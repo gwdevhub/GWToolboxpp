@@ -68,40 +68,39 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
 {
     if (!visible)
         return;
-    [this]() {
-        auto const *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-        if (skillbar == nullptr)
-            return;
-        auto has_sf = false;
-        for (const auto &skill : skillbar->skills) {
-            if (skill.skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Shadow_Form))
-                has_sf = true;
-        }
+    auto const *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (skillbar == nullptr)
+        return;
+    auto has_sf = false;
+    for (const auto &skill : skillbar->skills) {
+        if (skill.skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Shadow_Form))
+            has_sf = true;
+    }
 
-        for (auto it = 0u; it < 8; it++) {
-            skill_cooldown_to_string(m_skills[it].cooldown, static_cast<clock_t>(skillbar->skills[it].GetRecharge()));
-            auto const skill_id = static_cast<GW::Constants::SkillID>(skillbar->skills[it].skill_id);
-            clock_t const effect_duration = get_longest_effect_duration(skill_id);
-            m_skills[it].color = UptimeToColor(effect_duration);
-            if (display_effect_times) {
-                m_skills[it].effects.clear();
-                auto const create_pair = [this](auto duration) -> std::pair<std::array<char, 16>, Color> {
-                    auto buf = std::array<char, 16>{};
-                    skill_cooldown_to_string(buf, duration);
-                    return std::pair{buf, UptimeToColor(duration)};
-                };
-                auto const skill_data = GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(skill_id));
-                if (skill_data.profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) && has_sf && skill_data.type == static_cast<uint32_t>(GW::Constants::SkillType::Enchantment)) {
-                    auto durations = get_effect_durations(skill_id);
-                    std::sort(durations.begin(), durations.end(), [](auto a, auto b) { return b < a; });
-                    std::transform(durations.begin(), durations.end(), std::back_inserter(m_skills[it].effects), create_pair);
-                } else {
-                    if (effect_duration > 0)
-                        m_skills[it].effects.emplace_back(create_pair(effect_duration));
-                }
+    for (auto it = 0u; it < 8; it++) {
+        skill_cooldown_to_string(m_skills[it].cooldown, static_cast<clock_t>(skillbar->skills[it].GetRecharge()));
+        auto const skill_id = static_cast<GW::Constants::SkillID>(skillbar->skills[it].skill_id);
+        clock_t const effect_duration = get_longest_effect_duration(skill_id);
+        m_skills[it].color = UptimeToColor(effect_duration);
+        if (display_effect_times) {
+            m_skills[it].effects.clear();
+            auto const create_pair = [this](const clock_t duration) -> std::pair<std::array<char, 16>, Color> {
+                std::pair<std::array<char, 16>, Color> pair;
+                skill_cooldown_to_string(pair.first, duration);
+                pair.second = UptimeToColor(duration);
+                return pair;
+            };
+            auto const skill_data = GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(skill_id));
+            if (skill_data.profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) && has_sf && skill_data.type == static_cast<uint32_t>(GW::Constants::SkillType::Enchantment)) {
+                std::vector<clock_t> durations = get_effect_durations(skill_id);
+                std::sort(durations.begin(), durations.end(), [](const clock_t a, const clock_t b) { return b < a; });
+                std::transform(durations.begin(), durations.end(), std::back_inserter(m_skills[it].effects), create_pair);
+            } else {
+                if (effect_duration > 0)
+                    m_skills[it].effects.emplace_back(create_pair(effect_duration));
             }
         }
-    }();
+    }
 
     const auto wnd_flags = ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoTitleBar;
 
@@ -227,7 +226,7 @@ void SkillbarWidget::DrawSettingInternal()
         vertical = vertical_copy;
     }
     int size[2]{m_skill_width, m_skill_height};
-    if (ImGui::DragInt2("Skill size", size)) {
+    if (ImGui::DragInt2("Skill size", size, 1.f, 1, 100)) {
         m_skill_width = size[0];
         m_skill_height = size[1];
     }
@@ -242,12 +241,12 @@ void SkillbarWidget::DrawSettingInternal()
     }
     if (ImGui::TreeNode("Effect uptime")) {
         int mediumdur = static_cast<int>(medium_treshold);
-        if (ImGui::DragInt("Medium Treshold", &mediumdur)) {
+        if (ImGui::DragInt("Medium Treshold", &mediumdur, 1.f, 1, 180000)) {
             medium_treshold = clock_t{mediumdur};
         }
         ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the medium color is used.");
         int shortdur = static_cast<int>(short_treshold);
-        if (ImGui::DragInt("Short Treshold", &shortdur)) {
+        if (ImGui::DragInt("Short Treshold", &shortdur, 1.f, 1, 180000)) {
             short_treshold = clock_t{shortdur};
         }
         ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the short color is used.");
