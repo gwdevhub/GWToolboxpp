@@ -89,12 +89,11 @@ void SkillbarWidget::Update(float)
     }
 
 }
-
 void SkillbarWidget::Draw(IDirect3DDevice9 *)
 {
     if (!visible || GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return;
-    const auto wnd_flags = ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoTitleBar;
+    const auto wnd_flags = ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoTitleBar;
 
     ImGuiStyle &style = ImGui::GetStyle();
     const ImVec2 old_padding = style.WindowPadding;
@@ -109,7 +108,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
         winsize.x *= 8;
     }
     ImGui::SetNextWindowSize(winsize);
-    ImGui::Begin(Name(), nullptr, GetWinFlags());
+    ImGui::Begin(Name(), GetVisiblePtr(),GetWinFlags());
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0, 0});
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1);
@@ -121,7 +120,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
         ImGui::PushID(&skill);
         ImGui::PushStyleColor(ImGuiCol_Button, skill.color);
         const ImVec2 button_pos = ImGui::GetCursorPos();
-        ImGui::Button(skill.cooldown.data(), skillsize);
+        ImGui::ButtonEx(skill.cooldown.data(), skillsize, ImGuiButtonFlags_Disabled);
         if (!vertical)
             ImGui::SameLine();
         auto const next_button_pos = ImGui::GetCursorPos();
