@@ -461,6 +461,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {
             uielement->Draw(device);
         }
+        //for (TBModule* mod : GWToolbox::Instance().plugins) {
+        //    mod->Draw(device);
+        //}
 
 #ifdef _DEBUG
         // Feel free to uncomment to play with ImGui's features
@@ -513,6 +516,9 @@ void GWToolbox::Update(GW::HookStatus *)
         for (ToolboxModule* module : tb.modules) {
             module->Update(delta_f);
         }
+        //for (TBModule* module : tb.plugins) {
+        //    module->Update(delta_f);
+        //}
 
         last_tick_count = tick;
     }

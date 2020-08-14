@@ -191,7 +191,7 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
     Resources::EnsureFolderExists(crash_folder.c_str());
 
     StringCchPrintfW(szFileName, MAX_PATH, L"%s\\%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp", 
-        crash_folder.c_str(), GWTOOLBOX_VERSION,
+        crash_folder.c_str(), GWTOOLBOXDLL_VERSION,
         stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
         stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
         GetCurrentProcessId(), GetCurrentThreadId());

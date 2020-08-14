@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include <Core/Str.h>
+#include <Str.h>
 
 #include "Inject.h"
 

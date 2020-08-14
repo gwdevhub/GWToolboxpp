@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
-#include <Core/Path.h>
-#include <RestClient/RestClient.h>
+#include <Path.h>
+#include <RestClient.h>
 
 #include "Download.h"
 #include "Inject.h"
@@ -86,11 +86,7 @@ static bool SetProcessForeground(Process *process)
     return false;
 }
 
-#ifdef GWTOOLBOX_DEBUG
-int main(void)
-#else
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
-#endif
+int main(int argc, char** argv)
 {
     ParseRegSettings();
     ParseCommandLine();

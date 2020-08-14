@@ -2,10 +2,10 @@
 
 using Json = nlohmann::json;
 
-#include <Core/File.h>
-#include <Core/Path.h>
+#include <File.h>
+#include <Path.h>
 
-#include <RestClient/RestClient.h>
+#include <RestClient.h>
 
 #include "Download.h"
 #include "Registry.h"

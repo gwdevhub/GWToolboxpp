@@ -26,7 +26,7 @@ void Updater::SaveSettings(CSimpleIni* ini) {
     return;
 #else
     ini->SetLongValue(Name(), "update_mode", mode);
-    ini->SetValue(Name(), "dllversion", GWTOOLBOX_VERSION);
+    ini->SetValue(Name(), "dllversion", GWTOOLBOXDLL_VERSION);
 
     HMODULE module = GWToolbox::GetDLLModule();
     CHAR dllfile[MAX_PATH];
@@ -114,7 +114,7 @@ void Updater::CheckForUpdate(const bool forced) {
             step = Done;
             return;
         }
-        if (release.version.compare(GWTOOLBOX_VERSION) == 0) {
+        if (release.version.compare(GWTOOLBOXDLL_VERSION) == 0) {
             // server and client versions match
             step = Done;
             if (forced) {
@@ -140,7 +140,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
         if (!notified) {
             notified = true;
             Log::Warning("GWToolbox++ version %s is available! You have %s%s.",
-                latest_release.version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
+                latest_release.version.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA);
         }
 
         int iMode = forced_ask ? 2 : mode;
@@ -160,7 +160,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
             ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s%s",
-                latest_release.version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
+                latest_release.version.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA);
             ImGui::Text("Changes:");
             ImGui::Text(latest_release.body.c_str());
 
@@ -194,7 +194,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
             ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s",
-                latest_release.version.c_str(), GWTOOLBOX_VERSION);
+                latest_release.version.c_str(), GWTOOLBOXDLL_VERSION);
             ImGui::Text("Changes:");
             ImGui::Text(latest_release.body.c_str());
 
@@ -211,7 +211,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
             ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s",
-                latest_release.version.c_str(), GWTOOLBOX_VERSION);
+                latest_release.version.c_str(), GWTOOLBOXDLL_VERSION);
             ImGui::Text("Changes:");
             ImGui::Text(latest_release.body.c_str());
 

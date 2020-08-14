@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include <Core/Path.h>
+#include <Path.h>
 
 #include "Download.h"
 #include "Install.h"
