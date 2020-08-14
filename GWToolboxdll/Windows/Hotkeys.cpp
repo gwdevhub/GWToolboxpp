@@ -6,9 +6,11 @@
 
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Hero.h>
 
 #include <GWCA/Packets/Opcodes.h>
 
@@ -1163,4 +1165,96 @@ void HotkeyHeroTeamBuild::Execute()
     if (!CanUse())
         return;
     HeroBuildsWindow::Instance().Load(index);
+}
+
+HotkeyFlagHero::HotkeyFlagHero(CSimpleIni *ini, const char *section)
+    : TBHotkey(ini, section)
+{
+    degree = ini ? static_cast<float>(ini->GetDoubleValue(section, "degree", degree)) : degree;
+    distance = ini ? static_cast<float>(ini->GetDoubleValue(section, "distance", distance)) : distance;
+    hero = ini ? ini->GetLongValue(section, "hero", hero) : hero;
+    if (hero < 0) hero = 0;
+}
+void HotkeyFlagHero::Save(CSimpleIni *ini, const char *section) const
+{
+    TBHotkey::Save(ini, section);
+    ini->SetDoubleValue(section, "degree", degree);
+    ini->SetDoubleValue(section, "distance", distance);
+    ini->SetLongValue(section, "hero", hero);
+}
+void HotkeyFlagHero::Description(char *buf, size_t bufsz) const
+{
+    if (hero == 0) {
+        snprintf(buf, bufsz, "Flag All Heroes");
+    } else {
+        snprintf(buf, bufsz, "Flag Hero %d", hero);
+    }
+}
+void HotkeyFlagHero::Draw()
+{
+    hotkeys_changed |= ImGui::InputFloat("Degree", &degree, 0.0f, 0.0f, 3);
+    hotkeys_changed |= ImGui::InputFloat("Distance", &distance, 0.0f, 0.0f, 3);
+    if (hotkeys_changed && distance < 0.f)
+        distance = 0.f;
+    hotkeys_changed |= ImGui::InputInt("Hero", &hero, 0);
+    if (hotkeys_changed && hero < 0)
+        hero = 0;
+    ImGui::ShowHelp("The hero id that should be flagged.\nUse 0 to flag all");
+}
+void HotkeyFlagHero::Execute()
+{
+    if (!isExplorable())
+        return;
+
+    GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
+
+    if (hero < 0)
+        return;
+    if (hero == 0) {
+        if (!(std::isinf(allflag.x) && !std::isinf(allflag.y))) {
+            GW::PartyMgr::UnflagAll();
+            return;
+        }
+    } else {
+        const GW::HeroFlagArray &flags = GW::GameContext::instance()->world->hero_flags;
+        if (!flags.valid() || hero > flags.size())
+            return;
+
+        const GW::HeroFlag &flag = flags[hero - 1];
+        if (!std::isinf(flag.flag.x) || !std::isinf(flag.flag.y)) {
+            GW::PartyMgr::UnflagHero(hero);
+            return; 
+        }
+    }
+
+    const GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player)
+        return;
+    const GW::AgentLiving *target = GW::Agents::GetTargetAsAgentLiving();
+
+    float reference_radiant = player->rotation_angle;
+
+    if (target && target != player) {
+        float dx = target->x - player->x;
+        float dy = target->y - player->y;
+
+        reference_radiant = std::atan(dx == 0 ? dy : dy / dx);
+        if (dx < 0) {
+            reference_radiant += M_PI;
+        } else if (dx > 0 && dy < 0) {
+            reference_radiant += 2 * M_PI;
+        }
+    }
+
+    const float radiant = degree * M_PI / 180.f;
+    const float x = player->x + distance * std::cos(reference_radiant - radiant);
+    const float y = player->y + distance * std::sin(reference_radiant - radiant);
+
+    GW::GamePos pos = GW::GamePos(x, y, 0);
+
+    if (hero == 0) {
+        GW::PartyMgr::FlagAll(pos);
+    } else {
+        GW::PartyMgr::FlagHero(hero, pos);
+    }
 }
