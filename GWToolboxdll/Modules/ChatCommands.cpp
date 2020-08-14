@@ -378,7 +378,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"armor", [](const wchar_t*, int, LPWSTR*) -> void {
         GW::Chat::SendChat('/', "pingitem armor");
     });
-    GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHero);
+    GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHeroBehaviour);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -1241,52 +1241,40 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
     }
 }
-void ChatCommands::CmdHero(const wchar_t* message, int argc, LPWSTR* argv)
+void ChatCommands::CmdHeroBehaviour(const wchar_t* message, int argc, LPWSTR* argv)
 {
-    GW::HookEntry hookentry;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+        return;
+    // Argument validation
     if (argc < 2)
-        return Log::Error("Missing argument for /hero. It can be one of: avoid | guard | attack");
+        return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
+    // set behavior based on command message
+    int behaviour = 1; // guard by default
     std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    if (arg1 == L"avoid") {
+        behaviour = 2; // avoid combat
+    } else if (arg1 == L"guard") {
+        behaviour = 1; // guard
+    } else if (arg1 == L"attack") {
+        behaviour = 0; // attack
+    } else {
+        return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
+    }
 
-    const wchar_t* name = next_word(message);
-
-    GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
+    const GW::PartyInfo *party_info = GW::PartyMgr::GetPartyInfo();
     if (!party_info)
         return Log::Error("Could not retrieve party info");
-    GW::HeroPartyMemberArray& party_heros = party_info->heroes;
+    const GW::HeroPartyMemberArray& party_heros = party_info->heroes;
     if (!party_heros.valid())
         return Log::Error("Party heroes validation failed");
-
-    //detect the correct owner id for current player
-    auto me = GW::Agents::GetPlayer();
-    auto players = party_info->players;
-    uint32_t ownerId;
-    for (GW::PlayerPartyMember partyPlayer : players) {
-        auto player = GW::PlayerMgr::GetPlayerByID(partyPlayer.login_number);
-        if (player->agent_id == me->agent_id) {
-            ownerId = partyPlayer.login_number;
-        }
-    }
-
-    //set behavior based on command message
-    int behaviour = 1; //guard by default
-
-    if (arg1 == L"avoid") {
-        behaviour = 2; //avoid combat
-    }
-    if (arg1 == L"guard") {
-        behaviour = 1; //guard
-    }
-    if (arg1 == L"attack") {
-        behaviour = 0; //attack 
-    }
+    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    if (!me)
+        return Log::Error("Failed to get player");
 
     //execute in explorable area or outpost
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        for (GW::HeroPartyMember hero : party_heros) {
-            if (hero.owner_player_id == ownerId) {
-                GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero.agent_id, behaviour);
-            }
+    for (const GW::HeroPartyMember& hero : party_heros) {
+        if (hero.owner_player_id == me->login_number) {
+            GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero.agent_id, behaviour);
         }
     }
 }

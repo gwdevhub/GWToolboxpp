@@ -77,7 +77,7 @@ private:
     static void CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdHero(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdHeroBehaviour(const wchar_t *message, int argc, LPWSTR *argv);
 
     
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
