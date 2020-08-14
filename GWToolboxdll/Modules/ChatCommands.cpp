@@ -1243,11 +1243,9 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
 }
 void ChatCommands::CmdHero(const wchar_t* message, int argc, LPWSTR* argv)
 {
-    GW::HookEntry hookentry;
     if (argc < 2)
         return Log::Error("Missing argument for /hero. It can be one of: avoid | guard | attack");
     std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-
     const wchar_t* name = next_word(message);
 
     GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
@@ -1258,8 +1256,8 @@ void ChatCommands::CmdHero(const wchar_t* message, int argc, LPWSTR* argv)
         return Log::Error("Party heroes validation failed");
 
     //detect the correct owner id for current player
-    auto me = GW::Agents::GetPlayer();
-    auto players = party_info->players;
+    GW::Agent* me = GW::Agents::GetPlayer();
+    GW::PlayerPartyMemberArray players = party_info->players;
     uint32_t ownerId;
     for (GW::PlayerPartyMember partyPlayer : players) {
         auto player = GW::PlayerMgr::GetPlayerByID(partyPlayer.login_number);
