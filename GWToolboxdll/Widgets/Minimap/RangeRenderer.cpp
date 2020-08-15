@@ -62,7 +62,7 @@ void RangeRenderer::DrawSettings()
     changed |= Colors::DrawSettingHueWheel("Compass range", &color_range_compass);
     changed |= Colors::DrawSettingHueWheel("Chain Aggro range", &color_range_chain_aggro);
     changed |= Colors::DrawSettingHueWheel("Res Aggro range", &color_range_res_aggro);
-    changed |= Colors::DrawSettingHueWheel("Shadow step range", &color_range_shadowstep_aggro);
+    changed |= Colors::DrawSettingHueWheel("Shadow Step range", &color_range_shadowstep_aggro);
     changed |= ImGui::DragFloat("Line thickness", &line_thickness, 0.1f, 1.f, 10.f, "%.1f");
     if (changed)
         Invalidate();
@@ -277,7 +277,7 @@ bool RangeRenderer::HaveHos()
         return false;
     }
 
-    for (auto skill : skillbar->skills) {
+    for (const auto& skill : skillbar->skills) {
         const auto id = static_cast<GW::Constants::SkillID>(skill.skill_id);
         if (id == GW::Constants::SkillID::Heart_of_Shadow)
             return true;

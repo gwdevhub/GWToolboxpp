@@ -53,11 +53,11 @@ void PingsLinesRenderer::DrawSettings() {
     if (Colors::DrawSettingHueWheel("Pings", &ping_circle.color)) {
         ping_circle.Invalidate();
     }
-    if (Colors::DrawSettingHueWheel("Shadowstep Marker", &marker.color)) {
+    if (Colors::DrawSettingHueWheel("Shadow Step Marker", &marker.color)) {
         marker.Invalidate();
     }
-    Colors::DrawSettingHueWheel("Shadowstep Line", &color_shadowstep_line);
-    Colors::DrawSettingHueWheel("Shadowstep Line (Max range)", &color_shadowstep_line_maxrange);
+    Colors::DrawSettingHueWheel("Shadow Step Line", &color_shadowstep_line);
+    Colors::DrawSettingHueWheel("Shadow Step Line (Max range)", &color_shadowstep_line_maxrange);
     if (ImGui::SliderFloat("Max range start", &maxrange_interp_begin, 0.0f, 1.0f)
         && maxrange_interp_end < maxrange_interp_begin) {
         maxrange_interp_end = maxrange_interp_begin;
