@@ -6,9 +6,9 @@ If you are here to check toolbox features and for a download link to go [https:/
 
 ## How to download, build, and run
 ### Requirements
-* CMake 3.14 or higher. Download the latest version from [https://cmake.org/download/](). 
-* Visual Studio. You can download Visual Studio Community for free here: [https://visualstudio.microsoft.com/vs/community/](). You will also need the "Desktop development with C++" package. 
-* Git. [https://git-scm.com/]()
+* CMake 3.14 or higher. Download the latest version from [https://cmake.org/download/](https://cmake.org/download/). 
+* Visual Studio. You can download Visual Studio Community for free here: [https://visualstudio.microsoft.com/vs/community/](https://visualstudio.microsoft.com/vs/community/). You will also need the "Desktop development with C++" package. 
+* Git. [https://git-scm.com/](https://git-scm.com/)
 
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
 
