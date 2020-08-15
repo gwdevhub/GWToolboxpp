@@ -145,7 +145,6 @@ private:
 
     // for markers
     Marker marker;
-    GW::Vec2f shadowstep_location;
     DWORD recall_target = 0;
 
     // for the gpu

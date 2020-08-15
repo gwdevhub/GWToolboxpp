@@ -88,6 +88,10 @@ public:
 
     float GetMapRotation() const;
     D3DXVECTOR2 GetGwinchScale() const;
+    GW::Vec2f ShadowstepLocation() const;
+
+    static void SkillActivateCallback(GW::HookStatus*,GW::Packet::StoC::SkillActivate*);
+
 
     // 0 is 'all' flag, 1 to 7 is each hero
     void FlagHero(unsigned int idx)
@@ -119,6 +123,7 @@ private:
     Vec2i location;
     Vec2i size;
     D3DXVECTOR2 gwinch_scale;
+    GW::Vec2f shadowstep_location = {0.f, 0.f};
 
     Vec2i drag_start;
     GW::Vec2f translation;

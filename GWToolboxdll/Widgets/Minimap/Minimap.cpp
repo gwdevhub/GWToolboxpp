@@ -8,6 +8,7 @@
 
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -19,6 +20,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 
 #include <GuiUtils.h>
 #include <ImGuiAddons.h>
@@ -73,11 +75,7 @@ void Minimap::Initialize()
                 effect_renderer.PacketCallback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(&SkillActivate_Entry, [this](GW::HookStatus *, GW::Packet::StoC::SkillActivate *pak) -> void {
-        if (visible) {
-            pingslines_renderer.P221Callback(pak);
-        }
-    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(&SkillActivate_Entry, &SkillActivateCallback);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry, [this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadInfo *packet) -> void { is_observing = packet->is_observer != 0; });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
         UNREFERENCED_PARAMETER(packet);
@@ -101,6 +99,18 @@ void Minimap::Initialize()
     pmap_renderer.Invalidate();
 
     GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
+}
+void Minimap::SkillActivateCallback(GW::HookStatus*, GW::Packet::StoC::SkillActivate *pak)
+{
+    if (pak->agent_id == GW::Agents::GetPlayerId()) {
+        if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
+            Instance().shadowstep_location = GW::Agents::GetPlayer()->pos;
+        }
+    }
+}
+GW::Vec2f Minimap::ShadowstepLocation() const
+{
+    return shadowstep_location;
 }
 
 void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
@@ -334,6 +344,23 @@ void Minimap::Draw(IDirect3DDevice9 *device)
     GW::Agent *me = GW::Agents::GetPlayer();
     if (me == nullptr)
         return;
+
+    // Check shadowstep location
+    if (shadowstep_location.x != 0.0f || shadowstep_location.y != 0.0f) {
+        GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
+        if (!effects.valid()) {
+            shadowstep_location = GW::Vec2f();
+        }
+        else {
+            bool found = false;
+            for (unsigned int i = 0; !found && i < effects.size(); ++i) {
+                found = effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk;
+            }
+            if (!found) {
+                shadowstep_location = GW::Vec2f();
+            }
+        }
+    }
 
     // if not center and want to move, move center towards player
     if ((translation.x != 0 || translation.y != 0) && (me->move_x != 0 || me->move_y != 0) && TIMER_DIFF(last_moved) > ms_before_back) {
