@@ -87,29 +87,31 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
 
+    if (only_show_when_drunk && alcohol_level == 0) return;
+
+    long t = 0;
+    if (alcohol_level != 0) {
+        t = (long)((int)last_alcohol + ((int)alcohol_time)) - (long)time(NULL);
+    }
+
+    if (only_show_when_drunk && t < 0) return;
+
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiSetCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-        if (alcohol_level || !only_show_when_drunk) {
+        ImVec2 cur;
+
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
+        cur = ImGui::GetCursorPos();
+        ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
+        ImGui::TextColored(ImColor(0, 0, 0), "Alcohol");
+        ImGui::SetCursorPos(cur);
+        ImGui::Text("Alcohol");
+        ImGui::PopFont();
+
+        if (t > 0) {
             static char timer[32];
-            ImVec2 cur;
-            long t = 0;
-
-            if (alcohol_level) {
-                t = (long)((int)last_alcohol + ((int)alcohol_time)) - (long)time(NULL);
-            }
-            else if (only_show_when_drunk) {
-                return;
-            }
             snprintf(timer, 32, "%1ld:%02ld", (t / 60) % 60, t % 60);
-
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
-            cur = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-            ImGui::TextColored(ImColor(0, 0, 0), "Alcohol");
-            ImGui::SetCursorPos(cur);
-            ImGui::Text("Alcohol");
-            ImGui::PopFont();
 
             ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
             cur = ImGui::GetCursorPos();
