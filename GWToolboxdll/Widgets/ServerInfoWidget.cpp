@@ -53,10 +53,11 @@ sockaddr_sprint(char* s, size_t n, const sockaddr* host, bool inc_port = false)
 
 void ServerInfoWidget::Initialize() {
     ToolboxWidget::Initialize();
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_HookEntry,[this](GW::HookStatus* status,GW::Packet::StoC::InstanceLoadInfo* pak) {
-        current_server_info = nullptr;
-        server_ip[0] = 0;
-        server_location[0] = 0;
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
+        &InstanceLoadInfo_HookEntry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo*) {
+            current_server_info = nullptr;
+            server_ip[0] = 0;
+            server_location[0] = 0;
         });
     GetServerInfo();
 }
@@ -81,7 +82,7 @@ ServerInfoWidget::ServerInfo* ServerInfoWidget::GetServerInfo() {
     servers_by_ip.emplace(current_server_info->ip, current_server_info);
     return current_server_info;
 }
-void ServerInfoWidget::Update(float delta) {
+void ServerInfoWidget::Update(float) {
     if (current_server_info && current_server_info->country.empty() && current_server_info->last_update < time(nullptr) - 60) {
         if (server_info_fetcher.joinable())
             server_info_fetcher.join(); // Wait for thread to end.
@@ -107,12 +108,11 @@ void ServerInfoWidget::Update(float delta) {
     }
 }
 
-void ServerInfoWidget::Draw(IDirect3DDevice9* pDevice) {
+void ServerInfoWidget::Draw(IDirect3DDevice9*) {
     if (!visible) return;
     if (!server_location && !server_ip) return;
     if (!current_server_info) {
-        if (!GetServerInfo())
-            return;
+        if (!GetServerInfo()) return;
         server_string_dirty = true;
     }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));

@@ -1241,7 +1241,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
     }
 }
-void ChatCommands::CmdHeroBehaviour(const wchar_t* message, int argc, LPWSTR* argv)
+void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
 {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return;

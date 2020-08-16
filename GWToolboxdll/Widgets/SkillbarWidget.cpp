@@ -68,15 +68,16 @@ void SkillbarWidget::Update(float)
         const uint32_t &skill_id = skillbar->skills[it].skill_id;
         const uint32_t effect_duration = get_longest_effect_duration(skill_id);
         m_skills[it].color = UptimeToColor(effect_duration);
+
         if (display_effect_times) {
             m_skills[it].effects.clear();
-            auto const create_pair = [this](const uint32_t duration) -> std::pair<std::array<char, 16>, Color> {
+            auto create_pair = [this](const uint32_t duration) -> std::pair<std::array<char, 16>, Color> {
                 std::pair<std::array<char, 16>, Color> pair;
                 skill_cooldown_to_string(pair.first, duration);
                 pair.second = UptimeToColor(duration);
                 return pair;
             };
-            auto const skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+            const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
             if (skill_data.profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) && has_sf && skill_data.type == static_cast<uint32_t>(GW::Constants::SkillType::Enchantment)) {
                 std::vector<uint32_t> durations = get_effect_durations(skill_id);
                 std::sort(durations.begin(), durations.end(), [](const uint32_t a, const uint32_t b) { return b < a; });
@@ -115,6 +116,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
     ImGui::PushStyleColor(ImGuiCol_Text, color_text);
     ImGui::PushFont(GuiUtils::GetFont(m_font_size));
     ImGui::PushStyleColor(ImGuiCol_Border, color_border);
+
     char imgui_id_buf[32];
     for (const SkillbarWidget::Skill& skill : m_skills) {
         ImGui::PushID(&skill);
@@ -124,6 +126,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
         if (!vertical)
             ImGui::SameLine();
         auto const next_button_pos = ImGui::GetCursorPos();
+
         if (display_effect_times) {
             const ImVec2 wnd_size = vertical ? ImVec2{skillsize.x * 2, skillsize.y} : ImVec2{skillsize.x, skillsize.y * 2};
             const float font_scale = (1 + static_cast<float>(m_font_size) / 5.f);
