@@ -325,6 +325,7 @@ public:
     float degree = 0.0;
     float distance = 0.0;
     int hero = 0;
+    bool minimap = false;
 
     static const char *IniSection()
     {
@@ -340,6 +341,6 @@ public:
     void Save(CSimpleIni *ini, const char *section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
     void Execute() override;
 };
