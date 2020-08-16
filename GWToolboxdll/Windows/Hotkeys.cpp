@@ -38,6 +38,8 @@
 #include <Windows/HotkeysWindow.h>
 #include <Windows/PconsWindow.h>
 
+#include <string>
+
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
@@ -1174,7 +1176,6 @@ void HotkeyHeroTeamBuild::Execute()
 HotkeyFlagHero::HotkeyFlagHero(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
-    minimap = ini->GetBoolValue(section, "minimap", minimap);
     degree = static_cast<float>(ini->GetDoubleValue(section, "degree", degree));
     distance = static_cast<float>(ini->GetDoubleValue(section, "distance", distance));
     hero = ini->GetLongValue(section, "hero", hero);
@@ -1187,7 +1188,6 @@ void HotkeyFlagHero::Save(CSimpleIni *ini, const char *section) const
     ini->SetDoubleValue(section, "degree", degree);
     ini->SetDoubleValue(section, "distance", distance);
     ini->SetLongValue(section, "hero", hero);
-    ini->SetBoolValue(section, "minimap", minimap);
 }
 void HotkeyFlagHero::Description(char *buf, size_t bufsz) const
 {
@@ -1199,7 +1199,7 @@ void HotkeyFlagHero::Description(char *buf, size_t bufsz) const
 }
 void HotkeyFlagHero::Draw()
 {
-    hotkeys_changed |= ImGui::DragFloat("Degree", &degree, 0.0f, 0.0f, 360.f);
+    hotkeys_changed |= ImGui::DragFloat("Degree", &degree, 0.0f, -360.0f, 360.f);
     hotkeys_changed |= ImGui::DragFloat("Distance", &distance, 0.0f, 0.0f, 10'000.f);
     if (hotkeys_changed && distance < 0.f)
         distance = 0.f;
@@ -1209,8 +1209,8 @@ void HotkeyFlagHero::Draw()
     else if (hotkeys_changed && hero > 11)
         hero = 11;
     ImGui::ShowHelp("The hero number that should be flagged (1-11).\nUse 0 to flag all");
-    hotkeys_changed |= ImGui::Checkbox("Minimap", &minimap);
-    ImGui::ShowHelp("If you tick this, your next click on the minimap will instead flag the selected heroes there.");
+    ImGui::Text("For a minimap flagging hotkey, please create a chat hotkey with:");
+    ImGui::TextColored({1.f, 1.f, 0.f, 1.f}, "/flag %d toggle", hero);
 }
 void HotkeyFlagHero::Execute()
 {
@@ -1236,11 +1236,6 @@ void HotkeyFlagHero::Execute()
             GW::PartyMgr::UnflagHero(hero);
             return; 
         }
-    }
-
-    if (minimap) {
-        Minimap::Instance().FlagHero(hero);
-        return;
     }
 
     const GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();

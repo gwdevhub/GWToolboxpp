@@ -325,7 +325,6 @@ public:
     float degree = 0.0;
     float distance = 0.0;
     int hero = 0;
-    bool minimap = false;
 
     static const char *IniSection()
     {
