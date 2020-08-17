@@ -57,6 +57,7 @@ private:
 
     static bool IsLuxon();
 
+    static void CmdEnterMission(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdAge2(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdDialog(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdTB(const wchar_t *message, int argc, LPWSTR *argv);

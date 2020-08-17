@@ -883,7 +883,7 @@ void HotkeyAction::Execute()
             ChatCommands::CmdReapplyTitle(nullptr, 0, nullptr);
             break;
         case HotkeyAction::EnterChallenge:
-            GW::Map::EnterChallenge();
+            GW::Chat::SendChat('/',L"enter");
             break;
     }
 }

@@ -16,6 +16,7 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/GuildContext.h>
+#include <GWCA/Context/PartyContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -326,29 +327,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"gh", [](const wchar_t*, int, LPWSTR*) {
         GW::Chat::SendChat('/', "tp gh");
     });
-    GW::Chat::CreateCommand(L"enter", [](const wchar_t*, int argc, LPWSTR* argv) -> void {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
-        uint32_t item_id;
-        std::wstring arg;
-        switch (GW::Map::GetMapID()) {
-        case GW::Constants::MapID::Temple_of_the_Ages:
-        case GW::Constants::MapID::Embark_Beach:
-            if (argc < 2)
-                return Log::Warning("Use /enter fow or /enter uw to trigger entry");
-            arg = GuiUtils::ToLower(argv[1]);
-            if (arg == L"fow")
-                item_id = 22280;
-            else if (arg == L"uw")
-                item_id = 3746;
-            else
-                return Log::Warning("Use /enter fow or /enter uw to trigger entry");
-            if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16))
-                return Log::Error("Scroll not found!");
-            break;
-        default:
-            return Log::Warning("Use /enter from Temple of the Ages or Embark Beach");
-        }
-    });
+    GW::Chat::CreateCommand(L"enter", ChatCommands::CmdEnterMission);
     GW::Chat::CreateCommand(L"age2", ChatCommands::CmdAge2);
     GW::Chat::CreateCommand(L"dialog", ChatCommands::CmdDialog);
     GW::Chat::CreateCommand(L"show", ChatCommands::CmdShow);
@@ -502,6 +481,48 @@ bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSi
     buff[fileSize] = 0;
     CloseHandle(fileHandle);
     return true;
+}
+
+void ChatCommands::CmdEnterMission(const wchar_t*, int argc, LPWSTR* argv) {
+    const char* error_use_from_outpost = "Use '/enter' to start a mission or elite area from an outpost";
+    const char* error_fow_uw_syntax = "Use '/enter fow' or '/enter uw' to trigger entry";
+    const char* error_no_scrolls = "Unable to enter elite area; no scroll found";
+    const char* error_not_leading = "Unable to enter mission; you're not party leader";
+    
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) 
+        return Log::Error(error_use_from_outpost);
+
+    switch (GW::Map::GetMapID()) {
+    case GW::Constants::MapID::Temple_of_the_Ages:
+    case GW::Constants::MapID::Embark_Beach: {
+        if (argc < 2)
+            return Log::Error(error_fow_uw_syntax);
+        uint32_t item_id;
+        std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+        if (arg1 == L"fow")
+            item_id = 22280;
+        else if (arg1 == L"uw")
+            item_id = 3746;
+        else
+            return Log::Error(error_fow_uw_syntax);
+        if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16))
+            return Log::Error(error_no_scrolls);
+    }
+        break;
+    default:
+        GW::AreaInfo* map_info = GW::Map::GetCurrentMapInfo();
+        if (!map_info || !map_info->GetHasEnterButton())
+            return Log::Error(error_use_from_outpost);
+        if (!GW::PartyMgr::GetPlayerIsLeader())
+            return Log::Error(error_not_leading);
+        GW::PartyContext* p = GW::GameContext::instance()->party;
+        if (p && (p->flag & 0x8) != 0) {
+            GW::CtoS::SendPacket(4, GAME_CMSG_PARTY_CANCEL_ENTER_CHALLENGE);
+        }
+        else {
+            GW::Map::EnterChallenge();
+        }
+    }
 }
 
 void ChatCommands::CmdAge2(const wchar_t* , int, LPWSTR* ) {
