@@ -24,13 +24,13 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
         static char foes_count[32] = "";
         snprintf(foes_count, 32, "%lu / %lu", killed, tokill + killed);
 
         // vanquished
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f20));
         ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
         ImGui::TextColored(ImColor(0, 0, 0), "Vanquished");
@@ -39,7 +39,7 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
         ImGui::PopFont();
 
         // count
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f42));
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
         ImGui::TextColored(ImColor(0, 0, 0), foes_count);

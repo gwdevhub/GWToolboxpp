@@ -762,8 +762,8 @@ void ObjectiveTimerWindow::Update(float) {
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
     // Main objective timer window
     if (visible) {
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
             if (objective_sets.empty()) {
                 ImGui::Text("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
@@ -785,8 +785,8 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
 
     // Breakout objective set for current run
     if (show_current_run_window && current_objective_set) {
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
         char buf[256];
         sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name, current_objective_set->cached_time ? current_objective_set->cached_time : "--:--");
             

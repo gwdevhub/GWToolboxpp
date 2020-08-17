@@ -94,10 +94,10 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
         snprintf(timer_buffer, 32, "%lu:%02lu:%02lu", time / (60 * 60), (time / 60) % 60, time % 60);
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f48));
         ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
         ImGui::TextColored(ImColor(0, 0, 0), timer_buffer);
@@ -107,7 +107,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 
         if (show_extra_timers && (GetUrgozTimer() || GetDeepTimer() || GetDhuumTimer() || GetTrapTimer() || GetDoATimer())) {
 
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f24));
             ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 2, cur2.y + 2));
             ImGui::TextColored(ImColor(0, 0, 0), extra_buffer);
@@ -116,7 +116,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
         }
         if (GetSpiritTimer()) {
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f24));
             ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
             ImGui::TextColored(ImColor(0, 0, 0), spirits_buffer);

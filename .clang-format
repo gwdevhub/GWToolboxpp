@@ -54,7 +54,7 @@ AllowAllParametersOfDeclarationOnNextLine: false
 # if (a)           not       if (a) return;
 #   return;
 AllowShortBlocksOnASingleLine: false
-AllowShortCaseLabelsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: false

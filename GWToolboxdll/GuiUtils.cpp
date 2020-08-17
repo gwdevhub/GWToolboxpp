@@ -111,12 +111,12 @@ void GuiUtils::LoadFonts() {
 ImFont* GuiUtils::GetFont(GuiUtils::FontSize size) {
     ImFont* font = [](FontSize size) -> ImFont* {
         switch (size) {
-        case GuiUtils::f16: return font16;
-        case GuiUtils::f18: return font18;
-        case GuiUtils::f20: return font20;
-        case GuiUtils::f24: return font24;
-        case GuiUtils::f42: return font42;
-        case GuiUtils::f48: return font48;
+            case GuiUtils::FontSize::f16: return font16;
+            case GuiUtils::FontSize::f18: return font18;
+            case GuiUtils::FontSize::f20: return font20;
+            case GuiUtils::FontSize::f24: return font24;
+            case GuiUtils::FontSize::f42: return font42;
+            case GuiUtils::FontSize::f48: return font48;
         default: return nullptr;
         }
     }(size);

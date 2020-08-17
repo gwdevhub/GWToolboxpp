@@ -3,7 +3,7 @@
 #include <ImGuiAddons.h>
 
 namespace GuiUtils {
-    enum FontSize {
+    enum class FontSize {
         f16,
         f18,
         f20,
