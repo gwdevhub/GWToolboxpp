@@ -20,7 +20,7 @@
 
 void SkillbarWidget::skill_cooldown_to_string(std::array<char, 16>& arr, uint32_t cd) const
 {
-    if (cd > 180000u || cd == 0) {
+    if (cd > 180'000u || cd == 0) {
         snprintf(arr.data(), sizeof(arr), "");
     } else if (cd >= static_cast<uint32_t>(decimal_threshold)) {
         if (round_up) cd += 1000;
@@ -30,7 +30,7 @@ void SkillbarWidget::skill_cooldown_to_string(std::array<char, 16>& arr, uint32_
     }
 }
 
-std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t skillId) const
+std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t skillId)
 {
     std::vector<Effect> ret;
     for (const GW::Effect& effect : GW::Effects::GetPlayerEffectArray()) {
@@ -44,12 +44,12 @@ std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t s
     return ret;
 }
 
-SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const uint32_t skillId) const
+SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const uint32_t skillId)
 {
     SkillbarWidget::Effect ret;
     for (const GW::Effect& effect : GW::Effects::GetPlayerEffectArray()) {
         if (effect.skill_id == skillId && effect.effect_type != 7 /*hex*/) {
-            auto remaining = effect.GetTimeRemaining();
+            const auto remaining = effect.GetTimeRemaining();
             if (ret.remaining < remaining) {
                 ret.remaining = remaining;
                 ret.progress = (ret.remaining / 1000.0f) / effect.duration;
@@ -108,7 +108,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
     
     const auto window_flags = GetWinFlags();
-    Color col_border = (window_flags & ImGuiWindowFlags_NoMove) ? color_border : Colors::White();
+    const Color col_border = (window_flags & ImGuiWindowFlags_NoMove) ? color_border : Colors::White();
 
     ImGui::PushFont(GuiUtils::GetFont(font_recharge));
 
@@ -124,7 +124,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::SetNextWindowSize(winsize);
     ImGui::Begin(Name(), nullptr, window_flags);
-    ImVec2 winpos = ImGui::GetWindowPos();
+    const ImVec2 winpos = ImGui::GetWindowPos();
     for (size_t i = 0; i < m_skills.size(); ++i) {
         const Skill& skill = m_skills[i];
 
@@ -151,7 +151,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             }
         }
         // label
-        ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown.data());
+        const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown.data());
         ImVec2 label_pos(pos1.x + skillsize.x / 2 - label_size.x / 2, 
             pos1.y + skillsize.y / 2 - label_size.y / 2);
         ImGui::GetWindowDrawList()->AddText(label_pos, color_text_recharge, skill.cooldown.data());
@@ -220,10 +220,10 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
 
         ImGui::GetBackgroundDrawList()->AddRect(pos1, pos2, color_effect_border);
 
-        ImVec2 label_size = ImGui::CalcTextSize(effect.text.data());
-        ImVec2 label_pos(pos1.x + size.x / 2 - label_size.x / 2, pos1.y + size.y / 2 - label_size.y / 2);
+        const ImVec2 label_size = ImGui::CalcTextSize(effect.text.data());
+        const ImVec2 label_pos(pos1.x + size.x / 2 - label_size.x / 2, pos1.y + size.y / 2 - label_size.y / 2);
         ImGui::GetBackgroundDrawList()->AddText(
-            label_pos, effect_text_color ? effect.color : color_text_effects, effect.text.data());
+            label_pos, effect_text_color ? Colors::FullAlpha(effect.color) : color_text_effects, effect.text.data());
     }
 
     ImGui::PopFont();
@@ -337,7 +337,7 @@ void SkillbarWidget::DrawSettingInternal()
     ImGui::Spacing();
     ImGui::Text("Skill overlay");
     ImGui::Checkbox("Paint skills according to effect duration", &display_skill_overlay);
-    ImGui::Combo("Recharge font size", (int*)&font_recharge, font_sizes, 6);
+    ImGui::Combo("Recharge font size", reinterpret_cast<int*>(&font_recharge), font_sizes, 6);
     Colors::DrawSettingHueWheel("Recharge text color", &color_text_recharge);
     Colors::DrawSettingHueWheel("Skill border color", &color_border);
     
@@ -349,7 +349,7 @@ void SkillbarWidget::DrawSettingInternal()
     ImGui::ShowHelp("Show multiple casted enchantment per skill, when applicable");
     ImGui::Checkbox("Use the progress color for the text", &effect_text_color);
     ImGui::Checkbox("Use the progress color for the progress bar", &effect_progress_bar_color);
-    ImGui::Combo("Effects font size", (int*)&font_effects, font_sizes, 6);
+    ImGui::Combo("Effects font size", reinterpret_cast<int*>(&font_effects), font_sizes, 6);
     Colors::DrawSettingHueWheel("Effect font color", &color_text_effects);
     Colors::DrawSettingHueWheel("Effect background", &color_effect_background);
     Colors::DrawSettingHueWheel("Effect progress bar color", &color_effect_progress);
@@ -365,7 +365,7 @@ Color SkillbarWidget::UptimeToColor(const uint32_t uptime) const
     }
 
     if (uptime > static_cast<uint32_t>(short_treshold)) {
-        const float diff = static_cast<float>(medium_treshold - short_treshold);
+        const auto diff = static_cast<float>(medium_treshold - short_treshold);
         const float fraction = 1.f - (medium_treshold - uptime) / diff;
         int colold[4], colnew[4], colout[4];
         Colors::ConvertU32ToInt4(color_long, colold);

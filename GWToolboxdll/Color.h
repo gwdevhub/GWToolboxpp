@@ -24,6 +24,11 @@ namespace Colors {
                (static_cast<Color>(b) << IM_COL32_B_SHIFT);
     }
 
+    static Color FullAlpha(const Color clr)
+    {
+        return clr | 0xFFu << IM_COL32_A_SHIFT;
+    }
+
     static Color Black() { return RGB(0, 0, 0); }
     static Color White() { return RGB(0xFF, 0xFF, 0xFF); }
     static Color Empty() { return ARGB(0, 0, 0, 0); }
