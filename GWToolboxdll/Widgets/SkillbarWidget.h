@@ -87,6 +87,6 @@ private:
     // Internal utils
     Color UptimeToColor(uint32_t uptime) const;
     void skill_cooldown_to_string(std::array<char, 16>& arr, uint32_t cooldown) const;
-    std::vector<Effect> get_effects(const uint32_t skillId) const;
-    Effect get_longest_effect(const uint32_t skillId) const;
+    static std::vector<Effect> get_effects(uint32_t skillId);
+    static Effect get_longest_effect(uint32_t skillId);
 };
