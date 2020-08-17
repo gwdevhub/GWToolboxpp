@@ -5,8 +5,10 @@
 
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Map.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 
 #include <Color.h>
 #include <GuiUtils.h>
@@ -21,7 +23,11 @@ private:
         std::wstring name;
         uint8_t profession = 0;
     };
-
+    struct UIChatMessage {
+        uint32_t channel;
+        wchar_t* message;
+        uint32_t channel2;
+    };
     struct Friend {
         Friend(FriendListWindow* _parent) : parent(_parent) {};
         ~Friend() {
@@ -37,9 +43,6 @@ private:
         std::unordered_map<std::wstring, Character> characters;
         uint8_t status = static_cast<uint8_t>(GW::FriendStatus::FriendStatus_Offline); // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
         uint8_t type = static_cast<uint8_t>(GW::FriendType::FriendType_Unknow);
-        bool is_tb_friend = false;  // Is this a friend via toolbox, or friend via friend list?
-        bool has_tmp_uuid = false;
-        clock_t added_via_toolbox = 0; // This friend added via toolbox? When?
         clock_t last_update = 0;
         std::string cached_charnames_hover_str;
         bool cached_charnames_hover = false;
@@ -49,9 +52,8 @@ private:
         void GetMapName();
         const std::string GetCharactersHover(bool include_charname = false);
         void StartWhisper();
-        void InviteToParty();
-        bool AddGWFriend();
         bool RemoveGWFriend();
+        bool ValidUuid();
         const bool IsOffline() {
             return status < GW::FriendStatus::FriendStatus_Online || status > GW::FriendStatus::FriendStatus_Away;
         };
@@ -67,20 +69,38 @@ private:
     Friend* GetFriendByUUID(const char*);
     Friend* GetFriend(uint8_t*);
 
-    void RemoveFriend(Friend* f);
+    bool RemoveFriend(Friend* f);
     void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out);
 public:
     static FriendListWindow& Instance() {
         static FriendListWindow instance;
         return instance;
     }
+    // Encoded message types as received via encoded chat message
+    enum MessageType : wchar_t {
+        CANNOT_ADD_YOURSELF_AS_A_FRIEND = 0x2f3,
+        EXCEEDED_MAX_NUMBER_OF_FRIENDS,
+        CHARACTER_NAME_X_DOES_NOT_EXIST,
+        FRIEND_ALREADY_ADDED_AS_X,
+        INCOMING_WHISPER = 0x76d,
+        OUTGOING_WHISPER,
+        PLAYER_X_NOT_ONLINE = 0x881
+    };
+    bool WriteError(MessageType message_type, const wchar_t* character_name);
 
-    static void FriendStatusCallback(
-        GW::HookStatus*,
-        GW::Friend* f,
-        GW::FriendStatus status,
-        const wchar_t* alias,
-        const wchar_t* charname);
+    // Callback functions
+    static void OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak);
+    static void OnOutgoingWhisper(GW::HookStatus *status, int channel, wchar_t *message);
+    static void OnOutgoingWhisperSuccess(GW::HookStatus *status, wchar_t *message);
+    static void OnFriendAlreadyAdded(GW::HookStatus *status, wchar_t *message);
+    static void OnPlayerNotOnline(GW::HookStatus *status, wchar_t *message);
+    // Hook triggered when a new GW::Friend object has been newly added to your friend list. Can trigger on map entry or when adding a friend.
+    static void OnFriendCreated(GW::HookStatus*, const uint8_t* uuid, GW::FriendStatus, const wchar_t*, const wchar_t*);
+    static void OnFriendUpdated(GW::HookStatus*, GW::Friend* f, GW::FriendStatus status, const wchar_t* alias, const wchar_t* charname);
+    static void OnAddFriendError(GW::HookStatus* status, wchar_t* message);
+    static void OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*);
+
+    static void AddFriendAliasToMessage(UIChatMessage* uimsg);
 
     const char* Name() const override { return "Friend List"; }
     bool IsWidget() const override;
@@ -128,6 +148,21 @@ private:
     bool show_alias_on_whisper = false;
     bool show_my_status = true;
 
+    // When a whisper is being redirected by this module, this flag is set. Stops infinite redirect loops.
+    bool is_redirecting_whisper = false;
+    struct PendingWhisper {
+        std::wstring charname;
+        std::wstring message;
+        clock_t pending_add = 0;
+        inline void reset(std::wstring _charname = L"", std::wstring _message = L"") {
+            charname = _charname;
+            message = _message;
+            pending_add = 0;
+        }
+    };
+
+    PendingWhisper pending_whisper;
+
     int explorable_show_as = 1;
     int outpost_show_as = 1;
 
@@ -153,4 +188,7 @@ private:
     GW::HookEntry FriendStatusUpdate_Entry;
     GW::HookEntry ErrorMessage_Entry;
     GW::HookEntry PlayerJoinInstance_Entry;
+    GW::HookEntry SendChat_Entry;
+    GW::HookEntry OnFriendCreated_Entry;
+    GW::HookEntry OnUIMessage_Entry;
 };

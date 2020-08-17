@@ -8,6 +8,7 @@
 
 #pragma warning(disable: 4061) // enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
 #pragma warning(disable: 4091) // 'keyword' : ignored on left of 'type' when no variable is declared
+#pragma warning(disable: 4099) // PDB '*.pdb' was not found with '*.lib(*.obj)' or at '..\..\..\*.pdb'; linking object as if no debug info
 #pragma warning(disable: 4100) // 'identifier' : unreferenced formal parameter
 #pragma warning(disable: 4365) // 'action' : conversion from 'type_1' to 'type_2', signed/unsigned mismatch
 #pragma warning(disable: 4514) // 'function' : unreferenced inline function has been removed
