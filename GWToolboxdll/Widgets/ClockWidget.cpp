@@ -13,7 +13,7 @@ void ClockWidget::Draw(IDirect3DDevice9* pDevice) {
     GetLocalTime(&time);
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
         static char timer[32];
         if (use_24h_clock) {
@@ -29,7 +29,7 @@ void ClockWidget::Draw(IDirect3DDevice9* pDevice) {
             else
                 snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, (time.wHour >= 12 ? "p.m." : "a.m."));
         }
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f48));
         ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
         ImGui::TextColored(ImColor(0, 0, 0), timer);

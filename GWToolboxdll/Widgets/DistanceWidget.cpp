@@ -49,7 +49,7 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
         static char dist_perc[32];
         static char dist_abs[32];
@@ -79,7 +79,7 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
 
             ImColor background = ImColor(Colors::Black());
             // 'distance'
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f20));
             ImVec2 cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
             ImGui::TextColored(background, "Distance");
@@ -88,7 +88,7 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             // perc
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f42));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(background, dist_perc);
@@ -97,7 +97,7 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             // abs
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f24));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(background, dist_abs);

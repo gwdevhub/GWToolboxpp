@@ -56,8 +56,8 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 	static float time_since_last_update = 0.0f;
 	time_since_last_update += g.IO.DeltaTime;
 	bool update_keyboard_match = false;
-	for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++) {
-		if (unsigned int c = (unsigned int)g.IO.InputCharacters[n]) {
+    for (int n = 0; n < g.IO.InputQueueCharacters.size() && g.IO.InputQueueCharacters[n]; n++) {
+        if (unsigned int c = (unsigned int)g.IO.InputQueueCharacters[n]) {
 			if (c == ' '
 				|| (c >= '0' && c <= '9')
 				|| (c >= 'A' && c <= 'Z')

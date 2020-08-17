@@ -1217,7 +1217,7 @@ void HotkeyFlagHero::Execute()
         }
     } else {
         const GW::HeroFlagArray &flags = GW::GameContext::instance()->world->hero_flags;
-        if (!flags.valid() || hero > flags.size())
+        if (!flags.valid() || hero > (int)flags.size())
             return;
 
         const GW::HeroFlag &flag = flags[hero - 1];
@@ -1240,13 +1240,13 @@ void HotkeyFlagHero::Execute()
 
         reference_radiant = std::atan(dx == 0 ? dy : dy / dx);
         if (dx < 0) {
-            reference_radiant += M_PI;
+            reference_radiant += static_cast<float>(M_PI);
         } else if (dx > 0 && dy < 0) {
-            reference_radiant += 2 * M_PI;
+            reference_radiant += 2 * static_cast<float>(M_PI);
         }
     }
 
-    const float radiant = degree * M_PI / 180.f;
+    const float radiant = degree * static_cast<float>(M_PI) / 180.f;
     const float x = player->x + distance * std::cos(reference_radiant - radiant);
     const float y = player->y + distance * std::sin(reference_radiant - radiant);
 

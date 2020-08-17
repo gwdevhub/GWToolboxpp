@@ -651,11 +651,11 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     const bool is_window = IsWindow();
     if (!is_widget && !is_window)
         return;
-    ImGui::SetNextWindowPos(ImVec2(0.0f, 72.0f), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 72.0f), ImGuiCond_FirstUseEver);
     ImGuiIO* io = &ImGui::GetIO();
     ImVec2 window_size = ImVec2(540.0f * io->FontGlobalScale, 512.0f * io->FontGlobalScale);
     float cols[3] = { 180.0f * io->FontGlobalScale, 360.0f * io->FontGlobalScale, 540.0f * io->FontGlobalScale };
-    ImGui::SetNextWindowSize(window_size, ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(window_size, ImGuiCond_FirstUseEver);
     if (is_widget)
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0).Value);
     bool ok = ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());

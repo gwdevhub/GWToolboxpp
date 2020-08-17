@@ -237,8 +237,8 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
     }
 
     if (visible) {
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
             for (TeamBuild& tbuild : teambuilds) {
                 ImGui::PushID(static_cast<int>(tbuild.ui_id));
@@ -273,8 +273,8 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
         TeamBuild& tbuild = teambuilds[i];
         char winname[256];
         snprintf(winname, 256, "%s###build%d", tbuild.name, tbuild.ui_id);
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(winname, &tbuild.edit_open)) {
             ImGui::PushItemWidth(-120.0f);
             if (ImGui::InputText("Build Name", tbuild.name, 128)) builds_changed = true;

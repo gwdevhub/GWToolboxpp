@@ -53,10 +53,11 @@ sockaddr_sprint(char* s, size_t n, const sockaddr* host, bool inc_port = false)
 
 void ServerInfoWidget::Initialize() {
     ToolboxWidget::Initialize();
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_HookEntry,[this](GW::HookStatus* status,GW::Packet::StoC::InstanceLoadInfo* pak) {
-        current_server_info = nullptr;
-        server_ip[0] = 0;
-        server_location[0] = 0;
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
+        &InstanceLoadInfo_HookEntry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo*) {
+            current_server_info = nullptr;
+            server_ip[0] = 0;
+            server_location[0] = 0;
         });
     GetServerInfo();
 }
@@ -81,7 +82,7 @@ ServerInfoWidget::ServerInfo* ServerInfoWidget::GetServerInfo() {
     servers_by_ip.emplace(current_server_info->ip, current_server_info);
     return current_server_info;
 }
-void ServerInfoWidget::Update(float delta) {
+void ServerInfoWidget::Update(float) {
     if (current_server_info && current_server_info->country.empty() && current_server_info->last_update < time(nullptr) - 60) {
         if (server_info_fetcher.joinable())
             server_info_fetcher.join(); // Wait for thread to end.
@@ -107,16 +108,15 @@ void ServerInfoWidget::Update(float delta) {
     }
 }
 
-void ServerInfoWidget::Draw(IDirect3DDevice9* pDevice) {
+void ServerInfoWidget::Draw(IDirect3DDevice9*) {
     if (!visible) return;
     if (!server_location && !server_ip) return;
     if (!current_server_info) {
-        if (!GetServerInfo())
-            return;
+        if (!GetServerInfo()) return;
         server_string_dirty = true;
     }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
         ImGui::End();
         ImGui::PopStyleColor();
@@ -128,7 +128,7 @@ void ServerInfoWidget::Draw(IDirect3DDevice9* pDevice) {
         snprintf(server_ip, sizeof(server_ip) - 1, "%s", current_server_info->ip.c_str());
     }
     static ImVec2 cur;
-    ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
+    ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f20));
     cur = ImGui::GetCursorPos();
     ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
     ImGui::TextColored(ImColor(0, 0, 0), server_ip);
@@ -137,7 +137,7 @@ void ServerInfoWidget::Draw(IDirect3DDevice9* pDevice) {
     ImGui::PopFont();
     
     if (server_location) {
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f16));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
         ImGui::TextColored(ImColor(0, 0, 0), server_location);

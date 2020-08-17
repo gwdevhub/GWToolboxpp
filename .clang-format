@@ -2,7 +2,7 @@ UseTab: Never
 TabWidth: 4
 IndentWidth: 4
 ContinuationIndentWidth: 4
-ColumnLimit: 300
+ColumnLimit: 120
 
 Language: Cpp
 
@@ -17,7 +17,7 @@ AccessModifierOffset: -4
 # Align parameters on the open bracket
 # someLongFunction(argument1,
 #                  argument2);
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: false
 
 # Don't align consecutive assignments
 # int aaaa = 12;
@@ -54,9 +54,9 @@ AllowAllParametersOfDeclarationOnNextLine: false
 # if (a)           not       if (a) return;
 #   return;
 AllowShortBlocksOnASingleLine: false
-AllowShortCaseLabelsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: false
-AllowShortIfStatementsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: false
 
 # By default don't add a line break after the return type of top-level functions
@@ -130,7 +130,7 @@ IndentWrappedFunctionNames: false
 
 # Align pointer to the right
 # int *a;
-PointerAlignment: Right
+PointerAlignment: Left
 
 # Don't insert a space after a cast
 # x = (int32)y;    not    x = (int32) y;

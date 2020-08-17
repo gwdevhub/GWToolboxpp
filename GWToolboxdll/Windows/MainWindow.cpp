@@ -58,9 +58,9 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
     if (!visible) return;
     if (pending_refresh_buttons) RefreshButtons();
     static bool open = true;
-    ImGui::SetNextWindowSize(ImVec2(110.0f, 300.0f), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(110.0f, 300.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), show_closebutton ? &open : nullptr, GetWinFlags())) {
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f18));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f18));
         bool drawn = false;
         const size_t msize = modules_to_draw.size();
         for (size_t i = 0; i < msize;i++) {

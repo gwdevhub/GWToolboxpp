@@ -138,7 +138,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
         static char health_perc[32];
@@ -186,7 +186,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             }
 
             // 'health'
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f20));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
             ImGui::TextColored(background, "Health");
@@ -195,7 +195,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             // perc
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f42));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(background, "%s", health_perc);
@@ -204,7 +204,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             // abs
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f24));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(background, health_abs);
@@ -213,7 +213,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             if (click_to_print_health) {
-                if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringWindow()) {
+                if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsWindowHovered()) {
                     if (target) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
                         if (agent_name_ping.size()) {

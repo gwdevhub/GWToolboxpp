@@ -232,7 +232,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background).Value);
     ImGui::SetNextWindowSize(ImVec2(width, static_cast<float>(size * line_height)));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
-		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f16));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
 		const float &x = ImGui::GetWindowPos().x;
         const float &y = ImGui::GetWindowPos().y;
         const float &_width = ImGui::GetWindowWidth();

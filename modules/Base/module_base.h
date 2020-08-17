@@ -43,19 +43,19 @@ public:
 	virtual void Terminate() {};
 
 	// Update. Will always be called once every frame. Delta is in seconds. 
-	virtual void Update(float delta) {};
+	virtual void Update(float) {};
 
 	// Draw. Will always be called once every frame. 
-	virtual void Draw(IDirect3DDevice9* device) {};
+	virtual void Draw(IDirect3DDevice9*) {};
 
 	// Optional. Prefer using ImGui::GetIO() during update or render, if possible. 
-	virtual bool WndProc(UINT message, WPARAM wParam, LPARAM lParam) { return false; }
+	virtual bool WndProc(UINT /*message*/, WPARAM, LPARAM) { return false; }
 
 	// Load settings from ini
-	virtual void LoadSettings(CSimpleIni* ini) {};
+	virtual void LoadSettings(CSimpleIni*) {};
 
 	// Save settings to ini
-	virtual void SaveSettings(CSimpleIni* ini) {};
+	virtual void SaveSettings(CSimpleIni*) {};
 
 	// Draw settings. 
 	virtual void DrawSettings() {};

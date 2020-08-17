@@ -675,9 +675,9 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
 
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+    ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImInPresearing()) {
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
             TravelButton("Ascalon City", 0, GW::Constants::MapID::Ascalon_City_pre_searing);
             TravelButton("Ashford Abbey", 1, GW::Constants::MapID::Ashford_Abbey_outpost);
@@ -687,8 +687,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         ImGui::End();
     } else {
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
             ImGui::PushItemWidth(-1.0f);
             static int travelto_index = -1;

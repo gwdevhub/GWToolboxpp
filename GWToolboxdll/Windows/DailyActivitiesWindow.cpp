@@ -369,12 +369,11 @@ void DailyActivitiesWindow::DrawLine(
     }
 }
 
-void DailyActivitiesWindow::Draw(IDirect3DDevice9* pDevice) {
+void DailyActivitiesWindow::Draw(IDirect3DDevice9*) {
     if (!visible) return;
 
     ImColor sCol(102, 187, 238, 255);
 
-    bool highlight_sc_bounties = true;
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         //ImGui::Checkbox("Highlight SC bounties", &highlight_sc_bounties);
         DrawLine(

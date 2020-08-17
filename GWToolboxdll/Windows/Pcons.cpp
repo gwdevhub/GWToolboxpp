@@ -134,7 +134,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
     if (ImGui::IsItemHovered() && desc.size())
         ImGui::SetTooltip(desc.c_str());
     if (maptype != GW::Constants::InstanceType::Loading) {
-        ImFont* f = GuiUtils::GetFont(GuiUtils::f20);
+        ImFont* f = GuiUtils::GetFont(GuiUtils::FontSize::f20);
         ImVec2 nextPos = ImGui::GetCursorPos();
         ImGui::PushFont(f);
         ImVec4 color;
@@ -150,7 +150,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
         ImGui::PopFont();
 
         if (maptype == GW::Constants::InstanceType::Outpost && PconsWindow::Instance().show_storage_quantity) {
-            f = GuiUtils::GetFont(GuiUtils::f16);
+            f = GuiUtils::GetFont(GuiUtils::FontSize::f16);
             ImGui::PushFont(f);
             ImGui::SetCursorPos(ImVec2(pos.x + 3, nextPos.y - f->FontSize));
             ImGui::TextColored(ImVec4(0, 0, 0, 1), "%d", quantity_storage);
