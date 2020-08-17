@@ -292,6 +292,8 @@ void PartyWindowModule::LoadDefaults() {
 
     //AddSpecialNPC({ "Ebon Vanguard Assassin", 5848, GW::Constants::MapID::None });
     AddSpecialNPC({ "Ebon Vanguard Assassin", GW::Constants::ModelID::EbonVanguardAssassin, GW::Constants::MapID::None });
+
+    AddSpecialNPC({ "Ben Wolfson Pre-Searing", 1512, GW::Constants::MapID::None });
 }
 bool PartyWindowModule::ShouldAddAgentToPartyWindow(uint32_t agent_type) {
     if ((agent_type & 0x20000000) == 0)
