@@ -30,6 +30,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 
+set(CMAKE_CXX_FLAGS_DEBUG "/ZI")
+
 # Outputs dll, exe, and pdb into a /bin/config folder
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/")
 
@@ -77,4 +79,3 @@ endmacro()
 
 # add_tb_module(InstanceTimer)
 # add_tb_module(clock)
-

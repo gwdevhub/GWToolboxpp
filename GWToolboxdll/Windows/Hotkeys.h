@@ -340,6 +340,6 @@ public:
     void Save(CSimpleIni *ini, const char *section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
     void Execute() override;
 };

@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Widgets/Minimap/Minimap.h"
+
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
@@ -35,6 +37,8 @@
 #include <Windows/Hotkeys.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/PconsWindow.h>
+
+#include <string>
 
 
 bool TBHotkey::show_active_in_header = true;
@@ -75,6 +79,8 @@ TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
         return new HotkeyHeroTeamBuild(ini, section);
     } else if (type.compare(HotkeyEquipItem::IniSection()) == 0) {
         return new HotkeyEquipItem(ini, section);
+    } else if (type.compare(HotkeyFlagHero::IniSection()) == 0) {
+        return new HotkeyFlagHero(ini, section);
     } else {
         return nullptr;
     }
@@ -1170,10 +1176,11 @@ void HotkeyHeroTeamBuild::Execute()
 HotkeyFlagHero::HotkeyFlagHero(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
-    degree = ini ? static_cast<float>(ini->GetDoubleValue(section, "degree", degree)) : degree;
-    distance = ini ? static_cast<float>(ini->GetDoubleValue(section, "distance", distance)) : distance;
-    hero = ini ? ini->GetLongValue(section, "hero", hero) : hero;
+    degree = static_cast<float>(ini->GetDoubleValue(section, "degree", degree));
+    distance = static_cast<float>(ini->GetDoubleValue(section, "distance", distance));
+    hero = ini->GetLongValue(section, "hero", hero);
     if (hero < 0) hero = 0;
+    if (hero > 11) hero = 11;
 }
 void HotkeyFlagHero::Save(CSimpleIni *ini, const char *section) const
 {
@@ -1192,32 +1199,36 @@ void HotkeyFlagHero::Description(char *buf, size_t bufsz) const
 }
 void HotkeyFlagHero::Draw()
 {
-    hotkeys_changed |= ImGui::InputFloat("Degree", &degree, 0.0f, 0.0f, 3);
-    hotkeys_changed |= ImGui::InputFloat("Distance", &distance, 0.0f, 0.0f, 3);
+    hotkeys_changed |= ImGui::DragFloat("Degree", &degree, 0.0f, -360.0f, 360.f);
+    hotkeys_changed |= ImGui::DragFloat("Distance", &distance, 0.0f, 0.0f, 10'000.f);
     if (hotkeys_changed && distance < 0.f)
         distance = 0.f;
-    hotkeys_changed |= ImGui::InputInt("Hero", &hero, 0);
+    hotkeys_changed |= ImGui::InputInt("Hero", &hero, 1);
     if (hotkeys_changed && hero < 0)
         hero = 0;
-    ImGui::ShowHelp("The hero id that should be flagged.\nUse 0 to flag all");
+    else if (hotkeys_changed && hero > 11)
+        hero = 11;
+    ImGui::ShowHelp("The hero number that should be flagged (1-11).\nUse 0 to flag all");
+    ImGui::Text("For a minimap flagging hotkey, please create a chat hotkey with:");
+    ImGui::TextColored({1.f, 1.f, 0.f, 1.f}, "/flag %d toggle", hero);
 }
 void HotkeyFlagHero::Execute()
 {
     if (!isExplorable())
         return;
 
-    GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
+    const GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
 
     if (hero < 0)
         return;
     if (hero == 0) {
-        if (!(std::isinf(allflag.x) && !std::isinf(allflag.y))) {
+        if (allflag.x != 0 && allflag.y != 0 && (!std::isinf(allflag.x) || !std::isinf(allflag.y))) {
             GW::PartyMgr::UnflagAll();
             return;
         }
     } else {
         const GW::HeroFlagArray &flags = GW::GameContext::instance()->world->hero_flags;
-        if (!flags.valid() || hero > (int)flags.size())
+        if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size())
             return;
 
         const GW::HeroFlag &flag = flags[hero - 1];

@@ -124,14 +124,45 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
         Instance().FlagHero(0); // "/flag"
         return;
     }
+    const auto is_flagged = [](auto hero) -> bool {
+        if (hero == 0) {
+            const GW::Vec3f &allflag = GW::GameContext::instance()->world->all_flag;
+            if (allflag.x != 0 && allflag.y != 0 && (!std::isinf(allflag.x) || !std::isinf(allflag.y))) {
+                return true;
+            }
+        } else {
+            const GW::HeroFlagArray &flags = GW::GameContext::instance()->world->hero_flags;
+            if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size())
+                return false;
+
+            const GW::HeroFlag &flag = flags[hero - 1];
+            if (!std::isinf(flag.flag.x) || !std::isinf(flag.flag.y)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
     float x;
     float y;
     unsigned int n_heros = 0; // Count of heros available
     unsigned int f_hero = 0;  // Hero number to flag
-    if (arg1 == L"all") {
-        if (argc <= 2) {
+    if (arg1 == L"all" || arg1 == L"0") {
+        if (argc < 3) {
             Instance().FlagHero(0); // "/flag all" == "/flag"
+            return;
+        }
+        const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+        if (arg2 == L"clear") {
+            GW::PartyMgr::UnflagAll(); // "/flag 5 clear"
+            return;
+        }
+        if (arg2 == L"toggle") { // "/flag 5 toggle"
+            if (is_flagged(0))
+                GW::PartyMgr::UnflagAll();
+            else
+                Instance().FlagHero(0);
             return;
         }
         if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
@@ -141,7 +172,8 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
         GW::PartyMgr::FlagAll(GW::GamePos(x, y, 0)); // "/flag all -2913.41 3004.78"
         return;
     }
-    const auto heroarray = GW::GameContext::instance()->party->player_party->heroes;
+    const auto& heroarray = GW::GameContext::instance()->party->player_party->heroes;
+    
     if (heroarray.valid())
         n_heros = heroarray.size();
     if (n_heros < 1) {
@@ -165,6 +197,13 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
     const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
     if (arg2 == L"clear") {
         GW::PartyMgr::UnflagHero(f_hero); // "/flag 5 clear"
+        return;
+    }
+    if (arg2 == L"toggle") { // "/flag 5 toggle"
+        if (is_flagged(f_hero))
+            GW::PartyMgr::UnflagHero(f_hero);
+        else 
+            Instance().FlagHero(f_hero);
         return;
     }
     if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
