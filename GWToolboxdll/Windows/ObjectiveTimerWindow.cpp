@@ -1197,8 +1197,11 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
 
     sprintf(buf, "%s%s - %s%s###header%u", show_start_date_time ? cached_start : "", name, cached_time, failed ? " [Failed]" : "", ui_id);
 
-    bool is_open;
-    if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
+    bool is_open = true;
+    bool is_collapsed = !ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen);
+    if (!is_open)
+        return false;
+    if (!is_collapsed) {
         ImGui::PushID(static_cast<int>(ui_id));
         for (Objective& objective : objectives) {
             objective.Draw();
@@ -1209,7 +1212,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
         ImGui::GetCurrentWindow()->DC.StateStorage->SetInt(ImGui::GetID(buf), 0);
         need_to_collapse = false;
     }
-    return is_open;
+    return true;
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(struct tm* timeinfo) {
