@@ -431,7 +431,7 @@ bool FriendListWindow::WriteError(MessageType message_type, const wchar_t* chara
     return true;
 }
 
-void FriendListWindow::OnAddFriendError(GW::HookStatus* status, wchar_t* message) {
+void FriendListWindow::OnAddFriendError(GW::HookStatus* status, wchar_t* ) {
     FriendListWindow& instance = Instance();
     if (instance.pending_whisper.charname.size()) {
         ASSERT(instance.WriteError(MessageType::PLAYER_X_NOT_ONLINE, instance.pending_whisper.charname.c_str()));
@@ -458,7 +458,7 @@ void FriendListWindow::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::
         fc->profession = profession;
 }
 // Record the pending outgoing whisper
-void FriendListWindow::OnOutgoingWhisper(GW::HookStatus *status, int channel, wchar_t *message)
+void FriendListWindow::OnOutgoingWhisper(GW::HookStatus *, int channel, wchar_t *message)
 {
     FriendListWindow& instance = Instance();
     // If this outgoing whisper was created due to a redirect, or its not a whisper, drop out here.
@@ -469,7 +469,7 @@ void FriendListWindow::OnOutgoingWhisper(GW::HookStatus *status, int channel, wc
 }
 
 // Remove from pending whispers when whisper has been sent
-void FriendListWindow::OnOutgoingWhisperSuccess(GW::HookStatus *status, wchar_t *message)
+void FriendListWindow::OnOutgoingWhisperSuccess(GW::HookStatus *, wchar_t *)
 {
     FriendListWindow &instance = Instance();
     instance.pending_whisper.reset();
@@ -599,8 +599,6 @@ void FriendListWindow::Poll() {
         if (!lf) continue;
         lf->last_update = now;
     }
-    //Log::Log("Polling non-gw friends list\n");
-    int friend_list_spaces = 100 - static_cast<int>(fl->number_of_friend);
     std::unordered_map<std::string, Friend*>::iterator it = friends.begin();
     while (it != friends.end()) {
         Friend* lf = it->second;
@@ -612,8 +610,6 @@ void FriendListWindow::Poll() {
         // Removed from in-game friend list, delete from tb friend list.
         ASSERT(RemoveFriend(lf));
         it = friends.begin();
-        continue;
-        it++;
     }
     //Log::Log("Friends list polled\n");
     friends_list_checked = now;
