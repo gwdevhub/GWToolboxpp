@@ -60,6 +60,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
     unsigned int tries = 0;
     while (tries < 5 && releases_str.empty()) {
         releases_str = Resources::Instance().Download(L"https://api.github.com/repos/HasKha/GWToolboxpp/releases");
+        tries++;
     }
     if (releases_str.empty()) {
         return;
