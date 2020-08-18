@@ -384,8 +384,11 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
     GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
     GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target && auto_target_id) {
-        target = static_cast<GW::AgentLiving *>(GW::Agents::GetAgentByID(auto_target_id));
+    if (target) {
+        auto_target_id = 0;
+    }
+    else if (auto_target_id) {
+        target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(auto_target_id));
         if (target && !target->GetIsLivingType())
             target = nullptr;
     }
@@ -521,14 +524,13 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
     Color color = GetColor(agent, ca);
     float size = GetSize(agent, ca);
     Shape_e shape = GetShape(agent, ca);
-
-    if (auto_target_id == agent->agent_id) {
-        Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
-    } else if (GW::Agents::GetTargetId() == agent->agent_id && shape != BigCircle) {
-        Enqueue(shape, agent, size + 50.0f, color_target);
+    // No target highlight if BigCircle
+    if (shape != BigCircle) {
+        // Target highlight if this is the current or next target
+        if (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id)
+            Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
     }
-
-    Enqueue(shape, agent, size, color);
+    return Enqueue(shape, agent, size, color);
 }
 
 Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) const {
