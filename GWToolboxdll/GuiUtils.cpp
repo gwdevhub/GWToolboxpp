@@ -45,7 +45,7 @@ void GuiUtils::LoadFonts() {
         ImFontConfig* fontCfg;
         
         // Preload font size 16, then re-use the binary data for other sizes to avoid re-reading the file.
-        if (PathFileExistsW(Resources::GetPath(L"Font.ttf").c_str())) {
+        if (std::filesystem::exists(Resources::GetPath(L"Font.ttf"))) {
             utf8::string f = Resources::GetPathUtf8(L"Font.ttf");
             io.Fonts->AddFontFromFileTTF(f.bytes, 16.0f, 0, io.Fonts->GetGlyphRangesDefault());
             printf("Font.ttf found and pre-loaded\n");
@@ -60,7 +60,7 @@ void GuiUtils::LoadFonts() {
         fontCfg = &io.Fonts->ConfigData.back();
 
         for (unsigned int i = 0; i < extra_fonts.size(); i++) {
-            if (PathFileExistsW(Resources::GetPath(extra_fonts[i].first).c_str())) {
+            if (std::filesystem::exists(Resources::GetPath(extra_fonts[i].first))) {
                 ImFontConfig c;
                 c.MergeMode = true;
                 io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(extra_fonts[i].first).bytes, 16.0f, &c, extra_fonts[i].second);
@@ -81,7 +81,7 @@ void GuiUtils::LoadFonts() {
         copyCfg.GlyphRanges = fontCfg->GlyphRanges;
 
         copyCfg.SizePixels = 18.0f;
-        sprintf(copyCfg.Name,"Default_18");
+        sprintf(copyCfg.Name, "Default_18");
         font18 = io.Fonts->AddFont(&copyCfg);
 
         copyCfg.SizePixels = 20.0f;
