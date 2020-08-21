@@ -143,7 +143,7 @@ void TBHotkey::Draw(Op *op)
             const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
             if (show_active_in_header) {
                 ImGui::SameLine(
-                    ImGui::GetContentRegionAvailWidth() -
+                    ImGui::GetContentRegionAvail().x -
                     ImGui::GetTextLineHeight() - style.FramePadding.y * 2 -
                     (show_run_in_header
                          ? (btn_width + ImGui::GetStyle().ItemSpacing.x)
@@ -155,7 +155,7 @@ void TBHotkey::Draw(Op *op)
                         "The hotkey can trigger only when selected");
             }
             if (show_run_in_header) {
-                ImGui::SameLine(ImGui::GetContentRegionAvailWidth() -
+                ImGui::SameLine(ImGui::GetContentRegionAvail().x -
                                 btn_width);
                 if (ImGui::Button("Run", ImVec2(btn_width, 0.0f))) {
                     Execute();
@@ -1016,11 +1016,11 @@ void HotkeyMove::Description(char *buf, size_t bufsz) const
 }
 void HotkeyMove::Draw()
 {
-    if (ImGui::InputFloat("x", &x, 0.0f, 0.0f, 3))
+    if (ImGui::InputFloat("x", &x, 0.0f, 0.0f))
         hotkeys_changed = true;
-    if (ImGui::InputFloat("y", &y, 0.0f, 0.0f, 3))
+    if (ImGui::InputFloat("y", &y, 0.0f, 0.0f))
         hotkeys_changed = true;
-    if (ImGui::InputFloat("Range", &range, 0.0f, 0.0f, 0))
+    if (ImGui::InputFloat("Range", &range, 0.0f, 0.0f))
         hotkeys_changed = true;
     ImGui::ShowHelp(
         "The hotkey will only trigger within this range.\nUse 0 for no limit.");

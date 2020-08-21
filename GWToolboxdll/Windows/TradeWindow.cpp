@@ -488,7 +488,7 @@ void TradeWindow::DrawChatSettings(bool ownwindow)
     ImGui::Checkbox("Apply trade alerts to local trade messages", &filter_local_trade);
     ImGui::ShowHelp("If enabled, only trade messages matching your alerts will be shown in chat");
     if (!ownwindow) {
-        ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - 120.f * ImGui::GetIO().FontGlobalScale, 0);
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 120.f * ImGui::GetIO().FontGlobalScale, 0);
         if(ImGui::Button("Show Trade Alerts"))
             show_alert_window = !show_alert_window;
     }

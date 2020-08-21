@@ -167,7 +167,7 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
     //ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
     ImGui::PopItemWidth();
     if (ImGui::TreeNode("Advanced##item")) {
-        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
         if (item) {
             ImGui::LabelText("Addr", "%p", item);
             ImGui::LabelText("Id", "%d", item->item_id);
@@ -376,7 +376,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 if (ImGui::TreeNode("Advanced##target")) {
                     GW::Agent *me = GW::Agents::GetPlayer();
                     
-                    ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                     ImGui::LabelText("Addr", "%p", target);
                     ImGui::LabelText("Id", "%d", target->agent_id);
                     ImGui::LabelText("Z", "%f", target->z);
@@ -428,7 +428,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 if (player) {
                     if (ImGui::TreeNode("Player Info##target")) {
-                        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                         ImGui::LabelText("Addr", "%p", player);
                         ImGui::LabelText("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
                         ImGui::PopItemWidth();
@@ -437,7 +437,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 if (guild) {
                     if (ImGui::TreeNode("Guild Info##target")) {
-                        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                         ImGui::LabelText("Addr", "%p", guild);
                         ImGui::LabelText("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());
                         ImGui::LabelText("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");

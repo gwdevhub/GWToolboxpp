@@ -278,7 +278,7 @@ void TwitchModule::DrawSettingInternal() {
         ImGui::Checkbox("Notify on user join", &notify_on_user_join);
         ImGui::ShowHelp("Receive a message in the chat window when a viewer joins the Twitch Channel");
 
-        float width = ImGui::GetContentRegionAvailWidth() / 2;
+        float width = ImGui::GetContentRegionAvail().x / 2;
         ImGui::PushItemWidth(width);
         /*ImGui::InputText("Twitch Alias", const_cast<char*>(irc_alias.c_str()), 32);
         ImGui::ShowHelp("Sending a whisper to this name will send the message to Twitch.\nCannot contain spaces.");

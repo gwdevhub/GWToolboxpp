@@ -351,7 +351,7 @@ void PartyWindowModule::DrawSettingInternal() {
         ImGui::Text("%d", npc->model_id);
         ImGui::SameLine(cols[1]);
         ImGui::Text("%ls", npc->GetMapName()->c_str());
-        ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - (48.0f * fontScale));
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - (48.0f * fontScale));
         bool clicked = ImGui::Button(" X ");
         ImGui::PopID();
         if(clicked) {

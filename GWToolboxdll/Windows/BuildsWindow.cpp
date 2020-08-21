@@ -123,7 +123,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     const float btn_width = 50.0f * font_scale;
     const float del_width = 24.0f * font_scale;
     const float spacing = ImGui::GetStyle().ItemSpacing.y;
-    const float btn_offset = ImGui::GetContentRegionAvailWidth() - del_width - btn_width * 3 - spacing * 3;
+    const float btn_offset = ImGui::GetContentRegionAvail().x - del_width - btn_width * 3 - spacing * 3;
     ImGui::Text("#%d", j + 1);
     ImGui::PushItemWidth((btn_offset - btn_width - spacing * 2) / 2);
     ImGui::SameLine(btn_width, 0);
@@ -193,7 +193,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     auto pcons = PconsWindow::Instance().pcons;
         
     float pos_x = 0;
-    float third_w = ImGui::GetContentRegionAvailWidth() / 3;
+    float third_w = ImGui::GetContentRegionAvail().x / 3;
     unsigned int offset = 0;
     for (size_t i = 0; i < pcons.size(); i++) {
         auto pcon = pcons[i];
@@ -280,7 +280,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
             if (ImGui::InputText("Build Name", tbuild.name, 128)) builds_changed = true;
             ImGui::PopItemWidth();
             const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
-            const float btn_offset = ImGui::GetContentRegionAvailWidth() - btn_width * 3 - ImGui::GetStyle().FramePadding.x * 3;
+            const float btn_offset = ImGui::GetContentRegionAvail().x - btn_width * 3 - ImGui::GetStyle().FramePadding.x * 3;
             for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
                 ImGui::PushID(static_cast<int>(j));
                 BuildsWindow::DrawBuildSection(tbuild, j);

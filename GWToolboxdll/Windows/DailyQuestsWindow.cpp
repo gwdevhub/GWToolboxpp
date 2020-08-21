@@ -1228,7 +1228,7 @@ void DailyQuests::DrawHelp() {
 }
 void DailyQuests::DrawSettingInternal() {
     ToolboxWindow::DrawSettingInternal();
-    float width = ImGui::GetContentRegionAvailWidth() / 2;
+    float width = ImGui::GetContentRegionAvail().x / 2;
     ImGui::PushItemWidth(width);
     ImGui::InputInt("Show daily quests for the next ", &daily_quest_window_count);
     ImGui::PopItemWidth();

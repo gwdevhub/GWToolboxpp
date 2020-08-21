@@ -277,7 +277,7 @@ void ChatCommands::DrawSettingInternal() {
     ImGui::Text("'/cam unlock' options");
     ImGui::Indent();
     ImGui::Checkbox("Fix height when moving forward", &forward_fix_z);
-    ImGui::InputFloat("Camera speed", &cam_speed, 0.0f, 0.0f, 3);
+    ImGui::InputFloat("Camera speed", &cam_speed);
     ImGui::Unindent();
 }
 

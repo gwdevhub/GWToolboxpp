@@ -546,7 +546,7 @@ bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 }
 
 void ChatFilter::DrawSettingInternal() {
-    const float half_width = ImGui::GetContentRegionAvailWidth() / 2;
+    const float half_width = ImGui::GetContentRegionAvail().x / 2;
     ImGui::Text("Hide the following messages:");
     ImGui::Separator();
     ImGui::Text("Drops");

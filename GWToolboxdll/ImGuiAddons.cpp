@@ -132,10 +132,10 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 			keyboard_selected = -1;
 		}
 		if (item_selected && IsWindowAppearing()) {
-			SetScrollHere();
+            SetScrollHereY();
 		}
 		if (item_keyboard_selected && keyboard_selected_now) {
-			SetScrollHere();
+            SetScrollHereY();
 		}
 		PopID();
 	}

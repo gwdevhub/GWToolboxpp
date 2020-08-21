@@ -84,7 +84,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings() {
 }
 
 void ToolboxUIElement::ShowVisibleRadio() {
-    ImGui::SameLine(ImGui::GetContentRegionAvailWidth()
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x
         - ImGui::GetTextLineHeight()
         - ImGui::GetStyle().FramePadding.y * 2);
     ImGui::PushID(Name());

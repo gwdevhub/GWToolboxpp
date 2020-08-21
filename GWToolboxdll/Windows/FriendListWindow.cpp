@@ -661,8 +661,8 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         return ImGui::End();
 
     unsigned int colIdx = 0;
-    bool show_charname = ImGui::GetContentRegionAvailWidth() > 180.0f;
-    bool _show_location = ImGui::GetContentRegionAvailWidth() > 360.0f;
+    bool show_charname = ImGui::GetContentRegionAvail().x > 180.0f;
+    bool _show_location = ImGui::GetContentRegionAvail().x > 360.0f;
     if (!is_widget) {
         ImGui::Text("Name");
         if (show_charname) {
@@ -716,7 +716,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
         ImGui::PushID(lf.uuid.c_str());
-        ImGui::Button("", ImVec2(ImGui::GetContentRegionAvailWidth(), height));
+        ImGui::Button("", ImVec2(ImGui::GetContentRegionAvail().x, height));
         bool left_clicked = ImGui::IsItemClicked(0);
         bool right_clicked = ImGui::IsItemClicked(1);
         // TODO: Rename, Remove, Ignore.
