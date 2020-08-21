@@ -409,7 +409,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
         ImGui::CreateContext();
-        ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
+        //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
+        ImGui_ImplDX9_Init(device);
+        ImGui_ImplWin32_Init(GW::MemoryMgr().GetGWWindowHandle());
+
         ImGuiIO& io = ImGui::GetIO();
         io.MouseDrawCursor = false;
         
@@ -451,6 +454,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
             return; // Fonts not loaded yet.
 
         ImGui_ImplDX9_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
+
         // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct, 
         // or things like alt-tab make imgui think that alt is still down.
         ImGui::GetIO().KeysDown[VK_CONTROL] = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
@@ -471,9 +477,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
 
+        ImGui::EndFrame();
         ImGui::Render();
-        ImDrawData* draw_data = ImGui::GetDrawData();
-        ImGui_ImplDX9_RenderDrawData(draw_data);
+        ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
     }
 
     // === destruction ===
@@ -486,6 +492,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         GWToolbox::Instance().Terminate();
 
         ImGui_ImplDX9_Shutdown();
+        ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
 
         Log::Log("Restoring input hook\n");
