@@ -9,12 +9,14 @@ add_executable(GWToolbox)
 target_sources(GWToolbox PRIVATE ${SOURCES})
 target_precompile_headers(GWToolbox PRIVATE "stdafx.h")
 
+include(json)
+
 target_link_libraries(GWToolbox PRIVATE 
     # cmake dependencies:
     GWToolboxdll
     Core
     RestClient
-    json
+    nlohmann_json::nlohmann_json
     # libs:
     Ws2_32.lib
     Shlwapi.lib

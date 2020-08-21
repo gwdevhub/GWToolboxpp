@@ -95,7 +95,7 @@
 #include <Logger.h>
 #include <discord_game_sdk.h>
 #include <SimpleIni.h>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <easywsclient.hpp>
 #include <mp3.h>
 

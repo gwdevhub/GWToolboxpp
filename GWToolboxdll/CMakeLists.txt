@@ -1,4 +1,3 @@
-
 add_library(GWToolboxdll SHARED)
 
 file(GLOB SOURCES
@@ -27,6 +26,8 @@ target_include_directories(GWToolboxdll PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}"
     )
 
+include(json)
+
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     imgui
@@ -35,7 +36,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     utf8proc
     easywsclient
     discord_game_sdk
-    json
+    nlohmann_json::nlohmann_json
     simpleini
     # libs:
     Urlmon.lib
