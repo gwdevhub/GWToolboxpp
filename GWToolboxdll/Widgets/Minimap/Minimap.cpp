@@ -473,31 +473,41 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                     device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
                 };
 
-                D3DCOLOR color = Instance().pmap_renderer.GetBackgroundColor();
-                if (!Instance().circular_map) {
-                    auto &style = ImGui::GetStyle();
-                    RECT clipping;
-                    clipping.left = static_cast<long>(cmd->ClipRect.x - style.WindowPadding.x / 2); // > 0 ? cmd->ClipRect.x : 0);
-                    clipping.right = static_cast<long>(cmd->ClipRect.z + style.WindowPadding.x / 2 + 1);
-                    clipping.top = static_cast<long>(cmd->ClipRect.y);
-                    clipping.bottom = static_cast<long>(cmd->ClipRect.w);
-                    device->SetScissorRect(&clipping);
-                    device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-                    FillRect(color, Instance().location.x, Instance().location.y, Instance().size.x, Instance().size.y); // fill rect with chosen background color
-                } else {
-                    device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
-                    device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
-                    device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
-                    device->Clear(0, nullptr, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0); // clear depth and stencil buffer
-                    device->SetRenderState(D3DRS_STENCILREF, 1);
-                    device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);                           // write ref value into stencil buffer when passed
-                    float radius = static_cast<float>(Instance().size.x / 2.f);                                // rounding error in viewmatrix transformation
-                    FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
+                auto& style = ImGui::GetStyle();
+                RECT clipping;
+                clipping.left = static_cast<long>(cmd->ClipRect.x - style.WindowPadding.x / 2);
+                clipping.right = static_cast<long>(cmd->ClipRect.z + style.WindowPadding.x / 2 + 1);
+                clipping.top = static_cast<long>(cmd->ClipRect.y);
+                clipping.bottom = static_cast<long>(cmd->ClipRect.w);
+                device->SetScissorRect(&clipping);
+                device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
 
-                    device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
-                    device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
-                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+                HRESULT ret = 0;
+                D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
+                if (Instance().circular_map) {
+                    ret = device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
+                    ret = device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
+                    ret = device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
+
+                    // clear depth and stencil buffer
+                    // clearing the stencil buffer was failing for me ~Haskha
+                    ret = device->Clear(0, nullptr, D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0);
+                    ret = device->Clear(0, nullptr, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
+
+                    ret = device->SetRenderState(D3DRS_STENCILREF, 1);
+                    ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
+                    ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);      // write ref value into stencil buffer when passed
+                    float radius = static_cast<float>(Instance().size.x / 2.f);                 // rounding error in viewmatrix transformation
+                    FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius,
+                        background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
+
+                    ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
+                    ret = device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
+                    ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+                } else {
+
+                    FillRect(background, Instance().location.x, Instance().location.y, Instance().size.x,
+                        Instance().size.y); // fill rect with chosen background color
                 }
 
                 Instance().RenderSetupProjection(device);
