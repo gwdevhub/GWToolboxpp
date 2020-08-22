@@ -3,6 +3,17 @@
 #include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <ToolboxUIElement.h>
+#include <Windows/MainWindow.h>
+
+const char* ToolboxUIElement::UIName() const { 
+    if (Icon()) {
+        static char buf[128]; 
+        sprintf(buf, "%s  %s", Icon(), Name());
+        return buf;
+    } else {
+        return Name();
+    }
+}
 
 void ToolboxUIElement::Initialize() {
     ToolboxModule::Initialize();
@@ -61,26 +72,25 @@ void ToolboxUIElement::DrawSizeAndPositionSettings() {
         ImGui::ShowHelp(buf);
     }
     
-    bool newline = true;
+    ImGui::Spacing();
     if (is_movable) {
-        if (!newline)
-            ImGui::SameLine();
-        newline = false;
+        ImGui::SameLine();
         ImGui::Checkbox("Lock Position", &lock_move);
     }
     if (is_resizable) {
-        if (!newline)
-            ImGui::SameLine();
-        newline = false;
+        ImGui::SameLine();
         ImGui::Checkbox("Lock Size", &lock_size);
     }
     if (has_closebutton) {
-        if (!newline)
-            ImGui::SameLine();
-        newline = false;
+        ImGui::SameLine();
         ImGui::Checkbox("Show close button", &show_closebutton);
     }
-
+    if (can_show_in_main_window) {
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Show in main window", &show_menubutton)) {
+            MainWindow::Instance().pending_refresh_buttons = true;
+        }
+    }
 }
 
 void ToolboxUIElement::ShowVisibleRadio() {
@@ -93,10 +103,8 @@ void ToolboxUIElement::ShowVisibleRadio() {
     ImGui::PopID();
 }
 
-bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9* device, 
+bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*, 
     bool show_icon, bool show_text) {
-
-    UNREFERENCED_PARAMETER(device);
 
     ImGui::PushStyleColor(ImGuiCol_Button, visible ?
         ImGui::GetStyle().Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));
@@ -110,9 +118,14 @@ bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9* device,
     }
     float text_x = pos.x + img_size + (width - img_size - textsize.x) / 2;
     bool clicked = ImGui::Button("", ImVec2(width, ImGui::GetTextLineHeightWithSpacing()));
-    if (show_icon && button_texture != nullptr) {
-        ImGui::GetWindowDrawList()->AddImage((ImTextureID)button_texture, pos,
-            ImVec2(pos.x + img_size, pos.y + img_size));
+    if (show_icon) {
+        if (button_texture != nullptr) {
+            ImGui::GetWindowDrawList()->AddImage(
+                (ImTextureID)button_texture, pos, ImVec2(pos.x + img_size, pos.y + img_size));
+        } else if (Icon()) {
+            ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2), 
+                ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Icon());
+        }
     }
     if (show_text) {
         ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),

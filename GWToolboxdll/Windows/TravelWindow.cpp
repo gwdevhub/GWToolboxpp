@@ -635,8 +635,6 @@ namespace {
 
 void TravelWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img\\icons", L"airplane.png"), 
-        RESOURCES_DOWNLOAD_URL L"icons/airplane.png");
     Resources::Instance().LoadTextureAsync(&scroll_texture, Resources::GetPath(L"img\\materials", L"Scroll_of_Resurrection.png"), IDB_Mat_ResScroll);
     district = GW::Constants::District::Current;
     district_number = 0;
@@ -671,27 +669,26 @@ void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapI
     }
 }
 
-void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
+void TravelWindow::Draw(IDirect3DDevice9* pDevice)
+{
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
-    if (ImInPresearing()) {
-        if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+
+    if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+        if (ImInPresearing()) {
             TravelButton("Ascalon City", 0, GW::Constants::MapID::Ascalon_City_pre_searing);
             TravelButton("Ashford Abbey", 1, GW::Constants::MapID::Ashford_Abbey_outpost);
             TravelButton("Foible's Fair", 0, GW::Constants::MapID::Foibles_Fair_outpost);
             TravelButton("Fort Ranik", 1, GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost);
             TravelButton("The Barradin Estate", 0, GW::Constants::MapID::The_Barradin_Estate_outpost);
-        }
-        ImGui::End();
-    } else {
-
-        if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+        } else {
             ImGui::PushItemWidth(-1.0f);
             static int travelto_index = -1;
-            if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
+            if (ImGui::MyCombo(
+                    "travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
                 GW::Constants::MapID id = IndexToOutpostID(travelto_index);
                 Travel(id, district, district_number);
                 travelto_index = -1;
@@ -699,7 +696,8 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
             }
 
             static int district_index = 0;
-            static const char* const district_words[] = { "Current District",
+            static const char* const district_words[] = {
+                "Current District",
                 "International",
                 "American",
                 "American District 1",
@@ -712,7 +710,8 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
                 "Europe Russian",
                 "Asian Korean",
                 "Asia Chinese",
-                "Asia Japanese", };
+                "Asia Japanese",
+            };
             if (ImGui::Combo("###district", &district_index, district_words, N_DISTRICTS)) {
                 district_number = 0;
                 switch (district_index) {
@@ -733,8 +732,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
                     case 11: district = GW::Constants::District::AsiaKorean; break;
                     case 12: district = GW::Constants::District::AsiaChinese; break;
                     case 13: district = GW::Constants::District::AsiaJapanese; break;
-                    default:
-                        break;
+                    default: break;
                 }
             }
             ImGui::PopItemWidth();
@@ -751,7 +749,8 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
             for (int i = 0; i < fav_count; ++i) {
                 ImGui::PushID(i);
                 ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-                ImGui::MyCombo("", "Select a favorite", &fav_index[static_cast<size_t>(i)], outpost_name_array_getter, nullptr, N_OUTPOSTS);
+                ImGui::MyCombo("", "Select a favorite", &fav_index[static_cast<size_t>(i)], outpost_name_array_getter,
+                    nullptr, N_OUTPOSTS);
                 ImGui::PopItemWidth();
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
@@ -760,8 +759,8 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
                 ImGui::PopID();
             }
         }
-        ImGui::End();
     }
+    ImGui::End();
 }
 
 void TravelWindow::Update(float delta) {

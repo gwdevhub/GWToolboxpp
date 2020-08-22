@@ -5,6 +5,7 @@
 class MainWindow : public ToolboxWindow {
     MainWindow() {
         visible = true;
+        can_show_in_main_window = false;
     };
     ~MainWindow() {};
 public:

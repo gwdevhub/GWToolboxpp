@@ -98,6 +98,7 @@
 #include <nlohmann/json.hpp>
 #include <easywsclient.hpp>
 #include <mp3.h>
+#include <IconsFontAwesome5.h>
 
 #include <imgui.h>
 #include <imgui_internal.h>

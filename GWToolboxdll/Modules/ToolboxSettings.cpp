@@ -196,6 +196,7 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::Columns(1);
     ImGui::PopID();
     ImGui::PushID("menubuttons");
+    
     ImGui::Separator();
     ImGui::Text("Show the following in the main window:");
 
@@ -204,12 +205,10 @@ void ToolboxSettings::DrawSettingInternal() {
     col_count = 0;
     std::vector<ToolboxUIElement*> valid_elements;
     for (size_t i = 0; i < ui.size();i++) {
-        auto window = ui[i];
-        if (window == &Updater::Instance()) continue;
-        if (window == &MainWindow::Instance()) continue;
-        if (!(window->IsWidget() || window->IsWindow())) 
-            continue;
-        valid_elements.push_back(window);
+        auto& window = ui[i];
+        if ((window->IsWidget() || window->IsWindow()) && window->can_show_in_main_window) {
+            valid_elements.push_back(window);
+        }
     }
     std::sort(valid_elements.begin(), valid_elements.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
         return std::string(lhs->Name()).compare(rhs->Name()) < 0;

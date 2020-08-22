@@ -3,7 +3,7 @@
 #include "ToolboxUIElement.h"
 
 class Updater : public ToolboxUIElement {
-    Updater() {};
+    Updater() { can_show_in_main_window = false; };
     ~Updater() {};
 public:
     static Updater& Instance() {

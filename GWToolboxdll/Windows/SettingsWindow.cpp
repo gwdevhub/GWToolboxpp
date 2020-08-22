@@ -16,11 +16,6 @@
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
 
-void SettingsWindow::Initialize() {
-    ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"settings.png"), IDB_Icon_Settings);
-}
-
 void SettingsWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);

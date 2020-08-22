@@ -35,73 +35,58 @@ void GuiUtils::LoadFonts() {
         printf("Loading fonts\n");
 
         ImGuiIO& io = ImGui::GetIO();
-        std::vector<std::pair<wchar_t*, const ImWchar*>> extra_fonts;
-        extra_fonts.push_back({ L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese() });
-        extra_fonts.push_back({ L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic() });
-        extra_fonts.push_back({ L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull() });
-        extra_fonts.push_back({ L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean() });
 
-        // Pre-load font configs
-        ImFontConfig* fontCfg;
-        
-        // Preload font size 16, then re-use the binary data for other sizes to avoid re-reading the file.
-        if (std::filesystem::exists(Resources::GetPath(L"Font.ttf"))) {
-            utf8::string f = Resources::GetPathUtf8(L"Font.ttf");
-            io.Fonts->AddFontFromFileTTF(f.bytes, 16.0f, 0, io.Fonts->GetGlyphRangesDefault());
-            printf("Font.ttf found and pre-loaded\n");
+        struct FontData
+        {
+            wchar_t filename[128] = L"";
+            const ImWchar* glyph_ranges = nullptr;
+            void* data = nullptr;
+            size_t data_size = 0;
+        };
+        std::vector<FontData> fonts;
+
+        fonts.push_back({L"Font.ttf", io.Fonts->GetGlyphRangesDefault()});
+        static const ImWchar fa_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
+        fonts.push_back({L"fa-solid-900.ttf", fa_ranges});
+        fonts.push_back({L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese()});
+        fonts.push_back({L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic()});
+        fonts.push_back({L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull()});
+        fonts.push_back({L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean()});
+
+
+        // Load font data from disk
+        for (auto& font : fonts) {
+            utf8::string utf8path = Resources::GetPathUtf8(font.filename);
+            font.data = ImFileLoadToMemory(utf8path.bytes, "rb", &font.data_size, 0);
         }
-        else {
+
+        if (fonts.front().data == nullptr) {
             printf("Failed to find Font.ttf file\n");
-            fonts_loaded = true;
-            fonts_loading = false;
-            return;
-        }
-        // Collect the final font. This is the default (16px) font with all special chars merged. in.
-        fontCfg = &io.Fonts->ConfigData.back();
-
-        for (unsigned int i = 0; i < extra_fonts.size(); i++) {
-            if (std::filesystem::exists(Resources::GetPath(extra_fonts[i].first))) {
-                ImFontConfig c;
-                c.MergeMode = true;
-                io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(extra_fonts[i].first).bytes, 16.0f, &c, extra_fonts[i].second);
-                printf("%ls found and pre-loaded\n", extra_fonts[i].first);
-            }
-            else {
-                printf("%ls not found. Add this file to load special chars.\n", extra_fonts[i].first);
-            }
+            return; 
         }
         
-        font16 = fontCfg->DstFont;
+        std::vector<float> font_sizes = {16.f, 18.f, 20.f, 24.f, 42.f, 48.f};
+        for (unsigned int i = 0; i < font_sizes.size(); ++i) {
+            ImFontConfig cfg;
+            sprintf(cfg.Name, "Font%f", font_sizes[i]);
+            cfg.MergeMode = false; // for the first
+            cfg.SizePixels = font_sizes[i];
+            cfg.PixelSnapH = true;
+            cfg.FontDataOwnedByAtlas = (i == 0); // only the first font can free the data at the end
+            for (const auto& font : fonts) {
+                if (font.data) {
+                    io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, font_sizes[i], &cfg, font.glyph_ranges);
+                }
+                cfg.MergeMode = true;
+            }
+        }
+        font16 = io.Fonts->Fonts[0];
+        font18 = io.Fonts->Fonts[1];
+        font20 = io.Fonts->Fonts[2];
+        font24 = io.Fonts->Fonts[3];
+        font42 = io.Fonts->Fonts[4];
+        font48 = io.Fonts->Fonts[5];
 
-        // Recycle the binary data from original ImFontConfig for the other font sizes.
-        ImFontConfig copyCfg;
-        copyCfg.FontData = fontCfg->FontData;
-        copyCfg.FontDataSize = fontCfg->FontDataSize;
-        copyCfg.FontDataOwnedByAtlas = false; // Don't let ImGui try to free this data - it'll do it via defaultFontCfg
-        copyCfg.GlyphRanges = fontCfg->GlyphRanges;
-
-        copyCfg.SizePixels = 18.0f;
-        sprintf(copyCfg.Name, "Default_18");
-        font18 = io.Fonts->AddFont(&copyCfg);
-
-        copyCfg.SizePixels = 20.0f;
-        sprintf(copyCfg.Name, "Default_20");
-        font20 = io.Fonts->AddFont(&copyCfg);
-
-        copyCfg.SizePixels = 24.0f;
-        sprintf(copyCfg.Name, "Default_24");
-        font24 = io.Fonts->AddFont(&copyCfg);
-
-        copyCfg.SizePixels = 42.0f;
-        sprintf(copyCfg.Name, "Default_42");
-        font42 = io.Fonts->AddFont(&copyCfg);
-
-        copyCfg.SizePixels = 48.0f;
-        sprintf(copyCfg.Name, "Default_48");
-        font48 = io.Fonts->AddFont(&copyCfg);
-
-        printf("Building fonts...\n");
-        io.Fonts->Build();
         printf("Fonts loaded\n");
         fonts_loaded = true;
         fonts_loading = false;

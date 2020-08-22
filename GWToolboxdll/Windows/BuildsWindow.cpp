@@ -26,13 +26,8 @@ bool order_by_changed = false;
 
 #define INI_FILENAME L"builds.ini"
 
-BuildsWindow::~BuildsWindow() {
-
-}
-
 void BuildsWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
     send_timer = TIMER_INIT();
 
     GW::Chat::CreateCommand(L"loadbuild", CmdLoad);

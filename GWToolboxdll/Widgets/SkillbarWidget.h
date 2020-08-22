@@ -22,6 +22,7 @@ public:
     {
         return "Skillbar";
     }
+    const char* Icon() const override { return ICON_FA_ELLIPSIS_H; }
 
     void LoadSettings(CSimpleIni *ini) override;
     void SaveSettings(CSimpleIni *ini) override;

@@ -13,6 +13,7 @@ public:
     }
 
     const char* Name() const override { return "Health"; }
+    const char* Icon() const override { return ICON_FA_PERCENTAGE; }
 
     void LoadSettings(CSimpleIni *ini) override;
     void SaveSettings(CSimpleIni *ini) override;

@@ -27,6 +27,8 @@ public:
         return instance;
     }
     const char* Name() const override { return "Timer"; }
+    const char* Icon() const override { return ICON_FA_STOPWATCH; }
+
     void Initialize() override;
     void LoadSettings(CSimpleIni *ini) override;
     void SaveSettings(CSimpleIni *ini) override;

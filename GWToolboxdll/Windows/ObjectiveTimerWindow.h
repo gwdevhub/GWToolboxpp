@@ -20,6 +20,7 @@ public:
     }
 
     const char* Name() const override { return "Objective Timer"; }
+    const char* Icon() const override { return ICON_FA_BULLSEYE; }
 
     void Initialize() override;
 

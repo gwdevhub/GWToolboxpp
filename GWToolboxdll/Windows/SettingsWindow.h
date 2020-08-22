@@ -14,8 +14,7 @@ public:
     }
 
     const char* Name() const override { return "Settings"; }
-
-    void Initialize() override;
+    const char* Icon() const override { return ICON_FA_COGS; }
 
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;

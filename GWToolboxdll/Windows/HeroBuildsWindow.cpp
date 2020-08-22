@@ -137,7 +137,6 @@ HeroBuildsWindow::~HeroBuildsWindow() {
 
 void HeroBuildsWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"party.png"));
     send_timer = TIMER_INIT();
 }
 

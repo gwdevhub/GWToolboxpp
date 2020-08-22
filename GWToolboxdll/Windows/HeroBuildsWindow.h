@@ -50,6 +50,7 @@ public:
     }
 
     const char* Name() const override { return "Hero Builds"; }
+    const char* Icon() const override { return ICON_FA_USERS; }
 
     void Initialize() override;
     void Terminate() override;

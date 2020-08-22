@@ -49,7 +49,6 @@
 void InfoWindow::Initialize() {
     ToolboxWindow::Initialize();
 
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&MessageCore_Entry,OnMessageCore);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) -> void {

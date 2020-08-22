@@ -4,13 +4,17 @@
 #include <ToolboxModule.h>
 
 class ToolboxUIElement : public ToolboxModule {
+    friend class ToolboxSettings;
+
 public:
-    virtual ~ToolboxUIElement() {
-        //Terminate();
-    }
 
     // Draw user interface. Will be called every frame if the element is visible
     virtual void Draw(IDirect3DDevice9*) {};
+
+    virtual const char* Icon() const { return 0; }
+
+    virtual const char* UIName() const;
+    virtual const char* SettingsName() const override { return UIName(); }
 
     virtual void Initialize() override;
     virtual void Terminate() override;
@@ -44,6 +48,7 @@ public:
     }
     bool show_closebutton = true;
 protected:
+    bool can_show_in_main_window = true;
     bool has_closebutton = false;
     bool is_resizable = true;
     bool is_movable = true;

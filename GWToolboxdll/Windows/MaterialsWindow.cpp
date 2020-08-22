@@ -90,8 +90,6 @@ void MaterialsWindow::Update(float delta) {
 
 void MaterialsWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img\\icons", L"feather.png"), 
-        IDB_Icon_Feather);
 
     Resources::Instance().LoadTextureAsync(&tex_essence, Resources::GetPath(L"img\\icons", L"Essence_of_Celerity.png"), 
         IDB_Pcons_Essence);

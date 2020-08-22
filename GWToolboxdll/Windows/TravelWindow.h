@@ -16,6 +16,7 @@ public:
     }
 
     const char* Name() const override { return "Travel"; }
+    const char* Icon() const override { return ICON_FA_ROCKET; }
 
     void Initialize() override;
 
