@@ -109,6 +109,8 @@ public:
     EffectRenderer effect_renderer;
 
 private:
+    static void render_callback(const ImDrawList*, const ImDrawCmd* cmd);
+
     bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
     inline bool IsActive() const;

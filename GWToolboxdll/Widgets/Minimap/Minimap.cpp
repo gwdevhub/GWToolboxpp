@@ -421,164 +421,7 @@ void Minimap::Draw(IDirect3DDevice9 *device)
         location.y = static_cast<int>(ImGui::GetWindowPos().y);
         size.x = static_cast<int>(ImGui::GetWindowSize().x);
         size.y = static_cast<int>(ImGui::GetWindowSize().y);
-        ImGui::GetWindowDrawList()->AddCallback(
-            [](const ImDrawList *parent_list, const ImDrawCmd *cmd) -> void {
-                UNREFERENCED_PARAMETER(parent_list);
-
-                auto device = static_cast<IDirect3DDevice9 *>(cmd->UserCallbackData);
-                GW::Agent *me = GW::Agents::GetPlayer();
-                if (me == nullptr)
-                    return;
-
-                // Backup the DX9 state
-                IDirect3DStateBlock9 *d3d9_state_block = nullptr;
-                if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
-                    return;
-
-                // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
-                device->SetFVF(D3DFVF_CUSTOMVERTEX);
-                device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
-                device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-                device->SetPixelShader(nullptr);
-                device->SetVertexShader(nullptr);
-                device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-                device->SetRenderState(D3DRS_LIGHTING, false);
-                device->SetRenderState(D3DRS_ZENABLE, false);
-                device->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-                device->SetRenderState(D3DRS_ALPHATESTENABLE, false);
-                device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-                device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-                device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-                device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-                device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-                device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-                device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-                device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-                device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-                device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-                device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-
-                auto FillRect = [&device](const D3DCOLOR color, const int x, const int y, const int w, const int h) {
-                    D3DVertex vertices[6] = {{static_cast<float>(x), static_cast<float>(y), 1.0f, color},         {static_cast<float>(x) + w, static_cast<float>(y), 1.0f, color}, {static_cast<float>(x), static_cast<float>(y) + h, 1.0f, color},
-                                             {static_cast<float>(x) + w, static_cast<float>(y) + h, 1.0f, color}, {static_cast<float>(x), static_cast<float>(y), 1.0f, color},     {static_cast<float>(x) + w, static_cast<float>(y), 1.0f, color}};
-                    device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 4, vertices, sizeof(D3DVertex));
-                };
-
-                auto FillCircle = [&device](const float x, const float y, const float radius, const Color clr, float resolution = 199.f) {
-                    resolution = std::min(resolution, 199.f);
-                    D3DVertex vertices[200];
-                    for (auto i = 0; i <= resolution; ++i) {
-                        vertices[i] = {radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x, y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0, clr};
-                    }
-                    device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
-                };
-
-                auto& style = ImGui::GetStyle();
-                RECT clipping;
-                clipping.left = static_cast<long>(cmd->ClipRect.x - style.WindowPadding.x / 2);
-                clipping.right = static_cast<long>(cmd->ClipRect.z + style.WindowPadding.x / 2 + 1);
-                clipping.top = static_cast<long>(cmd->ClipRect.y);
-                clipping.bottom = static_cast<long>(cmd->ClipRect.w);
-                device->SetScissorRect(&clipping);
-                device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-
-                HRESULT ret = 0;
-                D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
-                if (Instance().circular_map) {
-                    ret = device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
-                    ret = device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
-                    ret = device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
-
-                    // clear depth and stencil buffer
-                    // clearing the stencil buffer was failing for me ~Haskha
-                    ret = device->Clear(0, nullptr, D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0);
-                    ret = device->Clear(0, nullptr, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
-
-                    ret = device->SetRenderState(D3DRS_STENCILREF, 1);
-                    ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-                    ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);      // write ref value into stencil buffer when passed
-                    float radius = static_cast<float>(Instance().size.x / 2.f);                 // rounding error in viewmatrix transformation
-                    FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius,
-                        background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
-
-                    ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
-                    ret = device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
-                    ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-                } else {
-
-                    FillRect(background, Instance().location.x, Instance().location.y, Instance().size.x,
-                        Instance().size.y); // fill rect with chosen background color
-                }
-
-                Instance().RenderSetupProjection(device);
-
-                D3DXMATRIX view;
-                D3DXMATRIX identity;
-                D3DXMatrixIdentity(&identity);
-                device->SetTransform(D3DTS_WORLD, &identity);
-                device->SetTransform(D3DTS_VIEW, &identity);
-
-                D3DXMATRIX translate_char;
-                D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
-
-                D3DXMATRIX rotate_char;
-                D3DXMatrixRotationZ(&rotate_char, -Instance().GetMapRotation() + static_cast<float>(M_PI_2));
-
-                D3DXMATRIX scaleM, translationM;
-                D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
-                D3DXMatrixTranslation(&translationM, Instance().translation.x, Instance().translation.y, 0);
-
-                float gwinch_scale = static_cast<float>(Instance().size.x) / 5000.0f / 2.f * Instance().scale;
-                if (gwinch_scale != Instance().gwinch_scale.x) {
-                    Instance().range_renderer.Invalidate();
-                    Instance().gwinch_scale = {gwinch_scale, gwinch_scale};
-                }
-
-                view = translate_char * rotate_char * scaleM * translationM;
-                device->SetTransform(D3DTS_VIEW, &view);
-
-                Instance().pmap_renderer.Render(device);
-
-                Instance().custom_renderer.Render(device);
-
-                // move the rings to the char position
-                D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
-                device->SetTransform(D3DTS_WORLD, &translate_char);
-                Instance().range_renderer.Render(device);
-                device->SetTransform(D3DTS_WORLD, &identity);
-
-                if (Instance().translation.x != 0 || Instance().translation.y != 0) {
-                    D3DXMATRIX view2 = scaleM;
-                    device->SetTransform(D3DTS_VIEW, &view2);
-                    Instance().range_renderer.SetDrawCenter(true);
-                    Instance().range_renderer.Render(device);
-                    Instance().range_renderer.SetDrawCenter(false);
-                    device->SetTransform(D3DTS_VIEW, &view);
-                }
-
-                Instance().symbols_renderer.Render(device);
-
-                device->SetTransform(D3DTS_WORLD, &identity);
-                Instance().agent_renderer.Render(device);
-
-                Instance().effect_renderer.Render(device);
-
-                Instance().pingslines_renderer.Render(device);
-
-                if (Instance().circular_map) {
-                    device->SetRenderState(D3DRS_STENCILREF, 0);
-                    device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
-                    device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
-                    device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
-                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
-                    device->SetRenderState(D3DRS_STENCILENABLE, false);
-                }
-
-                // Restore the DX9 state
-                d3d9_state_block->Apply();
-                d3d9_state_block->Release();
-            },
-            static_cast<void *>(device));
+        ImGui::GetWindowDrawList()->AddCallback(render_callback, static_cast<void *>(device));
     }
     ImGui::End();
     ImGui::PopStyleColor();
@@ -642,6 +485,169 @@ void Minimap::Draw(IDirect3DDevice9 *device)
             ImGui::PopStyleColor();
         }
     }
+}
+
+void Minimap::render_callback(const ImDrawList*, const ImDrawCmd* cmd) {
+    IDirect3DDevice9* device = static_cast<IDirect3DDevice9*>(cmd->UserCallbackData);
+    GW::Agent* me = GW::Agents::GetPlayer();
+    if (me == nullptr) return;
+
+    // Backup the DX9 state
+    IDirect3DStateBlock9* d3d9_state_block = nullptr;
+    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) return;
+
+    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
+    device->SetFVF(D3DFVF_CUSTOMVERTEX);
+    device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
+    device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+    device->SetPixelShader(nullptr);
+    device->SetVertexShader(nullptr);
+    device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    device->SetRenderState(D3DRS_LIGHTING, false);
+    device->SetRenderState(D3DRS_ZENABLE, false);
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+    device->SetRenderState(D3DRS_ALPHATESTENABLE, false);
+    device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+    device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+    device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+    device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+    device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+    device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+    device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+
+    auto FillRect = [&device](const D3DCOLOR color, const int x, const int y, const int w, const int h) {
+        D3DVertex vertices[6] = {{static_cast<float>(x), static_cast<float>(y), 0.0f, color},
+            {static_cast<float>(x) + w, static_cast<float>(y), 0.0f, color},
+            {static_cast<float>(x), static_cast<float>(y) + h, 0.0f, color},
+            {static_cast<float>(x) + w, static_cast<float>(y) + h, 0.0f, color},
+            {static_cast<float>(x), static_cast<float>(y), 0.0f, color},
+            {static_cast<float>(x) + w, static_cast<float>(y), 0.0f, color}};
+        device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 4, vertices, sizeof(D3DVertex));
+    };
+
+    auto FillCircle = [&device](
+                          const float x, const float y, const float radius, const Color clr, float resolution = 199.f) {
+        resolution = std::min(resolution, 199.f);
+        D3DVertex vertices[200];
+        for (auto i = 0; i <= resolution; ++i) {
+            vertices[i] = {radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x,
+                y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0.0f, clr};
+        }
+        device->DrawPrimitiveUP(
+            D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
+    };
+
+    auto& style = ImGui::GetStyle();
+    RECT clipping;
+    clipping.left = static_cast<long>(cmd->ClipRect.x - style.WindowPadding.x / 2);
+    clipping.right = static_cast<long>(cmd->ClipRect.z + style.WindowPadding.x / 2 + 1);
+    clipping.top = static_cast<long>(cmd->ClipRect.y);
+    clipping.bottom = static_cast<long>(cmd->ClipRect.w);
+    device->SetScissorRect(&clipping);
+    device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
+
+
+    D3DXMATRIX identity;
+    D3DXMatrixIdentity(&identity);
+    device->SetTransform(D3DTS_WORLD, &identity);
+    device->SetTransform(D3DTS_VIEW, &identity);
+
+    HRESULT ret; 
+    D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
+    if (Instance().circular_map) {
+        ret = device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
+        ret = device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
+        ret = device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
+
+        // clear depth and stencil buffer
+        // clearing the stencil buffer was failing for me ~Haskha
+        ret = device->Clear(0, nullptr, D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0);
+        ret = device->Clear(0, nullptr, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
+
+        ret = device->SetRenderState(D3DRS_STENCILREF, 1);
+        ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
+        ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer
+                                                                               // when passed
+        float radius = static_cast<float>(Instance().size.x / 2.f); // rounding error in viewmatrix transformation
+        FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius,
+            background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
+
+        ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
+        ret = device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
+        ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+    } else {
+        FillRect(background, Instance().location.x, Instance().location.y, Instance().size.x,
+            Instance().size.y); // fill rect with chosen background color
+    }
+
+    Instance().RenderSetupProjection(device);
+
+    device->SetTransform(D3DTS_WORLD, &identity);
+    device->SetTransform(D3DTS_VIEW, &identity);
+
+    D3DXMATRIX translate_char;
+    D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
+
+    D3DXMATRIX rotate_char;
+    D3DXMatrixRotationZ(&rotate_char, -Instance().GetMapRotation() + static_cast<float>(M_PI_2));
+
+    D3DXMATRIX scaleM, translationM;
+    D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
+    D3DXMatrixTranslation(&translationM, Instance().translation.x, Instance().translation.y, 0);
+
+    float gwinch_scale = static_cast<float>(Instance().size.x) / 5000.0f / 2.f * Instance().scale;
+    if (gwinch_scale != Instance().gwinch_scale.x) {
+        Instance().range_renderer.Invalidate();
+        Instance().gwinch_scale = {gwinch_scale, gwinch_scale};
+    }
+
+    D3DXMATRIX view = translate_char * rotate_char * scaleM * translationM;
+    device->SetTransform(D3DTS_VIEW, &view);
+
+    Instance().pmap_renderer.Render(device);
+
+    Instance().custom_renderer.Render(device);
+
+    // move the rings to the char position
+    D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
+    device->SetTransform(D3DTS_WORLD, &translate_char);
+    Instance().range_renderer.Render(device);
+    device->SetTransform(D3DTS_WORLD, &identity);
+
+    if (Instance().translation.x != 0 || Instance().translation.y != 0) {
+        D3DXMATRIX view2 = scaleM;
+        device->SetTransform(D3DTS_VIEW, &view2);
+        Instance().range_renderer.SetDrawCenter(true);
+        Instance().range_renderer.Render(device);
+        Instance().range_renderer.SetDrawCenter(false);
+        device->SetTransform(D3DTS_VIEW, &view);
+    }
+
+    Instance().symbols_renderer.Render(device);
+
+    device->SetTransform(D3DTS_WORLD, &identity);
+    Instance().agent_renderer.Render(device);
+
+    Instance().effect_renderer.Render(device);
+
+    Instance().pingslines_renderer.Render(device);
+
+    if (Instance().circular_map) {
+        device->SetRenderState(D3DRS_STENCILREF, 0);
+        device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
+        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
+        device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
+        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
+        device->SetRenderState(D3DRS_STENCILENABLE, false);
+    }
+
+    // Restore the DX9 state
+    d3d9_state_block->Apply();
+    d3d9_state_block->Release();
 }
 
 GW::Vec2f Minimap::InterfaceToWorldPoint(Vec2i pos) const
