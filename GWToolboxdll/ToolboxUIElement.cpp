@@ -40,7 +40,9 @@ void ToolboxUIElement::SaveSettings(CSimpleIni* ini) {
 }
 
 void ToolboxUIElement::RegisterSettingsContent() {
-    ToolboxModule::RegisterSettingsContent(SettingsName(),
+    ToolboxModule::RegisterSettingsContent(
+        SettingsName(),
+        Icon(),
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             ShowVisibleRadio();

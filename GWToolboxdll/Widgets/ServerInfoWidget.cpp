@@ -128,7 +128,7 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*) {
         snprintf(server_ip, sizeof(server_ip) - 1, "%s", current_server_info->ip.c_str());
     }
     static ImVec2 cur;
-    ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f20));
+    ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header1));
     cur = ImGui::GetCursorPos();
     ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
     ImGui::TextColored(ImColor(0, 0, 0), server_ip);
@@ -137,13 +137,11 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*) {
     ImGui::PopFont();
     
     if (server_location) {
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
         ImGui::TextColored(ImColor(0, 0, 0), server_location);
         ImGui::SetCursorPos(cur);
         ImGui::Text(server_location);
-        ImGui::PopFont();
     }
 
     ImGui::End();

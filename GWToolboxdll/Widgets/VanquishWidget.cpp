@@ -30,7 +30,7 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
         snprintf(foes_count, 32, "%lu / %lu", killed, tokill + killed);
 
         // vanquished
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f20));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header1));
         ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
         ImGui::TextColored(ImColor(0, 0, 0), "Vanquished");
@@ -39,7 +39,7 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
         ImGui::PopFont();
 
         // count
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f42));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_small));
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
         ImGui::TextColored(ImColor(0, 0, 0), foes_count);

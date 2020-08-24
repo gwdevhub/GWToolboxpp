@@ -101,7 +101,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
         ImVec2 cur;
 
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f20));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header1));
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
         ImGui::TextColored(ImColor(0, 0, 0), "Alcohol");
@@ -113,7 +113,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
             static char timer[32];
             snprintf(timer, 32, "%1ld:%02ld", (t / 60) % 60, t % 60);
 
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f48));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(ImColor(0, 0, 0), timer);

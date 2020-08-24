@@ -57,15 +57,10 @@ public:
     const float acceleration = 0.5f;
     const float max_speed = 15.0f; // game units per frame
 
-    const char *Name() const override
-    {
-        return "Minimap";
-    }
+    const char* Name() const override { return "Minimap"; }
+    const char* Icon() const override { return ICON_FA_GLOBE_EUROPE; }
 
-    float Scale() const
-    {
-        return scale;
-    }
+    float Scale() const { return scale; }
 
     void Initialize() override;
     void Terminate() override;

@@ -11,10 +11,8 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     virtual void Draw(IDirect3DDevice9*) {};
 
-    virtual const char* Icon() const { return 0; }
-
     virtual const char* UIName() const;
-    virtual const char* SettingsName() const override { return UIName(); }
+    //virtual const char* SettingsName() const override { return UIName(); }
 
     virtual void Initialize() override;
     virtual void Terminate() override;

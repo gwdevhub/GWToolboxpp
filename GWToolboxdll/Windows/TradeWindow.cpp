@@ -399,7 +399,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
                 // negative numbers have came from this before, it is probably just server client desync
                 int time_since_message = static_cast<int>(now) - static_cast<int>(msg.timestamp);
 
-                ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
 
                 // decide if days, hours, minutes, seconds...
@@ -418,7 +417,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
                 ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(timetext).x);
                 ImGui::Text(timetext);
                 ImGui::PopStyleColor();
-                ImGui::PopFont();
             }
 
             // ==== Sender name column ====
@@ -458,6 +456,7 @@ void TradeWindow::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
         "Chat Settings",
+        nullptr,
         [this](const std::string *section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing)

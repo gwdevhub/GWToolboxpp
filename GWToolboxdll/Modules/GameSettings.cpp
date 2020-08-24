@@ -1018,21 +1018,21 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 void GameSettings::RegisterSettingsContent() {
     ToolboxModule::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent("Inventory Settings",
+    ToolboxModule::RegisterSettingsContent("Inventory Settings", nullptr,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
             DrawInventorySettings();
         }, 0.9f);
 
-    ToolboxModule::RegisterSettingsContent("Chat Settings",
+    ToolboxModule::RegisterSettingsContent("Chat Settings", ICON_FA_COMMENTS,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
             DrawChatSettings();
         }, 0.9f);
 
-    ToolboxModule::RegisterSettingsContent("Party Settings",
+    ToolboxModule::RegisterSettingsContent("Party Settings", ICON_FA_USERS,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;

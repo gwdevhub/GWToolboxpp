@@ -24,7 +24,9 @@ void MainWindow::DrawSettingInternal() {
 }
 
 void MainWindow::RegisterSettingsContent() {
-    ToolboxModule::RegisterSettingsContent(SettingsName(),
+    ToolboxModule::RegisterSettingsContent(
+        SettingsName(),
+        Icon(),
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             // ShowVisibleRadio();
@@ -60,7 +62,7 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
     static bool open = true;
     ImGui::SetNextWindowSize(ImVec2(110.0f, 300.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), show_closebutton ? &open : nullptr, GetWinFlags())) {
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f18));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header2));
         bool drawn = false;
         const size_t msize = modules_to_draw.size();
         for (size_t i = 0; i < msize;i++) {

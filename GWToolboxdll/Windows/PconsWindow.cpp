@@ -415,7 +415,9 @@ bool PconsWindow::SetEnabled(bool b) {
 
 void PconsWindow::RegisterSettingsContent() {
     ToolboxUIElement::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent("Game Settings",
+    ToolboxModule::RegisterSettingsContent(
+        "Game Settings",
+        nullptr,
         [this](const std::string*, bool is_showing) {
             if (!is_showing) return;
             DrawLunarsAndAlcoholSettings();
@@ -559,12 +561,12 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
     ImGui::ShowHelp("Display a number on the bottom of each pcon icon, showing total quantity in storage.\n"
                     "This only displays when in an outpost.");
-    ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%.0f milliseconds");
+    ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%d milliseconds");
     ImGui::ShowHelp(
         "After using a pcon, toolbox will not use it again for this amount of time.\n"
         "It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
         "Decrease the value if you have good ping and you die a lot.");
-    ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%.0f milliseconds");
+    ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%d milliseconds");
     if (ImGui::TreeNode("Thresholds")) {
         ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");
         for (Pcon* pcon : pcons) {

@@ -232,7 +232,6 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background).Value);
     ImGui::SetNextWindowSize(ImVec2(width, static_cast<float>(size * line_height)));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
 		const float &x = ImGui::GetWindowPos().x;
         const float &y = ImGui::GetWindowPos().y;
         const float &_width = ImGui::GetWindowWidth();
@@ -286,7 +285,6 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 				ImVec2(x + _width / 2, y + (i * line_height) + height_diff),
 				IM_COL32(255, 255, 255, 255), buf);
 		}
-		ImGui::PopFont();
 	}
 	ImGui::End();
 	ImGui::PopStyleColor(); // window bg

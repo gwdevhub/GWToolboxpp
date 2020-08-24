@@ -134,14 +134,13 @@ void Pcon::Draw(IDirect3DDevice9* device) {
     if (ImGui::IsItemHovered() && desc.size())
         ImGui::SetTooltip(desc.c_str());
     if (maptype != GW::Constants::InstanceType::Loading) {
-        ImFont* f = GuiUtils::GetFont(GuiUtils::FontSize::f20);
+        ImFont* f = GuiUtils::GetFont(GuiUtils::FontSize::header1);
         ImVec2 nextPos = ImGui::GetCursorPos();
         ImGui::PushFont(f);
         ImVec4 color;
         if (quantity == 0) color = ImVec4(1, 0, 0, 1);
         else if (quantity < threshold) color = ImVec4(1, 1, 0, 1);
         else color = ImVec4(0, 1, 0, 1);
-
 
         ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
         ImGui::TextColored(ImVec4(0, 0, 0, 1), "%d", quantity);
@@ -150,13 +149,10 @@ void Pcon::Draw(IDirect3DDevice9* device) {
         ImGui::PopFont();
 
         if (maptype == GW::Constants::InstanceType::Outpost && PconsWindow::Instance().show_storage_quantity) {
-            f = GuiUtils::GetFont(GuiUtils::FontSize::f16);
-            ImGui::PushFont(f);
-            ImGui::SetCursorPos(ImVec2(pos.x + 3, nextPos.y - f->FontSize));
+            ImGui::SetCursorPos(ImVec2(pos.x + 3, nextPos.y - ImGui::GetTextLineHeight()));
             ImGui::TextColored(ImVec4(0, 0, 0, 1), "%d", quantity_storage);
-            ImGui::SetCursorPos(ImVec2(pos.x + 2, nextPos.y - f->FontSize - 1));
+            ImGui::SetCursorPos(ImVec2(pos.x + 2, nextPos.y - ImGui::GetTextLineHeight() - 1));
             ImGui::TextColored(ImVec4(0.75f, 0.75f, 0.75f, 1), "%d", quantity_storage);
-            ImGui::PopFont();
         }
     }
     

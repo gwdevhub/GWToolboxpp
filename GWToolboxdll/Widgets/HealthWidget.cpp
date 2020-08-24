@@ -186,7 +186,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             }
 
             // 'health'
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f20));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header1));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
             ImGui::TextColored(background, "Health");
@@ -195,7 +195,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             // perc
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f42));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_small));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(background, "%s", health_perc);
@@ -204,7 +204,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             // abs
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f24));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(background, health_abs);
