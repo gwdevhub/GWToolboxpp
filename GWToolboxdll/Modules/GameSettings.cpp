@@ -1018,7 +1018,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 void GameSettings::RegisterSettingsContent() {
     ToolboxModule::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent("Inventory Settings", nullptr,
+    ToolboxModule::RegisterSettingsContent("Inventory Settings", ICON_FA_BOXES,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
