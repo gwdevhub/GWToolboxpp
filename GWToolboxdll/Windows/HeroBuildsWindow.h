@@ -15,13 +15,14 @@ private:
     // 0 for 'no hero', 
     // and 1+ for heroes, order is in HeroIndexToID array
     struct HeroBuild {
-        HeroBuild(const char* n, const char* c, int index = -1, int panel = 0) : hero_index(index), show_panel(panel) {
+        HeroBuild(const char* n, const char* c, int index = -1, int panel = 0, uint32_t _behavior = 1) : hero_index(index), show_panel(panel), behavior(_behavior) {
             GuiUtils::StrCopy(name, n, sizeof(name));
             GuiUtils::StrCopy(code, c, sizeof(code));
         }
         char name[128];
         char code[128];
         int hero_index;
+        uint32_t behavior = 1;
         int show_panel = 0;
     };
 
@@ -101,12 +102,16 @@ private:
         size_t party_hero_index = 0xFFFFFFFF;
         GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
         int show_panel = 0;
+        uint32_t behavior = 1;
         clock_t started = 0;
-        CodeOnHero(const char *c = "", GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, int _show_panel = 0)
+        CodeOnHero(const char *c = "", GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, int _show_panel = 0, uint32_t _behavior = 1)
             : heroid(i)
             , show_panel(_show_panel)
+            , behavior(_behavior)
         {
             snprintf(code, 128, "%s", c);
+            if (behavior < 0 || behavior > 2)
+                behavior = 1;
         }
         // True when processing is done
         bool Process();
