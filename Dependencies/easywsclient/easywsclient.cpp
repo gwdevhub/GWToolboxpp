@@ -519,6 +519,8 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
       if (!SSL_set_fd (ptConnCtx->sslHandle, ptConnCtx->sockfd))
         ERR_print_errors_fp (stderr);
 
+      SSL_set_tlsext_host_name(ptConnCtx->sslHandle, host);
+
       // Initiate SSL handshake
       if (SSL_connect (ptConnCtx->sslHandle) != 1)
         ERR_print_errors_fp (stderr);
