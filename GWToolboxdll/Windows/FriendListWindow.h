@@ -18,6 +18,7 @@ class FriendListWindow : public ToolboxWindow {
 private:
     FriendListWindow();
     ~FriendListWindow();
+    std::thread settings_thread;
     // Structs because we don't case about public or private; this whole struct is private to this module anyway.
     struct Character {
         std::wstring name;

@@ -10,9 +10,7 @@
 
 class ObjectiveTimerWindow : public ToolboxWindow {
     ObjectiveTimerWindow() {};
-    ~ObjectiveTimerWindow() {
-        ClearObjectiveSets();
-    };
+    ~ObjectiveTimerWindow();
 public:
     static ObjectiveTimerWindow& Instance() {
         static ObjectiveTimerWindow instance;
@@ -23,6 +21,7 @@ public:
     const char* Icon() const override { return ICON_FA_BULLSEYE; }
 
     void Initialize() override;
+    void Terminate() override;
 
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -34,6 +33,7 @@ public:
     void SaveRuns();
 
 private:
+    std::thread run_loader;
     class Objective {
     public:
         uint32_t id = 0;
