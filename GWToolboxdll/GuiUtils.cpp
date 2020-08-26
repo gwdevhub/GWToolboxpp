@@ -60,6 +60,8 @@ void GuiUtils::LoadFonts() {
             } else if (i == 0) {
                 // first one cannot fail
                 printf("Failed to find Font.ttf file\n");
+                fonts_loaded = true;
+                fonts_loading = false;
                 return; 
             }
         }
