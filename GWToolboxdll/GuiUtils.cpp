@@ -118,6 +118,9 @@ void GuiUtils::LoadFonts() {
         io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_large, &cfg, base.glyph_ranges);
         font_widget_large = io.Fonts->Fonts.back();
 
+        if (!io.Fonts->IsBuilt())
+            io.Fonts->Build();
+
         printf("Fonts loaded\n");
         fonts_loaded = true;
         fonts_loading = false;
