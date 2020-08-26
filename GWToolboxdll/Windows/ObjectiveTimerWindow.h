@@ -21,7 +21,6 @@ public:
     const char* Icon() const override { return ICON_FA_BULLSEYE; }
 
     void Initialize() override;
-    void Terminate() override;
 
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -34,6 +33,7 @@ public:
 
 private:
     std::thread run_loader;
+    bool loading = false;
     class Objective {
     public:
         uint32_t id = 0;

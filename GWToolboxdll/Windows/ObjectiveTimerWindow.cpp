@@ -765,7 +765,7 @@ void ObjectiveTimerWindow::Update(float) {
 }
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
     // Main objective timer window
-    if (visible) {
+    if (visible && !loading) {
         ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -873,6 +873,7 @@ void ObjectiveTimerWindow::LoadRuns() {
     // Because this does a load of file reads and JSON decoding, its on a separate thread; it could delay rendering by seconds
     if (run_loader.joinable())
         run_loader.join();
+    loading = true;
     run_loader = std::thread([]() {
         ObjectiveTimerWindow& instance = ObjectiveTimerWindow::Instance();
         //ClearObjectiveSets();
@@ -917,6 +918,7 @@ void ObjectiveTimerWindow::LoadRuns() {
                 Log::Error("Failed to load ObjectiveSets from json");
             }
         }
+        instance.loading = false;
     });
 }
 void ObjectiveTimerWindow::SaveRuns() {
@@ -924,6 +926,7 @@ void ObjectiveTimerWindow::SaveRuns() {
         return;
     if (run_loader.joinable())
         run_loader.join();
+    loading = true;
     run_loader = std::thread([]() {
         ObjectiveTimerWindow& instance = ObjectiveTimerWindow::Instance();
         Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
@@ -960,6 +963,7 @@ void ObjectiveTimerWindow::SaveRuns() {
             }
         }
         runs_dirty = false;
+        instance.loading = false;
     });
 }
 void ObjectiveTimerWindow::ClearObjectiveSets() {
