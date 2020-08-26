@@ -27,6 +27,7 @@
 #include <Logger.h>
 
 #include <Widgets/Minimap/Minimap.h>
+#include <Modules/Resources.h>
 
 void Minimap::Terminate()
 {
@@ -301,6 +302,12 @@ void Minimap::DrawSettingInternal()
 void Minimap::LoadSettings(CSimpleIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
+    Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
+        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
+        [](bool success) {
+            UNREFERENCED_PARAMETER(success);
+            Minimap::Instance().custom_renderer.LoadMarkers();
+        });
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
     hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
     hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);

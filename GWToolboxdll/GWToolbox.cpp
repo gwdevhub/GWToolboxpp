@@ -26,7 +26,6 @@
 #include <Modules/ToolboxTheme.h>
 #include <Modules/ToolboxSettings.h>
 #include <Windows/MainWindow.h>
-#include <Widgets/Minimap/Minimap.h>
 
 namespace {
     HMODULE dllmodule = 0;
@@ -324,12 +323,6 @@ void GWToolbox::Initialize() {
     // if the file does not exist we'll load module settings once downloaded, but we need the file open
     // in order to read defaults
     OpenSettingsFile();
-    Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
-        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
-        [](bool success) {
-            UNREFERENCED_PARAMETER(success);
-            Minimap::Instance().custom_renderer.LoadMarkers();
-        });
 
     Log::Log("Creating Modules\n");
     core_modules.push_back(&Resources::Instance());
