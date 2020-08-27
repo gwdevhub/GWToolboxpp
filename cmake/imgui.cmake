@@ -30,5 +30,3 @@ target_compile_definitions(imgui PUBLIC
     IMGUI_USER_CONFIG="${PROJECT_SOURCE_DIR}/GWToolboxdll/imconfig.h")
 
 set_target_properties(imgui PROPERTIES FOLDER "Dependencies/")
-
-add_executable(font_binary_to_compressed_c "${imgui_SOURCE_DIR}/misc/fonts/binary_to_compressed_c.cpp")

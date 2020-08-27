@@ -7,7 +7,7 @@
 
 #include <GuiUtils.h>
 #include <Utf8.h>
-#include <fontawesome5.h>
+#include <fonts/fontawesome5.h>
 #include <Modules/Resources.h>
 
 namespace {
