@@ -133,6 +133,7 @@ private:
     bool mouse_clickthrough_in_outpost = false;
     bool rotate_minimap = true;
     bool circular_map = true;
+    bool safe_enemies = false;
     MinimapModifierBehaviour key_none_behavior = MinimapModifierBehaviour::Draw;
     MinimapModifierBehaviour key_ctrl_behavior = MinimapModifierBehaviour::Target;
     MinimapModifierBehaviour key_shift_behavior = MinimapModifierBehaviour::Move;

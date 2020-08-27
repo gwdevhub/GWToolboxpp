@@ -247,6 +247,8 @@ void Minimap::DrawSettingInternal()
     ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
     ImGui::Checkbox("Circular", &circular_map);
     ImGui::ShowHelp("Whether the map should be circular like the compass or a square (default).");
+    ImGui::Checkbox("Color safe enemies in the Underworld", &agent_renderer.color_safe_enemies);
+    ImGui::ShowHelp("Overwrites the agent color of some Obsidian Behemoths in Twin Serpent Mountains and Dead Threshers and Collectors in Bone Pits in case they pose no risk");
 }
 
 void Minimap::LoadSettings(CSimpleIni *ini)

@@ -59,6 +59,7 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
+    color_safe_enemies = ini->GetBoolValue(section, VAR_NAME(color_safe_enemies), color_safe_enemies);
 
     LoadAgentColors();
 
@@ -114,6 +115,7 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
+    ini->SetBoolValue(section, VAR_NAME(color_safe_enemies), color_safe_enemies);
 
     SaveAgentColors();
 }
@@ -189,6 +191,7 @@ void AgentRenderer::DrawSettings() {
                 size_boss = 125.0f;
                 size_minion = 50.0f;
                 boss_colors = true;
+                color_safe_enemies = false;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
@@ -531,6 +534,27 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
     Enqueue(shape, agent, size, color);
 }
 
+namespace
+{
+    bool isSafeBehemoth(float x, float y)
+    {
+        auto isLeftOfLine = [x, y](std::tuple<float, float> a, std::tuple<float, float> b) { return ((std::get<0>(b) - std::get<0>(a)) * (y - std::get<1>(a)) - (std::get<1>(b) - std::get<1>(a)) * (x - std::get<0>(a))) > 0; };
+        const std::vector<std::tuple<float, float>> points = {{-8809.f, -5233.f}, {-9276.f, -5207.f}, {-9128.f, -5562.f}, {-8920.f, -5462.f}, {-8867.f, -5541.f}, {-8715.f, -5459.f}};
+
+        //Safe area is split in two convex polygons to make checking easier:
+        if (isLeftOfLine(points[0], points[3])) //common edge between the two polygons
+            return isLeftOfLine(points[3], points[4]) && isLeftOfLine(points[4], points[5]) && isLeftOfLine(points[5], points[0]);
+        else
+            return isLeftOfLine(points[0], points[1]) && isLeftOfLine(points[1], points[2]) && isLeftOfLine(points[2], points[3]);
+    }
+    bool isSafeThresher(float x, float y)
+    {
+        bool isSafe = (x - 12813.f) * (x - 12813.f) + (y - 4696.f) * (y - 4696.f) > 1012.5f * 1012.5f;
+        bool isRelevant = std::abs(13588.9f - x) + std::abs(4248.4f - y) < 500;
+        return isRelevant && isSafe;
+    }
+}
+
 Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) const {
     if (agent->agent_id == GW::Agents::GetPlayerId()) {
         if (agent->GetAsAgentLiving()->GetIsDead()) return color_player_dead;
@@ -543,6 +567,13 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 
     const GW::AgentLiving* living = agent->GetAsAgentLiving();
 
+    if (color_safe_enemies) {
+        if (living->player_number == GW::Constants::ModelID::UW::ObsidianBehemoth && isSafeBehemoth(agent->x, agent->y))
+            return IM_COL32(0, 255, 0, 255);
+        if ((living->player_number == GW::Constants::ModelID::UW::DeadThresher || living->player_number == GW::Constants::ModelID::UW::DeadCollector) && isSafeThresher(agent->x, agent->y))
+            return IM_COL32(0, 255, 0, 255);
+    }
+    
     // don't draw dead spirits
     auto npcs = GW::Agents::GetNPCArray();
     if (living->GetIsDead() && npcs.valid() && living->player_number < npcs.size()) {

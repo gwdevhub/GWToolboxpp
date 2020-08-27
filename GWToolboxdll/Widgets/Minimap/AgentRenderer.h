@@ -20,6 +20,7 @@ public:
 
     bool show_hidden_npcs = false;
     bool boss_colors = true;
+    bool color_safe_enemies = false;
     uint32_t auto_target_id = 0;
 
 private:
