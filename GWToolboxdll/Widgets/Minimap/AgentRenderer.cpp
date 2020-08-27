@@ -550,7 +550,7 @@ namespace
     bool isSafeThresher(float x, float y)
     {
         bool isSafe = (x - 12813.f) * (x - 12813.f) + (y - 4696.f) * (y - 4696.f) > 1012.5f * 1012.5f;
-        bool isRelevant = std::abs(13588.9f - x) + std::abs(4248.4f - y) < 500;
+        bool isRelevant = x > 13400 && x < 14500 && y > 3700 && y < 4700;
         return isRelevant && isSafe;
     }
 }
