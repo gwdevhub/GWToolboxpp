@@ -8,6 +8,7 @@
 #include <Modules/ToolboxTheme.h>
 
 #define IniFilename L"Theme.ini"
+#define WindowPositionsFilename L"Windows.ini"
 #define IniSection "Theme"
 
 ToolboxTheme::ToolboxTheme() {
@@ -86,14 +87,19 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
     }
 
     ImGui::GetStyle() = ini_style;
-
-    LoadUILayout();
 }
-
+void ToolboxTheme::PreloadWindowLayouts() {
+    if(!window_layouts_ini)
+        window_layouts_ini = new CSimpleIni(false, false, false);
+    window_layouts_ini->Reset();
+    window_layouts_ini->LoadFile(Resources::GetPath(WindowPositionsFilename).c_str());
+}
 void ToolboxTheme::SaveUILayout(const char* layout_name) {
     uint32_t width = GW::Render::GetViewportWidth();
     uint32_t height = GW::Render::GetViewportHeight();
     ASSERT(width > 0 && height > 0);
+
+    PreloadWindowLayouts();
 
     char ini_section[128];
     if (layout_name) {
@@ -102,26 +108,20 @@ void ToolboxTheme::SaveUILayout(const char* layout_name) {
     else {
         snprintf(ini_section, 128, "%dx%d", width, height);
     }
-    
-
-    CSimpleIni* theme_layout_ini = new CSimpleIni(false, false, false);
-    std::wstring filename = Resources::GetPath(L"ThemeLayouts.ini");
-    theme_layout_ini->LoadFile(filename.c_str());
 
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     for (ImGuiWindow* window : windows) {
         char key[128];
         snprintf(key, 128, "%s_X", window->Name);
-        theme_layout_ini->SetDoubleValue(ini_section, key, window->Pos.x);
+        window_layouts_ini->SetDoubleValue(ini_section, key, window->Pos.x);
         snprintf(key, 128, "%s_Y", window->Name);
-        theme_layout_ini->SetDoubleValue(ini_section, key, window->Pos.y);
+        window_layouts_ini->SetDoubleValue(ini_section, key, window->Pos.y);
         snprintf(key, 128, "%s_W", window->Name);
-        theme_layout_ini->SetDoubleValue(ini_section, key, window->Size.x);
+        window_layouts_ini->SetDoubleValue(ini_section, key, window->Size.x);
         snprintf(key, 128, "%s_H", window->Name);
-        theme_layout_ini->SetDoubleValue(ini_section, key, window->Size.y);
+        window_layouts_ini->SetDoubleValue(ini_section, key, window->Size.y);
     }
-    theme_layout_ini->SaveFile(filename.c_str());
-    delete theme_layout_ini;
+    window_layouts_ini->SaveFile(Resources::GetPath(WindowPositionsFilename).c_str());
 }
 void ToolboxTheme::LoadUILayout(const char* layout_name) {
     uint32_t width = GW::Render::GetViewportWidth();
@@ -139,7 +139,7 @@ void ToolboxTheme::LoadUILayout(const char* layout_name) {
     CSimpleIni* theme_layout_ini = new CSimpleIni(false, false, false);
     std::wstring filename = Resources::GetPath(L"ThemeLayouts.ini");
     theme_layout_ini->LoadFile(filename.c_str());
-
+    
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     for (ImGuiWindow* window : windows) {
         ImVec2 pos = window->Pos;
@@ -205,6 +205,32 @@ void ToolboxTheme::DrawSettingInternal() {
     if (ImGui::SmallButton("Restore Default")) {
         const ImGuiStyle default_style = DefaultTheme(); // Default style
         style = default_style;
+    }
+    if (ImGui::SmallButton("Load Window Layout")) {
+        ImGui::OpenPopup("Choose Window Layout");
+        PreloadWindowLayouts();
+    }
+    if (ImGui::SmallButton("Save Window Layout")) {
+        ImGui::OpenPopup("Save Window Layout As...");
+    }
+    if (ImGui::BeginPopupModal("Choose Window Layout", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        // HERE BE DRAGONS
+        /*if (ImGui::BeginCombo("load_window_layout_dropdown", nullptr)) {
+            std::list<CSimpleIniA::Entry> section_entries;
+            window_layouts_ini->GetAllSections(section_entries);
+            for (const CSimpleIniA::Entry& entry : section_entries) {
+                ImGui::Selectable(entry.pItem,)
+            }
+        }
+        if (ImGui::MyCombo(
+            "travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
+            GW::Constants::MapID id = IndexToOutpostID(travelto_index);
+            Travel(id, district, district_number);
+            travelto_index = -1;
+            if (close_on_travel) visible = false;
+        }
+        ImGui::Selectable()
+        ImGui::EndPopup();*/
     }
     ImGui::Text("Note: theme is stored in 'Theme.ini' in settings folder. You can share the file or parts of it with other people.");
     ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
