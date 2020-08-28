@@ -101,7 +101,8 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 	if (cause_it == party_index.end()) return;  // ignore damage done by non-party members
 
 	// get target agent
-	if (!agents[packet->target_id]) return;
+	if (packet->target_id >= agents.size()) return;
+	if ( !agents[packet->target_id]) return;
 	GW::AgentLiving* target = agents[packet->target_id]->GetAsAgentLiving();
 	if (target == nullptr) return;
 	if (target->login_number != 0) return; // ignore player-inflicted damage
