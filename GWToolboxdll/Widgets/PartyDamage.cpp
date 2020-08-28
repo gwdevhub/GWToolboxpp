@@ -402,7 +402,7 @@ void PartyDamage::DrawSettingInternal() {
 	ImGui::InputInt("Row Height", &row_height);
 	ImGui::ShowHelp("Height of each row, leave 0 for default");
 	if (width <= 0) width = 1.0f;
-	ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%.0f milliseconds");
+	ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%d milliseconds");
 	if (recent_max_time < 0) recent_max_time = 0;
 	ImGui::ShowHelp("After this amount of time, each player recent damage (blue bar) will be reset");
 	Colors::DrawSettingHueWheel("Background", &color_background);
