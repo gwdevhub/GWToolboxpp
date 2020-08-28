@@ -27,7 +27,7 @@ target_include_directories(GWToolboxdll PRIVATE
     )
 
 include(json)
-include(iconfontheaders)
+include(imgui_fonts)
 
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
@@ -39,7 +39,8 @@ target_link_libraries(GWToolboxdll PRIVATE
     discord_game_sdk
     nlohmann_json::nlohmann_json
     simpleini
-    iconfontheaders
+    imgui::fonts
+    IconFontCppHeaders
     # libs:
     Urlmon.lib
     Shlwapi.lib
