@@ -15,6 +15,10 @@ public:
     void Terminate() override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
+
+    void SaveUILayout(const char* layout_name = nullptr);
+    void LoadUILayout(const char* layout_name = nullptr);
+
     void DrawSettingInternal() override;
 
 private:
