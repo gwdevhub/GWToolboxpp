@@ -59,7 +59,8 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
-    color_safe_enemies = ini->GetBoolValue(section, VAR_NAME(color_safe_enemies), color_safe_enemies);
+    enable_color_safe_enemies = ini->GetBoolValue(section, VAR_NAME(enable_color_safe_enemies), enable_color_safe_enemies);
+    color_safe_enemies = Colors::Load(ini, section, VAR_NAME(color_safe_enemies), 0xFF00FF00);
 
     LoadAgentColors();
 
@@ -115,7 +116,8 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
-    ini->SetBoolValue(section, VAR_NAME(color_safe_enemies), color_safe_enemies);
+    ini->SetBoolValue(section, VAR_NAME(enable_color_safe_enemies), enable_color_safe_enemies);
+    Colors::Save(ini, section, VAR_NAME(color_safe_enemies), color_safe_enemies);
 
     SaveAgentColors();
 }
@@ -160,6 +162,9 @@ void AgentRenderer::DrawSettings() {
         ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
         Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
         ImGui::ShowHelp("Each hostile agent has this value subtracted from it when under 90% HP.");
+        ImGui::Checkbox("Color safe enemies in the Underworld", &enable_color_safe_enemies);
+        ImGui::ShowHelp("Overwrites the agent color of some Obsidian Behemoths in Twin Serpent Mountains and Dead Threshers and Collectors in Bone Pits in case they pose no risk");
+        Colors::DrawSettingHueWheel("Safe enemy color", &color_safe_enemies);
         if (ImGui::SmallButton("Restore Defaults")) {
             ImGui::OpenPopup("Restore Defaults?");
         }
@@ -191,7 +196,8 @@ void AgentRenderer::DrawSettings() {
                 size_boss = 125.0f;
                 size_minion = 50.0f;
                 boss_colors = true;
-                color_safe_enemies = false;
+                enable_color_safe_enemies = false;
+                color_safe_enemies = 0xFF00FF00;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
@@ -567,11 +573,11 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 
     const GW::AgentLiving* living = agent->GetAsAgentLiving();
 
-    if (color_safe_enemies) {
+    if (enable_color_safe_enemies) {
         if (living->player_number == GW::Constants::ModelID::UW::ObsidianBehemoth && isSafeBehemoth(agent->x, agent->y))
-            return IM_COL32(0, 255, 0, 255);
+            return color_safe_enemies;
         if ((living->player_number == GW::Constants::ModelID::UW::DeadThresher || living->player_number == GW::Constants::ModelID::UW::DeadCollector) && isSafeThresher(agent->x, agent->y))
-            return IM_COL32(0, 255, 0, 255);
+            return color_safe_enemies;
     }
     
     // don't draw dead spirits
