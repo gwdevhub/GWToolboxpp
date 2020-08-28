@@ -64,31 +64,36 @@ void ToolboxUIElement::DrawSizeAndPositionSettings() {
     if (is_movable || is_resizable) {
         char buf[128];
         sprintf(buf, "You need to show the %s for this control to work", TypeName());
-        if (is_movable && ImGui::DragFloat2("Position", reinterpret_cast<float *>(&pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
-            ImGui::SetWindowPos(Name(), pos);
+        if (is_movable) {
+            if(ImGui::DragFloat2("Position", reinterpret_cast<float *>(&pos), 1.0f, 0.0f, 0.0f, "%.0f"))
+                ImGui::SetWindowPos(Name(), pos);
             ImGui::ShowHelp(buf);
         }
-        if (is_resizable && ImGui::DragFloat2("Size", reinterpret_cast<float *>(&size), 1.0f, 0.0f, 0.0f, "%.0f")) {
-            ImGui::SetWindowSize(Name(), size);
+        if (is_resizable) {
+            if(ImGui::DragFloat2("Size", reinterpret_cast<float *>(&size), 1.0f, 0.0f, 0.0f, "%.0f"))
+                ImGui::SetWindowSize(Name(), size);
             ImGui::ShowHelp(buf);
         }
     }
-    
-    ImGui::Spacing();
+    bool new_line = false;
     if (is_movable) {
-        ImGui::SameLine();
+        if(new_line) ImGui::SameLine();
+        new_line = true;
         ImGui::Checkbox("Lock Position", &lock_move);
     }
     if (is_resizable) {
-        ImGui::SameLine();
+        if (new_line) ImGui::SameLine();
+        new_line = true;
         ImGui::Checkbox("Lock Size", &lock_size);
     }
     if (has_closebutton) {
-        ImGui::SameLine();
+        if (new_line) ImGui::SameLine();
+        new_line = true;
         ImGui::Checkbox("Show close button", &show_closebutton);
     }
     if (can_show_in_main_window) {
-        ImGui::SameLine();
+        if (new_line) ImGui::SameLine();
+        new_line = true;
         if (ImGui::Checkbox("Show in main window", &show_menubutton)) {
             MainWindow::Instance().pending_refresh_buttons = true;
         }

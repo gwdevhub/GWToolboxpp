@@ -95,8 +95,6 @@ public:
     static void OnOutgoingWhisperSuccess(GW::HookStatus *status, wchar_t *message);
     static void OnFriendAlreadyAdded(GW::HookStatus *status, wchar_t *message);
     static void OnPlayerNotOnline(GW::HookStatus *status, wchar_t *message);
-    // Hook triggered when a new GW::Friend object has been newly added to your friend list. Can trigger on map entry or when adding a friend.
-    static void OnFriendCreated(GW::HookStatus*, const uint8_t* uuid, GW::FriendStatus, const wchar_t*, const wchar_t*);
     static void OnFriendUpdated(GW::HookStatus*, GW::Friend* f, GW::FriendStatus status, const wchar_t* alias, const wchar_t* charname);
     static void OnAddFriendError(GW::HookStatus* status, wchar_t* message);
     static void OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*);
@@ -139,7 +137,7 @@ public:
 private:
     CSimpleIni* inifile = nullptr;
     wchar_t* ini_filename = L"friends.ini";
-    bool loading = true; // Loading from disk?
+    bool loading = false; // Loading from disk?
     bool polling = false; // Polling in progress?
     bool poll_queued = false; // Used to avoid overloading the thread queue.
     bool should_stop = false;

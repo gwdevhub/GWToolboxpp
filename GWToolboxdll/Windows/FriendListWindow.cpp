@@ -798,7 +798,6 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 void FriendListWindow::DrawSettingInternal() {
     bool edited = false;
-    ImGui::SameLine();
     edited |= ImGui::Checkbox("Lock size as widget", &lock_size_as_widget);
     ImGui::SameLine();
     edited |= ImGui::Checkbox("Lock move as widget", &lock_move_as_widget);
@@ -919,7 +918,8 @@ void FriendListWindow::LoadFromFile() {
         return;
     loading = true;
     Log::Log("%s: Loading friends from ini\n", Name());
-    settings_thread.join();
+    if(settings_thread.joinable())
+        settings_thread.join();
     settings_thread = std::thread([this]() {
         // clear builds from toolbox
         uuid_by_name.clear();
