@@ -8,6 +8,7 @@
 
 class CustomRenderer : public VBuffer
 {
+    friend class AgentRenderer;
     struct CustomLine
     {
         CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n)
@@ -57,6 +58,7 @@ class CustomRenderer : public VBuffer
         bool visible;
         char name[128]{};
     };
+
     struct CustomPolygon
     {
         CustomPolygon(GW::Constants::MapID m, const char* n)

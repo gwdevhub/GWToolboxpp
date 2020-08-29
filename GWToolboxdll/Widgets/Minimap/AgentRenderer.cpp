@@ -1,3 +1,4 @@
+#include "Minimap.h"
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
@@ -33,6 +34,7 @@ unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), 0x001E1E1E);
     color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_lowhp_modifier), 0x00505050);
+    color_agent_in_polygon_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_in_polygon_modifier), 0x00A00000);
     color_eoe = Colors::Load(ini, section, VAR_NAME(color_eoe), 0x3200FF00);
     color_qz = Colors::Load(ini, section, VAR_NAME(color_qz), 0x320000FF);
     color_winnowing = Colors::Load(ini, section, VAR_NAME(color_winnowing), 0x3200FFFF);
@@ -87,6 +89,7 @@ void AgentRenderer::LoadAgentColors() {
 
 void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
     Colors::Save(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
+    Colors::Save(ini, section, VAR_NAME(color_agent_in_polygon_modifier), color_agent_in_polygon_modifier);
     Colors::Save(ini, section, VAR_NAME(color_agent_damaged_modifier), color_agent_damaged_modifier);
     Colors::Save(ini, section, VAR_NAME(color_eoe), color_eoe);
     Colors::Save(ini, section, VAR_NAME(color_qz), color_qz);
@@ -158,6 +161,8 @@ void AgentRenderer::DrawSettings() {
         ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
         Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
         ImGui::ShowHelp("Each hostile agent has this value subtracted from it when under 90% HP.");
+        Colors::DrawSettingHueWheel("Agent in custom polygon modifier", &color_agent_in_polygon_modifier);
+        ImGui::ShowHelp("Each hostile agent has this value subtracted from it when currently in a custom marker.");
         if (ImGui::SmallButton("Restore Defaults")) {
             ImGui::OpenPopup("Restore Defaults?");
         }
@@ -166,6 +171,7 @@ void AgentRenderer::DrawSettings() {
             if (ImGui::Button("OK", ImVec2(120, 0))) {
                 color_agent_modifier = 0x001E1E1E;
                 color_agent_damaged_modifier = 0x00505050;
+                color_agent_in_polygon_modifier = 0x00A00000;
                 color_eoe = 0x3200FF00;
                 color_qz = 0x320000FF;
                 color_winnowing = 0x3200FFFF;
@@ -285,7 +291,7 @@ AgentRenderer::~AgentRenderer() {
     custom_agents.clear();
     custom_agents_map.clear();
 }
-AgentRenderer::AgentRenderer() : vertices(nullptr) {
+AgentRenderer::AgentRenderer() {
     shapes[Tear].AddVertex(1.8f, 0, Dark);      // A
     shapes[Tear].AddVertex(0.7f, 0.7f, Dark);   // B
     shapes[Tear].AddVertex(0.0f, 0.0f, Light);  // O
@@ -388,9 +394,8 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
         auto_target_id = 0;
     }
     else if (auto_target_id) {
-        target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(auto_target_id));
-        if (target && !target->GetIsLivingType())
-            target = nullptr;
+        auto* const target_ = GW::Agents::GetAgentByID(auto_target_id);
+        target = target_ ? target_->GetAsAgentLiving() : nullptr;
     }
 
     // 1. eoes
@@ -568,13 +573,33 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     // hostiles
     if (living->allegiance == 0x3) {
         if(living->hp <= 0.0f) return color_hostile_dead;
-        const Color* c = &color_hostile;
+        Color c = color_hostile;
         if (boss_colors && living->GetHasBossGlow()) {
-            unsigned int prof = GetAgentProfession(living);
-            if (prof) c = &profession_colors[prof];
+            const auto prof = GetAgentProfession(living);
+            if (prof) c = profession_colors[prof];
         }
-        if (living->hp > 0.9f) return *c;
-        return Colors::Sub(*c, color_agent_damaged_modifier);
+        const auto& polygons = Minimap::Instance().custom_renderer.polygons;
+        const auto is_relevant = [living](const CustomRenderer::CustomPolygon& polygon)-> bool {
+            return polygon.map == GW::Map::GetMapID() && !polygon.points.empty() &&
+                   GW::GetDistance(living->pos, polygon.points.at(0)) < 2500.f;
+        };
+        const auto is_inside = [](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
+            bool b = false;
+            for (auto i = 0u, j = points.size() - 1; i < points.size(); j = i++) {
+                if (points[i].y >= pos.y != points[j].y >= pos.y &&
+                    pos.x <= (points[j].x - points[i].x) * (pos.y - points[i].y) / (points[j].y - points[i].y) + points[i].x)
+                    b = !b;
+            }
+            return b;
+        };
+        for (const auto& polygon : polygons) {
+            if (!is_relevant(polygon)) continue;
+            if (is_inside(living->pos, polygon.points)) {
+                c = Colors::Sub(c, color_agent_in_polygon_modifier);
+            }
+        }
+        if (living->hp > 0.9f) return c;
+        return Colors::Sub(c, color_agent_damaged_modifier);
     }
 
     // neutrals
