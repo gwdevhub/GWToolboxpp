@@ -68,6 +68,8 @@ void CustomRenderer::LoadMarkers()
                 if (vec.x != 0.f || vec.y != 0.f) polygon.points.emplace_back(vec);
                 else break;
             }
+            polygon.color = Colors::Load(inifile, section, "color", polygon.color);
+            polygon.color_agents = inifile->GetBoolValue(section, "color_agents", polygon.color_agents);
             polygon.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
             polygon.visible = inifile->GetBoolValue(section, "visible", true);
             polygons.push_back(polygon);
@@ -134,6 +136,8 @@ void CustomRenderer::SaveMarkers() const
                 inifile->SetDoubleValue(
                     section, (std::string("point[") + std::to_string(j) + "].y").c_str(), polygon.points.at(j).y);
             }
+            Colors::Save(inifile, section, "color", polygon.color);
+            inifile->SetBoolValue(section, "color_agents", polygon.color_agents);
             inifile->SetValue(section, "name", polygon.name);
             inifile->SetLongValue(section, "map", static_cast<long>(polygon.map));
             inifile->SetBoolValue(section, "visible", polygon.visible);
@@ -241,7 +245,7 @@ void CustomRenderer::DrawSettings()
     ImGui::PushID("polygons");
     for (size_t i = 0; i < polygons.size(); ++i) {
         bool remove = false;
-        CustomPolygon& polygon = polygons[i];
+        CustomPolygon& polygon = polygons.at(i);
         ImGui::PushID(static_cast<int>(i));
         ImGui::Checkbox("##visible", &polygon.visible);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
@@ -252,15 +256,26 @@ void CustomRenderer::DrawSettings()
                 polygon.points.emplace_back(0.f, 0.f);
                 markers_changed = true;
             }
-            ImGui::SameLine();
+            ImGui::SameLine(0.0f, spacing);
         }
         if (polygon.points.size() > 0) {
             if (ImGui::Button("-##del")) {
                 polygon.points.pop_back();
                 markers_changed = true;
             }
-            ImGui::SameLine();
+            ImGui::SameLine(0.0f, spacing);
         }
+        ImGui::Checkbox("##filled", &polygon.filled);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Filled");
+        ImGui::SameLine(0.0f, spacing);
+
+        ImGui::Checkbox("##coloragents", &polygon.color_agents);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color hostile agents within this polygon differently?");
+        ImGui::SameLine(0.0f, spacing);
+
+        if (Colors::DrawSettingHueWheel("##color", &polygon.color)) Invalidate();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color to substract from agents in this polygon.");
+        ImGui::SameLine(0.0f, spacing);
 
         if (ImGui::InputInt("##map", reinterpret_cast<int*>(&polygon.map), 0)) markers_changed = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Map ID");
@@ -285,7 +300,7 @@ void CustomRenderer::DrawSettings()
         if (remove) polygons.erase(polygons.begin() + static_cast<int>(i));
     }
     ImGui::PopID();
-    float button_width = (ImGui::CalcItemWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
+    const float button_width = (ImGui::CalcItemWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
     if (ImGui::Button("Add Line", ImVec2(button_width, 0.0f))) {
         char buf[32];
         snprintf(buf, 32, "line%zu", lines.size());
@@ -318,6 +333,50 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device)
         sizeof(D3DVertex) * vertices_max, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
     if (FAILED(hr)) {
         printf("Error setting up CustomRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
+    }
+}
+
+void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
+{
+    if (filled) {
+        if (points.size() < 3) return; // can't draw a triangle with less than 3 vertices
+        type = D3DPT_TRIANGLESTRIP;
+        const auto vertex_count = points.size();
+        D3DVertex* _vertices = nullptr;
+
+        if (buffer) buffer->Release();
+        device->CreateVertexBuffer(
+            sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+        buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
+
+        for (auto i = 0u; i < points.size(); i++) {
+            _vertices[i].x = points.at(i).x;
+            _vertices[i].y = points.at(i).y;
+            _vertices[i].z = 0.f;
+            _vertices[i].color = color;
+        }
+
+        buffer->Unlock();
+    } else {
+        if (points.size() < 2) return;
+        type = D3DPT_LINESTRIP;
+
+        const auto vertex_count = points.size() + 1;
+        D3DVertex* _vertices = nullptr;
+
+        if (buffer) buffer->Release();
+        device->CreateVertexBuffer(
+            sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+        buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
+
+        for (auto i = 0u; i < points.size(); i++) {
+            _vertices[i].x = points.at(i).x;
+            _vertices[i].y = points.at(i).y;
+            _vertices[i].z = 0.f;
+            _vertices[i].color = color;
+        }
+
+        buffer->Unlock();
     }
 }
 
@@ -417,6 +476,7 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
                 }
             }
         }
+        // TODO: draw custom polygons
 
         GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
         if (flags.valid()) {

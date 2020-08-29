@@ -59,28 +59,28 @@ class CustomRenderer : public VBuffer
         char name[128]{};
     };
 
-    struct CustomPolygon
+    struct CustomPolygon final : VBuffer
     {
         CustomPolygon(GW::Constants::MapID m, const char* n)
             : map(m)
-            , visible(true)
-            , filled(true)
         {
             if (n)
-                GuiUtils::StrCopy(name, n, sizeof(name));
+                GuiUtils::StrCopy(name, n, sizeof name);
             else
-                GuiUtils::StrCopy(name, "marker", sizeof(name));
+                GuiUtils::StrCopy(name, "marker", sizeof name);
         };
         CustomPolygon(const char* n)
             : CustomPolygon(GW::Constants::MapID::None, n){};
 
         std::vector<GW::Vec2f> points{};
         GW::Constants::MapID map;
-        bool visible;
-        bool filled;
+        bool visible = true;
+        bool filled = false;
+        bool color_agents = false;
         char name[128]{};
-        Color clr{0xFFFFFFFF};
+        Color color{0xA0FFFFFF};
         const static auto max_points = 20;
+        void Initialize(IDirect3DDevice9* device) override;
     };
 
 public:
