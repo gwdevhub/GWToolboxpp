@@ -544,8 +544,8 @@ namespace
 {
     bool isSafeBehemoth(float x, float y)
     {
-        auto isLeftOfLine = [x, y](std::tuple<float, float> a, std::tuple<float, float> b) { return ((std::get<0>(b) - std::get<0>(a)) * (y - std::get<1>(a)) - (std::get<1>(b) - std::get<1>(a)) * (x - std::get<0>(a))) > 0; };
-        const std::vector<std::tuple<float, float>> points = {{-8809.f, -5233.f}, {-9276.f, -5207.f}, {-9128.f, -5562.f}, {-8920.f, -5462.f}, {-8867.f, -5541.f}, {-8715.f, -5459.f}};
+        auto isLeftOfLine = [x, y](GW::Vec2f a, GW::Vec2f b) { return (b.x - a.x) * (y - a.y) - (b.y - a.y) * (x - a.x) > 0; };
+        const std::array<GW::Vec2f, 6> points{{{-8809.f, -5233.f}, {-9276.f, -5207.f}, {-9128.f, -5562.f}, {-8920.f, -5462.f}, {-8867.f, -5541.f}, {-8715.f, -5459.f}}};
 
         //Safe area is split in two convex polygons to make checking easier:
         if (isLeftOfLine(points[0], points[3])) //common edge between the two polygons
