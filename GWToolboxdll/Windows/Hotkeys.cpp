@@ -1154,7 +1154,7 @@ void HotkeyHeroTeamBuild::Description(char *buf, size_t bufsz) const
     const char *buildname = HeroBuildsWindow::Instance().BuildName(index);
     if (buildname == nullptr)
         buildname = "<not found>";
-    snprintf(buf, bufsz, "Load Team Hero Build '%s'", buildname);
+    snprintf(buf, bufsz, "Load Hero Team Build '%s'", buildname);
 }
 void HotkeyHeroTeamBuild::Draw()
 {
