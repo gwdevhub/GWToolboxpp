@@ -276,7 +276,7 @@ void CustomRenderer::DrawSettings()
         ImGui::SameLine(0.0f, spacing);
 
         if (ImGui::ColorButtonPicker("##colorsub", polygon.color_sub)) polygon_changed = markers_changed = true;
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color to substract from agents in this polygon.");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color in which hostile agents inside this polygon are drawn.");
         ImGui::SameLine(0.0f, spacing);
 
         if (ImGui::ColorButtonPicker("C:##color", polygon.color)) polygon_changed = markers_changed = true;

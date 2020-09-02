@@ -99,7 +99,6 @@ private:
 
     Color color_agent_modifier = 0;
     Color color_agent_damaged_modifier = 0;
-    Color color_agent_in_polygon_modifier = 0;
     Color color_eoe = 0;
     Color color_qz = 0;
     Color color_winnowing = 0;

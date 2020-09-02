@@ -34,7 +34,6 @@ unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), 0x001E1E1E);
     color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_lowhp_modifier), 0x00505050);
-    color_agent_in_polygon_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_in_polygon_modifier), 0x00A00000);
     color_eoe = Colors::Load(ini, section, VAR_NAME(color_eoe), 0x3200FF00);
     color_qz = Colors::Load(ini, section, VAR_NAME(color_qz), 0x320000FF);
     color_winnowing = Colors::Load(ini, section, VAR_NAME(color_winnowing), 0x3200FFFF);
@@ -89,7 +88,6 @@ void AgentRenderer::LoadAgentColors() {
 
 void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
     Colors::Save(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
-    Colors::Save(ini, section, VAR_NAME(color_agent_in_polygon_modifier), color_agent_in_polygon_modifier);
     Colors::Save(ini, section, VAR_NAME(color_agent_damaged_modifier), color_agent_damaged_modifier);
     Colors::Save(ini, section, VAR_NAME(color_eoe), color_eoe);
     Colors::Save(ini, section, VAR_NAME(color_qz), color_qz);
@@ -161,8 +159,6 @@ void AgentRenderer::DrawSettings() {
         ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
         Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
         ImGui::ShowHelp("Each hostile agent has this value subtracted from it when under 90% HP.");
-        Colors::DrawSettingHueWheel("Agent in custom polygon modifier", &color_agent_in_polygon_modifier);
-        ImGui::ShowHelp("Each hostile agent has this value subtracted from it when currently in a custom marker.");
         if (ImGui::SmallButton("Restore Defaults")) {
             ImGui::OpenPopup("Restore Defaults?");
         }
@@ -171,7 +167,6 @@ void AgentRenderer::DrawSettings() {
             if (ImGui::Button("OK", ImVec2(120, 0))) {
                 color_agent_modifier = 0x001E1E1E;
                 color_agent_damaged_modifier = 0x00505050;
-                color_agent_in_polygon_modifier = 0x00A00000;
                 color_eoe = 0x3200FF00;
                 color_qz = 0x320000FF;
                 color_winnowing = 0x3200FFFF;
@@ -580,22 +575,51 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         }
         const auto& polygons = Minimap::Instance().custom_renderer.polygons;
         const auto is_relevant = [living](const CustomRenderer::CustomPolygon& polygon)-> bool {
-            return polygon.map == GW::Map::GetMapID() && !polygon.points.empty() &&
+            return polygon.map == GW::Map::GetMapID() && !polygon.points.empty() && polygon.color_agents &&
                    GW::GetDistance(living->pos, polygon.points.at(0)) < 2500.f;
         };
         const auto is_inside = [](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
             bool b = false;
+            auto hits = 0;
             for (auto i = 0u, j = points.size() - 1; i < points.size(); j = i++) {
                 if (points[i].y >= pos.y != points[j].y >= pos.y &&
-                    pos.x <= (points[j].x - points[i].x) * (pos.y - points[i].y) / (points[j].y - points[i].y) + points[i].x)
+                    pos.x <= (points[j].x - points[i].x) * (pos.y - points[i].y) / (points[j].y - points[i].y) +
+                                 points[i].x) {
                     b = !b;
+                    hits++;
+                }
             }
             return b;
         };
+        auto sign = [](GW::Vec2f p1, GW::Vec2f p2, GW::Vec2f p3)-> float {
+            return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+        };
+
+        auto in_triangle = [sign](GW::Vec2f pt, GW::Vec2f v1, GW::Vec2f v2, GW::Vec2f v3) -> bool {
+
+            float d1 = sign(pt, v1, v2);
+            float d2 = sign(pt, v2, v3);
+            float d3 = sign(pt, v3, v1);
+
+            bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+            bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+            return !(has_neg && has_pos);
+        };
+
+        auto is_inside_triangles = [in_triangle](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) {
+            for (auto i = 0u; i < points.size() - 2; i++) {
+                if (in_triangle(pos, points[i], points[i + 1], points[i + 2])) return true;;
+            }
+            return false;
+        };
         for (const auto& polygon : polygons) {
             if (!is_relevant(polygon)) continue;
-            if (is_inside(living->pos, polygon.points)) {
-                c = Colors::Sub(c, color_agent_in_polygon_modifier);
+            if (polygon.filled && is_inside_triangles(living->pos, polygon.points)) {
+                c = polygon.color_sub;
+            }
+            if (!polygon.filled && is_inside(living->pos, polygon.points)) {
+                c = polygon.color_sub;
             }
         }
         if (living->hp > 0.9f) return c;
