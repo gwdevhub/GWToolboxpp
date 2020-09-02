@@ -317,7 +317,7 @@ void CustomRenderer::DrawSettings()
         else if (polygon_changed) polygon.Invalidate();
     }
     ImGui::PopID();
-    const float button_width = (ImGui::CalcItemWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
+    const float button_width = (ImGui::CalcItemWidth() - ImGui::GetStyle().ItemSpacing.x) / 2 - 10;
     if (ImGui::Button("Add Line", ImVec2(button_width, 0.0f))) {
         char buf[32];
         snprintf(buf, 32, "line%zu", lines.size());
