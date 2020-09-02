@@ -273,7 +273,32 @@ void CustomRenderer::DrawSettings()
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color hostile agents within this polygon differently?");
         ImGui::SameLine(0.0f, spacing);
 
-        if (Colors::DrawSettingHueWheel("##color", &polygon.color)) Invalidate();
+        float col[4];
+        Colors::ConvertU32ToFloat4(polygon.color, col);
+        ImVec4 col_v4{col[3], col[0], col[1], col[2]};
+        auto value_changed = false;
+        auto& g = *ImGui::GetCurrentContext();
+
+        if (ImGui::ColorButton("##ColorButton", col_v4)) {
+            g.ColorPickerRef = col_v4;
+            ImGui::OpenPopup("picker");
+        }
+        static float col_buf[4] = {col[0], col[1], col[2], col[3]};
+        if (ImGui::BeginPopup("picker")) {
+            const ImGuiColorEditFlags picker_flags = ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_NoLabel |
+                                                     ImGuiColorEditFlags_AlphaPreviewHalf;
+            ImGui::SetNextItemWidth(ImGui::GetFrameHeight() * 12.0f);
+            value_changed |= ImGui::ColorPicker4("##picker", col_buf, picker_flags, &g.ColorPickerRef.x);
+            ImGui::EndPopup();
+        }
+        if (value_changed) {
+            col_v4 = {col_buf[1],col_buf[2], col_buf[3], col_buf[0]}; // argb to rgba
+            polygon.color = ImGui::ColorConvertFloat4ToU32(col_v4);
+            markers_changed = true;
+        }
+
+        // TODO: only display color button with picker attached
+        //if (Colors::DrawSettingHueWheel("##color", &polygon.color)) Invalidate();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color to substract from agents in this polygon.");
         ImGui::SameLine(0.0f, spacing);
 

@@ -64,6 +64,13 @@ namespace Colors {
         i[3] = static_cast<int>((color >> IM_COL32_B_SHIFT) & 0xFF);
     }
 
+    static void ConvertU32ToFloat4(Color color, float* f) {
+        f[0] = static_cast<float>((color >> IM_COL32_A_SHIFT) & 0xFF) / 255.f;
+        f[1] = static_cast<int>((color >> IM_COL32_R_SHIFT) & 0xFF) / 255.f;
+        f[2] = static_cast<int>((color >> IM_COL32_G_SHIFT) & 0xFF) / 255.f;
+        f[3] = static_cast<int>((color >> IM_COL32_B_SHIFT) & 0xFF) / 255.f;
+    }
+
     static Color ConvertInt4ToU32(const int* i) {
         return static_cast<Color>((i[0] & 0xFF) << IM_COL32_A_SHIFT) |
                static_cast<Color>((i[1] & 0xFF) << IM_COL32_R_SHIFT) |
