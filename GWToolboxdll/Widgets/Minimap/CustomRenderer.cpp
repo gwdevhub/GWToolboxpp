@@ -65,8 +65,10 @@ void CustomRenderer::LoadMarkers()
                     inifile->GetDoubleValue(section, (std::string("point[") + std::to_string(i) + "].x").c_str(), 0.f));
                 vec.y = static_cast<float>(
                     inifile->GetDoubleValue(section, (std::string("point[") + std::to_string(i) + "].y").c_str(), 0.f));
-                if (vec.x != 0.f || vec.y != 0.f) polygon.points.emplace_back(vec);
-                else break;
+                if (vec.x != 0.f || vec.y != 0.f)
+                    polygon.points.emplace_back(vec);
+                else
+                    break;
             }
             polygon.color = Colors::Load(inifile, section, "color", polygon.color);
             polygon.color_agents = inifile->GetBoolValue(section, "color_agents", polygon.color_agents);
@@ -292,13 +294,10 @@ void CustomRenderer::DrawSettings()
             ImGui::EndPopup();
         }
         if (value_changed) {
-            col_v4 = {col_buf[1],col_buf[2], col_buf[3], col_buf[0]}; // argb to rgba
+            col_v4 = {col_buf[1], col_buf[2], col_buf[3], col_buf[0]}; // argb to rgba
             polygon.color = ImGui::ColorConvertFloat4ToU32(col_v4);
             markers_changed = true;
         }
-
-        // TODO: only display color button with picker attached
-        //if (Colors::DrawSettingHueWheel("##color", &polygon.color)) Invalidate();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color to substract from agents in this polygon.");
         ImGui::SameLine(0.0f, spacing);
 
@@ -405,6 +404,19 @@ void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
     }
 }
 
+void CustomRenderer::CustomPolygon::Render(IDirect3DDevice9* device)
+{
+    if (!initialized) {
+        initialized = true;
+        Initialize(device);
+    }
+    if (points.size() >= 3 && visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
+        device->SetFVF(D3DFVF_CUSTOMVERTEX);
+        device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+        device->DrawPrimitive(type, 0, points.size() - 2);
+    }
+}
+
 void CustomRenderer::FullCircle::Initialize(IDirect3DDevice9* device)
 {
     type = D3DPT_TRIANGLEFAN;
@@ -487,6 +499,10 @@ void CustomRenderer::Render(IDirect3DDevice9* device)
 void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
 {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+        for (CustomPolygon& polygon : polygons) {
+            polygon.Render(device);
+        }
+
         for (const CustomMarker& marker : markers) {
             if (marker.visible && (marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID())) {
                 D3DXMATRIX translate, scale, world;
@@ -501,7 +517,6 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
                 }
             }
         }
-        // TODO: draw custom polygons
 
         GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
         if (flags.valid()) {

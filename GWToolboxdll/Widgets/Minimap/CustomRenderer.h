@@ -81,6 +81,7 @@ class CustomRenderer : public VBuffer
         Color color{0xA0FFFFFF};
         const static auto max_points = 20;
         void Initialize(IDirect3DDevice9* device) override;
+        void Render(IDirect3DDevice9* device) override;
     };
 
 public:
