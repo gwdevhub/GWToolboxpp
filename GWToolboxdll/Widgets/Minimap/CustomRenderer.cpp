@@ -72,6 +72,7 @@ void CustomRenderer::LoadMarkers()
             }
             polygon.filled = inifile->GetBoolValue(section, "filled", polygon.filled);
             polygon.color = Colors::Load(inifile, section, "color", polygon.color);
+            polygon.color_sub = Colors::Load(inifile, section, "color_sub", polygon.color_sub);
             polygon.color_agents = inifile->GetBoolValue(section, "color_agents", polygon.color_agents);
             polygon.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
             polygon.visible = inifile->GetBoolValue(section, "visible", true);
@@ -140,6 +141,7 @@ void CustomRenderer::SaveMarkers() const
                     section, (std::string("point[") + std::to_string(j) + "].y").c_str(), polygon.points.at(j).y);
             }
             Colors::Save(inifile, section, "color", polygon.color);
+            Colors::Save(inifile, section, "color_sub", polygon.color_sub);
             inifile->SetBoolValue(section, "color_agents", polygon.color_agents);
             inifile->SetValue(section, "name", polygon.name);
             inifile->SetLongValue(section, "map", static_cast<long>(polygon.map));
@@ -250,6 +252,7 @@ void CustomRenderer::DrawSettings()
     for (size_t i = 0; i < polygons.size(); ++i) {
         bool polygon_changed = false;
         bool remove = false;
+        int remove_point = -1;
         CustomPolygon& polygon = polygons.at(i);
         ImGui::PushID(static_cast<int>(i));
         if (ImGui::Checkbox("##visible", &polygon.visible)) polygon.Invalidate();
@@ -264,14 +267,6 @@ void CustomRenderer::DrawSettings()
             }
             ImGui::SameLine(0.0f, spacing);
         }
-        if (polygon.points.size() > 0) {
-            if (ImGui::Button("-##del")) {
-                polygon_changed = true;
-                polygon.points.pop_back();
-                markers_changed = true;
-            }
-            ImGui::SameLine(0.0f, spacing);
-        }
         if (ImGui::Checkbox("##filled", &polygon.filled)) polygon_changed = true;;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Filled");
         ImGui::SameLine(0.0f, spacing);
@@ -280,41 +275,12 @@ void CustomRenderer::DrawSettings()
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color hostile agents within this polygon differently?");
         ImGui::SameLine(0.0f, spacing);
 
-        float col[4];
-        Colors::ConvertU32ToFloat4(polygon.color, col);
-        ImVec4 col_v4{col[3], col[0], col[1], col[2]};
-        auto value_changed = false;
-        auto& g = *ImGui::GetCurrentContext();
-
-        if (ImGui::ColorButton("##ColorButton", col_v4)) {
-            g.ColorPickerRef = col_v4;
-            ImGui::OpenPopup("picker");
-        }
-        static float col_buf[4] = {0, 0, 0, 0};
-        if (col_buf[0] == 0 && col_buf[1] == 0 && col_buf[2] == 0 && col_buf[3] == 0) {
-            col_buf[0] = col[0];
-            col_buf[1] = col[1];
-            col_buf[2] = col[2];
-            col_buf[3] = col[3];
-        }
-        if (ImGui::BeginPopup("picker")) {
-            const ImGuiColorEditFlags picker_flags = ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_NoLabel |
-                                                     ImGuiColorEditFlags_AlphaPreviewHalf;
-            ImGui::SetNextItemWidth(ImGui::GetFrameHeight() * 12.0f);
-            value_changed |= ImGui::ColorPicker4("##picker", col_buf, picker_flags, &g.ColorPickerRef.x);
-            ImGui::EndPopup();
-        }
-        if (value_changed) {
-            col_v4 = {
-                col_buf[2],
-                col_buf[3],
-                col_buf[0],
-                col_buf[1],
-            }; // argb to rgba
-            polygon.color = ImGui::ColorConvertFloat4ToU32(col_v4);
-            markers_changed = true;
-        }
+        if (ImGui::ColorButtonPicker("##colorsub", polygon.color_sub)) polygon_changed = markers_changed = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color to substract from agents in this polygon.");
+        ImGui::SameLine(0.0f, spacing);
+
+        if (ImGui::ColorButtonPicker("C:##color", polygon.color)) polygon_changed = markers_changed = true;
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color of the polygon on the map.");
         ImGui::SameLine(0.0f, spacing);
 
         if (ImGui::InputInt("##map", reinterpret_cast<int*>(&polygon.map), 0)) {
@@ -340,8 +306,13 @@ void CustomRenderer::DrawSettings()
             if (ImGui::InputFloat2((std::string("##point") + std::to_string(j)).c_str(),
                     reinterpret_cast<float*>(&polygon.points.at(j)), "%.0f"))
                 markers_changed = polygon_changed = true;
+            ImGui::SameLine();
+            using namespace std::string_literals;
+            if (ImGui::Button(("x##"s + std::to_string(j)).c_str()))
+                remove_point = j;
         }
         ImGui::PopID();
+        if (remove_point > -1) polygon.points.erase(polygon.points.begin() + remove_point);
         if (remove) polygons.erase(polygons.begin() + static_cast<int>(i));
         else if (polygon_changed) polygon.Invalidate();
     }
@@ -432,10 +403,20 @@ void CustomRenderer::CustomPolygon::Render(IDirect3DDevice9* device)
         initialized = true;
         Initialize(device);
     }
-    if (points.size() >= 3 && visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
-        device->SetFVF(D3DFVF_CUSTOMVERTEX);
-        device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-        device->DrawPrimitive(type, 0, points.size() - 2);
+    if (filled) {
+        if (points.size() < 3) return;
+        if (visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
+            device->SetFVF(D3DFVF_CUSTOMVERTEX);
+            device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+            device->DrawPrimitive(type, 0, points.size() - 2);
+        }
+    } else {
+        if (points.size() < 2) return;
+        if (visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
+            device->SetFVF(D3DFVF_CUSTOMVERTEX);
+            device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+            device->DrawPrimitive(type, 0, points.size() - 1);
+        }
     }
 }
 
