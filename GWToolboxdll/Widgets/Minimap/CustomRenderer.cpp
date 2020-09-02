@@ -70,6 +70,7 @@ void CustomRenderer::LoadMarkers()
                 else
                     break;
             }
+            polygon.filled = inifile->GetBoolValue(section, "filled", polygon.filled);
             polygon.color = Colors::Load(inifile, section, "color", polygon.color);
             polygon.color_agents = inifile->GetBoolValue(section, "color_agents", polygon.color_agents);
             polygon.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
@@ -143,6 +144,7 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetValue(section, "name", polygon.name);
             inifile->SetLongValue(section, "map", static_cast<long>(polygon.map));
             inifile->SetBoolValue(section, "visible", polygon.visible);
+            inifile->SetBoolValue(section, "filled", polygon.filled);
         }
 
         inifile->SaveFile(Resources::GetPath(IniFilename).c_str());
@@ -246,10 +248,11 @@ void CustomRenderer::DrawSettings()
     ImGui::PopID();
     ImGui::PushID("polygons");
     for (size_t i = 0; i < polygons.size(); ++i) {
+        bool polygon_changed = false;
         bool remove = false;
         CustomPolygon& polygon = polygons.at(i);
         ImGui::PushID(static_cast<int>(i));
-        ImGui::Checkbox("##visible", &polygon.visible);
+        if (ImGui::Checkbox("##visible", &polygon.visible)) polygon.Invalidate();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
         ImGui::SameLine(0.0f, spacing);
         ImGui::PushItemWidth((ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 5) / 5);
@@ -257,17 +260,19 @@ void CustomRenderer::DrawSettings()
             if (ImGui::Button("+##add", ImVec2(20.0f, 0))) {
                 polygon.points.emplace_back(0.f, 0.f);
                 markers_changed = true;
+                polygon_changed = true;
             }
             ImGui::SameLine(0.0f, spacing);
         }
         if (polygon.points.size() > 0) {
             if (ImGui::Button("-##del")) {
+                polygon_changed = true;
                 polygon.points.pop_back();
                 markers_changed = true;
             }
             ImGui::SameLine(0.0f, spacing);
         }
-        ImGui::Checkbox("##filled", &polygon.filled);
+        if (ImGui::Checkbox("##filled", &polygon.filled)) polygon_changed = true;;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Filled");
         ImGui::SameLine(0.0f, spacing);
 
@@ -285,7 +290,13 @@ void CustomRenderer::DrawSettings()
             g.ColorPickerRef = col_v4;
             ImGui::OpenPopup("picker");
         }
-        static float col_buf[4] = {col[0], col[1], col[2], col[3]};
+        static float col_buf[4] = {0, 0, 0, 0};
+        if (col_buf[0] == 0 && col_buf[1] == 0 && col_buf[2] == 0 && col_buf[3] == 0) {
+            col_buf[0] = col[0];
+            col_buf[1] = col[1];
+            col_buf[2] = col[2];
+            col_buf[3] = col[3];
+        }
         if (ImGui::BeginPopup("picker")) {
             const ImGuiColorEditFlags picker_flags = ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_NoLabel |
                                                      ImGuiColorEditFlags_AlphaPreviewHalf;
@@ -294,15 +305,24 @@ void CustomRenderer::DrawSettings()
             ImGui::EndPopup();
         }
         if (value_changed) {
-            col_v4 = {col_buf[1], col_buf[2], col_buf[3], col_buf[0]}; // argb to rgba
+            col_v4 = {
+                col_buf[2],
+                col_buf[3],
+                col_buf[0],
+                col_buf[1],
+            }; // argb to rgba
             polygon.color = ImGui::ColorConvertFloat4ToU32(col_v4);
             markers_changed = true;
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color to substract from agents in this polygon.");
         ImGui::SameLine(0.0f, spacing);
 
-        if (ImGui::InputInt("##map", reinterpret_cast<int*>(&polygon.map), 0)) markers_changed = true;
+        if (ImGui::InputInt("##map", reinterpret_cast<int*>(&polygon.map), 0)) {
+            markers_changed = true;
+            polygon_changed = true;
+        }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Map ID");
+
         ImGui::SameLine(0.0f, spacing);
         ImGui::PopItemWidth();
         ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() - ImGui::GetCursorPosX() - spacing - 20.0f);
@@ -317,11 +337,13 @@ void CustomRenderer::DrawSettings()
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
 
         for (auto j = 0u; j < polygon.points.size(); j++) {
-            ImGui::InputFloat2((std::string("##point") + std::to_string(j)).c_str(),
-                reinterpret_cast<float*>(&polygon.points.at(j)), "%.0f");
+            if (ImGui::InputFloat2((std::string("##point") + std::to_string(j)).c_str(),
+                    reinterpret_cast<float*>(&polygon.points.at(j)), "%.0f"))
+                markers_changed = polygon_changed = true;
         }
         ImGui::PopID();
         if (remove) polygons.erase(polygons.begin() + static_cast<int>(i));
+        else if (polygon_changed) polygon.Invalidate();
     }
     ImGui::PopID();
     const float button_width = (ImGui::CalcItemWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
