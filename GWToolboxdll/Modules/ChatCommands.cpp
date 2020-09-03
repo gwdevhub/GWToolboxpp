@@ -567,47 +567,73 @@ void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR *) {
 }
 
 void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
-    if (argc <= 1) {
+    if (argc < 2) { // e.g. /tb
         MainWindow::Instance().visible ^= 1;
-    } else {
+        return;
+    }
+    
+    if (argc < 3) {
         std::wstring arg = GuiUtils::ToLower(argv[1]);
-        if (arg == L"age") {
-            CmdAge2(message, 0, argv);
-        } else if (arg == L"hide") {
+        if (arg == L"hide") { // e.g. /tb hide
             MainWindow::Instance().visible = false;
-        } else if (arg == L"show") {
+        }
+        else if (arg == L"show") { // e.g. /tb show
             MainWindow::Instance().visible = true;
-        } else if (arg == L"reset") {
+        }
+        else if (arg == L"reset") { // e.g. /tb reset
             ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
             ImGui::SetWindowPos(SettingsWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
             MainWindow::Instance().visible = false;
             SettingsWindow::Instance().visible = true;
-        } else if (arg == L"settings") {
-            SettingsWindow::Instance().visible = true;
-        } else if (arg == L"mini" || arg == L"minimize") {
+        }
+        else if (arg == L"mini" || arg == L"minimize" || arg == L"collapse") { // e.g. /tb mini
             ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), true);
-        } else if (arg == L"maxi" || arg == L"maximize") {
+        }
+        else if (arg == L"maxi" || arg == L"maximize") { // e.g. /tb maxi
             ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), false);
-        } else if (arg == L"close" || arg == L"quit" || arg == L"exit") {
+        }
+        else if (arg == L"close" || arg == L"quit" || arg == L"exit") { // e.g. /tb close
             GWToolbox::Instance().StartSelfDestruct();
-        } else if (arg == L"ignore") {
-
-        } else {
-            auto windows = MatchingWindows(message, argc, argv);
+        }
+        else { // e.g. /tb travel
+            std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
             for (ToolboxUIElement* window : windows) {
                 window->visible ^= 1;
             }
         }
+        return;
+    }
+    std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
+    std::wstring arg = GuiUtils::ToLower(argv[2]);
+    if (arg == L"hide") { // e.g. /tb travel hide
+        for (auto const& window : windows)
+            window->visible = false;
+    }
+    else if (arg == L"show") { // e.g. /tb travel show
+        for (auto const& window : windows)
+            window->visible = true;
+    }
+    else if (arg == L"mini" || arg == L"minimize" || arg == L"collapse") { // e.g. /tb travel mini
+        for (auto const& window : windows)
+            ImGui::SetWindowCollapsed(window->Name(), true);
+    }
+    else if (arg == L"maxi" || arg == L"maximize") { // e.g. /tb travel maxi
+        for (auto const& window : windows)
+            ImGui::SetWindowCollapsed(window->Name(), false);
+    }
+    else { // Invalid argument
+        char buf[255];
+        snprintf(buf, 255, "Syntax: /%S %S [hide|show|mini|maxi]", argv[0], argv[1]);
+        Log::Error(buf);
     }
 }
 
-std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *message, int argc, LPWSTR *) {
+std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *, int argc, LPWSTR *argv) {
     std::vector<ToolboxUIElement*> ret;
     if (argc <= 1) {
         ret.push_back(&MainWindow::Instance());
     } else {
-        const wchar_t *tail = next_word(message);
-        std::wstring arg = GuiUtils::ToLower(tail);
+        std::wstring arg = GuiUtils::ToLower(argv[1]);
         if (arg == L"all") {
             for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
                 ret.push_back(window);

@@ -434,7 +434,7 @@ bool FriendListWindow::WriteError(MessageType message_type, const wchar_t* chara
     return true;
 }
 
-void FriendListWindow::OnAddFriendError(GW::HookStatus* status, wchar_t* msg) {
+void FriendListWindow::OnAddFriendError(GW::HookStatus* status, wchar_t*) {
     FriendListWindow& instance = Instance();
     if (instance.pending_whisper.charname.size()) {
         ASSERT(instance.WriteError(MessageType::PLAYER_X_NOT_ONLINE, instance.pending_whisper.charname.c_str()));
