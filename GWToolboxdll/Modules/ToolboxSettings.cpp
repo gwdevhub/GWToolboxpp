@@ -85,6 +85,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
 
     SettingsWindow::Instance().sep_windows = optional_modules.size();
+    optional_modules.push_back(&SettingsWindow::Instance());
     if (use_pcons) optional_modules.push_back(&PconsWindow::Instance());
     if (use_hotkeys) optional_modules.push_back(&HotkeysWindow::Instance());
     if (use_builds) optional_modules.push_back(&BuildsWindow::Instance());
@@ -113,7 +114,6 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
         });
 
     SettingsWindow::Instance().sep_widgets = optional_modules.size();
-    optional_modules.push_back(&SettingsWindow::Instance());
     if (use_timer) optional_modules.push_back(&TimerWidget::Instance());
     if (use_health) optional_modules.push_back(&HealthWidget::Instance());
     if (use_skillbar) optional_modules.push_back(&SkillbarWidget::Instance());
