@@ -126,7 +126,7 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetDoubleValue(section, "x", marker.pos.x);
             inifile->SetDoubleValue(section, "y", marker.pos.y);
             inifile->SetDoubleValue(section, "size", marker.size);
-            inifile->SetLongValue(section, "shape", marker.shape);
+            inifile->SetLongValue(section, "shape", static_cast<long>(marker.shape));
             inifile->SetLongValue(section, "map", (long)marker.map);
             inifile->SetBoolValue(section, "visible", marker.visible);
         }
@@ -215,7 +215,7 @@ void CustomRenderer::DrawSettings()
         ImGui::Checkbox("##visible", &marker.visible);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
         ImGui::SameLine(0.0f, spacing);
-        ImGui::PushItemWidth((ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 5) / 5);
+        ImGui::PushItemWidth((ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 8) / 8);
         if (ImGui::DragFloat("##x", &marker.pos.x, 1.0f, 0.0f, 0.0f, "%.0f")) markers_changed = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Marker X Position");
         ImGui::SameLine(0.0f, spacing);
@@ -227,8 +227,19 @@ void CustomRenderer::DrawSettings()
         ImGui::SameLine(0.0f, spacing);
 
         static const char* const types[] = {"Circle", "FillCircle"};
-        if (ImGui::Combo("##type", (int*)&marker.shape, types, 2)) markers_changed = true;
+        if (ImGui::Combo("##type", reinterpret_cast<int*>(&marker.shape), types, 2)) markers_changed = true;
         ImGui::SameLine(0.0f, spacing);
+
+        
+        ImGui::Checkbox("##color_agents", &marker.color_agents);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color agents in this circle differently?");
+        ImGui::SameLine(0.0f, spacing);
+        if (ImGui::ColorButtonPicker("##color_sub", marker.color_sub)) markers_changed = true;
+        ImGui::SameLine(0.0f, spacing);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color to draw agents in this circle in.");
+        if (ImGui::ColorButtonPicker("##color", marker.color)) markers_changed = true;
+        ImGui::SameLine(0.0f, spacing);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color of this circle.");
 
         if (ImGui::InputInt("##map", (int*)&marker.map, 0)) markers_changed = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Map ID");
@@ -520,8 +531,12 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
                 device->SetTransform(D3DTS_WORLD, &world);
 
                 switch (marker.shape) {
-                    case LineCircle: linecircle.Render(device); break;
-                    case FullCircle: fullcircle.Render(device); break;
+                    case Shape::LineCircle:
+                        linecircle.Render(device);
+                        break;
+                    case Shape::FullCircle:
+                        fullcircle.Render(device);
+                        break;
                 }
             }
         }

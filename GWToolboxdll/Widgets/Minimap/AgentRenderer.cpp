@@ -574,19 +574,22 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             if (prof) c = profession_colors[prof];
         }
         const auto& polygons = Minimap::Instance().custom_renderer.polygons;
+        const auto& markers = Minimap::Instance().custom_renderer.markers;
         const auto is_relevant = [living](const CustomRenderer::CustomPolygon& polygon)-> bool {
             return (polygon.map == GW::Constants::MapID::None || polygon.map == GW::Map::GetMapID()) && !polygon.points.empty() && polygon.color_agents &&
                    GW::GetDistance(living->pos, polygon.points.at(0)) < 2500.f;
         };
+        const auto is_relevant_circle = [living](const CustomRenderer::CustomMarker& marker) {
+            return (marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID()) && marker.color_agents &&
+                   GW::GetDistance(living->pos, marker.pos) < 2500.f;
+        };
         const auto is_inside = [](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
             bool b = false;
-            auto hits = 0;
             for (auto i = 0u, j = points.size() - 1; i < points.size(); j = i++) {
                 if (points[i].y >= pos.y != points[j].y >= pos.y &&
                     pos.x <= (points[j].x - points[i].x) * (pos.y - points[i].y) / (points[j].y - points[i].y) +
                                  points[i].x) {
                     b = !b;
-                    hits++;
                 }
             }
             return b;
@@ -607,11 +610,14 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             return !(has_neg && has_pos);
         };
 
-        auto is_inside_triangles = [in_triangle](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) {
+        auto is_inside_triangles = [in_triangle](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
             for (auto i = 0u; i < points.size() - 2; i++) {
                 if (in_triangle(pos, points[i], points[i + 1], points[i + 2])) return true;;
             }
             return false;
+        };
+        auto is_inside_circle = [](const GW::Vec2f pos, const GW::Vec2f circle, const float radius) -> bool {
+            return (pos.x - circle.x) * (pos.x - circle.x) + (pos.y - circle.y) * (pos.y - circle.y) <= radius * radius;
         };
         for (const auto& polygon : polygons) {
             if (!is_relevant(polygon)) continue;
@@ -620,6 +626,12 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             }
             if (!polygon.filled && is_inside(living->pos, polygon.points)) {
                 c = polygon.color_sub;
+            }
+        }
+        for (const auto marker : markers) {
+            if (!is_relevant_circle(marker)) continue;
+            if (is_inside_circle(living->pos, marker.pos, marker.size)) {
+                c = marker.color_sub;
             }
         }
         if (living->hp > 0.9f) return c;

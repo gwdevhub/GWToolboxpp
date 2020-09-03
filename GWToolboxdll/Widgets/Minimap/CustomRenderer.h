@@ -30,7 +30,7 @@ class CustomRenderer : public VBuffer
         bool visible;
         char name[128]{};
     };
-    enum Shape
+    enum class Shape
     {
         LineCircle,
         FullCircle
@@ -50,13 +50,16 @@ class CustomRenderer : public VBuffer
                 GuiUtils::StrCopy(name, "marker", sizeof(name));
         };
         CustomMarker(const char* n)
-            : CustomMarker(0, 0, 100.0f, LineCircle, GW::Constants::MapID::None, n){};
+            : CustomMarker(0, 0, 100.0f, Shape::LineCircle, GW::Constants::MapID::None, n){};
         GW::Vec2f pos;
         float size;
         Shape shape;
         GW::Constants::MapID map;
+        bool color_agents = false;
         bool visible;
         char name[128]{};
+        Color color{0xFFFFFFA0};
+        Color color_sub{0xA0FFFFFF};
     };
 
     struct CustomPolygon final : VBuffer
