@@ -575,7 +575,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         }
         const auto& polygons = Minimap::Instance().custom_renderer.polygons;
         const auto is_relevant = [living](const CustomRenderer::CustomPolygon& polygon)-> bool {
-            return polygon.map == GW::Map::GetMapID() && !polygon.points.empty() && polygon.color_agents &&
+            return (polygon.map == GW::Constants::MapID::None || polygon.map == GW::Map::GetMapID()) && !polygon.points.empty() && polygon.color_agents &&
                    GW::GetDistance(living->pos, polygon.points.at(0)) < 2500.f;
         };
         const auto is_inside = [](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
@@ -597,12 +597,12 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 
         auto in_triangle = [sign](GW::Vec2f pt, GW::Vec2f v1, GW::Vec2f v2, GW::Vec2f v3) -> bool {
 
-            float d1 = sign(pt, v1, v2);
-            float d2 = sign(pt, v2, v3);
-            float d3 = sign(pt, v3, v1);
+            const float d1 = sign(pt, v1, v2);
+            const float d2 = sign(pt, v2, v3);
+            const float d3 = sign(pt, v3, v1);
 
-            bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
-            bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+            const bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+            const bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
 
             return !(has_neg && has_pos);
         };

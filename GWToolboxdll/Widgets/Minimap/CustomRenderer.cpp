@@ -335,6 +335,7 @@ void CustomRenderer::DrawSettings()
     if (ImGui::Button("Add Polygon", ImVec2(button_width, 0.0f))) {
         char buf[32];
         snprintf(buf, 32, "polygon%zu", polygons.size());
+        polygons.end()->Invalidate();
         polygons.emplace_back(buf);
         markers_changed = true;
     }
