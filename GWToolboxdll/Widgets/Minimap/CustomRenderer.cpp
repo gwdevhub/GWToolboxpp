@@ -267,7 +267,8 @@ void CustomRenderer::DrawSettings()
             }
             ImGui::SameLine(0.0f, spacing);
         }
-        if (ImGui::Checkbox("##filled", &polygon.filled)) polygon_changed = true;;
+        if (ImGui::Checkbox("##filled", &polygon.filled)) polygon_changed = true;
+        ;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Filled");
         ImGui::SameLine(0.0f, spacing);
 
@@ -308,13 +309,14 @@ void CustomRenderer::DrawSettings()
                 markers_changed = polygon_changed = true;
             ImGui::SameLine();
             using namespace std::string_literals;
-            if (ImGui::Button(("x##"s + std::to_string(j)).c_str()))
-                remove_point = j;
+            if (ImGui::Button(("x##"s + std::to_string(j)).c_str())) remove_point = j;
         }
         ImGui::PopID();
         if (remove_point > -1) polygon.points.erase(polygon.points.begin() + remove_point);
-        if (remove) polygons.erase(polygons.begin() + static_cast<int>(i));
-        else if (polygon_changed) polygon.Invalidate();
+        if (remove)
+            polygons.erase(polygons.begin() + static_cast<int>(i));
+        else if (polygon_changed)
+            polygon.Invalidate();
     }
     ImGui::PopID();
     const float button_width = (ImGui::CalcItemWidth() - ImGui::GetStyle().ItemSpacing.x) / 2 - 10;
@@ -335,8 +337,10 @@ void CustomRenderer::DrawSettings()
     if (ImGui::Button("Add Polygon", ImVec2(button_width, 0.0f))) {
         char buf[32];
         snprintf(buf, 32, "polygon%zu", polygons.size());
-        polygons.end()->Invalidate();
         polygons.emplace_back(buf);
+        for (auto& poly : polygons) {
+            poly.Invalidate();
+        }
         markers_changed = true;
     }
 }
@@ -357,8 +361,8 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device)
 void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
 {
     if (filled) {
-        if (points.size() < 3) return; // can't draw a triangle with less than 3 vertices
-        type = D3DPT_TRIANGLESTRIP;
+        if (points.size() < 3) return;      // can't draw a triangle with less than 3 vertices
+        type = D3DPT_TRIANGLELIST;
         const auto vertex_count = points.size();
         D3DVertex* _vertices = nullptr;
 
@@ -409,7 +413,7 @@ void CustomRenderer::CustomPolygon::Render(IDirect3DDevice9* device)
         if (visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
             device->SetFVF(D3DFVF_CUSTOMVERTEX);
             device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-            device->DrawPrimitive(type, 0, points.size() - 2);
+            device->DrawPrimitive(type, 0, points.size() / 3);
         }
     } else {
         if (points.size() < 2) return;
