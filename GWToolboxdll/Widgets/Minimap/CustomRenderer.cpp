@@ -48,13 +48,17 @@ void CustomRenderer::LoadMarkers()
             inifile->Delete(section, nullptr);
         }
         if (strncmp(section, "custommarker", 12) == 0) {
-            markers.push_back(CustomMarker(inifile->GetValue(section, "name", "marker")));
-            markers.back().pos.x = (float)inifile->GetDoubleValue(section, "x", 0.0);
-            markers.back().pos.y = (float)inifile->GetDoubleValue(section, "y", 0.0);
-            markers.back().size = (float)inifile->GetDoubleValue(section, "size", 0.0);
-            markers.back().shape = (Shape)inifile->GetLongValue(section, "shape", 0);
-            markers.back().map = (GW::Constants::MapID)inifile->GetLongValue(section, "map", 0);
-            markers.back().visible = inifile->GetBoolValue(section, "visible", true);
+            auto marker = CustomMarker(inifile->GetValue(section, "name", "marker"));
+            marker.pos.x = static_cast<float>(inifile->GetDoubleValue(section, "x", 0.0));
+            marker.pos.y = static_cast<float>(inifile->GetDoubleValue(section, "y", 0.0));
+            marker.size = static_cast<float>(inifile->GetDoubleValue(section, "size", 0.0));
+            marker.shape = static_cast<Shape>(inifile->GetLongValue(section, "shape", 0));
+            marker.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
+            marker.color = Colors::Load(inifile, section, "color", marker.color);
+            marker.color_sub = Colors::Load(inifile, section, "color_sub", marker.color_sub);
+            marker.color_agents = inifile->GetBoolValue(section, "color_agents", marker.color_agents);
+            marker.visible = inifile->GetBoolValue(section, "visible", true);
+            markers.push_back(marker);
             inifile->Delete(section, nullptr);
         }
         if (strncmp(section, "custompolygon", 13) == 0) {
@@ -127,8 +131,11 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetDoubleValue(section, "y", marker.pos.y);
             inifile->SetDoubleValue(section, "size", marker.size);
             inifile->SetLongValue(section, "shape", static_cast<long>(marker.shape));
-            inifile->SetLongValue(section, "map", (long)marker.map);
+            inifile->SetLongValue(section, "map", static_cast<long>(marker.map));
             inifile->SetBoolValue(section, "visible", marker.visible);
+            Colors::Save(inifile, section, "color", marker.color);
+            Colors::Save(inifile, section, "color_sub", marker.color_sub);
+            inifile->SetBoolValue(section, "color_agents", marker.color_agents);
         }
         for (auto i = 0u; i < polygons.size(); ++i) {
             const CustomPolygon& polygon = polygons[i];
