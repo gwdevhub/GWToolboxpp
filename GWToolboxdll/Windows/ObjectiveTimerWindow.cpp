@@ -284,8 +284,6 @@ void ObjectiveTimerWindow::OnManipulateMapObject(GW::HookStatus *, GW::Packet::S
 void ObjectiveTimerWindow::OnMapChanged(GW::HookStatus *, GW::Packet::StoC::PacketBase *pak)
 {
     auto &instance = Instance();
-    instance.monitor_doors = false;
-
     if (pak->header == GW::Packet::StoC::InstanceLoadFile::STATIC_HEADER) {
         // Pre map load
         const GW::Packet::StoC::InstanceLoadFile *packet = static_cast<GW::Packet::StoC::InstanceLoadFile *>(pak);
@@ -360,6 +358,7 @@ void ObjectiveTimerWindow::OnMapChanged(GW::HookStatus *, GW::Packet::StoC::Pack
     }
     else if (pak->header == GW::Packet::StoC::GameSrvTransfer::STATIC_HEADER) {
         // Exited map
+        instance.monitor_doors = false;
         const GW::Packet::StoC::GameSrvTransfer *packet = static_cast<GW::Packet::StoC::GameSrvTransfer *>(pak);
         auto dungeonLevel = mapToDungeonLevel.find(static_cast<GW::Constants::MapID>(packet->map_id));
         bool isDungeon = dungeonLevel != mapToDungeonLevel.end();
