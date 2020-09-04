@@ -15,6 +15,7 @@ public:
 
         uint32_t object_id = 0; // object_id
         uint32_t initial_state = 0;
+        uint32_t is_open = true;
         time_t first_load = 0; // When did this door first get sent to the client?
         time_t first_open = 0; // First time the door was opened
         time_t last_open = 0; // Most recent time the door was opened
@@ -26,29 +27,28 @@ public:
             if (animation_type != 16 && animation_type != 3)
                 return; // Not opening or closing door.
             DoorObject* d = GetDoor(object_id);
+            d->is_open = animation_type == 16;
             time_t now = time(nullptr);
             if (!d->initial_state) {
                 // First load of this door.
                 d->initial_state = animation_stage;
                 d->first_load = now;
+                return;
             }
-            //if (animation_stage == 2) {
-                // Door animating.
-                if (animation_type == 16) {
-                    // Opening
-                    if (!d->first_open)
-                        d->first_open = now;
-                    else
-                        d->last_open = now;
-                }
-                else if (animation_type == 3) {
-                    // Closing
-                    if (!d->first_close)
-                        d->first_close = now;
-                    else
-                        d->last_close = now;
-                }
-           // }
+            if (d->is_open) {
+                // Opening
+                if (!d->first_open)
+                    d->first_open = now;
+                else
+                    d->last_open = now;
+            }
+            else {
+                // Closing
+                if (!d->first_close)
+                    d->first_close = now;
+                else
+                    d->last_close = now;
+            }
         };
     };
 
