@@ -406,6 +406,27 @@ namespace {
         DESC=2
     };
 
+    struct PendingCast {
+        uint32_t slot = 0;
+        uint32_t target_id = 0;
+        uint32_t call_target = 0;
+        bool cast_next_frame = false;
+        void reset(uint32_t _slot = 0 , uint32_t _target_id = 0, uint32_t _call_target = 0) {
+            slot = _slot;
+            target_id = _target_id;
+            call_target = _call_target;
+            cast_next_frame = false;
+        }
+        const GW::AgentLiving* GetTarget() {
+            const GW::AgentLiving* target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(target_id));
+            return target->GetIsLivingType() ? target : nullptr;
+        }
+        const uint32_t GetSkill() {
+            const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+            return skillbar && skillbar->IsValid() ? skillbar->skills[slot].skill_id : 0;
+        }
+    } pending_cast;
+
 }
 
 static std::wstring ShorthandItemDescription(GW::Item* item) {
@@ -833,7 +854,7 @@ void GameSettings::Initialize() {
     GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, &OnStartWhisper);
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,&FriendStatusCallback);
     GW::CtoS::RegisterPacketCallback(&WhisperCallback_Entry, GAME_CMSG_PING_WEAPON_SET, &OnPingWeaponSet);
-    GW::CtoS::RegisterPacketCallback(&OnCast_Entry, GAME_CMSG_USE_SKILL, &OnCast);
+    GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, &OnCast);
     GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, &ItemClickCallback);
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
@@ -1378,28 +1399,38 @@ void GameSettings::Update(float delta) {
     //UpdateFOV();
     FactionEarnedCheckAndWarn();
 
-    static bool cast_next_frame = false;
-    if (improve_move_to_cast && GW::Map::GetCurrentMapInfo() != nullptr) {
-        const auto *me = GW::Agents::GetPlayerAsAgentLiving();
-        const auto *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-        if (me != nullptr && skillbar != nullptr && cast_target != nullptr && cast_target->GetAsAgentLiving() != nullptr) {
-            const auto casting = skillbar->casting;
-            if (cast_next_frame && cast_target) {
-                GW::SkillbarMgr::UseSkillByID(cast_skill, cast_target->agent_id);
-                cast_target = nullptr;
-                cast_next_frame = false;
-            } else if (casting && me->GetIsMoving() && !me->skill && !me->GetIsCasting()) { // casting/skill don't update fast enough, so delay the rupt
-                const auto *target = cast_target->GetAsAgentLiving();
-                const auto range = GetSkillRange(cast_skill);
-                if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
-                    GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // cancel action packet
-                    cast_next_frame = true;
-                }
-            } else if (!casting) { // abort the action if not auto walking anymore
-                cast_target = nullptr;
-                cast_next_frame = false;
+    if (improve_move_to_cast && pending_cast.target_id) {
+        const GW::AgentLiving *me = GW::Agents::GetPlayerAsAgentLiving();
+        const GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+        if (!me || !skillbar) // I don't exist e.g. map change
+            return pending_cast.reset();
+
+        const GW::AgentLiving* target = pending_cast.GetTarget();
+        if (!target)  // Target no longer valid
+            return pending_cast.reset();
+
+        const uint32_t& casting = skillbar->casting;
+        if (pending_cast.cast_next_frame) { // Do cast now
+            if(pending_cast.GetTarget())
+                GW::SkillbarMgr::UseSkill(pending_cast.slot, pending_cast.target_id, pending_cast.call_target);
+            pending_cast.reset();
+            return;
+        }
+
+        if (casting && me->GetIsMoving() && !me->skill && !me->GetIsCasting()) { // casting/skill don't update fast enough, so delay the rupt
+            const uint32_t cast_skill = pending_cast.GetSkill();
+            if (!cast_skill) // Skill ID no longer valid
+                return pending_cast.reset();
+
+            const float range = GetSkillRange(cast_skill);
+            if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
+                GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // cancel action packet
+                pending_cast.cast_next_frame = true;
+                return;
             }
         }
+        if (!casting) // abort the action if not auto walking anymore
+            return pending_cast.reset();
     }
 
 #ifdef APRIL_FOOLS
@@ -1914,17 +1945,21 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
     }
 }
 
-void GameSettings::OnCast(GW::HookStatus *, void *packet)
+void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target)
 {
-    const auto *info = static_cast<CastInfo *>(packet);
-    const auto *me = GW::Agents::GetPlayerAsAgentLiving();
-    const auto *target = GW::Agents::GetAgentByID(info->target_id);
-    if (me != nullptr && target != nullptr && me->max_energy > 0 && me->player_number != 0 && target->agent_id != me->agent_id) {
-        if (GW::GetDistance(me->pos, target->pos) > GetSkillRange(info->skill_id)) { // don't interrupt yourself before you started casting
-            Instance().cast_target = GW::Agents::GetAgentByID(info->target_id);
-            Instance().cast_skill = info->skill_id;
-        }
-    }
+    if (agent_id != GW::Agents::GetPlayerId())
+        return;
+    if (!target_id) 
+        return;
+    const GW::Skillbar* skill_bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::Agent* target = GW::Agents::GetAgentByID(target_id);
+    if (!skill_bar || !me || !target)
+        return;
+    if (me->max_energy <= 0 || me->player_number <= 0 || target->agent_id == me->agent_id)
+        return;
+    if (GW::GetDistance(me->pos, target->pos) > GetSkillRange(skill_bar->skills[slot].skill_id))
+        pending_cast.reset(slot, target_id, call_target);
 }
 
 // Set window title to player name on map load
