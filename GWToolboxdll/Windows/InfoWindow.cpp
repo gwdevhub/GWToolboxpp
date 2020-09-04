@@ -70,7 +70,7 @@ void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
     UNREFERENCED_PARAMETER(cmd);
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
     GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (info == nullptr) return;
     GW::PlayerPartyMemberArray partymembers = info->players;
