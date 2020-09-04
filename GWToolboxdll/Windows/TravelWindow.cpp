@@ -775,7 +775,7 @@ bool TravelWindow::IsWaitingForMapTravel() {
 }
 
 void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District _district, uint32_t _district_number) {
-    if (!GW::Map::GetIsMapLoaded() || !GW::PartyMgr::GetIsPartyLoaded() || GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+    if (!GW::Map::GetIsMapLoaded() || (!GW::PartyMgr::GetIsPartyLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)) {
         map_travel_countdown_started = false;
         pending_map_travel = false;
         return; // Map loading, so we're no longer waiting for travel timer to start or finish.
