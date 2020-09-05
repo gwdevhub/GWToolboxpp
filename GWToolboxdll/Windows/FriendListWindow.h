@@ -166,6 +166,7 @@ private:
 
     int explorable_show_as = 1;
     int outpost_show_as = 1;
+    int loading_show_as = 1;
 
     bool resize_widget = false;
 

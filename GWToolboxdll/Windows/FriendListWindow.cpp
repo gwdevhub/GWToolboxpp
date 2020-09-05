@@ -635,12 +635,14 @@ ImGuiWindowFlags FriendListWindow::GetWinFlags(ImGuiWindowFlags flags) const {
 bool FriendListWindow::IsWidget() const
 {
     return (explorable_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
-        || (outpost_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost);
+        || (outpost_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+        || (loading_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading);
 }
 bool FriendListWindow::IsWindow() const
 {
-    return (explorable_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
-        || (outpost_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost);
+    return (explorable_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
+           || (outpost_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+           || (loading_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading);
 }
 void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
@@ -808,16 +810,26 @@ void FriendListWindow::DrawSettingInternal() {
     ImGui::PushItemWidth(dropdown_width);
     edited |= ImGui::Combo("###show_as_outpost", &outpost_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
-    ImGui::SameLine(); ImGui::Text("in outpost");
+    ImGui::SameLine();
+    ImGui::Text("in outpost");
 
     ImGui::Text("Show as");
     ImGui::SameLine(); 
     ImGui::PushItemWidth(dropdown_width); 
     edited |= ImGui::Combo("###show_as_explorable", &explorable_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
-    ImGui::SameLine(); ImGui::Text("in explorable");
-    Colors::DrawSettingHueWheel("Widget background hover color", &hover_background_color);
+    ImGui::SameLine();
+    ImGui::Text("while loading");
 
+    ImGui::Text("Show as");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(dropdown_width);
+    edited |= ImGui::Combo("###show_as_loading", &loading_show_as, "Window\0Widget\0Hidden");
+    ImGui::PopItemWidth();
+    ImGui::SameLine();
+    ImGui::Text("while loading");
+
+    Colors::DrawSettingHueWheel("Widget background hover color", &hover_background_color);
     ImGui::Checkbox("Show my status", &show_my_status);
     ImGui::ShowHelp("e.e. 'You are: Online'");
 
@@ -855,6 +867,7 @@ void FriendListWindow::LoadSettings(CSimpleIni* ini) {
     show_alias_on_whisper = ini->GetBoolValue(Name(), VAR_NAME(show_alias_on_whisper), show_alias_on_whisper);
 
     outpost_show_as = ini->GetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
+    loading_show_as = ini->GetLongValue(Name(), VAR_NAME(loading_show_as), loading_show_as);
     explorable_show_as = ini->GetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
     show_my_status = ini->GetBoolValue(Name(), VAR_NAME(show_my_status), show_my_status);
     
@@ -869,6 +882,7 @@ void FriendListWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_alias_on_whisper), show_alias_on_whisper);
 
     ini->SetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
+    ini->SetLongValue(Name(), VAR_NAME(loading_show_As), loading_show_as);
     ini->SetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
     ini->SetBoolValue(Name(), VAR_NAME(show_my_status), show_my_status);
 
