@@ -136,14 +136,6 @@ class GameSettings : public ToolboxModule {
     GameSettings(const GameSettings&) = delete;
     ~GameSettings() {};
 
-    using CastInfo = struct
-    {
-        uint32_t unknown;
-        uint32_t skill_id;
-        uint32_t unknown2;
-        uint32_t target_id;
-    };
-
 public:
     static GameSettings& Instance() {
         static GameSettings instance;
@@ -282,7 +274,6 @@ private:
     bool stop_screen_shake = false;
 
     bool improve_move_to_cast = false;
-    clock_t cast_clock = 0;
 
     static float GetSkillRange(uint32_t);
 
