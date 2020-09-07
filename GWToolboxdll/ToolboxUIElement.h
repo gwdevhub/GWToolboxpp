@@ -23,7 +23,7 @@ public:
 
     // returns true if clicked
     virtual bool DrawTabButton(IDirect3DDevice9* device, 
-        bool show_icon = true, bool show_text = true);
+        bool show_icon = true, bool show_text = true, bool center_align_text = true);
 
     virtual bool ToggleVisible() { return visible = !visible; }
 

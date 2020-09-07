@@ -195,37 +195,37 @@ void ToolboxSettings::DrawSettingInternal() {
     }
     ImGui::Columns(1);
     ImGui::PopID();
-    ImGui::PushID("menubuttons");
     
     ImGui::Separator();
-    ImGui::Text("Show the following in the main window:");
+    if (ImGui::TreeNode("Show the following in the main window:")) {
 
-    std::vector<ToolboxUIElement *> ui = GWToolbox::Instance().GetUIElements();
-    ImGui::Columns(static_cast<int>(cols), "menubuttons_cols", false);
-    col_count = 0;
-    std::vector<ToolboxUIElement*> valid_elements;
-    for (size_t i = 0; i < ui.size();i++) {
-        auto& window = ui[i];
-        if ((window->IsWidget() || window->IsWindow()) && window->can_show_in_main_window) {
-            valid_elements.push_back(window);
+        std::vector<ToolboxUIElement*> ui = GWToolbox::Instance().GetUIElements();
+        ImGui::Columns(static_cast<int>(cols), "menubuttons_cols", false);
+        col_count = 0;
+        std::vector<ToolboxUIElement*> valid_elements;
+        for (size_t i = 0; i < ui.size(); i++) {
+            auto& window = ui[i];
+            if ((window->IsWidget() || window->IsWindow()) && window->can_show_in_main_window) {
+                valid_elements.push_back(window);
+            }
         }
-    }
-    std::sort(valid_elements.begin(), valid_elements.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-        return std::string(lhs->Name()).compare(rhs->Name()) < 0;
+        std::sort(valid_elements.begin(), valid_elements.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+            return std::string(lhs->Name()).compare(rhs->Name()) < 0;
         });
-    items_per_col = (size_t)ceil(valid_elements.size() / cols);
-    for (size_t i = 0; i < valid_elements.size(); i++) {
-        auto window = valid_elements[i];
-        if (ImGui::Checkbox(window->Name(), &window->show_menubutton))
-            MainWindow::Instance().pending_refresh_buttons = true;
-        col_count++;
-        if (col_count == items_per_col) {
-            ImGui::NextColumn();
-            col_count = 0;
+        items_per_col = (size_t)ceil(valid_elements.size() / cols);
+        for (size_t i = 0; i < valid_elements.size(); i++) {
+            auto window = valid_elements[i];
+            if (ImGui::Checkbox(window->Name(), &window->show_menubutton))
+                MainWindow::Instance().pending_refresh_buttons = true;
+            col_count++;
+            if (col_count == items_per_col) {
+                ImGui::NextColumn();
+                col_count = 0;
+            }
         }
+        ImGui::Columns(1);
+        ImGui::TreePop();
     }
-    ImGui::Columns(1);
-    ImGui::PopID();
 }
 
 void ToolboxSettings::DrawFreezeSetting() {

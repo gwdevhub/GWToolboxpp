@@ -111,7 +111,7 @@ void ToolboxUIElement::ShowVisibleRadio() {
 }
 
 bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*, 
-    bool show_icon, bool show_text) {
+    bool show_icon, bool show_text, bool center_align_text) {
 
     ImGui::PushStyleColor(ImGuiCol_Button, visible ?
         ImGui::GetStyle().Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));
@@ -120,10 +120,15 @@ bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
     float width = ImGui::GetWindowContentRegionWidth();
     
     float img_size = 0;
-    if (show_icon && button_texture != nullptr) {
+    if (show_icon) {
         img_size = ImGui::GetTextLineHeightWithSpacing();
     }
-    float text_x = pos.x + img_size + (width - img_size - textsize.x) / 2;
+    float text_x;
+    if (center_align_text) {
+        text_x = pos.x + img_size + (width - img_size - textsize.x) / 2;
+    } else {
+        text_x = pos.x + img_size + ImGui::GetStyle().ItemSpacing.x;
+    }
     bool clicked = ImGui::Button("", ImVec2(width, ImGui::GetTextLineHeightWithSpacing()));
     if (show_icon) {
         if (button_texture != nullptr) {

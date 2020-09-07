@@ -9,6 +9,8 @@
 void MainWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     one_panel_at_time_only = ini->GetBoolValue(Name(), VAR_NAME(one_panel_at_time_only), one_panel_at_time_only);
+    show_icons = ini->GetBoolValue(Name(), VAR_NAME(show_icons), show_icons);
+    center_align_text = ini->GetBoolValue(Name(), VAR_NAME(center_align_text), center_align_text);
     show_menubutton = false;
     pending_refresh_buttons = true;
 }
@@ -16,11 +18,16 @@ void MainWindow::LoadSettings(CSimpleIni* ini) {
 void MainWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(one_panel_at_time_only), one_panel_at_time_only);
+    ini->SetBoolValue(Name(), VAR_NAME(show_icons), show_icons);
+    ini->SetBoolValue(Name(), VAR_NAME(center_align_text), center_align_text);
 }
 
 void MainWindow::DrawSettingInternal() {
     ImGui::Checkbox("Close other windows when opening a new one", &one_panel_at_time_only);
     ImGui::ShowHelp("Only affects windows (with a title bar), not widgets");
+
+    ImGui::Checkbox("Show Icons", &show_icons);
+    ImGui::Checkbox("Center-align text", &center_align_text);
 }
 
 void MainWindow::RegisterSettingsContent() {
@@ -70,7 +77,7 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
             if(drawn) ImGui::Separator();
             drawn = true;
             auto &ui_module = modules_to_draw[i].second;
-            if (ui_module->DrawTabButton(device)) {
+            if (ui_module->DrawTabButton(device, show_icons, true, center_align_text)) {
                 if (one_panel_at_time_only && ui_module->visible && ui_module->IsWindow()) {
                     for (auto &ui_module2 : modules_to_draw) {
                         if (ui_module2.second == ui_module) continue;

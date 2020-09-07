@@ -17,7 +17,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Objective Timer"; }
+    const char* Name() const override { return "Objectives"; }
     const char* Icon() const override { return ICON_FA_BULLSEYE; }
 
     void Initialize() override;
