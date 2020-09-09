@@ -52,14 +52,15 @@ uint32_t AlcoholWidget::GetAlcoholLevel() {
 }
 void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess *packet) {
     AlcoholWidget &instance = Instance();
+    if (packet->tint == 8 && packet->level == 5)
+        return; // Pahnai salad
     uint32_t pts_gained = instance.GetAlcoholTitlePointsGained();
-    //Log::Info("Drunk effect %d / %d, %d pts gained", packet->tint, packet->level, pts_gained);
+
     if (packet->tint == 6) {
         // Tint 6, level 5 - the trouble zone for lunars!
-        if (packet->level == 5 && (instance.prev_packet_tint_6_level < packet->level - 1 || (instance.prev_packet_tint_6_level == 5 && pts_gained < 1))) {
+        if (instance.prev_packet_tint_6_level < packet->level - 1 || (instance.prev_packet_tint_6_level == 5 && pts_gained < 1)) {
             // If we've jumped a level, or the last packet was also level 5 and no points were gained, then its not alcohol.
             // NOTE: All alcohol progresses from 1 to 5, but lunars just dive in at level 5.
-            //Log::Info("Lunars detected");
             return;
         }
         instance.prev_packet_tint_6_level = packet->level;
