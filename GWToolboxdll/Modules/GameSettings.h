@@ -142,6 +142,7 @@ public:
         return instance;
     }
     const char* Name() const override { return "Game Settings"; }
+    const char* Icon() const override { return ICON_FA_GAMEPAD; }
     static void PingItem(GW::Item* item, uint32_t parts = 3);
     static void PingItem(uint32_t item_id, uint32_t parts = 3);
 
