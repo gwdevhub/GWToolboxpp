@@ -337,12 +337,10 @@ void GWToolbox::Initialize() {
 
     ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
 
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-        && GW::Agents::GetAgentArray().valid()
-        && GW::Agents::GetPlayer() != nullptr) {
-
-        DWORD playerNumber = GW::Agents::GetPlayerAsAgentLiving()->player_number;
-        Log::Info("Hello %ls!", GW::Agents::GetPlayerNameByLoginNumber(playerNumber));
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+        DWORD playerNumber = GW::PlayerMgr::GetPlayerNumber();
+        if(playerNumber)
+            Log::Info("Hello %ls!", GW::Agents::GetPlayerNameByLoginNumber(playerNumber));
     }
 }
 void GWToolbox::FlashWindow() {

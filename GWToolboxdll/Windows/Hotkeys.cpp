@@ -597,8 +597,16 @@ void HotkeyEquipItem::Execute()
         item = nullptr;
         return; // Success!
     }
-    GW::AgentLiving *p = GW::Agents::GetPlayerAsAgentLiving();
-    if (!p || p->GetIsKnockedDown()) {
+    GW::AgentLiving *p = GW::Agents::GetCharacter();
+    if (!p || p->GetIsDead()) {
+        if (show_error_on_failure)
+            Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
+                slot_idx);
+        ongoing = false;
+        item = nullptr;
+        return;
+    }
+    if (p->GetIsKnockedDown()) {
         // Log::Info("knocked down or missing"); // Player knocked down or
         // casting; wait.
         return;

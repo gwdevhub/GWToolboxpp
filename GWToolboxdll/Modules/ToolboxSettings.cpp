@@ -343,7 +343,7 @@ void ToolboxSettings::Update(float delta) {
                 }
 
                 std::wstring prof_string = L"";
-                GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+                GW::AgentLiving* me = GW::Agents::GetCharacter();
                 if (me) {
                     prof_string += L" - ";
                     prof_string += GW::Constants::GetWProfessionAcronym(
@@ -370,7 +370,7 @@ void ToolboxSettings::Update(float delta) {
                 location_file.open(path);
             }
 
-            GW::Agent* me = GW::Agents::GetPlayer();
+            GW::Agent* me = GW::Agents::GetCharacter();
             if (location_file.is_open() && me != nullptr) {
                 location_file << "Time=" << GW::Map::GetInstanceTime();
                 location_file << " X=" << me->pos.x;

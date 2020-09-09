@@ -690,7 +690,7 @@ static std::wstring ParseItemDescription(GW::Item* item) {
 
 void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
     if (!item) return;
-    GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::Agents::GetPlayerAsAgentLiving()->login_number);
+    GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
     if (!p) return;
     std::wstring out;
     if ((parts & PING_PARTS::NAME) && item->complete_name_enc) {
@@ -1400,7 +1400,7 @@ void GameSettings::Update(float delta) {
     FactionEarnedCheckAndWarn();
 
     if (improve_move_to_cast && pending_cast.target_id) {
-        const GW::AgentLiving *me = GW::Agents::GetPlayerAsAgentLiving();
+        const GW::AgentLiving *me = GW::Agents::GetCharacter();
         const GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (!me || !skillbar) // I don't exist e.g. map change
             return pending_cast.reset();
