@@ -12,6 +12,7 @@
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Camera.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -247,14 +248,17 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         if (ImGui::CollapsingHeader("Camera")) {
             static char pos_buf[32];
             static char target_buf[32];
+            static char angle_buf[32];
             static GW::Camera* cam;
             if ((cam = GW::CameraMgr::GetCamera()) != nullptr) {
                 snprintf(pos_buf, 32, "%.2f, %.2f, %.2f", cam->position.x, cam->position.y, cam->position.z);
                 snprintf(target_buf, 32, "%.2f, %.2f, %.2f", cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z);
+                snprintf(angle_buf, 32, "%.2f, %.2f", cam->GetCurrentYaw(), cam->pitch);
             }
             ImGui::PushItemWidth(-80.0f);
             ImGui::InputText("Position##cam_pos", pos_buf, 32, ImGuiInputTextFlags_ReadOnly);
             ImGui::InputText("Target##cam_target", target_buf, 32, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputText("Yaw/Pitch##cam_angle", angle_buf, 32, ImGuiInputTextFlags_ReadOnly);
             ImGui::PopItemWidth();
         }
         if (show_player && ImGui::CollapsingHeader("Player")) {

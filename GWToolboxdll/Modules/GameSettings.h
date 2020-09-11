@@ -273,6 +273,7 @@ private:
     bool hide_dungeon_chest_popup = false;
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;
+    bool disable_camera_smoothing = false;
 
     bool improve_move_to_cast = false;
 

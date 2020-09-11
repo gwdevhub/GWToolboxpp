@@ -8,7 +8,7 @@
 
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Context/ItemContext.h>
@@ -961,6 +961,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
     fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
+    disable_camera_smoothing = ini->GetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
     tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
     show_timestamps = ini->GetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
     show_timestamp_24h = ini->GetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
@@ -1075,6 +1076,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
     ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
 
+    ini->SetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
     ini->SetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
     ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
     ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_seconds), show_timestamp_seconds);
@@ -1302,6 +1304,7 @@ void GameSettings::DrawSettingInternal() {
     if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
         SetWindowTitle(set_window_title_as_charname);
     }
+    ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
     ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
 }
@@ -1380,7 +1383,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 void GameSettings::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     // Try to print any pending messages.
-    for (std::vector<PendingChatMessage*>::iterator it = pending_messages.begin(); it != pending_messages.end(); ++it) {
+    for (auto it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage *m = *it;
         if (m->IsSend() && PendingChatMessage::Cooldown()) 
             continue;
@@ -1398,6 +1401,14 @@ void GameSettings::Update(float delta) {
     }
     //UpdateFOV();
     FactionEarnedCheckAndWarn();
+
+    if (disable_camera_smoothing) {
+        GW::Camera* cam = GW::CameraMgr::GetCamera();
+        cam->position = cam->camera_pos_to_go;
+        cam->look_at_target = cam->look_at_to_go;
+        cam->yaw = cam->yaw_to_go;
+        cam->pitch = cam->pitch_to_go;
+    }
 
     if (improve_move_to_cast && pending_cast.target_id) {
         const GW::AgentLiving *me = GW::Agents::GetCharacter();

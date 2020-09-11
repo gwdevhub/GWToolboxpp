@@ -4,6 +4,7 @@
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Hero.h>
@@ -295,6 +296,8 @@ void Minimap::DrawSettingInternal()
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
     ImGui::Checkbox("Map Rotation", &rotate_minimap);
     ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
+    ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
+    ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
     ImGui::Checkbox("Circular", &circular_map);
     ImGui::ShowHelp("Whether the map should be circular like the compass or a square (default).");
 }
@@ -314,8 +317,9 @@ void Minimap::LoadSettings(CSimpleIni *ini)
     hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background", ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
     mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
     mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
-    rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), true);
-    circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), true);
+    rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
+    smooth_rotation = ini->GetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
+    circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
     key_ctrl_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_ctrl_behavior), 2));
     key_shift_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_shift_behavior), 3));
@@ -374,7 +378,9 @@ void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID> &_p
 
 float Minimap::GetMapRotation() const
 {
-    return rotate_minimap ? GW::CameraMgr::GetYaw() : static_cast<float>(1.5708);
+    if (!rotate_minimap) return 1.5708f;
+    if (smooth_rotation) return GW::CameraMgr::GetCamera()->GetCurrentYaw();
+    return GW::CameraMgr::GetYaw();
 }
 
 D3DXVECTOR2 Minimap::GetGwinchScale() const
