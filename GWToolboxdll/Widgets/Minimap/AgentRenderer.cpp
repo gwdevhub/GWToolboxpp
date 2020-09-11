@@ -617,7 +617,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             return false;
         };
         auto is_inside_circle = [](const GW::Vec2f pos, const GW::Vec2f circle, const float radius) -> bool {
-            return (pos.x - circle.x) * (pos.x - circle.x) + (pos.y - circle.y) * (pos.y - circle.y) <= radius * radius;
+            return GW::GetSquareDistance(pos, circle) <= radius * radius;
         };
         for (const auto& polygon : polygons) {
             if (!is_relevant(polygon)) continue;
