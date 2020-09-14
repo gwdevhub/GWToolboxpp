@@ -388,7 +388,7 @@ D3DXVECTOR2 Minimap::GetGwinchScale() const
     return gwinch_scale;
 }
 
-void Minimap::Draw(IDirect3DDevice9 *device)
+void Minimap::Draw(IDirect3DDevice9 *)
 {
     if (!IsActive())
         return;
@@ -434,7 +434,15 @@ void Minimap::Draw(IDirect3DDevice9 *device)
         location.y = static_cast<int>(ImGui::GetWindowPos().y);
         size.x = static_cast<int>(ImGui::GetWindowSize().x);
         size.y = static_cast<int>(ImGui::GetWindowSize().y);
-        ImGui::GetWindowDrawList()->AddCallback(render_callback, static_cast<void *>(device));
+        auto& style = ImGui::GetStyle();
+        clipping.left = static_cast<long>(location.x - style.WindowPadding.x / 2);
+        clipping.right = static_cast<long>(location.x + size.x +style.WindowPadding.x / 2 + 1);
+        clipping.top = static_cast<long>(location.y);
+        clipping.bottom = static_cast<long>(location.y + size.y);
+        // @Broken: Updating ImGui from 1.77 to 1.78 broke AddCallback for Minimap - didn't draw at all for me. - Jon
+        // Instead, record the clipping location of the window and have GWToolbox.cpp call Minimap::Render before ImGui is loaded.
+
+        //ImGui::GetWindowDrawList()->AddCallback(render_callback, static_cast<void *>(device));
     }
     ImGui::End();
     ImGui::PopStyleColor();
@@ -500,8 +508,10 @@ void Minimap::Draw(IDirect3DDevice9 *device)
     }
 }
 
-void Minimap::render_callback(const ImDrawList*, const ImDrawCmd* cmd) {
-    IDirect3DDevice9* device = static_cast<IDirect3DDevice9*>(cmd->UserCallbackData);
+void Minimap::Render(IDirect3DDevice9* device) {
+    auto& instance = Instance();
+    if (!instance.IsActive())
+        return;
     GW::Agent* me = GW::Agents::GetPlayer();
     if (me == nullptr) return;
 
@@ -509,7 +519,14 @@ void Minimap::render_callback(const ImDrawList*, const ImDrawCmd* cmd) {
     IDirect3DStateBlock9* d3d9_state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) return;
 
+    // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
+    D3DMATRIX reset_world, reset_view, reset_projection;
+    device->GetTransform(D3DTS_WORLD, &reset_world);
+    device->GetTransform(D3DTS_VIEW, &reset_view);
+    device->GetTransform(D3DTS_PROJECTION, &reset_projection);
+
     // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
+    device->SetIndices(nullptr);
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
     device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
@@ -554,20 +571,11 @@ void Minimap::render_callback(const ImDrawList*, const ImDrawCmd* cmd) {
             D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
     };
 
-    auto& style = ImGui::GetStyle();
-    RECT clipping;
-    clipping.left = static_cast<long>(cmd->ClipRect.x - style.WindowPadding.x / 2);
-    clipping.right = static_cast<long>(cmd->ClipRect.z + style.WindowPadding.x / 2 + 1);
-    clipping.top = static_cast<long>(cmd->ClipRect.y);
-    clipping.bottom = static_cast<long>(cmd->ClipRect.w);
-    device->SetScissorRect(&clipping);
+    device->SetScissorRect(&instance.clipping);
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
 
-
-    D3DXMATRIX identity;
-    D3DXMatrixIdentity(&identity);
-    device->SetTransform(D3DTS_WORLD, &identity);
-    device->SetTransform(D3DTS_VIEW, &identity);
+    
+    Instance().RenderSetupProjection(device);
 
     HRESULT ret; 
     D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
@@ -584,23 +592,16 @@ void Minimap::render_callback(const ImDrawList*, const ImDrawCmd* cmd) {
         ret = device->SetRenderState(D3DRS_STENCILREF, 1);
         ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
         ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer
-                                                                               // when passed
-        float radius = static_cast<float>(Instance().size.x / 2.f); // rounding error in viewmatrix transformation
-        FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius,
-            background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
+        FillCircle(0, 0, 5000.0f, background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
 
         ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
         ret = device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
         ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
     } else {
-        FillRect(background, Instance().location.x, Instance().location.y, Instance().size.x,
-            Instance().size.y); // fill rect with chosen background color
+        FillRect(background, 0, 0, 5000, 5000); // fill rect with chosen background color
     }
 
-    Instance().RenderSetupProjection(device);
-
-    device->SetTransform(D3DTS_WORLD, &identity);
-    device->SetTransform(D3DTS_VIEW, &identity);
+    
 
     D3DXMATRIX translate_char;
     D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
@@ -629,7 +630,7 @@ void Minimap::render_callback(const ImDrawList*, const ImDrawCmd* cmd) {
     D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
     device->SetTransform(D3DTS_WORLD, &translate_char);
     Instance().range_renderer.Render(device);
-    device->SetTransform(D3DTS_WORLD, &identity);
+    device->SetTransform(D3DTS_WORLD, &reset_world);
 
     if (Instance().translation.x != 0 || Instance().translation.y != 0) {
         D3DXMATRIX view2 = scaleM;
@@ -642,7 +643,7 @@ void Minimap::render_callback(const ImDrawList*, const ImDrawCmd* cmd) {
 
     Instance().symbols_renderer.Render(device);
 
-    device->SetTransform(D3DTS_WORLD, &identity);
+    device->SetTransform(D3DTS_WORLD, &reset_world);
     Instance().agent_renderer.Render(device);
 
     Instance().effect_renderer.Render(device);
@@ -657,6 +658,11 @@ void Minimap::render_callback(const ImDrawList*, const ImDrawCmd* cmd) {
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
         device->SetRenderState(D3DRS_STENCILENABLE, false);
     }
+
+    // Restore the DX9 transform
+    device->SetTransform(D3DTS_WORLD, &reset_world);
+    device->SetTransform(D3DTS_VIEW, &reset_view);
+    device->SetTransform(D3DTS_PROJECTION, &reset_projection);
 
     // Restore the DX9 state
     d3d9_state_block->Apply();

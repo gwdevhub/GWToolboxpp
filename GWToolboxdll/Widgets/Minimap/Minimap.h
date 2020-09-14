@@ -103,8 +103,9 @@ public:
     CustomRenderer custom_renderer;
     EffectRenderer effect_renderer;
 
+    static void Render(IDirect3DDevice9* device);
+
 private:
-    static void render_callback(const ImDrawList*, const ImDrawCmd* cmd);
 
     bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
@@ -121,6 +122,7 @@ private:
     Vec2i size;
     D3DXVECTOR2 gwinch_scale;
     GW::Vec2f shadowstep_location = {0.f, 0.f};
+    RECT clipping = { 0 };
 
     Vec2i drag_start;
     GW::Vec2f translation;

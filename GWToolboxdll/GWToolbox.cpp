@@ -26,6 +26,7 @@
 #include <Modules/ToolboxTheme.h>
 #include <Modules/ToolboxSettings.h>
 #include <Windows/MainWindow.h>
+#include <Widgets/Minimap/Minimap.h>
 
 namespace {
     HMODULE dllmodule = 0;
@@ -446,6 +447,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         ImGui_ImplDX9_NewFrame();
         ImGui_ImplWin32_NewFrame();
+
+        Minimap::Render(device);
+
         ImGui::NewFrame();
 
         // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct, 
