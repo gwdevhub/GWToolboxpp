@@ -434,11 +434,11 @@ void Minimap::Draw(IDirect3DDevice9 *)
         location.y = static_cast<int>(ImGui::GetWindowPos().y);
         size.x = static_cast<int>(ImGui::GetWindowSize().x);
         size.y = static_cast<int>(ImGui::GetWindowSize().y);
-        auto& style = ImGui::GetStyle();
-        clipping.left = static_cast<long>(location.x - style.WindowPadding.x / 2);
-        clipping.right = static_cast<long>(location.x + size.x +style.WindowPadding.x / 2 + 1);
-        clipping.top = static_cast<long>(location.y);
-        clipping.bottom = static_cast<long>(location.y + size.y);
+        //auto& style = ImGui::GetStyle();
+        clipping.left = location.x;
+        clipping.right = location.x + size.x;
+        clipping.top = location.y;
+        clipping.bottom = location.y + size.y;
         // @Broken: Updating ImGui from 1.77 to 1.78 broke AddCallback for Minimap - didn't draw at all for me. - Jon
         // Instead, record the clipping location of the window and have GWToolbox.cpp call Minimap::Render before ImGui is loaded.
 
@@ -549,14 +549,12 @@ void Minimap::Render(IDirect3DDevice9* device) {
     device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
     device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 
-    auto FillRect = [&device](const D3DCOLOR color, const int x, const int y, const int w, const int h) {
-        D3DVertex vertices[6] = {{static_cast<float>(x), static_cast<float>(y), 0.0f, color},
-            {static_cast<float>(x) + w, static_cast<float>(y), 0.0f, color},
-            {static_cast<float>(x), static_cast<float>(y) + h, 0.0f, color},
-            {static_cast<float>(x) + w, static_cast<float>(y) + h, 0.0f, color},
-            {static_cast<float>(x), static_cast<float>(y), 0.0f, color},
-            {static_cast<float>(x) + w, static_cast<float>(y), 0.0f, color}};
-        device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 4, vertices, sizeof(D3DVertex));
+    auto FillRect = [&device](const Color color, const float x, const float y, const float w, const float h) {
+        D3DVertex vertices[6] = {{x,y, 0.0f, color},
+            {x + w, y, 0.0f, color},
+            {x, y + h, 0.0f, color},
+            {x + w, y + h, 0.0f, color}};
+        device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(D3DVertex));
     };
 
     auto FillCircle = [&device](
@@ -570,10 +568,6 @@ void Minimap::Render(IDirect3DDevice9* device) {
         device->DrawPrimitiveUP(
             D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
     };
-
-    device->SetScissorRect(&instance.clipping);
-    device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-
     
     Instance().RenderSetupProjection(device);
 
@@ -593,12 +587,13 @@ void Minimap::Render(IDirect3DDevice9* device) {
         ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
         ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer
         FillCircle(0, 0, 5000.0f, background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
-
         ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
         ret = device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
         ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
     } else {
-        FillRect(background, 0, 0, 5000, 5000); // fill rect with chosen background color
+        device->SetScissorRect(&instance.clipping);
+        device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
+        FillRect(background, -5000.0f, -5000.0f, 10000.f, 10000.f); // fill rect with chosen background color
     }
 
     
