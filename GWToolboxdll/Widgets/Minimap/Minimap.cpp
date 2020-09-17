@@ -571,32 +571,28 @@ void Minimap::Render(IDirect3DDevice9* device) {
     
     Instance().RenderSetupProjection(device);
 
-    HRESULT ret; 
+    
     D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
+    device->SetScissorRect(&instance.clipping); // always clip to rect as a fallback if the stenciling fails
+    device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
     if (Instance().circular_map) {
-        ret = device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
-        ret = device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
-        ret = device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
+        device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
+        device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
+        device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
 
         // clear depth and stencil buffer
-        // clearing the stencil buffer was failing for me ~Haskha
-        ret = device->Clear(0, nullptr, D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0);
-        ret = device->Clear(0, nullptr, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
+        device->Clear(0, nullptr, D3DCLEAR_STENCIL | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
 
-        ret = device->SetRenderState(D3DRS_STENCILREF, 1);
-        ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-        ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer
+        device->SetRenderState(D3DRS_STENCILREF, 1);
+        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
+        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer
         FillCircle(0, 0, 5000.0f, background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
-        ret = device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
-        ret = device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
-        ret = device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
+        device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
+        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
     } else {
-        device->SetScissorRect(&instance.clipping);
-        device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
         FillRect(background, -5000.0f, -5000.0f, 10000.f, 10000.f); // fill rect with chosen background color
     }
-
-    
 
     D3DXMATRIX translate_char;
     D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
