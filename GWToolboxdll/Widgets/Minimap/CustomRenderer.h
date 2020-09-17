@@ -6,6 +6,23 @@
 #include <Color.h>
 #include <Widgets/Minimap/VBuffer.h>
 
+namespace mapbox // enable mapbox::earcut to work with GW::Vec2f as Point
+{
+    namespace util
+    {
+        template <>
+        struct nth<0, GW::Vec2f>
+        {
+            inline static auto get(const GW::Vec2f& t) { return t.x; };
+        };
+        template <>
+        struct nth<1, GW::Vec2f>
+        {
+            inline static auto get(const GW::Vec2f& t) { return t.y; };
+        };
+    }
+}
+
 class CustomRenderer : public VBuffer
 {
     friend class AgentRenderer;
@@ -86,6 +103,9 @@ class CustomRenderer : public VBuffer
         const static auto max_points = 21;
         void Initialize(IDirect3DDevice9* device) override;
         void Render(IDirect3DDevice9* device) override;
+
+    private:
+        std::vector<unsigned> point_indices{};
     };
 
 public:

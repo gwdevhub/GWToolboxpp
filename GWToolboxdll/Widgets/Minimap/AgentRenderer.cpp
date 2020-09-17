@@ -621,7 +621,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         };
         for (const auto& polygon : polygons) {
             if (!is_relevant(polygon)) continue;
-            if (polygon.filled && is_inside_triangles(living->pos, polygon.points)) {
+            if (polygon.filled && is_inside(living->pos, polygon.points)) {
                 c = polygon.color_sub;
             }
             if (!polygon.filled && is_inside(living->pos, polygon.points)) {

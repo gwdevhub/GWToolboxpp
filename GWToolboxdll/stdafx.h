@@ -26,6 +26,7 @@
 #pragma warning(disable: 4738) // storing 32-bit float result in memory, possible loss of performance
 #pragma warning(disable: 4820) // 'bytes' bytes padding added after construct 'member_name'
 #pragma warning(disable: 4917) // 'declarator' : a GUID can only be associated with a class, interface or namespace
+#pragma warning(disable: 4996) // various members of std::allocator are deprecated in c++17...
 #pragma warning(disable: 5026) // 'type': move constructor was implicitly defined as deleted
 #pragma warning(disable: 5027) // 'type': move assignment operator was implicitly defined as deleted
 #pragma warning(disable: 5029) // nonstandard extension used: alignment attributes in C++ apply to variables, data members and tag types only
@@ -99,6 +100,7 @@
 #include <easywsclient.hpp>
 #include <mp3.h>
 #include <IconsFontAwesome5.h>
+#include <mapbox/earcut.hpp>
 
 #include <imgui.h>
 #include <imgui_internal.h>

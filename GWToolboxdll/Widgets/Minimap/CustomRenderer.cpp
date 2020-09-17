@@ -3,6 +3,7 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/GameEntities/Hero.h>
 
@@ -10,6 +11,7 @@
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/CustomRenderer.h>
@@ -279,7 +281,8 @@ void CustomRenderer::DrawSettings()
         ImGui::PushItemWidth((ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 5) / 5);
         if (polygon.points.size() < CustomPolygon::max_points) {
             if (ImGui::Button("+##add", ImVec2(20.0f, 0))) {
-                polygon.points.emplace_back(0.f, 0.f);
+                auto* const player = GW::Agents::GetPlayerAsAgentLiving();
+                polygon.points.emplace_back(player->pos.x, player->pos.y);
                 markers_changed = true;
                 polygon_changed = true;
             }
@@ -326,15 +329,15 @@ void CustomRenderer::DrawSettings()
                     reinterpret_cast<float*>(&polygon.points.at(j)), "%.0f"))
                 markers_changed = polygon_changed = true;
             ImGui::SameLine();
-            using namespace std::string_literals;
-            if (ImGui::Button(("x##"s + std::to_string(j)).c_str())) remove_point = j;
+            if (ImGui::Button((std::string("x##") + std::to_string(j)).c_str())) remove_point = j;
         }
         ImGui::PopID();
         if (remove_point > -1) polygon.points.erase(polygon.points.begin() + remove_point);
         if (remove)
             polygons.erase(polygons.begin() + static_cast<int>(i));
-        else if (polygon_changed)
+        else if (polygon_changed) {
             polygon.Invalidate();
+        }
     }
     ImGui::PopID();
     const float button_width = (ImGui::CalcItemWidth() - ImGui::GetStyle().ItemSpacing.x) / 2 - 10;
@@ -381,7 +384,13 @@ void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
     if (filled) {
         if (points.size() < 3) return;      // can't draw a triangle with less than 3 vertices
         type = D3DPT_TRIANGLELIST;
-        const auto vertex_count = points.size();
+
+        
+        const auto poly = std::vector<std::vector<GW::Vec2f>>{{points}};
+        point_indices.clear();
+        point_indices = mapbox::earcut<unsigned>(poly);
+
+        const auto vertex_count = point_indices.size();
         D3DVertex* _vertices = nullptr;
 
         if (buffer) buffer->Release();
@@ -389,9 +398,9 @@ void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
             sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
         buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
 
-        for (auto i = 0u; i < points.size(); i++) {
-            _vertices[i].x = points.at(i).x;
-            _vertices[i].y = points.at(i).y;
+        for (auto i = 0u; i < point_indices.size(); i++) {
+            _vertices[i].x = points.at(point_indices.at(i)).x;
+            _vertices[i].y = points.at(point_indices.at(i)).y;
             _vertices[i].z = 0.f;
             _vertices[i].color = color;
         }
@@ -431,7 +440,7 @@ void CustomRenderer::CustomPolygon::Render(IDirect3DDevice9* device)
         if (visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
             device->SetFVF(D3DFVF_CUSTOMVERTEX);
             device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-            device->DrawPrimitive(type, 0, points.size() / 3);
+            device->DrawPrimitive(type, 0, point_indices.size() / 3);
         }
     } else {
         if (points.size() < 2) return;

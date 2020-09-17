@@ -28,12 +28,14 @@ target_include_directories(GWToolboxdll PRIVATE
 
 include(json)
 include(imgui_fonts)
+include(earcut)
 
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     imgui
     gwca
     directx
+	earcut
     utf8proc
     easywsclient
     discord_game_sdk
