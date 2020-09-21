@@ -96,7 +96,7 @@ class CustomRenderer : public VBuffer
         bool visible = true;
         bool filled = false;
         char name[128]{};
-        Color color{0xFFFFFFA0};
+        Color color{0xA0FFFFFF};
         Color color_sub{0x00FFFFFF};
         const static auto max_points = 21;
         void Initialize(IDirect3DDevice9* device) override;

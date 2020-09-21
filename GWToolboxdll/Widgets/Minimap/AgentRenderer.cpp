@@ -568,10 +568,10 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     // hostiles
     if (living->allegiance == 0x3) {
         if(living->hp <= 0.0f) return color_hostile_dead;
-        Color c = color_hostile;
+        const Color* c = &color_hostile;
         if (boss_colors && living->GetHasBossGlow()) {
             const auto prof = GetAgentProfession(living);
-            if (prof) c = profession_colors[prof];
+            if (prof) c = &profession_colors[prof];
         }
         const auto& polygons = Minimap::Instance().custom_renderer.polygons;
         const auto& markers = Minimap::Instance().custom_renderer.markers;
@@ -621,21 +621,18 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         };
         for (const auto& polygon : polygons) {
             if (!is_relevant(polygon)) continue;
-            if (polygon.filled && is_inside(living->pos, polygon.points)) {
-                c = polygon.color_sub;
-            }
-            if (!polygon.filled && is_inside(living->pos, polygon.points)) {
-                c = polygon.color_sub;
+            if (is_inside(living->pos, polygon.points)) {
+                c = &polygon.color_sub;
             }
         }
         for (const auto marker : markers) {
             if (!is_relevant_circle(marker)) continue;
             if (is_inside_circle(living->pos, marker.pos, marker.size)) {
-                c = marker.color_sub;
+                c = &marker.color_sub;
             }
         }
         if (living->hp > 0.9f) return c;
-        return Colors::Sub(c, color_agent_damaged_modifier);
+        return Colors::Sub(*c, color_agent_damaged_modifier);
     }
 
     // neutrals
