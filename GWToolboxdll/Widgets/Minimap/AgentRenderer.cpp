@@ -631,7 +631,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
                 c = &marker.color_sub;
             }
         }
-        if (living->hp > 0.9f) return c;
+        if (living->hp > 0.9f) return *c;
         return Colors::Sub(*c, color_agent_damaged_modifier);
     }
 
