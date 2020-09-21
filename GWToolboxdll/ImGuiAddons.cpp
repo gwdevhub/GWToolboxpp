@@ -4,7 +4,7 @@
 #include <ImGuiAddons.h>
 #include <string>
 
-using namespace std::literals::string_literals;
+using namespace std::string_literals;
 
 void ImGui::ShowHelp(const char* help) {
 	ImGui::SameLine();
@@ -32,9 +32,11 @@ bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
         ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + style.ItemSpacing.y / 2), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), label);
     return clicked;
 }
-bool ImGui::ColorButtonPicker(const char* label, Color* imcol)
+bool ImGui::ColorButtonPicker(const char* label, Color* imcol, const ImGuiColorEditFlags flags)
 {
-	return Colors::DrawSettingHueWheel(label, imcol, ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs);
+    return Colors::DrawSettingHueWheel(label, imcol,
+        flags | ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel |
+            ImGuiColorEditFlags_NoInputs);
 }
 bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool(*items_getter)(void*, int, const char**), 
 	void* data, int items_count, int height_in_items) {

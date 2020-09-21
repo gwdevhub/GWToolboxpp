@@ -18,6 +18,8 @@
 
 #define IniFilename L"Markers.ini"
 
+using namespace std::string_literals;
+
 void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section)
 {
     color = Colors::Load(ini, section, "color_custom_markers", 0xFFFFFFFF);
@@ -234,10 +236,10 @@ void CustomRenderer::DrawSettings()
         if (ImGui::Combo("##type", reinterpret_cast<int*>(&marker.shape), types, 2)) markers_changed = true;
         ImGui::SameLine(0.0f, spacing);
 
-        if (ImGui::ColorButtonPicker("##color_sub", &marker.color_sub)) markers_changed = true;
+        if (ImGui::ColorButtonPicker(("##color_sub"s + std::to_string(i)).c_str(), &marker.color_sub)) markers_changed = true;
         ImGui::SameLine(0.0f, spacing);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color to draw agents in this circle in.");
-        if (ImGui::ColorButtonPicker("##color", &marker.color)) markers_changed = true;
+        if (ImGui::ColorButtonPicker(("##color"s + std::to_string(i)).c_str(), &marker.color)) markers_changed = true;
         ImGui::SameLine(0.0f, spacing);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color of this circle.");
 

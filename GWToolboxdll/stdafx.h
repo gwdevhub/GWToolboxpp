@@ -38,19 +38,17 @@
 
 #include <GWCA/Source/stdafx.h>
 
-// c style headers
-#include <ctype.h>
-#include <math.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <strsafe.h>
-#include <time.h>
+// c++ style c headers
+#include <cctype>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <ctime>
 
 // c++ headers
 #include <algorithm>
 #include <bitset>
 #include <chrono>
-#include <cmath>
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -77,6 +75,7 @@
 // windows headers
 #include <Windows.h>
 
+#include <strsafe.h>
 #include <DbgHelp.h>
 #include <shellapi.h>
 #include <ShlObj.h>
