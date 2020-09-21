@@ -72,11 +72,10 @@ class CustomRenderer : public VBuffer
         float size;
         Shape shape;
         GW::Constants::MapID map;
-        bool color_agents = false;
         bool visible;
         char name[128]{};
         Color color{0xFFFFFFA0};
-        Color color_sub{0xA0FFFFFF};
+        Color color_sub{0x00FFFFFF};
     };
 
     struct CustomPolygon final : VBuffer
@@ -96,10 +95,9 @@ class CustomRenderer : public VBuffer
         GW::Constants::MapID map;
         bool visible = true;
         bool filled = false;
-        bool color_agents = false;
         char name[128]{};
         Color color{0xFFFFFFA0};
-        Color color_sub{0xA0FFFFFF};
+        Color color_sub{0x00FFFFFF};
         const static auto max_points = 21;
         void Initialize(IDirect3DDevice9* device) override;
         void Render(IDirect3DDevice9* device) override;

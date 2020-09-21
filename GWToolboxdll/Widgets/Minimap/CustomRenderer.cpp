@@ -57,8 +57,6 @@ void CustomRenderer::LoadMarkers()
             marker.shape = static_cast<Shape>(inifile->GetLongValue(section, "shape", 0));
             marker.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
             marker.color = Colors::Load(inifile, section, "color", marker.color);
-            marker.color_sub = Colors::Load(inifile, section, "color_sub", marker.color_sub);
-            marker.color_agents = inifile->GetBoolValue(section, "color_agents", marker.color_agents);
             marker.visible = inifile->GetBoolValue(section, "visible", true);
             markers.push_back(marker);
             inifile->Delete(section, nullptr);
@@ -79,7 +77,6 @@ void CustomRenderer::LoadMarkers()
             polygon.filled = inifile->GetBoolValue(section, "filled", polygon.filled);
             polygon.color = Colors::Load(inifile, section, "color", polygon.color);
             polygon.color_sub = Colors::Load(inifile, section, "color_sub", polygon.color_sub);
-            polygon.color_agents = inifile->GetBoolValue(section, "color_agents", polygon.color_agents);
             polygon.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
             polygon.visible = inifile->GetBoolValue(section, "visible", true);
             polygons.push_back(polygon);
@@ -137,7 +134,6 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetBoolValue(section, "visible", marker.visible);
             Colors::Save(inifile, section, "color", marker.color);
             Colors::Save(inifile, section, "color_sub", marker.color_sub);
-            inifile->SetBoolValue(section, "color_agents", marker.color_agents);
         }
         for (auto i = 0u; i < polygons.size(); ++i) {
             const CustomPolygon& polygon = polygons[i];
@@ -151,7 +147,6 @@ void CustomRenderer::SaveMarkers() const
             }
             Colors::Save(inifile, section, "color", polygon.color);
             Colors::Save(inifile, section, "color_sub", polygon.color_sub);
-            inifile->SetBoolValue(section, "color_agents", polygon.color_agents);
             inifile->SetValue(section, "name", polygon.name);
             inifile->SetLongValue(section, "map", static_cast<long>(polygon.map));
             inifile->SetBoolValue(section, "visible", polygon.visible);
@@ -239,14 +234,10 @@ void CustomRenderer::DrawSettings()
         if (ImGui::Combo("##type", reinterpret_cast<int*>(&marker.shape), types, 2)) markers_changed = true;
         ImGui::SameLine(0.0f, spacing);
 
-        
-        ImGui::Checkbox("##color_agents", &marker.color_agents);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color agents in this circle differently?");
-        ImGui::SameLine(0.0f, spacing);
-        if (ImGui::ColorButtonPicker("##color_sub", marker.color_sub)) markers_changed = true;
+        if (ImGui::ColorButtonPicker("##color_sub", &marker.color_sub)) markers_changed = true;
         ImGui::SameLine(0.0f, spacing);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color to draw agents in this circle in.");
-        if (ImGui::ColorButtonPicker("##color", marker.color)) markers_changed = true;
+        if (ImGui::ColorButtonPicker("##color", &marker.color)) markers_changed = true;
         ImGui::SameLine(0.0f, spacing);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color of this circle.");
 
@@ -293,15 +284,11 @@ void CustomRenderer::DrawSettings()
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Filled");
         ImGui::SameLine(0.0f, spacing);
 
-        ImGui::Checkbox("##coloragents", &polygon.color_agents);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color hostile agents within this polygon differently?");
-        ImGui::SameLine(0.0f, spacing);
-
-        if (ImGui::ColorButtonPicker("##colorsub", polygon.color_sub)) polygon_changed = markers_changed = true;
+        if (ImGui::ColorButtonPicker("##colorsub", &polygon.color_sub)) polygon_changed = markers_changed = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color in which hostile agents inside this polygon are drawn.");
         ImGui::SameLine(0.0f, spacing);
 
-        if (ImGui::ColorButtonPicker("C:##color", polygon.color)) polygon_changed = markers_changed = true;
+        if (ImGui::ColorButtonPicker("C:##color", &polygon.color)) polygon_changed = markers_changed = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color of the polygon on the map.");
         ImGui::SameLine(0.0f, spacing);
 

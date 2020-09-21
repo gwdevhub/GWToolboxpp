@@ -32,42 +32,9 @@ bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
         ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + style.ItemSpacing.y / 2), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), label);
     return clicked;
 }
-bool ImGui::ColorButtonPicker(const char* label, Color& imcol)
+bool ImGui::ColorButtonPicker(const char* label, Color* imcol)
 {
-    float col[4];
-    Colors::ConvertU32ToFloat4(imcol, col);
-    ImVec4 col_v4{ // rgba to argb
-        col[1],
-        col[2],
-        col[3],
-        col[0],
-    };
-    auto value_changed = false;
-    auto& g = *ImGui::GetCurrentContext();
-
-	std::string picker_name = "picker"s + label;
-    if (ImGui::ColorButton(label, col_v4)) {
-        g.ColorPickerRef = col_v4;
-        ImGui::OpenPopup(picker_name.c_str());
-    }
-    static float col_buf[4] = {col[0], col[1], col[2], col[3]};
-    if (ImGui::BeginPopup(picker_name.c_str())) {
-        const ImGuiColorEditFlags picker_flags = ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_NoLabel |
-                                                 ImGuiColorEditFlags_AlphaPreviewHalf;
-        ImGui::SetNextItemWidth(ImGui::GetFrameHeight() * 12.0f);
-        value_changed |= ImGui::ColorPicker4(("##"s + picker_name) .c_str(), col_buf, picker_flags, &g.ColorPickerRef.x);
-        ImGui::EndPopup();
-    }
-    if (value_changed) {
-        col_v4 = {
-            col_buf[0],
-            col_buf[1],
-            col_buf[2],
-            col_buf[3],
-        };
-        imcol = ImGui::ColorConvertFloat4ToU32(col_v4);
-    }
-    return value_changed;
+	return Colors::DrawSettingHueWheel(label, imcol, ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs);
 }
 bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool(*items_getter)(void*, int, const char**), 
 	void* data, int items_count, int height_in_items) {

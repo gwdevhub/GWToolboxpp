@@ -576,11 +576,11 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         const auto& polygons = Minimap::Instance().custom_renderer.polygons;
         const auto& markers = Minimap::Instance().custom_renderer.markers;
         const auto is_relevant = [living](const CustomRenderer::CustomPolygon& polygon)-> bool {
-            return (polygon.map == GW::Constants::MapID::None || polygon.map == GW::Map::GetMapID()) && !polygon.points.empty() && polygon.color_agents &&
+            return (polygon.map == GW::Constants::MapID::None || polygon.map == GW::Map::GetMapID()) && !polygon.points.empty() && (polygon.color_sub & IM_COL32_A_MASK) != 0 &&
                    GW::GetDistance(living->pos, polygon.points.at(0)) < 2500.f;
         };
         const auto is_relevant_circle = [living](const CustomRenderer::CustomMarker& marker) {
-            return (marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID()) && marker.color_agents &&
+            return (marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID()) && (marker.color_sub & IM_COL32_A_MASK) != 0 &&
                    GW::GetDistance(living->pos, marker.pos) < 2500.f;
         };
         const auto is_inside = [](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
