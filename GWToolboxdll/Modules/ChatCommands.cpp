@@ -580,6 +580,13 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
         else if (arg == L"show") { // e.g. /tb show
             MainWindow::Instance().visible = true;
         }
+        else if (arg == L"save") { // e.g. /tb save
+            GWToolbox::Instance().SaveSettings();
+        }
+        else if (arg == L"load") { // e.g. /tb load
+            GWToolbox::Instance().OpenSettingsFile();
+            GWToolbox::Instance().LoadModuleSettings();
+        }
         else if (arg == L"reset") { // e.g. /tb reset
             ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
             ImGui::SetWindowPos(SettingsWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
