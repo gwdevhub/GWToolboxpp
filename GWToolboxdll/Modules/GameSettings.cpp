@@ -1163,7 +1163,7 @@ void GameSettings::DrawPartySettings() {
 }
 
 void GameSettings::DrawChatSettings() {
-    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
+    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
     if (ImGui::TreeNode("Chat Colors")) {
         ImGui::Text("Channel");
         ImGui::SameLine(chat_colors_grid_x[1]);
@@ -2074,7 +2074,7 @@ float GameSettings::GetSkillRange(uint32_t skill_id)
 void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
     ImGui::PushID(static_cast<int>(chan));
     ImGui::Text(name);
-    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
+    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
     GW::Chat::Color color, sender_col, message_col;
     GW::Chat::GetChannelColors(chan, &sender_col, &message_col);
 
