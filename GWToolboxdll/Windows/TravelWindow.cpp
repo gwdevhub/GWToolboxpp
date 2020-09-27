@@ -847,7 +847,13 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
 
 bool TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
     if (!IsMapUnlocked(MapID)) {
-        Log::Error("[Error] Your character does not have %s unlocked", GW::Constants::NAME_FROM_ID[(uint32_t)MapID]);
+        const GW::AreaInfo* map = GW::Map::GetMapInfo(MapID);
+        wchar_t map_name_buf[8];
+        wchar_t err_message_buf[256] = L"[Error] Your character does not have that map unlocked";
+        if (map && map->name_id && GW::UI::UInt32ToEncStr(map->name_id, map_name_buf, 8))
+            Log::ErrorW(L"[Error] Your character does not have \x1\x2%s\x2\x108\x107 unlocked", map_name_buf);
+        else
+            Log::ErrorW(err_message_buf);
         return false;
     }
     if (IsAlreadyInOutpost(MapID, _district, _district_number)) {

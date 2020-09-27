@@ -130,9 +130,32 @@ void Log::LogW(const wchar_t* msg, ...) {
 }
 
 // === Game chat logging ===
+static void _vchatlogW(GW::Chat::Channel chan, const wchar_t* format, va_list argv) {
+    wchar_t buf1[256];
+    vswprintf(buf1, 256, format, argv);
+
+    wchar_t buf2[256];
+    swprintf(buf2, 256, L"<c=#00ccff>GWToolbox++</c>: %s", buf1);
+
+    // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
+    std::wstring sbuf2(buf2);
+    GW::GameThread::Enqueue([chan, sbuf2]() {
+        GW::Chat::WriteChat(chan, sbuf2.c_str());
+        });
+
+    const wchar_t* c = [](GW::Chat::Channel chan) -> const wchar_t* {
+        switch (chan) {
+        case CHAN_INFO: return L"Info";
+        case CHAN_WARNING: return L"Warning";
+        case CHAN_ERROR: return L"Error";
+        default: return L"";
+        }
+    }(chan);
+    Log::LogW(L"[%s] %s\n", c, buf1);
+}
 static void _vchatlog(GW::Chat::Channel chan, const char* format, va_list argv) {
     char buf1[256];
-    vsprintf_s(buf1, format, argv);
+    vsnprintf(buf1, 256, format, argv);
 
     char buf2[256];
     snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
@@ -142,7 +165,6 @@ static void _vchatlog(GW::Chat::Channel chan, const char* format, va_list argv) 
     GW::GameThread::Enqueue([chan, sbuf2]() {
         GW::Chat::WriteChat(chan, sbuf2.c_str());
         });
-    
 
     const char* c = [](GW::Chat::Channel chan) -> const char* {
         switch (chan) {
@@ -161,11 +183,22 @@ void Log::Info(const char* format, ...) {
     _vchatlog(CHAN_INFO, format, vl);
     va_end(vl);
 }
-
+void Log::InfoW(const wchar_t* format, ...) {
+    va_list vl;
+    va_start(vl, format);
+    _vchatlogW(CHAN_INFO, format, vl);
+    va_end(vl);
+}
 void Log::Error(const char* format, ...) {
     va_list vl;
     va_start(vl, format);
     _vchatlog(CHAN_ERROR, format, vl);
+    va_end(vl);
+}
+void Log::ErrorW(const wchar_t* format, ...) {
+    va_list vl;
+    va_start(vl, format);
+    _vchatlogW(CHAN_ERROR, format, vl);
     va_end(vl);
 }
 
@@ -173,6 +206,12 @@ void Log::Warning(const char* format, ...) {
     va_list vl;
     va_start(vl, format);
     _vchatlog(CHAN_WARNING, format, vl);
+    va_end(vl);
+}
+void Log::WarningW(const wchar_t* format, ...) {
+    va_list vl;
+    va_start(vl, format);
+    _vchatlogW(CHAN_WARNING, format, vl);
     va_end(vl);
 }
 
