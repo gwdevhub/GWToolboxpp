@@ -273,7 +273,7 @@ void CustomRenderer::DrawMarkerSettings() {
         ImGui::SameLine(0.0f, spacing);
 
         ImGui::ColorButtonPicker("##colorsub", &marker.color_sub);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color in which hostile agents inside this polygon are drawn.");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color in which hostile agents inside this polygon are drawn.\n\nNOTE: An alpha channel of 0 will disable this color.");
         ImGui::SameLine(0.0f, spacing);
 
         markers_changed |= ImGui::InputInt("##map", (int*)&marker.map, 0);
@@ -340,11 +340,11 @@ void CustomRenderer::DrawPolygonSettings() {
         ImGui::SameLine(0.0f, spacing);
 
         polygon_changed |= ImGui::ColorButtonPicker("##colorsub", &polygon.color_sub);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color in which hostile agents inside this polygon are drawn.");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color in which hostile agents inside this polygon are drawn.\n\nNOTE: An alpha channel of 0 will disable this color.");
         ImGui::SameLine(0.0f, spacing);
 
-        polygon_changed |= ImGui::ColorButtonPicker("C:##color", &polygon.color);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color of the polygon on the map.");
+        polygon_changed |= ImGui::ColorButtonPicker("##color", &polygon.color);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color of the polygon on the map.\nNOTE: An alpha channel of 0 will disable this color.");
         ImGui::SameLine(0.0f, spacing);
 
         polygon_changed |= ImGui::InputInt("##map", reinterpret_cast<int*>(&polygon.map), 0);
@@ -387,7 +387,11 @@ void CustomRenderer::DrawPolygonSettings() {
         ImGui::PopID();
         if (remove) {
             polygons.erase(polygons.begin() + signed_idx);
+            for (auto& poly : polygons) {
+                poly.Invalidate();
+            }
             markers_changed = true;
+            break;
         }
         else if (polygon_changed) {
             polygon.Invalidate();
