@@ -153,8 +153,10 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 
                 bool overlay = false;
                 const GW::PartyAttribute& partyAttribute = GW::GameContext::instance()->world->attributes[0];
-                uint8_t attribute_id = GW::SkillbarMgr::GetSkillConstantData(skill).attribute;
-                const GW::Attribute& attribute = partyAttribute.attribute[attribute_id];
+                const GW::Skill& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill);
+                if (skill_data.duration0 == 0x20000)
+                    continue; // Maintained skill/enchantment
+                const GW::Attribute& attribute = partyAttribute.attribute[skill_data.attribute];
                 if (effect.effect_type < attribute.level) overlay = true;
 
                 size_t y = party_map[agent];
