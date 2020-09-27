@@ -44,6 +44,7 @@ class CustomRenderer : public VBuffer
         GW::Vec2f p1;
         GW::Vec2f p2;
         GW::Constants::MapID map;
+        Color color{ 0xFFFFFFFF };
         bool visible;
         char name[128]{};
     };
@@ -66,15 +67,13 @@ class CustomRenderer : public VBuffer
             else
                 GuiUtils::StrCopy(name, "marker", sizeof(name));
         };
-        CustomMarker(const char* n)
-            : CustomMarker(0, 0, 100.0f, Shape::LineCircle, GW::Constants::MapID::None, n){};
+        CustomMarker(const char* n);
         GW::Vec2f pos;
         float size;
         Shape shape;
         GW::Constants::MapID map;
         bool visible;
         char name[128]{};
-        Color color{0xFFFFFFA0};
         Color color_sub{0x00FFFFFF};
     };
 
@@ -88,12 +87,12 @@ class CustomRenderer : public VBuffer
             else
                 GuiUtils::StrCopy(name, "marker", sizeof name);
         };
-        CustomPolygon(const char* n)
-            : CustomPolygon(GW::Constants::MapID::None, n){};
+        CustomPolygon(const char* n);
 
         std::vector<GW::Vec2f> points{};
         GW::Constants::MapID map;
         bool visible = true;
+        Shape shape;
         bool filled = false;
         char name[128]{};
         Color color{0xA0FFFFFF};
@@ -110,6 +109,9 @@ public:
     void Render(IDirect3DDevice9* device) override;
     void Invalidate() override;
     void DrawSettings();
+    void DrawLineSettings();
+    void DrawMarkerSettings();
+    void DrawPolygonSettings();
     void LoadSettings(CSimpleIni* ini, const char* section);
     void SaveSettings(CSimpleIni* ini, const char* section) const;
     void LoadMarkers();
@@ -120,6 +122,13 @@ private:
     void DrawCustomMarkers(IDirect3DDevice9* device);
     void DrawCustomLines(IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
+    void SetTooltipMapID(const GW::Constants::MapID& map_id);
+    struct MapTooltip {
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        std::wstring map_name_ws;
+        char tooltip_str[128];
+    } map_id_tooltip;
+
 
     class FullCircle : public VBuffer
     {
@@ -136,6 +145,7 @@ private:
     unsigned int vertices_count = 0;
     unsigned int vertices_max = 0;
 
+    int show_polygon_details = -1;
     bool markers_changed = false;
     std::vector<CustomLine> lines;
     std::vector<CustomMarker> markers;

@@ -7,6 +7,48 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.0
+* [New] Added option to improve move-to-cast to better avoid getting aggro when auto-moving to cast range for a spell
+* [New] Updated icons for all widgets and windows
+* [New] Configurable minimap range circle thickness
+* [New] Minimap can now be toggled between square and circular (default circular)
+* [New] Added skillbar timer widget, shows time until skill is recharged in an overlay, among other things
+* [New] Added `/hero <attack|guard|avoid>` command
+* [New] Added hero flagging hotkey - allows hero formations
+* [New] Added res aggro and chain aggro ranges to minimap
+* [New] Added whisper redirect for all players, not just friends
+* [New] Extended `/enter` chat command to trigger challenge mission entries, option to cancel during a countdown
+* [New] Hero builds not include option to show/hide hero panel, and change behaviour on load
+* [New] Added `/tp <window_name> [hide|show|mini|maxi]` command
+* [New] Added option to disable/enable camera smoothing in-game
+* [New] Added option to disable/enable minimap smoothing to match compass smoothing
+* [New] Added custom polygon option to minimap, with option to color enemies within the polygon differently
+* [New] Added `/tb save` and `/tb load`
+* [Minor] Better crash reporting with issues related to ImGui
+* [Minor] Added item model_id to info window
+* [Minor] Added tick toggle hotkey
+* [Minor] Added background color option to minimap
+* [Minor] Re-added configurable modifiers for minimap clicks (e.g. change ctrl + click behaviour)
+* [Minor] Prevent weapon set items from being auto salvaged via context menu
+* [Minor] Switched project to use CMake for development
+* [Minor] Typo fixes
+* [Minor] Added Ben Wolfson to special NPC list
+* [Minor] Deferred option loading for objective timer and friend list to avoid slow toolbox start time
+* [Minor] Disable `/resignlog` in an outpost
+* [Fix] Fixed crash with alcohol widget if no alcohol has ever been used
+* [Fix] Fixed bug preventing bond widget showing on screen if effect array is empty
+* [Fix] Fixed infinite loop when trying to update toolbox causing crash on closing GW
+* [Fix] Fixed a bunch of settings not being loaded/saved correctly
+* [Fix] Fixed bug causing minimap to highlight BigCircle agents
+* [Fix] Fixed `/tp deep` and `/tp urgoz` not working when in an explorable with disconnected players
+* [Fix] Fixed issue preventing toolbox from loading if Font.ttf is not found
+* [Fix] Fixed a crash caused by damage monitor when target isn't found in memory
+* [Fix] Fixed minimap click-to-move and move hotkeys from working correctly whilst auto running
+* [Fix] Fixed Pahnai salad triggering alcohol timer
+* [Fix] Fixed discord status updating with wrong character when viewing another party member whilst dead
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.0_Release/GWToolboxdll.dll)
+
 ## Version 3.8.1
 * [New] Added DoA cave timer to timer widget
 * [Minor] Removed salvage/identify chat commands

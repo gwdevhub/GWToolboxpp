@@ -550,7 +550,6 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
         Item* context_item_actual = context_item.item(); 
         if (context_item_actual && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && ImGui::Button("Store Item", size)) {
-            // @Fix: This is not correct. A HookStatus can't be on the stack.
             GW::HookStatus st;
             ImGui::GetIO().KeysDown[VK_CONTROL] = true;
             is_manual_item_click = true;
@@ -670,6 +669,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                     pi->name_s = GuiUtils::WStringToString(pi->name);
                     pi->name_s = std::regex_replace(pi->name_s, sanitiser, "");
                 }
+                ImGui::PushID(static_cast<int>(pi->item_id));
                 ImGui::Checkbox(pi->name_s.c_str(),&pi->proceed);
                 const float item_name_length = ImGui::CalcTextSize(pi->name_s.c_str(), NULL, true).x;
                 longest_item_name_length = item_name_length > longest_item_name_length ? item_name_length : longest_item_name_length;
@@ -682,7 +682,6 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                     ImGui::SetTooltip("%s",pi->desc_s.c_str());
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
-                ImGui::PushID(static_cast<int>(pi->item_id));
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
                     std::wstring wiki_item = std::regex_replace(pi->short_name, std::wregex(L" "), std::wstring(L"_"));
                     wiki_item = std::regex_replace(wiki_item, wsanitiser, std::wstring(L""));

@@ -236,31 +236,28 @@ void Minimap::DrawSettingInternal()
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     // agent_rendered has its own TreeNodes
     agent_renderer.DrawSettings();
-    if (ImGui::TreeNode("Ranges")) {
+    if (ImGui::TreeNodeEx("Ranges", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         range_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Pings and drawings")) {
+    if (ImGui::TreeNodeEx("Pings and drawings", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         pingslines_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("AoE Effects")) {
+    if (ImGui::TreeNodeEx("AoE Effects", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         effect_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Symbols")) {
+    if (ImGui::TreeNodeEx("Symbols", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         symbols_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Terrain")) {
+    if (ImGui::TreeNodeEx("Terrain", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         pmap_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Custom Markers")) {
-        custom_renderer.DrawSettings();
-        ImGui::TreePop();
-    }
-    if (ImGui::TreeNode("Hero flagging")) {
+    custom_renderer.DrawSettings();
+    if (ImGui::TreeNodeEx("Hero flagging", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
         ImGui::Checkbox("Attach to minimap", &hero_flag_window_attach);
         ImGui::ShowHelp("If disabled, you can move/resize the window with 'Unlock Move All'.");

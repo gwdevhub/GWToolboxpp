@@ -148,14 +148,10 @@ namespace {
 
     const std::wstring GetPlayerName(uint32_t player_number = 0) {
         if (!player_number) {
-            GW::GameContext* g = GW::GameContext::instance();
-            if (!g || !g->character) return L"";
-            return g->character->player_name;
+            player_number = GW::PlayerMgr::GetPlayerNumber();
         }
-        GW::PlayerArray& players = GW::PlayerMgr::GetPlayerArray();
-        if (!players.valid() || player_number >= players.size())
-            return L"";
-        return GuiUtils::SanitizePlayerName(players[player_number].name);
+        const GW::Player* player = GW::PlayerMgr::GetPlayerByID(player_number);
+        return player && player->name ? GuiUtils::SanitizePlayerName(player->name) : L"";
     }
 
     void SetWindowTitle(bool enabled) {
