@@ -223,7 +223,7 @@ void BondsWidget::LoadSettings(CSimpleIni* ini) {
     show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
     flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
     row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
-    low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
+    low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(low_attribute_overlay), Colors::ARGB(76, 0, 0, 0));
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
