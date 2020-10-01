@@ -91,6 +91,8 @@ public:
     // 0 is 'all' flag, 1 to 7 is each hero
     bool FlagHero(uint32_t idx);
 
+    static std::pair<bool, int> Flagging();
+
     RangeRenderer range_renderer;
     PmapRenderer pmap_renderer;
     AgentRenderer agent_renderer;

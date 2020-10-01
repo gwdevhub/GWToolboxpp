@@ -862,8 +862,13 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
         return false;
     if (mouse_clickthrough)
         return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
-    if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+    if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) 
         return false;
+    flagging[Flagging().second] = Flagging().first;
+    if (Message == WM_LBUTTONDOWN && Flagging().first) {
+        GW::GameThread::Enqueue([this, lParam]() { FlagHeros(lParam); }); // todo:: very dirty please fix
+        return false;
+    }
     switch (Message) {
         case WM_MOUSEMOVE:
             return OnMouseMove(Message, wParam, lParam);
