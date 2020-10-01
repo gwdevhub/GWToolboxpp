@@ -22,6 +22,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GuiUtils.h>
 #include <ImGuiAddons.h>
@@ -110,6 +111,27 @@ void Minimap::SkillActivateCallback(GW::HookStatus*, GW::Packet::StoC::SkillActi
         }
     }
 }
+
+/*
+ return std::tuple<is_flagging, hero_num>
+ todo: very dirty please fix papa jon
+ */
+std::pair<bool, int> Minimap::Flagging()
+{
+    const auto handle = reinterpret_cast<uintptr_t>(GetModuleHandle("Gw.exe"));
+    const auto* flagging_addr = reinterpret_cast<bool*>(handle + 0x637568);
+    const auto offsets = std::array{0x3C, 0x14, 0x24, 0x2C, 0x4};
+    const auto* addr_heronum = reinterpret_cast<int**>(handle + 0x637564);
+    int* addr = *addr_heronum;
+    for (auto off : offsets) {
+        if (addr != nullptr) addr = *reinterpret_cast<int**>(reinterpret_cast<uintptr_t>(addr) + off);
+    }
+    if (addr != nullptr) {
+        return std::pair{*flagging_addr, *addr};
+    }
+    return std::pair{false, 0};
+}
+
 GW::Vec2f Minimap::ShadowstepLocation() const
 {
     return shadowstep_location;
@@ -714,7 +736,7 @@ GW::Vec2f Minimap::InterfaceToWorldVector(Vec2i pos) const
     return v;
 }
 
-void Minimap::SelectTarget(GW::Vec2f pos)
+void Minimap::SelectTarget(GW::Vec2f pos) const
 {
     GW::AgentArray agents = GW::Agents::GetAgentArray();
     if (!agents.valid())
@@ -756,6 +778,11 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
         return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
     if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return false;
+    flagging[Flagging().second] = Flagging().first;
+    if (Message == WM_LBUTTONDOWN && Flagging().first) {
+        GW::GameThread::Enqueue([this, lParam]() { FlagHeros(lParam); }); // todo:: very dirty please fix
+        return false;
+    }
     switch (Message) {
         case WM_MOUSEMOVE:
             return OnMouseMove(Message, wParam, lParam);

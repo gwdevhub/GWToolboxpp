@@ -95,6 +95,8 @@ public:
             flagging[idx] ^= 1;
     }
 
+    static std::pair<bool, int> Flagging();
+
     RangeRenderer range_renderer;
     PmapRenderer pmap_renderer;
     AgentRenderer agent_renderer;
@@ -113,7 +115,7 @@ private:
 
     GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
     GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
-    void SelectTarget(GW::Vec2f pos);
+    void SelectTarget(GW::Vec2f pos) const;
     bool IsKeyDown(MinimapModifierBehaviour mmb) const;
 
     bool mousedown = false;
