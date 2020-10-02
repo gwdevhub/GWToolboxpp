@@ -24,12 +24,101 @@
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
+#include <GWCA/Utilities/Scanner.h>
 #include <GuiUtils.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/Resources.h>
+
+namespace {
+    enum FlaggingState : uint32_t {
+        FlagState_All = 0,
+        FlagState_Hero1,
+        FlagState_Hero2,
+        FlagState_Hero3,
+        FlagState_Hero4,
+        FlagState_Hero5,
+        FlagState_Hero6,
+        FlagState_Hero7,
+        FlagState_None
+    };
+    enum CaptureMouseClickType : uint32_t {
+        CaptureType_None = 0,
+        CaptureType_FlagHero = 1,
+        CaptureType_SalvageWithUpgrades = 11,
+        CaptureType_SalvageMaterials = 12,
+        CaptureType_Idenfify = 13
+    };
+    struct MouseClickCaptureData {
+        struct sub1 {
+            uint8_t pad0[0x3C];
+            struct sub2 {
+                uint8_t pad1[0x14];
+                struct sub3 {
+                    uint8_t pad2[0x24];
+                    struct sub4 {
+                        uint8_t pad3[0x2C];
+                        struct sub5 {
+                            uint8_t pad4[0x4];
+                            FlaggingState* flagging_hero;
+                        } *sub5;
+                    } *sub4;
+                } *sub3;
+            } *sub2;
+        } *sub1;
+    } *MouseClickCaptureDataPtr = nullptr;
+    bool* IsFlaggingHero = nullptr;
+    CaptureMouseClickType* CaptureMouseClickTypePtr = nullptr;
+
+    // Internal flagging state to workaround not being able to set the in-game cursor state.
+    FlaggingState minimap_flagging_state = FlaggingState::FlagState_None;
+
+    FlaggingState GetFlaggingState() {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+            return minimap_flagging_state = FlaggingState::FlagState_None;
+        if (!IsFlaggingHero || !*IsFlaggingHero || !MouseClickCaptureDataPtr)
+            return minimap_flagging_state;
+        return minimap_flagging_state = *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
+    }
+    typedef void(__fastcall* StopCaptureMouseClick_pt)();
+    StopCaptureMouseClick_pt StopCaptureMouseClick_Func;
+
+    // This needs to signal to the game that it needs to capture the next mouse click as a flag, but we don't know how yet :(
+    typedef void(__fastcall* StartCaptureMouseClick_pt)(FlaggingState* arg1, void* arg2, uint32_t arg3, void* arg4, uint32_t arg5, void* arg6, void* arg7, void* arg8, void* arg9);
+    StartCaptureMouseClick_pt StartCaptureMouseClick_Func;
+
+    bool SetFlaggingState(FlaggingState set_state) {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+            return false;
+        // keep an internal flag for the minimap flagging until StartCaptureMouseClick_Func is working
+        minimap_flagging_state = set_state;
+        if (GetFlaggingState() == set_state)
+            return true;
+        if (set_state == FlaggingState::FlagState_None) {
+            if (!StopCaptureMouseClick_Func)
+                return false;
+            StopCaptureMouseClick_Func();
+            return true;
+        }
+        if (!StartCaptureMouseClick_Func)
+            return false;
+
+        // This needs to signal to the game that it needs to capture the next mouse click as a flag, but we don't know how yet :(
+
+        // FlaggingState* arg1 = &set_state;
+        // StartCaptureMouseClick_Func(arg1, 0 ,0x2C, 0, 1, 0, 0, 0, &arg1);
+        return true;
+    }
+    GW::PartyInfo* GetPlayerParty() {
+        const GW::GameContext * gamectx = GW::GameContext::instance();
+        if (!(gamectx && gamectx->party))
+            return nullptr;
+        return gamectx->party->player_party;
+    }
+
+}
 
 void Minimap::Terminate()
 {
@@ -46,6 +135,25 @@ void Minimap::Terminate()
 void Minimap::Initialize()
 {
     ToolboxWidget::Initialize();
+
+    uintptr_t address = GW::Scanner::Find("\x83\x3D\x00\x00\x00\x00\x00\x75\x11\x6A\x74\xBA", "xx????xxxxxx",-0x3);
+    if (address) {
+        StopCaptureMouseClick_Func = (StopCaptureMouseClick_pt)address;
+        address = address + 0x5;
+        address = *(uintptr_t*)address;
+        MouseClickCaptureDataPtr = (MouseClickCaptureData*)address;
+        IsFlaggingHero = (bool*)(address + 0x4);
+        CaptureMouseClickTypePtr = (CaptureMouseClickType*)(address - 0x10);
+    }
+    Log::Log("[SCAN] StopCaptureMouseClick_Func = %p\n", StopCaptureMouseClick_Func);
+    Log::Log("[SCAN] CaptureMouseClickTypePtr = %p\n", CaptureMouseClickTypePtr);
+    Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
+    address = GW::Scanner::Find("\x85\xC0\x75\x16\x68\x3B\x04\x00\x00", "xxxxxxxxx", -0x6);
+    if (address) {
+        StartCaptureMouseClick_Func = (StartCaptureMouseClick_pt)address;
+    }
+    Log::Log("[SCAN] StartCaptureMouseClick_Func = %p\n", StartCaptureMouseClick_Func);
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry, [this](GW::HookStatus *, GW::Packet::StoC::AgentPinged *pak) -> void {
         if (visible) {
             pingslines_renderer.P046Callback(pak);
@@ -110,26 +218,6 @@ void Minimap::SkillActivateCallback(GW::HookStatus*, GW::Packet::StoC::SkillActi
             Instance().shadowstep_location = GW::Agents::GetPlayer()->pos;
         }
     }
-}
-
-/*
- return std::tuple<is_flagging, hero_num>
- todo: very dirty please fix papa jon
- */
-std::pair<bool, int> Minimap::Flagging()
-{
-    const auto handle = reinterpret_cast<uintptr_t>(GetModuleHandle("Gw.exe"));
-    const auto* flagging_addr = reinterpret_cast<bool*>(handle + 0x637568);
-    const auto offsets = std::array{0x3C, 0x14, 0x24, 0x2C, 0x4};
-    const auto* addr_heronum = reinterpret_cast<int**>(handle + 0x637564);
-    int* addr = *addr_heronum;
-    for (auto off : offsets) {
-        if (addr != nullptr) addr = *reinterpret_cast<int**>(reinterpret_cast<uintptr_t>(addr) + off);
-    }
-    if (addr != nullptr) {
-        return std::pair{*flagging_addr, *addr};
-    }
-    return std::pair{false, 0};
 }
 
 GW::Vec2f Minimap::ShadowstepLocation() const
@@ -379,21 +467,22 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     effect_renderer.SaveSettings(ini, Name());
 }
 
-void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes)
+size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes)
 {
     _player_heroes.clear();
     if (!party)
-        return;
-    GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
+        return 0;
+    const GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player)
-        return;
+        return 0;
     const uint32_t player_id = player->login_number;
-    auto heroes = party->heroes;
+    const GW::HeroPartyMemberArray& heroes = party->heroes;
     _player_heroes.reserve(heroes.size());
-    for (GW::HeroPartyMember &hero : heroes) {
+    for (const GW::HeroPartyMember &hero : heroes) {
         if (hero.owner_player_id == player_id)
             _player_heroes.push_back(hero.agent_id);
     }
+    return _player_heroes.size();
 }
 
 float Minimap::GetMapRotation() const
@@ -468,16 +557,9 @@ void Minimap::Draw(IDirect3DDevice9 *)
     ImGui::PopStyleColor();
 
     if (hero_flag_controls_show && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        // @Cleanup: Maybe not lambda, but realy adapted in this case.
-        auto GetPlayerParty = []() -> GW::PartyInfo * {
-            GW::GameContext *gamectx = GW::GameContext::instance();
-            if (!(gamectx && gamectx->party))
-                return nullptr;
-            return gamectx->party->player_party;
-        };
 
-        const auto playerparty = GetPlayerParty();
-        GetPlayerHeroes(playerparty, player_heroes);
+        const GW::PartyInfo* playerparty = GetPlayerParty();
+        GetPlayerHeroes(GetPlayerParty(), player_heroes);
         bool player_has_henchmans = false;
         if (playerparty && playerparty->henchmen.size() && GW::PartyMgr::GetPlayerIsLeader())
             player_has_henchmans = true;
@@ -497,14 +579,18 @@ void Minimap::Draw(IDirect3DDevice9 *)
                 for (unsigned int i = 0; i < num_heroflags; ++i) {
                     if (i > 0)
                         ImGui::SameLine();
-                    const bool old_flagging = flagging[i];
-                    if (old_flagging)
+                    const bool is_flagging = GetFlaggingState() == i;
+                    if (is_flagging)
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
 
                     if (ImGui::Button(flag_txt[i], ImVec2(w_but, 0))) {
-                        flagging[i] ^= 1;
+                        if (is_flagging)
+                            SetFlaggingState(FlaggingState::FlagState_None);
+                        else
+                            SetFlaggingState(static_cast<FlaggingState>(i));
+                        //flagging[i] ^= 1;
                     }
-                    if (old_flagging)
+                    if (is_flagging)
                         ImGui::PopStyleColor();
 
                     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
@@ -778,11 +864,6 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
         return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
     if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return false;
-    flagging[Flagging().second] = Flagging().first;
-    if (Message == WM_LBUTTONDOWN && Flagging().first) {
-        GW::GameThread::Enqueue([this, lParam]() { FlagHeros(lParam); }); // todo:: very dirty please fix
-        return false;
-    }
     switch (Message) {
         case WM_MOUSEMOVE:
             return OnMouseMove(Message, wParam, lParam);
@@ -798,29 +879,36 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
             return false;
     }
 }
+bool Minimap::FlagHero(uint32_t idx) {
+    if (idx > FlaggingState::FlagState_None)
+        return false;
+    return SetFlaggingState(static_cast<FlaggingState>(idx));
+}
 bool Minimap::FlagHeros(LPARAM lParam)
 {
     const int x = GET_X_LPARAM(lParam);
     const int y = GET_Y_LPARAM(lParam);
     if (!IsInside(x, y))
         return false;
-
+    if (!player_heroes.size() && GetPlayerHeroes(GetPlayerParty(), player_heroes) == 0)
+        return false;
     const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
-    bool flagged = false;
-    if (flagging[0]) {
-        flagging[0] = false;
+    FlaggingState flag_state = GetFlaggingState();
+    switch (flag_state) {
+    case FlaggingState::FlagState_None:
+        return false;
+    case FlaggingState::FlagState_All:
+        SetFlaggingState(FlaggingState::FlagState_None);
         GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
-        flagged = true;
+        return true;
+    default:
+        if (flag_state >= player_heroes.size())
+            return false;
+        SetFlaggingState(FlaggingState::FlagState_None);
+        GW::PartyMgr::FlagHeroAgent(player_heroes[flag_state - 1], GW::GamePos(worldpos));
+        return true;
     }
-    for (size_t i = 1; i < 9; ++i) {
-        if (flagging[i]) {
-            flagging[i] = false;
-            flagged = true;
-            GW::PartyMgr::FlagHeroAgent(player_heroes[i - 1], GW::GamePos(worldpos));
-        }
-    }
-    return flagged;
 }
 bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam)
 {
