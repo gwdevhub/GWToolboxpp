@@ -68,14 +68,14 @@ public:
     void Draw(IDirect3DDevice9 *device) override;
     void RenderSetupProjection(IDirect3DDevice9 *device) const;
 
-    bool FlagHeros(LPARAM lParam);
-    bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
-    bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam);
-    bool OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam);
-    bool OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam);
+    bool FlagHeroes(LPARAM lParam);
+    bool OnMouseDown(UINT message, WPARAM wParam, LPARAM lParam);
+    bool OnMouseDblClick(UINT message, WPARAM wParam, LPARAM lParam) const;
+    bool OnMouseUp(UINT message, WPARAM wParam, LPARAM lParam);
+    bool OnMouseMove(UINT message, WPARAM wParam, LPARAM lParam);
     bool OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam);
     static void OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv);
-    bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
+    bool WndProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
     void LoadSettings(CSimpleIni *ini) override;
     void SaveSettings(CSimpleIni *ini) override;
@@ -89,9 +89,7 @@ public:
 
 
     // 0 is 'all' flag, 1 to 7 is each hero
-    bool FlagHero(uint32_t idx);
-
-    static std::pair<bool, int> Flagging();
+    static bool FlagHero(uint32_t idx);
 
     RangeRenderer range_renderer;
     PmapRenderer pmap_renderer;
@@ -147,7 +145,7 @@ private:
     Color hero_flag_window_background = 0;
     std::vector<GW::AgentID> player_heroes;
 
-    size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes);
+    static std::vector<GW::AgentID>&& GetPlayerHeroes(const GW::PartyInfo* party);
 
     GW::HookEntry AgentPinged_Entry;
     GW::HookEntry CompassEvent_Entry;

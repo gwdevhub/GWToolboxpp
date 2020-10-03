@@ -211,6 +211,7 @@ void Minimap::Initialize()
 
     GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
 }
+
 void Minimap::SkillActivateCallback(GW::HookStatus*, GW::Packet::StoC::SkillActivate *pak)
 {
     if (pak->agent_id == GW::Agents::GetPlayerId()) {
@@ -467,22 +468,19 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     effect_renderer.SaveSettings(ini, Name());
 }
 
-size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes)
+std::vector<GW::AgentID>&& Minimap::GetPlayerHeroes(const GW::PartyInfo* party)
 {
-    _player_heroes.clear();
-    if (!party)
-        return 0;
-    const GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player)
-        return 0;
+    std::vector<GW::AgentID> player_heroes{};
+    if (!party) return std::move(player_heroes);
+    const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player) return std::move(player_heroes);
     const uint32_t player_id = player->login_number;
     const GW::HeroPartyMemberArray& heroes = party->heroes;
-    _player_heroes.reserve(heroes.size());
-    for (const GW::HeroPartyMember &hero : heroes) {
-        if (hero.owner_player_id == player_id)
-            _player_heroes.push_back(hero.agent_id);
+    player_heroes.reserve(heroes.size());
+    for (const GW::HeroPartyMember& hero : heroes) {
+        if (hero.owner_player_id == player_id) player_heroes.push_back(hero.agent_id);
     }
-    return _player_heroes.size();
+    return std::move(player_heroes);
 }
 
 float Minimap::GetMapRotation() const
@@ -559,7 +557,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
     if (hero_flag_controls_show && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
 
         const GW::PartyInfo* playerparty = GetPlayerParty();
-        GetPlayerHeroes(GetPlayerParty(), player_heroes);
+        player_heroes = GetPlayerHeroes(GetPlayerParty());
         bool player_has_henchmans = false;
         if (playerparty && playerparty->henchmen.size() && GW::PartyMgr::GetPlayerIsLeader())
             player_has_henchmans = true;
@@ -861,14 +859,9 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
     if (is_observing)
         return false;
     if (mouse_clickthrough)
-        return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
+        return Message == WM_LBUTTONDOWN && FlagHeroes(lParam);
     if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) 
         return false;
-    flagging[Flagging().second] = Flagging().first;
-    if (Message == WM_LBUTTONDOWN && Flagging().first) {
-        GW::GameThread::Enqueue([this, lParam]() { FlagHeros(lParam); }); // todo:: very dirty please fix
-        return false;
-    }
     switch (Message) {
         case WM_MOUSEMOVE:
             return OnMouseMove(Message, wParam, lParam);
@@ -884,22 +877,24 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
             return false;
     }
 }
+
 bool Minimap::FlagHero(uint32_t idx) {
     if (idx > FlaggingState::FlagState_None)
         return false;
     return SetFlaggingState(static_cast<FlaggingState>(idx));
 }
-bool Minimap::FlagHeros(LPARAM lParam)
+
+bool Minimap::FlagHeroes(LPARAM lParam)
 {
     const int x = GET_X_LPARAM(lParam);
     const int y = GET_Y_LPARAM(lParam);
     if (!IsInside(x, y))
         return false;
-    if (!player_heroes.size() && GetPlayerHeroes(GetPlayerParty(), player_heroes) == 0)
+    if (player_heroes.empty() && (player_heroes=GetPlayerHeroes(GetPlayerParty()), player_heroes.empty()))
         return false;
     const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
-    FlaggingState flag_state = GetFlaggingState();
+    const FlaggingState flag_state = GetFlaggingState();
     switch (flag_state) {
     case FlaggingState::FlagState_None:
         return false;
@@ -915,13 +910,14 @@ bool Minimap::FlagHeros(LPARAM lParam)
         return true;
     }
 }
+
 bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
     if (!IsActive())
         return false;
-    if (FlagHeros(lParam))
+    if (FlagHeroes(lParam))
         return true;
     const int x = GET_X_LPARAM(lParam);
     const int y = GET_Y_LPARAM(lParam);
@@ -956,7 +952,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam)
     return true;
 }
 
-bool Minimap::OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam)
+bool Minimap::OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam) const
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
@@ -1070,6 +1066,7 @@ bool Minimap::IsInside(int x, int y) const
     }
     return true;
 }
+
 bool Minimap::IsActive() const
 {
     return visible && !loading && GW::Map::GetIsMapLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Agents::GetPlayerId() != 0;
