@@ -8,6 +8,8 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <Defines.h>
 #include <Logger.h>
@@ -16,6 +18,23 @@
 #include <Modules/TwitchModule.h>
 
 namespace {
+    void WriteChat(const wchar_t* message, const char* nick = nullptr) {
+        TwitchModule& module = TwitchModule::Instance();
+        char sender[128];
+        if (nick) {
+            snprintf(sender, sizeof(sender) / sizeof(*sender), "%s @ %s", nick, module.irc_alias.c_str());
+        }
+        else {
+            snprintf(sender, sizeof(sender) / sizeof(*sender), "%s", module.irc_alias.c_str());
+        }
+        std::wstring sender_ws = GuiUtils::StringToWString(sender);
+        std::wstring message_ws(message);
+        GW::GameThread::Enqueue([message_ws, sender_ws]() {
+            // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, message_ws.c_str(), sender_ws.c_str());
+            });
+    }
+
     int OnJoin(const char* params, irc_reply_data* hostd, void* conn) {
         UNREFERENCED_PARAMETER(conn);
         TwitchModule* module = &TwitchModule::Instance();
@@ -24,40 +43,32 @@ namespace {
         wchar_t buf[600];
         if (strcmp(hostd->nick, module->irc_username.c_str()) == 0) {
             if (strcmp(&params[1], module->irc_username.c_str()) == 0) {
-                swprintf(buf, 599, L"<a=1>%S</a>: Connected", module->irc_alias.c_str());
+                WriteChat(L"Connected");
+                return 0;
             }
             else {
-                swprintf(buf, 599, L"<a=1>%S</a>: Connected to %s as %S", module->irc_alias.c_str(), GuiUtils::StringToWString(&params[1]).c_str(), module->irc_username.c_str());
+                swprintf(buf, 599, L"Connected to %s as %S", GuiUtils::StringToWString(&params[1]).c_str(), module->irc_username.c_str());
+                WriteChat(buf);
+                return 0;
             }
         }
         else {
             if (!module->notify_on_user_join)
                 return 0;
-            swprintf(buf, 599, L"<a=1>%S</a>: %s joined your channel.", module->irc_alias.c_str(), GuiUtils::StringToWString(hostd->nick).c_str());
+            swprintf(buf, 599, L"%s joined your channel.", GuiUtils::StringToWString(hostd->nick).c_str());
+            WriteChat(buf);
+            return 0;
         }
-
-        // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
-        std::wstring wbuf(buf);
-        GW::GameThread::Enqueue([wbuf]() {
-            // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, wbuf.c_str());
-        });
-        return 0;
     }
     int OnLeave(const char* params, irc_reply_data* hostd, void* conn) {
         UNREFERENCED_PARAMETER(conn);
         TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages || !module->notify_on_user_leave)
             return 0; // Empty msg
-        wchar_t buf[600];
-        swprintf(buf, 599, L"<a=1>%S</a>: %s left your channel.", module->irc_alias.c_str(), GuiUtils::StringToWString(hostd->nick).c_str());
 
-        // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
-        std::wstring wbuf(buf);
-        GW::GameThread::Enqueue([wbuf]() {
-            // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, wbuf.c_str());
-            });
+        wchar_t buf[600];
+        swprintf(buf, 599, L"%s left your channel.", GuiUtils::StringToWString(hostd->nick).c_str());
+        WriteChat(buf);
         return 0;
     }
     int OnConnected(const char* params, irc_reply_data* hostd, void* conn) {
@@ -81,15 +92,9 @@ namespace {
         TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages)
             return 0; // Empty msg
-        wchar_t buf[600];
-        swprintf(buf, 599, L"<a=1>%s @ %S</a>: %s", GuiUtils::StringToWString(hostd->nick).c_str(), module->irc_alias.c_str(), GuiUtils::StringToWString(&params[1]).c_str());
-
-        // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
-        std::wstring wbuf(buf);
-        GW::GameThread::Enqueue([wbuf]() {
-            // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, wbuf.c_str());
-            });
+ 
+        std::wstring message_ws = GuiUtils::StringToWString(&params[1]);
+        WriteChat(message_ws.c_str(),hostd->nick);
         Log::Log("Message from %s: %s", hostd->nick, &params[1]);
         return 0;
     }
@@ -97,16 +102,12 @@ namespace {
         UNREFERENCED_PARAMETER(hostd);
         Log::Log("NOTICE: %s\n", params);
         if (strcmp(params, "Login authentication failed") == 0) {
-            GW::GameThread::Enqueue([]() {
-                Log::Error("Twitch Failed to connect - Invalid Oauth token");
-            });
+            Log::Error("Twitch Failed to connect - Invalid Oauth token");
             ((IRC*)conn)->disconnect();
             return 0;
         }
         if (params[1] && strcmp(&params[1], "Invalid NICK") == 0) {
-            GW::GameThread::Enqueue([]() {
-                Log::Error("Twitch Failed to connect - Invalid Username");
-                });
+            Log::Error("Twitch Failed to connect - Invalid Username");
             ((IRC*)conn)->disconnect();
             return 0;
         }
