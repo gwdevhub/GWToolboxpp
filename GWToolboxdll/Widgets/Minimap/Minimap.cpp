@@ -148,7 +148,7 @@ void Minimap::Initialize()
     Log::Log("[SCAN] StopCaptureMouseClick_Func = %p\n", StopCaptureMouseClick_Func);
     Log::Log("[SCAN] CaptureMouseClickTypePtr = %p\n", CaptureMouseClickTypePtr);
     Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
-    address = GW::Scanner::Find("\x85\xC0\x75\x16\x68\x3B\x04\x00\x00", "xxxxxxxxx", -0x6);
+    address = 0;// GW::Scanner::Find("\x85\xC0\x75\x16\x68\x3B\x04\x00\x00", "xxxxxxxxx", -0x6);
     if (address) {
         StartCaptureMouseClick_Func = (StartCaptureMouseClick_pt)address;
     }
