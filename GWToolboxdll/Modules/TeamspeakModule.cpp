@@ -239,16 +239,22 @@ bool TeamspeakModule::GetTeamspeakProcess(std::filesystem::path* filename, PBOOL
             CloseHandle(hProcess);
             continue; // This is not the droid you're looking for...
         }
-        if (is_x64 && !IsWow64Process(hProcess, is_x64)) {
-            Log::Log("Failed to call IsWow64Process on PID %d (%04X)\n", aProcesses[i], GetLastError());
-            CloseHandle(hProcess);
-            return false;
-        }
-        if (is_x64 && !*is_x64) {
-            // This could mean that the OS is 32-bit and the process is 32-bit, or 64-bit and 64-bit. Check the OS.
-            SYSTEM_INFO lpSystemInfo;
-            GetNativeSystemInfo(&lpSystemInfo);
-            *is_x64 = lpSystemInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64;
+        if (is_x64) {
+            if (!IsWow64Process(hProcess, is_x64)) {
+                Log::Log("Failed to call IsWow64Process on PID %d (%04X)\n", aProcesses[i], GetLastError());
+                CloseHandle(hProcess);
+                return false;
+            }
+            if (!*is_x64) {
+                // 64 bit process on 64 bit OS, or 32 bit process on 32 bit OS
+                SYSTEM_INFO lpSystemInfo;
+                GetNativeSystemInfo(&lpSystemInfo);
+                *is_x64 = lpSystemInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64;
+            }
+            else {
+                // 32 bit process on 64 bit OS. Sorry for confusing var name.
+                *is_x64 = !*is_x64;
+            }
         }
         // NB: We COULD now traverse the modules for the process to see if the TS3 DLL is loaded.
         // Because TS3 could be x64 bit, and we're a x32 bit program, lets not try to handle this differently and instead presume
