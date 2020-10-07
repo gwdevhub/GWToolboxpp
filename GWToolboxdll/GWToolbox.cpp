@@ -293,8 +293,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     case WM_SIZE:
         // ImGui doesn't need this, it reads the viewport size directly
         break;
-
     default:
+        // Custom messages registered via RegisterWindowMessage
+        if (Message >= 0xC000 && Message <= 0xFFFF) {
+            for (ToolboxModule* m : tb.GetModules()) {
+                m->WndProc(Message, wParam, lParam);
+            }
+        }
         break;
     }
     

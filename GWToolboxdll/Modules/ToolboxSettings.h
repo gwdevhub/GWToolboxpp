@@ -46,6 +46,7 @@ private:
     bool use_builds = true;
     bool use_herobuilds = true;
     bool use_travel = true;
+    bool use_teamspeak = true;
     bool use_dialogs = true;
     bool use_info = true;
     bool use_materials = true;

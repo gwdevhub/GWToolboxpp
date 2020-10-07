@@ -27,6 +27,7 @@
 #include <Modules/ZrawDeepModule.h>
 #include <Modules/AprilFools.h>
 #include <Modules/InventoryManager.h>
+#include <Modules/TeamspeakModule.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -83,6 +84,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 
     if (use_discord) optional_modules.push_back(&DiscordModule::Instance());
     if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
+    if (use_teamspeak) optional_modules.push_back(&TeamspeakModule::Instance());
 
     SettingsWindow::Instance().sep_windows = optional_modules.size();
     optional_modules.push_back(&SettingsWindow::Instance());
@@ -179,6 +181,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Timer",&use_timer},
         {"Trade",&use_trade},
         {"Travel",&use_travel},
+        {"Teamspeak",&use_teamspeak},
         {"Twitch",&use_twitch},
         {"Vanquish counter",&use_vanquish}
     };
