@@ -122,6 +122,7 @@ private:
     size_t trans_done = 0;
 
     bool manage_gold = false;
+    bool use_stock = false;
 
     GW::HookEntry QuotedItemPrice_Entry;
     GW::HookEntry TransactionDone_Entry;

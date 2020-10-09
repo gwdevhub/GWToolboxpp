@@ -39,12 +39,16 @@ If you are here to check toolbox features and for a download link to go [https:/
 
 9. Set "GWToolbox" as the startup project. Right click on the **GWToolbox** _project_ and hit "Set as Startup Project"
 
-10. Build and run. You may have to launch Visual Studio as administrator. For testing in Release mode, read the notes below.
+10. Build the solution. 
+
+11. Add `/localdll` (and optionally `/quiet`) to the GWToolbox project: right click on GWToolbox project -> Properties -> Debugging -> Command arguments. Keep in mind this is a per-configuration (Debug or Release) setting. This will make the launcher use the GWToolbox DLL you build, rather than the one already installed. 
+
+10. Run. You may have to launch Visual Studio as administrator.
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolbox.dll`). `GWToolbox.exe`, aka Launcher, selects a GW clients and injects the dll, but you can also use different launchers, such as the ones in the `AutoItLauncher/` folder.
-* The launcher will run the GWToolbox.dll in the project's compiled directory when set to Debug, but it will run the dll in the installation folder when set to Release. If you wish to run your own compiled dll in release mode either use a different launcher or move the dll to the GWToolboxpp installation folder.
-* You can use the Visual Studio debugger directly to be able to break and step through toolbox code. First launch toolbox in debug mode as normal, then go to Debug -> Attach to process, then select the gw.exe process and click Attach. You can also attach the debugger *before* running toolbox, to debug issues during launch, but you will need to use a separate launcher, such as `AutoItLauncher/inject.au3`. 
+* By default, the launcher (`GWToolbox.exe`) will run the `GWToolboxdll.dll` as specified by your installation, **not** the one you compile. To run the dll in the same folder, run the launcher with command-line argument `/localdll`.
+* You can use the Visual Studio debugger directly to be able to break and step through toolbox code. First launch toolbox in debug mode as normal, then go to Debug -> Attach to process, then select the gw.exe process and click Attach. You can also attach the debugger *before* running toolbox, to debug issues during launch, but then you will have to manually launch toolbox from outside visual studio, either with `GWToolbox.exe` or `AutoItLauncher/inject.au3`. 
 
 ## How to contribute
 * First of all make sure you take a look at the code and respect the somewhat consistent code conventions.
@@ -62,7 +66,7 @@ Both Widgets and Windows can also have a panel in Settings, and share common cod
 ## Credits
 
  **HasKha**
- * Original creator of GWToolbox++, from which this version build upon - [https://HasKha.github.io/GWToolboxpp/](https://HasKha.github.io/GWToolboxpp/)
+ * Original creator of GWToolbox++.
  
  **KAOS**
  * Original creator of the GW API used, reverse engineering work.
@@ -71,6 +75,10 @@ Both Widgets and Windows can also have a panel in Settings, and share common cod
  **Ziox**   
  * Implementation of the vast majority of the chat-based features, such as custom chats and the chat timestamps.
  * Major contributor to the GW API used, reverse engineering work.
+ 
+ **Jon**
+ * Implemented many new features and improvements
+ * Current maintainer of the project
 
  **Itecka** 
  * Original creator of a damage monitor, which inspired the toolbox damage monitor.
