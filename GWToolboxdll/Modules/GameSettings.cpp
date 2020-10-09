@@ -147,10 +147,20 @@ namespace {
     }
 
     const std::wstring GetPlayerName(uint32_t player_number = 0) {
+        GW::Player* player = nullptr;
         if (!player_number) {
-            player_number = GW::PlayerMgr::GetPlayerNumber();
+            player = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
+            if (!player || !player->name) {
+                // Map not loaded; try to get from character context
+                auto* g = GW::GameContext::instance();
+                if (!g || !g->character || !g->character->player_name)
+                    return L"";
+                return g->character->player_name;
+            }
         }
-        const GW::Player* player = GW::PlayerMgr::GetPlayerByID(player_number);
+        else {
+            player = GW::PlayerMgr::GetPlayerByID(player_number);
+        }
         return player && player->name ? GuiUtils::SanitizePlayerName(player->name) : L"";
     }
 
