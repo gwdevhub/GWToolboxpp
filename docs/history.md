@@ -24,6 +24,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [New] Added option to disable/enable minimap smoothing to match compass smoothing
 * [New] Added custom polygon option to minimap, with option to color enemies within the polygon differently
 * [New] Added `/tb save` and `/tb load`
+* [New] Added Teamspeak module, `/ts` to send connected server info to chat
 * [Minor] Better crash reporting with issues related to ImGui
 * [Minor] Added item model_id to info window
 * [Minor] Added tick toggle hotkey
@@ -35,6 +36,8 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Minor] Added Ben Wolfson to special NPC list
 * [Minor] Deferred option loading for objective timer and friend list to avoid slow toolbox start time
 * [Minor] Disable `/resignlog` in an outpost
+* [Minor] Minimap now responds to compass flagging
+* [Minor] Added option to consider materials in storage when buying materials for cons via Materials Window
 * [Fix] Fixed crash with alcohol widget if no alcohol has ever been used
 * [Fix] Fixed bug preventing bond widget showing on screen if effect array is empty
 * [Fix] Fixed infinite loop when trying to update toolbox causing crash on closing GW
@@ -46,6 +49,9 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed minimap click-to-move and move hotkeys from working correctly whilst auto running
 * [Fix] Fixed Pahnai salad triggering alcohol timer
 * [Fix] Fixed discord status updating with wrong character when viewing another party member whilst dead
+* [Fix] Fixed issues sending and receiving Twitch messages in chat with `<` and `>` characters
+* [Fix] Fixed bond monitor showing bonds on your player that you didn't cast
+* [Fix] Fixed a crash when trying to travel to embark beach without it unlocked via `/tp` command
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.0_Release/GWToolboxdll.dll)
 
