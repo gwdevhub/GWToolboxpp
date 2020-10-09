@@ -26,7 +26,6 @@
 void FactionLeaderboardWindow::Initialize() {
     ToolboxWindow::Initialize();
     leaderboard.resize(15);
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TownAllianceObject>(&TownAlliance_Entry, 
         [this](GW::HookStatus* status, GW::Packet::StoC::TownAllianceObject *pak) -> bool {
             UNREFERENCED_PARAMETER(status);
