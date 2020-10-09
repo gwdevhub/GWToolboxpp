@@ -344,9 +344,9 @@ void GWToolbox::Initialize() {
     ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        DWORD playerNumber = GW::PlayerMgr::GetPlayerNumber();
-        if(playerNumber)
-            Log::Info("Hello %ls!", GW::Agents::GetPlayerNameByLoginNumber(playerNumber));
+        auto* g = GW::GameContext::instance();
+        if(g && g->character && g->character->player_name)
+            Log::InfoW(L"Hello %s!", g->character->player_name);
     }
 }
 void GWToolbox::FlashWindow() {
