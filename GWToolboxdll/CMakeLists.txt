@@ -48,4 +48,5 @@ target_link_libraries(GWToolboxdll PRIVATE
     Shlwapi.lib
     Wininet.lib
     Dbghelp.lib # for MiniDump
+    xinput9_1_0.lib # for Win7 legacy support
     )
