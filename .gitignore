@@ -3,6 +3,7 @@ Debug/
 Release/
 ipch/
 Archive/
+bin/
 
 # Bloated Windows Databases
 *.sdf
