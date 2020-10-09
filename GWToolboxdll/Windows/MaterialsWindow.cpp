@@ -199,11 +199,13 @@ void MaterialsWindow::Terminate() {
 void MaterialsWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     manage_gold = ini->GetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
+    use_stock = ini->GetBoolValue(Name(), VAR_NAME(use_stock), use_stock);
 }
 
 void MaterialsWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
+    ini->SetBoolValue(Name(), VAR_NAME(use_stock), use_stock);
 }
 
 void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -214,6 +216,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 
         float x, y, h;
+
+        const size_t stockStart = static_cast<size_t>(GW::Constants::Bag::Backpack);
+        const size_t stockEnd = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 
         // note: textures are 64 x 64, but both off-center 
         // and with a bunch of empty space. We want to center the image
@@ -242,10 +247,18 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
         if (qty_essence < 1) qty_essence = 1;
         ImGui::PopItemWidth();
         ImGui::SameLine();
-        if (ImGui::Button("Buy##essence", ImVec2(100.0f, 0))) {
-            for (int i = 0; i < 5 * qty_essence; ++i) {
-                EnqueuePurchase(Feather);
-                EnqueuePurchase(PileofGlitteringDust);
+        if (ImGui::Button("Buy##essence", ImVec2(100.0f, 0))) {            
+            int featherStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(Feather), stockStart, stockEnd);
+            int dustStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(PileofGlitteringDust), stockStart, stockEnd);
+
+            int qty = 5 * qty_essence;
+            for (int i = 0; i < qty; ++i) {
+                if (!use_stock || i < qty - featherStock / 10) {
+                    EnqueuePurchase(Feather);
+                }
+                if (!use_stock || i < qty - dustStock / 10) {
+                    EnqueuePurchase(PileofGlitteringDust);
+                }
             }
         }
 
@@ -274,9 +287,17 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##grail", ImVec2(100.0f, 0))) {
-            for (int i = 0; i < 5 * qty_grail; ++i) {
-                EnqueuePurchase(IronIngot);
-                EnqueuePurchase(PileofGlitteringDust);
+            int ironStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(IronIngot), stockStart, stockEnd);
+            int dustStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(PileofGlitteringDust), stockStart, stockEnd);
+
+            int qty = 5 * qty_grail;
+            for (int i = 0; i < qty; ++i) {
+                if (!use_stock || i < qty - ironStock / 10) {
+                    EnqueuePurchase(IronIngot);
+                }
+                if (!use_stock || i < qty - dustStock / 10) {
+                    EnqueuePurchase(PileofGlitteringDust);
+                }
             }
         }
 
@@ -305,9 +326,17 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##armor", ImVec2(100.0f, 0))) {
-            for (int i = 0; i < 5 * qty_armor; ++i) {
-                EnqueuePurchase(IronIngot);
-                EnqueuePurchase(Bone);
+            int ironStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(IronIngot), stockStart, stockEnd);
+            int boneStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(Bone), stockStart, stockEnd);
+
+            int qty = 5 * qty_armor;
+            for (int i = 0; i < qty; ++i) {
+                if (!use_stock || i < qty - ironStock / 10) {
+                    EnqueuePurchase(IronIngot);
+                }
+                if (!use_stock || i < qty - boneStock / 10) {
+                    EnqueuePurchase(Bone);
+                }
             }
         }
 
@@ -335,9 +364,17 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##pstone", ImVec2(100.0f, 0))) {
-            for (int i = 0; i < 10 * qty_pstone; ++i) {
-                EnqueuePurchase(GraniteSlab);
-                EnqueuePurchase(PileofGlitteringDust);
+            int graniteStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(GraniteSlab), stockStart, stockEnd);
+            int dustStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(PileofGlitteringDust), stockStart, stockEnd);
+
+            int qty = 10 * qty_pstone;
+            for (int i = 0; i < qty; ++i) {
+                if (!use_stock || i < qty - graniteStock / 10) {
+                    EnqueuePurchase(GraniteSlab);
+                }
+                if (!use_stock || i < qty - dustStock / 10) {
+                    EnqueuePurchase(PileofGlitteringDust);
+                }
             }
         }
 
@@ -365,10 +402,17 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##resscroll", ImVec2(100.0f, 0))) {
-            int qty = (int)std::ceil(2.5f * qty_resscroll);
-            for (int j = 0; j < qty; ++j) {
-                EnqueuePurchase(PlantFiber);
-                EnqueuePurchase(Bone);
+            int fiberStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(PlantFiber), stockStart, stockEnd);
+            int boneStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID(Bone), stockStart, stockEnd);
+
+            float qty = 2.5f * qty_resscroll;
+            for (int i = 0; i < (int)std::ceil(qty); ++i) {
+                if (!use_stock || i < qty - fiberStock / 10) {
+                    EnqueuePurchase(PlantFiber);
+                }
+                if (!use_stock || i < qty - boneStock / 10) {
+                    EnqueuePurchase(Bone);
+                }
             }
         }
 
@@ -403,7 +447,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
         if (common_qty < 1) common_qty = 1;
         ImGui::SameLine();
         if (ImGui::Button("Buy##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            for (int i = 0; i < common_qty; ++i) {
+            int materialStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID((Material)common_idx), stockStart, stockEnd);
+
+            for (int i = 0; i < common_qty - (use_stock ? std::floor(materialStock / 10) : 0); ++i) {
                 EnqueuePurchase((Material)common_idx);
             }
         }
@@ -453,7 +499,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
         if (rare_qty < 1) rare_qty = 1;
         ImGui::SameLine();
         if (ImGui::Button("Buy##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            for (int i = 0; i < rare_qty; ++i) {
+            int materialStock = GW::Items::CountItemByModelId(MaterialsWindow::GetModelID((Material)(rare_idx + AmberChunk)), stockStart, stockEnd);
+
+            for (int i = 0; i < rare_qty - (use_stock ? materialStock : 0); ++i) {
                 EnqueuePurchase((Material)(rare_idx + AmberChunk));
             }
         }
@@ -590,6 +638,8 @@ void MaterialsWindow::DrawSettingInternal() {
     ToolboxWindow::DrawSettingInternal();
     ImGui::Checkbox("Automatically manage gold", &manage_gold);
     ImGui::ShowHelp("It will automatically withdraw and deposit gold while buying materials");
+    ImGui::Checkbox("Use stock", &use_stock);
+    ImGui::ShowHelp("Will take materials in inventory and storage into account when buying materials");    
 }
 MaterialsWindow::Material MaterialsWindow::GetMaterial(DWORD modelid) {
     switch (modelid) {
