@@ -153,8 +153,10 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 
                 bool overlay = false;
                 const GW::PartyAttribute& partyAttribute = GW::GameContext::instance()->world->attributes[0];
-                uint8_t attribute_id = GW::SkillbarMgr::GetSkillConstantData(skill).attribute;
-                const GW::Attribute& attribute = partyAttribute.attribute[attribute_id];
+                const GW::Skill& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill);
+                if (skill_data.duration0 == 0x20000)
+                    continue; // Maintained skill/enchantment
+                const GW::Attribute& attribute = partyAttribute.attribute[skill_data.attribute];
                 if (effect.effect_type < attribute.level) overlay = true;
 
                 size_t y = party_map[agent];
@@ -221,7 +223,7 @@ void BondsWidget::LoadSettings(CSimpleIni* ini) {
     show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
     flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
     row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
-    low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
+    low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(low_attribute_overlay), Colors::ARGB(76, 0, 0, 0));
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 

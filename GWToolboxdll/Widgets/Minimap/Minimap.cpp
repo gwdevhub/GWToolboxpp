@@ -4,10 +4,12 @@
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -19,12 +21,104 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
+#include <GWCA/Utilities/Scanner.h>
 #include <GuiUtils.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
 #include <Widgets/Minimap/Minimap.h>
+#include <Modules/Resources.h>
+
+namespace {
+    enum FlaggingState : uint32_t {
+        FlagState_All = 0,
+        FlagState_Hero1,
+        FlagState_Hero2,
+        FlagState_Hero3,
+        FlagState_Hero4,
+        FlagState_Hero5,
+        FlagState_Hero6,
+        FlagState_Hero7,
+        FlagState_None
+    };
+    enum CaptureMouseClickType : uint32_t {
+        CaptureType_None = 0,
+        CaptureType_FlagHero = 1,
+        CaptureType_SalvageWithUpgrades = 11,
+        CaptureType_SalvageMaterials = 12,
+        CaptureType_Idenfify = 13
+    };
+    struct MouseClickCaptureData {
+        struct sub1 {
+            uint8_t pad0[0x3C];
+            struct sub2 {
+                uint8_t pad1[0x14];
+                struct sub3 {
+                    uint8_t pad2[0x24];
+                    struct sub4 {
+                        uint8_t pad3[0x2C];
+                        struct sub5 {
+                            uint8_t pad4[0x4];
+                            FlaggingState* flagging_hero;
+                        } *sub5;
+                    } *sub4;
+                } *sub3;
+            } *sub2;
+        } *sub1;
+    } *MouseClickCaptureDataPtr = nullptr;
+    bool* IsFlaggingHero = nullptr;
+    CaptureMouseClickType* CaptureMouseClickTypePtr = nullptr;
+
+    // Internal flagging state to workaround not being able to set the in-game cursor state.
+    FlaggingState minimap_flagging_state = FlaggingState::FlagState_None;
+
+    FlaggingState GetFlaggingState() {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+            return minimap_flagging_state = FlaggingState::FlagState_None;
+        if (!IsFlaggingHero || !*IsFlaggingHero || !MouseClickCaptureDataPtr)
+            return minimap_flagging_state;
+        return minimap_flagging_state = *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
+    }
+    typedef void(__fastcall* StopCaptureMouseClick_pt)();
+    StopCaptureMouseClick_pt StopCaptureMouseClick_Func;
+
+    // This needs to signal to the game that it needs to capture the next mouse click as a flag, but we don't know how yet :(
+    typedef void(__fastcall* StartCaptureMouseClick_pt)(FlaggingState* arg1, void* arg2, uint32_t arg3, void* arg4, uint32_t arg5, void* arg6, void* arg7, void* arg8, void* arg9);
+    StartCaptureMouseClick_pt StartCaptureMouseClick_Func;
+
+    bool SetFlaggingState(FlaggingState set_state) {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+            return false;
+        // keep an internal flag for the minimap flagging until StartCaptureMouseClick_Func is working
+        minimap_flagging_state = set_state;
+        if (GetFlaggingState() == set_state)
+            return true;
+        if (set_state == FlaggingState::FlagState_None) {
+            if (!StopCaptureMouseClick_Func)
+                return false;
+            StopCaptureMouseClick_Func();
+            return true;
+        }
+        if (!StartCaptureMouseClick_Func)
+            return false;
+
+        // This needs to signal to the game that it needs to capture the next mouse click as a flag, but we don't know how yet :(
+
+        // FlaggingState* arg1 = &set_state;
+        // StartCaptureMouseClick_Func(arg1, 0 ,0x2C, 0, 1, 0, 0, 0, &arg1);
+        return true;
+    }
+    GW::PartyInfo* GetPlayerParty() {
+        const GW::GameContext * gamectx = GW::GameContext::instance();
+        if (!(gamectx && gamectx->party))
+            return nullptr;
+        return gamectx->party->player_party;
+    }
+
+}
 
 void Minimap::Terminate()
 {
@@ -41,6 +135,25 @@ void Minimap::Terminate()
 void Minimap::Initialize()
 {
     ToolboxWidget::Initialize();
+
+    uintptr_t address = GW::Scanner::Find("\x83\x3D\x00\x00\x00\x00\x00\x75\x11\x6A\x74\xBA", "xx????xxxxxx",-0x3);
+    if (address) {
+        StopCaptureMouseClick_Func = (StopCaptureMouseClick_pt)address;
+        address = address + 0x5;
+        address = *(uintptr_t*)address;
+        MouseClickCaptureDataPtr = (MouseClickCaptureData*)address;
+        IsFlaggingHero = (bool*)(address + 0x4);
+        CaptureMouseClickTypePtr = (CaptureMouseClickType*)(address - 0x10);
+    }
+    Log::Log("[SCAN] StopCaptureMouseClick_Func = %p\n", StopCaptureMouseClick_Func);
+    Log::Log("[SCAN] CaptureMouseClickTypePtr = %p\n", CaptureMouseClickTypePtr);
+    Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
+    address = 0;// GW::Scanner::Find("\x85\xC0\x75\x16\x68\x3B\x04\x00\x00", "xxxxxxxxx", -0x6);
+    if (address) {
+        StartCaptureMouseClick_Func = (StartCaptureMouseClick_pt)address;
+    }
+    Log::Log("[SCAN] StartCaptureMouseClick_Func = %p\n", StartCaptureMouseClick_Func);
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry, [this](GW::HookStatus *, GW::Packet::StoC::AgentPinged *pak) -> void {
         if (visible) {
             pingslines_renderer.P046Callback(pak);
@@ -73,11 +186,7 @@ void Minimap::Initialize()
                 effect_renderer.PacketCallback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(&SkillActivate_Entry, [this](GW::HookStatus *, GW::Packet::StoC::SkillActivate *pak) -> void {
-        if (visible) {
-            pingslines_renderer.P221Callback(pak);
-        }
-    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(&SkillActivate_Entry, &SkillActivateCallback);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry, [this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadInfo *packet) -> void { is_observing = packet->is_observer != 0; });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
         UNREFERENCED_PARAMETER(packet);
@@ -102,6 +211,19 @@ void Minimap::Initialize()
 
     GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
 }
+void Minimap::SkillActivateCallback(GW::HookStatus*, GW::Packet::StoC::SkillActivate *pak)
+{
+    if (pak->agent_id == GW::Agents::GetPlayerId()) {
+        if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
+            Instance().shadowstep_location = GW::Agents::GetPlayer()->pos;
+        }
+    }
+}
+
+GW::Vec2f Minimap::ShadowstepLocation() const
+{
+    return shadowstep_location;
+}
 
 void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
 {
@@ -114,14 +236,45 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
         Instance().FlagHero(0); // "/flag"
         return;
     }
+    const auto is_flagged = [](auto hero) -> bool {
+        if (hero == 0) {
+            const GW::Vec3f &allflag = GW::GameContext::instance()->world->all_flag;
+            if (allflag.x != 0 && allflag.y != 0 && (!std::isinf(allflag.x) || !std::isinf(allflag.y))) {
+                return true;
+            }
+        } else {
+            const GW::HeroFlagArray &flags = GW::GameContext::instance()->world->hero_flags;
+            if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size())
+                return false;
+
+            const GW::HeroFlag &flag = flags[hero - 1];
+            if (!std::isinf(flag.flag.x) || !std::isinf(flag.flag.y)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
     float x;
     float y;
     unsigned int n_heros = 0; // Count of heros available
     unsigned int f_hero = 0;  // Hero number to flag
-    if (arg1 == L"all") {
-        if (argc <= 2) {
+    if (arg1 == L"all" || arg1 == L"0") {
+        if (argc < 3) {
             Instance().FlagHero(0); // "/flag all" == "/flag"
+            return;
+        }
+        const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+        if (arg2 == L"clear") {
+            GW::PartyMgr::UnflagAll(); // "/flag 5 clear"
+            return;
+        }
+        if (arg2 == L"toggle") { // "/flag 5 toggle"
+            if (is_flagged(0))
+                GW::PartyMgr::UnflagAll();
+            else
+                Instance().FlagHero(0);
             return;
         }
         if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
@@ -131,7 +284,8 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
         GW::PartyMgr::FlagAll(GW::GamePos(x, y, 0)); // "/flag all -2913.41 3004.78"
         return;
     }
-    const auto heroarray = GW::GameContext::instance()->party->player_party->heroes;
+    const auto& heroarray = GW::GameContext::instance()->party->player_party->heroes;
+    
     if (heroarray.valid())
         n_heros = heroarray.size();
     if (n_heros < 1) {
@@ -155,6 +309,13 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
     const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
     if (arg2 == L"clear") {
         GW::PartyMgr::UnflagHero(f_hero); // "/flag 5 clear"
+        return;
+    }
+    if (arg2 == L"toggle") { // "/flag 5 toggle"
+        if (is_flagged(f_hero))
+            GW::PartyMgr::UnflagHero(f_hero);
+        else 
+            Instance().FlagHero(f_hero);
         return;
     }
     if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
@@ -185,31 +346,28 @@ void Minimap::DrawSettingInternal()
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     // agent_rendered has its own TreeNodes
     agent_renderer.DrawSettings();
-    if (ImGui::TreeNode("Ranges")) {
+    if (ImGui::TreeNodeEx("Ranges", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         range_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Pings and drawings")) {
+    if (ImGui::TreeNodeEx("Pings and drawings", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         pingslines_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("AoE Effects")) {
+    if (ImGui::TreeNodeEx("AoE Effects", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         effect_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Symbols")) {
+    if (ImGui::TreeNodeEx("Symbols", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         symbols_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Terrain")) {
+    if (ImGui::TreeNodeEx("Terrain", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         pmap_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Custom Markers")) {
-        custom_renderer.DrawSettings();
-        ImGui::TreePop();
-    }
-    if (ImGui::TreeNode("Hero flagging")) {
+    custom_renderer.DrawSettings();
+    if (ImGui::TreeNodeEx("Hero flagging", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
         ImGui::Checkbox("Attach to minimap", &hero_flag_window_attach);
         ImGui::ShowHelp("If disabled, you can move/resize the window with 'Unlock Move All'.");
@@ -245,6 +403,8 @@ void Minimap::DrawSettingInternal()
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
     ImGui::Checkbox("Map Rotation", &rotate_minimap);
     ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
+    ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
+    ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
     ImGui::Checkbox("Circular", &circular_map);
     ImGui::ShowHelp("Whether the map should be circular like the compass or a square (default).");
 }
@@ -252,14 +412,21 @@ void Minimap::DrawSettingInternal()
 void Minimap::LoadSettings(CSimpleIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
+    Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
+        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
+        [](bool success) {
+            UNREFERENCED_PARAMETER(success);
+            Minimap::Instance().custom_renderer.LoadMarkers();
+        });
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
     hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
     hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
     hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background", ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
     mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
     mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
-    rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), true);
-    circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), true);
+    rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
+    smooth_rotation = ini->GetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
+    circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
     key_ctrl_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_ctrl_behavior), 2));
     key_shift_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_shift_behavior), 3));
@@ -289,6 +456,7 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     ini->SetLongValue(Name(), VAR_NAME(key_alt_behavior), static_cast<long>(key_alt_behavior));
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
     ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
+    ini->SetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
     ini->SetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
@@ -299,26 +467,29 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     effect_renderer.SaveSettings(ini, Name());
 }
 
-void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes)
+size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes)
 {
     _player_heroes.clear();
     if (!party)
-        return;
-    GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
+        return 0;
+    const GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player)
-        return;
+        return 0;
     const uint32_t player_id = player->login_number;
-    auto heroes = party->heroes;
+    const GW::HeroPartyMemberArray& heroes = party->heroes;
     _player_heroes.reserve(heroes.size());
-    for (GW::HeroPartyMember &hero : heroes) {
+    for (const GW::HeroPartyMember &hero : heroes) {
         if (hero.owner_player_id == player_id)
             _player_heroes.push_back(hero.agent_id);
     }
+    return _player_heroes.size();
 }
 
 float Minimap::GetMapRotation() const
 {
-    return rotate_minimap ? GW::CameraMgr::GetYaw() : static_cast<float>(1.5708);
+    if (!rotate_minimap) return 1.5708f;
+    if (smooth_rotation) return GW::CameraMgr::GetCamera()->GetCurrentYaw();
+    return GW::CameraMgr::GetYaw();
 }
 
 D3DXVECTOR2 Minimap::GetGwinchScale() const
@@ -326,7 +497,7 @@ D3DXVECTOR2 Minimap::GetGwinchScale() const
     return gwinch_scale;
 }
 
-void Minimap::Draw(IDirect3DDevice9 *device)
+void Minimap::Draw(IDirect3DDevice9 *)
 {
     if (!IsActive())
         return;
@@ -334,6 +505,23 @@ void Minimap::Draw(IDirect3DDevice9 *device)
     GW::Agent *me = GW::Agents::GetPlayer();
     if (me == nullptr)
         return;
+
+    // Check shadowstep location
+    if (shadowstep_location.x != 0.0f || shadowstep_location.y != 0.0f) {
+        GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
+        if (!effects.valid()) {
+            shadowstep_location = GW::Vec2f();
+        }
+        else {
+            bool found = false;
+            for (unsigned int i = 0; !found && i < effects.size(); ++i) {
+                found = effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk;
+            }
+            if (!found) {
+                shadowstep_location = GW::Vec2f();
+            }
+        }
+    }
 
     // if not center and want to move, move center towards player
     if ((translation.x != 0 || translation.y != 0) && (me->move_x != 0 || me->move_y != 0) && TIMER_DIFF(last_moved) > ms_before_back) {
@@ -348,176 +536,30 @@ void Minimap::Draw(IDirect3DDevice9 *device)
         }
     }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus))) {
         // window pos are already rounded by imgui, so casting is no big deal
         location.x = static_cast<int>(ImGui::GetWindowPos().x);
         location.y = static_cast<int>(ImGui::GetWindowPos().y);
         size.x = static_cast<int>(ImGui::GetWindowSize().x);
         size.y = static_cast<int>(ImGui::GetWindowSize().y);
-        ImGui::GetWindowDrawList()->AddCallback(
-            [](const ImDrawList *parent_list, const ImDrawCmd *cmd) -> void {
-                UNREFERENCED_PARAMETER(parent_list);
+        //auto& style = ImGui::GetStyle();
+        clipping.left = location.x;
+        clipping.right = location.x + size.x;
+        clipping.top = location.y;
+        clipping.bottom = location.y + size.y;
+        // @Broken: Updating ImGui from 1.77 to 1.78 broke AddCallback for Minimap - didn't draw at all for me. - Jon
+        // Instead, record the clipping location of the window and have GWToolbox.cpp call Minimap::Render before ImGui is loaded.
 
-                auto device = static_cast<IDirect3DDevice9 *>(cmd->UserCallbackData);
-                GW::Agent *me = GW::Agents::GetPlayer();
-                if (me == nullptr)
-                    return;
-
-                // Backup the DX9 state
-                IDirect3DStateBlock9 *d3d9_state_block = nullptr;
-                if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
-                    return;
-
-                // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
-                device->SetFVF(D3DFVF_CUSTOMVERTEX);
-                device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
-                device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-                device->SetPixelShader(nullptr);
-                device->SetVertexShader(nullptr);
-                device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-                device->SetRenderState(D3DRS_LIGHTING, false);
-                device->SetRenderState(D3DRS_ZENABLE, false);
-                device->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-                device->SetRenderState(D3DRS_ALPHATESTENABLE, false);
-                device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-                device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-                device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-                device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-                device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-                device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-                device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-                device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-                device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-                device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-                device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-
-                auto FillRect = [&device](const D3DCOLOR color, const int x, const int y, const int w, const int h) {
-                    D3DVertex vertices[6] = {{static_cast<float>(x), static_cast<float>(y), 1.0f, color},         {static_cast<float>(x) + w, static_cast<float>(y), 1.0f, color}, {static_cast<float>(x), static_cast<float>(y) + h, 1.0f, color},
-                                             {static_cast<float>(x) + w, static_cast<float>(y) + h, 1.0f, color}, {static_cast<float>(x), static_cast<float>(y), 1.0f, color},     {static_cast<float>(x) + w, static_cast<float>(y), 1.0f, color}};
-                    device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 4, vertices, sizeof(D3DVertex));
-                };
-
-                auto FillCircle = [&device](const float x, const float y, const float radius, const Color clr, float resolution = 199.f) {
-                    resolution = std::min(resolution, 199.f);
-                    D3DVertex vertices[200];
-                    for (auto i = 0; i <= resolution; ++i) {
-                        vertices[i] = {radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x, y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0, clr};
-                    }
-                    device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
-                };
-
-                D3DCOLOR color = Instance().pmap_renderer.GetBackgroundColor();
-                if (!Instance().circular_map) {
-                    auto &style = ImGui::GetStyle();
-                    RECT clipping;
-                    clipping.left = static_cast<long>(cmd->ClipRect.x - style.WindowPadding.x / 2); // > 0 ? cmd->ClipRect.x : 0);
-                    clipping.right = static_cast<long>(cmd->ClipRect.z + style.WindowPadding.x / 2 + 1);
-                    clipping.top = static_cast<long>(cmd->ClipRect.y);
-                    clipping.bottom = static_cast<long>(cmd->ClipRect.w);
-                    device->SetScissorRect(&clipping);
-                    device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-                    FillRect(color, Instance().location.x, Instance().location.y, Instance().size.x, Instance().size.y); // fill rect with chosen background color
-                } else {
-                    device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
-                    device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
-                    device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
-                    device->Clear(0, nullptr, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0); // clear depth and stencil buffer
-                    device->SetRenderState(D3DRS_STENCILREF, 1);
-                    device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);                           // write ref value into stencil buffer when passed
-                    float radius = static_cast<float>(Instance().size.x / 2.f);                                // rounding error in viewmatrix transformation
-                    FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
-
-                    device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
-                    device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
-                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-                }
-
-                Instance().RenderSetupProjection(device);
-
-                D3DXMATRIX view;
-                D3DXMATRIX identity;
-                D3DXMatrixIdentity(&identity);
-                device->SetTransform(D3DTS_WORLD, &identity);
-                device->SetTransform(D3DTS_VIEW, &identity);
-
-                D3DXMATRIX translate_char;
-                D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
-
-                D3DXMATRIX rotate_char;
-                D3DXMatrixRotationZ(&rotate_char, -Instance().GetMapRotation() + static_cast<float>(M_PI_2));
-
-                D3DXMATRIX scaleM, translationM;
-                D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
-                D3DXMatrixTranslation(&translationM, Instance().translation.x, Instance().translation.y, 0);
-
-                float gwinch_scale = static_cast<float>(Instance().size.x) / 5000.0f / 2.f * Instance().scale;
-                if (gwinch_scale != Instance().gwinch_scale.x) {
-                    Instance().range_renderer.Invalidate();
-                    Instance().gwinch_scale = {gwinch_scale, gwinch_scale};
-                }
-
-                view = translate_char * rotate_char * scaleM * translationM;
-                device->SetTransform(D3DTS_VIEW, &view);
-
-                Instance().pmap_renderer.Render(device);
-
-                Instance().custom_renderer.Render(device);
-
-                // move the rings to the char position
-                D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
-                device->SetTransform(D3DTS_WORLD, &translate_char);
-                Instance().range_renderer.Render(device);
-                device->SetTransform(D3DTS_WORLD, &identity);
-
-                if (Instance().translation.x != 0 || Instance().translation.y != 0) {
-                    D3DXMATRIX view2 = scaleM;
-                    device->SetTransform(D3DTS_VIEW, &view2);
-                    Instance().range_renderer.SetDrawCenter(true);
-                    Instance().range_renderer.Render(device);
-                    Instance().range_renderer.SetDrawCenter(false);
-                    device->SetTransform(D3DTS_VIEW, &view);
-                }
-
-                Instance().symbols_renderer.Render(device);
-
-                device->SetTransform(D3DTS_WORLD, &identity);
-                Instance().agent_renderer.Render(device);
-
-                Instance().effect_renderer.Render(device);
-
-                Instance().pingslines_renderer.Render(device);
-
-                if (Instance().circular_map) {
-                    device->SetRenderState(D3DRS_STENCILREF, 0);
-                    device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
-                    device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
-                    device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
-                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
-                    device->SetRenderState(D3DRS_STENCILENABLE, false);
-                }
-
-                // Restore the DX9 state
-                d3d9_state_block->Apply();
-                d3d9_state_block->Release();
-            },
-            static_cast<void *>(device));
+        //ImGui::GetWindowDrawList()->AddCallback(render_callback, static_cast<void *>(device));
     }
     ImGui::End();
     ImGui::PopStyleColor();
 
     if (hero_flag_controls_show && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        // @Cleanup: Maybe not lambda, but realy adapted in this case.
-        auto GetPlayerParty = []() -> GW::PartyInfo * {
-            GW::GameContext *gamectx = GW::GameContext::instance();
-            if (!(gamectx && gamectx->party))
-                return nullptr;
-            return gamectx->party->player_party;
-        };
 
-        const auto playerparty = GetPlayerParty();
-        GetPlayerHeroes(playerparty, player_heroes);
+        const GW::PartyInfo* playerparty = GetPlayerParty();
+        GetPlayerHeroes(GetPlayerParty(), player_heroes);
         bool player_has_henchmans = false;
         if (playerparty && playerparty->henchmen.size() && GW::PartyMgr::GetPlayerIsLeader())
             player_has_henchmans = true;
@@ -537,14 +579,18 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                 for (unsigned int i = 0; i < num_heroflags; ++i) {
                     if (i > 0)
                         ImGui::SameLine();
-                    const bool old_flagging = flagging[i];
-                    if (old_flagging)
+                    const bool is_flagging = GetFlaggingState() == i;
+                    if (is_flagging)
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
 
                     if (ImGui::Button(flag_txt[i], ImVec2(w_but, 0))) {
-                        flagging[i] ^= 1;
+                        if (is_flagging)
+                            SetFlaggingState(FlaggingState::FlagState_None);
+                        else
+                            SetFlaggingState(static_cast<FlaggingState>(i));
+                        //flagging[i] ^= 1;
                     }
-                    if (old_flagging)
+                    if (is_flagging)
                         ImGui::PopStyleColor();
 
                     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
@@ -566,6 +612,158 @@ void Minimap::Draw(IDirect3DDevice9 *device)
             ImGui::PopStyleColor();
         }
     }
+}
+
+void Minimap::Render(IDirect3DDevice9* device) {
+    auto& instance = Instance();
+    if (!instance.IsActive())
+        return;
+    GW::Agent* me = GW::Agents::GetPlayer();
+    if (me == nullptr) return;
+
+    // Backup the DX9 state
+    IDirect3DStateBlock9* d3d9_state_block = nullptr;
+    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) return;
+
+    // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
+    D3DMATRIX reset_world, reset_view, reset_projection;
+    device->GetTransform(D3DTS_WORLD, &reset_world);
+    device->GetTransform(D3DTS_VIEW, &reset_view);
+    device->GetTransform(D3DTS_PROJECTION, &reset_projection);
+
+    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
+    device->SetIndices(nullptr);
+    device->SetFVF(D3DFVF_CUSTOMVERTEX);
+    device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
+    device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+    device->SetPixelShader(nullptr);
+    device->SetVertexShader(nullptr);
+    device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    device->SetRenderState(D3DRS_LIGHTING, false);
+    device->SetRenderState(D3DRS_ZENABLE, false);
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+    device->SetRenderState(D3DRS_ALPHATESTENABLE, false);
+    device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+    device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+    device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+    device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+    device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+    device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+    device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+
+    auto FillRect = [&device](const Color color, const float x, const float y, const float w, const float h) {
+        D3DVertex vertices[6] = {{x,y, 0.0f, color},
+            {x + w, y, 0.0f, color},
+            {x, y + h, 0.0f, color},
+            {x + w, y + h, 0.0f, color}};
+        device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(D3DVertex));
+    };
+
+    auto FillCircle = [&device](
+                          const float x, const float y, const float radius, const Color clr, float resolution = 199.f) {
+        resolution = std::min(resolution, 199.f);
+        D3DVertex vertices[200];
+        for (auto i = 0; i <= resolution; ++i) {
+            vertices[i] = {radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x,
+                y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0.0f, clr};
+        }
+        device->DrawPrimitiveUP(
+            D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
+    };
+    
+    Instance().RenderSetupProjection(device);
+
+    
+    D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
+    device->SetScissorRect(&instance.clipping); // always clip to rect as a fallback if the stenciling fails
+    device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
+    if (Instance().circular_map) {
+        device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
+        device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
+        device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
+
+        // clear depth and stencil buffer
+        device->Clear(0, nullptr, D3DCLEAR_STENCIL | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
+
+        device->SetRenderState(D3DRS_STENCILREF, 1);
+        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
+        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer
+        FillCircle(0, 0, 5000.0f, background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
+        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
+        device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
+        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+    } else {
+        FillRect(background, -5000.0f, -5000.0f, 10000.f, 10000.f); // fill rect with chosen background color
+    }
+
+    D3DXMATRIX translate_char;
+    D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
+
+    D3DXMATRIX rotate_char;
+    D3DXMatrixRotationZ(&rotate_char, -Instance().GetMapRotation() + static_cast<float>(M_PI_2));
+
+    D3DXMATRIX scaleM, translationM;
+    D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
+    D3DXMatrixTranslation(&translationM, Instance().translation.x, Instance().translation.y, 0);
+
+    float gwinch_scale = static_cast<float>(Instance().size.x) / 5000.0f / 2.f * Instance().scale;
+    if (gwinch_scale != Instance().gwinch_scale.x) {
+        Instance().range_renderer.Invalidate();
+        Instance().gwinch_scale = {gwinch_scale, gwinch_scale};
+    }
+
+    D3DXMATRIX view = translate_char * rotate_char * scaleM * translationM;
+    device->SetTransform(D3DTS_VIEW, &view);
+
+    Instance().pmap_renderer.Render(device);
+
+    Instance().custom_renderer.Render(device);
+
+    // move the rings to the char position
+    D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
+    device->SetTransform(D3DTS_WORLD, &translate_char);
+    Instance().range_renderer.Render(device);
+    device->SetTransform(D3DTS_WORLD, &reset_world);
+
+    if (Instance().translation.x != 0 || Instance().translation.y != 0) {
+        D3DXMATRIX view2 = scaleM;
+        device->SetTransform(D3DTS_VIEW, &view2);
+        Instance().range_renderer.SetDrawCenter(true);
+        Instance().range_renderer.Render(device);
+        Instance().range_renderer.SetDrawCenter(false);
+        device->SetTransform(D3DTS_VIEW, &view);
+    }
+
+    Instance().symbols_renderer.Render(device);
+
+    device->SetTransform(D3DTS_WORLD, &reset_world);
+    Instance().agent_renderer.Render(device);
+
+    Instance().effect_renderer.Render(device);
+
+    Instance().pingslines_renderer.Render(device);
+
+    if (Instance().circular_map) {
+        device->SetRenderState(D3DRS_STENCILREF, 0);
+        device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
+        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
+        device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
+        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
+        device->SetRenderState(D3DRS_STENCILENABLE, false);
+    }
+
+    // Restore the DX9 transform
+    device->SetTransform(D3DTS_WORLD, &reset_world);
+    device->SetTransform(D3DTS_VIEW, &reset_view);
+    device->SetTransform(D3DTS_PROJECTION, &reset_projection);
+
+    // Restore the DX9 state
+    d3d9_state_block->Apply();
+    d3d9_state_block->Release();
 }
 
 GW::Vec2f Minimap::InterfaceToWorldPoint(Vec2i pos) const
@@ -624,7 +822,7 @@ GW::Vec2f Minimap::InterfaceToWorldVector(Vec2i pos) const
     return v;
 }
 
-void Minimap::SelectTarget(GW::Vec2f pos)
+void Minimap::SelectTarget(GW::Vec2f pos) const
 {
     GW::AgentArray agents = GW::Agents::GetAgentArray();
     if (!agents.valid())
@@ -681,29 +879,36 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
             return false;
     }
 }
+bool Minimap::FlagHero(uint32_t idx) {
+    if (idx > FlaggingState::FlagState_None)
+        return false;
+    return SetFlaggingState(static_cast<FlaggingState>(idx));
+}
 bool Minimap::FlagHeros(LPARAM lParam)
 {
     const int x = GET_X_LPARAM(lParam);
     const int y = GET_Y_LPARAM(lParam);
     if (!IsInside(x, y))
         return false;
-
+    if (!player_heroes.size() && GetPlayerHeroes(GetPlayerParty(), player_heroes) == 0)
+        return false;
     const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
-    bool flagged = false;
-    if (flagging[0]) {
-        flagging[0] = false;
+    FlaggingState flag_state = GetFlaggingState();
+    switch (flag_state) {
+    case FlaggingState::FlagState_None:
+        return false;
+    case FlaggingState::FlagState_All:
+        SetFlaggingState(FlaggingState::FlagState_None);
         GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
-        flagged = true;
+        return true;
+    default:
+        if (flag_state >= player_heroes.size())
+            return false;
+        SetFlaggingState(FlaggingState::FlagState_None);
+        GW::PartyMgr::FlagHeroAgent(player_heroes[flag_state - 1], GW::GamePos(worldpos));
+        return true;
     }
-    for (size_t i = 1; i < 9; ++i) {
-        if (flagging[i]) {
-            flagging[i] = false;
-            flagged = true;
-            GW::PartyMgr::FlagHeroAgent(player_heroes[i - 1], GW::GamePos(worldpos));
-        }
-    }
-    return flagged;
 }
 bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam)
 {
@@ -891,6 +1096,9 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9 *device) const
 
 bool Minimap::IsKeyDown(const MinimapModifierBehaviour mmb) const
 {
-    return (key_none_behavior == mmb and not ImGui::IsKeyDown(VK_CONTROL) and not ImGui::IsKeyDown(VK_SHIFT) and not ImGui::IsKeyDown(VK_MENU)) or (key_ctrl_behavior == mmb and ImGui::IsKeyDown(VK_CONTROL)) or (key_shift_behavior == mmb and ImGui::IsKeyDown(VK_SHIFT)) or
-           (key_alt_behavior == mmb and ImGui::IsKeyDown(VK_MENU));
+    return (key_none_behavior == mmb && !ImGui::IsKeyDown(VK_CONTROL) && !ImGui::IsKeyDown(VK_SHIFT) &&
+               !ImGui::IsKeyDown(VK_MENU)) ||
+           (key_ctrl_behavior == mmb && ImGui::IsKeyDown(VK_CONTROL)) ||
+           (key_shift_behavior == mmb && ImGui::IsKeyDown(VK_SHIFT)) ||
+           (key_alt_behavior == mmb && ImGui::IsKeyDown(VK_MENU));
 }

@@ -14,6 +14,8 @@ public:
 
     const char* Name() const override { return "Vanquish"; }
 
+    const char* Icon() const override { return ICON_FA_SKULL;  }
+
     void Draw(IDirect3DDevice9* pDevice) override;
 
     void DrawSettingInternal() override;

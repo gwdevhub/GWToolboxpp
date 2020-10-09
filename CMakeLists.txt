@@ -28,7 +28,7 @@ add_compile_definitions(
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Outputs dll, exe, and pdb into a /bin/config folder
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/")
@@ -40,7 +40,7 @@ include(utf8proc)
 include(easywsclient)
 include(simpleini)
 include(discord_game_sdk)
-include(json)
+include(earcut)
 
 add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)
@@ -59,6 +59,7 @@ target_include_directories(module_base INTERFACE "modules/base")
 target_include_directories(module_base INTERFACE "GWToolboxdll/GWToolbox")
 target_link_libraries(module_base INTERFACE 
     imgui
+	earcut
     simpleini
     gwca
     )
@@ -77,4 +78,3 @@ endmacro()
 
 # add_tb_module(InstanceTimer)
 # add_tb_module(clock)
-

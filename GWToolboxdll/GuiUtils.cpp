@@ -7,16 +7,16 @@
 
 #include <GuiUtils.h>
 #include <Utf8.h>
-
+#include <fonts/fontawesome5.h>
 #include <Modules/Resources.h>
 
 namespace {
-    ImFont* font16 = nullptr;
-    ImFont* font18 = nullptr;
-    ImFont* font20 = nullptr;
-    ImFont* font24 = nullptr;
-    ImFont* font42 = nullptr;
-    ImFont* font48 = nullptr;
+    ImFont* font_widget_large = nullptr;
+    ImFont* font_widget_small = nullptr;
+    ImFont* font_widget_label = nullptr;
+    ImFont* font_header1 = nullptr;
+    ImFont* font_header2 = nullptr;
+    ImFont* font_text = nullptr;
 
     bool fonts_loading = false;
     bool fonts_loaded = false;
@@ -35,73 +35,94 @@ void GuiUtils::LoadFonts() {
         printf("Loading fonts\n");
 
         ImGuiIO& io = ImGui::GetIO();
-        std::vector<std::pair<wchar_t*, const ImWchar*>> extra_fonts;
-        extra_fonts.push_back({ L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese() });
-        extra_fonts.push_back({ L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic() });
-        extra_fonts.push_back({ L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull() });
-        extra_fonts.push_back({ L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean() });
 
-        // Pre-load font configs
-        ImFontConfig* fontCfg;
-        
-        // Preload font size 16, then re-use the binary data for other sizes to avoid re-reading the file.
-        if (PathFileExistsW(Resources::GetPath(L"Font.ttf").c_str())) {
-            utf8::string f = Resources::GetPathUtf8(L"Font.ttf");
-            io.Fonts->AddFontFromFileTTF(f.bytes, 16.0f, 0, io.Fonts->GetGlyphRangesDefault());
-            printf("Font.ttf found and pre-loaded\n");
-        }
-        else {
-            printf("Failed to find Font.ttf file\n");
-            fonts_loaded = true;
-            fonts_loading = false;
-            return;
-        }
-        // Collect the final font. This is the default (16px) font with all special chars merged. in.
-        fontCfg = &io.Fonts->ConfigData.back();
+        std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk;
+        fonts_on_disk.emplace_back(L"Font.ttf", io.Fonts->GetGlyphRangesDefault());
+        fonts_on_disk.emplace_back(L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese());
+        fonts_on_disk.emplace_back(L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic());
+        fonts_on_disk.emplace_back(L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull());
+        fonts_on_disk.emplace_back(L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean());
 
-        for (unsigned int i = 0; i < extra_fonts.size(); i++) {
-            if (PathFileExistsW(Resources::GetPath(extra_fonts[i].first).c_str())) {
-                ImFontConfig c;
-                c.MergeMode = true;
-                io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(extra_fonts[i].first).bytes, 16.0f, &c, extra_fonts[i].second);
-                printf("%ls found and pre-loaded\n", extra_fonts[i].first);
-            }
-            else {
-                printf("%ls not found. Add this file to load special chars.\n", extra_fonts[i].first);
+        struct FontData
+        {
+            const ImWchar* glyph_ranges = nullptr;
+            size_t data_size = 0;
+            void* data = nullptr;
+        };
+        std::vector<FontData> fonts;
+        for (size_t i = 0; i < fonts_on_disk.size(); ++i) {
+            const auto& f = fonts_on_disk[i];
+            utf8::string utf8path = Resources::GetPathUtf8(f.first);
+            size_t size;
+            void* data = ImFileLoadToMemory(utf8path.bytes, "rb", &size, 0);
+            if (data) {
+                fonts.push_back({f.second, size, data});
+            } else if (i == 0) {
+                // first one cannot fail
+                printf("Failed to find Font.ttf file\n");
+                fonts_loaded = true;
+                fonts_loading = false;
+                return; 
             }
         }
-        
-        font16 = fontCfg->DstFont;
 
-        // Recycle the binary data from original ImFontConfig for the other font sizes.
-        ImFontConfig copyCfg;
-        copyCfg.FontData = fontCfg->FontData;
-        copyCfg.FontDataSize = fontCfg->FontDataSize;
-        copyCfg.FontDataOwnedByAtlas = false; // Don't let ImGui try to free this data - it'll do it via defaultFontCfg
-        copyCfg.GlyphRanges = fontCfg->GlyphRanges;
+        // TODO: expose those in UI
+        constexpr float size_text = 16.0f;
+        constexpr float size_header1 = 18.0f;
+        constexpr float size_header2 = 20.0f;
+        constexpr float size_widget_label = 24.0f;
+        constexpr float size_widget_small = 42.0f;
+        constexpr float size_widget_large = 48.0f;
+        static constexpr ImWchar fontawesome5_glyph_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
-        copyCfg.SizePixels = 18.0f;
-        sprintf(copyCfg.Name,"Default_18");
-        font18 = io.Fonts->AddFont(&copyCfg);
 
-        copyCfg.SizePixels = 20.0f;
-        sprintf(copyCfg.Name, "Default_20");
-        font20 = io.Fonts->AddFont(&copyCfg);
+        ImFontConfig cfg = ImFontConfig();
+        cfg.MergeMode = false;
+        cfg.PixelSnapH = true;
+        cfg.FontDataOwnedByAtlas = true;
+        for (const auto& font : fonts) {
+            io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size_text, &cfg, font.glyph_ranges);
+            cfg.MergeMode = true; // for all but the first
+        }
+        io.Fonts->AddFontFromMemoryCompressedTTF(
+            fontawesome5_compressed_data, fontawesome5_compressed_size, size_text, &cfg, fontawesome5_glyph_ranges);
+        font_text = io.Fonts->Fonts.back();
 
-        copyCfg.SizePixels = 24.0f;
-        sprintf(copyCfg.Name, "Default_24");
-        font24 = io.Fonts->AddFont(&copyCfg);
+        // All other fonts re-used the data
+        cfg.FontDataOwnedByAtlas = false;
 
-        copyCfg.SizePixels = 42.0f;
-        sprintf(copyCfg.Name, "Default_42");
-        font42 = io.Fonts->AddFont(&copyCfg);
+        const auto& base = fonts.front(); // base font
 
-        copyCfg.SizePixels = 48.0f;
-        sprintf(copyCfg.Name, "Default_48");
-        font48 = io.Fonts->AddFont(&copyCfg);
 
-        printf("Building fonts...\n");
-        io.Fonts->Build();
+        cfg.MergeMode = false;
+        io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_header1, &cfg, base.glyph_ranges);
+        cfg.MergeMode = true;
+        io.Fonts->AddFontFromMemoryCompressedTTF(
+            fontawesome5_compressed_data, fontawesome5_compressed_size, size_header1, &cfg, fontawesome5_glyph_ranges);
+        font_header2 = io.Fonts->Fonts.back();
+
+        cfg.MergeMode = false;
+        io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_header2, &cfg, base.glyph_ranges);
+
+        cfg.MergeMode = true;
+        io.Fonts->AddFontFromMemoryCompressedTTF(
+            fontawesome5_compressed_data, fontawesome5_compressed_size, size_header2, &cfg, fontawesome5_glyph_ranges);
+        font_header1 = io.Fonts->Fonts.back();
+
+        cfg.MergeMode = false;
+
+        io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_label, &cfg, base.glyph_ranges);
+        font_widget_label = io.Fonts->Fonts.back();
+
+        io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_small, &cfg, base.glyph_ranges);
+        font_widget_small = io.Fonts->Fonts.back();
+
+        io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_large, &cfg, base.glyph_ranges);
+        font_widget_large = io.Fonts->Fonts.back();
+
+        if (!io.Fonts->IsBuilt())
+            io.Fonts->Build();
+
         printf("Fonts loaded\n");
         fonts_loaded = true;
         fonts_loading = false;
@@ -111,12 +132,12 @@ void GuiUtils::LoadFonts() {
 ImFont* GuiUtils::GetFont(GuiUtils::FontSize size) {
     ImFont* font = [](FontSize size) -> ImFont* {
         switch (size) {
-        case GuiUtils::f16: return font16;
-        case GuiUtils::f18: return font18;
-        case GuiUtils::f20: return font20;
-        case GuiUtils::f24: return font24;
-        case GuiUtils::f42: return font42;
-        case GuiUtils::f48: return font48;
+            case GuiUtils::FontSize::widget_large: return font_widget_large;
+            case GuiUtils::FontSize::widget_small: return font_widget_small;
+            case GuiUtils::FontSize::widget_label: return font_widget_label;
+            case GuiUtils::FontSize::header1: return font_header1;
+            case GuiUtils::FontSize::header2: return font_header2;
+            case GuiUtils::FontSize::text: return font_text;
         default: return nullptr;
         }
     }(size);

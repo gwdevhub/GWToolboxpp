@@ -271,8 +271,8 @@ void PconsWindow::CmdPcons(const wchar_t *, int argc, LPWSTR *argv)
     }
 }
 
-bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) {
-    bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
+bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text) {
+    bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text, center_align_text);
 
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -286,8 +286,8 @@ bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool s
 }
 void PconsWindow::Draw(IDirect3DDevice9* device) {
     if (!visible) return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    if(!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
     if (show_enable_button) {
         ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
@@ -415,7 +415,9 @@ bool PconsWindow::SetEnabled(bool b) {
 
 void PconsWindow::RegisterSettingsContent() {
     ToolboxUIElement::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent("Game Settings",
+    ToolboxModule::RegisterSettingsContent(
+        "Game Settings",
+        nullptr,
         [this](const std::string*, bool is_showing) {
             if (!is_showing) return;
             DrawLunarsAndAlcoholSettings();
@@ -559,12 +561,12 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
     ImGui::ShowHelp("Display a number on the bottom of each pcon icon, showing total quantity in storage.\n"
                     "This only displays when in an outpost.");
-    ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%.0f milliseconds");
+    ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%d milliseconds");
     ImGui::ShowHelp(
         "After using a pcon, toolbox will not use it again for this amount of time.\n"
         "It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
         "Decrease the value if you have good ping and you die a lot.");
-    ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%.0f milliseconds");
+    ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%d milliseconds");
     if (ImGui::TreeNode("Thresholds")) {
         ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");
         for (Pcon* pcon : pcons) {

@@ -19,7 +19,6 @@
 
 void HotkeysWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"keyboard.png"), IDB_Icon_Keyboard);
     clickerTimer = TIMER_INIT();
     dropCoinsTimer = TIMER_INIT();
 }
@@ -38,8 +37,8 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
     // === hotkey panel ===
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+    ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (ImGui::Button("Create Hotkey...", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
             ImGui::OpenPopup("Create Hotkey");
@@ -89,6 +88,11 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                 hotkeys.push_back(new HotkeyEquipItem(nullptr, nullptr));
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Equip an item from your inventory");
+            if (ImGui::Selectable("Flag Hero")) {
+                hotkeys.push_back(new HotkeyFlagHero(nullptr, nullptr));
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Flag a hero relative to your position");
             ImGui::EndPopup();
         }
 

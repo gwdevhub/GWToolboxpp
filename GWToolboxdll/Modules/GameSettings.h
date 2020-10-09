@@ -136,20 +136,13 @@ class GameSettings : public ToolboxModule {
     GameSettings(const GameSettings&) = delete;
     ~GameSettings() {};
 
-    using CastInfo = struct
-    {
-        uint32_t unknown;
-        uint32_t skill_id;
-        uint32_t unknown2;
-        uint32_t target_id;
-    };
-
 public:
     static GameSettings& Instance() {
         static GameSettings instance;
         return instance;
     }
     const char* Name() const override { return "Game Settings"; }
+    const char* Icon() const override { return ICON_FA_GAMEPAD; }
     static void PingItem(GW::Item* item, uint32_t parts = 3);
     static void PingItem(uint32_t item_id, uint32_t parts = 3);
 
@@ -196,7 +189,7 @@ public:
     static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
     static void OnScreenShake(GW::HookStatus*, void* packet);
     static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
-    static void OnCast(GW::HookStatus *, void *info);
+    static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
     
 
     bool tick_is_toggle = false;
@@ -280,11 +273,9 @@ private:
     bool hide_dungeon_chest_popup = false;
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;
+    bool disable_camera_smoothing = false;
 
     bool improve_move_to_cast = false;
-    GW::Agent *cast_target = nullptr;
-    uint32_t cast_skill = 0;
-    clock_t cast_clock = 0;
 
     static float GetSkillRange(uint32_t);
 

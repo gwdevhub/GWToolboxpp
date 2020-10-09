@@ -22,6 +22,7 @@ public:
     }
 
     const char* Name() const override { return "Info"; }
+    const char* Icon() const override { return ICON_FA_INFO_CIRCLE; }
 
     void Initialize() override;
 

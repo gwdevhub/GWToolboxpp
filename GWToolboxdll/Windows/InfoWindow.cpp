@@ -12,6 +12,7 @@
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Camera.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -49,7 +50,6 @@
 void InfoWindow::Initialize() {
     ToolboxWindow::Initialize();
 
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&MessageCore_Entry,OnMessageCore);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) -> void {
@@ -71,7 +71,7 @@ void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
     UNREFERENCED_PARAMETER(cmd);
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
     GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (info == nullptr) return;
     GW::PlayerPartyMemberArray partymembers = info->players;
@@ -167,7 +167,7 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
     //ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
     ImGui::PopItemWidth();
     if (ImGui::TreeNode("Advanced##item")) {
-        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
         if (item) {
             ImGui::LabelText("Addr", "%p", item);
             ImGui::LabelText("Id", "%d", item->item_id);
@@ -207,8 +207,8 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
 void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+    ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (show_widgets) {
             const std::vector<ToolboxModule *> &optional_modules = ToolboxSettings::Instance().GetOptionalModules();
@@ -248,14 +248,17 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         if (ImGui::CollapsingHeader("Camera")) {
             static char pos_buf[32];
             static char target_buf[32];
+            static char angle_buf[32];
             static GW::Camera* cam;
             if ((cam = GW::CameraMgr::GetCamera()) != nullptr) {
                 snprintf(pos_buf, 32, "%.2f, %.2f, %.2f", cam->position.x, cam->position.y, cam->position.z);
                 snprintf(target_buf, 32, "%.2f, %.2f, %.2f", cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z);
+                snprintf(angle_buf, 32, "%.2f, %.2f", cam->GetCurrentYaw(), cam->pitch);
             }
             ImGui::PushItemWidth(-80.0f);
             ImGui::InputText("Position##cam_pos", pos_buf, 32, ImGuiInputTextFlags_ReadOnly);
             ImGui::InputText("Target##cam_target", target_buf, 32, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputText("Yaw/Pitch##cam_angle", angle_buf, 32, ImGuiInputTextFlags_ReadOnly);
             ImGui::PopItemWidth();
         }
         if (show_player && ImGui::CollapsingHeader("Player")) {
@@ -376,7 +379,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 if (ImGui::TreeNode("Advanced##target")) {
                     GW::Agent *me = GW::Agents::GetPlayer();
                     
-                    ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                     ImGui::LabelText("Addr", "%p", target);
                     ImGui::LabelText("Id", "%d", target->agent_id);
                     ImGui::LabelText("Z", "%f", target->z);
@@ -428,7 +431,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 if (player) {
                     if (ImGui::TreeNode("Player Info##target")) {
-                        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                         ImGui::LabelText("Addr", "%p", player);
                         ImGui::LabelText("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
                         ImGui::PopItemWidth();
@@ -437,7 +440,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 if (guild) {
                     if (ImGui::TreeNode("Guild Info##target")) {
-                        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                         ImGui::LabelText("Addr", "%p", guild);
                         ImGui::LabelText("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());
                         ImGui::LabelText("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");

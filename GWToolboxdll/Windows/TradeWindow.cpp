@@ -88,8 +88,6 @@ void TradeWindow::CmdPricecheck(const wchar_t *, int argc, LPWSTR *argv)
 }
 void TradeWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img\\icons", L"trade.png"), 
-        RESOURCES_DOWNLOAD_URL L"icons/trade.png");
 
     messages = CircularBuffer<Message>(100);
 
@@ -325,8 +323,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
     /* Main trade window */
     if (!visible)
         return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(700, 400), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+    ImGui::SetNextWindowSize(ImVec2(700, 400), ImGuiCond_FirstUseEver);
     collapsed = !ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
     if (collapsed) {
         ImGui::End();
@@ -401,7 +399,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
                 // negative numbers have came from this before, it is probably just server client desync
                 int time_since_message = static_cast<int>(now) - static_cast<int>(msg.timestamp);
 
-                ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
 
                 // decide if days, hours, minutes, seconds...
@@ -420,7 +417,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
                 ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(timetext).x);
                 ImGui::Text(timetext);
                 ImGui::PopStyleColor();
-                ImGui::PopFont();
             }
 
             // ==== Sender name column ====
@@ -460,6 +456,7 @@ void TradeWindow::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
         "Chat Settings",
+        nullptr,
         [this](const std::string *section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing)
@@ -488,7 +485,7 @@ void TradeWindow::DrawChatSettings(bool ownwindow)
     ImGui::Checkbox("Apply trade alerts to local trade messages", &filter_local_trade);
     ImGui::ShowHelp("If enabled, only trade messages matching your alerts will be shown in chat");
     if (!ownwindow) {
-        ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - 120.f * ImGui::GetIO().FontGlobalScale, 0);
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 120.f * ImGui::GetIO().FontGlobalScale, 0);
         if(ImGui::Button("Show Trade Alerts"))
             show_alert_window = !show_alert_window;
     }

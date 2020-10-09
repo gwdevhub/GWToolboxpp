@@ -44,7 +44,7 @@ void Updater::Initialize() {
 void Updater::DrawSettingInternal() {
     ImGui::Text("Update mode:");
     const float btnWidth = 180.0f * ImGui::GetIO().FontGlobalScale;
-    ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - btnWidth);
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - btnWidth);
     if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates",ImVec2(btnWidth,0)) && step != Checking) {
         CheckForUpdate(true);
     }
@@ -60,6 +60,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
     unsigned int tries = 0;
     while (tries < 5 && releases_str.empty()) {
         releases_str = Resources::Instance().Download(L"https://api.github.com/repos/HasKha/GWToolboxpp/releases");
+        tries++;
     }
     if (releases_str.empty()) {
         return;
@@ -156,8 +157,8 @@ void Updater::Draw(IDirect3DDevice9* device) {
             break;
 
         case 2: { // check and ask
-            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
-            ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
+            ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Appearing, ImVec2(.5f, .5f));
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s%s",
                 latest_release.version.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA);
@@ -190,8 +191,8 @@ void Updater::Draw(IDirect3DDevice9* device) {
 
     } else if (step == Downloading) {
         if (visible) {
-            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
-            ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
+            ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Appearing, ImVec2(.5f, .5f));
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s",
                 latest_release.version.c_str(), GWTOOLBOXDLL_VERSION);
@@ -207,8 +208,8 @@ void Updater::Draw(IDirect3DDevice9* device) {
         }
     } else if (step == Success) {
         if (visible) {
-            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
-            ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
+            ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Appearing, ImVec2(.5f, .5f));
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s",
                 latest_release.version.c_str(), GWTOOLBOXDLL_VERSION);

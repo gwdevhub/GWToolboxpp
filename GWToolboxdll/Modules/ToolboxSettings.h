@@ -16,6 +16,8 @@ public:
 
     const char* Name() const override { return "Toolbox Settings"; }
 
+    const char* Icon() const override { return ICON_FA_TOOLBOX;  }
+
     void LoadModules(CSimpleIni* ini);
     
     void Update(float delta) override;
@@ -44,6 +46,7 @@ private:
     bool use_builds = true;
     bool use_herobuilds = true;
     bool use_travel = true;
+    bool use_teamspeak = true;
     bool use_dialogs = true;
     bool use_info = true;
     bool use_materials = true;

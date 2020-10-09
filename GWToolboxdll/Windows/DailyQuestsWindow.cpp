@@ -1065,13 +1065,12 @@ bool GetIsPreSearing() {
     GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
     return i && i->region == GW::Region::Region_Presearing;
 }
-void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
-        return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+void DailyQuests::Draw(IDirect3DDevice9*) {
+    if (!visible) return;
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
+    if (!ImGui::Begin(UIName(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
     float offset = 0.0f;
     const float short_text_width = 120.0f * ImGui::GetIO().FontGlobalScale;
@@ -1228,7 +1227,7 @@ void DailyQuests::DrawHelp() {
 }
 void DailyQuests::DrawSettingInternal() {
     ToolboxWindow::DrawSettingInternal();
-    float width = ImGui::GetContentRegionAvailWidth() / 2;
+    float width = ImGui::GetContentRegionAvail().x / 2;
     ImGui::PushItemWidth(width);
     ImGui::InputInt("Show daily quests for the next ", &daily_quest_window_count);
     ImGui::PopItemWidth();

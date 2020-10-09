@@ -1,3 +1,4 @@
+#include "Minimap.h"
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
@@ -134,7 +135,7 @@ void AgentRenderer::SaveAgentColors() const {
 }
 
 void AgentRenderer::DrawSettings() {
-    if (ImGui::TreeNode("Agent Colors")) {
+    if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         Colors::DrawSettingHueWheel("EoE", &color_eoe);
         ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
         Colors::DrawSettingHueWheel("QZ", &color_qz);
@@ -200,7 +201,7 @@ void AgentRenderer::DrawSettings() {
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Agent Sizes")) {
+    if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Signpost Size", &size_signpost, 1.0f, 1.0f, 0.0f, "%.0f");
@@ -210,7 +211,7 @@ void AgentRenderer::DrawSettings() {
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Custom Agents")) {
+    if (ImGui::TreeNodeEx("Custom Agents", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         bool changed = false;
         for (unsigned i = 0; i < custom_agents.size(); ++i) {
 
@@ -285,7 +286,7 @@ AgentRenderer::~AgentRenderer() {
     custom_agents.clear();
     custom_agents_map.clear();
 }
-AgentRenderer::AgentRenderer() : vertices(nullptr) {
+AgentRenderer::AgentRenderer() {
     shapes[Tear].AddVertex(1.8f, 0, Dark);      // A
     shapes[Tear].AddVertex(0.7f, 0.7f, Dark);   // B
     shapes[Tear].AddVertex(0.0f, 0.0f, Light);  // O
@@ -384,10 +385,12 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
     GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
     GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target && auto_target_id) {
-        target = static_cast<GW::AgentLiving *>(GW::Agents::GetAgentByID(auto_target_id));
-        if (target && !target->GetIsLivingType())
-            target = nullptr;
+    if (target) {
+        auto_target_id = 0;
+    }
+    else if (auto_target_id) {
+        auto* const target_ = GW::Agents::GetAgentByID(auto_target_id);
+        target = target_ ? target_->GetAsAgentLiving() : nullptr;
     }
 
     // 1. eoes
@@ -521,14 +524,13 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
     Color color = GetColor(agent, ca);
     float size = GetSize(agent, ca);
     Shape_e shape = GetShape(agent, ca);
-
-    if (auto_target_id == agent->agent_id) {
-        Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
-    } else if (GW::Agents::GetTargetId() == agent->agent_id && shape != BigCircle) {
-        Enqueue(shape, agent, size + 50.0f, color_target);
+    // No target highlight if BigCircle
+    if (shape != BigCircle) {
+        // Target highlight if this is the current or next target
+        if (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id)
+            Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
     }
-
-    Enqueue(shape, agent, size, color);
+    return Enqueue(shape, agent, size, color);
 }
 
 Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) const {
@@ -568,8 +570,66 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         if(living->hp <= 0.0f) return color_hostile_dead;
         const Color* c = &color_hostile;
         if (boss_colors && living->GetHasBossGlow()) {
-            unsigned int prof = GetAgentProfession(living);
+            const auto prof = GetAgentProfession(living);
             if (prof) c = &profession_colors[prof];
+        }
+        const auto& polygons = Minimap::Instance().custom_renderer.polygons;
+        const auto& markers = Minimap::Instance().custom_renderer.markers;
+        const auto is_relevant = [living](const CustomRenderer::CustomPolygon& polygon)-> bool {
+            return (polygon.visible && polygon.map == GW::Constants::MapID::None || polygon.map == GW::Map::GetMapID()) && !polygon.points.empty() && (polygon.color_sub & IM_COL32_A_MASK) != 0 &&
+                   GW::GetDistance(living->pos, polygon.points.at(0)) < 2500.f;
+        };
+        const auto is_relevant_circle = [living](const CustomRenderer::CustomMarker& marker) {
+            return (marker.visible && marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID()) && (marker.color_sub & IM_COL32_A_MASK) != 0 &&
+                   GW::GetDistance(living->pos, marker.pos) < 2500.f;
+        };
+        const auto is_inside = [](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
+            bool b = false;
+            for (auto i = 0u, j = points.size() - 1; i < points.size(); j = i++) {
+                if (points[i].y >= pos.y != points[j].y >= pos.y &&
+                    pos.x <= (points[j].x - points[i].x) * (pos.y - points[i].y) / (points[j].y - points[i].y) +
+                                 points[i].x) {
+                    b = !b;
+                }
+            }
+            return b;
+        };
+        auto sign = [](GW::Vec2f p1, GW::Vec2f p2, GW::Vec2f p3)-> float {
+            return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+        };
+
+        auto in_triangle = [sign](GW::Vec2f pt, GW::Vec2f v1, GW::Vec2f v2, GW::Vec2f v3) -> bool {
+
+            const float d1 = sign(pt, v1, v2);
+            const float d2 = sign(pt, v2, v3);
+            const float d3 = sign(pt, v3, v1);
+
+            const bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+            const bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+            return !(has_neg && has_pos);
+        };
+
+        auto is_inside_triangles = [in_triangle](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
+            for (auto i = 0u; i < points.size() - 2; i++) {
+                if (in_triangle(pos, points[i], points[i + 1], points[i + 2])) return true;;
+            }
+            return false;
+        };
+        auto is_inside_circle = [](const GW::Vec2f pos, const GW::Vec2f circle, const float radius) -> bool {
+            return GW::GetSquareDistance(pos, circle) <= radius * radius;
+        };
+        for (const auto& polygon : polygons) {
+            if (!is_relevant(polygon)) continue;
+            if (is_inside(living->pos, polygon.points)) {
+                c = &polygon.color_sub;
+            }
+        }
+        for (const auto marker : markers) {
+            if (!is_relevant_circle(marker)) continue;
+            if (is_inside_circle(living->pos, marker.pos, marker.size)) {
+                c = &marker.color_sub;
+            }
         }
         if (living->hp > 0.9f) return *c;
         return Colors::Sub(*c, color_agent_damaged_modifier);

@@ -16,7 +16,7 @@
 #include <GWCA/Managers/EffectMgr.h>
 
 #include <GuiUtils.h>
-#include <Widgets/Minimap/PingsLinesRenderer.h>
+#include <Widgets/Minimap/Minimap.h>
 
 void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));
@@ -53,11 +53,11 @@ void PingsLinesRenderer::DrawSettings() {
     if (Colors::DrawSettingHueWheel("Pings", &ping_circle.color)) {
         ping_circle.Invalidate();
     }
-    if (Colors::DrawSettingHueWheel("Shadowstep Marker", &marker.color)) {
+    if (Colors::DrawSettingHueWheel("Shadow Step Marker", &marker.color)) {
         marker.Invalidate();
     }
-    Colors::DrawSettingHueWheel("Shadowstep Line", &color_shadowstep_line);
-    Colors::DrawSettingHueWheel("Shadowstep Line (Max range)", &color_shadowstep_line_maxrange);
+    Colors::DrawSettingHueWheel("Shadow Step Line", &color_shadowstep_line);
+    Colors::DrawSettingHueWheel("Shadow Step Line (Max range)", &color_shadowstep_line_maxrange);
     if (ImGui::SliderFloat("Max range start", &maxrange_interp_begin, 0.0f, 1.0f)
         && maxrange_interp_end < maxrange_interp_begin) {
         maxrange_interp_end = maxrange_interp_begin;
@@ -77,8 +77,6 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
     lastshown = TIMER_INIT();
     lastsent = TIMER_INIT();
     lastqueued = TIMER_INIT();
-
-    shadowstep_location = GW::Vec2f(0, 0);
 }
 
 void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak) {
@@ -149,14 +147,6 @@ void PingsLinesRenderer::P153Callback(GW::Packet::StoC::GenericValueTarget *pak)
         && pak->caster == GW::Agents::GetPlayerId()
         && pak->value == 928) {
         recall_target = pak->target;
-    }
-};
-void PingsLinesRenderer::P221Callback(GW::Packet::StoC::SkillActivate *pak) {
-    if (pak->agent_id == GW::Agents::GetPlayerId()) {
-        if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
-            || pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
-            shadowstep_location = GW::Agents::GetPlayer()->pos;
-        }
     }
 };
 
@@ -280,27 +270,11 @@ void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device) {
 }
 
 void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
-    if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f) return;
-    if ((marker.color & IM_COL32_A_MASK) == 0) return;
-
-    GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-    if (!effects.valid()) {
-        shadowstep_location = GW::Vec2f();
+    if ((marker.color & IM_COL32_A_MASK) == 0)
         return;
-    }
-
-    bool found = false;
-    for (unsigned int i = 0; i < effects.size(); ++i) {
-        if (effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
-            || effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
-            found = true;
-        }
-    }
-    if (!found) {
-        shadowstep_location = GW::Vec2f();
+    const GW::Vec2f &shadowstep_location = Minimap::Instance().ShadowstepLocation();
+    if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f)
         return;
-    }
-
     D3DXMATRIX translate, scale, world;
     D3DXMatrixTranslation(&translate, shadowstep_location.x, shadowstep_location.y, 0.0f);
     D3DXMatrixScaling(&scale, 100.0f, 100.0f, 1.0f);
@@ -311,9 +285,11 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
 
 void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
-    // this is after the previous func, so don't check for effect
-    if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f) return;
-    if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
+    if ((color_shadowstep_line & IM_COL32_A_MASK) == 0)
+        return;
+    const GW::Vec2f &shadowstep_location = Minimap::Instance().ShadowstepLocation();
+    if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f)
+        return;
 
     GW::Agent* player = GW::Agents::GetPlayer();
     if (player == nullptr) return;

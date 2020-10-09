@@ -43,6 +43,7 @@ public:
     }
 
     const char* Name() const override { return "Materials"; }
+    const char* Icon() const override { return ICON_FA_FEATHER_ALT; }
 
     void Initialize() override;
     void Terminate() override;
@@ -121,6 +122,7 @@ private:
     size_t trans_done = 0;
 
     bool manage_gold = false;
+    bool use_stock = false;
 
     GW::HookEntry QuotedItemPrice_Entry;
     GW::HookEntry TransactionDone_Entry;

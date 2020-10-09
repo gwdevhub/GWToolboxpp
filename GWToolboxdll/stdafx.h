@@ -8,6 +8,7 @@
 
 #pragma warning(disable: 4061) // enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
 #pragma warning(disable: 4091) // 'keyword' : ignored on left of 'type' when no variable is declared
+#pragma warning(disable: 4099) // PDB '*.pdb' was not found with '*.lib(*.obj)' or at '..\..\..\*.pdb'; linking object as if no debug info
 #pragma warning(disable: 4100) // 'identifier' : unreferenced formal parameter
 #pragma warning(disable: 4365) // 'action' : conversion from 'type_1' to 'type_2', signed/unsigned mismatch
 #pragma warning(disable: 4514) // 'function' : unreferenced inline function has been removed
@@ -25,6 +26,7 @@
 #pragma warning(disable: 4738) // storing 32-bit float result in memory, possible loss of performance
 #pragma warning(disable: 4820) // 'bytes' bytes padding added after construct 'member_name'
 #pragma warning(disable: 4917) // 'declarator' : a GUID can only be associated with a class, interface or namespace
+#pragma warning(disable: 4996) // various members of std::allocator are deprecated in c++17...
 #pragma warning(disable: 5026) // 'type': move constructor was implicitly defined as deleted
 #pragma warning(disable: 5027) // 'type': move assignment operator was implicitly defined as deleted
 #pragma warning(disable: 5029) // nonstandard extension used: alignment attributes in C++ apply to variables, data members and tag types only
@@ -36,19 +38,17 @@
 
 #include <GWCA/Source/stdafx.h>
 
-// c style headers
-#include <ctype.h>
-#include <math.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <strsafe.h>
-#include <time.h>
+// c++ style c headers
+#include <cctype>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <ctime>
 
 // c++ headers
 #include <algorithm>
 #include <bitset>
 #include <chrono>
-#include <cmath>
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -75,6 +75,7 @@
 // windows headers
 #include <Windows.h>
 
+#include <strsafe.h>
 #include <DbgHelp.h>
 #include <shellapi.h>
 #include <ShlObj.h>
@@ -94,13 +95,16 @@
 #include <Logger.h>
 #include <discord_game_sdk.h>
 #include <SimpleIni.h>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <easywsclient.hpp>
 #include <mp3.h>
+#include <IconsFontAwesome5.h>
+#include <mapbox/earcut.hpp>
 
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <imgui_impl_dx9.h>
+#include <examples/imgui_impl_dx9.h>
+#include <examples/imgui_impl_win32.h>
 
 #pragma warning(pop)
 

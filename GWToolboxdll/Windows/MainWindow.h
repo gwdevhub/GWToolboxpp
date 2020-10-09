@@ -5,6 +5,7 @@
 class MainWindow : public ToolboxWindow {
     MainWindow() {
         visible = true;
+        can_show_in_main_window = false;
     };
     ~MainWindow() {};
 public:
@@ -31,6 +32,8 @@ public:
 
 private:
     bool one_panel_at_time_only = false;
+    bool show_icons = true;
+    bool center_align_text = false;
 
     float GetModuleWeighting(ToolboxUIElement* m) {
         auto found = module_weightings.find(m->Name());
@@ -48,7 +51,7 @@ private:
         {"Materials",0.64f},
         {"Trade",0.66f},
         {"Notepad",0.68f},
-        {"Objective Timer",0.7f},
+        {"Objectives",0.7f},
         {"Faction Leaderboard",0.72f},
         {"Daily Quests",0.74f},
         {"Friend List",0.76f},

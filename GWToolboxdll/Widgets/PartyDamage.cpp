@@ -101,7 +101,8 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 	if (cause_it == party_index.end()) return;  // ignore damage done by non-party members
 
 	// get target agent
-	if (!agents[packet->target_id]) return;
+	if (packet->target_id >= agents.size()) return;
+	if ( !agents[packet->target_id]) return;
 	GW::AgentLiving* target = agents[packet->target_id]->GetAsAgentLiving();
 	if (target == nullptr) return;
 	if (target->login_number != 0) return; // ignore player-inflicted damage
@@ -232,7 +233,6 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background).Value);
     ImGui::SetNextWindowSize(ImVec2(width, static_cast<float>(size * line_height)));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
-		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f16));
 		const float &x = ImGui::GetWindowPos().x;
         const float &y = ImGui::GetWindowPos().y;
         const float &_width = ImGui::GetWindowWidth();
@@ -286,7 +286,6 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 				ImVec2(x + _width / 2, y + (i * line_height) + height_diff),
 				IM_COL32(255, 255, 255, 255), buf);
 		}
-		ImGui::PopFont();
 	}
 	ImGui::End();
 	ImGui::PopStyleColor(); // window bg
@@ -404,7 +403,7 @@ void PartyDamage::DrawSettingInternal() {
 	ImGui::InputInt("Row Height", &row_height);
 	ImGui::ShowHelp("Height of each row, leave 0 for default");
 	if (width <= 0) width = 1.0f;
-	ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%.0f milliseconds");
+	ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%d milliseconds");
 	if (recent_max_time < 0) recent_max_time = 0;
 	ImGui::ShowHelp("After this amount of time, each player recent damage (blue bar) will be reset");
 	Colors::DrawSettingHueWheel("Background", &color_background);

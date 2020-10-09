@@ -559,7 +559,7 @@ void DiscordModule::UpdateActivity() {
     GW::Guild* g = nullptr;
     GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
     GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
-    GW::AgentLiving* a = GW::Agents::GetPlayerAsAgentLiving();
+    GW::AgentLiving* a = GW::Agents::GetCharacter();
     GW::CharContext* c = GW::GameContext::instance()->character;
     GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (!p || !m || !a || !c)

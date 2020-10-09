@@ -292,6 +292,8 @@ void PartyWindowModule::LoadDefaults() {
 
     //AddSpecialNPC({ "Ebon Vanguard Assassin", 5848, GW::Constants::MapID::None });
     AddSpecialNPC({ "Ebon Vanguard Assassin", GW::Constants::ModelID::EbonVanguardAssassin, GW::Constants::MapID::None });
+
+    AddSpecialNPC({ "Ben Wolfson Pre-Searing", 1512, GW::Constants::MapID::None });
 }
 bool PartyWindowModule::ShouldAddAgentToPartyWindow(uint32_t agent_type) {
     if ((agent_type & 0x20000000) == 0)
@@ -349,7 +351,7 @@ void PartyWindowModule::DrawSettingInternal() {
         ImGui::Text("%d", npc->model_id);
         ImGui::SameLine(cols[1]);
         ImGui::Text("%ls", npc->GetMapName()->c_str());
-        ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - (48.0f * fontScale));
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - (48.0f * fontScale));
         bool clicked = ImGui::Button(" X ");
         ImGui::PopID();
         if(clicked) {

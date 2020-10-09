@@ -7,17 +7,27 @@
 
 #include <Defines.h>
 #include <Logger.h>
+#include <GuiUtils.h>
 
 #include <Modules/Resources.h>
 
-#define CHAN_WARNING GW::Chat::Channel::CHANNEL_GWCA2
-#define CHAN_INFO    GW::Chat::Channel::CHANNEL_EMOTE
-#define CHAN_ERROR   GW::Chat::Channel::CHANNEL_GWCA3
+#define GWTOOLBOX_CHAN GW::Chat::Channel::CHANNEL_GWCA2
+#define GWTOOLBOX_SENDER L"GWToolbox++"
+#define GWTOOLBOX_SENDER_COL 0x00ccff
+#define GWTOOLBOX_WARNING_COL 0xFFFF44
+#define GWTOOLBOX_ERROR_COL 0xFF4444
+#define GWTOOLBOX_INFO_COL 0xFFFFFF
 
 namespace {
     FILE* logfile = nullptr;
     FILE* stdout_file = nullptr;
     FILE* stderr_file = nullptr;
+
+    enum LogType : uint8_t {
+        LogType_Info,
+        LogType_Warning,
+        LogType_Error
+    };
 }
 
 static void GWCALogHandler(
@@ -72,9 +82,8 @@ void Log::InitializeLog() {
 }
 
 void Log::InitializeChat() {
-    GW::Chat::SetMessageColor(CHAN_WARNING, 0xFFFFFF44); // warning
-    GW::Chat::SetMessageColor(CHAN_INFO, 0xFFFFFFFF); // info
-    GW::Chat::SetMessageColor(CHAN_ERROR, 0xFFFF4444); // error
+    GW::Chat::SetSenderColor(GWTOOLBOX_CHAN, 0xFF000000 | GWTOOLBOX_SENDER_COL);
+    GW::Chat::SetMessageColor(GWTOOLBOX_CHAN, 0xFF000000 | GWTOOLBOX_INFO_COL);
 }
 
 void Log::Terminate() {
@@ -130,49 +139,86 @@ void Log::LogW(const wchar_t* msg, ...) {
 }
 
 // === Game chat logging ===
-static void _vchatlog(GW::Chat::Channel chan, const char* format, va_list argv) {
-    char buf1[256];
-    vsprintf_s(buf1, format, argv);
+static void _chatlog(LogType log_type, const wchar_t* message) {
+    uint32_t color;
+    switch (log_type) {
+    case LogType::LogType_Error:
+        color = GWTOOLBOX_ERROR_COL;
+        break;
+    case LogType::LogType_Warning:
+        color = GWTOOLBOX_WARNING_COL;
+        break;
+    default:
+        color = GWTOOLBOX_INFO_COL;
+        break;
+    }
+    size_t len = 5 + wcslen(GWTOOLBOX_SENDER) + 4 + 13 + wcslen(message) + 4 + 1;
+    wchar_t* to_send = new wchar_t[len];
+    swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", GWTOOLBOX_SENDER, color, message);
 
-    char buf2[256];
-    snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
-
-    // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
-    std::string sbuf2(buf2);
-    GW::GameThread::Enqueue([chan, sbuf2]() {
-        GW::Chat::WriteChat(chan, sbuf2.c_str());
+    GW::GameThread::Enqueue([to_send]() {
+        GW::Chat::WriteChat(GWTOOLBOX_CHAN, to_send);
+        delete[] to_send;
         });
-    
 
-    const char* c = [](GW::Chat::Channel chan) -> const char* {
-        switch (chan) {
-        case CHAN_INFO: return "Info";
-        case CHAN_WARNING: return "Warning";
-        case CHAN_ERROR: return "Error";
-        default: return "";
+    const wchar_t* c = [](LogType log_type) -> const wchar_t* {
+        switch (log_type) {
+        case LogType::LogType_Info: return L"Info";
+        case LogType::LogType_Warning: return L"Warning";
+        case LogType::LogType_Error: return L"Error";
+        default: return L"";
         }
-    }(chan);
-    Log::Log("[%s] %s\n", c, buf1);
+    }(log_type);
+    Log::LogW(L"[%s] %s\n", c, message);
+}
+static void _vchatlogW(LogType log_type, const wchar_t* format, va_list argv) {
+    wchar_t buf1[256];
+    vswprintf(buf1, 256, format, argv);
+    _chatlog(log_type, buf1);
+}
+
+static void _vchatlog(LogType log_type, const char* format, va_list argv) {
+    char buf1[256];
+    vsnprintf(buf1, 256, format, argv);
+    std::wstring sbuf2 = GuiUtils::StringToWString(buf1);
+    _chatlog(log_type, sbuf2.c_str());
 }
 
 void Log::Info(const char* format, ...) {
     va_list vl;
     va_start(vl, format);
-    _vchatlog(CHAN_INFO, format, vl);
+    _vchatlog(LogType::LogType_Info, format, vl);
     va_end(vl);
 }
-
+void Log::InfoW(const wchar_t* format, ...) {
+    va_list vl;
+    va_start(vl, format);
+    _vchatlogW(LogType::LogType_Info, format, vl);
+    va_end(vl);
+}
 void Log::Error(const char* format, ...) {
     va_list vl;
     va_start(vl, format);
-    _vchatlog(CHAN_ERROR, format, vl);
+    _vchatlog(LogType::LogType_Error, format, vl);
+    va_end(vl);
+}
+void Log::ErrorW(const wchar_t* format, ...) {
+    va_list vl;
+    va_start(vl, format);
+    _vchatlogW(LogType::LogType_Error, format, vl);
     va_end(vl);
 }
 
 void Log::Warning(const char* format, ...) {
     va_list vl;
     va_start(vl, format);
-    _vchatlog(CHAN_WARNING, format, vl);
+    _vchatlog(LogType::LogType_Warning, format, vl);
+    va_end(vl);
+}
+void Log::WarningW(const wchar_t* format, ...) {
+    va_list vl;
+    va_start(vl, format);
+    _vchatlogW(LogType::LogType_Warning, format, vl);
     va_end(vl);
 }
 

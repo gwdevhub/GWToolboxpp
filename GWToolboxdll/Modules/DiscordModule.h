@@ -43,6 +43,7 @@ public:
     }
 
     const char* Name() const override { return "Discord"; }
+    const char* Icon() const override { return ICON_FA_HEADSET; }
 
     const char* SettingsName() const override { return "Third Party Integration"; }
 

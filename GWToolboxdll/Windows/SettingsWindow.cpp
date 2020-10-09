@@ -16,11 +16,6 @@
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
 
-void SettingsWindow::Initialize() {
-    ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"settings.png"), IDB_Icon_Settings);
-}
-
 void SettingsWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
@@ -42,8 +37,8 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
     }
 
     if (!visible) return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+    ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         drawn_settings.clear();
         ImColor sCol(102, 187, 238, 255);
@@ -154,4 +149,39 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PopTextWrapPos();
     }
     ImGui::End();
+}
+
+bool SettingsWindow::DrawSettingsSection(const char* section)
+{
+    const auto& callbacks = ToolboxModule::GetSettingsCallbacks();
+    const auto& icons = ToolboxModule::GetSettingsIcons();
+
+    const auto& settings_section = callbacks.find(section);
+    if (settings_section == callbacks.end()) return false;
+    if (drawn_settings.find(section) != drawn_settings.end()) return true; // Already drawn
+    drawn_settings[section] = true;
+    
+    static char buf[128];
+    sprintf(buf, "      %s", section);
+    auto pos = ImGui::GetCursorScreenPos();
+    const bool& is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
+
+    const char* icon = nullptr;
+    auto it = icons.find(section);
+    if (it != icons.end()) icon = it->second;
+    if (icon) {
+        const auto& style = ImGui::GetStyle();
+        const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
+        ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2), ImColor(style.Colors[ImGuiCol_Text]), icon);
+    }
+
+    if (is_showing) ImGui::PushID(section);
+    size_t i = 0;
+    for (auto& entry : settings_section->second) {
+        if (i && is_showing) ImGui::Separator();
+        entry.second(&settings_section->first, is_showing);
+        i++;
+    }
+    if (is_showing) ImGui::PopID();
+    return true;
 }

@@ -8,7 +8,7 @@
 
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Context/ItemContext.h>
@@ -148,14 +148,10 @@ namespace {
 
     const std::wstring GetPlayerName(uint32_t player_number = 0) {
         if (!player_number) {
-            GW::GameContext* g = GW::GameContext::instance();
-            if (!g || !g->character) return L"";
-            return g->character->player_name;
+            player_number = GW::PlayerMgr::GetPlayerNumber();
         }
-        GW::PlayerArray& players = GW::PlayerMgr::GetPlayerArray();
-        if (!players.valid() || player_number >= players.size())
-            return L"";
-        return GuiUtils::SanitizePlayerName(players[player_number].name);
+        const GW::Player* player = GW::PlayerMgr::GetPlayerByID(player_number);
+        return player && player->name ? GuiUtils::SanitizePlayerName(player->name) : L"";
     }
 
     void SetWindowTitle(bool enabled) {
@@ -405,6 +401,27 @@ namespace {
         NAME=1,
         DESC=2
     };
+
+    struct PendingCast {
+        uint32_t slot = 0;
+        uint32_t target_id = 0;
+        uint32_t call_target = 0;
+        bool cast_next_frame = false;
+        void reset(uint32_t _slot = 0 , uint32_t _target_id = 0, uint32_t _call_target = 0) {
+            slot = _slot;
+            target_id = _target_id;
+            call_target = _call_target;
+            cast_next_frame = false;
+        }
+        const GW::AgentLiving* GetTarget() {
+            const GW::AgentLiving* target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(target_id));
+            return target->GetIsLivingType() ? target : nullptr;
+        }
+        const uint32_t GetSkill() {
+            const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+            return skillbar && skillbar->IsValid() ? skillbar->skills[slot].skill_id : 0;
+        }
+    } pending_cast;
 
 }
 
@@ -669,7 +686,7 @@ static std::wstring ParseItemDescription(GW::Item* item) {
 
 void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
     if (!item) return;
-    GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::Agents::GetPlayerAsAgentLiving()->login_number);
+    GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
     if (!p) return;
     std::wstring out;
     if ((parts & PING_PARTS::NAME) && item->complete_name_enc) {
@@ -833,7 +850,7 @@ void GameSettings::Initialize() {
     GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, &OnStartWhisper);
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,&FriendStatusCallback);
     GW::CtoS::RegisterPacketCallback(&WhisperCallback_Entry, GAME_CMSG_PING_WEAPON_SET, &OnPingWeaponSet);
-    GW::CtoS::RegisterPacketCallback(&OnCast_Entry, GAME_CMSG_USE_SKILL, &OnCast);
+    GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, &OnCast);
     GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, &ItemClickCallback);
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
@@ -940,6 +957,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
     fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
+    disable_camera_smoothing = ini->GetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
     tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
     show_timestamps = ini->GetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
     show_timestamp_24h = ini->GetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
@@ -984,7 +1002,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     notify_when_friends_leave_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_leave_outpost), notify_when_friends_leave_outpost);
 
     notify_when_party_member_leaves = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_leaves);
-    notify_when_party_member_joins = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_joins);
+    notify_when_party_member_joins = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_joins), notify_when_party_member_joins);
     notify_when_players_join_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_join_outpost), notify_when_players_join_outpost);
     notify_when_players_leave_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_leave_outpost), notify_when_players_leave_outpost);
 
@@ -1018,21 +1036,21 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 void GameSettings::RegisterSettingsContent() {
     ToolboxModule::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent("Inventory Settings",
+    ToolboxModule::RegisterSettingsContent("Inventory Settings", ICON_FA_BOXES,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
             DrawInventorySettings();
         }, 0.9f);
 
-    ToolboxModule::RegisterSettingsContent("Chat Settings",
+    ToolboxModule::RegisterSettingsContent("Chat Settings", ICON_FA_COMMENTS,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
             DrawChatSettings();
         }, 0.9f);
 
-    ToolboxModule::RegisterSettingsContent("Party Settings",
+    ToolboxModule::RegisterSettingsContent("Party Settings", ICON_FA_USERS,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
@@ -1054,6 +1072,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
     ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
 
+    ini->SetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
     ini->SetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
     ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
     ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_seconds), show_timestamp_seconds);
@@ -1072,6 +1091,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
+    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_cinematic), flash_window_on_cinematic);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
@@ -1139,7 +1159,7 @@ void GameSettings::DrawPartySettings() {
 }
 
 void GameSettings::DrawChatSettings() {
-    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
+    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
     if (ImGui::TreeNode("Chat Colors")) {
         ImGui::Text("Channel");
         ImGui::SameLine(chat_colors_grid_x[1]);
@@ -1280,6 +1300,7 @@ void GameSettings::DrawSettingInternal() {
     if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
         SetWindowTitle(set_window_title_as_charname);
     }
+    ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
     ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
 }
@@ -1358,7 +1379,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 void GameSettings::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     // Try to print any pending messages.
-    for (std::vector<PendingChatMessage*>::iterator it = pending_messages.begin(); it != pending_messages.end(); ++it) {
+    for (auto it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage *m = *it;
         if (m->IsSend() && PendingChatMessage::Cooldown()) 
             continue;
@@ -1377,28 +1398,46 @@ void GameSettings::Update(float delta) {
     //UpdateFOV();
     FactionEarnedCheckAndWarn();
 
-    static bool cast_next_frame = false;
-    if (improve_move_to_cast && GW::Map::GetCurrentMapInfo() != nullptr) {
-        const auto *me = GW::Agents::GetPlayerAsAgentLiving();
-        const auto *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-        if (me != nullptr && skillbar != nullptr && cast_target != nullptr && cast_target->GetAsAgentLiving() != nullptr) {
-            const auto casting = skillbar->casting;
-            if (cast_next_frame && cast_target) {
-                GW::SkillbarMgr::UseSkillByID(cast_skill, cast_target->agent_id);
-                cast_target = nullptr;
-                cast_next_frame = false;
-            } else if (casting && me->GetIsMoving() && !me->skill && !me->GetIsCasting()) { // casting/skill don't update fast enough, so delay the rupt
-                const auto *target = cast_target->GetAsAgentLiving();
-                const auto range = GetSkillRange(cast_skill);
-                if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
-                    GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // cancel action packet
-                    cast_next_frame = true;
-                }
-            } else if (!casting) { // abort the action if not auto walking anymore
-                cast_target = nullptr;
-                cast_next_frame = false;
+    if (disable_camera_smoothing) {
+        GW::Camera* cam = GW::CameraMgr::GetCamera();
+        cam->position = cam->camera_pos_to_go;
+        cam->look_at_target = cam->look_at_to_go;
+        cam->yaw = cam->yaw_to_go;
+        cam->pitch = cam->pitch_to_go;
+    }
+
+    if (improve_move_to_cast && pending_cast.target_id) {
+        const GW::AgentLiving *me = GW::Agents::GetCharacter();
+        const GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+        if (!me || !skillbar) // I don't exist e.g. map change
+            return pending_cast.reset();
+
+        const GW::AgentLiving* target = pending_cast.GetTarget();
+        if (!target)  // Target no longer valid
+            return pending_cast.reset();
+
+        const uint32_t& casting = skillbar->casting;
+        if (pending_cast.cast_next_frame) { // Do cast now
+            if(pending_cast.GetTarget())
+                GW::SkillbarMgr::UseSkill(pending_cast.slot, pending_cast.target_id, pending_cast.call_target);
+            pending_cast.reset();
+            return;
+        }
+
+        if (casting && me->GetIsMoving() && !me->skill && !me->GetIsCasting()) { // casting/skill don't update fast enough, so delay the rupt
+            const uint32_t cast_skill = pending_cast.GetSkill();
+            if (!cast_skill) // Skill ID no longer valid
+                return pending_cast.reset();
+
+            const float range = GetSkillRange(cast_skill);
+            if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
+                GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // cancel action packet
+                pending_cast.cast_next_frame = true;
+                return;
             }
         }
+        if (!casting) // abort the action if not auto walking anymore
+            return pending_cast.reset();
     }
 
 #ifdef APRIL_FOOLS
@@ -1913,17 +1952,21 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
     }
 }
 
-void GameSettings::OnCast(GW::HookStatus *, void *packet)
+void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target)
 {
-    const auto *info = static_cast<CastInfo *>(packet);
-    const auto *me = GW::Agents::GetPlayerAsAgentLiving();
-    const auto *target = GW::Agents::GetAgentByID(info->target_id);
-    if (me != nullptr && target != nullptr && me->max_energy > 0 && me->player_number != 0 && target->agent_id != me->agent_id) {
-        if (GW::GetDistance(me->pos, target->pos) > GetSkillRange(info->skill_id)) { // don't interrupt yourself before you started casting
-            Instance().cast_target = GW::Agents::GetAgentByID(info->target_id);
-            Instance().cast_skill = info->skill_id;
-        }
-    }
+    if (agent_id != GW::Agents::GetPlayerId())
+        return;
+    if (!target_id) 
+        return;
+    const GW::Skillbar* skill_bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::Agent* target = GW::Agents::GetAgentByID(target_id);
+    if (!skill_bar || !me || !target)
+        return;
+    if (me->max_energy <= 0 || me->player_number <= 0 || target->agent_id == me->agent_id)
+        return;
+    if (GW::GetDistance(me->pos, target->pos) > GetSkillRange(skill_bar->skills[slot].skill_id))
+        pending_cast.reset(slot, target_id, call_target);
 }
 
 // Set window title to player name on map load
@@ -2027,7 +2070,7 @@ float GameSettings::GetSkillRange(uint32_t skill_id)
 void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
     ImGui::PushID(static_cast<int>(chan));
     ImGui::Text(name);
-    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
+    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
     GW::Chat::Color color, sender_col, message_col;
     GW::Chat::GetChannelColors(chan, &sender_col, &message_col);
 

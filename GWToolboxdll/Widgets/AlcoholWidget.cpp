@@ -52,14 +52,15 @@ uint32_t AlcoholWidget::GetAlcoholLevel() {
 }
 void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess *packet) {
     AlcoholWidget &instance = Instance();
+    if (packet->tint == 8 && packet->level == 5)
+        return; // Pahnai salad
     uint32_t pts_gained = instance.GetAlcoholTitlePointsGained();
-    //Log::Info("Drunk effect %d / %d, %d pts gained", packet->tint, packet->level, pts_gained);
+
     if (packet->tint == 6) {
         // Tint 6, level 5 - the trouble zone for lunars!
-        if (packet->level == 5 && (instance.prev_packet_tint_6_level < packet->level - 1 || (instance.prev_packet_tint_6_level == 5 && pts_gained < 1))) {
+        if (instance.prev_packet_tint_6_level < packet->level - 1 || (instance.prev_packet_tint_6_level == 5 && pts_gained < 1)) {
             // If we've jumped a level, or the last packet was also level 5 and no points were gained, then its not alcohol.
             // NOTE: All alcohol progresses from 1 to 5, but lunars just dive in at level 5.
-            //Log::Info("Lunars detected");
             return;
         }
         instance.prev_packet_tint_6_level = packet->level;
@@ -87,31 +88,33 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiSetCond_FirstUseEver);
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-        if (alcohol_level || !only_show_when_drunk) {
-            static char timer[32];
-            ImVec2 cur;
-            long t = 0;
+    if (only_show_when_drunk && alcohol_level == 0) return;
 
-            if (alcohol_level) {
-                t = (long)((int)last_alcohol + ((int)alcohol_time)) - (long)time(NULL);
-            }
-            else if (only_show_when_drunk) {
-                return;
-            }
+    long t = 0;
+    if (alcohol_level != 0) {
+        t = (long)((int)last_alcohol + ((int)alcohol_time)) - (long)time(NULL);
+    }
+
+    if (only_show_when_drunk && t < 0) return;
+
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+    ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
+        ImVec2 cur;
+
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header1));
+        cur = ImGui::GetCursorPos();
+        ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
+        ImGui::TextColored(ImColor(0, 0, 0), "Alcohol");
+        ImGui::SetCursorPos(cur);
+        ImGui::Text("Alcohol");
+        ImGui::PopFont();
+
+        if (t > 0) {
+            static char timer[32];
             snprintf(timer, 32, "%1ld:%02ld", (t / 60) % 60, t % 60);
 
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
-            cur = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-            ImGui::TextColored(ImColor(0, 0, 0), "Alcohol");
-            ImGui::SetCursorPos(cur);
-            ImGui::Text("Alcohol");
-            ImGui::PopFont();
-
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(ImColor(0, 0, 0), timer);

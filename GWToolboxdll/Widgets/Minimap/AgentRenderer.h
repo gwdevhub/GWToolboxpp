@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CustomRenderer.h"
+
 #include <GWCA/GameEntities/Agent.h>
 
 #include <Color.h>
