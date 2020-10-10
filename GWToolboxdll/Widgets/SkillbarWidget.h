@@ -52,7 +52,14 @@ private:
     std::array<Skill, 8> m_skills{};
 
     // Overall settings
-    bool vertical = false;
+    enum Layout
+    {
+        Row,
+        Rows,
+        Column,
+        Columns
+    };
+    Layout layout = Layout::Row;
     int m_skill_width = 50;
     int m_skill_height = 50;
 
@@ -75,7 +82,9 @@ private:
 
     // Effect monitor settings
     bool display_effect_monitor = false;
+    int effect_monitor_size = 0;
     int effect_monitor_offset = -100;
+    bool effects_symmetric_offset = true;
     bool display_multiple_effects = false;
     bool effect_text_color = false;
     bool effect_progress_bar_color = false;
