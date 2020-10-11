@@ -255,7 +255,7 @@ HealthWidget::Threshold::Threshold(const char* _name, Color _color, int _value)
 bool HealthWidget::Threshold::DrawHeader() {
     char mapbuf[64] = { '\0' };
     if (mapId) {
-        if (mapId < sizeof(GW::Constants::NAME_FROM_ID) - 1)
+        if (mapId < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID))
             snprintf(mapbuf, 64, "[%s]", GW::Constants::NAME_FROM_ID[mapId]);
         else
             snprintf(mapbuf, 64, "[Map %d]", mapId);
