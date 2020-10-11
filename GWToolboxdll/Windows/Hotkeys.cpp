@@ -175,7 +175,7 @@ void TBHotkey::Draw(Op *op)
     if (prof_id)
         snprintf(profbuf, 64, " [%s]", professions[prof_id]);
     if (map_id) {
-        if (map_id <= 729)
+        if (map_id < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID))
             snprintf(mapbuf, 64, " [%s]", GW::Constants::NAME_FROM_ID[map_id]);
         else
             snprintf(mapbuf, 64, " [Map %d]", map_id);
