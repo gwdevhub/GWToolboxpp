@@ -7,6 +7,15 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.1
+* [Fix] Fixed GWToolbox not working for Windows 7/8 users
+* [Fix] Fixed wrong character name in window title
+* [Fix] Re-fixed click to move on minimap when autorunning after recent GW update
+* [Fix] Fixed wrong icon for faction leaderboard in toolbox main window
+* [Fix] Fixed "Hello (null)!" message when starting toolbox without being in a map
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.1_Release/GWToolboxdll.dll)
+
 ## Version 4.0
 * [New] Added option to improve move-to-cast to better avoid getting aggro when auto-moving to cast range for a spell
 * [New] Updated icons for all widgets and windows
