@@ -850,7 +850,7 @@ void FriendListWindow::DrawChatSettings() {
     ImGui::ShowHelp("Only if your friend's alias is different to their character name");
 }
 void FriendListWindow::DrawHelp() {
-    if (!ImGui::TreeNode("Friend List Commands"))
+    if (!ImGui::TreeNodeEx("Friend List Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
         return;
     ImGui::Bullet(); ImGui::Text("'/addfriend <character_name>' Add a character to your friend list.");
     ImGui::Bullet(); ImGui::Text("'/removefriend <character_name|alias>' Remove character to your friend list.");

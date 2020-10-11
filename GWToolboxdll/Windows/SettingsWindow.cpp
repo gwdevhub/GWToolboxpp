@@ -85,7 +85,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 
         ImGui::Text("General:");
         if (ImGui::CollapsingHeader("Help")) {
-            if (ImGui::TreeNode("General Interface")) {
+            if (ImGui::TreeNodeEx("General Interface", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ImGui::Bullet(); ImGui::Text("Double-click on the title bar to collapse a window.");
                 ImGui::Bullet(); ImGui::Text("Click and drag on the lower right corner to resize a window.");
                 ImGui::Bullet(); ImGui::Text("Click and drag on any empty space to move a window.");
@@ -106,7 +106,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
                     "- You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract.\n");
                 ImGui::TreePop();
             }
-            if (ImGui::TreeNode("Opening and closing windows")) {
+            if (ImGui::TreeNodeEx("Opening and closing windows", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ImGui::Text("There are several ways to open and close toolbox windows and widgets:");
                 ImGui::Bullet(); ImGui::Text("Buttons in the main window.");
                 ImGui::Bullet(); ImGui::Text("Checkboxes in the Info window.");

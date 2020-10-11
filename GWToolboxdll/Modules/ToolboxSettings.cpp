@@ -200,7 +200,7 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::PopID();
     
     ImGui::Separator();
-    if (ImGui::TreeNode("Show the following in the main window:")) {
+    if (ImGui::TreeNodeEx("Show the following in the main window:", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
 
         std::vector<ToolboxUIElement*> ui = GWToolbox::Instance().GetUIElements();
         ImGui::Columns(static_cast<int>(cols), "menubuttons_cols", false);
@@ -215,7 +215,7 @@ void ToolboxSettings::DrawSettingInternal() {
         std::sort(valid_elements.begin(), valid_elements.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
             return std::string(lhs->Name()).compare(rhs->Name()) < 0;
         });
-        items_per_col = (size_t)ceil(valid_elements.size() / cols);
+        items_per_col = (size_t)ceil(valid_elements.size() / static_cast<float>(cols));
         for (size_t i = 0; i < valid_elements.size(); i++) {
             auto window = valid_elements[i];
             if (ImGui::Checkbox(window->Name(), &window->show_menubutton))

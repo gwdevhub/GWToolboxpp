@@ -213,7 +213,7 @@ bool ChatCommands::GetNPCInfoByName(const std::wstring name, PendingTransmo &tra
 }
 
 void ChatCommands::DrawHelp() {
-    if (!ImGui::TreeNode("Chat Commands"))
+    if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
         return;
     ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
     ImGui::TextDisabled("Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"

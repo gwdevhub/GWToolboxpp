@@ -567,7 +567,7 @@ void PconsWindow::DrawSettingInternal() {
         "It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
         "Decrease the value if you have good ping and you die a lot.");
     ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%d milliseconds");
-    if (ImGui::TreeNode("Thresholds")) {
+    if (ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");
         for (Pcon* pcon : pcons) {
             ImGui::SliderInt(pcon->chat, &pcon->threshold, 0, 250);
@@ -582,7 +582,7 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::ShowHelp("Size of each Pcon icon in the interface");
     Colors::DrawSettingHueWheel("Enabled-Background", &Pcon::enabled_bg_color);
     if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
-    if (ImGui::TreeNode("Visibility")) {
+    if (ImGui::TreeNodeEx("Visibility", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Checkbox("Enable/Disable button", &show_enable_button);
         ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
         ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");

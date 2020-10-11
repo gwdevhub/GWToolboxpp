@@ -1170,7 +1170,7 @@ void GameSettings::DrawPartySettings() {
 
 void GameSettings::DrawChatSettings() {
     ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
-    if (ImGui::TreeNode("Chat Colors")) {
+    if (ImGui::TreeNodeEx("Chat Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Text("Channel");
         ImGui::SameLine(chat_colors_grid_x[1]);
         ImGui::Text("Sender");

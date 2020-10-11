@@ -81,7 +81,7 @@ void HealthWidget::DrawSettingInternal() {
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
 
-    bool thresholdsNode = ImGui::TreeNode("Thresholds");
+    bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("The first matching threshold will be used.");
     if (thresholdsNode) {
         bool changed = false;
@@ -273,7 +273,7 @@ bool HealthWidget::Threshold::DrawHeader() {
 bool HealthWidget::Threshold::DrawSettings(Operation& op) {
     bool changed = false;
 
-    if (ImGui::TreeNode("##params")) {
+    if (ImGui::TreeNodeEx("##params", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap)) {
         changed |= DrawHeader();
 
         ImGui::PushID(static_cast<int>(ui_id));

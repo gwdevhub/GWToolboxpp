@@ -166,7 +166,7 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
     ImGui::InputText("Name", name->str(), 64, ImGuiInputTextFlags_ReadOnly);
     //ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
     ImGui::PopItemWidth();
-    if (ImGui::TreeNode("Advanced##item")) {
+    if (ImGui::TreeNodeEx("Advanced##item", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
         if (item) {
             ImGui::LabelText("Addr", "%p", item);
@@ -285,7 +285,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::InputText("Player ID##player", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
             ImGui::ShowHelp("Player ID is unique for each human player in the instance.");
             ImGui::PopItemWidth();
-            if (ImGui::TreeNode("Effects##player")) {
+            if (ImGui::TreeNodeEx("Effects##player", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
                 if (effects.valid()) {
                     for (DWORD i = 0; i < effects.size(); ++i) {
@@ -297,7 +297,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 ImGui::TreePop();
             }
-            if (ImGui::TreeNode("Buffs##player")) {
+            if (ImGui::TreeNodeEx("Buffs##player", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 GW::BuffArray effects = GW::Effects::GetPlayerBuffArray();
                 if (effects.valid()) {
                     for (DWORD i = 0; i < effects.size(); ++i) {
@@ -376,7 +376,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     guild = guilds[target_living->tags->guild_id];
             }
             if (target) {
-                if (ImGui::TreeNode("Advanced##target")) {
+                if (ImGui::TreeNodeEx("Advanced##target", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                     GW::Agent *me = GW::Agents::GetPlayer();
                     
                     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
@@ -430,7 +430,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     ImGui::TreePop();
                 }
                 if (player) {
-                    if (ImGui::TreeNode("Player Info##target")) {
+                    if (ImGui::TreeNodeEx("Player Info##target", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                         ImGui::LabelText("Addr", "%p", player);
                         ImGui::LabelText("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
@@ -439,7 +439,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     }
                 }
                 if (guild) {
-                    if (ImGui::TreeNode("Guild Info##target")) {
+                    if (ImGui::TreeNodeEx("Guild Info##target", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                         ImGui::LabelText("Addr", "%p", guild);
                         ImGui::LabelText("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());

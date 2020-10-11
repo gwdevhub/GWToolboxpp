@@ -1210,7 +1210,7 @@ void DailyQuests::Draw(IDirect3DDevice9*) {
     return ImGui::End();
 }
 void DailyQuests::DrawHelp() {
-    if (!ImGui::TreeNode("Daily Quest Chat Commands"))
+    if (!ImGui::TreeNodeEx("Daily Quest Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
         return;
     ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
     ImGui::Bullet(); ImGui::Text("'/zb' prints current zaishen bounty.");

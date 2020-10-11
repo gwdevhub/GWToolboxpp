@@ -33,7 +33,7 @@ void BuildsWindow::Initialize() {
     GW::Chat::CreateCommand(L"loadbuild", CmdLoad);
 }
 void BuildsWindow::DrawHelp() {
-    if (!ImGui::TreeNode("Build Chat Commands"))
+    if (!ImGui::TreeNodeEx("Build Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
         return;
     ImGui::Bullet(); ImGui::Text("'/load [build template|build name] [Hero index]' loads a build via Guild Wars builds. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
     ImGui::Bullet(); ImGui::Text("'/loadbuild [teambuild] <build name|build code>' loads a build via GWToolbox Builds window. Does a partial search on team build name/build name/build code. Matches current player's profession.");

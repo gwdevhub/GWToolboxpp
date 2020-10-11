@@ -870,9 +870,7 @@ bool AgentRenderer::CustomAgent::DrawHeader() {
     ImGui::SameLine(0, 18);
     bool changed = ImGui::Checkbox("##visible", &active);
     ImGui::SameLine();
-    int color_i4[4];
-    Colors::ConvertU32ToInt4(color, color_i4);
-    ImGui::ColorButton("", ImColor(color_i4[1], color_i4[2], color_i4[3]));
+    changed |= ImGui::ColorButtonPicker("", &color);
     ImGui::SameLine();
     ImGui::Text(name);
     return changed;
@@ -880,7 +878,7 @@ bool AgentRenderer::CustomAgent::DrawHeader() {
 bool AgentRenderer::CustomAgent::DrawSettings(AgentRenderer::CustomAgent::Operation& op) {
     bool changed = false;
 
-    if (ImGui::TreeNode("##params")) {
+    if (ImGui::TreeNodeEx("##params", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap)) {
         ImGui::PushID(static_cast<int>(ui_id));
 
         changed |= DrawHeader();
