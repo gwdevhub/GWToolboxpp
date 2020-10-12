@@ -110,18 +110,16 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Text("Alcohol");
         ImGui::PopFont();
 
-        if (t > 0) {
-            static char timer[32];
-            snprintf(timer, 32, "%1ld:%02ld", (t / 60) % 60, t % 60);
+        static char timer[32];
+        snprintf(timer, 32, "%1ld:%02ld", (t / 60) % 60, t % 60);
 
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
-            cur = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-            ImGui::TextColored(ImColor(0, 0, 0), timer);
-            ImGui::SetCursorPos(cur);
-            ImGui::Text(timer);
-            ImGui::PopFont();
-        }
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
+        cur = ImGui::GetCursorPos();
+        ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
+        ImGui::TextColored(ImColor(0, 0, 0), timer);
+        ImGui::SetCursorPos(cur);
+        ImGui::Text(timer);
+        ImGui::PopFont();
     }
     ImGui::End();
     ImGui::PopStyleColor();

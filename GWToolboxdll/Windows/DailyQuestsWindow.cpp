@@ -1070,7 +1070,7 @@ void DailyQuests::Draw(IDirect3DDevice9*) {
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(UIName(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
     float offset = 0.0f;
     const float short_text_width = 120.0f * ImGui::GetIO().FontGlobalScale;
