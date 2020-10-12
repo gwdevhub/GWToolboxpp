@@ -453,7 +453,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 void TradeWindow::RegisterSettingsContent()
 {
-    ToolboxModule::RegisterSettingsContent();
+    ToolboxWindow::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
         "Chat Settings",
         nullptr,
