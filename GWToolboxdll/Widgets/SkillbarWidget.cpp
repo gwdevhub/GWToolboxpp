@@ -74,14 +74,16 @@ void SkillbarWidget::Update(float)
 
     for (size_t it = 0u; it < 8; it++) {
         skill_cooldown_to_string(m_skills[it].cooldown, skillbar->skills[it].GetRecharge());
-        const uint32_t &skill_id = skillbar->skills[it].skill_id;
-        const Effect& effect = get_longest_effect(skill_id);
-        m_skills[it].color = UptimeToColor(effect.remaining);
 
         if (display_effect_monitor) {
-
-            m_skills[it].effects.clear();
+            const uint32_t& skill_id = skillbar->skills[it].skill_id;
             const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+            if (skill_data.duration0 == 0x20000)
+                continue; // Maintained enchantment
+
+            const Effect& effect = get_longest_effect(skill_id);
+            m_skills[it].color = UptimeToColor(effect.remaining);
+            m_skills[it].effects.clear();
             if (display_multiple_effects && has_sf 
                 && skill_data.profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) 
                 && skill_data.type == static_cast<uint32_t>(GW::Constants::SkillType::Enchantment)) {
@@ -174,7 +176,6 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
     ImGui::PushFont(GuiUtils::GetFont(font_effects));
 
     const Skill& skill = m_skills[skill_idx];
-
     ImVec2 pos1 = pos; // base position
     if (vertical) {
         pos1.x += effect_monitor_offset;
@@ -192,7 +193,7 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
 
     for (size_t i = 0; i < skill.effects.size(); ++i) {
         const Effect& effect = skill.effects[i];
-
+        if(!effect.progress)
         if (i != 0) {
             if (vertical) {
                 pos1.x += size.x;
