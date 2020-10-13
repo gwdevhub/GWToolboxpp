@@ -903,7 +903,7 @@ bool Minimap::FlagHeros(LPARAM lParam)
         GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
         return true;
     default:
-        if (flag_state >= player_heroes.size())
+        if (flag_state > player_heroes.size())
             return false;
         SetFlaggingState(FlaggingState::FlagState_None);
         GW::PartyMgr::FlagHeroAgent(player_heroes[flag_state - 1], GW::GamePos(worldpos));
