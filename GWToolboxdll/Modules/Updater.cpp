@@ -138,6 +138,10 @@ void Updater::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
     if (step == Asking && !latest_release.version.empty()) {
         
+        if (latest_release.version <= GWTOOLBOXDLL_VERSION) {
+            step = Done;
+            return;
+        }
         if (!notified) {
             notified = true;
             Log::Warning("GWToolbox++ version %s is available! You have %s%s.",

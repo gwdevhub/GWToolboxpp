@@ -890,11 +890,11 @@ bool Minimap::FlagHeros(LPARAM lParam)
     const int y = GET_Y_LPARAM(lParam);
     if (!IsInside(x, y))
         return false;
-    if (!player_heroes.size() && GetPlayerHeroes(GetPlayerParty(), player_heroes) == 0)
+    if (player_heroes.empty() && GetPlayerHeroes(GetPlayerParty(), player_heroes) == 0)
         return false;
     const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
-    FlaggingState flag_state = GetFlaggingState();
+    const FlaggingState flag_state = GetFlaggingState();
     switch (flag_state) {
     case FlaggingState::FlagState_None:
         return false;
