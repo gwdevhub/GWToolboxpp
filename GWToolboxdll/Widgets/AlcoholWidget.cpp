@@ -42,9 +42,13 @@ uint32_t AlcoholWidget::GetAlcoholTitlePointsGained() {
 }
 void AlcoholWidget::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
-    if (map_id != GW::Map::GetMapID() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        map_id = GW::Map::GetMapID();
-        prev_alcohol_title_points = GetAlcoholTitlePoints(); // Fetch base alcohol points at start of map.
+    if (map_id != GW::Map::GetMapID()) {
+        last_alcohol = 0;
+        alcohol_time = alcohol_level = prev_packet_tint_6_level = 0;
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+            map_id = GW::Map::GetMapID();
+            prev_alcohol_title_points = GetAlcoholTitlePoints(); // Fetch base alcohol points at start of map.
+        }
     }
 }
 uint32_t AlcoholWidget::GetAlcoholLevel() {
