@@ -79,6 +79,7 @@ void GuiUtils::LoadFonts() {
         ImFontConfig cfg = ImFontConfig();
         cfg.MergeMode = false;
         cfg.PixelSnapH = true;
+        cfg.OversampleH = cfg.OversampleV = 1;
         cfg.FontDataOwnedByAtlas = true;
         for (const auto& font : fonts) {
             io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size_text, &cfg, font.glyph_ranges);
