@@ -37,7 +37,11 @@ std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t s
         if (effect.skill_id == skillId && effect.effect_type != 7 /*hex*/) {
             Effect e;
             e.remaining = effect.GetTimeRemaining();
-            e.progress = (e.remaining / 1000.0f) / effect.duration;
+            if (effect.duration) {
+                e.progress = (e.remaining / 1000.0f) / effect.duration;
+            } else {
+                e.progress = 1.f;
+            }
             ret.emplace_back(e);
         }
     }
@@ -52,7 +56,11 @@ SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const uint32_t skillId
             const auto remaining = effect.GetTimeRemaining();
             if (ret.remaining < remaining) {
                 ret.remaining = remaining;
-                ret.progress = (ret.remaining / 1000.0f) / effect.duration;
+                if (effect.duration) {
+                    ret.progress = (ret.remaining / 1000.0f) / effect.duration;
+                } else {
+                    ret.progress = 1.f;
+                }
             }
         }
     }
@@ -78,8 +86,6 @@ void SkillbarWidget::Update(float)
         if (display_effect_monitor) {
             const uint32_t& skill_id = skillbar->skills[it].skill_id;
             const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-            if (skill_data.duration0 == 0x20000)
-                continue; // Maintained enchantment
 
             const Effect& effect = get_longest_effect(skill_id);
             m_skills[it].color = UptimeToColor(effect.remaining);
@@ -116,10 +122,16 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
     const ImVec2 skillsize(static_cast<float>(m_skill_width), static_cast<float>(m_skill_height));
     ImVec2 winsize = skillsize;
-    if (vertical) {
-        winsize.y *= 8;
-    } else {
+    if (layout == Layout::Row) {
         winsize.x *= 8;
+    } else if (layout == Layout::Rows) {
+        winsize.x *= 4;
+        winsize.y *= 2;
+    } else if (layout == Layout::Column) {
+        winsize.y *= 8;
+    } else if (layout == Layout::Columns) {
+        winsize.x *= 2;
+        winsize.y *= 4;
     }
 
     ImGui::SetNextWindowBgAlpha(0.0f);
@@ -132,11 +144,19 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
         // position of this skill
         ImVec2 pos1(winpos.x, winpos.y);
-        if (vertical) {
-            pos1.y += (i * skillsize.y);
-        } else {
+
+        if (layout == Layout::Row) {
             pos1.x += (i * skillsize.x);
+        } else if (layout == Layout::Rows) {
+            pos1.x += (i % 4 * skillsize.x);
+            pos1.y += ((float)std::floor(i / 4) * skillsize.y);
+        } else if (layout == Layout::Column) {
+            pos1.y += (i * skillsize.y);       
+        } else if (layout == Layout::Columns) {
+            pos1.x += (i % 2 * skillsize.x);
+            pos1.y += ((float)std::floor(i / 2) * skillsize.y);
         }
+
         ImVec2 pos2 = ImVec2(pos1.x + skillsize.x, pos1.y + skillsize.y);
 
         // draw overlay
@@ -145,13 +165,30 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         }
 
         // border
-        if (i != 7) {
-            if (vertical) {
-                ImGui::GetBackgroundDrawList()->AddLine(ImVec2(pos1.x, pos2.y), ImVec2(pos2.x, pos2.y), col_border);
-            } else {
+        if (layout == Layout::Row) {
+            if (i != 7) {
                 ImGui::GetBackgroundDrawList()->AddLine(ImVec2(pos2.x, pos1.y), ImVec2(pos2.x, pos2.y), col_border);
             }
+        } else if (layout == Layout::Rows) {
+            if (i % 4 != 3) {
+                ImGui::GetBackgroundDrawList()->AddLine(ImVec2(pos2.x, pos1.y), ImVec2(pos2.x, pos2.y), col_border);
+            }
+            if (std::floor(i / 4) == 0) {
+                ImGui::GetBackgroundDrawList()->AddLine(ImVec2(pos1.x, pos2.y), ImVec2(pos2.x, pos2.y), col_border);            
+            }
+        } else if (layout == Layout::Column) {
+            if (i != 7) {
+                ImGui::GetBackgroundDrawList()->AddLine(ImVec2(pos1.x, pos2.y), ImVec2(pos2.x, pos2.y), col_border);
+            }
+        } else if (layout == Layout::Columns) {
+            if (i % 2 == 0) {
+                ImGui::GetBackgroundDrawList()->AddLine(ImVec2(pos2.x, pos1.y), ImVec2(pos2.x, pos2.y), col_border);            
+            }
+            if (i < 6) {
+                ImGui::GetBackgroundDrawList()->AddLine(ImVec2(pos1.x, pos2.y), ImVec2(pos2.x, pos2.y), col_border);     
+            }
         }
+
         // label
         const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown.data());
         ImVec2 label_pos(pos1.x + skillsize.x / 2 - label_size.x / 2, 
@@ -176,31 +213,68 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
     ImGui::PushFont(GuiUtils::GetFont(font_effects));
 
     const Skill& skill = m_skills[skill_idx];
-    ImVec2 pos1 = pos; // base position
-    if (vertical) {
-        pos1.x += effect_monitor_offset;
-    } else {
-        pos1.y += effect_monitor_offset;
+
+    ImVec2 base = pos;
+
+    if (layout == Layout::Row) {
+        base.y += effect_monitor_offset;
+    } else if (layout == Layout::Rows) {
+        if (effects_symmetric && std::floor(skill_idx / 4) == 0) {
+            base.y += m_skill_height;
+            base.y -= effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size;
+            base.y += effect_monitor_offset;
+        } else {
+            base.y -= effect_monitor_offset;
+        }
+    } else if (layout == Layout::Column) {
+        base.x += effect_monitor_offset;
+    } else if (layout == Layout::Columns) {
+        if (effects_symmetric && skill_idx % 2 == 0) {
+            base.x += m_skill_width;
+            base.x -= effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size; // not really correct but works
+            base.x += effect_monitor_offset;
+        } else {
+            base.x -= effect_monitor_offset;
+        }
     }
+
     ImVec2 size;
-    if (vertical) {
-        size.x = ImGui::GetTextLineHeightWithSpacing(); // not really correct but works
+    if (layout == Layout::Column || layout == Layout::Columns) {
+        size.x = effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size; // not really correct but works
         size.y = static_cast<float>(m_skill_height);
     } else {
         size.x = static_cast<float>(m_skill_width);
-        size.y = ImGui::GetTextLineHeightWithSpacing();
+        size.y = effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size;
     }
 
     for (size_t i = 0; i < skill.effects.size(); ++i) {
         const Effect& effect = skill.effects[i];
-        if(!effect.progress)
-        if (i != 0) {
-            if (vertical) {
-                pos1.x += size.x;
-            } else {
-                pos1.y -= size.y;
+
+        ImVec2 pos1 = base;
+
+        bool first_half = (layout == Layout::Rows && std::floor(skill_idx / 4) == 0) || (layout == Layout::Columns && skill_idx % 2 == 0);
+        bool flip_order = effects_flip_order;
+
+        bool shift_offset = (effects_symmetric && first_half) || effects_flip_direction;
+
+        if (effects_symmetric && !first_half) {
+            flip_order = !flip_order;
+        }
+
+        size_t index = flip_order ? i : skill.effects.size() - i - 1;
+
+        if (layout == Layout::Row || layout == Layout::Rows) {
+            pos1.y += size.y * index;
+            if (shift_offset) {
+                pos1.y -= size.y * (skill.effects.size() - 1);
+            }
+        } else if (layout == Layout::Column || layout == Layout::Columns) {
+            pos1.x += size.x * index;
+            if (shift_offset) {
+                pos1.x -= size.x * (skill.effects.size() - 1);
             }
         }
+
         ImVec2 pos2(pos1.x + size.x, pos1.y + size.y); // base + size
 
         ImGui::GetBackgroundDrawList()->AddRectFilled(
@@ -208,7 +282,7 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
         
         if (effect.progress >= 0.0f && effect.progress <= 1.0f) {
             ImVec2 pos3, pos4;
-            if (vertical) {
+            if (layout == Layout::Column || layout == Layout::Columns) {
                 pos3 = ImVec2(pos1.x, pos2.y - size.y * effect.progress);
                 pos4 = pos2;
             } else {
@@ -233,7 +307,7 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
 void SkillbarWidget::LoadSettings(CSimpleIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    vertical = ini->GetBoolValue(Name(), VAR_NAME(vertical), false);
+    layout = (Layout)ini->GetLongValue(Name(), VAR_NAME(layout), layout);
     m_skill_height = ini->GetLongValue(Name(), "height", m_skill_height);
     m_skill_width = ini->GetLongValue(Name(), "width", m_skill_width);
 
@@ -260,8 +334,12 @@ void SkillbarWidget::LoadSettings(CSimpleIni *ini)
     color_border = Colors::Load(ini, Name(), VAR_NAME(color_border), color_border);
 
     display_effect_monitor = ini->GetBoolValue(Name(), VAR_NAME(display_effect_monitor), display_effect_monitor);
+    effect_monitor_size = ini->GetLongValue(Name(), VAR_NAME(effect_monitor_size), effect_monitor_size);
     effect_monitor_offset = ini->GetLongValue(Name(), VAR_NAME(effect_monitor_offset), effect_monitor_offset);
+    effects_symmetric = ini->GetBoolValue(Name(), VAR_NAME(effects_symmetric), effects_symmetric);
     display_multiple_effects = ini->GetBoolValue(Name(), VAR_NAME(display_multiple_effects), display_multiple_effects);
+    effects_flip_order = ini->GetBoolValue(Name(), VAR_NAME(effects_flip_order), effects_flip_order);
+    effects_flip_direction = ini->GetBoolValue(Name(), VAR_NAME(effects_flip_direction), effects_flip_direction);
     effect_text_color = ini->GetBoolValue(Name(), VAR_NAME(effect_text_color), effect_text_color);
     effect_progress_bar_color =
         ini->GetBoolValue(Name(), VAR_NAME(effect_progress_bar_color), effect_progress_bar_color);
@@ -276,7 +354,7 @@ void SkillbarWidget::LoadSettings(CSimpleIni *ini)
 void SkillbarWidget::SaveSettings(CSimpleIni *ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(vertical), vertical);
+    ini->SetLongValue(Name(), VAR_NAME(layout), layout);
     ini->SetLongValue(Name(), "height", static_cast<long>(m_skill_height));
     ini->SetLongValue(Name(), "width", static_cast<long>(m_skill_width));
 
@@ -295,8 +373,12 @@ void SkillbarWidget::SaveSettings(CSimpleIni *ini)
     Colors::Save(ini, Name(), VAR_NAME(color_border), color_border);
 
     ini->SetBoolValue(Name(), VAR_NAME(display_effect_monitor), display_effect_monitor);
+    ini->SetLongValue(Name(), VAR_NAME(effect_monitor_size), effect_monitor_size);
     ini->SetLongValue(Name(), VAR_NAME(effect_monitor_offset), effect_monitor_offset);
+    ini->SetBoolValue(Name(), VAR_NAME(effects_symmetric), effects_symmetric);
     ini->SetBoolValue(Name(), VAR_NAME(display_multiple_effects), display_multiple_effects);
+    ini->SetBoolValue(Name(), VAR_NAME(effects_flip_order), effects_flip_order);
+    ini->SetBoolValue(Name(), VAR_NAME(effects_flip_direction), effects_flip_direction);
     ini->SetBoolValue(Name(), VAR_NAME(effect_text_color), effect_text_color);
     ini->SetBoolValue(Name(), VAR_NAME(effect_progress_bar_color), effect_progress_bar_color);
     ini->SetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects));
@@ -309,8 +391,8 @@ void SkillbarWidget::SaveSettings(CSimpleIni *ini)
 void SkillbarWidget::DrawSettingInternal()
 {
     ToolboxWidget::DrawSettingInternal();
-    ImGui::SameLine();
-    ImGui::Checkbox("Vertical", &vertical);
+    static const char* items[] = {"Row", "2 Rows", "Column", "2 Columns"};
+    ImGui::Combo("Layout", (int*)&layout, items, 4);
     int size[2]{m_skill_width, m_skill_height};
     if (ImGui::DragInt2("Skill size", size, 1.f, 1, 100)) {
         m_skill_width = size[0];
@@ -344,10 +426,18 @@ void SkillbarWidget::DrawSettingInternal()
     
     ImGui::Spacing();
     ImGui::Text("Effect monitor");
+    ImGui::DragInt("Effect monitor size", &effect_monitor_size, 1, 0);
+    ImGui::ShowHelp("0 matches font size.");
     ImGui::Checkbox("Display effect monitor", &display_effect_monitor);
     ImGui::DragInt("Offset", &effect_monitor_offset, 1, -200, 200);
+    ImGui::Checkbox("Symmetic effects", &effects_symmetric);
+    ImGui::ShowHelp("Only applicable to multirow display");
     ImGui::Checkbox("Display multiple effects", &display_multiple_effects);
     ImGui::ShowHelp("Show multiple casted enchantment per skill, when applicable");
+    ImGui::Checkbox("Flip effects order", &effects_flip_order);
+    ImGui::ShowHelp("Only applies if multiple effects are displayed");
+    ImGui::Checkbox("Flip effects direction", &effects_flip_direction);
+    ImGui::ShowHelp("Only applies if multiple effects are displayed");
     ImGui::Checkbox("Use the progress color for the text", &effect_text_color);
     ImGui::Checkbox("Use the progress color for the progress bar", &effect_progress_bar_color);
     ImGui::Combo("Effects font size", reinterpret_cast<int*>(&font_effects), font_sizes, 6);
