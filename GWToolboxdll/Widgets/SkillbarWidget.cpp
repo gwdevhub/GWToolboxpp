@@ -256,22 +256,18 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
         }
 
         size_t index = flip_order ? i : skill.effects.size() - i - 1;
-        ImVec2 offset(0, 0);
 
         if (layout == Layout::Row || layout == Layout::Rows) {
-            offset.y += size.y * index;
+            pos1.y += size.y * index;
             if (shift_offset) {
-                offset.y -= size.y * (skill.effects.size() - 1);
+                pos1.y -= size.y * (skill.effects.size() - 1);
             }
         } else if (layout == Layout::Column || layout == Layout::Columns) {
-            offset.x += size.x * index;
+            pos1.x += size.x * index;
             if (shift_offset) {
-                offset.x -= size.x * (skill.effects.size() - 1);
+                pos1.x -= size.x * (skill.effects.size() - 1);
             }
         }
-
-        pos1.x += offset.x;
-        pos1.y += offset.y;
 
         ImVec2 pos2(pos1.x + size.x, pos1.y + size.y); // base + size
 
