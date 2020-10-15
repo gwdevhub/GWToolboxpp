@@ -9,6 +9,7 @@
 #include <Utf8.h>
 #include <fonts/fontawesome5.h>
 #include <Modules/Resources.h>
+#include <imgui_impl_dx9.h>
 
 namespace {
     ImFont* font_widget_large = nullptr;
@@ -124,6 +125,8 @@ void GuiUtils::LoadFonts() {
 
         if (!io.Fonts->IsBuilt())
             io.Fonts->Build();
+        // Also create device objects here to avoid blocking the main draw loop when ImGui_ImplDX9_NewFrame() is called.
+        ImGui_ImplDX9_CreateDeviceObjects();
 
         printf("Fonts loaded\n");
         fonts_loaded = true;
@@ -199,9 +202,8 @@ std::wstring GuiUtils::StringToWString(const std::string& str)
     return wstrTo;
 }
 std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
-    // @Cleanup:
-    // What exactly needs to be done to sanitize a player name?
-    // Add this information as a comment, because nobody want to read the regex.
+    // e.g. "Player Name (2)" => "Player Name", for pvp player names
+    // e.g. "Player Name [TAG]" = >"Player Name", for alliance message sender name
     if (s.empty()) return L"";
     static std::wregex remove(L" ?[\\(\\[]\\w+[\\)\\]]");
     s = std::regex_replace(s, remove, L""); 

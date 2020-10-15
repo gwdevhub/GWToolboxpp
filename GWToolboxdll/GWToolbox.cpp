@@ -484,6 +484,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
     // === destruction ===
     if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
+        if (!GuiUtils::FontsLoaded())
+            return;
         for (ToolboxModule* module : GWToolbox::Instance().modules) {
             if (!module->CanTerminate())
                 return;
