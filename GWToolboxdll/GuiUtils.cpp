@@ -79,8 +79,9 @@ void GuiUtils::LoadFonts() {
         ImFontConfig cfg = ImFontConfig();
         cfg.MergeMode = false;
         cfg.PixelSnapH = true;
-        cfg.OversampleH = cfg.OversampleV = 1;
         cfg.FontDataOwnedByAtlas = true;
+        cfg.OversampleH = 2; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
+        cfg.OversampleV = 1;
         for (const auto& font : fonts) {
             io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size_text, &cfg, font.glyph_ranges);
             cfg.MergeMode = true; // for all but the first
@@ -94,7 +95,7 @@ void GuiUtils::LoadFonts() {
 
         const auto& base = fonts.front(); // base font
 
-
+        cfg.OversampleH = 1; // OversampleH = 1 makes the font look a bit more blurry, but halves the size in memory
         cfg.MergeMode = false;
         io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_header1, &cfg, base.glyph_ranges);
         cfg.MergeMode = true;
