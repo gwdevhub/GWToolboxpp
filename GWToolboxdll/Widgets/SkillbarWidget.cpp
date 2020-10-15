@@ -37,7 +37,11 @@ std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t s
         if (effect.skill_id == skillId && effect.effect_type != 7 /*hex*/) {
             Effect e;
             e.remaining = effect.GetTimeRemaining();
-            e.progress = (e.remaining / 1000.0f) / effect.duration;
+            if (effect.duration) {
+                e.progress = (e.remaining / 1000.0f) / effect.duration;
+            } else {
+                e.progress = 1.f;
+            }
             ret.emplace_back(e);
         }
     }
@@ -52,7 +56,11 @@ SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const uint32_t skillId
             const auto remaining = effect.GetTimeRemaining();
             if (ret.remaining < remaining) {
                 ret.remaining = remaining;
-                ret.progress = (ret.remaining / 1000.0f) / effect.duration;
+                if (effect.duration) {
+                    ret.progress = (ret.remaining / 1000.0f) / effect.duration;
+                } else {
+                    ret.progress = 1.f;
+                }
             }
         }
     }
@@ -78,8 +86,6 @@ void SkillbarWidget::Update(float)
         if (display_effect_monitor) {
             const uint32_t& skill_id = skillbar->skills[it].skill_id;
             const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-            if (skill_data.duration0 == 0x20000)
-                continue; // Maintained enchantment
 
             const Effect& effect = get_longest_effect(skill_id);
             m_skills[it].color = UptimeToColor(effect.remaining);
