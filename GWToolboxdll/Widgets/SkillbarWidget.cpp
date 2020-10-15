@@ -385,7 +385,6 @@ void SkillbarWidget::SaveSettings(CSimpleIni *ini)
 void SkillbarWidget::DrawSettingInternal()
 {
     ToolboxWidget::DrawSettingInternal();
-    ImGui::SameLine();
     static const char* items[] = {"Row", "2 Rows", "Column", "2 Columns"};
     ImGui::Combo("Layout", (int*)&layout, items, 4);
     int size[2]{m_skill_width, m_skill_height};
