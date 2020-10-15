@@ -705,22 +705,28 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
         ImGui::TextColored(StatusColors[status].Value, status_c);
     }
+    std::vector<Friend*> friends_online;
     for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
         colIdx = 0;
         Friend* lfp = it->second;
         if (lfp->type != GW::FriendType::FriendType_Friend) continue;
         // Get actual object instead of pointer just in case it becomes invalid half way through the draw.
-        Friend lf = *lfp;
-        if (lf.IsOffline()) continue;
-        if (lf.alias.empty()) continue;
+        if (lfp->IsOffline()) continue;
+        if (lfp->alias.empty()) continue;
+        friends_online.push_back(lfp);
+    }
+    std::sort(friends_online.begin(), friends_online.end(), [](const Friend* lhs, const Friend* rhs) {
+        return std::wstring(lhs->alias).compare(rhs->alias) < 0;
+        });
+    for (Friend* lfp : friends_online) {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hover_background_color);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, hover_background_color);
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(0,0));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
-        ImGui::PushID(lf.uuid.c_str());
+        ImGui::PushID(lfp->uuid.c_str());
         ImGui::Button("", ImVec2(ImGui::GetContentRegionAvail().x, height));
         bool left_clicked = ImGui::IsItemClicked(0);
         bool right_clicked = ImGui::IsItemClicked(1);
@@ -729,14 +735,14 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 
         bool hovered = ImGui::IsItemHovered();
         ImGui::PopStyleVar(4);
-        ImGui::SameLine(2.0f,0);
-        ImGui::PushStyleColor(ImGuiCol_Text, StatusColors[static_cast<size_t>(lf.status)].Value);
+        ImGui::SameLine(2.0f, 0);
+        ImGui::PushStyleColor(ImGuiCol_Text, StatusColors[static_cast<size_t>(lfp->status)].Value);
         ImGui::Bullet();
         ImGui::PopStyleColor(4);
-        if(ImGui::IsItemHovered())
-            ImGui::SetTooltip(GetStatusText(lf.status));
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(GetStatusText(lfp->status));
         ImGui::SameLine(0);
-        std::string s = GuiUtils::WStringToString(lf.alias);
+        std::string s = GuiUtils::WStringToString(lfp->alias);
         if (is_widget) {
             pos = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
@@ -746,13 +752,13 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Text(s.c_str());
         hovered = hovered || ImGui::IsItemHovered();
         if (!show_charname && hovered) {
-            ImGui::SetTooltip(lf.GetCharactersHover(true).c_str());
+            ImGui::SetTooltip(lfp->GetCharactersHover(true).c_str());
         }
-        if (show_charname && lf.current_char != nullptr) {
+        if (show_charname && lfp->current_char != nullptr) {
             ImGui::SameLine(cols[colIdx]);
-            std::string current_char_name_s = GuiUtils::WStringToString(lf.current_char->name);
-            uint8_t prof = lf.current_char->profession;
-            if (prof) ImGui::PushStyleColor(ImGuiCol_Text, ProfColors[lf.current_char->profession].Value);
+            std::string current_char_name_s = GuiUtils::WStringToString(lfp->current_char->name);
+            uint8_t prof = lfp->current_char->profession;
+            if (prof) ImGui::PushStyleColor(ImGuiCol_Text, ProfColors[lfp->current_char->profession].Value);
             if (is_widget) {
                 pos = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
@@ -761,38 +767,38 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
             }
             ImGui::Text("%s", current_char_name_s.c_str());
             if (prof) ImGui::PopStyleColor();
-            if (lf.characters.size() > 1) {
-                ImGui::SameLine(0,0);
+            if (lfp->characters.size() > 1) {
+                ImGui::SameLine(0, 0);
                 if (is_widget) {
                     pos = ImGui::GetCursorPos();
                     ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
-                    ImGui::TextColored(ImVec4(0, 0, 0, 1), " (+%d)", lf.characters.size() - 1);
+                    ImGui::TextColored(ImVec4(0, 0, 0, 1), " (+%d)", lfp->characters.size() - 1);
                     ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
                 }
-                ImGui::Text(" (+%d)", lf.characters.size() - 1);
+                ImGui::Text(" (+%d)", lfp->characters.size() - 1);
                 hovered |= ImGui::IsItemHovered();
                 if (hovered) {
-                    ImGui::SetTooltip(lf.GetCharactersHover().c_str());
+                    ImGui::SetTooltip(lfp->GetCharactersHover().c_str());
                 }
             }
             if (show_location) {
                 ImGui::SameLine(cols[++colIdx]);
-                if (lf.current_map_name) {
+                if (lfp->current_map_name) {
                     if (is_widget) {
                         pos = ImGui::GetCursorPos();
                         ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
-                        ImGui::TextColored(ImVec4(0, 0, 0, 1), lf.current_map_name);
+                        ImGui::TextColored(ImVec4(0, 0, 0, 1), lfp->current_map_name);
                         ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
                     }
-                    ImGui::Text(lf.current_map_name);
+                    ImGui::Text(lfp->current_map_name);
                 }
             }
         }
         ImGui::PopID();
-        if (left_clicked && !lf.IsOffline())
-            lf.StartWhisper();
+        if (left_clicked && !lfp->IsOffline())
+            lfp->StartWhisper();
         if (right_clicked) {
-            
+
         }
     }
     if (!is_widget)
