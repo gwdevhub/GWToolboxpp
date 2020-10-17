@@ -85,13 +85,13 @@ void SkillbarWidget::Update(float)
 
     for (size_t it = 0u; it < 8; it++) {
         skill_cooldown_to_string(m_skills[it].cooldown, skillbar->skills[it].GetRecharge());
-
+        if (!display_skill_overlay && !display_effect_monitor)
+            continue;
+        const uint32_t& skill_id = skillbar->skills[it].skill_id;
+        const Effect& effect = get_longest_effect(skill_id);
+        m_skills[it].color = UptimeToColor(effect.remaining);
         if (display_effect_monitor) {
-            const uint32_t& skill_id = skillbar->skills[it].skill_id;
             const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-
-            const Effect& effect = get_longest_effect(skill_id);
-            m_skills[it].color = UptimeToColor(effect.remaining);
             m_skills[it].effects.clear();
             if (display_multiple_effects && has_sf 
                 && skill_data.profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) 
