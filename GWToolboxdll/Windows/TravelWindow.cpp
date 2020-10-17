@@ -846,6 +846,8 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
 }
 
 bool TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+        return false;
     if (!IsMapUnlocked(MapID)) {
         const GW::AreaInfo* map = GW::Map::GetMapInfo(MapID);
         wchar_t map_name_buf[8];
