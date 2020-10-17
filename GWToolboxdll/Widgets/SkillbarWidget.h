@@ -40,12 +40,12 @@ private:
     {
         float progress = 1.0f; // 1 to 0
         uint32_t remaining = 0; // in ms
-        std::array<char, 16> text{};
+        char text[16] = { 0 };
         Color color{};
     };
     struct Skill
     {
-        std::array<char, 16> cooldown{};
+        char cooldown[16] = { 0 };
         Color color{};
         std::vector<Effect> effects;
     };
@@ -87,7 +87,6 @@ private:
     bool effects_symmetric = true;
     bool display_multiple_effects = false;
     bool effects_flip_order = false;
-    bool effects_flip_direction = true;
     bool effect_text_color = false;
     bool effect_progress_bar_color = false;
     GuiUtils::FontSize font_effects = GuiUtils::FontSize::text;
@@ -98,7 +97,8 @@ private:
 
     // Internal utils
     Color UptimeToColor(uint32_t uptime) const;
-    void skill_cooldown_to_string(std::array<char, 16>& arr, uint32_t cooldown) const;
+    void skill_cooldown_to_string(char* arr, uint32_t cooldown) const;
     static std::vector<Effect> get_effects(uint32_t skillId);
     static Effect get_longest_effect(uint32_t skillId);
+    void DrawDurationThresholds();
 };

@@ -18,15 +18,18 @@
  */
 
 
-void SkillbarWidget::skill_cooldown_to_string(std::array<char, 16>& arr, uint32_t cd) const
+
+void SkillbarWidget::skill_cooldown_to_string(char arr[16], uint32_t cd) const
 {
-    if (cd > 180'000u || cd == 0) {
-        snprintf(arr.data(), sizeof(arr), "");
-    } else if (cd >= static_cast<uint32_t>(decimal_threshold)) {
+    if (cd > 1800'000u || cd == 0) {
+        arr[0] = 0;
+    }
+    else if (cd >= static_cast<uint32_t>(decimal_threshold)) {
         if (round_up) cd += 1000;
-        snprintf(arr.data(), sizeof(arr), "%d", cd / 1000);
-    } else {
-        snprintf(arr.data(), sizeof(arr), "%.1f", cd / 1000.f);
+        snprintf(arr, 16, "%d", cd / 1000);
+    }
+    else {
+        snprintf(arr, 16, "%.1f", cd / 1000.f);
     }
 }
 
@@ -190,10 +193,10 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         }
 
         // label
-        const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown.data());
+        const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
         ImVec2 label_pos(pos1.x + skillsize.x / 2 - label_size.x / 2, 
             pos1.y + skillsize.y / 2 - label_size.y / 2);
-        ImGui::GetWindowDrawList()->AddText(label_pos, color_text_recharge, skill.cooldown.data());
+        ImGui::GetWindowDrawList()->AddText(label_pos, color_text_recharge, skill.cooldown);
 
         if (display_effect_monitor) {
             DrawEffect(i, pos1);
@@ -295,10 +298,10 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
 
         ImGui::GetBackgroundDrawList()->AddRect(pos1, pos2, color_effect_border);
 
-        const ImVec2 label_size = ImGui::CalcTextSize(effect.text.data());
+        const ImVec2 label_size = ImGui::CalcTextSize(effect.text);
         const ImVec2 label_pos(pos1.x + size.x / 2 - label_size.x / 2, pos1.y + size.y / 2 - label_size.y / 2);
         ImGui::GetBackgroundDrawList()->AddText(
-            label_pos, effect_text_color ? Colors::FullAlpha(effect.color) : color_text_effects, effect.text.data());
+            label_pos, effect_text_color ? Colors::FullAlpha(effect.color) : color_text_effects, effect.text);
     }
 
     ImGui::PopFont();
@@ -388,6 +391,42 @@ void SkillbarWidget::SaveSettings(CSimpleIni *ini)
     Colors::Save(ini, Name(), VAR_NAME(color_effect_border), color_effect_border);
 }
 
+void SkillbarWidget::DrawDurationThresholds() {
+    ImGui::Indent();
+    ImGui::Text("Skill duration thresholds");
+    const float width = 150.f * ImGui::GetIO().FontGlobalScale;
+    ImGui::PushID("long");
+    ImGui::Text("Long: ");
+    ImGui::SameLine(width);
+    Colors::DrawSettingHueWheel("Color", &color_long);
+    ImGui::PopID();
+    ImGui::Spacing();
+
+    ImGui::PushID("medium");
+    ImGui::Text("Medium: ");
+    ImGui::SameLine(width);
+    Colors::DrawSettingHueWheel("Color", &color_medium);
+    ImGui::NewLine();
+    ImGui::SameLine(width);
+    ImGui::DragInt("Threshold", &medium_treshold, 1.f, 1, 180000);
+    ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the medium color is used.");
+    ImGui::PopID();
+    ImGui::Spacing();
+
+    ImGui::PushID("short");
+    ImGui::Text("Short: ");
+    ImGui::SameLine(width);
+    Colors::DrawSettingHueWheel("Color", &color_short);
+    ImGui::NewLine();
+    ImGui::SameLine(width);
+    ImGui::DragInt("Threshold", &short_treshold, 1.f, 1, 180000);
+    ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the short color is used.");
+    ImGui::PopID();
+    ImGui::Spacing();
+
+    ImGui::Unindent();
+}
+
 void SkillbarWidget::DrawSettingInternal()
 {
     ToolboxWidget::DrawSettingInternal();
@@ -401,52 +440,77 @@ void SkillbarWidget::DrawSettingInternal()
 
     static constexpr char* font_sizes[] = {"16", "18", "20", "24", "42", "48"};
 
-    ImGui::Spacing();
-    ImGui::Text("Duration -> Color");
-    Colors::DrawSettingHueWheel("Long color", &color_long);
-    ImGui::DragInt("Medium Threshold", &medium_treshold, 1.f, 1, 180000);
-    ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the medium color is used.");
-    Colors::DrawSettingHueWheel("Medium color", &color_medium);
-    ImGui::DragInt("Short Threshold", &short_treshold, 1.f, 1, 180000);
-    ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the short color is used.");
-    Colors::DrawSettingHueWheel("Short color", &color_short);
+    bool is_vertical = (layout == Layout::Column || layout == Layout::Columns);
 
+    ImGui::Separator();
+    ImGui::Text("Skill overlay settings");
     ImGui::Spacing();
-    ImGui::Text("Duration -> Text");
-    ImGui::InputInt("Decimal threshold", &decimal_threshold);
+    ImGui::Indent();
+    ImGui::PushID("skill_overlay_settings");
+    ImGui::Combo("Text size", reinterpret_cast<int*>(&font_recharge), font_sizes, 6);
+    Colors::DrawSettingHueWheel("Text color", &color_text_recharge);
+    Colors::DrawSettingHueWheel("Border color", &color_border);
+    ImGui::Checkbox("Paint skills according to effect duration", &display_skill_overlay);
+    ImGui::ShowHelp("Change the color of the skill dependent on the long/medium/short duration colors");
+    if (display_skill_overlay) {
+        DrawDurationThresholds();
+    }
+    ImGui::InputInt("Text decimal threshold", &decimal_threshold);
     ImGui::ShowHelp("When should decimal numbers start to show (in milliseconds)");
     ImGui::Checkbox("Round up integers", &round_up);
+    ImGui::PopID();
+    ImGui::Unindent();
 
     ImGui::Spacing();
-    ImGui::Text("Skill overlay");
-    ImGui::Checkbox("Paint skills according to effect duration", &display_skill_overlay);
-    ImGui::Combo("Recharge font size", reinterpret_cast<int*>(&font_recharge), font_sizes, 6);
-    Colors::DrawSettingHueWheel("Recharge text color", &color_text_recharge);
-    Colors::DrawSettingHueWheel("Skill border color", &color_border);
-    
+    ImGui::Separator();
+    ImGui::Text("Effect monitor settings");
     ImGui::Spacing();
-    ImGui::Text("Effect monitor");
-    ImGui::DragInt("Effect monitor size", &effect_monitor_size, 1, 0);
-    ImGui::ShowHelp("0 matches font size.");
+    ImGui::Indent();
+    ImGui::PushID("effect_monitor_settings");
     ImGui::Checkbox("Display effect monitor", &display_effect_monitor);
-    ImGui::DragInt("Offset", &effect_monitor_offset, 1, -200, 200);
-    ImGui::Checkbox("Symmetic effects", &effects_symmetric);
-    ImGui::ShowHelp("Only applicable to multirow display");
-    ImGui::Checkbox("Display multiple effects", &display_multiple_effects);
-    ImGui::ShowHelp("Show multiple casted enchantment per skill, when applicable");
-    ImGui::Checkbox("Flip effects order", &effects_flip_order);
-    ImGui::ShowHelp("Only applies if multiple effects are displayed");
-    ImGui::Checkbox("Flip effects direction", &effects_flip_direction);
-    ImGui::ShowHelp("Only applies if multiple effects are displayed");
-    ImGui::Checkbox("Use the progress color for the text", &effect_text_color);
-    ImGui::Checkbox("Use the progress color for the progress bar", &effect_progress_bar_color);
-    ImGui::Combo("Effects font size", reinterpret_cast<int*>(&font_effects), font_sizes, 6);
-    Colors::DrawSettingHueWheel("Effect font color", &color_text_effects);
-    Colors::DrawSettingHueWheel("Effect background", &color_effect_background);
-    Colors::DrawSettingHueWheel("Effect progress bar color", &color_effect_progress);
-    Colors::DrawSettingHueWheel("Effect border color", &color_effect_border);
-    
-    ImGui::ShowHelp("Whether effect uptime timers should be displayed above the skill.");
+    if (display_effect_monitor) {
+        ImGui::DragInt(is_vertical ? "Effect width" : "Effect height", &effect_monitor_size, 1, 0);
+        ImGui::ShowHelp(is_vertical ? 
+            "Width in pixels of a single effect on the effect monitor.\n0 matches font size." 
+            : "Height in pixels of a single effect on the effect monitor.\n0 matches font size.");
+        ImGui::DragInt("Offset", &effect_monitor_offset, 1, -200, 200);
+        ImGui::ShowHelp(is_vertical ?
+            "Distance to the left or right of an effect relative to the related skill on your skillbar"
+            : "Distance above or below of an effect relative to the related skill on your skillbar");
+        if (layout == Layout::Columns) {
+            ImGui::Checkbox("Show effects either side of your skillbar", &effects_symmetric);
+        }
+        else if (layout == Layout::Rows) {
+            ImGui::Checkbox("Show effects above and below your skillbar", &effects_symmetric);
+        }
+        ImGui::Checkbox("Display multiple effects", &display_multiple_effects);
+        ImGui::ShowHelp("Show stacking effects for casted enchantments e.g. Shroud of Distress with Shadow Form");
+        if (display_multiple_effects) {
+            ImGui::Indent();
+            ImGui::Checkbox("Flip effects order", &effects_flip_order);
+            ImGui::ShowHelp("Newest effect is displayed last instead of first");
+            ImGui::Unindent();
+            ImGui::Spacing();
+        }
+
+
+        ImGui::Checkbox("Color text according to effect duration", &effect_text_color);
+        ImGui::ShowHelp("Change the color of the font dependent on the long/medium/short duration colors");
+        ImGui::Checkbox("Paint effects according to effect duration", &effect_progress_bar_color);
+        ImGui::ShowHelp("Change the color of the effect progress bar dependent on the long/medium/short duration colors");
+        if (effect_text_color || effect_progress_bar_color) {
+            DrawDurationThresholds();
+        }
+        ImGui::Combo("Text size", reinterpret_cast<int*>(&font_effects), font_sizes, 6);
+        if(!effect_text_color)
+            Colors::DrawSettingHueWheel("Text color", &color_text_effects);
+        Colors::DrawSettingHueWheel("Background color", &color_effect_background);
+        if(!effect_progress_bar_color)
+            Colors::DrawSettingHueWheel("Progress bar color", &color_effect_progress);
+        Colors::DrawSettingHueWheel("Border color", &color_effect_border);
+    }
+    ImGui::PopID();
+    ImGui::Unindent();
 }
 
 Color SkillbarWidget::UptimeToColor(const uint32_t uptime) const
