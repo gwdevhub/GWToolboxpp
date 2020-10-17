@@ -7,6 +7,26 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.2
+* [New] Support for multi-column skillbar layouts in the skillbar widget
+* [New] Modified launcher to show available GW instances that don't have a character name but do have an email address (e.g. login window)
+* [Minor] Fixed slow map load times due to new icons
+* [Minor] Changed look and feel of nested dropdowns to make them easier to click on
+* [Minor] Changed ordering of "enabled features" in settings window
+* [Minor] Revisited skillbar widget settings
+* [Minor] All color picker swatches now also display transparency alpha channel
+* [Minor] Flag All option now available if you're able to control the heroes/henchmen of a disconnected party member
+* [Fix] Fixed not being able to move around when camera is unlocked and camera smoothing is disabled
+* [Fix] Fixed bug with effects lasting > 180 seconds now showing duration on effect monitor
+* [Fix] Fixed various issues relating to flagging heroes in minimap
+* [Fix] Fixed some missing window options for Trade Window
+* [Fix] Fixed potential crashes in health widget and travel widget relating to fetching map names
+* [Fix] Re-fixed click to move on minimap when autorunning after recent GW update
+* [Fix] Fixed issue with alcohol not being popped at the right time
+* [Fix] Fixed bug preventing hero flagging when observing another player whilst dead
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.2_Release/GWToolboxdll.dll)
+
 ## Version 4.1
 * [Fix] Fixed GWToolbox not working for Windows 7/8 users
 * [Fix] Fixed wrong character name in window title
