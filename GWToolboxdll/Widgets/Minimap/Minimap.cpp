@@ -22,6 +22,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
@@ -69,7 +70,7 @@ namespace {
             } *sub2;
         } *sub1;
     } *MouseClickCaptureDataPtr = nullptr;
-    bool* IsFlaggingHero = nullptr;
+    uint32_t* GameCursorState = nullptr;
     CaptureMouseClickType* CaptureMouseClickTypePtr = nullptr;
 
     // Internal flagging state to workaround not being able to set the in-game cursor state.
@@ -78,9 +79,9 @@ namespace {
     FlaggingState GetFlaggingState() {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
             return minimap_flagging_state = FlaggingState::FlagState_None;
-        if (!IsFlaggingHero || !*IsFlaggingHero || !MouseClickCaptureDataPtr)
+        if (!CaptureMouseClickTypePtr || !(*CaptureMouseClickTypePtr == CaptureType_FlagHero) || !MouseClickCaptureDataPtr || !MouseClickCaptureDataPtr->sub1)
             return minimap_flagging_state;
-        return minimap_flagging_state = *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
+        return *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
     }
     typedef void(__fastcall* StopCaptureMouseClick_pt)();
     StopCaptureMouseClick_pt StopCaptureMouseClick_Func;
@@ -111,6 +112,19 @@ namespace {
         // StartCaptureMouseClick_Func(arg1, 0 ,0x2C, 0, 1, 0, 0, 0, &arg1);
         return true;
     }
+    // Same as GW::PartyMgr::GetPlayerIsLeader() but has an extra check to ignore disconnected people.
+    bool GetPlayerIsLeader() {
+        GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+        if (!party || !party->players.size()) return false;
+        uint32_t player_id = GW::PlayerMgr::GetPlayerNumber();
+        for (auto& player : party->players) {
+            if (!player.connected())
+                continue;
+            return player.login_number == player_id;
+        }
+        return false;
+    }
+
     GW::PartyInfo* GetPlayerParty() {
         const GW::GameContext * gamectx = GW::GameContext::instance();
         if (!(gamectx && gamectx->party))
@@ -142,7 +156,7 @@ void Minimap::Initialize()
         address = address + 0x5;
         address = *(uintptr_t*)address;
         MouseClickCaptureDataPtr = (MouseClickCaptureData*)address;
-        IsFlaggingHero = (bool*)(address + 0x4);
+        GameCursorState = (uint32_t*)(address + 0x4);
         CaptureMouseClickTypePtr = (CaptureMouseClickType*)(address - 0x10);
     }
     Log::Log("[SCAN] StopCaptureMouseClick_Func = %p\n", StopCaptureMouseClick_Func);
@@ -467,21 +481,40 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     effect_renderer.SaveSettings(ini, Name());
 }
 
-size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes)
+size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes, bool* has_flags)
 {
     _player_heroes.clear();
     if (!party)
         return 0;
-    const GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player)
+    const uint32_t player_id = GW::PlayerMgr::GetPlayerNumber();
+    if (!player_id)
         return 0;
-    const uint32_t player_id = player->login_number;
     const GW::HeroPartyMemberArray& heroes = party->heroes;
+    
+    bool player_is_leader = GetPlayerIsLeader();
+    std::map<uint32_t, const GW::PlayerPartyMember*> party_players_by_id;
+    if (player_is_leader) {
+        for (const GW::PlayerPartyMember& pplayer : party->players) {
+            party_players_by_id.emplace(pplayer.login_number, &pplayer);
+        }
+    }
+    
     _player_heroes.reserve(heroes.size());
     for (const GW::HeroPartyMember &hero : heroes) {
         if (hero.owner_player_id == player_id)
             _player_heroes.push_back(hero.agent_id);
+        else if (player_is_leader) {
+            auto found = party_players_by_id.find(hero.owner_player_id);
+            if (found == party_players_by_id.end() || found->second->connected())
+                continue;
+            if(has_flags)
+                *has_flags = true;
+        }
     }
+    if (player_is_leader && has_flags && party->henchmen.size())
+        *has_flags = true;
+    else if (_player_heroes.size() && has_flags)
+        *has_flags = true;
     return _player_heroes.size();
 }
 
@@ -559,12 +592,10 @@ void Minimap::Draw(IDirect3DDevice9 *)
     if (hero_flag_controls_show && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
 
         const GW::PartyInfo* playerparty = GetPlayerParty();
-        GetPlayerHeroes(GetPlayerParty(), player_heroes);
-        bool player_has_henchmans = false;
-        if (playerparty && playerparty->henchmen.size() && GW::PartyMgr::GetPlayerIsLeader())
-            player_has_henchmans = true;
+        bool has_flags = false;
+        GetPlayerHeroes(playerparty, player_heroes, &has_flags);
 
-        if (playerparty && (player_has_henchmans || !player_heroes.empty())) {
+        if (has_flags) {
             if (hero_flag_window_attach) {
                 ImGui::SetNextWindowPos(ImVec2(static_cast<float>(location.x), static_cast<float>(location.y + size.y)));
                 ImGui::SetNextWindowSize(ImVec2(static_cast<float>(size.x), 40.0f));
@@ -597,14 +628,14 @@ void Minimap::Draw(IDirect3DDevice9 *)
                         if (i == 0)
                             GW::PartyMgr::UnflagAll();
                         else
-                            GW::PartyMgr::UnflagHero(i);
+                            GW::PartyMgr::FlagHeroAgent(player_heroes[i-1], GW::GamePos(HUGE_VALF, HUGE_VALF, 0));
                     }
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Clear", ImVec2(-1, 0))) {
                     GW::PartyMgr::UnflagAll();
-                    for (unsigned int i = 1; i < num_heroflags; ++i) {
-                        GW::PartyMgr::UnflagHero(i);
+                    for (uint32_t agent_id : player_heroes) {
+                        GW::PartyMgr::FlagHeroAgent(agent_id, GW::GamePos(HUGE_VALF, HUGE_VALF, 0));
                     }
                 }
             }
@@ -890,8 +921,8 @@ bool Minimap::FlagHeros(LPARAM lParam)
     const int y = GET_Y_LPARAM(lParam);
     if (!IsInside(x, y))
         return false;
-    if (!player_heroes.size() && GetPlayerHeroes(GetPlayerParty(), player_heroes) == 0)
-        return false;
+    bool has_flagall = false;
+    GetPlayerHeroes(GetPlayerParty(), player_heroes, &has_flagall);
     const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
     FlaggingState flag_state = GetFlaggingState();
@@ -899,6 +930,8 @@ bool Minimap::FlagHeros(LPARAM lParam)
     case FlaggingState::FlagState_None:
         return false;
     case FlaggingState::FlagState_All:
+        if (!has_flagall)
+            return false;
         SetFlaggingState(FlaggingState::FlagState_None);
         GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
         return true;
