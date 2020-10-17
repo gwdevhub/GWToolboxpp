@@ -126,7 +126,7 @@ void GuiUtils::LoadFonts() {
         if (!io.Fonts->IsBuilt())
             io.Fonts->Build();
         // Also create device objects here to avoid blocking the main draw loop when ImGui_ImplDX9_NewFrame() is called.
-        ImGui_ImplDX9_CreateDeviceObjects();
+        // ImGui_ImplDX9_CreateDeviceObjects();
 
         printf("Fonts loaded\n");
         fonts_loaded = true;
