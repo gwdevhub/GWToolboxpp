@@ -47,7 +47,7 @@ private:
         Downloading
     } step = Idle;
 
-    bool enabled = true;
+    bool enabled = false;
     bool disconnecting = false;
     bool pending_connect = false;
     bool pending_disconnect = false;

@@ -88,6 +88,7 @@ TeamspeakModule::~TeamspeakModule() {
 void TeamspeakModule::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
     enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);
+    pending_connect = true;
 }
 void TeamspeakModule::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
