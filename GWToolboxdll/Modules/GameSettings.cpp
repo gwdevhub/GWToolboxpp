@@ -1408,7 +1408,7 @@ void GameSettings::Update(float delta) {
     //UpdateFOV();
     FactionEarnedCheckAndWarn();
 
-    if (disable_camera_smoothing) {
+    if (disable_camera_smoothing && !GW::CameraMgr::GetCameraUnlock()) {
         GW::Camera* cam = GW::CameraMgr::GetCamera();
         cam->position = cam->camera_pos_to_go;
         cam->look_at_target = cam->look_at_to_go;

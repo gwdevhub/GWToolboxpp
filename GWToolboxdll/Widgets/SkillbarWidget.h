@@ -87,6 +87,7 @@ private:
     bool effects_symmetric = true;
     bool display_multiple_effects = false;
     bool effects_flip_order = false;
+    bool effects_flip_direction = false;
     bool effect_text_color = false;
     bool effect_progress_bar_color = false;
     GuiUtils::FontSize font_effects = GuiUtils::FontSize::text;
