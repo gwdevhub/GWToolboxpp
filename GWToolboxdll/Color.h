@@ -80,7 +80,7 @@ namespace Colors {
 
     static bool DrawSettingHueWheel(const char* text, Color* color, ImGuiColorEditFlags flags = 0) {// ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel) {
         ImVec4 col = ImGui::ColorConvertU32ToFloat4(*color);
-        if (ImGui::ColorEdit4(text, &col.x, flags)) {
+        if (ImGui::ColorEdit4(text, &col.x, flags | ImGuiColorEditFlags_AlphaPreview)) {
             *color = ImGui::ColorConvertFloat4ToU32(col);
             return true;
         }
