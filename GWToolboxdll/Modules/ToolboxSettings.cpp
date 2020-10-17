@@ -266,6 +266,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_chatcommand = ini->GetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
     use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
     use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
+    use_teamspeak = ini->GetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
     use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
     use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
     use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
@@ -298,6 +299,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
     ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
     ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
+    ini->SetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
     ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
     ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
     ini->SetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
