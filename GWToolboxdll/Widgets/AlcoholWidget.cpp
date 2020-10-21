@@ -62,9 +62,13 @@ void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess *pa
 
     if (packet->tint == 6) {
         // Tint 6, level 5 - the trouble zone for lunars!
-        if (instance.prev_packet_tint_6_level < packet->level - 1 || (instance.prev_packet_tint_6_level == 5 && pts_gained < 1)) {
+        // Also used for krytan brandy (level 5 alcohol)
+        if (packet->level == 5 && 
+            (instance.prev_packet_tint_6_level < packet->level - 1
+            || (instance.prev_packet_tint_6_level == 5 && pts_gained < 1))) {
             // If we've jumped a level, or the last packet was also level 5 and no points were gained, then its not alcohol.
             // NOTE: All alcohol progresses from 1 to 5, but lunars just dive in at level 5.
+            instance.prev_packet_tint_6_level = packet->level;
             return;
         }
         instance.prev_packet_tint_6_level = packet->level;
@@ -97,6 +101,9 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
     long t = 0;
     if (alcohol_level != 0) {
         t = (long)((int)last_alcohol + ((int)alcohol_time)) - (long)time(NULL);
+        // NB: Sometimes the game won't send through the signal to remove post processing.
+        if (t < 0)
+            alcohol_level = 0;
     }
 
     if (only_show_when_drunk && t < 0) return;
@@ -123,6 +130,9 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
         ImGui::TextColored(ImColor(0, 0, 0), timer);
         ImGui::SetCursorPos(cur);
         ImGui::Text(timer);
+#if 0
+        ImGui::Text("Alcohol Level %d", GetAlcoholLevel());
+#endif
         ImGui::PopFont();
     }
     ImGui::End();
