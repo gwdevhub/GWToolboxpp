@@ -13,6 +13,14 @@ void ImGui::ShowHelp(const char* help) {
 		ImGui::SetTooltip(help);
 	}
 }
+void ImGui::TextShadowed(const char* label, ImVec2 offset, ImVec4 shadow_color) {
+	ImVec2 pos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(pos.x + offset.x, pos.y + offset.y));
+	ImGui::TextColored(shadow_color, label);
+	ImGui::SetCursorPos(pos);
+	ImGui::Text(label);
+}
+
 bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
 {
     char button_id[128];

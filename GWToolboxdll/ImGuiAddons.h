@@ -5,6 +5,8 @@ typedef ImU32 Color;
 namespace ImGui {
     // Shows '(?)' and the helptext when hovered
     IMGUI_API void ShowHelp(const char* help);
+    // Shows current text with a drop shadow
+    IMGUI_API void TextShadowed(const char* label, ImVec2 offset = { 1, 1 }, ImVec4 shadow_color = { 0, 0, 0, 1 });
 
     IMGUI_API bool MyCombo(const char* label, const char* preview_text, int* current_item, 
         bool(*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);

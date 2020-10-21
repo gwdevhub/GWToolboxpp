@@ -707,7 +707,6 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     }
     std::vector<Friend*> friends_online;
     for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
-        colIdx = 0;
         Friend* lfp = it->second;
         if (lfp->type != GW::FriendType::FriendType_Friend) continue;
         // Get actual object instead of pointer just in case it becomes invalid half way through the draw.
@@ -718,7 +717,9 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     std::sort(friends_online.begin(), friends_online.end(), [](const Friend* lhs, const Friend* rhs) {
         return std::wstring(lhs->alias).compare(rhs->alias) < 0;
         });
+    char tmpbuf[32];
     for (Friend* lfp : friends_online) {
+        colIdx = 0;
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hover_background_color);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, hover_background_color);
@@ -743,13 +744,10 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::SetTooltip(GetStatusText(lfp->status));
         ImGui::SameLine(0);
         std::string s = GuiUtils::WStringToString(lfp->alias);
-        if (is_widget) {
-            pos = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
-            ImGui::TextColored(ImVec4(0, 0, 0, 1), s.c_str());
-            ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
-        }
-        ImGui::Text(s.c_str());
+        if (is_widget)
+            ImGui::TextShadowed(s.c_str());
+        else
+            ImGui::Text(s.c_str());
         hovered = hovered || ImGui::IsItemHovered();
         if (!show_charname && hovered) {
             ImGui::SetTooltip(lfp->GetCharactersHover(true).c_str());
@@ -759,23 +757,18 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
             std::string current_char_name_s = GuiUtils::WStringToString(lfp->current_char->name);
             uint8_t prof = lfp->current_char->profession;
             if (prof) ImGui::PushStyleColor(ImGuiCol_Text, ProfColors[lfp->current_char->profession].Value);
-            if (is_widget) {
-                pos = ImGui::GetCursorPos();
-                ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
-                ImGui::TextColored(ImVec4(0, 0, 0, 1), "%s", current_char_name_s.c_str());
-                ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
-            }
-            ImGui::Text("%s", current_char_name_s.c_str());
+            if (is_widget)
+                ImGui::TextShadowed(current_char_name_s.c_str());
+            else
+                ImGui::Text(current_char_name_s.c_str());
             if (prof) ImGui::PopStyleColor();
             if (lfp->characters.size() > 1) {
                 ImGui::SameLine(0, 0);
-                if (is_widget) {
-                    pos = ImGui::GetCursorPos();
-                    ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
-                    ImGui::TextColored(ImVec4(0, 0, 0, 1), " (+%d)", lfp->characters.size() - 1);
-                    ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
-                }
-                ImGui::Text(" (+%d)", lfp->characters.size() - 1);
+                snprintf(tmpbuf, sizeof(tmpbuf), " (+%d)", lfp->characters.size() - 1);
+                if (is_widget)
+                    ImGui::TextShadowed(tmpbuf);
+                else 
+                    ImGui::Text(tmpbuf);
                 hovered |= ImGui::IsItemHovered();
                 if (hovered) {
                     ImGui::SetTooltip(lfp->GetCharactersHover().c_str());
@@ -784,13 +777,10 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
             if (show_location) {
                 ImGui::SameLine(cols[++colIdx]);
                 if (lfp->current_map_name) {
-                    if (is_widget) {
-                        pos = ImGui::GetCursorPos();
-                        ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
-                        ImGui::TextColored(ImVec4(0, 0, 0, 1), lfp->current_map_name);
-                        ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
-                    }
-                    ImGui::Text(lfp->current_map_name);
+                    if (is_widget)
+                        ImGui::TextShadowed(lfp->current_map_name);
+                    else
+                        ImGui::Text(lfp->current_map_name);
                 }
             }
         }
