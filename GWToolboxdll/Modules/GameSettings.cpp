@@ -1034,6 +1034,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     ::LoadChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
     ::LoadChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
 
+    GW::PartyMgr::SetTickToggle(tick_is_toggle);
     GW::UI::SetOpenLinks(openlinks);
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
@@ -1162,6 +1163,9 @@ void GameSettings::DrawInventorySettings() {
 }
 
 void GameSettings::DrawPartySettings() {
+    if(ImGui::Checkbox("Tick is a toggle", &tick_is_toggle))
+        GW::PartyMgr::SetTickToggle(tick_is_toggle);
+    ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
     ImGui::Checkbox("Automatically accept party invitations when ticked", &auto_accept_invites);
     ImGui::ShowHelp("When you're invited to join someone elses party");
     ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
@@ -1227,11 +1231,6 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
     ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
     ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
-
-
-
-    //ImGui::Checkbox("Tick is a toggle", &tick_is_toggle);
-    //ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
     ImGui::Text("Flash Guild Wars taskbar icon when:");
     ImGui::Indent();
     ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
