@@ -14,6 +14,7 @@ public:
     void SaveSettings(CSimpleIni* ini, const char* section) const;
     Color GetBackgroundColor() { return color_mapbackground; }
 
+
 protected:
     void Initialize(IDirect3DDevice9* device) override;
 private:

@@ -17,15 +17,28 @@
 
 void RangeRenderer::LoadSettings(CSimpleIni *ini, const char *section)
 {
-    color_range_hos = Colors::Load(ini, section, "color_range_hos", 0xFF881188);
-    color_range_aggro = Colors::Load(ini, section, "color_range_aggro", 0xFF994444);
-    color_range_cast = Colors::Load(ini, section, "color_range_cast", 0xFF117777);
-    color_range_spirit = Colors::Load(ini, section, "color_range_spirit", 0xFF337733);
-    color_range_compass = Colors::Load(ini, section, "color_range_compass", 0xFF666611);
-    color_range_chain_aggro = Colors::Load(ini, section, "color_range_chain_aggro", 0x00994444);
-    color_range_res_aggro = Colors::Load(ini, section, "color_range_res_aggro", 0x64D6D6D6);
-    color_range_shadowstep_aggro = Colors::Load(ini, section, "color_range_shadowstep_aggro", Colors::ARGB(200, 128, 0, 128));
-    line_thickness = static_cast<float>(ini->GetDoubleValue(section, "range_line_thickness", 1.f));
+    LoadDefaults();
+    color_range_hos = Colors::Load(ini, section, "color_range_hos", color_range_hos);
+    color_range_aggro = Colors::Load(ini, section, "color_range_aggro", color_range_aggro);
+    color_range_cast = Colors::Load(ini, section, "color_range_cast", color_range_cast);
+    color_range_spirit = Colors::Load(ini, section, "color_range_spirit", color_range_spirit);
+    color_range_compass = Colors::Load(ini, section, "color_range_compass", color_range_compass);
+    color_range_chain_aggro = Colors::Load(ini, section, "color_range_chain_aggro", color_range_chain_aggro);
+    color_range_res_aggro = Colors::Load(ini, section, "color_range_res_aggro", color_range_res_aggro);
+    color_range_shadowstep_aggro = Colors::Load(ini, section, "color_range_shadowstep_aggro", color_range_shadowstep_aggro);
+    line_thickness = static_cast<float>(ini->GetDoubleValue(section, "range_line_thickness", line_thickness));
+    Invalidate();
+}
+void RangeRenderer::LoadDefaults() {
+    color_range_hos = 0xFF881188;
+    color_range_aggro = 0xFF994444;
+    color_range_cast = 0xFF117777;
+    color_range_spirit = 0xFF337733;
+    color_range_compass = 0xFF666611;
+    color_range_chain_aggro = 0x00994444;
+    color_range_res_aggro = 0x64D6D6D6;
+    color_range_shadowstep_aggro = Colors::ARGB(200, 128, 0, 128);
+    line_thickness = 1.f;
     Invalidate();
 }
 void RangeRenderer::SaveSettings(CSimpleIni *ini, const char *section) const
@@ -43,17 +56,9 @@ void RangeRenderer::SaveSettings(CSimpleIni *ini, const char *section) const
 void RangeRenderer::DrawSettings()
 {
     bool changed = false;
-    if (ImGui::SmallButton("Restore Defaults")) {
-        changed = true;
-        color_range_hos = 0xFF881188;
-        color_range_aggro = 0xFF994444;
-        color_range_cast = 0xFF117777;
-        color_range_spirit = 0xFF337733;
-        color_range_compass = 0xFF666611;
-        color_range_chain_aggro = 0x00994444;
-        color_range_res_aggro = 0x64D6D6D6;
-        color_range_shadowstep_aggro = Colors::ARGB(200, 128, 0, 128);
-        line_thickness = 1.f;
+    bool confirm = false;
+    if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
+        LoadDefaults();
     }
     changed |= Colors::DrawSettingHueWheel("HoS range", &color_range_hos);
     changed |= Colors::DrawSettingHueWheel("Aggro range", &color_range_aggro);

@@ -27,7 +27,8 @@ void PmapRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 }
 
 void PmapRenderer::DrawSettings() {
-    if (ImGui::SmallButton("Restore Defaults")) {
+    bool confirm = false;
+    if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
         color_map = 0xFF999999;
         color_mapshadow = 0xFF120808;
         color_mapbackground = 0x00000000;

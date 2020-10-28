@@ -40,24 +40,21 @@ void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) cons
     ini->SetDoubleValue(section, "maxrange_interp_end", maxrange_interp_end);
 }
 void PingsLinesRenderer::DrawSettings() {
-    if (ImGui::SmallButton("Restore Defaults")) {
+    bool changed = false;
+    bool confirm = false;
+    if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
         color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
         ping_circle.color = Colors::ARGB(128, 255, 0, 0);
         marker.color = Colors::ARGB(200, 128, 0, 128);
         color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
         color_shadowstep_line_maxrange = Colors::ARGB(48, 128, 0, 128);
-        ping_circle.Invalidate();
-        marker.Invalidate();
+        changed = true;
     }
-    Colors::DrawSettingHueWheel("Drawings", &color_drawings);
-    if (Colors::DrawSettingHueWheel("Pings", &ping_circle.color)) {
-        ping_circle.Invalidate();
-    }
-    if (Colors::DrawSettingHueWheel("Shadow Step Marker", &marker.color)) {
-        marker.Invalidate();
-    }
-    Colors::DrawSettingHueWheel("Shadow Step Line", &color_shadowstep_line);
-    Colors::DrawSettingHueWheel("Shadow Step Line (Max range)", &color_shadowstep_line_maxrange);
+    changed |= Colors::DrawSettingHueWheel("Drawings", &color_drawings);
+    changed |= Colors::DrawSettingHueWheel("Pings", &ping_circle.color);
+    changed |= Colors::DrawSettingHueWheel("Shadow Step Marker", &marker.color);
+    changed |= Colors::DrawSettingHueWheel("Shadow Step Line", &color_shadowstep_line);
+    changed |= Colors::DrawSettingHueWheel("Shadow Step Line (Max range)", &color_shadowstep_line_maxrange);
     if (ImGui::SliderFloat("Max range start", &maxrange_interp_begin, 0.0f, 1.0f)
         && maxrange_interp_end < maxrange_interp_begin) {
         maxrange_interp_end = maxrange_interp_begin;
@@ -65,6 +62,11 @@ void PingsLinesRenderer::DrawSettings() {
     if (ImGui::SliderFloat("Max range end", &maxrange_interp_end, 0.0f, 1.0f)
         && maxrange_interp_begin > maxrange_interp_end) {
         maxrange_interp_begin = maxrange_interp_end;
+    }
+
+    if (changed) {
+        ping_circle.Invalidate();
+        marker.Invalidate();
     }
 }
 

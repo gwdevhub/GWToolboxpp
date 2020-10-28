@@ -20,7 +20,26 @@ void ImGui::TextShadowed(const char* label, ImVec2 offset, ImVec4 shadow_color) 
 	ImGui::SetCursorPos(pos);
 	ImGui::Text(label);
 }
-
+bool ImGui::SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content) {
+	static char id_buf[128];
+	snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, confirm_bool);
+	if (ImGui::SmallButton(label)) {
+		ImGui::OpenPopup(id_buf);
+	}
+	if (ImGui::BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		ImGui::Text(confirm_content);
+		if (ImGui::Button("OK", ImVec2(120, 0))) {
+			*confirm_bool = true;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+	return *confirm_bool;
+}
 bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
 {
     char button_id[128];
