@@ -81,7 +81,7 @@ void HealthWidget::DrawSettingInternal() {
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
 
-    bool thresholdsNode = ImGui::TreeNode("Thresholds");
+    bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("The first matching threshold will be used.");
     if (thresholdsNode) {
         bool changed = false;
@@ -138,7 +138,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
         static char health_perc[32];
@@ -186,7 +186,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             }
 
             // 'health'
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header1));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
             ImGui::TextColored(background, "Health");
@@ -195,7 +195,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             // perc
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_small));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(background, "%s", health_perc);
@@ -204,7 +204,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             // abs
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
             cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
             ImGui::TextColored(background, health_abs);
@@ -213,7 +213,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             if (click_to_print_health) {
-                if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringWindow()) {
+                if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsWindowHovered()) {
                     if (target) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
                         if (agent_name_ping.size()) {
@@ -255,7 +255,7 @@ HealthWidget::Threshold::Threshold(const char* _name, Color _color, int _value)
 bool HealthWidget::Threshold::DrawHeader() {
     char mapbuf[64] = { '\0' };
     if (mapId) {
-        if (mapId < sizeof(GW::Constants::NAME_FROM_ID) - 1)
+        if (mapId < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID))
             snprintf(mapbuf, 64, "[%s]", GW::Constants::NAME_FROM_ID[mapId]);
         else
             snprintf(mapbuf, 64, "[Map %d]", mapId);
@@ -273,7 +273,7 @@ bool HealthWidget::Threshold::DrawHeader() {
 bool HealthWidget::Threshold::DrawSettings(Operation& op) {
     bool changed = false;
 
-    if (ImGui::TreeNode("##params")) {
+    if (ImGui::TreeNodeEx("##params", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap)) {
         changed |= DrawHeader();
 
         ImGui::PushID(static_cast<int>(ui_id));

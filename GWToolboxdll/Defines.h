@@ -1,9 +1,6 @@
 #pragma once
 
-#define GWTOOLBOX_VERSION "3.8.1"				// Enter main version here. Should match with server version file.
-#define GWTOOLBOX_MODULE_VERSION 3,8,1,0	// Used for Dll Module Info, see GWToolbox.rc
-#define BETA_VERSION "" // enter something like "Beta 1". Internally we only check if not empty
-#define GWTOOLBOX_WEBSITE "https://haskha.github.io/GWToolboxpp/"
+#define GWTOOLBOX_WEBSITE "https://www.gwtoolbox.com"
 #define RESOURCES_DOWNLOAD_URL "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/"
 
 #define DIRECTX_REDIST_WEBSITE "https://www.microsoft.com/en-us/download/details.aspx?id=8109"

@@ -165,18 +165,19 @@ public:
 
 // hotkey to toggle a toolbox function
 class HotkeyToggle : public TBHotkey {
-    const int n_targets = 2;
+    const int n_targets = 4;
     enum Toggle {
         Clicker,
         Pcons,
-        CoinDrop
+        CoinDrop,
+        Tick
     };
     static bool GetText(void*, int idx, const char** out_text);
 
 public:
     Toggle target; // the thing to toggle
 
-    static const bool IsValid(CSimpleIni* ini, const char* section);
+    static bool IsValid(CSimpleIni *ini, const char *section);
     static const char* IniSection() { return "Toggle"; }
     const char* Name() const override { return IniSection(); }
 
@@ -312,6 +313,31 @@ public:
     HotkeyHeroTeamBuild(CSimpleIni* ini, const char* section);
 
     void Save(CSimpleIni* ini, const char* section) const override;
+
+    void Draw() override;
+    void Description(char *buf, size_t bufsz) const override;
+    void Execute() override;
+};
+
+class HotkeyFlagHero : public TBHotkey
+{
+public:
+    float degree = 0.0;
+    float distance = 0.0;
+    int hero = 0;
+
+    static const char *IniSection()
+    {
+        return "FlagHero";
+    }
+    const char *Name() const override
+    {
+        return IniSection();
+    }
+
+    HotkeyFlagHero(CSimpleIni *ini, const char *section);
+
+    void Save(CSimpleIni *ini, const char *section) const override;
 
     void Draw() override;
     void Description(char *buf, size_t bufsz) const override;

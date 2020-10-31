@@ -24,39 +24,38 @@ public:
     void Update(float delta) override;
     void DxUpdate(IDirect3DDevice9* device);
 
-    static std::wstring GetSettingsFolderPath();
-    static std::wstring GetPath(std::wstring file);
-    static std::wstring GetPath(std::wstring folder, std::wstring file);
+    static std::filesystem::path GetSettingsFolderPath();
+    static std::filesystem::path GetPath(const std::filesystem::path& file);
+    static std::filesystem::path GetPath(const std::filesystem::path& folder, const std::filesystem::path& file);
 
     static utf8::string GetPathUtf8(std::wstring file);
-    static void EnsureFolderExists(std::wstring path);
+    static void EnsureFolderExists(const std::filesystem::path& path);
 
     // folder should not contain a trailing slash
-    void LoadTextureAsync(IDirect3DTexture9** tex,
-        std::wstring path_to_file);
+    void LoadTextureAsync(IDirect3DTexture9** tex, const std::filesystem::path& path_to_file);
     void LoadTextureAsync(IDirect3DTexture9** tex, 
-        std::wstring path_to_file, WORD id);
+        const std::filesystem::path& path_to_file, WORD id);
     void LoadTextureAsync(IDirect3DTexture9 **tex, 
-        std::wstring path_to_file, std::wstring url);
+        const std::filesystem::path& path_to_file, const std::wstring& url);
 
 
     // checks if file exists, and downloads from server if it doesn't.
     // If the file exists, executes callback immediately,
     // otherwise execute callback on download completion.
     // folder should not contain a trailing slash
-    void EnsureFileExists(std::wstring path_to_file, std::wstring url,
+    void EnsureFileExists(const std::filesystem::path& path_to_file, const std::wstring& url,
         std::function<void(bool)> callback);
 
     // download to file, blocking
-    bool Download(std::wstring path_to_file, std::wstring url);
+    bool Download(const std::filesystem::path& path_to_file, const std::wstring& url);
     // download to file, async, calls callback on completion
-    void Download(std::wstring path_to_file, std::wstring url, 
+    void Download(const std::filesystem::path& path_to_file, const std::wstring& url, 
         std::function<void(bool)> callback);
 
     // download to memory, blocking
-    std::string Download(std::wstring url) const;
+    std::string Download(const std::wstring& url) const;
     // download to memory, async, calls callback on completion
-    void Download(std::wstring url, 
+    void Download(const std::wstring& url, 
         std::function<void(std::string file)> callback);
 
     void EnqueueWorkerTask(std::function<void()> f) { thread_jobs.push(f); }

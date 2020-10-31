@@ -24,12 +24,18 @@ namespace Colors {
                (static_cast<Color>(b) << IM_COL32_B_SHIFT);
     }
 
+    static Color FullAlpha(const Color clr)
+    {
+        return clr | 0xFFu << IM_COL32_A_SHIFT;
+    }
+
     static Color Black() { return RGB(0, 0, 0); }
     static Color White() { return RGB(0xFF, 0xFF, 0xFF); }
     static Color Empty() { return ARGB(0, 0, 0, 0); }
 
     static Color Red() { return RGB(0xFF, 0x0, 0x0); }
     static Color Green() { return RGB(0x0, 0xFF, 0x0); }
+    static Color Yellow() { return RGB(0xFF, 0xFF, 0x0); }
     static Color Blue() { return RGB(0x0, 0x0, 0xFF); }
 
     static Color Load(CSimpleIni* ini, const char* section, const char* key, Color def) {
@@ -58,6 +64,13 @@ namespace Colors {
         i[3] = static_cast<int>((color >> IM_COL32_B_SHIFT) & 0xFF);
     }
 
+    static void ConvertU32ToFloat4(Color color, float* f) {
+        f[0] = static_cast<float>((color >> IM_COL32_A_SHIFT) & 0xFF) / 255.f;
+        f[1] = static_cast<int>((color >> IM_COL32_R_SHIFT) & 0xFF) / 255.f;
+        f[2] = static_cast<int>((color >> IM_COL32_G_SHIFT) & 0xFF) / 255.f;
+        f[3] = static_cast<int>((color >> IM_COL32_B_SHIFT) & 0xFF) / 255.f;
+    }
+
     static Color ConvertInt4ToU32(const int* i) {
         return static_cast<Color>((i[0] & 0xFF) << IM_COL32_A_SHIFT) |
                static_cast<Color>((i[1] & 0xFF) << IM_COL32_R_SHIFT) |
@@ -67,7 +80,7 @@ namespace Colors {
 
     static bool DrawSettingHueWheel(const char* text, Color* color, ImGuiColorEditFlags flags = 0) {// ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel) {
         ImVec4 col = ImGui::ColorConvertU32ToFloat4(*color);
-        if (ImGui::ColorEdit4(text, &col.x, flags)) {
+        if (ImGui::ColorEdit4(text, &col.x, flags | ImGuiColorEditFlags_AlphaPreview)) {
             *color = ImGui::ColorConvertFloat4ToU32(col);
             return true;
         }
@@ -111,25 +124,25 @@ namespace Colors {
         
         ImGui::PushItemWidth(w_item_one);
         if (alpha) {
-            value_changed |= ImGui::DragInt("##A", &i[0], 1.0f, 0, 255, "A:%3.0f");
+            value_changed |= ImGui::DragInt("##A", &i[0], 1.0f, 0, 255, "A:%d");
             ImGui::SameLine(0, style.ItemInnerSpacing.x);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alpha channel (0 - 255)\n0 is transparent, 255 is solid color");
         } else {
             if (!alpha) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + w_item_one + style.ItemInnerSpacing.x);
         }
 
-        value_changed |= ImGui::DragInt("##R", &i[1], 1.0f, 0, 255, "R:%3.0f");
+        value_changed |= ImGui::DragInt("##R", &i[1], 1.0f, 0, 255, "R:%d");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Red channel (0 - 255)");
 
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
-        value_changed |= ImGui::DragInt("##G", &i[2], 1.0f, 0, 255, "G:%3.0f");
+        value_changed |= ImGui::DragInt("##G", &i[2], 1.0f, 0, 255, "G:%d");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Green channel (0 - 255)");
 
         ImGui::PopItemWidth();
 
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         ImGui::PushItemWidth(w_item_last);
-        value_changed |= ImGui::DragInt("##B", &i[3], 1.0f, 0, 255, "B:%3.0f");
+        value_changed |= ImGui::DragInt("##B", &i[3], 1.0f, 0, 255, "B:%d");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Blue channel (0 - 255)");
         ImGui::PopItemWidth();
 

@@ -51,13 +51,15 @@ The [minimap](minimap) is an improved version of the default Guild Wars compass,
 The [damage monitor](damage_monitor) records how much damage has been dealt by each party member and displays it as a number, as a percentage of the party's total, and as a thick horizontal bar.
 
 ## Bonds
-The bonds monitor shows which maintained monk enchantments you currently have on the allies in the party window. There is an option in [Settings](settings) to only show bonds for party members.
+The bonds monitor shows which maintained monk enchantments you currently have on the allies in the party window. There is an option in [Settings](settings) to only show bonds for party members. The monitor also shows refrains ([Heroic Refrain](https://wiki.guildwars.com/wiki/Heroic_Refrain), [Bladeturn Refrain](https://wiki.guildwars.com/wiki/Bladeturn_Refrain), [Burning Refrain](https://wiki.guildwars.com/wiki/Burning_Refrain), [Hasty Refrain](https://wiki.guildwars.com/wiki/Hasty_Refrain), [Mending Refrain](https://wiki.guildwars.com/wiki/Mending_Refrain)) you have cast on yourself and your heroes.
 
 The bonds are displayed in the order they appear in your skill bar when entering the zone. There is a button in [Settings](settings) to refresh the order if you re-order your skill bar in an explorable area. You can also make them appear in reverse order.
 
-Only enchantments that can be maintained on another ally will show up.
+Self-targeted enchantments that cannot be maintained on another ally (e.g. Unyielding Aura) will not show up.
 
-You can click on the monitor to cast or dismiss enchantments. This can be disabled in [Settings](settings).
+If your attributes have increased, allowing you to cast a stronger version of a bond or refrain, it will appear darkened on the monitor. This only works for yourself and your heroes.
+
+You can click on the monitor to cast or dismiss bonds and cast refrains. This can be disabled in [Settings](settings).
 
 You can customize the background color of the monitor in [Settings](settings). You can also adjust the row height to make it line up better with your party window.
 
@@ -67,7 +69,7 @@ The clock simply shows your local time of day. You can choose 12 or 24-hour cloc
 ## Vanquish
 The vanquish monitor shows how many enemies are in a zone, and how many have already been killed. This updates whenever you spawn additional enemies e.g. from quests or pop-ups.
 
-This widget will not appear unless you are in an explorable area and in Hard Mode. In areas that cannot be vanquished, such as missions and dungeons, the counter will show 0/0.
+This widget will not appear unless you are in an vanquishable area and in Hard Mode. 
 
 ## Alcohol
 When in an explorable area, the alcohol monitor displays a timer of how long before the drunkenness effect wears off.

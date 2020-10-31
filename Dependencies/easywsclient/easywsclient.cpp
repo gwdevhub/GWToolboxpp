@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #pragma warning(disable: 4100)
 #pragma warning(disable: 4244)
 #pragma warning(disable: 4365)
@@ -519,6 +518,8 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
       // Connect the SSL struct to our connection
       if (!SSL_set_fd (ptConnCtx->sslHandle, ptConnCtx->sockfd))
         ERR_print_errors_fp (stderr);
+
+      SSL_set_tlsext_host_name(ptConnCtx->sslHandle, host);
 
       // Initiate SSL handshake
       if (SSL_connect (ptConnCtx->sslHandle) != 1)

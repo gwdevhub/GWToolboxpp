@@ -5,7 +5,7 @@
 
 utf8::string Unicode16ToUtf8(const wchar_t *str)
 {
-    utf8::string res = {0};
+    utf8::string res;
     int isize = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
     if (isize < 0) return res;
     size_t size = static_cast<size_t>(isize);
@@ -17,7 +17,7 @@ utf8::string Unicode16ToUtf8(const wchar_t *str)
 
 utf8::string Unicode16ToUtf8(const wchar_t *start, const wchar_t *end)
 {
-    utf8::string res = {0};
+    utf8::string res;
     int isize = WideCharToMultiByte(CP_UTF8, 0, start, end - start, nullptr, 0,
                                     nullptr, nullptr);
     if (isize < 0) return res;
@@ -32,7 +32,7 @@ utf8::string Unicode16ToUtf8(const wchar_t *start, const wchar_t *end)
 
 utf8::string Unicode16ToUtf8(char *buffer, size_t n_buffer, const wchar_t *start, const wchar_t *end)
 {
-    utf8::string res = {0};
+    utf8::string res;
     int isize = WideCharToMultiByte(CP_UTF8, 0, start, end - start, buffer,
                                    static_cast<int>(n_buffer), nullptr, nullptr);
     if (isize < 0) return res;
@@ -57,7 +57,7 @@ utf8::string Utf8Normalize(const char *str)
 {
     const int flags = UTF8PROC_NULLTERM | UTF8PROC_STABLE |
         UTF8PROC_COMPOSE | UTF8PROC_COMPAT | UTF8PROC_CASEFOLD | UTF8PROC_IGNORE | UTF8PROC_STRIPMARK;
-    utf8::string res = {0};
+    utf8::string res;
     utf8proc_map((utf8proc_uint8_t *)str, 0, (utf8proc_uint8_t **)&res.bytes, (utf8proc_option_t)flags);
     res.count = res.bytes ? strlen(res.bytes) : 0;
     return res;

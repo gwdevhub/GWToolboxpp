@@ -11,6 +11,9 @@ public:
     // name of the window and the ini section
     virtual const char* Name() const = 0;
 
+    // Icon for this module (if any).
+    virtual const char* Icon() const { return nullptr; }
+
     // name of the setting section
     virtual const char* SettingsName() const { return Name(); };
 
@@ -21,7 +24,8 @@ public:
     virtual void RegisterSettingsContent();
 
     // Readable array of setting callbacks registered.
-    static const std::unordered_map<std::string, SectionDrawCallbackList>* GetSettingsCallbacks();
+    static const std::unordered_map<std::string, SectionDrawCallbackList>& GetSettingsCallbacks();
+    static const std::unordered_map<std::string, const char*>& GetSettingsIcons();
 
     // Readable array of modules currently loaded
     static const std::unordered_map<std::string, ToolboxModule*>* GetModulesLoaded();
@@ -61,7 +65,8 @@ public:
     virtual void DrawSettingInternal() {};
 
     // Register settings content
-    static void RegisterSettingsContent(const char* section, SectionDrawCallback callback, float weighting);
+    static void RegisterSettingsContent(
+        const char* section, const char* icon, SectionDrawCallback callback, float weighting);
 
 protected:
     // Weighting used to decide where to position the DrawSettingInternal() for this module. Useful when more than 1 module has the same SettingsName().

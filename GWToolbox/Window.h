@@ -16,9 +16,11 @@ public:
 
     bool Create();
     bool WaitMessages();
+    bool PollMessages(uint32_t TimeoutMs);
     bool ProcessMessages();
 
     void SignalStop();
+    bool ShouldClose();
 
     void SetWindowName(LPCWSTR lpName);
     void SetWindowPosition(int X, int Y);

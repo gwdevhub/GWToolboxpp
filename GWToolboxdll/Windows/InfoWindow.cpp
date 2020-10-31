@@ -12,6 +12,7 @@
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Camera.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -44,10 +45,11 @@
 #include <Windows/NotepadWindow.h>
 #include <Windows/StringDecoderWindow.h>
 
+#include <Modules/ToolboxSettings.h>
+
 void InfoWindow::Initialize() {
     ToolboxWindow::Initialize();
 
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&MessageCore_Entry,OnMessageCore);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) -> void {
@@ -69,7 +71,7 @@ void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
     UNREFERENCED_PARAMETER(cmd);
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
     GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (info == nullptr) return;
     GW::PlayerPartyMemberArray partymembers = info->players;
@@ -164,8 +166,8 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
     ImGui::InputText("Name", name->str(), 64, ImGuiInputTextFlags_ReadOnly);
     //ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
     ImGui::PopItemWidth();
-    if (ImGui::TreeNode("Advanced##item")) {
-        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+    if (ImGui::TreeNodeEx("Advanced##item", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
         if (item) {
             ImGui::LabelText("Addr", "%p", item);
             ImGui::LabelText("Id", "%d", item->item_id);
@@ -205,32 +207,34 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
 void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+    ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (show_widgets) {
-            ImGui::Checkbox("Timer", &TimerWidget::Instance().visible);
-            ImGui::ShowHelp("Time the instance has been active");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Minimap", &Minimap::Instance().visible);
-            ImGui::ShowHelp("An alternative to the default compass");
-            ImGui::Checkbox("Bonds", &BondsWidget::Instance().visible);
-            ImGui::ShowHelp("Show the bonds maintained by you.\nOnly works on human players");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Damage", &PartyDamage::Instance().visible);
-            ImGui::ShowHelp("Show the damage done by each player in your party.\nOnly works on the damage done within your radar range.");
-            ImGui::Checkbox("Health", &HealthWidget::Instance().visible);
-            ImGui::ShowHelp("Displays the health of the target.\nMax health is only computed and refreshed when you directly damage or heal your target");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Distance", &DistanceWidget::Instance().visible);
-            ImGui::ShowHelp("Displays the distance to your target.\n1010 = Earshot / Aggro\n1248 = Cast range\n2500 = Spirit range\n5000 = Radar range");
-            ImGui::Checkbox("Clock", &ClockWidget::Instance().visible);
-            ImGui::ShowHelp("Displays the system time (hour : minutes)");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Notepad", &NotePadWindow::Instance().visible);
-            ImGui::ShowHelp("A simple in-game text editor");
-            ImGui::Checkbox("Alcohol", &AlcoholWidget::Instance().visible);
-            ImGui::ShowHelp("Shows a countdown timer for alcohol");
+            const std::vector<ToolboxModule *> &optional_modules = ToolboxSettings::Instance().GetOptionalModules();
+            std::vector<ToolboxUIElement *> widgets;
+            widgets.reserve(optional_modules.size());
+            for (ToolboxModule *module : optional_modules) {
+                ToolboxUIElement *widget = dynamic_cast<ToolboxUIElement *>(module);
+                if (!widget || !widget->IsWidget())
+                    continue;
+                widgets.push_back(widget);
+            }
+            std::sort(widgets.begin(), widgets.end(), [](auto *a, auto *b) { return std::strcmp(a->Name(), b->Name()) < 0; });
+            const unsigned cols = static_cast<unsigned>(ceil(ImGui::GetWindowSize().x / 200.f));
+            ImGui::PushID("info_enable_widget_items");
+            ImGui::Columns(static_cast<int>(cols), "info_enable_widgets", false);
+            const size_t items_per_col = static_cast<size_t>(ceil(static_cast<float>(widgets.size()) / cols));
+            size_t col_count = 0u;
+            for (ToolboxUIElement* widget : widgets) {
+                ImGui::Checkbox(widget->Name(), &widget->visible);
+                if (++col_count == items_per_col) {
+                    ImGui::NextColumn();
+                    col_count = 0u;
+                }
+            }
+            ImGui::Columns(1);
+            ImGui::PopID();
         }
 
         if (show_open_chest) {
@@ -244,14 +248,17 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         if (ImGui::CollapsingHeader("Camera")) {
             static char pos_buf[32];
             static char target_buf[32];
+            static char angle_buf[32];
             static GW::Camera* cam;
             if ((cam = GW::CameraMgr::GetCamera()) != nullptr) {
                 snprintf(pos_buf, 32, "%.2f, %.2f, %.2f", cam->position.x, cam->position.y, cam->position.z);
                 snprintf(target_buf, 32, "%.2f, %.2f, %.2f", cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z);
+                snprintf(angle_buf, 32, "%.2f, %.2f", cam->GetCurrentYaw(), cam->pitch);
             }
             ImGui::PushItemWidth(-80.0f);
             ImGui::InputText("Position##cam_pos", pos_buf, 32, ImGuiInputTextFlags_ReadOnly);
             ImGui::InputText("Target##cam_target", target_buf, 32, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputText("Yaw/Pitch##cam_angle", angle_buf, 32, ImGuiInputTextFlags_ReadOnly);
             ImGui::PopItemWidth();
         }
         if (show_player && ImGui::CollapsingHeader("Player")) {
@@ -278,7 +285,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::InputText("Player ID##player", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
             ImGui::ShowHelp("Player ID is unique for each human player in the instance.");
             ImGui::PopItemWidth();
-            if (ImGui::TreeNode("Effects##player")) {
+            if (ImGui::TreeNodeEx("Effects##player", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
                 if (effects.valid()) {
                     for (DWORD i = 0; i < effects.size(); ++i) {
@@ -290,7 +297,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 ImGui::TreePop();
             }
-            if (ImGui::TreeNode("Buffs##player")) {
+            if (ImGui::TreeNodeEx("Buffs##player", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 GW::BuffArray effects = GW::Effects::GetPlayerBuffArray();
                 if (effects.valid()) {
                     for (DWORD i = 0; i < effects.size(); ++i) {
@@ -321,8 +328,12 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 snprintf(y_buf, 32, "%.2f", target->pos.y);
                 float s = sqrtf(target->move_x * target->move_x + target->move_y * target->move_y);
                 snprintf(s_buf, 32, "%.3f", s / 288.0f);
+                
+                if (target->GetIsItemType())
+                    snprintf(modelid_buf, 32, "%d", target_item ? GW::Items::GetItemById(target_item->item_id)->model_id : 0);
+                else
+                    snprintf(modelid_buf, 32, "%d", target_living ? target_living->player_number : 0);
                 snprintf(agentid_buf, 32, "%d", target->agent_id);
-                snprintf(modelid_buf, 32, "%d", target_living ? target_living->player_number : 0);
                 wchar_t* enc_name = GW::Agents::GetAgentEncName(target);
                 if (enc_name) {
                     size_t offset = 0;
@@ -365,10 +376,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     guild = guilds[target_living->tags->guild_id];
             }
             if (target) {
-                if (ImGui::TreeNode("Advanced##target")) {
+                if (ImGui::TreeNodeEx("Advanced##target", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                     GW::Agent *me = GW::Agents::GetPlayer();
                     
-                    ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                     ImGui::LabelText("Addr", "%p", target);
                     ImGui::LabelText("Id", "%d", target->agent_id);
                     ImGui::LabelText("Z", "%f", target->z);
@@ -419,8 +430,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     ImGui::TreePop();
                 }
                 if (player) {
-                    if (ImGui::TreeNode("Player Info##target")) {
-                        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                    if (ImGui::TreeNodeEx("Player Info##target", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                         ImGui::LabelText("Addr", "%p", player);
                         ImGui::LabelText("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
                         ImGui::PopItemWidth();
@@ -428,8 +439,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     }
                 }
                 if (guild) {
-                    if (ImGui::TreeNode("Guild Info##target")) {
-                        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                    if (ImGui::TreeNodeEx("Guild Info##target", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
                         ImGui::LabelText("Addr", "%p", guild);
                         ImGui::LabelText("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());
                         ImGui::LabelText("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");
@@ -488,11 +499,13 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             static ForDecode item_name;
             DrawItemInfo(GW::Items::GetItemBySlot(GW::Constants::Bag::Backpack, 1),&item_name);
         }
+        #ifdef _DEBUG
         if (show_item && ImGui::CollapsingHeader("Quoted Item")) {
             ImGui::Text("Most recently quoted item (buy or sell) from trader");
             static ForDecode quoted_name;
             DrawItemInfo(GW::Items::GetItemById(quoted_item_id),&quoted_name);
         }
+        #endif
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
             GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
             DWORD qid = GW::GameContext::instance()->world->active_quest_id;

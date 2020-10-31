@@ -236,7 +236,11 @@ void ObjectiveTimerWindow::Initialize() {
         return false;
     });*/
 }
-
+ObjectiveTimerWindow::~ObjectiveTimerWindow() {
+    if (run_loader.joinable())
+        run_loader.join();
+    ClearObjectiveSets();
+}
 void ObjectiveTimerWindow::OnAgentUpdateAllegiance(GW::HookStatus *, GW::Packet::StoC::AgentUpdateAllegiance *packet)
 {
     if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld)
@@ -280,8 +284,6 @@ void ObjectiveTimerWindow::OnManipulateMapObject(GW::HookStatus *, GW::Packet::S
 void ObjectiveTimerWindow::OnMapChanged(GW::HookStatus *, GW::Packet::StoC::PacketBase *pak)
 {
     auto &instance = Instance();
-    instance.monitor_doors = false;
-
     if (pak->header == GW::Packet::StoC::InstanceLoadFile::STATIC_HEADER) {
         // Pre map load
         const GW::Packet::StoC::InstanceLoadFile *packet = static_cast<GW::Packet::StoC::InstanceLoadFile *>(pak);
@@ -356,6 +358,7 @@ void ObjectiveTimerWindow::OnMapChanged(GW::HookStatus *, GW::Packet::StoC::Pack
     }
     else if (pak->header == GW::Packet::StoC::GameSrvTransfer::STATIC_HEADER) {
         // Exited map
+        instance.monitor_doors = false;
         const GW::Packet::StoC::GameSrvTransfer *packet = static_cast<GW::Packet::StoC::GameSrvTransfer *>(pak);
         auto dungeonLevel = mapToDungeonLevel.find(static_cast<GW::Constants::MapID>(packet->map_id));
         bool isDungeon = dungeonLevel != mapToDungeonLevel.end();
@@ -761,9 +764,9 @@ void ObjectiveTimerWindow::Update(float) {
 }
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
     // Main objective timer window
-    if (visible) {
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+    if (visible && !loading) {
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
             if (objective_sets.empty()) {
                 ImGui::Text("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
@@ -785,8 +788,8 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
 
     // Breakout objective set for current run
     if (show_current_run_window && current_objective_set) {
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
         char buf[256];
         sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name, current_objective_set->cached_time ? current_objective_set->cached_time : "--:--");
             
@@ -866,86 +869,101 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
 }
 void ObjectiveTimerWindow::LoadRuns() {
     if (!save_to_disk) return;
-    //ClearObjectiveSets();
-    Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
-    WIN32_FIND_DATAW FindFileData;
-    size_t max_objectives_in_memory = 200;
-    std::wstring file_match = Resources::GetPath(L"runs", L"ObjectiveTimerRuns_*.json");
-    std::wstring filename;
-    std::set<std::wstring> obj_timer_files;
-    HANDLE hFind = FindFirstFileW(file_match.c_str(), &FindFileData);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        obj_timer_files.insert(FindFileData.cFileName);
-        while (FindNextFileW(hFind, &FindFileData) != 0) {
+    // Because this does a load of file reads and JSON decoding, its on a separate thread; it could delay rendering by seconds
+    if (run_loader.joinable())
+        run_loader.join();
+    loading = true;
+    run_loader = std::thread([]() {
+        ObjectiveTimerWindow& instance = ObjectiveTimerWindow::Instance();
+        //ClearObjectiveSets();
+        Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
+        WIN32_FIND_DATAW FindFileData;
+        size_t max_objectives_in_memory = 200;
+        std::wstring file_match = Resources::GetPath(L"runs", L"ObjectiveTimerRuns_*.json");
+        std::wstring filename;
+        std::set<std::wstring> obj_timer_files;
+        HANDLE hFind = FindFirstFileW(file_match.c_str(), &FindFileData);
+        if (hFind != INVALID_HANDLE_VALUE) {
             obj_timer_files.insert(FindFileData.cFileName);
-        }
-    }
-    FindClose(hFind);
-
-    // Output the list of names found
-    for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && objective_sets.size() < max_objectives_in_memory; it++) {
-        try {
-            std::ifstream file;
-            std::wstring fn = Resources::GetPath(L"runs", *it);
-            file.open(fn);
-            if (file.is_open()) {
-                nlohmann::json os_json_arr;
-                file >> os_json_arr;
-                for (nlohmann::json::iterator json_it = os_json_arr.begin();
-                     json_it != os_json_arr.end(); ++json_it) {
-                    ObjectiveSet *os = ObjectiveSet::FromJson(&json_it.value());
-                    if (objective_sets.find(os->system_time) != objective_sets.end())
-                        continue; // Don't load in a run that already exists
-                    os->StopObjectives();
-                    os->need_to_collapse = true;
-                    os->from_disk = true;
-                    objective_sets.emplace(os->system_time, os);
-                }
-                file.close();
+            while (FindNextFileW(hFind, &FindFileData) != 0) {
+                obj_timer_files.insert(FindFileData.cFileName);
             }
         }
-        catch (const std::exception&) {
-            Log::Error("Failed to load ObjectiveSets from json");
+        FindClose(hFind);
+
+        // Output the list of names found
+        for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && instance.objective_sets.size() < max_objectives_in_memory; it++) {
+            try {
+                std::ifstream file;
+                std::wstring fn = Resources::GetPath(L"runs", *it);
+                file.open(fn);
+                if (file.is_open()) {
+                    nlohmann::json os_json_arr;
+                    file >> os_json_arr;
+                    for (nlohmann::json::iterator json_it = os_json_arr.begin();
+                        json_it != os_json_arr.end(); ++json_it) {
+                        ObjectiveSet* os = ObjectiveSet::FromJson(&json_it.value());
+                        if (instance.objective_sets.find(os->system_time) != instance.objective_sets.end())
+                            continue; // Don't load in a run that already exists
+                        os->StopObjectives();
+                        os->need_to_collapse = true;
+                        os->from_disk = true;
+                        instance.objective_sets.emplace(os->system_time, os);
+                    }
+                    file.close();
+                }
+            }
+            catch (const std::exception&) {
+                Log::Error("Failed to load ObjectiveSets from json");
+            }
         }
-    }
+        instance.loading = false;
+    });
 }
 void ObjectiveTimerWindow::SaveRuns() {
     if (!save_to_disk || objective_sets.empty())
         return;
-    Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
-    std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
-    wchar_t filename[36];
-    struct tm* structtime;
-    for (auto& os : objective_sets) {
-        if (os.second->from_disk)
-            continue; // No need to re-save a run.
-        time_t tt = (time_t)os.second->system_time;
-        structtime = gmtime(&tt);
-        if (!structtime)
-            continue;
-        swprintf(filename, 36, L"ObjectiveTimerRuns_%02d-%02d-%02d.json", structtime->tm_year + 1900, structtime->tm_mon + 1, structtime->tm_mday);
-        objective_sets_by_file[filename].push_back(os.second);
-    }
-    bool error_saving = false;
-    for (auto& it : objective_sets_by_file) {
-        try {
-            std::ofstream file;
-            file.open(Resources::GetPath(L"runs",it.first));
-            if (file.is_open()) {
-                nlohmann::json os_json_arr;
-                for (auto os : it.second) {
-                    os_json_arr.push_back(os->ToJson());
+    if (run_loader.joinable())
+        run_loader.join();
+    loading = true;
+    run_loader = std::thread([]() {
+        ObjectiveTimerWindow& instance = ObjectiveTimerWindow::Instance();
+        Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
+        std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
+        wchar_t filename[36];
+        struct tm* structtime;
+        for (auto& os : instance.objective_sets) {
+            if (os.second->from_disk)
+                continue; // No need to re-save a run.
+            time_t tt = (time_t)os.second->system_time;
+            structtime = gmtime(&tt);
+            if (!structtime)
+                continue;
+            swprintf(filename, 36, L"ObjectiveTimerRuns_%02d-%02d-%02d.json", structtime->tm_year + 1900, structtime->tm_mon + 1, structtime->tm_mday);
+            objective_sets_by_file[filename].push_back(os.second);
+        }
+        bool error_saving = false;
+        for (auto& it : objective_sets_by_file) {
+            try {
+                std::ofstream file;
+                file.open(Resources::GetPath(L"runs", it.first));
+                if (file.is_open()) {
+                    nlohmann::json os_json_arr;
+                    for (auto os : it.second) {
+                        os_json_arr.push_back(os->ToJson());
+                    }
+                    file << os_json_arr << std::endl;
+                    file.close();
                 }
-                file << os_json_arr << std::endl;
-                file.close();
+            }
+            catch (const std::exception&) {
+                Log::Error("Failed to save ObjectiveSets to json");
+                error_saving = true;
             }
         }
-        catch (const std::exception&) {
-            Log::Error("Failed to save ObjectiveSets to json");
-            error_saving = true;
-        }
-    }
-    runs_dirty = false;
+        runs_dirty = false;
+        instance.loading = false;
+    });
 }
 void ObjectiveTimerWindow::ClearObjectiveSets() {
     for (auto os : objective_sets) {
@@ -1197,8 +1215,11 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
 
     sprintf(buf, "%s%s - %s%s###header%u", show_start_date_time ? cached_start : "", name, cached_time, failed ? " [Failed]" : "", ui_id);
 
-    bool is_open;
-    if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
+    bool is_open = true;
+    bool is_collapsed = !ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen);
+    if (!is_open)
+        return false;
+    if (!is_collapsed) {
         ImGui::PushID(static_cast<int>(ui_id));
         for (Objective& objective : objectives) {
             objective.Draw();
@@ -1209,7 +1230,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
         ImGui::GetCurrentWindow()->DC.StateStorage->SetInt(ImGui::GetID(buf), 0);
         need_to_collapse = false;
     }
-    return is_open;
+    return true;
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(struct tm* timeinfo) {

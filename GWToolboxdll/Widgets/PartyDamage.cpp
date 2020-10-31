@@ -101,7 +101,8 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 	if (cause_it == party_index.end()) return;  // ignore damage done by non-party members
 
 	// get target agent
-	if (!agents[packet->target_id]) return;
+	if (packet->target_id >= agents.size()) return;
+	if ( !agents[packet->target_id]) return;
 	GW::AgentLiving* target = agents[packet->target_id]->GetAsAgentLiving();
 	if (target == nullptr) return;
 	if (target->login_number != 0) return; // ignore player-inflicted damage
@@ -230,63 +231,61 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background).Value);
-	ImGui::SetNextWindowSize(ImVec2(width, (float)(size * line_height)));
+    ImGui::SetNextWindowSize(ImVec2(width, static_cast<float>(size * line_height)));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
-		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f16));
-		float x = ImGui::GetWindowPos().x;
-		float y = ImGui::GetWindowPos().y;
-		float _width = ImGui::GetWindowWidth();
+		const float &x = ImGui::GetWindowPos().x;
+        const float &y = ImGui::GetWindowPos().y;
+        const float &_width = ImGui::GetWindowWidth();
+        const Color damage_col_from = Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20));
+        const Color damage_col_to = Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20));
+        const Color damage_recent_from = Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20));
+        const Color damage_recent_to = Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20));
+        const float height_diff = (line_height - ImGui::GetTextLineHeight()) / 2;
 		const int BUF_SIZE = 16;
 		char buf[BUF_SIZE];
+        float part_of_max = 0, part_of_recent = 0, 
+			bar_left = 0, bar_right = 0, 
+			recent_left = 0, recent_right = 0, 
+			perc_of_total = 0;
 		for (size_t i = 0; i < size; ++i) {
-			float part_of_max = 0;
-			if (max > 0) {
-				part_of_max = (float)(damage[i].damage) / max;
-			}
-			float bar_left = bars_left ? (x + _width * (1.0f - part_of_max)) : (x);
-			float bar_right = bars_left ? (x + _width) : (x + _width * part_of_max);
+            const float &damage_float = static_cast<float>(damage[i].damage);
+
+            part_of_max = max > 0 ? damage_float / max : 0;
+			bar_left = bars_left ? (x + _width * (1.0f - part_of_max)) : (x);
+            bar_right = bars_left ? (x + _width) : (x + _width * part_of_max);
 			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
 				ImVec2(bar_left, y + i * line_height),
-				ImVec2(bar_right, y + (i + 1) * line_height),
-				Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20)),
-				Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20)),
-				Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20)),
-				Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20)));
+				ImVec2(bar_right, y + (i + 1) * line_height), 
+				damage_col_from, damage_col_from, damage_col_to, damage_col_to);
 
-			float part_of_recent = 0;
-			if (max_recent > 0) {
-				part_of_recent = (float)(damage[i].recent_damage) / max_recent;
-			}
-			float recent_left = bars_left ? (x + _width * (1.0f - part_of_recent)) : (x);
-			float recent_right = bars_left ? (x + _width) : (x + _width * part_of_recent);
+            part_of_recent = max_recent > 0 ? static_cast<float>(damage[i].recent_damage) / max_recent : 0;
+			recent_left = bars_left ? (x + _width * (1.0f - part_of_recent)) : (x);
+			recent_right = bars_left ? (x + _width) : (x + _width * part_of_recent);
 			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
-				ImVec2(recent_left, y + (i + 1) * line_height - 6),
-				ImVec2(recent_right, y + (i + 1) * line_height),
-				Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20)),
-				Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20)),
-				Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20)),
-				Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20)));
+				ImVec2(recent_left, y + (i + 1) * line_height - 6), 
+				ImVec2(recent_right, y + (i + 1) * line_height), 
+				damage_recent_from, damage_recent_from, damage_recent_to, damage_recent_to);
 
 			if (damage[i].damage < 1000) {
 				snprintf(buf, BUF_SIZE, "%d", damage[i].damage);
 			} else if (damage[i].damage < 1000 * 10) {
-				snprintf(buf, BUF_SIZE, "%.2f k", (float)damage[i].damage / 1000);
+                snprintf(buf, BUF_SIZE, "%.2f k", damage_float / 1000);
 			} else if (damage[i].damage < 1000 * 1000) {
-				snprintf(buf, BUF_SIZE, "%.1f k", (float)damage[i].damage / 1000);
+                snprintf(buf, BUF_SIZE, "%.1f k", damage_float / 1000);
 			} else {
-				snprintf(buf, BUF_SIZE, "%.2f m", (float)damage[i].damage / (1000 * 1000));
+                snprintf(buf, BUF_SIZE, "%.2f m", damage_float / (1000 * 1000));
 			}
+            
 			ImGui::GetWindowDrawList()->AddText(
-				ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + i * line_height),
+				ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + (i * line_height) + height_diff),
 				IM_COL32(255, 255, 255, 255), buf);
 
-			float perc_of_total = GetPercentageOfTotal(damage[i].damage);
+			perc_of_total = GetPercentageOfTotal(damage[i].damage);
 			snprintf(buf, BUF_SIZE, "%.1f %%", perc_of_total);
-			ImGui::GetWindowDrawList()->AddText(
-				ImVec2(x + _width / 2, y + i * line_height),
+            ImGui::GetWindowDrawList()->AddText(
+				ImVec2(x + _width / 2, y + (i * line_height) + height_diff),
 				IM_COL32(255, 255, 255, 255), buf);
 		}
-		ImGui::PopFont();
 	}
 	ImGui::End();
 	ImGui::PopStyleColor(); // window bg
@@ -404,7 +403,7 @@ void PartyDamage::DrawSettingInternal() {
 	ImGui::InputInt("Row Height", &row_height);
 	ImGui::ShowHelp("Height of each row, leave 0 for default");
 	if (width <= 0) width = 1.0f;
-	ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%.0f milliseconds");
+	ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%d milliseconds");
 	if (recent_max_time < 0) recent_max_time = 0;
 	ImGui::ShowHelp("After this amount of time, each player recent damage (blue bar) will be reset");
 	Colors::DrawSettingHueWheel("Background", &color_background);

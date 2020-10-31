@@ -14,22 +14,38 @@
 #include <Widgets/Minimap/SymbolsRenderer.h>
 #include <Widgets/Minimap/VBuffer.h>
 
-class Minimap : public ToolboxWidget {
-    struct Vec2i {
-        Vec2i(int _x, int _y) : x(_x), y(_y) {}
-        Vec2i() : x(0), y(0) {}
+class Minimap final : public ToolboxWidget
+{
+    struct Vec2i
+    {
+        Vec2i(int _x, int _y)
+            : x(_x)
+            , y(_y)
+        {
+        }
+        Vec2i()
+            : x(0)
+            , y(0)
+        {
+        }
         int x, y;
     };
-    Minimap() {};
-    Minimap(const Minimap&) = delete;
-    ~Minimap() {};
+    Minimap()
+    {
+        is_resizable = false;
+    };
+    Minimap(const Minimap &) = delete;
+    ~Minimap(){};
+
 public:
-    static Minimap& Instance() {
+    static Minimap &Instance()
+    {
         static Minimap instance;
         return instance;
     }
 
-    enum class MinimapModifierBehaviour : int {
+    enum class MinimapModifierBehaviour : int
+    {
         Disabled,
         Draw,
         Target,
@@ -42,15 +58,16 @@ public:
     const float max_speed = 15.0f; // game units per frame
 
     const char* Name() const override { return "Minimap"; }
+    const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
 
     float Scale() const { return scale; }
 
     void Initialize() override;
     void Terminate() override;
 
-    void Draw(IDirect3DDevice9* device) override;
-    void RenderSetupProjection(IDirect3DDevice9* device);
-    
+    void Draw(IDirect3DDevice9 *device) override;
+    void RenderSetupProjection(IDirect3DDevice9 *device) const;
+
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam);
@@ -60,16 +77,19 @@ public:
     static void OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv);
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(CSimpleIni *ini) override;
+    void SaveSettings(CSimpleIni *ini) override;
     void DrawSettingInternal() override;
 
-    float GetMapRotation();
+    float GetMapRotation() const;
+    D3DXVECTOR2 GetGwinchScale() const;
+    GW::Vec2f ShadowstepLocation() const;
+
+    static void SkillActivateCallback(GW::HookStatus*,GW::Packet::StoC::SkillActivate*);
+
 
     // 0 is 'all' flag, 1 to 7 is each hero
-    void FlagHero(unsigned int idx) {
-        if (idx < 8) flagging[idx] ^= 1;
-    }
+    bool FlagHero(uint32_t idx);
 
     RangeRenderer range_renderer;
     PmapRenderer pmap_renderer;
@@ -79,20 +99,26 @@ public:
     CustomRenderer custom_renderer;
     EffectRenderer effect_renderer;
 
+    static void Render(IDirect3DDevice9* device);
+
 private:
+
     bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
     inline bool IsActive() const;
 
     GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
     GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
-    void SelectTarget(GW::Vec2f pos);
-    bool IsKeyDown(MinimapModifierBehaviour mmb);
+    void SelectTarget(GW::Vec2f pos) const;
+    bool IsKeyDown(MinimapModifierBehaviour mmb) const;
 
     bool mousedown = false;
 
     Vec2i location;
     Vec2i size;
+    D3DXVECTOR2 gwinch_scale;
+    GW::Vec2f shadowstep_location = {0.f, 0.f};
+    RECT clipping = { 0 };
 
     Vec2i drag_start;
     GW::Vec2f translation;
@@ -106,19 +132,20 @@ private:
     bool mouse_clickthrough = false;
     bool mouse_clickthrough_in_outpost = false;
     bool rotate_minimap = true;
-    MinimapModifierBehaviour key_none_behavior  = MinimapModifierBehaviour::Draw;
-    MinimapModifierBehaviour key_ctrl_behavior  = MinimapModifierBehaviour::Target;
+    bool smooth_rotation = true;
+    bool circular_map = true;
+    MinimapModifierBehaviour key_none_behavior = MinimapModifierBehaviour::Draw;
+    MinimapModifierBehaviour key_ctrl_behavior = MinimapModifierBehaviour::Target;
     MinimapModifierBehaviour key_shift_behavior = MinimapModifierBehaviour::Move;
-    MinimapModifierBehaviour key_alt_behavior   = MinimapModifierBehaviour::Walk;
+    MinimapModifierBehaviour key_alt_behavior = MinimapModifierBehaviour::Walk;
     bool is_observing = false;
 
     bool hero_flag_controls_show = false;
     bool hero_flag_window_attach = true;
     Color hero_flag_window_background = 0;
-    bool flagging[9] = {false};
     std::vector<GW::AgentID> player_heroes;
 
-    void GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& heroes);
+    size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 
     GW::HookEntry AgentPinged_Entry;
     GW::HookEntry CompassEvent_Entry;

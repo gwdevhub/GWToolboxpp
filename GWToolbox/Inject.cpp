@@ -1,7 +1,8 @@
 #include "stdafx.h"
 
+#include <Str.h>
+
 #include "Inject.h"
-#include "Str.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
@@ -111,6 +112,11 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
         return InjectReply_PatternError;
     }
 
+    uintptr_t email_rva;
+    if (!scanner.FindPatternRva("\x33\xC0\x5D\xC2\x10\x00\xCC\x68\x80\x00\x00\x00", "xxxxxxxxxxxx", 0xE, &email_rva)) {
+        return InjectReply_PatternError;
+    }
+
     std::vector<InjectProcess> inject_processes;
 
     for (Process& process : processes) {
@@ -135,16 +141,30 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
                 module.base + charname_rva, process.GetProcessId());
             continue;
         }
-
-        wchar_t charname[32];
-        if (!process.Read(charname_ptr, charname, 40)) {
+        uint32_t email_ptr = 0;
+        if (!process.Read(module.base + email_rva, &email_ptr, 4)) {
+            fprintf(stderr, "Can't read the address 0x%08X in process %u\n",
+                module.base + email_rva, process.GetProcessId());
+            continue;
+        }
+        wchar_t charname[128] = { 0 };
+        if (!process.Read(charname_ptr, charname, 20 * sizeof(wchar_t))) {
             fprintf(stderr, "Can't read the character name at address 0x%08X in process %u\n",
                 charname_ptr, process.GetProcessId());
             continue;
         }
-        charname[20] = 0;
-
-        if (charname[0] == 0) {
+        if (!charname[0]) {
+            char email[_countof(charname)] = { 0 };
+            if (!process.Read(email_ptr, email, _countof(email) - 1)) {
+                fprintf(stderr, "Can't read the email at address 0x%08X in process %u\n",
+                    email_ptr, process.GetProcessId());
+                continue;
+            }
+            for (int i = 0; i < _countof(email) && email[i]; i++) {
+                charname[i] = email[i];
+            }
+        }
+        if (!charname[0]) {
             fprintf(stderr, "Character name in process %u is empty\n", process.GetProcessId());
             continue;
         }
@@ -156,6 +176,10 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
     }
 
     processes.clear();
+
+    if (!inject_processes.size()) {
+        return InjectReply_NoProcess;
+    }
 
     if (settings.quiet && inject_processes.size() == 1) {
         *target_process = std::move(inject_processes[0].m_Process);

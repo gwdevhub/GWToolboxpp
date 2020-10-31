@@ -20,10 +20,13 @@ This is simply a button to open your storage, wherever you are in any outpost. T
 
 This function is also available as a [chat command](commands) or a [hotkey](hotkeys).
 
+## Camera
+Position shows the co-ordinates of the camera. Target shows the direction the camera is pointing (usually the top of your character's head).
+
 ## Player
 Here you can see your exact position on the map, and how fast you are moving (normal walking forwards with no speed boost is 1.000).
 
-Agent ID and Player ID are only useful for debugging and development; normal players can ignore these.
+Agent ID, Player ID, Effects, and Buffs are only useful for debugging and development; normal players can ignore these.
 
 ## Target
 The Target menu is mostly the same as the Player one, but the information pertains to your current target instead.
@@ -35,14 +38,14 @@ There is also an Advanced section, only useful for debugging and development.
 ## Map
 This section tells you about the current zone you are in.
 
-Map ID is useful for setting up custom map markers and movement macros. Each explorable area has a unique map ID, although this is sometimes shared with the associated outpost.
+Map ID is useful for setting up custom map markers and hotkeys. Each explorable area has a unique map ID, although this is sometimes shared with the associated outpost.
 
 Map Type simply tells you if you are in an Outpost or Explorable area.
 
 Map file refers to the zone's pathing map. The files are often shared with other maps; this is especially noticeable in Eye of the North dungeons.
 
 ## Dialog
-This just shows the decimal code for the last dialog sent. You can use this to find out the code to set up dialog hotkeys.
+This just shows the decimal codes for the last NPC you spoke to. You can use this to find out the code to set up dialog hotkeys.
 
 ## Items
 This just shows the ID for the item in the top-left slot of your inventory backpack. You can use this to find out the ID to set up "Use Item" hotkeys.

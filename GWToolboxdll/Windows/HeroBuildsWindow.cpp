@@ -10,6 +10,8 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 
+#include <GWCA/Packets/Opcodes.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -17,6 +19,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
 #include <Logger.h>
 #include <GuiUtils.h>
@@ -106,6 +109,16 @@ namespace {
         }
         return ret;
     }
+    const GW::HeroFlag* GetHeroFlagInfo(uint32_t hero_id) {
+        const GW::GameContext* g = GW::GameContext::instance();
+        if (!g || !g->world) return nullptr;
+        const GW::HeroFlagArray& flags = g->world->hero_flags;
+        for (const GW::HeroFlag& flag : flags) {
+            if (flag.hero_id == hero_id)
+                return &flag;
+        }
+        return nullptr;
+    }
 
 }
 
@@ -137,7 +150,6 @@ HeroBuildsWindow::~HeroBuildsWindow() {
 
 void HeroBuildsWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"party.png"));
     send_timer = TIMER_INIT();
 }
 
@@ -148,8 +160,8 @@ void HeroBuildsWindow::Terminate() {
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
     if (visible) {
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
             const float btn_width = 60.0f * ImGui::GetIO().FontGlobalScale;
             const float &item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
@@ -196,11 +208,12 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
         TeamHeroBuild& tbuild = teambuilds[i];
         char winname[256];
         snprintf(winname, 256, "%s###herobuild%d", tbuild.name, tbuild.ui_id);
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(winname, &tbuild.edit_open)) {
             builds_changed |= ImGui::InputText("Hero Build Name", tbuild.name, 128);
             const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
+            const float icon_btn_width = btn_width / 1.75f;
             const float panel_width = btn_width + 12.0f;
             const float item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
             const float text_item_width = (ImGui::GetWindowContentRegionWidth() - btn_width - btn_width - btn_width - panel_width - (item_spacing * 3)) / 3;
@@ -227,6 +240,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                 if (j == 0) {
                     ImGui::TextDisabled("Player");
                     ImGui::SameLine(offset += text_item_width + item_spacing + btn_width + 10.0f + item_spacing);
+                    ImGui::PopItemWidth();
                 } else {
                     if (ImGui::MyCombo("###heroid", "Choose Hero", &build.hero_index,
                         [](void*, int idx, const char** out_text) -> bool {
@@ -257,14 +271,36 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                     }
                     ImGui::PopItemWidth();
                     ImGui::SameLine(offset += text_item_width + item_spacing);
-                    static const char *panel_options[2] = {"Hide", "Show"};
-                    ImGui::PushItemWidth(btn_width + 10.0f);
-                    builds_changed |= ImGui::Combo("###show_panel", &build.show_panel, panel_options, 2);
+                    if (ImGui::Button(build.show_panel ? ICON_FA_EYE : ICON_FA_EYE_SLASH, ImVec2(icon_btn_width, 0))) {
+                        build.show_panel = !build.show_panel;
+                        builds_changed = true;
+                    }
                     if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("Hide or Show the hero panel for this hero when this build is loaded.");
-                    ImGui::SameLine(offset += btn_width + 10.0f + item_spacing);
+                        ImGui::SetTooltip(build.show_panel ? "Hero panel: Show" : "Hero panel: Hide");
+                    ImGui::SameLine(offset += icon_btn_width + item_spacing);
+                    char* hero_stance_icon = ICON_FA_SHIELD_ALT;
+                    char* hero_stance_tooltip = "Hero behaviour: Guard";
+                    switch (build.behavior) {
+                    case 2:
+                        hero_stance_icon = ICON_FA_DOVE;
+                        hero_stance_tooltip = "Hero behaviour: Avoid Combat";
+                        break;
+                    case 0:
+                        hero_stance_icon = ICON_FA_FIST_RAISED;
+                        hero_stance_tooltip = "Hero behaviour: Fight";
+                        break;
+                    }
+                    if (ImGui::Button(hero_stance_icon, ImVec2(icon_btn_width, 0))) {
+                        build.behavior++;
+                        if (build.behavior > 2)
+                            build.behavior = 0;
+                        builds_changed = true;
+                    }
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip(hero_stance_tooltip);
+                    ImGui::SameLine(offset += icon_btn_width + item_spacing);
                 }
-                ImGui::PopItemWidth();
+                
                 if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {
                     if (ImGui::GetIO().KeyCtrl)
                         Send(tbuild, j);
@@ -473,7 +509,7 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx ) {
 
         if (heroid == HeroID::NoHero) return;
 
-        pending_hero_loads.push_back({ code.c_str(), heroid,build.show_panel });
+        pending_hero_loads.push_back({ code.c_str(), heroid,build.show_panel, build.behavior });
     }
 }
 
@@ -577,10 +613,12 @@ void HeroBuildsWindow::LoadFromFile() {
             char templatekey[16];
             char heroindexkey[16];
             char showpanelkey[16];
+            char behaviorkey[16];
             snprintf(namekey, 16, "name%d", i);
             snprintf(templatekey, 16, "template%d", i);
             snprintf(heroindexkey, 16, "heroindex%d", i);
             snprintf(showpanelkey, 16, "panel%d", i);
+            snprintf(behaviorkey, 16, "behavior%d", i);
             const char* nameval = inifile->GetValue(section, namekey, "");
             const char* templateval = inifile->GetValue(section, templatekey, "");
             int hero_index = inifile->GetLongValue(section, heroindexkey, -1);
@@ -588,7 +626,8 @@ void HeroBuildsWindow::LoadFromFile() {
                 hero_index = -1; // can happen due to an old bug
             }
             int show_panel = inifile->GetLongValue(section, showpanelkey, 0);
-            HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0);
+            uint32_t behavior = static_cast<uint32_t>(inifile->GetLongValue(section, behaviorkey, 1));
+            HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0, behavior);
             tb.builds.push_back(build);
         }
 
@@ -621,14 +660,17 @@ void HeroBuildsWindow::SaveToFile() {
                 char templatekey[16];
                 char heroindexkey[16];
                 char showpanelkey[16];
+                char behaviorkey[16];
                 snprintf(namekey, 16, "name%d", j);
                 snprintf(templatekey, 16, "template%d", j);
                 snprintf(heroindexkey, 16, "heroindex%d", j);
                 snprintf(showpanelkey, 16, "panel%d", j);
+                snprintf(behaviorkey, 16, "behavior%d", j);
                 inifile->SetValue(section, namekey, build.name);
                 inifile->SetValue(section, templatekey, build.code);
                 inifile->SetLongValue(section, heroindexkey, build.hero_index);
                 inifile->SetLongValue(section, showpanelkey, build.show_panel);
+                inifile->SetLongValue(section, behaviorkey, build.behavior);
             }
         }
 
@@ -646,15 +688,22 @@ bool HeroBuildsWindow::CodeOnHero::Process() {
         GW::PartyMgr::AddHero(heroid);
         stage = Load;
     case Load: // Waiting for hero to be added to party
-        if (!GetPartyHeroByID(heroid, &party_hero_index))
-            break;
-        if (code[0]) // Build optional
-            GW::SkillbarMgr::LoadSkillTemplate(code, party_hero_index);
-        if (show_panel)
-            GW::UI::SendUIMessage(GW::UI::UIMessage::kShowHeroPanel, heroid);
-        else 
-            GW::UI::SendUIMessage(GW::UI::UIMessage::kHideHeroPanel, heroid);
-
+        {
+            const GW::HeroPartyMember* hero = GetPartyHeroByID(heroid, &party_hero_index);
+            if (!hero)
+                break;
+            const GW::HeroFlag* flag = GetHeroFlagInfo(heroid);
+            if (!flag)
+                break;
+            if (code[0]) // Build optional
+                GW::SkillbarMgr::LoadSkillTemplate(code, party_hero_index);
+            if (show_panel)
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kShowHeroPanel, heroid);
+            else
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kHideHeroPanel, heroid);
+            if (flag->hero_behavior != behavior)
+                GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero->agent_id, behavior);
+        }
         stage = Finished;
     case Finished: // Success, hero added and build loaded.
         return true;

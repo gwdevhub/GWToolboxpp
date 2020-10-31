@@ -59,11 +59,11 @@ static void WriteRegSettings()
         return;
     }
 
-    if (RegWriteDWORD(SettingsKey, L"asadmin", settings.asadmin)) {
+    if (RegWriteDWORD(SettingsKey, L"asadmin", static_cast<DWORD>(settings.asadmin))) {
         fprintf(stderr, "Failed to write 'asadmin' registry key\n");
     }
 
-    if (RegWriteDWORD(SettingsKey, L"noupdate", settings.noupdate)) {
+    if (RegWriteDWORD(SettingsKey, L"noupdate", static_cast<DWORD>(settings.noupdate))) {
         fprintf(stderr, "Failed to write 'noupdate' registry key\n");
     }
 

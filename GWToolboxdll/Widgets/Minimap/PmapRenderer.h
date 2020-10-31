@@ -12,12 +12,15 @@ public:
     void DrawSettings();
     void LoadSettings(CSimpleIni* ini, const char* section);
     void SaveSettings(CSimpleIni* ini, const char* section) const;
+    Color GetBackgroundColor() { return color_mapbackground; }
+
 
 protected:
     void Initialize(IDirect3DDevice9* device) override;
 private:
     Color color_map = 0;
     Color color_mapshadow = 0;
+    Color color_mapbackground = 0;
 
     size_t trapez_count_ = 0;
     size_t tri_count_ = 0; // of just 1 batch (map)

@@ -30,7 +30,8 @@ void SymbolsRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
     Colors::Save(ini, section, "color_symbols_modifier", color_modifier);
 }
 void SymbolsRenderer::DrawSettings() {
-    if (ImGui::SmallButton("Restore Defaults")) {
+    bool confirm = false;
+    if (ImGui::SmallConfirmButton("Restore Defaults",&confirm)) {
         color_quest = 0xFF22EF22;
         color_north = 0xFFFF8000;
         color_modifier = 0x001E1E1E;

@@ -292,6 +292,8 @@ void PartyWindowModule::LoadDefaults() {
 
     //AddSpecialNPC({ "Ebon Vanguard Assassin", 5848, GW::Constants::MapID::None });
     AddSpecialNPC({ "Ebon Vanguard Assassin", GW::Constants::ModelID::EbonVanguardAssassin, GW::Constants::MapID::None });
+
+    AddSpecialNPC({ "Ben Wolfson Pre-Searing", 1512, GW::Constants::MapID::None });
 }
 bool PartyWindowModule::ShouldAddAgentToPartyWindow(uint32_t agent_type) {
     if ((agent_type & 0x20000000) == 0)
@@ -349,7 +351,7 @@ void PartyWindowModule::DrawSettingInternal() {
         ImGui::Text("%d", npc->model_id);
         ImGui::SameLine(cols[1]);
         ImGui::Text("%ls", npc->GetMapName()->c_str());
-        ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - (48.0f * fontScale));
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - (48.0f * fontScale));
         bool clicked = ImGui::Button(" X ");
         ImGui::PopID();
         if(clicked) {
@@ -378,7 +380,7 @@ void PartyWindowModule::DrawSettingInternal() {
         std::map<uint32_t, SpecialNPCToAdd*>::iterator it = user_defined_npcs_by_model_id.find(static_cast<uint32_t>(new_npc_model_id));
         if (it != user_defined_npcs_by_model_id.end())
             return Error("Special NPC %s is already defined for model_id %d", it->second->alias.c_str(), new_npc_model_id);
-        AddSpecialNPC({ alias_str.c_str(),(uint32_t)new_npc_model_id,static_cast<GW::Constants::MapID>(new_npc_map_id) });
+        AddSpecialNPC({ alias_str.c_str(), new_npc_model_id,static_cast<GW::Constants::MapID>(new_npc_map_id) });
         Log::Info("Added special NPC %s (%d)", alias_str.c_str(), new_npc_model_id);
         CheckMap();
     }
@@ -389,8 +391,11 @@ void PartyWindowModule::Error(const char* format, ...) {
     va_start(args, format);
     snprintf(buffer, 599, format, args);
     va_end(args);
-    GW::GameThread::Enqueue([buffer]() {
-        Log::Error(buffer);
+
+    // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
+    std::string sbuffer(buffer);
+    GW::GameThread::Enqueue([sbuffer]() {
+        Log::Error(sbuffer.c_str());
     });
 }
 void PartyWindowModule::SaveSettings(CSimpleIni* ini) {
@@ -441,7 +446,7 @@ void PartyWindowModule::LoadSettings(CSimpleIni* ini) {
         long map_id = strtol(value.substr(name_end_pos + 1).c_str(), &p, 10);
         if (!p || map_id < 0 || map_id >= static_cast<long>(GW::Constants::MapID::Count))
             continue; // Invalid map_id
-        AddSpecialNPC({ alias.c_str(),(uint32_t)model_id,static_cast<GW::Constants::MapID>(map_id) });
+        AddSpecialNPC({ alias.c_str(), model_id,static_cast<GW::Constants::MapID>(map_id) });
     }
     CheckMap();
 }

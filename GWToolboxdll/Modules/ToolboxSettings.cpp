@@ -27,6 +27,7 @@
 #include <Modules/ZrawDeepModule.h>
 #include <Modules/AprilFools.h>
 #include <Modules/InventoryManager.h>
+#include <Modules/TeamspeakModule.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -58,10 +59,12 @@
 #include <Widgets/ClockWidget.h>
 #include <Widgets/VanquishWidget.h>
 #include <Widgets/AlcoholWidget.h>
+#include <Widgets/SkillbarWidget.h>
 #include <Widgets/ServerInfoWidget.h>
 
 
 #include "ToolboxSettings.h"
+
 //#define _FUN
 
 
@@ -81,8 +84,10 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 
     if (use_discord) optional_modules.push_back(&DiscordModule::Instance());
     if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
+    if (use_teamspeak) optional_modules.push_back(&TeamspeakModule::Instance());
 
     SettingsWindow::Instance().sep_windows = optional_modules.size();
+    optional_modules.push_back(&SettingsWindow::Instance());
     if (use_pcons) optional_modules.push_back(&PconsWindow::Instance());
     if (use_hotkeys) optional_modules.push_back(&HotkeysWindow::Instance());
     if (use_builds) optional_modules.push_back(&BuildsWindow::Instance());
@@ -111,9 +116,9 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
         });
 
     SettingsWindow::Instance().sep_widgets = optional_modules.size();
-    optional_modules.push_back(&SettingsWindow::Instance());
     if (use_timer) optional_modules.push_back(&TimerWidget::Instance());
     if (use_health) optional_modules.push_back(&HealthWidget::Instance());
+    if (use_skillbar) optional_modules.push_back(&SkillbarWidget::Instance());
     if (use_distance) optional_modules.push_back(&DistanceWidget::Instance());
     if (use_minimap) optional_modules.push_back(&Minimap::Instance());
     if (use_damage) optional_modules.push_back(&PartyDamage::Instance());
@@ -176,54 +181,54 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Timer",&use_timer},
         {"Trade",&use_trade},
         {"Travel",&use_travel},
+        {"Teamspeak",&use_teamspeak},
         {"Twitch",&use_twitch},
         {"Vanquish counter",&use_vanquish}
     };
     ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
-    size_t items_per_col = (size_t)ceil(features.size() / cols);
+    size_t items_per_col = (size_t)ceil(features.size() / static_cast<float>(cols));
     size_t col_count = 0;
     for (auto feature : features) {
         ImGui::Checkbox(feature.first, feature.second);
         col_count++;
-        if (col_count > items_per_col) {
+        if (col_count == items_per_col) {
             ImGui::NextColumn();
             col_count = 0;
         }
     }
     ImGui::Columns(1);
     ImGui::PopID();
-    ImGui::PushID("menubuttons");
+    
     ImGui::Separator();
-    ImGui::Text("Show the following in the main window:");
+    if (ImGui::TreeNodeEx("Show the following in the main window:", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
 
-    std::vector<ToolboxUIElement *> ui = GWToolbox::Instance().GetUIElements();
-    ImGui::Columns(static_cast<int>(cols), "menubuttons_cols", false);
-    col_count = 0;
-    std::vector<ToolboxUIElement*> valid_elements;
-    for (size_t i = 0; i < ui.size();i++) {
-        auto window = ui[i];
-        if (window == &Updater::Instance()) continue;
-        if (window == &MainWindow::Instance()) continue;
-        if (!(window->IsWidget() || window->IsWindow())) 
-            continue;
-        valid_elements.push_back(window);
-    }
-    std::sort(valid_elements.begin(), valid_elements.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-        return std::string(lhs->Name()).compare(rhs->Name()) < 0;
-        });
-    items_per_col = (size_t)ceil(valid_elements.size() / cols);
-    for (size_t i = 0; i < valid_elements.size(); i++) {
-        auto window = valid_elements[i];
-        if (ImGui::Checkbox(window->Name(), &window->show_menubutton))
-            MainWindow::Instance().pending_refresh_buttons = true;
-        col_count++;
-        if (col_count > items_per_col) {
-            ImGui::NextColumn();
-            col_count = 0;
+        std::vector<ToolboxUIElement*> ui = GWToolbox::Instance().GetUIElements();
+        ImGui::Columns(static_cast<int>(cols), "menubuttons_cols", false);
+        col_count = 0;
+        std::vector<ToolboxUIElement*> valid_elements;
+        for (size_t i = 0; i < ui.size(); i++) {
+            auto& window = ui[i];
+            if ((window->IsWidget() || window->IsWindow()) && window->can_show_in_main_window) {
+                valid_elements.push_back(window);
+            }
         }
+        std::sort(valid_elements.begin(), valid_elements.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+            return std::string(lhs->Name()).compare(rhs->Name()) < 0;
+        });
+        items_per_col = (size_t)ceil(valid_elements.size() / static_cast<float>(cols));
+        for (size_t i = 0; i < valid_elements.size(); i++) {
+            auto window = valid_elements[i];
+            if (ImGui::Checkbox(window->Name(), &window->show_menubutton))
+                MainWindow::Instance().pending_refresh_buttons = true;
+            col_count++;
+            if (col_count == items_per_col) {
+                ImGui::NextColumn();
+                col_count = 0;
+            }
+        }
+        ImGui::Columns(1);
+        ImGui::TreePop();
     }
-    ImGui::Columns(1);
-    ImGui::PopID();
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
@@ -234,33 +239,34 @@ void ToolboxSettings::DrawFreezeSetting() {
 void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
     move_all = false;
-    use_pcons = ini->GetBoolValue(Name(), VAR_NAME(use_pcons), true);
-    use_hotkeys = ini->GetBoolValue(Name(), VAR_NAME(use_hotkeys), true);
-    use_builds = ini->GetBoolValue(Name(), VAR_NAME(use_builds), true);
-    use_herobuilds = ini->GetBoolValue(Name(), VAR_NAME(use_herobuilds), true);
-    use_travel = ini->GetBoolValue(Name(), VAR_NAME(use_travel), true);
-    use_dialogs = ini->GetBoolValue(Name(), VAR_NAME(use_dialogs), true);
-    use_info = ini->GetBoolValue(Name(), VAR_NAME(use_info), true);
-    use_materials = ini->GetBoolValue(Name(), VAR_NAME(use_materials), true);
-    use_timer = ini->GetBoolValue(Name(), VAR_NAME(use_timer), true);
-    use_health = ini->GetBoolValue(Name(), VAR_NAME(use_health), true);
-    use_distance = ini->GetBoolValue(Name(), VAR_NAME(use_distance), true);
-    use_minimap = ini->GetBoolValue(Name(), VAR_NAME(use_minimap), true);
-    use_damage = ini->GetBoolValue(Name(), VAR_NAME(use_damage), true);
-    use_bonds = ini->GetBoolValue(Name(), VAR_NAME(use_bonds), true);
-    use_clock = ini->GetBoolValue(Name(), VAR_NAME(use_clock), true);
-    use_notepad = ini->GetBoolValue(Name(), VAR_NAME(use_notepad), true);
-    use_vanquish = ini->GetBoolValue(Name(), VAR_NAME(use_vanquish), true);
-    use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), true);
-    use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), true);
-    use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), true);
-    save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
-    use_gamesettings = ini->GetBoolValue(Name(), VAR_NAME(use_gamesettings), true);
-    use_updater = ini->GetBoolValue(Name(), VAR_NAME(use_updater), true);
-    use_chatfilter = ini->GetBoolValue(Name(), VAR_NAME(use_chatfilter), true);
-    use_chatcommand = ini->GetBoolValue(Name(), VAR_NAME(use_chatcommand), true);
-    use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), true);
+    use_pcons = ini->GetBoolValue(Name(), VAR_NAME(use_pcons), use_pcons);
+    use_hotkeys = ini->GetBoolValue(Name(), VAR_NAME(use_hotkeys), use_hotkeys);
+    use_builds = ini->GetBoolValue(Name(), VAR_NAME(use_builds), use_builds);
+    use_herobuilds = ini->GetBoolValue(Name(), VAR_NAME(use_herobuilds), use_herobuilds);
+    use_travel = ini->GetBoolValue(Name(), VAR_NAME(use_travel), use_travel);
+    use_dialogs = ini->GetBoolValue(Name(), VAR_NAME(use_dialogs), use_dialogs);
+    use_info = ini->GetBoolValue(Name(), VAR_NAME(use_info), use_info);
+    use_materials = ini->GetBoolValue(Name(), VAR_NAME(use_materials), use_materials);
+    use_timer = ini->GetBoolValue(Name(), VAR_NAME(use_timer), use_timer);
+    use_health = ini->GetBoolValue(Name(), VAR_NAME(use_health), use_health);
+    use_distance = ini->GetBoolValue(Name(), VAR_NAME(use_distance), use_distance);
+    use_minimap = ini->GetBoolValue(Name(), VAR_NAME(use_minimap), use_minimap);
+    use_damage = ini->GetBoolValue(Name(), VAR_NAME(use_damage), use_damage);
+    use_bonds = ini->GetBoolValue(Name(), VAR_NAME(use_bonds), use_bonds);
+    use_clock = ini->GetBoolValue(Name(), VAR_NAME(use_clock), use_clock);
+    use_notepad = ini->GetBoolValue(Name(), VAR_NAME(use_notepad), use_notepad);
+    use_vanquish = ini->GetBoolValue(Name(), VAR_NAME(use_vanquish), use_vanquish);
+    use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), use_alcohol);
+    use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
+    use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
+    save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
+    use_gamesettings = ini->GetBoolValue(Name(), VAR_NAME(use_gamesettings), use_gamesettings);
+    use_updater = ini->GetBoolValue(Name(), VAR_NAME(use_updater), use_updater);
+    use_chatfilter = ini->GetBoolValue(Name(), VAR_NAME(use_chatfilter), use_chatfilter);
+    use_chatcommand = ini->GetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
+    use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
     use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
+    use_teamspeak = ini->GetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
     use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
     use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
     use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
@@ -293,6 +299,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
     ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
     ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
+    ini->SetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
     ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
     ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
     ini->SetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
@@ -341,7 +348,7 @@ void ToolboxSettings::Update(float delta) {
                 }
 
                 std::wstring prof_string = L"";
-                GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+                GW::AgentLiving* me = GW::Agents::GetCharacter();
                 if (me) {
                     prof_string += L" - ";
                     prof_string += GW::Constants::GetWProfessionAcronym(
@@ -368,7 +375,7 @@ void ToolboxSettings::Update(float delta) {
                 location_file.open(path);
             }
 
-            GW::Agent* me = GW::Agents::GetPlayer();
+            GW::Agent* me = GW::Agents::GetCharacter();
             if (location_file.is_open() && me != nullptr) {
                 location_file << "Time=" << GW::Map::GetInstanceTime();
                 location_file << " X=" << me->pos.x;

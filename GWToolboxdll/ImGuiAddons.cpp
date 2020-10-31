@@ -1,6 +1,10 @@
+#include "Color.h"
 #include "stdafx.h"
 
 #include <ImGuiAddons.h>
+#include <string>
+
+using namespace std::string_literals;
 
 void ImGui::ShowHelp(const char* help) {
 	ImGui::SameLine();
@@ -8,6 +12,33 @@ void ImGui::ShowHelp(const char* help) {
 	if (ImGui::IsItemHovered()) {
 		ImGui::SetTooltip(help);
 	}
+}
+void ImGui::TextShadowed(const char* label, ImVec2 offset, ImVec4 shadow_color) {
+	ImVec2 pos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(pos.x + offset.x, pos.y + offset.y));
+	ImGui::TextColored(shadow_color, label);
+	ImGui::SetCursorPos(pos);
+	ImGui::Text(label);
+}
+bool ImGui::SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content) {
+	static char id_buf[128];
+	snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, confirm_bool);
+	if (ImGui::SmallButton(label)) {
+		ImGui::OpenPopup(id_buf);
+	}
+	if (ImGui::BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		ImGui::Text(confirm_content);
+		if (ImGui::Button("OK", ImVec2(120, 0))) {
+			*confirm_bool = true;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+	return *confirm_bool;
 }
 bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
 {
@@ -27,6 +58,12 @@ bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
     if (label)
         ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + style.ItemSpacing.y / 2), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), label);
     return clicked;
+}
+bool ImGui::ColorButtonPicker(const char* label, Color* imcol, const ImGuiColorEditFlags flags)
+{
+    return Colors::DrawSettingHueWheel(label, imcol,
+        flags | ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel |
+            ImGuiColorEditFlags_NoInputs);
 }
 bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool(*items_getter)(void*, int, const char**), 
 	void* data, int items_count, int height_in_items) {
@@ -56,8 +93,8 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 	static float time_since_last_update = 0.0f;
 	time_since_last_update += g.IO.DeltaTime;
 	bool update_keyboard_match = false;
-	for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++) {
-		if (unsigned int c = (unsigned int)g.IO.InputCharacters[n]) {
+    for (int n = 0; n < g.IO.InputQueueCharacters.size() && g.IO.InputQueueCharacters[n]; n++) {
+        if (unsigned int c = (unsigned int)g.IO.InputQueueCharacters[n]) {
 			if (c == ' '
 				|| (c >= '0' && c <= '9')
 				|| (c >= 'A' && c <= 'Z')
@@ -132,10 +169,10 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 			keyboard_selected = -1;
 		}
 		if (item_selected && IsWindowAppearing()) {
-			SetScrollHere();
+            SetScrollHereY();
 		}
 		if (item_keyboard_selected && keyboard_selected_now) {
-			SetScrollHere();
+            SetScrollHereY();
 		}
 		PopID();
 	}
