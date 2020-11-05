@@ -28,10 +28,34 @@ namespace {
             snprintf(sender, sizeof(sender) / sizeof(*sender), "%s", module.irc_alias.c_str());
         }
         std::wstring sender_ws = GuiUtils::StringToWString(sender);
-        std::wstring message_ws(message);
+        wchar_t* message_ws = new wchar_t[255];
+        size_t message_len = 0;
+        size_t original_len = wcslen(message);
+        bool is_emote = wmemcmp(message, L"\x1" L"ACTION ", 7) == 0;
+        if (is_emote)
+            message_ws[message_len++] = '*';
+        for (size_t i = (is_emote ? 8 : 0); i < original_len; i++) {
+            // Break on the end of the message
+            if(message[i] == '\x1' || !message[i])
+                break;
+            // Double escape backsashes
+            if (message[i] == '\\')
+                message_ws[message_len++] = message[i];
+            if (message_len >= 254)
+                break;
+            message_ws[message_len++] = message[i];
+        }
+        if(is_emote)
+            message_ws[message_len++] = '*';
+        message_ws[message_len] = 0;
+        if (!message_len) {
+            delete[] message_ws;
+            return;
+        }
         GW::GameThread::Enqueue([message_ws, sender_ws]() {
             // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, message_ws.c_str(), sender_ws.c_str());
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, message_ws, sender_ws.c_str());
+            delete[] message_ws;
             });
     }
 
@@ -92,7 +116,6 @@ namespace {
         TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages)
             return 0; // Empty msg
- 
         std::wstring message_ws = GuiUtils::StringToWString(&params[1]);
         WriteChat(message_ws.c_str(),hostd->nick);
         Log::Log("Message from %s: %s", hostd->nick, &params[1]);
