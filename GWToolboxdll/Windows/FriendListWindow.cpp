@@ -815,7 +815,7 @@ void FriendListWindow::DrawSettingInternal() {
     edited |= ImGui::Combo("###show_as_explorable", &explorable_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
     ImGui::SameLine();
-    ImGui::Text("while loading");
+    ImGui::Text("in explorable");
 
     ImGui::Text("Show as");
     ImGui::SameLine();
