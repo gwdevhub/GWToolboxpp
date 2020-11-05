@@ -33,6 +33,10 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/Resources.h>
 
+#ifndef M_PI_F
+#define M_PI_F 3.141592741f
+#endif
+
 namespace {
     enum FlaggingState : uint32_t {
         FlagState_All = 0,
@@ -78,9 +82,9 @@ namespace {
 
     FlaggingState GetFlaggingState() {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
-            return minimap_flagging_state = FlaggingState::FlagState_None;
+            return FlaggingState::FlagState_None;
         if (!CaptureMouseClickTypePtr || !(*CaptureMouseClickTypePtr == CaptureType_FlagHero) || !MouseClickCaptureDataPtr || !MouseClickCaptureDataPtr->sub1)
-            return minimap_flagging_state;
+            return FlaggingState::FlagState_None;
         return *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
     }
     typedef void(__fastcall* StopCaptureMouseClick_pt)();
@@ -94,7 +98,7 @@ namespace {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
             return false;
         // keep an internal flag for the minimap flagging until StartCaptureMouseClick_Func is working
-        minimap_flagging_state = set_state;
+        //minimap_flagging_state = set_state;
         if (GetFlaggingState() == set_state)
             return true;
         if (set_state == FlaggingState::FlagState_None) {
@@ -103,14 +107,20 @@ namespace {
             StopCaptureMouseClick_Func();
             return true;
         }
-        if (!StartCaptureMouseClick_Func)
+        GW::UI::ControlAction key = GW::UI::ControlAction_None;
+        switch (set_state) {
+        case FlaggingState::FlagState_Hero1: key = GW::UI::ControlAction_CommandHero1; break;
+        case FlaggingState::FlagState_Hero2: key = GW::UI::ControlAction_CommandHero2; break;
+        case FlaggingState::FlagState_Hero3: key = GW::UI::ControlAction_CommandHero3; break;
+        case FlaggingState::FlagState_Hero4: key = GW::UI::ControlAction_CommandHero4; break;
+        case FlaggingState::FlagState_Hero5: key = GW::UI::ControlAction_CommandHero5; break;
+        case FlaggingState::FlagState_Hero6: key = GW::UI::ControlAction_CommandHero6; break;
+        case FlaggingState::FlagState_Hero7: key = GW::UI::ControlAction_CommandHero7; break;
+        case FlaggingState::FlagState_All: key = GW::UI::ControlAction_CommandParty; break;
+        default:
             return false;
-
-        // This needs to signal to the game that it needs to capture the next mouse click as a flag, but we don't know how yet :(
-
-        // FlaggingState* arg1 = &set_state;
-        // StartCaptureMouseClick_Func(arg1, 0 ,0x2C, 0, 1, 0, 0, 0, &arg1);
-        return true;
+        }
+        return GW::UI::Keypress(key);
     }
     // Same as GW::PartyMgr::GetPlayerIsLeader() but has an extra check to ignore disconnected people.
     bool GetPlayerIsLeader() {
@@ -162,11 +172,17 @@ void Minimap::Initialize()
     Log::Log("[SCAN] StopCaptureMouseClick_Func = %p\n", StopCaptureMouseClick_Func);
     Log::Log("[SCAN] CaptureMouseClickTypePtr = %p\n", CaptureMouseClickTypePtr);
     Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
-    address = 0;// GW::Scanner::Find("\x85\xC0\x75\x16\x68\x3B\x04\x00\x00", "xxxxxxxxx", -0x6);
-    if (address) {
-        StartCaptureMouseClick_Func = (StartCaptureMouseClick_pt)address;
-    }
-    Log::Log("[SCAN] StartCaptureMouseClick_Func = %p\n", StartCaptureMouseClick_Func);
+
+    GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus* ,uint32_t key) {
+        if (key != GW::UI::ControlAction_ReverseCamera)
+            return;
+        reverse_camera = true;
+        });
+    GW::UI::RegisterKeyupCallback(&AgentPinged_Entry, [this](GW::HookStatus*, uint32_t key) {
+        if (key != GW::UI::ControlAction_ReverseCamera)
+            return;
+        reverse_camera = false;
+        });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry, [this](GW::HookStatus *, GW::Packet::StoC::AgentPinged *pak) -> void {
         if (visible) {
@@ -520,9 +536,14 @@ size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::Agen
 
 float Minimap::GetMapRotation() const
 {
-    if (!rotate_minimap) return 1.5708f;
-    if (smooth_rotation) return GW::CameraMgr::GetCamera()->GetCurrentYaw();
-    return GW::CameraMgr::GetYaw();
+    float yaw = 1.5708f;
+    if (rotate_minimap) {
+        yaw = smooth_rotation ? GW::CameraMgr::GetCamera()->GetCurrentYaw() : GW::CameraMgr::GetYaw();
+    }
+    if (reverse_camera) {
+        yaw = M_PI_F + yaw;
+    }
+    return yaw;
 }
 
 D3DXVECTOR2 Minimap::GetGwinchScale() const
