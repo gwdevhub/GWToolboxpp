@@ -425,7 +425,7 @@ namespace {
         }
         const GW::AgentLiving* GetTarget() {
             const GW::AgentLiving* target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(target_id));
-            return target->GetIsLivingType() ? target : nullptr;
+            return target && target->GetIsLivingType() ? target : nullptr;
         }
         const uint32_t GetSkill() {
             const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
