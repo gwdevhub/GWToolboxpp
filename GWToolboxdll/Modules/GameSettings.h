@@ -189,6 +189,7 @@ public:
     static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
     static void OnScreenShake(GW::HookStatus*, void* packet);
     static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
+    static void OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
     
 
@@ -274,6 +275,7 @@ private:
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;
     bool disable_camera_smoothing = false;
+    bool targeting_nearest_item = false;
 
     bool improve_move_to_cast = false;
 
@@ -313,6 +315,7 @@ private:
     GW::HookEntry PlayerLeaveInstance_Entry;
     GW::HookEntry OnDialog_Entry;
     GW::HookEntry OnCheckboxPreferenceChanged_Entry;
+    GW::HookEntry OnChangeTarget_Entry;
     GW::HookEntry OnScreenShake_Entry;
     GW::HookEntry OnCast_Entry;
 };

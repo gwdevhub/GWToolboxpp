@@ -857,6 +857,18 @@ void GameSettings::Initialize() {
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, &OnScreenShake);
     GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, &OnCheckboxPreferenceChanged);
+    GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, OnChangeTarget);
+    GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
+        if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
+            return;
+        targeting_nearest_item = true;
+        GW::Agents::ChangeTarget((uint32_t)0); // To ensure OnChangeTarget is triggered
+        });
+    GW::UI::RegisterKeyupCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
+        if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
+            return;
+        targeting_nearest_item = false;
+        });
     GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, &OnStartWhisper);
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,&FriendStatusCallback);
     GW::CtoS::RegisterPacketCallback(&WhisperCallback_Entry, GAME_CMSG_PING_WEAPON_SET, &OnPingWeaponSet);
@@ -1961,6 +1973,36 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
     }
 }
 
+// Don't target chest as nearest item
+void GameSettings::OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void*) {
+    if (!(msgid == GW::UI::kChangeTarget && wParam))
+        return;
+    if (!Instance().targeting_nearest_item)
+        return;
+    GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
+    GW::AgentGadget* gadget = static_cast<GW::AgentGadget*>(GW::Agents::GetAgentByID(msg->manual_target_id));
+    if (!gadget || !gadget->GetIsGadgetType())
+        return;
+    GW::AgentArray agents = GW::Agents::GetAgentArray();
+    if (!agents.valid())
+        return;
+    float closest_item_dist = GW::Constants::Range::Area;
+    uint32_t closest_item_id = 0;
+    GW::AgentItem* item = nullptr;
+    uint32_t player_id = GW::Agents::GetPlayerId();
+    if (!player_id) return;
+    for (auto* agent : agents) {
+        if (!agent) continue;
+        item = agent->GetAsAgentItem();
+        if (!item || item->owner != player_id) continue;
+        float dist = GW::GetDistance(gadget->pos, item->pos);
+        if (dist > closest_item_dist) continue;
+        closest_item_id = item->agent_id;        
+    }
+    if (closest_item_id)
+        GW::Agents::ChangeTarget(closest_item_id);
+}
+
 void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target)
 {
     if (agent_id != GW::Agents::GetPlayerId())
@@ -1991,23 +2033,14 @@ float GameSettings::GetSkillRange(uint32_t skill_id)
     using S = GW::Constants::SkillID;
     switch (static_cast<T>(constant_data.type)) {
         case GW::Constants::SkillType::Hex:
-            break;
         case GW::Constants::SkillType::Spell:
-            break;
         case GW::Constants::SkillType::Enchantment:
-            break;
         case GW::Constants::SkillType::Signet:
-            break;
         case GW::Constants::SkillType::Condition:
-            break;
         case GW::Constants::SkillType::Well:
-            break;
         case GW::Constants::SkillType::Skill:
-            break;
         case GW::Constants::SkillType::ItemSpell:
-            break;
         case GW::Constants::SkillType::WeaponSpell:
-            break;
         case GW::Constants::SkillType::EchoRefrain:
             break;
         default:
