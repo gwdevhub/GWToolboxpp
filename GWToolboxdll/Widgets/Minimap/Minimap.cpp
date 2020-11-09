@@ -229,10 +229,11 @@ void Minimap::Initialize()
         loading = true;
         agent_renderer.auto_target_id = 0;
     });
-    GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, [this](GW::HookStatus *, uint32_t msgid, void *lParam, void *) -> void {
-        if (msgid != GW::UI::kAutoTargetAgent || !lParam)
+    GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, [this](GW::HookStatus*, uint32_t msgid, void* wParam , void* ) -> void {
+        if (msgid != GW::UI::kChangeTarget)
             return;
-        agent_renderer.auto_target_id = *static_cast<uint32_t *>(lParam);
+        GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
+        agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
     });
 
     last_moved = TIMER_INIT();
