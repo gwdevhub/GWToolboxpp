@@ -484,12 +484,10 @@ bool InventoryManager::IsPendingSalvage() {
     return false;
 }
 void InventoryManager::DrawSettingInternal() {
-    ImGui::TextDisabled("This module is responsible for salvaging and identifying functions either by ctrl + clicking on a salvage or identification kit, or by using the command /salvage <type>");
+    ImGui::TextDisabled("This module is responsible for salvaging and identifying functions either by ctrl + clicking on a salvage or identification kit");
     ImGui::Text("Salvage All options:");
     ImGui::SameLine();
     ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
-    ImGui::Checkbox("Only use Superior Salvage Kits with /salvage command",&only_use_superior_salvage_kits);
-    ImGui::ShowHelp("Salvaging items with lesser salvage kits produce less materials.\nSalvaging items with superior salvage kits can produce rare materials.\n\nCtrl + clicking on a normal Salvage Kit will still allow you to use Salvage All.");
     ImGui::Checkbox("Salvage Rare Materials", &salvage_rare_mats);
     ImGui::ShowHelp("Untick to skip salvagable rare materials when checking for salvagable items");
     ImGui::Text("Salvage from:");
