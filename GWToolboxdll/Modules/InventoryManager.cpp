@@ -32,6 +32,155 @@ namespace {
     {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
     }
+
+    // GW Client doesn't actually know max material storage size for the account.
+    // We can make a guess by checking how many materials are currently in storage.
+    uint16_t MaxMaterialStorage() {
+        uint16_t max_mat_storage_size = 250u;
+        GW::Bag* bag = GW::Items::GetBag(GW::Constants::Bag::Material_Storage);
+        if (!bag || bag->items.valid() || !bag->items_count)
+            return max_mat_storage_size;
+        GW::Item* b_item = nullptr;
+        for (size_t i = GW::Constants::MaterialSlot::Bone; i < GW::Constants::MaterialSlot::N_MATS; i++) {
+            b_item = bag->items[i];
+            if (!b_item || b_item->quantity <= max_mat_storage_size)
+                continue;
+            while (b_item->quantity > max_mat_storage_size) {
+                max_mat_storage_size += 250u;
+            }
+        }
+        return max_mat_storage_size;
+    }
+
+    uint16_t move_materials_to_storage(GW::Item* item) {
+        ASSERT(item && item->quantity);
+        ASSERT(item->GetIsMaterial());
+
+        int islot = GW::Items::GetMaterialSlot(item);
+        if (islot < 0 || (int)GW::Constants::N_MATS <= islot) return 0;
+        uint32_t slot = static_cast<uint32_t>(islot);
+        const uint16_t max_in_slot = MaxMaterialStorage();
+        uint16_t availaible = max_in_slot;
+        GW::Item* b_item = GW::Items::GetItemBySlot(GW::Constants::Bag::Material_Storage, slot + 1);
+        if (b_item) {
+            if (b_item->quantity >= max_in_slot)
+                return 0;
+            availaible = max_in_slot - b_item->quantity;
+        }
+        uint16_t will_move = std::min<uint16_t>(item->quantity, availaible);
+        if (will_move) GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
+        return will_move;
+    }
+
+    // From bag_first to bag_last (included) i.e. [bag_first, bag_last]
+    // Returns the amount moved
+    uint16_t complete_existing_stack(GW::Item* item, size_t bag_first, size_t bag_last, uint16_t quantity = 1000u) {
+        if (!item->GetIsStackable()) return 0;
+        uint16_t to_move = std::min<uint16_t>(item->quantity, quantity);
+        uint16_t remaining = to_move;
+        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+            GW::Bag* bag = GW::Items::GetBag(bag_i);
+            if (!bag) continue;
+            size_t slot = bag->find2(item);
+            while (slot != GW::Bag::npos) {
+                GW::Item* b_item = bag->items[slot];
+                // b_item can be null in the case of birthday present for instance.
+
+                if (b_item != nullptr && b_item->quantity < 250u) {
+                    uint16_t availaible = 250u - b_item->quantity;
+                    uint16_t will_move = std::min<uint16_t>(availaible, remaining);
+                    if (will_move > 0) {
+                        GW::Items::MoveItem(item, b_item, will_move);
+                        remaining -= will_move;
+                    }
+                    if (remaining == 0)
+                        return to_move;
+                }
+                slot = bag->find2(item, slot + 1);
+            }
+        }
+        return to_move - remaining;
+    }
+
+    uint16_t move_to_first_empty_slot(GW::Item* item, size_t bag_first, size_t bag_last) {
+        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+            GW::Bag* bag = GW::Items::GetBag(bag_i);
+            if (!bag) continue;
+            size_t slot = bag->find1(0);
+            // The reason why we test if the slot has no item is because birthday present have ModelId == 0
+            while (slot != GW::Bag::npos) {
+                if (bag->items[slot] == nullptr) {
+                    GW::Items::MoveItem(item, bag, slot);
+                    return item->quantity;
+                }
+                slot = bag->find1(0, slot + 1);
+            }
+        }
+        return 0;
+    }
+
+    uint16_t move_item_to_storage_page(GW::Item* item, size_t page, uint16_t quantity = 1000u) {
+        ASSERT(item && item->quantity);
+        uint16_t to_move = std::min<uint16_t>(item->quantity, quantity);
+        uint16_t remaining = to_move;
+        if (page == static_cast<size_t>(GW::Constants::StoragePane::Material_Storage)) {
+            if (!item->GetIsMaterial()) 
+                return 0;
+            remaining -= move_materials_to_storage(item);
+        }
+
+        if (static_cast<size_t>(GW::Constants::StoragePane::Storage_14) < page)
+            return item->quantity - remaining;
+
+        const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
+        const size_t bag_index = storage1 + page;
+        ASSERT(GW::Items::GetBag(bag_index));
+
+        // For materials, we always try to move what we can into the material page
+        if (remaining && item->GetIsMaterial())
+            remaining -= move_materials_to_storage(item);
+
+        // if the item is stackable we try to complete stack that already exist in the current storage page
+        if(remaining)
+            remaining -= complete_existing_stack(item, bag_index, bag_index, remaining);
+        if (remaining)
+            remaining -= move_to_first_empty_slot(item, bag_index, bag_index);
+        return to_move - remaining;
+    }
+
+    uint16_t move_item_to_storage(GW::Item* item, uint16_t quantity = 1000u) {
+        ASSERT(item && item->quantity);
+        uint16_t to_move = std::min<uint16_t>(item->quantity,quantity);
+        uint16_t remaining = to_move;
+        if (item->GetIsMaterial() && remaining)
+            remaining -= move_materials_to_storage(item);
+        
+        const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
+        const size_t storage14 = static_cast<size_t>(GW::Constants::Bag::Storage_14);
+
+        if(remaining)
+            remaining -= complete_existing_stack(item, storage1, storage14, item->quantity);
+        if (remaining)
+            remaining -= move_to_first_empty_slot(item, storage1, storage14);
+        return to_move - remaining;
+    }
+
+    uint16_t move_item_to_inventory(GW::Item* item, uint16_t quantity = 1000u) {
+        ASSERT(item && item->quantity);
+
+        const size_t backpack = static_cast<size_t>(GW::Constants::Bag::Backpack);
+        const size_t bag2 = static_cast<size_t>(GW::Constants::Bag::Bag_2);
+
+        uint16_t to_move = std::min<uint16_t>(item->quantity, quantity);
+        uint16_t remaining = to_move;
+        // If item is stackable, try to complete similar stack
+        remaining -= complete_existing_stack(item, backpack, bag2, item->quantity);
+        if(remaining)
+            remaining -= move_to_first_empty_slot(item, backpack, bag2);
+
+        return to_move - remaining;
+    }
+
 } // namespace
 InventoryManager::InventoryManager()
 {
@@ -250,6 +399,7 @@ void InventoryManager::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&on_map_change_entry, [this](...) {
         CancelAll();
         });
+    GW::Items::RegisterItemClickCallback(&ItemClick_Entry, ItemClickCallback);
 }
 void InventoryManager::Salvage(Item* item, Item* kit) {
     if (!item || !kit)
@@ -551,7 +701,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
             GW::HookStatus st;
             ImGui::GetIO().KeysDown[VK_CONTROL] = true;
             is_manual_item_click = true;
-            GameSettings::ItemClickCallback(&st, 7, context_item_actual->slot, context_item_actual->bag);
+            ItemClickCallback(&st, 7, context_item_actual->slot, context_item_actual->bag);
             is_manual_item_click = false;
             ImGui::CloseCurrentPopup();
         }
@@ -709,23 +859,64 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
     if (!ImGui::IsKeyDown(VK_CONTROL)) return;
     if (type != 7) return;
     InventoryManager& im = InventoryManager::Instance();
-    if (im.is_manual_item_click) return;
     Item* item = static_cast<Item*>(GW::Items::GetItemBySlot(bag,slot + 1));
-    if (!item || !(item->IsIdentificationKit() || item->IsSalvageKit()))
-        return;
-    if (!item->bag || !item->bag->IsInventoryBag())
-        return;
-    if (im.context_item.item_id == item->item_id && im.show_item_context_menu)
-        return; // Double looped.
-    if (im.context_item.set(item)) {
+    if (!item) return;
+    bool is_inventory_item = bag->IsInventoryBag();
+    bool is_storage_item = bag->IsStorageBag();
+    if (!is_inventory_item && !is_storage_item) return;
+    if (!im.is_manual_item_click && item && (item->IsIdentificationKit() || item->IsSalvageKit())) {
+        // Context menu applies
+        if (im.context_item.item_id == item->item_id && im.show_item_context_menu)
+            return; // Double looped.
+        if (!im.context_item.set(item))
+            return;
         im.show_item_context_menu = true;
         im.context_item_name_ws.clear();
         im.context_item_name_s.clear();
         GW::UI::AsyncDecodeStr(item->name_enc, &im.context_item_name_ws);
         status->blocked = true;
+        return;
     }
+    if (GameSettings::Instance().move_item_on_ctrl_click) {
+        // Move item on ctrl click
 
-    return;
+        // Expected behaviors
+        //  When clicking on item in inventory
+        //   case storage close (or move_item_to_current_storage_pane = false):
+        //    - If the item is a material, it look if it can move it to the material page.
+        //    - If the item is stackable, search in all the storage if there is already similar items and completes the stack
+        //    - If not everything was moved, move the remaining in the first empty slot of the storage.
+        //   case storage open:
+        //    - If the item is a material, it look if it can move it to the material page.
+        //    - If the item is stackable, search for incomplete stacks in the current storage page and completes them
+        //    - If not everything was moved, move the remaining in the first empty slot of the current page.
+        //  When clicking on item in chest
+        //   - If the item is stackable, search for incomplete stacks in the inventory and completes them.
+        //   - If nothing was moved, move the stack in the first empty slot of the inventory.
+
+        // @Fix:
+        //  There is a bug in gw that doesn't "save" if the material storage
+        //  (or anniversary storage in the case when the player bought all other storage)
+        //  so we cannot know if they are the storage selected.
+        //  Sol: The solution is to patch the value 7 -> 9 at 0040E851 (EB 20 33 C0 BE 06 [-5])
+        // @Cleanup: Bad
+        if (item->model_file_id == 0x0002f301) {
+            Log::Error("Ctrl+click doesn't work with birthday presents yet");
+            return;
+        }
+        uint16_t remaining = item->quantity;
+        if (is_inventory_item) {
+            if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
+                // If move_item_to_current_storage_pane = true, try to add the item to current storage pane.
+                size_t current_storage = GW::Items::GetStoragePage();
+                remaining -= move_item_to_storage_page(item, current_storage, remaining);
+            }
+            remaining -= move_item_to_storage(item, remaining);
+        }
+        else {
+            remaining -= move_item_to_inventory(item, remaining);
+        }
+    }
 }
 void InventoryManager::ClearPotentialItems()
 {

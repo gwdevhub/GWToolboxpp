@@ -101,6 +101,7 @@ private:
 
     GW::HookEntry on_map_change_entry;
     GW::HookEntry salvage_hook_entry;
+    GW::HookEntry ItemClick_Entry;
 
     void FetchPotentialItems();
     void AttachSalvageListeners();

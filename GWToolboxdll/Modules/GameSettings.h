@@ -166,7 +166,6 @@ public:
     void SetAfkMessage(std::wstring&& message);
 
     // Static callback functions
-    static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
     static void OnPingWeaponSet(GW::HookStatus*, void* packet);
     static void OnStartWhisper(GW::HookStatus*, wchar_t* _name);
     static void OnPlayerDance(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
