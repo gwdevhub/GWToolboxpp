@@ -279,6 +279,8 @@ bool ChatFilter::IsRare(const wchar_t* item_segment) const {
         return true;    // don't ignore ectos
     if (FullMatch(item_segment, { 0x108, 0x10A, 0x22EA, 0xFDA9, 0xDE53, 0x2D16 } ))
         return true; // don't ignore obby shards
+    if (FullMatch(item_segment, { 0x108, 0x10A, 0x8101, 0x730E }))
+        return true; // don't ignore lockpicks
     return false;
 }
 
@@ -551,7 +553,7 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::Separator();
     ImGui::Text("Drops");
     ImGui::SameLine();
-    ImGui::TextDisabled("('Rare' stands for Gold item, Ecto or Obby shard)");
+    ImGui::TextDisabled("('Rare' stands for Gold item, Ecto, Obby shard or Lockpick)");
     ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
     ImGui::SameLine(half_width); ImGui::Checkbox("A common item drops for you", &self_drop_common);
     ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
