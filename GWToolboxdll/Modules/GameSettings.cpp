@@ -1755,33 +1755,62 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
 }
 
 // Don't target chest as nearest item
-void GameSettings::OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void*) {
+// Target green items from chest last
+void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
     if (!(msgid == GW::UI::kChangeTarget && wParam))
         return;
     if (!Instance().targeting_nearest_item)
         return;
     GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
-    GW::AgentGadget* gadget = static_cast<GW::AgentGadget*>(GW::Agents::GetAgentByID(msg->manual_target_id));
-    if (!gadget || !gadget->GetIsGadgetType())
+    GW::Agent* chosen_target = static_cast<GW::AgentItem*>(GW::Agents::GetAgentByID(msg->manual_target_id));
+    if (!chosen_target)
         return;
-    GW::AgentArray agents = GW::Agents::GetAgentArray();
+    uint32_t override_manual_agent_id = 0;
+    GW::Item* target_item = nullptr;
+    const GW::AgentArray agents = GW::Agents::GetAgentArray();
     if (!agents.valid())
         return;
-    float closest_item_dist = GW::Constants::Range::Area;
-    uint32_t closest_item_id = 0;
-    GW::AgentItem* item = nullptr;
     uint32_t player_id = GW::Agents::GetPlayerId();
-    if (!player_id) return;
-    for (auto* agent : agents) {
-        if (!agent) continue;
-        item = agent->GetAsAgentItem();
-        if (!item || item->owner != player_id) continue;
-        float dist = GW::GetDistance(gadget->pos, item->pos);
-        if (dist > closest_item_dist) continue;
-        closest_item_id = item->agent_id;        
+    if (!player_id)
+        return;
+    // If the item targeted is a green that belongs to me, and its next to the chest, try to find another item instead.
+    if (chosen_target->GetIsItemType() && ((GW::AgentItem*)chosen_target)->owner == player_id) {
+        target_item = GW::Items::GetItemById(((GW::AgentItem*)chosen_target)->item_id);
+        if (!target_item || (target_item->interaction & 0x10) == 0)
+            return; // Failed to get target item, or is not green.
+        for (auto* agent : agents) {
+            if (!agent) continue;
+            if (!agent->GetIsGadgetType()) continue;
+            if (GW::GetDistance(agent->pos, chosen_target->pos) <= GW::Constants::Range::Nearby) {
+                // Choose the chest as the target instead of this green item, and drop through to the next loop
+                chosen_target = agent;
+                override_manual_agent_id = agent->agent_id;
+                break;
+            }
+        }
     }
-    if (closest_item_id)
-        GW::Agents::ChangeTarget(closest_item_id);
+    
+    // If we're targeting a gadget (presume its the chest), try to find adjacent items that belong to me instead.
+    if (chosen_target->GetIsGadgetType()) {
+        float closest_item_dist = GW::Constants::Range::Nearby;
+        GW::AgentItem* agent_item = nullptr;
+        for (auto* agent : agents) {
+            if (!agent || !agent->GetIsItemType()) continue;
+            agent_item = agent->GetAsAgentItem();
+            if (!agent_item || agent_item->owner != player_id) continue;
+            target_item = GW::Items::GetItemById(agent_item->item_id);
+            // Don't target green items.
+            if (!target_item || (target_item->interaction & 0x10) != 0)
+                continue;
+            float dist = GW::GetDistance(chosen_target->pos, agent->pos);
+            if (dist > closest_item_dist) continue;
+            override_manual_agent_id = agent->agent_id;
+        }
+    }
+    if (override_manual_agent_id) {
+        status->blocked = true;
+        GW::Agents::ChangeTarget(override_manual_agent_id);
+    }
 }
 
 void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target)
