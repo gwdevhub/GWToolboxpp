@@ -160,7 +160,7 @@ void HeroBuildsWindow::Terminate() {
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
     if (visible) {
-        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
             const float btn_width = 60.0f * ImGui::GetIO().FontGlobalScale;
@@ -208,7 +208,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
         TeamHeroBuild& tbuild = teambuilds[i];
         char winname[256];
         snprintf(winname, 256, "%s###herobuild%d", tbuild.name, tbuild.ui_id);
-        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(winname, &tbuild.edit_open)) {
             builds_changed |= ImGui::InputText("Hero Build Name", tbuild.name, 128);

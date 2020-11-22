@@ -323,7 +323,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
     /* Main trade window */
     if (!visible)
         return;
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(700, 400), ImGuiCond_FirstUseEver);
     collapsed = !ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
     if (collapsed) {

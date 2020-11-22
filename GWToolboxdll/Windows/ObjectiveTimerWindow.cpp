@@ -765,7 +765,7 @@ void ObjectiveTimerWindow::Update(float) {
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
     // Main objective timer window
     if (visible && !loading) {
-        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
             if (objective_sets.empty()) {
@@ -788,7 +788,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
 
     // Breakout objective set for current run
     if (show_current_run_window && current_objective_set) {
-        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver, ImVec2(.5f, .5f));
+        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
         char buf[256];
         sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name, current_objective_set->cached_time ? current_objective_set->cached_time : "--:--");

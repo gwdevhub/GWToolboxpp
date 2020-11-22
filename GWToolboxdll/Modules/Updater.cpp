@@ -157,9 +157,8 @@ void Updater::Draw(IDirect3DDevice9* device) {
             break;
 
         case 2: { // check and ask
-            const auto& io = ImGui::GetIO();
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s%s",
                 latest_release.version.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA);
@@ -193,7 +192,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
     } else if (step == Downloading) {
         if (visible) {
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Appearing, ImVec2(.5f, .5f));
+            ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s",
                 latest_release.version.c_str(), GWTOOLBOXDLL_VERSION);
@@ -210,7 +209,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
     } else if (step == Success) {
         if (visible) {
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Appearing, ImVec2(.5f, .5f));
+            ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s",
                 latest_release.version.c_str(), GWTOOLBOXDLL_VERSION);
