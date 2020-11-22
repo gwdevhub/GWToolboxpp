@@ -4,6 +4,10 @@
 
 class ToolboxTheme : public ToolboxModule {
     ToolboxTheme();
+    ~ToolboxTheme() { 
+        if (windows_ini) delete windows_ini;
+        if (inifile) delete inifile;
+    }
 public:
     static ToolboxTheme& Instance() {
         static ToolboxTheme instance;
@@ -17,16 +21,18 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
 
-    void PreloadWindowLayouts();
-    void SaveUILayout(const char* layout_name = nullptr);
-    void LoadUILayout(const char* layout_name = nullptr);
+    void SaveUILayout();
+    void LoadUILayout();
 
     void DrawSettingInternal() override;
+
+    CSimpleIni* GetLayoutIni();
 
 private:
     ImGuiStyle DefaultTheme();
 
     ImGuiStyle ini_style;
+
     CSimpleIni* inifile = nullptr;
-    CSimpleIni* window_layouts_ini = nullptr;
+    CSimpleIni* windows_ini = nullptr;
 };
