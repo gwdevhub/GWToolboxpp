@@ -1813,7 +1813,7 @@ void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* 
     }
 }
 
-void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target)
+void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t /* call_target */)
 {
     if (agent_id != GW::Agents::GetPlayerId())
         return;

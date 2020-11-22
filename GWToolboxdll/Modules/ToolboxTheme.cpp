@@ -101,9 +101,11 @@ void ToolboxTheme::SaveUILayout() {
         snprintf(key, 128, "_%s_Y", window->Name);
         ini->SetDoubleValue(window_ini_section, key, window->Pos.y);
         snprintf(key, 128, "_%s_W", window->Name);
-        ini->SetDoubleValue(window_ini_section, key, window->Size.x);
+        ini->SetDoubleValue(window_ini_section, key, window->SizeFull.x);
         snprintf(key, 128, "_%s_H", window->Name);
-        ini->SetDoubleValue(window_ini_section, key, window->Size.y);
+        ini->SetDoubleValue(window_ini_section, key, window->SizeFull.y);
+        snprintf(key, 128, "_%s_Collapsed", window->Name);
+        ini->SetBoolValue(window_ini_section, key, window->Collapsed);
     }
     ini->SaveFile(Resources::GetPath(WindowPositionsFilename).c_str());
 }
@@ -136,9 +138,11 @@ void ToolboxTheme::LoadUILayout() {
         size.x = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, size.x));
         snprintf(key, 128, "_%s_H", window->Name);
         size.y = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, size.y));
-
+        snprintf(key, 128, "_%s_Collapsed", window->Name);
+        bool collapsed = ini->GetBoolValue(window_ini_section, key, false);
         ImGui::SetWindowPos(window, pos);
         ImGui::SetWindowSize(window, size);
+        ImGui::SetWindowCollapsed(window, collapsed);
     }
 }
 
