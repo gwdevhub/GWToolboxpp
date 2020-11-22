@@ -1827,7 +1827,7 @@ void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, ui
     if (me->max_energy <= 0 || me->player_number <= 0 || target->agent_id == me->agent_id)
         return;
     if (GW::GetDistance(me->pos, target->pos) > GetSkillRange(skill_bar->skills[slot].skill_id))
-        pending_cast.reset(slot, target_id, call_target);
+        pending_cast.reset(slot, target_id, 0);
 }
 
 // Set window title to player name on map load
