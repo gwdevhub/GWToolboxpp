@@ -85,8 +85,12 @@ static bool SetProcessForeground(Process *process)
 
     return false;
 }
-
-int main(int argc, char** argv)
+#ifdef _DEBUG
+int main()
+#else
+INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+    PSTR lpCmdLine, INT nCmdShow)
+#endif
 {
     ParseRegSettings();
     ParseCommandLine();
