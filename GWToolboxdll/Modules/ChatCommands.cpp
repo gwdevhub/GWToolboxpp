@@ -354,6 +354,9 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"settitle", ChatCommands::CmdReapplyTitle);
     GW::Chat::CreateCommand(L"title", ChatCommands::CmdReapplyTitle);
     GW::Chat::CreateCommand(L"pingitem", ChatCommands::CmdPingEquipment);
+    GW::Chat::CreateCommand(L"tick", [](const wchar_t*, int, LPWSTR*) -> void {
+        GW::PartyMgr::Tick(!GW::PartyMgr::GetIsPlayerTicked());
+        });
     GW::Chat::CreateCommand(L"armor", [](const wchar_t*, int, LPWSTR*) -> void {
         GW::Chat::SendChat('/', "pingitem armor");
     });
