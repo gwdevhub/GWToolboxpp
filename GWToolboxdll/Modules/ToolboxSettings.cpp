@@ -44,11 +44,14 @@
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Windows/FactionLeaderboardWindow.h>
 #include <Windows/DailyQuestsWindow.h>
+#include <Windows/FriendListWindow.h>
+#ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
-#include <Windows/SkillListingWindow.h>
+#include <Windows/PartySearchWindow.h>
 #include <Windows/StringDecoderWindow.h>
-#include <Windows/FriendListWindow.h>
+#include <Windows/SkillListingWindow.h>
+#endif
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -60,8 +63,6 @@
 #include <Widgets/VanquishWidget.h>
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/SkillbarWidget.h>
-#include <Widgets/ServerInfoWidget.h>
-
 
 #include "ToolboxSettings.h"
 
@@ -103,6 +104,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
     if (use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
 #ifdef _DEBUG
+    optional_modules.push_back(&PartySearchWindow::Instance());
     optional_modules.push_back(&PacketLoggerWindow::Instance());
     optional_modules.push_back(&StringDecoderWindow::Instance());
     optional_modules.push_back(&DoorMonitorWindow::Instance());
