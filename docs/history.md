@@ -7,6 +7,28 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.3
+* [New] GWToolbox now saves ImGui window positions into Layouts.ini - if you bork up your window size, just "Load Now" to fix it
+* [New] Target nearest item (default `;`) will avoid targeting a chest if there are non-green assigned items next to it
+* [New] Added more visibiltiy over GW's "Auto target ID" - minimap highlights friendly NPCs, items and gadgets to show what pressing space will do
+* [Minor] Added `/tick` command
+* [Minor] Stopped enhanced move-to-cast from double-calling a target
+* [Minor] Lockpicks are now identified as "rare" items for purposes of the chat filters
+* [Minor] Removed hint text relating to being able to `/salvage all`, as this no longer works
+* [Minor] Added "Load Defaults" for minimap settings that didn't have any
+* [Minor] Reverse camera button also reverses minimap
+* [Minor] Fixed an issue stopping toolbox from storing full item stacks with ctrl-click when the stack is split across more than 1 receiving slot
+* [Fix] Fixed twitch emotes causing crash
+* [Fix] Fixed hero flagging not always working
+* [Fix] Re-enabled tick as toggle
+* [Fix] Fixed issues with certain alcohol types not triggering alcohol timer correctly
+* [Fix] Fixed issue with friend list widget layout when viewing more than 1 column on-screen
+* [Fix] Fixed crash when using enhanced move-to-cast just as an enemy (or ally) becomes untargetable
+* [Fix] Fixed bug causing windows to open only partially on-screen for the first time due to recent ImGui update
+* [Fix] GWToolbox.exe 2.1.0.0 no longer shows console on-screen when launching
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.3_Release/GWToolboxdll.dll)
+
 ## Version 4.2
 * [New] Support for multi-column skillbar layouts in the skillbar widget
 * [New] Modified launcher to show available GW instances that don't have a character name but do have an email address (e.g. login window)
