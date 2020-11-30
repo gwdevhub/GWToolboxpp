@@ -5,6 +5,7 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -20,6 +21,7 @@
 
 void TimerWidget::Initialize() {
     ToolboxWidget::Initialize();
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) -> void {
             if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) return;
@@ -29,7 +31,13 @@ void TimerWidget::Initialize() {
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
-            cave_start = 0;
+
+            cave_start = 0; // reset doa's cave timer
+
+            if (reset_next_loading_screen) {
+                run_started = TIMER_INIT();
+                reset_next_loading_screen = false;
+            }
 
             if (pak->is_explorable && !in_explorable) { // if zoning from outpost to explorable
                 run_started = TIMER_INIT();
@@ -37,11 +45,26 @@ void TimerWidget::Initialize() {
             if (!pak->is_explorable) { // zoning back to outpost
                 run_started = TIMER_INIT();
             }
-            // TODO: reset timer when moving from normal explorable to a dungeon
+
+            GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)pak->map_id);
+            if (info) {
+                bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
+
+                if (new_in_dungeon && !in_dungeon) { // zoning from explorable to dungeon
+                    run_started = TIMER_INIT();
+                }
+
+                in_dungeon = new_in_dungeon;
+            }
 
             run_completed = 0;
             in_explorable = pak->is_explorable;
         });
+
+    GW::Chat::CreateCommand(L"resettimer", [this](const wchar_t*, int, LPWSTR*) { 
+        reset_next_loading_screen = true;
+        Log::Info("Resetting timer at the next loading screen.");
+    });
 }
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
@@ -76,7 +99,8 @@ void TimerWidget::DrawSettingInternal() {
     ToolboxWidget::DrawSettingInternal();
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     ImGui::Checkbox("Use instance timer", &use_instance_timer);
-    ImGui::ShowHelp("Default timer does not reset when zoning between explorable areas.");
+    ImGui::ShowHelp("Default timer does not reset when zoning between explorable areas.\n \
+        You can use /resettimer to force a reset at the next loading screen.");
     ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");

@@ -76,7 +76,9 @@ private:
     ImColor extra_color = 0;
 
     bool use_instance_timer = false;
+    bool reset_next_loading_screen = false;
     bool in_explorable = false;
+    bool in_dungeon = false;
     clock_t run_started = 0; // system time of when run started
     clock_t run_completed = 0; // set to non-zero when objectives are completed
 
