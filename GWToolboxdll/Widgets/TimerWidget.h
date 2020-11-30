@@ -8,19 +8,15 @@
 
 class TimerWidget : public ToolboxWidget {
     TimerWidget() {
-        for (auto it : spirit_effects) {
+        for (const auto& it : spirit_effects) {
             auto e = spirit_effects_enabled.find(it.first);
             if (e != spirit_effects_enabled.end())
                 continue;
-            spirit_effects_enabled[it.first] = new bool(false);
+            spirit_effects_enabled[it.first] = false;
         }
     };
-    ~TimerWidget() {
-        for (auto it : spirit_effects_enabled) {
-            delete it.second;
-        }
-        spirit_effects_enabled.clear();
-    };
+    ~TimerWidget() = default;
+
 public:
     static TimerWidget& Instance() {
         static TimerWidget instance;
@@ -69,9 +65,9 @@ private:
     bool click_to_print_time = false;
     bool show_extra_timers = true;
     bool show_spirit_timers = true;
-    std::map<GW::Constants::SkillID, bool*> spirit_effects_enabled{
-        {GW::Constants::SkillID::Edge_of_Extinction,new bool(true)},
-        {GW::Constants::SkillID::Quickening_Zephyr,new bool(true)}
+    std::map<GW::Constants::SkillID, bool> spirit_effects_enabled{
+        {GW::Constants::SkillID::Edge_of_Extinction, true},
+        {GW::Constants::SkillID::Quickening_Zephyr, true}
     };
 
     char timer_buffer[32] = "";

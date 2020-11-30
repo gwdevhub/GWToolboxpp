@@ -40,7 +40,7 @@ void TimerWidget::LoadSettings(CSimpleIni *ini) {
     for (auto it : spirit_effects) {
         char ini_name[32];
         snprintf(ini_name, 32, "spirit_effect_%d", it.first);
-        *spirit_effects_enabled[it.first] = ini->GetBoolValue(Name(), ini_name, *spirit_effects_enabled[it.first]);
+        spirit_effects_enabled[it.first] = ini->GetBoolValue(Name(), ini_name, spirit_effects_enabled[it.first]);
     }
 }
 
@@ -53,7 +53,7 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
     for (auto it : spirit_effects) {
         char ini_name[32];
         snprintf(ini_name, 32, "spirit_effect_%d", it.first);
-        ini->SetBoolValue(Name(), ini_name, *spirit_effects_enabled[it.first]);
+        ini->SetBoolValue(Name(), ini_name, spirit_effects_enabled[it.first]);
     }
 }
 
@@ -74,7 +74,7 @@ void TimerWidget::DrawSettingInternal() {
             else 
                 ImGui::SameLine(200.0f * ImGui::GetIO().FontGlobalScale * i);
             i++;
-            ImGui::Checkbox(it.second, spirit_effects_enabled[it.first]);
+            ImGui::Checkbox(it.second, &spirit_effects_enabled[it.first]);
         }
         ImGui::Unindent();
     }
@@ -163,7 +163,7 @@ bool TimerWidget::GetSpiritTimer() {
             continue;
         SkillID effect_id = (SkillID)effects[i].skill_id;
         auto spirit_effect_enabled = spirit_effects_enabled.find(effect_id);
-        if (spirit_effect_enabled == spirit_effects_enabled.end() || !*(spirit_effect_enabled->second))
+        if (spirit_effect_enabled == spirit_effects_enabled.end() || !(spirit_effect_enabled->second))
             continue;
         offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effects[i].GetTimeRemaining() / 1000);
     }
