@@ -22,20 +22,34 @@ void TimerWidget::Initialize() {
     ToolboxWidget::Initialize();
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) -> void {
-            DisplayDialogue(packet);
+            if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) return;
+            if (packet->message[1] != 0x5765) return;
+            cave_start = GW::Map::GetInstanceTime();
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*) -> void {
+        [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
             cave_start = 0;
+
+            if (pak->is_explorable && !in_explorable) { // if zoning from outpost to explorable
+                run_started = TIMER_INIT();
+            }
+            if (!pak->is_explorable) { // zoning back to outpost
+                run_started = TIMER_INIT();
+            }
+            // TODO: reset timer when moving from normal explorable to a dungeon
+
+            run_completed = 0;
+            in_explorable = pak->is_explorable;
         });
 }
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
     ToolboxWidget::LoadSettings(ini);
+    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    use_instance_timer = ini->GetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
     click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
     for (auto it : spirit_effects) {
         char ini_name[32];
@@ -46,9 +60,10 @@ void TimerWidget::LoadSettings(CSimpleIni *ini) {
 
 void TimerWidget::SaveSettings(CSimpleIni *ini) {
     ToolboxWidget::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
     for (auto it : spirit_effects) {
         char ini_name[32];
@@ -60,6 +75,8 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
 void TimerWidget::DrawSettingInternal() {
     ToolboxWidget::DrawSettingInternal();
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::Checkbox("Use instance timer", &use_instance_timer);
+    ImGui::ShowHelp("Default timer does not reset when zoning between explorable areas.");
     ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");
@@ -69,10 +86,11 @@ void TimerWidget::DrawSettingInternal() {
         ImGui::Indent();
         size_t i = 0;
         for (auto it : spirit_effects) {
-            if (i % 3 == 0)
+            if (i % 3 == 0) {
                 i = 0;
-            else 
+            } else {
                 ImGui::SameLine(200.0f * ImGui::GetIO().FontGlobalScale * i);
+            }
             i++;
             ImGui::Checkbox(it.second, &spirit_effects_enabled[it.first]);
         }
@@ -90,12 +108,23 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
-    unsigned long time = GW::Map::GetInstanceTime() / 1000;
+
+    unsigned long time = 0;
+
+    if (use_instance_timer || run_started == 0) {
+        time = GW::Map::GetInstanceTime() / 1000;
+    } else if (run_completed != 0) {
+        time = run_completed / 1000;
+    } else {
+        time = TIMER_DIFF(run_started) / 1000;
+    }
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
+
+        // Main timer:
         snprintf(timer_buffer, 32, "%lu:%02lu:%02lu", time / (60 * 60), (time / 60) % 60, time % 60);
         ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
         ImGui::TextShadowed(timer_buffer, { 2, 2 });
@@ -132,6 +161,13 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     }
     ImGui::End();
     ImGui::PopStyleColor();
+}
+
+void TimerWidget::SetRunCompleted()
+{
+    if (run_started != 0) {
+        run_completed = TIMER_DIFF(run_started);
+    }
 }
 
 bool TimerWidget::GetUrgozTimer() {
@@ -325,10 +361,4 @@ bool TimerWidget::GetDoATimer() {
     extra_color = ImColor(255, 255, 255);
 
     return true;
-}
-
-void TimerWidget::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
-    if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) return;
-    if (packet->message[1] != 0x5765) return;
-    cave_start = GW::Map::GetInstanceTime();
 }
