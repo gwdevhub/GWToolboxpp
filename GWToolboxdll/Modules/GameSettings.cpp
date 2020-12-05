@@ -268,6 +268,14 @@ namespace {
         }
     } pending_cast;
 
+    struct PlayerChatMessage {
+        uint32_t channel;
+        wchar_t* message;
+        uint32_t player_number;
+    };
+
+    
+
 }
 
 static std::wstring ShorthandItemDescription(GW::Item* item) {
@@ -693,6 +701,8 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, &OnScreenShake);
     GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, &OnCheckboxPreferenceChanged);
     GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, OnChangeTarget);
+    GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, OnPlayerChatMessage);
+
     GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
             return;
@@ -844,6 +854,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
     auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
+    hide_player_speech_bubbles = ini->GetBoolValue(Name(), VAR_NAME(hide_player_speech_bubbles), hide_player_speech_bubbles);
     npc_speech_bubbles_as_chat = ini->GetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
     redirect_npc_messages_to_emote_chat = ini->GetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
 
@@ -961,6 +972,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
     ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
+    
+    ini->SetBoolValue(Name(), VAR_NAME(hide_player_speech_bubbles), hide_player_speech_bubbles);
     ini->SetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
     ini->SetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
 
@@ -1058,6 +1071,8 @@ void GameSettings::DrawChatSettings() {
             GW::Chat::SetTimestampsColor(timestamps_color);
         ImGui::Unindent();
     }
+    ImGui::Checkbox("Hide player chat speech bubbles", &hide_player_speech_bubbles);
+    ImGui::ShowHelp("Don't show in-game speech bubbles over player characters that send a message in chat");
     ImGui::Checkbox("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat);
     ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
     ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);
@@ -1834,6 +1849,18 @@ void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, ui
 void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(Instance().set_window_title_as_charname);
+}
+
+// Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
+void GameSettings::OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*) {
+    if (msg_id == 0x10000081 && Instance().hide_player_speech_bubbles) {
+        status->blocked = true;
+        PlayerChatMessage* msg = (PlayerChatMessage*)wParam;
+        GW::Player* agent = GW::PlayerMgr::GetPlayerByID(msg->player_number);
+        if (!agent)
+            return;
+        GW::Chat::WriteChatEnc((GW::Chat::Channel)msg->channel, msg->message, agent->name);
+    }
 }
 
 float GameSettings::GetSkillRange(uint32_t skill_id)

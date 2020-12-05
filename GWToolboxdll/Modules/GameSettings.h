@@ -190,6 +190,7 @@ public:
     static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
+    static void OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*);
     
 
     bool tick_is_toggle = false;
@@ -275,7 +276,7 @@ private:
     bool stop_screen_shake = false;
     bool disable_camera_smoothing = false;
     bool targeting_nearest_item = false;
-
+    bool hide_player_speech_bubbles = false;
     bool improve_move_to_cast = false;
 
     static float GetSkillRange(uint32_t);
@@ -315,6 +316,7 @@ private:
     GW::HookEntry OnDialog_Entry;
     GW::HookEntry OnCheckboxPreferenceChanged_Entry;
     GW::HookEntry OnChangeTarget_Entry;
+    GW::HookEntry OnPlayerChatMessage_Entry;
     GW::HookEntry OnScreenShake_Entry;
     GW::HookEntry OnCast_Entry;
 };
