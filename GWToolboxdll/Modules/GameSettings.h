@@ -191,7 +191,8 @@ public:
     static void OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
     static void OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*);
-    
+    static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
+    static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
     bool tick_is_toggle = false;
 
@@ -249,6 +250,8 @@ public:
     bool disable_gold_selling_confirmation = false;
     bool collectors_edition_emotes = true;
 
+    bool lazy_chest_looting = false;
+
     static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
     std::vector<PendingChatMessage*> pending_messages;
@@ -265,6 +268,14 @@ private:
     GW::MemoryPatcher gold_confirm_patch;
     std::vector<std::wstring> previous_party_names;
 
+    enum ReinviteType : uint8_t {
+        None,
+        Player,
+        Hero,
+        Henchman
+    } pending_reinvite_type = None;
+    uint32_t pending_reinvite_id = 0;
+
     bool was_leading = true;
     bool check_message_on_party_change = true;
     bool npc_speech_bubbles_as_chat = false;
@@ -276,6 +287,7 @@ private:
     bool stop_screen_shake = false;
     bool disable_camera_smoothing = false;
     bool targeting_nearest_item = false;
+    
     bool hide_player_speech_bubbles = false;
     bool improve_move_to_cast = false;
 
@@ -319,4 +331,5 @@ private:
     GW::HookEntry OnPlayerChatMessage_Entry;
     GW::HookEntry OnScreenShake_Entry;
     GW::HookEntry OnCast_Entry;
+    GW::HookEntry OnPartyTargetChange_Entry;
 };
