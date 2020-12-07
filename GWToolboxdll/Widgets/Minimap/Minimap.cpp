@@ -160,7 +160,7 @@ void Minimap::Initialize()
 {
     ToolboxWidget::Initialize();
 
-    uintptr_t address = GW::Scanner::Find("\x56\x8B\x75\x08\xD3\xE2\x23\x56\x10\xF7\xDA\x1B\xD2\x83\xE0\x01", "xxxxxxxxxxxxxxxx",-0x2D);
+    uintptr_t address = GW::Scanner::Find("\x00\x74\x16\x6A\x27\x68\x80\x00\x00\x00\x6A\x00\x68", "xxxxxxxxxxxxx",-0x56);
     if (address) {
         StopCaptureMouseClick_Func = (StopCaptureMouseClick_pt)address;
         address = address + 0x5;
