@@ -228,10 +228,12 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
             modifier |= ModKey_Alt;
 
         bool triggered = false;
+        int instance_type = static_cast<int>(GW::Map::GetInstanceType());
         for (TBHotkey* hk : hotkeys) {
             if (!block_hotkeys && hk->active 
                 && !hk->pressed && keyData == hk->hotkey
                 && modifier == hk->modifier
+                && (hk->instance_type == -1 || hk->instance_type == instance_type)
                 && (hk->map_id == 0 || hk->map_id == static_cast<int>(map_id))
                 && (hk->prof_id == 0 || hk->prof_id == static_cast<int>(prof_id))) {
 

@@ -38,7 +38,7 @@ public:
 
     int map_id = 0;
     int prof_id = 0;
-    int instance_type = 0;
+    int instance_type = -1;
 
     long hotkey = 0;
     long modifier = 0;
