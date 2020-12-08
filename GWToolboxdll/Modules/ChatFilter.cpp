@@ -443,12 +443,12 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
         case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
         case 0x223F: return false; // "x minutes of favor of the gods remaining" as a result of /favor command
         case 0x223B: return hoh; // a party won hall of heroes  
+        case 0x23E2: return player_has_achieved_title; // Player has achieved... The gods have blessed the world with their favor.
+        case 0x23E3: return favor; // The gods have blessed the world
         case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
-        case 0x23E5: return player_has_achieved_title;
-        case 0x23E6: return player_has_achieved_title;
+        case 0x23E5: return player_has_achieved_title; // Player has achieved... The gods have extended their blessings
+        case 0x23E6: return player_has_achieved_title; // Player has achieved... N more achievements will earn favor of the gods
         case 0x29F1: return item_cannot_be_used; // Cannot use this item when no party members are dead.
-        case 0x2E35: return player_has_achieved_title; // Player has achieved the title...
-        case 0x2E36: return player_has_achieved_title; // Player has achieved the title...
         case 0x3772: return false; // I'm under the effect of x
         case 0x3DCA: return item_cannot_be_used; // This item can only be used in a guild hall
         case 0x4684: return item_cannot_be_used; // There is already an ally from a summoning stone present in this instance.
