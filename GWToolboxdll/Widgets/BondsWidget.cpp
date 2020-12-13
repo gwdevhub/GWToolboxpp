@@ -123,10 +123,10 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f
         );
         internal_offset *= uiscale_multiply;
-        float user_offset_x = (float)user_offset;
+        int user_offset_x = abs(user_offset);
         float offset_width = width;
         ImVec2 calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
-        if (calculated_pos.x < 0) {
+        if (calculated_pos.x < 0 || user_offset < 0) {
             // Right placement
             internal_offset.x = 4.f * uiscale_multiply;
             offset_width = rect.z - rect.x;
@@ -288,7 +288,6 @@ void BondsWidget::DrawSettingInternal() {
         ImGui::TextColored(ImVec4(0xFF, 0, 0, 0xFF), "Equip a maintainable enchantment or refrain to show bonds widget on-screen");
     ImGui::Checkbox("Attach to party window", &snap_to_party_window);
     if (snap_to_party_window) {
-        ImGui::SameLine();
         ImGui::InputInt("Party window offset", &user_offset);
         ImGui::ShowHelp("Distance away from the party window");
     }
