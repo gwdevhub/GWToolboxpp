@@ -128,6 +128,12 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     ImVec2 skillsize(static_cast<float>(m_skill_width), static_cast<float>(m_skill_height));
     ImVec2 winsize;
     if (snap_to_skillbar && pos) {
+        if (pos->state & 0x2) {
+            // Default layout
+            pos->state = 0x21;
+            pos->p1 = { 224.5f,56.f };
+            pos->p2 = { 223.5f, 0.f };
+        }
         float uiscale = GuiUtils::GetGWScaleMultiplier();
         GW::Vec2f xAxis = pos->xAxis(uiscale);
         GW::Vec2f yAxis = pos->yAxis(uiscale);
