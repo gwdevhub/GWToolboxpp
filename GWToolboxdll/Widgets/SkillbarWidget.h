@@ -96,6 +96,8 @@ private:
     Color color_effect_border = Colors::ARGB(255, 0, 0, 0);
     Color color_effect_progress = Colors::Blue();
 
+    bool snap_to_skillbar = true;
+
     // Internal utils
     Color UptimeToColor(uint32_t uptime) const;
     void skill_cooldown_to_string(char* arr, uint32_t cooldown) const;

@@ -48,7 +48,11 @@ private:
     bool ShouldIgnoreByContent(const wchar_t *message, size_t size = 1024);
     bool ShouldIgnoreBySender(const wchar_t *sender, size_t size);
     // Should this channel be checked for ignored messages?
-    bool ShouldIgnoreByChannel(uint32_t channel);
+    bool ShouldFilterByChannel(uint32_t channel);
+    // Should this channel be blocked altogether?
+    bool ShouldBlockByChannel(uint32_t channel);
+
+    
 
     bool guild_announcement = false;
     bool self_drop_rare = false;
@@ -69,6 +73,8 @@ private:
     bool player_has_achieved_title = false;
     bool faction_gain = false;
     bool challenge_mission_messages = false;
+
+    bool block_messages_from_inactive_channels = false;
 
 
     // Error messages on-screen

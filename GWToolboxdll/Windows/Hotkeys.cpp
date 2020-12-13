@@ -95,6 +95,7 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
         active = ini->GetBoolValue(section, VAR_NAME(active), active);
         map_id = ini->GetLongValue(section, VAR_NAME(map_id), map_id);
         prof_id = ini->GetLongValue(section, VAR_NAME(prof_id), prof_id);
+        instance_type = ini->GetLongValue(section, VAR_NAME(instance_type), instance_type);
         show_message_in_emote_channel =
             ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
                               show_message_in_emote_channel);
@@ -117,6 +118,7 @@ void TBHotkey::Save(CSimpleIni *ini, const char *section) const
     ini->SetLongValue(section, VAR_NAME(map_id), map_id);
     ini->SetLongValue(section, VAR_NAME(prof_id), prof_id);
     ini->SetLongValue(section, VAR_NAME(modifier), modifier);
+    ini->SetLongValue(section, VAR_NAME(instance_type), instance_type);
     ini->SetBoolValue(section, VAR_NAME(active), active);
     ini->SetBoolValue(section, VAR_NAME(block_gw), block_gw);
     ini->SetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
@@ -197,29 +199,22 @@ void TBHotkey::Draw(Op *op)
         Draw();
 
         // === Hotkey section ===
-        if (ImGui::Checkbox("Block key in Guild Wars when triggered",
-                            &block_gw))
+        hotkeys_changed |= ImGui::Checkbox("Block key in Guild Wars when triggered", &block_gw);
+        ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event");  
+        hotkeys_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
+        hotkeys_changed |= ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost);
+        int instance_type_tmp = instance_type + 1;
+        if (ImGui::Combo("Instance Type", &instance_type_tmp, "Any\0Outpost\0Explorable")) {
             hotkeys_changed = true;
-        ImGui::ShowHelp(
-            "When triggered, this hotkey will prevent Guild Wars from receiving the keypress event");
-        if (ImGui::Checkbox("Trigger hotkey when entering explorable area",
-                            &trigger_on_explorable))
-            hotkeys_changed = true;
-        if (ImGui::Checkbox("Trigger hotkey when entering outpost",
-                            &trigger_on_outpost))
-            hotkeys_changed = true;
-        if (ImGui::InputInt("Map ID", &map_id))
-            hotkeys_changed = true;
-        ImGui::ShowHelp(
-            "The hotkey can only trigger in the selected map (0 = Any map)");
+            instance_type = instance_type_tmp - 1;
+        }
+        hotkeys_changed |= ImGui::InputInt("Map ID", &map_id);
+        ImGui::ShowHelp("Only trigger in the selected map (0 = Any map)");
 
-        if (ImGui::Combo("Profession", &prof_id, professions, 11))
-            hotkeys_changed = true;
-        ImGui::ShowHelp(
-            "The hotkey can only trigger when player is the selected primary profession (0 = Any profession)");
+        hotkeys_changed |= ImGui::Combo("Profession", &prof_id, professions, 11);
+        ImGui::ShowHelp("Only trigger when player is the selected primary profession (0 = Any profession)");
         ImGui::Separator();
-        if (ImGui::Checkbox("###active", &active))
-            hotkeys_changed = true;
+        hotkeys_changed |= ImGui::Checkbox("###active", &active);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("The hotkey can trigger only when selected");
         ImGui::SameLine();

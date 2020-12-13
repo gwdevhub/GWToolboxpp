@@ -1,7 +1,10 @@
 #pragma once
 
 #include <GWCA/GameEntities/Agent.h>
+
 #include <GWCA/Constants/Skills.h>
+
+#include <GWCA/Managers/UIMgr.h>
 
 #include <Color.h>
 #include <Defines.h>
@@ -80,5 +83,11 @@ private:
     bool click_to_drop = true;
     bool show_allies = true;
     bool flip_bonds = false;
-    int row_height = 0;
+    int row_height = 64;
+
+    bool snap_to_party_window = true;
+    // Distance away from the party window on the x axis; used with snap to party window
+    int user_offset = 64;
+
+    GW::UI::WindowPosition* party_window_position = nullptr;
 };

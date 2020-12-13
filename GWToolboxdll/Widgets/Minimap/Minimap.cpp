@@ -87,13 +87,7 @@ namespace {
             return FlaggingState::FlagState_None;
         return *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
     }
-    typedef void(__fastcall* StopCaptureMouseClick_pt)();
-    StopCaptureMouseClick_pt StopCaptureMouseClick_Func;
-
-    // This needs to signal to the game that it needs to capture the next mouse click as a flag, but we don't know how yet :(
-    typedef void(__fastcall* StartCaptureMouseClick_pt)(FlaggingState* arg1, void* arg2, uint32_t arg3, void* arg4, uint32_t arg5, void* arg6, void* arg7, void* arg8, void* arg9);
-    StartCaptureMouseClick_pt StartCaptureMouseClick_Func;
-
+    static bool compass_fix_pending = false;
     bool SetFlaggingState(FlaggingState set_state) {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
             return false;
@@ -102,10 +96,7 @@ namespace {
         if (GetFlaggingState() == set_state)
             return true;
         if (set_state == FlaggingState::FlagState_None) {
-            if (!StopCaptureMouseClick_Func)
-                return false;
-            StopCaptureMouseClick_Func();
-            return true;
+            set_state = GetFlaggingState();
         }
         GW::UI::ControlAction key = GW::UI::ControlAction_None;
         switch (set_state) {
@@ -160,16 +151,13 @@ void Minimap::Initialize()
 {
     ToolboxWidget::Initialize();
 
-    uintptr_t address = GW::Scanner::Find("\x56\x8B\x75\x08\xD3\xE2\x23\x56\x10\xF7\xDA\x1B\xD2\x83\xE0\x01", "xxxxxxxxxxxxxxxx",-0x2D);
+    uintptr_t address = GW::Scanner::Find("\x00\x74\x16\x6A\x27\x68\x80\x00\x00\x00\x6A\x00\x68", "xxxxxxxxxxxxx",-0x51);
     if (address) {
-        StopCaptureMouseClick_Func = (StopCaptureMouseClick_pt)address;
-        address = address + 0x5;
         address = *(uintptr_t*)address;
         MouseClickCaptureDataPtr = (MouseClickCaptureData*)address;
         GameCursorState = (uint32_t*)(address + 0x4);
         CaptureMouseClickTypePtr = (CaptureMouseClickType*)(address - 0x10);
     }
-    Log::Log("[SCAN] StopCaptureMouseClick_Func = %p\n", StopCaptureMouseClick_Func);
     Log::Log("[SCAN] CaptureMouseClickTypePtr = %p\n", CaptureMouseClickTypePtr);
     Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
 
@@ -218,10 +206,17 @@ void Minimap::Initialize()
     });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(&SkillActivate_Entry, &SkillActivateCallback);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry, [this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadInfo *packet) -> void { is_observing = packet->is_observer != 0; });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadFile* packet) -> void {
         UNREFERENCED_PARAMETER(packet);
         pmap_renderer.Invalidate();
         loading = false;
+        // Compass fix to allow hero flagging controls
+        GW::UI::WindowPosition* compass_info = GW::UI::GetWindowPosition(GW::UI::WindowID_Compass);
+        if (compass_info && !compass_info->visible()) {
+            // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
+            compass_fix_pending = true;
+            GW::UI::SetWindowVisible(GW::UI::WindowID_Compass, true);
+        }
     });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, [this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *pak) -> void {
@@ -671,6 +666,12 @@ void Minimap::Render(IDirect3DDevice9* device) {
     auto& instance = Instance();
     if (!instance.IsActive())
         return;
+    if (compass_fix_pending) {
+        // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
+        GW::UI::SetWindowVisible(GW::UI::WindowID_Compass, false);
+        compass_fix_pending = false;
+    }
+
     GW::Agent* me = GW::Agents::GetPlayer();
     if (me == nullptr) return;
 

@@ -11,6 +11,8 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <GWToolbox.h>
 #include <GuiUtils.h>
@@ -43,6 +45,7 @@ void PartyDamage::Initialize() {
 		damage[i].recent_damage = 0;
 		damage[i].last_damage = TIMER_INIT();
 	}
+	party_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID_PartyWindow);
 }
 
 void PartyDamage::Terminate() {
@@ -210,7 +213,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 		return;
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 	
-	size_t line_height = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
+	float line_height = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
 	uint32_t size = GW::PartyMgr::GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 
@@ -231,6 +234,37 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background).Value);
+	if (snap_to_party_window && party_window_position) {
+		float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
+		// NB: Use case to define GW::Vec4f ?
+		GW::Vec2f x = party_window_position->xAxis();
+		GW::Vec2f y = party_window_position->yAxis();
+		// Do the uiscale multiplier
+		x *= uiscale_multiply;
+		y *= uiscale_multiply;
+		// Clamp
+		ImVec4 rect(x.x,y.x,x.y,y.y);
+		ImVec4 viewport(0, 0, (float)GW::Render::GetViewportWidth(), (float)GW::Render::GetViewportHeight());
+		// GW Clamps windows to viewport; we need to do the same.
+		GuiUtils::ClampRect(rect, viewport);
+		// Left placement
+		GW::Vec2f internal_offset(
+			7.f,
+			GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f
+		);
+		internal_offset *= uiscale_multiply;
+		int user_offset_x = abs(user_offset);
+		float offset_width = width;
+		ImVec2 calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
+		if (calculated_pos.x < 0 || user_offset < 0) {
+			// Right placement
+			internal_offset.x = 4.f * uiscale_multiply;
+			offset_width = rect.z - rect.x;
+			calculated_pos.x = rect.x - internal_offset.x + user_offset_x + offset_width;
+		}
+		ImGui::SetNextWindowPos(calculated_pos);
+	}
+		
     ImGui::SetNextWindowSize(ImVec2(width, static_cast<float>(size * line_height)));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
 		const float &x = ImGui::GetWindowPos().x;
@@ -359,6 +393,8 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 	color_damage = Colors::Load(ini, Name(), VAR_NAME(color_damage), Colors::ARGB(102, 205, 102, 51));
 	color_recent = Colors::Load(ini, Name(), VAR_NAME(color_recent), Colors::ARGB(205, 102, 153, 230));
 	hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+	snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
+	user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
 	inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
@@ -387,6 +423,8 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 	Colors::Save(ini, Name(), VAR_NAME(color_damage), color_damage);
 	Colors::Save(ini, Name(), VAR_NAME(color_recent), color_recent);
 	ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+	ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
+	ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 
 	for (const std::pair<DWORD, long>& item : hp_map) {
 		std::string key = std::to_string(item.first);
@@ -397,11 +435,18 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 
 void PartyDamage::DrawSettingInternal() {
 	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+	ImGui::Checkbox("Attach to party window", &snap_to_party_window);
+	if (snap_to_party_window) {
+		ImGui::InputInt("Party window offset", &user_offset);
+		ImGui::ShowHelp("Distance away from the party window");
+	}
 	ImGui::Checkbox("Bars towards the left", &bars_left);
 	ImGui::ShowHelp("If unchecked, they will expand to the right");
 	ImGui::DragFloat("Width", &width, 1.0f, 50.0f, 0.0f, "%.0f");
-	ImGui::InputInt("Row Height", &row_height);
-	ImGui::ShowHelp("Height of each row, leave 0 for default");
+	if (!snap_to_party_window) {
+		ImGui::InputInt("Row Height", &row_height);
+		ImGui::ShowHelp("Height of each row, leave 0 for default");
+	}
 	if (width <= 0) width = 1.0f;
 	ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%d milliseconds");
 	if (recent_max_time < 0) recent_max_time = 0;

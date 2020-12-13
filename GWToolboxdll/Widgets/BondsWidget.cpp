@@ -18,6 +18,8 @@
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
+
 
 #include <GuiUtils.h>
 #include <Modules/Resources.h>
@@ -52,6 +54,8 @@ void BondsWidget::Initialize() {
     LoadBondTexture(&textures[MendingRefrain], L"Mending_Refrain.png", IDB_Bond_MendingRefrain);
     LoadBondTexture(&textures[BladeturnRefrain], L"Bladeturn_Refrain.png", IDB_Bond_BladeturnRefrain);
     LoadBondTexture(&textures[HastyRefrain], L"Hasty_Refrain.png", IDB_Bond_HastyRefrain);
+
+    party_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID_PartyWindow);
 }
 
 void BondsWidget::Terminate() {
@@ -91,14 +95,48 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     const GW::AgentEffectsArray &effects = GW::Effects::GetPartyEffectArray();
 
     // ==== Draw ====
-    const size_t img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
-    const size_t height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
+    const float img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
+    const float height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
-    ImGui::SetNextWindowSize(ImVec2((float)(bond_list.size() * img_size), (float)height));
+
+    float width = bond_list.size() * img_size;
+    if (snap_to_party_window && party_window_position) {
+        float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
+        // NB: Use case to define GW::Vec4f ?
+        GW::Vec2f x = party_window_position->xAxis();
+        GW::Vec2f y = party_window_position->yAxis();
+        // Do the uiscale multiplier
+        x *= uiscale_multiply;
+        y *= uiscale_multiply;
+        // Clamp
+        ImVec4 rect(x.x, y.x, x.y, y.y);
+        ImVec4 viewport(0, 0, (float)GW::Render::GetViewportWidth(), (float)GW::Render::GetViewportHeight());
+        // GW Clamps windows to viewport; we need to do the same.
+        GuiUtils::ClampRect(rect, viewport);
+        // Left placement
+        GW::Vec2f internal_offset(
+            7.f,
+            GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f
+        );
+        internal_offset *= uiscale_multiply;
+        int user_offset_x = abs(user_offset);
+        float offset_width = width;
+        ImVec2 calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
+        if (calculated_pos.x < 0 || user_offset < 0) {
+            // Right placement
+            internal_offset.x = 4.f * uiscale_multiply;
+            offset_width = rect.z - rect.x;
+            calculated_pos.x = rect.x - internal_offset.x + user_offset_x + offset_width;
+        }
+        ImGui::SetNextWindowPos(calculated_pos);
+    }
+
+
+    ImGui::SetNextWindowSize(ImVec2(width, height));
     if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !(click_to_cast || click_to_drop)))) {
         float win_x = ImGui::GetWindowPos().x;
         float win_y = ImGui::GetWindowPos().y;
@@ -225,6 +263,8 @@ void BondsWidget::LoadSettings(CSimpleIni* ini) {
     row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
     low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(low_attribute_overlay), Colors::ARGB(76, 0, 0, 0));
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
+    user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 }
 
 void BondsWidget::SaveSettings(CSimpleIni* ini) {
@@ -238,12 +278,19 @@ void BondsWidget::SaveSettings(CSimpleIni* ini) {
     ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
     Colors::Save(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
+    ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 }
 
 void BondsWidget::DrawSettingInternal() {
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     if (bond_list.empty())
         ImGui::TextColored(ImVec4(0xFF, 0, 0, 0xFF), "Equip a maintainable enchantment or refrain to show bonds widget on-screen");
+    ImGui::Checkbox("Attach to party window", &snap_to_party_window);
+    if (snap_to_party_window) {
+        ImGui::InputInt("Party window offset", &user_offset);
+        ImGui::ShowHelp("Distance away from the party window");
+    }
     Colors::DrawSettingHueWheel("Background", &background, 0);
     ImGui::Checkbox("Click to cast bond", &click_to_cast);
     ImGui::Checkbox("Click to cancel bond", &click_to_drop);
@@ -256,9 +303,11 @@ void BondsWidget::DrawSettingInternal() {
         "Overlays effects casted with less than current attribute level.\n"
         "Only works for yourself and your heroes and doesn't include bonds."
     );
-    ImGui::InputInt("Row Height", &row_height);
+    if (!snap_to_party_window) {
+        ImGui::InputInt("Row Height", &row_height);
+        ImGui::ShowHelp("Height of each row, leave 0 for default");
+    }
     if (row_height < 0) row_height = 0;
-    ImGui::ShowHelp("Height of each row, leave 0 for default");
 }
 
 BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid) const {

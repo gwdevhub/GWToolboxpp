@@ -13,6 +13,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <Defines.h>
 #include <ImGuiAddons.h>
@@ -126,6 +127,8 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
     filter_channel_alliance = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
     filter_channel_emotes = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
 
+    block_messages_from_inactive_channels = ini->GetBoolValue(Name(), VAR_NAME(block_messages_from_inactive_channels), block_messages_from_inactive_channels);
+    
     strcpy_s(bycontent_word_buf, "");
     strcpy_s(bycontent_regex_buf, "");
 
@@ -195,12 +198,7 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
     ini->SetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
 
-    filter_channel_local = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
-    filter_channel_guild = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
-    filter_channel_team = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_team), filter_channel_team);
-    filter_channel_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
-    filter_channel_alliance = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
-    filter_channel_emotes = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
+    ini->SetBoolValue(Name(), VAR_NAME(block_messages_from_inactive_channels), block_messages_from_inactive_channels);
 
     if (timer_parse_filters) {
         timer_parse_filters = 0;
@@ -293,9 +291,11 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
 }
 
 bool ChatFilter::ShouldIgnore(const wchar_t* message, uint32_t channel) {
+    if (ShouldBlockByChannel(channel))
+        return true;
     if (ShouldIgnore(message))
         return true;
-    if (!ShouldIgnoreByChannel(channel))
+    if (!ShouldFilterByChannel(channel))
         return false;
     return ShouldIgnoreByContent(message);
 }
@@ -443,12 +443,12 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
         case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
         case 0x223F: return false; // "x minutes of favor of the gods remaining" as a result of /favor command
         case 0x223B: return hoh; // a party won hall of heroes  
+        case 0x23E2: return player_has_achieved_title; // Player has achieved... The gods have blessed the world with their favor.
+        case 0x23E3: return favor; // The gods have blessed the world
         case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
-        case 0x23E5: return player_has_achieved_title;
-        case 0x23E6: return player_has_achieved_title;
+        case 0x23E5: return player_has_achieved_title; // Player has achieved... The gods have extended their blessings
+        case 0x23E6: return player_has_achieved_title; // Player has achieved... N more achievements will earn favor of the gods
         case 0x29F1: return item_cannot_be_used; // Cannot use this item when no party members are dead.
-        case 0x2E35: return player_has_achieved_title; // Player has achieved the title...
-        case 0x2E36: return player_has_achieved_title; // Player has achieved the title...
         case 0x3772: return false; // I'm under the effect of x
         case 0x3DCA: return item_cannot_be_used; // This item can only be used in a guild hall
         case 0x4684: return item_cannot_be_used; // There is already an ally from a summoning stone present in this instance.
@@ -518,7 +518,7 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
     free(text);
     return false;
 }
-bool ChatFilter::ShouldIgnoreByChannel(uint32_t channel) {
+bool ChatFilter::ShouldFilterByChannel(uint32_t channel) {
     switch (channel) {
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALL):        return filter_channel_local;
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GUILD):      return filter_channel_guild;
@@ -526,6 +526,38 @@ bool ChatFilter::ShouldIgnoreByChannel(uint32_t channel) {
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_TRADE):      return filter_channel_trade;
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALLIANCE):   return filter_channel_alliance;
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_EMOTE):      return filter_channel_emotes;
+    }
+    return false;
+}
+bool ChatFilter::ShouldBlockByChannel(uint32_t channel) {
+    if (Instance().block_messages_from_inactive_channels) {
+        // Don't log chat messages if the channel is turned off - avoids hitting the chat log limit
+        GW::UI::CheckboxPreference prefCheck = GW::UI::CheckboxPreference_Count;
+        switch (static_cast<GW::Chat::Channel>(channel)) {
+        case GW::Chat::Channel::CHANNEL_ALL:
+            prefCheck = GW::UI::CheckboxPreference_ChannelLocal;
+            break;
+        case GW::Chat::Channel::CHANNEL_GROUP:
+        case GW::Chat::Channel::CHANNEL_ALLIES:
+            prefCheck = GW::UI::CheckboxPreference_ChannelGroup;
+            break;
+        case GW::Chat::Channel::CHANNEL_EMOTE:
+            prefCheck = GW::UI::CheckboxPreference_ChannelEmotes;
+            break;
+        case GW::Chat::Channel::CHANNEL_GUILD:
+            prefCheck = GW::UI::CheckboxPreference_ChannelGuild;
+            break;
+        case GW::Chat::Channel::CHANNEL_ALLIANCE:
+            prefCheck = GW::UI::CheckboxPreference_ChannelAlliance;
+            break;
+        case GW::Chat::Channel::CHANNEL_TRADE:
+            prefCheck = GW::UI::CheckboxPreference_ChannelTrade;
+            break;
+        }
+        if(prefCheck != GW::UI::CheckboxPreference_Count
+            && GW::UI::GetCheckboxPreference(prefCheck) == 1) {
+            return true;
+        }
     }
     return false;
 }
@@ -549,7 +581,7 @@ bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 
 void ChatFilter::DrawSettingInternal() {
     const float half_width = ImGui::GetContentRegionAvail().x / 2;
-    ImGui::Text("Hide the following messages:");
+    ImGui::Text("Block the following messages:");
     ImGui::Separator();
     ImGui::Text("Drops");
     ImGui::SameLine();
@@ -609,6 +641,11 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::Checkbox("'Player x might not reply because his/her status is set to away'", &away);
 
     ImGui::Separator();
+    ImGui::Checkbox("Block messages from inactive chat channels", &block_messages_from_inactive_channels);
+    ImGui::ShowHelp("Chat history in Guild Wars isn't unlimited.\n\nEnable this to prevent the game from logging messages in channels that you have turned off.");
+    if (block_messages_from_inactive_channels) {
+        ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "Messages from channels you have turned off in chat are not being logged in-game");
+    }
     ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
     ImGui::Indent();
     ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");

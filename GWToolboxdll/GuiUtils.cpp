@@ -153,10 +153,48 @@ ImFont* GuiUtils::GetFont(GuiUtils::FontSize size) {
     }
 }
 
-size_t GuiUtils::GetPartyHealthbarHeight() {
+float GuiUtils::GetGWScaleMultiplier() {
     GW::Constants::InterfaceSize interfacesize =
         static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::Preference_InterfaceSize));
 
+    switch (interfacesize) {
+    case GW::Constants::InterfaceSize::SMALL: return .9f;
+    case GW::Constants::InterfaceSize::LARGE: return 1.166666f;
+    case GW::Constants::InterfaceSize::LARGER: return 1.3333333f;
+    default: return 1.f;
+    }
+}
+
+ImVec4& GuiUtils::ClampRect(ImVec4& rect, ImVec4& viewport) {
+    float correct;
+    // X axis
+    if (rect.x < viewport.x) {
+        correct = viewport.x - rect.x;
+        rect.x += correct;
+        rect.z += correct;
+    }
+    if (rect.z > viewport.z) {
+        correct = rect.z - viewport.z;
+        rect.x -= correct;
+        rect.z -= correct;
+    }
+    // Y axis
+    if (rect.y < viewport.y) {
+        correct = viewport.y - rect.y;
+        rect.y += correct;
+        rect.w += correct;
+    }
+    if (rect.w > viewport.w) {
+        correct = rect.w - viewport.w;
+        rect.y -= correct;
+        rect.w -= correct;
+    }
+    return rect;
+}
+
+float GuiUtils::GetPartyHealthbarHeight() {
+    GW::Constants::InterfaceSize interfacesize =
+        static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::Preference_InterfaceSize));
     switch (interfacesize) {
     case GW::Constants::InterfaceSize::SMALL: return GW::Constants::HealthbarHeight::Small;
     case GW::Constants::InterfaceSize::NORMAL: return GW::Constants::HealthbarHeight::Normal;

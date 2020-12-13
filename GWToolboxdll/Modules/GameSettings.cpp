@@ -268,6 +268,18 @@ namespace {
         }
     } pending_cast;
 
+    struct PlayerChatMessage {
+        uint32_t channel;
+        wchar_t* message;
+        uint32_t player_number;
+    };
+
+    struct PartyTargetInfo {
+        uint32_t target_type = 0;
+        uint32_t unk1;
+        uint32_t target_identifier;
+    } party_target_info;
+
 }
 
 static std::wstring ShorthandItemDescription(GW::Item* item) {
@@ -693,8 +705,12 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, &OnScreenShake);
     GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, &OnCheckboxPreferenceChanged);
     GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, OnChangeTarget);
+    GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, OnPlayerChatMessage);
+
     GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
+            return;
+        if (!lazy_chest_looting)
             return;
         targeting_nearest_item = true;
         GW::Agents::ChangeTarget((uint32_t)0); // To ensure OnChangeTarget is triggered
@@ -710,7 +726,8 @@ void GameSettings::Initialize() {
     GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, &OnCast);
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
-
+    GW::Chat::RegisterChatEventCallback(&OnPartyTargetChange_Entry, OnPartyTargetChange);
+    GW::Chat::CreateCommand(L"reinvite", GameSettings::CmdReinvite);
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
 #endif
@@ -844,6 +861,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
     auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
+    hide_player_speech_bubbles = ini->GetBoolValue(Name(), VAR_NAME(hide_player_speech_bubbles), hide_player_speech_bubbles);
     npc_speech_bubbles_as_chat = ini->GetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
     redirect_npc_messages_to_emote_chat = ini->GetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
 
@@ -870,6 +888,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
     improve_move_to_cast = ini->GetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
+
+    lazy_chest_looting = ini->GetBoolValue(Name(), VAR_NAME(lazy_chest_looting), lazy_chest_looting);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -961,6 +981,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
     ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
+    
+    ini->SetBoolValue(Name(), VAR_NAME(hide_player_speech_bubbles), hide_player_speech_bubbles);
     ini->SetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
     ini->SetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
 
@@ -986,6 +1008,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
     ini->SetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
 
+    ini->SetBoolValue(Name(), VAR_NAME(lazy_chest_looting), lazy_chest_looting);
+
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     ::SaveChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -1006,6 +1030,9 @@ void GameSettings::DrawInventorySettings() {
     ImGui::Unindent();
     ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
     ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
+
+    ImGui::Checkbox("Lazy chest looting", &lazy_chest_looting);
+    ImGui::ShowHelp("Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
 }
 
 void GameSettings::DrawPartySettings() {
@@ -1058,6 +1085,8 @@ void GameSettings::DrawChatSettings() {
             GW::Chat::SetTimestampsColor(timestamps_color);
         ImGui::Unindent();
     }
+    ImGui::Checkbox("Hide player chat speech bubbles", &hide_player_speech_bubbles);
+    ImGui::ShowHelp("Don't show in-game speech bubbles over player characters that send a message in chat");
     ImGui::Checkbox("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat);
     ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
     ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);
@@ -1306,6 +1335,80 @@ void GameSettings::Update(float delta) {
         }
         if (check_message_on_party_change)
             GameSettings::MessageOnPartyChange();
+    }
+    // Re-invite logic
+    if (pending_reinvite_type != None) {
+        if (!pending_reinvite_id || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+            pending_reinvite_type = None;
+        }
+    }
+    switch (pending_reinvite_type) {
+    case Player: {
+        GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+        bool still_in_party = false;
+        for (size_t i = 0; party && party->players.valid() && i < party->players.size(); i++) {
+            auto& member = party->players[i];
+            if (member.login_number == pending_reinvite_id) {
+                still_in_party = true;
+                break;
+            }
+        }
+        GW::Player* player = GW::PlayerMgr::GetPlayerByID(pending_reinvite_id);
+        if (!player) {
+            pending_reinvite_type = None;
+            break;
+        }
+        if (!still_in_party) {
+            wchar_t message[64];
+            swprintf(message, _countof(message), L"invite %s", player->name);
+            GW::Chat::SendChat('/', message);
+            pending_reinvite_type = None;
+        }
+    } break;
+    case Hero: {
+        GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+        bool still_in_party = false;
+        uint32_t my_id = GW::PlayerMgr::GetPlayerNumber();
+        for (size_t i = 0; party && party->heroes.valid() && i < party->heroes.size(); i++) {
+            auto& member = party->heroes[i];
+            if (member.hero_id == pending_reinvite_id && member.owner_player_id == my_id) {
+                still_in_party = true;
+                break;
+            }
+        }
+        if (!still_in_party) {
+            GW::CtoS::SendPacket(0x8, 33, pending_reinvite_id);
+            pending_reinvite_type = None;
+        }
+    } break;
+    case Henchman: {
+        GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+        bool still_in_party = false;
+        bool is_leading = false;
+        uint32_t my_id = GW::PlayerMgr::GetPlayerNumber();
+        for (size_t i = 0; party && party->players.valid() && i < party->players.size(); i++) {
+            auto& member = party->players[i];
+            if (!member.connected())
+                continue;
+            is_leading = member.login_number == my_id;
+            break;
+        }
+        if (!is_leading) {
+            pending_reinvite_type = None;
+            break;
+        }
+        for (size_t i = 0; party && party->henchmen.valid() && i < party->henchmen.size(); i++) {
+            auto& member = party->henchmen[i];
+            if (member.agent_id == pending_reinvite_id) {
+                still_in_party = true;
+                break;
+            }
+        }
+        if (!still_in_party) {
+            GW::CtoS::SendPacket(0x8, 167, pending_reinvite_id);
+            pending_reinvite_type = None;
+        }
+    } break;
     }
 }
 
@@ -1754,6 +1857,138 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
     }
 }
 
+// Record current party target - this isn't always the same as the compass target.
+void GameSettings::OnPartyTargetChange(GW::HookStatus* , uint32_t event_id, uint32_t type, void* wParam, void*) {
+    UNREFERENCED_PARAMETER(event_id);
+    if (!(type == 0x7 && (uint32_t)wParam > 0xffff))
+        return;
+    party_target_info = *(PartyTargetInfo*)wParam;
+}
+
+void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
+    ReinviteType& target_type = Instance().pending_reinvite_type;
+    uint32_t& target_identifier = Instance().pending_reinvite_id;
+    target_type = None;
+    target_identifier = 0;
+    GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+    if (!party || !party->players.valid())
+        return;
+    GW::Player* first_player = nullptr;
+    GW::Player* next_player = nullptr;
+    GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    if (!me)
+        return;
+    GW::AgentLiving* targetted_agent = nullptr;
+    switch (party_target_info.target_type) {
+    case 0x9: // Targetting player, identifer = player_number
+        target_type = Player;
+        target_identifier = party_target_info.target_identifier;
+        break;
+    case 0x2:// Targetting henchman, identifier = agent_id
+        target_type = Henchman;
+        target_identifier = party_target_info.target_identifier;
+        break;
+    case 0x3: // Targetting hero, identifier = player_number & agent_id
+        target_type = Hero;
+        // NOTE: Although this seems to be a valid agent_id, its not a valid agent so GetAgentByID() won't work here.
+        target_identifier = (uint32_t)party_target_info.target_identifier & 0x0000ffff;
+        break;
+    case 0x1: // Hero in Party Search window, identifier = hero_id
+    case 0x5: // Targetting pending player, identifier = player_number
+    default:
+        Log::ErrorW(L"Target a party member to re-invite");
+        return;
+    }
+
+    // Build some references
+    for (size_t i = 0; party->players.valid() && i < party->players.size(); i++) {
+        auto& member = party->players[i];
+        if (!member.connected())
+            continue;
+        if (!first_player) {
+            first_player = GW::PlayerMgr::GetPlayerByID(member.login_number);
+        }
+        else if (!next_player) {
+            next_player = GW::PlayerMgr::GetPlayerByID(member.login_number);
+        }
+        if (target_type == None && member.login_number == targetted_agent->login_number) {
+            target_type = Player;
+            target_identifier = member.login_number;
+        }
+    }
+    if (!first_player) {
+        Log::ErrorW(L"Failed to find party leader");
+        return;
+    }
+    bool leading = first_player->agent_id == me->agent_id;
+
+    switch (target_type) {
+    case Player:
+        if (target_identifier == me->login_number) {
+            // If I'm targeting myself, or I'm not leading; leave and re-join.
+            if (!leading) {
+                next_player = first_player;
+            }
+            GW::AgentLiving* next_player_agent = next_player ? static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(next_player->agent_id)) : nullptr;
+            if (!next_player_agent || !next_player_agent->GetIsLivingType() || !next_player_agent->IsPlayer()) {
+                Log::ErrorW(L"No-one is around to re-join");
+                target_type = None;
+                return;
+            }
+            target_identifier = next_player_agent->login_number;
+            GW::CtoS::SendPacket(0x4, GAME_CMSG_PARTY_LEAVE_GROUP);
+            return;
+        }
+        else {
+            if (!leading) {
+                Log::ErrorW(L"Only party leader can re-invite players");
+                target_type = None;
+                return;
+            }
+            // Kick this player and re-invite
+            GW::CtoS::SendPacket(0x8, 177, target_identifier);
+        }
+        break;
+    case Hero:
+        // Check that this is my hero
+        target_type = None;
+        for (size_t i = 0; target_type == None && party->heroes.valid() && i < party->heroes.size(); i++) {
+            auto& member = party->heroes[i];
+            if (member.agent_id == target_identifier) {
+                if (member.owner_player_id != me->login_number) {
+                    Log::ErrorW(L"The targetted hero doesn't belong to you");
+                    target_type = None;
+                    return;
+                }
+                target_type = Hero;
+                target_identifier = member.hero_id;
+                break;
+            }
+        }
+        if (target_type == None) {
+            Log::ErrorW(L"Failed to find Hero for agent_id %d", target_identifier);
+            return;
+        }
+        // Kick this hero
+        GW::CtoS::SendPacket(0x8, 34, target_identifier);
+        break;
+    case Henchman:
+        if (!leading) {
+            Log::ErrorW(L"Only party leader can re-invite henchmen");
+            target_type = None;
+            return;
+        }
+        // Kick this henchman
+        GW::CtoS::SendPacket(0x8, 176, target_identifier);
+        break;
+    default:
+        Log::ErrorW(L"Target a party member to re-invite");
+        target_type = None;
+        return;
+    }
+}
+
+
 // Don't target chest as nearest item
 // Target green items from chest last
 void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
@@ -1770,11 +2005,11 @@ void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* 
     const GW::AgentArray agents = GW::Agents::GetAgentArray();
     if (!agents.valid())
         return;
-    uint32_t player_id = GW::Agents::GetPlayerId();
-    if (!player_id)
+    GW::Agent* me = GW::Agents::GetPlayer();
+    if (!me)
         return;
     // If the item targeted is a green that belongs to me, and its next to the chest, try to find another item instead.
-    if (chosen_target->GetIsItemType() && ((GW::AgentItem*)chosen_target)->owner == player_id) {
+    if (chosen_target->GetIsItemType() && ((GW::AgentItem*)chosen_target)->owner == me->agent_id) {
         target_item = GW::Items::GetItemById(((GW::AgentItem*)chosen_target)->item_id);
         if (!target_item || (target_item->interaction & 0x10) == 0)
             return; // Failed to get target item, or is not green.
@@ -1792,19 +2027,22 @@ void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* 
     
     // If we're targeting a gadget (presume its the chest), try to find adjacent items that belong to me instead.
     if (chosen_target->GetIsGadgetType()) {
-        float closest_item_dist = GW::Constants::Range::Nearby;
+        float closest_item_dist = GW::Constants::Range::Compass;
         GW::AgentItem* agent_item = nullptr;
         for (auto* agent : agents) {
             if (!agent || !agent->GetIsItemType()) continue;
             agent_item = agent->GetAsAgentItem();
-            if (!agent_item || agent_item->owner != player_id) continue;
+            if (!agent_item || agent_item->owner != me->agent_id) continue;
             target_item = GW::Items::GetItemById(agent_item->item_id);
             // Don't target green items.
             if (!target_item || (target_item->interaction & 0x10) != 0)
                 continue;
-            float dist = GW::GetDistance(chosen_target->pos, agent->pos);
+            if (GW::GetDistance(agent->pos, chosen_target->pos) > GW::Constants::Range::Nearby)
+                continue;
+            float dist = GW::GetDistance(me->pos, agent->pos);
             if (dist > closest_item_dist) continue;
             override_manual_agent_id = agent->agent_id;
+            closest_item_dist = dist;
         }
     }
     if (override_manual_agent_id) {
@@ -1834,6 +2072,18 @@ void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, ui
 void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(Instance().set_window_title_as_charname);
+}
+
+// Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
+void GameSettings::OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*) {
+    if (msg_id == 0x10000081 && Instance().hide_player_speech_bubbles) {
+        status->blocked = true;
+        PlayerChatMessage* msg = (PlayerChatMessage*)wParam;
+        GW::Player* agent = GW::PlayerMgr::GetPlayerByID(msg->player_number);
+        if (!agent)
+            return;
+        GW::Chat::WriteChatEnc((GW::Chat::Channel)msg->channel, msg->message, agent->name);
+    }
 }
 
 float GameSettings::GetSkillRange(uint32_t skill_id)
