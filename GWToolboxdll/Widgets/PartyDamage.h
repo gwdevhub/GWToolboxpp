@@ -75,6 +75,7 @@ private:
     std::map<DWORD, uint32_t> hp_map;
     std::map<DWORD, size_t> party_index;
     size_t player_index = 0;
+    GW::UI::WindowPosition* party_window_position = nullptr;
 
     // main routine variables
     bool in_explorable = false;
@@ -91,6 +92,10 @@ private:
     int recent_max_time = 0;
     int row_height = 0;
     bool hide_in_outpost = false;
+
+    bool snap_to_party_window = true;
+    // Distance away from the party window on the x axis; used with snap to party window
+    int user_offset = 0;
 
     GW::HookEntry GenericModifier_Entry;
     GW::HookEntry MapLoaded_Entry;
