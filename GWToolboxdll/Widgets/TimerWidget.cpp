@@ -31,32 +31,32 @@ void TimerWidget::Initialize() {
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
-
             cave_start = 0; // reset doa's cave timer
 
-            if (reset_next_loading_screen) {
-                run_started = TIMER_INIT();
-                reset_next_loading_screen = false;
-            }
+            if (!never_reset) {
+                if (reset_next_loading_screen) {
+                    run_started = TIMER_INIT();
+                    reset_next_loading_screen = false;
+                }
 
-            if (pak->is_explorable && !in_explorable) { // if zoning from outpost to explorable
-                run_started = TIMER_INIT();
-            }
-            if (!pak->is_explorable) { // zoning back to outpost
-                run_started = TIMER_INIT();
-            }
-
-            GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)pak->map_id);
-            if (info) {
-                bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
-
-                if (new_in_dungeon && !in_dungeon) { // zoning from explorable to dungeon
+                if (pak->is_explorable && !in_explorable) { // if zoning from outpost to explorable
+                    run_started = TIMER_INIT();
+                }
+                if (!pak->is_explorable) { // zoning back to outpost
                     run_started = TIMER_INIT();
                 }
 
-                in_dungeon = new_in_dungeon;
-            }
+                GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)pak->map_id);
+                if (info) {
+                    bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
 
+                    if (new_in_dungeon && !in_dungeon) { // zoning from explorable to dungeon
+                        run_started = TIMER_INIT();
+                    }
+
+                    in_dungeon = new_in_dungeon;
+                }
+            }
             run_completed = 0;
             in_explorable = pak->is_explorable;
         });
@@ -65,12 +65,17 @@ void TimerWidget::Initialize() {
         reset_next_loading_screen = true;
         Log::Info("Resetting timer at the next loading screen.");
     });
+    GW::Chat::CreateCommand(L"timerreset", [this](const wchar_t*, int, LPWSTR*) { 
+        reset_next_loading_screen = true; 
+    });
 }
+
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
     ToolboxWidget::LoadSettings(ini);
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     use_instance_timer = ini->GetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
+    never_reset = ini->GetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
     click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
@@ -85,6 +90,7 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
+    ini->SetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     ini->SetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
@@ -101,6 +107,11 @@ void TimerWidget::DrawSettingInternal() {
     ImGui::Checkbox("Use instance timer", &use_instance_timer);
     ImGui::ShowHelp("Default timer does not reset when zoning between explorable areas.\n \
         You can use /resettimer to force a reset at the next loading screen.");
+    ImGui::Checkbox("Never reset", &never_reset);
+    ImGui::ShowHelp(
+        "Don't reset when entering outposts, explorables (from outposts), and dungeons. \n" \
+        "Useful for timing longer runs.\n" \
+        "Requires 'Use instance timer' above NOT ticked");
     ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");

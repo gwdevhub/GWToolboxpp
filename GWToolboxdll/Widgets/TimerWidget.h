@@ -76,6 +76,7 @@ private:
     ImColor extra_color = 0;
 
     bool use_instance_timer = false;
+    bool never_reset = false;
     bool reset_next_loading_screen = false;
     bool in_explorable = false;
     bool in_dungeon = false;
