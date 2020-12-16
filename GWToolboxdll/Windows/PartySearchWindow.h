@@ -44,21 +44,25 @@ private:
         static uint32_t IdFromLocalParty(uint32_t party_id);
         bool FromRegionParty(GW::PartySearch*);
         bool FromLocalParty(GW::PartyInfo*);
-        uint32_t concat_party_id;
-        uint8_t party_size;
-        uint8_t hero_count;
-        uint8_t search_type; // 0 = hunting, 1 = mission, 2 = quest, 3 = trade, 4 = guild
-        uint8_t is_hard_mode;
-        uint16_t map_id;
-        int8_t region_id; // This is set by the player's map
-        int8_t district;
-        int8_t language;
+        bool FromPlayerInMap(GW::Player* player);
+        uint32_t concat_party_id = 0;
+        uint32_t player_id = 0; // Leader
+        uint8_t party_size = 0;
+        uint8_t hero_count = 0;
+        uint8_t search_type = 5; // 0 = hunting, 1 = mission, 2 = quest, 3 = trade, 4 = guild, 5 = local
+        uint8_t is_hard_mode = 0;
+        uint16_t map_id = 0;
+        int8_t region_id = 0; // This is set by the player's map
+        int8_t district = 0;
+        int8_t language = 0;
+        uint8_t primary = 0;
+        uint8_t secondary = 0;
         std::string message;
         std::string player_name;
     };
     GW::HookEntry OnMessageLocal_Entry;
 
-    std::unordered_map<uint32_t,TBParty*> party_advertisements;
+    std::unordered_map<std::wstring,TBParty*> party_advertisements;
 
     WSAData wsaData = {0};
 
@@ -82,12 +86,21 @@ private:
     bool should_stop = false;
     std::thread worker;
     bool ws_window_connecting = false;
+
+    clock_t refresh_parties = 0;
+    bool display_party_types[6] = { true, true, true, false, true, true };
+    // Internal - mainly to hide Trade channel from the UI and networking
+    bool ignore_party_types[6] = { false, false, false, true, false, false };
+    uint32_t max_party_size = 0;
+
     easywsclient::WebSocket* ws_window = NULL;
     RateLimiter window_rate_limiter;
     
     CircularBuffer<Message> messages;
 
-    TBParty* GetParty(uint32_t party_id);
+    TBParty* GetParty(uint32_t party_id, wchar_t** leader_out = nullptr);
+    TBParty* GetPartyByName(std::wstring leader);
+    
     void ClearParties();
     void FillParties();
     void DrawAlertsWindowContent(bool ownwindow);
