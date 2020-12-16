@@ -407,6 +407,7 @@ void SkillbarWidget::LoadSettings(CSimpleIni *ini)
     color_effect_progress = Colors::Load(ini, Name(), VAR_NAME(color_effect_progress), color_effect_progress);    
     color_effect_border = Colors::Load(ini, Name(), VAR_NAME(color_effect_border), color_effect_border);
     snap_to_skillbar = ini->GetBoolValue(Name(), VAR_NAME(snap_to_skillbar), snap_to_skillbar);
+    is_movable = is_resizable = !snap_to_skillbar;
 }
 
 void SkillbarWidget::SaveSettings(CSimpleIni *ini)
@@ -485,8 +486,10 @@ void SkillbarWidget::DrawDurationThresholds() {
 
 void SkillbarWidget::DrawSettingInternal()
 {
+    if (ImGui::Checkbox("Attach to skill bar", &snap_to_skillbar)) {
+        is_movable = is_resizable = !snap_to_skillbar;
+    }
     ToolboxWidget::DrawSettingInternal();
-    ImGui::Checkbox("Attach to skill bar", &snap_to_skillbar);
     ImGui::ShowHelp("Skill overlay will match your skillbar position and orientation");
     if (snap_to_skillbar) {
         // TODO: Offsets, rely on user values for now

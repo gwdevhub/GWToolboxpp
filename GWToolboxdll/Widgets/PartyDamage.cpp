@@ -233,6 +233,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background).Value);
 	if (snap_to_party_window && party_window_position) {
 		float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
@@ -323,7 +324,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	}
 	ImGui::End();
 	ImGui::PopStyleColor(); // window bg
-	ImGui::PopStyleVar(2);
+	ImGui::PopStyleVar(3);
 }
 
 float PartyDamage::GetPartOfTotal(uint32_t dmg) const {
@@ -409,6 +410,8 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 			hp_map[static_cast<size_t>(lkey)] = static_cast<uint32_t>(lval);
 		}
 	}
+
+	is_movable = is_resizable = !snap_to_party_window;
 }
 
 void PartyDamage::SaveSettings(CSimpleIni* ini) {
@@ -435,7 +438,9 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 
 void PartyDamage::DrawSettingInternal() {
 	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-	ImGui::Checkbox("Attach to party window", &snap_to_party_window);
+	if (ImGui::Checkbox("Attach to party window", &snap_to_party_window)) {
+		is_movable = is_resizable = !snap_to_party_window;
+	}
 	if (snap_to_party_window) {
 		ImGui::InputInt("Party window offset", &user_offset);
 		ImGui::ShowHelp("Distance away from the party window");
