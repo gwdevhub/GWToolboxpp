@@ -42,4 +42,4 @@ jobs:
     - name: Save output
       uses: actions/upload-artifact@v2
       with:
-        path: ${{runner.workspace}}/bin/$BUILD_TYPE/
+        path: ${{runner.workspace}}/GWToolboxpp/bin/$BUILD_TYPE/
