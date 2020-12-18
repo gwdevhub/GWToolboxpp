@@ -47,19 +47,22 @@ private:
 
     // TODO: many of those are not hooked up
     enum class EventType {
-        ServerMessage, 
-        Dialog, 
-        InstanceLoadFile, // id is mapfile
-        InstanceLoadInfo, // id is mapid
-        GameSrvTransfer, // start of map load. Use as map finished.
-        DoorOpen, 
-        DoorClose,
-        ObjectiveStarted,
-        ObjectiveDone,
-        AgentTurnsFriendly,
-        AgentTurnsHostile,
-        DoACompleteZone,
-        CountdownStart,
+        // dialog without owner. 
+        ServerMessage,      // id1-4 = message
+
+        // dialog from owner. Can be in chat or middle of screen.
+        DisplayDialogue,    // id1-4 = message
+
+        InstanceLoadInfo,   // id1 is mapid
+        GameSrvTransfer,    // start of map load. Use as map finished.
+        DoorOpen,           // id=object_id
+        DoorClose,          // id=object_id
+        ObjectiveStarted,   // id=objective_id
+        ObjectiveDone,      // id=objective_id
+
+        AgentUpdateAllegiance, // id1 = agent model id, id2 = allegiance_bits
+        DoACompleteZone,    // id1 = second wchar of message (doa "id")
+        CountdownStart,     // id1 = mapid
         DungeonReward
     };
 
@@ -74,7 +77,10 @@ private:
 
         struct Event {
             EventType type;
-            uint32_t id;
+            uint32_t id1 = 0;
+            uint32_t id2 = 0;
+            uint32_t id3 = 0;
+            uint32_t id4 = 0;
         };
         std::vector<Event> start_events;
         std::vector<Event> end_events;
@@ -94,8 +100,8 @@ private:
        
         Objective(const char* name, uint32_t id = 0);
 
-        Objective& AddStartEvent(EventType et, uint32_t _id);
-        Objective& AddEndEvent(EventType et, uint32_t _id);
+        Objective& AddStartEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0, uint32_t id3 = 0, uint32_t id4 = 0);
+        Objective& AddEndEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0, uint32_t id3 = 0, uint32_t id4 = 0);
         Objective& SetStarted();
         Objective& SetDone();
 
@@ -130,8 +136,14 @@ private:
             obj.starting_completes_previous_objectives = true;
             return AddObjective(std::move(obj));
         }
+        void AddQuestObjective(const char* obj_name, uint32_t id)
+        {
+            AddObjective(Objective(obj_name))
+                .AddStartEvent(EventType::ObjectiveStarted, id)
+                .AddEndEvent(EventType::ObjectiveDone, id);
+        }
 
-        void Event(EventType type, uint32_t id);
+        void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0, uint32_t id3 = 0, uint32_t id4 = 0);
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
         void StopObjectives();
@@ -155,24 +167,18 @@ private:
     bool auto_send_age = false;
     ObjectiveSet* current_objective_set = nullptr;
 
+    void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0, uint32_t id3 = 0, uint32_t id4 = 0);
+
     void AddObjectiveSet(ObjectiveSet* os);
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
-    void AddSlaversObjectiveSet();
-    void AddDungeonObjectiveSet(int levels);
-    void DoorOpened(uint32_t door_id);
     
     void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
     void AddToPKObjectiveSet();
     void ClearObjectiveSets();
+    void StopObjectives(); // called on partydefeated or back to outpost
 
-    static void OnAgentUpdateAllegiance(GW::HookStatus *, GW::Packet::StoC::AgentUpdateAllegiance *packet);
-    static void OnDisplayDialogue(GW::HookStatus *,GW::Packet::StoC::DisplayDialogue *packet);
-    static void OnMessageServer(GW::HookStatus *, GW::Packet::StoC::MessageServer *);
-    static void OnCountdownStart(GW::HookStatus *, GW::Packet::StoC::PacketBase *);
-    // Called via PartyDefeated packet, but can also be called without args to kill any running objectives.
-    static void StopObjectives(GW::HookStatus *status = nullptr, GW::Packet::StoC::PacketBase *packet = nullptr);
-    static void OnMapChanged(GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo* packet);
+    void OnMapChanged(GW::Packet::StoC::InstanceLoadInfo* packet);
 };
