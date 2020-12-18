@@ -76,6 +76,8 @@ void TimerWidget::LoadSettings(CSimpleIni *ini) {
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     use_instance_timer = ini->GetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
     never_reset = ini->GetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
+    stop_at_objective_completion =
+        ini->GetBoolValue(Name(), VAR_NAME(stop_at_objective_completion), stop_at_objective_completion);
     click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
@@ -91,6 +93,7 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
     ini->SetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
+    ini->SetBoolValue(Name(), VAR_NAME(stop_at_objective_completion), stop_at_objective_completion);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     ini->SetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
@@ -104,14 +107,22 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
 void TimerWidget::DrawSettingInternal() {
     ToolboxWidget::DrawSettingInternal();
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-    ImGui::Checkbox("Use instance timer", &use_instance_timer);
-    ImGui::ShowHelp("Default timer does not reset when zoning between explorable areas.\n \
+    if (ImGui::RadioButton("Instance timer", use_instance_timer)) {
+        use_instance_timer = true;
+    }
+    if (ImGui::RadioButton("Real-time timer", !use_instance_timer)) {
+        use_instance_timer = false;
+    }
+    ImGui::ShowHelp("Real-time timer does not reset when zoning between explorable areas.\n \
         You can use /resettimer to force a reset at the next loading screen.");
+    ImGui::Indent();
     ImGui::Checkbox("Never reset", &never_reset);
     ImGui::ShowHelp(
         "Don't reset when entering outposts, explorables (from outposts), and dungeons. \n" \
         "Useful for timing longer runs.\n" \
         "Requires 'Use instance timer' above NOT ticked");
+    ImGui::Checkbox("Stop at objective completion", &stop_at_objective_completion);
+    ImGui::Unindent();
     ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");
@@ -133,6 +144,17 @@ void TimerWidget::DrawSettingInternal() {
     }
 }
 
+unsigned long TimerWidget::GetTimer()
+{
+    if (use_instance_timer || run_started == 0) {
+        return GW::Map::GetInstanceTime();
+    } else if (run_completed != 0) {
+        return run_completed;
+    } else {
+        return TIMER_DIFF(run_started);
+    }
+}
+
 ImGuiWindowFlags TimerWidget::GetWinFlags(ImGuiWindowFlags flags, bool noinput_if_frozen) const {
     return ToolboxWidget::GetWinFlags(flags, noinput_if_frozen) | (lock_size ? ImGuiWindowFlags_AlwaysAutoResize : 0);
 }
@@ -144,15 +166,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
 
-    unsigned long time = 0;
-
-    if (use_instance_timer || run_started == 0) {
-        time = GW::Map::GetInstanceTime() / 1000;
-    } else if (run_completed != 0) {
-        time = run_completed / 1000;
-    } else {
-        time = TIMER_DIFF(run_started) / 1000;
-    }
+    unsigned long time = GetTimer() / 1000;
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
@@ -200,9 +214,14 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 
 void TimerWidget::SetRunCompleted()
 {
-    if (run_started != 0) {
+    if (run_started != 0 && stop_at_objective_completion) {
         run_completed = TIMER_DIFF(run_started);
     }
+    Log::Info("Time: %lu:%02lu:%02lu.%02lu", 
+        (run_completed / 1000 / (60 * 60)), 
+        (run_completed / 1000 / 60) % 60, 
+        (run_completed / 1000) % 60, 
+        run_completed / 10 % 100);
 }
 
 bool TimerWidget::GetUrgozTimer() {

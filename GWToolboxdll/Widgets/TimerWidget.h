@@ -35,6 +35,7 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
     void SetRunCompleted(); // call when the objectives are completed to stop the timer
+    unsigned long GetTimer(); // time in milliseconds
 
 private:
     // those function write to extra_buffer and extra_color.
@@ -78,6 +79,8 @@ private:
     bool use_instance_timer = false;
     bool never_reset = false;
     bool reset_next_loading_screen = false;
+    bool stop_at_objective_completion = true;
+
     bool in_explorable = false;
     bool in_dungeon = false;
     clock_t run_started = 0; // system time of when run started
