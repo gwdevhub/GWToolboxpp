@@ -253,6 +253,8 @@ void ObjectiveTimerWindow::Initialize()
             bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
             if (in_dungeon && !new_in_dungeon) { // moved from dungeon to outside
                 StopObjectives();
+            } else if (!packet->is_explorable) { // zoning to outpost
+                StopObjectives();
             }
             in_dungeon = new_in_dungeon;
 
@@ -546,42 +548,47 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 .AddStartEvent(EventType::DoACompleteZone, Gloom)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_foundry_entrance_r1)
                 .AddEndEvent(EventType::DoACompleteZone, Foundry);
-            os->AddObjective(Objective("Room 1", 1))
-                .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_entrance_r1)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r1_r2);
-            os->AddObjective(Objective("Room 2", 1))
-                .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r1_r2)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r2_r3);
-            os->AddObjective(Objective("Room 3", 1))
-                .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r2_r3)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r3_r4);
-            os->AddObjective(Objective("Room 4", 1))
-                .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r3_r4)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r4_r5);
+            if (show_detailed_objectives) {
+                os->AddObjective(Objective("Room 1", 1))
+                    .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_entrance_r1)
+                    .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r1_r2);
+                os->AddObjective(Objective("Room 2", 1))
+                    .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r1_r2)
+                    .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r2_r3);
+                os->AddObjective(Objective("Room 3", 1))
+                    .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r2_r3)
+                    .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r3_r4);
+                os->AddObjective(Objective("Room 4", 1))
+                    .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r3_r4)
+                    .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r4_r5);
 
-            // maybe time snakes take? (check them being added to party)
+                // maybe time snakes take? (check them being added to party)
 
-            // maybe change BB event to use the dialog instead? "None shall escape. Prepare to die."
-            // change BB to start at door and finish at fury spawn?
-            os->AddObjective(Objective("Black Beast", 1))
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_foundry_r5_bb)
-                .AddEndEvent(EventType::AgentUpdateAllegiance, 5221, 0x6E6F6E63); // all 3 are the same
-            
-            // 0x8101 0x273D 0x98D8 0xB91A 0x47B8 The Fury: Ah, you have finally arrived. My dark master informed me I might have visitors....
-            os->AddObjective(Objective("Fury", 1))
-                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273D\x98DB\xB91A")
-                .AddEndEvent(EventType::DoACompleteZone, Foundry);
+                // maybe change BB event to use the dialog instead? "None shall escape. Prepare to die."
+                // change BB to start at door and finish at fury spawn?
+                os->AddObjective(Objective("Black Beast", 1))
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_foundry_r5_bb)
+                    .AddEndEvent(EventType::AgentUpdateAllegiance, 5221, 0x6E6F6E63); // all 3 are the same
+
+                // 0x8101 0x273D 0x98D8 0xB91A 0x47B8 The Fury: Ah, you have finally arrived. My dark master informed me
+                // I might have visitors....
+                os->AddObjective(Objective("Fury", 1))
+                    .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273D\x98DB\xB91A")
+                    .AddEndEvent(EventType::DoACompleteZone, Foundry);
+            }
         },
         [&]() {
             os->AddObjective(Objective("City"))
                 .AddStartEvent(EventType::DoACompleteZone, Foundry)
                 .AddEndEvent(EventType::DoACompleteZone, City);
-            os->AddObjective(Objective("Outside", 1))
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_city_entrance)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_city_wall);
-            os->AddObjective(Objective("Inside", 1))
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_city_wall)
-                .AddEndEvent(EventType::DoACompleteZone, City);
+            if (show_detailed_objectives) {
+                os->AddObjective(Objective("Outside", 1))
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_city_entrance)
+                    .AddEndEvent(EventType::DoorOpen, DoorID::DoA_city_wall);
+                os->AddObjective(Objective("Inside", 1))
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_city_wall)
+                    .AddEndEvent(EventType::DoACompleteZone, City);
+            }
 
             // TODO: jadoth (starts at end of city, ends when chest spawns)
         }, 
@@ -589,39 +596,42 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
             os->AddObjective(Objective("Veil"))
                 .AddStartEvent(EventType::DoACompleteZone, City)
                 .AddEndEvent(EventType::DoACompleteZone, Veil);
-            os->AddObjective(Objective("360", 1))
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_left)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_middle)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_right);
-            os->AddObjectiveAfter(Objective("Underlords", 1))
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_ranger)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_derv);
-            os->AddObjectiveAfter(Objective("Lords", 1))
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_gloom)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_monk)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_ele)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_mes)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro);
-            os->AddObjectiveAfter(Objective("Tendrils", 1))
-                .AddStartEvent(EventType::ServerMessage, 3, (uint32_t)L"\x817\x10D\x101")
-                .AddEndEvent(EventType::DoACompleteZone, Veil);
+            if (show_detailed_objectives) {
+                os->AddObjective(Objective("360", 1))
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_left)
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_middle)
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_right);
+                os->AddObjectiveAfter(Objective("Underlords", 1))
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_ranger)
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_derv);
+                os->AddObjectiveAfter(Objective("Lords", 1))
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_gloom)
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_monk)
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_ele)
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_mes)
+                    .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro);
+                os->AddObjectiveAfter(Objective("Tendrils", 1))
+                    .AddStartEvent(EventType::ServerMessage, 3, (uint32_t)L"\x817\x10D\x101")
+                    .AddEndEvent(EventType::DoACompleteZone, Veil);
+            }
         },
         [&]() {
             os->AddObjective(Objective("Gloom"))
                 .AddStartEvent(EventType::DoACompleteZone, Veil)
                 .AddEndEvent(EventType::DoACompleteZone, Gloom);
+            if (show_detailed_objectives) {
+                os->AddObjective(Objective("Cave", 1))
+                    .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5765\x9846\xA72B")
+                    .AddEndEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5767\xA547\xB2C2");
 
-            os->AddObjective(Objective("Cave", 1))
-                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5765\x9846\xA72B")
-                .AddEndEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5767\xA547\xB2C2");
-            
-            // TODO: rift may not be possible from outside of range
+                // TODO: rift may not be possible from outside of range
 
-            // TODO: deathbringer ?
+                // TODO: deathbringer ?
 
-            os->AddObjective(Objective("Darknesses", 1))
-                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273B\xB5DB\x8B13")
-                .AddEndEvent(EventType::DoACompleteZone, Gloom);
+                os->AddObjective(Objective("Darknesses", 1))
+                    .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273B\xB5DB\x8B13")
+                    .AddEndEvent(EventType::DoACompleteZone, Gloom);
+            }
         }
     };
 
@@ -847,6 +857,8 @@ void ObjectiveTimerWindow::DrawSettingInternal()
     ImGui::Checkbox("Show 'Start' column", &show_start_column);
     ImGui::Checkbox("Show 'End' column", &show_end_column);
     ImGui::Checkbox("Show 'Time' column", &show_time_column);
+    ImGui::Checkbox("Show detailed objectives", &show_detailed_objectives);
+    ImGui::ShowHelp("Currently only affects DoA objectives");
     ImGui::Checkbox("Show run start date/time", &show_start_date_time);
     ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
     if (ImGui::Checkbox("Save/Load runs to disk", &save_to_disk)) {
@@ -874,6 +886,7 @@ void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini)
     save_to_disk = ini->GetBoolValue(Name(), VAR_NAME(save_to_disk), save_to_disk);
     show_past_runs = ini->GetBoolValue(Name(), VAR_NAME(show_past_runs), show_past_runs);
     show_start_date_time = ini->GetBoolValue(Name(), VAR_NAME(show_start_date_time), show_start_date_time);
+    show_detailed_objectives = ini->GetBoolValue(Name(), VAR_NAME(show_detailed_objectives), show_detailed_objectives);
     ComputeNColumns();
     LoadRuns();
 }
@@ -889,6 +902,7 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(show_start_date_time), show_start_date_time);
     ini->SetBoolValue(Name(), VAR_NAME(save_to_disk), save_to_disk);
     ini->SetBoolValue(Name(), VAR_NAME(show_past_runs), show_past_runs);
+    ini->SetBoolValue(Name(), VAR_NAME(show_detailed_objectives), show_detailed_objectives);
     SaveRuns();
 }
 void ObjectiveTimerWindow::LoadRuns()
@@ -1150,7 +1164,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Update()
     unsigned long now = TimerWidget::Instance().GetTimer();
 
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        PrintTime(cached_time, sizeof(cached_time), now, false);
+        PrintTime(cached_time, sizeof(cached_time), now, show_decimal);
     }
 
     for (Objective& obj : objectives) {

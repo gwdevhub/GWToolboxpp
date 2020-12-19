@@ -165,6 +165,7 @@ private:
     bool show_current_run_window = false;
     bool clear_cached_times = false;
     bool auto_send_age = false;
+    bool show_detailed_objectives = true; // currently only for doa
     ObjectiveSet* current_objective_set = nullptr;
 
     void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0);
