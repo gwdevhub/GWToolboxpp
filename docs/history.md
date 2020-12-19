@@ -7,6 +7,21 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.4
+* [New] Added option to hide player speech bubbles
+* [New] Added /reinvite command - use when targetting someone in your party window to reinvite player/hero/henchman
+* [New] Added instance type option for hotkeys (explorable/outpost)
+* [New] Added option to block messages from chat channels that you have turned off in-game
+* [New] QoL fix to allow hero flagging hotkeys even if you have GW compass disabled
+* [New] Added option to attach bond monitor to party window to avoid having to move/resize it manually
+* [New] Added option to attach damage monitor to party window to avoid having to move/resize it manually
+* [New] Added option to attach skillbar widget to skillbar to avoid having to move/resize it manually
+* [Minor] Ctrl + click from storage to inventory tops up any existing stack instead of moving entire stack
+* [Fix] Fixed bug preventing chat filter form blocking some player title achievement messages
+* [Fix] Fixed bug with flagging hotkeys/buttons not working properly after an initial flagging action
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.4_Release/GWToolboxdll.dll)
+
 ## Version 4.3
 * [New] GWToolbox now saves ImGui window positions into Layouts.ini - if you bork up your window size, just "Load Now" to fix it
 * [New] Target nearest item (default `;`) will avoid targeting a chest if there are non-green assigned items next to it
