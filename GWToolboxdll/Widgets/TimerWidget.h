@@ -34,6 +34,9 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 
+    void SetRunCompleted(); // call when the objectives are completed to stop the timer
+    unsigned long GetTimer(); // time in milliseconds
+
 private:
     // those function write to extra_buffer and extra_color.
     // they return true if there is something to draw.
@@ -43,8 +46,6 @@ private:
     bool GetTrapTimer();
     bool GetDoATimer();
     bool GetSpiritTimer();
-
-    void DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet);
     
     std::map<GW::Constants::SkillID, char*> spirit_effects{
         {GW::Constants::SkillID::Edge_of_Extinction,"EoE"},
@@ -75,7 +76,17 @@ private:
     char spirits_buffer[128] = "";
     ImColor extra_color = 0;
 
-    unsigned long cave_start = 0;
+    bool use_instance_timer = false;
+    bool never_reset = false;
+    bool reset_next_loading_screen = false;
+    bool stop_at_objective_completion = true;
+
+    bool in_explorable = false;
+    bool in_dungeon = false;
+    clock_t run_started = 0; // system time of when run started
+    clock_t run_completed = 0; // set to non-zero when objectives are completed
+
+    unsigned long cave_start = 0; // instance timer when cave started
     GW::HookEntry DisplayDialogue_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     const uint32_t CAVE_SPAWN_INTERVALS[12] = {12, 12, 12, 12, 12, 12, 10, 10, 10, 10, 10, 10};
