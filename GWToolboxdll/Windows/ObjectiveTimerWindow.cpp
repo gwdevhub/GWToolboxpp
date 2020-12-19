@@ -563,7 +563,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
 
             // maybe change BB event to use the dialog instead? "None shall escape. Prepare to die."
             // change BB to start at door and finish at fury spawn?
-            os->AddObjective(Objective("BlackBeast", 1))
+            os->AddObjective(Objective("Black Beast", 1))
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_foundry_r5_bb)
                 .AddEndEvent(EventType::AgentUpdateAllegiance, 5221, 0x6E6F6E63); // all 3 are the same
             
@@ -602,7 +602,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_ele)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_mes)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro);
-            os->AddObjectiveAfter(Objective("6-0", 1))
+            os->AddObjectiveAfter(Objective("Tendrils", 1))
                 .AddStartEvent(EventType::ServerMessage, 3, (uint32_t)L"\x817\x10D\x101")
                 .AddEndEvent(EventType::DoACompleteZone, Veil);
         },
@@ -611,7 +611,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 .AddStartEvent(EventType::DoACompleteZone, Veil)
                 .AddEndEvent(EventType::DoACompleteZone, Gloom);
 
-            os->AddObjective(Objective("Cave"))
+            os->AddObjective(Objective("Cave", 1))
                 .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5765\x9846\xA72B")
                 .AddEndEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5767\xA547\xB2C2");
             
@@ -619,7 +619,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
 
             // TODO: deathbringer ?
 
-            os->AddObjective(Objective("Darknesses"))
+            os->AddObjective(Objective("Darknesses", 1))
                 .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273B\xB5DB\x8B13")
                 .AddEndEvent(EventType::DoACompleteZone, Gloom);
         }
