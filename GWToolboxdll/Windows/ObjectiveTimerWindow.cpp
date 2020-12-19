@@ -52,16 +52,7 @@ namespace
         Gloom,
         City
     };
-    uint32_t doa_get_next(uint32_t id)
-    {
-        switch (id) {
-            case Foundry: return City;
-            case City: return Veil;
-            case Veil: return Gloom;
-            case Gloom: return Foundry;
-        }
-        return 0;
-    }
+
     // Hex values matching the first char of Kanaxai's dialogs in each room.
     const enum kanaxai_room_dialogs { Room5 = 0x5336, Room6, Room8, Room10, Room12, Room13, Room14, Room15 };
     const wchar_t* kanaxai_dialogs[] = {
@@ -257,7 +248,6 @@ void ObjectiveTimerWindow::Initialize()
                                                                              // (HotS <-> Bogs)
             if (!isDungeon || isDungeonEntrance) {
                 StopObjectives();
-                return;
             }
         });
 
@@ -267,16 +257,11 @@ void ObjectiveTimerWindow::Initialize()
             const GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
             if (!buff || !buff->valid() || !buff->size()) return; // Message buffer empty!?
             const wchar_t* msg = buff->begin();
-
-            // TODO: figure out if we can remove this check on msg[5]
-            if (msg[5] == 0x2810 || msg[5] == 0x1488) {
-                Event(EventType::ServerMessage, msg[0], msg[1], msg[2], msg[3]);
-            }
+            Event(EventType::ServerMessage, buff->size(), (uint32_t)msg);
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, 
         [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) {
-            Event(EventType::DisplayDialogue, packet->message[0], packet->message[1], packet->message[2],
-                packet->message[3]);
+            Event(EventType::DisplayDialogue, 122, (uint32_t)packet->message);
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
         &ManipulateMapObject_Entry, [this](GW::HookStatus*, GW::Packet::StoC::ManipulateMapObject* packet) {
@@ -292,17 +277,10 @@ void ObjectiveTimerWindow::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(
         &ObjectiveUpdateName_Entry, [this](GW::HookStatus*, GW::Packet::StoC::ObjectiveUpdateName* packet) {
             Event(EventType::ObjectiveStarted, packet->objective_id);
-            if (Objective* obj = GetCurrentObjective(packet->objective_id)) {
-                obj->SetStarted(); // TODO: remove
-            }
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(
         &ObjectiveDone_Entry, [this](GW::HookStatus*, GW::Packet::StoC::ObjectiveDone* packet) {
             Event(EventType::ObjectiveDone, packet->objective_id);
-            if (Objective* obj = GetCurrentObjective(packet->objective_id)) { // TODO: remove
-                obj->SetDone();
-                GetCurrentObjectiveSet()->CheckSetDone();
-            }
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
         &AgentUpdateAllegiance_Entry, [this](GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance* packet) {
@@ -362,108 +340,95 @@ ObjectiveTimerWindow::~ObjectiveTimerWindow()
     }
     ClearObjectiveSets();
 }
-void ObjectiveTimerWindow::Event(EventType type, uint32_t id1, uint32_t id2, uint32_t id3, uint32_t id4)
+void ObjectiveTimerWindow::Event(EventType type, uint32_t id1, uint32_t id2)
 {
-    GetCurrentObjectiveSet()->Event(type, id1, id2, id3, id4);
+    GetCurrentObjectiveSet()->Event(type, id1, id2);
 }
 void ObjectiveTimerWindow::OnMapChanged(GW::Packet::StoC::InstanceLoadInfo* packet)
 {
-    auto& instance = Instance();
     // Loaded map
     if (!packet->is_explorable) return;
 
-    instance.Event(EventType::InstanceLoadInfo, packet->map_id);
-
-    auto AddDungeon = [&](std::vector<GW::Constants::MapID> levels) -> void {
-        ObjectiveSet* os = new ObjectiveSet;
-        ::AsyncGetMapName(os->name, sizeof(os->name));
-        for (size_t i = 0; i < levels.size(); ++i) {
-            char name[256];
-            snprintf(name, sizeof(name), "Level %d", i);
-            os->AddObjectiveAfter(Objective(name)).AddStartEvent(EventType::InstanceLoadInfo, (uint32_t)levels[i]);
-        }
-        os->objectives.front().SetStarted();
-        os->objectives.back().AddEndEvent(EventType::DungeonReward);
-    };
+    Event(EventType::InstanceLoadInfo, packet->map_id);
 
     // clang-format off
     using namespace GW::Constants;
     switch (static_cast<GW::Constants::MapID>(packet->map_id)) {
             // elite areas:
-        case MapID::Urgozs_Warren: instance.AddUrgozObjectiveSet(); break;
-        case MapID::The_Deep: instance.AddDeepObjectiveSet(); break;
-        case MapID::The_Fissure_of_Woe: instance.AddFoWObjectiveSet(); break;
-        case MapID::The_Underworld: instance.AddUWObjectiveSet(); break;
+        case MapID::Urgozs_Warren: AddUrgozObjectiveSet(); break;
+        case MapID::The_Deep: AddDeepObjectiveSet(); break;
+        case MapID::The_Fissure_of_Woe: AddFoWObjectiveSet(); break;
+        case MapID::The_Underworld: AddUWObjectiveSet(); break;
 
             // dungeons - 1 level:
-        case MapID::Ooze_Pit: AddDungeon({MapID::Ooze_Pit}); break;
-        case MapID::Fronis_Irontoes_Lair_mission: AddDungeon({MapID::Fronis_Irontoes_Lair_mission}); break;
-        case MapID::Secret_Lair_of_the_Snowmen: AddDungeon({MapID::Secret_Lair_of_the_Snowmen}); break;
+        case MapID::Ooze_Pit: AddDungeonObjectiveSet({MapID::Ooze_Pit}); break;
+        case MapID::Fronis_Irontoes_Lair_mission: AddDungeonObjectiveSet({MapID::Fronis_Irontoes_Lair_mission}); break;
+        case MapID::Secret_Lair_of_the_Snowmen: AddDungeonObjectiveSet({MapID::Secret_Lair_of_the_Snowmen}); break;
 
             // dungeons - 2 levels:
         case MapID::Sepulchre_of_Dragrimmar_Level_1:
-            AddDungeon({MapID::Sepulchre_of_Dragrimmar_Level_1, MapID::Sepulchre_of_Dragrimmar_Level_2});
+            AddDungeonObjectiveSet({MapID::Sepulchre_of_Dragrimmar_Level_1, MapID::Sepulchre_of_Dragrimmar_Level_2});
             break;
         case MapID::Bogroot_Growths_Level_1:
-            AddDungeon({MapID::Bogroot_Growths_Level_1, MapID::Bogroot_Growths_Level_2});
+            AddDungeonObjectiveSet({MapID::Bogroot_Growths_Level_1, MapID::Bogroot_Growths_Level_2});
             break;
         case MapID::Arachnis_Haunt_Level_1: 
-            AddDungeon({MapID::Arachnis_Haunt_Level_1, MapID::Arachnis_Haunt_Level_2});
+            AddDungeonObjectiveSet({MapID::Arachnis_Haunt_Level_1, MapID::Arachnis_Haunt_Level_2});
             break;
 
             // dungeons - 3 levels:
         case MapID::Catacombs_of_Kathandrax_Level_1:
-            AddDungeon({MapID::Catacombs_of_Kathandrax_Level_1, 
+            AddDungeonObjectiveSet({MapID::Catacombs_of_Kathandrax_Level_1, 
                 MapID::Catacombs_of_Kathandrax_Level_2,
                 MapID::Catacombs_of_Kathandrax_Level_3});
             break;
         case MapID::Rragars_Menagerie_Level_1:
-            AddDungeon({MapID::Rragars_Menagerie_Level_1, 
+            AddDungeonObjectiveSet({MapID::Rragars_Menagerie_Level_1, 
                 MapID::Rragars_Menagerie_Level_2, 
                 MapID::Rragars_Menagerie_Level_3});
             break;
         case MapID::Cathedral_of_Flames_Level_1:
-            AddDungeon({MapID::Cathedral_of_Flames_Level_1, 
+            AddDungeonObjectiveSet({MapID::Cathedral_of_Flames_Level_1, 
                 MapID::Cathedral_of_Flames_Level_2,
                 MapID::Catacombs_of_Kathandrax_Level_3});
             break;
         case MapID::Darkrime_Delves_Level_1:
-            AddDungeon({MapID::Darkrime_Delves_Level_1, 
+            AddDungeonObjectiveSet({MapID::Darkrime_Delves_Level_1, 
                 MapID::Darkrime_Delves_Level_2, 
                 MapID::Darkrime_Delves_Level_3});
             break;
         case MapID::Ravens_Point_Level_1:
-            AddDungeon({MapID::Ravens_Point_Level_1, 
+            AddDungeonObjectiveSet({MapID::Ravens_Point_Level_1, 
                 MapID::Ravens_Point_Level_2, 
                 MapID::Ravens_Point_Level_3});
             break;
         case MapID::Vloxen_Excavations_Level_1:
-            AddDungeon({MapID::Vloxen_Excavations_Level_1, 
+            AddDungeonObjectiveSet({MapID::Vloxen_Excavations_Level_1, 
                 MapID::Vloxen_Excavations_Level_2,
                 MapID::Vloxen_Excavations_Level_3});
             break;
         case MapID::Bloodstone_Caves_Level_1:
-            AddDungeon({MapID::Bloodstone_Caves_Level_1, 
+            AddDungeonObjectiveSet({MapID::Bloodstone_Caves_Level_1, 
                 MapID::Bloodstone_Caves_Level_2, 
                 MapID::Bloodstone_Caves_Level_3});
             break;
         case MapID::Shards_of_Orr_Level_1:
-            AddDungeon({MapID::Shards_of_Orr_Level_1, 
+            AddDungeonObjectiveSet({MapID::Shards_of_Orr_Level_1, 
                 MapID::Shards_of_Orr_Level_2, 
                 MapID::Shards_of_Orr_Level_3});
             break;
         case MapID::Oolas_Lab_Level_1:
-            AddDungeon({MapID::Oolas_Lab_Level_1, MapID::Oolas_Lab_Level_2, MapID::Oolas_Lab_Level_3});
+            AddDungeonObjectiveSet({MapID::Oolas_Lab_Level_1, MapID::Oolas_Lab_Level_2, MapID::Oolas_Lab_Level_3});
             break;
         case MapID::Heart_of_the_Shiverpeaks_Level_1: 
-            AddDungeon({MapID::Heart_of_the_Shiverpeaks_Level_1, 
+            AddDungeonObjectiveSet({MapID::Heart_of_the_Shiverpeaks_Level_1, 
                 MapID::Heart_of_the_Shiverpeaks_Level_2,
                 MapID::Heart_of_the_Shiverpeaks_Level_3});
             break;
             
             // dungeons - 5 levels:
         case MapID::Frostmaws_Burrows_Level_1: 
-            AddDungeon({MapID::Frostmaws_Burrows_Level_1, 
+            AddDungeonObjectiveSet({MapID::Frostmaws_Burrows_Level_1, 
                 MapID::Frostmaws_Burrows_Level_2, 
                 MapID::Frostmaws_Burrows_Level_3,
                 MapID::Frostmaws_Burrows_Level_4, 
@@ -472,14 +437,14 @@ void ObjectiveTimerWindow::OnMapChanged(GW::Packet::StoC::InstanceLoadInfo* pack
 
             // dungeons - irregular:
         case MapID::Slavers_Exile_Level_5: 
-            AddDungeon({MapID::Slavers_Exile_Level_5}); 
+            AddDungeonObjectiveSet({MapID::Slavers_Exile_Level_5}); 
             break;
 
             // Others:
         case MapID::The_Underworld_PvP:
             if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo()) {
                 if (info->type == GW::RegionType::RegionType_ExplorableZone) {
-                    instance.AddToPKObjectiveSet();
+                    AddToPKObjectiveSet();
                 }
             }
             break;
@@ -513,6 +478,21 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
     if (os->active) current_objective_set = os;
     runs_dirty = true;
 }
+
+void ObjectiveTimerWindow::AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels)
+{
+    ObjectiveSet* os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    for (size_t i = 0; i < levels.size(); ++i) {
+        char name[256];
+        snprintf(name, sizeof(name), "Level %d", i);
+        os->AddObjectiveAfterAll(Objective(name)).AddStartEvent(EventType::InstanceLoadInfo, (uint32_t)levels[i]);
+    }
+    os->objectives.front().SetStarted(); // start first level
+    os->objectives.back().AddEndEvent(EventType::DungeonReward); // last level finished with dungeon reward
+    AddObjectiveSet(os);
+}
+
 void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
 {
     constexpr int n_areas = 4;
@@ -548,16 +528,16 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 .AddStartEvent(EventType::DoACompleteZone, Gloom)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_foundry_entrance_r1)
                 .AddEndEvent(EventType::DoACompleteZone, Foundry);
-            os->AddObjective(Objective("Room 1"))
+            os->AddObjective(Objective("Room 1", 1))
                 .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_entrance_r1)
                 .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r1_r2);
-            os->AddObjective(Objective("Room 2"))
+            os->AddObjective(Objective("Room 2", 1))
                 .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r1_r2)
                 .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r2_r3);
-            os->AddObjective(Objective("Room 3"))
+            os->AddObjective(Objective("Room 3", 1))
                 .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r2_r3)
                 .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r3_r4);
-            os->AddObjective(Objective("Room 4"))
+            os->AddObjective(Objective("Room 4", 1))
                 .AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r3_r4)
                 .AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r4_r5);
 
@@ -565,21 +545,21 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
 
             // maybe change BB event to use the dialog instead? "None shall escape. Prepare to die."
             // change BB to start at door and finish at fury spawn?
-            os->AddObjective(Objective("BB door")).AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r5_bb);
+            os->AddObjective(Objective("BB door", 1)).AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r5_bb);
 
             // 0x8101 0x273D 0x98D8 0xB91A 0x47B8 The Fury: Ah, you have finally arrived. My dark master informed me I might have visitors....
-            os->AddObjective(Objective("Fury"))
-                .AddStartEvent(EventType::DisplayDialogue, 0x8101, 0x273D, 0x98D8, 0xB91A)
+            os->AddObjective(Objective("Fury", 1))
+                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273D\x98D8\xB91A")
                 .AddEndEvent(EventType::DoACompleteZone, Foundry);
         },
         [&]() {
             os->AddObjective(Objective("City"))
                 .AddStartEvent(EventType::DoACompleteZone, Foundry)
                 .AddEndEvent(EventType::DoACompleteZone, City);
-            os->AddObjective(Objective("Outside"))
+            os->AddObjective(Objective("Outside", 1))
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_city_entrance)
                 .AddEndEvent(EventType::DoorOpen, DoorID::DoA_city_wall);
-            os->AddObjective(Objective("Inside"))
+            os->AddObjective(Objective("Inside", 1))
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_city_wall)
                 .AddEndEvent(EventType::DoACompleteZone, City);
 
@@ -589,29 +569,21 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
             os->AddObjective(Objective("Veil"))
                 .AddStartEvent(EventType::DoACompleteZone, City)
                 .AddEndEvent(EventType::DoACompleteZone, Veil);
-            os->AddObjective(Objective("360"))
+            os->AddObjective(Objective("360", 1))
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_left)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_middle)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_right)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_veil_ranger)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_veil_derv);
-            os->AddObjective(Objective("Underlords"))
+                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_right);
+            os->AddObjectiveAfter(Objective("Underlords", 1))
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_ranger)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_derv)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_gloom)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_monk)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_ele)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_mes)
-                .AddEndEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro);
-            os->AddObjective(Objective("Lords"))
+                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_derv);
+            os->AddObjectiveAfter(Objective("Lords", 1))
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_gloom)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_monk)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_ele)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_mes)
-                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro)
-                .AddEndEvent(EventType::DisplayDialogue, 0x8101, 0x34C1, 0x9FA1, 0x1BE4);
-            os->AddObjective(Objective("6-0"))
-                .AddStartEvent(EventType::DisplayDialogue, 0x8101, 0x34C1, 0x9FA1, 0x1BE4)
+                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro);
+            os->AddObjectiveAfter(Objective("6-0", 1))
+                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x34C1\x9FA1\x1BE4")
                 .AddEndEvent(EventType::DoACompleteZone, Veil);
         },
         [&]() {
@@ -654,21 +626,22 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet()
 
     ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
-    os->AddObjective(Objective("Zone 1 | Weakness", 1)).SetStarted();
-    os->AddObjectiveAfter(Objective("Zone 2 | Life Drain")).AddStartEvent(EventType::DoorOpen, 45420);
-    os->AddObjectiveAfter(Objective("Zone 3 | Levers")).AddStartEvent(EventType::DoorOpen, 11692);
-    os->AddObjectiveAfter(Objective("Zone 4 | Bridge Wolves")).AddStartEvent(EventType::DoorOpen, 54552);
-    os->AddObjectiveAfter(Objective("Zone 5 | More Wolves")).AddStartEvent(EventType::DoorOpen, 1760);
-    os->AddObjectiveAfter(Objective("Zone 6 | Energy Drain")).AddStartEvent(EventType::DoorOpen, 40330);
-    os->AddObjectiveAfter(Objective("Zone 7 | Exhaustion")).AddStartEvent(EventType::DoorOpen, 29537);
-    os->AddObjectiveAfter(Objective("Zone 8 | Pillars")).AddStartEvent(EventType::DoorOpen, 37191);
-    os->AddObjectiveAfter(Objective("Zone 9 | Blood Drinkers")).AddStartEvent(EventType::DoorOpen, 35500);
-    os->AddObjectiveAfter(Objective("Zone 10 | Bridge")).AddStartEvent(EventType::DoorOpen, 34278);
-    os->AddObjectiveAfter(Objective("Zone 11 | Urgoz"))
+    os->AddObjective(Objective("Zone 1 | Weakness")).SetStarted();
+    os->AddObjectiveAfterAll(Objective("Zone 2 | Life Drain")).AddStartEvent(EventType::DoorOpen, 45420);
+    os->AddObjectiveAfterAll(Objective("Zone 3 | Levers")).AddStartEvent(EventType::DoorOpen, 11692);
+    os->AddObjectiveAfterAll(Objective("Zone 4 | Bridge Wolves")).AddStartEvent(EventType::DoorOpen, 54552);
+    os->AddObjectiveAfterAll(Objective("Zone 5 | More Wolves")).AddStartEvent(EventType::DoorOpen, 1760);
+    os->AddObjectiveAfterAll(Objective("Zone 6 | Energy Drain")).AddStartEvent(EventType::DoorOpen, 40330);
+    os->AddObjectiveAfterAll(Objective("Zone 7 | Exhaustion")).AddStartEvent(EventType::DoorOpen, 29537);
+    os->AddObjectiveAfterAll(Objective("Zone 8 | Pillars")).AddStartEvent(EventType::DoorOpen, 37191);
+    os->AddObjectiveAfterAll(Objective("Zone 9 | Blood Drinkers")).AddStartEvent(EventType::DoorOpen, 35500);
+    os->AddObjectiveAfterAll(Objective("Zone 10 | Bridge")).AddStartEvent(EventType::DoorOpen, 34278);
+    os->AddObjectiveAfterAll(Objective("Zone 11 | Urgoz"))
         .AddStartEvent(EventType::DoorOpen, 15529)
         .AddStartEvent(EventType::DoorOpen, 45631)
         .AddStartEvent(EventType::DoorOpen, 53071)
-        .AddEndEvent(EventType::ServerMessage, 0x6C9C);
+        .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6C9C\x0\x0\x0\x0\x2810")
+        .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6C9C\x0\x0\x0\x0\x1488");
 
     AddObjectiveSet(os);
 }
@@ -719,7 +692,8 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet()
         .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room13); 
     os->AddObjectiveAfter(Objective("Room 15 | Kanaxai"))
         .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room15)
-        .AddEndEvent(EventType::ServerMessage, 0x6D4D);
+        .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6D4D\x0\x0\x0\x0\x2810")
+        .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6D4D\x0\x0\x0\x0\x1488");
     AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet()
@@ -754,8 +728,9 @@ void ObjectiveTimerWindow::AddUWObjectiveSet()
     os->AddQuestObjective("Planes", 153);
     os->AddQuestObjective("Mnts", 154);
     os->AddQuestObjective("Pools", 155);
-    os->AddObjective(Objective("Dhuum", 157))
-        .AddStartEvent(EventType::AgentUpdateAllegiance, GW::Constants::ModelID::UW::Dhuum, 0x6D6F6E31);
+    os->AddObjective(Objective("Dhuum"))
+        .AddStartEvent(EventType::AgentUpdateAllegiance, GW::Constants::ModelID::UW::Dhuum, 0x6D6F6E31)
+        .AddEndEvent(EventType::ObjectiveDone, 157);
     AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::AddToPKObjectiveSet()
@@ -839,18 +814,6 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet
     if (objective_sets.empty()) return nullptr;
     if (!current_objective_set || !current_objective_set->active) return nullptr;
     return current_objective_set;
-}
-
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint32_t obj_id)
-{
-    ObjectiveTimerWindow::ObjectiveSet* os = GetCurrentObjectiveSet();
-    if (!os) return nullptr;
-    for (Objective& objective : os->objectives) {
-        if (objective.id == obj_id) {
-            return &objective;
-        }
-    }
-    return nullptr;
 }
 
 void ObjectiveTimerWindow::DrawSettingInternal()
@@ -1017,9 +980,8 @@ void ObjectiveTimerWindow::StopObjectives()
 
 // =============================================================================
 
-ObjectiveTimerWindow::Objective::Objective(const char* _name, uint32_t _id)
-    : id(_id)
-    , indent(0)
+ObjectiveTimerWindow::Objective::Objective(const char* _name, int _indent)
+    : indent(_indent)
     , start(TIME_UNKNOWN)
     , done(TIME_UNKNOWN)
     , duration(TIME_UNKNOWN)
@@ -1031,15 +993,15 @@ ObjectiveTimerWindow::Objective::Objective(const char* _name, uint32_t _id)
 }
 
 ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::AddStartEvent(
-    EventType et, uint32_t _id1, uint32_t _id2, uint32_t _id3, uint32_t _id4)
+    EventType et, uint32_t id1, uint32_t id2)
 {
-    start_events.emplace_back<Event>({et, _id1, _id2, _id3, _id4});
+    start_events.emplace_back<Event>({et, id1, id2});
     return *this;
 }
 ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::AddEndEvent(
-    EventType et, uint32_t _id1, uint32_t _id2, uint32_t _id3, uint32_t _id4)
+    EventType et, uint32_t id1, uint32_t id2)
 {
-    end_events.emplace_back<Event>({et, _id1, _id2, _id3, _id4});
+    end_events.emplace_back<Event>({et, id1, id2});
     return *this;
 }
 ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::SetStarted()
@@ -1170,43 +1132,62 @@ void ObjectiveTimerWindow::ObjectiveSet::Update()
         obj.Update();
     }
 }
-void ObjectiveTimerWindow::ObjectiveSet::Event(EventType type, uint32_t id1, uint32_t id2, uint32_t id3, uint32_t id4)
+void ObjectiveTimerWindow::ObjectiveSet::Event(EventType type, uint32_t id1, uint32_t id2)
 {
+    auto Match = [&](const Objective::Event& event) -> bool {
+        if (type != event.type) return false;
+        switch (type) {
+            // for these, use id2 as a wchar_t*
+            case EventType::ServerMessage:
+            case EventType::DisplayDialogue: {
+                const wchar_t* msg1 = (wchar_t*)id2;
+                const wchar_t* msg2 = (wchar_t*)event.id2;
+                for (uint32_t i = 0; i < id1 && i < event.id1; ++i) {
+                    if (msg1[i] != 0 && msg1[i] != msg2[i]) return false;
+                }
+                return true;
+            }
+
+            default: 
+                if (id1 != 0 && id1 != event.id1) return false;
+                if (id2 != 0 && id2 != event.id2) return false;
+                return true;
+        }
+    };
+
     bool just_set_something_done = false;
-    size_t to_set_done = 0;
+    size_t set_done_before = 0;
+    
     for (size_t i = 0; i < objectives.size(); ++i) {
-        Objective& obj = objectives[i];
+        ObjectiveTimerWindow::Objective& obj = objectives[i];
         if (obj.IsDone()) continue; // nothing to check
 
         if (!obj.IsStarted()) {
-            for (const Objective::Event& event : obj.start_events) {
-                if (type != event.type) continue;
-                if (id1 != 0 && id1 != event.id1) continue;
-                if (id2 != 0 && id2 != event.id2) continue;
-                if (id3 != 0 && id3 != event.id3) continue;
-                if (id4 != 0 && id4 != event.id4) continue;
-                    
-                obj.SetStarted();
-                if (obj.starting_completes_previous_objectives && i > 0) to_set_done = i - 1;
-                break;
+            for (auto& event : obj.start_events) {
+                if (Match(event)) {
+                    obj.SetStarted();
+                    if (obj.starting_completes_all_previous) set_done_before = i;
+                    if (obj.starting_completes_previous_objective && i > 0) {
+                        Objective& other = objectives[i - 1];
+                        if (!other.IsDone()) other.SetDone();
+                    }
+                    break;
+                }  
             }
         }
 
         for (const Objective::Event& event : obj.end_events) {
-            if (type != event.type) continue;
-            if (id1 != 0 && id1 != event.id1) continue;
-            if (id2 != 0 && id2 != event.id2) continue;
-            if (id3 != 0 && id3 != event.id3) continue;
-            if (id4 != 0 && id4 != event.id4) continue;
-
-            obj.SetDone();
-            just_set_something_done = true;
+            if (Match(event)) {
+                obj.SetDone();
+                just_set_something_done = true;
+                break;
+            }
         }
     }
 
-    for (size_t i = 0; i < to_set_done; ++i) {
+    for (size_t i = 0; i < set_done_before; ++i) {
         Objective& obj = objectives[i];
-        obj.SetDone();
+        if (!obj.IsDone()) obj.SetDone();
     }
 
     if (just_set_something_done) {
@@ -1250,7 +1231,7 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
     for (nlohmann::json::iterator it = json_objs.begin(); it != json_objs.end(); ++it) {
         const nlohmann::json& o = it.value();
         name = o.at("name").get<std::string>();
-        Objective obj(name.c_str(), o.at("id").get<DWORD>());
+        Objective obj(name.c_str());
         obj.status = o.at("status").get<Objective::Status>();
         obj.start = o.at("start").get<DWORD>();
         obj.duration = o.at("duration").get<DWORD>();
@@ -1279,7 +1260,6 @@ nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson()
     nlohmann::json json_objectives;
     for (const auto& o : objectives) {
         nlohmann::json obj_json;
-        obj_json["id"] = o.id;
         obj_json["name"] = o.name;
         obj_json["status"] = o.status;
         obj_json["start"] = o.start;

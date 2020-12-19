@@ -7,6 +7,7 @@
 
 #include <Defines.h>
 #include <ToolboxWindow.h>
+#include <vector>
 
 /*
 each objective can have a duration (start and end) or a single timestamp
@@ -48,10 +49,10 @@ private:
     // TODO: many of those are not hooked up
     enum class EventType {
         // dialog without owner. 
-        ServerMessage,      // id1-4 = message
+        ServerMessage,      // id1=msg length, id2=pointer to msg
 
         // dialog from owner. Can be in chat or middle of screen.
-        DisplayDialogue,    // id1-4 = message
+        DisplayDialogue,    // id1=msg length, id2=pointer to msg
 
         InstanceLoadInfo,   // id1 is mapid
         GameSrvTransfer,    // start of map load. Use as map finished.
@@ -70,17 +71,14 @@ private:
     {
     public:
         char name[126] = "";
-        int indent = 0; // TODO: take in constructor after we remove ID
-        bool starting_completes_previous_objectives = false;
-
-        uint32_t id = 0; // TODO: remove
+        int indent = 0;
+        bool starting_completes_previous_objective = false;
+        bool starting_completes_all_previous = false;
 
         struct Event {
             EventType type;
             uint32_t id1 = 0;
             uint32_t id2 = 0;
-            uint32_t id3 = 0;
-            uint32_t id4 = 0;
         };
         std::vector<Event> start_events;
         std::vector<Event> end_events;
@@ -98,10 +96,10 @@ private:
             Failed
         } status = Status::NotStarted;
        
-        Objective(const char* name, uint32_t id = 0);
+        Objective(const char* name, int indent = 0);
 
-        Objective& AddStartEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0, uint32_t id3 = 0, uint32_t id4 = 0);
-        Objective& AddEndEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0, uint32_t id3 = 0, uint32_t id4 = 0);
+        Objective& AddStartEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
+        Objective& AddEndEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
         Objective& SetStarted();
         Objective& SetDone();
 
@@ -133,7 +131,11 @@ private:
             return objectives.back();
         }
         Objective& AddObjectiveAfter(Objective&& obj) {
-            obj.starting_completes_previous_objectives = true;
+            obj.starting_completes_previous_objective = true;
+            return AddObjective(std::move(obj));
+        }
+        Objective& AddObjectiveAfterAll(Objective&& obj) {
+            obj.starting_completes_all_previous = true;
             return AddObjective(std::move(obj));
         }
         void AddQuestObjective(const char* obj_name, uint32_t id)
@@ -143,7 +145,7 @@ private:
                 .AddEndEvent(EventType::ObjectiveDone, id);
         }
 
-        void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0, uint32_t id3 = 0, uint32_t id4 = 0);
+        void Event(EventType type, uint32_t id1, uint32_t id2);
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
         void StopObjectives();
@@ -160,23 +162,23 @@ private:
 
     std::map<DWORD, ObjectiveSet*> objective_sets;
 
-    Objective* GetCurrentObjective(uint32_t obj_id);
     ObjectiveSet* GetCurrentObjectiveSet();
     bool show_current_run_window = false;
     bool clear_cached_times = false;
     bool auto_send_age = false;
     ObjectiveSet* current_objective_set = nullptr;
 
-    void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0, uint32_t id3 = 0, uint32_t id4 = 0);
-
+    void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0);
     void AddObjectiveSet(ObjectiveSet* os);
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
-    
     void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
     void AddToPKObjectiveSet();
+    void AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels);
+
+
     void ClearObjectiveSets();
     void StopObjectives(); // called on partydefeated or back to outpost
 
