@@ -158,13 +158,13 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         skillsize.x = width;
         switch (layout) {
         case Layout::Columns:
-            skillsize.x /= 2;
+            skillsize.x /= 2.f;
             break;
         case Layout::Row:
-            skillsize.x /= 8;
+            skillsize.x /= 8.f;
             break;
         case Layout::Rows:
-            skillsize.x /= 4;
+            skillsize.x /= 4.f;
             break;
         }
         skillsize.y = skillsize.x;
@@ -206,12 +206,12 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             pos1.x += (i * skillsize.x);
         } else if (layout == Layout::Rows) {
             pos1.x += (i % 4 * skillsize.x);
-            pos1.y += ((float)std::floor(i / 4) * skillsize.y);
+            pos1.y += ((float)std::floor(i / 4.f) * skillsize.y);
         } else if (layout == Layout::Column) {
             pos1.y += (i * skillsize.y);       
         } else if (layout == Layout::Columns) {
             pos1.x += (i % 2 * skillsize.x);
-            pos1.y += ((float)std::floor(i / 2) * skillsize.y);
+            pos1.y += ((float)std::floor(i / 2.f) * skillsize.y);
         }
 
         ImVec2 pos2 = ImVec2(pos1.x + skillsize.x, pos1.y + skillsize.y);
@@ -230,7 +230,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             if (i % 4 != 3) {
                 ImGui::GetBackgroundDrawList()->AddLine(ImVec2(pos2.x, pos1.y), ImVec2(pos2.x, pos2.y), col_border);
             }
-            if (std::floor(i / 4) == 0) {
+            if (std::floor(i / 4.f) == 0) {
                 ImGui::GetBackgroundDrawList()->AddLine(ImVec2(pos1.x, pos2.y), ImVec2(pos2.x, pos2.y), col_border);            
             }
         } else if (layout == Layout::Column) {
@@ -407,6 +407,7 @@ void SkillbarWidget::LoadSettings(CSimpleIni *ini)
     color_effect_progress = Colors::Load(ini, Name(), VAR_NAME(color_effect_progress), color_effect_progress);    
     color_effect_border = Colors::Load(ini, Name(), VAR_NAME(color_effect_border), color_effect_border);
     snap_to_skillbar = ini->GetBoolValue(Name(), VAR_NAME(snap_to_skillbar), snap_to_skillbar);
+    is_movable = is_resizable = !snap_to_skillbar;
 }
 
 void SkillbarWidget::SaveSettings(CSimpleIni *ini)
@@ -485,8 +486,10 @@ void SkillbarWidget::DrawDurationThresholds() {
 
 void SkillbarWidget::DrawSettingInternal()
 {
+    if (ImGui::Checkbox("Attach to skill bar", &snap_to_skillbar)) {
+        is_movable = is_resizable = !snap_to_skillbar;
+    }
     ToolboxWidget::DrawSettingInternal();
-    ImGui::Checkbox("Attach to skill bar", &snap_to_skillbar);
     ImGui::ShowHelp("Skill overlay will match your skillbar position and orientation");
     if (snap_to_skillbar) {
         // TODO: Offsets, rely on user values for now
