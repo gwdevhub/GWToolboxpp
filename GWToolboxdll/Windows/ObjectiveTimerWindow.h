@@ -48,14 +48,13 @@ private:
 
     // TODO: many of those are not hooked up
     enum class EventType {
-        // dialog without owner. 
         ServerMessage,      // id1=msg length, id2=pointer to msg
 
         // dialog from owner. Can be in chat or middle of screen.
         DisplayDialogue,    // id1=msg length, id2=pointer to msg
 
         InstanceLoadInfo,   // id1 is mapid
-        GameSrvTransfer,    // start of map load. Use as map finished.
+        InstanceEnd,        // id1 is mapid we're leaving. Use as "end of instance".
         DoorOpen,           // id=object_id
         DoorClose,          // id=object_id
         ObjectiveStarted,   // id=objective_id
@@ -169,7 +168,9 @@ private:
     ObjectiveSet* current_objective_set = nullptr;
 
     void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0);
+
     void AddObjectiveSet(ObjectiveSet* os);
+    void AddObjectiveSet(GW::Constants::MapID map_id);
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
@@ -178,9 +179,6 @@ private:
     void AddToPKObjectiveSet();
     void AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels);
 
-
     void ClearObjectiveSets();
     void StopObjectives(); // called on partydefeated or back to outpost
-
-    void OnMapChanged(GW::Packet::StoC::InstanceLoadInfo* packet);
 };

@@ -232,7 +232,11 @@ void ObjectiveTimerWindow::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(
         &PartyDefeated_Entry, [this](GW::HookStatus*, GW::Packet::StoC::PartyDefeated*) { StopObjectives(); });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo* packet) { OnMapChanged(packet); });
+        [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo* packet) { 
+            if (!packet->is_explorable) return;
+            AddObjectiveSet((GW::Constants::MapID)packet->map_id);
+            Event(EventType::InstanceLoadInfo, packet->map_id);
+        });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
         &InstanceLoadFile_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadFile* packet) {
             if (packet->map_fileID == 219215) {
@@ -242,13 +246,19 @@ void ObjectiveTimerWindow::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
         &GameSrvTransfer_Entry, [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* packet) {
             // Exited map
-            auto dungeonLevel = mapToDungeonLevel.find(static_cast<GW::Constants::MapID>(packet->map_id));
-            bool isDungeon = dungeonLevel != mapToDungeonLevel.end();
-            bool isDungeonEntrance = isDungeon && dungeonLevel->second == 1; // used for transition between dungeons
-                                                                             // (HotS <-> Bogs)
-            if (!isDungeon || isDungeonEntrance) {
+            const GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)packet->map_id);
+            if (!info) return; // we should always have this
+
+            static bool in_dungeon = false;
+            bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
+            if (in_dungeon && !new_in_dungeon) { // moved from dungeon to outside
                 StopObjectives();
             }
+            in_dungeon = new_in_dungeon;
+
+            static uint32_t map_id = 0;
+            Event(EventType::InstanceEnd, map_id);
+            map_id = packet->map_id;
         });
 
     // packet hooks that trigger events:
@@ -344,18 +354,24 @@ void ObjectiveTimerWindow::Event(EventType type, uint32_t id1, uint32_t id2)
 {
     if (ObjectiveSet* os = GetCurrentObjectiveSet()) {
         os->Event(type, id1, id2);
+        
+        // debug:
+        //switch (type) {
+        //    case EventType::ServerMessage:
+        //    case EventType::DisplayDialogue: {
+        //        const wchar_t* msg = (wchar_t*)id2;
+        //        Log::Info("Event: %d, %d, %x, %x, %x, %x", type, id1, msg[0], msg[1], msg[2], msg[3]);
+        //    }
+        //        break;
+        //    default: Log::Info("Event: %d, %d, %d", type, id1, id2);
+        //}
     }
 }
-void ObjectiveTimerWindow::OnMapChanged(GW::Packet::StoC::InstanceLoadInfo* packet)
+void ObjectiveTimerWindow::AddObjectiveSet(GW::Constants::MapID map_id)
 {
-    // Loaded map
-    if (!packet->is_explorable) return;
-
-    Event(EventType::InstanceLoadInfo, packet->map_id);
-
     // clang-format off
     using namespace GW::Constants;
-    switch (static_cast<GW::Constants::MapID>(packet->map_id)) {
+    switch (map_id) {
             // elite areas:
         case MapID::Urgozs_Warren: AddUrgozObjectiveSet(); break;
         case MapID::The_Deep: AddDeepObjectiveSet(); break;
@@ -547,11 +563,13 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
 
             // maybe change BB event to use the dialog instead? "None shall escape. Prepare to die."
             // change BB to start at door and finish at fury spawn?
-            os->AddObjective(Objective("BB door", 1)).AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r5_bb);
-
+            os->AddObjective(Objective("BlackBeast", 1))
+                .AddStartEvent(EventType::DoorOpen, DoorID::DoA_foundry_r5_bb)
+                .AddEndEvent(EventType::AgentUpdateAllegiance, 5221, 0x6E6F6E63); // all 3 are the same
+            
             // 0x8101 0x273D 0x98D8 0xB91A 0x47B8 The Fury: Ah, you have finally arrived. My dark master informed me I might have visitors....
             os->AddObjective(Objective("Fury", 1))
-                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273D\x98D8\xB91A")
+                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273D\x98DB\xB91A")
                 .AddEndEvent(EventType::DoACompleteZone, Foundry);
         },
         [&]() {
@@ -585,20 +603,25 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_mes)
                 .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro);
             os->AddObjectiveAfter(Objective("6-0", 1))
-                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x34C1\x9FA1\x1BE4")
+                .AddStartEvent(EventType::ServerMessage, 3, (uint32_t)L"\x817\x10D\x101")
                 .AddEndEvent(EventType::DoACompleteZone, Veil);
         },
         [&]() {
             os->AddObjective(Objective("Gloom"))
                 .AddStartEvent(EventType::DoACompleteZone, Veil)
                 .AddEndEvent(EventType::DoACompleteZone, Gloom);
-            // TODO: cave (from dialog triggered at cave, to cave completed)
 
-            // TODO: rift may not be possible.
+            os->AddObjective(Objective("Cave"))
+                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5765\x9846\xA72B")
+                .AddEndEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5767\xA547\xB2C2");
+            
+            // TODO: rift may not be possible from outside of range
 
             // TODO: deathbringer ?
 
-            // TODO: darknesses ?
+            os->AddObjective(Objective("Darknesses"))
+                .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273B\xB5DB\x8B13")
+                .AddEndEvent(EventType::DoACompleteZone, Gloom);
         }
     };
 
