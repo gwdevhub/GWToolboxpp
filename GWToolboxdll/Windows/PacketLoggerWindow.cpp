@@ -426,7 +426,7 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
 static void CtoSHandler(GW::HookStatus* status, void* packet) {
     UNREFERENCED_PARAMETER(status);
      if (!logger_enabled) return;
-    printf("CtoS packet(%u)\n", *(uint32_t*)packet);
+     printf("CtoS packet(%u 0x%X) {\n", *(uint32_t*)packet, *(uint32_t*)packet);
 }
 static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
 {
@@ -447,9 +447,9 @@ static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* 
     Serialize<uint32_t>(bytes, &header);
     ASSERT(packet->header == header);
 
-    printf("StoC packet(%u) {\n", packet->header);
+    printf("StoC packet(%u 0x%X) {\n", packet->header, packet->header);
     PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
-    printf("} endpacket(%u)\n", packet->header);
+    printf("} endpacket(%u 0x%X)\n", packet->header, packet->header);
 }
 
 
