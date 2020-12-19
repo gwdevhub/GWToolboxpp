@@ -1861,7 +1861,7 @@ void GameSettings::OnPartyTargetChange(GW::HookStatus* , uint32_t event_id, uint
     UNREFERENCED_PARAMETER(event_id);
     UNREFERENCED_PARAMETER(lParam);
     // type 0x6 == "Highlight control in frame"
-    if (!(type == 0x6 && (uint32_t)wParam > 0xffff && !lParam))
+    if (!(type == 0x6 && (uint32_t)wParam > 0xffffff && !lParam))
         return;
     // NB: Trade and quest log (maybe some others) get through here, but wParam is always a pointer to something.
     PartyTargetInfo* pti = (PartyTargetInfo*)wParam;
