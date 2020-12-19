@@ -275,7 +275,7 @@ namespace {
 
     struct PartyTargetInfo {
         uint32_t target_type = 0;
-        uint32_t unk1;
+        uint32_t has_target; // 1 or 0
         uint32_t target_identifier;
     } party_target_info;
 
@@ -1864,9 +1864,10 @@ void GameSettings::OnPartyTargetChange(GW::HookStatus* , uint32_t event_id, uint
     if (!(type == 0x6 && (uint32_t)wParam > 0xffff && !lParam))
         return;
     // NB: Trade and quest log (maybe some others) get through here, but wParam is always a pointer to something.
-    // Check the first uint32 pointed to, to make sure its a party target packet.w
-    uint32_t target_type = *(uint32_t*)wParam;
-    switch (target_type) {
+    PartyTargetInfo* pti = (PartyTargetInfo*)wParam;
+    // Test 1: Check target_type, make sure its something we're interested in
+    switch (pti->target_type) {
+    case 0x0:
     case 0x1:
     case 0x2:
     case 0x3:
@@ -1876,8 +1877,11 @@ void GameSettings::OnPartyTargetChange(GW::HookStatus* , uint32_t event_id, uint
     default:
         return;
     }
+    // Test 2: Check has_target, make sure its a valid bool value
+    if (pti->has_target != 0x1 && pti->has_target != 0x0)
+        return;
     // Copy
-    party_target_info = *(PartyTargetInfo*)wParam;
+    party_target_info = *pti;
 }
 
 void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
