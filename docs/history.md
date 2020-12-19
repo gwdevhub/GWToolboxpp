@@ -8,6 +8,8 @@ Previous releases are provided as dll files. If you are looking for the latest v
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
 ## Version 4.4
+* [New] Timer and objective timer now tracks real-time since (first) loading screen. Added options to have the old behavior. 
+* [New] Added more detailed timers for DoA in the objective timer. 
 * [New] Added option to hide player speech bubbles
 * [New] Added /reinvite command - use when targetting someone in your party window to reinvite player/hero/henchman
 * [New] Added instance type option for hotkeys (explorable/outpost)
