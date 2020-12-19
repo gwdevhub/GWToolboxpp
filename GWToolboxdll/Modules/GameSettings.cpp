@@ -1376,7 +1376,7 @@ void GameSettings::Update(float delta) {
             }
         }
         if (!still_in_party) {
-            GW::CtoS::SendPacket(0x8, 33, pending_reinvite_id);
+            GW::CtoS::SendPacket(0x8, GAME_CMSG_HERO_ADD, pending_reinvite_id);
             pending_reinvite_type = None;
         }
     } break;
@@ -1404,7 +1404,7 @@ void GameSettings::Update(float delta) {
             }
         }
         if (!still_in_party) {
-            GW::CtoS::SendPacket(0x8, 167, pending_reinvite_id);
+            GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_INVITE_NPC, pending_reinvite_id);
             pending_reinvite_type = None;
         }
     } break;
@@ -1857,10 +1857,26 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
 }
 
 // Record current party target - this isn't always the same as the compass target.
-void GameSettings::OnPartyTargetChange(GW::HookStatus* , uint32_t event_id, uint32_t type, void* wParam, void*) {
+void GameSettings::OnPartyTargetChange(GW::HookStatus* , uint32_t event_id, uint32_t type, void* wParam, void* lParam) {
     UNREFERENCED_PARAMETER(event_id);
-    if (!(type == 0x7 && (uint32_t)wParam > 0xffff))
+    UNREFERENCED_PARAMETER(lParam);
+    // type 0x6 == "Highlight control in frame"
+    if (!(type == 0x6 && (uint32_t)wParam > 0xffff && !lParam))
         return;
+    // NB: Trade and quest log (maybe some others) get through here, but wParam is always a pointer to something.
+    // Check the first uint32 pointed to, to make sure its a party target packet.w
+    uint32_t target_type = *(uint32_t*)wParam;
+    switch (target_type) {
+    case 0x1:
+    case 0x2:
+    case 0x3:
+    case 0x5:
+    case 0x9:
+        break;
+    default:
+        return;
+    }
+    // Copy
     party_target_info = *(PartyTargetInfo*)wParam;
 }
 
@@ -1945,7 +1961,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
                 return;
             }
             // Kick this player and re-invite
-            GW::CtoS::SendPacket(0x8, 177, target_identifier);
+            GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_KICK_PLAYER, target_identifier);
         }
         break;
     case Hero:
@@ -1969,7 +1985,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
             return;
         }
         // Kick this hero
-        GW::CtoS::SendPacket(0x8, 34, target_identifier);
+        GW::CtoS::SendPacket(0x8, GAME_CMSG_HERO_KICK, target_identifier);
         break;
     case Henchman:
         if (!leading) {
@@ -1978,7 +1994,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
             return;
         }
         // Kick this henchman
-        GW::CtoS::SendPacket(0x8, 176, target_identifier);
+        GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_KICK_NPC, target_identifier);
         break;
     default:
         Log::ErrorW(L"Target a party member to re-invite");
