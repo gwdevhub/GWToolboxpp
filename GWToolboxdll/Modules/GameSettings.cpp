@@ -1438,6 +1438,7 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
                 GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)player_name, nullptr);
                 ctrl_enter_whisper = false;
                 });
+            return true;
         }
     }
 
@@ -1583,19 +1584,21 @@ void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
     }
     if (!ImGui::GetIO().KeyCtrl)
         return; // - Next logic only applicable when Ctrl is held
-    if (ctrl_enter_whisper)
-        return; // - Ctrl + Enter is write whisper to target - drop out here
+
     std::wstring name = GuiUtils::SanitizePlayerName(_name);
     if (ImGui::GetIO().KeyShift && GW::PartyMgr::GetPlayerIsLeader()) {
         wchar_t buf[64];
         swprintf(buf, 64, L"invite %s", name.c_str());
         GW::Chat::SendChat('/', buf);
+        status->blocked = true;
+        return;
     }
     GW::Player* player = GetPlayerByName(name.c_str());
-    if (player && GW::Agents::GetAgentByID(player->agent_id)) {
+    if (!ctrl_enter_whisper && player && GW::Agents::GetAgentByID(player->agent_id)) {
         GW::Agents::ChangeTarget(player->agent_id);
+        status->blocked = true;
     }
-    status->blocked = true;
+    
 }
 
 // Auto accept invitations, flash window on received party invite
