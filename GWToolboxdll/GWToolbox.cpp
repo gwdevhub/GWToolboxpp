@@ -108,11 +108,12 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     while (!tb_destroyed) { // wait until destruction
         Sleep(100);
 
-#ifdef _DEBUG
-        if (GetAsyncKeyState(VK_END) & 1) {
-            GWToolbox::Instance().StartSelfDestruct();
-        }
-#endif
+        // Feel free to uncomment to get this behavior for testing, but don't commit. 
+//#ifdef _DEBUG
+//        if (GetAsyncKeyState(VK_END) & 1) {
+//            GWToolbox::Instance().StartSelfDestruct();
+//        }
+//#endif
     }
 
     Log::Log("Removing Cursor Fix\n");

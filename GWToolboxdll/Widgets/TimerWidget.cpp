@@ -5,6 +5,7 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -20,22 +21,65 @@
 
 void TimerWidget::Initialize() {
     ToolboxWidget::Initialize();
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) -> void {
-            DisplayDialogue(packet);
+            if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) return;
+            if (packet->message[1] != 0x5765) return;
+            cave_start = GW::Map::GetInstanceTime();
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*) -> void {
-            cave_start = 0;
+        [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
+            cave_start = 0; // reset doa's cave timer
+
+            if (!never_reset) {
+                if (reset_next_loading_screen) {
+                    run_started = TIMER_INIT();
+                    reset_next_loading_screen = false;
+                }
+
+                if (pak->is_explorable && !in_explorable) { // if zoning from outpost to explorable
+                    run_started = TIMER_INIT();
+                }
+                if (!pak->is_explorable) { // zoning back to outpost
+                    run_started = TIMER_INIT();
+                }
+
+                GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)pak->map_id);
+                if (info) {
+                    bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
+
+                    if (new_in_dungeon && !in_dungeon) { // zoning from explorable to dungeon
+                        run_started = TIMER_INIT();
+                    }
+
+                    in_dungeon = new_in_dungeon;
+                }
+            }
+            run_completed = 0;
+            in_explorable = pak->is_explorable;
         });
+
+    GW::Chat::CreateCommand(L"resettimer", [this](const wchar_t*, int, LPWSTR*) { 
+        reset_next_loading_screen = true;
+        Log::Info("Resetting timer at the next loading screen.");
+    });
+    GW::Chat::CreateCommand(L"timerreset", [this](const wchar_t*, int, LPWSTR*) { 
+        reset_next_loading_screen = true; 
+    });
 }
+
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
     ToolboxWidget::LoadSettings(ini);
+    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    use_instance_timer = ini->GetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
+    never_reset = ini->GetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
+    stop_at_objective_completion =
+        ini->GetBoolValue(Name(), VAR_NAME(stop_at_objective_completion), stop_at_objective_completion);
     click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
     for (auto it : spirit_effects) {
         char ini_name[32];
@@ -46,9 +90,12 @@ void TimerWidget::LoadSettings(CSimpleIni *ini) {
 
 void TimerWidget::SaveSettings(CSimpleIni *ini) {
     ToolboxWidget::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
+    ini->SetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
+    ini->SetBoolValue(Name(), VAR_NAME(stop_at_objective_completion), stop_at_objective_completion);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
     for (auto it : spirit_effects) {
         char ini_name[32];
@@ -60,6 +107,22 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
 void TimerWidget::DrawSettingInternal() {
     ToolboxWidget::DrawSettingInternal();
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    if (ImGui::RadioButton("Instance timer", use_instance_timer)) {
+        use_instance_timer = true;
+    }
+    if (ImGui::RadioButton("Real-time timer", !use_instance_timer)) {
+        use_instance_timer = false;
+    }
+    ImGui::ShowHelp("Real-time timer does not reset when zoning between explorable areas.\n \
+        You can use /resettimer to force a reset at the next loading screen.");
+    ImGui::Indent();
+    ImGui::Checkbox("Never reset", &never_reset);
+    ImGui::ShowHelp(
+        "Don't reset when entering outposts, explorables (from outposts), and dungeons. \n" \
+        "Useful for timing longer runs.\n" \
+        "Requires 'Use instance timer' above NOT ticked");
+    ImGui::Checkbox("Stop at objective completion", &stop_at_objective_completion);
+    ImGui::Unindent();
     ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");
@@ -69,14 +132,26 @@ void TimerWidget::DrawSettingInternal() {
         ImGui::Indent();
         size_t i = 0;
         for (auto it : spirit_effects) {
-            if (i % 3 == 0)
+            if (i % 3 == 0) {
                 i = 0;
-            else 
+            } else {
                 ImGui::SameLine(200.0f * ImGui::GetIO().FontGlobalScale * i);
+            }
             i++;
             ImGui::Checkbox(it.second, &spirit_effects_enabled[it.first]);
         }
         ImGui::Unindent();
+    }
+}
+
+unsigned long TimerWidget::GetTimer()
+{
+    if (use_instance_timer || run_started == 0) {
+        return GW::Map::GetInstanceTime();
+    } else if (run_completed != 0) {
+        return run_completed;
+    } else {
+        return TIMER_DIFF(run_started);
     }
 }
 
@@ -90,12 +165,15 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
-    unsigned long time = GW::Map::GetInstanceTime() / 1000;
+
+    unsigned long time = GetTimer() / 1000;
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
+
+        // Main timer:
         snprintf(timer_buffer, 32, "%lu:%02lu:%02lu", time / (60 * 60), (time / 60) % 60, time % 60);
         ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
         ImGui::TextShadowed(timer_buffer, { 2, 2 });
@@ -132,6 +210,18 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     }
     ImGui::End();
     ImGui::PopStyleColor();
+}
+
+void TimerWidget::SetRunCompleted()
+{
+    if (run_started != 0 && stop_at_objective_completion) {
+        run_completed = TIMER_DIFF(run_started);
+    }
+    Log::Info("Time: %lu:%02lu:%02lu.%02lu", 
+        (run_completed / 1000 / (60 * 60)), 
+        (run_completed / 1000 / 60) % 60, 
+        (run_completed / 1000) % 60, 
+        run_completed / 10 % 100);
 }
 
 bool TimerWidget::GetUrgozTimer() {
@@ -325,10 +415,4 @@ bool TimerWidget::GetDoATimer() {
     extra_color = ImColor(255, 255, 255);
 
     return true;
-}
-
-void TimerWidget::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
-    if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) return;
-    if (packet->message[1] != 0x5765) return;
-    cave_start = GW::Map::GetInstanceTime();
 }
