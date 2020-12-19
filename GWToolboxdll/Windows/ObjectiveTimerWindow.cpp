@@ -342,7 +342,9 @@ ObjectiveTimerWindow::~ObjectiveTimerWindow()
 }
 void ObjectiveTimerWindow::Event(EventType type, uint32_t id1, uint32_t id2)
 {
-    GetCurrentObjectiveSet()->Event(type, id1, id2);
+    if (ObjectiveSet* os = GetCurrentObjectiveSet()) {
+        os->Event(type, id1, id2);
+    }
 }
 void ObjectiveTimerWindow::OnMapChanged(GW::Packet::StoC::InstanceLoadInfo* packet)
 {
