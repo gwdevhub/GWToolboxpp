@@ -48,7 +48,9 @@
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
+#if 0
 #include <Windows/PartySearchWindow.h>
+#endif
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
 #endif
@@ -104,7 +106,9 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
     if (use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
 #ifdef _DEBUG
+#if 0
     optional_modules.push_back(&PartySearchWindow::Instance());
+#endif
     optional_modules.push_back(&PacketLoggerWindow::Instance());
     optional_modules.push_back(&StringDecoderWindow::Instance());
     optional_modules.push_back(&DoorMonitorWindow::Instance());

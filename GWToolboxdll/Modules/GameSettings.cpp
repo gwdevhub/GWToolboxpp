@@ -275,7 +275,7 @@ namespace {
 
     struct PartyTargetInfo {
         uint32_t target_type = 0;
-        uint32_t has_target; // 1 or 0
+        uint32_t is_party_member; // 1 or 0
         uint32_t target_identifier;
     } party_target_info;
 
@@ -1881,7 +1881,7 @@ void GameSettings::OnPartyTargetChange(GW::HookStatus* , uint32_t event_id, uint
         return;
     }
     // Test 2: Check has_target, make sure its a valid bool value
-    if (pti->has_target != 0x1 && pti->has_target != 0x0)
+    if (pti->is_party_member != 0x1 && pti->is_party_member != 0x0)
         return;
     // Copy
     party_target_info = *pti;
@@ -1900,7 +1900,6 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
     GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     if (!me)
         return;
-    GW::AgentLiving* targetted_agent = nullptr;
     switch (party_target_info.target_type) {
     case 0x9: // Targetting player, identifer = player_number
         target_type = Player;
@@ -1923,6 +1922,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
     }
 
     // Build some references
+    bool target_in_party = false;
     for (size_t i = 0; party->players.valid() && i < party->players.size(); i++) {
         auto& member = party->players[i];
         if (!member.connected())
@@ -1933,9 +1933,8 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
         else if (!next_player) {
             next_player = GW::PlayerMgr::GetPlayerByID(member.login_number);
         }
-        if (target_type == None && member.login_number == targetted_agent->login_number) {
-            target_type = Player;
-            target_identifier = member.login_number;
+        if (target_type == Player && member.login_number == target_identifier) {
+            target_in_party = true;
         }
     }
     if (!first_player) {
@@ -1961,14 +1960,17 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
             GW::CtoS::SendPacket(0x4, GAME_CMSG_PARTY_LEAVE_GROUP);
             return;
         }
-        else {
-            if (!leading) {
-                Log::ErrorW(L"Only party leader can re-invite players");
-                target_type = None;
-                return;
-            }
+        else if (!leading) {
+            Log::ErrorW(L"Only party leader can re-invite players");
+            target_type = None;
+            return;
+        }
+        else if (target_in_party) {
             // Kick this player and re-invite
             GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_KICK_PLAYER, target_identifier);
+        }
+        else {
+            // We want to re-invite a player that isn't in the party already; do nothing and we'll invite the player on next frame.
         }
         break;
     case Hero:
@@ -2016,9 +2018,24 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
 void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
     if (!(msgid == GW::UI::kChangeTarget && wParam))
         return;
+    GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
+    // Logic for re-inviting players
+    if (msg->manual_target_id) {
+        // Target changed
+        GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(msg->manual_target_id));
+        if (agent && agent->GetIsLivingType() && agent->IsPlayer()) {
+            party_target_info.target_type = 0x9;
+            party_target_info.target_identifier = agent->player_number;
+        }
+    }
+    else {
+        // Target cleared.
+        party_target_info.target_type = 0;
+        party_target_info.target_identifier = 0;
+    }
+    // Logic for targetting nearest item.
     if (!Instance().targeting_nearest_item)
         return;
-    GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
     GW::Agent* chosen_target = static_cast<GW::AgentItem*>(GW::Agents::GetAgentByID(msg->manual_target_id));
     if (!chosen_target)
         return;
