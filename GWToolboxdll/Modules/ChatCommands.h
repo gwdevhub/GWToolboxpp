@@ -57,6 +57,7 @@ private:
 
     static bool IsLuxon();
 
+    static void CmdEnterMission(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdAge2(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdDialog(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdTB(const wchar_t *message, int argc, LPWSTR *argv);
@@ -77,6 +78,8 @@ private:
     static void CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdHeroBehaviour(const wchar_t *message, int argc, LPWSTR *argv);
+
     
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string name, PendingTransmo &transmo);

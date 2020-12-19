@@ -16,11 +16,6 @@
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
 
-void SettingsWindow::Initialize() {
-    ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"settings.png"), IDB_Icon_Settings);
-}
-
 void SettingsWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
@@ -42,25 +37,26 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
     }
 
     if (!visible) return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         drawn_settings.clear();
         ImColor sCol(102, 187, 238, 255);
         ImGui::PushTextWrapPos();
         ImGui::Text("GWToolbox++");
-        ImGui::SameLine(0, 0); ImGui::TextColored(sCol," v%s ",GWTOOLBOX_VERSION);
+        ImGui::SameLine(0, 0);
+        ImGui::TextColored(sCol, " v%s ", GWTOOLBOXDLL_VERSION);
         if (ImGui::IsItemHovered()) 
             ImGui::SetTooltip("Go to %s", GWTOOLBOX_WEBSITE);
         if(ImGui::IsItemClicked())
             ShellExecute(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
-        if (BETA_VERSION[0]) {
+        if (GWTOOLBOXDLL_VERSION_BETA[0]) {
             ImGui::SameLine();
-            ImGui::Text("- %s", BETA_VERSION);
+            ImGui::Text("- %s", GWTOOLBOXDLL_VERSION_BETA);
         } else {
             const std::string server_version = Updater::Instance().GetServerVersion();
             if (!server_version.empty()) {
-                if (server_version.compare(GWTOOLBOX_VERSION) == 0) {
+                if (server_version.compare(GWTOOLBOXDLL_VERSION) == 0) {
                     ImGui::SameLine();
                     ImGui::Text("(Up to date)");
                 } else {
@@ -68,6 +64,10 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
             }
         }
+#ifdef _DEBUG
+            ImGui::SameLine();
+            ImGui::Text("(Debug)");
+#endif
         float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
         if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
             CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
@@ -85,7 +85,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 
         ImGui::Text("General:");
         if (ImGui::CollapsingHeader("Help")) {
-            if (ImGui::TreeNode("General Interface")) {
+            if (ImGui::TreeNodeEx("General Interface", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ImGui::Bullet(); ImGui::Text("Double-click on the title bar to collapse a window.");
                 ImGui::Bullet(); ImGui::Text("Click and drag on the lower right corner to resize a window.");
                 ImGui::Bullet(); ImGui::Text("Click and drag on any empty space to move a window.");
@@ -106,7 +106,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
                     "- You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract.\n");
                 ImGui::TreePop();
             }
-            if (ImGui::TreeNode("Opening and closing windows")) {
+            if (ImGui::TreeNodeEx("Opening and closing windows", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ImGui::Text("There are several ways to open and close toolbox windows and widgets:");
                 ImGui::Bullet(); ImGui::Text("Buttons in the main window.");
                 ImGui::Bullet(); ImGui::Text("Checkboxes in the Info window.");
@@ -149,4 +149,39 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PopTextWrapPos();
     }
     ImGui::End();
+}
+
+bool SettingsWindow::DrawSettingsSection(const char* section)
+{
+    const auto& callbacks = ToolboxModule::GetSettingsCallbacks();
+    const auto& icons = ToolboxModule::GetSettingsIcons();
+
+    const auto& settings_section = callbacks.find(section);
+    if (settings_section == callbacks.end()) return false;
+    if (drawn_settings.find(section) != drawn_settings.end()) return true; // Already drawn
+    drawn_settings[section] = true;
+    
+    static char buf[128];
+    sprintf(buf, "      %s", section);
+    auto pos = ImGui::GetCursorScreenPos();
+    const bool& is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
+
+    const char* icon = nullptr;
+    auto it = icons.find(section);
+    if (it != icons.end()) icon = it->second;
+    if (icon) {
+        const auto& style = ImGui::GetStyle();
+        const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
+        ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2), ImColor(style.Colors[ImGuiCol_Text]), icon);
+    }
+
+    if (is_showing) ImGui::PushID(section);
+    size_t i = 0;
+    for (auto& entry : settings_section->second) {
+        if (i && is_showing) ImGui::Separator();
+        entry.second(&settings_section->first, is_showing);
+        i++;
+    }
+    if (is_showing) ImGui::PopID();
+    return true;
 }

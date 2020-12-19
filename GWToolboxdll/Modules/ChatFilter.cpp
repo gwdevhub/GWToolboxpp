@@ -279,6 +279,8 @@ bool ChatFilter::IsRare(const wchar_t* item_segment) const {
         return true;    // don't ignore ectos
     if (FullMatch(item_segment, { 0x108, 0x10A, 0x22EA, 0xFDA9, 0xDE53, 0x2D16 } ))
         return true; // don't ignore obby shards
+    if (FullMatch(item_segment, { 0x108, 0x10A, 0x8101, 0x730E }))
+        return true; // don't ignore lockpicks
     return false;
 }
 
@@ -344,7 +346,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
                   // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
                   // <monster> is wchar_t id of several wchars
                   // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-        GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+        GW::AgentLiving* me = GW::Agents::GetCharacter();
         bool forplayer = (me && me->player_number == GetNumericSegment(message));
         bool rare = IsRare(Get2ndSegment(message));
         if (forplayer && rare) return self_drop_rare;
@@ -546,12 +548,12 @@ bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 }
 
 void ChatFilter::DrawSettingInternal() {
-    const float half_width = ImGui::GetContentRegionAvailWidth() / 2;
+    const float half_width = ImGui::GetContentRegionAvail().x / 2;
     ImGui::Text("Hide the following messages:");
     ImGui::Separator();
     ImGui::Text("Drops");
     ImGui::SameLine();
-    ImGui::TextDisabled("('Rare' stands for Gold item, Ecto or Obby shard)");
+    ImGui::TextDisabled("('Rare' stands for Gold item, Ecto, Obby shard or Lockpick)");
     ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
     ImGui::SameLine(half_width); ImGui::Checkbox("A common item drops for you", &self_drop_common);
     ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);

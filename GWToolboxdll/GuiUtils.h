@@ -3,13 +3,13 @@
 #include <ImGuiAddons.h>
 
 namespace GuiUtils {
-    enum FontSize {
-        f16,
-        f18,
-        f20,
-        f24,
-        f42,
-        f48
+    enum class FontSize {
+        text,
+        header2,
+        header1,
+        widget_label,
+        widget_small,
+        widget_large
     };
     void LoadFonts();
     bool FontsLoaded();

@@ -26,7 +26,6 @@
 void FactionLeaderboardWindow::Initialize() {
     ToolboxWindow::Initialize();
     leaderboard.resize(15);
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TownAllianceObject>(&TownAlliance_Entry, 
         [this](GW::HookStatus* status, GW::Packet::StoC::TownAllianceObject *pak) -> bool {
             UNREFERENCED_PARAMETER(status);
@@ -48,14 +47,14 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible)
         return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
     float offset = 0.0f;
     const float tiny_text_width = 50.0f * ImGui::GetIO().FontGlobalScale;
     const float short_text_width = 80.0f * ImGui::GetIO().FontGlobalScale;
-    const float avail_width = ImGui::GetContentRegionAvailWidth();
+    const float avail_width = ImGui::GetContentRegionAvail().x;
     const float long_text_width = 200.0f * ImGui::GetIO().FontGlobalScale;
     ImGui::Text("Rank");
     ImGui::SameLine(offset += tiny_text_width);

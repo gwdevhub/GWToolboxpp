@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Widgets/Minimap/Minimap.h"
+
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
@@ -6,15 +8,18 @@
 
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Hero.h>
 
 #include <GWCA/Packets/Opcodes.h>
 
 #include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
@@ -32,6 +37,9 @@
 #include <Windows/Hotkeys.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/PconsWindow.h>
+
+#include <string>
+
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
@@ -71,6 +79,8 @@ TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
         return new HotkeyHeroTeamBuild(ini, section);
     } else if (type.compare(HotkeyEquipItem::IniSection()) == 0) {
         return new HotkeyEquipItem(ini, section);
+    } else if (type.compare(HotkeyFlagHero::IniSection()) == 0) {
+        return new HotkeyFlagHero(ini, section);
     } else {
         return nullptr;
     }
@@ -133,7 +143,7 @@ void TBHotkey::Draw(Op *op)
             const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
             if (show_active_in_header) {
                 ImGui::SameLine(
-                    ImGui::GetContentRegionAvailWidth() -
+                    ImGui::GetContentRegionAvail().x -
                     ImGui::GetTextLineHeight() - style.FramePadding.y * 2 -
                     (show_run_in_header
                          ? (btn_width + ImGui::GetStyle().ItemSpacing.x)
@@ -145,7 +155,7 @@ void TBHotkey::Draw(Op *op)
                         "The hotkey can trigger only when selected");
             }
             if (show_run_in_header) {
-                ImGui::SameLine(ImGui::GetContentRegionAvailWidth() -
+                ImGui::SameLine(ImGui::GetContentRegionAvail().x -
                                 btn_width);
                 if (ImGui::Button("Run", ImVec2(btn_width, 0.0f))) {
                     Execute();
@@ -165,7 +175,7 @@ void TBHotkey::Draw(Op *op)
     if (prof_id)
         snprintf(profbuf, 64, " [%s]", professions[prof_id]);
     if (map_id) {
-        if (map_id <= 729)
+        if (map_id < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID))
             snprintf(mapbuf, 64, " [%s]", GW::Constants::NAME_FROM_ID[map_id]);
         else
             snprintf(mapbuf, 64, " [Map %d]", map_id);
@@ -587,8 +597,16 @@ void HotkeyEquipItem::Execute()
         item = nullptr;
         return; // Success!
     }
-    GW::AgentLiving *p = GW::Agents::GetPlayerAsAgentLiving();
-    if (!p || p->GetIsKnockedDown()) {
+    GW::AgentLiving *p = GW::Agents::GetCharacter();
+    if (!p || p->GetIsDead()) {
+        if (show_error_on_failure)
+            Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
+                slot_idx);
+        ongoing = false;
+        item = nullptr;
+        return;
+    }
+    if (p->GetIsKnockedDown()) {
         // Log::Info("knocked down or missing"); // Player knocked down or
         // casting; wait.
         return;
@@ -707,7 +725,7 @@ void HotkeyDropUseBuff::Execute()
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
                 GW::GameThread::Enqueue([slot] () -> void {
                     GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(),
-                        ImGui::IsKeyDown(VK_CONTROL));
+                        static_cast<uint32_t>(ImGui::IsKeyDown(VK_CONTROL)));
                 });
             }
         }
@@ -726,18 +744,25 @@ bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
         case CoinDrop:
             *out_text = "Coin Drop";
             return true;
+        case Tick:
+            *out_text = "Tick";
+            return true;
         default:
             return false;
     }
 }
-const bool HotkeyToggle::IsValid(CSimpleIni *ini, const char *section)
+
+bool HotkeyToggle::IsValid(CSimpleIni *ini, const char *section)
 {
-    switch (ini->GetLongValue(section, "ToggleID", (long)Clicker)) {
-        case (long)Clicker:
-        case (long)Pcons:
+    switch (ini->GetLongValue(section, "ToggleID", static_cast<long>(Clicker))) {
+        case static_cast<long>(Clicker):
+        case static_cast<long>(Pcons):
+        case static_cast<long>(CoinDrop):
+        case static_cast<long>(Tick):
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 HotkeyToggle::HotkeyToggle(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
@@ -782,6 +807,10 @@ void HotkeyToggle::Execute()
             if (show_message_in_emote_channel)
                 Log::Info("Coin dropper is %s",
                           _active ? "active" : "disabled");
+            break;
+        case HotkeyToggle::Tick:
+            const auto ticked = GW::PartyMgr::GetIsPlayerTicked();
+            GW::PartyMgr::Tick(!ticked);
             break;
     }
 }
@@ -862,7 +891,7 @@ void HotkeyAction::Execute()
             ChatCommands::CmdReapplyTitle(nullptr, 0, nullptr);
             break;
         case HotkeyAction::EnterChallenge:
-            GW::Map::EnterChallenge();
+            GW::Chat::SendChat('/',L"enter");
             break;
     }
 }
@@ -995,11 +1024,11 @@ void HotkeyMove::Description(char *buf, size_t bufsz) const
 }
 void HotkeyMove::Draw()
 {
-    if (ImGui::InputFloat("x", &x, 0.0f, 0.0f, 3))
+    if (ImGui::InputFloat("x", &x, 0.0f, 0.0f))
         hotkeys_changed = true;
-    if (ImGui::InputFloat("y", &y, 0.0f, 0.0f, 3))
+    if (ImGui::InputFloat("y", &y, 0.0f, 0.0f))
         hotkeys_changed = true;
-    if (ImGui::InputFloat("Range", &range, 0.0f, 0.0f, 0))
+    if (ImGui::InputFloat("Range", &range, 0.0f, 0.0f))
         hotkeys_changed = true;
     ImGui::ShowHelp(
         "The hotkey will only trigger within this range.\nUse 0 for no limit.");
@@ -1133,7 +1162,7 @@ void HotkeyHeroTeamBuild::Description(char *buf, size_t bufsz) const
     const char *buildname = HeroBuildsWindow::Instance().BuildName(index);
     if (buildname == nullptr)
         buildname = "<not found>";
-    snprintf(buf, bufsz, "Load Team Hero Build '%s'", buildname);
+    snprintf(buf, bufsz, "Load Hero Team Build '%s'", buildname);
 }
 void HotkeyHeroTeamBuild::Draw()
 {
@@ -1150,4 +1179,101 @@ void HotkeyHeroTeamBuild::Execute()
     if (!CanUse())
         return;
     HeroBuildsWindow::Instance().Load(index);
+}
+
+HotkeyFlagHero::HotkeyFlagHero(CSimpleIni *ini, const char *section)
+    : TBHotkey(ini, section)
+{
+    degree = static_cast<float>(ini->GetDoubleValue(section, "degree", degree));
+    distance = static_cast<float>(ini->GetDoubleValue(section, "distance", distance));
+    hero = ini->GetLongValue(section, "hero", hero);
+    if (hero < 0) hero = 0;
+    if (hero > 11) hero = 11;
+}
+void HotkeyFlagHero::Save(CSimpleIni *ini, const char *section) const
+{
+    TBHotkey::Save(ini, section);
+    ini->SetDoubleValue(section, "degree", degree);
+    ini->SetDoubleValue(section, "distance", distance);
+    ini->SetLongValue(section, "hero", hero);
+}
+void HotkeyFlagHero::Description(char *buf, size_t bufsz) const
+{
+    if (hero == 0) {
+        snprintf(buf, bufsz, "Flag All Heroes");
+    } else {
+        snprintf(buf, bufsz, "Flag Hero %d", hero);
+    }
+}
+void HotkeyFlagHero::Draw()
+{
+    hotkeys_changed |= ImGui::DragFloat("Degree", &degree, 0.0f, -360.0f, 360.f);
+    hotkeys_changed |= ImGui::DragFloat("Distance", &distance, 0.0f, 0.0f, 10'000.f);
+    if (hotkeys_changed && distance < 0.f)
+        distance = 0.f;
+    hotkeys_changed |= ImGui::InputInt("Hero", &hero, 1);
+    if (hotkeys_changed && hero < 0)
+        hero = 0;
+    else if (hotkeys_changed && hero > 11)
+        hero = 11;
+    ImGui::ShowHelp("The hero number that should be flagged (1-11).\nUse 0 to flag all");
+    ImGui::Text("For a minimap flagging hotkey, please create a chat hotkey with:");
+    ImGui::TextColored({1.f, 1.f, 0.f, 1.f}, "/flag %d toggle", hero);
+}
+void HotkeyFlagHero::Execute()
+{
+    if (!isExplorable())
+        return;
+
+    const GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
+
+    if (hero < 0)
+        return;
+    if (hero == 0) {
+        if (allflag.x != 0 && allflag.y != 0 && (!std::isinf(allflag.x) || !std::isinf(allflag.y))) {
+            GW::PartyMgr::UnflagAll();
+            return;
+        }
+    } else {
+        const GW::HeroFlagArray &flags = GW::GameContext::instance()->world->hero_flags;
+        if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size())
+            return;
+
+        const GW::HeroFlag &flag = flags[hero - 1];
+        if (!std::isinf(flag.flag.x) || !std::isinf(flag.flag.y)) {
+            GW::PartyMgr::UnflagHero(hero);
+            return; 
+        }
+    }
+
+    const GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player)
+        return;
+    const GW::AgentLiving *target = GW::Agents::GetTargetAsAgentLiving();
+
+    float reference_radiant = player->rotation_angle;
+
+    if (target && target != player) {
+        float dx = target->x - player->x;
+        float dy = target->y - player->y;
+
+        reference_radiant = std::atan(dx == 0 ? dy : dy / dx);
+        if (dx < 0) {
+            reference_radiant += static_cast<float>(M_PI);
+        } else if (dx > 0 && dy < 0) {
+            reference_radiant += 2 * static_cast<float>(M_PI);
+        }
+    }
+
+    const float radiant = degree * static_cast<float>(M_PI) / 180.f;
+    const float x = player->x + distance * std::cos(reference_radiant - radiant);
+    const float y = player->y + distance * std::sin(reference_radiant - radiant);
+
+    GW::GamePos pos = GW::GamePos(x, y, 0);
+
+    if (hero == 0) {
+        GW::PartyMgr::FlagAll(pos);
+    } else {
+        GW::PartyMgr::FlagHero(hero, pos);
+    }
 }

@@ -19,7 +19,7 @@ If you make another order while the current one is still going, it will be queue
 
 Clicking "Cancel" will cancel all orders that are currently queued.
 
-If you run out of cash or fill up to 100K, the entire queue will be cancelled.
+If you run out of cash or fill up to 100K, the entire queue will be cancelled. This can be avoided by turning on "Automatically manage gold" in the [Settings](settings) window. Gold will then be withdrawn or deposited from your storage when necessary.
 
 ## Known Bugs
 * Sometimes the materials trader will keep working even if you move away from the NPC; other times it won't, and sometimes it'll just stop. If moving back to the NPC doesn't fix it, re-zone or change district and try again.

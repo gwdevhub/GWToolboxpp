@@ -56,6 +56,7 @@ public:
     void PacketCallback(GW::Packet::StoC::GenericValueTarget* pak);
     void PacketCallback(GW::Packet::StoC::PlayEffect* pak);
 
+    void LoadDefaults();
     void DrawSettings();
     void LoadSettings(CSimpleIni* ini, const char* section);
     void SaveSettings(CSimpleIni* ini, const char* section) const;

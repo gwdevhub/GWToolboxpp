@@ -1,6 +1,7 @@
 #pragma once
 
 #define ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))
+#define IM_ASSERT(expr) ASSERT(expr)
 
 namespace Log {
     // === Setup and cleanup ====
@@ -23,12 +24,15 @@ namespace Log {
     // === Game chat logging ===
     // Shows to the user in the form of a white chat message from toolbox
     void Info(const char* format, ...);
+    void InfoW(const wchar_t* format, ...);
 
     // Shows to the user in the form of a red chat message from toolbox
     void Error(const char* format, ...);
+    void ErrorW(const wchar_t* format, ...);
 
     // Shows to the user in the form of a yellow chat message from toolbox
     void Warning(const char* format, ...);
+    void WarningW(const wchar_t* format, ...);
 
     // === Crash Dump ===
     // Creates minidump, to be called from within __except()

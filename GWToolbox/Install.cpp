@@ -1,8 +1,9 @@
 #include "stdafx.h"
 
+#include <Path.h>
+
 #include "Download.h"
 #include "Install.h"
-#include "Path.h"
 #include "Registry.h"
 #include "Settings.h"
 

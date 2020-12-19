@@ -22,6 +22,7 @@ public:
     }
 
     const char* Name() const override { return "Pcons"; }
+    const char* Icon() const override { return ICON_FA_BIRTHDAY_CAKE; }
 
     void Initialize() override;
     void Terminate() override;
@@ -34,7 +35,7 @@ public:
 
     void Update(float delta) override;
 
-    bool DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) override;
+    bool DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text) override;
     void Draw(IDirect3DDevice9* pDevice) override;
 
     void LoadSettings(CSimpleIni* ini) override;

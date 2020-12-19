@@ -11,12 +11,13 @@
 
 #include <Logger.h>
 #include <Windows/DoorMonitorWindow.h>
+#include <ImGuiAddons.h>
 
 void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(512, 256), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(512, 256), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
 
@@ -29,6 +30,7 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SameLine(offset += colWidth); ImGui::Text("First Close");
     ImGui::SameLine(offset += colWidth); ImGui::Text("Last Open");
     ImGui::SameLine(offset += colWidth); ImGui::Text("Last Close");
+    ImGui::SameLine(offset += colWidth); ImGui::Text("Current State");
     ImGui::Separator();
     std::map<uint32_t, DoorObject*>::iterator it;
     
@@ -56,7 +58,7 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice) {
         if (o.last_close)
             std::strftime(mbstr, 100, "%H:%M:%S", std::localtime(&o.last_close));
         ImGui::SameLine(offset += colWidth); ImGui::Text("%s", mbstr);
-        
+        ImGui::SameLine(offset += colWidth); ImGui::Text("%s", o.is_open ? "Open" : "Closed");
     }
     ImGui::End();
 

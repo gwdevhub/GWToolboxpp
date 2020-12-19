@@ -7,6 +7,105 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.3
+* [New] GWToolbox now saves ImGui window positions into Layouts.ini - if you bork up your window size, just "Load Now" to fix it
+* [New] Target nearest item (default `;`) will avoid targeting a chest if there are non-green assigned items next to it
+* [New] Added more visibiltiy over GW's "Auto target ID" - minimap highlights friendly NPCs, items and gadgets to show what pressing space will do
+* [Minor] Added `/tick` command
+* [Minor] Stopped enhanced move-to-cast from double-calling a target
+* [Minor] Lockpicks are now identified as "rare" items for purposes of the chat filters
+* [Minor] Removed hint text relating to being able to `/salvage all`, as this no longer works
+* [Minor] Added "Load Defaults" for minimap settings that didn't have any
+* [Minor] Reverse camera button also reverses minimap
+* [Minor] Fixed an issue stopping toolbox from storing full item stacks with ctrl-click when the stack is split across more than 1 receiving slot
+* [Fix] Fixed twitch emotes causing crash
+* [Fix] Fixed hero flagging not always working
+* [Fix] Re-enabled tick as toggle
+* [Fix] Fixed issues with certain alcohol types not triggering alcohol timer correctly
+* [Fix] Fixed issue with friend list widget layout when viewing more than 1 column on-screen
+* [Fix] Fixed crash when using enhanced move-to-cast just as an enemy (or ally) becomes untargetable
+* [Fix] Fixed bug causing windows to open only partially on-screen for the first time due to recent ImGui update
+* [Fix] GWToolbox.exe 2.1.0.0 no longer shows console on-screen when launching
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.3_Release/GWToolboxdll.dll)
+
+## Version 4.2
+* [New] Support for multi-column skillbar layouts in the skillbar widget
+* [New] Modified launcher to show available GW instances that don't have a character name but do have an email address (e.g. login window)
+* [Minor] Fixed slow map load times due to new icons
+* [Minor] Changed look and feel of nested dropdowns to make them easier to click on
+* [Minor] Changed ordering of "enabled features" in settings window
+* [Minor] Revisited skillbar widget settings
+* [Minor] All color picker swatches now also display transparency alpha channel
+* [Minor] Flag All option now available if you're able to control the heroes/henchmen of a disconnected party member
+* [Fix] Fixed not being able to move around when camera is unlocked and camera smoothing is disabled
+* [Fix] Fixed bug with effects lasting > 180 seconds now showing duration on effect monitor
+* [Fix] Fixed various issues relating to flagging heroes in minimap
+* [Fix] Fixed some missing window options for Trade Window
+* [Fix] Fixed potential crashes in health widget and travel widget relating to fetching map names
+* [Fix] Re-fixed click to move on minimap when autorunning after recent GW update
+* [Fix] Fixed issue with alcohol not being popped at the right time
+* [Fix] Fixed bug preventing hero flagging when observing another player whilst dead
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.2_Release/GWToolboxdll.dll)
+
+## Version 4.1
+* [Fix] Fixed GWToolbox not working for Windows 7/8 users
+* [Fix] Fixed wrong character name in window title
+* [Fix] Re-fixed click to move on minimap when autorunning after recent GW update
+* [Fix] Fixed wrong icon for faction leaderboard in toolbox main window
+* [Fix] Fixed "Hello (null)!" message when starting toolbox without being in a map
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.1_Release/GWToolboxdll.dll)
+
+## Version 4.0
+* [New] Added option to improve move-to-cast to better avoid getting aggro when auto-moving to cast range for a spell
+* [New] Updated icons for all widgets and windows
+* [New] Configurable minimap range circle thickness
+* [New] Minimap can now be toggled between square and circular (default circular)
+* [New] Added skillbar timer widget, shows time until skill is recharged in an overlay, among other things
+* [New] Added `/hero <attack|guard|avoid>` command
+* [New] Added hero flagging hotkey - allows hero formations
+* [New] Added res aggro and chain aggro ranges to minimap
+* [New] Added whisper redirect for all players, not just friends
+* [New] Extended `/enter` chat command to trigger challenge mission entries, option to cancel during a countdown
+* [New] Hero builds not include option to show/hide hero panel, and change behaviour on load
+* [New] Added `/tp <window_name> [hide|show|mini|maxi]` command
+* [New] Added option to disable/enable camera smoothing in-game
+* [New] Added option to disable/enable minimap smoothing to match compass smoothing
+* [New] Added custom polygon option to minimap, with option to color enemies within the polygon differently
+* [New] Added `/tb save` and `/tb load`
+* [New] Added Teamspeak module, `/ts` to send connected server info to chat
+* [Minor] Better crash reporting with issues related to ImGui
+* [Minor] Added item model_id to info window
+* [Minor] Added tick toggle hotkey
+* [Minor] Added background color option to minimap
+* [Minor] Re-added configurable modifiers for minimap clicks (e.g. change ctrl + click behaviour)
+* [Minor] Prevent weapon set items from being auto salvaged via context menu
+* [Minor] Switched project to use CMake for development
+* [Minor] Typo fixes
+* [Minor] Added Ben Wolfson to special NPC list
+* [Minor] Deferred option loading for objective timer and friend list to avoid slow toolbox start time
+* [Minor] Disable `/resignlog` in an outpost
+* [Minor] Minimap now responds to compass flagging
+* [Minor] Added option to consider materials in storage when buying materials for cons via Materials Window
+* [Fix] Fixed crash with alcohol widget if no alcohol has ever been used
+* [Fix] Fixed bug preventing bond widget showing on screen if effect array is empty
+* [Fix] Fixed infinite loop when trying to update toolbox causing crash on closing GW
+* [Fix] Fixed a bunch of settings not being loaded/saved correctly
+* [Fix] Fixed bug causing minimap to highlight BigCircle agents
+* [Fix] Fixed `/tp deep` and `/tp urgoz` not working when in an explorable with disconnected players
+* [Fix] Fixed issue preventing toolbox from loading if Font.ttf is not found
+* [Fix] Fixed a crash caused by damage monitor when target isn't found in memory
+* [Fix] Fixed minimap click-to-move and move hotkeys from working correctly whilst auto running
+* [Fix] Fixed Pahnai salad triggering alcohol timer
+* [Fix] Fixed discord status updating with wrong character when viewing another party member whilst dead
+* [Fix] Fixed issues sending and receiving Twitch messages in chat with `<` and `>` characters
+* [Fix] Fixed bond monitor showing bonds on your player that you didn't cast
+* [Fix] Fixed a crash when trying to travel to embark beach without it unlocked via `/tp` command
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.0_Release/GWToolboxdll.dll)
+
 ## Version 3.8.1
 * [New] Added DoA cave timer to timer widget
 * [Minor] Removed salvage/identify chat commands

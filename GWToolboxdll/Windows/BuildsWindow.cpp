@@ -26,19 +26,14 @@ bool order_by_changed = false;
 
 #define INI_FILENAME L"builds.ini"
 
-BuildsWindow::~BuildsWindow() {
-
-}
-
 void BuildsWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
     send_timer = TIMER_INIT();
 
     GW::Chat::CreateCommand(L"loadbuild", CmdLoad);
 }
 void BuildsWindow::DrawHelp() {
-    if (!ImGui::TreeNode("Build Chat Commands"))
+    if (!ImGui::TreeNodeEx("Build Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
         return;
     ImGui::Bullet(); ImGui::Text("'/load [build template|build name] [Hero index]' loads a build via Guild Wars builds. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
     ImGui::Bullet(); ImGui::Text("'/loadbuild [teambuild] <build name|build code>' loads a build via GWToolbox Builds window. Does a partial search on team build name/build name/build code. Matches current player's profession.");
@@ -123,7 +118,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     const float btn_width = 50.0f * font_scale;
     const float del_width = 24.0f * font_scale;
     const float spacing = ImGui::GetStyle().ItemSpacing.y;
-    const float btn_offset = ImGui::GetContentRegionAvailWidth() - del_width - btn_width * 3 - spacing * 3;
+    const float btn_offset = ImGui::GetContentRegionAvail().x - del_width - btn_width * 3 - spacing * 3;
     ImGui::Text("#%d", j + 1);
     ImGui::PushItemWidth((btn_offset - btn_width - spacing * 2) / 2);
     ImGui::SameLine(btn_width, 0);
@@ -193,7 +188,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     auto pcons = PconsWindow::Instance().pcons;
         
     float pos_x = 0;
-    float third_w = ImGui::GetContentRegionAvailWidth() / 3;
+    float third_w = ImGui::GetContentRegionAvail().x / 3;
     unsigned int offset = 0;
     for (size_t i = 0; i < pcons.size(); i++) {
         auto pcon = pcons[i];
@@ -237,8 +232,8 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
     }
 
     if (visible) {
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
             for (TeamBuild& tbuild : teambuilds) {
                 ImGui::PushID(static_cast<int>(tbuild.ui_id));
@@ -273,14 +268,14 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
         TeamBuild& tbuild = teambuilds[i];
         char winname[256];
         snprintf(winname, 256, "%s###build%d", tbuild.name, tbuild.ui_id);
-        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(winname, &tbuild.edit_open)) {
             ImGui::PushItemWidth(-120.0f);
             if (ImGui::InputText("Build Name", tbuild.name, 128)) builds_changed = true;
             ImGui::PopItemWidth();
             const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
-            const float btn_offset = ImGui::GetContentRegionAvailWidth() - btn_width * 3 - ImGui::GetStyle().FramePadding.x * 3;
+            const float btn_offset = ImGui::GetContentRegionAvail().x - btn_width * 3 - ImGui::GetStyle().FramePadding.x * 3;
             for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
                 ImGui::PushID(static_cast<int>(j));
                 BuildsWindow::DrawBuildSection(tbuild, j);

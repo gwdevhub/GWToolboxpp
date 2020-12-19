@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CustomRenderer.h"
+
 #include <GWCA/GameEntities/Agent.h>
 
 #include <Color.h>
@@ -15,8 +17,11 @@ public:
     void DrawSettings();
     void LoadSettings(CSimpleIni* ini, const char* section);
     void SaveSettings(CSimpleIni* ini, const char* section) const;
-    void LoadAgentColors();
-    void SaveAgentColors() const;
+    void LoadCustomAgents();
+    void SaveCustomAgents() const;
+
+    void LoadDefaultColors();
+    void LoadDefaultSizes();
 
     bool show_hidden_npcs = false;
     bool boss_colors = true;

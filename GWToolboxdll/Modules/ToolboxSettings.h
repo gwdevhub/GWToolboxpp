@@ -2,7 +2,6 @@
 
 #include <GWCA/Constants/Maps.h>
 
-#include <Timer.h>
 #include <ToolboxModule.h>
 
 class ToolboxSettings : public ToolboxModule {
@@ -16,6 +15,8 @@ public:
     }
 
     const char* Name() const override { return "Toolbox Settings"; }
+
+    const char* Icon() const override { return ICON_FA_TOOLBOX;  }
 
     void LoadModules(CSimpleIni* ini);
     
@@ -45,12 +46,14 @@ private:
     bool use_builds = true;
     bool use_herobuilds = true;
     bool use_travel = true;
+    bool use_teamspeak = true;
     bool use_dialogs = true;
     bool use_info = true;
     bool use_materials = true;
     bool use_trade = true;
     bool use_timer = true;
     bool use_health = true;
+    bool use_skillbar = true;
     bool use_distance = true;
     bool use_minimap = true;
     bool use_damage = true;

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Skills.h>
 #include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/GameContainers/Array.h>
@@ -7,7 +8,8 @@
 
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Camera.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -28,6 +30,7 @@
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 
 #include <GWCA/Utilities/Scanner.h>
@@ -41,7 +44,8 @@
 
 #include <Windows/StringDecoderWindow.h>
 #include <Modules/GameSettings.h>
-#include <Modules/InventoryManager.h>
+
+#pragma warning(disable : 6011)
 
 namespace {
     void SendChatCallback(GW::HookStatus *, GW::Chat::Channel chan, wchar_t msg[120]) {
@@ -142,15 +146,21 @@ namespace {
     }
 
     const std::wstring GetPlayerName(uint32_t player_number = 0) {
+        GW::Player* player = nullptr;
         if (!player_number) {
-            GW::GameContext* g = GW::GameContext::instance();
-            if (!g || !g->character) return L"";
-            return g->character->player_name;
+            player = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
+            if (!player || !player->name) {
+                // Map not loaded; try to get from character context
+                auto* g = GW::GameContext::instance();
+                if (!g || !g->character || !g->character->player_name)
+                    return L"";
+                return g->character->player_name;
+            }
         }
-        GW::PlayerArray& players = GW::PlayerMgr::GetPlayerArray();
-        if (!players.valid() || player_number >= players.size())
-            return L"";
-        return GuiUtils::SanitizePlayerName(players[player_number].name);
+        else {
+            player = GW::PlayerMgr::GetPlayerByID(player_number);
+        }
+        return player && player->name ? GuiUtils::SanitizePlayerName(player->name) : L"";
     }
 
     void SetWindowTitle(bool enabled) {
@@ -190,170 +200,6 @@ namespace {
             // Avoid infinite recursion
             if (::GetPlayerName() != from)
                 GW::Chat::SendChat(from, buffer);
-        }
-    }
-
-    // GW Client doesn't actually know max material storage size for the account.
-    // We can make a guess by checking how many materials are currently in storage.
-    size_t MaxMaterialStorage() {
-        size_t max_mat_storage_size = 250u;
-        GW::Bag *bag = GW::Items::GetBag(GW::Constants::Bag::Material_Storage);
-        if (!bag || bag->items.valid() || !bag->items_count)
-            return max_mat_storage_size;
-        GW::Item *b_item = nullptr;
-        for (size_t i = GW::Constants::MaterialSlot::Bone; i < GW::Constants::MaterialSlot::N_MATS; i++) {
-            b_item = bag->items[i];
-            if (!b_item || b_item->quantity <= max_mat_storage_size)
-                continue;
-            while (b_item->quantity > max_mat_storage_size) {
-                max_mat_storage_size += 250u;
-            }
-        }
-        return max_mat_storage_size;
-    }
-
-    size_t move_materials_to_storage(GW::Item *item) {
-        ASSERT(item && item->quantity);
-        ASSERT(item->GetIsMaterial());
-
-        int islot = GW::Items::GetMaterialSlot(item);
-        if (islot < 0 || (int)GW::Constants::N_MATS <= islot) return 0;
-        uint32_t slot = static_cast<uint32_t>(islot);
-        const size_t max_in_slot = MaxMaterialStorage();
-        size_t availaible = max_in_slot;
-        GW::Item *b_item = GW::Items::GetItemBySlot(GW::Constants::Bag::Material_Storage, slot + 1);
-        if (b_item) {
-            if (b_item->quantity >= max_in_slot)
-                return 0;
-            availaible = max_in_slot - b_item->quantity;
-        }
-        size_t will_move = std::min<size_t>(item->quantity, availaible);
-        if (will_move) GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
-        return will_move;
-    }
-
-    // From bag_first to bag_last (included) i.e. [bag_first, bag_last]
-    // Returns the amount moved
-    size_t complete_existing_stack(GW::Item *item, size_t bag_first, size_t bag_last, size_t remaining) {
-        if (!item->GetIsStackable() || remaining == 0) return 0;
-        size_t remaining_start = remaining;
-        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
-            GW::Bag *bag = GW::Items::GetBag(bag_i);
-            if (!bag) continue;
-            size_t slot = bag->find2(item);
-            while (slot != GW::Bag::npos) {
-                GW::Item *b_item = bag->items[slot];
-                // b_item can be null in the case of birthday present for instance.
-                
-                if (b_item != nullptr && b_item->quantity < 250u) {
-                    size_t availaible = 250u - b_item->quantity;
-                    size_t will_move = std::min<size_t>(availaible, remaining);
-                    if (will_move > 0) {
-                        GW::Items::MoveItem(item, b_item, will_move);
-                        remaining -= will_move;
-                    }
-                    if (remaining == 0)
-                        return remaining_start;
-                }
-                slot = bag->find2(item, slot + 1);
-            }
-        }
-        return remaining_start - remaining;
-    }
-
-    void move_to_first_empty_slot(GW::Item *item, size_t bag_first, size_t bag_last) {
-        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
-            GW::Bag *bag = GW::Items::GetBag(bag_i);
-            if (!bag) continue;
-            size_t slot = bag->find1(0);
-            // The reason why we test if the slot has no item is because birthday present have ModelId == 0
-            while (slot != GW::Bag::npos) {
-                if (bag->items[slot] == nullptr) {
-                    GW::Items::MoveItem(item, bag, slot);
-                    return;
-                }
-                slot = bag->find1(0, slot + 1);
-            }
-        }
-    }
-
-    void move_item_to_storage_page(GW::Item *item, size_t page) {
-        ASSERT(item && item->quantity);
-        if (page == static_cast<size_t>(GW::Constants::StoragePane::Material_Storage)) {
-            if (!item->GetIsMaterial()) return;
-            move_materials_to_storage(item);
-            return;
-        }
-
-        if (static_cast<size_t>(GW::Constants::StoragePane::Storage_14) < page) {
-            return;
-        }
-
-        const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
-        const size_t bag_index = storage1 + page;
-        ASSERT(GW::Items::GetBag(bag_index));
-
-        size_t remaining = item->quantity;
-
-        // For materials, we always try to move what we can into the material page
-        if (item->GetIsMaterial()) {
-            size_t moved = move_materials_to_storage(item);
-            remaining -= moved;
-        }
-
-        // if the item is stackable we try to complete stack that already exist in the current storage page
-        size_t moved = complete_existing_stack(item, bag_index, bag_index, remaining);
-        remaining -= moved;
-
-        // if there is still item, we find the first empty slot and move everything there
-        if (remaining) {
-            move_to_first_empty_slot(item, bag_index, bag_index);
-        }
-    }
-
-    void move_item_to_storage(GW::Item *item) {
-        ASSERT(item && item->quantity);
-
-        GW::Bag **bags = GW::Items::GetBagArray();
-        if (!bags) return;
-        size_t remaining = item->quantity;
-
-        // We try to move to the material storage
-        if (item->GetIsMaterial()) {
-            size_t moved = move_materials_to_storage(item);
-            remaining -= moved;
-        }
-
-        const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
-        const size_t storage14 = static_cast<size_t>(GW::Constants::Bag::Storage_14);
-
-        // If item is stackable, try to complete similar stack
-        if (remaining == 0) return;
-        size_t moved = complete_existing_stack(item, storage1, storage14, remaining);
-        remaining -= moved;
-
-        // We find the first empty slot and put the remaining there
-        if (remaining) {
-            move_to_first_empty_slot(item, storage1, storage14);
-        }
-    }
-
-    void move_item_to_inventory(GW::Item *item) {
-        ASSERT(item && item->quantity);
-
-        const size_t backpack = static_cast<size_t>(GW::Constants::Bag::Backpack);
-        const size_t bag2 = static_cast<size_t>(GW::Constants::Bag::Bag_2);
-
-        size_t total = item->quantity;
-        size_t remaining = total;
-
-        // If item is stackable, try to complete similar stack
-        size_t moved = complete_existing_stack(item, backpack, bag2, remaining);
-        remaining -= moved;
-
-        // If we didn't move any item (i.e. there was no stack to complete), move the stack to first empty slot
-        if (remaining == total) {
-            move_to_first_empty_slot(item, backpack, bag2);
         }
     }
 
@@ -400,6 +246,27 @@ namespace {
         NAME=1,
         DESC=2
     };
+
+    struct PendingCast {
+        uint32_t slot = 0;
+        uint32_t target_id = 0;
+        uint32_t call_target = 0;
+        bool cast_next_frame = false;
+        void reset(uint32_t _slot = 0 , uint32_t _target_id = 0, uint32_t _call_target = 0) {
+            slot = _slot;
+            target_id = _target_id;
+            call_target = _call_target;
+            cast_next_frame = false;
+        }
+        const GW::AgentLiving* GetTarget() {
+            const GW::AgentLiving* target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(target_id));
+            return target && target->GetIsLivingType() ? target : nullptr;
+        }
+        const uint32_t GetSkill() {
+            const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+            return skillbar && skillbar->IsValid() ? skillbar->skills[slot].skill_id : 0;
+        }
+    } pending_cast;
 
 }
 
@@ -664,7 +531,7 @@ static std::wstring ParseItemDescription(GW::Item* item) {
 
 void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
     if (!item) return;
-    GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::Agents::GetPlayerAsAgentLiving()->login_number);
+    GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
     if (!p) return;
     std::wstring out;
     if ((parts & PING_PARTS::NAME) && item->complete_name_enc) {
@@ -793,7 +660,7 @@ void GameSettings::Initialize() {
         &OnDialog_Entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::DialogSender* pak) {
             UNREFERENCED_PARAMETER(status);
-            GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
+            auto *agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
             if (!agent) return;
             last_dialog_npc_id = agent->player_number;
         });
@@ -825,10 +692,22 @@ void GameSettings::Initialize() {
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, &OnScreenShake);
     GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, &OnCheckboxPreferenceChanged);
+    GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, OnChangeTarget);
+    GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
+        if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
+            return;
+        targeting_nearest_item = true;
+        GW::Agents::ChangeTarget((uint32_t)0); // To ensure OnChangeTarget is triggered
+        });
+    GW::UI::RegisterKeyupCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
+        if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
+            return;
+        targeting_nearest_item = false;
+        });
     GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, &OnStartWhisper);
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,&FriendStatusCallback);
     GW::CtoS::RegisterPacketCallback(&WhisperCallback_Entry, GAME_CMSG_PING_WEAPON_SET, &OnPingWeaponSet);
-    GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, &ItemClickCallback);
+    GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, &OnCast);
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
 
@@ -843,10 +722,10 @@ bool GameSettings::GetPlayerIsLeader() {
     if (!party) return false;
     std::wstring player_name = GetPlayerName();
     if (!party->players.size()) return false;
-    for (size_t i = 0; i < party->players.size(); i++) {
-        if (!party->players[i].connected())
+    for (auto &player : party->players) {
+        if (!player.connected())
             continue;
-        return GetPlayerName(party->players[i].login_number) == player_name;
+        return GetPlayerName(player.login_number) == player_name;
     }
     return false;
 }
@@ -934,6 +813,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
     fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
+    disable_camera_smoothing = ini->GetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
     tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
     show_timestamps = ini->GetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
     show_timestamp_24h = ini->GetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
@@ -978,7 +858,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     notify_when_friends_leave_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_leave_outpost), notify_when_friends_leave_outpost);
 
     notify_when_party_member_leaves = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_leaves);
-    notify_when_party_member_joins = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_joins);
+    notify_when_party_member_joins = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_joins), notify_when_party_member_joins);
     notify_when_players_join_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_join_outpost), notify_when_players_join_outpost);
     notify_when_players_leave_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_leave_outpost), notify_when_players_leave_outpost);
 
@@ -989,6 +869,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     auto_accept_join_requests = ini->GetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
 
     skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
+    improve_move_to_cast = ini->GetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -999,6 +880,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     ::LoadChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
     ::LoadChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
 
+    GW::PartyMgr::SetTickToggle(tick_is_toggle);
     GW::UI::SetOpenLinks(openlinks);
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
@@ -1011,21 +893,21 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 void GameSettings::RegisterSettingsContent() {
     ToolboxModule::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent("Inventory Settings",
+    ToolboxModule::RegisterSettingsContent("Inventory Settings", ICON_FA_BOXES,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
             DrawInventorySettings();
         }, 0.9f);
 
-    ToolboxModule::RegisterSettingsContent("Chat Settings",
+    ToolboxModule::RegisterSettingsContent("Chat Settings", ICON_FA_COMMENTS,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
             DrawChatSettings();
         }, 0.9f);
 
-    ToolboxModule::RegisterSettingsContent("Party Settings",
+    ToolboxModule::RegisterSettingsContent("Party Settings", ICON_FA_USERS,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
@@ -1047,6 +929,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
     ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
 
+    ini->SetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
     ini->SetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
     ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
     ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_seconds), show_timestamp_seconds);
@@ -1065,6 +948,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
+    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_cinematic), flash_window_on_cinematic);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
@@ -1100,6 +984,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(auto_accept_invites), auto_accept_invites);
     ini->SetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
     ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
+    ini->SetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1124,6 +1009,9 @@ void GameSettings::DrawInventorySettings() {
 }
 
 void GameSettings::DrawPartySettings() {
+    if(ImGui::Checkbox("Tick is a toggle", &tick_is_toggle))
+        GW::PartyMgr::SetTickToggle(tick_is_toggle);
+    ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
     ImGui::Checkbox("Automatically accept party invitations when ticked", &auto_accept_invites);
     ImGui::ShowHelp("When you're invited to join someone elses party");
     ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
@@ -1131,8 +1019,8 @@ void GameSettings::DrawPartySettings() {
 }
 
 void GameSettings::DrawChatSettings() {
-    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
-    if (ImGui::TreeNode("Chat Colors")) {
+    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
+    if (ImGui::TreeNodeEx("Chat Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Text("Channel");
         ImGui::SameLine(chat_colors_grid_x[1]);
         ImGui::Text("Sender");
@@ -1189,11 +1077,6 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
     ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
     ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
-
-
-
-    //ImGui::Checkbox("Tick is a toggle", &tick_is_toggle);
-    //ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
     ImGui::Text("Flash Guild Wars taskbar icon when:");
     ImGui::Indent();
     ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
@@ -1272,6 +1155,9 @@ void GameSettings::DrawSettingInternal() {
     if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
         SetWindowTitle(set_window_title_as_charname);
     }
+    ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
+    ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
+    ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
@@ -1348,7 +1234,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 void GameSettings::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     // Try to print any pending messages.
-    for (std::vector<PendingChatMessage*>::iterator it = pending_messages.begin(); it != pending_messages.end(); ++it) {
+    for (auto it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage *m = *it;
         if (m->IsSend() && PendingChatMessage::Cooldown()) 
             continue;
@@ -1366,6 +1252,48 @@ void GameSettings::Update(float delta) {
     }
     //UpdateFOV();
     FactionEarnedCheckAndWarn();
+
+    if (disable_camera_smoothing && !GW::CameraMgr::GetCameraUnlock()) {
+        GW::Camera* cam = GW::CameraMgr::GetCamera();
+        cam->position = cam->camera_pos_to_go;
+        cam->look_at_target = cam->look_at_to_go;
+        cam->yaw = cam->yaw_to_go;
+        cam->pitch = cam->pitch_to_go;
+    }
+
+    if (improve_move_to_cast && pending_cast.target_id) {
+        const GW::AgentLiving *me = GW::Agents::GetCharacter();
+        const GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+        if (!me || !skillbar) // I don't exist e.g. map change
+            return pending_cast.reset();
+
+        const GW::AgentLiving* target = pending_cast.GetTarget();
+        if (!target)  // Target no longer valid
+            return pending_cast.reset();
+
+        const uint32_t& casting = skillbar->casting;
+        if (pending_cast.cast_next_frame) { // Do cast now
+            if(pending_cast.GetTarget())
+                GW::SkillbarMgr::UseSkill(pending_cast.slot, pending_cast.target_id, pending_cast.call_target);
+            pending_cast.reset();
+            return;
+        }
+
+        if (casting && me->GetIsMoving() && !me->skill && !me->GetIsCasting()) { // casting/skill don't update fast enough, so delay the rupt
+            const uint32_t cast_skill = pending_cast.GetSkill();
+            if (!cast_skill) // Skill ID no longer valid
+                return pending_cast.reset();
+
+            const float range = GetSkillRange(cast_skill);
+            if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
+                GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // cancel action packet
+                pending_cast.cast_next_frame = true;
+                return;
+            }
+        }
+        if (!casting) // abort the action if not auto walking anymore
+            return pending_cast.reset();
+    }
 
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
@@ -1427,59 +1355,6 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     }
 
     return false;
-}
-
-void GameSettings::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag *bag) {
-    InventoryManager::ItemClickCallback(status, type, slot, bag);
-    if (!GameSettings::Instance().move_item_on_ctrl_click) return;
-    if (!ImGui::IsKeyDown(VK_CONTROL)) return;
-    if (type != 7) return;
-    if (status->blocked) return;
-    // Expected behaviors
-    //  When clicking on item in inventory
-    //   case storage close (or move_item_to_current_storage_pane = false):
-    //    - If the item is a material, it look if it can move it to the material page.
-    //    - If the item is stackable, search in all the storage if there is already similar items and completes the stack
-    //    - If not everything was moved, move the remaining in the first empty slot of the storage.
-    //   case storage open:
-    //    - If the item is a material, it look if it can move it to the material page.
-    //    - If the item is stackable, search for incomplete stacks in the current storage page and completes them
-    //    - If not everything was moved, move the remaining in the first empty slot of the current page.
-    //  When clicking on item in chest
-    //   - If the item is stackable, search for incomplete stacks in the inventory and completes them.
-    //   - If nothing was moved, move the stack in the first empty slot of the inventory.
-
-    // @Fix:
-    //  There is a bug in gw that doesn't "save" if the material storage
-    //  (or anniversary storage in the case when the player bought all other storage)
-    //  so we cannot know if they are the storage selected.
-    //  Sol: The solution is to patch the value 7 -> 9 at 0040E851 (EB 20 33 C0 BE 06 [-5])
-
-    bool is_inventory_item = bag->IsInventoryBag();
-    bool is_storage_item = bag->IsStorageBag();
-    if (!is_inventory_item && !is_storage_item) return;
-
-    GW::Item *item = GW::Items::GetItemBySlot(bag, slot + 1);
-    if (!item) return;
-
-    // @Cleanup: Bad
-    if (item->model_file_id == 0x0002f301) {
-        Log::Error("Ctrl+click doesn't work with birthday presents yet");
-        return;
-    }
-
-    if (is_inventory_item) {
-        if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
-            // If move_item_to_current_storage_pane = true, try to add the item to current storage pane.
-            size_t current_storage = GW::Items::GetStoragePage();
-            move_item_to_storage_page(item, current_storage);
-        } else {
-            // Otherwise, just try to put it in anywhere.
-            move_item_to_storage(item);
-        }
-    } else {
-        move_item_to_inventory(item);
-    }
 }
 
 void GameSettings::FriendStatusCallback(
@@ -1879,16 +1754,175 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
     }
 }
 
+// Don't target chest as nearest item
+// Target green items from chest last
+void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
+    if (!(msgid == GW::UI::kChangeTarget && wParam))
+        return;
+    if (!Instance().targeting_nearest_item)
+        return;
+    GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
+    GW::Agent* chosen_target = static_cast<GW::AgentItem*>(GW::Agents::GetAgentByID(msg->manual_target_id));
+    if (!chosen_target)
+        return;
+    uint32_t override_manual_agent_id = 0;
+    GW::Item* target_item = nullptr;
+    const GW::AgentArray agents = GW::Agents::GetAgentArray();
+    if (!agents.valid())
+        return;
+    uint32_t player_id = GW::Agents::GetPlayerId();
+    if (!player_id)
+        return;
+    // If the item targeted is a green that belongs to me, and its next to the chest, try to find another item instead.
+    if (chosen_target->GetIsItemType() && ((GW::AgentItem*)chosen_target)->owner == player_id) {
+        target_item = GW::Items::GetItemById(((GW::AgentItem*)chosen_target)->item_id);
+        if (!target_item || (target_item->interaction & 0x10) == 0)
+            return; // Failed to get target item, or is not green.
+        for (auto* agent : agents) {
+            if (!agent) continue;
+            if (!agent->GetIsGadgetType()) continue;
+            if (GW::GetDistance(agent->pos, chosen_target->pos) <= GW::Constants::Range::Nearby) {
+                // Choose the chest as the target instead of this green item, and drop through to the next loop
+                chosen_target = agent;
+                override_manual_agent_id = agent->agent_id;
+                break;
+            }
+        }
+    }
+    
+    // If we're targeting a gadget (presume its the chest), try to find adjacent items that belong to me instead.
+    if (chosen_target->GetIsGadgetType()) {
+        float closest_item_dist = GW::Constants::Range::Nearby;
+        GW::AgentItem* agent_item = nullptr;
+        for (auto* agent : agents) {
+            if (!agent || !agent->GetIsItemType()) continue;
+            agent_item = agent->GetAsAgentItem();
+            if (!agent_item || agent_item->owner != player_id) continue;
+            target_item = GW::Items::GetItemById(agent_item->item_id);
+            // Don't target green items.
+            if (!target_item || (target_item->interaction & 0x10) != 0)
+                continue;
+            float dist = GW::GetDistance(chosen_target->pos, agent->pos);
+            if (dist > closest_item_dist) continue;
+            override_manual_agent_id = agent->agent_id;
+        }
+    }
+    if (override_manual_agent_id) {
+        status->blocked = true;
+        GW::Agents::ChangeTarget(override_manual_agent_id);
+    }
+}
+
+void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t /* call_target */)
+{
+    if (agent_id != GW::Agents::GetPlayerId())
+        return;
+    if (!target_id) 
+        return;
+    const GW::Skillbar* skill_bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::Agent* target = GW::Agents::GetAgentByID(target_id);
+    if (!skill_bar || !me || !target)
+        return;
+    if (me->max_energy <= 0 || me->player_number <= 0 || target->agent_id == me->agent_id)
+        return;
+    if (GW::GetDistance(me->pos, target->pos) > GetSkillRange(skill_bar->skills[slot].skill_id))
+        pending_cast.reset(slot, target_id, 0);
+}
+
 // Set window title to player name on map load
 void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(Instance().set_window_title_as_charname);
 }
 
+float GameSettings::GetSkillRange(uint32_t skill_id)
+{
+    const auto constant_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    using T = GW::Constants::SkillType;
+    using S = GW::Constants::SkillID;
+    switch (static_cast<T>(constant_data.type)) {
+        case GW::Constants::SkillType::Hex:
+        case GW::Constants::SkillType::Spell:
+        case GW::Constants::SkillType::Enchantment:
+        case GW::Constants::SkillType::Signet:
+        case GW::Constants::SkillType::Condition:
+        case GW::Constants::SkillType::Well:
+        case GW::Constants::SkillType::Skill:
+        case GW::Constants::SkillType::ItemSpell:
+        case GW::Constants::SkillType::WeaponSpell:
+        case GW::Constants::SkillType::EchoRefrain:
+            break;
+        default:
+        return 0.f;
+    }
+    switch (static_cast<GW::Constants::SkillID>(constant_data.skill_id)) {
+        case S::A_Touch_of_Guile:
+        case S::Blackout:
+        case S::Blood_Ritual:
+        case S::Brawling_Headbutt:
+        case S::Brawling_Headbutt_Brawling_skill:
+        case S::Dwaynas_Touch:
+        case S::Ear_Bite:
+        case S::Enfeebling_Touch:
+        case S::Expunge_Enchantments:
+        case S::Grapple:
+        case S::Headbutt:
+        case S::Healing_Touch:
+        case S::Hex_Eater_Signet:
+        case S::Holy_Strike:
+        case S::Iron_Palm:
+        case S::Lift_Enchantment:
+        case S::Lightning_Touch:
+        case S::Low_Blow:
+        case S::Mending_Touch:
+        case S::Palm_Strike:
+        case S::Plague_Touch:
+        case S::Rending_Touch:
+        case S::Renew_Life:
+        case S::Restore_Life:
+        case S::Shock:
+        case S::Shove:
+        case S::Shroud_of_Silence:
+        case S::Signet_of_Midnight:
+        case S::Spirit_to_Flesh:
+        case S::Star_Burst:
+        case S::Stonesoul_Strike:
+        case S::Test_of_Faith:
+        case S::Throw_Dirt:
+        case S::Ursan_Rage:
+        case S::Ursan_Strike:
+        case S::Ursan_Strike_Blood_Washes_Blood:
+        case S::Vampiric_Bite:
+        case S::Vampiric_Touch:
+        case S::Vile_Touch:
+        case S::Volfen_Claw:
+        case S::Volfen_Claw_Curse_of_the_Nornbear:
+        case S::Wallows_Bite:
+            return 144.f;
+        case S::Augury_of_Death:
+        case S::Awe:
+        case S::Caltrops:
+        case S::Crippling_Dagger:
+        case S::Dancing_Daggers:
+        case S::Disrupting_Dagger:
+        case S::Healing_Whisper:
+        case S::Resurrection_Chant:
+        case S::Scorpion_Wire:
+        case S::Seeping_Wound:
+        case S::Signet_of_Judgment:
+        case S::Signet_of_Judgment_PvP:
+        case S::Siphon_Speed:
+            return GW::Constants::Range::Spellcast / 2.f;
+        default:
+            return GW::Constants::Range::Spellcast;
+    }
+}
+
 void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
     ImGui::PushID(static_cast<int>(chan));
     ImGui::Text(name);
-    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
+    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
     GW::Chat::Color color, sender_col, message_col;
     GW::Chat::GetChannelColors(chan, &sender_col, &message_col);
 

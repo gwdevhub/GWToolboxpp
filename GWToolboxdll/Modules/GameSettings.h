@@ -4,10 +4,12 @@
 #include <GWCA/Utilities/MemoryPatcher.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Skills.h>
 
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/Packets/StoC.h>
@@ -133,12 +135,14 @@ class GameSettings : public ToolboxModule {
     GameSettings() {};
     GameSettings(const GameSettings&) = delete;
     ~GameSettings() {};
+
 public:
     static GameSettings& Instance() {
         static GameSettings instance;
         return instance;
     }
     const char* Name() const override { return "Game Settings"; }
+    const char* Icon() const override { return ICON_FA_GAMEPAD; }
     static void PingItem(GW::Item* item, uint32_t parts = 3);
     static void PingItem(uint32_t item_id, uint32_t parts = 3);
 
@@ -162,7 +166,6 @@ public:
     void SetAfkMessage(std::wstring&& message);
 
     // Static callback functions
-    static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
     static void OnPingWeaponSet(GW::HookStatus*, void* packet);
     static void OnStartWhisper(GW::HookStatus*, wchar_t* _name);
     static void OnPlayerDance(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
@@ -185,6 +188,8 @@ public:
     static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
     static void OnScreenShake(GW::HookStatus*, void* packet);
     static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
+    static void OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
+    static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
     
 
     bool tick_is_toggle = false;
@@ -268,6 +273,12 @@ private:
     bool hide_dungeon_chest_popup = false;
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;
+    bool disable_camera_smoothing = false;
+    bool targeting_nearest_item = false;
+
+    bool improve_move_to_cast = false;
+
+    static float GetSkillRange(uint32_t);
 
     void DrawChannelColor(const char *name, GW::Chat::Channel chan);
     static void FriendStatusCallback(
@@ -303,5 +314,7 @@ private:
     GW::HookEntry PlayerLeaveInstance_Entry;
     GW::HookEntry OnDialog_Entry;
     GW::HookEntry OnCheckboxPreferenceChanged_Entry;
+    GW::HookEntry OnChangeTarget_Entry;
     GW::HookEntry OnScreenShake_Entry;
+    GW::HookEntry OnCast_Entry;
 };

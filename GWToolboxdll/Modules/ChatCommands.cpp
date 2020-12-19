@@ -16,6 +16,7 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/GuildContext.h>
+#include <GWCA/Context/PartyContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -30,6 +31,7 @@
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
 #include <GuiUtils.h>
 #include <GWToolbox.h>
@@ -211,7 +213,7 @@ bool ChatCommands::GetNPCInfoByName(const std::wstring name, PendingTransmo &tra
 }
 
 void ChatCommands::DrawHelp() {
-    if (!ImGui::TreeNode("Chat Commands"))
+    if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
         return;
     ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
     ImGui::TextDisabled("Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
@@ -275,7 +277,7 @@ void ChatCommands::DrawSettingInternal() {
     ImGui::Text("'/cam unlock' options");
     ImGui::Indent();
     ImGui::Checkbox("Fix height when moving forward", &forward_fix_z);
-    ImGui::InputFloat("Camera speed", &cam_speed, 0.0f, 0.0f, 3);
+    ImGui::InputFloat("Camera speed", &cam_speed);
     ImGui::Unindent();
 }
 
@@ -325,29 +327,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"gh", [](const wchar_t*, int, LPWSTR*) {
         GW::Chat::SendChat('/', "tp gh");
     });
-    GW::Chat::CreateCommand(L"enter", [](const wchar_t*, int argc, LPWSTR* argv) -> void {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
-        uint32_t item_id;
-        std::wstring arg;
-        switch (GW::Map::GetMapID()) {
-        case GW::Constants::MapID::Temple_of_the_Ages:
-        case GW::Constants::MapID::Embark_Beach:
-            if (argc < 2)
-                return Log::Warning("Use /enter fow or /enter uw to trigger entry");
-            arg = GuiUtils::ToLower(argv[1]);
-            if (arg == L"fow")
-                item_id = 22280;
-            else if (arg == L"uw")
-                item_id = 3746;
-            else
-                return Log::Warning("Use /enter fow or /enter uw to trigger entry");
-            if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16))
-                return Log::Error("Scroll not found!");
-            break;
-        default:
-            return Log::Warning("Use /enter from Temple of the Ages or Embark Beach");
-        }
-    });
+    GW::Chat::CreateCommand(L"enter", ChatCommands::CmdEnterMission);
     GW::Chat::CreateCommand(L"age2", ChatCommands::CmdAge2);
     GW::Chat::CreateCommand(L"dialog", ChatCommands::CmdDialog);
     GW::Chat::CreateCommand(L"show", ChatCommands::CmdShow);
@@ -374,9 +354,13 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"settitle", ChatCommands::CmdReapplyTitle);
     GW::Chat::CreateCommand(L"title", ChatCommands::CmdReapplyTitle);
     GW::Chat::CreateCommand(L"pingitem", ChatCommands::CmdPingEquipment);
+    GW::Chat::CreateCommand(L"tick", [](const wchar_t*, int, LPWSTR*) -> void {
+        GW::PartyMgr::Tick(!GW::PartyMgr::GetIsPlayerTicked());
+        });
     GW::Chat::CreateCommand(L"armor", [](const wchar_t*, int, LPWSTR*) -> void {
         GW::Chat::SendChat('/', "pingitem armor");
     });
+    GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHeroBehaviour);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -502,6 +486,48 @@ bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSi
     return true;
 }
 
+void ChatCommands::CmdEnterMission(const wchar_t*, int argc, LPWSTR* argv) {
+    const char* error_use_from_outpost = "Use '/enter' to start a mission or elite area from an outpost";
+    const char* error_fow_uw_syntax = "Use '/enter fow' or '/enter uw' to trigger entry";
+    const char* error_no_scrolls = "Unable to enter elite area; no scroll found";
+    const char* error_not_leading = "Unable to enter mission; you're not party leader";
+    
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) 
+        return Log::Error(error_use_from_outpost);
+
+    switch (GW::Map::GetMapID()) {
+    case GW::Constants::MapID::Temple_of_the_Ages:
+    case GW::Constants::MapID::Embark_Beach: {
+        if (argc < 2)
+            return Log::Error(error_fow_uw_syntax);
+        uint32_t item_id;
+        std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+        if (arg1 == L"fow")
+            item_id = 22280;
+        else if (arg1 == L"uw")
+            item_id = 3746;
+        else
+            return Log::Error(error_fow_uw_syntax);
+        if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16))
+            return Log::Error(error_no_scrolls);
+    }
+        break;
+    default:
+        GW::AreaInfo* map_info = GW::Map::GetCurrentMapInfo();
+        if (!map_info || !map_info->GetHasEnterButton())
+            return Log::Error(error_use_from_outpost);
+        if (!GW::PartyMgr::GetPlayerIsLeader())
+            return Log::Error(error_not_leading);
+        GW::PartyContext* p = GW::GameContext::instance()->party;
+        if (p && (p->flag & 0x8) != 0) {
+            GW::CtoS::SendPacket(4, GAME_CMSG_PARTY_CANCEL_ENTER_CHALLENGE);
+        }
+        else {
+            GW::Map::EnterChallenge();
+        }
+    }
+}
+
 void ChatCommands::CmdAge2(const wchar_t* , int, LPWSTR* ) {
     DWORD second = GW::Map::GetInstanceTime() / 1000;
     Log::Info("%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
@@ -544,47 +570,80 @@ void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR *) {
 }
 
 void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
-    if (argc <= 1) {
+    if (argc < 2) { // e.g. /tb
         MainWindow::Instance().visible ^= 1;
-    } else {
+        return;
+    }
+    
+    if (argc < 3) {
         std::wstring arg = GuiUtils::ToLower(argv[1]);
-        if (arg == L"age") {
-            CmdAge2(message, 0, argv);
-        } else if (arg == L"hide") {
+        if (arg == L"hide") { // e.g. /tb hide
             MainWindow::Instance().visible = false;
-        } else if (arg == L"show") {
+        }
+        else if (arg == L"show") { // e.g. /tb show
             MainWindow::Instance().visible = true;
-        } else if (arg == L"reset") {
+        }
+        else if (arg == L"save") { // e.g. /tb save
+            GWToolbox::Instance().SaveSettings();
+        }
+        else if (arg == L"load") { // e.g. /tb load
+            GWToolbox::Instance().OpenSettingsFile();
+            GWToolbox::Instance().LoadModuleSettings();
+        }
+        else if (arg == L"reset") { // e.g. /tb reset
             ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
             ImGui::SetWindowPos(SettingsWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
             MainWindow::Instance().visible = false;
             SettingsWindow::Instance().visible = true;
-        } else if (arg == L"settings") {
-            SettingsWindow::Instance().visible = true;
-        } else if (arg == L"mini" || arg == L"minimize") {
+        }
+        else if (arg == L"mini" || arg == L"minimize" || arg == L"collapse") { // e.g. /tb mini
             ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), true);
-        } else if (arg == L"maxi" || arg == L"maximize") {
+        }
+        else if (arg == L"maxi" || arg == L"maximize") { // e.g. /tb maxi
             ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), false);
-        } else if (arg == L"close" || arg == L"quit" || arg == L"exit") {
+        }
+        else if (arg == L"close" || arg == L"quit" || arg == L"exit") { // e.g. /tb close
             GWToolbox::Instance().StartSelfDestruct();
-        } else if (arg == L"ignore") {
-
-        } else {
-            auto windows = MatchingWindows(message, argc, argv);
+        }
+        else { // e.g. /tb travel
+            std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
             for (ToolboxUIElement* window : windows) {
                 window->visible ^= 1;
             }
         }
+        return;
+    }
+    std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
+    std::wstring arg = GuiUtils::ToLower(argv[2]);
+    if (arg == L"hide") { // e.g. /tb travel hide
+        for (auto const& window : windows)
+            window->visible = false;
+    }
+    else if (arg == L"show") { // e.g. /tb travel show
+        for (auto const& window : windows)
+            window->visible = true;
+    }
+    else if (arg == L"mini" || arg == L"minimize" || arg == L"collapse") { // e.g. /tb travel mini
+        for (auto const& window : windows)
+            ImGui::SetWindowCollapsed(window->Name(), true);
+    }
+    else if (arg == L"maxi" || arg == L"maximize") { // e.g. /tb travel maxi
+        for (auto const& window : windows)
+            ImGui::SetWindowCollapsed(window->Name(), false);
+    }
+    else { // Invalid argument
+        char buf[255];
+        snprintf(buf, 255, "Syntax: /%S %S [hide|show|mini|maxi]", argv[0], argv[1]);
+        Log::Error(buf);
     }
 }
 
-std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *message, int argc, LPWSTR *) {
+std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *, int argc, LPWSTR *argv) {
     std::vector<ToolboxUIElement*> ret;
     if (argc <= 1) {
         ret.push_back(&MainWindow::Instance());
     } else {
-        const wchar_t *tail = next_word(message);
-        std::wstring arg = GuiUtils::ToLower(tail);
+        std::wstring arg = GuiUtils::ToLower(argv[1]);
         if (arg == L"all") {
             for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
                 ret.push_back(window);
@@ -1237,5 +1296,42 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
         break;
     default:
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
+    }
+}
+void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
+{
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+        return;
+    // Argument validation
+    if (argc < 2)
+        return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
+    // set behavior based on command message
+    int behaviour = 1; // guard by default
+    std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    if (arg1 == L"avoid") {
+        behaviour = 2; // avoid combat
+    } else if (arg1 == L"guard") {
+        behaviour = 1; // guard
+    } else if (arg1 == L"attack") {
+        behaviour = 0; // attack
+    } else {
+        return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
+    }
+
+    const GW::PartyInfo *party_info = GW::PartyMgr::GetPartyInfo();
+    if (!party_info)
+        return Log::Error("Could not retrieve party info");
+    const GW::HeroPartyMemberArray& party_heros = party_info->heroes;
+    if (!party_heros.valid())
+        return Log::Error("Party heroes validation failed");
+    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    if (!me)
+        return Log::Error("Failed to get player");
+
+    //execute in explorable area or outpost
+    for (const GW::HeroPartyMember& hero : party_heros) {
+        if (hero.owner_player_id == me->login_number) {
+            GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero.agent_id, behaviour);
+        }
     }
 }

@@ -17,7 +17,7 @@ DWORD WINAPI init(HMODULE hModule) noexcept {
         DWORD **found = (DWORD **)GW::Scanner::Find(
             "\xA3\x00\x00\x00\x00\xFF\x75\x0C\xC7\x05", "x????xxxxx", +1);
         if (!(found && *found)) {
-            MessageBoxA(0, "We can't determine if the character is ingame.\nContact the developpers.", "GWToolbox++ - Clientside Error Detected", 0);
+            MessageBoxA(0, "We can't determine if the character is ingame.\nContact the developers.", "GWToolbox++ - Clientside Error Detected", 0);
             FreeLibraryAndExitThread(hModule, EXIT_SUCCESS);
         } else {
             printf("[SCAN] is_ingame = %p\n", found);
@@ -57,4 +57,4 @@ BOOL WINAPI DllMain(_In_ HMODULE _HDllHandle, _In_ DWORD _Reason, _In_opt_ LPVOI
     return TRUE;
 }
 
-extern "C" __declspec(dllexport) const char* GWToolboxVersion = GWTOOLBOX_VERSION;
+extern "C" __declspec(dllexport) const char *GWToolboxVersion = GWTOOLBOXDLL_VERSION;

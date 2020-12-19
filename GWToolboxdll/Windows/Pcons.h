@@ -123,7 +123,6 @@ private:
     IDirect3DTexture9* texture = nullptr;
     const ImVec2 uv0;
     const ImVec2 uv1;
-    std::thread refill_thread;
 };
 
 // A generic Pcon has an item_id and effect_id

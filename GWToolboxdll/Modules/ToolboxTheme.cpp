@@ -2,10 +2,14 @@
 
 #include <Color.h>
 
+#include <GWCA/Managers/RenderMgr.h>
+
 #include <Modules/Resources.h>
 #include <Modules/ToolboxTheme.h>
 
 #define IniFilename L"Theme.ini"
+// @Enhancement: Allow users to save different layouts by changing this variable in settings
+#define WindowPositionsFilename L"Layout.ini"
 #define IniSection "Theme"
 
 ToolboxTheme::ToolboxTheme() {
@@ -84,6 +88,62 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
     }
 
     ImGui::GetStyle() = ini_style;
+    LoadUILayout();
+}
+void ToolboxTheme::SaveUILayout() {
+    CSimpleIni* ini = GetLayoutIni();
+    const char* window_ini_section = "Windows";
+    ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
+    for (ImGuiWindow* window : windows) {
+        char key[128];
+        snprintf(key, 128, "_%s_X", window->Name);
+        ini->SetDoubleValue(window_ini_section, key, window->Pos.x);
+        snprintf(key, 128, "_%s_Y", window->Name);
+        ini->SetDoubleValue(window_ini_section, key, window->Pos.y);
+        snprintf(key, 128, "_%s_W", window->Name);
+        ini->SetDoubleValue(window_ini_section, key, window->SizeFull.x);
+        snprintf(key, 128, "_%s_H", window->Name);
+        ini->SetDoubleValue(window_ini_section, key, window->SizeFull.y);
+        snprintf(key, 128, "_%s_Collapsed", window->Name);
+        ini->SetBoolValue(window_ini_section, key, window->Collapsed);
+    }
+    ini->SaveFile(Resources::GetPath(WindowPositionsFilename).c_str());
+}
+CSimpleIni* ToolboxTheme::GetLayoutIni() {
+    if (!windows_ini)
+        windows_ini = new CSimpleIni(false, false, false);
+    windows_ini->Reset();
+    std::wstring filename = Resources::GetPath(WindowPositionsFilename);
+    if (std::filesystem::exists(filename.c_str())) {
+        windows_ini->LoadFile(filename.c_str());
+    } else {
+        Log::LogW(L"File %s doesn't exist.", filename.c_str());
+    }
+    return windows_ini;
+}
+void ToolboxTheme::LoadUILayout() {
+    CSimpleIni* ini = GetLayoutIni();
+    ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
+    const char* window_ini_section = "Windows";
+    for (ImGuiWindow* window : windows) {
+        if (!window) continue;
+        ImVec2 pos = window->Pos;
+        ImVec2 size = window->Size;
+        char key[128];
+        snprintf(key, 128, "_%s_X", window->Name);
+        pos.x = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, pos.x));
+        snprintf(key, 128, "_%s_Y", window->Name);
+        pos.y = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, pos.y));
+        snprintf(key, 128, "_%s_W", window->Name);
+        size.x = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, size.x));
+        snprintf(key, 128, "_%s_H", window->Name);
+        size.y = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, size.y));
+        snprintf(key, 128, "_%s_Collapsed", window->Name);
+        bool collapsed = ini->GetBoolValue(window_ini_section, key, false);
+        ImGui::SetWindowPos(window, pos);
+        ImGui::SetWindowSize(window, size);
+        ImGui::SetWindowCollapsed(window, collapsed);
+    }
 }
 
 void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
@@ -122,6 +182,8 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
 
     inifile->SaveFile(Resources::GetPath(IniFilename).c_str());
     ini_style = style;
+
+    SaveUILayout();
 }
 
 void ToolboxTheme::DrawSettingInternal() {
@@ -130,6 +192,7 @@ void ToolboxTheme::DrawSettingInternal() {
         const ImGuiStyle default_style = DefaultTheme(); // Default style
         style = default_style;
     }
+    ImGui::Text("Note: window position/size is stored in 'Layout.ini' in settings folder. You can share the file or parts of it with other people.");
     ImGui::Text("Note: theme is stored in 'Theme.ini' in settings folder. You can share the file or parts of it with other people.");
     ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
     if (style.Alpha > 1.0f) style.Alpha = 1.0f;

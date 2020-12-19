@@ -1,3 +1,4 @@
+#include "Minimap.h"
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
@@ -31,25 +32,28 @@ namespace {
 unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
-    color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), 0x001E1E1E);
-    color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_lowhp_modifier), 0x00505050);
-    color_eoe = Colors::Load(ini, section, VAR_NAME(color_eoe), 0x3200FF00);
-    color_qz = Colors::Load(ini, section, VAR_NAME(color_qz), 0x320000FF);
-    color_winnowing = Colors::Load(ini, section, VAR_NAME(color_winnowing), 0x3200FFFF);
-    color_target = Colors::Load(ini, section, VAR_NAME(color_target), 0xFFFFFF00);
-    color_player = Colors::Load(ini, section, VAR_NAME(color_player), 0xFFFF8000);
-    color_player_dead = Colors::Load(ini, section, VAR_NAME(color_player_dead), 0x64FF8000);
-    color_signpost = Colors::Load(ini, section, VAR_NAME(color_signpost), 0xFF0000C8);
-    color_item = Colors::Load(ini, section, VAR_NAME(color_item), 0xFF0000F0);
-    color_hostile = Colors::Load(ini, section, VAR_NAME(color_hostile), 0xFFF00000);
-    color_hostile_dead = Colors::Load(ini, section, VAR_NAME(color_hostile_dead), 0xFF320000);
-    color_neutral = Colors::Load(ini, section, VAR_NAME(color_neutral), 0xFF0000DC);
-    color_ally = Colors::Load(ini, section, VAR_NAME(color_ally), 0xFF00B300);
-    color_ally_npc = Colors::Load(ini, section, VAR_NAME(color_ally_npc), 0xFF99FF99);
-    color_ally_spirit = Colors::Load(ini, section, VAR_NAME(color_ally_spirit), 0xFF608000);
-    color_ally_minion = Colors::Load(ini, section, VAR_NAME(color_ally_minion), 0xFF008060);
-    color_ally_dead = Colors::Load(ini, section, VAR_NAME(color_ally_dead), 0x64006400);
+    LoadDefaultColors();
+    color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
+    color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_lowhp_modifier), color_agent_damaged_modifier);
+    color_eoe = Colors::Load(ini, section, VAR_NAME(color_eoe), color_eoe);
+    color_qz = Colors::Load(ini, section, VAR_NAME(color_qz), color_qz);
+    color_winnowing = Colors::Load(ini, section, VAR_NAME(color_winnowing), color_winnowing);
+    color_target = Colors::Load(ini, section, VAR_NAME(color_target), color_target);
+    color_player = Colors::Load(ini, section, VAR_NAME(color_player), color_player);
+    color_player_dead = Colors::Load(ini, section, VAR_NAME(color_player_dead), color_player_dead);
+    color_signpost = Colors::Load(ini, section, VAR_NAME(color_signpost), color_signpost);
+    color_item = Colors::Load(ini, section, VAR_NAME(color_item), color_item);
+    color_hostile = Colors::Load(ini, section, VAR_NAME(color_hostile), color_hostile);
+    color_hostile_dead = Colors::Load(ini, section, VAR_NAME(color_hostile_dead), color_hostile_dead);
+    color_neutral = Colors::Load(ini, section, VAR_NAME(color_neutral), color_neutral);
+    color_ally = Colors::Load(ini, section, VAR_NAME(color_ally), color_ally);
+    color_ally_npc = Colors::Load(ini, section, VAR_NAME(color_ally_npc), color_ally_npc);
+    color_ally_spirit = Colors::Load(ini, section, VAR_NAME(color_ally_spirit), color_ally_spirit);
+    color_ally_minion = Colors::Load(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
+    color_ally_dead = Colors::Load(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
+    boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
 
+    LoadDefaultSizes();
     size_default = (float)ini->GetDoubleValue(section, VAR_NAME(size_default), 75.0);
     size_player = (float)ini->GetDoubleValue(section, VAR_NAME(size_player), 100.0);
     size_signpost = (float)ini->GetDoubleValue(section, VAR_NAME(size_signpost), 50.0);
@@ -58,14 +62,13 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     size_minion = (float)ini->GetDoubleValue(section, VAR_NAME(size_minion), 50.0);
 
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
-    boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
-
-    LoadAgentColors();
+    
+    LoadCustomAgents();
 
     Invalidate();
 }
 
-void AgentRenderer::LoadAgentColors() {
+void AgentRenderer::LoadCustomAgents() {
     if (agentcolorinifile == nullptr) agentcolorinifile = new CSimpleIni();
     agentcolorinifile->LoadFile(Resources::GetPath(AGENTCOLOR_INIFILENAME).c_str());
 
@@ -115,10 +118,10 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
 
-    SaveAgentColors();
+    SaveCustomAgents();
 }
 
-void AgentRenderer::SaveAgentColors() const {
+void AgentRenderer::SaveCustomAgents() const {
     if (agentcolors_changed && agentcolorinifile != nullptr) {
         // clear colors from ini
         agentcolorinifile->Reset();
@@ -132,9 +135,48 @@ void AgentRenderer::SaveAgentColors() const {
         agentcolorinifile->SaveFile(Resources::GetPath(AGENTCOLOR_INIFILENAME).c_str());
     }
 }
-
+void AgentRenderer::LoadDefaultSizes() {
+    size_default = 75.0f;
+    size_player = 100.0f;
+    size_signpost = 50.0f;
+    size_item = 25.0f;
+    size_boss = 125.0f;
+    size_minion = 50.0f;
+}
+void AgentRenderer::LoadDefaultColors() {
+    color_agent_modifier = 0x001E1E1E;
+    color_agent_damaged_modifier = 0x00505050;
+    color_eoe = 0x3200FF00;
+    color_qz = 0x320000FF;
+    color_winnowing = 0x3200FFFF;
+    color_target = 0xFFFFFF00;
+    color_player = 0xFFFF8000;
+    color_player_dead = 0x64FF8000;
+    color_signpost = 0xFF0000C8;
+    color_item = 0xFF0000F0;
+    color_hostile = 0xFFF00000;
+    color_hostile_dead = 0xFF320000;
+    color_neutral = 0xFF0000DC;
+    color_ally = 0xFF00B300;
+    color_ally_npc = 0xFF99FF99;
+    color_ally_spirit = 0xFF608000;
+    color_ally_minion = 0xFF008060;
+    color_ally_dead = 0x64006400;
+    size_default = 75.0f;
+    size_player = 100.0f;
+    size_signpost = 50.0f;
+    size_item = 25.0f;
+    size_boss = 125.0f;
+    size_minion = 50.0f;
+    boss_colors = true;
+}
 void AgentRenderer::DrawSettings() {
-    if (ImGui::TreeNode("Agent Colors")) {
+    
+    if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        bool confirmed = false;
+        if (ImGui::SmallConfirmButton("Restore Defaults", &confirmed, "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n")) {
+            LoadDefaultColors();
+        }
         Colors::DrawSettingHueWheel("EoE", &color_eoe);
         ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
         Colors::DrawSettingHueWheel("QZ", &color_qz);
@@ -158,59 +200,28 @@ void AgentRenderer::DrawSettings() {
         ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
         Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
         ImGui::ShowHelp("Each hostile agent has this value subtracted from it when under 90% HP.");
-        if (ImGui::SmallButton("Restore Defaults")) {
-            ImGui::OpenPopup("Restore Defaults?");
-        }
-        if (ImGui::BeginPopupModal("Restore Defaults?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Are you sure?\nThis will reset all agent colors to the default values.\nThis operation cannot be undone.\n\n");
-            if (ImGui::Button("OK", ImVec2(120, 0))) {
-                color_agent_modifier = 0x001E1E1E;
-                color_agent_damaged_modifier = 0x00505050;
-                color_eoe = 0x3200FF00;
-                color_qz = 0x320000FF;
-                color_winnowing = 0x3200FFFF;
-                color_target = 0xFFFFFF00;
-                color_player = 0xFFFF8000;
-                color_player_dead = 0x64FF8000;
-                color_signpost = 0xFF0000C8;
-                color_item = 0xFF0000F0;
-                color_hostile = 0xFFF00000;
-                color_hostile_dead = 0xFF320000;
-                color_neutral = 0xFF0000DC;
-                color_ally = 0xFF00B300;
-                color_ally_npc = 0xFF99FF99;
-                color_ally_spirit = 0xFF608000;
-                color_ally_minion = 0xFF008060;
-                color_ally_dead = 0x64006400;
-                size_default = 75.0f;
-                size_player = 100.0f;
-                size_signpost = 50.0f;
-                size_item = 25.0f;
-                size_boss = 125.0f;
-                size_minion = 50.0f;
-                boss_colors = true;
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
-        }
+
         ImGui::TreePop();
     }
-
-    if (ImGui::TreeNode("Agent Sizes")) {
+    
+    
+    if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        bool confirmed = false;
+        if (ImGui::SmallConfirmButton("Restore Defaults", &confirmed, "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n")) {
+            LoadDefaultSizes();
+        }
         ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Signpost Size", &size_signpost, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Item Size", &size_item, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Boss Size", &size_boss, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Minion Size", &size_minion, 1.0f, 1.0f, 0.0f, "%.0f");
+
         ImGui::TreePop();
     }
+    
 
-    if (ImGui::TreeNode("Custom Agents")) {
+    if (ImGui::TreeNodeEx("Custom Agents", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         bool changed = false;
         for (unsigned i = 0; i < custom_agents.size(); ++i) {
 
@@ -285,7 +296,7 @@ AgentRenderer::~AgentRenderer() {
     custom_agents.clear();
     custom_agents_map.clear();
 }
-AgentRenderer::AgentRenderer() : vertices(nullptr) {
+AgentRenderer::AgentRenderer() {
     shapes[Tear].AddVertex(1.8f, 0, Dark);      // A
     shapes[Tear].AddVertex(0.7f, 0.7f, Dark);   // B
     shapes[Tear].AddVertex(0.0f, 0.0f, Light);  // O
@@ -384,10 +395,12 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
     GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
     GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target && auto_target_id) {
-        target = static_cast<GW::AgentLiving *>(GW::Agents::GetAgentByID(auto_target_id));
-        if (target && !target->GetIsLivingType())
-            target = nullptr;
+    if (target) {
+        auto_target_id = 0;
+    }
+    else if (auto_target_id) {
+        auto* const target_ = GW::Agents::GetAgentByID(auto_target_id);
+        target = target_ ? target_->GetAsAgentLiving() : nullptr;
     }
 
     // 1. eoes
@@ -521,14 +534,13 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
     Color color = GetColor(agent, ca);
     float size = GetSize(agent, ca);
     Shape_e shape = GetShape(agent, ca);
-
-    if (auto_target_id == agent->agent_id) {
-        Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
-    } else if (GW::Agents::GetTargetId() == agent->agent_id && shape != BigCircle) {
-        Enqueue(shape, agent, size + 50.0f, color_target);
+    // No target highlight if BigCircle
+    if (shape != BigCircle) {
+        // Target highlight if this is the current or next target
+        if (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id)
+            Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
     }
-
-    Enqueue(shape, agent, size, color);
+    return Enqueue(shape, agent, size, color);
 }
 
 Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) const {
@@ -568,8 +580,66 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         if(living->hp <= 0.0f) return color_hostile_dead;
         const Color* c = &color_hostile;
         if (boss_colors && living->GetHasBossGlow()) {
-            unsigned int prof = GetAgentProfession(living);
+            const auto prof = GetAgentProfession(living);
             if (prof) c = &profession_colors[prof];
+        }
+        const auto& polygons = Minimap::Instance().custom_renderer.polygons;
+        const auto& markers = Minimap::Instance().custom_renderer.markers;
+        const auto is_relevant = [living](const CustomRenderer::CustomPolygon& polygon)-> bool {
+            return (polygon.visible && polygon.map == GW::Constants::MapID::None || polygon.map == GW::Map::GetMapID()) && !polygon.points.empty() && (polygon.color_sub & IM_COL32_A_MASK) != 0 &&
+                   GW::GetDistance(living->pos, polygon.points.at(0)) < 2500.f;
+        };
+        const auto is_relevant_circle = [living](const CustomRenderer::CustomMarker& marker) {
+            return (marker.visible && marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID()) && (marker.color_sub & IM_COL32_A_MASK) != 0 &&
+                   GW::GetDistance(living->pos, marker.pos) < 2500.f;
+        };
+        const auto is_inside = [](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
+            bool b = false;
+            for (auto i = 0u, j = points.size() - 1; i < points.size(); j = i++) {
+                if (points[i].y >= pos.y != points[j].y >= pos.y &&
+                    pos.x <= (points[j].x - points[i].x) * (pos.y - points[i].y) / (points[j].y - points[i].y) +
+                                 points[i].x) {
+                    b = !b;
+                }
+            }
+            return b;
+        };
+        auto sign = [](GW::Vec2f p1, GW::Vec2f p2, GW::Vec2f p3)-> float {
+            return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+        };
+
+        auto in_triangle = [sign](GW::Vec2f pt, GW::Vec2f v1, GW::Vec2f v2, GW::Vec2f v3) -> bool {
+
+            const float d1 = sign(pt, v1, v2);
+            const float d2 = sign(pt, v2, v3);
+            const float d3 = sign(pt, v3, v1);
+
+            const bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+            const bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+            return !(has_neg && has_pos);
+        };
+
+        auto is_inside_triangles = [in_triangle](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
+            for (auto i = 0u; i < points.size() - 2; i++) {
+                if (in_triangle(pos, points[i], points[i + 1], points[i + 2])) return true;;
+            }
+            return false;
+        };
+        auto is_inside_circle = [](const GW::Vec2f pos, const GW::Vec2f circle, const float radius) -> bool {
+            return GW::GetSquareDistance(pos, circle) <= radius * radius;
+        };
+        for (const auto& polygon : polygons) {
+            if (!is_relevant(polygon)) continue;
+            if (is_inside(living->pos, polygon.points)) {
+                c = &polygon.color_sub;
+            }
+        }
+        for (const auto marker : markers) {
+            if (!is_relevant_circle(marker)) continue;
+            if (is_inside_circle(living->pos, marker.pos, marker.size)) {
+                c = &marker.color_sub;
+            }
         }
         if (living->hp > 0.9f) return *c;
         return Colors::Sub(*c, color_agent_damaged_modifier);
@@ -810,9 +880,7 @@ bool AgentRenderer::CustomAgent::DrawHeader() {
     ImGui::SameLine(0, 18);
     bool changed = ImGui::Checkbox("##visible", &active);
     ImGui::SameLine();
-    int color_i4[4];
-    Colors::ConvertU32ToInt4(color, color_i4);
-    ImGui::ColorButton("", ImColor(color_i4[1], color_i4[2], color_i4[3]));
+    changed |= ImGui::ColorButtonPicker("", &color);
     ImGui::SameLine();
     ImGui::Text(name);
     return changed;
@@ -820,7 +888,7 @@ bool AgentRenderer::CustomAgent::DrawHeader() {
 bool AgentRenderer::CustomAgent::DrawSettings(AgentRenderer::CustomAgent::Operation& op) {
     bool changed = false;
 
-    if (ImGui::TreeNode("##params")) {
+    if (ImGui::TreeNodeEx("##params", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap)) {
         ImGui::PushID(static_cast<int>(ui_id));
 
         changed |= DrawHeader();

@@ -37,6 +37,10 @@ namespace {
     };
 }
 EffectRenderer::EffectRenderer() {
+    LoadDefaults();
+}
+void EffectRenderer::LoadDefaults() {
+    aoe_effect_settings.clear();
     aoe_effect_settings.emplace(Maelstrom, new EffectSettings("Maelstrom", Maelstrom, GW::Constants::Range::Adjacent, 10000));
     aoe_effect_settings.emplace(Chaos_storm, new EffectSettings("Chaos Storm", Chaos_storm, GW::Constants::Range::Adjacent, 10000));
     aoe_effect_settings.emplace(Savannah_heat, new EffectSettings("Savannah Heat", Savannah_heat, GW::Constants::Range::Adjacent, 5000));
@@ -73,6 +77,7 @@ void EffectRenderer::Invalidate() {
 }
 void EffectRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     Invalidate();
+    LoadDefaults();
     for (auto settings : aoe_effect_settings) {
         char color_buf[64];
         sprintf(color_buf, "color_aoe_effect_%d", settings.first);
@@ -88,6 +93,10 @@ void EffectRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 }
 void EffectRenderer::DrawSettings() {
     const float offset = ImGui::GetIO().FontGlobalScale * 150.0f;
+    bool confirm = false;
+    if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
+        LoadDefaults();
+    }
     for (auto s : aoe_effect_settings) {
         ImGui::PushID(static_cast<int>(s.first));
         Colors::DrawSettingHueWheel("", &s.second->color, 0);
@@ -95,6 +104,7 @@ void EffectRenderer::DrawSettings() {
         ImGui::Text(s.second->name.c_str());
         ImGui::PopID();
     }
+
 }
 void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
     auto it1 = aoe_effect_triggers.find(effect_id);

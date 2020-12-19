@@ -26,7 +26,7 @@ void Updater::SaveSettings(CSimpleIni* ini) {
     return;
 #else
     ini->SetLongValue(Name(), "update_mode", mode);
-    ini->SetValue(Name(), "dllversion", GWTOOLBOX_VERSION);
+    ini->SetValue(Name(), "dllversion", GWTOOLBOXDLL_VERSION);
 
     HMODULE module = GWToolbox::GetDLLModule();
     CHAR dllfile[MAX_PATH];
@@ -44,7 +44,7 @@ void Updater::Initialize() {
 void Updater::DrawSettingInternal() {
     ImGui::Text("Update mode:");
     const float btnWidth = 180.0f * ImGui::GetIO().FontGlobalScale;
-    ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - btnWidth);
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - btnWidth);
     if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates",ImVec2(btnWidth,0)) && step != Checking) {
         CheckForUpdate(true);
     }
@@ -60,6 +60,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
     unsigned int tries = 0;
     while (tries < 5 && releases_str.empty()) {
         releases_str = Resources::Instance().Download(L"https://api.github.com/repos/HasKha/GWToolboxpp/releases");
+        tries++;
     }
     if (releases_str.empty()) {
         return;
@@ -85,7 +86,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
                 || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string()))
                 continue;
             std::string asset_name = asset["name"].get<std::string>();
-            if (!asset_name._Equal("GWToolbox.dll") && !asset_name._Equal("GWToolboxdll.dll"))
+            if (asset_name != "GWToolbox.dll" && asset_name != "GWToolboxdll.dll")
                 continue; // This release doesn't have a dll download.
             release->download_url = asset["browser_download_url"].get<std::string>();
             release->version = tag_name.substr(0, version_number_len);
@@ -114,7 +115,7 @@ void Updater::CheckForUpdate(const bool forced) {
             step = Done;
             return;
         }
-        if (release.version.compare(GWTOOLBOX_VERSION) == 0) {
+        if (release.version.compare(GWTOOLBOXDLL_VERSION) == 0) {
             // server and client versions match
             step = Done;
             if (forced) {
@@ -140,7 +141,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
         if (!notified) {
             notified = true;
             Log::Warning("GWToolbox++ version %s is available! You have %s%s.",
-                latest_release.version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
+                latest_release.version.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA);
         }
 
         int iMode = forced_ask ? 2 : mode;
@@ -156,11 +157,11 @@ void Updater::Draw(IDirect3DDevice9* device) {
             break;
 
         case 2: { // check and ask
-            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
-            ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
+            ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s%s",
-                latest_release.version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
+                latest_release.version.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA);
             ImGui::Text("Changes:");
             ImGui::Text(latest_release.body.c_str());
 
@@ -190,11 +191,11 @@ void Updater::Draw(IDirect3DDevice9* device) {
 
     } else if (step == Downloading) {
         if (visible) {
-            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
-            ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
+            ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s",
-                latest_release.version.c_str(), GWTOOLBOX_VERSION);
+                latest_release.version.c_str(), GWTOOLBOXDLL_VERSION);
             ImGui::Text("Changes:");
             ImGui::Text(latest_release.body.c_str());
 
@@ -207,11 +208,11 @@ void Updater::Draw(IDirect3DDevice9* device) {
         }
     } else if (step == Success) {
         if (visible) {
-            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
-            ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
+            ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
             ImGui::Text("GWToolbox++ version %s is available! You have %s",
-                latest_release.version.c_str(), GWTOOLBOX_VERSION);
+                latest_release.version.c_str(), GWTOOLBOXDLL_VERSION);
             ImGui::Text("Changes:");
             ImGui::Text(latest_release.body.c_str());
 
@@ -272,16 +273,20 @@ void Updater::DoUpdate() {
     DeleteFileW(dllold);
     MoveFileW(dllfile, dllold);
 
+    // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
+    std::wstring wdllfile(dllfile);
+    std::wstring wdllold(dllold);
+
     // 2. download new dll
     Resources::Instance().Download(
         dllfile, GuiUtils::StringToWString(latest_release.download_url),
-        [this, dllfile, dllold](bool success) {
+        [this, wdllfile, wdllold](bool success) -> void {
         if (success) {
             step = Success;
             Log::Warning("Update successful, please restart toolbox.");
         } else {
             Log::Error("Updated error - cannot download GWToolbox.dll");
-            MoveFileW(dllold, dllfile);
+            MoveFileW(wdllold.c_str(), wdllfile.c_str());
             step = Done;
         }
     });

@@ -33,14 +33,17 @@ private:
     };
 
     BuildsWindow() {};
-    ~BuildsWindow();
+    ~BuildsWindow() {};
+
 public:
     static BuildsWindow& Instance() {
         static BuildsWindow instance;
         return instance;
     }
     static void CmdLoad(const wchar_t* message, int argc, LPWSTR* argv);
+
     const char* Name() const override { return "Builds"; }
+    const char* Icon() const override { return ICON_FA_LIST; }
 
     void Initialize() override;
     void Terminate() override;

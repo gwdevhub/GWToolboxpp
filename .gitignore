@@ -3,6 +3,7 @@ Debug/
 Release/
 ipch/
 Archive/
+bin/
 
 # Bloated Windows Databases
 *.sdf
@@ -44,3 +45,4 @@ GWToolbox.aps
 *.sublime-project*
 *.sublime-workspace*
 .vs/
+build/

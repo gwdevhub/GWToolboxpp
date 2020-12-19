@@ -271,8 +271,8 @@ void PconsWindow::CmdPcons(const wchar_t *, int argc, LPWSTR *argv)
     }
 }
 
-bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) {
-    bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
+bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text) {
+    bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text, center_align_text);
 
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -286,8 +286,8 @@ bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool s
 }
 void PconsWindow::Draw(IDirect3DDevice9* device) {
     if (!visible) return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    if(!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
     if (show_enable_button) {
         ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
@@ -415,7 +415,9 @@ bool PconsWindow::SetEnabled(bool b) {
 
 void PconsWindow::RegisterSettingsContent() {
     ToolboxUIElement::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent("Game Settings",
+    ToolboxModule::RegisterSettingsContent(
+        "Game Settings",
+        nullptr,
         [this](const std::string*, bool is_showing) {
             if (!is_showing) return;
             DrawLunarsAndAlcoholSettings();
@@ -554,20 +556,18 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
     ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
     ImGui::ShowHelp("Toolbox will disable a pcon if it is not found in the inventory");
-    ImGui::Checkbox("Disable on map change", &disable_pcons_on_map_change);
-    ImGui::ShowHelp("Toolbox will disable pcons when leaving an explorable area");
     ImGui::Checkbox("Refill from storage", &Pcon::refill_if_below_threshold);
     ImGui::ShowHelp("Toolbox will refill pcons from storage if below the threshold");
     ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
     ImGui::ShowHelp("Display a number on the bottom of each pcon icon, showing total quantity in storage.\n"
                     "This only displays when in an outpost.");
-    ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%.0f milliseconds");
+    ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%d milliseconds");
     ImGui::ShowHelp(
         "After using a pcon, toolbox will not use it again for this amount of time.\n"
         "It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
         "Decrease the value if you have good ping and you die a lot.");
-    ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%.0f milliseconds");
-    if (ImGui::TreeNode("Thresholds")) {
+    ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%d milliseconds");
+    if (ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");
         for (Pcon* pcon : pcons) {
             ImGui::SliderInt(pcon->chat, &pcon->threshold, 0, 250);
@@ -582,7 +582,7 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::ShowHelp("Size of each Pcon icon in the interface");
     Colors::DrawSettingHueWheel("Enabled-Background", &Pcon::enabled_bg_color);
     if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
-    if (ImGui::TreeNode("Visibility")) {
+    if (ImGui::TreeNodeEx("Visibility", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Checkbox("Enable/Disable button", &show_enable_button);
         ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
         ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
@@ -599,11 +599,13 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::Separator();
     DrawLunarsAndAlcoholSettings();
     ImGui::Separator();
-    ImGui::Text("Auto-Disabling Pcons in elite areas");
+    ImGui::Text("Auto-Disabling Pcons");
     ImGui::Checkbox("Auto Disable on Vanquish completion", &disable_cons_on_vanquish_completion);
     ImGui::ShowHelp(disable_cons_on_vanquish_completion_hint);
     ImGui::Checkbox("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room);
     ImGui::ShowHelp(disable_cons_in_final_room_hint);
     ImGui::Checkbox("Auto Disable on final objective completion", &disable_cons_on_objective_completion);
     ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
+    ImGui::Checkbox("Disable on map change", &disable_pcons_on_map_change);
+    ImGui::ShowHelp("Toolbox will disable pcons when leaving an explorable area");
 }

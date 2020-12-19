@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <cstdlib>
 
 #include <GWCA/Utilities/Macros.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -104,14 +105,14 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible)
         return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
     float offset = 0.0f;
     const float tiny_text_width = 50.0f * ImGui::GetIO().FontGlobalScale;
     const float short_text_width = 80.0f * ImGui::GetIO().FontGlobalScale;
-    const float avail_width = ImGui::GetContentRegionAvailWidth();
+    const float avail_width = ImGui::GetContentRegionAvail().x;
     const float long_text_width = 200.0f * ImGui::GetIO().FontGlobalScale;
     ImGui::Text("#");
     ImGui::SameLine(offset += tiny_text_width);
@@ -123,8 +124,15 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SameLine(offset += tiny_text_width);
     ImGui::Text("Type");
     ImGui::Separator();
+    char buf[16] = {};
+    static std::wstring search_term;
+    if (ImGui::InputText("Search", buf, sizeof buf)) {
+        search_term = GuiUtils::ToLower(GuiUtils::StringToWString(buf));
+    }
     for (size_t i = 0; i < skills.size(); i++) {
         if (!skills[i]) continue;
+        if (!search_term.empty() && GuiUtils::ToLower(skills[i]->Name()).find(search_term) == std::wstring::npos)
+            continue;
         ImGui::Text("%d", i);
         if (!ImGui::IsItemVisible())
             continue;

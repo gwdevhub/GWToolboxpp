@@ -293,8 +293,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     case WM_SIZE:
         // ImGui doesn't need this, it reads the viewport size directly
         break;
-
     default:
+        // Custom messages registered via RegisterWindowMessage
+        if (Message >= 0xC000 && Message <= 0xFFFF) {
+            for (ToolboxModule* m : tb.GetModules()) {
+                m->WndProc(Message, wParam, lParam);
+            }
+        }
         break;
     }
     
@@ -324,12 +329,6 @@ void GWToolbox::Initialize() {
     // if the file does not exist we'll load module settings once downloaded, but we need the file open
     // in order to read defaults
     OpenSettingsFile();
-    Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
-        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
-        [](bool success) {
-            UNREFERENCED_PARAMETER(success);
-            Minimap::Instance().custom_renderer.LoadMarkers();
-        });
 
     Log::Log("Creating Modules\n");
     core_modules.push_back(&Resources::Instance());
@@ -344,12 +343,10 @@ void GWToolbox::Initialize() {
 
     ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
 
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-        && GW::Agents::GetAgentArray().valid()
-        && GW::Agents::GetPlayer() != nullptr) {
-
-        DWORD playerNumber = GW::Agents::GetPlayerAsAgentLiving()->player_number;
-        Log::Info("Hello %ls!", GW::Agents::GetPlayerNameByLoginNumber(playerNumber));
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+        auto* g = GW::GameContext::instance();
+        if(g && g->character && g->character->player_name)
+            Log::InfoW(L"Hello %s!", g->character->player_name);
     }
 }
 void GWToolbox::FlashWindow() {
@@ -409,7 +406,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
         ImGui::CreateContext();
-        ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
+        //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
+        ImGui_ImplDX9_Init(device);
+        ImGui_ImplWin32_Init(GW::MemoryMgr().GetGWWindowHandle());
+
         ImGuiIO& io = ImGui::GetIO();
         io.MouseDrawCursor = false;
         
@@ -451,6 +451,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
             return; // Fonts not loaded yet.
 
         ImGui_ImplDX9_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+
+        Minimap::Render(device);
+
+        ImGui::NewFrame();
+
         // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct, 
         // or things like alt-tab make imgui think that alt is still down.
         ImGui::GetIO().KeysDown[VK_CONTROL] = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
@@ -461,6 +467,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {
             uielement->Draw(device);
         }
+        //for (TBModule* mod : GWToolbox::Instance().plugins) {
+        //    mod->Draw(device);
+        //}
 
 #ifdef _DEBUG
         // Feel free to uncomment to play with ImGui's features
@@ -468,13 +477,15 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
 
+        ImGui::EndFrame();
         ImGui::Render();
-        ImDrawData* draw_data = ImGui::GetDrawData();
-        ImGui_ImplDX9_RenderDrawData(draw_data);
+        ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
     }
 
     // === destruction ===
     if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
+        if (!GuiUtils::FontsLoaded())
+            return;
         for (ToolboxModule* module : GWToolbox::Instance().modules) {
             if (!module->CanTerminate())
                 return;
@@ -483,6 +494,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         GWToolbox::Instance().Terminate();
 
         ImGui_ImplDX9_Shutdown();
+        ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
 
         Log::Log("Restoring input hook\n");
@@ -513,6 +525,9 @@ void GWToolbox::Update(GW::HookStatus *)
         for (ToolboxModule* module : tb.modules) {
             module->Update(delta_f);
         }
+        //for (TBModule* module : tb.plugins) {
+        //    module->Update(delta_f);
+        //}
 
         last_tick_count = tick;
     }
