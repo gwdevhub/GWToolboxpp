@@ -151,6 +151,8 @@ HeroBuildsWindow::~HeroBuildsWindow() {
 void HeroBuildsWindow::Initialize() {
     ToolboxWindow::Initialize();
     send_timer = TIMER_INIT();
+    GW::Chat::CreateCommand(L"heroteam", &CmdHeroTeamBuild);
+    GW::Chat::CreateCommand(L"herobuild", &CmdHeroTeamBuild);
 }
 
 void HeroBuildsWindow::Terminate() {
@@ -571,6 +573,26 @@ void HeroBuildsWindow::Update(float) {
     last_instance_type = instance_type;
 }
 
+void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, int argc, LPWSTR* argv) {
+    if (argc < 2) {
+        Log::ErrorW(L"Syntax: /%s [hero_build_name]",argv[0]);
+        return;
+    }
+    std::wstring argBuildname = argv[1];
+    for (int i = 2; i < argc; i++) {
+        argBuildname.append(L" ");
+        argBuildname.append(argv[i]);
+    }
+    std::string argBuildName_s = GuiUtils::WStringToString(argBuildname);
+    HeroBuildsWindow::TeamHeroBuild* found = Instance().GetTeambuildByName(argBuildName_s);
+    if (!found) {
+        Log::ErrorW(L"No hero build found for %s",argBuildname.c_str());
+        return;
+    }
+    const TeamHeroBuild& tbuild = *(const TeamHeroBuild*)found;
+    Instance().Load(tbuild);
+}
+
 void HeroBuildsWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
@@ -709,4 +731,16 @@ bool HeroBuildsWindow::CodeOnHero::Process() {
         return true;
     }
     return false;
+}
+
+HeroBuildsWindow::TeamHeroBuild* HeroBuildsWindow::GetTeambuildByName(std::string& build_name_search) {
+    std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(build_name_search));
+    for (auto& tb : teambuilds) {
+        std::string name = GuiUtils::ToLower(GuiUtils::RemovePunctuation(tb.name));
+        if (name.length() < compare.length())
+            continue; // String entered by user is longer
+        if (name.rfind(compare) == 0)
+            return &tb;
+    }
+    return nullptr;
 }
