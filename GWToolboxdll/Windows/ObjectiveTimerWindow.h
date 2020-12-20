@@ -71,8 +71,7 @@ private:
     public:
         char name[126] = "";
         int indent = 0;
-        bool starting_completes_previous_objective = false;
-        bool starting_completes_all_previous = false;
+        int starting_completes_n_previous_objectives = 0; // use -1 for all
 
         struct Event {
             EventType type;
@@ -125,16 +124,17 @@ private:
 
         std::vector<Objective> objectives;
 
-        Objective& AddObjective(Objective&& obj) { 
+        Objective& AddObjective(Objective&& obj, int starting_completes_num_previous = 0) { 
+            obj.starting_completes_n_previous_objectives = starting_completes_num_previous;
             objectives.push_back(std::move(obj)); 
             return objectives.back();
         }
         Objective& AddObjectiveAfter(Objective&& obj) {
-            obj.starting_completes_previous_objective = true;
+            obj.starting_completes_n_previous_objectives = 1;
             return AddObjective(std::move(obj));
         }
         Objective& AddObjectiveAfterAll(Objective&& obj) {
-            obj.starting_completes_all_previous = true;
+            obj.starting_completes_n_previous_objectives = -1;
             return AddObjective(std::move(obj));
         }
         void AddQuestObjective(const char* obj_name, uint32_t id)
@@ -166,6 +166,7 @@ private:
     bool clear_cached_times = false;
     bool auto_send_age = false;
     bool show_detailed_objectives = true; // currently only for doa
+    bool show_debug_events = false;
     ObjectiveSet* current_objective_set = nullptr;
 
     void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0);
