@@ -710,22 +710,22 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet()
         .AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_4_first)
         .AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_4_second);
     
-    os->AddObjectiveAfter(Objective("Room 6 | Lethargy")).AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_5);
-    os->AddObjectiveAfter(Objective("Room 7 | Depletion")).AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_6);
+    os->AddObjectiveAfterAll(Objective("Room 6 | Lethargy")).AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_5);
+    os->AddObjectiveAfterAll(Objective("Room 7 | Depletion")).AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_6);
 
     // 8 and 9 together because theres no boundary between
-    os->AddObjectiveAfter(Objective("Room 8-9 | Failure/Shadows"))
+    os->AddObjectiveAfterAll(Objective("Room 8-9 | Failure/Shadows"))
         .AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_7);
     
-    os->AddObjectiveAfter(Objective("Room 10 | Scorpion"))
+    os->AddObjectiveAfterAll(Objective("Room 10 | Scorpion"))
         .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room10);
-    os->AddObjectiveAfter(Objective("Room 11 | Fear")).AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_11);
-    os->AddObjectiveAfter(Objective("Room 12 | Depletion"))
+    os->AddObjectiveAfterAll(Objective("Room 11 | Fear")).AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_11);
+    os->AddObjectiveAfterAll(Objective("Room 12 | Depletion"))
         .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room12);
     // 13 and 14 together because theres no boundary between
-    os->AddObjectiveAfter(Objective("Room 13-14 | Decay/Torment"))
+    os->AddObjectiveAfterAll(Objective("Room 13-14 | Decay/Torment"))
         .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room13); 
-    os->AddObjectiveAfter(Objective("Room 15 | Kanaxai"))
+    os->AddObjectiveAfterAll(Objective("Room 15 | Kanaxai"))
         .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room15)
         .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6D4D\x0\x0\x0\x0\x2810")
         .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6D4D\x0\x0\x0\x0\x1488");
