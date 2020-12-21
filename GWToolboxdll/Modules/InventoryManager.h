@@ -83,6 +83,9 @@ private:
     bool salvage_listeners_attached = false;
     bool only_use_superior_salvage_kits = false;
     bool salvage_rare_mats = false;
+    bool show_transact_quantity_popup = false;
+    bool transaction_listeners_attached = false;
+
 
     std::map<GW::Constants::Bag, bool> bags_to_salvage_from = {
         { GW::Constants::Bag::Backpack,true },
@@ -101,6 +104,7 @@ private:
 
     GW::HookEntry on_map_change_entry;
     GW::HookEntry salvage_hook_entry;
+    GW::HookEntry transaction_hook_entry;
     GW::HookEntry ItemClick_Entry;
 
     void FetchPotentialItems();
@@ -110,6 +114,11 @@ private:
     void CancelSalvage();
     void CancelIdentify();
     void CancelAll();
+    void ContinueTransaction();
+    void CancelTransaction();
+    static void ClearTransactionSession(GW::HookStatus* status = nullptr, void* packet = nullptr);
+    void AttachTransactionListeners();
+    void DetachTransactionListeners();
 public:
     struct Item : GW::Item {
         GW::ItemModifier *GetModifier(uint32_t identifier);
@@ -155,6 +164,54 @@ public:
     void Identify(Item* item, Item* kit);
     void Salvage(Item* item, Item* kit);
 private:
+    struct CtoS_TransactItems {
+        uint32_t header = GAME_CMSG_BUY_MATERIALS;
+        uint32_t type;
+        uint32_t gold_give = 0;
+        uint32_t item_give_count = 0;
+        uint32_t item_give_ids[16];
+        uint32_t gold_recv = 0;
+        uint32_t item_recv_count = 0;
+        uint32_t item_recv_ids[16];
+    };
+    static_assert(sizeof(CtoS_TransactItems) == 0x98);
+    struct CtoS_QuoteItem {
+        uint32_t header = GAME_CMSG_REQUEST_QUOTE;
+        uint32_t type;
+        uint32_t unk1 = 0;
+        uint32_t gold_give = 0;
+        uint32_t item_give_count = 0;
+        uint32_t item_give_ids[16];
+        uint32_t gold_recv = 0;
+        uint32_t item_recv_count = 0;
+        uint32_t item_recv_ids[16];
+    };
+    static_assert(sizeof(CtoS_QuoteItem) == 0x9C);
+    struct PendingTransaction {
+        enum State : uint8_t {
+            None,
+            Prompt,
+            Pending,
+            Quoting,
+            Quoted,
+            Transacting
+        } state = None;
+        uint32_t type;
+        uint32_t price;
+        uint32_t item_id;
+        clock_t state_timestamp = 0;
+        void setState(State _state) {
+            state = _state;
+            state_timestamp = clock();
+        }
+        CtoS_QuoteItem quote();
+        CtoS_TransactItems transact();
+        Item* item();
+        bool in_progress() { return state > State::Prompt; }
+        bool selling();
+    };
+    
+
     struct PendingItem {
         uint32_t item_id = 0;
         uint32_t slot = 0;
@@ -179,6 +236,13 @@ private:
     PendingItem pending_identify_kit;
     PendingItem pending_salvage_item;
     PendingItem pending_salvage_kit;
+    PendingTransaction pending_transaction;
+
+    int pending_transaction_amount = 0;
+    bool pending_cancel_transaction = false;
+    bool is_transacting = false;
+    bool has_prompted_transaction = false;
+
     clock_t pending_salvage_at = 0;
     clock_t pending_identify_at = 0;
     PendingItem context_item;

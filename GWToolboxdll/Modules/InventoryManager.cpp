@@ -10,6 +10,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/MerchantMgr.h>
 
 #include <Logger.h>
 #include <GuiUtils.h>
@@ -194,6 +195,7 @@ namespace {
         return to_move - remaining;
     }
 
+    uint32_t requesting_quote_type = 0;
 } // namespace
 InventoryManager::InventoryManager()
 {
@@ -203,6 +205,37 @@ InventoryManager::InventoryManager()
 InventoryManager::~InventoryManager()
 {
     ClearPotentialItems();
+}
+void InventoryManager::Initialize() {
+    ToolboxUIElement::Initialize();
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&on_map_change_entry, [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
+        CancelAll();
+        });
+    GW::Items::RegisterItemClickCallback(&ItemClick_Entry, ItemClickCallback);
+    GW::CtoS::RegisterPacketCallback(&ItemClick_Entry, GAME_CMSG_REQUEST_QUOTE,
+        [this](GW::HookStatus*, void* pak) -> void {
+            requesting_quote_type = 0;
+            if (pending_transaction.in_progress() || !ImGui::IsKeyDown(VK_CONTROL)) {
+                return;
+            }
+            CtoS_QuoteItem* quote = (CtoS_QuoteItem*)pak;
+            requesting_quote_type = quote->type;
+        });
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&ItemClick_Entry, [this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) {
+        if (!requesting_quote_type)
+            return;
+        if (pending_transaction.in_progress())
+            return;
+        pending_cancel_transaction = true;
+        GW::Item* requested_item = GW::Items::GetItemById(packet->itemid);
+        if (!requested_item)
+            return;
+        pending_transaction.type = requesting_quote_type;
+        pending_transaction.item_id = requested_item->item_id;
+        pending_transaction.price = packet->price;
+        requesting_quote_type = 0;
+        show_transact_quantity_popup = true;
+        });
 }
 void InventoryManager::SaveSettings(CSimpleIni* ini) {
     ToolboxUIElement::SaveSettings(ini);
@@ -241,6 +274,20 @@ void InventoryManager::CancelSalvage()
     context_item.item_id = 0;
     pending_cancel_salvage = false;
 }
+void InventoryManager::CancelTransaction()
+{
+    DetachTransactionListeners();
+    ClearTransactionSession();
+    is_transacting = has_prompted_transaction = false;
+    pending_transaction_amount = 0;
+    pending_cancel_transaction = false;
+}
+void InventoryManager::ClearTransactionSession(GW::HookStatus* status, void*)
+{
+    if (status)
+        status->blocked = true;
+    Instance().pending_transaction.setState(PendingTransaction::State::None);
+}
 void InventoryManager::CancelIdentify()
 {
     is_identifying = is_identifying_all = false;
@@ -255,6 +302,7 @@ void InventoryManager::CancelAll()
     ClearPotentialItems();
     CancelSalvage();
     CancelIdentify();
+    CancelTransaction();
 }
 void InventoryManager::AttachSalvageListeners() {
     if (salvage_listeners_attached)
@@ -275,6 +323,41 @@ void InventoryManager::AttachSalvageListeners() {
             status->blocked = true;
         });
     salvage_listeners_attached = true;
+}
+void InventoryManager::AttachTransactionListeners() {
+    if (transaction_listeners_attached)
+        return;
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TransactionDone>(&salvage_hook_entry, [this](GW::HookStatus* status, GW::Packet::StoC::TransactionDone*) {
+        pending_transaction_amount--;
+        status->blocked = true;
+        //Log::Info("Transacted item; %d to go", pending_transaction_amount);
+        Instance().pending_transaction.setState(PendingTransaction::State::Pending);
+        });
+    GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GAME_SMSG_TRANSACTION_REJECT, [this](GW::HookStatus* status, void*) {
+        if (!pending_transaction.in_progress())
+            return;
+        pending_cancel_transaction = true;
+        Log::WarningW(L"Trader rejected transaction");
+        status->blocked = true;
+        return;
+        });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&salvage_hook_entry, [this](GW::HookStatus* status, GW::Packet::StoC::QuotedItemPrice* packet) {      
+        if (pending_transaction.item_id != packet->itemid) {
+            pending_cancel_transaction = true;
+            return;
+        }
+        pending_transaction.price = packet->price;
+        pending_transaction.setState(PendingTransaction::State::Quoted);
+        status->blocked = true;
+        });
+    transaction_listeners_attached = true;
+}
+void InventoryManager::DetachTransactionListeners() {
+    if (!transaction_listeners_attached)
+        return;
+    GW::StoC::RemoveCallback(GW::Packet::StoC::TransactionDone::STATIC_HEADER, &salvage_hook_entry);
+    GW::StoC::RemoveCallback(GW::Packet::StoC::QuotedItemPrice::STATIC_HEADER, &salvage_hook_entry);
+    transaction_listeners_attached = false;
 }
 void InventoryManager::DetachSalvageListeners() {
     if (!salvage_listeners_attached)
@@ -352,6 +435,63 @@ void InventoryManager::ContinueSalvage() {
     if (is_salvaging_all)
         SalvageAll(salvage_all_type);
 }
+void InventoryManager::ContinueTransaction() {
+    if (!IsMapReady()) {
+        pending_cancel_transaction = true;
+    }
+
+    switch (pending_transaction.state) {
+    case PendingTransaction::State::Pending: {
+        if (pending_cancel_transaction) {
+            CancelTransaction();
+            return;
+        }
+        // Check if we need any more of this item; send quote if yes, complete if no.
+        if (pending_transaction_amount <= 0) {
+            Log::Info("Transaction complete");
+            CancelTransaction();
+            return;
+        }
+        Log::Log("PendingTransaction pending, ask for quote\n");
+        pending_transaction.setState(PendingTransaction::State::Quoting);
+        auto packet = pending_transaction.quote();
+        AttachTransactionListeners();
+        GW::CtoS::SendPacket(&packet);
+    }break;
+    case PendingTransaction::State::Quoting:
+        // Check for timeout having asked for a quote.
+        if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
+            Log::ErrorW(L"Timeout waiting for item quote");
+            CancelTransaction();
+            return;
+        }
+        break;
+    case PendingTransaction::State::Quoted: {
+        if (pending_cancel_transaction) {
+            CancelTransaction();
+            return;
+        }
+        Log::Log("PendingTransaction quoted %d, moving to buy/sell\n", pending_transaction.price);
+        // Got a quote; begin transaction
+        pending_transaction.setState(PendingTransaction::State::Transacting);
+        auto packet = pending_transaction.transact();
+        AttachTransactionListeners();
+        GW::CtoS::SendPacket(&packet);
+    }break;
+    case PendingTransaction::State::Transacting:
+        // Check for timeout having agreed to buy or sell
+        if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
+            Log::ErrorW(L"Timeout waiting for item sell/buy");
+            CancelTransaction();
+            return;
+        }
+        break;
+    default:
+        // Anything else, cancel the transaction.
+        CancelTransaction();
+        return;
+    }
+}
 void InventoryManager::SalvageAll(SalvageAllType type) {
     if (type != salvage_all_type) {
         CancelSalvage();
@@ -406,13 +546,6 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
     }
 
     Salvage(item, kit);
-}
-void InventoryManager::Initialize() {
-    ToolboxUIElement::Initialize();
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&on_map_change_entry, [this](...) {
-        CancelAll();
-        });
-    GW::Items::RegisterItemClickCallback(&ItemClick_Entry, ItemClickCallback);
 }
 void InventoryManager::Salvage(Item* item, Item* kit) {
     if (!item || !kit)
@@ -693,6 +826,9 @@ void InventoryManager::Update(float delta) {
         IdentifyAll(identify_all_type);
     if (is_salvaging_all)
         SalvageAll(salvage_all_type);
+    if (pending_transaction.in_progress())
+        ContinueTransaction();
+
 };
 void InventoryManager::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
@@ -767,6 +903,45 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         }
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
+        ImGui::EndPopup();
+    }
+    if (show_transact_quantity_popup) {
+        ImGui::OpenPopup("Transaction quantity");
+        pending_transaction.setState(PendingTransaction::State::Prompt);
+        show_transact_quantity_popup = false;
+    }
+    if (ImGui::BeginPopupModal("Transaction quantity", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        switch (pending_transaction.state) {
+        case PendingTransaction::State::None:
+            // Transaction has just completed, progress window still open - close it now.
+            pending_cancel_transaction = true;
+            ImGui::CloseCurrentPopup();
+            break;
+        case PendingTransaction::State::Prompt:
+            // Prompt user for amount
+            ImGui::Text(pending_transaction.selling() ? "Enter quantity to sell:" : "Enter quantity to buy:");
+            if (ImGui::InputInt("##transacting_quantity", &pending_transaction_amount, 1, 1)) {
+                if (pending_transaction_amount < 1)
+                    pending_transaction_amount = 1;
+            }
+            if (ImGui::Button("Continue")) {
+                pending_transaction.setState(PendingTransaction::State::Pending);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel")) {
+                pending_cancel_transaction = true;
+                ImGui::CloseCurrentPopup();
+            }
+            break;
+        default:
+            // Anything else is in progress.
+            ImGui::Text(pending_transaction.selling() ? "Selling items..." : "Buying items...");
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                pending_cancel_transaction = true;
+                ImGui::CloseCurrentPopup();
+            }
+            break;
+        }
         ImGui::EndPopup();
     }
     if (show_salvage_all_popup) {
@@ -936,6 +1111,7 @@ void InventoryManager::ClearPotentialItems()
     }
     potential_salvage_all_items.clear();
 }
+
 bool InventoryManager::Item::IsWeaponSetItem()
 {
     if (!IsWeapon())
@@ -1103,4 +1279,46 @@ InventoryManager::Item *InventoryManager::PendingItem::item()
         return nullptr;
     Item *item = static_cast<Item *>(GW::Items::GetItemBySlot(bag, slot + 1));
     return item && item->item_id == item_id ? item : nullptr;
+}
+
+InventoryManager::Item* InventoryManager::PendingTransaction::item()
+{
+    return static_cast<Item*>(GW::Items::GetItemById(item_id));
+}
+InventoryManager::CtoS_QuoteItem InventoryManager::PendingTransaction::quote()
+{
+    CtoS_QuoteItem q;
+    q.type = type;
+    if (selling()) {
+        q.gold_recv = 0;
+        q.item_give_count = 1;
+        q.item_give_ids[0] = item_id;
+    }
+    else {
+        q.gold_give = 0;
+        q.item_recv_count = 1;
+        q.item_recv_ids[0] = item_id;
+    }
+    return q;
+}
+InventoryManager::CtoS_TransactItems InventoryManager::PendingTransaction::transact()
+{
+    CtoS_TransactItems q;
+    q.type = type;
+    if (selling()) {
+        q.gold_recv = price;
+        q.item_give_count = 1;
+        q.item_give_ids[0] = item_id;
+    }
+    else {
+        q.gold_give = price;
+        q.item_recv_count = 1;
+        q.item_recv_ids[0] = item_id;
+    }
+    return q;
+}
+
+bool InventoryManager::PendingTransaction::selling()
+{
+    return type == GW::Merchant::TransactionType::MerchantSell || type == GW::Merchant::TransactionType::TraderSell;
 }
