@@ -200,6 +200,7 @@ private:
         uint32_t price;
         uint32_t item_id;
         clock_t state_timestamp = 0;
+        uint8_t retries = 0;
         void setState(State _state) {
             state = _state;
             state_timestamp = clock();

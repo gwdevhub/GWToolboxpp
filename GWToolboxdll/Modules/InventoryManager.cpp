@@ -281,6 +281,7 @@ void InventoryManager::CancelTransaction()
     is_transacting = has_prompted_transaction = false;
     pending_transaction_amount = 0;
     pending_cancel_transaction = false;
+    pending_transaction.retries = 0;
 }
 void InventoryManager::ClearTransactionSession(GW::HookStatus* status, void*)
 {
@@ -460,13 +461,19 @@ void InventoryManager::ContinueTransaction() {
     }break;
     case PendingTransaction::State::Quoting:
         // Check for timeout having asked for a quote.
-        if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
-            Log::ErrorW(L"Timeout waiting for item quote");
-            CancelTransaction();
+        if (TIMER_DIFF(pending_transaction.state_timestamp) > 1000) {
+            if (pending_transaction.retries > 0) {
+                Log::ErrorW(L"Timeout waiting for item quote");
+                CancelTransaction();
+                return;
+            }
+            pending_transaction.retries++;
+            pending_transaction.setState(PendingTransaction::State::Pending);
             return;
         }
         break;
     case PendingTransaction::State::Quoted: {
+        pending_transaction.retries = 0;
         if (pending_cancel_transaction) {
             CancelTransaction();
             return;
@@ -480,9 +487,14 @@ void InventoryManager::ContinueTransaction() {
     }break;
     case PendingTransaction::State::Transacting:
         // Check for timeout having agreed to buy or sell
-        if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
-            Log::ErrorW(L"Timeout waiting for item sell/buy");
-            CancelTransaction();
+        if (TIMER_DIFF(pending_transaction.state_timestamp) > 1000) {
+            if (pending_transaction.retries > 0) {
+                Log::ErrorW(L"Timeout waiting for item sell/buy");
+                CancelTransaction();
+                return;
+            }
+            pending_transaction.retries++;
+            pending_transaction.setState(PendingTransaction::State::Pending);
             return;
         }
         break;
@@ -908,7 +920,6 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
     if (show_transact_quantity_popup) {
         ImGui::OpenPopup("Transaction quantity");
         pending_transaction.setState(PendingTransaction::State::Prompt);
-        show_transact_quantity_popup = false;
     }
     if (ImGui::BeginPopupModal("Transaction quantity", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         switch (pending_transaction.state) {
@@ -917,14 +928,38 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
             pending_cancel_transaction = true;
             ImGui::CloseCurrentPopup();
             break;
-        case PendingTransaction::State::Prompt:
+        case PendingTransaction::State::Prompt: {
+            if (show_transact_quantity_popup) {
+                pending_transaction_amount = 1;
+                if (pending_transaction.selling()) {
+                    Item* item = pending_transaction.item();
+                    if (item) {
+                        // Set initial transaction amount to be the entire stack
+                        pending_transaction_amount = item->quantity;
+                        if (item->GetIsMaterial() && !item->IsRareMaterial() && pending_transaction.type == GW::Merchant::TraderSell) {
+                            pending_transaction_amount = static_cast<int>(floor(pending_transaction_amount / 10));
+                        }
+                    }
+                }
+                else {
+                    pending_transaction_amount = static_cast<int>(floor(GW::Items::GetGoldAmountOnCharacter() / pending_transaction.price));
+                }
+            }
             // Prompt user for amount
             ImGui::Text(pending_transaction.selling() ? "Enter quantity to sell:" : "Enter quantity to buy:");
-            if (ImGui::InputInt("##transacting_quantity", &pending_transaction_amount, 1, 1)) {
+            if (ImGui::InputInt("###transacting_quantity", &pending_transaction_amount, 1, 1)) {
                 if (pending_transaction_amount < 1)
                     pending_transaction_amount = 1;
             }
-            if (ImGui::Button("Continue")) {
+            ImGuiID id = ImGui::GetID("###transacting_quantity");
+            if (show_transact_quantity_popup) {
+                ImGui::SetFocusID(id, ImGui::GetCurrentWindow());
+            }
+            show_transact_quantity_popup = false;
+            bool begin_transaction = (ImGui::GetFocusID() == id && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)));
+            begin_transaction |= ImGui::Button("Continue");
+            if (begin_transaction) {
+                pending_cancel_transaction = false;
                 pending_transaction.setState(PendingTransaction::State::Pending);
             }
             ImGui::SameLine();
@@ -932,7 +967,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                 pending_cancel_transaction = true;
                 ImGui::CloseCurrentPopup();
             }
-            break;
+        } break;
         default:
             // Anything else is in progress.
             ImGui::Text(pending_transaction.selling() ? "Selling items..." : "Buying items...");
