@@ -45,6 +45,7 @@ namespace
     bool save_to_disk = true;
     bool show_past_runs = false;
 
+    //@Cleanup: These IDs should be wchar_t[]'s e.g. L"\x8101\x273F" and the doa event should be a wchar_t comparison instead of something bespoke.
     enum DoA_ObjId : uint32_t
     {
         Foundry = 0x273F,
@@ -219,11 +220,13 @@ void ObjectiveTimerWindow::Initialize()
             const GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
             if (!buff || !buff->valid() || !buff->size()) return; // Message buffer empty!?
             const wchar_t* msg = buff->begin();
-            Event(EventType::ServerMessage, buff->size(), msg);
+            // NB: buff->size() includes null terminating char. All GW strings are null terminated, use wcslen instead
+            Event(EventType::ServerMessage, wcslen(msg), msg);
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, 
         [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) {
-            Event(EventType::DisplayDialogue, 122, packet->message);
+            // NB: All GW strings are null terminated, use wcslen to avoid having to check all 122 chars 
+            Event(EventType::DisplayDialogue, wcslen(packet->message), packet->message);
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
         &ManipulateMapObject_Entry, [this](GW::HookStatus*, GW::Packet::StoC::ManipulateMapObject* packet) {
