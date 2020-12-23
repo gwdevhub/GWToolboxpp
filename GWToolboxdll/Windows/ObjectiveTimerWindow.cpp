@@ -1017,7 +1017,7 @@ ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::AddEndEvent(
 ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::SetStarted()
 {
     if (start == TIME_UNKNOWN) {
-        start = TimerWidget::Instance().GetTimer();
+        start = TimerWidget::Instance().GetTimerMs();
     }
     PrintTime(cached_start, sizeof(cached_start), start);
     status = Status::Started;
@@ -1026,7 +1026,7 @@ ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::SetStarted()
 ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::SetDone()
 {
     if (done == TIME_UNKNOWN) {
-        done = TimerWidget::Instance().GetTimer();
+        done = TimerWidget::Instance().GetTimerMs();
     }
     PrintTime(cached_done, sizeof(cached_done), done);
 
@@ -1047,7 +1047,7 @@ bool ObjectiveTimerWindow::Objective::IsDone() const { return done != TIME_UNKNO
 
 void ObjectiveTimerWindow::Objective::Update()
 {
-    unsigned long now = TimerWidget::Instance().GetTimer();
+    unsigned long now = TimerWidget::Instance().GetTimerMs();
 
     if (start == TIME_UNKNOWN) {
         PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
@@ -1132,7 +1132,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Update()
 {
     if (!active) return;
 
-    unsigned long now = TimerWidget::Instance().GetTimer();
+    unsigned long now = TimerWidget::Instance().GetTimerMs();
 
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         PrintTime(cached_time, sizeof(cached_time), now, show_decimal);

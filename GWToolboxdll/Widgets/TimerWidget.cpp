@@ -19,6 +19,15 @@
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/TimerWidget.h>
 
+using namespace std::chrono;
+
+namespace
+{
+    steady_clock::time_point now() { return steady_clock::now(); }
+
+    bool is_valid(const steady_clock::time_point& time) { return time.time_since_epoch().count(); }
+}
+
 void TimerWidget::Initialize() {
     ToolboxWidget::Initialize();
 
@@ -35,15 +44,15 @@ void TimerWidget::Initialize() {
 
             if (!never_reset) {
                 if (reset_next_loading_screen) {
-                    run_started = TIMER_INIT();
+                    run_started = now();
                     reset_next_loading_screen = false;
                 }
 
                 if (pak->is_explorable && !in_explorable) { // if zoning from outpost to explorable
-                    run_started = TIMER_INIT();
+                    run_started = now();
                 }
                 if (!pak->is_explorable) { // zoning back to outpost
-                    run_started = TIMER_INIT();
+                    run_started = now();
                 }
 
                 GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)pak->map_id);
@@ -51,13 +60,13 @@ void TimerWidget::Initialize() {
                     bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
 
                     if (new_in_dungeon && !in_dungeon) { // zoning from explorable to dungeon
-                        run_started = TIMER_INIT();
+                        run_started = now();
                     }
 
                     in_dungeon = new_in_dungeon;
                 }
             }
-            run_completed = 0;
+            run_completed = steady_clock::time_point();
             in_explorable = pak->is_explorable;
         });
 
@@ -78,6 +87,9 @@ void TimerWidget::LoadSettings(CSimpleIni *ini) {
     never_reset = ini->GetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
     stop_at_objective_completion =
         ini->GetBoolValue(Name(), VAR_NAME(stop_at_objective_completion), stop_at_objective_completion);
+    also_show_instance_timer = ini->GetBoolValue(Name(), VAR_NAME(also_show_instance_timer), also_show_instance_timer);
+    show_decimals = ini->GetLongValue(Name(), VAR_NAME(show_decimals), show_decimals);
+    show_decimals = std::clamp(show_decimals, 0, 3);
     click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
@@ -94,6 +106,8 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
     ini->SetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
     ini->SetBoolValue(Name(), VAR_NAME(stop_at_objective_completion), stop_at_objective_completion);
+    ini->SetBoolValue(Name(), VAR_NAME(also_show_instance_timer), also_show_instance_timer);
+    ini->SetLongValue(Name(), VAR_NAME(show_decimals), show_decimals);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     ini->SetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
@@ -122,7 +136,11 @@ void TimerWidget::DrawSettingInternal() {
         "Useful for timing longer runs.\n" \
         "Requires 'Use instance timer' above NOT ticked");
     ImGui::Checkbox("Stop at objective completion", &stop_at_objective_completion);
+    ImGui::Checkbox("Also show instance timer", &also_show_instance_timer);
     ImGui::Unindent();
+    if (ImGui::SliderInt("Show decimals", &show_decimals, 0, 3)) {
+        show_decimals = std::clamp(show_decimals, 0, 3);
+    }
     ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");
@@ -144,16 +162,19 @@ void TimerWidget::DrawSettingInternal() {
     }
 }
 
-unsigned long TimerWidget::GetTimer()
-{
-    if (use_instance_timer || run_started == 0) {
-        return GW::Map::GetInstanceTime();
-    } else if (run_completed != 0) {
-        return run_completed;
+std::chrono::milliseconds TimerWidget::GetTimer()
+{   
+    if (use_instance_timer || !is_valid(run_started)) {
+        return milliseconds(GW::Map::GetInstanceTime());
+
+    } else if (is_valid(run_completed)) {
+        return duration_cast<milliseconds>(run_completed - run_started);
+
     } else {
-        return TIMER_DIFF(run_started);
+        return duration_cast<milliseconds>(now() - run_started);
     }
 }
+unsigned long TimerWidget::GetTimerMs() { return static_cast<unsigned long>(GetTimer().count()); }
 
 ImGuiWindowFlags TimerWidget::GetWinFlags(ImGuiWindowFlags flags, bool noinput_if_frozen) const {
     return ToolboxWidget::GetWinFlags(flags, noinput_if_frozen) | (lock_size ? ImGuiWindowFlags_AlwaysAutoResize : 0);
@@ -166,7 +187,27 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
 
-    unsigned long time = GetTimer() / 1000;
+    auto ShowTimer = [this](milliseconds time) -> void {
+        long long secs = duration_cast<seconds>(time).count() % 60;
+        int mins = duration_cast<minutes>(time).count() % 60;
+        int hrs = duration_cast<hours>(time).count();
+        switch (show_decimals) {
+            case 1:
+                snprintf(timer_buffer, 32, "%d:%02d:%02lld.%01lld", hrs, mins, secs, time.count() / 100 % 10);
+                break;
+            case 2:
+                snprintf(timer_buffer, 32, "%d:%02d:%02lld.%02lld", hrs, mins, secs, time.count() / 10 % 100);
+                break;
+            case 3: snprintf(timer_buffer, 32, "%d:%02d:%02lld.%03lld", hrs, mins, secs, time.count() % 1000);
+                break;
+            default: // and 0
+                snprintf(timer_buffer, 32, "%d:%02d:%02lld", hrs, mins, secs);
+                break;
+        }
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
+        ImGui::TextShadowed(timer_buffer, {2, 2});
+        ImGui::PopFont();
+    };
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
@@ -174,10 +215,11 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
 
         // Main timer:
-        snprintf(timer_buffer, 32, "%lu:%02lu:%02lu", time / (60 * 60), (time / 60) % 60, time % 60);
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
-        ImGui::TextShadowed(timer_buffer, { 2, 2 });
-        ImGui::PopFont();
+        ShowTimer(GetTimer());
+
+        if (also_show_instance_timer) {
+            ShowTimer(milliseconds(GW::Map::GetInstanceTime()));
+        }
 
         if (show_extra_timers && (GetUrgozTimer() || GetDeepTimer() || GetDhuumTimer() || GetTrapTimer() || GetDoATimer())) {
 
@@ -214,14 +256,16 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 
 void TimerWidget::SetRunCompleted()
 {
-    if (run_started != 0 && stop_at_objective_completion) {
-        run_completed = TIMER_DIFF(run_started);
+    if (is_valid(run_started) && stop_at_objective_completion) {
+        run_completed = now();
     }
-    Log::Info("Time: %lu:%02lu:%02lu.%02lu", 
-        (run_completed / 1000 / (60 * 60)), 
-        (run_completed / 1000 / 60) % 60, 
-        (run_completed / 1000) % 60, 
-        run_completed / 10 % 100);
+    if (is_valid(run_started) && is_valid(run_completed)) {
+        auto time = duration_cast<milliseconds>(run_completed - run_started);
+        unsigned long secs = duration_cast<seconds>(time).count() % 60;
+        unsigned long mins = duration_cast<minutes>(time).count() % 60;
+        unsigned long hrs = duration_cast<hours>(time).count();
+        Log::Info("Time: %lu:%02lu:%02lu.%02lu", hrs, mins, secs, time.count() / 10 % 100);
+    }
 }
 
 bool TimerWidget::GetUrgozTimer() {
