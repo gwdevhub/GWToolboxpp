@@ -38,6 +38,7 @@ public:
     void SetRunCompleted(); // call when the objectives are completed to stop the timer
     std::chrono::milliseconds GetTimer(); 
     unsigned long GetTimerMs(); // time in milliseconds
+    void PrintTimer(); // prints current timer to chat
 
 private:
     // those function write to extra_buffer and extra_color.
@@ -65,7 +66,6 @@ private:
     };
 
     bool hide_in_outpost = false;
-    bool click_to_print_time = false;
     bool show_extra_timers = true;
     bool show_spirit_timers = true;
     std::map<GW::Constants::SkillID, bool> spirit_effects_enabled{
@@ -84,11 +84,13 @@ private:
     bool also_show_instance_timer = false;
     int show_decimals = 1;
 
+    bool click_to_print_time = false;
+    bool print_time_zoning = false;
+    bool print_time_objective = true;
+
     bool reset_next_loading_screen = false;
     bool in_explorable = false;
     bool in_dungeon = false;
-    //clock_t run_started = 0; // system time of when run started
-    //clock_t run_completed = 0; // set to non-zero when objectives are completed
 
     std::chrono::steady_clock::time_point run_started, run_completed;
 
