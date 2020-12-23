@@ -60,9 +60,9 @@ std::wstring StringDecoderWindow::GetEncodedString()
     std::vector<std::string> results((std::istream_iterator<std::string>(iss)),
                                      std::istream_iterator<std::string>());
 
-    std::wstring encodedW;
-
-    for (size_t i = 0; i < results.size(); i++) {
+    wchar_t encodedW[100];
+    size_t i = 0;
+    for (i=0; i < results.size(); i++) {
         Log::Log("%s\n", results[i].c_str());
         wchar_t c;
         unsigned int lval = 0;
@@ -73,6 +73,7 @@ std::wstring StringDecoderWindow::GetEncodedString()
         printchar(encodedW[i]);
         printf("\n");
     }
+    encodedW[i] = 0;
     return encodedW;
 }
 void StringDecoderWindow::Decode()
