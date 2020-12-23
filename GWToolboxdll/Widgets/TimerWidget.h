@@ -3,6 +3,7 @@
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Packets/StoC.h>
+#include <chrono>
 
 #include <ToolboxWidget.h>
 
@@ -35,7 +36,8 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
     void SetRunCompleted(); // call when the objectives are completed to stop the timer
-    unsigned long GetTimer(); // time in milliseconds
+    std::chrono::milliseconds GetTimer(); 
+    unsigned long GetTimerMs(); // time in milliseconds
 
 private:
     // those function write to extra_buffer and extra_color.
@@ -78,13 +80,17 @@ private:
 
     bool use_instance_timer = false;
     bool never_reset = false;
-    bool reset_next_loading_screen = false;
     bool stop_at_objective_completion = true;
+    bool also_show_instance_timer = false;
+    int show_decimals = 1;
 
+    bool reset_next_loading_screen = false;
     bool in_explorable = false;
     bool in_dungeon = false;
-    clock_t run_started = 0; // system time of when run started
-    clock_t run_completed = 0; // set to non-zero when objectives are completed
+    //clock_t run_started = 0; // system time of when run started
+    //clock_t run_completed = 0; // set to non-zero when objectives are completed
+
+    std::chrono::steady_clock::time_point run_started, run_completed;
 
     unsigned long cave_start = 0; // instance timer when cave started
     GW::HookEntry DisplayDialogue_Entry;

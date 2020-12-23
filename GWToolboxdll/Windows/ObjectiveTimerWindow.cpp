@@ -54,26 +54,31 @@ namespace
     };
 
     // Hex values matching the first char of Kanaxai's dialogs in each room.
-    const enum kanaxai_room_dialogs { Room5 = 0x5336, Room6, Room8, Room10, Room12, Room13, Room14, Room15 };
-    const wchar_t* kanaxai_dialogs[] = {
-        // Room 1-4 no dialog
-        L"\x5336\xBEB8\x8555\x7267", // Room 5 "Fear not the darkness. It is already within you."
-        L"\x5337\xAA3A\xE96F\x3E34", // Room 6 "Is it comforting to know the source of your fears? Or do you fear more
-                                     // now that you see them in front of you."
-        // Room 7 no dialog
-        L"\x5338\xFD69\xA162\x3A04", // Room 8 "Even if you banish me from your sight, I will remain in your mind."
-        // Room 9 no dialog
-        L"\x5339\xA7BA\xC67B\x5D81", // Room 10 "You mortals may be here to defeat me, but acknowledging my presence
-                                     // only makes the nightmare grow stronger."
-        // Room 11 no dialog
-        L"\x533A\xED06\x815D\x5FFB", // Room 12 "So, you have passed through the depths of the Jade Sea, and into the
-                                     // nightmare realm. It is too bad that I must send you back from whence you came."
-        L"\x533B\xCAA6\xFDA9\x3277", // Room 13 "I am Kanaxai, creator of nightmares. Let me make yours into reality."
-        L"\x533C\xDD33\xA330\x4E27", // Room 14 "I will fill your hearts with visions of horror and despair that will
-                                     // haunt you for all of your days."
-        L"\x533D\x9EB1\x8BEE\x2637"  // Kanaxai "What gives you the right to enter my lair? I shall kill you for your
-                                     // audacity, after I destroy your mind with my horrifying visions, of course."
-    };
+    //const enum kanaxai_room_dialogs { Room5 = 0x5336, Room6, Room8, Room10, Room12, Room13, Room14, Room15 };
+
+
+    // Room 1-4 no dialog
+    // Room 5: "Fear not the darkness. It is already within you."
+    const wchar_t kanaxai_dialog_r5[] = L"\x5336\xBEB8\x8555\x7267";
+    // Room 6 "Is it comforting to know the source of your fears? Or do you fear more now that you see them in front of you."
+    const wchar_t kanaxai_dialog_r6[] = L"\x5337\xAA3A\xE96F\x3E34";
+    // Room 7 no dialog
+    // Room 8 "Even if you banish me from your sight, I will remain in your mind."
+    const wchar_t kanaxai_dialog_r8[] = L"\x5338\xFD69\xA162\x3A04";
+    // Room 9 no dialog
+    // Room 10 "You mortals may be here to defeat me, but acknowledging my presence only makes the nightmare grow stronger."
+    const wchar_t kanaxai_dialog_r10[] = L"\x5339\xA7BA\xC67B\x5D81";
+    // Room 11 no dialog
+    // Room 12 "So, you have passed through the depths of the Jade Sea, and into the nightmare realm. It is too bad that I must send you back from whence you came."
+    const wchar_t kanaxai_dialog_r12[] = L"\x533A\xED06\x815D\x5FFB"; 
+    // Room 13 "I am Kanaxai, creator of nightmares. Let me make yours into reality."
+    const wchar_t kanaxai_dialog_r13[] = L"\x533B\xCAA6\xFDA9\x3277"; 
+    // Room 14 "I will fill your hearts with visions of horror and despair that will haunt you for all of your days."
+    const wchar_t kanaxai_dialog_r14[] = L"\x533C\xDD33\xA330\x4E27";
+    // Kanaxai "What gives you the right to enter my lair? I shall kill you for your
+    // audacity, after I destroy your mind with my horrifying visions, of course."
+    const wchar_t kanaxai_dialog_r15[] = L"\x533D\x9EB1\x8BEE\x2637";
+
     const enum DoorID : uint32_t {
         // object_id's for doors opening.
         Deep_room_1_first = 12669,  // Room 1 Complete = Room 5 open
@@ -89,7 +94,7 @@ namespace
         Deep_room_7 = 55680,        // Room 7 Complete = Room 8 open
         // NOTE: Room 8 (failure) to room 10 (scorpion), no door.
         Deep_room_9 = 99887,  // Trigger on leviathan?
-        Deep_room_11 = 29320, // Room 11 door is always open. Use to START room 11 when it comes into range.
+        Deep_room_11 = 28961, // Room 11 door is always open. Use to START room 11 when it comes into range.
     
         DoA_foundry_entrance_r1 = 39534,
         DoA_foundry_r1_r2 = 6356,
@@ -214,11 +219,11 @@ void ObjectiveTimerWindow::Initialize()
             const GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
             if (!buff || !buff->valid() || !buff->size()) return; // Message buffer empty!?
             const wchar_t* msg = buff->begin();
-            Event(EventType::ServerMessage, buff->size(), (uint32_t)msg);
+            Event(EventType::ServerMessage, buff->size(), msg);
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, 
         [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) {
-            Event(EventType::DisplayDialogue, 122, (uint32_t)packet->message);
+            Event(EventType::DisplayDialogue, 122, packet->message);
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
         &ManipulateMapObject_Entry, [this](GW::HookStatus*, GW::Packet::StoC::ManipulateMapObject* packet) {
@@ -297,6 +302,10 @@ ObjectiveTimerWindow::~ObjectiveTimerWindow()
     }
     ClearObjectiveSets();
 }
+void ObjectiveTimerWindow::Event(EventType type, uint32_t count, const wchar_t* msg)
+{
+    Event(type, count, (uint32_t)msg);
+}
 void ObjectiveTimerWindow::Event(EventType type, uint32_t id1, uint32_t id2)
 {
     if (ObjectiveSet* os = GetCurrentObjectiveSet()) {
@@ -308,7 +317,8 @@ void ObjectiveTimerWindow::Event(EventType type, uint32_t id1, uint32_t id2)
                 case EventType::ServerMessage:
                 case EventType::DisplayDialogue: {
                     const wchar_t* msg = (wchar_t*)id2;
-                    Log::Info("Event: %d, %d, %x, %x, %x, %x", type, id1, msg[0], msg[1], msg[2], msg[3]);
+                    Log::Info("Event: %d, %d, %x, %x, %x, %x, %x, %x", type, id1, 
+                        msg[0], msg[1], msg[2], msg[3], msg[4], msg[5]);
                 } break;
                 default: Log::Info("Event: %d, %d, %d", type, id1, id2);
             }
@@ -519,7 +529,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 // 0x8101 0x273D 0x98D8 0xB91A 0x47B8 The Fury: Ah, you have finally arrived. My dark master informed me
                 // I might have visitors....
                 os->AddObjective(Objective("Fury", 1), 5)
-                    .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273D\x98DB\xB91A")
+                    .AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x273D\x98DB\xB91A")
                     .AddEndEvent(EventType::DoACompleteZone, Foundry);
             }
         },
@@ -557,7 +567,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                     .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_mes)
                     .AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro);
                 os->AddObjective(Objective("Tendrils", 1), 3)
-                    .AddStartEvent(EventType::ServerMessage, 3, (uint32_t)L"\x817\x10D\x101")
+                    //.AddStartEvent(EventType::ServerMessage, 4, L"\x8102\x223B\x10A\xB60")
                     .AddEndEvent(EventType::DoACompleteZone, Veil);
             }
         },
@@ -567,15 +577,15 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 .AddEndEvent(EventType::DoACompleteZone, Gloom);
             if (show_detailed_objectives) {
                 os->AddObjective(Objective("Cave", 1), 0)
-                    .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5765\x9846\xA72B")
-                    .AddEndEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x5767\xA547\xB2C2");
+                    .AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x5765\x9846\xA72B")
+                    .AddEndEvent(EventType::DisplayDialogue, 4, L"\x8101\x5767\xA547\xB2C2");
 
                 // TODO: rift may not be possible from outside of range
 
                 // TODO: deathbringer ?
 
                 os->AddObjective(Objective("Darknesses", 1), 1)
-                    .AddStartEvent(EventType::DisplayDialogue, 4, (uint32_t)L"\x8101\x273B\xB5DB\x8B13")
+                    .AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x273B\xB5DB\x8B13")
                     .AddEndEvent(EventType::DoACompleteZone, Gloom);
             }
         }
@@ -621,8 +631,8 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet()
         .AddStartEvent(EventType::DoorOpen, 15529)
         .AddStartEvent(EventType::DoorOpen, 45631)
         .AddStartEvent(EventType::DoorOpen, 53071)
-        .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6C9C\x0\x0\x0\x0\x2810")
-        .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6C9C\x0\x0\x0\x0\x1488");
+        .AddEndEvent(EventType::ServerMessage, 6, L"\x6C9C\x0\x0\x0\x0\x2810")
+        .AddEndEvent(EventType::ServerMessage, 6, L"\x6C9C\x0\x0\x0\x0\x1488");
 
     AddObjectiveSet(os);
 }
@@ -664,17 +674,17 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet()
         .AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_7);
     
     os->AddObjectiveAfterAll(Objective("Room 10 | Scorpion"))
-        .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room10);
+        .AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r10);
     os->AddObjectiveAfterAll(Objective("Room 11 | Fear")).AddStartEvent(EventType::DoorOpen, DoorID::Deep_room_11);
     os->AddObjectiveAfterAll(Objective("Room 12 | Depletion"))
-        .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room12);
+        .AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r12);
     // 13 and 14 together because theres no boundary between
     os->AddObjectiveAfterAll(Objective("Room 13-14 | Decay/Torment"))
-        .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room13); 
+        .AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r13); 
     os->AddObjectiveAfterAll(Objective("Room 15 | Kanaxai"))
-        .AddStartEvent(EventType::DisplayDialogue, kanaxai_room_dialogs::Room15)
-        .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6D4D\x0\x0\x0\x0\x2810")
-        .AddEndEvent(EventType::ServerMessage, 6, (uint32_t)L"\x6D4D\x0\x0\x0\x0\x1488");
+        .AddStartEvent(EventType::DisplayDialogue, 4, kanaxai_dialog_r15)
+        .AddEndEvent(EventType::ServerMessage, 6, L"\x6D4D\x0\x0\x0\x0\x2810")
+        .AddEndEvent(EventType::ServerMessage, 6, L"\x6D4D\x0\x0\x0\x0\x1488");
     AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet()
@@ -986,16 +996,28 @@ ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::AddStartEvent(
     start_events.emplace_back<Event>({et, id1, id2});
     return *this;
 }
+ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::AddStartEvent(
+    EventType et, uint32_t count, const wchar_t* msg)
+{
+    start_events.emplace_back<Event>({et, count, (uint32_t)msg});
+    return *this;
+}
 ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::AddEndEvent(
     EventType et, uint32_t id1, uint32_t id2)
 {
     end_events.emplace_back<Event>({et, id1, id2});
     return *this;
 }
+ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::AddEndEvent(
+    EventType et, uint32_t count, const wchar_t* msg)
+{
+    end_events.emplace_back<Event>({et, count, (uint32_t)msg});
+    return *this;
+}
 ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::SetStarted()
 {
     if (start == TIME_UNKNOWN) {
-        start = TimerWidget::Instance().GetTimer();
+        start = TimerWidget::Instance().GetTimerMs();
     }
     PrintTime(cached_start, sizeof(cached_start), start);
     status = Status::Started;
@@ -1004,7 +1026,7 @@ ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::SetStarted()
 ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::SetDone()
 {
     if (done == TIME_UNKNOWN) {
-        done = TimerWidget::Instance().GetTimer();
+        done = TimerWidget::Instance().GetTimerMs();
     }
     PrintTime(cached_done, sizeof(cached_done), done);
 
@@ -1025,7 +1047,7 @@ bool ObjectiveTimerWindow::Objective::IsDone() const { return done != TIME_UNKNO
 
 void ObjectiveTimerWindow::Objective::Update()
 {
-    unsigned long now = TimerWidget::Instance().GetTimer();
+    unsigned long now = TimerWidget::Instance().GetTimerMs();
 
     if (start == TIME_UNKNOWN) {
         PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
@@ -1110,7 +1132,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Update()
 {
     if (!active) return;
 
-    unsigned long now = TimerWidget::Instance().GetTimer();
+    unsigned long now = TimerWidget::Instance().GetTimerMs();
 
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         PrintTime(cached_time, sizeof(cached_time), now, show_decimal);
@@ -1130,8 +1152,10 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(EventType type, uint32_t id1, uin
             case EventType::DisplayDialogue: {
                 const wchar_t* msg1 = (wchar_t*)id2;
                 const wchar_t* msg2 = (wchar_t*)event.id2;
+                if (msg1 == nullptr) return false;
+                if (msg2 == nullptr) return false;
                 for (uint32_t i = 0; i < id1 && i < event.id1; ++i) {
-                    if (msg1[i] != 0 && msg1[i] != msg2[i]) return false;
+                    if (msg2[i] != 0 && msg1[i] != msg2[i]) return false;
                 }
                 return true;
             }

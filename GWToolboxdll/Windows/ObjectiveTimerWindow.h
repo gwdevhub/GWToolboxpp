@@ -97,7 +97,9 @@ private:
         Objective(const char* name, int indent = 0);
 
         Objective& AddStartEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
+        Objective& AddStartEvent(EventType et, uint32_t count, const wchar_t* msg);
         Objective& AddEndEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
+        Objective& AddEndEvent(EventType et, uint32_t count, const wchar_t* msg);
         Objective& SetStarted();
         Objective& SetDone();
 
@@ -130,12 +132,10 @@ private:
             return objectives.back();
         }
         Objective& AddObjectiveAfter(Objective&& obj) {
-            obj.starting_completes_n_previous_objectives = 1;
-            return AddObjective(std::move(obj));
+            return AddObjective(std::move(obj), 1);
         }
         Objective& AddObjectiveAfterAll(Objective&& obj) {
-            obj.starting_completes_n_previous_objectives = -1;
-            return AddObjective(std::move(obj));
+            return AddObjective(std::move(obj), -1);
         }
         void AddQuestObjective(const char* obj_name, uint32_t id)
         {
@@ -170,6 +170,7 @@ private:
     ObjectiveSet* current_objective_set = nullptr;
 
     void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0);
+    void Event(EventType type, uint32_t count, const wchar_t* msg);
 
     void AddObjectiveSet(ObjectiveSet* os);
     void AddObjectiveSet(GW::Constants::MapID map_id);
