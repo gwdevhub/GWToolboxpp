@@ -252,6 +252,9 @@ public:
 
     bool lazy_chest_looting = false;
 
+    bool auto_age2_on_age = true;
+    bool auto_age_on_vanquish = false;
+
     static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
     std::vector<PendingChatMessage*> pending_messages;
@@ -280,8 +283,6 @@ private:
     bool check_message_on_party_change = true;
     bool npc_speech_bubbles_as_chat = false;
     bool redirect_npc_messages_to_emote_chat = false;
-    bool auto_age2_on_age = true;
-    bool auto_age_on_vanquish = false;
     bool hide_dungeon_chest_popup = false;
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;

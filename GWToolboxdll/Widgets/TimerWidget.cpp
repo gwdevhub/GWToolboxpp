@@ -16,6 +16,7 @@
 #include <Logger.h>
 #include <Timer.h>
 
+#include <Modules/GameSettings.h>
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/TimerWidget.h>
 
@@ -282,7 +283,9 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
             ImVec2 min = ImGui::GetWindowPos();
             ImVec2 max(min.x + size.x, min.y + size.y);
             if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
-                PrintTimer();
+                if (!GameSettings::Instance().auto_age2_on_age) {
+                    PrintTimer();
+                }
                 GW::Chat::SendChat('/', "age");
             }
         }

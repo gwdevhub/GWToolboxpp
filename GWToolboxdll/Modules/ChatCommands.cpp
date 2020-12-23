@@ -45,6 +45,7 @@
 #include <Windows/Hotkeys.h>
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
+#include <Widgets/TimerWidget.h>
 
 
 namespace {
@@ -529,8 +530,7 @@ void ChatCommands::CmdEnterMission(const wchar_t*, int argc, LPWSTR* argv) {
 }
 
 void ChatCommands::CmdAge2(const wchar_t* , int, LPWSTR* ) {
-    DWORD second = GW::Map::GetInstanceTime() / 1000;
-    Log::Info("%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
+    TimerWidget::Instance().PrintTimer();
 }
 
 void ChatCommands::CmdDialog(const wchar_t *, int argc, LPWSTR *argv) {
