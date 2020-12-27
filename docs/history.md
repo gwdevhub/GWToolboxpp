@@ -7,6 +7,13 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.6
+* [New] Added `/herobuild` command to load hero teambuild
+* [New] Timer improvements and new options. 
+* [Fix] Fixed a crash bug with the objective timer in Deep
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.6_Release/GWToolboxdll.dll)
+
 ## Version 4.5
 * [Fix] Fixed a crash issue with withdrawing gold from chest
 * [Fix] Fixed some issues with the objective timer
