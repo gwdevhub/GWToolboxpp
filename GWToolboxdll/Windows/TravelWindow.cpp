@@ -1281,9 +1281,7 @@ void TravelWindow::CmdTP(const wchar_t *message, int argc, LPWSTR *argv)
 }
 bool TravelWindow::ParseOutpost(const std::wstring &s, GW::Constants::MapID &outpost, GW::Constants::District &district, uint32_t &number)
 {
-    // @Cleanup:
-    // Should we parse this number here?
-    number = 0;
+    UNREFERENCED_PARAMETER(number);
     // By Map ID e.g. "/tp 77" for house zu heltzer
     uint32_t map_id = 0;
     if (GuiUtils::ParseUInt(s.c_str(), &map_id))
@@ -1348,8 +1346,6 @@ bool TravelWindow::ParseOutpost(const std::wstring &s, GW::Constants::MapID &out
 }
 bool TravelWindow::ParseDistrict(const std::wstring &s, GW::Constants::District &district, uint32_t &number)
 {
-    district = GW::Constants::District::Current;
-    number = 0;
     std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
     // Shortcut words e.g "/tp ae" for american english
     std::string first_word = compare.substr(0, compare.find(' '));
