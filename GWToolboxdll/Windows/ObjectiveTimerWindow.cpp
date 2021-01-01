@@ -194,7 +194,7 @@ void ObjectiveTimerWindow::Initialize()
                 AddDoAObjectiveSet(packet->spawn_point);
             }
         });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
         &GameSrvTransfer_Entry, [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* packet) {
             // Exited map
             const GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)packet->map_id);
@@ -1019,9 +1019,9 @@ ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::AddEndEvent(
 }
 ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::SetStarted()
 {
-    if (start == TIME_UNKNOWN) {
-        start = TimerWidget::Instance().GetTimerMs();
-    }
+    if (IsStarted())
+        return *this;
+    start = TimerWidget::Instance().GetTimerMs();
     PrintTime(cached_start, sizeof(cached_start), start);
     status = Status::Started;
     return *this;
@@ -1045,7 +1045,7 @@ ObjectiveTimerWindow::Objective& ObjectiveTimerWindow::Objective::SetDone()
     return *this;
 }
 
-bool ObjectiveTimerWindow::Objective::IsStarted() const { return start != TIME_UNKNOWN; }
+bool ObjectiveTimerWindow::Objective::IsStarted() const { return IsDone() || start != TIME_UNKNOWN; }
 bool ObjectiveTimerWindow::Objective::IsDone() const { return done != TIME_UNKNOWN; }
 
 void ObjectiveTimerWindow::Objective::Update()
