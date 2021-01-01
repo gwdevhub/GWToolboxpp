@@ -94,7 +94,11 @@ private:
             return (char*)dec_s.c_str();
         }
     };
+    void InfoField(const char* label, const char* fmt, ...);
+    void EncInfoField(const char* label, const wchar_t* enc_string);
+
     void DrawItemInfo(GW::Item* item, ForDecode* name);
+    void DrawAgentInfo(GW::Agent* agent);
     DWORD mapfile = 0;
 
     std::vector<Status> status;
