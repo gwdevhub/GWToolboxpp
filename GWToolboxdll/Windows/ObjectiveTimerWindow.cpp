@@ -194,7 +194,7 @@ void ObjectiveTimerWindow::Initialize()
                 AddDoAObjectiveSet(packet->spawn_point);
             }
         });
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
         &GameSrvTransfer_Entry, [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* packet) {
             // Exited map
             const GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)packet->map_id);

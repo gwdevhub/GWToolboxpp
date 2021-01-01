@@ -58,7 +58,7 @@ void TimerWidget::Initialize() {
             cave_start = GW::Map::GetInstanceTime();
         });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
             cave_start = 0; // reset doa's cave timer
 
