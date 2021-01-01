@@ -212,7 +212,7 @@ void ObjectiveTimerWindow::Initialize()
             static uint32_t map_id = 0;
             Event(EventType::InstanceEnd, map_id);
             map_id = packet->map_id;
-        });
+        }, -5);
 
     // packet hooks that trigger events:
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, 
