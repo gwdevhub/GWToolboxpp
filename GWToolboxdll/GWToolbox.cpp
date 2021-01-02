@@ -442,6 +442,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         if (!GW::UI::GetIsUIDrawn())
             return;
 
+        if (GW::UI::GetIsWorldMapShowing())
+            return;
+
         if (GW::Map::GetIsInCinematic())
             return;
 
