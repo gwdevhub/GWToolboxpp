@@ -21,8 +21,8 @@ set(SOURCES
     "${imgui_SOURCE_DIR}/imgui_draw.cpp"
     "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
     # we copied (and modified) impl_imgui_dx9.h/cpp files under GWToolboxdll
-    "${imgui_SOURCE_DIR}/examples/imgui_impl_win32.h"
-    "${imgui_SOURCE_DIR}/examples/imgui_impl_win32.cpp")
+    # we copied (and modified) imgui_impl_win32.h/cpp files under GWToolboxdll
+    )
 source_group(TREE "${imgui_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(imgui PRIVATE ${SOURCES})
 target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}")

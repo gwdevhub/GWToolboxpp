@@ -164,20 +164,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
     GWToolbox::Instance().right_mouse_down = right_mouse_down;
 
+    bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing();
+
     // === Send events to ImGui ===
     ImGuiIO& io = ImGui::GetIO();
 
     switch (Message) {
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK:
-        if (!right_mouse_down) io.MouseDown[0] = true;
+        if (!skip_mouse_capture) io.MouseDown[0] = true;
         break;
     case WM_LBUTTONUP:
         io.MouseDown[0] = false; 
         break;
     case WM_MBUTTONDOWN:
     case WM_MBUTTONDBLCLK:
-        if (!right_mouse_down) {
+        if (!skip_mouse_capture) {
             io.KeysDown[VK_MBUTTON] = true;
             io.MouseDown[2] = true;
         }
@@ -187,16 +189,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         io.MouseDown[2] = false;
         break;
     case WM_MOUSEWHEEL: 
-        if (!right_mouse_down) io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f; 
+        if (!skip_mouse_capture) io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
         break;
     case WM_MOUSEMOVE:
-        if (!right_mouse_down) {
+        if (!skip_mouse_capture) {
             io.MousePos.x = (float)GET_X_LPARAM(lParam);
             io.MousePos.y = (float)GET_Y_LPARAM(lParam);
         }
         break;
     case WM_XBUTTONDOWN:
-        if (!right_mouse_down) {
+        if (!skip_mouse_capture) {
             if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) io.KeysDown[VK_XBUTTON1] = true;
             if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2) io.KeysDown[VK_XBUTTON2] = true;
         }
@@ -244,7 +246,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     case WM_LBUTTONDBLCLK:
     case WM_MOUSEMOVE:
     case WM_MOUSEWHEEL:
-        if (!right_mouse_down) {
+        if (!skip_mouse_capture) {
             if (io.WantCaptureMouse) return true;
             bool captured = false;
             for (ToolboxModule* m : tb.GetModules()) {
