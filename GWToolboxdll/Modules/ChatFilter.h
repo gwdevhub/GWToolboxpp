@@ -131,4 +131,5 @@ private:
     }
 #endif
     GW::HookEntry BlockIfApplicable_Entry;
+    GW::HookEntry ClearIfApplicable_Entry;
 };

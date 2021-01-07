@@ -61,20 +61,23 @@ void ChatFilter::Initialize() {
     [this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
         BlockIfApplicable(status, GetMessageCore(), pak->channel);
     });
-    GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageServer>(&BlockIfApplicable_Entry, ClearMessageBufferIfBlocked);
+    
 
     // global messages
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&BlockIfApplicable_Entry,
     [this](GW::HookStatus *status, GW::Packet::StoC::MessageGlobal* pak) -> void {
         BlockIfApplicable(status, GetMessageCore(), pak->channel);
     });
-    GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageGlobal>(&BlockIfApplicable_Entry, ClearMessageBufferIfBlocked);
+    
     // local messages
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&BlockIfApplicable_Entry,
     [this](GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak) -> void {
         BlockIfApplicable(status, GetMessageCore(), pak->channel);
     });
-    GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageLocal>(&BlockIfApplicable_Entry, ClearMessageBufferIfBlocked);
+
+    GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageServer>(&ClearIfApplicable_Entry, ClearMessageBufferIfBlocked);
+    GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageGlobal>(&ClearIfApplicable_Entry, ClearMessageBufferIfBlocked);
+    GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageLocal>(&ClearIfApplicable_Entry, ClearMessageBufferIfBlocked);
 
     GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry,
     [this](GW::HookStatus *status, int channel, wchar_t *message) -> void {
