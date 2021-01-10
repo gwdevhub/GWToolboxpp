@@ -218,6 +218,36 @@ std::wstring GuiUtils::ToLower(std::wstring s) {
     });
     return s;
 }
+std::string GuiUtils::UrlEncode(std::string s) {
+    if (s.empty())
+        return "";
+    static char html5[256] = { 0 };
+    bool initialised = false;
+    if (!initialised) {
+        for(uint8_t i = 0; ; i++) {
+            html5[i] = (isalnum(i) || i == '*' || i == '-' || i == '.' || i == '_' || i == ' ') ? i : 0;
+            if (i == 255) break;
+        }
+        initialised = true;
+    }
+    char out[256];
+    size_t len = 0;
+    const char* in = s.c_str();
+    for (size_t i = 0; in[i] && len < 255; i++) {
+        if (html5[in[i]]) {
+            out[len++] = html5[in[i]];
+        }
+        else {
+            int written = snprintf(&out[len], 255 - len, "%%%02X", in[i]);
+            if (written < 0)
+                return ""; // @Cleanup; how to gracefully fail?
+            len += written;
+        }
+    }
+    out[len] = 0;
+    return out;
+}
+
 // Convert a wide Unicode string to an UTF8 string
 std::string GuiUtils::WStringToString(const std::wstring& wstr)
 {
