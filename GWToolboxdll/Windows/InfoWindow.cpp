@@ -243,19 +243,23 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
     }
     if (player) {
         if (ImGui::TreeNodeEx("Player Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            ImGui::PushID("player_info");
             InfoField("Addr", "%p", player);
             InfoField("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
+            ImGui::PopID();
             ImGui::TreePop();
         }
     }
     if (guild) {
         if (ImGui::TreeNodeEx("Guild Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            ImGui::PushID("guild_info");
             InfoField("Addr", "%p", guild);
             InfoField("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());
             InfoField("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");
             if (ImGui::Button("Go to Guild Hall")) {
                 GW::GuildMgr::TravelGH(guild->key);
             }
+            ImGui::PopID();
             ImGui::TreePop();
         }
     }
@@ -293,6 +297,7 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
         InfoField("Rotation", "%f", agent->rotation_angle);
         InfoField("NameProperties", "0x%X", agent->name_properties);
         InfoField("Distance", "%.2f", me ? GW::GetDistance(me->pos, agent->pos) : 0.f);
+        InfoField("Visual effects", "0x%X", agent->visual_effects);
         if (item_actual) {
             InfoField("Owner", "%d", item->owner);
             InfoField("ItemId", "%d", item->item_id);
@@ -321,6 +326,8 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
             InfoField("Animation code", "%.3f", living->animation_speed);
         }
         if (npc) {
+            ImGui::PushID("npc_info");
+            InfoField("Addr", "%p", npc);
             InfoField("NPC ID", "%d", npc_id);
             InfoField("NPC ModelFileID", "0x%X", npc->model_file_id);
             if (npc->files_count)
@@ -328,6 +335,12 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
             InfoField("NPC Flags", "0x%X", npc->npc_flags);
             EncInfoField("NPC Name", npc->name_enc);
             InfoField ("NPC Scale", "0x%X", npc->scale);
+            ImGui::PopID();
+        }
+        auto map_agents = GW::Agents::GetMapAgentArray();
+        if (map_agents.valid() && agent->agent_id < map_agents.size()) {
+            const GW::MapAgent& map_agent = map_agents[agent->agent_id];
+            InfoField("Map agent effects", "0x%X", map_agent.effects);
         }
         ImGui::TreePop();
     }

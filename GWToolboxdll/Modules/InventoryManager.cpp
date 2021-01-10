@@ -357,6 +357,7 @@ void InventoryManager::DetachTransactionListeners() {
     if (!transaction_listeners_attached)
         return;
     GW::StoC::RemoveCallback(GW::Packet::StoC::TransactionDone::STATIC_HEADER, &salvage_hook_entry);
+    GW::StoC::RemoveCallback(GAME_SMSG_TRANSACTION_REJECT, &salvage_hook_entry);
     GW::StoC::RemoveCallback(GW::Packet::StoC::QuotedItemPrice::STATIC_HEADER, &salvage_hook_entry);
     transaction_listeners_attached = false;
 }
