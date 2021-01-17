@@ -168,7 +168,9 @@ public:
     // Static callback functions
     static void OnPingWeaponSet(GW::HookStatus*, void* packet);
     static void OnStartWhisper(GW::HookStatus*, wchar_t* _name);
-    static void OnPlayerDance(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
+    static void OnAgentAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
+    static void OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
+    static void OnAgentEffect(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
     static void OnFactionDonate(GW::HookStatus*, uint32_t dialog_id);
     static void OnPartyDefeated(GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
     static void OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::VanquishComplete*);
@@ -192,6 +194,9 @@ public:
     static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
     static void OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*);
     static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
+    static void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
+    static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
+
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
     bool tick_is_toggle = false;
@@ -249,6 +254,13 @@ public:
 
     bool disable_gold_selling_confirmation = false;
     bool collectors_edition_emotes = true;
+
+    bool block_transmogrify_effect = false;
+    bool block_sugar_rush_effect = false;
+    bool block_snowman_summoner = false;
+    bool block_party_poppers = false;
+    bool block_bottle_rockets = false;
+    bool block_ghostinthebox_effect = false;
 
     bool lazy_chest_looting = false;
 

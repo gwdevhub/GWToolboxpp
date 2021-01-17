@@ -31,7 +31,6 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
-
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
@@ -678,7 +677,25 @@ void GameSettings::Initialize() {
     GW::Agents::RegisterDialogCallback(&OnDialog_Entry, &OnFactionDonate);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &OnPartyDefeated);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, &OnPlayerDance);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
+        switch (packet->Value_id) {
+        case 21:
+            OnAgentEffect(status, packet);
+            break;
+        case 22:
+            //OnAgentAnimation(status, packet);
+            break;
+        case 28:
+            OnAgentLoopingAnimation(status, packet);
+            break;
+        }
+    });
+
+    // Sanity check to prevent GW crash trying to despawn an agent that we may have already despawned.
+    /*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet) {
+        if (false && !GW::Agents::GetAgentByID(packet->agent_id))
+            status->blocked = true;
+        });*/
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, &OnTradeStarted);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, &OnPartyInviteReceived);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, &OnPartyPlayerJoined);
@@ -694,6 +711,8 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, &OnMapLoaded);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, &OnPlayerJoinInstance);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerLeaveInstance>(&PlayerLeaveInstance_Entry, &OnPlayerLeaveInstance);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&PartyDefeated_Entry, &OnAgentAdd);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&PartyDefeated_Entry, &OnUpdateAgentState);
     // Trigger for message on party change
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(
         &PartyPlayerRemove_Entry,
@@ -702,6 +721,7 @@ void GameSettings::Initialize() {
             check_message_on_party_change = true;
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, &OnScreenShake);
+
     GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, &OnCheckboxPreferenceChanged);
     GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, OnChangeTarget);
     GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, OnPlayerChatMessage);
@@ -726,6 +746,9 @@ void GameSettings::Initialize() {
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
     GW::Chat::RegisterChatEventCallback(&OnPartyTargetChange_Entry, OnPartyTargetChange);
+
+
+
     GW::Chat::CreateCommand(L"reinvite", GameSettings::CmdReinvite);
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
@@ -890,6 +913,13 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     lazy_chest_looting = ini->GetBoolValue(Name(), VAR_NAME(lazy_chest_looting), lazy_chest_looting);
 
+    block_transmogrify_effect = ini->GetBoolValue(Name(), VAR_NAME(block_transmogrify_effect), block_transmogrify_effect);
+    block_sugar_rush_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sugar_rush_effect), block_sugar_rush_effect);
+    block_snowman_summoner = ini->GetBoolValue(Name(), VAR_NAME(block_snowman_summoner), block_snowman_summoner);
+    block_party_poppers = ini->GetBoolValue(Name(), VAR_NAME(block_party_popper_effect), block_party_poppers);
+    block_bottle_rockets = ini->GetBoolValue(Name(), VAR_NAME(block_bottle_rockets), block_bottle_rockets);
+    block_ghostinthebox_effect = ini->GetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
+
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     ::LoadChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -1009,6 +1039,13 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
     ini->SetBoolValue(Name(), VAR_NAME(lazy_chest_looting), lazy_chest_looting);
 
+    ini->SetBoolValue(Name(), VAR_NAME(block_transmogrify_effect), block_transmogrify_effect);
+    ini->SetBoolValue(Name(), VAR_NAME(block_sugar_rush_effect), block_sugar_rush_effect);
+    ini->SetBoolValue(Name(), VAR_NAME(block_snowman_summoner), block_snowman_summoner);
+    ini->SetBoolValue(Name(), VAR_NAME(block_party_poppers), block_party_poppers);
+    ini->SetBoolValue(Name(), VAR_NAME(block_bottle_rockets), block_bottle_rockets);
+    ini->SetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
+
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     ::SaveChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -1100,7 +1137,7 @@ void GameSettings::DrawChatSettings() {
 }
 
 void GameSettings::DrawSettingInternal() {
-    const float column_spacing = 256.0f * ImGui::GetIO().FontGlobalScale;
+    const float column_spacing = 300.0f * ImGui::GetIO().FontGlobalScale;
     ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
     ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
     ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
@@ -1186,6 +1223,25 @@ void GameSettings::DrawSettingInternal() {
     ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
     ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
+    ImGui::Text("Disable animation and sound from consumables:");
+    ImGui::Indent();
+    const char* doesnt_affect_me = "Only applies to other players";
+    ImGui::Checkbox("Tonics", &block_transmogrify_effect);
+    ImGui::ShowHelp(doesnt_affect_me);
+    ImGui::SameLine(column_spacing); ImGui::Checkbox("Sweets", &block_sugar_rush_effect);
+    ImGui::ShowHelp(doesnt_affect_me);
+    ImGui::Checkbox("Bottle rockets", &block_bottle_rockets);
+    ImGui::ShowHelp(doesnt_affect_me);
+    ImGui::SameLine(column_spacing); ImGui::Checkbox("Party poppers", &block_party_poppers);
+    ImGui::ShowHelp(doesnt_affect_me);
+    ImGui::Checkbox("Snowman Summoners", &block_snowman_summoner);
+    ImGui::ShowHelp(doesnt_affect_me);
+#if 0
+    //@Cleanup: Ghost in the box spawn effect suppressed, but still need to figure out how to suppress the death effect.
+    ImGui::SameLine(column_spacing); ImGui::Checkbox("Ghost-in-the-box", &block_ghostinthebox_effect);
+    ImGui::ShowHelp("Also applies to ghost-in-the-boxes that you use");
+#endif
+    ImGui::Unindent();
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
@@ -1577,6 +1633,17 @@ void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::
 void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
     if (!_name) return;
     GameSettings* instance = &Instance();
+    // wchar_t 0x2800 is a character that can't be entered in-game, and is blank - perfect for wiki links :)
+    for (size_t i = 0; _name[i]; i++) {
+        if (_name[i] != 0x2800)
+            continue;
+        _name[i] = 0;
+        std::string s = "https://wiki.guildwars.com/wiki/" + GuiUtils::UrlEncode(GuiUtils::WStringToString(_name));
+        // Wiki URL
+        ShellExecute(NULL, "open", s.c_str(), NULL, NULL, SW_SHOWNORMAL);
+        status->blocked = true;
+        return;
+    }
     if (instance->openlinks && (!wcsncmp(_name, L"http://", 7) || !wcsncmp(_name, L"https://", 8))) {
         ShellExecuteW(NULL, L"open", _name, NULL, NULL, SW_SHOWNORMAL);
         status->blocked = true;
@@ -1642,10 +1709,79 @@ void GameSettings::OnPartyPlayerJoined(GW::HookStatus* status, GW::Packet::StoC:
     }
 }
 
-// Apply Collector's Edition animations on player dancing
-void GameSettings::OnPlayerDance(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) {
-    UNREFERENCED_PARAMETER(status);
-    if (pak->Value_id != 28 || pak->agent_id != GW::Agents::GetPlayerId() || !Instance().collectors_edition_emotes)
+// Block annoying tonic sounds/effects from other players
+void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) {
+    if (pak->agent_id != GW::Agents::GetPlayerId()) {
+        switch (pak->value) {
+        case 905:
+            status->blocked = Instance().block_snowman_summoner;
+            break;
+        case 1688:
+            status->blocked = Instance().block_bottle_rockets;
+            break;
+        case 1689:
+            status->blocked = Instance().block_party_poppers;
+            break;
+        case 758: // Chocolate bunny
+        case 2063: // e.g. Fruitcake, sugary blue drink
+        case 1176: // e.g. Delicious cake
+            status->blocked = Instance().block_sugar_rush_effect;
+            break;
+        case 1491:
+            status->blocked = Instance().block_transmogrify_effect;
+            break;
+        default:
+            break;
+        }
+    }
+
+}
+
+// Block Ghost in the box spawn animation & sound
+void GameSettings::OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet) {
+    if (Instance().block_ghostinthebox_effect && false
+        && (packet->agent_type & 0x20000000) != 0
+        && (packet->agent_type ^ 0x20000000) == GW::Constants::ModelID::Boo) {
+        // Boo spawning; reset initial state to 0 from 4096 - this stops the Boo from "animating" in and making the sound
+        struct InitialEffectPacket : GW::Packet::StoC::PacketBase {
+            uint32_t agent_id = 0;
+            uint32_t state = 0;
+        } packet2;
+        packet2.header = GAME_SMSG_AGENT_INITIAL_EFFECTS;
+        packet2.agent_id = packet->agent_id;
+        GW::StoC::EmulatePacket(&packet2);
+    }
+}
+
+// Block ghost in the box death animation & sound
+void GameSettings::OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet ) {
+    // @Cleanup: Not found an elegent way to do this; prematurely destroying the agent will crash the client when the id it recycled. Disable for now, here for reference.
+    if (packet->state == 0x10 && false) {
+        GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
+        if (agent && agent->GetIsLivingType() && agent->player_number == GW::Constants::ModelID::Boo) {
+            // Boo spawning; reset initial state to 0 from 4096 - this stops the Boo from "animating" in and making the sound
+            struct InitialEffectPacket : GW::Packet::StoC::PacketBase {
+                uint32_t agent_id = 0;
+                uint32_t state = 0x1000;
+            } packet2;
+            packet2.header = GAME_SMSG_AGENT_INITIAL_EFFECTS;
+            packet2.agent_id = packet->agent_id;
+            GW::StoC::EmulatePacket(&packet2);
+            /*agent->animation_code = 0x32fc5eaf;
+            agent->animation_id = 0x2;
+            agent->animation_speed = 1.5f;
+            agent->animation_type = 0x0;
+            agent->type_map = 0x8;
+            agent->model_state = 0x400;
+            agent->effects = 0x10;*/
+            status->blocked = true;
+        }
+    }
+}
+
+// Apply Collector's Edition animations on player dancing, 
+void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) {
+    if (pak->agent_id != GW::Agents::GetPlayerId() || !Instance().collectors_edition_emotes)
         return;
     static GW::Packet::StoC::GenericValue pak2;
     pak2.agent_id = pak->agent_id;
@@ -2012,9 +2148,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
     }
 }
 
-
-// Don't target chest as nearest item
-// Target green items from chest last
+// Don't target chest as nearest item, Target green items from chest last
 void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
     if (!(msgid == GW::UI::kChangeTarget && wParam))
         return;
