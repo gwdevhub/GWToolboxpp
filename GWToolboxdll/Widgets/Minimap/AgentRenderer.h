@@ -144,6 +144,7 @@ private:
     float size_item = 0.f;
     float size_boss = 0.f;
     float size_minion = 0.f;
+    Shape_e default_shape = Tear;
 
     bool agentcolors_changed = false;
     CSimpleIni* agentcolorinifile = nullptr;

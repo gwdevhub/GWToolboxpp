@@ -60,6 +60,7 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     size_item = (float)ini->GetDoubleValue(section, VAR_NAME(size_item), 25.0);
     size_boss = (float)ini->GetDoubleValue(section, VAR_NAME(size_boss), 125.0);
     size_minion = (float)ini->GetDoubleValue(section, VAR_NAME(size_minion), 50.0);
+    default_shape = (Shape_e)ini->GetLongValue(section, VAR_NAME(default_shape), default_shape);
 
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     
@@ -114,6 +115,7 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
     ini->SetDoubleValue(section, VAR_NAME(size_item), size_item);
     ini->SetDoubleValue(section, VAR_NAME(size_boss), size_boss);
     ini->SetDoubleValue(section, VAR_NAME(size_minion), size_minion);
+    ini->SetLongValue(section, VAR_NAME(default_shape), static_cast<long>(default_shape));
 
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
@@ -216,6 +218,9 @@ void AgentRenderer::DrawSettings() {
         ImGui::DragFloat("Item Size", &size_item, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Boss Size", &size_boss, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Minion Size", &size_minion, 1.0f, 1.0f, 0.0f, "%.0f");
+        static const char* items[] = {"Tear", "Circle", "Square", "Big Circle"};
+        ImGui::Combo("Shape", reinterpret_cast<int*>(&default_shape), items, 4);
+        ImGui::ShowHelp("The default shape of agents.");
 
         ImGui::TreePop();
     }
@@ -795,7 +800,7 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const Cus
         }
     }
 
-    return Tear;
+    return default_shape;
 }
 
 void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, Color color) {
