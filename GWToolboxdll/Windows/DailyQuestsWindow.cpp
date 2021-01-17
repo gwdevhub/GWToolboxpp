@@ -1038,10 +1038,10 @@ namespace {
         bool show_date = unix != time(nullptr);
         wchar_t buf[139];
         if (show_date) {
-            swprintf(buf, _countof(buf), L"%s, %s: <a=2>%S\x2800</a>", label, DateString(&unix), value);
+            swprintf(buf, _countof(buf), L"%s, %s: <a=1>%S\x2800</a>", label, DateString(&unix), value);
         }
         else {
-            swprintf(buf, _countof(buf), L"%s: <a=2>%S\x2800</a>", label, value);
+            swprintf(buf, _countof(buf), L"%s: <a=1>%S\x2800</a>", label, value);
         }
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buf);
     }
