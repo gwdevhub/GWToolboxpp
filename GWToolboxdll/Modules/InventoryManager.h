@@ -56,6 +56,8 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
 
+    bool WndProc(UINT, WPARAM, LPARAM);
+
     // Find an empty (or partially empty) inventory slot that this item can go into
     std::pair<GW::Bag*, uint32_t> GetAvailableInventorySlot(GW::Item* like_item = nullptr);
     // Find an empty (or partially empty) inventory slot that this item can go into. !entire_stack = Returns slots that are the same item, but won't hold all of them.
@@ -64,6 +66,7 @@ public:
     bool IsSameItem(GW::Item* item1, GW::Item* item2);
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
+
 
     IdentifyAllType identify_all_type = IdentifyAllType::None;
     SalvageAllType salvage_all_type = SalvageAllType::None;
@@ -78,7 +81,6 @@ private:
     bool is_salvaging = false;
     bool is_salvaging_all = false;
     bool has_prompted_salvage = false;
-    bool is_manual_item_click = false;
     bool show_salvage_all_popup = true;
     bool salvage_listeners_attached = false;
     bool only_use_superior_salvage_kits = false;

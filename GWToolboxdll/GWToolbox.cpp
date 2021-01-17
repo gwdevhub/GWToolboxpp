@@ -158,13 +158,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
     }
 
+    if (Message == WM_RBUTTONUP) right_mouse_down = false;
     if (Message == WM_RBUTTONDOWN) right_mouse_down = true;
     if (Message == WM_RBUTTONDBLCLK) right_mouse_down = true;
-    if (Message == WM_RBUTTONUP) right_mouse_down = false;
 
     GWToolbox::Instance().right_mouse_down = right_mouse_down;
 
     bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing();
+
+
 
     // === Send events to ImGui ===
     ImGuiIO& io = ImGui::GetIO();
@@ -232,6 +234,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     switch (Message) {
     // Send button up mouse events to everything, to avoid being stuck on mouse-down
     case WM_LBUTTONUP:
+    case WM_RBUTTONUP:
         for (ToolboxModule* m : tb.GetModules()) {
             m->WndProc(Message, wParam, lParam);
         }
@@ -244,16 +247,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     // - otherwise pass to gw
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK:
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONDBLCLK:
     case WM_MOUSEMOVE:
-    case WM_MOUSEWHEEL:
-        if (!skip_mouse_capture) {
-            if (io.WantCaptureMouse) return true;
-            bool captured = false;
-            for (ToolboxModule* m : tb.GetModules()) {
-                if (m->WndProc(Message, wParam, lParam)) captured = true;
-            }
-            if (captured) return true;
+    case WM_MOUSEWHEEL: {
+        if (io.WantCaptureMouse && !skip_mouse_capture) return true;
+        bool captured = false;
+        for (ToolboxModule* m : tb.GetModules()) {
+            if (m->WndProc(Message, wParam, lParam)) captured = true;
         }
+        if (captured) return true;
+    }
+        //if (!skip_mouse_capture) {
+
+        //}
         break;
 
     // keyboard messages

@@ -16,6 +16,7 @@
 #include <GuiUtils.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/GameSettings.h>
+#include <GWCA/Managers/RenderMgr.h>
 
 namespace {
     static ImVec4 ItemBlue = ImColor(153, 238, 255).Value;
@@ -195,7 +196,243 @@ namespace {
         return to_move - remaining;
     }
 
+    void store_all_materials() {
+        const size_t bag_first = static_cast<size_t>(GW::Constants::Bag::Backpack);
+        const size_t bag_last = static_cast<size_t>(GW::Constants::Bag::Bag_2);
+        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+            GW::Bag* bag = GW::Items::GetBag(bag_i);
+            if (!bag) continue;
+            for (size_t slot = 0; slot < bag->items.size(); slot++) {
+                GW::Item* item = bag->items[slot];
+                if (item && item->GetIsMaterial())
+                    move_item_to_storage(item);
+            }
+        }
+        pending_moves.clear();
+    }
+
+    // Move a whole stack into/out of storage
+    uint16_t move_item(GW::Item* item) {
+        // Expected behaviors
+        //  When clicking on item in inventory
+        //   case storage close (or move_item_to_current_storage_pane = false):
+        //    - If the item is a material, it look if it can move it to the material page.
+        //    - If the item is stackable, search in all the storage if there is already similar items and completes the stack
+        //    - If not everything was moved, move the remaining in the first empty slot of the storage.
+        //   case storage open:
+        //    - If the item is a material, it look if it can move it to the material page.
+        //    - If the item is stackable, search for incomplete stacks in the current storage page and completes them
+        //    - If not everything was moved, move the remaining in the first empty slot of the current page.
+
+
+        // @Fix:
+        //  There is a bug in gw that doesn't "save" if the material storage
+        //  (or anniversary storage in the case when the player bought all other storage)
+        //  so we cannot know if they are the storage selected.
+        //  Sol: The solution is to patch the value 7 -> 9 at 0040E851 (EB 20 33 C0 BE 06 [-5])
+        // @Cleanup: Bad
+        if (item->model_file_id == 0x0002f301) {
+            Log::Error("Ctrl+click doesn't work with birthday presents yet");
+            return 0;
+        }
+        bool is_inventory_item = item->bag->IsInventoryBag();
+        uint16_t remaining = item->quantity;
+        if (is_inventory_item) {
+            if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
+                // If move_item_to_current_storage_pane = true, try to add the item to current storage pane.
+                size_t current_storage = GW::Items::GetStoragePage();
+                remaining -= move_item_to_storage_page(item, current_storage, remaining);
+            }
+            remaining -= move_item_to_storage(item, remaining);
+        }
+        else {
+            remaining -= move_item_to_inventory(item, remaining);
+        }
+        pending_moves.clear();
+        return remaining;
+    }
+
     uint32_t requesting_quote_type = 0;
+
+    GW::UI::WindowPosition* inventory_bags_window_position = nullptr;
+
+
+    // x, y, z, w; Top, right, bottom, left
+    struct Rect {
+        float top, right, bottom, left;
+        bool contains(const GW::Vec2f& pos) {
+            return (pos.x > left
+                && pos.x < right
+                && pos.y > top
+                && pos.y < bottom);
+        }
+        Rect() { top = right = bottom = left = 0.0f; }
+        Rect(float _x, float _y, float _z, float _w) { top = _x; right = _y; bottom = _z; left = _w; }
+    };
+    inline Rect& operator*=(Rect& lhs, float rhs) {
+        lhs.top *= rhs;
+        lhs.bottom *= rhs;
+        lhs.left *= rhs;
+        lhs.right *= rhs;
+        return lhs;
+    }
+    inline Rect operator*(float lhs, Rect rhs) {
+        rhs *= lhs;
+        return rhs;
+    }
+
+    
+    const Rect GetGWWindowPadding() {
+        Rect gw_window_padding = { 33.f, 14.f, 14.f, 18.f };
+        gw_window_padding *= GuiUtils::GetGWScaleMultiplier();
+        return gw_window_padding;
+    }
+    // Size of a single inv slot on-screen (includes 1px right padding, 2px bottom padding)
+    const GW::Vec2f GetInventorySlotSize() {
+        GW::Vec2f inventory_slot_size = { 41.f, 50.f };
+        inventory_slot_size *= GuiUtils::GetGWScaleMultiplier();
+        return inventory_slot_size;
+    }
+
+    // Width of scrollbar on gw windows.
+    const float gw_scrollbar_width = 20.f;
+
+    bool GetMousePosition(GW::Vec2f& pos) {
+        ImVec2 imgui_pos = ImGui::GetIO().MousePos;
+        pos.x = (float)imgui_pos.x;
+        pos.y = (float)imgui_pos.y;
+        return true;
+    }
+
+    int CountInventoryBagSlots() {
+        int slots = 0;
+        GW::Bag* bag = nullptr;
+        for (size_t bag_index = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_index < static_cast<size_t>(GW::Constants::Bag::Equipment_Pack); bag_index++) {
+            bag = GW::Items::GetBag(bag_index);
+            if (!bag) continue;
+            slots += bag->items.m_size;
+        }
+        return slots;
+    }
+#if 0
+    void DrawInventoryOverlay() {
+        // Testing inventory slots overlay
+        if (inventory_bags_window_position && inventory_bags_window_position->visible()) {
+            float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
+            // NB: Use case to define GW::Vec4f ?
+            GW::Vec2f x = inventory_bags_window_position->xAxis(uiscale_multiply);
+            GW::Vec2f y = inventory_bags_window_position->yAxis(uiscale_multiply);
+            float window_width = x.y - x.x;
+            float window_height = y.y - y.x;
+            Rect padding = GetGWWindowPadding();
+            float inner_width = window_width - padding.left - padding.right;
+            float inner_height = window_height - padding.top - padding.bottom;
+            ImGui::SetNextWindowPos({ x.x + padding.left,y.x + padding.top });
+            ImGui::SetNextWindowSize({ inner_width,inner_height });
+            ImGui::SetNextWindowBgAlpha(0.0f);
+            ImVec4 semi = ImColor(0xff, 0xff, 0xff, 100).Value;
+            ImGui::PushStyleColor(ImGuiCol_Border, semi);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
+
+            if (ImGui::Begin("Inventory Slots Overlay", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoInputs)) {
+                ImVec2 pos = { 0.f, 0.f };
+                char imgui_id[12];
+                ImVec4 trans = ImColor(0, 0, 0, 0).Value;
+                ImGui::PushStyleColor(ImGuiCol_Button, trans);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, trans);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, trans);
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
+                // @Cleanup: This logic is based on bags being "combined" - find out positioning when its not!
+                bool has_bag_headings = !GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ShowCollapsedBags) == 1;
+
+                const GW::Vec2f& inventory_slot_size = GetInventorySlotSize();
+                float cols_per_rowf = inner_width / inventory_slot_size.x;
+                float cols_per_row = floor(cols_per_rowf);
+                float remainder = cols_per_rowf - cols_per_row;
+                if (remainder > 0.f && inventory_slot_size.x * remainder > 37.f * uiscale_multiply)
+                    cols_per_row += 1.f;
+                int bags = 0;
+                int slots = 0;
+                GW::Bag* bag = nullptr;
+                for (size_t bag_index = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_index < static_cast<size_t>(GW::Constants::Bag::Equipment_Pack); bag_index++) {
+                    bag = GW::Items::GetBag(bag_index);
+                    if (!bag) continue;
+                    bags++;
+                    slots += bag->items.m_size;
+                }
+                Rect bag_padding = { 21.f, 0.f, 9.f, 0.f };
+                bag_padding *= uiscale_multiply;
+                if (!has_bag_headings)
+                    bag_padding *= 0.f;
+                inner_height -= (bag_padding.top * bags) - (bag_padding.bottom * bags);
+                inner_width -= bag_padding.right - bag_padding.left;
+                // Calculate rows per column (requires slot count to calculate if scrollbar is visible)
+                float rows_per_col = floor(inner_height / inventory_slot_size.y);
+                float slots_visible = rows_per_col * cols_per_row;
+                bool scrollbar = slots_visible < slots;
+                if (scrollbar) {
+                    // Scrollbar has been added; recalculate columns per row
+                    inner_width -= gw_scrollbar_width * uiscale_multiply;
+                    cols_per_rowf = inner_width / inventory_slot_size.x;
+                    cols_per_row = floor(cols_per_rowf);
+                    remainder = cols_per_rowf - cols_per_row;
+                    if (remainder > 0.f && inventory_slot_size.x * remainder > 37.f * uiscale_multiply)
+                        cols_per_row += 1.f;
+                }
+                cols_per_row = std::max(cols_per_row, 5.f);
+                // Cycle inventory, find click target.
+                Rect slot;
+                slot.left = x.x + padding.left;
+                slot.top = y.x + padding.top;
+                int row_slot = 0;
+                slot.bottom = slot.top + inventory_slot_size.y;
+                for (size_t bag_index = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_index < static_cast<size_t>(GW::Constants::Bag::Equipment_Pack); bag_index++) {
+                    bag = GW::Items::GetBag(bag_index);
+                    if (!bag) continue;
+                    int item_count = static_cast<int>(bag->items.size());
+                    int slot_idx = 0;
+                    if (has_bag_headings) {
+                        slot.top += bag_padding.top;
+                        slot.bottom = slot.top + inventory_slot_size.y;
+                    }
+                    do {
+                        if (row_slot == cols_per_row) {
+                            slot.left = x.x + padding.left;
+                            slot.top += inventory_slot_size.y;
+                            slot.bottom = slot.top + inventory_slot_size.y;
+                            row_slot = 0;
+                        }
+                        slot.right = slot.left + inventory_slot_size.x;
+                        ImGui::SetCursorScreenPos({ slot.left, slot.top });
+                        snprintf(imgui_id, _countof(imgui_id), "###inv_slot_%d%d", bag->bag_id, slot_idx);
+                        ImGui::Button(imgui_id, { inventory_slot_size.x, inventory_slot_size.y });
+
+                        slot.left += inventory_slot_size.x;
+                        slot_idx++;
+                        row_slot++;
+                    } while (slot_idx < item_count);
+                    if (has_bag_headings) {
+                        slot.left = x.x + padding.left;
+                        slot.top += inventory_slot_size.y + bag_padding.bottom;
+                        slot.bottom = slot.top + inventory_slot_size.y;
+                        row_slot = 0;
+                    }
+                }
+                ImGui::PopStyleVar(2);
+                ImGui::PopStyleColor(3);
+
+            }
+            ImGui::End();
+            ImGui::PopStyleVar(4);
+            ImGui::PopStyleColor(1);
+        }
+    }
+#endif
+
 } // namespace
 InventoryManager::InventoryManager()
 {
@@ -236,6 +473,56 @@ void InventoryManager::Initialize() {
         requesting_quote_type = 0;
         show_transact_quantity_popup = true;
         });
+    inventory_bags_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_InventoryBags);
+}
+bool InventoryManager::WndProc(UINT message, WPARAM , LPARAM ) {
+    static DWORD is_right_clicking = 0;
+    static DWORD start_pos = 0;
+    static DWORD gw_cursor_moved_to = 0;
+    // GW Deliberately makes a WM_MOUSEMOVE event right after right button is pressed.
+    // Does this to "hide" the cursor when looking around.
+    switch (message) {
+    case WM_RBUTTONDOWN:
+        is_right_clicking = 1;
+        start_pos = GetMessagePos();
+        break;
+    case WM_MOUSEMOVE: {
+        if (!is_right_clicking)
+            break;
+        DWORD pos = GetMessagePos();
+        if (!gw_cursor_moved_to) {
+            // First move after right mouse clicked - GW moving cursor. Record the position.
+            gw_cursor_moved_to = pos;
+        }
+        // If the position is the same, its GW still messing with it.
+        if (gw_cursor_moved_to == pos) {
+            // Mouse not actually moved
+            break;
+        }
+        // This far, pos has changed. If it is the same pos as the starting position, then its a right click.
+        if (pos == start_pos) {
+            const Item* item = static_cast<Item*>(GW::Items::GetHoveredItem());
+            GW::Bag* bag = item ? item->bag : nullptr;
+            if (bag) {
+                // Item right clicked - spoof a click event
+                GW::HookStatus status;
+                ItemClickCallback(&status, 999, item->slot, bag);
+            }
+        }
+        is_right_clicking = start_pos = gw_cursor_moved_to = 0;
+    } break;
+    case WM_LBUTTONDOWN: {
+        const Item* item = static_cast<Item*>(GW::Items::GetHoveredItem());
+        GW::Bag* bag = item ? item->bag : nullptr;
+        if (bag && static_cast<GW::Constants::Bag>(bag->index + 1) == GW::Constants::Bag::Material_Storage) {
+            // Item in material storage pane clicked - spoof a click event
+            GW::HookStatus status;
+            ItemClickCallback(&status, 7, item->slot, bag);
+        }
+    } break;
+    }
+
+    return false;
 }
 void InventoryManager::SaveSettings(CSimpleIni* ini) {
     ToolboxUIElement::SaveSettings(ini);
@@ -809,8 +1096,7 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::SameLine();
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 }
-void InventoryManager::Update(float delta) {
-    UNREFERENCED_PARAMETER(delta);
+void InventoryManager::Update(float) {
     if (is_salvaging) {
         if (IsPendingSalvage()) {
             if ((clock() / CLOCKS_PER_SEC) - pending_salvage_at > 5) {
@@ -845,9 +1131,73 @@ void InventoryManager::Update(float delta) {
 };
 void InventoryManager::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
-    if (show_item_context_menu)
+    if (!GW::Map::GetIsMapLoaded())
+        return;
+#if 0
+    DrawInventoryOverlay();
+#endif
+
+
+    static bool show_inventory_context_menu = false;
+    if (show_item_context_menu) {
         ImGui::OpenPopup("Item Context Menu");
-    show_item_context_menu = false;
+        show_item_context_menu = false;
+    }
+    
+    /*
+    *   Cog icon on inventory bags window
+    */
+#if 0
+    bool show_options_on_inventory = false;
+    if (show_options_on_inventory && inventory_bags_window_position && inventory_bags_window_position->visible()) {
+        float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
+        // NB: Use case to define GW::Vec4f ?
+        GW::Vec2f x = inventory_bags_window_position->xAxis(uiscale_multiply);
+        GW::Vec2f y = inventory_bags_window_position->yAxis(uiscale_multiply);
+        // Clamp
+        ImVec4 rect(x.x, y.x, x.y, y.y);
+        ImVec4 viewport(0, 0, (float)GW::Render::GetViewportWidth(), (float)GW::Render::GetViewportHeight());
+        // GW Clamps windows to viewport; we need to do the same.
+        GuiUtils::ClampRect(rect, viewport);
+        // Left placement
+        GW::Vec2f internal_offset(
+            (rect.z - rect.x) - 48.f * uiscale_multiply ,
+            0.f
+        );
+        ImVec2 calculated_pos = ImVec2(rect.x + internal_offset.x, rect.y + internal_offset.y);
+        ImGui::SetNextWindowPos(calculated_pos);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor(0, 0, 0, 0).Value);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor(0, 0, 0, 0).Value);
+        const char* context_menu_id = "Inventory Context Menu###inv_context";
+        if (ImGui::Begin("Inventory bags context", &visible, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)) {
+            const char* btn_id = u8"\uf013###inv_bags_context_btn";
+            show_inventory_context_menu = ImGui::Button(btn_id);
+        }
+        ImGui::End();
+        ImGui::PopStyleColor(4);
+        ImGui::PopStyleVar(4);
+        if (show_inventory_context_menu)
+            ImGui::OpenPopup(context_menu_id);
+        if (ImGui::BeginPopup(context_menu_id)) {
+            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+                if (ImGui::Button("Store Materials")) {
+                    Log::Info("TODO: Store materials");
+                }
+            }
+            ImGui::EndPopup();
+        }
+
+    }
+#endif
+
+
+
     if (ImGui::BeginPopup("Item Context Menu")) {
         if (context_item_name_s.empty() && !context_item_name_ws.empty()) {
             context_item_name_s = GuiUtils::WStringToString(context_item_name_ws);
@@ -859,13 +1209,17 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         ImGui::Separator();
         // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
         Item* context_item_actual = context_item.item(); 
-        if (context_item_actual && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && ImGui::Button("Store Item", size)) {
-            GW::HookStatus st;
-            ImGui::GetIO().KeysDown[VK_CONTROL] = true;
-            is_manual_item_click = true;
-            ItemClickCallback(&st, 7, context_item_actual->slot, context_item_actual->bag);
-            is_manual_item_click = false;
-            ImGui::CloseCurrentPopup();
+        if (context_item_actual && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+            if (ImGui::Button("Store Item", size)) {
+                move_item(context_item_actual);
+                ImGui::CloseCurrentPopup();
+            }
+            if (context_item_actual->GetIsMaterial() && context_item_actual->bag->IsInventoryBag()) {
+                if (ImGui::Button("Store All Materials", size)) {
+                    ImGui::CloseCurrentPopup();
+                    store_all_materials();
+                }
+            }
         }
         if (context_item_actual && context_item_actual->IsIdentificationKit()) {
             IdentifyAllType type = IdentifyAllType::None;
@@ -1080,64 +1434,48 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
     }
 }
 void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag* bag) {
-    if (!ImGui::IsKeyDown(VK_CONTROL)) return;
-    if (type != 7) return;
     InventoryManager& im = InventoryManager::Instance();
-    Item* item = static_cast<Item*>(GW::Items::GetItemBySlot(bag,slot + 1));
+    switch (type) {
+    case 7:   // Left click + ctrl
+        if (!ImGui::IsKeyDown(VK_CONTROL))
+            return;
+        break;
+    case 999: // Right click (via GWToolbox)
+        break;
+    default:
+        return;
+    }
+    Item* item = nullptr;
+    if (bag) {
+        item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+    }
+    else {
+        item = static_cast<Item*>(GW::Items::GetHoveredItem());
+    }
+    
     if (!item) return;
-    bool is_inventory_item = bag->IsInventoryBag();
-    bool is_storage_item = bag->IsStorageBag();
+    bool is_inventory_item = item->bag->IsInventoryBag();
+    bool is_storage_item = item->bag->IsStorageBag() || item->bag->IsMaterialStorage();
     if (!is_inventory_item && !is_storage_item) return;
-    if (!im.is_manual_item_click && item && (item->IsIdentificationKit() || item->IsSalvageKit())) {
+
+    bool show_context_menu = item->IsIdentificationKit() || item->IsSalvageKit() || (type == 999 && item->GetIsMaterial() && is_inventory_item);
+
+    if (show_context_menu) {
         // Context menu applies
         if (im.context_item.item_id == item->item_id && im.show_item_context_menu)
             return; // Double looped.
         if (!im.context_item.set(item))
             return;
-        im.show_item_context_menu = true;
         im.context_item_name_ws.clear();
         im.context_item_name_s.clear();
         GW::UI::AsyncDecodeStr(item->name_enc, &im.context_item_name_ws);
+        im.show_item_context_menu = true;
         status->blocked = true;
         return;
     }
-    if (GameSettings::Instance().move_item_on_ctrl_click) {
+    if (type == 7 && ImGui::IsKeyDown(VK_CONTROL) && GameSettings::Instance().move_item_on_ctrl_click) {
         // Move item on ctrl click
-
-        // Expected behaviors
-        //  When clicking on item in inventory
-        //   case storage close (or move_item_to_current_storage_pane = false):
-        //    - If the item is a material, it look if it can move it to the material page.
-        //    - If the item is stackable, search in all the storage if there is already similar items and completes the stack
-        //    - If not everything was moved, move the remaining in the first empty slot of the storage.
-        //   case storage open:
-        //    - If the item is a material, it look if it can move it to the material page.
-        //    - If the item is stackable, search for incomplete stacks in the current storage page and completes them
-        //    - If not everything was moved, move the remaining in the first empty slot of the current page.
-
-
-        // @Fix:
-        //  There is a bug in gw that doesn't "save" if the material storage
-        //  (or anniversary storage in the case when the player bought all other storage)
-        //  so we cannot know if they are the storage selected.
-        //  Sol: The solution is to patch the value 7 -> 9 at 0040E851 (EB 20 33 C0 BE 06 [-5])
-        // @Cleanup: Bad
-        if (item->model_file_id == 0x0002f301) {
-            Log::Error("Ctrl+click doesn't work with birthday presents yet");
-            return;
-        }
-        uint16_t remaining = item->quantity;
-        if (is_inventory_item) {
-            if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
-                // If move_item_to_current_storage_pane = true, try to add the item to current storage pane.
-                size_t current_storage = GW::Items::GetStoragePage();
-                remaining -= move_item_to_storage_page(item, current_storage, remaining);
-            }
-            remaining -= move_item_to_storage(item, remaining);
-        } else {
-            remaining -= move_item_to_inventory(item, remaining);
-        }
-        pending_moves.clear();
+        move_item(item);
     }
 }
 void InventoryManager::ClearPotentialItems()
