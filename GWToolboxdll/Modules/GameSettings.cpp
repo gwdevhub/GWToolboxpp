@@ -916,7 +916,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     block_transmogrify_effect = ini->GetBoolValue(Name(), VAR_NAME(block_transmogrify_effect), block_transmogrify_effect);
     block_sugar_rush_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sugar_rush_effect), block_sugar_rush_effect);
     block_snowman_summoner = ini->GetBoolValue(Name(), VAR_NAME(block_snowman_summoner), block_snowman_summoner);
-    block_party_poppers = ini->GetBoolValue(Name(), VAR_NAME(block_party_popper_effect), block_party_poppers);
+    block_party_poppers = ini->GetBoolValue(Name(), VAR_NAME(block_party_poppers), block_party_poppers);
     block_bottle_rockets = ini->GetBoolValue(Name(), VAR_NAME(block_bottle_rockets), block_bottle_rockets);
     block_ghostinthebox_effect = ini->GetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
 
