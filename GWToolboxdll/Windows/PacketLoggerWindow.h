@@ -6,7 +6,7 @@
 
 class PacketLoggerWindow : public ToolboxWindow {
     PacketLoggerWindow() {};
-    ~PacketLoggerWindow() {};
+    ~PacketLoggerWindow() { ClearMessageLog(); };
 public:
     static PacketLoggerWindow& Instance() {
         static PacketLoggerWindow instance;
@@ -22,9 +22,12 @@ public:
     void Update(float delta) override;
     void Enable();
     void Disable();
-
+    void AddMessageLog(const wchar_t* encoded);
+    void SaveMessageLog();
+    void ClearMessageLog();
     
 private:
+    std::unordered_map<std::wstring, std::wstring*> message_log;
     uint32_t identifiers[512] = { 0 }; // Presume 512 is big enough for header size...
     GW::HookEntry hook_entry;
 

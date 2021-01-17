@@ -458,6 +458,39 @@ int debug_door_id = 0;
 uint32_t message_core_callback_identifier;
 uint32_t display_dialogue_callback_identifier;
 
+void PacketLoggerWindow::AddMessageLog(const wchar_t* encoded) {
+    std::wstring encoded_ws(encoded);
+    if (!encoded || message_log.find(encoded_ws) != message_log.end())
+        return;
+    std::wstring* decoded_ws = new std::wstring();
+    message_log[encoded_ws] = decoded_ws;
+    GW::UI::AsyncDecodeStr(encoded, decoded_ws);
+}
+void PacketLoggerWindow::SaveMessageLog() {
+    utf8::string filename = Resources::GetPathUtf8(L"message_log.csv");
+    std::wofstream myFile(filename.bytes);
+
+    // Send column names to the stream
+    for (auto it : message_log)
+    {
+        if (!it.second || !it.second->length())
+            continue;
+        myFile << it.first.c_str();
+        myFile << L",";
+        myFile << it.second->c_str();
+        myFile << "\n";
+    }
+    // Close the file
+    myFile.close();
+}
+void PacketLoggerWindow::ClearMessageLog() {
+    for (auto it : message_log) {
+        if (it.second)
+            delete it.second;
+    }
+    message_log.clear();
+}
+
 void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible)
@@ -667,6 +700,10 @@ void PacketLoggerWindow::Update(float delta) {
         printf("\n");
         npc_dialog.msg_out.clear();
     }
+    if (message_log.size() > 100) {
+        SaveMessageLog();
+        ClearMessageLog();
+    }
 }
 void PacketLoggerWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
@@ -676,6 +713,8 @@ void PacketLoggerWindow::SaveSettings(CSimpleIni* ini) {
         ignored_packets_bitset[i] = ignored_packets[i] ? 1 : 0;
     }
     ini->SetValue(Name(), VAR_NAME(ignored_packets), ignored_packets_bitset.to_string().c_str());
+    SaveMessageLog();
+    ClearMessageLog();
 }
 void PacketLoggerWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
