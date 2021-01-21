@@ -136,6 +136,8 @@ public:
         bool IsSalvagable();
         bool IsRareMaterial();
         bool IsWeaponSetItem();
+        bool IsOfferedInTrade();
+        bool CanOfferToTrade();
         inline bool GetIsIdentified()
         {
             return (interaction & 1) != 0;

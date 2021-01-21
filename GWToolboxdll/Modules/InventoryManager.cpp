@@ -3,6 +3,7 @@
 #include <GWCA/Packets/Opcodes.h>
 
 #include <GWCA/Context/ItemContext.h>
+#include <GWCA/Context/TradeContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
@@ -11,12 +12,14 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/MerchantMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/TradeMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Logger.h>
 #include <GuiUtils.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/GameSettings.h>
-#include <GWCA/Managers/RenderMgr.h>
 
 namespace {
     static ImVec4 ItemBlue = ImColor(153, 238, 255).Value;
@@ -304,6 +307,28 @@ namespace {
         return true;
     }
 
+    bool IsTradeWindowOpen() {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+            return false;
+        const GW::TradeContext* c = GW::GameContext::instance()->trade;
+        return c && c->GetIsTradeInitiated();
+    }
+
+    GW::HookEntry on_offer_item_hook;
+
+    void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity) {
+        if (ImGui::IsKeyDown(VK_SHIFT))
+            return; // Default behaviour; prompt user for amount
+        if (quantity == 0) {
+            const GW::Item* item = GW::Items::GetItemById(item_id);
+            if (item && item->quantity > 1) {
+                status->blocked = true;
+                GW::Trade::OfferItem(item_id, item->quantity);
+            }
+        }
+    }
+
+
     int CountInventoryBagSlots() {
         int slots = 0;
         GW::Bag* bag = nullptr;
@@ -473,6 +498,8 @@ void InventoryManager::Initialize() {
         requesting_quote_type = 0;
         show_transact_quantity_popup = true;
         });
+
+    GW::Trade::RegisterOfferItemCallback(&on_offer_item_hook, OnOfferTradeItem);
     inventory_bags_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_InventoryBags);
 }
 bool InventoryManager::WndProc(UINT message, WPARAM , LPARAM ) {
@@ -512,16 +539,18 @@ bool InventoryManager::WndProc(UINT message, WPARAM , LPARAM ) {
         is_right_clicking = start_pos = gw_cursor_moved_to = 0;
     } break;
     case WM_LBUTTONDOWN: {
-        const Item* item = static_cast<Item*>(GW::Items::GetHoveredItem());
-        GW::Bag* bag = item ? item->bag : nullptr;
-        if (bag && static_cast<GW::Constants::Bag>(bag->index + 1) == GW::Constants::Bag::Material_Storage) {
-            // Item in material storage pane clicked - spoof a click event
-            GW::HookStatus status;
-            ItemClickCallback(&status, 7, item->slot, bag);
-        }
-    } break;
+            const Item* item = static_cast<Item*>(GW::Items::GetHoveredItem());
+            GW::Bag* bag = item ? item->bag : nullptr;
+            if (!bag)
+                break;
+            if (static_cast<GW::Constants::Bag>(bag->index + 1) == GW::Constants::Bag::Material_Storage) {
+                // Item in material storage pane clicked - spoof a click event
+                GW::HookStatus status;
+                ItemClickCallback(&status, 7, item->slot, bag);
+                return true;
+            }
+        } break;
     }
-
     return false;
 }
 void InventoryManager::SaveSettings(CSimpleIni* ini) {
@@ -1435,17 +1464,27 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 }
 void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag* bag) {
     InventoryManager& im = InventoryManager::Instance();
+    Item* item = nullptr;
     switch (type) {
     case 7:   // Left click + ctrl
         if (!ImGui::IsKeyDown(VK_CONTROL))
             return;
+        break;
+    case 8: // Double click - add to trade window if available
+        if (!IsTradeWindowOpen())
+            break;
+        status->blocked = true;
+        item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+        if (!item || item->IsOfferedInTrade())
+            break;
+        GW::Trade::OfferItem(item->item_id);
         break;
     case 999: // Right click (via GWToolbox)
         break;
     default:
         return;
     }
-    Item* item = nullptr;
+    
     if (bag) {
         item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
     }
@@ -1501,6 +1540,27 @@ bool InventoryManager::Item::IsWeaponSetItem()
             return true;
     }
     return false;
+}
+
+bool InventoryManager::Item::IsOfferedInTrade() {
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+        return false;
+    const GW::TradeContext* c = GW::GameContext::instance()->trade;
+    if (!c || !c->GetIsTradeInitiated())
+        return false;
+    auto& player_items = c->player.items;
+    if (!player_items.valid())
+        return false;
+    for (auto& player_item : player_items) {
+        if (player_item.item_id == item_id)
+            return true;
+    }
+    return false;
+}
+bool InventoryManager::Item::CanOfferToTrade()
+{
+    // TODO: How to figure out if an item is tradable?
+    return IsTradeWindowOpen() && !IsOfferedInTrade();
 }
 
 bool InventoryManager::Item::IsSalvagable()
