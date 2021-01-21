@@ -152,18 +152,18 @@ void InfoWindow::InfoField(const char* label, const char* fmt, ...) {
     ImGui::InputTextEx(label, NULL, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
 }
 void InfoWindow::EncInfoField(const char* label, const wchar_t* enc_string) {
-    static char info_string[256];
+    static char info_string[1024];
     size_t offset = 0;
     for (size_t i = 0; enc_string && enc_string[i] && offset < _countof(info_string) - 1; i++) {
         offset += sprintf(info_string + offset, "0x%X ", enc_string[i]);
     }
-    if (offset > _countof(info_string))
+    if (offset >= _countof(info_string))
         offset = _countof(info_string) - 1;
     info_string[offset] = 0;
     ImGui::InputTextEx(label, NULL, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
 }
 
-void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
+void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name, bool force_advanced) {
     if (!item) return;
     name->init(item->single_item_name);
     static char slot[8] = "-";
@@ -176,7 +176,7 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
     InfoField("Bag/Slot", "%s",slot);
     InfoField("ModelID", "%d", item->model_id);
     InfoField("Name", "%s", name->str());
-    if (ImGui::TreeNodeEx("Advanced##item", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    auto draw_advanced = [&,item]() {
         InfoField("Addr", "%p", item);
         InfoField("Id", "%d", item->item_id);
         InfoField("Type", "%d", item->type);
@@ -193,6 +193,11 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
                 InfoField(mod_struct_label, "0x%X (%d %d %d)", mod->mod, mod->identifier(), mod->arg1(), mod->arg2());
             }
         }
+    };
+    if (force_advanced)
+        draw_advanced();
+    else if (ImGui::TreeNodeEx("Advanced##item", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        draw_advanced();
         ImGui::TreePop();
     }
     ImGui::PopID();
@@ -440,6 +445,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 ImGui::InputText(dialog->msg_s.c_str(), dialog->dialog_buf, _countof(dialog->dialog_buf), ImGuiInputTextFlags_ReadOnly);
             }
             ImGui::PopItemWidth();
+        }
+        if (show_item && ImGui::CollapsingHeader("Hovered Item")) {
+            static ForDecode item_name;
+            DrawItemInfo(GW::Items::GetHoveredItem(), &item_name, true);
         }
         if (show_item && ImGui::CollapsingHeader("Item")) {
             ImGui::Text("First item in inventory");
