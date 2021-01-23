@@ -149,6 +149,9 @@ public:
         inline bool IsUsable() {
             return (interaction & 0x1000000) != 0;
         }
+        inline bool IsTradable() {
+            return (interaction & 0x100) == 0;
+        }
         inline bool IsBlue() {
             return single_item_name && single_item_name[0] == 0xA3F;
         }

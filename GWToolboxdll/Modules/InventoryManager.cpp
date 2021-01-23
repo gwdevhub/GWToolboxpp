@@ -1472,13 +1472,13 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
         break;
     case 8: // Double click - add to trade window if available
         if (!IsTradeWindowOpen())
-            break;
+            return;
         status->blocked = true;
         item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
-        if (!item || item->IsOfferedInTrade())
-            break;
+        if (!item || !item->CanOfferToTrade())
+            return;
         GW::Trade::OfferItem(item->item_id);
-        break;
+        return;
     case 999: // Right click (via GWToolbox)
         break;
     default:
@@ -1557,10 +1557,8 @@ bool InventoryManager::Item::IsOfferedInTrade() {
     }
     return false;
 }
-bool InventoryManager::Item::CanOfferToTrade()
-{
-    // TODO: How to figure out if an item is tradable?
-    return IsTradeWindowOpen() && !IsOfferedInTrade();
+bool InventoryManager::Item::CanOfferToTrade() {
+    return IsTradable() && IsTradeWindowOpen() && !IsOfferedInTrade();
 }
 
 bool InventoryManager::Item::IsSalvagable()
