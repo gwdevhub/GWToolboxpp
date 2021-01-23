@@ -1034,14 +1034,14 @@ namespace {
     uint32_t GetZaishenVanquish(time_t* unix) {
         return static_cast<uint32_t>((*unix - 1299168000) / 86400 % 136);
     }
-    void PrintDaily(const wchar_t* label, const char* value, time_t unix) {
+    void PrintDaily(const wchar_t* label, const char* value, time_t unix, bool as_wiki_link = true) {
         bool show_date = unix != time(nullptr);
         wchar_t buf[139];
         if (show_date) {
-            swprintf(buf, _countof(buf), L"%s, %s: <a=1>%S\x2800</a>", label, DateString(&unix), value);
+            swprintf(buf, _countof(buf), as_wiki_link ? L"%s, %s: <a=1>\x200B%S</a>" : L"%s, %s: <a=1>%S</a>", label, DateString(&unix), value);
         }
         else {
-            swprintf(buf, _countof(buf), L"%s: <a=1>%S\x2800</a>", label, value);
+            swprintf(buf, _countof(buf), as_wiki_link ? L"%s: <a=1>\x200B%S</a>" : L"%s: <a=1>%S</a>", label, value);
         }
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buf);
     }
@@ -1543,10 +1543,10 @@ void DailyQuests::CmdNicholas(const wchar_t *, int argc, LPWSTR *argv) {
     char buf[128];
     if (GetIsPreSearing()) {
         snprintf(buf, _countof(buf), "5 %s", GetNicholasSandfordLocation(&now));
-        PrintDaily(L"Nicholas Sandford", buf, now);
+        PrintDaily(L"Nicholas Sandford", buf, now,false);
     }
     else {
         snprintf(buf, _countof(buf), "%d %s in %s", GetNicholasItemQuantity(&now), GetNicholasItemName(&now), GetNicholasLocation(&now));
-        PrintDaily(L"Nicholas the Traveler", buf, now);
+        PrintDaily(L"Nicholas the Traveler", buf, now,false);
     }
 }

@@ -725,6 +725,7 @@ void GameSettings::Initialize() {
     GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, &OnCheckboxPreferenceChanged);
     GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, OnChangeTarget);
     GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, OnPlayerChatMessage);
+    GW::UI::RegisterUIMessageCallback(&OnWriteChat_Entry, OnWriteChat);
 
     GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
@@ -1633,16 +1634,21 @@ void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::
 void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
     if (!_name) return;
     GameSettings* instance = &Instance();
-    // wchar_t 0x2800 is a character that can't be entered in-game, and is blank - perfect for wiki links :)
-    for (size_t i = 0; _name[i]; i++) {
-        if (_name[i] != 0x2800)
-            continue;
-        _name[i] = 0;
-        std::string s = "https://wiki.guildwars.com/wiki/" + GuiUtils::UrlEncode(GuiUtils::WStringToString(_name));
-        // Wiki URL
-        ShellExecute(NULL, "open", s.c_str(), NULL, NULL, SW_SHOWNORMAL);
-        status->blocked = true;
-        return;
+    switch (_name[0]) {
+        case 0x200B: {
+            // Zero-Width Space - wiki link
+            std::string s = "https://wiki.guildwars.com/wiki/" + GuiUtils::UrlEncode(GuiUtils::WStringToString(&_name[1]));
+            ShellExecute(NULL, "open", s.c_str(), NULL, NULL, SW_SHOWNORMAL);
+            status->blocked = true;
+            return;
+        }
+        case 0x200C: {
+            // Zero Width Non-Joiner - location on disk
+            std::filesystem::path p(&_name[1]);
+            ShellExecuteW(NULL, L"open", p.parent_path().c_str(), NULL, NULL, SW_SHOWNORMAL);
+            status->blocked = true;
+            return;
+        }
     }
     if (instance->openlinks && (!wcsncmp(_name, L"http://", 7) || !wcsncmp(_name, L"https://", 8))) {
         ShellExecuteW(NULL, L"open", _name, NULL, NULL, SW_SHOWNORMAL);
@@ -2146,6 +2152,58 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
         target_type = None;
         return;
     }
+}
+
+// Turn screenshots into clickable links
+void GameSettings::OnWriteChat(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
+    static bool is_redirecting = false;
+    if (is_redirecting) {
+        is_redirecting = false;
+        return;
+    }
+    if (!(msgid == GW::UI::kWriteToChatLog && wParam))
+        return;
+    PlayerChatMessage* msg = static_cast<PlayerChatMessage*>(wParam);
+    if (msg->channel != GW::Chat::Channel::CHANNEL_GLOBAL)
+        return;
+    if (wmemcmp(L"\x846\x107", msg->message, 2) != 0)
+        return;
+    status->blocked = true;
+    wchar_t file_path[256];
+    size_t file_path_len = 0;
+    wchar_t new_message[256];
+    size_t new_message_len = 0;
+    wcscpy(&new_message[new_message_len], L"\x846\x107<a=1>\x200C");
+    new_message_len += 8;
+    for (size_t i = 2; msg->message[i] && msg->message[i] != 0x1;i++) {
+        new_message[new_message_len++] = msg->message[i];
+        if (msg->message[i] == '\\' && msg->message[i - 1] == '\\')
+            continue; // Skip double escaped directory separators when getting the actual file name
+        file_path[file_path_len++] = msg->message[i]; 
+    }
+    file_path[file_path_len] = 0;
+    wcscpy(&new_message[new_message_len], L"</a>\x1");
+    new_message_len += 5;
+    new_message[new_message_len] = 0;
+    is_redirecting = true;
+    GW::Chat::WriteChatEnc(static_cast<GW::Chat::Channel>(msg->channel), new_message);
+    // Copy file to clipboard
+
+    int size = sizeof(DROPFILES) + ((file_path_len + 2) * sizeof(wchar_t));
+    HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
+    DROPFILES* df = (DROPFILES*)GlobalLock(hGlobal);
+    ZeroMemory(df, size);
+    df->pFiles = sizeof(DROPFILES);
+    df->fWide = TRUE;
+    LPWSTR ptr = (LPWSTR)(df + 1);
+    lstrcpyW(ptr, file_path);
+    GlobalUnlock(hGlobal);
+
+    // prepare the clipboard
+    OpenClipboard(NULL);
+    EmptyClipboard();
+    SetClipboardData(CF_HDROP, hGlobal);
+    CloseClipboard();
 }
 
 // Don't target chest as nearest item, Target green items from chest last

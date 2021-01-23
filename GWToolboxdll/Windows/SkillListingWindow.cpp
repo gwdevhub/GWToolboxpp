@@ -89,13 +89,32 @@ void SkillListingWindow::ExportToJSON() {
     std::ofstream out(file_location);
     out << json.dump();
     out.close();
-    Log::Info("Skills exported to %ls", file_location.c_str());
+    wchar_t file_location_wc[512];
+    size_t msg_len = 0;
+    const wchar_t* message = file_location.c_str();
+
+    size_t max_len = _countof(file_location_wc) - 1;
+    
+    for (size_t i = 0; i < file_location.length(); i++) {
+        // Break on the end of the message
+        if (!message[i])
+            break;
+        // Double escape backsashes
+        if (message[i] == '\\')
+            file_location_wc[msg_len++] = message[i];
+        if (msg_len >= max_len)
+            break;
+        file_location_wc[msg_len++] = message[i];
+    }
+    file_location_wc[msg_len] = 0;
+    wchar_t chat_message[1024];
+    swprintf(chat_message, _countof(chat_message), L"Skills exported to <a=1>\x200C%s</a>", file_location_wc);
+    GW::Chat::WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 void SkillListingWindow::Initialize() {
     ToolboxWindow::Initialize();
-    const unsigned int max_skills = 3410;
-    skills.resize(max_skills);
-    for (size_t i = 0; i < max_skills; i++) {
+    skills.resize((size_t)GW::Constants::SkillID::Count);
+    for (size_t i = 0; i < skills.size(); i++) {
         GW::Skill* s = &GW::SkillbarMgr::GetSkillConstantData(i);
         if (!s || !s->skill_id || !s->skill_equip_type) continue;
         skills[i] = new Skill(s);
