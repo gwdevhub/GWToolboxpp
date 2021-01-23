@@ -538,7 +538,8 @@ bool InventoryManager::WndProc(UINT message, WPARAM , LPARAM ) {
         }
         is_right_clicking = start_pos = gw_cursor_moved_to = 0;
     } break;
-    case WM_LBUTTONDOWN: {
+    case WM_LBUTTONDOWN: 
+    case WM_LBUTTONDBLCLK: {
             const Item* item = static_cast<Item*>(GW::Items::GetHoveredItem());
             GW::Bag* bag = item ? item->bag : nullptr;
             if (!bag)
@@ -546,8 +547,8 @@ bool InventoryManager::WndProc(UINT message, WPARAM , LPARAM ) {
             if (static_cast<GW::Constants::Bag>(bag->index + 1) == GW::Constants::Bag::Material_Storage) {
                 // Item in material storage pane clicked - spoof a click event
                 GW::HookStatus status;
-                ItemClickCallback(&status, 7, item->slot, bag);
-                return true;
+                ItemClickCallback(&status, message == WM_LBUTTONDOWN ? 7 : 8, item->slot, bag);
+                return false;
             }
         } break;
     }
