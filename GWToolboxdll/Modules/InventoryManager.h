@@ -66,6 +66,7 @@ public:
     bool IsSameItem(GW::Item* item1, GW::Item* item2);
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
+    static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
 
 
     IdentifyAllType identify_all_type = IdentifyAllType::None;
@@ -75,6 +76,7 @@ protected:
     void ShowVisibleRadio() override {};
 
 private:
+    bool trade_whole_stacks = false;
     bool show_item_context_menu = false;
     bool is_identifying = false;
     bool is_identifying_all = false;

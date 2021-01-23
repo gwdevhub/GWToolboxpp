@@ -316,19 +316,6 @@ namespace {
 
     GW::HookEntry on_offer_item_hook;
 
-    void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity) {
-        if (ImGui::IsKeyDown(VK_SHIFT))
-            return; // Default behaviour; prompt user for amount
-        if (quantity == 0) {
-            const GW::Item* item = GW::Items::GetItemById(item_id);
-            if (item && item->quantity > 1) {
-                status->blocked = true;
-                GW::Trade::OfferItem(item_id, item->quantity);
-            }
-        }
-    }
-
-
     int CountInventoryBagSlots() {
         int slots = 0;
         GW::Bag* bag = nullptr;
@@ -502,6 +489,17 @@ void InventoryManager::Initialize() {
     GW::Trade::RegisterOfferItemCallback(&on_offer_item_hook, OnOfferTradeItem);
     inventory_bags_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_InventoryBags);
 }
+void InventoryManager::OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity) {
+    if (ImGui::IsKeyDown(VK_SHIFT) || !Instance().trade_whole_stacks)
+        return; // Default behaviour; prompt user for amount
+    if (quantity == 0) {
+        const GW::Item* item = GW::Items::GetItemById(item_id);
+        if (item && item->quantity > 1) {
+            status->blocked = true;
+            GW::Trade::OfferItem(item_id, item->quantity);
+        }
+    }
+}
 bool InventoryManager::WndProc(UINT message, WPARAM , LPARAM ) {
     static DWORD is_right_clicking = 0;
     static DWORD start_pos = 0;
@@ -562,6 +560,7 @@ void InventoryManager::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
+    ini->SetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
 }
 void InventoryManager::LoadSettings(CSimpleIni* ini) {
     ToolboxUIElement::LoadSettings(ini);
@@ -571,6 +570,7 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
     bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
     bags_to_salvage_from[GW::Constants::Bag::Bag_1] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
+    trade_whole_stacks = ini->GetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
 }
 void InventoryManager::ClearSalvageSession(GW::HookStatus *status, void *)
 {
@@ -1110,7 +1110,9 @@ bool InventoryManager::IsPendingSalvage() {
     return false;
 }
 void InventoryManager::DrawSettingInternal() {
-    ImGui::TextDisabled("This module is responsible for salvaging and identifying functions either by ctrl + clicking on a salvage or identification kit");
+    ImGui::TextDisabled("This module is responsible for extra item functions via ctrl+click, right click or double click");
+    ImGui::Checkbox("Move whole stacks into trade by default", &trade_whole_stacks);
+    ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack into trade");
     ImGui::Text("Salvage All options:");
     ImGui::SameLine();
     ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
@@ -1167,7 +1169,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
     DrawInventoryOverlay();
 #endif
 
-
+    static bool check_all_items = true;
     static bool show_inventory_context_menu = false;
     if (show_item_context_menu) {
         ImGui::OpenPopup("Item Context Menu");
@@ -1367,6 +1369,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
     if (show_salvage_all_popup) {
         ImGui::OpenPopup("Salvage All?");
         show_salvage_all_popup = false;
+        check_all_items = true;
     }
     if (ImGui::BeginPopupModal("Salvage All?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         if (!is_salvaging_all && salvage_all_type == SalvageAllType::None) {
@@ -1396,6 +1399,11 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
             Item* item;
             GW::Bag* bag = nullptr;
             bool has_items_to_salvage = false;
+            if (ImGui::Checkbox("Select All", &check_all_items)) {
+                for (size_t i = 0; i < potential_salvage_all_items.size(); i++) {
+                    potential_salvage_all_items[i]->proceed = check_all_items;
+                }
+            }
             for(size_t i=0;i< potential_salvage_all_items.size();i++) {
                 pi = potential_salvage_all_items[i];
                 if (!pi) continue;
