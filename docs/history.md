@@ -13,6 +13,8 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [New] Ctrl + click working on material storage pane
 * [New] Added option to block animations for bottle rockets, party poppers, transmogs, snowmen and sweet points
 * [New] Right click context menu for materials shows option to store all into chest
+* [Minor] Taking a screenshot in-game will copy to clipboard
+* [Minor] Screenshot filename in chat opens the screenshot directory
 * [Minor] Hide toolbox on world map
 * [Minor] Added setting to set default minimap agent shape
 * [Minor] Added Select All" to salvage dialog
