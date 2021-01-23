@@ -197,6 +197,9 @@ nlohmann::json SkillListingWindow::Skill::ToJson() {
         z_json["e"] = skill->GetEnergyCost();
     if (skill->health_cost)
         z_json["s"] = skill->health_cost;
+    z_json["sp"] = skill->special;
+    z_json["co"] = skill->combo;
+    z_json["q"] = skill->weapon_req;
     if (z_json.size())
         json["z"] = z_json;
     return json;
