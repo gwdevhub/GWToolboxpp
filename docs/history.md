@@ -7,7 +7,7 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
-## Version 4.7
+## Version 4.7.1
 * [New] Double click to send items to trade window when trade is open; works with material storage and chest items without having to withdraw them
 * [New] Added option to move entire stacks to trade window by default
 * [New] Ctrl + click working on material storage pane
