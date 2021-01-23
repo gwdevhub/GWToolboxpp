@@ -299,6 +299,7 @@ namespace {
 
     // Width of scrollbar on gw windows.
     const float gw_scrollbar_width = 20.f;
+    uint32_t pending_item_move_for_trade = 0;
 
     bool GetMousePosition(GW::Vec2f& pos) {
         ImVec2 imgui_pos = ImGui::GetIO().MousePos;
@@ -1129,6 +1130,18 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 }
 void InventoryManager::Update(float) {
+    if (pending_item_move_for_trade) {
+        Item* item = static_cast<Item*>(GW::Items::GetItemById(pending_item_move_for_trade));
+        if (!item) {
+            pending_item_move_for_trade = 0;
+            return;
+        }
+        if (item->bag && item->bag->IsInventoryBag()) {
+            if (item->CanOfferToTrade())
+                GW::Trade::OfferItem(item->item_id);
+            pending_item_move_for_trade = 0;
+        }
+    }
     if (is_salvaging) {
         if (IsPendingSalvage()) {
             if ((clock() / CLOCKS_PER_SEC) - pending_salvage_at > 5) {
@@ -1486,7 +1499,14 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
         item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
         if (!item || !item->CanOfferToTrade())
             return;
-        GW::Trade::OfferItem(item->item_id);
+        if (!item->bag->IsInventoryBag()) {
+            uint16_t moved = move_to_first_empty_slot(item, (size_t)GW::Constants::Bag::Backpack, (size_t)GW::Constants::Bag::Bag_2);
+            if (!moved) {
+                Log::ErrorW(L"Failed to move item to inventory for trading");
+                return;
+            }
+        }
+        pending_item_move_for_trade = item->item_id;
         return;
     case 999: // Right click (via GWToolbox)
         break;
