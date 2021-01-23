@@ -7,6 +7,23 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.7
+* [New] Double click to send items to trade window when trade is open; works with material storage and chest items without having to withdraw them
+* [New] Added option to move entire stacks to trade window by default
+* [New] Ctrl + click working on material storage pane
+* [New] Added option to block animations for bottle rockets, party poppers, transmogs, snowmen and sweet points
+* [New] Right click context menu for materials shows option to store all into chest
+* [Minor] Hide toolbox on world map
+* [Minor] Added setting to set default minimap agent shape
+* [Minor] Added Select All" to salvage dialog
+* [Minor] Removed URL for daily quests from chat window
+* [Minor] Right clicking items also opens context menu
+* [Fix] Fixed a bug preventing toolbox from reacting to window focussing mouse click
+* [Fix] Fixed bug preventing `/tp kama ae1` from travelling to district 1
+* [Fix] Fixed bug causing objectives to start before timer was reset
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.7_Release/GWToolboxdll.dll)
+
 ## Version 4.6
 * [New] Added `/herobuild` command to load hero teambuild
 * [New] Timer improvements and new options. 
