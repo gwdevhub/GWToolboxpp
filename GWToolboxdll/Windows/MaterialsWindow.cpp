@@ -88,6 +88,10 @@ void MaterialsWindow::Update(float delta) {
     }
 }
 
+bool MaterialsWindow::GetIsInProgress() {
+    return !transactions.empty();
+}
+
 void MaterialsWindow::Initialize() {
     ToolboxWindow::Initialize();
 

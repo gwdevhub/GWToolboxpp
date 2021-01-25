@@ -20,6 +20,7 @@
 #include <GuiUtils.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/GameSettings.h>
+#include <Windows/MaterialsWindow.h>
 
 namespace {
     static ImVec4 ItemBlue = ImColor(153, 238, 255).Value;
@@ -465,7 +466,7 @@ void InventoryManager::Initialize() {
     GW::CtoS::RegisterPacketCallback(&ItemClick_Entry, GAME_CMSG_REQUEST_QUOTE,
         [this](GW::HookStatus*, void* pak) -> void {
             requesting_quote_type = 0;
-            if (pending_transaction.in_progress() || !ImGui::IsKeyDown(VK_CONTROL)) {
+            if (pending_transaction.in_progress() || !ImGui::IsKeyDown(VK_CONTROL) || MaterialsWindow::Instance().GetIsInProgress()) {
                 return;
             }
             CtoS_QuoteItem* quote = (CtoS_QuoteItem*)pak;
@@ -1526,7 +1527,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
     bool is_storage_item = item->bag->IsStorageBag() || item->bag->IsMaterialStorage();
     if (!is_inventory_item && !is_storage_item) return;
 
-    bool show_context_menu = item->IsIdentificationKit() || item->IsSalvageKit() || (type == 999 && item->GetIsMaterial() && is_inventory_item);
+    bool show_context_menu = item->IsIdentificationKit() || item->IsSalvageKit() || type == 999;
 
     if (show_context_menu) {
         // Context menu applies
@@ -1540,8 +1541,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
         im.show_item_context_menu = true;
         status->blocked = true;
         return;
-    }
-    if (type == 7 && ImGui::IsKeyDown(VK_CONTROL) && GameSettings::Instance().move_item_on_ctrl_click) {
+    } else if (type == 7 && ImGui::IsKeyDown(VK_CONTROL) && GameSettings::Instance().move_item_on_ctrl_click) {
         // Move item on ctrl click
         move_item(item);
     }

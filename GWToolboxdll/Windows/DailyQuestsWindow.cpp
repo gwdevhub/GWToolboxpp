@@ -1041,7 +1041,7 @@ namespace {
             swprintf(buf, _countof(buf), as_wiki_link ? L"%s, %s: <a=1>\x200B%S</a>" : L"%s, %s: <a=1>%S</a>", label, DateString(&unix), value);
         }
         else {
-            swprintf(buf, _countof(buf), as_wiki_link ? L"%s: <a=1>\x200B%S</a>" : L"%s: <a=1>%S</a>", label, value);
+            swprintf(buf, _countof(buf), as_wiki_link ? L"%s: <a=1>\x200B%S</a>" : L"%s: %S", label, value);
         }
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buf);
     }

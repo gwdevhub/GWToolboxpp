@@ -51,6 +51,8 @@ public:
     void DrawSettingInternal() override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
+
+    bool GetIsInProgress();
     
     // Update. Will always be called every frame.
     void Update(float delta) override;

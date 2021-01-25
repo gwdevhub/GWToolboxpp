@@ -429,8 +429,11 @@ bool DiscordModule::Connect() {
 */
     ConnectCanary(); // Sets env var to attach to canary if its open.
 #endif
-    if (discordCreate(DISCORD_VERSION, &params, &app.core) != DiscordResult_Ok) {
-        // Log::Error("Failed to create discord connection");
+    int result = discordCreate(DISCORD_VERSION, &params, &app.core);
+    if (result != DiscordResult_Ok) {
+#ifdef _DEBUG
+        Log::ErrorW(L"Failed to create discord connection; error code %d", result);
+#endif
         return false;
     }
     discord_connected = true;
