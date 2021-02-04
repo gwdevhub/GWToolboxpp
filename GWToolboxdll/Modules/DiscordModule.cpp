@@ -429,10 +429,11 @@ bool DiscordModule::Connect() {
 */
     ConnectCanary(); // Sets env var to attach to canary if its open.
 #endif
+    SetLastError(0);
     int result = discordCreate(DISCORD_VERSION, &params, &app.core);
     if (result != DiscordResult_Ok) {
 #ifdef _DEBUG
-        Log::ErrorW(L"Failed to create discord connection; error code %d", result);
+        Log::ErrorW(L"Failed to create discord connection; error code %d, last error %d", result, GetLastError());
 #endif
         return false;
     }
@@ -470,12 +471,14 @@ bool DiscordModule::LoadDll() {
     if (discordCreate)
         return true; // Already loaded.
     HINSTANCE hGetProcIDDLL = LoadLibraryW(dll_location.c_str());
-    if (!hGetProcIDDLL)
+    if (!hGetProcIDDLL) {
+        Log::LogW(L"Failed to LoadLibraryW %s\n", dll_location.c_str());
         return false;
+    }
     // resolve function address here
     discordCreate = (DiscordCreate_pt)((uintptr_t)(GetProcAddress(hGetProcIDDLL, "DiscordCreate")));
     if (!discordCreate) {
-        Log::Error("Failed to find address for DiscordCreate");
+        Log::LogW(L"Failed to find address for DiscordCreate\n");
         return false;
     }
     Log::Log("Discord DLL hooked!\n");

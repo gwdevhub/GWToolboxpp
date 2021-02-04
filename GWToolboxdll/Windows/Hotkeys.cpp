@@ -749,15 +749,8 @@ bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
 
 bool HotkeyToggle::IsValid(CSimpleIni *ini, const char *section)
 {
-    switch (ini->GetLongValue(section, "ToggleID", static_cast<long>(Clicker))) {
-        case static_cast<long>(Clicker):
-        case static_cast<long>(Pcons):
-        case static_cast<long>(CoinDrop):
-        case static_cast<long>(Tick):
-            return true;
-        default:
-            return false;
-    }
+    long val = ini->GetLongValue(section, "ToggleID", static_cast<long>(Clicker));
+    return val >= 0 && val < Count;
 }
 HotkeyToggle::HotkeyToggle(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
@@ -777,8 +770,7 @@ void HotkeyToggle::Description(char *buf, size_t bufsz) const
 }
 void HotkeyToggle::Draw()
 {
-    if (ImGui::Combo("Toggle###combo", (int *)&target, GetText, nullptr,
-                     n_targets))
+    if (ImGui::Combo("Toggle###combo", (int *)&target, GetText, nullptr,Count))
         hotkeys_changed = true;
     if (ImGui::Checkbox("Display message when triggered",
                         &show_message_in_emote_channel))

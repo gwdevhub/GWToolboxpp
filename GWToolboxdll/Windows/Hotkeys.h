@@ -165,12 +165,13 @@ public:
 
 // hotkey to toggle a toolbox function
 class HotkeyToggle : public TBHotkey {
-    const int n_targets = 4;
     enum Toggle {
         Clicker,
         Pcons,
         CoinDrop,
-        Tick
+        Tick,
+        Keypress,
+        Count
     };
     static bool GetText(void*, int idx, const char** out_text);
 

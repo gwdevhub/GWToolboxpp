@@ -219,14 +219,14 @@ bool TeamspeakModule::GetTeamspeakProcess(std::filesystem::path* filename, PBOOL
     for (i = 0; i < cProcesses; i++) {
         if (!aProcesses[i]) {
             // @Cleanup: Why would this happen?
-            Log::Log("Empty PID\n");
+            //Log::Log("Empty PID\n");
             continue;
         }
         // Get a handle to the process.
         HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, aProcesses[i]);
         if (!hProcess) {
             // @Cleanup: Why would this happen?
-            Log::Log("Failed to get process by PID %d (%04X)\n", aProcesses[i], GetLastError());
+            //Log::Log("Failed to get process by PID %d (%04X)\n", aProcesses[i], GetLastError());
             continue;
         }
         wchar_t szProcessName[MAX_PATH];
