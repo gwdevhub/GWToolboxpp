@@ -48,12 +48,14 @@
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
+#include <Windows/MissionsWindow.h>
 #if 0
 #include <Windows/PartySearchWindow.h>
 #endif
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
 #endif
+
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -105,6 +107,8 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_factionleaderboard) optional_modules.push_back(&FactionLeaderboardWindow::Instance());
     if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
     if (use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
+
+
 #ifdef _DEBUG
 #if 0
     optional_modules.push_back(&PartySearchWindow::Instance());
@@ -113,6 +117,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&StringDecoderWindow::Instance());
     optional_modules.push_back(&DoorMonitorWindow::Instance());
     optional_modules.push_back(&SkillListingWindow::Instance());
+    optional_modules.push_back(&MissionsWindow::Instance());
 #endif
     std::sort(
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_windows),
