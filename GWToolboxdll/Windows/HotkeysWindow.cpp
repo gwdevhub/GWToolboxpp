@@ -219,6 +219,8 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     case WM_SYSKEYDOWN:
     case WM_XBUTTONDOWN:
     case WM_MBUTTONDOWN: {
+        if (block_hotkeys)
+            return true;
         long modifier = 0;
         if (GetKeyState(VK_CONTROL) < 0)
             modifier |= ModKey_Control;
@@ -239,7 +241,7 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 
                 hk->pressed = true;
                 current_hotkey = hk;
-                hk->Execute();
+                hk->Toggle();
                 current_hotkey = nullptr;
                 if (hk->block_gw)
                     triggered = true;
@@ -313,31 +315,9 @@ void HotkeysWindow::Update(float delta) {
     }
     if (!map_change_triggered)
         MapChanged();
-    if (clickerActive && TIMER_DIFF(clickerTimer) > 20) {
-        clickerTimer = TIMER_INIT();
-        INPUT input;
-        input.type = INPUT_MOUSE;
-        input.mi.dx = 0;
-        input.mi.dy = 0;
-        input.mi.mouseData = 0;
-        input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP;
-        input.mi.time = 0;
-        input.mi.dwExtraInfo = NULL;
-
-        SendInput(1, &input, sizeof(INPUT));
-    }
-
-    if (dropCoinsActive && TIMER_DIFF(dropCoinsTimer) > 500) {
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-            dropCoinsTimer = TIMER_INIT();
-            GW::Items::DropGold(1);
-        }
-    }
 
     for (unsigned int i = 0; i < hotkeys.size(); ++i) {
         if (hotkeys[i]->ongoing)
             hotkeys[i]->Execute();
     }
-
-    // TODO rupt?
 }

@@ -214,6 +214,20 @@ namespace {
         }
         pending_moves.clear();
     }
+    void store_all_tomes() {
+        const size_t bag_first = static_cast<size_t>(GW::Constants::Bag::Backpack);
+        const size_t bag_last = static_cast<size_t>(GW::Constants::Bag::Bag_2);
+        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+            GW::Bag* bag = GW::Items::GetBag(bag_i);
+            if (!bag) continue;
+            for (size_t slot = 0; slot < bag->items.size(); slot++) {
+                InventoryManager::Item* item = static_cast<InventoryManager::Item*>(bag->items[slot]);
+                if (item && item->IsTome())
+                    move_item_to_storage(item);
+            }
+        }
+        pending_moves.clear();
+    }
 
     // Move a whole stack into/out of storage
     uint16_t move_item(GW::Item* item) {
@@ -1266,6 +1280,12 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                     store_all_materials();
                 }
             }
+            if (context_item_actual->IsTome() && context_item_actual->bag->IsInventoryBag()) {
+                if (ImGui::Button("Store All Tomes", size)) {
+                    ImGui::CloseCurrentPopup();
+                    store_all_tomes();
+                }
+            }
         }
         if (context_item_actual && context_item_actual->IsIdentificationKit()) {
             IdentifyAllType type = IdentifyAllType::None;
@@ -1683,6 +1703,11 @@ uint32_t InventoryManager::Item::GetUses()
 bool InventoryManager::Item::IsSalvageKit()
 {
     return IsLesserKit() || IsExpertSalvageKit(); // || IsPerfectSalvageKit();
+}
+bool InventoryManager::Item::IsTome() {
+    GW::ItemModifier* mod = GetModifier(0x2788);
+    uint32_t use_id = mod ? mod->arg2() : 0;
+    return use_id > 15 && use_id < 36;
 }
 bool InventoryManager::Item::IsIdentificationKit()
 {

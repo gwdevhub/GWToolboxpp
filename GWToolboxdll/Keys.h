@@ -37,6 +37,11 @@
 #define VK_Y        0x59
 #define VK_Z        0x5A
 
+static int KeyName(long vkey, char* buf, int len) {
+    UINT scan_code = MapVirtualKey(vkey, MAPVK_VK_TO_VSC);
+    return GetKeyNameTextA(MAKELPARAM(0x0001, scan_code), buf, len);
+}
+
 static const char* KeyName(long vkey) {
     switch (vkey) {
     case 0: return "None";
@@ -281,9 +286,14 @@ const LONG ModKey_Control = 0x20000;
 const LONG ModKey_Alt = 0x40000;
 
 inline int ModKeyName(char* buf, size_t bufsz, LONG mod, LONG vkey, const char* ifempty = "") {
+    char vkey_c[32];
+    if (vkey > 0) {
+        if (!KeyName(vkey, vkey_c, _countof(vkey_c)))
+            snprintf(vkey_c, _countof(vkey_c), "%s", KeyName(vkey));
+    }
     return snprintf(buf, bufsz, "%s%s%s%s",
         (mod & ModKey_Control) ? "Control + " : "",
         (mod & ModKey_Alt) ? "Alt + " : "",
         (mod & ModKey_Shift) ? "Shift + " : "",
-        vkey > 0 ? KeyName(vkey) : ifempty);
+        vkey > 0 ? vkey_c : ifempty);
 }

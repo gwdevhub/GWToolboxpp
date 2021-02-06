@@ -130,6 +130,7 @@ public:
         uint32_t GetUses();
         bool IsIdentificationKit();
         bool IsSalvageKit();
+        bool IsTome();
         bool IsLesserKit();
         bool IsExpertSalvageKit();
         bool IsPerfectSalvageKit();

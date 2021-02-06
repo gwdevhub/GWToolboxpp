@@ -429,6 +429,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     InfoField("Region", "%d", map_info->region);
                     InfoField("Type", "%d", map_info->type);
                     InfoField("Flags", "0x%X", map_info->flags);
+                    static wchar_t name_enc[8];
+                    if(GW::UI::UInt32ToEncStr(map_info->name_id,name_enc,8))
+                        EncInfoField("Name Enc", name_enc);
                 }
                 ImGui::TreePop();
             }

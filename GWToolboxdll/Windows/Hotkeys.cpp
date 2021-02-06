@@ -45,6 +45,9 @@ bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
 bool TBHotkey::hotkeys_changed = false;
 unsigned int TBHotkey::cur_ui_id = 0;
+WORD* TBHotkey::key_out = nullptr;
+DWORD* TBHotkey::mod_out = nullptr;
+std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
 
 TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
 {
@@ -135,6 +138,11 @@ static const char *professions[] = {"Any",          "Warrior",     "Ranger",
                                     "Elementalist", "Assassin",    "Ritualist",
                                     "Paragon",      "Dervish"};
 static const char *instance_types[] = {"Any", "Outpost", "Explorable"};
+void TBHotkey::HotkeySelector(WORD* key, DWORD* modifier) {
+    key_out = key;
+    mod_out = modifier;
+    ImGui::OpenPopup("Select Hotkey");
+}
 void TBHotkey::Draw(Op *op)
 {
     auto ShowHeaderButtons = [&]() {
@@ -159,8 +167,8 @@ void TBHotkey::Draw(Op *op)
             if (show_run_in_header) {
                 ImGui::SameLine(ImGui::GetContentRegionAvail().x -
                                 btn_width);
-                if (ImGui::Button("Run", ImVec2(btn_width, 0.0f))) {
-                    Execute();
+                if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(btn_width, 0.0f))) {
+                    Toggle();
                 }
             }
             ImGui::PopID();
@@ -218,42 +226,47 @@ void TBHotkey::Draw(Op *op)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("The hotkey can trigger only when selected");
         ImGui::SameLine();
-        static LONG newkey = 0;
         char keybuf2[128];
         snprintf(keybuf2, 128, "Hotkey: %s", keybuf);
         if (ImGui::Button(keybuf2, ImVec2(-70.0f, 0))) {
-            ImGui::OpenPopup("Select Hotkey");
-            newkey = 0;
+            HotkeySelector((WORD*)&hotkey, (DWORD*)&modifier);
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Click to change hotkey");
         if (ImGui::BeginPopup("Select Hotkey")) {
+            static WORD newkey = 0;
             *op = Op_BlockInput;
             ImGui::Text("Press key");
-            int newmod = 0;
-            if (ImGui::GetIO().KeyCtrl)
-                newmod |= ModKey_Control;
-            if (ImGui::GetIO().KeyAlt)
-                newmod |= ModKey_Alt;
-            if (ImGui::GetIO().KeyShift)
-                newmod |= ModKey_Shift;
+            DWORD newmod = 0;
+            bool* keysdown = ImGui::GetIO().KeysDown;
+            if (mod_out) {
+                if (keysdown[VK_CONTROL])
+                    newmod |= ModKey_Control;
+                if (keysdown[VK_MENU])
+                    newmod |= ModKey_Alt;
+                if (keysdown[VK_SHIFT])
+                    newmod |= ModKey_Shift;
+            }
+
 
             if (newkey == 0) { // we are looking for the key
-                for (int i = 0; i < 512; ++i) {
+                for (WORD i = 0; i < 512; ++i) {
                     if (i == VK_CONTROL)
                         continue;
                     if (i == VK_SHIFT)
                         continue;
                     if (i == VK_MENU)
                         continue;
-                    if (ImGui::GetIO().KeysDown[i]) {
+                    if (keysdown[i]) {
                         newkey = i;
                     }
                 }
             } else { // key was pressed, close if it's released
-                if (!ImGui::GetIO().KeysDown[newkey]) {
-                    hotkey = newkey;
-                    modifier = newmod;
+                if (!keysdown[newkey]) {
+                    *key_out = newkey;
+                    if(mod_out)
+                        *mod_out = newmod;
+                    newkey = 0;
                     ImGui::CloseCurrentPopup();
                     hotkeys_changed = true;
                 }
@@ -263,13 +276,24 @@ void TBHotkey::Draw(Op *op)
             char newkey_buf[256];
             ModKeyName(newkey_buf, 256, newmod, newkey);
             ImGui::Text("%s", newkey_buf);
-            if (ImGui::Button("Cancel", ImVec2(-1.0f, 0)))
+            if (ImGui::Button("Clear")) {
+                *key_out = 0;
+                if (mod_out)
+                    *mod_out = 0;
+                newkey = 0;
                 ImGui::CloseCurrentPopup();
+                hotkeys_changed = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel")) {
+                newkey = 0;
+                ImGui::CloseCurrentPopup();
+            }
             ImGui::EndPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Run", ImVec2(70.0f, 0.0f))) {
-            Execute();
+        if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(70.0f, 0.0f))) {
+            Toggle();
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Execute the hotkey now");
@@ -729,9 +753,12 @@ void HotkeyDropUseBuff::Execute()
 
 bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
 {
-    switch ((Toggle)idx) {
+    switch ((ToggleTarget)idx) {
         case Clicker:
             *out_text = "Clicker";
+            return true;
+        case Keypress:
+            *out_text = "Keypress";
             return true;
         case Pcons:
             *out_text = "Pcons";
@@ -755,51 +782,160 @@ bool HotkeyToggle::IsValid(CSimpleIni *ini, const char *section)
 HotkeyToggle::HotkeyToggle(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
-    target = (Toggle)ini->GetLongValue(section, "ToggleID", (long)Clicker);
+    target = (ToggleTarget)ini->GetLongValue(section, "ToggleID", target);
+    if (target == Keypress) {
+        long val = ini->GetLongValue(section, "ToggleKey", 0);
+        if (val >= 0 && val <= 512)
+            togglekey = static_cast<WORD>(val);
+    }
+    if(HasInterval())
+        interval = ini->GetLongValue(section, "Interval", interval);
+    static bool initialised = false;
+    if (!initialised)
+        toggled.reserve(512);
+    initialised = true;
 }
 void HotkeyToggle::Save(CSimpleIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ToggleID", (long)target);
+    ini->SetLongValue(section, "ToggleKey", (long)togglekey);
+    ini->SetLongValue(section, "Interval", (long)interval);
 }
 void HotkeyToggle::Description(char *buf, size_t bufsz) const
 {
-    const char *name;
-    GetText(nullptr, (int)target, &name);
-    snprintf(buf, bufsz, "Toggle %s", name);
+    if (target == Keypress) {
+        char keybuf[32];
+        ModKeyName(keybuf, 32, 0, togglekey, "<None>");
+        snprintf(buf, bufsz, "Toggle Keypress %s", keybuf);
+    }
+    else {
+        const char* name;
+        GetText(nullptr, (int)target, &name);
+        snprintf(buf, bufsz, "Toggle %s", name);
+    }
+
 }
 void HotkeyToggle::Draw()
 {
-    if (ImGui::Combo("Toggle###combo", (int *)&target, GetText, nullptr,Count))
+    if (ImGui::Combo("Toggle###combo", (int*)&target, GetText, nullptr, Count)) {
+        if (target == Clicker)
+            togglekey = VK_LBUTTON;
         hotkeys_changed = true;
+    }
+    if (HasInterval()) {
+        if (ImGui::InputInt("Interval", &interval)) {
+            if (interval < 0)
+                interval = 50;
+            if (interval > 30000)
+                interval = 30000;
+            hotkeys_changed = true;
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Time in milliseconds between key execution\nMin: 50ms, Max: 30s");
+    }
+    if (HasToggleKey()) {
+        char keybuf[32];
+        ModKeyName(keybuf, 32, 0, togglekey, "<None>");
+        char keybuf2[64];
+        snprintf(keybuf2, 64, "Toggle key: %s", keybuf);
+        if (ImGui::Button(keybuf2, ImVec2(-70.0f, 0))) {
+            HotkeySelector(&togglekey);
+        }
+    }
     if (ImGui::Checkbox("Display message when triggered",
                         &show_message_in_emote_channel))
         hotkeys_changed = true;
 }
+HotkeyToggle::~HotkeyToggle() {
+    if (IsToggled(true))
+        toggled[togglekey] = 0;
+}
+void HotkeyToggle::Toggle() {
+    if (!HasInterval())
+        return Execute();
+    ongoing = !IsToggled(true);
+    toggled[togglekey] = ongoing ? this : 0;
+    last_use = 0;
+    if (ongoing || (!ongoing && !toggled[togglekey])) {
+        switch (target) {
+        case Clicker:
+            Log::Info("Clicker is %s", ongoing ? "active" : "disabled");
+            break;
+        case CoinDrop:
+            Log::Info("Coindrop is %s", ongoing ? "active" : "disabled");
+            break;
+        case Keypress:
+            char keybuf[32];
+            ModKeyName(keybuf, 32, 0, togglekey, "<None>");
+            Log::Info("Keypress %s is %s", keybuf, ongoing ? "active" : "disabled");
+            break;
+        }
+    }
+}
+bool HotkeyToggle::IsToggled(bool force) {
+    if (force) {
+        auto found = toggled.find(togglekey);
+        ongoing = (found != toggled.end() && found->second == this);
+    }
+    return ongoing;
+}
 void HotkeyToggle::Execute()
 {
-    bool _active;
+    if (HasInterval()) {
+        if (!CanUse())
+            ongoing = false;
+        if (!ongoing)
+            Toggle();
+        if (TIMER_DIFF(last_use) < interval)
+            return;
+        if(!IsToggled(true)) {
+            ongoing = false;
+            last_use = 0;
+            return;
+        }
+    }
+
     switch (target) {
+    case HotkeyToggle::Keypress: {
+        if (!togglekey) {
+            Toggle(); 
+            break;
+        }
+        HWND gw = GW::MemoryMgr::GetGWWindowHandle();
+        UINT scan_code = MapVirtualKey(togglekey, MAPVK_VK_TO_VSC);
+        LPARAM p = MAKELPARAM(0x0001, scan_code);
+        PostMessage(gw, WM_KEYDOWN, togglekey, p);
+        p |= 0xC0000000;
+        PostMessage(gw, WM_KEYUP, togglekey, p);
+    } break;
+            
         case HotkeyToggle::Clicker:
-            _active = HotkeysWindow::Instance().ToggleClicker();
-            if (show_message_in_emote_channel)
-                Log::Info("Clicker is %s", _active ? "active" : "disabled");
+            INPUT input;
+            memset(&input, 0, sizeof(INPUT));
+            input.type = INPUT_MOUSE;
+            input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP;
+            SendInput(1, &input, sizeof(INPUT));
             break;
         case HotkeyToggle::Pcons:
             PconsWindow::Instance().ToggleEnable();
+            ongoing = false;
             // writing to chat is done by ToggleActive if needed
             break;
         case HotkeyToggle::CoinDrop:
-            _active = HotkeysWindow::Instance().ToggleCoinDrop();
-            if (show_message_in_emote_channel)
-                Log::Info("Coin dropper is %s",
-                          _active ? "active" : "disabled");
+            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+                Toggle();
+                return;
+            }
+            GW::Items::DropGold(1);
             break;
         case HotkeyToggle::Tick:
             const auto ticked = GW::PartyMgr::GetIsPlayerTicked();
             GW::PartyMgr::Tick(!ticked);
+            ongoing = false;
             break;
     }
+    last_use = TIMER_INIT();
 }
 
 bool HotkeyAction::GetText(void *, int idx, const char **out_text)

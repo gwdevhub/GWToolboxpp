@@ -24,8 +24,11 @@ public:
     static bool show_active_in_header;
     static bool show_run_in_header;
     static bool hotkeys_changed;
+    static WORD* key_out;
+    static DWORD* mod_out;
 
     static TBHotkey* HotkeyFactory(CSimpleIni* ini, const char* section);
+    static void HotkeySelector(WORD* key, DWORD* modifier = nullptr);
 
     bool pressed = false;   // if the key has been pressed
     bool active = true;     // if the hotkey is enabled/active
@@ -58,7 +61,7 @@ public:
     virtual void Draw() = 0;
     virtual void Description(char *buf, size_t bufsz) const = 0;
     virtual void Execute() = 0;
-
+    virtual void Toggle() { return Execute(); };
 protected:
     
     static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
@@ -165,30 +168,41 @@ public:
 
 // hotkey to toggle a toolbox function
 class HotkeyToggle : public TBHotkey {
-    enum Toggle {
+    enum ToggleTarget {
         Clicker,
         Pcons,
         CoinDrop,
         Tick,
         Keypress,
         Count
-    };
+    } target = Clicker;
     static bool GetText(void*, int idx, const char** out_text);
 
-public:
-    Toggle target; // the thing to toggle
 
+public:
     static bool IsValid(CSimpleIni *ini, const char *section);
     static const char* IniSection() { return "Toggle"; }
     const char* Name() const override { return IniSection(); }
 
     HotkeyToggle(CSimpleIni* ini, const char* section);
-
+    ~HotkeyToggle();
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
     void Description(char *buf, size_t bufsz) const override;
     void Execute() override;
+    void Toggle() override;
+    bool IsToggled(bool force = false);
+
+private:
+    inline bool HasToggleKey() { return target == Keypress; };
+    inline bool HasInterval() { return target == Clicker || target == Keypress || target == CoinDrop; };
+    WORD togglekey = VK_LBUTTON;
+    bool is_key_down = false;
+    clock_t last_use = 0;
+    // ms between uses - min 50ms, max 30s
+    int interval = 50;
+    static std::unordered_map<WORD, HotkeyToggle*> toggled;
 };
 
 class HotkeyAction : public TBHotkey {
