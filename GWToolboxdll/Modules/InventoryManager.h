@@ -137,16 +137,18 @@ public:
         bool IsWeapon();
         bool IsArmor();
         bool IsSalvagable();
+        
         bool IsRareMaterial();
         bool IsWeaponSetItem();
         bool IsOfferedInTrade();
         bool CanOfferToTrade();
-        inline bool GetIsIdentified()
-        {
+        inline bool IsSparkly() {
+            return (interaction & 0x2000) == 0;
+        }
+        inline bool GetIsIdentified() {
             return (interaction & 1) != 0;
         }
-        inline bool IsStackable()
-        {
+        inline bool IsStackable() {
             return (interaction & 0x80000) != 0;
         }
         inline bool IsUsable() {

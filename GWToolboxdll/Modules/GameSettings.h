@@ -196,6 +196,7 @@ public:
     static void OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*);
     static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
     static void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
+    static void OnAfterAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
@@ -262,6 +263,7 @@ public:
     bool block_party_poppers = false;
     bool block_bottle_rockets = false;
     bool block_ghostinthebox_effect = false;
+    bool block_sparkly_drops_effect = true;
 
     bool lazy_chest_looting = false;
 
@@ -324,6 +326,7 @@ private:
     GW::HookEntry ItemClickCallback_Entry;
     GW::HookEntry FriendStatusCallback_Entry;
     GW::HookEntry PartyDefeated_Entry;
+    GW::HookEntry OnAfterAgentAdd_Entry;
     GW::HookEntry AgentState_Entry;
     GW::HookEntry AgentRemove_Entry;
     GW::HookEntry AgentAdd_Entry;

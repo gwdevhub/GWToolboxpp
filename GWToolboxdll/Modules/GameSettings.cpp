@@ -711,6 +711,7 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, &OnMapLoaded);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, &OnPlayerJoinInstance);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerLeaveInstance>(&PlayerLeaveInstance_Entry, &OnPlayerLeaveInstance);
+    //GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAfterAgentAdd_Entry, &OnAfterAgentAdd);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&PartyDefeated_Entry, &OnAgentAdd);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&PartyDefeated_Entry, &OnUpdateAgentState);
     // Trigger for message on party change
@@ -920,6 +921,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     block_party_poppers = ini->GetBoolValue(Name(), VAR_NAME(block_party_poppers), block_party_poppers);
     block_bottle_rockets = ini->GetBoolValue(Name(), VAR_NAME(block_bottle_rockets), block_bottle_rockets);
     block_ghostinthebox_effect = ini->GetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
+    block_sparkly_drops_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1046,6 +1048,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(block_party_poppers), block_party_poppers);
     ini->SetBoolValue(Name(), VAR_NAME(block_bottle_rockets), block_bottle_rockets);
     ini->SetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
+    ini->SetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1243,6 +1246,8 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("Also applies to ghost-in-the-boxes that you use");
 #endif
     ImGui::Unindent();
+    ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
+    ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
@@ -1744,7 +1749,12 @@ void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::Gener
 }
 
 // Block Ghost in the box spawn animation & sound
+// Block sparkly item animation
 void GameSettings::OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet) {
+    if (Instance().block_sparkly_drops_effect && packet->type == 4 && packet->agent_type < 0xFFFFFF) {
+        GW::Item* item = GW::Items::GetItemById(packet->agent_type);
+        if (item) item->interaction ^= 0x2000;
+    }
     if (Instance().block_ghostinthebox_effect && false
         && (packet->agent_type & 0x20000000) != 0
         && (packet->agent_type ^ 0x20000000) == GW::Constants::ModelID::Boo) {
