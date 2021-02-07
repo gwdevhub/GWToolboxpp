@@ -1753,7 +1753,7 @@ void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::Gener
 void GameSettings::OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet) {
     if (Instance().block_sparkly_drops_effect && packet->type == 4 && packet->agent_type < 0xFFFFFF) {
         GW::Item* item = GW::Items::GetItemById(packet->agent_type);
-        if (item) item->interaction ^= 0x2000;
+        if (item) item->interaction |= 0x2000;
     }
     if (Instance().block_ghostinthebox_effect && false
         && (packet->agent_type & 0x20000000) != 0
