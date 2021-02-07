@@ -883,6 +883,8 @@ bool HotkeyToggle::IsToggled(bool force) {
 void HotkeyToggle::Execute()
 {
     if (HasInterval()) {
+        if (GW::Chat::GetIsTyping())
+            return;
         if (!CanUse())
             ongoing = false;
         if (!ongoing)
