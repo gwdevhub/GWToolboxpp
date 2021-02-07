@@ -217,6 +217,15 @@ namespace {
         return out;
     }
 
+    const GW::Array<GW::TradeContext::Item>* GetPlayerTradeItems() {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+            return nullptr;
+        const GW::TradeContext* c = GW::GameContext::instance()->trade;
+        if (!c || !c->GetIsTradeInitiated())
+            return nullptr;
+        return &c->player.items;
+    }
+
     void store_all_materials() {
         std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](GW::Item* item) {
             return item && item->GetIsMaterial();
@@ -1620,22 +1629,20 @@ bool InventoryManager::Item::IsWeaponSetItem()
 }
 
 bool InventoryManager::Item::IsOfferedInTrade() {
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+    auto* player_items = GetPlayerTradeItems();
+    if (!player_items)
         return false;
-    const GW::TradeContext* c = GW::GameContext::instance()->trade;
-    if (!c || !c->GetIsTradeInitiated())
-        return false;
-    auto& player_items = c->player.items;
-    if (!player_items.valid())
-        return false;
-    for (auto& player_item : player_items) {
+    for (auto& player_item : *player_items) {
         if (player_item.item_id == item_id)
             return true;
     }
     return false;
 }
 bool InventoryManager::Item::CanOfferToTrade() {
-    return IsTradable() && IsTradeWindowOpen() && !IsOfferedInTrade();
+    auto* player_items = GetPlayerTradeItems();
+    if (!player_items)
+        return false;
+    return IsTradable() && IsTradeWindowOpen() && !IsOfferedInTrade() && player_items->size() < 7;
 }
 
 bool InventoryManager::Item::IsSalvagable()
