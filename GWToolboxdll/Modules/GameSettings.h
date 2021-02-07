@@ -263,7 +263,7 @@ public:
     bool block_party_poppers = false;
     bool block_bottle_rockets = false;
     bool block_ghostinthebox_effect = false;
-    bool block_sparkly_drops_effect = true;
+    bool block_sparkly_drops_effect = false;
 
     bool lazy_chest_looting = false;
 
