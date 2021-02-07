@@ -200,31 +200,47 @@ namespace {
         return to_move - remaining;
     }
 
-    void store_all_materials() {
-        const size_t bag_first = static_cast<size_t>(GW::Constants::Bag::Backpack);
-        const size_t bag_last = static_cast<size_t>(GW::Constants::Bag::Bag_2);
+    std::vector<InventoryManager::Item*> filter_items(GW::Constants::Bag from, GW::Constants::Bag to, std::function<bool(InventoryManager::Item*)> cmp) {
+        std::vector<InventoryManager::Item*> out;
+        const size_t bag_first = static_cast<size_t>(from);
+        const size_t bag_last = static_cast<size_t>(to);
+        InventoryManager::Item* item;
         for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
             GW::Bag* bag = GW::Items::GetBag(bag_i);
             if (!bag) continue;
             for (size_t slot = 0; slot < bag->items.size(); slot++) {
-                GW::Item* item = bag->items[slot];
-                if (item && item->GetIsMaterial())
-                    move_item_to_storage(item);
+                item = static_cast<InventoryManager::Item*>(bag->items[slot]);
+                if (cmp(item))
+                    out.push_back(item);
             }
+        }
+        return out;
+    }
+
+    void store_all_materials() {
+        std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](GW::Item* item) {
+            return item && item->GetIsMaterial();
+        });
+        for (auto& item : items) {
+            move_item_to_storage(item);
         }
         pending_moves.clear();
     }
     void store_all_tomes() {
-        const size_t bag_first = static_cast<size_t>(GW::Constants::Bag::Backpack);
-        const size_t bag_last = static_cast<size_t>(GW::Constants::Bag::Bag_2);
-        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
-            GW::Bag* bag = GW::Items::GetBag(bag_i);
-            if (!bag) continue;
-            for (size_t slot = 0; slot < bag->items.size(); slot++) {
-                InventoryManager::Item* item = static_cast<InventoryManager::Item*>(bag->items[slot]);
-                if (item && item->IsTome())
-                    move_item_to_storage(item);
-            }
+        std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](InventoryManager::Item* item) {
+            return item && item->IsTome();
+            });
+        for (auto& item : items) {
+            move_item_to_storage(item);
+        }
+        pending_moves.clear();
+    }
+    void store_all_upgrades() {
+        std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](InventoryManager::Item* item) {
+            return item && item->type == 8;
+            });
+        for (auto& item : items) {
+            move_item_to_storage(item);
         }
         pending_moves.clear();
     }
@@ -1268,9 +1284,11 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         ImGui::Text(context_item_name_s.c_str());
         ImGui::Separator();
         // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
-        Item* context_item_actual = context_item.item(); 
+        Item* context_item_actual = context_item.item();
+        bool has_options = false;
         if (context_item_actual && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-            if (ImGui::Button("Store Item", size)) {
+            has_options = true;
+            if (ImGui::Button(context_item_actual->bag->IsInventoryBag() ? "Store Item" : "Withdraw Item", size)) {
                 move_item(context_item_actual);
                 ImGui::CloseCurrentPopup();
             }
@@ -1286,8 +1304,15 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                     store_all_tomes();
                 }
             }
+            if (context_item_actual->type == 8 && context_item_actual->bag->IsInventoryBag()) {
+                if (ImGui::Button("Store All Upgrades", size)) {
+                    ImGui::CloseCurrentPopup();
+                    store_all_upgrades();
+                }
+            }
         }
         if (context_item_actual && context_item_actual->IsIdentificationKit()) {
+            has_options = true;
             IdentifyAllType type = IdentifyAllType::None;
             if(ImGui::Button("Identify All Items", size))
                 type = IdentifyAllType::All;
@@ -1312,6 +1337,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
             }
         }
         else if (context_item_actual && context_item_actual->IsSalvageKit()) {
+            has_options = true;
             SalvageAllType type = SalvageAllType::None;
             if (ImGui::Button("Salvage All White Items", size))
                 type = SalvageAllType::White;
@@ -1337,6 +1363,8 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
         ImGui::EndPopup();
+        if(!has_options)
+            ImGui::CloseCurrentPopup();
     }
     if (show_transact_quantity_popup) {
         ImGui::OpenPopup("Transaction quantity");
