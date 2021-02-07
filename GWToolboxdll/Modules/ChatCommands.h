@@ -3,6 +3,8 @@
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Constants/Constants.h>
 
+#include <GWCA/GameContainers/GamePos.h>
+
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
@@ -92,10 +94,12 @@ private:
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;
 
-    void AddSkillToUse(uint32_t skill); // 1-8 range
-    std::list<uint32_t> skills_to_use; // 0-7 range
-    float skill_usage_delay = 1.0f;
-    clock_t skill_timer = clock();
+    struct SkillToUse {
+        uint32_t slot = 0; // 1-8 range
+        GW::GamePos pos;
+        float skill_usage_delay = 1.0f;
+        clock_t skill_timer = clock();;
+    } skill_to_use;
 protected:
     const float SettingsWeighting() override { return  1.2f; };
 };

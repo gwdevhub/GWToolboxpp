@@ -757,9 +757,6 @@ bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
         case Clicker:
             *out_text = "Clicker";
             return true;
-        case Keypress:
-            *out_text = "Keypress";
-            return true;
         case Pcons:
             *out_text = "Pcons";
             return true;
@@ -783,38 +780,29 @@ HotkeyToggle::HotkeyToggle(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     target = (ToggleTarget)ini->GetLongValue(section, "ToggleID", target);
-    if (target == Keypress) {
-        long val = ini->GetLongValue(section, "ToggleKey", 0);
-        if (val >= 0 && val <= 512)
-            togglekey = static_cast<WORD>(val);
-    }
-    if(HasInterval())
-        interval = ini->GetLongValue(section, "Interval", interval);
     static bool initialised = false;
     if (!initialised)
         toggled.reserve(512);
     initialised = true;
+    switch (target) {
+    case Clicker:
+        interval = 50;
+        break;
+    case CoinDrop:
+        interval = 500;
+        break;
+    }
 }
 void HotkeyToggle::Save(CSimpleIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ToggleID", (long)target);
-    ini->SetLongValue(section, "ToggleKey", (long)togglekey);
-    ini->SetLongValue(section, "Interval", (long)interval);
 }
 void HotkeyToggle::Description(char *buf, size_t bufsz) const
 {
-    if (target == Keypress) {
-        char keybuf[32];
-        ModKeyName(keybuf, 32, 0, togglekey, "<None>");
-        snprintf(buf, bufsz, "Toggle Keypress %s", keybuf);
-    }
-    else {
-        const char* name;
-        GetText(nullptr, (int)target, &name);
-        snprintf(buf, bufsz, "Toggle %s", name);
-    }
-
+    const char* name;
+    GetText(nullptr, (int)target, &name);
+    snprintf(buf, bufsz, "Toggle %s", name);
 }
 void HotkeyToggle::Draw()
 {
@@ -822,26 +810,6 @@ void HotkeyToggle::Draw()
         if (target == Clicker)
             togglekey = VK_LBUTTON;
         hotkeys_changed = true;
-    }
-    if (HasInterval()) {
-        if (ImGui::InputInt("Interval", &interval)) {
-            if (interval < 0)
-                interval = 50;
-            if (interval > 30000)
-                interval = 30000;
-            hotkeys_changed = true;
-        }
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Time in milliseconds between key execution\nMin: 50ms, Max: 30s");
-    }
-    if (HasToggleKey()) {
-        char keybuf[32];
-        ModKeyName(keybuf, 32, 0, togglekey, "<None>");
-        char keybuf2[64];
-        snprintf(keybuf2, 64, "Toggle key: %s", keybuf);
-        if (ImGui::Button(keybuf2, ImVec2(-70.0f, 0))) {
-            HotkeySelector(&togglekey);
-        }
     }
     if (ImGui::Checkbox("Display message when triggered",
                         &show_message_in_emote_channel))
@@ -864,11 +832,6 @@ void HotkeyToggle::Toggle() {
             break;
         case CoinDrop:
             Log::Info("Coindrop is %s", ongoing ? "active" : "disabled");
-            break;
-        case Keypress:
-            char keybuf[32];
-            ModKeyName(keybuf, 32, 0, togglekey, "<None>");
-            Log::Info("Keypress %s is %s", keybuf, ongoing ? "active" : "disabled");
             break;
         }
     }
@@ -899,19 +862,6 @@ void HotkeyToggle::Execute()
     }
 
     switch (target) {
-    case HotkeyToggle::Keypress: {
-        if (!togglekey) {
-            Toggle(); 
-            break;
-        }
-        HWND gw = GW::MemoryMgr::GetGWWindowHandle();
-        UINT scan_code = MapVirtualKey(togglekey, MAPVK_VK_TO_VSC);
-        LPARAM p = MAKELPARAM(0x0001, scan_code);
-        PostMessage(gw, WM_KEYDOWN, togglekey, p);
-        p |= 0xC0000000;
-        PostMessage(gw, WM_KEYUP, togglekey, p);
-    } break;
-            
         case HotkeyToggle::Clicker:
             INPUT input;
             memset(&input, 0, sizeof(INPUT));

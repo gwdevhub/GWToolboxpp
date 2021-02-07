@@ -173,7 +173,6 @@ class HotkeyToggle : public TBHotkey {
         Pcons,
         CoinDrop,
         Tick,
-        Keypress,
         Count
     } target = Clicker;
     static bool GetText(void*, int idx, const char** out_text);
@@ -195,8 +194,7 @@ public:
     bool IsToggled(bool force = false);
 
 private:
-    inline bool HasToggleKey() { return target == Keypress; };
-    inline bool HasInterval() { return target == Clicker || target == Keypress || target == CoinDrop; };
+    inline bool HasInterval() { return target == Clicker || target == CoinDrop; };
     WORD togglekey = VK_LBUTTON;
     bool is_key_down = false;
     clock_t last_use = 0;
