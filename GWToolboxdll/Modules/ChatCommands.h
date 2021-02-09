@@ -96,9 +96,9 @@ private:
 
     struct SkillToUse {
         uint32_t slot = 0; // 1-8 range
-        GW::GamePos pos;
-        float skill_usage_delay = 1.0f;
-        clock_t skill_timer = clock();;
+        float skill_usage_delay = 0.f;
+        clock_t skill_timer = clock();
+        void Update();
     } skill_to_use;
 protected:
     const float SettingsWeighting() override { return  1.2f; };
