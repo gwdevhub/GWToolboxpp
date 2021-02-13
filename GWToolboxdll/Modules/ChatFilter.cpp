@@ -24,6 +24,9 @@
 
 //#define PRINT_CHAT_PACKETS
 
+#define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
+#define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
+
 static bool IsInChallengeMission() {
     GW::AreaInfo* a = GW::Map::GetCurrentMapInfo();
     return a && a->type == GW::RegionType_Challenge;
@@ -96,41 +99,49 @@ void ChatFilter::BlockIfApplicable(GW::HookStatus* status, const wchar_t* messag
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
-    self_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(self_drop_rare), self_drop_rare);
-    self_drop_common = ini->GetBoolValue(Name(), VAR_NAME(self_drop_common), self_drop_common);
-    ally_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_rare), ally_drop_rare);
-    ally_drop_common = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_common), ally_drop_common);
-    ally_pickup_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_rare), ally_pickup_rare);
-    ally_pickup_common = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_common), ally_pickup_common);
-    skill_points = ini->GetBoolValue(Name(), VAR_NAME(skill_points), skill_points);
-    pvp_messages = ini->GetBoolValue(Name(), VAR_NAME(pvp_messages), pvp_messages);
-    guild_announcement = ini->GetBoolValue(Name(), VAR_NAME(guild_announcement), guild_announcement);
-    hoh = ini->GetBoolValue(Name(), VAR_NAME(hoh_messages), hoh);
-    favor = ini->GetBoolValue(Name(), VAR_NAME(favor), favor);
-    ninerings = ini->GetBoolValue(Name(), VAR_NAME(ninerings), ninerings);
-    noonehearsyou = ini->GetBoolValue(Name(), VAR_NAME(noonehearsyou), noonehearsyou);
-    lunars = ini->GetBoolValue(Name(), VAR_NAME(lunars), lunars);
-    messagebycontent = ini->GetBoolValue(Name(), VAR_NAME(messagebycontent), messagebycontent);
-    away = ini->GetBoolValue(Name(), VAR_NAME(away), away);
-    you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), you_have_been_playing_for);
-    player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
-    invalid_target = ini->GetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
-    opening_chest_messages = ini->GetBoolValue(Name(), VAR_NAME(opening_chest_messages), opening_chest_messages);
-    inventory_is_full = ini->GetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
-    not_enough_energy = ini->GetBoolValue(Name(), VAR_NAME(not_enough_energy), not_enough_energy);
-    item_cannot_be_used = ini->GetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
-    item_already_identified = ini->GetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
-    faction_gain = ini->GetBoolValue(Name(), VAR_NAME(faction_gain), faction_gain);
-    challenge_mission_messages = ini->GetBoolValue(Name(), VAR_NAME(challenge_mission_messages), challenge_mission_messages);
+    LOAD_BOOL(self_drop_rare);
+    LOAD_BOOL(self_drop_common);
+    LOAD_BOOL(ally_drop_rare);
+    LOAD_BOOL(ally_drop_common);
+    LOAD_BOOL(ally_pickup_rare);
+    LOAD_BOOL(ally_pickup_common);
+    LOAD_BOOL(player_pickup_common);
+    LOAD_BOOL(player_pickup_rare);
+    LOAD_BOOL(salvage_messages);
 
-    filter_channel_local = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
-    filter_channel_guild = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
-    filter_channel_team = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_team), filter_channel_team);
-    filter_channel_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
-    filter_channel_alliance = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
-    filter_channel_emotes = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
+    LOAD_BOOL(skill_points);
+    LOAD_BOOL(pvp_messages);
+    LOAD_BOOL(skill_points);
+    LOAD_BOOL(pvp_messages);
+    LOAD_BOOL(guild_announcement);
+    LOAD_BOOL(pvp_messages);
+    LOAD_BOOL(skill_points);
+    LOAD_BOOL(pvp_messages);
+    LOAD_BOOL(hoh_messages);
+    LOAD_BOOL(favor);
+    LOAD_BOOL(ninerings);
+    LOAD_BOOL(noonehearsyou);
+    LOAD_BOOL(lunars);
+    LOAD_BOOL(messagebycontent);
+    LOAD_BOOL(you_have_been_playing_for);
+    LOAD_BOOL(player_has_achieved_title);
+    LOAD_BOOL(invalid_target);
+    LOAD_BOOL(opening_chest_messages);
+    LOAD_BOOL(inventory_is_full);
+    LOAD_BOOL(not_enough_energy);
+    LOAD_BOOL(item_cannot_be_used);
+    LOAD_BOOL(item_already_identified);
+    LOAD_BOOL(faction_gain);
+    LOAD_BOOL(challenge_mission_messages);
 
-    block_messages_from_inactive_channels = ini->GetBoolValue(Name(), VAR_NAME(block_messages_from_inactive_channels), block_messages_from_inactive_channels);
+    LOAD_BOOL(filter_channel_local);
+    LOAD_BOOL(filter_channel_guild);
+    LOAD_BOOL(filter_channel_team);
+    LOAD_BOOL(filter_channel_trade);
+    LOAD_BOOL(filter_channel_alliance);
+    LOAD_BOOL(filter_channel_emotes);
+
+    LOAD_BOOL(block_messages_from_inactive_channels);
     
     strcpy_s(bycontent_word_buf, "");
     strcpy_s(bycontent_regex_buf, "");
@@ -167,41 +178,49 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 
 void ChatFilter::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(self_drop_rare), self_drop_rare);
-    ini->SetBoolValue(Name(), VAR_NAME(self_drop_common), self_drop_common);
-    ini->SetBoolValue(Name(), VAR_NAME(ally_drop_rare), ally_drop_rare);
-    ini->SetBoolValue(Name(), VAR_NAME(ally_drop_common), ally_drop_common);
-    ini->SetBoolValue(Name(), VAR_NAME(ally_pickup_rare), ally_pickup_rare);
-    ini->SetBoolValue(Name(), VAR_NAME(ally_pickup_common), ally_pickup_common);
-    ini->SetBoolValue(Name(), VAR_NAME(skill_points), skill_points);
-    ini->SetBoolValue(Name(), VAR_NAME(pvp_messages), pvp_messages);
-    ini->SetBoolValue(Name(), VAR_NAME(guild_announcement), guild_announcement);
-    ini->SetBoolValue(Name(), VAR_NAME(hoh_messages), hoh);
-    ini->SetBoolValue(Name(), VAR_NAME(favor), favor);
-    ini->SetBoolValue(Name(), VAR_NAME(ninerings), ninerings);
-    ini->SetBoolValue(Name(), VAR_NAME(noonehearsyou), noonehearsyou);
-    ini->SetBoolValue(Name(), VAR_NAME(lunars), lunars);
-    ini->SetBoolValue(Name(), VAR_NAME(messagebycontent), messagebycontent);
-    ini->SetBoolValue(Name(), VAR_NAME(away), away);
-    ini->SetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), you_have_been_playing_for);
-    ini->SetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
-    ini->SetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
-    ini->SetBoolValue(Name(), VAR_NAME(opening_chest_messages), opening_chest_messages);
-    ini->SetBoolValue(Name(), VAR_NAME(not_enough_energy), not_enough_energy);
-    ini->SetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
-    ini->SetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
-    ini->SetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
-    ini->SetBoolValue(Name(), VAR_NAME(faction_gain), faction_gain);
-    ini->SetBoolValue(Name(), VAR_NAME(challenge_mission_messages), challenge_mission_messages);
-    
-    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
-    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
-    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_team), filter_channel_team);
-    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
-    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
-    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
+    SAVE_BOOL(self_drop_rare);
+    SAVE_BOOL(self_drop_common);
+    SAVE_BOOL(ally_drop_rare);
+    SAVE_BOOL(ally_drop_common);
+    SAVE_BOOL(ally_pickup_rare);
+    SAVE_BOOL(ally_pickup_common);
+    SAVE_BOOL(player_pickup_rare);
+    SAVE_BOOL(player_pickup_common);
+    SAVE_BOOL(salvage_messages);
 
-    ini->SetBoolValue(Name(), VAR_NAME(block_messages_from_inactive_channels), block_messages_from_inactive_channels);
+    SAVE_BOOL(skill_points);
+    SAVE_BOOL(pvp_messages);
+    SAVE_BOOL(skill_points);
+    SAVE_BOOL(pvp_messages);
+    SAVE_BOOL(guild_announcement);
+    SAVE_BOOL(pvp_messages);
+    SAVE_BOOL(skill_points);
+    SAVE_BOOL(pvp_messages);
+    SAVE_BOOL(hoh_messages);
+    SAVE_BOOL(favor);
+    SAVE_BOOL(ninerings);
+    SAVE_BOOL(noonehearsyou);
+    SAVE_BOOL(lunars);
+    SAVE_BOOL(messagebycontent);
+    SAVE_BOOL(you_have_been_playing_for);
+    SAVE_BOOL(player_has_achieved_title);
+    SAVE_BOOL(invalid_target);
+    SAVE_BOOL(opening_chest_messages);
+    SAVE_BOOL(inventory_is_full);
+    SAVE_BOOL(not_enough_energy);
+    SAVE_BOOL(item_cannot_be_used);
+    SAVE_BOOL(item_already_identified);
+    SAVE_BOOL(faction_gain);
+    SAVE_BOOL(challenge_mission_messages);
+
+    SAVE_BOOL(filter_channel_local);
+    SAVE_BOOL(filter_channel_guild);
+    SAVE_BOOL(filter_channel_team);
+    SAVE_BOOL(filter_channel_trade);
+    SAVE_BOOL(filter_channel_alliance);
+    SAVE_BOOL(filter_channel_emotes);
+
+    SAVE_BOOL(block_messages_from_inactive_channels);
 
     if (timer_parse_filters) {
         timer_parse_filters = 0;
@@ -305,6 +324,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t* message, uint32_t channel) {
 bool ChatFilter::ShouldIgnore(const wchar_t *message) {
     if (!message)
         return false;
+
     switch (message[0]) {
         // ==== Messages not ignored ====
     case 0x108: return false; // player message
@@ -359,12 +379,10 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
         return false;
     }
     case 0x7F2: return false; // you drop item x
-    case 0x7F6: { // player x picks up item y (note: item can be unassigned gold)
-        bool rare = IsRare(Get2ndSegment(message));
-        if (rare) return ally_pickup_rare;
-        else      return ally_pickup_common;
-    }
-    case 0x7FC: return false; // you pick up item y (note: item can be unassigned gold)
+    case 0x7F6: // player x picks up item y (note: item can be unassigned gold)
+        return IsRare(Get1stSegment(message)) ? ally_pickup_rare : ally_pickup_common;
+    case 0x7FC: // you pick up item y (note: item can be unassigned gold)
+        return IsRare(Get1stSegment(message)) ? player_pickup_rare : player_pickup_common;
     case 0x807: return false; // player joined the game
     case 0x816: return skill_points; // you gain a skill point
     case 0x817: return skill_points; // player x gained a skill point
@@ -391,9 +409,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
     case 0x8C1: return invalid_target; // That skill requires a different weapon type.
     case 0x8C2: return invalid_target; // Invalid spell target.
     case 0x8C3: return invalid_target; // Target is out of range.
-    case 0xAD7: return false; // You salvaged <number> <item name(s)> from the <item name>
     case 0x52C3: // 0x52C3 0xDE9C 0xCD2F 0x78E4 0x101 0x100 - Hold-out bonus: +(message[5] - 0x100) points
-        if (FullMatch(&message[1], { 0xDE9C, 0xCD2F, 0x78E4, 0x101 })) return challenge_mission_messages;
+        return FullMatch(&message[1], { 0xDE9C, 0xCD2F, 0x78E4, 0x101 }) && challenge_mission_messages;
     case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
         if (!FullMatch(&message[1], { 0x866F, 0xB8D2, 0x5A20, 0x101 })) break;
         return faction_gain || challenge_mission_messages && IsInChallengeMission();
@@ -445,7 +462,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
         case 0x4650: return pvp_messages; // skill has been updated for pvp
         case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
         case 0x223F: return false; // "x minutes of favor of the gods remaining" as a result of /favor command
-        case 0x223B: return hoh; // a party won hall of heroes  
+        case 0x223B: return hoh_messages; // a party won hall of heroes  
         case 0x23E2: return player_has_achieved_title; // Player has achieved... The gods have blessed the world with their favor.
         case 0x23E3: return favor; // The gods have blessed the world
         case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
@@ -463,6 +480,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
         case 0x9CD: return item_cannot_be_used; // You must wait before using another tonic.
         }
     case 0xAD2: return item_already_identified; // That item is already identified
+    case 0xAD7: return salvage_messages; // You salvaged <number> <item name(s)> from the <item name>
     case 0xADD: return item_cannot_be_used; // That item has no uses remaining
     //default:
     //  for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
@@ -595,11 +613,13 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::SameLine(half_width); ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
     ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
     ImGui::SameLine(half_width); ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
+    ImGui::Checkbox("You pick up a rare item", &player_pickup_rare);
+    ImGui::SameLine(half_width); ImGui::Checkbox("You pick up a common item", &player_pickup_common);
 
     ImGui::Separator();
     ImGui::Text("Announcements");
     ImGui::Checkbox("Guild Announcement", &guild_announcement);
-    ImGui::SameLine(half_width); ImGui::Checkbox("Hall of Heroes winners", &hoh);
+    ImGui::SameLine(half_width); ImGui::Checkbox("Hall of Heroes winners", &hoh_messages);
     ImGui::Checkbox("Favor of the Gods announcements", &favor);
     ImGui::SameLine(half_width); ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
     ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
@@ -642,6 +662,7 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::ShowHelp("Such as 'Hold-out bonus: +2 points'");
     ImGui::SameLine(half_width); ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
     ImGui::Checkbox("'Player x might not reply because his/her status is set to away'", &away);
+    ImGui::SameLine(half_width); ImGui::Checkbox("Salvaging messages", &salvage_messages);
 
     ImGui::Separator();
     ImGui::Checkbox("Block messages from inactive chat channels", &block_messages_from_inactive_channels);

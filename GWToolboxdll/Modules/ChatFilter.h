@@ -61,9 +61,12 @@ private:
     bool ally_drop_common = false;
     bool ally_pickup_rare = false;
     bool ally_pickup_common = false;
+    bool player_pickup_rare = false;
+    bool player_pickup_common = false;
+    bool salvage_messages = false;
     bool skill_points = false;
     bool pvp_messages = true;
-    bool hoh = false;
+    bool hoh_messages = false;
     bool favor = false;
     bool ninerings = true;
     bool noonehearsyou = true;
