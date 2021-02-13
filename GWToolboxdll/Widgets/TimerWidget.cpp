@@ -94,7 +94,7 @@ void TimerWidget::Initialize() {
             run_completed = steady_clock::time_point();
             in_explorable = pak->is_explorable;
         });
-
+    in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     GW::Chat::CreateCommand(L"resettimer", [this](const wchar_t*, int, LPWSTR*) { 
         reset_next_loading_screen = true;
         Log::Info("Resetting timer at the next loading screen.");
