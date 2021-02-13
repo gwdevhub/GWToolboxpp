@@ -34,6 +34,15 @@ namespace {
         "Bag 1",
         "Bag 2"
     };
+    void OpenWiki(std::wstring& term) {
+        // @Enhancement: Would be nice to use GW's "/wiki" hook in here, but don't want to bother with another RVA so do it ourselves.
+        // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
+        if (!term.size())
+            return;
+        wchar_t cmd[256];
+        swprintf(cmd, _countof(cmd), L"https://wiki.guildwars.com/wiki/?search=%s", term.c_str());
+        ShellExecuteW(NULL, L"open", cmd, NULL, NULL, SW_SHOWNORMAL);
+    }
     static bool IsMapReady()
     {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
@@ -356,6 +365,7 @@ namespace {
     }
 
     GW::HookEntry on_offer_item_hook;
+    bool check_context_menu_position = false;
 
     int CountInventoryBagSlots() {
         int slots = 0;
@@ -566,15 +576,7 @@ bool InventoryManager::WndProc(UINT message, WPARAM , LPARAM ) {
             break;
         }
         // This far, pos has changed. If it is the same pos as the starting position, then its a right click.
-        if (pos == start_pos) {
-            const Item* item = static_cast<Item*>(GW::Items::GetHoveredItem());
-            GW::Bag* bag = item ? item->bag : nullptr;
-            if (bag) {
-                // Item right clicked - spoof a click event
-                GW::HookStatus status;
-                ItemClickCallback(&status, 999, item->slot, bag);
-            }
-        }
+        check_context_menu_position = pos == start_pos;
         is_right_clicking = start_pos = gw_cursor_moved_to = 0;
     } break;
     case WM_LBUTTONDOWN: 
@@ -1170,6 +1172,17 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 }
 void InventoryManager::Update(float) {
+    if (check_context_menu_position) {
+        const Item* item = static_cast<Item*>(GW::Items::GetHoveredItem());
+        GW::Bag* bag = item ? item->bag : nullptr;
+        if (bag) {
+            // Item right clicked - spoof a click event
+            GW::HookStatus status;
+            ItemClickCallback(&status, 999, item->slot, bag);
+        }
+        check_context_menu_position = false;
+    }
+
     if (pending_item_move_for_trade) {
         Item* item = static_cast<Item*>(GW::Items::GetItemById(pending_item_move_for_trade));
         if (!item) {
@@ -1229,6 +1242,8 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         show_item_context_menu = false;
     }
     
+    DrawItemContextMenu();
+
     /*
     *   Cog icon on inventory bags window
     */
@@ -1283,98 +1298,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 
 
 
-    if (ImGui::BeginPopup("Item Context Menu")) {
-        if (context_item_name_s.empty() && !context_item_name_ws.empty()) {
-            context_item_name_s = GuiUtils::WStringToString(context_item_name_ws);
-        }
-        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
-        ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-        ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale,0);
-        ImGui::Text(context_item_name_s.c_str());
-        ImGui::Separator();
-        // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
-        Item* context_item_actual = context_item.item();
-        bool has_options = false;
-        if (context_item_actual && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-            has_options = true;
-            if (ImGui::Button(context_item_actual->bag->IsInventoryBag() ? "Store Item" : "Withdraw Item", size)) {
-                move_item(context_item_actual);
-                ImGui::CloseCurrentPopup();
-            }
-            if (context_item_actual->GetIsMaterial() && context_item_actual->bag->IsInventoryBag()) {
-                if (ImGui::Button("Store All Materials", size)) {
-                    ImGui::CloseCurrentPopup();
-                    store_all_materials();
-                }
-            }
-            if (context_item_actual->IsTome() && context_item_actual->bag->IsInventoryBag()) {
-                if (ImGui::Button("Store All Tomes", size)) {
-                    ImGui::CloseCurrentPopup();
-                    store_all_tomes();
-                }
-            }
-            if (context_item_actual->type == 8 && context_item_actual->bag->IsInventoryBag()) {
-                if (ImGui::Button("Store All Upgrades", size)) {
-                    ImGui::CloseCurrentPopup();
-                    store_all_upgrades();
-                }
-            }
-        }
-        if (context_item_actual && context_item_actual->IsIdentificationKit()) {
-            has_options = true;
-            IdentifyAllType type = IdentifyAllType::None;
-            if(ImGui::Button("Identify All Items", size))
-                type = IdentifyAllType::All;
-            ImGui::PushStyleColor(ImGuiCol_Text, ItemBlue);
-            if (ImGui::Button("Identify All Blue Items", size))
-                type = IdentifyAllType::Blue;
-            ImGui::PushStyleColor(ImGuiCol_Text, ItemPurple);
-            if (ImGui::Button("Identify All Purple Items", size))
-                type = IdentifyAllType::Purple;
-            ImGui::PushStyleColor(ImGuiCol_Text, ItemGold);
-            if(ImGui::Button("Identify All Gold Items", size))
-                type = IdentifyAllType::Gold;
-            ImGui::PopStyleColor(3);
-            if (type != IdentifyAllType::None) {
-                ImGui::CloseCurrentPopup();
-                CancelIdentify();
-                if (context_item.set(context_item_actual)) {
-                    is_identifying_all = true;
-                    identify_all_type = type;
-                    IdentifyAll(type);
-                }
-            }
-        }
-        else if (context_item_actual && context_item_actual->IsSalvageKit()) {
-            has_options = true;
-            SalvageAllType type = SalvageAllType::None;
-            if (ImGui::Button("Salvage All White Items", size))
-                type = SalvageAllType::White;
-            ImGui::PushStyleColor(ImGuiCol_Text, ItemBlue);
-            if (ImGui::Button("Salvage All Blue & Lesser Items", size))
-                type = SalvageAllType::BlueAndLower;
-            ImGui::PushStyleColor(ImGuiCol_Text, ItemPurple);
-            if (ImGui::Button("Salvage All Purple & Lesser Items", size))
-                type = SalvageAllType::PurpleAndLower;
-            ImGui::PushStyleColor(ImGuiCol_Text, ItemGold);
-            if (ImGui::Button("Salvage All Gold & Lesser Items", size))
-                type = SalvageAllType::GoldAndLower;
-            ImGui::PopStyleColor(3);
-            if (type != SalvageAllType::None) {
-                ImGui::CloseCurrentPopup();
-                CancelSalvage();
-                if (context_item.set(context_item_actual)) {
-                    salvage_all_type = type;
-                    SalvageAll(type);
-                }
-            }
-        }
-        ImGui::PopStyleColor();
-        ImGui::PopStyleVar();
-        ImGui::EndPopup();
-        if(!has_options)
-            ImGui::CloseCurrentPopup();
-    }
+    
     if (show_transact_quantity_popup) {
         ImGui::OpenPopup("Transaction quantity");
         pending_transaction.setState(PendingTransaction::State::Prompt);
@@ -1518,9 +1442,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
-                    std::wstring wiki_item = std::regex_replace(pi->short_name, std::wregex(L" "), std::wstring(L"_"));
-                    wiki_item = std::regex_replace(wiki_item, wsanitiser, std::wstring(L""));
-                    ShellExecuteW(NULL, L"open", (wiki_url + wiki_item).c_str(), NULL, NULL, SW_SHOWNORMAL);
+                    OpenWiki(pi->desc);
                 }
                 ImGui::PopID();
                 has_items_to_salvage |= pi->proceed;
@@ -1541,6 +1463,108 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         }
         ImGui::EndPopup();
     }
+}
+bool InventoryManager::DrawItemContextMenu() {
+    if (!ImGui::BeginPopup("Item Context Menu"))
+        return false;
+    Item* context_item_actual = context_item.item();
+    if (!context_item_actual) {
+        ImGui::EndPopup();
+        ImGui::CloseCurrentPopup();
+        return false;
+    }
+    if (context_item_name_s.empty() && !context_item_name_ws.empty()) {
+        context_item_name_s = GuiUtils::WStringToString(context_item_name_ws);
+    }
+    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
+    ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+    ImGui::Text(context_item_name_s.c_str());
+    ImGui::Separator();
+    // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
+    bool has_options = true;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+        has_options = true;
+        if (ImGui::Button(context_item_actual->bag->IsInventoryBag() ? "Store Item" : "Withdraw Item", size)) {
+            move_item(context_item_actual);
+            ImGui::CloseCurrentPopup();
+        }
+        if (context_item_actual->GetIsMaterial() && context_item_actual->bag->IsInventoryBag()) {
+            if (ImGui::Button("Store All Materials", size)) {
+                ImGui::CloseCurrentPopup();
+                store_all_materials();
+            }
+        }
+        if (context_item_actual->IsTome() && context_item_actual->bag->IsInventoryBag()) {
+            if (ImGui::Button("Store All Tomes", size)) {
+                ImGui::CloseCurrentPopup();
+                store_all_tomes();
+            }
+        }
+        if (context_item_actual->type == 8 && context_item_actual->bag->IsInventoryBag()) {
+            if (ImGui::Button("Store All Upgrades", size)) {
+                ImGui::CloseCurrentPopup();
+                store_all_upgrades();
+            }
+        }
+    }
+    if (context_item_actual->IsIdentificationKit()) {
+        has_options = true;
+        IdentifyAllType type = IdentifyAllType::None;
+        if (ImGui::Button("Identify All Items", size))
+            type = IdentifyAllType::All;
+        ImGui::PushStyleColor(ImGuiCol_Text, ItemBlue);
+        if (ImGui::Button("Identify All Blue Items", size))
+            type = IdentifyAllType::Blue;
+        ImGui::PushStyleColor(ImGuiCol_Text, ItemPurple);
+        if (ImGui::Button("Identify All Purple Items", size))
+            type = IdentifyAllType::Purple;
+        ImGui::PushStyleColor(ImGuiCol_Text, ItemGold);
+        if (ImGui::Button("Identify All Gold Items", size))
+            type = IdentifyAllType::Gold;
+        ImGui::PopStyleColor(3);
+        if (type != IdentifyAllType::None) {
+            ImGui::CloseCurrentPopup();
+            CancelIdentify();
+            if (context_item.set(context_item_actual)) {
+                is_identifying_all = true;
+                identify_all_type = type;
+                IdentifyAll(type);
+            }
+        }
+    }
+    else if (context_item_actual->IsSalvageKit()) {
+        has_options = true;
+        SalvageAllType type = SalvageAllType::None;
+        if (ImGui::Button("Salvage All White Items", size))
+            type = SalvageAllType::White;
+        ImGui::PushStyleColor(ImGuiCol_Text, ItemBlue);
+        if (ImGui::Button("Salvage All Blue & Lesser Items", size))
+            type = SalvageAllType::BlueAndLower;
+        ImGui::PushStyleColor(ImGuiCol_Text, ItemPurple);
+        if (ImGui::Button("Salvage All Purple & Lesser Items", size))
+            type = SalvageAllType::PurpleAndLower;
+        ImGui::PushStyleColor(ImGuiCol_Text, ItemGold);
+        if (ImGui::Button("Salvage All Gold & Lesser Items", size))
+            type = SalvageAllType::GoldAndLower;
+        ImGui::PopStyleColor(3);
+        if (type != SalvageAllType::None) {
+            ImGui::CloseCurrentPopup();
+            CancelSalvage();
+            if (context_item.set(context_item_actual)) {
+                salvage_all_type = type;
+                SalvageAll(type);
+            }
+        }
+    }
+    if (ImGui::Button("Guild Wars Wiki", size)) {
+        OpenWiki(context_item_name_ws);
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+    ImGui::EndPopup();
+    return has_options;
 }
 void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag* bag) {
     InventoryManager& im = InventoryManager::Instance();

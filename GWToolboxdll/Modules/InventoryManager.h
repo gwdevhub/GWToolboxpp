@@ -44,6 +44,7 @@ public:
     const char* SettingsName() const override { return "Inventory Settings"; }
 
     void Draw(IDirect3DDevice9* device) override;
+    bool DrawItemContextMenu();
 
     void IdentifyAll(IdentifyAllType type);
     void SalvageAll(SalvageAllType type);
@@ -171,6 +172,7 @@ public:
         }
     };
 public:
+
     Item* GetNextUnsalvagedItem(Item* salvage_kit = nullptr, Item* start_after_item = nullptr);
     Item* GetNextUnidentifiedItem(Item* start_after_item = nullptr);
     void Identify(Item* item, Item* kit);
