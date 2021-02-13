@@ -10,6 +10,7 @@ enum InjectReply
     InjectReply_Cancel,
     InjectReply_NoProcess,
     InjectReply_PatternError,
+    InjectReply_NoValidProcess
 };
 
 class InjectWindow : public Window

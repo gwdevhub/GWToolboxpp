@@ -102,7 +102,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     }
 
     if (settings.asadmin && !IsRunningAsAdmin()) {
-        RestartAsAdminWithSameArgs();
+        RestartWithSameArgs(true);
     }
 
     AsyncRestScopeInit RestInitializer;
@@ -192,17 +192,19 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         return 1;
     }
 
-    if (reply == InjectReply_NoProcess) {
+    if (reply == InjectReply_NoValidProcess) {
         if (IsRunningAsAdmin()) {
-            ShowError(L"Failed to inject GWToolbox into Guild Wars");
+            ShowError(L"Failed to inject GWToolbox into Guild Wars\n");
             fprintf(stderr, "InjectWindow::AskInjectName failed\n");
             return 0;
-        } else {
+        }
+        else {
             // @Enhancement:
             // Add UAC shield to the yes button
             int iRet = MessageBoxW(
                 0,
                 L"Couldn't find any valid process to start GWToolboxpp.\n"
+                L"Ensure Guild Wars is running before trying to run GWToolbox.\n"
                 L"If such process exist GWToolbox.exe may require administrator privileges.\n"
                 L"Do you want to restart as administrator?",
                 L"GWToolbox - Error",
@@ -214,9 +216,26 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             }
 
             if (iRet == IDYES) {
-                RestartAsAdminWithSameArgs();
+                RestartWithSameArgs(true);
                 return 0;
             }
+        }
+    }
+    if (reply == InjectReply_NoProcess) {
+        int iRet = MessageBoxW(
+            0,
+            L"Couldn't find any valid process to start GWToolboxpp.\n"
+            L"Ensure Guild Wars is running before trying to run GWToolbox.\n",
+            L"GWToolbox - Error",
+            MB_RETRYCANCEL);
+        if (iRet == IDCANCEL) {
+            fprintf(stderr, "User doesn't want to retry\n");
+            return 1;
+        }
+
+        if (iRet == IDRETRY) {
+            RestartWithSameArgs();
+            return 0;
         }
     }
 

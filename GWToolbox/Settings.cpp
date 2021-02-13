@@ -173,7 +173,7 @@ bool IsRunningAsAdmin()
     return (IsRunAsAdmin != FALSE);
 }
 
-bool CreateProcessAsAdmin(const wchar_t *path, const wchar_t *args, const wchar_t *workdir)
+bool CreateProcessInt(const wchar_t *path, const wchar_t *args, const wchar_t *workdir, bool as_admin)
 {
     wchar_t command_line[1024] = L"";
     size_t n_path = wcslen(path);
@@ -188,7 +188,8 @@ bool CreateProcessAsAdmin(const wchar_t *path, const wchar_t *args, const wchar_
     SHELLEXECUTEINFOW ExecInfo = {0};
     ExecInfo.cbSize = sizeof(ExecInfo);
     ExecInfo.fMask = SEE_MASK_NOASYNC;
-    ExecInfo.lpVerb = L"runas";
+    if(as_admin)
+        ExecInfo.lpVerb = L"runas";
     ExecInfo.lpFile = path;
     ExecInfo.lpParameters = args;
     ExecInfo.lpDirectory = workdir;
@@ -201,9 +202,7 @@ bool CreateProcessAsAdmin(const wchar_t *path, const wchar_t *args, const wchar_
 
     return true;
 }
-
-bool RestartAsAdmin(const wchar_t *args)
-{
+bool Restart(const wchar_t* args, bool force_admin) {
     wchar_t path[1024];
     if (!GetModuleFileNameW(GetModuleHandleW(nullptr), path, _countof(path))) {
         fprintf(stderr, "GetModuleFileNameW failed: %lu\n", GetLastError());
@@ -215,8 +214,14 @@ bool RestartAsAdmin(const wchar_t *args)
         fprintf(stderr, "GetCurrentDirectoryW failed: %lu\n", GetLastError());
         return false;
     }
+    bool is_admin = force_admin ? true : IsRunningAsAdmin();
+    CreateProcessInt(path, args, workdir, is_admin);
+    ExitProcess(0);
+}
 
-    return CreateProcessAsAdmin(path, args, workdir);
+bool RestartAsAdmin(const wchar_t* args)
+{
+    return Restart(args, true);
 }
 
 static LPWSTR ConsumeSpaces(LPWSTR Str)
@@ -257,10 +262,9 @@ static wchar_t* GetCommandLineWithoutProgram()
     return ConsumeArg(CmdLine);
 }
 
-void RestartAsAdminWithSameArgs()
+void RestartWithSameArgs(bool force_admin)
 {
-    RestartAsAdmin(GetCommandLineWithoutProgram());
-    ExitProcess(0);
+    Restart(GetCommandLineWithoutProgram(), force_admin);
 }
 
 bool EnableDebugPrivilege()

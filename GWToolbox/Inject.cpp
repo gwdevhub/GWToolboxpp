@@ -178,7 +178,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
     processes.clear();
 
     if (!inject_processes.size()) {
-        return InjectReply_NoProcess;
+        return InjectReply_NoValidProcess;
     }
 
     if (settings.quiet && inject_processes.size() == 1) {
@@ -379,7 +379,7 @@ void InjectWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificationCode)
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
         DestroyWindow(m_hWnd);
     } else if ((hWnd == m_hRestartAsAdmin) && (ControlId == STN_CLICKED)) {
-        RestartAsAdminWithSameArgs();
+        RestartWithSameArgs(true);
     } else if ((hWnd == m_hSettings) && (ControlId == STN_CLICKED)) {
         m_SettingsWindow.Create();
     }
