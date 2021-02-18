@@ -2,6 +2,8 @@
 
 #include <GWCA/Packets/StoC.h>
 
+#include <GWCA/GameEntities/Party.h>
+
 #include <CircurlarBuffer.h>
 #include <ToolboxWindow.h>
 #include <Utils/RateLimiter.h>
@@ -34,6 +36,8 @@ public:
     void DrawSettingInternal() override;
     void DrawChatSettings(bool ownwindow = false);
 
+    static void FindPlayerPartySearch(GW::HookStatus* status = nullptr, void* packet = nullptr);
+
 private:
     struct Message {
         uint32_t    timestamp = 0;
@@ -42,6 +46,9 @@ private:
     };
 
     GW::HookEntry OnMessageLocal_Entry;
+    GW::HookEntry OnPartySearch_Entry;
+    GW::PartySearch player_party_search = { 0 };
+    char player_party_search_text[64] = { 0 };
 
     WSAData wsaData = {0};
 
@@ -75,7 +82,7 @@ private:
 
     void DrawAlertsWindowContent(bool ownwindow);
 
-    static bool GetInKamadanAE1();
+    static bool GetInKamadanAE1(bool check_district = true);
 
     // Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
     void AsyncWindowConnect(bool force = false);

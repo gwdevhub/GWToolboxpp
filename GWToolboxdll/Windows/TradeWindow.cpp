@@ -5,6 +5,7 @@
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/Context/PartyContext.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -12,6 +13,9 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
 #include <Logger.h>
 #include <GuiUtils.h>
@@ -105,6 +109,20 @@ void TradeWindow::Initialize() {
     GW::Chat::CreateCommand(L"pc", CmdPricecheck);
     // local messages
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&OnMessageLocal_Entry, OnMessageLocal);
+    GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT, [](GW::HookStatus*, void* pak) {
+        struct Packet {
+            uint32_t header;
+            uint32_t other_atts[7];
+            wchar_t message[32];
+            wchar_t player[20];
+        } *packet = (Packet*)pak;
+        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(GW::PlayerMgr::GetPlayerNumber());
+        if (wcscmp(player_name, packet->player) == 0)
+            FindPlayerPartySearch();
+        });
+    GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_PARTY_SEARCH_REMOVE, FindPlayerPartySearch);
+    GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_TRANSFER_GAME_SERVER_INFO, FindPlayerPartySearch);
+    FindPlayerPartySearch();
 }
 void TradeWindow::SignalTerminate()
 {
@@ -122,14 +140,14 @@ TradeWindow::~TradeWindow() {
         WSACleanup();
 }
 
-bool TradeWindow::GetInKamadanAE1() {
+bool TradeWindow::GetInKamadanAE1(bool check_district) {
     using namespace GW::Constants;
     switch (GW::Map::GetMapID()) {
     case MapID::Kamadan_Jewel_of_Istan_outpost:
     case MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
     case MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
     case MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost:
-        return GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == GW::Constants::Region::America;
+        return !check_district || (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == GW::Constants::Region::America);
     default:
         return false;
     }
@@ -176,7 +194,7 @@ void TradeWindow::fetch() {
         return;
     bool search_pending = !pending_query_sent && !pending_query_string.empty();
     if (search_pending) {
-        strcpy(search_buffer, pending_query_string.c_str());
+        //strcpy(search_buffer, pending_query_string.c_str());
         // Fill searched_words; query to lower to ease on-the-fly search in ::fetch
         ParseBuffer(search_buffer, searched_words);
 
@@ -309,6 +327,32 @@ void TradeWindow::search(std::string query, bool print_results_in_chat)
     pending_query_sent = 0;
 }
 
+void TradeWindow::FindPlayerPartySearch(GW::HookStatus*, void*) {
+    GW::PartyContext* ctx = GW::GameContext::instance()->party;
+    if (!ctx)
+        goto clear_party_search;
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+        goto clear_party_search;
+    auto& party_searches = ctx->party_search;
+    if (!party_searches.valid() || !party_searches.size())
+        goto clear_party_search;
+    wchar_t* me = GW::PlayerMgr::GetPlayerName(GW::PlayerMgr::GetPlayerNumber());
+    for (GW::PartySearch* party_search : party_searches) {
+        if (party_search && wcscmp(me, party_search->party_leader) == 0) {
+            GW::PartySearch* existing = &Instance().player_party_search;
+            bool message_changed = wcscmp(existing->message, party_search->message) != 0;
+            *existing = *party_search;
+            if (message_changed) {
+                std::string pps_str = GuiUtils::WStringToString(party_search->message);
+                strcpy(Instance().player_party_search_text, pps_str.c_str());
+            }
+            return;
+        }
+    }
+clear_party_search:
+    Instance().player_party_search = { 0 };
+}
+
 void TradeWindow::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
     /* Alerts window */
@@ -333,7 +377,46 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
     /* Search bar header */
     const float &font_scale = ImGui::GetIO().FontGlobalScale;
     const float btn_width = 80.0f * font_scale;
-    ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - btn_width - btn_width - btn_width - ImGui::GetStyle().ItemInnerSpacing.x * 6));
+    const float search_bar_width = (ImGui::GetWindowContentRegionWidth() - btn_width - btn_width - btn_width - ImGui::GetStyle().ItemInnerSpacing.x * 6);
+    if (GetInKamadanAE1(false)) {
+        bool advertise_dirty = false;
+        static int search_type = static_cast<int>(GW::PartySearchType::PartySearchType_Trade);
+        bool is_seeking = player_party_search.message[0] != 0;
+        if (is_seeking) {
+            search_type = static_cast<int>(player_party_search.party_search_type);
+        }
+        ImGui::PushItemWidth(search_bar_width);
+        if (ImGui::InputTextWithHint("##search_text", "Seek Party", player_party_search_text, _countof(player_party_search_text), ImGuiInputTextFlags_EnterReturnsTrue)) {
+            is_seeking = strlen(player_party_search_text);
+            advertise_dirty = true;
+        }
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
+        ImGui::PushItemWidth(btn_width * 1.5f);
+        advertise_dirty |= ImGui::Combo("##search_type", &search_type, "Hunting\0Mission\0Quest\0Trade\0Guild\0\0");
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
+        advertise_dirty |= ImGui::Checkbox("Seek Party", &is_seeking);
+        if (advertise_dirty) {
+            if (!is_seeking) {
+                if (player_party_search.message[0])
+                    GW::CtoS::SendPacket(0x4, GAME_CMSG_PARTY_SEARCH_CANCEL);
+            }
+            else {
+                struct {
+                    uint32_t header = GAME_CMSG_PARTY_SEARCH_SEEK;
+                    uint32_t search_type;
+                    wchar_t advert[32];
+                    uint32_t hard_mode = 0;
+                } packet;
+                packet.search_type = search_type;
+                std::wstring out = GuiUtils::StringToWString(player_party_search_text);
+                swprintf(packet.advert, _countof(packet.advert), L"%s", out.c_str());
+                GW::CtoS::SendPacket(sizeof(packet), &packet);
+            }
+        }
+        ImGui::Separator();
+    }
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
     const bool searching = !pending_query_string.empty();
     if (searching) {
@@ -341,7 +424,9 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
     }
     bool do_search = false;
-    do_search |= ImGui::InputText("", search_buffer, 256, flags);
+    ImGui::PushItemWidth(search_bar_width);
+    do_search |= ImGui::InputTextWithHint("##trade_search_buffer", "Search Kamadan Trade Chat", search_buffer, 256, flags);
+    ImGui::PopItemWidth();
     ImGui::SameLine();
     do_search |= ImGui::Button(searching ? "Searching" : "Search", ImVec2(btn_width, 0));
     if (searching) {
