@@ -38,6 +38,8 @@ namespace {
     bool drawing_world = 0;
     int drawing_passes = 0;
     int last_drawing_passes = 0;
+
+    bool defer_close = false;
 }
 
 HMODULE GWToolbox::GetDLLModule() {
@@ -153,9 +155,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
     }
 
-    if (Message == WM_QUIT || Message == WM_CLOSE) {
-        GWToolbox::Instance().SaveSettings();
-        return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
+    if (Message == WM_QUIT || Message == WM_CLOSE || Message == WM_DESTROY) {
+        // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
+        // we can't sleep here, because toolbox modules will probably be using the render loop to close off things like hooks
+        GWToolbox::Instance().StartSelfDestruct();
+        defer_close = true;
+        return true;
     }
 
     if (Message == WM_RBUTTONUP) right_mouse_down = false;
@@ -516,6 +521,13 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         GW::DisableHooks();
         tb_initialized = false;
         tb_destroyed = true;
+
+
+
+    }
+    if(tb_destroyed && defer_close) {
+        // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
+        SendMessageW(gw_window_handle, WM_CLOSE, NULL, NULL);
     }
 }
 

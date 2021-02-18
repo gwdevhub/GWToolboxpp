@@ -34,6 +34,7 @@ public:
     static void FlashWindow();
 
     void StartSelfDestruct() {
+        SaveSettings();
         for (ToolboxModule* module : modules) {
             module->SignalTerminate();
         }
