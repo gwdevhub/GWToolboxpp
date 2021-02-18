@@ -155,12 +155,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
     }
 
-    if (Message == WM_QUIT || Message == WM_CLOSE || Message == WM_DESTROY) {
+    if (Message == WM_CLOSE) {
         // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
         // we can't sleep here, because toolbox modules will probably be using the render loop to close off things like hooks
         GWToolbox::Instance().StartSelfDestruct();
         defer_close = true;
-        return true;
+        return 0;
     }
 
     if (Message == WM_RBUTTONUP) right_mouse_down = false;
