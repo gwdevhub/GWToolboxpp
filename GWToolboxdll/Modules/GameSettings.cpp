@@ -30,6 +30,7 @@
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -2296,9 +2297,19 @@ void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, ui
 {
     if (agent_id != GW::Agents::GetPlayerId())
         return;
-    if (!target_id) 
-        return;
     const GW::Skillbar* skill_bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!skill_bar)
+        return;
+    // Cancel UA before recast
+    GW::Constants::SkillID skill_id = static_cast<GW::Constants::SkillID>(skill_bar->skills[slot].skill_id);
+    if (skill_id == GW::Constants::SkillID::Unyielding_Aura) {
+        const GW::Buff* buff = GW::Effects::GetPlayerBuffBySkillId(skill_id);
+        if (buff && buff->skill_id) {
+            GW::Effects::DropBuff(buff->buff_id);
+        }
+    }
+    if (!target_id)
+        return;
     const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     const GW::Agent* target = GW::Agents::GetAgentByID(target_id);
     if (!skill_bar || !me || !target)
