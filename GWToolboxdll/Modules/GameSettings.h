@@ -192,6 +192,7 @@ public:
     static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnWriteChat(GW::HookStatus* status, uint32_t msgid, void* wParam, void*);
+    static void OnAgentStartCast(GW::HookStatus* status, uint32_t msgid, void* wParam, void*);
     static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
     static void OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*);
     static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
@@ -347,6 +348,7 @@ private:
     GW::HookEntry OnChangeTarget_Entry;
     GW::HookEntry OnPlayerChatMessage_Entry;
     GW::HookEntry OnWriteChat_Entry;
+    GW::HookEntry OnAgentStartCast_Entry;
     GW::HookEntry OnScreenShake_Entry;
     GW::HookEntry OnCast_Entry;
     GW::HookEntry OnPartyTargetChange_Entry;

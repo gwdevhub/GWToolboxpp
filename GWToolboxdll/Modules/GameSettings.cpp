@@ -728,6 +728,8 @@ void GameSettings::Initialize() {
     GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, OnChangeTarget);
     GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, OnPlayerChatMessage);
     GW::UI::RegisterUIMessageCallback(&OnWriteChat_Entry, OnWriteChat);
+    GW::UI::RegisterUIMessageCallback(&OnAgentStartCast_Entry, OnAgentStartCast);
+    
 
     GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
@@ -1377,7 +1379,7 @@ void GameSettings::Update(float delta) {
 
             const float range = GetSkillRange(cast_skill);
             if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
-                GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // cancel action packet
+                GW::UI::Keypress(GW::UI::ControlAction::ControlAction_MoveBackward);
                 pending_cast.cast_next_frame = true;
                 return;
             }
@@ -2217,6 +2219,23 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, uint32_t msgid, void* wPa
     CloseClipboard();
 }
 
+// Auto-drop UA when recasting
+void GameSettings::OnAgentStartCast(GW::HookStatus* , uint32_t msgid, void* wParam, void*) {
+    if (!(msgid == 0x10000027 && wParam))
+        return;
+    struct Casting {
+        uint32_t agent_id;
+        GW::Constants::SkillID skill_id;
+    } *casting = (Casting*)wParam;
+    if (casting->agent_id == GW::Agents::GetPlayerId() && casting->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
+        // Cancel UA before recast
+        const GW::Buff* buff = GW::Effects::GetPlayerBuffBySkillId(casting->skill_id);
+        if (buff && buff->skill_id) {
+            GW::Effects::DropBuff(buff->buff_id);
+        }
+    }
+};
+
 // Don't target chest as nearest item, Target green items from chest last
 void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
     if (!(msgid == GW::UI::kChangeTarget && wParam))
@@ -2295,21 +2314,9 @@ void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* 
 
 void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t /* call_target */)
 {
-    if (agent_id != GW::Agents::GetPlayerId())
+    if (!(target_id && agent_id == GW::Agents::GetPlayerId()))
         return;
     const GW::Skillbar* skill_bar = GW::SkillbarMgr::GetPlayerSkillbar();
-    if (!skill_bar)
-        return;
-    // Cancel UA before recast
-    GW::Constants::SkillID skill_id = static_cast<GW::Constants::SkillID>(skill_bar->skills[slot].skill_id);
-    if (skill_id == GW::Constants::SkillID::Unyielding_Aura) {
-        const GW::Buff* buff = GW::Effects::GetPlayerBuffBySkillId(skill_id);
-        if (buff && buff->skill_id) {
-            GW::Effects::DropBuff(buff->buff_id);
-        }
-    }
-    if (!target_id)
-        return;
     const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     const GW::Agent* target = GW::Agents::GetAgentByID(target_id);
     if (!skill_bar || !me || !target)
