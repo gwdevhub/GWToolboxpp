@@ -80,43 +80,54 @@ private:
         };
         std::vector<Event> start_events;
         std::vector<Event> end_events;
+        std::vector<Objective*> children;
 
         DWORD    start = 0;
         DWORD    done = 0;
-        DWORD    duration = 0;
-        char cached_done[16] = "";
-        char cached_start[16] = "";
-        char cached_duration[16] = "";
+        
         enum class Status {
             NotStarted,
             Started,
             Completed,
             Failed
         } status = Status::NotStarted;
+        const char* GetStartTimeStr();
+        const char* GetEndTimeStr();
+        const char* GetDurationStr();
+        DWORD GetDuration();
        
         Objective(const char* name, int indent = 0);
 
-        Objective& AddStartEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
-        Objective& AddStartEvent(EventType et, uint32_t count, const wchar_t* msg);
-        Objective& AddEndEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
-        Objective& AddEndEvent(EventType et, uint32_t count, const wchar_t* msg);
-        Objective& SetStarted();
-        Objective& SetDone();
+        Objective* AddStartEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
+        Objective* AddStartEvent(EventType et, uint32_t count, const wchar_t* msg);
+        Objective* AddEndEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
+        Objective* AddEndEvent(EventType et, uint32_t count, const wchar_t* msg);
+        Objective* SetStarted();
+        Objective* SetDone();
+        Objective* AddChild(Objective* child);
 
         bool IsStarted() const;
         bool IsDone() const;
         void Draw();
         void Update();
+    private:
+        char cached_done[16] = "";
+        char cached_start[16] = "";
+        char cached_duration[16] = "";
+        DWORD    duration = 0;
     };
 
     class ObjectiveSet {
     public:
         ObjectiveSet();
+        ~ObjectiveSet();
 
         DWORD system_time;
         DWORD instance_time = (DWORD)-1;
-        char cached_time[16] = { 0 };
-        char cached_start[16] = { 0 };
+        DWORD duration = (DWORD)-1;
+        DWORD GetDuration();
+        const char* GetDurationStr();
+        const char* GetStartTimeStr();
 
         bool active = true;
         bool failed = false;
@@ -124,24 +135,24 @@ private:
         bool need_to_collapse = false;
         char name[256] = { 0 };
 
-        std::vector<Objective> objectives;
+        std::vector<Objective*> objectives;
 
-        Objective& AddObjective(Objective&& obj, int starting_completes_num_previous = 0) { 
-            obj.starting_completes_n_previous_objectives = starting_completes_num_previous;
-            objectives.push_back(std::move(obj)); 
+        Objective* AddObjective(Objective* obj, int starting_completes_num_previous = 0) { 
+            obj->starting_completes_n_previous_objectives = starting_completes_num_previous;
+            objectives.push_back(obj); 
             return objectives.back();
         }
-        Objective& AddObjectiveAfter(Objective&& obj) {
-            return AddObjective(std::move(obj), 1);
+        Objective* AddObjectiveAfter(Objective* obj) {
+            return AddObjective(obj, 1);
         }
-        Objective& AddObjectiveAfterAll(Objective&& obj) {
-            return AddObjective(std::move(obj), -1);
+        Objective* AddObjectiveAfterAll(Objective* obj) {
+            return AddObjective(obj, -1);
         }
         void AddQuestObjective(const char* obj_name, uint32_t id)
         {
-            AddObjective(Objective(obj_name))
-                .AddStartEvent(EventType::ObjectiveStarted, id)
-                .AddEndEvent(EventType::ObjectiveDone, id);
+            AddObjective(new Objective(obj_name))
+                ->AddStartEvent(EventType::ObjectiveStarted, id)
+                ->AddEndEvent(EventType::ObjectiveDone, id);
         }
 
         void Event(EventType type, uint32_t id1, uint32_t id2);
@@ -157,6 +168,9 @@ private:
 
     private:
         static unsigned int cur_ui_id;
+        char cached_start[16] = { 0 };
+        char cached_time[16] = { 0 };
+        
     };
 
     std::map<DWORD, ObjectiveSet*> objective_sets;
