@@ -96,7 +96,7 @@ private:
         const char* GetDurationStr();
         DWORD GetDuration();
        
-        Objective(const char* name, int indent = 0);
+        Objective(const char* name);
 
         Objective* AddStartEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
         Objective* AddStartEvent(EventType et, uint32_t count, const wchar_t* msg);
@@ -105,6 +105,8 @@ private:
         Objective* SetStarted();
         Objective* SetDone();
         Objective* AddChild(Objective* child);
+        static Objective* FromJson(const nlohmann::json& json);
+        nlohmann::json ToJson();
 
         bool IsStarted() const;
         bool IsDone() const;
@@ -159,7 +161,7 @@ private:
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
         void StopObjectives();
-        static ObjectiveSet* FromJson(nlohmann::json* json);
+        static ObjectiveSet* FromJson(const nlohmann::json& json);
         nlohmann::json ToJson();
         void Update();
         void GetStartTime(struct tm* timeinfo);

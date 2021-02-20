@@ -509,29 +509,29 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_foundry_entrance_r1)
                 ->AddEndEvent(EventType::DoACompleteZone, Foundry);
             if (show_detailed_objectives) {
-                parent->AddChild(os->AddObjective(new Objective("Room 1", 1), 0)
+                parent->AddChild(os->AddObjective(new Objective("Room 1"), 0)
                     ->AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_entrance_r1)
                     ->AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r1_r2));
-                parent->AddChild(os->AddObjective(new Objective("Room 2", 1), 1)
+                parent->AddChild(os->AddObjective(new Objective("Room 2"), 1)
                     ->AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r1_r2)
                     ->AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r2_r3));
-                parent->AddChild(os->AddObjective(new Objective("Room 3", 1), 2)
+                parent->AddChild(os->AddObjective(new Objective("Room 3"), 2)
                     ->AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r2_r3)
                     ->AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r3_r4));
-                parent->AddChild(os->AddObjective(new Objective("Room 4", 1), 3)
+                parent->AddChild(os->AddObjective(new Objective("Room 4"), 3)
                     ->AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r4_r5));
 
                 // maybe time snakes take? (check them being added to party)
 
                 // maybe change BB event to use the dialog instead? "None shall escape. Prepare to die."
                 // change BB to start at door and finish at fury spawn?
-                parent->AddChild(os->AddObjective(new Objective("Black Beast", 1), 4)
+                parent->AddChild(os->AddObjective(new Objective("Black Beast"), 4)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_foundry_r5_bb)
                     ->AddEndEvent(EventType::AgentUpdateAllegiance, 5221, 0x6E6F6E63)); // all 3 are the same
 
                 // 0x8101 0x273D 0x98D8 0xB91A 0x47B8 The Fury: Ah, you have finally arrived. My dark master informed me
                 // I might have visitors....
-                parent->AddChild(os->AddObjective(new Objective("Fury", 1), 5)
+                parent->AddChild(os->AddObjective(new Objective("Fury"), 5)
                     ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x273D\x98DB\xB91A")
                     ->AddEndEvent(EventType::DoACompleteZone, Foundry));
             }
@@ -541,10 +541,10 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 ->AddStartEvent(EventType::DoACompleteZone, Foundry)
                 ->AddEndEvent(EventType::DoACompleteZone, City);
             if (show_detailed_objectives) {
-                parent->AddChild(os->AddObjective(new Objective("Outside", 1), 0)
+                parent->AddChild(os->AddObjective(new Objective("Outside"), 0)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_city_entrance)
                     ->AddEndEvent(EventType::DoorOpen, DoorID::DoA_city_wall));
-                parent->AddChild(os->AddObjective(new Objective("Inside", 1), 1)
+                parent->AddChild(os->AddObjective(new Objective("Inside"), 1)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_city_wall)
                     ->AddEndEvent(EventType::DoACompleteZone, City));
             }
@@ -556,20 +556,20 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 ->AddStartEvent(EventType::DoACompleteZone, City)
                 ->AddEndEvent(EventType::DoACompleteZone, Veil);
             if (show_detailed_objectives) {
-                parent->AddChild(os->AddObjective(new Objective("360", 1), 0)
+                parent->AddChild(os->AddObjective(new Objective("360"), 0)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_left)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_middle)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_360_right));
-                parent->AddChild(os->AddObjective(new Objective("Underlords", 1), 1)
+                parent->AddChild(os->AddObjective(new Objective("Underlords"), 1)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_ranger)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_derv));
-                parent->AddChild(os->AddObjective(new Objective("Lords", 1), 2)
+                parent->AddChild(os->AddObjective(new Objective("Lords"), 2)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_gloom)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_monk)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_ele)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_mes)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro));
-                parent->AddChild(os->AddObjective(new Objective("Tendrils", 1), 3)
+                parent->AddChild(os->AddObjective(new Objective("Tendrils"), 3)
                     //->AddStartEvent(EventType::ServerMessage, 4, L"\x8102\x223B\x10A\xB60")
                     ->AddEndEvent(EventType::DoACompleteZone, Veil));
             }
@@ -579,7 +579,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                 ->AddStartEvent(EventType::DoACompleteZone, Veil)
                 ->AddEndEvent(EventType::DoACompleteZone, Gloom);
             if (show_detailed_objectives) {
-                parent->AddChild(os->AddObjective(new Objective("Cave", 1), 0)
+                parent->AddChild(os->AddObjective(new Objective("Cave"), 0)
                     ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x5765\x9846\xA72B")
                     ->AddEndEvent(EventType::DisplayDialogue, 4, L"\x8101\x5767\xA547\xB2C2"));
 
@@ -587,7 +587,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
 
                 // TODO: deathbringer ?
 
-                parent->AddChild(os->AddObjective(new Objective("Darknesses", 1), 1)
+                parent->AddChild(os->AddObjective(new Objective("Darknesses"), 1)
                     ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x273B\xB5DB\x8B13")
                     ->AddEndEvent(EventType::DoACompleteZone, Gloom));
             }
@@ -907,9 +907,11 @@ void ObjectiveTimerWindow::LoadRuns()
                     file >> os_json_arr;
                     for (nlohmann::json::iterator json_it = os_json_arr.begin(); json_it != os_json_arr.end();
                          ++json_it) {
-                        ObjectiveSet* os = ObjectiveSet::FromJson(&json_it.value());
-                        if (instance.objective_sets.find(os->system_time) != instance.objective_sets.end())
+                        ObjectiveSet* os = ObjectiveSet::FromJson(json_it.value());
+                        if (instance.objective_sets.find(os->system_time) != instance.objective_sets.end()) {
+                            delete os;
                             continue; // Don't load in a run that already exists
+                        }
                         os->StopObjectives();
                         os->need_to_collapse = true;
                         os->from_disk = true;
@@ -984,8 +986,8 @@ void ObjectiveTimerWindow::StopObjectives()
 
 // =============================================================================
 
-ObjectiveTimerWindow::Objective::Objective(const char* _name, int _indent)
-    : indent(_indent)
+ObjectiveTimerWindow::Objective::Objective(const char* _name)
+    : indent(0)
     , start(TIME_UNKNOWN)
     , done(TIME_UNKNOWN)
     , duration(TIME_UNKNOWN)
@@ -1052,6 +1054,7 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetDone()
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::AddChild(ObjectiveTimerWindow::Objective* child) {
     children.push_back(child);
+    child->indent = indent + 1;
     return children.back();
 }
 bool ObjectiveTimerWindow::Objective::IsStarted() const { return IsDone() || start != TIME_UNKNOWN; }
@@ -1266,29 +1269,25 @@ ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet() {
     objectives.clear();
 }
 
-ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(nlohmann::json* json)
+ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(const nlohmann::json& json)
 {
     ObjectiveSet* os = new ObjectiveSet;
     os->active = false;
-    os->system_time = json->at("utc_start").get<DWORD>();
-    std::string name = json->at("name").get<std::string>();
+    os->system_time = json.at("utc_start").get<DWORD>();
+    std::string name = json.at("name").get<std::string>();
     snprintf(os->name, sizeof(os->name), "%s", name.c_str());
-    os->instance_time = json->at("instance_start").get<DWORD>();
-    if(json->contains("duration"))
-        os->duration = json->at("duration").get<DWORD>();
-    nlohmann::json json_objs = json->at("objectives");
+    os->instance_time = json.at("instance_start").get<DWORD>();
+    if(json.contains("duration"))
+        os->duration = json.at("duration").get<DWORD>();
+    nlohmann::json json_objs = json.at("objectives");
     for (nlohmann::json::iterator it = json_objs.begin(); it != json_objs.end(); ++it) {
         const nlohmann::json& o = it.value();
-        name = o.at("name").get<std::string>();
-        Objective* obj = new Objective(name.c_str());
-        obj->status = o.at("status").get<Objective::Status>();
-        obj->start = o.at("start").get<DWORD>();
-        obj->done = o.at("done").get<DWORD>();
-        os->objectives.emplace_back(obj);
+        os->objectives.emplace_back(Objective::FromJson(o));
     }
     os->StopObjectives();
     return os;
 }
+
 nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson()
 {
     nlohmann::json json;
@@ -1296,18 +1295,36 @@ nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson()
     json["instance_start"] = instance_time;
     json["utc_start"] = system_time;
     nlohmann::json json_objectives;
-    for (const auto* obj : objectives) {
-        const auto& o = *obj;
-        nlohmann::json obj_json;
-        obj_json["name"] = o.name;
-        obj_json["status"] = o.status;
-        obj_json["start"] = o.start;
-        obj_json["done"] = o.done;
-        json_objectives.push_back(obj_json);
+    for (auto* obj : objectives) {
+        json_objectives.push_back(obj->ToJson());
     }
     json["objectives"] = json_objectives;
     json["duration"] = GetDuration();
     return json;
+}
+nlohmann::json ObjectiveTimerWindow::Objective::ToJson()
+{
+    nlohmann::json json;
+    json["name"] = name;
+    json["status"] = status;
+    json["start"] = start;
+    json["done"] = done;
+    json["indent"] = indent;
+    json["duration"] = GetDuration();
+    return json;
+}
+ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const nlohmann::json& json)
+{
+    std::string name = json.at("name").get<std::string>();
+    Objective* obj = new Objective(name.c_str());
+    obj->status = json.at("status").get<Objective::Status>();
+    obj->start = json.at("start").get<DWORD>();
+    obj->done = json.at("done").get<DWORD>();
+    if (json.contains("indent"))
+        obj->indent = json.at("indent").get<DWORD>();
+    if (json.contains("duration"))
+        obj->duration = json.at("duration").get<DWORD>();
+    return obj;
 }
 const char* ObjectiveTimerWindow::ObjectiveSet::GetStartTimeStr() {
     if (!cached_start[0]) {
