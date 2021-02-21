@@ -7,6 +7,26 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.8
+* [New] Added "Seek Party" to top of trade window when in Kamadan to avoid having to use party search window to buy/sell
+* [New] Right click context menu for materials shows option to store all into chest
+* [New] Added context menu option to store all materials, tomes and upgrade mods when right clicking those item types
+* [New] Added context menu option to go to Guild Wars Wiki on right click
+* [New] Added chat filter for player item pickup and salvage messages
+* [New] Automatically cancel UA if already maintained when recasting
+* [Minor] Added option to disable item sparkles without texmod
+* [Minor] Double clicking an item in chest whilst trading now automatically withdraws it into inventory
+* [Minor] `/useskill` limited to 1 skill instead of being able to chain skills.
+* [Minor] Clicking on your status on the friend list widget will change it in-game
+* [Fix] Fixed issue preventing some DoA objectives not being flagged as done when a run is completed.
+* [Fix] Fixed bugs related to printing timestamps on objective timer window
+* [Fix] Fixed occasional rupt/energy waste when using move-to-cast
+* [Fix] Fixed bug preventing GWToolbox from closing gracefully when closing GW window
+* [Fix] Fixed right click not always working when clicking on an item
+* [Fix] Fixed bug that showed the bulk buy option when using materials window whilst ctrl is held
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.8_Release/GWToolboxdll.dll)
+
 ## Version 4.7.1
 * [New] Double click to send items to trade window when trade is open; works with material storage and chest items without having to withdraw them
 * [New] Added option to move entire stacks to trade window by default
