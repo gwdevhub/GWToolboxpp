@@ -48,6 +48,7 @@ namespace
         IM_COL32(0xc8, 0x0, 0x0, 255),   // busy
         IM_COL32(0xc8, 0xc8, 0x0, 255)   // away
     };
+    static char* statuses[] = { "Offline", "Online", "Busy", "Away" };
     static std::wstring current_map;
     static GW::Constants::MapID current_map_id = GW::Constants::MapID::None;
     static std::wstring *GetCurrentMapName()
@@ -684,26 +685,20 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     float height = ImGui::GetTextLineHeightWithSpacing();
     ImVec2 pos;
     if (show_my_status) {
-        char* status_c = "Offline";
         uint32_t status = GW::FriendListMgr::GetMyStatus();
-        switch (status) {
-            case static_cast<uint32_t>(GW::FriendStatus::FriendStatus_Online):
-                status_c = "Online";
-                break;
-            case static_cast<uint32_t>(GW::FriendStatus::FriendStatus_DND):
-                status_c = "Busy";
-                break;
-            case static_cast<uint32_t>(GW::FriendStatus::FriendStatus_Away):
-                status_c = "Away";
-                break;
-        }
         ImGui::Text("You are:");
         ImGui::SameLine();
         pos = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
-        ImGui::TextColored(ImVec4(0, 0, 0, 1), status_c);
+        ImGui::TextColored(ImVec4(0, 0, 0, 1), statuses[status]);
         ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
-        ImGui::TextColored(StatusColors[status].Value, status_c);
+        ImGui::TextColored(StatusColors[status].Value, statuses[status]);
+        if (ImGui::IsItemClicked()) {
+            status++;
+            if (status == 4)
+                status = 0;
+            GW::FriendListMgr::SetFriendListStatus(static_cast<GW::Constants::OnlineStatus>(status));
+        }
     }
     std::vector<Friend*> friends_online;
     for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
