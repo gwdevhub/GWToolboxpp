@@ -519,6 +519,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                     ->AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r2_r3)
                     ->AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r3_r4));
                 parent->AddChild(os->AddObjective(new Objective("Room 4"), 3)
+                    ->AddStartEvent(EventType::DoorClose, DoorID::DoA_foundry_r3_r4)
                     ->AddEndEvent(EventType::DoorOpen, DoorID::DoA_foundry_r4_r5));
 
                 // maybe time snakes take? (check them being added to party)
