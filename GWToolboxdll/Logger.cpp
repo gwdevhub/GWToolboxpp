@@ -126,16 +126,21 @@ void Log::Log(const char* msg, ...) {
     va_start(args, msg);
     vfprintf(logfile, msg, args);
     va_end(args);
+    if(msg[strlen(msg) - 1] != '\n')
+        fprintf(logfile, "\n");
 }
 
 void Log::LogW(const wchar_t* msg, ...) {
     if (!logfile) return;
     PrintTimestamp();
+    
 
     va_list args;
     va_start(args, msg);
     vfwprintf(logfile, msg, args);
     va_end(args);
+    if (msg[wcslen(msg) - 1] != '\n')
+        fprintf(logfile, "\n");
 }
 
 // === Game chat logging ===
