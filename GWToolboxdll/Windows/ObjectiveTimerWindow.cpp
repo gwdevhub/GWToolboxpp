@@ -623,7 +623,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet()
     os->AddObjectiveAfterAll(new Objective("Zone 4 | Bridge Wolves"))->AddStartEvent(EventType::DoorOpen, 54552);
     os->AddObjectiveAfterAll(new Objective("Zone 5 | More Wolves"))->AddStartEvent(EventType::DoorOpen, 1760);
     os->AddObjectiveAfterAll(new Objective("Zone 6 | Energy Drain"))->AddStartEvent(EventType::DoorOpen, 40330);
-    os->AddObjectiveAfterAll(new Objective("Zone 7 | Exhaustion"))->AddStartEvent(EventType::DoorOpen, 29537);
+    os->AddObjectiveAfterAll(new Objective("Zone 7 | Exhaustion"))->AddStartEvent(EventType::DoorOpen, 60114);
     os->AddObjectiveAfterAll(new Objective("Zone 8 | Pillars"))->AddStartEvent(EventType::DoorOpen, 37191);
     os->AddObjectiveAfterAll(new Objective("Zone 9 | Blood Drinkers"))->AddStartEvent(EventType::DoorOpen, 35500);
     os->AddObjectiveAfterAll(new Objective("Zone 10 | Bridge"))->AddStartEvent(EventType::DoorOpen, 34278);
