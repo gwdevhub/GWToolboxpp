@@ -36,8 +36,8 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice) {
     
     for (it = doors.begin(); it != doors.end(); it++) {
         offset = 0.0f;
-        DoorObject o = *it->second;
-
+        DoorObject& o = *it->second;
+        ImGui::PushID(o.object_id);
         ImGui::Text("%d", o.object_id);
         char mbstr[100];
         std::strftime(mbstr, 100, "%H:%M:%S", std::localtime(&o.first_load));
@@ -58,7 +58,29 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice) {
         if (o.last_close)
             std::strftime(mbstr, 100, "%H:%M:%S", std::localtime(&o.last_close));
         ImGui::SameLine(offset += colWidth); ImGui::Text("%s", mbstr);
-        ImGui::SameLine(offset += colWidth); ImGui::Text("%s", o.is_open ? "Open" : "Closed");
+        ImGui::SameLine(offset += colWidth); 
+        char name[128];
+        snprintf(name,128,"%s (%d)", o.is_open ? "Open" : "Closed", o.animation_type);
+        if (ImGui::Button(name)) {
+            GW::Packet::StoC::ManipulateMapObject packet;
+            packet.header = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER;
+            packet.animation_stage = 3;
+            switch (o.animation_type) {
+            case 3:
+                packet.animation_type = 9;
+                break;
+            case 9:
+                packet.animation_type = 16;
+                break;
+            case 16:
+                packet.animation_type = 3;
+                break;
+            }
+            packet.object_id = o.object_id;
+            GW::StoC::EmulatePacket(&packet);
+            o.animation_type = packet.animation_type;
+        }
+        ImGui::PopID();
     }
     ImGui::End();
 
