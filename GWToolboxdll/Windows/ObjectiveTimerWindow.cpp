@@ -263,11 +263,7 @@ void ObjectiveTimerWindow::Initialize()
         });
     GW::StoC::RegisterPacketCallback(&CountdownStart_Enty, GAME_SMSG_INSTANCE_COUNTDOWN, 
         [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
-            if (const GW::AreaInfo* map = GW::Map::GetCurrentMapInfo()) {
-                if (map->type != GW::RegionType::RegionType_ExplorableZone) {
-                    Event(EventType::CountdownStart, (uint32_t)GW::Map::GetMapID());
-                }
-            }
+            Event(EventType::CountdownStart, (uint32_t)GW::Map::GetMapID());
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(
         &DungeonReward_Entry, [this](GW::HookStatus*, GW::Packet::StoC::DungeonReward*) {
