@@ -178,6 +178,10 @@ namespace {
         ASSERT(item && item->quantity);
         uint16_t to_move = std::min<uint16_t>(item->quantity,quantity);
         uint16_t remaining = to_move;
+        if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
+            size_t current_storage = GW::Items::GetStoragePage();
+            remaining -= move_item_to_storage_page(item, current_storage, remaining);
+        }
         if (item->GetIsMaterial() && remaining)
             remaining -= move_materials_to_storage(item);
         
@@ -290,11 +294,6 @@ namespace {
         bool is_inventory_item = item->bag->IsInventoryBag();
         uint16_t remaining = item->quantity;
         if (is_inventory_item) {
-            if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
-                // If move_item_to_current_storage_pane = true, try to add the item to current storage pane.
-                size_t current_storage = GW::Items::GetStoragePage();
-                remaining -= move_item_to_storage_page(item, current_storage, remaining);
-            }
             remaining -= move_item_to_storage(item, remaining);
         }
         else {
