@@ -603,6 +603,7 @@ void InventoryManager::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
     ini->SetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
+    ini->SetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
 }
 void InventoryManager::LoadSettings(CSimpleIni* ini) {
     ToolboxUIElement::LoadSettings(ini);
@@ -613,6 +614,7 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
     bags_to_salvage_from[GW::Constants::Bag::Bag_1] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
     trade_whole_stacks = ini->GetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
+    wiki_link_on_context_menu = ini->GetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
 }
 void InventoryManager::ClearSalvageSession(GW::HookStatus *status, void *)
 {
@@ -1155,6 +1157,8 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::TextDisabled("This module is responsible for extra item functions via ctrl+click, right click or double click");
     ImGui::Checkbox("Move whole stacks into trade by default", &trade_whole_stacks);
     ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack into trade");
+    ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &wiki_link_on_context_menu);
+    ImGui::ShowHelp("When right clicking an item in inventory");
     ImGui::Text("Salvage All options:");
     ImGui::SameLine();
     ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
@@ -1236,12 +1240,10 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 
     static bool check_all_items = true;
     static bool show_inventory_context_menu = false;
-    if (show_item_context_menu) {
-        ImGui::OpenPopup("Item Context Menu");
-        show_item_context_menu = false;
-    }
+    DrawItemContextMenu(show_item_context_menu);
+    show_item_context_menu = false;
     
-    DrawItemContextMenu();
+    
 
     /*
     *   Cog icon on inventory bags window
@@ -1463,52 +1465,71 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         ImGui::EndPopup();
     }
 }
-bool InventoryManager::DrawItemContextMenu() {
-    if (!ImGui::BeginPopup("Item Context Menu"))
-        return false;
+bool InventoryManager::DrawItemContextMenu(bool open) {
+    const char* context_menu_id = "Item Context Menu";
+    const auto has_context_menu = [&](Item* item) {
+        if (!item)
+            return false;
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+            return true;
+        if (wiki_link_on_context_menu)
+            return true;
+        return item->IsIdentificationKit() || item->IsSalvageKit();
+    };
     Item* context_item_actual = context_item.item();
-    if (!context_item_actual) {
-        ImGui::EndPopup();
-        ImGui::CloseCurrentPopup();
+    if (!context_item.item_id || !has_context_menu(context_item_actual)) {
+        context_item.item_id = 0;
         return false;
     }
+    
+
+    // NB: Be really careful here; a window has to be open for at LEAST 1 frame before closing it again.
+
+    // If it is closed before the draw ends, the you'll get a crash on g.NavWindow being NULL.
+    // Either don't open it at all, or wait a frame before closing it.
+    if(open)
+        ImGui::OpenPopup(context_menu_id);
+    if (!ImGui::BeginPopup(context_menu_id))
+        return false;
+    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
+    const ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
     if (context_item_name_s.empty() && !context_item_name_ws.empty()) {
         context_item_name_s = GuiUtils::WStringToString(context_item_name_ws);
     }
-    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
-    ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-    ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+    
     ImGui::Text(context_item_name_s.c_str());
     ImGui::Separator();
     // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
-    bool has_options = true;
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        has_options = true;
         if (ImGui::Button(context_item_actual->bag->IsInventoryBag() ? "Store Item" : "Withdraw Item", size)) {
-            move_item(context_item_actual);
             ImGui::CloseCurrentPopup();
+            move_item(context_item_actual);
+            goto end_popup;
         }
         if (context_item_actual->GetIsMaterial() && context_item_actual->bag->IsInventoryBag()) {
             if (ImGui::Button("Store All Materials", size)) {
                 ImGui::CloseCurrentPopup();
                 store_all_materials();
+                goto end_popup;
             }
         }
-        if (context_item_actual->IsTome() && context_item_actual->bag->IsInventoryBag()) {
+        else if (context_item_actual->IsTome() && context_item_actual->bag->IsInventoryBag()) {
             if (ImGui::Button("Store All Tomes", size)) {
                 ImGui::CloseCurrentPopup();
                 store_all_tomes();
+                goto end_popup;
             }
         }
-        if (context_item_actual->type == 8 && context_item_actual->bag->IsInventoryBag()) {
+        else if (context_item_actual->type == 8 && context_item_actual->bag->IsInventoryBag()) {
             if (ImGui::Button("Store All Upgrades", size)) {
                 ImGui::CloseCurrentPopup();
                 store_all_upgrades();
+                goto end_popup;
             }
         }
     }
     if (context_item_actual->IsIdentificationKit()) {
-        has_options = true;
         IdentifyAllType type = IdentifyAllType::None;
         if (ImGui::Button("Identify All Items", size))
             type = IdentifyAllType::All;
@@ -1530,10 +1551,10 @@ bool InventoryManager::DrawItemContextMenu() {
                 identify_all_type = type;
                 IdentifyAll(type);
             }
+            goto end_popup;
         }
     }
     else if (context_item_actual->IsSalvageKit()) {
-        has_options = true;
         SalvageAllType type = SalvageAllType::None;
         if (ImGui::Button("Salvage All White Items", size))
             type = SalvageAllType::White;
@@ -1554,16 +1575,19 @@ bool InventoryManager::DrawItemContextMenu() {
                 salvage_all_type = type;
                 SalvageAll(type);
             }
+            goto end_popup;
         }
     }
-    if (ImGui::Button("Guild Wars Wiki", size)) {
-        OpenWiki(context_item_name_ws);
+    if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
+        OpenWiki(context_item_name_ws);
+        goto end_popup;
     }
+    end_popup:
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
     ImGui::EndPopup();
-    return has_options;
+    return true;
 }
 void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag* bag) {
     InventoryManager& im = InventoryManager::Instance();

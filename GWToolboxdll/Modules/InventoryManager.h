@@ -44,7 +44,7 @@ public:
     const char* SettingsName() const override { return "Inventory Settings"; }
 
     void Draw(IDirect3DDevice9* device) override;
-    bool DrawItemContextMenu();
+    bool DrawItemContextMenu(bool open = false);
 
     void IdentifyAll(IdentifyAllType type);
     void SalvageAll(SalvageAllType type);
@@ -90,6 +90,8 @@ private:
     bool salvage_rare_mats = false;
     bool show_transact_quantity_popup = false;
     bool transaction_listeners_attached = false;
+
+    bool wiki_link_on_context_menu = false;
 
 
     std::map<GW::Constants::Bag, bool> bags_to_salvage_from = {
