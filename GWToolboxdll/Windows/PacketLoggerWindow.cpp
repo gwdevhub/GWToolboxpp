@@ -7,6 +7,10 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
+
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/ChatMgr.h>
@@ -26,7 +30,10 @@
 #include <Windows/PacketLoggerWindow.h>
 
 namespace {
-
+    static wchar_t* GetMessageCore() {
+        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+        return buff ? buff->begin() : nullptr;
+    }
     struct MapInfo {
         wchar_t enc_name[8];
         std::wstring name;
@@ -590,6 +597,7 @@ void PacketLoggerWindow::Initialize() {
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_MISSION_OBJECTIVE_UPDATE_STRING, OnMessagePacket);
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_MISSION_OBJECTIVE_ADD, OnMessagePacket);
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_AGENT_DISPLAY_DIALOG, OnMessagePacket);
+    GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_CHAT_MESSAGE_NPC, OnMessagePacket);
 }
 void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet) {
     if (!log_npc_dialogs)
@@ -611,6 +619,9 @@ void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::Pack
         break;
     case GAME_SMSG_AGENT_DISPLAY_DIALOG:
         string_offset = 19;
+        break;
+    case GAME_SMSG_CHAT_MESSAGE_NPC:
+        Instance().AddMessageLog(GetMessageCore());
         break;
     }
     if (string_offset) {
