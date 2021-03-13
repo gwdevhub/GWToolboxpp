@@ -109,6 +109,7 @@ public:
 
     static void CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdWhisper(const wchar_t* message, int argc, LPWSTR* argv);
 
     void Initialize() override;
     void SignalTerminate() override;
