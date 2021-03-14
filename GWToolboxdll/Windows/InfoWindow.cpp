@@ -231,7 +231,8 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
     ImGui::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
     InfoField("X pos", "%.2f", agent->pos.x);
     InfoField("Y pos", "%.2f", agent->pos.y);
-    InfoField("Speed", "%.3f", sqrtf(agent->move_x * agent->move_x + agent->move_y * agent->move_y));
+    float speed = sqrtf(agent->move_x * agent->move_x + agent->move_y * agent->move_y);
+    InfoField("Speed (Relative)", "%.2f (%.2f) ", speed, speed > 0.f ? speed / 288.0f : 0.f);
     if (living) {
         InfoField(living->IsPlayer() ? "Player ID" : "Model ID", "%d", living->player_number);
         ImGui::ShowHelp("Model ID is unique for each kind of agent.\n"

@@ -477,6 +477,8 @@ void FriendListWindow::OnOutgoingWhisper(GW::HookStatus *, int channel, wchar_t 
     if (instance.is_redirecting_whisper || static_cast<GW::Chat::Channel>(channel) != GW::Chat::CHANNEL_WHISPER)
         return;
     wchar_t* separator_pos = wcschr(message, ',');
+    if (!separator_pos)
+        return;
     instance.pending_whisper.reset(std::wstring(message, separator_pos), std::wstring(&separator_pos[1]));
 }
 
