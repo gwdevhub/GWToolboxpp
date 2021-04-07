@@ -649,8 +649,7 @@ void GameSettings::Initialize() {
     }
 
     {
-        uintptr_t found = GW::Scanner::Find(
-            "\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
+        uintptr_t found = GW::Scanner::Find("\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
         printf("[SCAN] TomePatch = %p\n", (void *)found);
         if (found) {
             tome_patch.SetPatch(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);
@@ -658,7 +657,7 @@ void GameSettings::Initialize() {
     }
 
     {
-        uintptr_t found = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxxxx", +7);
+        uintptr_t found = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
         printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)found);
         if (found) {
             gold_confirm_patch.SetPatch(found, "\x90\x90", 2);
