@@ -1158,7 +1158,12 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::Checkbox("Move whole stacks into trade by default", &trade_whole_stacks);
     ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack into trade");
     ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &wiki_link_on_context_menu);
-    ImGui::ShowHelp("When right clicking an item in inventory");
+    ImGui::Text("Right click an item to open context menu in:");
+    ImGui::Indent();
+    ImGui::Checkbox("Exporable Area", &right_click_context_menu_in_explorable);
+    ImGui::SameLine();
+    ImGui::Checkbox("Outpost", &right_click_context_menu_in_outpost);
+    ImGui::Unindent();
     ImGui::Text("Salvage All options:");
     ImGui::SameLine();
     ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
@@ -1614,6 +1619,10 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
         pending_item_move_for_trade = item->item_id;
         return;
     case 999: // Right click (via GWToolbox)
+        if (!Instance().right_click_context_menu_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+            return;
+        if (!Instance().right_click_context_menu_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+            return;
         break;
     default:
         return;

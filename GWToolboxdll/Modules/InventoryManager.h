@@ -92,7 +92,8 @@ private:
     bool transaction_listeners_attached = false;
 
     bool wiki_link_on_context_menu = false;
-
+    bool right_click_context_menu_in_explorable = true;
+    bool right_click_context_menu_in_outpost = true;
 
     std::map<GW::Constants::Bag, bool> bags_to_salvage_from = {
         { GW::Constants::Bag::Backpack,true },
