@@ -7,6 +7,18 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.9
+* [Minor] Added option to disable right click context menu in outpost/explorable
+* [Minor] Added option to disable wiki link on context menu
+* [Minor] Tweak info window to show relative speed of an agent
+* [Fix] Fixed ctrl+click not storing in current storage pane if set
+* [Fix] Fixed foundry room 4 not being triggered in objective timer
+* [Fix] Fixed exhaustion room not being triggered in Urgoz' Warren
+* [Fix] Fixed crashes when using /tell, /whisper, /t and /w
+* [Fix] Fixed GWToolbox not working after GW update 37112
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.9_Release/GWToolboxdll.dll)
+
 ## Version 4.8
 * [New] Added "Seek Party" to top of trade window when in Kamadan to avoid having to use party search window to buy/sell
 * [New] Right click context menu for materials shows option to store all into chest
