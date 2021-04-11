@@ -61,7 +61,8 @@ private:
     bool collapsed = false;
 
     // if we need to print in the chat
-    bool print_game_chat = false;
+    bool print_game_chat_kmd = false;
+    bool print_game_chat_asc = false;
 
     // if enable, we won't print the messages containing word from alert_words
     bool filter_alerts = false;
@@ -86,6 +87,7 @@ private:
     void DrawAlertsWindowContent(bool ownwindow);
 
     static bool GetInKamadanAE1(bool check_district = true);
+    static bool GetInAscalonAE1(bool check_district = true);
 
     // Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
     void AsyncWindowConnect(bool force = false);
