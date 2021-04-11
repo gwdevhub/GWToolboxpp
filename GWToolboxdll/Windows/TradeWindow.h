@@ -52,6 +52,9 @@ private:
 
     WSAData wsaData = {0};
 
+    bool is_kamadan_chat = false;
+    bool refresh_footer = false;
+
     bool show_alert_window = false;
 
     // Window could be visible but collapsed - use this var to check it.
@@ -107,4 +110,5 @@ private:
     void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
     static void DeleteWebSocket(easywsclient::WebSocket *ws);
+    void SwitchSockets();
 };
