@@ -52,7 +52,7 @@ private:
 
     WSAData wsaData = {0};
 
-    bool is_kamadan_chat = false;
+    bool is_kamadan_chat = true;
     bool refresh_footer = false;
 
     bool show_alert_window = false;
