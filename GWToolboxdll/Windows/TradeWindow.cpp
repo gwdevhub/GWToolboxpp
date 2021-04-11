@@ -580,9 +580,11 @@ void TradeWindow::RegisterSettingsContent()
 void TradeWindow::DrawAlertsWindowContent(bool) {
     ImGui::Text("Alerts");
     ImGui::Checkbox("Send Kamadan AE1 trade chat to your trade chat", &print_game_chat_kmd);
+    ImGui::ShowHelp("Only when trade chat channel is visible in-game");
     ImGui::Checkbox("Send Pre-Searing Ascalon AE1 trade chat to your trade chat", &print_game_chat_asc);
     ImGui::ShowHelp("Only when trade chat channel is visible in-game");
     ImGui::Checkbox("Only show messages containing:", &filter_alerts);
+    ImGui::ShowHelp("Only shows messages from the currently active trade channel (Kamadan OR Ascalon)");
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, 
         ImVec2(-1.0f, 0.0f))) {
