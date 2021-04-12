@@ -174,7 +174,7 @@ void TradeWindow::Update(float delta) {
         ws_window->poll();
     }
     bool search_pending = !pending_query_string.empty();
-    bool maintain_socket = (visible && !collapsed) || ((print_game_chat_kmd || print_game_chat_asc) && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0) || search_pending;
+    bool maintain_socket = (visible && !collapsed) || ((print_game_chat || print_game_chat_asc) && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0) || search_pending;
     if (maintain_socket && !ws_window) {
         AsyncWindowConnect();
     }
@@ -296,7 +296,7 @@ void TradeWindow::fetch() {
 
         // Check alerts
         // do not display trade chat while in kamadan AE district 1 or Pre-Searing Ascalon AE district 1
-        bool print_message = (print_game_chat_kmd && !GetInKamadanAE1() || print_game_chat_asc && !GetInAscalonAE1()) && IsTradeAlert(msg.message);
+        bool print_message = (print_game_chat && !GetInKamadanAE1() || print_game_chat_asc && !GetInAscalonAE1()) && IsTradeAlert(msg.message);
 
         if (print_message) {
             wchar_t buffer[512];
@@ -579,7 +579,7 @@ void TradeWindow::RegisterSettingsContent()
 
 void TradeWindow::DrawAlertsWindowContent(bool) {
     ImGui::Text("Alerts");
-    ImGui::Checkbox("Send Kamadan AE1 trade chat to your trade chat", &print_game_chat_kmd);
+    ImGui::Checkbox("Send Kamadan AE1 trade chat to your trade chat", &print_game_chat);
     ImGui::ShowHelp("Only when trade chat channel is visible in-game");
     ImGui::Checkbox("Send Pre-Searing Ascalon AE1 trade chat to your trade chat", &print_game_chat_asc);
     ImGui::ShowHelp("Only when trade chat channel is visible in-game");
@@ -611,8 +611,8 @@ void TradeWindow::DrawSettingInternal() {
 
 void TradeWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
-    print_game_chat_kmd = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat_kmd);
-    print_game_chat_asc = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat_asc);
+    print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
+    print_game_chat_asc = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat_asc), print_game_chat_asc);
     filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
     filter_local_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_local_trade), filter_local_trade);
 
@@ -629,8 +629,8 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 void TradeWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat_kmd);
-    ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat_asc);
+    ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
+    ini->SetBoolValue(Name(), VAR_NAME(print_game_chat_asc), print_game_chat_asc);
     ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
     ini->SetBoolValue(Name(), VAR_NAME(filter_local_trade), filter_local_trade);
 

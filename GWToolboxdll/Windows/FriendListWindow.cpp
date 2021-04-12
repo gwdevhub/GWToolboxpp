@@ -120,12 +120,35 @@ namespace
 }
 void FriendListWindow::CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
-    if (argc < 2)
-        return Log::Error("Missing player name");
     std::wstring player_name = ParsePlayerName(argc - 1, &argv[1]);
-    if (player_name.empty())
-        return Log::Error("Missing player name");
-    GW::FriendListMgr::AddFriend(player_name.c_str());
+    if (player_name.empty()) {
+        try {
+            GW::Agent* agent = GW::Agents::GetTarget();
+            const GW::AgentLiving* living = agent->GetAsAgentLiving();
+            const GW::Player* player = living && living->IsPlayer() ? GW::PlayerMgr::GetPlayerByID(living->player_number) : nullptr;
+            player_name = StringToWString(GuiUtils::WStringToString(player->name).c_str());
+        } catch (int n) {
+            
+            return Log::Error("Missing player name" + n);
+        }        
+    }
+        
+    try {
+        GW::FriendListMgr::AddFriend(player_name.c_str());
+    } catch (int x) {
+
+        // Try adding friend to personal friends list
+
+        return Log::Error("Couldn't add friend internally" + x);
+    }
+    
+}
+std::wstring FriendListWindow::StringToWString(const std::string& str)
+{
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(size_needed, 0);
+    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
 }
 void FriendListWindow::CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
@@ -374,6 +397,7 @@ void FriendListWindow::Initialize() {
     ToolboxWindow::Initialize();
 
     GW::Chat::CreateCommand(L"addfriend", CmdAddFriend);
+    GW::Chat::CreateCommand(L"add", CmdAddFriend);
     GW::Chat::CreateCommand(L"removefriend", CmdRemoveFriend);
     GW::Chat::CreateCommand(L"deletefriend", CmdRemoveFriend);
     GW::Chat::CreateCommand(L"tell", CmdWhisper);
