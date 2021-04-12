@@ -296,7 +296,7 @@ void TradeWindow::fetch() {
 
         // Check alerts
         // do not display trade chat while in kamadan AE district 1 or Pre-Searing Ascalon AE district 1
-        bool print_message = (print_game_chat && !GetInKamadanAE1() || print_game_chat_asc && !GetInAscalonAE1()) && IsTradeAlert(msg.message);
+        bool print_message = ((is_kamadan_chat && print_game_chat && !GetInKamadanAE1()) || (!is_kamadan_chat && print_game_chat_asc && !GetInAscalonAE1())) && IsTradeAlert(msg.message);
 
         if (print_message) {
             wchar_t buffer[512];
