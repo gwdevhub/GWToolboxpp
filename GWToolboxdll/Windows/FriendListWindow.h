@@ -108,7 +108,6 @@ public:
     bool IsWindow() const override;
 
     static void CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv);
-    static std::wstring FriendListWindow::StringToWString(const std::string& str);
     static void CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdWhisper(const wchar_t* message, int argc, LPWSTR* argv);
 

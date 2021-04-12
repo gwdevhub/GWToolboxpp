@@ -61,7 +61,7 @@ private:
     bool collapsed = false;
 
     // if we need to print in the chat
-    bool print_game_chat = false;
+    bool print_game_chat_kmd = false;
     bool print_game_chat_asc = false;
 
     // if enable, we won't print the messages containing word from alert_words
