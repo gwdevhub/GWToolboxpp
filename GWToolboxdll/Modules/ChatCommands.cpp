@@ -14,6 +14,7 @@
 #include <GWCA/GameEntities/Player.h>
 
 #include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -41,6 +42,7 @@
 #include <Modules/ChatCommands.h>
 #include <Modules/GameSettings.h>
 #include <Widgets/PartyDamage.h>
+#include <Widgets/ObserverWidget.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/Hotkeys.h>
 #include <Windows/MainWindow.h>
@@ -339,6 +341,12 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"cam", ChatCommands::CmdCamera);
     GW::Chat::CreateCommand(L"damage", ChatCommands::CmdDamage);
     GW::Chat::CreateCommand(L"dmg", ChatCommands::CmdDamage);
+    GW::Chat::CreateCommand(L"observer:init", ChatCommands::CmdObserverInit);
+    GW::Chat::CreateCommand(L"observer:reset", ChatCommands::CmdObserverReset);
+    GW::Chat::CreateCommand(L"observer:enable", ChatCommands::CmdObserverToggleForceEnable);
+    GW::Chat::CreateCommand(L"observer:follow", ChatCommands::ToggleFollowMode);
+    GW::Chat::CreateCommand(L"debug", ChatCommands::CmdDebug);
+
     GW::Chat::CreateCommand(L"chest", ChatCommands::CmdChest);
     GW::Chat::CreateCommand(L"xunlai", ChatCommands::CmdChest);
     GW::Chat::CreateCommand(L"afk", ChatCommands::CmdAfk);
@@ -755,6 +763,145 @@ void ChatCommands::CmdCamera(const wchar_t *message, int argc, LPWSTR *argv) {
         }
     }
 }
+
+void ChatCommands::CmdDebug(const wchar_t* message, int argc, LPWSTR* argv)
+{
+    UNREFERENCED_PARAMETER(message);
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    const GW::AgentArray& agents = GW::Agents::GetAgentArray();
+    Log::Log((std::string("Loaded ( ") + std::to_string(agents.size()) + ") agents...").c_str());
+
+    if (!agents.valid()) {
+        Log::Log("Failed: \"!agents.valid()\"");
+    } else {
+		size_t i = 0;
+        for (const GW::Agent* agent : agents) {
+            if (agent == nullptr) {
+                Log::Log((std::string("\tagent ")
+                    + "("
+                    + std::to_string(i)
+                    + "): ??? (nullptr)").c_str());
+                continue;
+            }
+            Log::Log((std::string("\tagent ")
+                + "("
+                + std::to_string(i)
+                + "): agent_id: "
+                + std::to_string(agent->agent_id)).c_str());
+            i += 1;
+        }
+    }
+
+    const GW::PartyContext* party_ctx = GW::GameContext::instance()->party;
+    if (!party_ctx) {
+        Log::Log("Failed: \"party_ctx == nullptr\"");
+    } else {
+        auto parties = party_ctx->parties;
+        if (!parties.valid()) {
+			Log::Log("Failed: \"!parties.valid()\"");
+        } else {
+			Log::Log((std::string("Loaded ( ")
+                + std::to_string(parties.size())
+                + ") parties...").c_str());
+			size_t i = 0;
+			for (const GW::PartyInfo* party : parties) {
+				if (party == nullptr) {
+					Log::Log((std::string("\tparty ")
+                        + "("
+                        + std::to_string(i)
+                        + "): ??? (nullptr)").c_str());
+					continue;
+				}
+				Log::Log((std::string("\tparty ")
+                    + "("
+                    + std::to_string(i)
+                    + "): party_id: "
+                    + std::to_string(party->party_id)
+                    + " | size: ("
+                    + std::to_string((party->players.size() + party->heroes.size() + party->henchmen.size()))
+                    + ")").c_str());
+
+                size_t j = 0;
+                // enumerate the parties players, heroes, hench...
+                for (const GW::PlayerPartyMember& player : party->players) {
+					Log::Log((std::string("\t\tplayer: ")
+						+ "("
+						+ std::to_string(j)
+						+ "): login_number: "
+                        + std::to_string(player.login_number)
+						+ " | state: "
+                        + std::to_string(player.state)
+                        ).c_str());
+
+                    size_t k = 0;
+					for (const GW::HeroPartyMember& hero : party->heroes) {
+                        if (hero.owner_player_id != player.login_number) continue;
+						Log::Log((std::string("\t\tplayer: ")
+							+ "("
+							+ std::to_string(j)
+							+ ") hero ("
+                            + std::to_string(k)
+                            + "): agent_id:"
+							+ std::to_string(hero.agent_id)
+							+ " | level: "
+							+ std::to_string(hero.level)
+							+ " | hero_id: "
+							+ std::to_string(hero.hero_id)
+							).c_str());
+                        k += 1;
+					}
+                    j += 1 + k;
+                }
+
+                for (const GW::HenchmanPartyMember& hench : party->henchmen) {
+					Log::Log((std::string("\t\thench: ")
+						+ "("
+						+ std::to_string(j)
+						+ "): agent_id: "
+                        + std::to_string(hench.agent_id)
+						+ " | level: "
+                        + std::to_string(hench.level)
+						+ " | profession: "
+                        + std::to_string(hench.profession)
+                        ).c_str());
+                    j += 1;
+                }
+
+				i += 1;
+			}
+        }
+    }
+}
+
+void ChatCommands::CmdObserverReset(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    ObserverModule::Instance().Reset();
+}
+
+void ChatCommands::CmdObserverInit(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    ObserverModule::Instance().InitializeObserverSession();
+}
+
+void ChatCommands::CmdObserverToggleForceEnable(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    ObserverModule::Instance().ToggleForceEnabled();
+}
+
+void ChatCommands::ToggleFollowMode(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    ObserverModule::Instance().ToggleFollowMode();
+}
+
 
 void ChatCommands::CmdDamage(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);

@@ -63,6 +63,7 @@ private:
     bool use_vanquish = true;
     bool use_alcohol = true;
     bool use_objectivetimer = true;
+    bool use_observer = true;
     bool use_factionleaderboard = true;
     bool use_daily_quests = true;
     bool use_discord = true;

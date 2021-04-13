@@ -62,6 +62,7 @@
 #include <Widgets/DistanceWidget.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/PartyDamage.h>
+#include <Widgets/ObserverWidget.h>
 #include <Widgets/BondsWidget.h>
 #include <Widgets/ClockWidget.h>
 #include <Widgets/VanquishWidget.h>
@@ -104,6 +105,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_trade) optional_modules.push_back(&TradeWindow::Instance());
     if (use_notepad) optional_modules.push_back(&NotePadWindow::Instance());
     if (use_objectivetimer) optional_modules.push_back(&ObjectiveTimerWindow::Instance());
+    if (use_observer) optional_modules.push_back(&ObserverModule::Instance());
     if (use_factionleaderboard) optional_modules.push_back(&FactionLeaderboardWindow::Instance());
     if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
     if (use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
@@ -133,6 +135,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_distance) optional_modules.push_back(&DistanceWidget::Instance());
     if (use_minimap) optional_modules.push_back(&Minimap::Instance());
     if (use_damage) optional_modules.push_back(&PartyDamage::Instance());
+    if (use_observer) optional_modules.push_back(&ObserverModule::Instance());
     if (use_bonds) optional_modules.push_back(&BondsWidget::Instance());
     if (use_clock) optional_modules.push_back(&ClockWidget::Instance());
     if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
@@ -175,6 +178,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Clock",&use_clock},
         {"Daily Quests",&use_daily_quests},
         {"Damage",&use_damage},
+        {"Observer",&use_observer},
         {"Dialogs",&use_dialogs},
         {"Discord",&use_discord},
         {"Distance",&use_distance},
@@ -187,6 +191,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Minimap",&use_minimap},
         {"Notepad",&use_notepad},
         {"Objective Timer",&use_objectivetimer},
+        {"Observer",&use_observer},
         {"Party Window",&use_partywindowmodule},
         {"Pcons",&use_pcons},
         {"Timer",&use_timer},
@@ -270,6 +275,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), use_alcohol);
     use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
     use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
+    use_observer = ini->GetBoolValue(Name(), VAR_NAME(use_observer), use_observer);
     save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
     use_gamesettings = ini->GetBoolValue(Name(), VAR_NAME(use_gamesettings), use_gamesettings);
     use_updater = ini->GetBoolValue(Name(), VAR_NAME(use_updater), use_updater);
@@ -308,6 +314,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_alcohol), use_alcohol);
     ini->SetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
     ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
+    ini->SetBoolValue(Name(), VAR_NAME(use_observer), use_observer);
     ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
     ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
     ini->SetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
