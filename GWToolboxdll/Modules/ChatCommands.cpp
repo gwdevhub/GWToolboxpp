@@ -40,9 +40,9 @@
 #include <Logger.h>
 
 #include <Modules/ChatCommands.h>
+#include <Modules/ObserverModule.h>
 #include <Modules/GameSettings.h>
 #include <Widgets/PartyDamage.h>
-#include <Widgets/ObserverWidget.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/Hotkeys.h>
 #include <Windows/MainWindow.h>
