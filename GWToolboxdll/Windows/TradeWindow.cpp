@@ -34,8 +34,10 @@ using easywsclient::WebSocket;
 using nlohmann::json;
 using json_vec = std::vector<json>;
 
-static const char ws_host[] = "wss://kamadan.gwtoolbox.com";
-static const char https_host[] = "https://kamadan.gwtoolbox.com";
+static const char ws_host_kmd[] = "wss://kamadan.gwtoolbox.com";
+static const char https_host_kmd[] = "https://kamadan.gwtoolbox.com";
+static const char ws_host_asc[] = "wss://ascalon.gwtoolbox.com";
+static const char https_host_asc[] = "https://ascalon.gwtoolbox.com/";
 
 static wchar_t *GetMessageCore()
 {
@@ -152,6 +154,15 @@ bool TradeWindow::GetInKamadanAE1(bool check_district) {
         return false;
     }
 }
+bool TradeWindow::GetInAscalonAE1(bool check_district) {
+    using namespace GW::Constants;
+    switch (GW::Map::GetMapID()) {
+        case MapID::Ascalon_City_pre_searing:
+            return !check_district ||
+                   (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == GW::Constants::Region::America);
+        default: return false;
+    }
+}
 
 void TradeWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
@@ -163,7 +174,7 @@ void TradeWindow::Update(float delta) {
         ws_window->poll();
     }
     bool search_pending = !pending_query_string.empty();
-    bool maintain_socket = (visible && !collapsed) || (print_game_chat && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0) || search_pending;
+    bool maintain_socket = (visible && !collapsed) || ((print_game_chat || print_game_chat_asc) && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0) || search_pending;
     if (maintain_socket && !ws_window) {
         AsyncWindowConnect();
     }
@@ -284,8 +295,8 @@ void TradeWindow::fetch() {
             messages.add(msg);
 
         // Check alerts
-        // do not display trade chat while in kamadan AE district 1
-        bool print_message = print_game_chat && !GetInKamadanAE1() && IsTradeAlert(msg.message);
+        // do not display trade chat while in kamadan AE district 1 or Pre-Searing Ascalon AE district 1
+        bool print_message = ((is_kamadan_chat && print_game_chat && !GetInKamadanAE1()) || (!is_kamadan_chat && print_game_chat_asc && !GetInAscalonAE1())) && IsTradeAlert(msg.message);
 
         if (print_message) {
             wchar_t buffer[512];
@@ -377,8 +388,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
     /* Search bar header */
     const float &font_scale = ImGui::GetIO().FontGlobalScale;
     const float btn_width = 80.0f * font_scale;
-    const float search_bar_width = (ImGui::GetWindowContentRegionWidth() - btn_width - btn_width - btn_width - ImGui::GetStyle().ItemInnerSpacing.x * 6);
-    if (GetInKamadanAE1(false)) {
+    const float search_bar_width = (ImGui::GetWindowContentRegionWidth() - (btn_width * 4) - ImGui::GetStyle().ItemInnerSpacing.x * 7);
+    if (GetInKamadanAE1(false) || GetInAscalonAE1(false)) {
         bool advertise_dirty = false;
         static int search_type = static_cast<int>(GW::PartySearchType::PartySearchType_Trade);
         bool is_seeking = player_party_search.message[0] != 0;
@@ -425,7 +436,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
     }
     bool do_search = false;
     ImGui::PushItemWidth(search_bar_width);
-    do_search |= ImGui::InputTextWithHint("##trade_search_buffer", "Search Kamadan Trade Chat", search_buffer, 256, flags);
+    do_search |= ImGui::InputTextWithHint("##trade_search_buffer", is_kamadan_chat ? "Search Kamadan Trade Chat" : "Search Ascalon Trade Chat", search_buffer, 256, flags);
     ImGui::PopItemWidth();
     ImGui::SameLine();
     do_search |= ImGui::Button(searching ? "Searching" : "Search", ImVec2(btn_width, 0));
@@ -444,12 +455,26 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
         show_alert_window = !show_alert_window;
     }
 
+    ImGui::SameLine();
+    if (ImGui::Button(is_kamadan_chat ? "Kamadan" : "Ascalon", ImVec2(btn_width, 0))) {
+        is_kamadan_chat = !is_kamadan_chat;
+        SwitchSockets();
+    }
+    if (is_kamadan_chat) {
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Currently viewing messages from Kamadan AE1.\nClick to view messages from Pre-Searing Ascalon AE1 instead.");
+    } else {
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip( "Currently viewing messages from Pre-Searing Ascalon AE1.\nClick to view messages from Kamadan AE1 instead.");
+    }
+
+
     /* Main trade chat area */
     ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
     /* Connection checks */
     if (!ws_window && !ws_window_connecting) {
         char buf[255];
-        snprintf(buf, 255, "The connection to %s has timed out.", ws_host);
+        snprintf(buf, 255, "The connection to %s has timed out.", (is_kamadan_chat) ? ws_host_kmd : ws_host_asc);
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(buf).x) / 2);
         ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
         ImGui::Text(buf);
@@ -526,12 +551,13 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
     /* Link to website footer */
     static char buf[128];
-    if (!buf[0]) {
-        snprintf(buf, 128, "Powered by %s", https_host);
+    if (!buf[0] || refresh_footer) {
+        snprintf(buf, 128, "Powered by %s", is_kamadan_chat ? https_host_kmd : https_host_asc);
     }
+
     if (ImGui::Button(buf, ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))) {
         CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-        ShellExecuteA(NULL, "open", https_host, NULL, NULL, SW_SHOWNORMAL);
+        ShellExecuteA(NULL, "open", is_kamadan_chat ? https_host_kmd : https_host_asc, NULL, NULL, SW_SHOWNORMAL);
     }
     ImGui::End();
 }
@@ -553,9 +579,12 @@ void TradeWindow::RegisterSettingsContent()
 
 void TradeWindow::DrawAlertsWindowContent(bool) {
     ImGui::Text("Alerts");
-    ImGui::Checkbox("Send Kamadan ad1 trade chat to your trade chat", &print_game_chat);
+    ImGui::Checkbox("Send Kamadan AE1 trade chat to your trade chat", &print_game_chat);
+    ImGui::ShowHelp("Only when trade chat channel is visible in-game");
+    ImGui::Checkbox("Send Pre-Searing Ascalon AE1 trade chat to your trade chat", &print_game_chat_asc);
     ImGui::ShowHelp("Only when trade chat channel is visible in-game");
     ImGui::Checkbox("Only show messages containing:", &filter_alerts);
+    ImGui::ShowHelp("Only shows messages from the currently active trade channel (Kamadan OR Ascalon)");
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, 
         ImVec2(-1.0f, 0.0f))) {
@@ -583,6 +612,7 @@ void TradeWindow::DrawSettingInternal() {
 void TradeWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
+    print_game_chat_asc = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat_asc), print_game_chat_asc);
     filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
     filter_local_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_local_trade), filter_local_trade);
 
@@ -600,6 +630,7 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
+    ini->SetBoolValue(Name(), VAR_NAME(print_game_chat_asc), print_game_chat_asc);
     ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
     ini->SetBoolValue(Name(), VAR_NAME(filter_local_trade), filter_local_trade);
 
@@ -647,8 +678,8 @@ void TradeWindow::AsyncWindowConnect(bool force) {
     }
     ws_window_connecting = true;
     thread_jobs.push([this]() {
-        if ((ws_window = WebSocket::from_url(ws_host)) == nullptr) {
-            printf("Couldn't connect to the host '%s'", ws_host);
+        if ((ws_window = WebSocket::from_url((is_kamadan_chat) ? ws_host_kmd : ws_host_asc)) == nullptr) {
+            printf("Couldn't connect to the host '%s'", (is_kamadan_chat) ? ws_host_kmd : ws_host_asc);
         }
         ws_window_connecting = false;
         if (messages.size() == 0 && pending_query_string.empty())
@@ -663,4 +694,12 @@ void TradeWindow::DeleteWebSocket(easywsclient::WebSocket *ws) {
     while ( ws->getReadyState() != easywsclient::WebSocket::CLOSED)
         ws->poll();
     delete ws;
+}
+
+void TradeWindow::SwitchSockets() {
+    refresh_footer = true;
+    DeleteWebSocket(ws_window);
+    ws_window = nullptr;
+    messages.clear();
+    AsyncWindowConnect(true);
 }

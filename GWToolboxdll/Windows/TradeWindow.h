@@ -52,6 +52,9 @@ private:
 
     WSAData wsaData = {0};
 
+    bool is_kamadan_chat = true;
+    bool refresh_footer = false;
+
     bool show_alert_window = false;
 
     // Window could be visible but collapsed - use this var to check it.
@@ -59,6 +62,7 @@ private:
 
     // if we need to print in the chat
     bool print_game_chat = false;
+    bool print_game_chat_asc = false;
 
     // if enable, we won't print the messages containing word from alert_words
     bool filter_alerts = false;
@@ -83,6 +87,7 @@ private:
     void DrawAlertsWindowContent(bool ownwindow);
 
     static bool GetInKamadanAE1(bool check_district = true);
+    static bool GetInAscalonAE1(bool check_district = true);
 
     // Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
     void AsyncWindowConnect(bool force = false);
@@ -107,4 +112,5 @@ private:
     void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
     static void DeleteWebSocket(easywsclient::WebSocket *ws);
+    void SwitchSockets();
 };
