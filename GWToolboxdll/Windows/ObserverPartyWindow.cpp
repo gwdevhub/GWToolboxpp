@@ -329,6 +329,7 @@ void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::Observa
 // Draw everything
 void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
+    if (!visible) return;
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) return ImGui::End();
@@ -355,7 +356,7 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice) {
 
 
 	float global = ImGui::GetIO().FontGlobalScale;
-	text_long   = 200.0f * global;
+	text_long   = 220.0f * global;
 	text_medium = 150.0f * global;
 	text_short  = 80.0f  * global;
 	text_tiny	= 40.0f  * global;
@@ -480,6 +481,7 @@ void ObserverPartyWindow::SaveSettings(CSimpleIni* ini) {
 
 // Draw settings
 void ObserverPartyWindow::DrawSettingInternal() {
+    ImGui::Text("Make sure the Observer Module is enabled.");
     ImGui::Checkbox("Show player number (#)", &show_player_number);
     ImGui::Checkbox((std::string("Show kills (")
 		+ ObserverLabel::Kills

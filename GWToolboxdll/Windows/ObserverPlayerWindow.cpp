@@ -109,6 +109,7 @@ void ObserverPlayerWindow::DrawSkills(const std::unordered_map<uint32_t, Observe
 // Draw the window
 void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
+    if (!visible) return;
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
@@ -132,7 +133,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Text(tracking->Name().c_str());
 
         float global = ImGui::GetIO().FontGlobalScale;
-        text_long   = 200.0f * global;
+        text_long   = 220.0f * global;
         text_medium = 150.0f * global;
         text_short  = 80.0f  * global;
         text_tiny	= 40.0f  * global;
@@ -183,6 +184,7 @@ void ObserverPlayerWindow::SaveSettings(CSimpleIni* ini) {
 
 // Draw settings
 void ObserverPlayerWindow::DrawSettingInternal() {
+    ImGui::Text("Make sure the Observer Module is enabled.");
     ImGui::Checkbox("Show tracking player", &show_tracking);
     ImGui::Checkbox("Show player comparison", &show_comparison);
 }

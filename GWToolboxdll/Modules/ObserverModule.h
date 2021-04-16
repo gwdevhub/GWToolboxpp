@@ -655,22 +655,24 @@ public:
     }
 
     // lets the module run it in outposts and explorable areas
-    void ToggleForceEnabled() {
-        force_enabled = !force_enabled;
-        if (force_enabled) {
-            Log::Info("[ObserverMode]: ObserverModule may run in Explorable areas");
+    void ToggleEnableExplorableAreas() {
+        enable_explorable_areas = !enable_explorable_areas;
+        if (enable_explorable_areas) {
+            Log::Info("[ObserverMode]: Observer Module may run in Explorable Areas");
             if (IsActive()) InitializeObserverSession();
         }
-        else Log::Info("[ObserverMode]: ObserverModule will only run in Observer Mode.");
+        else Log::Info("[ObserverMode]: Observer Module will only run in Observer Mode.");
     }
 
     // Is the Module actively tracking agents?
     const bool IsActive() {
-        return is_explorable && (force_enabled || is_observer);
+        // an observer match is considered an explorable area
+        return is_enabled && is_explorable && (enable_explorable_areas || is_observer);
     }
 
+    bool is_enabled = false;
 
-    const char* Name() const override { return "ObserverModule"; }
+    const char* Name() const override { return "Observer Module"; }
     const char* Icon() const override { return ICON_FA_EYE; }
 
     void Initialize() override;
@@ -700,7 +702,7 @@ private:
     clock_t party_sync_timer = 0;
 
     // can be force enabled in non-explorable explorable areas
-    bool force_enabled = false;
+    bool enable_explorable_areas = false;
 
     bool observer_session_initialized = false;
     bool is_observer = false;

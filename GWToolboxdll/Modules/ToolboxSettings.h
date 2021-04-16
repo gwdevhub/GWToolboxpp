@@ -63,10 +63,10 @@ private:
     bool use_vanquish = true;
     bool use_alcohol = true;
     bool use_objectivetimer = true;
-    bool use_observer = true;
-    bool use_observer_player_window = true;
-    bool use_observer_target_window = true;
-    bool use_observer_party_window = true;
+    bool use_observer = false;
+    bool use_observer_player_window = false;
+    bool use_observer_target_window = false;
+    bool use_observer_party_window = false;
     bool use_factionleaderboard = true;
     bool use_daily_quests = true;
     bool use_discord = true;

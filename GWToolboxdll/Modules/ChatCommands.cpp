@@ -342,7 +342,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"damage", ChatCommands::CmdDamage);
     GW::Chat::CreateCommand(L"dmg", ChatCommands::CmdDamage);
     GW::Chat::CreateCommand(L"observer:reset", ChatCommands::CmdObserverReset);
-    GW::Chat::CreateCommand(L"observer:enable", ChatCommands::CmdObserverToggleForceEnable);
+    GW::Chat::CreateCommand(L"observer:explorable", ChatCommands::CmdObserverToggleExplorable);
 
     GW::Chat::CreateCommand(L"chest", ChatCommands::CmdChest);
     GW::Chat::CreateCommand(L"xunlai", ChatCommands::CmdChest);
@@ -770,11 +770,11 @@ void ChatCommands::CmdObserverReset(const wchar_t* message, int argc, LPWSTR* ar
 }
 
 
-void ChatCommands::CmdObserverToggleForceEnable(const wchar_t* message, int argc, LPWSTR* argv) {
+void ChatCommands::CmdObserverToggleExplorable(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
-    ObserverModule::Instance().ToggleForceEnabled();
+    ObserverModule::Instance().ToggleEnableExplorableAreas();
 }
 
 

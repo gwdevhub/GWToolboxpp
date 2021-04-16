@@ -868,20 +868,25 @@ bool ObserverModule::SynchroniseParties() {
 }
 
 
+// Load settings
 void ObserverModule::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
-    // No settings yet
+	is_enabled = ini->GetBoolValue(Name(), VAR_NAME(is_enabled), true);
 }
 
 
+// Save settings
 void ObserverModule::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
-    // No settings yet
+	ini->SetBoolValue(Name(), VAR_NAME(is_enabled), is_enabled);
 }
 
 
+// Draw internal settings
 void ObserverModule::DrawSettingInternal() {
-    // No settings yet
+    ImGui::Text("Enable data collection in Observer Mode.");
+    ImGui::Text("DISABLE if not using this feature to avoid using extra CPU and memory in Observer Mode.");
+    ImGui::Checkbox("Enabled", &is_enabled);
 }
 
 
