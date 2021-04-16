@@ -9,8 +9,27 @@
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Party.h>
 
+#include <Timer.h>
+
 #define NO_AGENT 0
 #define NO_PARTY 0
+
+namespace ObserverLabel {
+    extern const char* Name;
+    extern const char* Kills;
+    extern const char* Deaths;
+    extern const char* KDR;
+    extern const char* Cancels;
+    extern const char* Interrupts;
+    extern const char* Knockdowns;
+    extern const char* Finishes;
+    extern const char* AttacksReceivedFromOtherParties;
+    extern const char* AttacksDealtToOtherParties;
+    extern const char* CritsReceivedFromOtherParties;
+    extern const char* CritsDealToOtherParties;
+    extern const char* SkillsReceivedFromOtherParties;
+    extern const char* SkillsUsedOnOtherParties;
+}; // namespace ObserverLabels
 
 
 class ObserverModule : public ToolboxModule {
@@ -18,7 +37,12 @@ public:
     // An action between a caster and target
     // Where an action can be a skill and/or attack
     struct TargetAction {
-        TargetAction(const uint32_t caster_id, const uint32_t target_id, const bool is_attack, const bool is_skill, const uint32_t skill_id)
+        TargetAction(const uint32_t caster_id,
+            const uint32_t target_id,
+            const bool is_attack,
+            const bool is_skill,
+            const uint32_t skill_id
+        )
             : caster_id(caster_id)
             , target_id(target_id)
             , is_attack(is_attack)
@@ -32,16 +56,14 @@ public:
         const uint32_t skill_id;
     };
 
-    // Marks the "start" of an action
-    // Where an action can be a skill and/or attack
-    enum class ActionStartpoint {
+    enum class ActionStage {
+        // start
         Started,
-        Instant,
-    };
 
-    // Marks the "end" of an action
-    // Where an action can be a skill and/or attack
-    enum class ActionEndpoint {
+        // both
+        Instant,
+
+        // finish
         Stopped,
         Finished,
         Interrupted // "Interrupted" is received after "Stopped"
@@ -55,28 +77,23 @@ public:
         size_t finished = 0;
         size_t interrupted = 0;
 
-        void HandleEvent(const ActionStartpoint startpoint) {
-            switch (startpoint) {
-                case ActionStartpoint::Instant:
+        void Reduce(const ActionStage stage) {
+            switch (stage) {
+                case ActionStage::Instant:
                     started += 1;
                     finished += 1;
                     break;
-                case ActionStartpoint::Started:
+                case ActionStage::Started:
                     started += 1;
                     break;
-            }
-        }
-
-        void HandleEvent(const ActionEndpoint endpoint) {
-            switch (endpoint) {
-                case ActionEndpoint::Stopped:
+                case ActionStage::Stopped:
                     stopped += 1;
                     break;
-                case ActionEndpoint::Interrupted:
+                case ActionStage::Interrupted:
                     stopped -= 1;
                     interrupted += 1;
                     break;
-                case ActionEndpoint::Finished:
+                case ActionStage::Finished:
                     finished += 1;
                     break;
             }
@@ -91,61 +108,25 @@ public:
     };
 
 
-    // Represents an agent whose stats are tracked
-    // Includes players AND npc's
-    class ObservableAgent {
+    // Shared stats for an Agent or Team
+    class SharedStats {
     public:
-        ObservableAgent(ObserverModule& parent, const GW::AgentLiving& agent_living): parent(parent) {
-            state = agent_living.model_state;
-            agent_id = agent_living.agent_id;
-            team_id = agent_living.team_id;
-            // async initialise the agents name now because we probably want it later
-            GW::Agents::AsyncGetAgentName(&agent_living, name);
-            primary = agent_living.primary;
-            secondary = agent_living.secondary;
-            is_npc = agent_living.IsNPC();
-            is_player = agent_living.IsPlayer();
-            login_number = agent_living.login_number;
-        };
-        ~ObservableAgent() {
-            delete current_target_action;
-            attacks_received_by_agent.clear();
-            attacks_dealed_by_agent.clear();
-            skill_ids_used.clear();
-            skills_used.clear();
-            skill_ids_received.clear();
-            skills_received.clear();
-            skills_received_by_agent.clear();
-            skills_used_on_agent.clear();
-        }
+        // ****
+        // misc
+        // ****
 
-        ObserverModule& parent;
-        uint32_t agent_id;
-        uint32_t team_id;
-        uint32_t login_number;
-        uint32_t state = state;
+        size_t total_crits_received = 0;
+        size_t total_crits_dealt = 0;
 
-        // initialise to no party id
-        // let the party set the party_id
-        uint32_t party_id = NO_PARTY;
-        uint32_t party_index = 0;
+        size_t total_party_crits_received = 0;
+        size_t total_party_crits_dealt = 0;
 
-        // name: Inially unknown for NPC's.
-        //       Asynchronously initialized in constructor.
-        std::wstring name = L"???";
-        uint32_t primary = (uint32_t) GW::Constants::Profession::None;
-        uint32_t secondary = (uint32_t) GW::Constants::Profession::None;
-
-        // latest action (attack/skill) the agent was undertaking
-        const TargetAction* current_target_action = nullptr;
-
-        // last_hit_by tells us who killed the player if they die
-        // MUST be a party_member (e.g. not a footman)
-        // Not literally who is responsible for the kill, but may help
-        // account for degen / npc steals / such.
-        // It's a for fun stat so don't take it too serious
-        uint32_t last_hit_by = NO_AGENT;
-        // TODO: last_hit_at to limit the kill window
+        size_t knocked_down_count = 0;
+        size_t interrupted_count = 0;
+        size_t interrupted_skills_count = 0;
+        size_t cancelled_count = 0;
+        size_t cancelled_skills_count = 0;
+        float knocked_down_duration = 0;
 
         // deaths: from AgentState packets
         size_t deaths = 0;
@@ -155,43 +136,130 @@ public:
         float kdr_pc = 0;
         std::string kdr_str = "0.00";
 
-        bool is_player;
-        bool is_npc;
+        // *******
+        // attacks
+        // *******
 
-        // ===============
-        // ==== stats ====
-        // ===============
-
-        // ******
-        // totals
-        // ******
-
+        // attacks:total
+        // -------------
         ObservedAction total_attacks_done = ObservedAction();
         ObservedAction total_attacks_received = ObservedAction();
 
+        // attacks:party
+        // -------------
+        // attacks done on other parties (not inc. npcs)
+        ObservedAction total_attacks_done_on_other_party = ObservedAction();
+        // attacks received from other parties (not inc. npcs)
+        ObservedAction total_attacks_received_by_other_party = ObservedAction();
+
+        // ******
+        // skills
+        // ******
+
+        // ------------
+        // skills:total
+        // ------------
+
+        // skills used on anyone
         ObservedAction total_skills_used = ObservedAction();
+        // skills received from anyone
         ObservedAction total_skills_received = ObservedAction();
 
-        size_t total_crits_received = 0;
-        size_t total_crits_dealt = 0;
+        // ------------
+        // skills:party
+        // ------------
 
-        size_t total_npc_crits_received = 0;
-        size_t total_npc_crits_dealt = 0;
+        // skills used on your own party (not inc. npcs)
+        ObservedAction total_skills_used_on_own_party = ObservedAction();
+        // skills used on other parties (not inc. npcs)
+        ObservedAction total_skills_used_on_other_party = ObservedAction();
 
-        size_t total_player_crits_received = 0;
-        size_t total_player_crits_dealt = 0;
+        // skills received from your own party (not inc. npcs)
+        ObservedAction total_skills_received_by_own_party = ObservedAction();
+        // skills received from other parties (not inc. npcs)
+        ObservedAction total_skills_received_by_other_party = ObservedAction();
 
-        size_t knocked_down_count = 0;
-        size_t interrupted_count = 0;
-        size_t interrupted_skills_count = 0;
-        size_t cancelled_count = 0;
-        size_t cancelled_skills_count = 0;
-        float knocked_down_duration = 0;
+        // -----------
+        // skills:team
+        // -----------
+
+        // skills used on your own team (inc. npcs)
+        ObservedAction total_skills_used_on_own_team = ObservedAction();
+        // skills used on other team (inc. npcs)
+        ObservedAction total_skills_used_on_other_team = ObservedAction();
+
+        // skills received from your own team (inc. npcs)
+        ObservedAction total_skills_received_by_own_team = ObservedAction();
+        // skills received from other team (inc. npcs)
+        ObservedAction total_skills_received_by_other_team = ObservedAction();
 
 
-        // ****************
-        // attacks by agent
-        // ****************
+        // fired when the agent dies
+        void HandleDeath() {
+            deaths += 1;
+            // recalculate kdr
+            kdr_pc = (float) kills / deaths;
+            // get kdr string
+            std::stringstream str;
+            str << std::fixed << std::setprecision(2) << kdr_pc;
+            kdr_str = str.str();
+        }
+
+        // fired when the agent scores a kill
+        void HandleKill() {
+            kills += 1;
+            // recalculate kdr
+            if (deaths < 1)
+                kdr_pc = static_cast<float>(kills);
+            else
+                kdr_pc = static_cast<float>(kills) / deaths;
+            // get kdr string
+            std::stringstream str;
+            str << std::fixed << std::setprecision(2) << kdr_pc;
+            kdr_str = str.str();
+        }
+    };
+
+    // Stats for Agents
+    class ObservableAgentStats : public SharedStats {
+    public:
+        ~ObservableAgentStats()
+        {
+            // attacks received (by agent)
+            for (const auto& [_, o_atk] : attacks_received_by_agent) if (o_atk) delete o_atk;
+            attacks_received_by_agent.clear();
+
+            // attacks dealed (by agent)
+            for (const auto& [_, o_atk] : attacks_done_by_agent) if (o_atk) delete o_atk;
+            attacks_done_by_agent.clear();
+
+            // skills used
+            skill_ids_used.clear();
+            for (const auto& [_, o_skill] : skills_used) if (o_skill) delete o_skill;
+            skills_used.clear();
+
+            // skills received
+            skill_ids_received.clear();
+            for (const auto& [_, o_skill] : skills_received) if (o_skill) delete o_skill;
+            skills_received.clear();
+
+            // skill received (by agent)
+            for (auto& [_, skill_ids] : skills_ids_received_by_agent) skill_ids.clear();
+            skills_ids_received_by_agent.clear();
+            for (auto& [_, agent_skills] : skills_received_by_agent) {
+                for (const auto [__, o_skill] : agent_skills) if (o_skill) delete o_skill;
+                agent_skills.clear();
+            }
+            skills_received_by_agent.clear();
+
+            // skill used (by agent)
+            for (auto& [_, skill_ids] : skills_ids_used_on_agent) skill_ids.clear();
+            for (auto& [_, agent_skills] : skills_used_on_agent) {
+                for (const auto [__, o_skill] : agent_skills) if (o_skill) delete o_skill;
+                agent_skills.clear();
+            }
+            skills_ids_used_on_agent.clear();
+        }
 
         // map of agent_id -> ObservedAction
         std::unordered_map<uint32_t, ObservedAction*> attacks_received_by_agent = {};
@@ -210,14 +278,14 @@ public:
         }
 
         // map of agent_id -> ObservedAction
-        std::unordered_map<uint32_t, ObservedAction*> attacks_dealed_by_agent = {};
+        std::unordered_map<uint32_t, ObservedAction*> attacks_done_by_agent = {};
         // getter helper
         ObservedAction& LazyGetAttacksDealedAgainst(const uint32_t receiver_agent_id) {
-            auto it = attacks_dealed_by_agent.find(receiver_agent_id);
-            if (it == attacks_dealed_by_agent.end()) {
+            auto it = attacks_done_by_agent.find(receiver_agent_id);
+            if (it == attacks_done_by_agent.end()) {
                 // receiver not registered
                 ObservedAction* observed_action = new ObservedAction();
-                attacks_dealed_by_agent.insert({receiver_agent_id, observed_action});
+                attacks_done_by_agent.insert({receiver_agent_id, observed_action});
                 return *observed_action;
             } else {
                 // receiver is already reigstered
@@ -353,77 +421,106 @@ public:
                 }
             }
         }
+    };
 
-        // ==================
-        // ==== handlers ====
-        // ==================
-
-        void HandleActionStarted(const TargetAction& action, ActionStartpoint startpoint);
-        void HandleReceivedActionStarted(const TargetAction& action, ActionStartpoint startpoint);
-        const TargetAction* HandleActionEnded(const ActionEndpoint endpoint);
-        void HandleReceivedActionEnded(const TargetAction& action, const ActionEndpoint endpoint);
-        void HandleKnockedDown(float duration);
-
-        // fired when the agent dies
-        void HandleDeath() {
-            deaths += 1;
-            // recalculate kdr
-            kdr_pc = (float) kills / deaths;
-            // get kdr string
-            std::stringstream str;
-            str << std::fixed << std::setprecision(2) << kdr_pc;
-            kdr_str = str.str();
-        }
-
-        // fired when the agent scores a kill
-        void HandleKill() {
-            kills += 1;
-            // recalculate kdr
-            if (deaths < 1)
-                kdr_pc = static_cast<float>(kills);
-            else
-                kdr_pc = static_cast<float>(kills) / deaths;
-            // get kdr string
-            std::stringstream str;
-            str << std::fixed << std::setprecision(2) << kdr_pc;
-            kdr_str = str.str();
-        }
-        
-
-
+    // Stats for Parties
+    class ObservablePartyStats : public SharedStats {
     public:
-        // =======
-        // helpers
-        // =======
+        //
+    };
 
-        GW::Agent* GetAgent();
-        GW::AgentLiving* GetAgentLiving();
+    // Represents an agent whose stats are tracked
+    // Includes players AND npc's
+    class ObservableAgent {
+    public:
+        ObservableAgent(ObserverModule& parent, const GW::AgentLiving& agent_living)
+            : parent(parent)
+            , state(agent_living.model_state)
+            , agent_id(agent_living.agent_id)
+            , team_id(agent_living.team_id)
+            , primary((GW::Constants::Profession) agent_living.primary)
+            , secondary((GW::Constants::Profession) agent_living.secondary)
+            , is_npc(agent_living.IsNPC())
+            , is_player(agent_living.IsPlayer())
+            , login_number(agent_living.login_number)
+        {
+            // async initialise the agents name now because we probably want it later
+            GW::Agents::AsyncGetAgentName(&agent_living, raw_name);
 
-        //TODO: rename to Name()
-        std::string Name() {
-            // the sanitize fn occasionally throws fatal errors for some reason
-            // std::string safe_name = GuiUtils::WStringToString(GuiUtils::SanitizePlayerName(name));
-            std::string safe_name = GuiUtils::WStringToString(name);
-            return safe_name;
+			if (primary != GW::Constants::Profession::None) {
+                std::string prof = GW::Constants::GetProfessionAcronym(primary);
+                if (secondary != GW::Constants::Profession::None) {
+                    std::string s_prof = GW::Constants::GetProfessionAcronym(secondary);
+					prof = prof + "/" + s_prof;
+                }
+                profession = prof;
+            }
+        };
+
+        ~ObservableAgent() {
+            delete current_target_action;
         }
 
-        // TODO: rename to DebugName since it includes the agent_id
+        std::string profession = "";
+
+        ObserverModule& parent;
+        uint32_t agent_id;
+        uint32_t login_number;
+        uint32_t state = state;
+
+        uint32_t team_id;
+        // initialise to no party id
+        // let the party set the party_id
+        uint32_t party_id = NO_PARTY;
+        uint32_t party_index = 0;
+
+        GW::Constants::Profession primary;
+        GW::Constants::Profession secondary;
+
+        // latest action (attack/skill) the agent was undertaking
+        const TargetAction* current_target_action = nullptr;
+
+        // last_hit_by tells us who killed the player if they die
+        // MUST be a party_member (e.g. not a footman)
+        // Not literally who is responsible for the kill, but may help
+        // account for degen / npc steals / such.
+        // It's a for fun stat so don't take it too serious
+        uint32_t last_hit_by = NO_AGENT;
+
+        // TODO: last_hit_at to limit the kill window
+
+        bool is_player;
+        bool is_npc;
+
+        // stats:
+        ObservableAgentStats stats = ObservableAgentStats();
+    public:
+        // Name of the Agent
+        std::string Name();
+
+        // Name of the Agent
+        std::string RawName() {
+			// has been cached
+			if (cached_raw_name.length() > 0) return cached_raw_name;
+			// hasn't been cached yet
+            if (raw_name == L"") return "";
+            // can now be cached
+			cached_raw_name = GuiUtils::WStringToString(raw_name);
+            return cached_raw_name;
+        }
+
+        // Name + agent_id of the Agent
         std::string DebugName() {
             std::string display_name = "(" + std::to_string(agent_id) + ") " + "\"" + Name() + "\"";
             return display_name;
         }
 
-        // TODO: rename to TrimmedDebugName since it includes the agent_id
-        std::string TrimmedDebugName() {
-            // trim hench names appended like [Illusion Henchmen]
-            std::string display_name = "(" + std::to_string(agent_id) + ") " + "\"" + Name() + "\"";
-            size_t begin = display_name.find(" [");
-            size_t end = display_name.find_first_of("]");
-            if (std::string::npos != begin && std::string::npos != end && begin <= end) {
-                display_name.erase(begin, end-begin + 1);
-            }
-            return display_name;
-        }
+    private:
+        // name: Inially unknown for NPC's.
+        //       Asynchronously initialized in constructor.
+        std::wstring raw_name = L"";
+        std::string cached_raw_name = "";
+        std::string trimmed_name = "";
     };
 
 
@@ -434,8 +531,7 @@ public:
         ObservableSkill(ObserverModule& parent, const GW::Skill& _gw_skill);
 
         ~ObservableSkill() {
-            // usages_by_team.clear();
-            usages_by_agent.clear();
+            //
         }
 
         uint32_t skill_id;
@@ -448,14 +544,9 @@ public:
         const bool IsPvE() { return (gw_skill.special & 0x80000) != 0;  }
         const bool IsElite() { return (gw_skill.special & 0x4) != 0; }
 
-        size_t total_usages = 0;
-        size_t total_npc_usages = 0;
-        size_t total_player_usages = 0;
-
-        // std::unordered_map<uint32_t, size_t> usages_by_team = {};
-        std::unordered_map<uint32_t, size_t> usages_by_agent = {};
-
-        void AddUsage(const uint32_t agent_id);
+        ObservedAction total_usages = ObservedAction();
+        ObservedAction total_party_caster_usages = ObservedAction();
+        ObservedAction total_party_target_usages = ObservedAction();
 
         const std::string Name() {
             // the sanitize fn occasionally throws fatal errors for some reason
@@ -473,48 +564,19 @@ public:
     };
 
 
-    // TODO: complete this...
     class ObservableParty {
     public:
-        ObservableParty(ObserverModule& parent, const GW::PartyInfo& info) : parent(parent) {
-            party_id = info.party_id;
-        }
+        ObservableParty(ObserverModule& parent, const GW::PartyInfo& info)
+            : parent(parent)
+            , party_id(info.party_id) {}
         ~ObservableParty() {
-            //
+            agent_ids.clear();
         }
 
         uint32_t party_id;
         ObserverModule& parent;
 
-        ObservedAction total_attacks_done = ObservedAction();
-        ObservedAction total_attacks_received = ObservedAction();
-
-        ObservedAction total_skills_used = ObservedAction();
-        ObservedAction total_skills_received = ObservedAction();
-
-        size_t total_crits_received = 0;
-        size_t total_crits_dealt = 0;
-
-        size_t total_npc_crits_received = 0;
-        size_t total_npc_crits_dealt = 0;
-
-        size_t total_player_crits_received = 0;
-        size_t total_player_crits_dealt = 0;
-
-        size_t knocked_down_count = 0;
-        size_t interrupted_count = 0;
-        size_t interrupted_skills_count = 0;
-        size_t cancelled_count = 0;
-        size_t cancelled_skills_count = 0;
-        float knocked_down_duration = 0;
-
-        // deaths: from AgentState packets
-        size_t deaths = 0;
-        // kills: player kills only, not npc kills
-        //        guessed from damage packets
-        size_t kills = 0;
-        float kdr_pc = 0;
-        std::string kdr_str = "0.00";
+        ObservablePartyStats stats = ObservablePartyStats();
 
         bool SynchroniseParty();
 
@@ -525,34 +587,19 @@ public:
             std::string display_name = "(" + std::to_string(party_id) + ")";
             return display_name;
         }
-
-        // fired when an agent in the party dies
-        void HandleDeath() {
-            deaths += 1;
-            // recalculate kdr
-            kdr_pc = (float) kills / deaths;
-            // get kdr string
-            std::stringstream str;
-            str << std::fixed << std::setprecision(2) << kdr_pc;
-            kdr_str = str.str();
-        }
-
-        // fired when an agent in the party scores a kill
-        void HandleKill() {
-            kills += 1;
-            // recalculate kdr
-            if (deaths < 1)
-                kdr_pc = static_cast<float>(kills);
-            else
-                kdr_pc = static_cast<float>(kills) / deaths;
-            // get kdr string
-            std::stringstream str;
-            str << std::fixed << std::setprecision(2) << kdr_pc;
-            kdr_str = str.str();
-        }
     };
 
-    // TODO: replace with GWCA GenericValueId after PR is accepted
+    // TODO: push this to GWCA
+    // applies to skill.target
+    enum class TargetType {
+        no_target = 0,
+        anyone = 1,
+        ally = 3,
+        other_ally = 4,
+        enemy = 5,
+    };
+
+    // TODO: replace with GWCA GenericValueId
     // https://github.com/GameRevision/GWLP-R/wiki/GenericValues
     enum class GenericValueId2
     {
@@ -597,7 +644,9 @@ public:
 
 
     ObserverModule() {}
-    ~ObserverModule() {};
+    ~ObserverModule() {
+        Reset();
+    };
 
 public:
     static ObserverModule& Instance() {
@@ -608,31 +657,11 @@ public:
     // lets the module run it in outposts and explorable areas
     void ToggleForceEnabled() {
         force_enabled = !force_enabled;
-        if (force_enabled) Log::Info("[ObserverMode]: ObserverModule may run in Explorable areas");
-        else Log::Info("[ObserverMode]: ObserverModule will only run in Observer Mode.");
-    }
-
-    // restricts logging to only the currently selected target
-    void ToggleFollowMode() {
-        switch (follow_mode) {
-            case FollowMode::None:
-                follow_mode = FollowMode::Target;
-                Log::Info("[FollowMode]: Switching to \"Target\"");
-                break;
-            case FollowMode::Target:
-                follow_mode = FollowMode::UsedByTarget;
-                Log::Info("[FollowMode]: Switching to \"UsedByTarget\"");
-                break;
-            case FollowMode::UsedByTarget:
-                follow_mode = FollowMode::UsedOnTarget;
-                Log::Info("[FollowMode]: Switching to \"UsedOnTarget\"");
-                break;
-            case FollowMode::UsedOnTarget:
-                follow_mode = FollowMode::None;
-                Log::Info("[FollowMode]: off");
-                break;
-        
+        if (force_enabled) {
+            Log::Info("[ObserverMode]: ObserverModule may run in Explorable areas");
+            if (IsActive()) InitializeObserverSession();
         }
+        else Log::Info("[ObserverMode]: ObserverModule will only run in Observer Mode.");
     }
 
     // Is the Module actively tracking agents?
@@ -642,8 +671,7 @@ public:
 
 
     const char* Name() const override { return "ObserverModule"; }
-    // TODO: pick a better icon
-    const char* Icon() const override { return ICON_FA_BARS; }
+    const char* Icon() const override { return ICON_FA_EYE; }
 
     void Initialize() override;
     void Terminate() override;
@@ -655,33 +683,25 @@ public:
     bool InitializeObserverSession();
     void Reset();
 
-    ObservableAgent* GetObservableAgentByAgentId(uint32_t agent_id);
-    ObservableAgent* GetObservableAgentByAgent(const GW::Agent& agent);
-    ObservableAgent& GetObservableAgentByAgentLiving(const GW::AgentLiving& agent_living);
+    ObservableAgent* GetObservableAgentById(const uint32_t agent_id);
     ObservableAgent& CreateObservableAgent(const GW::AgentLiving& agent_living);
 
-    ObservableSkill* GetObservableSkillBySkillId(uint32_t skill_id);
+    ObservableSkill* GetObservableSkillById(const uint32_t skill_id);
     ObservableSkill& CreateObservableSkill(const GW::Skill& gw_skill);
 
     ObservableParty& GetObservablePartyByPartyInfo(const GW::PartyInfo& party_info);
+    ObservableParty* GetObservablePartyById(const uint32_t party_id);
     ObservableParty& CreateObservableParty(const GW::PartyInfo& party_info);
 
-    const std::vector<uint32_t> GetObservablePartyIds() { return observed_party_ids; }
-    ObservableParty* GetObservablePartyByPartyId(const uint32_t party_id);
-    const std::vector<ObservableParty*> GetObservablePartyArray() { return observed_parties_array; }
+    const std::vector<uint32_t> GetObservablePartyIds() { return observable_party_ids; }
+    const std::vector<ObservableParty*> GetObservablePartyArray() { return observable_parties_array; }
 
 private:
-    enum class FollowMode {
-        None,
-        Target,
-        UsedByTarget,
-        UsedOnTarget,
-    };
+    clock_t party_sync_timer = 0;
 
     // can be force enabled in non-explorable explorable areas
     bool force_enabled = false;
 
-    FollowMode follow_mode = FollowMode::None;
     bool observer_session_initialized = false;
     bool is_observer = false;
     bool is_explorable = false;
@@ -691,7 +711,6 @@ private:
     // ***************
 
     void HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo *packet);
-
     void HandleAgentProjectileLaunched(const uint32_t agent_id, const bool is_attack);
 
     // ****************
@@ -699,11 +718,10 @@ private:
     // ****************
 
     void HandleInterrupted(const uint32_t agent_id);
-
     void HandleKnockedDown(const uint32_t agent_id, const float duration);
     void HandleAgentState(const uint32_t agent_id, const uint32_t state);
     void HandleDamageDone(const uint32_t caster_id, const uint32_t target_id, const float amount_pc, const bool is_crit);
-    void HandlePartyUpdated(const uint32_t party_id);
+    void HandleAgentAdd(const uint32_t agent_id);
 
     void HandleAttackFinished(const uint32_t agent_id);
     void HandleAttackStopped(const uint32_t agent_id);
@@ -725,30 +743,34 @@ private:
     void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
             const uint32_t target_id, const uint32_t value, const bool no_target);
 
+    // action handlers
+    void ReduceAction(ObservableAgent* caster, const TargetAction& action, ActionStage stage);
+
     // lazy loaded observed agents
-    std::unordered_map<uint32_t, ObservableAgent*> observed_agents = {};
+    std::unordered_map<uint32_t, ObservableAgent*> observable_agents = {};
 
     // lazy loaded observed skills
-    std::unordered_map<uint32_t, ObservableSkill*> observed_skills = {};
+    std::unordered_map<uint32_t, ObservableSkill*> observable_skills = {};
 
     // lazy loaded observed parties
-    std::unordered_map<uint32_t, ObservableParty*> observed_parties = {};
-    std::vector<uint32_t> observed_party_ids = {};
-    std::vector<ObservableParty*> observed_parties_array = {};
+    std::unordered_map<uint32_t, ObservableParty*> observable_parties = {};
+    std::vector<uint32_t> observable_party_ids = {};
+    std::vector<ObservableParty*> observable_parties_array = {};
+
+    bool SynchroniseParties();
 
     // reorder the observable parties
-    void SynchroniseParties() {
-        // NOTE: this needs to be called whenever there's a change to the parties ordering/count...
-        // because it caches the observed_parties_array that can be used to iterate over parties
-        // in Draw/Render functions
-        observed_parties_array.clear();
-        std::sort(observed_party_ids.begin(), observed_party_ids.end());
-        for (uint32_t party_id : observed_party_ids) {
+    // cache array of party pointers
+    // TODO: is an ordered map smarter than unordered+vector in this case because of infrequent IO to the map?
+    void ReorderAndCacheParties() {
+        observable_parties_array.clear();
+        std::sort(observable_party_ids.begin(), observable_party_ids.end());
+        for (uint32_t party_id : observable_party_ids) {
             // disabuse any players of their party_id's so we can reset them
-            auto it_party = observed_parties.find(party_id);
-            if (it_party != observed_parties.end()) {
+            auto it_party = observable_parties.find(party_id);
+            if (it_party != observable_parties.end()) {
                 ObservableParty* party = it_party->second;
-                observed_parties_array.push_back(party);
+                observable_parties_array.push_back(party);
             }
         }
     }
@@ -756,6 +778,7 @@ private:
     // hooks
     GW::HookEntry InstanceLoadInfo_Entry;
     GW::HookEntry AgentState_Entry;
+    GW::HookEntry AgentAdd_Entry;
     GW::HookEntry AgentProjectileLaunched_Entry;
     GW::HookEntry GenericModifier_Entry;
     GW::HookEntry GenericValueTarget_Entry;

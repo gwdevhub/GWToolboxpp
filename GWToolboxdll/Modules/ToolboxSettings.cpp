@@ -112,9 +112,9 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_factionleaderboard) optional_modules.push_back(&FactionLeaderboardWindow::Instance());
     if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
     if (use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
-    if (use_observer) optional_modules.push_back(&ObserverPlayerWindow::Instance());
-    if (use_observer) optional_modules.push_back(&ObserverTargetWindow::Instance());
-    if (use_observer) optional_modules.push_back(&ObserverPartyWindow::Instance());
+    if (use_observer && use_observer_player_window) optional_modules.push_back(&ObserverPlayerWindow::Instance());
+    if (use_observer && use_observer_target_window) optional_modules.push_back(&ObserverTargetWindow::Instance());
+    if (use_observer && use_observer_party_window) optional_modules.push_back(&ObserverPartyWindow::Instance());
 
 
 #ifdef _DEBUG
@@ -203,6 +203,9 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Teamspeak",&use_teamspeak},
         {"Twitch",&use_twitch},
         {"Observer",&use_observer},
+        {"Observer Player Window",&use_observer_player_window},
+        {"Observer Target Window",&use_observer_target_window},
+        {"Observer Party Window",&use_observer_party_window},
         {"Observer Following",&use_observer},
         {"Observer Parties",&use_observer},
         {"Vanquish counter",&use_vanquish}
@@ -291,6 +294,9 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_teamspeak = ini->GetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
     use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
     use_observer = ini->GetBoolValue(Name(), VAR_NAME(use_observer), use_observer);
+    use_observer_player_window = ini->GetBoolValue(Name(), VAR_NAME(use_observer_player_window), use_observer_player_window);
+    use_observer_target_window = ini->GetBoolValue(Name(), VAR_NAME(use_observer_target_window), use_observer_target_window);
+    use_observer_party_window = ini->GetBoolValue(Name(), VAR_NAME(use_observer_party_window), use_observer_party_window);
     use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
     use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
     use_serverinfo = ini->GetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
@@ -325,6 +331,9 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
     ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
     ini->SetBoolValue(Name(), VAR_NAME(use_observer), use_observer);
+    ini->SetBoolValue(Name(), VAR_NAME(use_observer_player_window), use_observer_player_window);
+    ini->SetBoolValue(Name(), VAR_NAME(use_observer_target_window), use_observer_target_window);
+    ini->SetBoolValue(Name(), VAR_NAME(use_observer_party_window), use_observer_party_window);
     ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
     ini->SetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
     ini->SetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);

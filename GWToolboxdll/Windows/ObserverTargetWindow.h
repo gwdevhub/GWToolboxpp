@@ -12,13 +12,12 @@
 #include <Timer.h>
 #include <ToolboxWindow.h>
 
+#include <Windows/ObserverPlayerWindow.h>
+
 #define NO_AGENT 0
 
-class ObserverTargetWindow : public ToolboxWindow {
+class ObserverTargetWindow : public ObserverPlayerWindow {
 public:
-    //
-
-private:
     ObserverTargetWindow() {};
     ~ObserverTargetWindow() {
         //
@@ -30,15 +29,14 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Target"; }
-    void Draw(IDirect3DDevice9* pDevice) override;
-    void Initialize() override;
+    void Prepare() override;
+    uint32_t GetTracking() override;
+    uint32_t GetComparison() override;
 
-    void DrawSkillHeaders(float _long, float _mid, float _small, float _tiny);
-    void DrawSkills(float _long, float _mid, float _small, float _tiny, const std::vector<uint32_t>& skill_ids,
-        const std::unordered_map<uint32_t, ObserverModule::ObservedSkill*>& skils);
+    const char* Name() const override { return "Observer Target"; }
+    const char* Icon() const override { return ICON_FA_EYE; }
 
-private:
-    uint32_t last_target_id = NO_AGENT;
-    uint32_t last_player_id = NO_AGENT;
+protected:
+    uint32_t current_tracked_agent_id = NO_AGENT;
+    uint32_t current_compared_agent_id = NO_AGENT;
 };

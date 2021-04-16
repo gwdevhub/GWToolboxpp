@@ -341,11 +341,8 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"cam", ChatCommands::CmdCamera);
     GW::Chat::CreateCommand(L"damage", ChatCommands::CmdDamage);
     GW::Chat::CreateCommand(L"dmg", ChatCommands::CmdDamage);
-    GW::Chat::CreateCommand(L"observer:init", ChatCommands::CmdObserverInit);
     GW::Chat::CreateCommand(L"observer:reset", ChatCommands::CmdObserverReset);
     GW::Chat::CreateCommand(L"observer:enable", ChatCommands::CmdObserverToggleForceEnable);
-    GW::Chat::CreateCommand(L"observer:follow", ChatCommands::ToggleFollowMode);
-    GW::Chat::CreateCommand(L"debug", ChatCommands::CmdDebug);
 
     GW::Chat::CreateCommand(L"chest", ChatCommands::CmdChest);
     GW::Chat::CreateCommand(L"xunlai", ChatCommands::CmdChest);
@@ -874,6 +871,7 @@ void ChatCommands::CmdDebug(const wchar_t* message, int argc, LPWSTR* argv)
     }
 }
 
+
 void ChatCommands::CmdObserverReset(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
     UNREFERENCED_PARAMETER(argc);
@@ -881,25 +879,12 @@ void ChatCommands::CmdObserverReset(const wchar_t* message, int argc, LPWSTR* ar
     ObserverModule::Instance().Reset();
 }
 
-void ChatCommands::CmdObserverInit(const wchar_t* message, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(message);
-    UNREFERENCED_PARAMETER(argc);
-    UNREFERENCED_PARAMETER(argv);
-    ObserverModule::Instance().InitializeObserverSession();
-}
 
 void ChatCommands::CmdObserverToggleForceEnable(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
     ObserverModule::Instance().ToggleForceEnabled();
-}
-
-void ChatCommands::ToggleFollowMode(const wchar_t* message, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(message);
-    UNREFERENCED_PARAMETER(argc);
-    UNREFERENCED_PARAMETER(argv);
-    ObserverModule::Instance().ToggleFollowMode();
 }
 
 
