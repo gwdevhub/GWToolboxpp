@@ -447,11 +447,11 @@ public:
             // async initialise the agents name now because we probably want it later
             GW::Agents::AsyncGetAgentName(&agent_living, raw_name);
 
-			if (primary != GW::Constants::Profession::None) {
+            if (primary != GW::Constants::Profession::None) {
                 std::string prof = GW::Constants::GetProfessionAcronym(primary);
                 if (secondary != GW::Constants::Profession::None) {
                     std::string s_prof = GW::Constants::GetProfessionAcronym(secondary);
-					prof = prof + "/" + s_prof;
+                    prof = prof + "/" + s_prof;
                 }
                 profession = prof;
             }
@@ -500,12 +500,12 @@ public:
 
         // Name of the Agent
         std::string RawName() {
-			// has been cached
-			if (cached_raw_name.length() > 0) return cached_raw_name;
-			// hasn't been cached yet
+            // has been cached
+            if (cached_raw_name.length() > 0) return cached_raw_name;
+            // hasn't been cached yet
             if (raw_name == L"") return "";
             // can now be cached
-			cached_raw_name = GuiUtils::WStringToString(raw_name);
+            cached_raw_name = GuiUtils::WStringToString(raw_name);
             return cached_raw_name;
         }
 
@@ -604,38 +604,38 @@ public:
     enum class GenericValueId2
     {
         add_effect                  = GW::Packet::StoC::P156_Type::add_effect,
-        remove_effect				= GW::Packet::StoC::P156_Type::remove_effect,
-        apply_marker				= GW::Packet::StoC::P156_Type::apply_marker,
-        remove_marker				= GW::Packet::StoC::P156_Type::remove_marker,
-        damage				        = GW::Packet::StoC::P156_Type::damage,
-        critical				    = GW::Packet::StoC::P156_Type::critical,
-        effect_on_target			= GW::Packet::StoC::P156_Type::effect_on_target,
-        effect_on_agent				= GW::Packet::StoC::P156_Type::effect_on_agent,
-        animation				    = GW::Packet::StoC::P156_Type::animation,
-        animation_special			= GW::Packet::StoC::P156_Type::animation_special,
-        animation_loop				= GW::Packet::StoC::P156_Type::animation_loop,
-        health				        = GW::Packet::StoC::P156_Type::health,
-        energygain				    = GW::Packet::StoC::P156_Type::energygain,
-        armorignoring				= GW::Packet::StoC::P156_Type::armorignoring,
-        casttime				    = GW::Packet::StoC::P156_Type::casttime,
-        attack_finished				= 1,
-        attack_stopped				= 3,
-        attack_started				= 4,
-        disabled				    = 8,
+        remove_effect               = GW::Packet::StoC::P156_Type::remove_effect,
+        apply_marker                = GW::Packet::StoC::P156_Type::apply_marker,
+        remove_marker               = GW::Packet::StoC::P156_Type::remove_marker,
+        damage                      = GW::Packet::StoC::P156_Type::damage,
+        critical                    = GW::Packet::StoC::P156_Type::critical,
+        effect_on_target            = GW::Packet::StoC::P156_Type::effect_on_target,
+        effect_on_agent             = GW::Packet::StoC::P156_Type::effect_on_agent,
+        animation                   = GW::Packet::StoC::P156_Type::animation,
+        animation_special           = GW::Packet::StoC::P156_Type::animation_special,
+        animation_loop              = GW::Packet::StoC::P156_Type::animation_loop,
+        health                      = GW::Packet::StoC::P156_Type::health,
+        energygain                  = GW::Packet::StoC::P156_Type::energygain,
+        armorignoring               = GW::Packet::StoC::P156_Type::armorignoring,
+        casttime                    = GW::Packet::StoC::P156_Type::casttime,
+        attack_finished             = 1,
+        attack_stopped              = 3,
+        attack_started              = 4,
+        disabled                    = 8,
         hit_by_skill                = 10,
         max_hp_reached              = 32,
         interrupted                 = 35,
         _q_attack_fail              = 38,
         change_health_regen         = 44,
         attack_skill_finsihed       = 46,
-        instant_skill_activated	    = 48,
+        instant_skill_activated     = 48,
         attack_skill_stopped        = 49,
-        attack_skill_activated	    = 50,
+        attack_skill_activated      = 50,
         _q_health_modifier_3        = 56,
-        skill_finished				= 58,
-        skill_stopped				= 59,
-        skill_activated				= 60,
-        energy_spent			    = 62,
+        skill_finished              = 58,
+        skill_stopped               = 59,
+        skill_activated             = 60,
+        energy_spent                = 62,
         knocked_down                = 63,
 
 

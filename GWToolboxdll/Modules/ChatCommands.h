@@ -64,8 +64,8 @@ private:
     static void CmdDialog(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdTB(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdDamage(const wchar_t *message, int argc, LPWSTR *argv);
-	static void CmdObserverReset(const wchar_t* message, int argc, LPWSTR* argv);
-	static void CmdObserverToggleExplorable(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdObserverReset(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdObserverToggleExplorable(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdChest(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdAfk(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdTarget(const wchar_t *message, int argc, LPWSTR *argv);

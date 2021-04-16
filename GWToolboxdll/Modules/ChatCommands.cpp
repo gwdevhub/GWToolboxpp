@@ -14,7 +14,6 @@
 #include <GWCA/GameEntities/Player.h>
 
 #include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -234,6 +233,8 @@ void ChatCommands::DrawHelp() {
         "'/damage me' sends your own damage only.\n"
         "'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
         "'/damage reset' resets the damage in party window.");
+    ImGui::Bullet(); ImGui::Text("'/observer:reset' resets observer mode data.");
+    ImGui::Bullet(); ImGui::Text("'/observer:explorable' enables/disables the observer mode module to run in any explorable area.");
     ImGui::Bullet(); ImGui::Text("'/dialog <id>' sends a dialog.");
     ImGui::Bullet(); ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
     ImGui::Bullet(); ImGui::Text("'/flag [all|<number>] [x] [y]' to flag a hero to coordinates [x],[y].");

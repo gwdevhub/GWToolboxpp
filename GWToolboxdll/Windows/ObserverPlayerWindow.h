@@ -37,7 +37,7 @@ public:
 
     void DrawSkillHeaders();
 
-	void DrawSkills(const std::unordered_map<uint32_t, ObserverModule::ObservedSkill*>& skills,
+    void DrawSkills(const std::unordered_map<uint32_t, ObserverModule::ObservedSkill*>& skills,
         const std::vector<uint32_t>& skill_ids);
 
     const char* Name() const override { return "Observer Player"; };
@@ -57,6 +57,6 @@ protected:
     uint32_t previously_tracked_agent_id = NO_AGENT;
     uint32_t previously_compared_agent_id = NO_AGENT;
 
-	bool show_tracking = true;
+    bool show_tracking = true;
     bool show_comparison = true;
 };

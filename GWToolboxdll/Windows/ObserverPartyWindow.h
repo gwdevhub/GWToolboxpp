@@ -53,19 +53,19 @@ protected:
     float text_tiny     = 0;
 
 
-	bool show_player_number = true;
+    bool show_player_number = true;
     bool show_kills = true;
     bool show_deaths = true;
     bool show_kdr = true;
     bool show_cancels = true;
-	bool show_interrupts = true;
-	bool show_knockdowns = true;
-	bool show_received_party_attacks = true;
-	bool show_dealt_party_attacks = true;
-	bool show_received_party_crits = true;
-	bool show_dealt_party_crits = true;
-	bool show_received_party_skills = true;
-	bool show_dealt_party_skills = true;
+    bool show_interrupts = true;
+    bool show_knockdowns = true;
+    bool show_received_party_attacks = true;
+    bool show_dealt_party_attacks = true;
+    bool show_received_party_crits = true;
+    bool show_dealt_party_crits = true;
+    bool show_received_party_skills = true;
+    bool show_dealt_party_skills = true;
 
 private:
     // ini
