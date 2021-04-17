@@ -67,6 +67,7 @@ private:
     bool use_observer_player_window = false;
     bool use_observer_target_window = false;
     bool use_observer_party_window = false;
+    bool use_observer_export_window = false;
     bool use_factionleaderboard = true;
     bool use_daily_quests = true;
     bool use_discord = true;

@@ -140,13 +140,17 @@ public:
         // attacks
         // *******
 
+        // -------------
         // attacks:total
         // -------------
+
         ObservedAction total_attacks_done = ObservedAction();
         ObservedAction total_attacks_received = ObservedAction();
 
+        // -------------
         // attacks:party
         // -------------
+
         // attacks done on other parties (not inc. npcs)
         ObservedAction total_attacks_done_on_other_party = ObservedAction();
         // attacks received from other parties (not inc. npcs)
@@ -349,7 +353,7 @@ public:
         std::unordered_map<uint32_t, std::vector<uint32_t>> skills_ids_received_by_agent = {};
         // getter helper
         // note: registers the skill_id on access
-        ObservedSkill& LazyGetSkillReceievedFrom(const uint32_t caster_agent_id, const uint32_t skill_id) {
+        ObservedSkill& LazyGetSkillReceivedFrom(const uint32_t caster_agent_id, const uint32_t skill_id) {
             auto it_caster = skills_received_by_agent.find(caster_agent_id);
             if (it_caster == skills_received_by_agent.end()) {
                 // receiver and his skills are not registered with this agent
@@ -695,8 +699,9 @@ public:
     ObservableParty* GetObservablePartyById(const uint32_t party_id);
     ObservableParty& CreateObservableParty(const GW::PartyInfo& party_info);
 
-    const std::vector<uint32_t> GetObservablePartyIds() { return observable_party_ids; }
-    const std::vector<ObservableParty*> GetObservablePartyArray() { return observable_parties_array; }
+    const std::vector<uint32_t>& GetObservablePartyIds() { return observable_party_ids; }
+    const std::vector<ObservableParty*>& GetObservablePartyArray() { return observable_parties_array; }
+    const std::unordered_map<uint32_t, ObservableAgent*>& GetObservableAgents() { return observable_agents; }
 
 private:
     clock_t party_sync_timer = 0;
