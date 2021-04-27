@@ -7,6 +7,12 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 4.10
+* [New] Observer module (and windows) added for pvp
+* [Fix] Fixed bugs after GW update 37121
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.10_Release/GWToolboxdll.dll)
+
 ## Version 4.9
 * [Minor] Added option to disable right click context menu in outpost/explorable
 * [Minor] Added option to disable wiki link on context menu
