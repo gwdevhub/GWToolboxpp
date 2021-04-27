@@ -29,6 +29,7 @@
 #include <Modules/InventoryManager.h>
 #include <Modules/TeamspeakModule.h>
 #include <Modules/ObserverModule.h>
+#include <Modules/Obfuscator.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -128,6 +129,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&DoorMonitorWindow::Instance());
     optional_modules.push_back(&SkillListingWindow::Instance());
     optional_modules.push_back(&MissionsWindow::Instance());
+    optional_modules.push_back(&Obfuscator::Instance());
 #endif
     std::sort(
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_windows),
