@@ -28,6 +28,8 @@
 #include <Modules/AprilFools.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/TeamspeakModule.h>
+#include <Modules/ObserverModule.h>
+#include <Modules/Obfuscator.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -45,6 +47,10 @@
 #include <Windows/FactionLeaderboardWindow.h>
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/FriendListWindow.h>
+#include <Windows/ObserverPlayerWindow.h>
+#include <Windows/ObserverTargetWindow.h>
+#include <Windows/ObserverPartyWindow.h>
+#include <Windows/ObserverExportWindow.h>
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
@@ -90,6 +96,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_discord) optional_modules.push_back(&DiscordModule::Instance());
     if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
     if (use_teamspeak) optional_modules.push_back(&TeamspeakModule::Instance());
+    if (use_observer) optional_modules.push_back(&ObserverModule::Instance());
 
     SettingsWindow::Instance().sep_windows = optional_modules.size();
     optional_modules.push_back(&SettingsWindow::Instance());
@@ -107,6 +114,10 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_factionleaderboard) optional_modules.push_back(&FactionLeaderboardWindow::Instance());
     if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
     if (use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
+    if (use_observer_player_window) optional_modules.push_back(&ObserverPlayerWindow::Instance());
+    if (use_observer_target_window) optional_modules.push_back(&ObserverTargetWindow::Instance());
+    if (use_observer_party_window) optional_modules.push_back(&ObserverPartyWindow::Instance());
+    if (use_observer_export_window) optional_modules.push_back(&ObserverExportWindow::Instance());
 
 
 #ifdef _DEBUG
@@ -118,6 +129,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&DoorMonitorWindow::Instance());
     optional_modules.push_back(&SkillListingWindow::Instance());
     optional_modules.push_back(&MissionsWindow::Instance());
+    optional_modules.push_back(&Obfuscator::Instance());
 #endif
     std::sort(
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_windows),
@@ -194,6 +206,11 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Travel",&use_travel},
         {"Teamspeak",&use_teamspeak},
         {"Twitch",&use_twitch},
+        {"Observer",&use_observer},
+        {"Observer Player Window",&use_observer_player_window},
+        {"Observer Target Window",&use_observer_target_window},
+        {"Observer Party Window",&use_observer_party_window},
+        {"Observer Export Window",&use_observer_export_window},
         {"Vanquish counter",&use_vanquish}
     };
     ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
@@ -279,6 +296,11 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
     use_teamspeak = ini->GetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
     use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
+    use_observer = ini->GetBoolValue(Name(), VAR_NAME(use_observer), use_observer);
+    use_observer_player_window = ini->GetBoolValue(Name(), VAR_NAME(use_observer_player_window), use_observer_player_window);
+    use_observer_target_window = ini->GetBoolValue(Name(), VAR_NAME(use_observer_target_window), use_observer_target_window);
+    use_observer_party_window = ini->GetBoolValue(Name(), VAR_NAME(use_observer_party_window), use_observer_party_window);
+    use_observer_export_window = ini->GetBoolValue(Name(), VAR_NAME(use_observer_export_window), use_observer_export_window);
     use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
     use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
     use_serverinfo = ini->GetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
@@ -312,6 +334,11 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
     ini->SetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
     ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
+    ini->SetBoolValue(Name(), VAR_NAME(use_observer), use_observer);
+    ini->SetBoolValue(Name(), VAR_NAME(use_observer_player_window), use_observer_player_window);
+    ini->SetBoolValue(Name(), VAR_NAME(use_observer_target_window), use_observer_target_window);
+    ini->SetBoolValue(Name(), VAR_NAME(use_observer_party_window), use_observer_party_window);
+    ini->SetBoolValue(Name(), VAR_NAME(use_observer_export_window), use_observer_export_window);
     ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
     ini->SetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
     ini->SetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
