@@ -762,13 +762,11 @@ void GameSettings::Initialize() {
 // Same as GW::PartyMgr::GetPlayerIsLeader() but has an extra check to ignore disconnected people.
 bool GameSettings::GetPlayerIsLeader() {
     GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
-    if (!party) return false;
-    std::wstring player_name = GetPlayerName();
-    if (!party->players.size()) return false;
+    if (!(party && party->players.size())) return false;
     for (auto &player : party->players) {
         if (!player.connected())
             continue;
-        return GetPlayerName(player.login_number) == player_name;
+        return player.login_number == GW::PlayerMgr::GetPlayerNumber();
     }
     return false;
 }
