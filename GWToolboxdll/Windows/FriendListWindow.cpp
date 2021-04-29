@@ -388,8 +388,17 @@ void FriendListWindow::Initialize() {
 
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, OnFriendUpdated);
     GW::Chat::RegisterSendChatCallback(&SendChat_Entry, OnOutgoingWhisper);
+    GW::Chat::RegisterPrintChatCallback(&SendChat_Entry, OnPrintChat);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry,OnPlayerJoinInstance);
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, OnUIMessage);
+}
+void FriendListWindow::OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int) {
+    switch (*message_ptr[0]) {
+    case MessageType::INCOMING_WHISPER:
+    case MessageType::OUTGOING_WHISPER:
+        AddFriendAliasToMessage(message_ptr);
+        break;
+    }
 }
 void FriendListWindow::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*) {
     if (message_id != GW::UI::kWriteToChatLog || !wparam)
@@ -406,12 +415,8 @@ void FriendListWindow::OnUIMessage(GW::HookStatus* status, uint32_t message_id, 
     case MessageType::FRIEND_ALREADY_ADDED_AS_X: // The Character you're trying to add is already in your friend list as "".
         OnFriendAlreadyAdded(status, message);
         break;
-    case MessageType::INCOMING_WHISPER: // Incoming whisper
-        AddFriendAliasToMessage(uimsg);
-        break;
     case MessageType::OUTGOING_WHISPER: // Server has successfully sent your whisper
         OnOutgoingWhisperSuccess(status, message);
-        AddFriendAliasToMessage(uimsg);
         break;
     case MessageType::PLAYER_X_NOT_ONLINE: // Player "" is not online. Redirect to the right person if we can find them!
         OnPlayerNotOnline(status, message);
@@ -489,11 +494,11 @@ void FriendListWindow::OnOutgoingWhisperSuccess(GW::HookStatus *, wchar_t *)
     instance.pending_whisper.reset();
 }
 // Optionally add friend alias to incoming/outgoing messages
-void FriendListWindow::AddFriendAliasToMessage(UIChatMessage* uimsg) {
+void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr) {
     FriendListWindow& instance = Instance();
     if (!instance.show_alias_on_whisper)
         return;
-    wchar_t* message = uimsg->message;
+    wchar_t* message = *message_ptr;
     const wchar_t* name_start = wcschr(message, 0x107);
     ASSERT(name_start != nullptr);
     const wchar_t* name_end = wcschr(name_start, 0x1);
@@ -503,13 +508,13 @@ void FriendListWindow::AddFriendAliasToMessage(UIChatMessage* uimsg) {
     if (!f || f->alias == player_name)
         return;
     static std::wstring new_message;
-    new_message = std::wstring(message, name_end - message);
+    new_message = std::wstring(message, (name_end - message));
     new_message += L" (";
     new_message += f->alias;
     new_message += L")";
     new_message.append(name_end);
     // TODO; Would doing this cause a memory leak on the previous wchar_t* ?
-    uimsg->message = (wchar_t*)new_message.c_str();
+    *message_ptr = (wchar_t*)new_message.c_str();
 }
 void FriendListWindow::OnFriendAlreadyAdded(GW::HookStatus *status, wchar_t *message)
 {

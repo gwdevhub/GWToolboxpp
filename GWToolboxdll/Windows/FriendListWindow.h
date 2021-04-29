@@ -98,8 +98,9 @@ public:
     static void OnFriendUpdated(GW::HookStatus*, GW::Friend* f, GW::FriendStatus status, const wchar_t* alias, const wchar_t* charname);
     static void OnAddFriendError(GW::HookStatus* status, wchar_t* message);
     static void OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*);
+    static void OnPrintChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t** message_ptr, FILETIME, int);
 
-    static void AddFriendAliasToMessage(UIChatMessage* uimsg);
+    static void AddFriendAliasToMessage(wchar_t** message_ptr);
 
     const char* Name() const override { return "Friend List"; }
     const char* Icon() const override { return ICON_FA_USER_FRIENDS; }
