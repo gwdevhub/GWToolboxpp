@@ -30,6 +30,8 @@
 #ifndef GAME_SMSG_MERCENARY_INFO
 #define GAME_SMSG_MERCENARY_INFO 115
 #endif
+#define ONLY_CURRENT_PLAYER 1;
+
 #include <Psapi.h>
 
 
@@ -47,8 +49,6 @@ namespace {
         GW::GameContext* g = GW::GameContext::instance();
         return g ? g->character->player_name : nullptr;
     }
-
-    std::vector<std::vector<const wchar_t*>> replace_tokens_by_channel;
 
     std::vector<const wchar_t*> obfuscated_name_pool = {
         L"Abbot Ramoth",
@@ -319,52 +319,53 @@ void Obfuscator::OnSendChat(GW::HookStatus* status, GW::Chat::Channel channel, w
     GW::Chat::SendChat(unobfuscated, &whisper_separator[1]);
     processing = false;
 }
-wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel channel, wchar_t* message, bool obfuscate) {
-    UNREFERENCED_PARAMETER(channel);
-    static wchar_t new_message[1024];
-    if (channel == GW::Chat::Channel::CHANNEL_GWCA2) {
-        wchar_t* link_start = wcsstr(message, L"<a=1>");
-        if (link_start) {
-            link_start += 5;
-            wchar_t* link_end = wcsstr(link_start, L"</a>");
-            wchar_t new_name[32] = { 0 };
-            wcsncpy(new_name, link_start, link_end - link_start);
-            return message;
-        }
+wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel, wchar_t* message, bool obfuscate) {
+    // NB: Static for ease, but be sure copy this away before accessing this function again as needed
+    static std::wstring new_message(L"");
+    wchar_t* player_name_start = nullptr;
+    switch (message[0]) {
+    case 0x76B: // Incoming player message (chat/guild/alliance/team)
+    //case 0x76D: // Incoming whisper
+    //case 0x76E: // Outgoing whisper
+    //case 0x880: // Player name <name> is invalid.
+    //case 0x881: // Player <name> is not online.
+    //case 0x817: // Player x gained a skill point
+        player_name_start = wcschr(message, 0x107);
+        break;
+    default:
+        if (wmemcmp(message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0)
+            player_name_start = wcschr(message, 0x107); // <player name> has resigned
+        break;
     }
-
-    auto& replace_tokens = replace_tokens_by_channel[channel];
-    for (size_t i = 0; i < replace_tokens.size(); i++) {
-        size_t token_len = wcslen(replace_tokens[i]);
-        if (wcsncmp(message, replace_tokens[i], token_len) != 0)
-            continue;
-        wchar_t* whisper_separator = wcschr(&message[token_len], '\x1');
-        if (!whisper_separator)
-            break;
-        size_t len = (whisper_separator - message - token_len);
-        // NB: Static for ease, but be sure copy this away before accessing this function again as needed
-        wchar_t new_name[32] = { 0 };
-        wcsncpy(new_name, &message[token_len], len);
-        if (obfuscate) {
-            ObfuscateName(new_name, new_name, _countof(new_name));
-        }
-        else {
-            UnobfuscateName(new_name, new_name, _countof(new_name));
-        }
-        int written = 0;
-        if (message == new_message) {
-            // Avoid recursive calls to this function causing borked up pointers.
-            wchar_t* latter_message = new wchar_t[wcslen(whisper_separator) + 1];
-            wcscpy(latter_message, whisper_separator);
-            written = swprintf(new_message, _countof(new_message) - 1, L"%s%s%s", replace_tokens[i], new_name, latter_message);
-        }
-        else {
-            written = swprintf(new_message, _countof(new_message) - 1, L"%s%s%s", replace_tokens[i], new_name, whisper_separator);
-        }
-        new_message[written] = 0;
-        return new_message;
+    if (!player_name_start)
+        return message;
+    player_name_start += 1;
+    wchar_t* player_name_end = wcschr(player_name_start, 0x1);
+    if (!player_name_end)
+        return message;
+    bool need_to_free_message = message == new_message.data();
+    if (need_to_free_message) {
+        // Check to avoid recursive string assignment
+        message = new wchar_t[new_message.size() + 1];
+        wcscpy(message, new_message.c_str());
+        player_name_start = &message[player_name_start - new_message.data()];
+        player_name_end = &message[player_name_end - new_message.data()];
     }
-    return message;
+    new_message.clear();
+    new_message.append(message, (player_name_start - message));
+    wchar_t new_name[64] = { 0 };
+    wcsncpy(new_name, player_name_start, (player_name_end - player_name_start));
+    if (obfuscate) {
+        ObfuscateName(new_name, new_name, _countof(new_name));
+    }
+    else {
+        UnobfuscateName(new_name, new_name, _countof(new_name));
+    }
+    new_message.append(new_name);
+    new_message.append(player_name_end);
+    if (need_to_free_message)
+        delete[] message;
+    return new_message.data();
 }
 void Obfuscator::OnPrintChat(GW::HookStatus* , GW::Chat::Channel channel, wchar_t** message_ptr, FILETIME, int) {
     if (Instance().status != Enabled)
@@ -381,14 +382,12 @@ void Obfuscator::OnPreUIMessage(GW::HookStatus*, uint32_t msg_id, void* wParam, 
             wchar_t* message;
             uint32_t player_number;
         } *packet_actual = (PlayerChatMessage*) wParam;
+        // Because we've already obfuscated the player name in-game, the name in the message will be obfuscated. Unobfuscate it here, and re-obfuscate it later.
+        // This allows the player to toggle obfuscate on/off between map loads and it won't bork up the message log.
         packet_actual->message = Instance().UnobfuscateMessage(packet_actual->channel, packet_actual->message);
-        // Unobfuscate player name for incoming UI messages; we obfuscate it when the message is printed on-screen
-        UNREFERENCED_PARAMETER(packet_actual);
+        Log::LogW(packet_actual->message);
     } break;
     }
-}
-void Obfuscator::OnPostUIMessage(GW::HookStatus*, uint32_t , void* , void* ) {
-    // TODO: Re-obfuscate player name.
 }
 void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet) {
     if (packet->header == GAME_SMSG_TRANSFER_GAME_SERVER_INFO) {
@@ -415,7 +414,7 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
             uint32_t chaff[20];
             wchar_t name[32];
         } *packet_actual = (Packet*)packet;
-        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name) - 1);
+        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name) - 1, true);
     } break;
     // Hide Mercenary Hero name after being added to party or in explorable area
     case GAME_SMSG_AGENT_UPDATE_NPC_NAME: {
@@ -434,7 +433,7 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
             len++;
         }
         original_name[len] = 0;
-        Instance().ObfuscateName(original_name, &packet_actual->name[2], _countof(packet_actual->name) - 4);
+        Instance().ObfuscateName(original_name, &packet_actual->name[2], _countof(packet_actual->name) - 4, true);
         len = wcslen(packet_actual->name);
         packet_actual->name[len] = 0x1;
         packet_actual->name[len+1] = 0;
@@ -460,8 +459,13 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
     } break;
     }
 }
-wchar_t* Obfuscator::ObfuscateName(const wchar_t* _original_name, wchar_t* out, int length) {
+wchar_t* Obfuscator::ObfuscateName(const wchar_t* _original_name, wchar_t* out, int length, bool force) {
     std::wstring original_name = GuiUtils::SanitizePlayerName(_original_name);
+#ifdef ONLY_CURRENT_PLAYER
+    // Only obfuscate current player; undefine to use this on other players
+    if (!force && wcscmp(_original_name, getPlayerName()) != 0)
+        return _original_name == _original_name ? out : wcsncpy(out, _original_name, length);
+#endif
     auto found = obfuscated_by_original.find(original_name);
     if (found != obfuscated_by_original.end())
         return wcsncpy(out, found->second.c_str(), length);
@@ -517,18 +521,6 @@ void Obfuscator::Initialize() {
     ToolboxModule::Initialize();
     Reset();
 
-    replace_tokens_by_channel.resize(GW::Chat::Channel::CHANNEL_COUNT);
-    replace_tokens_by_channel[GW::Chat::Channel::CHANNEL_ALLIANCE] = { L"\x76b\x10a\x913\x107" };
-    replace_tokens_by_channel[GW::Chat::Channel::CHANNEL_GUILD] = { L"\x76b\x107" };
-    replace_tokens_by_channel[GW::Chat::Channel::CHANNEL_ALLIES] = { L"\x76b\x10a\x108\x107" };
-    replace_tokens_by_channel[GW::Chat::Channel::CHANNEL_ALL] = { L"\x76b\x10a\x108\x107" };
-    replace_tokens_by_channel[GW::Chat::Channel::CHANNEL_GROUP] = { L"\x76b\x10a\x108\x107" };
-    replace_tokens_by_channel[GW::Chat::Channel::CHANNEL_WHISPER] = {
-        L"\x076d\x0107",            // Incoming whisper
-    };
-    replace_tokens_by_channel[GW::Chat::Channel::CHANNEL_GLOBAL] = {
-        L"\x76e\x101\x100\x107",    // Outgoing whisper
-    };
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_AGENT_CREATE_PLAYER, OnStoCPacket);
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_MERCENARY_INFO, OnStoCPacket);
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_AGENT_UPDATE_NPC_NAME, OnStoCPacket);
@@ -537,7 +529,6 @@ void Obfuscator::Initialize() {
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_GUILD_PLAYER_INFO, OnStoCPacket);
 
     GW::UI::RegisterUIMessageCallback(&stoc_hook, OnPreUIMessage, -0x9000);
-    GW::UI::RegisterUIMessageCallback(&stoc_hook, OnPostUIMessage, 0x8000);
 
     GW::Chat::RegisterSendChatCallback(&ctos_hook, OnSendChat);
 
