@@ -118,17 +118,8 @@ void InfoWindow::OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* p
     if (!players.valid()) return;
 
     // Prepare the name
-    const int offset = 5;
-    wchar_t buf[256];
-    {
-        int i = 0;
-        while (i < 255 && pak->message[i + offset] != 0x1 && pak->message[i + offset] != 0) {
-            buf[i] = (pak->message[offset + i]);
-            ++i;
-        }
-        buf[i] = '\0';
-    }
-
+    wchar_t* start = wcschr(pak->message, 0x107) + 1;
+    std::wstring buf(start, wcschr(start, 0x1) - start);
     // set the right index in party
     auto instance = &Instance();
     for (unsigned i = 0; i < partymembers.size(); ++i) {

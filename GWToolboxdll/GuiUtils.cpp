@@ -272,8 +272,7 @@ std::wstring GuiUtils::StringToWString(const std::string& str)
 std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
     // e.g. "Player Name (2)" => "Player Name", for pvp player names
     // e.g. "Player Name [TAG]" = >"Player Name", for alliance message sender name
-    std::wstring out;
-    out.resize(s.size());
+    wchar_t out[64];
     size_t len = 0;
     wchar_t remove_char_token = 0;
     for (wchar_t& wchar : s) {
@@ -284,19 +283,20 @@ std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
         }
         if (wchar == '[') {
             remove_char_token = ']';
+            if(len > 0)
+                len--;
             continue;
         }
         if (wchar == '(') {
             remove_char_token = ')';
+            if (len > 0)
+                len--;
             continue;
         }
-        out[len] = wchar;
-        len++;
+        out[len++] = wchar;
     }
-    out[len] = 0;
-    if (len && out[len] - 1 == ' ')
-        out[len - 1] = 0;
-    return out;
+    out[len++] = 0;
+    return std::wstring(out);
 }
 std::string GuiUtils::RemovePunctuation(std::string s) {
     s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
