@@ -544,12 +544,15 @@ bool HotkeyEquipItem::IsEquippable(GW::Item *_item)
             return false;
             break;
     }
+    return true;
+    // 2021-05-02: Disabled customised check, conflicts with obfuscator module, not worth the hassle - the hotkey will fail with a message on timeout anyway - Jon
+    /*
     if (!_item->customized)
         return true;
     GW::GameContext *g = GW::GameContext::instance();
     GW::CharContext *c = g ? g->character : nullptr;
     return c && c->player_name &&
-           wcscmp(c->player_name, _item->customized) == 0;
+           wcscmp(c->player_name, _item->customized) == 0;*/
 }
 void HotkeyEquipItem::Execute()
 {
