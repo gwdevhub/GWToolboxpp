@@ -319,7 +319,7 @@ void Obfuscator::OnSendChat(GW::HookStatus* status, GW::Chat::Channel channel, w
     GW::Chat::SendChat(unobfuscated, &whisper_separator[1]);
     processing = false;
 }
-wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel, wchar_t* message, bool obfuscate) {
+wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel channel, wchar_t* message, bool obfuscate) {
     // NB: Static for ease, but be sure copy this away before accessing this function again as needed
     static std::wstring new_message(L"");
     wchar_t* player_name_start = nullptr;
@@ -333,9 +333,16 @@ wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel, wchar_t* message, bool 
         player_name_start = wcschr(message, 0x107);
         break;
     default:
-        if (wmemcmp(message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0 // <player name> has resigned
-            || wmemcmp(message, L"\x8101\x3b02\xb2eb\xc1f4\x41af\x0107", 6) == 0) // <player name> has restored communication with the server
-            player_name_start = wcschr(message, 0x107);
+        if (channel == GW::Chat::Channel::CHANNEL_GLOBAL) {
+            if (
+                wmemcmp(message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0 // <player name> has resigned
+                || wmemcmp(message, L"\x8101\x3b02\xb2eb\xc1f4\x41af\x0107", 6) == 0 // <player name> has restored communication with the server
+                || wmemcmp(message, L"\x8101\x475c\x010a\x0ba9\x0107", 5) == 0 // Skill template named "<blah>" has been loaded onto <player name>
+                || wmemcmp(message, L"\x7f1\x9a9d\xe943\x0b33\x010a",5) == 0 // <monster name> drops an <item name> which your party reserves for <player name>
+                ) {
+                player_name_start = wcschr(message, 0x107);
+            }
+        }
         break;
     }
     if (!player_name_start)
