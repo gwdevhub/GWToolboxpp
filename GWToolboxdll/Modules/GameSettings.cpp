@@ -1535,11 +1535,11 @@ void GameSettings::FriendStatusCallback(
     GameSettings& game_setting = GameSettings::Instance();
     if (status == f->status)
         return;
-    char buffer[512];
+    wchar_t buffer[512];
     switch (status) {
     case GW::FriendStatus::FriendStatus_Offline:
         if (game_setting.notify_when_friends_offline) {
-            snprintf(buffer, sizeof(buffer), "%ls (%ls) has just logged out.", charname, alias);
+            swprintf(buffer, _countof(buffer), L"%s (%s) has just logged out.", charname, alias);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
         return;
@@ -1549,7 +1549,7 @@ void GameSettings::FriendStatusCallback(
         if (f->status != GW::FriendStatus::FriendStatus_Offline)
             return;
         if (game_setting.notify_when_friends_online) {
-            snprintf(buffer, sizeof(buffer), "<a=1>%ls</a> (%ls) has just logged in.</c>", charname, alias);
+            swprintf(buffer, _countof(buffer), L"<a=1>%s</a> (%s) has just logged in.</c>", charname, alias);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
         return;
