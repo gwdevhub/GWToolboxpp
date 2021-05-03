@@ -210,6 +210,7 @@ public:
     // bool select_with_chat_doubleclick = false;
     bool move_item_on_ctrl_click = false;
     bool move_item_to_current_storage_pane = true;
+    bool drop_ua_on_cast = false;
 
     bool flash_window_on_pm = false;
     bool flash_window_on_party_invite = false;

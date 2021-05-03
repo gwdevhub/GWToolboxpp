@@ -912,6 +912,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
     improve_move_to_cast = ini->GetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
+    drop_ua_on_cast = ini->GetBoolValue(Name(), VAR_NAME(drop_ua_on_cast), drop_ua_on_cast);
 
     lazy_chest_looting = ini->GetBoolValue(Name(), VAR_NAME(lazy_chest_looting), lazy_chest_looting);
 
@@ -1039,6 +1040,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
     ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
     ini->SetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
+    ini->SetBoolValue(Name(), VAR_NAME(drop_ua_on_cast), drop_ua_on_cast);
 
     ini->SetBoolValue(Name(), VAR_NAME(lazy_chest_looting), lazy_chest_looting);
 
@@ -1227,6 +1229,7 @@ void GameSettings::DrawSettingInternal() {
     ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
     ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
+    ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting",&drop_ua_on_cast);
     ImGui::Text("Disable animation and sound from consumables:");
     ImGui::Indent();
     const char* doesnt_affect_me = "Only applies to other players";
@@ -2218,7 +2221,7 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, uint32_t msgid, void* wPa
 
 // Auto-drop UA when recasting
 void GameSettings::OnAgentStartCast(GW::HookStatus* , uint32_t msgid, void* wParam, void*) {
-    if (!(msgid == 0x10000027 && wParam))
+    if (!(msgid == 0x10000027 && wParam && Instance().drop_ua_on_cast))
         return;
     struct Casting {
         uint32_t agent_id;
