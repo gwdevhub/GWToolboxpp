@@ -25,6 +25,7 @@ public:
     void Update(float) override;
     void Terminate() override;
     void DrawSettingInternal() override;
+    void Obfuscate(bool obfuscate);
     wchar_t* ObfuscateMessage(GW::Chat::Channel channel, wchar_t* original_message, bool obfuscate = true);
     wchar_t* UnobfuscateMessage(GW::Chat::Channel channel, wchar_t* original_message) {
         return ObfuscateMessage(channel, original_message, false);
@@ -42,9 +43,11 @@ private:
     static void OnPreUIMessage(GW::HookStatus*, uint32_t msg_id, void* wParam, void* lParam);
     static void OnSendChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t* message);
     static void OnPrintChat(GW::HookStatus* status, GW::Chat::Channel, wchar_t** message, FILETIME, int);
+    static void CmdObfuscate(const wchar_t* cmd, int argc, wchar_t** argv);
     std::unordered_map<std::wstring, std::wstring> obfuscated_by_obfuscation;
     std::unordered_map<std::wstring, std::wstring> obfuscated_by_original;
     GW::HookEntry stoc_hook;
+    GW::HookEntry stoc_hook2;
     GW::HookEntry ctos_hook;
     size_t pool_index = 0;
 

@@ -333,8 +333,9 @@ wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel, wchar_t* message, bool 
         player_name_start = wcschr(message, 0x107);
         break;
     default:
-        if (wmemcmp(message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0)
-            player_name_start = wcschr(message, 0x107); // <player name> has resigned
+        if (wmemcmp(message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0 // <player name> has resigned
+            || wmemcmp(message, L"\x8101\x3b02\xb2eb\xc1f4\x41af\x0107", 6) == 0) // <player name> has restored communication with the server
+            player_name_start = wcschr(message, 0x107);
         break;
     }
     if (!player_name_start)
@@ -366,6 +367,27 @@ wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel, wchar_t* message, bool 
     if (need_to_free_message)
         delete[] message;
     return new_message.data();
+}
+void Obfuscator::CmdObfuscate(const wchar_t* , int , wchar_t** ) {
+    Instance().Obfuscate(Instance().status == Disabled);
+}
+void Obfuscator::Obfuscate(bool obfuscate) {
+    bool changed = false;
+    if (obfuscate) {
+        if (status == Disabled) {
+            changed = true;
+            status = Pending;
+        }
+    }
+    else {
+        if (status != Disabled) {
+            changed = true;
+            status = Disabled;
+        }
+    }
+    if (changed) {
+        Log::Info(status == Disabled ? "Player name will be visible on next map change" : "Player name will be hidden on next map change");
+    }
 }
 void Obfuscator::OnPrintChat(GW::HookStatus* , GW::Chat::Channel channel, wchar_t** message_ptr, FILETIME, int) {
     if (Instance().status != Enabled)
@@ -399,13 +421,34 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
     if (Instance().status != Enabled)
         return;
     switch (packet->header) {
+    // Temporarily obfuscate player name on resign (affected modules: InfoWindow)
+    case GAME_SMSG_CHAT_MESSAGE_CORE: {
+        GW::Packet::StoC::MessageCore* packet_actual = (GW::Packet::StoC::MessageCore*)packet;
+        static bool obfuscated = false;
+        if (wmemcmp(packet_actual->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0) {
+            // This hook is called twice - once before resign log module, once after.
+            obfuscated = !obfuscated;
+            wchar_t* obfuscated_wc = Instance().ObfuscateMessage(GW::Chat::Channel::CHANNEL_GLOBAL, packet_actual->message, obfuscated);
+            wcscpy(packet_actual->message, obfuscated_wc);
+        }
+    } break;
+    // Obfuscate incoming party searches (affected modules: Trade Window)
+    case GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT: {
+        struct Packet {
+            uint32_t header;
+            uint32_t other_atts[7];
+            wchar_t message[32];
+            wchar_t name[20];
+        } *packet_actual = (Packet*)packet;
+        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name));
+    } break;
     // Hide Player name on spawn
     case GAME_SMSG_AGENT_CREATE_PLAYER: {
         struct Packet {
             uint32_t chaff[7];
             wchar_t name[32];
         } *packet_actual = (Packet*)packet;
-        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name) - 1);
+        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name));
         return;
     } break;
     // Hide Mercenary Hero name
@@ -414,7 +457,7 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
             uint32_t chaff[20];
             wchar_t name[32];
         } *packet_actual = (Packet*)packet;
-        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name) - 1, true);
+        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name), true);
     } break;
     // Hide Mercenary Hero name after being added to party or in explorable area
     case GAME_SMSG_AGENT_UPDATE_NPC_NAME: {
@@ -433,12 +476,13 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
             len++;
         }
         original_name[len] = 0;
-        Instance().ObfuscateName(original_name, &packet_actual->name[2], _countof(packet_actual->name) - 4, true);
+        Instance().ObfuscateName(original_name, &packet_actual->name[2], _countof(packet_actual->name) - 3, true);
         len = wcslen(packet_actual->name);
         packet_actual->name[len] = 0x1;
         packet_actual->name[len+1] = 0;
     } break;
     // Hide "Customised for <player_name>". Packet header is poorly named, this is actually something like GAME_SMSG_ITEM_CUSTOMISED_NAME
+    // (affected modules: HotkeysWindow)
     case GAME_SMSG_ITEM_UPDATE_NAME: {
         struct Packet {
             uint32_t chaff[2];
@@ -446,24 +490,13 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
         } *packet_actual = (Packet*)packet;
         Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name));
     } break;
-    // Hide guild member info
-    case GAME_SMSG_GUILD_PLAYER_INFO: {
-        struct Packet {
-            uint32_t header;
-            wchar_t account_name[20];
-            wchar_t player_name[20];
-        } *packet_actual = (Packet*)packet;
-        // Only bother to obfuscate the current player's name
-        if(wcscmp(packet_actual->player_name, getPlayerName()) == 0)
-            Instance().ObfuscateName(packet_actual->player_name, packet_actual->player_name, _countof(packet_actual->player_name));
-    } break;
     }
 }
 wchar_t* Obfuscator::ObfuscateName(const wchar_t* _original_name, wchar_t* out, int length, bool force) {
     std::wstring original_name = GuiUtils::SanitizePlayerName(_original_name);
 #ifdef ONLY_CURRENT_PLAYER
     // Only obfuscate current player; undefine to use this on other players
-    if (!force && wcscmp(_original_name, getPlayerName()) != 0)
+    if (!force && wcscmp(original_name.c_str(), getPlayerName()) != 0)
         return _original_name == _original_name ? out : wcsncpy(out, _original_name, length);
 #endif
     auto found = obfuscated_by_original.find(original_name);
@@ -521,18 +554,27 @@ void Obfuscator::Initialize() {
     ToolboxModule::Initialize();
     Reset();
 
-    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_AGENT_CREATE_PLAYER, OnStoCPacket);
-    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_MERCENARY_INFO, OnStoCPacket);
-    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_AGENT_UPDATE_NPC_NAME, OnStoCPacket);
-    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_ITEM_UPDATE_NAME, OnStoCPacket);
-    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_TRANSFER_GAME_SERVER_INFO, OnStoCPacket);
-    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_GUILD_PLAYER_INFO, OnStoCPacket);
+    const int pre_hook_altitude = -0x9000; // Hooks that run before other RegisterPacketCallback hooks
+    const int post_hook_altitude = -0x7000; // Hooks that run after other RegisterPacketCallback hooks, but BEFORE the game processes the packet
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_AGENT_CREATE_PLAYER, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_MERCENARY_INFO, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_AGENT_UPDATE_NPC_NAME, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_ITEM_UPDATE_NAME, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_TRANSFER_GAME_SERVER_INFO, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT, OnStoCPacket, pre_hook_altitude);
+    // Pre resignlog hook
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_CHAT_MESSAGE_CORE, OnStoCPacket, pre_hook_altitude);
+    // Post resignlog hook
+    GW::StoC::RegisterPacketCallback(&stoc_hook2, GAME_SMSG_CHAT_MESSAGE_CORE, OnStoCPacket, post_hook_altitude);
 
-    GW::UI::RegisterUIMessageCallback(&stoc_hook, OnPreUIMessage, -0x9000);
+    GW::UI::RegisterUIMessageCallback(&stoc_hook, OnPreUIMessage, pre_hook_altitude);
 
     GW::Chat::RegisterSendChatCallback(&ctos_hook, OnSendChat);
 
     GW::Chat::RegisterPrintChatCallback(&ctos_hook, OnPrintChat);
+
+    GW::Chat::CreateCommand(L"obfuscate", CmdObfuscate);
+    GW::Chat::CreateCommand(L"hideme", CmdObfuscate);
 
     CoInitialize(NULL);
     hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_OBJECT_DESTROY, NULL, OnWindowEvent, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
@@ -551,10 +593,9 @@ void Obfuscator::Reset() {
     obfuscated_by_original.clear();
 }
 void Obfuscator::DrawSettingInternal() {
-    static bool enabled = status != Disabled;
+    bool enabled = status != Disabled;
     if (ImGui::Checkbox("Obfuscate player names", &enabled)) {
-        status = enabled ? Pending : Disabled;
-        Log::Info("Setting will be applied on next map change");
+        Obfuscate(enabled);
     }
     ImGui::ShowHelp("Replace player names in-game with aliases.\nThis change is applied on next map change.");
 }
