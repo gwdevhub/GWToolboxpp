@@ -1111,90 +1111,90 @@ ObserverModule::ObservableParty* ObserverModule::CreateObservableParty(const GW:
 
 // change state based on an actions stage
 void ObserverModule::ObservedAction::Reduce(const ObserverModule::ActionStage stage) {
-	switch (stage) {
-		case ActionStage::Instant:
-			started += 1;
-			finished += 1;
-			break;
-		case ActionStage::Started:
-			started += 1;
-			break;
-		case ActionStage::Stopped:
-			stopped += 1;
-			break;
-		case ActionStage::Interrupted:
-			stopped -= 1;
-			interrupted += 1;
-			break;
-		case ActionStage::Finished:
-			finished += 1;
-			break;
-	}
+    switch (stage) {
+        case ActionStage::Instant:
+            started += 1;
+            finished += 1;
+            break;
+        case ActionStage::Started:
+            started += 1;
+            break;
+        case ActionStage::Stopped:
+            stopped += 1;
+            break;
+        case ActionStage::Interrupted:
+            stopped -= 1;
+            interrupted += 1;
+            break;
+        case ActionStage::Finished:
+            finished += 1;
+            break;
+    }
 }
 
 
 // fired when the Agent dies
 void ObserverModule::SharedStats::HandleDeath() {
-	deaths += 1;
-	// recalculate kdr
-	kdr_pc = (float) kills / deaths;
-	// get kdr string
-	std::stringstream str;
-	str << std::fixed << std::setprecision(2) << kdr_pc;
-	kdr_str = str.str();
+    deaths += 1;
+    // recalculate kdr
+    kdr_pc = (float) kills / deaths;
+    // get kdr string
+    std::stringstream str;
+    str << std::fixed << std::setprecision(2) << kdr_pc;
+    kdr_str = str.str();
 }
 
 
 // fired when the agent scores a kill
 void ObserverModule::SharedStats::HandleKill() {
-	kills += 1;
-	// recalculate kdr
-	if (deaths < 1)
-		kdr_pc = static_cast<float>(kills);
-	else
-		kdr_pc = static_cast<float>(kills) / deaths;
-	// get kdr string
-	std::stringstream str;
-	str << std::fixed << std::setprecision(2) << kdr_pc;
-	kdr_str = str.str();
+    kills += 1;
+    // recalculate kdr
+    if (deaths < 1)
+        kdr_pc = static_cast<float>(kills);
+    else
+        kdr_pc = static_cast<float>(kills) / deaths;
+    // get kdr string
+    std::stringstream str;
+    str << std::fixed << std::setprecision(2) << kdr_pc;
+    kdr_str = str.str();
 }
 
 
 ObserverModule::ObservableAgentStats::~ObservableAgentStats() {
-	// attacks received (by agent)
-	for (const auto& [_, o_atk] : attacks_received_from_agent) if (o_atk) delete o_atk;
-	attacks_received_from_agent.clear();
+    // attacks received (by agent)
+    for (const auto& [_, o_atk] : attacks_received_from_agent) if (o_atk) delete o_atk;
+    attacks_received_from_agent.clear();
 
-	// attacks dealed (by agent)
-	for (const auto& [_, o_atk] : attacks_dealt_to_agent) if (o_atk) delete o_atk;
-	attacks_dealt_to_agent.clear();
+    // attacks dealed (by agent)
+    for (const auto& [_, o_atk] : attacks_dealt_to_agent) if (o_atk) delete o_atk;
+    attacks_dealt_to_agent.clear();
 
-	// skills used
-	skill_ids_used.clear();
-	for (const auto& [_, o_skill] : skills_used) if (o_skill) delete o_skill;
-	skills_used.clear();
+    // skills used
+    skill_ids_used.clear();
+    for (const auto& [_, o_skill] : skills_used) if (o_skill) delete o_skill;
+    skills_used.clear();
 
-	// skills received
-	skill_ids_received.clear();
-	for (const auto& [_, o_skill] : skills_received) if (o_skill) delete o_skill;
-	skills_received.clear();
+    // skills received
+    skill_ids_received.clear();
+    for (const auto& [_, o_skill] : skills_received) if (o_skill) delete o_skill;
+    skills_received.clear();
 
-	// skill received (by agent)
-	for (auto& [_, skill_ids] : skills_ids_received_by_agent) skill_ids.clear();
-	skills_ids_received_by_agent.clear();
-	for (auto& [_, agent_skills] : skills_received_from_agent) {
-		for (const auto [__, o_skill] : agent_skills) if (o_skill) delete o_skill;
-		agent_skills.clear();
-	}
-	skills_received_from_agent.clear();
+    // skill received (by agent)
+    for (auto& [_, skill_ids] : skills_ids_received_by_agent) skill_ids.clear();
+    skills_ids_received_by_agent.clear();
+    for (auto& [_, agent_skills] : skills_received_from_agent) {
+        for (const auto [__, o_skill] : agent_skills) if (o_skill) delete o_skill;
+        agent_skills.clear();
+    }
+    skills_received_from_agent.clear();
 
-	// skill used (by agent)
-	for (auto& [_, skill_ids] : skills_ids_used_on_agent) skill_ids.clear();
-	for (auto& [_, agent_skills] : skills_used_on_agent) {
-		for (const auto [__, o_skill] : agent_skills) if (o_skill) delete o_skill;
-		agent_skills.clear();
-	}
-	skills_ids_used_on_agent.clear();
+    // skill used (by agent)
+    for (auto& [_, skill_ids] : skills_ids_used_on_agent) skill_ids.clear();
+    for (auto& [_, agent_skills] : skills_used_on_agent) {
+        for (const auto [__, o_skill] : agent_skills) if (o_skill) delete o_skill;
+        agent_skills.clear();
+    }
+    skills_ids_used_on_agent.clear();
 }
 
 
@@ -1217,54 +1217,54 @@ ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetAtt
 // Get attacks dealed against this agent, by a caster_agent_id
 // Lazy initialises the caster_agent_id
 ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetAttacksReceivedFrom(const uint32_t caster_agent_id) {
-	auto it = attacks_received_from_agent.find(caster_agent_id);
-	if (it == attacks_received_from_agent.end()) {
-		// attacker not registered
-		ObservedAction* observed_action = new ObservedAction();
-		attacks_received_from_agent.insert({caster_agent_id, observed_action});
-		return *observed_action;
-	} else {
-		// attacker is already reigstered
-		return *it->second;
-	}
+    auto it = attacks_received_from_agent.find(caster_agent_id);
+    if (it == attacks_received_from_agent.end()) {
+        // attacker not registered
+        ObservedAction* observed_action = new ObservedAction();
+        attacks_received_from_agent.insert({caster_agent_id, observed_action});
+        return *observed_action;
+    } else {
+        // attacker is already reigstered
+        return *it->second;
+    }
 }
 
 
 // Get skills used by this agent
 // Lazy initialises the skill_id
 ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillUsed(const uint32_t skill_id) {
-	auto it_skill = skills_used.find(skill_id);
-	if (it_skill == skills_used.end()) {
-		// skill not registered
-		skill_ids_used.push_back(skill_id);
-		// re-sort skills
-		std::sort(skill_ids_used.begin(), skill_ids_used.end());
-		ObservedSkill* observed_skill = new ObservedSkill(skill_id);
-		skills_used.insert({skill_id, observed_skill});
-		return *observed_skill;
-	} else {
-		// skill already registered
-		return *it_skill->second;
-	}
+    auto it_skill = skills_used.find(skill_id);
+    if (it_skill == skills_used.end()) {
+        // skill not registered
+        skill_ids_used.push_back(skill_id);
+        // re-sort skills
+        std::sort(skill_ids_used.begin(), skill_ids_used.end());
+        ObservedSkill* observed_skill = new ObservedSkill(skill_id);
+        skills_used.insert({skill_id, observed_skill});
+        return *observed_skill;
+    } else {
+        // skill already registered
+        return *it_skill->second;
+    }
 }
 
 
 // Get skills used received by this agent
 // Lazy initialises the skill_id
 ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillReceived(const uint32_t skill_id) {
-	auto it_skill = skills_received.find(skill_id);
-	if (it_skill == skills_received.end()) {
-		// skill not registered
-		skill_ids_received.push_back(skill_id);
-		// re-sort skills
-		std::sort(skill_ids_received.begin(), skill_ids_received.end());
-		ObservedSkill* observed_skill = new ObservedSkill(skill_id);
-		skills_received.insert({skill_id, observed_skill});
-		return *observed_skill;
-	} else {
-		// skill already registered
-		return *it_skill->second;
-	}
+    auto it_skill = skills_received.find(skill_id);
+    if (it_skill == skills_received.end()) {
+        // skill not registered
+        skill_ids_received.push_back(skill_id);
+        // re-sort skills
+        std::sort(skill_ids_received.begin(), skill_ids_received.end());
+        ObservedSkill* observed_skill = new ObservedSkill(skill_id);
+        skills_received.insert({skill_id, observed_skill});
+        return *observed_skill;
+    } else {
+        // skill already registered
+        return *it_skill->second;
+    }
 }
 
 
@@ -1272,36 +1272,36 @@ ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSki
 // Get a skill received by this agent, from another agent
 // Lazy initialises the skill_id and caster_agent_id
 ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkillReceivedFrom(const uint32_t caster_agent_id, const uint32_t skill_id) {
-	auto it_caster = skills_received_from_agent.find(caster_agent_id);
-	if (it_caster == skills_received_from_agent.end()) {
-		// receiver and his skills are not registered with this agent
-		std::vector<uint32_t> received_skill_ids = {skill_id};
-		skills_ids_received_by_agent.insert({ caster_agent_id, received_skill_ids });
-		ObservedSkill* observed_skill = new ObservedSkill(skill_id);
-		std::unordered_map<uint32_t, ObservedSkill*> received_skills = {{skill_id, observed_skill}};
-		skills_received_from_agent.insert({caster_agent_id, received_skills});
-		return *observed_skill;
-	} else {
-		// receiver is registered with this agent
-		std::unordered_map<uint32_t, ObservedSkill*>& used_by_caster = it_caster->second;
-		auto it_observed_skill = used_by_caster.find(skill_id);
-		// does receiver have the skill registered from/against us?
-		if (it_observed_skill == used_by_caster.end()) {
-			// caster hasn't registered this skill with this agent
-			// add & re-sort skill_ids by the caster
-			std::vector<uint32_t>& skills_ids_received_by_agent_vec = skills_ids_received_by_agent.find(caster_agent_id)->second;
-			skills_ids_received_by_agent_vec.push_back(skill_id);
-			// re-sort
-			std::sort(skills_ids_received_by_agent_vec.begin(), skills_ids_received_by_agent_vec.end());
-			// add the observed skill for the caster
-			ObservedSkill* observed_skill = new ObservedSkill(skill_id);
-			used_by_caster.insert({skill_id, observed_skill});
-			return *observed_skill;
-		} else {
-			// receivers already registered this skill
-			return *(it_observed_skill->second);
-		}
-	}
+    auto it_caster = skills_received_from_agent.find(caster_agent_id);
+    if (it_caster == skills_received_from_agent.end()) {
+        // receiver and his skills are not registered with this agent
+        std::vector<uint32_t> received_skill_ids = {skill_id};
+        skills_ids_received_by_agent.insert({ caster_agent_id, received_skill_ids });
+        ObservedSkill* observed_skill = new ObservedSkill(skill_id);
+        std::unordered_map<uint32_t, ObservedSkill*> received_skills = {{skill_id, observed_skill}};
+        skills_received_from_agent.insert({caster_agent_id, received_skills});
+        return *observed_skill;
+    } else {
+        // receiver is registered with this agent
+        std::unordered_map<uint32_t, ObservedSkill*>& used_by_caster = it_caster->second;
+        auto it_observed_skill = used_by_caster.find(skill_id);
+        // does receiver have the skill registered from/against us?
+        if (it_observed_skill == used_by_caster.end()) {
+            // caster hasn't registered this skill with this agent
+            // add & re-sort skill_ids by the caster
+            std::vector<uint32_t>& skills_ids_received_by_agent_vec = skills_ids_received_by_agent.find(caster_agent_id)->second;
+            skills_ids_received_by_agent_vec.push_back(skill_id);
+            // re-sort
+            std::sort(skills_ids_received_by_agent_vec.begin(), skills_ids_received_by_agent_vec.end());
+            // add the observed skill for the caster
+            ObservedSkill* observed_skill = new ObservedSkill(skill_id);
+            used_by_caster.insert({skill_id, observed_skill});
+            return *observed_skill;
+        } else {
+            // receivers already registered this skill
+            return *(it_observed_skill->second);
+        }
+    }
 }
 
 
