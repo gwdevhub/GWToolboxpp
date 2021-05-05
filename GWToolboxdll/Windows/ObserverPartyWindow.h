@@ -36,8 +36,8 @@ public:
     void Initialize() override;
 
     void DrawBlankPartyMember(float& offset);
-    void DrawPartyMember(float& offset, ObserverModule::ObservableAgent& agent, const bool odd,
-        const bool is_player, const bool is_target);
+    void DrawPartyMember(float& offset, ObserverModule::ObservableAgent& agent, const ObserverModule::ObservableGuild* guild,
+        const bool odd, const bool is_player, const bool is_target);
     void DrawParty(float& offset, const ObserverModule::ObservableParty& party);
     void DrawHeaders(const size_t party_count);
 
@@ -54,6 +54,10 @@ protected:
 
 
     bool show_player_number = true;
+    bool show_profession = true;
+    bool show_player_guild_tag = true;
+    bool show_player_guild_rating = false;
+    bool show_player_guild_rank = false;
     bool show_kills = true;
     bool show_deaths = true;
     bool show_kdr = true;

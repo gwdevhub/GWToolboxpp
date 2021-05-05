@@ -234,7 +234,6 @@ void ChatCommands::DrawHelp() {
         "'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
         "'/damage reset' resets the damage in party window.");
     ImGui::Bullet(); ImGui::Text("'/observer:reset' resets observer mode data.");
-    ImGui::Bullet(); ImGui::Text("'/observer:explorable' enables/disables the observer mode module to run in any explorable area.");
     ImGui::Bullet(); ImGui::Text("'/dialog <id>' sends a dialog.");
     ImGui::Bullet(); ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
     ImGui::Bullet(); ImGui::Text("'/flag [all|<number>] [x] [y]' to flag a hero to coordinates [x],[y].");
@@ -343,7 +342,6 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"damage", ChatCommands::CmdDamage);
     GW::Chat::CreateCommand(L"dmg", ChatCommands::CmdDamage);
     GW::Chat::CreateCommand(L"observer:reset", ChatCommands::CmdObserverReset);
-    GW::Chat::CreateCommand(L"observer:explorable", ChatCommands::CmdObserverToggleExplorable);
 
     GW::Chat::CreateCommand(L"chest", ChatCommands::CmdChest);
     GW::Chat::CreateCommand(L"xunlai", ChatCommands::CmdChest);
@@ -768,14 +766,6 @@ void ChatCommands::CmdObserverReset(const wchar_t* message, int argc, LPWSTR* ar
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
     ObserverModule::Instance().Reset();
-}
-
-
-void ChatCommands::CmdObserverToggleExplorable(const wchar_t* message, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(message);
-    UNREFERENCED_PARAMETER(argc);
-    UNREFERENCED_PARAMETER(argv);
-    ObserverModule::Instance().ToggleEnableExplorableAreas();
 }
 
 

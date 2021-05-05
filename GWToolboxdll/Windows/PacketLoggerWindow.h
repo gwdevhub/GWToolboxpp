@@ -4,6 +4,9 @@
 
 #include <ToolboxWindow.h>
 
+#include <chrono>
+
+
 class PacketLoggerWindow : public ToolboxWindow {
     PacketLoggerWindow() {};
     ~PacketLoggerWindow() { ClearMessageLog(); };
@@ -15,6 +18,7 @@ public:
 
     const char* Name() const override { return "Packet Logger"; }
     void Draw(IDirect3DDevice9* pDevice) override;
+    void DrawSettingInternal() override;
 
     void Initialize() override;
     void SaveSettings(CSimpleIni* ini) override;
@@ -26,8 +30,18 @@ public:
     void AddMessageLog(const wchar_t* encoded);
     void SaveMessageLog();
     void ClearMessageLog();
+    void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet);
+    void CtoSHandler(GW::HookStatus* status, void* packet);
+    std::string PadLeft(std::string input, uint8_t count, char c);
+    std::string PrefixTimestamp(std::string message);
     
 private:
+    enum TimestampType : int {
+        TimestampType_None,
+        TimestampType_Local,
+        TimestampType_Instance,
+    };
+
     std::unordered_map<std::wstring, std::wstring*> message_log;
     std::wstring* last_message_decoded = nullptr;
     uint32_t identifiers[512] = { 0 }; // Presume 512 is big enough for header size...
@@ -44,4 +58,10 @@ private:
     GW::HookEntry MessageCore_Entry;
     GW::HookEntry MessageLocal_Entry;
     GW::HookEntry NpcGeneralStats_Entry;
+
+    int timestamp_type = TimestampType::TimestampType_None;
+    bool timestamp_show_hours = true;
+    bool timestamp_show_minutes = true;
+    bool timestamp_show_seconds = true;
+    bool timestamp_show_milliseconds = true;
 };

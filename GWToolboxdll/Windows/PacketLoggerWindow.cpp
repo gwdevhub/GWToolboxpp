@@ -430,12 +430,13 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
     }
 }
 
-static void CtoSHandler(GW::HookStatus* status, void* packet) {
+void PacketLoggerWindow::CtoSHandler(GW::HookStatus* status, void* packet) {
     UNREFERENCED_PARAMETER(status);
      if (!logger_enabled) return;
-     printf("CtoS packet(%u 0x%X) {\n", *(uint32_t*)packet, *(uint32_t*)packet);
+     printf(PrefixTimestamp("CtoS packet(%u 0x%X) {\n").c_str(), *(uint32_t*)packet, *(uint32_t*)packet);
 }
-static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
+
+void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
 {
     if (blocked_packets[packet->header])
         status->blocked = true;
@@ -454,16 +455,87 @@ static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* 
     Serialize<uint32_t>(bytes, &header);
     ASSERT(packet->header == header);
 
-    printf("StoC packet(%u 0x%X) {\n", packet->header, packet->header);
+
+
+    printf(PrefixTimestamp("StoC packet(%u 0x%X) {\n").c_str(), packet->header, packet->header);
     PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
     printf("} endpacket(%u 0x%X)\n", packet->header, packet->header);
 }
 
+std::string PacketLoggerWindow::PadLeft(std::string input, uint8_t count, char c) {
+    input.insert(input.begin(), count - input.size(), c);
+    return input;
+}
 
+std::string PacketLoggerWindow::PrefixTimestamp(std::string message) {
+    if (timestamp_type == TimestampType::TimestampType_None) return message;
 
-int debug_door_id = 0;
-uint32_t message_core_callback_identifier;
-uint32_t display_dialogue_callback_identifier;
+    switch (timestamp_type) {
+        case TimestampType::TimestampType_Local: {
+            SYSTEMTIME time;
+            GetLocalTime(&time);
+            bool prependColon = false;
+            char t[4];
+            std::string time_s = "[";
+            if (timestamp_show_hours) {
+                snprintf(t, 4, "%02d", time.wHour);
+                time_s.append(t);
+                prependColon = true;
+            }
+            if (timestamp_show_minutes) {
+                if (prependColon) time_s.append(":");
+                snprintf(t, 4, "%02d", time.wMinute);
+                time_s.append(t);
+                prependColon = true;
+            }
+            if (timestamp_show_seconds) {
+                if (prependColon) time_s.append(":");
+                snprintf(t, 4, "%02d", time.wSecond);
+                time_s.append(t);
+                prependColon = true;
+            }
+            if (timestamp_show_milliseconds) {
+                if (prependColon) time_s.append(".");
+                snprintf(t, 4, "%03d", time.wMilliseconds);
+                time_s.append(t);
+            }
+            return time_s+ "] " + message;
+        }
+        case TimestampType::TimestampType_Instance: {
+            std::chrono::milliseconds ms = std::chrono::milliseconds(GW::Map::GetInstanceTime());
+            std::chrono::seconds secs = std::chrono::duration_cast<std::chrono::seconds>(ms);
+            ms -= std::chrono::duration_cast<std::chrono::milliseconds>(secs);
+            std::chrono::minutes mins = std::chrono::duration_cast<std::chrono::minutes>(secs);
+            secs -= std::chrono::duration_cast<std::chrono::seconds>(mins);
+            std::chrono::hours hours = std::chrono::duration_cast<std::chrono::hours>(mins);
+            mins -= std::chrono::duration_cast<std::chrono::minutes>(hours);
+            bool prependColon = false;
+            std::string time_s = "[";
+            if (timestamp_show_hours) {
+                time_s.append(PadLeft(std::to_string(hours.count()), 2, '0'));
+                prependColon = true;
+            }
+            if (timestamp_show_minutes) {
+                if (prependColon) time_s.append(":");
+                time_s.append(PadLeft(std::to_string(mins.count()), 2, '0'));
+                prependColon = true;
+            }
+            if (timestamp_show_seconds) {
+                if (prependColon) time_s.append(":");
+                time_s.append(PadLeft(std::to_string(secs.count()), 2, '0'));
+                prependColon = true;
+            }
+            if (timestamp_show_milliseconds) {
+                if (prependColon) time_s.append(".");
+                time_s.append(PadLeft(std::to_string(ms.count()), 3, '0'));
+            }
+            return time_s + "] " + message;
+        }
+        default: {
+            return message;
+        }
+    }
+}
 
 void PacketLoggerWindow::AddMessageLog(const wchar_t* encoded) {
     std::wstring encoded_ws(encoded);
@@ -474,6 +546,7 @@ void PacketLoggerWindow::AddMessageLog(const wchar_t* encoded) {
     pending_translation.push_back(t);
     GW::UI::AsyncDecodeStr(encoded, &t->out);
 }
+
 void PacketLoggerWindow::SaveMessageLog() {
     utf8::string filename = Resources::GetPathUtf8(L"message_log.csv");
     std::wofstream myFile(filename.bytes);
@@ -491,6 +564,7 @@ void PacketLoggerWindow::SaveMessageLog() {
     // Close the file
     myFile.close();
 }
+
 void PacketLoggerWindow::ClearMessageLog() {
     for (auto it : message_log) {
         if (it.second)
@@ -583,6 +657,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     }
     return ImGui::End();
 }
+
 void PacketLoggerWindow::Initialize() {
     ToolboxWindow::Initialize();
     InitStoC();
@@ -599,6 +674,7 @@ void PacketLoggerWindow::Initialize() {
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_AGENT_DISPLAY_DIALOG, OnMessagePacket);
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_CHAT_MESSAGE_NPC, OnMessagePacket);
 }
+
 void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet) {
     if (!log_npc_dialogs)
         return;
@@ -628,6 +704,7 @@ void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::Pack
         Instance().AddMessageLog((wchar_t*)(pak + string_offset));
     }
 }
+
 void PacketLoggerWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     for (auto it = pending_translation.begin(); it != pending_translation.end();it++) {
@@ -652,8 +729,14 @@ void PacketLoggerWindow::Update(float delta) {
         SaveMessageLog();
     }
 }
+
 void PacketLoggerWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
+
+    ini->SetBoolValue(Name(), VAR_NAME(timestamp_type), timestamp_type);
+    ini->SetBoolValue(Name(), VAR_NAME(timestamp_show_hours), timestamp_show_hours);
+    ini->SetBoolValue(Name(), VAR_NAME(timestamp_show_seconds), timestamp_show_seconds);
+    ini->SetBoolValue(Name(), VAR_NAME(timestamp_show_milliseconds), timestamp_show_milliseconds);
 
     std::bitset<packet_max> ignored_packets_bitset;
     for (size_t i = 0; i < packet_max; ++i) {
@@ -663,8 +746,14 @@ void PacketLoggerWindow::SaveSettings(CSimpleIni* ini) {
     SaveMessageLog();
     ClearMessageLog();
 }
+
 void PacketLoggerWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
+
+    timestamp_type = ini->GetBoolValue(Name(), VAR_NAME(timestamp_type), TimestampType::TimestampType_None);
+    timestamp_show_hours = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_hours), true);
+    timestamp_show_seconds = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_seconds), true);
+    timestamp_show_milliseconds = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_milliseconds), true);
 
     const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
     if (strcmp(ignored_packets_bits, "-") == 0)
@@ -674,6 +763,7 @@ void PacketLoggerWindow::LoadSettings(CSimpleIni* ini) {
         ignored_packets[i] = ignored_packets_bitset[i] == 1;
     }
 }
+
 void PacketLoggerWindow::Disable() {
     if (!logger_enabled) return;
     for (size_t i = 0; i < game_server_handler.size(); i++) {
@@ -684,13 +774,33 @@ void PacketLoggerWindow::Disable() {
     }
     logger_enabled = false;
 }
+
 void PacketLoggerWindow::Enable() {
     if (logger_enabled) return;
     for (size_t i = 0; i < game_server_handler.size(); i++) {
-        GW::StoC::RegisterPacketCallback(&hook_entry,i, &PacketHandler);
+        GW::StoC::RegisterPacketCallback(
+            &hook_entry, i, [this](GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) -> void {
+                PacketHandler(status, packet);
+            }
+        );
     }
     for (size_t i = 0; i < 180; i++) {
-        GW::CtoS::RegisterPacketCallback(&hook_entry,i,&CtoSHandler);
+        GW::CtoS::RegisterPacketCallback(
+            &hook_entry, i, [this](GW::HookStatus* status, void* packet) -> void {
+                CtoSHandler(status, packet);
+            }
+        );
     }
     logger_enabled = true;
 }
+
+void PacketLoggerWindow::DrawSettingInternal() {
+    ImGui::RadioButton("No timestamp", &timestamp_type, TimestampType::TimestampType_None);
+    ImGui::RadioButton("Local timestmap", &timestamp_type, TimestampType::TimestampType_Local);
+    ImGui::RadioButton("Instance timestamp", &timestamp_type, TimestampType::TimestampType_Instance);
+    ImGui::Checkbox("Show hours", &timestamp_show_hours);
+    ImGui::Checkbox("Show minutes", &timestamp_show_minutes);
+    ImGui::Checkbox("Show seconds", &timestamp_show_seconds);
+    ImGui::Checkbox("Show milliseconds", &timestamp_show_milliseconds);
+}
+

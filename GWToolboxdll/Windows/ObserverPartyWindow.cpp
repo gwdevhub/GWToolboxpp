@@ -20,27 +20,6 @@
 
 #define NO_AGENT 0
 
-// row: [#] [name        ] [kills] [deaths] [kdr] [skill_rupts] [skill_cancels] [skills_finished]
-
-// row:
-
-// [#:tiny]
-// [name:long]
-// [kills:tiny]
-// [deaths:tiny]
-// [kdr:tiny]
-// [cancels:tiny]
-// [rupts:tiny]
-// [kds:tiny]
-// [-atk:tiny]
-// [+atk:tiny]
-// [-crt:tiny]
-// [+crt:tiny]
-// [-skl:tiny]
-// [+skl:tiny]
-
-
-
 void ObserverPartyWindow::Initialize() {
     ToolboxWindow::Initialize();
 }
@@ -56,10 +35,33 @@ void ObserverPartyWindow::DrawHeaders(const size_t party_count) {
     }
 
     for (size_t i = 0; i < party_count; i += 1) {
-        // don't flip it
+		// [profession:short]
+		if (show_profession) {
+			ImGui::Text(ObserverLabel::Profession);
+			ImGui::SameLine(offset += text_short);
+        }
+
         // [name:long]
         ImGui::Text(ObserverLabel::Name);
         ImGui::SameLine(offset += text_long);
+
+		// [guild-tag:short]
+		if (show_player_guild_tag) {
+			ImGui::Text(ObserverLabel::PlayerGuildTag);
+			ImGui::SameLine(offset += text_short);
+        }
+
+		// [guild-rating:tiny]
+		if (show_player_guild_rating) {
+			ImGui::Text(ObserverLabel::PlayerGuildRating);
+			ImGui::SameLine(offset += text_tiny);
+        }
+
+		// [guild-rank]
+		if (show_player_guild_rank) {
+			ImGui::Text(ObserverLabel::PlayerGuildRank);
+			ImGui::SameLine(offset += text_tiny);
+        }
 
 		// [kills:tiny]
 		if (show_kills) {
@@ -132,7 +134,6 @@ void ObserverPartyWindow::DrawHeaders(const size_t party_count) {
             ImGui::Text(ObserverLabel::SkillsUsedOnOtherParties);
             ImGui::SameLine(offset += text_tiny);
         }
-
     }
 }
 
@@ -140,35 +141,67 @@ void ObserverPartyWindow::DrawHeaders(const size_t party_count) {
 // Draw a blank
 void ObserverPartyWindow::DrawBlankPartyMember(float& offset) {
 	uint16_t tinys = 0;
-    if (!show_kills) tinys += 1;
-    if (!show_deaths) tinys += 1;
-    if (!show_kdr) tinys += 1;
-    if (!show_cancels) tinys += 1;
-	if (!show_interrupts) tinys += 1;
-	if (!show_knockdowns) tinys += 1;
-	if (!show_received_party_attacks) tinys += 1;
-	if (!show_dealt_party_attacks) tinys += 1;
-	if (!show_received_party_crits) tinys += 1;
-	if (!show_dealt_party_crits) tinys += 1;
-	if (!show_received_party_skills) tinys += 1;
-	if (!show_dealt_party_skills) tinys += 1;
+    uint16_t shorts = 0;
+    if (show_profession) shorts += 1;
+    if (show_player_guild_tag) shorts += 1;
+    if (show_player_guild_rating) tinys += 1;
+    if (show_player_guild_rank) tinys += 1;
+    if (show_kills) tinys += 1;
+    if (show_deaths) tinys += 1;
+    if (show_kdr) tinys += 1;
+    if (show_cancels) tinys += 1;
+	if (show_interrupts) tinys += 1;
+	if (show_knockdowns) tinys += 1;
+	if (show_received_party_attacks) tinys += 1;
+	if (show_dealt_party_attacks) tinys += 1;
+	if (show_received_party_crits) tinys += 1;
+	if (show_dealt_party_crits) tinys += 1;
+	if (show_received_party_skills) tinys += 1;
+	if (show_dealt_party_skills) tinys += 1;
 
     ImGui::Text("");
-    ImGui::SameLine(offset += (text_long + tinys * text_tiny));
+    ImGui::SameLine(offset += (text_long + shorts * text_short + tinys * text_tiny));
 }
 
 
 // Draw a Party Member
-void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::ObservableAgent& agent, const bool odd,
-    const bool is_player, const bool is_target) {
+void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::ObservableAgent& agent, const ObserverModule::ObservableGuild* guild,
+    const bool odd, const bool is_player, const bool is_target) {
     UNREFERENCED_PARAMETER(is_player);
     UNREFERENCED_PARAMETER(is_target);
 
     auto& Text = odd ? ImGui::TextDisabled : ImGui::Text;
 
+    // [profession:short]
+    if (show_profession) {
+		Text(agent.profession.c_str());
+		ImGui::SameLine(offset += text_short);
+    }
+
 	// [name:long]
-	Text(agent.Name().c_str());
+	Text(agent.DisplayName().c_str());
 	ImGui::SameLine(offset += text_long);
+
+    // [guild-tag:short]
+    if (show_player_guild_tag) {
+        if (guild) ImGui::Text(guild->wrapped_tag.c_str());
+		else ImGui::Text("");
+        ImGui::SameLine(offset += text_short);
+    }
+
+    // [guild-rating:tiny]
+    if (show_player_guild_rating) {
+        if (guild) ImGui::Text(std::to_string(guild->rating).c_str());
+		else ImGui::Text("");
+        ImGui::SameLine(offset += text_tiny);
+    }
+
+    // [guild-rank]
+    if (show_player_guild_rank) {
+        if (guild) ImGui::Text(std::to_string(guild->rank).c_str());
+		else ImGui::Text("");
+        ImGui::SameLine(offset += text_tiny);
+    }
 
 	// [kills:tiny]
     if (show_kills) {
@@ -208,13 +241,13 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
 
 	// [-atk:tiny]
     if (show_received_party_attacks) {
-		Text(std::to_string(agent.stats.total_attacks_received_by_other_party.finished).c_str());
+		Text(std::to_string(agent.stats.total_attacks_received_from_other_party.finished).c_str());
 		ImGui::SameLine(offset += text_tiny);
     }
 
 	// [+atk:tiny]
     if (show_dealt_party_attacks) {
-		Text(std::to_string(agent.stats.total_attacks_done_on_other_party.finished).c_str());
+		Text(std::to_string(agent.stats.total_attacks_dealt_to_other_party.finished).c_str());
 		ImGui::SameLine(offset += text_tiny);
     }
 
@@ -232,13 +265,13 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
 
 	// [-skl:tiny]
     if (show_received_party_skills) {
-		Text(std::to_string(agent.stats.total_skills_received_by_other_party.finished).c_str());
+		Text(std::to_string(agent.stats.total_skills_received_from_other_parties.finished).c_str());
 		ImGui::SameLine(offset += text_tiny);
     }
 
 	// [+skl:tiny]
     if (show_dealt_party_skills) {
-		Text(std::to_string(agent.stats.total_skills_used_on_other_party.finished).c_str());
+		Text(std::to_string(agent.stats.total_skills_used_on_other_parties.finished).c_str());
 		ImGui::SameLine(offset += text_tiny);
     }
 }
@@ -247,9 +280,33 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
 // Draw a Party row
 void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::ObservableParty& party) {
     // [name:long]
-    // TODO: get guild name & put it here
-    ImGui::Text("");
+    ImGui::Text(party.display_name.c_str());
     ImGui::SameLine(offset += text_long);
+
+    // [profession:tiny]
+    if (show_profession) {
+		ImGui::Text("");
+		ImGui::SameLine(offset += text_short);
+    }
+
+    // [guild-tag:short]
+    if (show_player_guild_tag) {
+        // tag is in display_name
+        // this makes it not hideable
+        ImGui::SameLine(offset += text_short);
+    }
+
+    // [guild-rating:tiny]
+    if (show_player_guild_rating) {
+        ImGui::Text(std::to_string(party.rating).c_str());
+        ImGui::SameLine(offset += text_tiny);
+    }
+
+    // [guild-rank]
+    if (show_player_guild_rank) {
+        ImGui::Text(std::to_string(party.rank).c_str());
+        ImGui::SameLine(offset += text_tiny);
+    }
 
     // [kills:tiny]
     if (show_kills) {
@@ -289,13 +346,13 @@ void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::Observa
 
     // [-atk:tiny]
     if (show_received_party_attacks) {
-		ImGui::Text(std::to_string(party.stats.total_attacks_received_by_other_party.finished).c_str());
+		ImGui::Text(std::to_string(party.stats.total_attacks_received_from_other_party.finished).c_str());
 		ImGui::SameLine(offset += text_tiny);
     }
 
     // [+atk:tiny]
     if (show_dealt_party_attacks) {
-		ImGui::Text(std::to_string(party.stats.total_attacks_done_on_other_party.finished).c_str());
+		ImGui::Text(std::to_string(party.stats.total_attacks_dealt_to_other_party.finished).c_str());
 		ImGui::SameLine(offset += text_tiny);
     }
 
@@ -313,13 +370,13 @@ void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::Observa
 
     // [-skl:tiny]
     if (show_received_party_skills) {
-		ImGui::Text(std::to_string(party.stats.total_skills_received_by_other_party.finished).c_str());
+		ImGui::Text(std::to_string(party.stats.total_skills_received_from_other_parties.finished).c_str());
 		ImGui::SameLine(offset += text_tiny);
     }
 
     // [+skl:tiny]
     if (show_dealt_party_skills) {
-		ImGui::Text(std::to_string(party.stats.total_skills_used_on_other_party.finished).c_str());
+		ImGui::Text(std::to_string(party.stats.total_skills_used_on_other_parties.finished).c_str());
 		ImGui::SameLine(offset += text_tiny);
     }
 
@@ -344,11 +401,14 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice) {
     // this should work with both 2/3(+?) parties, with preference on 2
 
     int max_party_size = 0;
-    const std::vector<ObserverModule::ObservableParty*> parties = observer_module.GetObservablePartyArray();
-    size_t party_count = parties.size();
+    const std::vector<uint32_t>& party_ids = observer_module.GetObservablePartyIds();
+    size_t party_count = party_ids.size();
+    std::vector<const ObserverModule::ObservableParty*> parties;
     size_t actual_party_count = 0;
-    for (const ObserverModule::ObservableParty* party : parties) {
-        if (party == nullptr) continue;
+    for (const uint32_t party_id : party_ids) {
+        const ObserverModule::ObservableParty* party = observer_module.GetObservablePartyById(party_id);
+        if (!party) continue;
+        parties.push_back(party);
         actual_party_count += 1;
         int size = static_cast<int>(party->agent_ids.size());
         if (size > max_party_size) max_party_size = size;
@@ -356,15 +416,14 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice) {
 
 
 	float global = ImGui::GetIO().FontGlobalScale;
-	text_long   = 220.0f * global;
+	text_long   = 200.0f * global;
 	text_medium = 150.0f * global;
-	text_short  = 80.0f  * global;
+	text_short  = 55.0f  * global;
 	text_tiny	= 40.0f  * global;
 
-    DrawHeaders(actual_party_count);
-    ImGui::Text(""); // new line
-
-    ImGui::Separator();
+    // DrawHeaders(actual_party_count);
+    // ImGui::Text(""); // new line
+    // ImGui::Separator();
 
     // iterate through each party member
     for (int party_member_index = -1; party_member_index < max_party_size; party_member_index += 1) {
@@ -374,8 +433,11 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice) {
         if (party_member_index == 0) {
             ImGui::Text("");
             ImGui::Separator();
+            DrawHeaders(actual_party_count);
+            ImGui::Text("");
+            ImGui::Separator();
         }
-        // force new line
+        // force new line for each player
         else if (party_member_index > 0) ImGui::Text("");
         // else if (party_member_index > 0) ImGui::Separator();
 
@@ -395,16 +457,13 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::SameLine(offset += text_tiny);
 			}
 
-		    ObserverModule::ObservableParty* party = parties[party_index];
-			if (party == nullptr) {
-				// nothing to print...
-			    continue;
-			}
+		    const ObserverModule::ObservableParty* party = parties[party_index];
+            if (!party) return;
 
 			// draw party total
 			if (party_member_index == -1) {
-			    DrawParty(offset, *party);
-		       continue;
+				DrawParty(offset, *party);
+				continue;
 		    }
 
 
@@ -426,13 +485,14 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice) {
 			// party_member not found
 	        ObserverModule::ObservableAgent* party_member =
 				observer_module.GetObservableAgentById(party_member_id);
-	        if (party_member == nullptr) {
+	        if (!party_member) {
 			    DrawBlankPartyMember(offset);
 			    continue;
 	        }
 
 	        // party member found!
-	        DrawPartyMember(offset, *party_member, party_member_index % 2, false, false);
+            const ObserverModule::ObservableGuild* guild = observer_module.GetObservableGuildById(party_member->guild_id);
+	        DrawPartyMember(offset, *party_member, guild, party_member_index % 2, false, false);
 		}
     }
 
@@ -445,6 +505,10 @@ void ObserverPartyWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 
 	show_player_number = ini->GetBoolValue(Name(), VAR_NAME(show_player_number), true);
+	show_profession = ini->GetBoolValue(Name(), VAR_NAME(show_profession), true);
+    show_player_guild_tag = ini->GetBoolValue(Name(), VAR_NAME(show_player_guild_tag), true);
+    show_player_guild_rating = ini->GetBoolValue(Name(), VAR_NAME(show_player_guild_rating), false);
+    show_player_guild_rank = ini->GetBoolValue(Name(), VAR_NAME(show_player_guild_rank), false);
     show_kills = ini->GetBoolValue(Name(), VAR_NAME(show_kills), true);
     show_deaths = ini->GetBoolValue(Name(), VAR_NAME(show_deaths), true);
     show_kdr = ini->GetBoolValue(Name(), VAR_NAME(show_kdr), true);
@@ -465,6 +529,10 @@ void ObserverPartyWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_player_number), show_player_number);
+    ini->SetBoolValue(Name(), VAR_NAME(show_profession), show_profession);
+    ini->SetBoolValue(Name(), VAR_NAME(show_player_guild_tag), show_player_guild_tag);
+    ini->SetBoolValue(Name(), VAR_NAME(show_player_guild_rank), show_player_guild_rank);
+    ini->SetBoolValue(Name(), VAR_NAME(show_player_guild_rating), show_player_guild_rating);
     ini->SetBoolValue(Name(), VAR_NAME(show_kills), show_kills);
     ini->SetBoolValue(Name(), VAR_NAME(show_deaths), show_deaths);
     ini->SetBoolValue(Name(), VAR_NAME(show_kdr), show_kdr);
@@ -483,6 +551,22 @@ void ObserverPartyWindow::SaveSettings(CSimpleIni* ini) {
 void ObserverPartyWindow::DrawSettingInternal() {
     ImGui::Text("Make sure the Observer Module is enabled.");
     ImGui::Checkbox("Show player number (#)", &show_player_number);
+    ImGui::Checkbox((std::string("Show professions (")
+		+ ObserverLabel::Profession
+		+ ")").c_str(), &show_profession);
+
+    ImGui::Checkbox((std::string("Show Player Guild Tags (")
+		+ ObserverLabel::PlayerGuildTag
+		+ ")").c_str(), &show_player_guild_tag);
+
+    ImGui::Checkbox((std::string("Show Player Guild Rating (")
+		+ ObserverLabel::PlayerGuildRating
+		+ ")").c_str(), &show_player_guild_rating);
+
+    ImGui::Checkbox((std::string("Show Player Guild Rank (")
+		+ ObserverLabel::PlayerGuildRank
+		+ ")").c_str(), &show_player_guild_rank);
+
     ImGui::Checkbox((std::string("Show kills (")
 		+ ObserverLabel::Kills
 		+ ")").c_str(), &show_kills);
