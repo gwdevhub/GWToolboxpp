@@ -2,14 +2,16 @@
 
 #include <algorithm>
 
-
 #include <GWCA/Packets/StoC.h>
 
+#include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Item.h>
+
+#include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
-
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Item.h>
+#include <GWCA/Context/GuildContext.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
@@ -20,6 +22,8 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+
+#include <GWCA/Utilities/MemoryPatcher.h>
 
 #include <GuiUtils.h>
 #include <Logger.h>
@@ -48,6 +52,10 @@ namespace {
     const wchar_t* getPlayerName() {
         GW::GameContext* g = GW::GameContext::instance();
         return g ? g->character->player_name : nullptr;
+    }
+    const wchar_t* getGuildPlayerName() {
+        GW::GameContext* g = GW::GameContext::instance();
+        return g && g->guild ? g->guild->player_name : nullptr;
     }
 
     std::vector<const wchar_t*> obfuscated_name_pool = {
@@ -255,7 +263,48 @@ namespace {
         L"Zaln The Jaded",
         L"Zu Jin The Quick"
     };
+
+    typedef void( __fastcall* GetCharacterSummary_pt)(void* ctx, uint32_t edx, wchar_t* character_name);
+    GetCharacterSummary_pt GetCharacterSummary_Func = 0;
+    GetCharacterSummary_pt RetGetCharacterSummary = 0;
+    GW::MemoryPatcher GetCharacterSummary_AssertionPatch;
+
+    static void __fastcall OnGetCharacterSummary(void* ctx, uint32_t edx, wchar_t* character_name) {
+        GW::HookBase::EnterHook();
+        if (edx != 2 && edx != 3)
+            goto leave;
+        static wchar_t new_character_name[20];
+        auto& instance = Obfuscator::Instance();
+        if (instance.status != Obfuscator::Disabled) {
+            instance.ObfuscateName(character_name, new_character_name, 20, true);
+            character_name = new_character_name;
+        }
+    leave:
+        RetGetCharacterSummary(ctx, edx, character_name);
+        GW::HookBase::LeaveHook();
+    }
 }
+wchar_t* Obfuscator::getPlayerInvitedName() {
+    if (player_guild_invited_name[0])
+        return player_guild_invited_name;
+    GW::GameContext* g = GW::GameContext::instance();
+    if (!g || !g->guild)
+        return player_guild_invited_name;
+    const wchar_t* player_guild_name = getGuildPlayerName();
+    if (!player_guild_name)
+        return player_guild_invited_name;
+    GW::GuildRoster& roster = g->guild->player_roster;
+    if (!roster.valid())
+        return player_guild_invited_name;
+    for (GW::GuildPlayer* player : roster) {
+        if (player && wcscmp(player->current_name, player_guild_name) == 0) {
+            wcscpy(player_guild_invited_name, player->invited_name);
+            break;
+        }
+    }
+    return player_guild_invited_name;
+}
+
 void CALLBACK Obfuscator::OnWindowEvent(HWINEVENTHOOK _hook, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
      if (!running)
          return;
@@ -419,55 +468,62 @@ void Obfuscator::OnPreUIMessage(GW::HookStatus*, uint32_t msg_id, void* wParam, 
     }
 }
 void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet) {
-    if (packet->header == GAME_SMSG_TRANSFER_GAME_SERVER_INFO) {
-        Instance().Reset();
-        if (Instance().status == Pending)
-        Instance().status = Enabled;
-        return;
-    }
-    if (Instance().status != Enabled)
-        return;
+    auto& self = Instance();
     switch (packet->header) {
+    case GAME_SMSG_INSTANCE_LOAD_HEAD: {
+        self.Reset();
+        return;
+    } break;
     // Temporarily obfuscate player name on resign (affected modules: InfoWindow)
     case GAME_SMSG_CHAT_MESSAGE_CORE: {
+        if (self.status != Enabled)
+            break;
         GW::Packet::StoC::MessageCore* packet_actual = (GW::Packet::StoC::MessageCore*)packet;
         static bool obfuscated = false;
         if (wmemcmp(packet_actual->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0) {
             // This hook is called twice - once before resign log module, once after.
             obfuscated = !obfuscated;
-            wchar_t* obfuscated_wc = Instance().ObfuscateMessage(GW::Chat::Channel::CHANNEL_GLOBAL, packet_actual->message, obfuscated);
+            wchar_t* obfuscated_wc = self.ObfuscateMessage(GW::Chat::Channel::CHANNEL_GLOBAL, packet_actual->message, obfuscated);
             wcscpy(packet_actual->message, obfuscated_wc);
         }
     } break;
     // Obfuscate incoming party searches (affected modules: Trade Window)
     case GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT: {
+        if (self.status != Enabled)
+            break;
         struct Packet {
             uint32_t header;
             uint32_t other_atts[7];
             wchar_t message[32];
             wchar_t name[20];
         } *packet_actual = (Packet*)packet;
-        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name));
+        self.ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name));
     } break;
     // Hide Player name on spawn
     case GAME_SMSG_AGENT_CREATE_PLAYER: {
+        if (self.status != Enabled)
+            break;
         struct Packet {
             uint32_t chaff[7];
             wchar_t name[32];
         } *packet_actual = (Packet*)packet;
-        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name));
+        self.ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name));
         return;
     } break;
     // Hide Mercenary Hero name
     case GAME_SMSG_MERCENARY_INFO: {
+        if (self.status != Enabled)
+            break;
         struct Packet {
             uint32_t chaff[20];
             wchar_t name[32];
         } *packet_actual = (Packet*)packet;
-        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name), true);
+        self.ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name), true);
     } break;
     // Hide Mercenary Hero name after being added to party or in explorable area
     case GAME_SMSG_AGENT_UPDATE_NPC_NAME: {
+        if (self.status != Enabled)
+            break;
         struct Packet {
             uint32_t chaff[2];
             wchar_t name[32];
@@ -483,7 +539,7 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
             len++;
         }
         original_name[len] = 0;
-        Instance().ObfuscateName(original_name, &packet_actual->name[2], _countof(packet_actual->name) - 3, true);
+        self.ObfuscateName(original_name, &packet_actual->name[2], _countof(packet_actual->name) - 3, true);
         len = wcslen(packet_actual->name);
         packet_actual->name[len] = 0x1;
         packet_actual->name[len+1] = 0;
@@ -491,14 +547,99 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
     // Hide "Customised for <player_name>". Packet header is poorly named, this is actually something like GAME_SMSG_ITEM_CUSTOMISED_NAME
     // (affected modules: HotkeysWindow)
     case GAME_SMSG_ITEM_UPDATE_NAME: {
+        if (self.status != Enabled)
+            break;
         struct Packet {
             uint32_t chaff[2];
             wchar_t name[32];
         } *packet_actual = (Packet*)packet;
-        Instance().ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name));
+        self.ObfuscateName(packet_actual->name, packet_actual->name, _countof(packet_actual->name));
+    } break;
+    case GAME_SMSG_GUILD_PLAYER_ROLE: {
+        self.ObfuscateGuild(false);
+        self.pending_guild_obfuscate = true;
+    } break;
+    // When current player is updated in guild window (e.g. change character), ensure this is updated in the obfuscator.
+    case GAME_SMSG_GUILD_PLAYER_INFO: {
+        struct Packet {
+            uint32_t header;
+            wchar_t invited_name[20];
+            wchar_t current_name[20];
+            wchar_t invited_by[20];
+            wchar_t context_info[64];
+            uint32_t unk; // Something to do with promoted date?
+            uint32_t minutes_since_login;
+            uint32_t join_date; // This is seconds, but since when? 1471089600 ?
+            uint32_t status;
+            uint32_t member_type;
+        } *packet_actual = (Packet*)packet;
+        self.ObfuscateGuild(false);
+        if (wcscmp(packet_actual->current_name, getGuildPlayerName()) == 0 || wcscmp(packet_actual->current_name, getPlayerName()) == 0) {
+            wcscpy(self.player_guild_invited_name, packet_actual->invited_name);
+        }
+        self.pending_guild_obfuscate = true;
+    } break;
+        // If player name is obfuscated in guild window, ensure that any updates (e.g. status) are mapped correctly
+    case GAME_SMSG_GUILD_PLAYER_CHANGE_COMPLETE: {
+        struct Packet {
+            uint32_t header;
+            wchar_t invited_name[20];
+        } *packet_actual = (Packet*)packet;
+        self.ObfuscateGuild(false);
+        self.pending_guild_obfuscate = true;
+        Log::LogW(L"Guild player change for %s", packet_actual->invited_name);
     } break;
     }
 }
+
+void Obfuscator::ObfuscateGuild(bool obfuscate) {
+    if (obfuscate && player_guild_obfuscated_name[0]) {
+        Log::Log("Tried to obfuscate guild, but already obfuscated");
+        return;
+    }
+    if (!obfuscate && !player_guild_obfuscated_name[0]) {
+        Log::Log("Tried to unobfuscate guild, but already unobfuscated");
+        return;
+    }
+    GW::GameContext* g = GW::GameContext::instance();
+    if (!g || !g->guild) {
+        Log::Log("Tried to obfuscate guild, but no guild context");
+        return;
+    }
+    GW::GuildRoster& roster = g->guild->player_roster;
+    if (!roster.valid() || !roster.m_buffer || !roster.size()) {
+        Log::Log("Tried to obfuscate guild, but no valid roster");
+        return;
+    }
+    wchar_t* invited_name = getPlayerInvitedName();
+    if (!invited_name || !invited_name[0]) {
+        Log::Log("Tried to obfuscate guild, failed to find current player in roster");
+        return;
+    }
+    for (GW::GuildPlayer* player : roster) {
+        if (!player)
+            continue;
+        if (wcscmp(invited_name, player->invited_name) != 0 && wcscmp(player_guild_obfuscated_name, player->invited_name) != 0)
+            continue;
+        wchar_t original[20];
+        wcscpy(original, player->invited_name);
+        if (obfuscate) {
+            if(player->current_name[0])
+                ObfuscateName(player->current_name, player->current_name, _countof(player->current_name),true);
+            ObfuscateName(player->invited_name, player->invited_name, _countof(player->invited_name), true);
+            wcscpy(player_guild_obfuscated_name, player->invited_name);
+            Log::LogW(L"Guild player obfuscated from %s to %s",original, player->invited_name);
+            GW::UI::SendUIMessage(0x100000d8, &player->name_ptr);
+        } else {
+            if (player->current_name[0])
+                UnobfuscateName(player->current_name, player->current_name, _countof(player->current_name));
+            UnobfuscateName(player->invited_name, player->invited_name, _countof(player->invited_name));
+            player_guild_obfuscated_name[0] = 0;
+            Log::LogW(L"Guild player unobfuscated from %s to %s", original, player->invited_name);
+        }
+    }
+}
+
 wchar_t* Obfuscator::ObfuscateName(const wchar_t* _original_name, wchar_t* out, int length, bool force) {
     std::wstring original_name = GuiUtils::SanitizePlayerName(_original_name);
 #ifdef ONLY_CURRENT_PLAYER
@@ -538,18 +679,13 @@ Obfuscator::~Obfuscator() {
     Terminate();
 }
 void Obfuscator::Terminate() {
-    /*if (pSvc) {
-        pSvc->Release();
-        pSvc = 0;
+    if (GetCharacterSummary_Func) {
+        GW::HookBase::RemoveHook(GetCharacterSummary_Func);
+        GetCharacterSummary_AssertionPatch.Reset();
     }
-    if (pLoc) {
-        pLoc->Release();
-        pLoc = 0;
-    }
-    if (!SUCCEEDED(CoInitializeEx_result)) {
-        CoUninitialize();
-        CoInitializeEx_result = -1;
-    }*/
+    
+
+    ObfuscateGuild(false);
     running = false;
     if (hook) {
         ASSERT(UnhookWinEvent(hook));
@@ -557,9 +693,22 @@ void Obfuscator::Terminate() {
         hook = 0;
     }
 }
+
+
 void Obfuscator::Initialize() {
     ToolboxModule::Initialize();
     Reset();
+    
+    uintptr_t GetCharacterSummary_Assertion = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\char\\uichinfo.cpp", "!StrCmp(m_characterName, characterInfo.characterName)");
+    if (GetCharacterSummary_Assertion) {
+        // Hook to override character names on login screen
+        GetCharacterSummary_Func = (GetCharacterSummary_pt)(GetCharacterSummary_Assertion - 0x4F);
+        GW::HookBase::CreateHook(GetCharacterSummary_Func, OnGetCharacterSummary, (void**)&RetGetCharacterSummary);
+        GW::HookBase::EnableHooks(GetCharacterSummary_Func);
+        // Patch to allow missing character summary
+        GetCharacterSummary_AssertionPatch.SetPatch(GetCharacterSummary_Assertion - 0x7, "\xEB", 1);
+        GetCharacterSummary_AssertionPatch.TogglePatch(true);
+    }
 
     const int pre_hook_altitude = -0x9000; // Hooks that run before other RegisterPacketCallback hooks
     const int post_hook_altitude = -0x7000; // Hooks that run after other RegisterPacketCallback hooks, but BEFORE the game processes the packet
@@ -567,8 +716,12 @@ void Obfuscator::Initialize() {
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_MERCENARY_INFO, OnStoCPacket, pre_hook_altitude);
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_AGENT_UPDATE_NPC_NAME, OnStoCPacket, pre_hook_altitude);
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_ITEM_UPDATE_NAME, OnStoCPacket, pre_hook_altitude);
-    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_TRANSFER_GAME_SERVER_INFO, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_INSTANCE_LOAD_HEAD, OnStoCPacket, pre_hook_altitude);
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_GUILD_PLAYER_INFO, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_GUILD_PLAYER_CHANGE_COMPLETE, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_GUILD_PLAYER_ROLE, OnStoCPacket, pre_hook_altitude);
+    
     // Pre resignlog hook
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_CHAT_MESSAGE_CORE, OnStoCPacket, pre_hook_altitude);
     // Post resignlog hook
@@ -592,12 +745,34 @@ void Obfuscator::Update(float) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+    if (GW::PreGameContext::instance() && player_guild_obfuscated_name[0]) {
+        ObfuscateGuild(false);
+    }
+    else if (pending_guild_obfuscate) {
+        ObfuscateGuild(status == Enabled);
+        pending_guild_obfuscate = false;
+    }
+    /*if (status == Enabled && !obfuscated_login_screen) {
+        auto* context = GW::PreGameContext::instance();
+        if (context && context->chars.valid() && context->chars.size()) {
+            // On login screen; obfuscate if needed
+            for (auto& character : context->chars) {
+                ObfuscateName(character.character_name, character.character_name, _countof(character.character_name), true);
+            }
+            obfuscated_login_screen = true;
+        }
+    }*/
 }
 void Obfuscator::Reset() {
+    ObfuscateGuild(false);
     std::shuffle(std::begin(obfuscated_name_pool), std::end(obfuscated_name_pool), dre);
     pool_index = 0;
     obfuscated_by_obfuscation.clear();
     obfuscated_by_original.clear();
+    obfuscated_login_screen = false;
+    if (status == Pending)
+        status = Enabled;
+    pending_guild_obfuscate = status == Enabled;
 }
 void Obfuscator::DrawSettingInternal() {
     bool enabled = status != Disabled;
