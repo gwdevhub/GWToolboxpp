@@ -129,6 +129,7 @@ struct NPCDialog {
     std::wstring sender_out = L"";
 } npc_dialog;
 bool logger_enabled = false;
+bool log_packet_content = false;
 bool debug = false;
 uint32_t log_message_callback_identifier = 0;
 static volatile bool running;
@@ -462,9 +463,14 @@ static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* 
     Serialize<uint32_t>(bytes, &header);
     ASSERT(packet->header == header);
 
-    printf("StoC packet(%u 0x%X) {\n", packet->header, packet->header);
-    PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
-    printf("} endpacket(%u 0x%X)\n", packet->header, packet->header);
+    if (log_packet_content) {
+        printf("StoC packet(%u 0x%X) {\n", packet->header, packet->header);
+        PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
+        printf("} endpacket(%u 0x%X)\n", packet->header, packet->header);
+    }
+    else {
+        printf("StoC packet(%u 0x%X)\n", packet->header, packet->header);
+    }
 }
 
 
@@ -523,6 +529,9 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
             Disable();
     }
     ImGui::ShowHelp("Log outgoing and incoming packet contents in debug console");
+    ImGui::SameLine();
+    ImGui::Checkbox("Log packet content", &log_packet_content);
+    
     /*if ( ImGui::Button("Export Map Info")) {
         if (maps.empty()) {
             FetchMapInfo();
