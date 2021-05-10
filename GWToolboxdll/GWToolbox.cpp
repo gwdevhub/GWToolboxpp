@@ -6,6 +6,9 @@
 #include <GWCA/GameEntities/Party.h>
 
 #include <GWCA/GWCA.h>
+
+#include <GWCA/Context/PreGameContext.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
@@ -458,6 +461,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         if (GW::UI::GetIsWorldMapShowing())
             return;
+
+        if (GW::PreGameContext::instance())
+            return; // Login screen
 
         if (GW::Map::GetIsInCinematic())
             return;
