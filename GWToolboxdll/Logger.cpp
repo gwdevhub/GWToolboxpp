@@ -95,6 +95,7 @@ void Log::Terminate() {
         fclose(stdout_file);
     if (stderr_file)
         fclose(stderr_file);
+    logfile = nullptr;
     FreeConsole();
 #else
     if (logfile) {

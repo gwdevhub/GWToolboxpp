@@ -42,13 +42,14 @@ namespace
         L"Unknown",     L"Warrior", L"Ranger",       L"Monk",
         L"Necromancer", L"Mesmer",  L"Elementalist", L"Assassin",
         L"Ritualist",   L"Paragon", L"Dervish"};
-    static const ImColor StatusColors[4] = {
+    static const ImColor StatusColors[5] = {
         IM_COL32(0x99, 0x99, 0x99, 255), // offline
         IM_COL32(0x0, 0xc8, 0x0, 255),   // online
         IM_COL32(0xc8, 0x0, 0x0, 255),   // busy
-        IM_COL32(0xc8, 0xc8, 0x0, 255)   // away
+        IM_COL32(0xc8, 0xc8, 0x0, 255),   // away
+        IM_COL32(0x99, 0x99, 0x99, 255) // offline
     };
-    static char* statuses[] = { "Offline", "Online", "Busy", "Away" };
+    static char* statuses[] = { "Offline", "Online", "Busy", "Away", "Disconnected" };
     static std::wstring current_map;
     static GW::Constants::MapID current_map_id = GW::Constants::MapID::None;
     static std::wstring *GetCurrentMapName()
