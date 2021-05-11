@@ -118,7 +118,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_observer_target_window) optional_modules.push_back(&ObserverTargetWindow::Instance());
     if (use_observer_party_window) optional_modules.push_back(&ObserverPartyWindow::Instance());
     if (use_observer_export_window) optional_modules.push_back(&ObserverExportWindow::Instance());
-
+    if (use_obfuscator) optional_modules.push_back(&Obfuscator::Instance());
 
 #ifdef _DEBUG
 #if 0
@@ -129,7 +129,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&DoorMonitorWindow::Instance());
     optional_modules.push_back(&SkillListingWindow::Instance());
     optional_modules.push_back(&MissionsWindow::Instance());
-    optional_modules.push_back(&Obfuscator::Instance());
+
 #endif
     std::sort(
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_windows),
@@ -199,6 +199,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Minimap",&use_minimap},
         {"Notepad",&use_notepad},
         {"Objective Timer",&use_objectivetimer},
+        {"Obfuscator",&use_obfuscator},
         {"Party Window",&use_partywindowmodule},
         {"Pcons",&use_pcons},
         {"Timer",&use_timer},
@@ -305,6 +306,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
     use_serverinfo = ini->GetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
     use_daily_quests = ini->GetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
+    use_obfuscator = ini->GetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -348,6 +350,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_chatfilter), use_chatfilter);
     ini->SetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
     ini->SetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
+    ini->SetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
 }
 
 void ToolboxSettings::Update(float delta) {

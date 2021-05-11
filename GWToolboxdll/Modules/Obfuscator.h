@@ -25,6 +25,8 @@ public:
     void Update(float) override;
     void Terminate() override;
     void DrawSettingInternal() override;
+    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(CSimpleIni* ini) override;
     void Obfuscate(bool obfuscate);
     wchar_t* ObfuscateMessage(GW::Chat::Channel channel, wchar_t* original_message, bool obfuscate = true);
     wchar_t* UnobfuscateMessage(GW::Chat::Channel channel, wchar_t* original_message) {
@@ -39,7 +41,7 @@ public:
         Disabled,
         Pending,
         Enabled
-    } status = Pending;
+    } status = Disabled;
 private:
     static void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);
     static void OnPostStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);

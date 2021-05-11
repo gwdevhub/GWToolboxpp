@@ -60,29 +60,25 @@ namespace {
 
     std::vector<const wchar_t*> obfuscated_name_pool = {
         L"Abbot Ramoth",
-        L"Acolyte Of Balthazar",
-        L"Acolyte Of Dwayna",
-        L"Acolyte Of Grenth",
-        L"Acolyte Of Lyssa",
-        L"Acolyte Of Melandru",
+        L"Acolyte of Dwayna",
+        L"Acolyte of Grenth",
+        L"Acolyte of Lyssa",
+        L"Acolyte of Melandru",
         L"Admiral Chiggen",
         L"Admiral Kantoh",
         L"Admiral Kaya",
-        L"Ajun Xi Deft Blade",
         L"Am Fah Courier",
         L"Am Fah Leader",
-        L"Apep Unending Night",
         L"Argo",
         L"Arius Dark Apostle",
         L"Ashlyn Spiderfriend",
-        L"Auri The Skull Wand",
+        L"Auri the Skull Wand",
         L"Aurora",
-        L"Bairn The Sinless",
-        L"Bearn The Implacable",
+        L"Bairn the Sinless",
         L"Bonetti",
         L"Bosun Mohrti",
-        L"Braima The Callous",
-        L"Brogan The Punisher",
+        L"Braima the Callous",
+        L"Brogan the Punisher",
         L"Calamitous",
         L"Captain Alsin",
         L"Captain Bei Chi",
@@ -96,99 +92,86 @@ namespace {
         L"Captain Mwende",
         L"Captain Nebo",
         L"Captain Shehnahr",
-        L"Carnak The Hungry",
+        L"Carnak the Hungry",
         L"Cerris",
         L"Chae Plan",
-        L"Chazek Plague Herder",
         L"Cho Spirit Empath",
-        L"Chung The Attuned",
+        L"Chung the Attuned",
         L"Colonel Chaklin",
         L"Colonel Custo",
         L"Colonel Kajo",
         L"Commander Bahreht",
-        L"Commander Chui Kantu",
         L"Commander Kubeh",
         L"Commander Noss",
-        L"Commander Sadi-Belai",
+        L"Commander SadiBelai",
         L"Commander Sehden",
         L"Commander Wahli",
-        L"Commander Werishakul",
         L"Confessor Isaiah",
-        L"Corbin The Upright",
+        L"Corbin the Upright",
         L"Corporal Argon",
         L"Corporal Luluh",
         L"Corporal Suli",
         L"Corsair Commander",
-        L"Countess Nadya",
         L"Cultist Milthuran",
         L"Cultist Rajazan",
         L"Cursed Salihm",
-        L"Cuthbert The Chaste",
+        L"Cuthbert the Chaste",
         L"Daeman",
-        L"Daisuke Crimson Edge",
-        L"Danthor The Adamant",
-        L"Darwym The Spiteful",
-        L"Degaz The Cynical",
-        L"Dim Sii",
+        L"Danthor the Adamant",
+        L"Darwym the Spiteful",
+        L"Degaz the Cynical",
         L"Dimsur Cheefai",
         L"Drinkmaster Tahnu",
-        L"Edgar The Iron Fist",
-        L"Edred The Bruiser",
-        L"Elvina The Pious",
-        L"En Fa The Awakened",
+        L"Edgar the Iron Fist",
+        L"Edred the Bruiser",
+        L"Elvina the Pious",
+        L"En Fa the Awakened",
         L"Ensign Charehli",
         L"Ensign Jahan",
         L"Ensign Lumi",
-        L"Eri Heart Of Fire",
-        L"Erulai The Inimical",
-        L"Fo Mahn",
+        L"Erulai the Inimical",
+        L"Executioner Vekil",
         L"Galrath",
-        L"Ganshu The Scribe",
-        L"Gao Han Of The Rings",
-        L"Garr The Merciful",
+        L"Ganshu the Scribe",
+        L"Garr the Merciful",
         L"General Kahyet",
-        L"Geoffer Pain Bringer",
-        L"Gilroy The Stoic",
+        L"Gilroy the Stoic",
         L"Gowan Chobak",
         L"Heifan Kanko",
-        L"Imuk The Pungent",
-        L"Initiate Jeng Sunjoo",
-        L"Initiate Shen Wojong",
+        L"Imuk the Pungent",
         L"Inquisitor Bauer",
         L"Inquisitor Lashona",
         L"Inquisitor Lovisa",
         L"Insatiable Vakar",
         L"Ironfist",
-        L"Irwyn The Severe",
+        L"Irwyn the Severe",
         L"Jacqui The Reaver",
         L"Jang Wen",
-        L"Jiao Kuai The Swift",
-        L"Jin The Skull Bow",
-        L"Jin The Purifier",
-        L"Joh The Hostile",
-        L"Julen The Devout",
+        L"Jin the Skull Bow",
+        L"Jin the Purifier",
+        L"Joh the Hostile",
+        L"Julen the Devout",
         L"Justiciar Amilyn",
         L"Justiciar Hablion",
         L"Justiciar Kasandra",
         L"Justiciar Kimii",
         L"Justiciar Marron",
         L"Justiciar Sevaan",
-        L"Kahli, The Stiched",
+        L"Kahli the Stiched",
         L"Kai Shi Jo",
-        L"Kathryn The Cold",
-        L"Kayali The Brave",
-        L"Kenric The Believer",
+        L"Kathryn the Cold",
+        L"Kayali the Brave",
+        L"Kenric the Believer",
         L"Kenshi Steelhand",
-        L"Koon Jizang",
         L"Lai Graceful Blade",
-        L"Lale The Vindictive",
-        L"Lars The Obeisant",
+        L"Lale the Vindictive",
+        L"Lars the Obeisant",
         L"Leijun Ano",
-        L"Lerita The Lewd",
-        L"Lev The Condemned",
+        L"Lerita the Lewd",
+        L"Lev the Condemned",
         L"Li Ho Yan",
         L"Liam Shanglui",
-        L"Lian Dragons Petal",
+        L"Lian Dragon's Petal",
         L"Lieutenant Kayin",
         L"Lieutenant Mahrik",
         L"Lieutenant Nali",
@@ -196,72 +179,63 @@ namespace {
         L"Lieutenant Silmok",
         L"Lieutenant Vanahk",
         L"Lorelle Jade Cutter",
-        L"Lou Of The Knives",
+        L"Lou of the Knives",
         L"Major Jeahr",
-        L"Manton The Indulgent",
         L"Markis",
         L"Marnta Doomspeaker",
         L"Maxine Coldstone",
-        L"Meijun Vengeful Eye",
+        L"Melikos",
         L"Merki The Reaver",
         L"Midshipman Bennis",
         L"Midshipman Beraidun",
         L"Midshipman Morolah",
         L"Mina Shatter Storm",
-        L"Minea The Obscene",
-        L"Ming The Judgment",
-        L"Oswald The Amiable",
+        L"Minea the Obscene",
+        L"Ming the Judgment",
+        L"Oswald the Amiable",
         L"Overseer Boktek",
         L"Overseer Haubeh",
         L"Pah Pei",
-        L"Pei The Skull Blade",
-        L"Pleoh The Ugly",
+        L"Pei the Skull Blade",
+        L"Pleoh the Ugly",
         L"Quufu",
-        L"Ramm The Benevolent",
+        L"Ramm the Benevolent",
         L"Rei Bi",
-        L"Reiko",
-        L"Reisen The Phoenix",
-        L"Rho Ki",
-        L"Rien The Martyr",
-        L"Riseh The Harmless",
+        L"Reisen the Phoenix",
+        L"Rien the Martyr",
+        L"Riseh the Harmless",
         L"Royen Beastkeeper",
         L"Samira Dhulnarim",
         L"Seaguard Eli",
         L"Seaguard Gita",
         L"Seaguard Hala",
-        L"Seiran Of The Cards",
-        L"Selenas The Blunt",
-        L"Selwin The Fervent",
+        L"Seiran of the Cards",
+        L"Selenas the Blunt",
+        L"Selwin the Fervent",
         L"Sergeant Behnwa",
-        L"Shen The Magistrate",
+        L"Shen the Magistrate",
         L"Sheng Pai",
         L"Shensang Jinzao",
-        L"Shiro Tagachi",
-        L"Sun The Quivering",
-        L"Suuga Rei",
+        L"Sun the Quivering",
         L"Suunshi Haisang",
         L"Tachi Forvent",
-        L"Tai Soon",
-        L"Talous The Mad",
+        L"Talous the Mad",
         L"Taskmaster Suli",
         L"Taskmaster Vanahk",
-        L"Teral The Punisher",
+        L"Teral the Punisher",
         L"The Dark Blade",
-        L"Torr The Relentless",
-        L"Tuila The Club",
-        L"Uris Tong Of Ash",
-        L"Valis The Rampant",
-        L"Ven The Conservator",
-        L"Vess The Disputant",
+        L"Torr the Relentless",
+        L"Tuila the Club",
+        L"Uris Tong of Ash",
+        L"Valis the Rampant",
+        L"Ven the Conservator",
+        L"Vess the Disputant",
         L"Waeng",
-        L"Watari The Infinite",
         L"Wing Three Blade",
-        L"Xi Lin Of The Flames",
         L"Xien",
-        L"Yayoi Of The Orders",
         L"Yinnai Qi",
-        L"Zaln The Jaded",
-        L"Zu Jin The Quick"
+        L"Zaln the Jaded",
+        L"Zu Jin the Quick"
     };
 
     typedef void( __fastcall* GetCharacterSummary_pt)(void* ctx, uint32_t edx, wchar_t* character_name);
@@ -757,9 +731,10 @@ void Obfuscator::Initialize() {
 
     GW::Chat::CreateCommand(L"obfuscate", CmdObfuscate);
     GW::Chat::CreateCommand(L"hideme", CmdObfuscate);
-
+#ifdef _DEBUG
     CoInitialize(NULL);
     hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_OBJECT_DESTROY, NULL, OnWindowEvent, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+#endif
     running = true;
 }
 void Obfuscator::Update(float) {
@@ -774,16 +749,6 @@ void Obfuscator::Update(float) {
         ObfuscateGuild(status == Enabled);
         pending_guild_obfuscate = false;
     }
-    /*if (status == Enabled && !obfuscated_login_screen) {
-        auto* context = GW::PreGameContext::instance();
-        if (context && context->chars.valid() && context->chars.size()) {
-            // On login screen; obfuscate if needed
-            for (auto& character : context->chars) {
-                ObfuscateName(character.character_name, character.character_name, _countof(character.character_name), true);
-            }
-            obfuscated_login_screen = true;
-        }
-    }*/
 }
 void Obfuscator::Reset() {
     ObfuscateGuild(false);
@@ -796,10 +761,23 @@ void Obfuscator::Reset() {
         status = Enabled;
     pending_guild_obfuscate = status == Enabled;
 }
+void Obfuscator::SaveSettings(CSimpleIni* ini) {
+    ToolboxModule::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(obfuscate), status != Disabled);
+}
+void Obfuscator::LoadSettings(CSimpleIni* ini) {
+    ToolboxModule::LoadSettings(ini);
+
+    if (ini->GetBoolValue(Name(), VAR_NAME(obfuscate), status != Disabled)) {
+        Obfuscate(true);
+    }
+}
+
 void Obfuscator::DrawSettingInternal() {
     bool enabled = status != Disabled;
-    if (ImGui::Checkbox("Obfuscate player names", &enabled)) {
+    if (ImGui::Checkbox("Hide my character names on-screen", &enabled)) {
         Obfuscate(enabled);
     }
-    ImGui::ShowHelp("Replace player names in-game with aliases.\nThis change is applied on next map change.");
+    ImGui::ShowHelp("Hides and overrides current player name at character selection and in-game.\nThis change is applied on next map change.");
+    ImGui::TextDisabled("You can also use the /hideme or /obfuscate command to toggle this at any time");
 }
