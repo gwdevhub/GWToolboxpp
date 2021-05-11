@@ -59,4 +59,5 @@ protected:
 
     bool show_tracking = true;
     bool show_comparison = true;
+    bool show_skills_used_on_self = true;
 };

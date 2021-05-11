@@ -130,7 +130,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice) {
     } else if (!tracking) {
         ImGui::Text("No selection");
     } else {
-        ImGui::Text(tracking->Name().c_str());
+        ImGui::Text(tracking->DisplayName().c_str());
 
         float global = ImGui::GetIO().FontGlobalScale;
         text_long   = 220.0f * global;
@@ -149,9 +149,9 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice) {
     }
 
 
-    if (show_comparison && compared) {
+    if (show_comparison && compared && !(!show_skills_used_on_self && tracking && compared->agent_id == tracking->agent_id)) {
         // skills
-        ImGui::Text((std::string("Skills used on: ") + compared->Name()).c_str());
+        ImGui::Text((std::string("Skills used on: ") + compared->DisplayName()).c_str());
         DrawSkillHeaders();
         ImGui::Separator();
             auto it_used_on_agent_skills = tracking->stats.skills_used_on_agent.find(compared->agent_id);
@@ -171,6 +171,7 @@ void ObserverPlayerWindow::LoadSettings(CSimpleIni* ini) {
 
     show_tracking = ini->GetBoolValue(Name(), VAR_NAME(show_tracking), true);
     show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_comparison), true);
+    show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_skills_used_on_self), true);
 }
 
 
@@ -180,6 +181,7 @@ void ObserverPlayerWindow::SaveSettings(CSimpleIni* ini) {
 
     ini->SetBoolValue(Name(), VAR_NAME(show_tracking), show_tracking);
     ini->SetBoolValue(Name(), VAR_NAME(show_comparison), show_comparison);
+    ini->SetBoolValue(Name(), VAR_NAME(show_skills_used_on_self), show_skills_used_on_self);
 }
 
 // Draw settings
@@ -187,4 +189,5 @@ void ObserverPlayerWindow::DrawSettingInternal() {
     ImGui::Text("Make sure the Observer Module is enabled.");
     ImGui::Checkbox("Show tracking player", &show_tracking);
     ImGui::Checkbox("Show player comparison", &show_comparison);
+    ImGui::Checkbox("Show skills used on self", &show_skills_used_on_self);
 }

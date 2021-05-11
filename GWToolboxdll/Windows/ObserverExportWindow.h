@@ -27,15 +27,15 @@ public:
         return instance;
     }
 
-    nlohmann::json ToJSON();
-    void ExportToJSON();
+    enum class Version {
+        V_0_1,
+        V_1_0
+    };
 
-    nlohmann::json ObservableAgentToJSON(ObserverModule::ObservableAgent& agent);
-    nlohmann::json SharedStatsToJSON(ObserverModule::SharedStats& stats);
-    nlohmann::json ObservableAgentStatsToJSON(ObserverModule::ObservableAgentStats& stats);
-    nlohmann::json ObservablePartyStatsToJSON(ObserverModule::ObservablePartyStats& stats);
-    nlohmann::json ObservablePartyToJSON(ObserverModule::ObservableParty& party);
-    nlohmann::json ObservableSkillToJSON(ObserverModule::ObservableSkill& skill);
+    std::string PadLeft(std::string input, uint8_t count, char c);
+    nlohmann::json ToJSON_V_0_1();
+    nlohmann::json ToJSON_V_1_0();
+    void ExportToJSON(Version version);
 
     const char* Name() const override { return "Observer Export"; };
     const char* Icon() const override { return ICON_FA_EYE; }
