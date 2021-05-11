@@ -39,8 +39,15 @@ namespace {
         // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
         if (!term.size())
             return;
+        uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
+        wchar_t* wiki_prefix = L"https://wiki.guildwars.com/wiki/?search=%s";
+        switch (language) {
+        case 3: // German wiki
+            wiki_prefix = L"https://www.guildwiki.de/wiki/?search=%s";
+            break;
+        }
         wchar_t cmd[256];
-        swprintf(cmd, _countof(cmd), L"https://wiki.guildwars.com/wiki/?search=%s", term.c_str());
+        swprintf(cmd, _countof(cmd), wiki_prefix, term.c_str());
         ShellExecuteW(NULL, L"open", cmd, NULL, NULL, SW_SHOWNORMAL);
     }
     static bool IsMapReady()

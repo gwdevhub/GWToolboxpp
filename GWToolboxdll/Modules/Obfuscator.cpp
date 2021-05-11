@@ -629,6 +629,7 @@ void Obfuscator::ObfuscateGuild(bool obfuscate) {
             ObfuscateName(player->invited_name, player->invited_name, _countof(player->invited_name), true);
             wcscpy(player_guild_obfuscated_name, player->invited_name);
             Log::LogW(L"Guild player obfuscated from %s to %s",original, player->invited_name);
+            // Redraw roster position for obfuscated name
             GW::UI::SendUIMessage(0x100000d8, &player->name_ptr);
         } else {
             if (player->current_name[0])
