@@ -42,9 +42,9 @@ namespace {
         GW::AreaInfo* map_info;
         nlohmann::json ToJson() {
             nlohmann::json json;
-            if(!name.empty())
+            if (!name.empty())
                 json["name"] = GuiUtils::WStringToString(name);
-            if(!description.empty())
+            if (!description.empty())
                 json["description"] = GuiUtils::WStringToString(description);
             json["campaign"] = map_info->campaign;
             json["type"] = map_info->type;
@@ -438,8 +438,8 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
 
 void PacketLoggerWindow::CtoSHandler(GW::HookStatus* status, void* packet) {
     UNREFERENCED_PARAMETER(status);
-     if (!logger_enabled) return;
-     printf(PrefixTimestamp("CtoS packet(%u 0x%X) {\n").c_str(), *(uint32_t*)packet, *(uint32_t*)packet);
+    if (!logger_enabled) return;
+    printf(PrefixTimestamp("CtoS packet(%u 0x%X) {\n").c_str(), *(uint32_t*)packet, *(uint32_t*)packet);
 }
 
 void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
@@ -463,13 +463,15 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
     uint32_t header;
     Serialize<uint32_t>(bytes, &header);
     ASSERT(packet->header == header);
+
+
     if (log_packet_content) {
-        printf("StoC packet(%u 0x%X) {\n", packet->header, packet->header);
+        printf(PrefixTimestamp("StoC packet(%u 0x%X) {\n").c_str(), packet->header, packet->header);
         PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
         printf("} endpacket(%u 0x%X)\n", packet->header, packet->header);
     }
     else {
-        printf("StoC packet(%u 0x%X)\n", packet->header, packet->header);
+        printf(PrefixTimestamp("StoC packet(%u 0x%X) {\n").c_str(), packet->header, packet->header);
     }
 }
 
@@ -482,69 +484,69 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) {
     if (timestamp_type == TimestampType::TimestampType_None) return message;
 
     switch (timestamp_type) {
-        case TimestampType::TimestampType_Local: {
-            SYSTEMTIME time;
-            GetLocalTime(&time);
-            bool prependColon = false;
-            char t[4];
-            std::string time_s = "[";
-            if (timestamp_show_hours) {
-                snprintf(t, 4, "%02d", time.wHour);
-                time_s.append(t);
-                prependColon = true;
-            }
-            if (timestamp_show_minutes) {
-                if (prependColon) time_s.append(":");
-                snprintf(t, 4, "%02d", time.wMinute);
-                time_s.append(t);
-                prependColon = true;
-            }
-            if (timestamp_show_seconds) {
-                if (prependColon) time_s.append(":");
-                snprintf(t, 4, "%02d", time.wSecond);
-                time_s.append(t);
-                prependColon = true;
-            }
-            if (timestamp_show_milliseconds) {
-                if (prependColon) time_s.append(".");
-                snprintf(t, 4, "%03d", time.wMilliseconds);
-                time_s.append(t);
-            }
-            return time_s+ "] " + message;
+    case TimestampType::TimestampType_Local: {
+        SYSTEMTIME time;
+        GetLocalTime(&time);
+        bool prependColon = false;
+        char t[4];
+        std::string time_s = "[";
+        if (timestamp_show_hours) {
+            snprintf(t, 4, "%02d", time.wHour);
+            time_s.append(t);
+            prependColon = true;
         }
-        case TimestampType::TimestampType_Instance: {
-            std::chrono::milliseconds ms = std::chrono::milliseconds(GW::Map::GetInstanceTime());
-            std::chrono::seconds secs = std::chrono::duration_cast<std::chrono::seconds>(ms);
-            ms -= std::chrono::duration_cast<std::chrono::milliseconds>(secs);
-            std::chrono::minutes mins = std::chrono::duration_cast<std::chrono::minutes>(secs);
-            secs -= std::chrono::duration_cast<std::chrono::seconds>(mins);
-            std::chrono::hours hours = std::chrono::duration_cast<std::chrono::hours>(mins);
-            mins -= std::chrono::duration_cast<std::chrono::minutes>(hours);
-            bool prependColon = false;
-            std::string time_s = "[";
-            if (timestamp_show_hours) {
-                time_s.append(PadLeft(std::to_string(hours.count()), 2, '0'));
-                prependColon = true;
-            }
-            if (timestamp_show_minutes) {
-                if (prependColon) time_s.append(":");
-                time_s.append(PadLeft(std::to_string(mins.count()), 2, '0'));
-                prependColon = true;
-            }
-            if (timestamp_show_seconds) {
-                if (prependColon) time_s.append(":");
-                time_s.append(PadLeft(std::to_string(secs.count()), 2, '0'));
-                prependColon = true;
-            }
-            if (timestamp_show_milliseconds) {
-                if (prependColon) time_s.append(".");
-                time_s.append(PadLeft(std::to_string(ms.count()), 3, '0'));
-            }
-            return time_s + "] " + message;
+        if (timestamp_show_minutes) {
+            if (prependColon) time_s.append(":");
+            snprintf(t, 4, "%02d", time.wMinute);
+            time_s.append(t);
+            prependColon = true;
         }
-        default: {
-            return message;
+        if (timestamp_show_seconds) {
+            if (prependColon) time_s.append(":");
+            snprintf(t, 4, "%02d", time.wSecond);
+            time_s.append(t);
+            prependColon = true;
         }
+        if (timestamp_show_milliseconds) {
+            if (prependColon) time_s.append(".");
+            snprintf(t, 4, "%03d", time.wMilliseconds);
+            time_s.append(t);
+        }
+        return time_s + "] " + message;
+    }
+    case TimestampType::TimestampType_Instance: {
+        std::chrono::milliseconds ms = std::chrono::milliseconds(GW::Map::GetInstanceTime());
+        std::chrono::seconds secs = std::chrono::duration_cast<std::chrono::seconds>(ms);
+        ms -= std::chrono::duration_cast<std::chrono::milliseconds>(secs);
+        std::chrono::minutes mins = std::chrono::duration_cast<std::chrono::minutes>(secs);
+        secs -= std::chrono::duration_cast<std::chrono::seconds>(mins);
+        std::chrono::hours hours = std::chrono::duration_cast<std::chrono::hours>(mins);
+        mins -= std::chrono::duration_cast<std::chrono::minutes>(hours);
+        bool prependColon = false;
+        std::string time_s = "[";
+        if (timestamp_show_hours) {
+            time_s.append(PadLeft(std::to_string(hours.count()), 2, '0'));
+            prependColon = true;
+        }
+        if (timestamp_show_minutes) {
+            if (prependColon) time_s.append(":");
+            time_s.append(PadLeft(std::to_string(mins.count()), 2, '0'));
+            prependColon = true;
+        }
+        if (timestamp_show_seconds) {
+            if (prependColon) time_s.append(":");
+            time_s.append(PadLeft(std::to_string(secs.count()), 2, '0'));
+            prependColon = true;
+        }
+        if (timestamp_show_milliseconds) {
+            if (prependColon) time_s.append(".");
+            time_s.append(PadLeft(std::to_string(ms.count()), 3, '0'));
+        }
+        return time_s + "] " + message;
+    }
+    default: {
+        return message;
+    }
     }
 }
 
@@ -592,7 +594,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
-    if (ImGui::Checkbox("Enable Packet Logging",&logger_enabled)) {
+    if (ImGui::Checkbox("Enable Packet Logging", &logger_enabled)) {
         logger_enabled = !logger_enabled;
         if (!logger_enabled)
             Enable();
@@ -600,13 +602,10 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
             Disable();
     }
     ImGui::ShowHelp("Log outgoing and incoming packet contents in debug console");
-    ImGui::SameLine();
-    ImGui::Checkbox("Log packet content", &log_packet_content);
-    
     /*if ( ImGui::Button("Export Map Info")) {
         if (maps.empty()) {
             FetchMapInfo();
-        } 
+        }
         else {
             ExportMapInfo();
         }
@@ -721,7 +720,7 @@ void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::Pack
 
 void PacketLoggerWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
-    for (auto it = pending_translation.begin(); it != pending_translation.end();it++) {
+    for (auto it = pending_translation.begin(); it != pending_translation.end(); it++) {
         ForTranslation& t = *(*it);
         if (t.out.empty())
             continue;
@@ -732,7 +731,7 @@ void PacketLoggerWindow::Update(float delta) {
         }
         Log::LogW(enc_str);
         Log::LogW(t.out.c_str());
-        delete *it;
+        delete* it;
         pending_translation.erase(it);
         break;
     }
@@ -790,9 +789,13 @@ void PacketLoggerWindow::Disable() {
 }
 
 void PacketLoggerWindow::Enable() {
-    if (logger_enabled || !game_server_handler) return;
+    if (logger_enabled) return;
     for (size_t i = 0; i < game_server_handler->size(); i++) {
-        GW::StoC::RegisterPacketCallback(&hook_entry,i, &PacketHandler);
+        GW::StoC::RegisterPacketCallback(
+            &hook_entry, i, [this](GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) -> void {
+                PacketHandler(status, packet);
+            }
+        );
     }
     for (size_t i = 0; i < 180; i++) {
         GW::CtoS::RegisterPacketCallback(
