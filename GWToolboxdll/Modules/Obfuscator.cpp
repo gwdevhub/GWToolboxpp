@@ -463,7 +463,6 @@ void Obfuscator::OnPreUIMessage(GW::HookStatus*, uint32_t msg_id, void* wParam, 
         // Because we've already obfuscated the player name in-game, the name in the message will be obfuscated. Unobfuscate it here, and re-obfuscate it later.
         // This allows the player to toggle obfuscate on/off between map loads and it won't bork up the message log.
         packet_actual->message = Instance().UnobfuscateMessage(packet_actual->channel, packet_actual->message);
-        Log::LogW(packet_actual->message);
     } break;
     }
 }
@@ -589,6 +588,27 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
         self.pending_guild_obfuscate = true;
         Log::LogW(L"Guild player change for %s", packet_actual->invited_name);
     } break;
+        // Obfuscate player name in NPC dialogs
+    case GAME_SMSG_DIALOG_BODY: {
+        GW::Packet::StoC::DialogBody* packet_actual = (GW::Packet::StoC::DialogBody*)packet;
+        wchar_t* player_name_start = wcsstr(packet_actual->message, L"\xBA9\x107");
+        if (player_name_start) {
+            player_name_start += 2;
+            wchar_t* player_name_end = wcschr(player_name_start, 0x1);
+            if (player_name_end) {
+                wchar_t player_name[20] = { 0 };
+                wcsncpy(player_name, player_name_start, player_name_end - player_name_start);
+                static wchar_t new_message[122];
+                wmemset(new_message, 0, _countof(new_message));
+                wcsncpy(new_message, packet_actual->message, player_name_start - packet_actual->message);
+                self.ObfuscateName(player_name, &new_message[wcslen(new_message)], 20, true);
+                wcscpy(&new_message[wcslen(new_message)], player_name_end);
+                new_message[wcslen(new_message)] = 0;
+                wcscpy(packet_actual->message, new_message);
+            }
+        }
+    } break;
+
     }
 }
 
@@ -722,6 +742,7 @@ void Obfuscator::Initialize() {
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_GUILD_PLAYER_INFO, OnStoCPacket, pre_hook_altitude);
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_GUILD_PLAYER_CHANGE_COMPLETE, OnStoCPacket, pre_hook_altitude);
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_GUILD_PLAYER_ROLE, OnStoCPacket, pre_hook_altitude);
+    GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_DIALOG_BODY, OnStoCPacket, pre_hook_altitude);
     
     // Pre resignlog hook
     GW::StoC::RegisterPacketCallback(&stoc_hook, GAME_SMSG_CHAT_MESSAGE_CORE, OnStoCPacket, pre_hook_altitude);
