@@ -364,7 +364,7 @@ void GWToolbox::Initialize() {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
         auto* g = GW::GameContext::instance();
         if(g && g->character && g->character->player_name)
-            Log::InfoW(L"Hello %s!", g->character->player_name);
+            Log::InfoW(L"Hello!");
     }
 }
 void GWToolbox::FlashWindow() {

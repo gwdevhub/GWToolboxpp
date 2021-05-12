@@ -164,7 +164,7 @@ static void _chatlog(LogType log_type, const wchar_t* message) {
     swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", GWTOOLBOX_SENDER, color, message);
 
     GW::GameThread::Enqueue([to_send]() {
-        GW::Chat::WriteChat(GWTOOLBOX_CHAN, to_send, nullptr, true);
+        GW::Chat::WriteChat(GWTOOLBOX_CHAN, to_send, nullptr);
         delete[] to_send;
         });
 
