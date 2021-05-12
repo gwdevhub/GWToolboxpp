@@ -7,7 +7,7 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
-## Version 5.0
+## Version 5.1
 Please note that a lot of changes have been made in this version in an effort to hide player names in-game in response to the recent bans, so there may be bugs with it. Please raise an issue on GitHub or the Toolbox Discord if you find one!
 
 * [New] Obfuscate setting added to Game Settings to hide player name(s) in-game
@@ -15,8 +15,9 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Minor] Clicking wiki link in context menu whilst playing in German will load https://www.guildwiki.de/ instead of https://wiki.guildwars.com/
 * [Minor] Further improvements to Observer windows
 * [Fix] Fixed issues preventing resign log from working properly
+* [Fix] Hotfixes for some players on 5.0
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.0_Release/GWToolboxdll.dll)
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.1_Release/GWToolboxdll.dll)
 
 ## Version 4.11
 * [New] Observer module (and windows) added for pvp
