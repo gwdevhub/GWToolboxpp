@@ -346,6 +346,7 @@ wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel channel, wchar_t* messag
     // NB: Static for ease, but be sure copy this away before accessing this function again as needed
     static std::wstring new_message(L"");
     wchar_t* player_name_start = nullptr;
+    wchar_t* player_name_end = nullptr;
     switch (message[0]) {
     case 0x76B: // Incoming player message (chat/guild/alliance/team)
     //case 0x76D: // Incoming whisper
@@ -353,26 +354,34 @@ wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel channel, wchar_t* messag
     //case 0x880: // Player name <name> is invalid.
     //case 0x881: // Player <name> is not online.
     //case 0x817: // Player x gained a skill point
-        player_name_start = wcschr(message, 0x107);
+        player_name_start = wcschr(message, 0x107) + 1;
+        player_name_end = wcschr(player_name_start, 0x1);
         break;
     default:
-        if (channel == GW::Chat::Channel::CHANNEL_GLOBAL) {
+        switch (channel) {
+        case GW::Chat::Channel::CHANNEL_GROUP:
+        case GW::Chat::Channel::CHANNEL_GWCA2: {
+            // Find any other generic instance of the current player name
+            const wchar_t* player_name = getPlayerName();
+            player_name_start = wcsstr(message, player_name);
+            if (player_name_start)
+                player_name_end = player_name_start + wcslen(player_name);
+        } break;
+        case GW::Chat::Channel::CHANNEL_GLOBAL:
             if (
                 wmemcmp(message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0 // <player name> has resigned
                 || wmemcmp(message, L"\x8101\x3b02\xb2eb\xc1f4\x41af\x0107", 6) == 0 // <player name> has restored communication with the server
                 || wmemcmp(message, L"\x8101\x475c\x010a\x0ba9\x0107", 5) == 0 // Skill template named "<blah>" has been loaded onto <player name>
-                || wmemcmp(message, L"\x7f1\x9a9d\xe943\x0b33\x010a",5) == 0 // <monster name> drops an <item name> which your party reserves for <player name>
+                || wmemcmp(message, L"\x7f1\x9a9d\xe943\x0b33\x010a", 5) == 0 // <monster name> drops an <item name> which your party reserves for <player name>
                 ) {
-                player_name_start = wcschr(message, 0x107);
+                player_name_start = wcschr(message, 0x107) + 1;
+                player_name_end = wcschr(player_name_start, 0x1);
             }
+            break;
         }
         break;
     }
-    if (!player_name_start)
-        return message;
-    player_name_start += 1;
-    wchar_t* player_name_end = wcschr(player_name_start, 0x1);
-    if (!player_name_end)
+    if (!(player_name_start && player_name_end))
         return message;
     bool need_to_free_message = message == new_message.data();
     if (need_to_free_message) {
@@ -384,15 +393,17 @@ wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel channel, wchar_t* messag
     }
     new_message.clear();
     new_message.append(message, (player_name_start - message));
-    wchar_t new_name[64] = { 0 };
+    wchar_t* new_name = new wchar_t[32];
+    wmemset(new_name, 0, 32);
     wcsncpy(new_name, player_name_start, (player_name_end - player_name_start));
     if (obfuscate) {
-        ObfuscateName(new_name, new_name, _countof(new_name));
+        ObfuscateName(new_name, new_name, 32);
     }
     else {
-        UnobfuscateName(new_name, new_name, _countof(new_name));
+        UnobfuscateName(new_name, new_name, 32);
     }
     new_message.append(new_name);
+    delete[] new_name;
     new_message.append(player_name_end);
     if (need_to_free_message)
         delete[] message;
