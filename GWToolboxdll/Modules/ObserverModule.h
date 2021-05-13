@@ -129,40 +129,40 @@ public:
 
         // attacks
 
-        ObservedAction total_attacks_dealt = ObservedAction();
-        ObservedAction total_attacks_received = ObservedAction();
+        ObservedAction total_attacks_dealt;
+        ObservedAction total_attacks_received;
 
         // attacks done on other parties (not inc. npcs)
-        ObservedAction total_attacks_dealt_to_other_party = ObservedAction();
+        ObservedAction total_attacks_dealt_to_other_party;
         // attacks received from other parties (not inc. npcs)
-        ObservedAction total_attacks_received_from_other_party = ObservedAction();
+        ObservedAction total_attacks_received_from_other_party;
 
         // skills
 
         // skills used on anyone
-        ObservedAction total_skills_used = ObservedAction();
+        ObservedAction total_skills_used;
         // skills received from anyone
-        ObservedAction total_skills_received = ObservedAction();
+        ObservedAction total_skills_received;
 
         // skills used on your own party (not inc. npcs)
-        ObservedAction total_skills_used_on_own_party = ObservedAction();
+        ObservedAction total_skills_used_on_own_party;
         // skills used on other parties (not inc. npcs)
-        ObservedAction total_skills_used_on_other_parties = ObservedAction();
+        ObservedAction total_skills_used_on_other_parties;
 
         // skills received from your own party (not inc. npcs)
-        ObservedAction total_skills_received_from_own_party = ObservedAction();
+        ObservedAction total_skills_received_from_own_party;
         // skills received from other parties (not inc. npcs)
-        ObservedAction total_skills_received_from_other_parties = ObservedAction();
+        ObservedAction total_skills_received_from_other_parties;
 
         // skills used on your own team (inc. npcs)
-        ObservedAction total_skills_used_on_own_team = ObservedAction();
+        ObservedAction total_skills_used_on_own_team;
         // skills used on other team (inc. npcs)
-        ObservedAction total_skills_used_on_other_teams = ObservedAction();
+        ObservedAction total_skills_used_on_other_teams;
 
         // skills received from your own team (inc. npcs)
-        ObservedAction total_skills_received_from_own_team = ObservedAction();
+        ObservedAction total_skills_received_from_own_team;
         // skills received from other team (inc. npcs)
-        ObservedAction total_skills_received_from_other_teams = ObservedAction();
+        ObservedAction total_skills_received_from_other_teams;
 
         // fired when the agent dies
         void HandleDeath();
@@ -217,16 +217,16 @@ public:
 
     class ObservableSkillStats {
     public:
-        ObservedAction total_usages = ObservedAction();
+        ObservedAction total_usages;
 
-        ObservedAction total_self_usages = ObservedAction();
-        ObservedAction total_other_usages = ObservedAction();
+        ObservedAction total_self_usages;
+        ObservedAction total_other_usages;
 
-        ObservedAction total_own_party_usages = ObservedAction();
-        ObservedAction total_own_team_usages = ObservedAction();
+        ObservedAction total_own_party_usages;
+        ObservedAction total_own_team_usages;
 
-        ObservedAction total_other_party_usages = ObservedAction();
-        ObservedAction total_other_team_usages = ObservedAction();
+        ObservedAction total_other_party_usages;
+        ObservedAction total_other_team_usages;
     };
 
 
@@ -255,7 +255,7 @@ public:
         GW::Constants::Profession secondary;
 
         // latest action (attack/skill) the agent was undertaking
-        const TargetAction* current_target_action = nullptr;
+        TargetAction* current_target_action = nullptr;
 
         // last_hit_by tells us who killed the player if they die
         // MUST be a party_member (e.g. not a footman)
@@ -270,7 +270,7 @@ public:
         bool is_npc;
 
         // stats:
-        ObservableAgentStats stats = ObservableAgentStats();
+        ObservableAgentStats stats;;
     public:
         // name fns with excessive caching & lazy loading
         std::string DisplayName();
@@ -508,8 +508,9 @@ private:
     void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
             const uint32_t target_id, const uint32_t value, const bool no_target);
 
-    // action handlers
-    void ReduceAction(ObservableAgent* caster, const TargetAction& action, ActionStage stage);
+    // Update the state of the module based on an Action & Stage
+    // return false means action was not assigned and may need freeing by the caller
+    bool ReduceAction(ObservableAgent* caster, ActionStage stage, TargetAction* new_action = nullptr);
 
     ObservableMap* map;
 
