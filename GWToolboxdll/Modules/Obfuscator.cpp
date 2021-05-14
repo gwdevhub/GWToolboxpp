@@ -354,8 +354,11 @@ wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel channel, wchar_t* messag
     //case 0x880: // Player name <name> is invalid.
     //case 0x881: // Player <name> is not online.
     //case 0x817: // Player x gained a skill point
-        player_name_start = wcschr(message, 0x107) + 1;
-        player_name_end = wcschr(player_name_start, 0x1);
+        player_name_start = wcschr(message, 0x107);
+        if (player_name_start) {
+            player_name_start += 1;
+            player_name_end = wcschr(player_name_start, 0x1);
+        }
         break;
     default:
         switch (channel) {
@@ -374,8 +377,10 @@ wchar_t* Obfuscator::ObfuscateMessage(GW::Chat::Channel channel, wchar_t* messag
                 || wmemcmp(message, L"\x8101\x475c\x010a\x0ba9\x0107", 5) == 0 // Skill template named "<blah>" has been loaded onto <player name>
                 || wmemcmp(message, L"\x7f1\x9a9d\xe943\x0b33\x010a", 5) == 0 // <monster name> drops an <item name> which your party reserves for <player name>
                 ) {
-                player_name_start = wcschr(message, 0x107) + 1;
-                player_name_end = wcschr(player_name_start, 0x1);
+                if (player_name_start) {
+                    player_name_start += 1;
+                    player_name_end = wcschr(player_name_start, 0x1);
+                }
             }
             break;
         }

@@ -602,6 +602,9 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
             Disable();
     }
     ImGui::ShowHelp("Log outgoing and incoming packet contents in debug console");
+    ImGui::SameLine();
+    ImGui::Checkbox("Log Packet Content", &log_packet_content);
+    
     /*if ( ImGui::Button("Export Map Info")) {
         if (maps.empty()) {
             FetchMapInfo();
