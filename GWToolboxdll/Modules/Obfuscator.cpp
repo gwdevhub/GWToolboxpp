@@ -584,6 +584,8 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
     } break;
         // Obfuscate player name in NPC dialogs
     case GAME_SMSG_DIALOG_BODY: {
+        if (self.status != Enabled)
+            break;
         GW::Packet::StoC::DialogBody* packet_actual = (GW::Packet::StoC::DialogBody*)packet;
         wchar_t* player_name_start = wcsstr(packet_actual->message, L"\xBA9\x107");
         if (player_name_start) {
