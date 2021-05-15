@@ -7,6 +7,13 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.2
+
+* [Fix] Fixed some map load crashes when using obfuscator
+* [Fix] Fixed blank pcon icons caused by d3d errors loading from disk
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.2_Release/GWToolboxdll.dll)
+
 ## Version 5.1
 Please note that a lot of changes have been made in this version in an effort to hide player names in-game in response to the recent bans, so there may be bugs with it. Please raise an issue on GitHub or the Toolbox Discord if you find one!
 

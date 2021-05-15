@@ -35,7 +35,7 @@
 #define GAME_SMSG_MERCENARY_INFO 115
 #endif
 #define ONLY_CURRENT_PLAYER 1;
-#define DETECT_STREAMING_APPLICATION 0;
+// #define DETECT_STREAMING_APPLICATION 1;
 
 #include <Psapi.h>
 
@@ -47,9 +47,11 @@ namespace {
     MSG msg;
     HWND streaming_window_handle = 0;
     std::default_random_engine dre = std::default_random_engine((uint32_t)time(0));
-#if DETECT_STREAMING_APPLICATION
+
+#ifdef DETECT_STREAMING_APPLICATION
     HWINEVENTHOOK hook = 0;
 #endif
+
     bool running = false;
 
     const wchar_t* getPlayerName() {
@@ -281,7 +283,8 @@ wchar_t* Obfuscator::getPlayerInvitedName() {
     }
     return player_guild_invited_name;
 }
-#if DETECT_STREAMING_APPLICATION
+#ifdef DETECT_STREAMING_APPLICATION
+
 void CALLBACK Obfuscator::OnWindowEvent(HWINEVENTHOOK _hook, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
      if (!running)
          return;
@@ -322,7 +325,9 @@ void CALLBACK Obfuscator::OnWindowEvent(HWINEVENTHOOK _hook, DWORD event, HWND h
      } break;
      }
 }
+
 #endif
+
 void Obfuscator::OnSendChat(GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* message) {
     if (channel != GW::Chat::Channel::CHANNEL_WHISPER)
         return;
@@ -704,13 +709,17 @@ void Obfuscator::Terminate() {
 
     ObfuscateGuild(false);
     running = false;
-#if DETECT_STREAMING_APPLICATION
+
+#ifdef DETECT_STREAMING_APPLICATION
+
     if (hook) {
         ASSERT(UnhookWinEvent(hook));
         CoUninitialize();
         hook = 0;
     }
+
 #endif
+
 }
 
 
@@ -755,10 +764,14 @@ void Obfuscator::Initialize() {
 
     GW::Chat::CreateCommand(L"obfuscate", CmdObfuscate);
     GW::Chat::CreateCommand(L"hideme", CmdObfuscate);
+
 #if DETECT_STREAMING_APPLICATION
+
     CoInitialize(NULL);
     hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_OBJECT_DESTROY, NULL, OnWindowEvent, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+
 #endif
+
     running = true;
 }
 void Obfuscator::Update(float) {
