@@ -8,6 +8,27 @@
 
 #include <Modules/Resources.h>
 
+namespace {
+    const wchar_t* d3dErrorMessage(HRESULT code) {
+        
+        switch (code) {
+        case D3DERR_NOTAVAILABLE:
+            return  L"D3DERR_NOTAVAILABLE";
+        case D3DERR_OUTOFVIDEOMEMORY:
+            return  L"D3DERR_OUTOFVIDEOMEMORY";
+        case D3DERR_INVALIDCALL:
+            return  L"D3DERR_INVALIDCALL";
+        case E_OUTOFMEMORY:
+            return  L"E_OUTOFMEMORY";
+        case D3D_OK:
+            return L"D3D_OK";
+        }
+        static wchar_t out[32];
+        swprintf(out, 32, L"Unknown D3D error %#08x", code);
+        return out;
+    }
+}
+
 void Resources::Initialize() {
     ToolboxModule::Initialize();
     worker = std::thread([this]() {
@@ -124,18 +145,46 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture, const std::filesys
     if (std::filesystem::exists(path_to_file)) {
         // make sure we copy the path, not use the ref
         toload.push([path_to_file, texture](IDirect3DDevice9* device) {
-            D3DXCreateTextureFromFileW(device, path_to_file.c_str(), texture);
+            TryCreateTexture(device, path_to_file.c_str(), texture);
         });
     }
 }
+
+HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, bool display_error) {
+    HRESULT res = D3DXCreateTextureFromFileW(device, path_to_file.c_str(), texture);
+    if (display_error && res != D3D_OK) {
+        Log::Error("Error loading resource from file %ls - Error is %ls", path_to_file.filename().c_str(), d3dErrorMessage(res));
+    }
+    if (display_error && !texture) {
+        Log::Error("Error loading resource from file %ls - texture loaded is null", path_to_file.filename().c_str());
+    }
+    return res;
+}
+HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule, LPCSTR id, IDirect3DTexture9** texture, bool display_error) {
+    HRESULT res = D3DXCreateTextureFromResourceA(device, hSrcModule, id, texture);
+    if (display_error && res != D3D_OK) {
+        Log::Error("Error loading resource for id %d, module %p - Error is %ls", id, hSrcModule, d3dErrorMessage(res));
+    }
+    if (display_error && !texture) {
+        Log::Error("Error loading resource for id %ds - texture loaded is null", id);
+    }
+    return res;
+}
+
+// @Cleanup: What should we do with error?
+
 
 void Resources::LoadTextureAsync(
     IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::wstring& url)
 {
     EnsureFileExists(path_to_file, url, [this, path_to_file, texture](bool success) { 
-        if (success && std::filesystem::exists(path_to_file)) {
+        if (!success) {
+            Log::ErrorW(L"Error downloading resource from url %s", path_to_file.c_str());
+            return;
+        }
+        if (std::filesystem::exists(path_to_file)) {
             toload.push([path_to_file, texture](IDirect3DDevice9* device) {
-                D3DXCreateTextureFromFileW(device, path_to_file.c_str(), texture);
+                TryCreateTexture(device, path_to_file, texture);
             });
         }
     });
@@ -145,36 +194,61 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
     const std::filesystem::path& path_to_file, WORD id)
 {
 
-    if (std::filesystem::exists(path_to_file)) {
-        // if file exists load it
-        toload.push([path_to_file, texture](IDirect3DDevice9* device) {
-            D3DXCreateTextureFromFileW(device, path_to_file.c_str(), texture);
-        });
-    } else if (id > 0) {
+    // First, try to create the file in the gwtoolbox dir if it doesn't exist
+    if (!std::filesystem::exists(path_to_file) && id > 0) {
         // otherwise try to install it from resource
-        HRSRC hResInfo = FindResource(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
+        HRSRC hResInfo = FindResourceA(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
+        if (!hResInfo) {
+            DWORD wfErr = GetLastError();
+            Log::Error("Error calling FindResourceA on resource id %u - Error is %lu", id, wfErr);
+            return;
+        }
         HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
+        if (!hRes) {
+            DWORD wfErr = GetLastError();
+            Log::Error("Error calling LoadResource on resource id %u - Error is %lu", id, wfErr);
+            return;
+        }
         DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
-
+        if (!size) {
+            DWORD wfErr = GetLastError();
+            Log::Error("Error calling SizeofResource on resource id %u - Error is %lu", id, wfErr);
+            return;
+        }
         // write to file so the user can customize his icons
         HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         DWORD bytesWritten;
         BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
         if (wfRes != TRUE) {
             DWORD wfErr = GetLastError();
-            Log::Error("Error writing file %s - Error is %lu", path_to_file.c_str(), wfErr);
-        } else if (bytesWritten != size) {
-            Log::Error("Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.c_str());
+            Log::Error("Error writing file %ls - Error is %lu", path_to_file.filename().c_str(), wfErr);
         }
+        else if (bytesWritten != size) {
+            Log::Error("Wrote %lu of %lu bytes for %ls", bytesWritten, size, path_to_file.filename().c_str());
+        }
+
         CloseHandle(hFile);
         // Note: this WILL fail for some users. Don't care, it's only needed for customization.
+    }
 
+    if (std::filesystem::exists(path_to_file)) {
+        // if file exists load it
+        toload.push([path_to_file, texture, id](IDirect3DDevice9* device) {
+            TryCreateTexture(device, path_to_file, texture);
+            HRESULT res = TryCreateTexture(device, path_to_file, texture, id != 0);
+            if (!(res == D3D_OK && texture) && id != 0) {
+                Log::Log("Failed to load %ls from file; error code %ls", path_to_file.filename().c_str(), d3dErrorMessage(res));
+                TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture);
+            }
+        });
+    } else if(id != 0) {
         // finally load the texture from the resource
         toload.push([id, texture](IDirect3DDevice9* device) {
-            // @Cleanup: What should we do with error?
-            HRESULT res = D3DXCreateTextureFromResource(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture);
-            UNREFERENCED_PARAMETER(res);
+            TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture);
         });
+    }
+    else {
+        Log::Error("Failed to load resource from file %ls; path doesn't exist and no resource available", path_to_file.filename().c_str());
     }
 }
 
