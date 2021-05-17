@@ -151,7 +151,13 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture, const std::filesys
 }
 
 HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, bool display_error) {
-    HRESULT res = D3DXCreateTextureFromFileW(device, path_to_file.c_str(), texture);
+    // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
+    HRESULT res = D3DERR_NOTAVAILABLE;
+    size_t tries = 0;
+    do {
+        tries++;
+        res = D3DXCreateTextureFromFileExW(device, path_to_file.c_str(), D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, NULL, NULL, texture);
+    } while (res == D3DERR_NOTAVAILABLE && tries < 3);
     if (display_error && res != D3D_OK) {
         Log::Error("Error loading resource from file %ls - Error is %ls", path_to_file.filename().c_str(), d3dErrorMessage(res));
     }
@@ -161,7 +167,13 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     return res;
 }
 HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule, LPCSTR id, IDirect3DTexture9** texture, bool display_error) {
-    HRESULT res = D3DXCreateTextureFromResourceA(device, hSrcModule, id, texture);
+    // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
+    HRESULT res = D3DERR_NOTAVAILABLE;
+    size_t tries = 0;
+    do {
+        tries++;
+        res = D3DXCreateTextureFromResourceExA(device, hSrcModule, id, D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, NULL, NULL, texture);
+    } while (res == D3DERR_NOTAVAILABLE && tries < 3);
     if (display_error && res != D3D_OK) {
         Log::Error("Error loading resource for id %d, module %p - Error is %ls", id, hSrcModule, d3dErrorMessage(res));
     }
@@ -234,8 +246,7 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
     if (std::filesystem::exists(path_to_file)) {
         // if file exists load it
         toload.push([path_to_file, texture, id](IDirect3DDevice9* device) {
-            TryCreateTexture(device, path_to_file, texture);
-            HRESULT res = TryCreateTexture(device, path_to_file, texture, id != 0);
+            HRESULT res = TryCreateTexture(device, path_to_file, texture, id == 0);
             if (!(res == D3D_OK && texture) && id != 0) {
                 Log::Log("Failed to load %ls from file; error code %ls", path_to_file.filename().c_str(), d3dErrorMessage(res));
                 TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture);
@@ -254,6 +265,9 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
 
 void Resources::DxUpdate(IDirect3DDevice9* device) {
     while (!toload.empty()) {
+        D3DCAPS9 caps;
+        if (device->GetDeviceCaps(&caps) != D3D_OK)
+            break; // Not ready yet
         toload.front()(device);
         toload.pop();
     }
