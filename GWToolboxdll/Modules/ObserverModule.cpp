@@ -345,17 +345,19 @@ void ObserverModule::HandleAgentState(const uint32_t agent_id, const uint32_t st
 
     // notify the party
     ObservableParty* party = GetObservablePartyById(observable_agent->party_id);
-    if (party)
-        party->stats.HandleDeath();
+
+    // only grant a kill if the victim belonged to a party
+    // (don't count footmen/archer/bodyguard/lord/ghostly kills)
+    if (!party) return;
+    party->stats.HandleDeath();
+
     // credit the kill to the last-hitter and their party,
-    // only if the dead guy belongs to a party
     ObservableAgent* killer = GetObservableAgentById(observable_agent->last_hit_by);
-    if (killer) {
-        killer->stats.HandleKill();
-        ObservableParty* killer_party = GetObservablePartyById(killer->party_id);
-        if (killer_party)
-            killer_party->stats.HandleKill();
-    }
+    if (!killer) return;
+    killer->stats.HandleKill();
+    ObservableParty* killer_party = GetObservablePartyById(killer->party_id);
+    if (killer_party)
+        killer_party->stats.HandleKill();
 }
 
 
