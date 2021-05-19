@@ -474,6 +474,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         if (!GuiUtils::FontsLoaded())
             return; // Fonts not loaded yet.
 
+        Resources::Instance().DxUpdate(device);
+
         ImGui_ImplDX9_NewFrame();
         ImGui_ImplWin32_NewFrame();
 
@@ -486,7 +488,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ImGui::GetIO().KeysDown[VK_CONTROL] = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
         ImGui::GetIO().KeysDown[VK_SHIFT] = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
         ImGui::GetIO().KeysDown[VK_MENU] = (GetKeyState(VK_MENU) & 0x8000) != 0;
-        Resources::Instance().DxUpdate(device);
+        
 
         for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {
             uielement->Draw(device);
