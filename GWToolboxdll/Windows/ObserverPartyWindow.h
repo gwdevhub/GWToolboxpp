@@ -70,6 +70,7 @@ protected:
     bool show_dealt_party_crits = true;
     bool show_received_party_skills = true;
     bool show_dealt_party_skills = true;
+    bool show_skills_used = true;
 
 private:
     // ini

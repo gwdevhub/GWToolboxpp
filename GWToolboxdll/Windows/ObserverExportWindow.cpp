@@ -114,8 +114,15 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
     bool name_prepend_vs = false;
     std::string name = "";
 
-    json["map"] = nlohmann::json::value_t::null;
+    json["match_finished"]              = om.match_finished;
+    json["winning_party_id"]            = om.winning_party_id;
+    json["match_duration_ms_total"]     = om.match_duration_ms_total.count();
+    json["match_duration_ms"]           = om.match_duration_ms.count();
+    json["match_duration_secs"]         = om.match_duration_secs.count();
+    json["match_duration_mins"]         = om.match_duration_mins.count();
+
     ObserverModule::ObservableMap* map = om.GetMap();
+    json["map"] = nlohmann::json::value_t::null;
     if (map) {
         json["map"]                     = {};
         json["map"]["name"]             = map->Name();
@@ -134,10 +141,11 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
 
     auto action_to_json = [](const ObserverModule::ObservedAction& action) -> nlohmann::json {
         nlohmann::json action_json;
-        action_json["started"] = action.started;
-        action_json["stopped"] = action.stopped;
-        action_json["interrupted"] = action.interrupted;
-        action_json["finished"] = action.finished;
+        action_json["started"]      = action.started;
+        action_json["stopped"]      = action.stopped;
+        action_json["interrupted"]  = action.interrupted;
+        action_json["finished"]     = action.finished;
+        action_json["integrity"]    = action.integrity;
         return action_json;
     };
 
@@ -158,8 +166,8 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
         stats_json["kdr_str"]                       = stats.kdr_str;
         stats_json["total_attacks_dealt"]                       = action_to_json(stats.total_attacks_dealt);
         stats_json["total_attacks_received"]                    = action_to_json(stats.total_attacks_received);
-        stats_json["total_attacks_dealt_to_other_party"]        = action_to_json(stats.total_attacks_dealt_to_other_party);
-        stats_json["total_attacks_received_from_other_party"]   = action_to_json(stats.total_attacks_received_from_other_party);
+        stats_json["total_attacks_dealt_to_other_parties"]      = action_to_json(stats.total_attacks_dealt_to_other_parties);
+        stats_json["total_attacks_received_from_other_parties"] = action_to_json(stats.total_attacks_received_from_other_parties);
         stats_json["total_skills_used"]                         = action_to_json(stats.total_skills_used);
         stats_json["total_skills_received"]                     = action_to_json(stats.total_skills_received);
         stats_json["total_skills_used_on_own_party"]            = action_to_json(stats.total_skills_used_on_own_party);
@@ -211,6 +219,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
             json["skills"]["by_id"][skill_id_s] = nlohmann::json::value_t::null;
             continue;
         }
+        json["skills"]["by_id"][skill_id_s]["skill_id"]         = skill->gw_skill.skill_id;
         json["skills"]["by_id"][skill_id_s]["name"]             = skill->Name();
         json["skills"]["by_id"][skill_id_s]["stats"]["total_usages"]                = action_to_json(skill->stats.total_usages);
         json["skills"]["by_id"][skill_id_s]["stats"]["total_self_usages"]           = action_to_json(skill->stats.total_self_usages);
@@ -219,7 +228,6 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
         json["skills"]["by_id"][skill_id_s]["stats"]["total_other_party_usages"]    = action_to_json(skill->stats.total_other_party_usages);
         json["skills"]["by_id"][skill_id_s]["stats"]["total_own_team_usages"]       = action_to_json(skill->stats.total_own_team_usages);
         json["skills"]["by_id"][skill_id_s]["stats"]["total_other_team_usages"]     = action_to_json(skill->stats.total_other_team_usages);
-        json["skills"]["by_id"][skill_id_s]["skill_id"]         = skill->gw_skill.skill_id;
         json["skills"]["by_id"][skill_id_s]["campaign"]         = skill->gw_skill.campaign;
         json["skills"]["by_id"][skill_id_s]["type"]             = skill->gw_skill.type;
         json["skills"]["by_id"][skill_id_s]["sepcial"]          = skill->gw_skill.special;
@@ -268,6 +276,8 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
         json["parties"]["by_id"][party_id_s]["party_id"] = party->party_id;
         json["parties"]["by_id"][party_id_s]["name"] = party->name;
         json["parties"]["by_id"][party_id_s]["display_name"] = party->display_name;
+        json["parties"]["by_id"][party_id_s]["is_victorious"] = party->is_victorious;
+        json["parties"]["by_id"][party_id_s]["is_defeated"] = party->is_defeated;
         json["parties"]["by_id"][party_id_s]["guild_id"] = party->guild_id;
         json["parties"]["by_id"][party_id_s]["agent_ids"] = party->agent_ids;
         json["parties"]["by_id"][party_id_s]["rank"] = party->rank;
@@ -286,6 +296,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
             json["agents"]["by_id"][agent_id_s] = nlohmann::json::value_t::null;
             continue;
         }
+        json["agents"]["by_id"][agent_id_s]["agent_id"]       = agent->agent_id;
         json["agents"]["by_id"][agent_id_s]["display_name"]   = agent->DisplayName();
         json["agents"]["by_id"][agent_id_s]["raw_name"]       = agent->RawName();
         json["agents"]["by_id"][agent_id_s]["debug_name"]     = agent->DebugName();
@@ -301,23 +312,23 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
         // attacks
 
         // attacks dealt (by agent)
-        for (auto& [target_id, action] : agent->stats.attacks_dealt_to_agent) {
+        for (auto& [target_id, action] : agent->stats.attacks_dealt_to_agents) {
             std::string target_id_s = std::to_string(target_id);
             if (!action) {
-                json["agents"]["by_id"][agent_id_s]["attacks_dealt_to_agent"][target_id_s] = nlohmann::json::value_t::null;
+                json["agents"]["by_id"][agent_id_s]["stats"]["attacks_dealt_to_agents"][target_id_s] = nlohmann::json::value_t::null;
                 continue;
             }
-            json["agents"]["by_id"][agent_id_s]["attacks_dealt_to_agent"][target_id_s] = action_to_json(*action);
+            json["agents"]["by_id"][agent_id_s]["stats"]["attacks_dealt_to_agents"][target_id_s] = action_to_json(*action);
         }
 
         // attacks received (by agent)
-        for (auto& [caster_id, action] : agent->stats.attacks_received_from_agent) {
+        for (auto& [caster_id, action] : agent->stats.attacks_received_from_agents) {
             std::string caster_id_s = std::to_string(caster_id);
             if (!action) {
-                json["agents"]["by_id"][agent_id_s]["attacks_received_from_agent"][caster_id_s] = nlohmann::json::value_t::null;
+                json["agents"]["by_id"][agent_id_s]["stats"]["attacks_received_from_agents"][caster_id_s] = nlohmann::json::value_t::null;
                 continue;
             }
-            json["agents"]["by_id"][agent_id_s]["attacks_received_from_agent"][caster_id_s] = action_to_json(*action);
+            json["agents"]["by_id"][agent_id_s]["stats"]["attacks_received_from_agents"][caster_id_s] = action_to_json(*action);
         }
 
         // skills
@@ -349,40 +360,40 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
         }
 
         // skills used (by agent)
-        for (auto& [target_id, agent_skill_ids] : agent->stats.skills_ids_used_on_agent) {
+        for (auto& [target_id, agent_skill_ids] : agent->stats.skill_ids_used_on_agents) {
             std::string target_id_s = std::to_string(target_id);
-            auto it_target = agent->stats.skills_used_on_agent.find(target_id);
-            if (it_target == agent->stats.skills_used_on_agent.end()) {
-                json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agent"][target_id_s] = nlohmann::json::value_t::null;
+            auto it_target = agent->stats.skills_used_on_agents.find(target_id);
+            if (it_target == agent->stats.skills_used_on_agents.end()) {
+                json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s] = nlohmann::json::value_t::null;
                 continue;
             }
             for (uint32_t skill_id : agent_skill_ids) {
                 std::string skill_id_s = std::to_string(skill_id);
                 auto it_skill = it_target->second.find(skill_id);
                 if (it_skill == it_target->second.end()) {
-                    json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agent"][target_id_s][skill_id_s] = nlohmann::json::value_t::null;
+                    json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s][skill_id_s] = nlohmann::json::value_t::null;
                     continue;
                 }
-                json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agent"][target_id_s][skill_id_s] = action_to_json(*it_skill->second);
+                json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s][skill_id_s] = action_to_json(*it_skill->second);
             }
         }
 
         // skills received (by agent)
-        for (auto& [caster_id, agent_skill_ids] : agent->stats.skills_ids_received_by_agent) {
+        for (auto& [caster_id, agent_skill_ids] : agent->stats.skill_ids_received_from_agents) {
             std::string caster_id_s = std::to_string(caster_id);
-            auto it_target = agent->stats.skills_received_from_agent.find(caster_id);
-            if (it_target == agent->stats.skills_received_from_agent.end()) {
-                json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agent"][caster_id_s] = nlohmann::json::value_t::null;
+            auto it_target = agent->stats.skills_received_from_agents.find(caster_id);
+            if (it_target == agent->stats.skills_received_from_agents.end()) {
+                json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s] = nlohmann::json::value_t::null;
                 continue;
             }
             for (uint32_t skill_id : agent_skill_ids) {
                 std::string skill_id_s = std::to_string(skill_id);
                 auto it_skill = it_target->second.find(skill_id);
                 if (it_skill == it_target->second.end()) {
-                    json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agent"][caster_id_s][skill_id_s] = nlohmann::json::value_t::null;
+                    json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s][skill_id_s] = nlohmann::json::value_t::null;
                     continue;
                 }
-                json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agent"][caster_id_s][skill_id_s] = action_to_json(*it_skill->second);
+                json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s][skill_id_s] = action_to_json(*it_skill->second);
             }
         }
     }

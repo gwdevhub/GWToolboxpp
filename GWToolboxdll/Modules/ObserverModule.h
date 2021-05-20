@@ -11,6 +11,7 @@
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Party.h>
 
+#include <chrono>
 #include <Timer.h>
 
 #define NO_AGENT 0
@@ -30,6 +31,8 @@ namespace ObserverLabel {
     extern const char* Kills;
     extern const char* Deaths;
     extern const char* KDR;
+    extern const char* Attempts;
+    extern const char* Integrity;
     extern const char* Cancels;
     extern const char* Interrupts;
     extern const char* Knockdowns;
@@ -40,11 +43,25 @@ namespace ObserverLabel {
     extern const char* CritsDealToOtherParties;
     extern const char* SkillsReceivedFromOtherParties;
     extern const char* SkillsUsedOnOtherParties;
+    extern const char* SkillsUsed;
 }; // namespace ObserverLabels
 
 
 class ObserverModule : public ToolboxModule {
 public:
+    enum class ActionStage {
+        // start
+        Started,
+
+        // both
+        Instant,
+
+        // finish
+        Stopped,
+        Finished,
+        Interrupted // "Interrupted" is received after "Stopped"
+    };
+
     // An action between a caster and target
     // Where an action can be a skill and/or attack
     struct TargetAction {
@@ -65,19 +82,12 @@ public:
         const bool is_attack;
         const bool is_skill;
         const uint32_t skill_id;
-    };
 
-    enum class ActionStage {
-        // start
-        Started,
-
-        // both
-        Instant,
-
-        // finish
-        Stopped,
-        Finished,
-        Interrupted // "Interrupted" is received after "Stopped"
+        // if the action was interrupted after it was finished (e.g. an attack skill that gets interrupted
+        // in the aftersting [once the skill has completed activation]) then we don't count as "interrupted"
+        // even if receiving an "interrupted" signal
+        bool was_stopped = false;
+        bool was_finished = false;
     };
 
     // an agents statistics for an action (attack)
@@ -88,7 +98,12 @@ public:
         size_t finished = 0;
         size_t interrupted = 0;
 
-        void Reduce(const ActionStage stage);
+        // should be zero at all times except when an action is not yet concluded
+        // used to indicate there may be innacuracies in the stats due to due to
+        // innacuracies in our modelling of the game engine
+        int integrity = 0;
+
+        void Reduce(const TargetAction* action, const ActionStage stage);
     };
 
     // an agents statistics for an action (skill)
@@ -133,9 +148,9 @@ public:
         ObservedAction total_attacks_received;
 
         // attacks done on other parties (not inc. npcs)
-        ObservedAction total_attacks_dealt_to_other_party;
+        ObservedAction total_attacks_dealt_to_other_parties;
         // attacks received from other parties (not inc. npcs)
-        ObservedAction total_attacks_received_from_other_party;
+        ObservedAction total_attacks_received_from_other_parties;
 
         // skills
 
@@ -177,11 +192,11 @@ public:
         ~ObservableAgentStats();
 
         // map of agent_id -> ObservedAction
-        std::unordered_map<uint32_t, ObservedAction*> attacks_dealt_to_agent = {};
+        std::unordered_map<uint32_t, ObservedAction*> attacks_dealt_to_agents = {};
         ObservedAction& LazyGetAttacksDealedAgainst(const uint32_t target_agent_id);
 
         // map of agent_id -> ObservedAction
-        std::unordered_map<uint32_t, ObservedAction*> attacks_received_from_agent = {};
+        std::unordered_map<uint32_t, ObservedAction*> attacks_received_from_agents = {};
         ObservedAction& LazyGetAttacksReceivedFrom(const uint32_t attacker_agent_id);
 
         // skills
@@ -199,13 +214,13 @@ public:
         // skills by agent
 
         // map of agent_id -> skill_id -> count of times received
-        std::unordered_map<uint32_t, std::unordered_map<uint32_t, ObservedSkill*>> skills_received_from_agent = {};
-        std::unordered_map<uint32_t, std::vector<uint32_t>> skills_ids_received_by_agent = {};
+        std::unordered_map<uint32_t, std::unordered_map<uint32_t, ObservedSkill*>> skills_received_from_agents = {};
+        std::unordered_map<uint32_t, std::vector<uint32_t>> skill_ids_received_from_agents = {};
         ObservedSkill& LazyGetSkillReceivedFrom(const uint32_t caster_agent_id, const uint32_t skill_id);
 
         // map of agent_id -> skill_id -> count of times used
-        std::unordered_map<uint32_t, std::unordered_map<uint32_t, ObservedSkill*>> skills_used_on_agent = {};
-        std::unordered_map<uint32_t, std::vector<uint32_t>> skills_ids_used_on_agent = {};
+        std::unordered_map<uint32_t, std::unordered_map<uint32_t, ObservedSkill*>> skills_used_on_agents = {};
+        std::unordered_map<uint32_t, std::vector<uint32_t>> skill_ids_used_on_agents = {};
         ObservedSkill& LazyGetSkillUsedOn(const uint32_t target_agent_id, const uint32_t skill_id);
     };
 
@@ -352,11 +367,13 @@ public:
         uint32_t guild_id = NO_GUILD;
         uint32_t rating = NO_RATING;
         uint32_t rank = NO_RANK;
-        // TODO: set is_defeate when the party is defeated...
-        bool is_defeated = false;
         std::string rank_str; // 0 -> "N/A"
         std::string name = "";
         std::string display_name = "";
+
+        uint32_t morale_boosts = 0;
+        bool is_victorious = false;
+        bool is_defeated = false;
 
         ObserverModule& parent;
 
@@ -368,8 +385,8 @@ public:
         std::vector<uint32_t> agent_ids = {};
 
         std::string DebugName() {
-            std::string _display_name = "(" + std::to_string(party_id) + ")";
-            return _display_name;
+            std::string _debug_name = "(" + std::to_string(party_id) + ") " + display_name;
+            return _debug_name;
         }
     };
 
@@ -423,8 +440,6 @@ public:
     const bool IsActive();
     bool is_enabled = false;
 
-    //
-
     const char* Name() const override { return "Observer Module"; }
     const char* Icon() const override { return ICON_FA_EYE; }
 
@@ -453,6 +468,13 @@ public:
     const std::unordered_map<uint32_t, ObservableParty*>& GetObservableParties() { return observable_parties; }
     const std::unordered_map<uint32_t, ObservableSkill*>& GetObservableSkills() { return observable_skills; }
 
+    bool match_finished = false;
+    uint32_t winning_party_id = NO_PARTY;
+    std::chrono::milliseconds match_duration_ms_total;
+    std::chrono::milliseconds match_duration_ms;
+    std::chrono::seconds match_duration_secs;
+    std::chrono::minutes match_duration_mins;
+
 private:
     ObservableGuild* CreateObservableGuild(const GW::Guild& guild);
     ObservableAgent* CreateObservableAgent(const GW::AgentLiving& agent_living);
@@ -461,8 +483,6 @@ private:
     ObservableParty* GetObservablePartyByPartyInfo(const GW::PartyInfo& party_info);
 
     clock_t party_sync_timer = 0;
-
-    uint8_t display_name_flags = 0b00;
 
     // agent name settings
     bool trim_hench_names = false;
@@ -477,8 +497,9 @@ private:
 
     // packet handlers
 
-    void HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo *packet);
-    void HandleAgentProjectileLaunched(const uint32_t agent_id, const bool is_attack);
+    void HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet);
+    void HandleJumboMessage(const uint8_t type, const uint32_t value);
+    void HandleAgentProjectileLaunched(const GW::Packet::StoC::AgentProjectileLaunched* packet);
 
     // generic handlers
 
@@ -512,6 +533,10 @@ private:
     // return false means action was not assigned and may need freeing by the caller
     bool ReduceAction(ObservableAgent* caster, ActionStage stage, TargetAction* new_action = nullptr);
 
+    uint32_t JumboMessageValueToPartyId(const uint32_t value);
+    void HandleMoraleBoost(ObservableParty* boosting_party);
+    void HandleVictory(ObservableParty* winning_party);
+
     ObservableMap* map;
 
     // lazy loaded observed guilds
@@ -533,6 +558,7 @@ private:
     bool SynchroniseParties();
 
     // hooks
+    GW::HookEntry JumboMessage_Entry;
     GW::HookEntry InstanceLoadInfo_Entry;
     GW::HookEntry AgentState_Entry;
     GW::HookEntry AgentAdd_Entry;
