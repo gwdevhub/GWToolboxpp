@@ -21,6 +21,8 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     bool hide_in_outpost = false;
+    bool show_abs_value = true;
+    bool show_perc_value = true;
 
     Color color_adjacent = 0xFFFFFFFF;
     Color color_nearby = 0xFFFFFFFF;
