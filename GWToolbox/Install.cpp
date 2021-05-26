@@ -256,6 +256,8 @@ static bool DeleteInstallationDirectory(void)
 
 bool Install(bool quiet)
 {
+    if (IsInstalled())
+        return true;
     if (!EnsureInstallationDirectoryExist()) {
         fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
         return false;

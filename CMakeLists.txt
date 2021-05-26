@@ -9,6 +9,8 @@ set(GWTOOBOX_MODULE_VERSION "5,3,0,0") # used for Dll module info. See GWToolbox
 # Updates toolboxversion.txt after changes in the above version (make sure to run cmake .. or build the project)
 file(WRITE "resources/toolboxversion.txt" ${GWTOOLBOXDLL_VERSION})
 
+configure_file(${PROJECT_SOURCE_DIR}/gwtoolbox.wxs.in ${PROJECT_SOURCE_DIR}/gwtoolbox.wxs @ONLY)
+
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "You are configuring a 64bit build, this is not supported. Run cmake with `-A Win32`")
 endif()

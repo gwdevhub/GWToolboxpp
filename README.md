@@ -45,6 +45,26 @@ If you are here to check toolbox features and for a download link to go [https:/
 
 10. Run. You may have to launch Visual Studio as administrator.
 
+## How to create a GWToolbox installer
+
+Useful for packaging d3dx9 and vc140 components without having to install them separately.
+
+### Requirements
+* WiX 3.1 or higher. Download the latest version from [https://wixtoolset.org/releases/](https://wixtoolset.org/releases/).
+* DirectX SDK. Download from [https://www.microsoft.com/en-gb/download/details.aspx?id=6812](https://www.microsoft.com/en-gb/download/details.aspx?id=6812)
+* Copy of Microsoft_VC140_CRT_x86.msm - this is installed when you install the runtime in Visual Studio
+
+1. Build the solution; CMake will create a gwtoolbox.wxs file in the repository directory.
+
+2. Run the following commands from the repository, making sure that `candle.exe` and `light.exe` are installed in the relevent places:
+
+`"C:\Program Files (x86)\WiX Toolset v3.11\bin\candle" gwtoolbox.wxs`
+
+`"C:\Program Files (x86)\WiX Toolset v3.11\bin\light" gwtoolbox.wixobj`
+
+A `gwtoolbox.msi` file should have been created in the repository directory.
+
+
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolbox.dll`). `GWToolbox.exe`, aka Launcher, selects a GW clients and injects the dll, but you can also use different launchers, such as the ones in the `AutoItLauncher/` folder.
 * By default, the launcher (`GWToolbox.exe`) will run the `GWToolboxdll.dll` as specified by your installation, **not** the one you compile. To run the dll in the same folder, run the launcher with command-line argument `/localdll`.

@@ -24,6 +24,9 @@ bin/
 *.o
 *.obj
 *.exe
+*.wxs
+*.wixobj
+*.msi
 
 # Precompiled Headers
 *.gch
@@ -31,6 +34,7 @@ bin/
 *.idb
 *.pdb
 *.opendb
+*.wixpdb
 
 # Visual studio stuff
 *.user
