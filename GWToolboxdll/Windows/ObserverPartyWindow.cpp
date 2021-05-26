@@ -134,6 +134,12 @@ void ObserverPartyWindow::DrawHeaders(const size_t party_count) {
             ImGui::Text(ObserverLabel::SkillsUsedOnOtherParties);
             ImGui::SameLine(offset += text_tiny);
         }
+
+        // [+skl:tiny]
+        if (show_skills_used) {
+            ImGui::Text(ObserverLabel::SkillsUsed);
+            ImGui::SameLine(offset += text_tiny);
+        }
     }
 }
 
@@ -241,13 +247,13 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
 
     // [-atk:tiny]
     if (show_received_party_attacks) {
-        Text(std::to_string(agent.stats.total_attacks_received_from_other_party.finished).c_str());
+        Text(std::to_string(agent.stats.total_attacks_received_from_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+atk:tiny]
     if (show_dealt_party_attacks) {
-        Text(std::to_string(agent.stats.total_attacks_dealt_to_other_party.finished).c_str());
+        Text(std::to_string(agent.stats.total_attacks_dealt_to_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
@@ -272,6 +278,12 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
     // [+skl:tiny]
     if (show_dealt_party_skills) {
         Text(std::to_string(agent.stats.total_skills_used_on_other_parties.finished).c_str());
+        ImGui::SameLine(offset += text_tiny);
+    }
+
+    // [+skl:tiny]
+    if (show_skills_used) {
+        Text(std::to_string(agent.stats.total_skills_used.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 }
@@ -346,13 +358,13 @@ void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::Observa
 
     // [-atk:tiny]
     if (show_received_party_attacks) {
-        ImGui::Text(std::to_string(party.stats.total_attacks_received_from_other_party.finished).c_str());
+        ImGui::Text(std::to_string(party.stats.total_attacks_received_from_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+atk:tiny]
     if (show_dealt_party_attacks) {
-        ImGui::Text(std::to_string(party.stats.total_attacks_dealt_to_other_party.finished).c_str());
+        ImGui::Text(std::to_string(party.stats.total_attacks_dealt_to_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
@@ -380,6 +392,11 @@ void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::Observa
         ImGui::SameLine(offset += text_tiny);
     }
 
+    // [+skl:tiny]
+    if (show_skills_used) {
+        ImGui::Text(std::to_string(party.stats.total_skills_used.finished).c_str());
+        ImGui::SameLine(offset += text_tiny);
+    }
 }
 
 
@@ -521,6 +538,7 @@ void ObserverPartyWindow::LoadSettings(CSimpleIni* ini) {
     show_dealt_party_crits = ini->GetBoolValue(Name(), VAR_NAME(show_dealt_party_crits), true);
     show_received_party_skills = ini->GetBoolValue(Name(), VAR_NAME(show_received_party_skills), true);
     show_dealt_party_skills = ini->GetBoolValue(Name(), VAR_NAME(show_dealt_party_skills), true);
+    show_skills_used = ini->GetBoolValue(Name(), VAR_NAME(show_skills_used), true);
 }
 
 
@@ -545,6 +563,7 @@ void ObserverPartyWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_dealt_party_crits), show_dealt_party_crits);
     ini->SetBoolValue(Name(), VAR_NAME(show_received_party_skills), show_received_party_skills);
     ini->SetBoolValue(Name(), VAR_NAME(show_dealt_party_skills), show_dealt_party_skills);
+    ini->SetBoolValue(Name(), VAR_NAME(show_skills_used), show_skills_used);
 }
 
 // Draw settings
@@ -614,4 +633,8 @@ void ObserverPartyWindow::DrawSettingInternal() {
     ImGui::Checkbox((std::string("Show skills used on other parties (")
         + ObserverLabel::SkillsUsedOnOtherParties
         + ")").c_str(), &show_dealt_party_skills);
+
+    ImGui::Checkbox((std::string("Show skills used (")
+        + ObserverLabel::SkillsUsed
+        + ")").c_str(), &show_skills_used);
 }

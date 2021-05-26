@@ -35,7 +35,8 @@ public:
     virtual uint32_t ObserverPlayerWindow::GetTracking();
     virtual uint32_t ObserverPlayerWindow::GetComparison();
 
-    void DrawSkillHeaders();
+    void DrawHeaders();
+    void DrawAction(const std::string& name, const ObserverModule::ObservedAction* action);
 
     void DrawSkills(const std::unordered_map<uint32_t, ObserverModule::ObservedSkill*>& skills,
         const std::vector<uint32_t>& skill_ids);
@@ -60,4 +61,10 @@ protected:
     bool show_tracking = true;
     bool show_comparison = true;
     bool show_skills_used_on_self = true;
+
+    bool show_attempts = false;
+    bool show_cancels = true;
+    bool show_interrupts = true;
+    bool show_finishes = true;
+    bool show_integrity = false;
 };
