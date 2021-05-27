@@ -233,8 +233,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
                     if (target) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
                         if (agent_name_ping.size()) {
-                            constexpr size_t buffer_size = 512;
-                            char buffer[buffer_size];
+                            char buffer[512];
                             const std::string agent_name_str = GuiUtils::WStringToString(agent_name_ping);
                             const int current_hp = (int)(target->hp * target->max_hp);
                             snprintf(buffer, sizeof(buffer), "%s's Health is %d of %d. (%.0f %%)", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
