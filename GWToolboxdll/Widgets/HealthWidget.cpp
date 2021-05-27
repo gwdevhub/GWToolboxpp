@@ -69,7 +69,8 @@ void HealthWidget::SaveSettings(CSimpleIni *ini) {
     if (thresholds_changed && inifile) {
         inifile->Reset();
 
-        char buf[32];
+        constexpr size_t buffer_size = 32;
+        char buf[buffer_size];
         for (size_t i = 0; i < thresholds.size(); ++i) {
             snprintf(buf, sizeof(buf), "threshold%03zu", i);
             thresholds[i]->SaveSettings(inifile, buf);
@@ -87,7 +88,7 @@ void HealthWidget::DrawSettingInternal() {
     ImGui::SameLine(); ImGui::Checkbox("Show percentage value", &show_perc_value);
     ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
 
-    bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
+    const bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("The first matching threshold will be used.");
     if (thresholdsNode) {
         bool changed = false;
@@ -117,6 +118,7 @@ void HealthWidget::DrawSettingInternal() {
                 case Threshold::Operation::Delete:
                     thresholds.erase(thresholds.begin() + static_cast<int>(i));
                     delete threshold;
+                    threshold = nullptr;
                     --i;
                     break;
             }
@@ -145,7 +147,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
         return;
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
-    bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
+    const bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
         constexpr size_t buffer_size = 32;
         static char health_perc[buffer_size];
@@ -231,9 +233,10 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
                     if (target) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
                         if (agent_name_ping.size()) {
-                            char buffer[512];
-                            std::string agent_name_str = GuiUtils::WStringToString(agent_name_ping);
-                            int current_hp = (int)(target->hp * target->max_hp);
+                            constexpr size_t buffer_size = 512;
+                            char buffer[buffer_size];
+                            const std::string agent_name_str = GuiUtils::WStringToString(agent_name_ping);
+                            const int current_hp = (int)(target->hp * target->max_hp);
                             snprintf(buffer, sizeof(buffer), "%s's Health is %d of %d. (%.0f %%)", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', buffer);
                         }
@@ -306,8 +309,8 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op) {
         changed |= Colors::DrawSettingHueWheel("Color", &color, 0);
         ImGui::ShowHelp("The custom color for this threshold.");
 
-        float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-        float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
+        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+        const float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
         if (ImGui::Button("Move Up", ImVec2(width, 0))) {
             op = Threshold::Operation::MoveUp;
         }
