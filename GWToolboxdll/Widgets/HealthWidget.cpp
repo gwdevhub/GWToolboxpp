@@ -18,7 +18,7 @@
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/HealthWidget.h>
 
-#define HEALTH_THRESHOLD_INIFILENAME L"HealthThreshold.ini"
+constexpr const wchar_t* HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
 HealthWidget::~HealthWidget() {
     ClearThresholds();
@@ -28,6 +28,8 @@ void HealthWidget::LoadSettings(CSimpleIni *ini) {
     ToolboxWidget::LoadSettings(ini);
     click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    show_abs_value = ini->GetBoolValue(Name(), VAR_NAME(show_abs_value), show_abs_value);
+    show_perc_value = ini->GetBoolValue(Name(), VAR_NAME(show_perc_value), show_perc_value);
 
     if (inifile == nullptr) inifile = new CSimpleIni();
     inifile->LoadFile(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME).c_str());
@@ -45,7 +47,7 @@ void HealthWidget::LoadSettings(CSimpleIni *ini) {
 
     if (thresholds.empty()) {
         Threshold* thresholdFh = new Threshold("\"Finish Him!\"", Colors::RGB(255, 255, 0), 50);
-        thresholdFh->skillId = (int) GW::Constants::SkillID::Finish_Him;
+        thresholdFh->skillId = static_cast<int>(GW::Constants::SkillID::Finish_Him);
         thresholdFh->active = false;
         thresholds.push_back(thresholdFh);
         thresholds.back()->index = thresholds.size() - 1;
@@ -61,6 +63,8 @@ void HealthWidget::SaveSettings(CSimpleIni *ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(show_abs_value), show_abs_value);
+    ini->SetBoolValue(Name(), VAR_NAME(show_perc_value), show_perc_value);
 
     if (thresholds_changed && inifile) {
         inifile->Reset();
@@ -79,6 +83,8 @@ void HealthWidget::SaveSettings(CSimpleIni *ini) {
 void HealthWidget::DrawSettingInternal() {
     ToolboxWidget::DrawSettingInternal();
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::SameLine(); ImGui::Checkbox("Show absolute value", &show_abs_value);
+    ImGui::SameLine(); ImGui::Checkbox("Show percentage value", &show_perc_value);
     ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
 
     bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
@@ -141,24 +147,28 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
-        static char health_perc[32];
-        static char health_abs[32];
+        constexpr size_t buffer_size = 32;
+        static char health_perc[buffer_size];
+        static char health_abs[buffer_size];
         GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
         if (target) {
-            if (target->hp >= 0) {
-                snprintf(health_perc, 32, "%.0f %%", target->hp * 100.0f);
-            } else {
-                snprintf(health_perc, 32, "-");
+            if (show_perc_value) {
+                if (target->hp >= 0) {
+                    snprintf(health_perc, buffer_size, "%.0f %%", target->hp * 100.0f);
+                } else {
+                    snprintf(health_perc, buffer_size, "-");
+                }
             }
-            if (target->max_hp > 0) {
-                float abs = target->hp * target->max_hp;
-                snprintf(health_abs, 32, "%.0f / %d", abs, target->max_hp);
-            } else {
-                snprintf(health_abs, 32, "-");
+            if (show_abs_value) {
+                if (target->max_hp > 0) {
+                    float abs = target->hp * target->max_hp;
+                    snprintf(health_abs, buffer_size, "%.0f / %d", abs, target->max_hp);
+                } else {
+                    snprintf(health_abs, buffer_size, "-");
+                }
             }
 
             ImVec2 cur;
-
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
             ImColor background = ImColor(Colors::Black());
 
@@ -195,22 +205,26 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
 
             // perc
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_small));
-            cur = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-            ImGui::TextColored(background, "%s", health_perc);
-            ImGui::SetCursorPos(cur);
-            ImGui::TextColored(color, "%s", health_perc);
-            ImGui::PopFont();
+            if (show_perc_value) {
+                ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_small));
+                cur = ImGui::GetCursorPos();
+                ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
+                ImGui::TextColored(background, "%s", health_perc);
+                ImGui::SetCursorPos(cur);
+                ImGui::TextColored(color, "%s", health_perc);
+                ImGui::PopFont();
+            }
 
             // abs
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
-            cur = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-            ImGui::TextColored(background, health_abs);
-            ImGui::SetCursorPos(cur);
-            ImGui::Text(health_abs);
-            ImGui::PopFont();
+            if (show_abs_value) {
+                ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
+                cur = ImGui::GetCursorPos();
+                ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
+                ImGui::TextColored(background, health_abs);
+                ImGui::SetCursorPos(cur);
+                ImGui::Text(health_abs);
+                ImGui::PopFont();
+            }
 
             if (click_to_print_health) {
                 if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsWindowHovered()) {
@@ -253,12 +267,13 @@ HealthWidget::Threshold::Threshold(const char* _name, Color _color, int _value)
 }
 
 bool HealthWidget::Threshold::DrawHeader() {
-    char mapbuf[64] = { '\0' };
+    constexpr size_t buffer_size = 64;
+    char mapbuf[buffer_size] = {'\0'};
     if (mapId) {
         if (mapId < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID))
-            snprintf(mapbuf, 64, "[%s]", GW::Constants::NAME_FROM_ID[mapId]);
+            snprintf(mapbuf, buffer_size, "[%s]", GW::Constants::NAME_FROM_ID[mapId]);
         else
-            snprintf(mapbuf, 64, "[Map %d]", mapId);
+            snprintf(mapbuf, buffer_size, "[Map %d]", mapId);
     }
 
     ImGui::SameLine(0, 18);
