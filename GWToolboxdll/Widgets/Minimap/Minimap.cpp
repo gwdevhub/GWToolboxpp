@@ -447,7 +447,7 @@ void Minimap::LoadSettings(CSimpleIni *ini)
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
     hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
     hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
-    hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background", ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
+    hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background", hero_flag_window_background);
     mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
     mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
     rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
