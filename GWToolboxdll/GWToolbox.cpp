@@ -43,6 +43,8 @@ namespace {
     int last_drawing_passes = 0;
 
     bool defer_close = false;
+
+    static HWND gw_window_handle = 0;
 }
 
 HMODULE GWToolbox::GetDLLModule() {
@@ -100,6 +102,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
         ImGui_ImplDX9_InvalidateDeviceObjects();
     });
 
+
     Log::Log("Installed dx hooks\n");
 
     Log::InitializeChat();
@@ -109,6 +112,10 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     GW::HookBase::EnableHooks();
 
     Log::Log("Hooks Enabled!\n");
+
+    GW::GameThread::Enqueue([]() {
+        GWToolbox::Instance().Initialize();
+        });
 
     while (!tb_destroyed) { // wait until destruction
         Sleep(100);
@@ -325,6 +332,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 }
 
 void GWToolbox::Initialize() {
+    if (tb_initialized || must_self_destruct)
+        return;
+    
+    imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
+
     Log::Log("Creating Toolbox\n");
 
     GW::GameThread::RegisterGameThreadCallback(&Update_Entry, GWToolbox::Update);
@@ -366,6 +378,7 @@ void GWToolbox::Initialize() {
         if(g && g->character && g->character->player_name)
             Log::InfoW(L"Hello!");
     }
+    tb_initialized = true;
 }
 void GWToolbox::FlashWindow() {
     FLASHWINFO flashInfo = { 0 };
@@ -412,49 +425,41 @@ void GWToolbox::Terminate() {
 }
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {
-
-    static HWND gw_window_handle = 0;
-
-    // === initialization ===
-    if (!tb_initialized && !GWToolbox::Instance().must_self_destruct) {
-
-        Log::Log("installing event handler\n");
-        gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
-        OldWndProc = SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
-        Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
-
-        ImGui::CreateContext();
-        //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
-        ImGui_ImplDX9_Init(device);
-        ImGui_ImplWin32_Init(GW::MemoryMgr().GetGWWindowHandle());
-
-        ImGuiIO& io = ImGui::GetIO();
-        io.MouseDrawCursor = false;
-        
-        GWToolbox& tb = GWToolbox::Instance();
-        tb.imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
-        io.IniFilename = tb.imgui_inifile.bytes;
-
-        Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
-            L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
-            [](bool success) {
-            if (success) {
-                GuiUtils::LoadFonts();
-            } else {
-                Log::Error("Cannot load font!");
-            }
-        });
-
-        GWToolbox::Instance().Initialize();
-
-        tb_initialized = true;
-    }
-
+    static bool imgui_initialized = false;
     // === runtime ===
     if (tb_initialized 
         && !GWToolbox::Instance().must_self_destruct
         && GW::Render::GetViewportWidth() > 0
         && GW::Render::GetViewportHeight() > 0) {
+
+        if (!imgui_initialized) {
+            ImGui::CreateContext();
+            //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
+            ImGui_ImplDX9_Init(device);
+            ImGui_ImplWin32_Init(GW::MemoryMgr().GetGWWindowHandle());
+
+            ImGuiIO& io = ImGui::GetIO();
+            io.MouseDrawCursor = false;
+            io.IniFilename = GWToolbox::Instance().imgui_inifile.bytes;
+
+            Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
+                L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
+                [](bool success) {
+                    if (success) {
+                        GuiUtils::LoadFonts();
+                    }
+                    else {
+                        Log::Error("Cannot load font!");
+                    }
+                });
+
+            Log::Log("installing event handler\n");
+            gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
+            OldWndProc = SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
+            Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
+
+            imgui_initialized = true;
+        }
 
         if (!GW::UI::GetIsUIDrawn())
             return;
@@ -546,6 +551,8 @@ void GWToolbox::Update(GW::HookStatus *)
         last_tick_count = GetTickCount();
 
     GWToolbox& tb = GWToolbox::Instance();
+    if (!tb_initialized)
+        GWToolbox::Instance().Initialize();
     if (tb_initialized
         && !GWToolbox::Instance().must_self_destruct) {
 

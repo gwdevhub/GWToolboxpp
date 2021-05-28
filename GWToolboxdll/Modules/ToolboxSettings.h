@@ -2,9 +2,9 @@
 
 #include <GWCA/Constants/Maps.h>
 
-#include <ToolboxModule.h>
+#include <ToolboxUIElement.h>
 
-class ToolboxSettings : public ToolboxModule {
+class ToolboxSettings : public ToolboxUIElement {
     ToolboxSettings() {};
     ToolboxSettings(const ToolboxSettings&) = delete;
     ~ToolboxSettings() {};
@@ -25,6 +25,7 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
+    void Draw(IDirect3DDevice9*) override;
 
     void DrawFreezeSetting();
 

@@ -59,7 +59,8 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
     if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
     inifile->LoadFile(Resources::GetPath(IniFilename).c_str());
     
-    ImGui::GetIO().FontGlobalScale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", 1.0);
+    font_global_scale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", 1.0);
+    
     ini_style.Alpha = (float)inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha);
     ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f); // clamp to [0.2, 1.0]
     ini_style.WindowPadding.x = (float)inifile->GetDoubleValue(IniSection, "WindowPaddingX", ini_style.WindowPadding.x);
@@ -87,8 +88,7 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
         ini_style.Colors[i] = ImColor(color);
     }
 
-    ImGui::GetStyle() = ini_style;
-    LoadUILayout();
+    layout_dirty = true;
 }
 void ToolboxTheme::SaveUILayout() {
     CSimpleIni* ini = GetLayoutIni();
@@ -122,6 +122,8 @@ CSimpleIni* ToolboxTheme::GetLayoutIni() {
     return windows_ini;
 }
 void ToolboxTheme::LoadUILayout() {
+    ImGui::GetStyle() = ini_style;
+    ImGui::GetIO().FontGlobalScale = font_global_scale;
     CSimpleIni* ini = GetLayoutIni();
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     const char* window_ini_section = "Windows";
@@ -144,6 +146,7 @@ void ToolboxTheme::LoadUILayout() {
         ImGui::SetWindowSize(window, size);
         ImGui::SetWindowCollapsed(window, collapsed);
     }
+    layout_dirty = false;
 }
 
 void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
@@ -184,6 +187,11 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
     ini_style = style;
 
     SaveUILayout();
+}
+
+void ToolboxTheme::Draw(IDirect3DDevice9*) {
+    if (layout_dirty)
+        LoadUILayout();
 }
 
 void ToolboxTheme::DrawSettingInternal() {

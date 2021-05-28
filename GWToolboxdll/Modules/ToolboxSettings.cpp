@@ -353,9 +353,13 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
 }
 
+void ToolboxSettings::Draw(IDirect3DDevice9*) {
+    ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
+}
+
 void ToolboxSettings::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
-    ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
+    
 
     // save location data
     if (save_location_data && TIMER_DIFF(location_timer) > 1000) {
