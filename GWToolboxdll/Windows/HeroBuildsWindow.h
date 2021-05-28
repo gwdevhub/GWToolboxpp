@@ -7,6 +7,8 @@
 #include <Timer.h>
 #include <ToolboxWindow.h>
 
+constexpr size_t BUFFER_SIZE = 128;
+
 class HeroBuildsWindow : public ToolboxWindow {
 private:
     // hero_index is:
@@ -15,12 +17,15 @@ private:
     // 0 for 'no hero', 
     // and 1+ for heroes, order is in HeroIndexToID array
     struct HeroBuild {
-        HeroBuild(const char* n, const char* c, int index = -1, int panel = 0, uint32_t _behavior = 1) : hero_index(index), show_panel(panel), behavior(_behavior) {
+        HeroBuild(const char* n, const char* c, int index = -1, int panel = 0, uint32_t _behavior = 1)
+            : hero_index(index)
+            , show_panel(panel)
+            , behavior(_behavior) {
             GuiUtils::StrCopy(name, n, sizeof(name));
             GuiUtils::StrCopy(code, c, sizeof(code));
         }
-        char name[128];
-        char code[128];
+        char name[BUFFER_SIZE];
+        char code[BUFFER_SIZE];
         int hero_index;
         uint32_t behavior = 1;
         int show_panel = 0;
@@ -34,7 +39,7 @@ private:
         }
         bool edit_open = false;
         int mode = 0; // 0=don't change, 1=normal mode, 2=hard mode
-        char name[128];
+        char name[BUFFER_SIZE];
         std::vector<HeroBuild> builds;
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };
@@ -101,7 +106,7 @@ private:
             Load,
             Finished
         } stage = Add;
-        char code[128];
+        char code[BUFFER_SIZE];
         size_t party_hero_index = 0xFFFFFFFF;
         GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
         int show_panel = 0;
@@ -112,7 +117,7 @@ private:
             , show_panel(_show_panel)
             , behavior(_behavior)
         {
-            snprintf(code, 128, "%s", c);
+            snprintf(code, BUFFER_SIZE, "%s", c);
             if (behavior < 0 || behavior > 2)
                 behavior = 1;
         }
