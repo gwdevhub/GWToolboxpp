@@ -871,6 +871,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
     flash_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
     flash_window_on_cinematic = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_cinematic), flash_window_on_cinematic);
+    focus_window_on_launch = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_launch), focus_window_on_launch);
     focus_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
     flash_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
     focus_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
@@ -942,6 +943,10 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     tome_patch.TogglePatch(show_unlearned_skill);
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
+
+    if (focus_window_on_launch) {
+        FocusWindow();
+    }
 }
 
 void GameSettings::RegisterSettingsContent() {
@@ -1000,6 +1005,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
+    ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_launch), focus_window_on_launch);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_cinematic), flash_window_on_cinematic);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
@@ -1164,8 +1170,9 @@ void GameSettings::DrawSettingInternal() {
         "the window from a minimized state when important events\n"
         "occur, such as entering instances.");
     ImGui::Indent();
-    ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
+    ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &focus_window_on_launch);
+    ImGui::SameLine(column_spacing); ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
+    ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
     ImGui::Unindent();
 
     ImGui::Text("Show a message when a friend:");

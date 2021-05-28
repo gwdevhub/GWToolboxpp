@@ -212,6 +212,7 @@ public:
     bool move_item_to_current_storage_pane = true;
     bool drop_ua_on_cast = false;
 
+    bool focus_window_on_launch = true;
     bool flash_window_on_pm = false;
     bool flash_window_on_party_invite = false;
     bool flash_window_on_zoning = false;
