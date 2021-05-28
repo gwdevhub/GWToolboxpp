@@ -1170,6 +1170,12 @@ void HotkeyDialog::Execute()
         return;
     if (id == 0)
         return;
+    if (isExplorable()) {
+        GW::Agent *target = GW::Agents::GetTarget();
+        if (target && target->type == 0xDB) {
+            GW::Agents::GoNPC(target);
+        }
+    }
     GW::Agents::SendDialog(id);
     if (show_message_in_emote_channel)
         Log::Info("Sent dialog %s (%d)", name, id);
