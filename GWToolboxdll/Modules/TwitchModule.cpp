@@ -310,20 +310,21 @@ void TwitchModule::DrawSettingInternal() {
         ImGui::ShowHelp("Shouldn't need to change this.\nDefault: irc.chat.twitch.tv");
         ImGui::InputText("Twitch Username", const_cast<char*>(irc_username.c_str()), 32);
         ImGui::ShowHelp("Your username that you use for Twitch.");*/
-        ImGui::InputText("Twitch Oauth Token", const_cast<char*>(irc_password.c_str()), 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
+        ImGui::InputText("Twitch Oauth Token", irc_password.data(), 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
         ImGui::PopItemWidth();
         ImGui::ShowHelp("Used to connect to Twitch.\ne.g. oauth:3fplxiscsq1550zdkf8z2kh1jk7mqs");
         ImGui::SameLine();
         ImGui::Checkbox("Show", &show_irc_password);
         ImGui::Indent();
-        ImGui::TextColored(ImColor(102, 187, 238, 255), "Click Here to get a Twitch Oauth Token");
+        const ImColor col(102, 187, 238, 255);
+        ImGui::TextColored(col.Value, "Click Here to get a Twitch Oauth Token");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Go to %s", "https://twitchapps.com/tmi/");
         if (ImGui::IsItemClicked())
             ShellExecute(NULL, "open", "https://twitchapps.com/tmi/", NULL, NULL, SW_SHOWNORMAL);
         ImGui::Unindent();
         ImGui::PushItemWidth(width);
-        ImGui::InputText("Twitch Channel", const_cast<char*>(irc_channel.c_str()), 56);
+        ImGui::InputText("Twitch Channel", irc_channel.data(), 56);
         ImGui::ShowHelp("The Twitch username of the person who's channel you want to connect to.\nEnter your own Twitch username here to receive messages from your channel whilst streaming.");
         ImGui::PopItemWidth();
         ImGui::TextDisabled("Re-connect after making changes to use updated info");
