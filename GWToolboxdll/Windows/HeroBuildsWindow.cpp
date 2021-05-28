@@ -201,7 +201,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                 teambuilds.push_back(tb);
             }
             /* Code for copying a teambuild */
-            static int selectedTeambuild = -1;
             std::vector<const char*> names(teambuilds.size(), "\0");
             std::transform(
                 teambuilds.begin(),
@@ -209,29 +208,18 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                 names.begin(),
                 [](const TeamHeroBuild& tb) { return tb.name; }
            );
-            const auto width = ImGui::GetWindowContentRegionWidth();
-            ImGui::SetNextItemWidth(width);
-            const std::string copy_text = "Copy Teambuild";
-            // Get the index of the teambuild to be copied
-            const auto flags = ImGuiComboFlags_::ImGuiComboFlags_PopupAlignLeft;
             const int num_elements = static_cast<int>(names.size());
-            if (ImGui::BeginCombo("###copyTeambuild", copy_text.data(), flags)) {
-                for (int n = 0; n < num_elements; n++) {
-                    const bool is_selected = (selectedTeambuild == n);
-                    if (ImGui::Selectable(names[n], is_selected)) selectedTeambuild = n;
-
-                    if (is_selected) ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            // If teambuild was selected, add a copy of it
-            if (selectedTeambuild >= 0) {
+            static int selectedTeambuild = 0;
+            ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
+            ImGui::Combo("###teamBuildCombo", &selectedTeambuild, names.data(), num_elements);
+            ImGui::PopItemWidth();
+            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::Button("Copy##1", ImVec2(60.0f, 0))) {
                 TeamHeroBuild new_tb = teambuilds[selectedTeambuild];
                 std::string copy_name = std::string(new_tb.name) + " (Copy)";
                 GuiUtils::StrCopy(new_tb.name, copy_name.c_str(), sizeof(new_tb.name));
                 builds_changed = true;
                 teambuilds.push_back(new_tb);
-                selectedTeambuild = -1; // reset to stop adding the team build
             }
         }
         ImGui::End();
