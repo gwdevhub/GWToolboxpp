@@ -28,6 +28,8 @@ public:
 
     std::wstring agent_name_ping;
     bool hide_in_outpost = false;
+    bool show_abs_value = true;
+    bool show_perc_value = true;
 
     bool thresholds_changed = false;
 private:
