@@ -10,7 +10,7 @@
 
 class ChatCommands : public ToolboxModule {
     const float DEFAULT_CAM_SPEED = 1000.f; // 600 units per sec
-    const float ROTATION_SPEED = (float)M_PI / 3.f; // 6 seconds for full rotation
+    const float ROTATION_SPEED = static_cast<float>(M_PI) / 3.f; // 6 seconds for full rotation
 
     ChatCommands() {};
     ~ChatCommands() {};
@@ -35,7 +35,6 @@ public:
     };
 
     const char* Name() const override { return "Chat Commands"; }
-
     const char* SettingsName() const override { return "Game Settings"; }
 
     void Initialize() override;
@@ -53,8 +52,6 @@ public:
     static void CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv);
 
 private:
-
-
     static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
 
     static bool IsLuxon();
@@ -75,6 +72,7 @@ private:
     static void CmdCamera(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdLoad(const wchar_t *message, int argc, LPWSTR *argv);
+    static void CmdPing(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdResize(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv);
@@ -82,7 +80,6 @@ private:
     static void CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdHeroBehaviour(const wchar_t *message, int argc, LPWSTR *argv);
-
     
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string name, PendingTransmo &transmo);
