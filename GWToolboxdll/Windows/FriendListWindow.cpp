@@ -402,26 +402,46 @@ void FriendListWindow::OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t**
     }
 }
 void FriendListWindow::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*) {
-    if (message_id != GW::UI::kWriteToChatLog || !wparam)
-        return;
-    UIChatMessage* uimsg = static_cast<UIChatMessage*>(wparam);
-    wchar_t* message = uimsg->message;
-    std::wstring message_w = message;
-    switch (message[0]) {
-    case MessageType::CANNOT_ADD_YOURSELF_AS_A_FRIEND: // You cannot add yourself as a friend.
-    case MessageType::EXCEEDED_MAX_NUMBER_OF_FRIENDS: // You have exceeded the maximum number of characters on your Friends list.
-    case MessageType::CHARACTER_NAME_X_DOES_NOT_EXIST: // The Character name "" does not exist
-        OnAddFriendError(status, message);
-        break;
-    case MessageType::FRIEND_ALREADY_ADDED_AS_X: // The Character you're trying to add is already in your friend list as "".
-        OnFriendAlreadyAdded(status, message);
-        break;
-    case MessageType::OUTGOING_WHISPER: // Server has successfully sent your whisper
-        OnOutgoingWhisperSuccess(status, message);
-        break;
-    case MessageType::PLAYER_X_NOT_ONLINE: // Player "" is not online. Redirect to the right person if we can find them!
-        OnPlayerNotOnline(status, message);
-        break;
+    switch (message_id) {
+    case GW::UI::kSetAgentNameTagAttribs:
+    case GW::UI::kShowAgentNameTag: {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+            break;
+        GW::UI::AgentNameTagInfo* tag = (GW::UI::AgentNameTagInfo*)wparam;
+        wchar_t* player_name_start = wcsstr(tag->name_enc, L"\xba9\x107");
+        if (!player_name_start)
+            break;
+        wchar_t* player_name_end = wcschr(player_name_start, 0x1);
+        if (!player_name_end)
+            break;
+        player_name_start += 2;
+        player_name_end[0] = 0;
+        Friend* f = Instance().GetFriend(player_name_start);
+        player_name_end[0] = 0x1;
+        if (f)
+            tag->text_color = Instance().friend_name_tag_color;
+    } break;
+    case GW::UI::kWriteToChatLog: {
+        UIChatMessage* uimsg = static_cast<UIChatMessage*>(wparam);
+        wchar_t* message = uimsg->message;
+        std::wstring message_w = message;
+        switch (message[0]) {
+        case MessageType::CANNOT_ADD_YOURSELF_AS_A_FRIEND: // You cannot add yourself as a friend.
+        case MessageType::EXCEEDED_MAX_NUMBER_OF_FRIENDS: // You have exceeded the maximum number of characters on your Friends list.
+        case MessageType::CHARACTER_NAME_X_DOES_NOT_EXIST: // The Character name "" does not exist
+            OnAddFriendError(status, message);
+            break;
+        case MessageType::FRIEND_ALREADY_ADDED_AS_X: // The Character you're trying to add is already in your friend list as "".
+            OnFriendAlreadyAdded(status, message);
+            break;
+        case MessageType::OUTGOING_WHISPER: // Server has successfully sent your whisper
+            OnOutgoingWhisperSuccess(status, message);
+            break;
+        case MessageType::PLAYER_X_NOT_ONLINE: // Player "" is not online. Redirect to the right person if we can find them!
+            OnPlayerNotOnline(status, message);
+            break;
+        }
+    } break;
     }
 }
 void FriendListWindow::OnFriendUpdated(GW::HookStatus*, GW::Friend* f, GW::FriendStatus status, const wchar_t* alias, const wchar_t* charname) {
@@ -840,7 +860,10 @@ void FriendListWindow::DrawSettingInternal() {
 
     Colors::DrawSettingHueWheel("Widget background hover color", &hover_background_color);
     ImGui::Checkbox("Show my status", &show_my_status);
-    ImGui::ShowHelp("e.e. 'You are: Online'");
+    ImGui::ShowHelp("e.g. 'You are: Online'");
+
+    Colors::DrawSettingHueWheel("Friend name tag color", &friend_name_tag_color);
+    ImGui::ShowHelp("When targeting friends in an outpost");
 
     DrawChatSettings();
 }
@@ -880,7 +903,8 @@ void FriendListWindow::LoadSettings(CSimpleIni* ini) {
     explorable_show_as = ini->GetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
     show_my_status = ini->GetBoolValue(Name(), VAR_NAME(show_my_status), show_my_status);
     
-    Colors::Load(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
+    hover_background_color = Colors::Load(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
+    friend_name_tag_color = Colors::Load(ini, Name(), VAR_NAME(friend_name_tag_color), friend_name_tag_color);
 
     LoadFromFile();
 }
@@ -891,11 +915,12 @@ void FriendListWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_alias_on_whisper), show_alias_on_whisper);
 
     ini->SetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
-    ini->SetLongValue(Name(), VAR_NAME(loading_show_As), loading_show_as);
+    ini->SetLongValue(Name(), VAR_NAME(loading_show_as), loading_show_as);
     ini->SetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
     ini->SetBoolValue(Name(), VAR_NAME(show_my_status), show_my_status);
 
     Colors::Save(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
+    Colors::Save(ini, Name(), VAR_NAME(friend_name_tag_color), friend_name_tag_color);
 
     SaveToFile();
 }
