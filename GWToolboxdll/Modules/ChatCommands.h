@@ -72,6 +72,7 @@ private:
     static void CmdCamera(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdLoad(const wchar_t *message, int argc, LPWSTR *argv);
+    static void CmdPing(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdResize(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv);

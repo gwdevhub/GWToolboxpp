@@ -350,6 +350,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"useskill", ChatCommands::CmdUseSkill);
     GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
     GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
+    GW::Chat::CreateCommand(L"ping", ChatCommands::CmdPing);
     GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
     GW::Chat::CreateCommand(L"transmotarget", ChatCommands::CmdTransmoTarget);
     GW::Chat::CreateCommand(L"transmoparty", ChatCommands::CmdTransmoParty);
@@ -963,38 +964,37 @@ void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
     }
 }
 
-void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
+void ChatCommands::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv)
+{
     UNREFERENCED_PARAMETER(message);
     // We will & should move that to GWCA.
-    static int(__cdecl *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
+    static int(__cdecl * GetPersonalDir)(size_t size, wchar_t * dir) = 0;
     *(uintptr_t*)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
     if (argc == 1) {
-        // We could open the build template window, but any interaction with it would make gw crash.
-        // int32_t param[2] = { 0, 2 };
-        // SendUIMessage(0x100001B4, param, NULL);
         return;
     }
 
-    LPWSTR arg1 = argv[1];
-    constexpr size_t dir_size = 256;
+    constexpr size_t dir_size = 512;
+    constexpr size_t temp_size = 64;
+
+    const LPWSTR arg1 = argv[1];
     wchar_t dir[dir_size];
     GetPersonalDir(dir_size, dir); // @Fix, GetPersonalDir failed on Windows7, return path without slashes
     wcscat_s(dir, L"/GUILD WARS/Templates/Skills/");
     wcscat_s(dir, arg1);
     wcscat_s(dir, L".txt");
 
-    constexpr size_t temp_size = 256;
     char temp[temp_size];
     if (!ReadTemplateFile(dir, temp, temp_size)) {
         // If it failed, we will interpret the input as the code models.
-        size_t len = wcslen(arg1);
+        const size_t len = wcslen(arg1);
         if (len >= temp_size) return;
         for (size_t i = 0; i < len; i++)
             temp[i] = static_cast<char>(arg1[i]);
         temp[len] = 0;
     }
     if (argc == 2)
-        GW::SkillbarMgr::LoadSkillTemplate(temp);   
+        GW::SkillbarMgr::LoadSkillTemplate(temp);
     else if (argc == 3) {
         int ihero_number;
         if (GuiUtils::ParseInt(argv[2], &ihero_number)) {
@@ -1004,6 +1004,49 @@ void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
                 GW::SkillbarMgr::LoadSkillTemplate(temp, static_cast<uint32_t>(ihero_number));
             }
         }
+    }
+}
+
+void ChatCommands::CmdPing(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
+    // We will & should move that to GWCA.
+    static int(__cdecl * GetPersonalDir)(size_t size, wchar_t * dir) = 0;
+    *(uintptr_t*)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
+    if (argc < 2) {
+        return;
+    }
+
+    constexpr size_t dir_size = 512;
+    constexpr size_t temp_size = 64;
+    constexpr size_t template_size = 256;
+
+    for (int arg_idx = 1; arg_idx < argc; arg_idx++) {
+        const LPWSTR arg = argv[arg_idx];
+        wchar_t dir[dir_size];
+        GetPersonalDir(dir_size, dir); // @Fix, GetPersonalDir failed on Windows7, return path without slashes
+        wcscat_s(dir, L"/GUILD WARS/Templates/Skills/");
+        wcscat_s(dir, arg);
+        wcscat_s(dir, L".txt");
+
+        char temp[temp_size];
+        if (!ReadTemplateFile(dir, temp, temp_size)) {
+            // If it failed, we will interpret the input as the code models.
+            const size_t len = wcslen(arg);
+            if (len >= temp_size) continue;
+            for (size_t i = 0; i < len; i++)
+                temp[i] = static_cast<char>(arg[i]);
+            temp[len] = 0;
+        }
+
+        // If template file does not exist, skip
+        GW::SkillbarMgr::SkillTemplate skill_template;
+        if (!GW::SkillbarMgr::DecodeSkillTemplate(&skill_template, temp)) {
+            continue;
+        }
+
+        char template_code[template_size];
+        snprintf(template_code, template_size, "[%S;%s]", arg, temp);
+        GW::Chat::SendChat('#', template_code);
     }
 }
 void ChatCommands::CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv) {
