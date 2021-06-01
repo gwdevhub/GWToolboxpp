@@ -9,7 +9,7 @@
 #include <ToolboxWidget.h>
 
 class PartyDamage : public ToolboxWidget {
-    static const int MAX_PLAYERS = 12;
+    static const size_t MAX_PLAYERS = 12;
 
     struct PlayerDamage {
         uint32_t damage = 0;
@@ -55,7 +55,7 @@ public:
     void DrawSettingInternal() override;
 
     void WritePartyDamage();
-    void WriteDamageOf(size_t index, uint32_t rank = 0); // party index from 0 to 12
+    void WriteDamageOf(const size_t index, uint32_t rank = 0); // party index from 0 to 12
     void WriteOwnDamage();
     void ResetDamage();
 
@@ -65,8 +65,8 @@ private:
 
     void CreatePartyIndexMap();
 
-    float GetPartOfTotal(uint32_t dmg) const;
-    inline float GetPercentageOfTotal(uint32_t dmg) const
+    float GetPartOfTotal(const uint32_t dmg) const;
+    inline float GetPercentageOfTotal(const uint32_t dmg) const
     { return GetPartOfTotal(dmg) * 100.0f; };
 
     // damage values
