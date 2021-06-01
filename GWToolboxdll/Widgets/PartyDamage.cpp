@@ -283,43 +283,61 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 			recent_left = 0, recent_right = 0, 
 			perc_of_total = 0;
 		for (size_t i = 0; i < size; ++i) {
-            const float &damage_float = static_cast<float>(damage[i].damage);
+            const float& damage_float = static_cast<float>(damage[i].damage);
 
             part_of_max = max > 0 ? damage_float / max : 0;
-			bar_left = bars_left ? (x + _width * (1.0f - part_of_max)) : (x);
+            bar_left = bars_left ? (x + _width * (1.0f - part_of_max)) : (x);
             bar_right = bars_left ? (x + _width) : (x + _width * part_of_max);
-			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
-				ImVec2(bar_left, y + i * line_height),
-				ImVec2(bar_right, y + (i + 1) * line_height), 
-				damage_col_from, damage_col_from, damage_col_to, damage_col_to);
+            const ImVec2 left_vec = ImVec2(bar_left, y + i * line_height);
+            const ImVec2 right_vec = ImVec2(bar_right, y + (i + 1) * line_height);
+            ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
+                left_vec, right_vec, damage_col_from,
+				damage_col_from, damage_col_to, damage_col_to
+			);
 
             part_of_recent = max_recent > 0 ? static_cast<float>(damage[i].recent_damage) / max_recent : 0;
-			recent_left = bars_left ? (x + _width * (1.0f - part_of_recent)) : (x);
-			recent_right = bars_left ? (x + _width) : (x + _width * part_of_recent);
-			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
-				ImVec2(recent_left, y + (i + 1) * line_height - 6), 
-				ImVec2(recent_right, y + (i + 1) * line_height), 
-				damage_recent_from, damage_recent_from, damage_recent_to, damage_recent_to);
+            recent_left = bars_left ? (x + _width * (1.0f - part_of_recent)) : (x);
+            recent_right = bars_left ? (x + _width) : (x + _width * part_of_recent);
+            const ImVec2 recent_left_vec = ImVec2(recent_left, y + (i + 1) * line_height - 6);
+            const ImVec2 recent_right_vec = ImVec2(recent_right, y + (i + 1) * line_height);
+            ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
+				recent_left_vec, recent_right_vec,
+                damage_recent_from, damage_recent_from,
+                damage_recent_to, damage_recent_to
+			);
 
-			if (damage[i].damage < 1000) {
-				snprintf(buf, BUF_SIZE, "%d", damage[i].damage);
-			} else if (damage[i].damage < 1000 * 10) {
+            if (damage[i].damage < 1000) {
+                snprintf(buf, BUF_SIZE, "%d", damage[i].damage);
+            } else if (damage[i].damage < 1000 * 10) {
                 snprintf(buf, BUF_SIZE, "%.2f k", damage_float / 1000);
-			} else if (damage[i].damage < 1000 * 1000) {
+            } else if (damage[i].damage < 1000 * 1000) {
                 snprintf(buf, BUF_SIZE, "%.1f k", damage_float / 1000);
-			} else {
+            } else {
                 snprintf(buf, BUF_SIZE, "%.2f m", damage_float / (1000 * 1000));
-			}
-            
-			ImGui::GetWindowDrawList()->AddText(
-				ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + (i * line_height) + height_diff),
-				IM_COL32(255, 255, 255, 255), buf);
+            }
 
-			perc_of_total = GetPercentageOfTotal(damage[i].damage);
-			snprintf(buf, BUF_SIZE, "%.1f %%", perc_of_total);
             ImGui::GetWindowDrawList()->AddText(
-				ImVec2(x + _width / 2, y + (i * line_height) + height_diff),
-				IM_COL32(255, 255, 255, 255), buf);
+                ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + (i * line_height) + height_diff),
+                IM_COL32(255, 255, 255, 255), buf);
+
+            perc_of_total = GetPercentageOfTotal(damage[i].damage);
+            snprintf(buf, BUF_SIZE, "%.1f %%", perc_of_total);
+            ImGui::GetWindowDrawList()->AddText(
+                ImVec2(x + _width / 2, y + (i * line_height) + height_diff),
+				IM_COL32(255, 255, 255, 255), buf
+			);
+
+			const ImGuiWindow* const window = ImGui::GetCurrentWindow();
+            if (window && !window->SkipItems) {
+                const ImVec2 window_size = ImGui::GetWindowSize();
+                const ImVec2 window_offset = ImVec2(window->DC.CursorPos.x + window_size.x, window->DC.CursorPos.y + window_size.y);
+                ImRect damage_rect(window->DC.CursorPos, window_offset);
+                ImGui::ItemSize(damage_rect);
+                const auto id = ImGui::GetID(Name());
+                if (ImGui::ButtonBehavior(damage_rect, id, NULL, NULL)) {
+                    WritePartyDamage();
+                }
+            }
 		}
 	}
 	ImGui::End();
