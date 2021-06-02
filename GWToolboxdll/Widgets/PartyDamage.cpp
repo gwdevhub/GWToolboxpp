@@ -323,18 +323,15 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 				IM_COL32(255, 255, 255, 255), buffer
 			);
 
-            const ImRect current_rect(left_vec, right_vec);
-            float current_width = right_vec.x - left_vec.x;
-            current_width;
-            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0f);
-            char button_name[buffer_size] = {'\0'};
-            snprintf(button_name, buffer_size, "button_%d", i);
-            if (ImGui::Button(button_name, ImVec2(_width, 0))
-					&& print_by_click
-					&& ImGui::IsKeyDown(VK_CONTROL)) {
-				WriteDamageOf(i, i + 1);
+			if (print_by_click) {
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0f);
+                char button_name[buffer_size] = {'\0'};
+                snprintf(button_name, buffer_size, "button_%d", i);
+                if (ImGui::Button(button_name, ImVec2(_width, 0)) && ImGui::IsKeyDown(VK_CONTROL)) {
+                    WriteDamageOf(i, i + 1);
+                }
+                ImGui::PopStyleVar();
 			}
-            ImGui::PopStyleVar();
 		}
 	}
 	ImGui::End();
