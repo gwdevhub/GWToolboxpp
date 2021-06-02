@@ -323,19 +323,18 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 				IM_COL32(255, 255, 255, 255), buffer
 			);
 
-			const ImGuiWindow* const window = ImGui::GetCurrentWindow();
-            if (window && !window->SkipItems) {
-                const ImVec2 window_size = ImGui::GetWindowSize();
-                const ImVec2 window_offset = ImVec2(window->DC.CursorPos.x + window_size.x, window->DC.CursorPos.y + window_size.y);
-                ImRect damage_rect(window->DC.CursorPos, window_offset);
-                ImGui::ItemSize(damage_rect);
-                const auto id = ImGui::GetID(Name());
-                if (ImGui::ButtonBehavior(damage_rect, id, NULL, NULL)
-						&& print_by_click
-						&& ImGui::IsKeyDown(VK_CONTROL)) {
-                    WritePartyDamage();
-                }
-            }
+            const ImRect current_rect(left_vec, right_vec);
+            float current_width = right_vec.x - left_vec.x;
+            current_width;
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0f);
+            char button_name[buffer_size] = {'\0'};
+            snprintf(button_name, buffer_size, "button_%d", i);
+            if (ImGui::Button(button_name, ImVec2(_width, 0))
+					&& print_by_click
+					&& ImGui::IsKeyDown(VK_CONTROL)) {
+				WriteDamageOf(i, i + 1);
+			}
+            ImGui::PopStyleVar();
 		}
 	}
 	ImGui::End();
