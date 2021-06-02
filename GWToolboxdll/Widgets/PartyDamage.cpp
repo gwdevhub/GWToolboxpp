@@ -330,7 +330,9 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
                 ImRect damage_rect(window->DC.CursorPos, window_offset);
                 ImGui::ItemSize(damage_rect);
                 const auto id = ImGui::GetID(Name());
-                if (ImGui::ButtonBehavior(damage_rect, id, NULL, NULL) && print_by_click) {
+                if (ImGui::ButtonBehavior(damage_rect, id, NULL, NULL)
+						&& print_by_click
+						&& ImGui::IsKeyDown(VK_CONTROL)) {
                     WritePartyDamage();
                 }
             }
@@ -455,7 +457,7 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 void PartyDamage::DrawSettingInternal() {
 	ImGui::SameLine();
 	ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-    ImGui::Checkbox("Print Player Damage by CTRL + Click", &print_by_click);
+    ImGui::Checkbox("Print Player Damage by Ctrl + Click", &print_by_click);
 	if (ImGui::Checkbox("Attach to party window", &snap_to_party_window)) {
 		is_movable = is_resizable = !snap_to_party_window;
 	}
