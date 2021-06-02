@@ -92,6 +92,7 @@ private:
     int recent_max_time = 0;
     int row_height = 0;
     bool hide_in_outpost = false;
+    bool print_by_click = false;
 
     bool snap_to_party_window = true;
     // Distance away from the party window on the x axis; used with snap to party window

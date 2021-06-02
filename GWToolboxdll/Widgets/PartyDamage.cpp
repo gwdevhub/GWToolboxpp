@@ -330,7 +330,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
                 ImRect damage_rect(window->DC.CursorPos, window_offset);
                 ImGui::ItemSize(damage_rect);
                 const auto id = ImGui::GetID(Name());
-                if (ImGui::ButtonBehavior(damage_rect, id, NULL, NULL)) {
+                if (ImGui::ButtonBehavior(damage_rect, id, NULL, NULL) && print_by_click) {
                     WritePartyDamage();
                 }
             }
@@ -408,6 +408,7 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 	color_damage = Colors::Load(ini, Name(), VAR_NAME(color_damage), Colors::ARGB(102, 205, 102, 51));
 	color_recent = Colors::Load(ini, Name(), VAR_NAME(color_recent), Colors::ARGB(205, 102, 153, 230));
 	hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    print_by_click = ini->GetBoolValue(Name(), VAR_NAME(print_by_click), print_by_click);
 	snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
 	user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 
@@ -439,7 +440,8 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 	Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
 	Colors::Save(ini, Name(), VAR_NAME(color_damage), color_damage);
 	Colors::Save(ini, Name(), VAR_NAME(color_recent), color_recent);
-	ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(print_by_click), print_by_click);
 	ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
 	ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 
@@ -451,7 +453,9 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 }
 
 void PartyDamage::DrawSettingInternal() {
-	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+	ImGui::SameLine();
+	ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::Checkbox("Print Player Damage by CTRL + Click", &print_by_click);
 	if (ImGui::Checkbox("Attach to party window", &snap_to_party_window)) {
 		is_movable = is_resizable = !snap_to_party_window;
 	}
