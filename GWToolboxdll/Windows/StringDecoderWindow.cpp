@@ -2,6 +2,9 @@
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+
+#include <GWCA/GameEntities/Map.h>
 
 #include <Logger.h>
 #include <GuiUtils.h>
@@ -28,6 +31,20 @@ void StringDecoderWindow::Draw(IDirect3DDevice9 *pDevice)
     ImGui::InputText("Encoded string:", encoded, 2048);
     if (ImGui::Button("Decode")) {
         Decode();
+    }
+    ImGui::InputInt("Map ID:", &map_id);
+    if (ImGui::Button("Decode Map Name")) {
+        GW::AreaInfo* map = GW::Map::GetMapInfo((GW::Constants::MapID)map_id);
+        if (map) {
+            wchar_t buf[8] = { 0 };
+            if (GW::UI::UInt32ToEncStr(map->name_id, buf, 8)) {
+                int offset = 0;
+                for (size_t i = 0; buf[i]; i++) {
+                    offset += sprintf(&encoded[offset], offset > 0 ? " 0x%04x" : "0x%04x", buf[i]);
+                }
+                Decode();
+            }
+        }
     }
     if (decoded.size()) {
         // std::wstring str = GuiUtils::StringToWString(encoded);
@@ -77,6 +94,11 @@ std::wstring StringDecoderWindow::GetEncodedString()
     return encodedW;
 }
 void StringDecoderWindow::Decode()
+{
+    decoded.clear();
+    GW::UI::AsyncDecodeStr(GetEncodedString().c_str(), &decoded);
+}
+void StringDecoderWindow::DecodeFromMapId()
 {
     decoded.clear();
     GW::UI::AsyncDecodeStr(GetEncodedString().c_str(), &decoded);

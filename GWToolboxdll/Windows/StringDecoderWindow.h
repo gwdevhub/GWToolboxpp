@@ -17,6 +17,7 @@ public:
     void Initialize() override;
 
     void Decode();
+    void DecodeFromMapId();
     void Send();
     static void PrintEncStr(const wchar_t* enc_str);
     std::wstring GetEncodedString();
@@ -24,4 +25,5 @@ public:
 private:
     char encoded[2048] = { 0 };
     std::wstring decoded;
+    int map_id = 0;
 };
