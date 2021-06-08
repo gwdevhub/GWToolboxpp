@@ -349,28 +349,22 @@ void Obfuscator::OnSendChat(GW::HookStatus* status, GW::Chat::Channel channel, w
 }
 bool FindPlayerNameInMessage(GW::Chat::Channel channel, wchar_t* message, wchar_t** player_name_start_p, wchar_t** player_name_end_p) {
     *player_name_start_p = 0;
+    auto findPlayerName = [message, player_name_start_p, player_name_end_p]() {
+        // Find any other generic instance of the current player name
+        const wchar_t* player_name = getPlayerName();
+        *player_name_start_p = wcsstr(message, player_name);
+        if (*player_name_start_p)
+            *player_name_end_p = *player_name_start_p + wcslen(player_name);
+    };
     switch (message[0]) {
     case 0x76B: // Incoming player message (chat/guild/alliance/team)
-    //case 0x76D: // Incoming whisper
-    //case 0x76E: // Outgoing whisper
-    //case 0x880: // Player name <name> is invalid.
-    //case 0x881: // Player <name> is not online.
-    //case 0x817: // Player x gained a skill point
-        *player_name_start_p = wcschr(message, 0x107);
-        if (*player_name_start_p) {
-            *player_name_start_p += 1;
-            *player_name_end_p = wcschr(*player_name_start_p, 0x1);
-        }
+        findPlayerName();
         break;
     default:
         switch (channel) {
         case GW::Chat::Channel::CHANNEL_GROUP:
         case GW::Chat::Channel::CHANNEL_GWCA2: {
-            // Find any other generic instance of the current player name
-            const wchar_t* player_name = getPlayerName();
-            *player_name_start_p = wcsstr(message, player_name);
-            if (*player_name_start_p)
-                *player_name_end_p = *player_name_start_p + wcslen(player_name);
+            findPlayerName();
         } break;
         case GW::Chat::Channel::CHANNEL_GLOBAL:
             if (
@@ -379,10 +373,7 @@ bool FindPlayerNameInMessage(GW::Chat::Channel channel, wchar_t* message, wchar_
                 || wmemcmp(message, L"\x8101\x475c\x010a\x0ba9\x0107", 5) == 0 // Skill template named "<blah>" has been loaded onto <player name>
                 || wmemcmp(message, L"\x7f1\x9a9d\xe943\x0b33\x010a", 5) == 0 // <monster name> drops an <item name> which your party reserves for <player name>
                 ) {
-                if (*player_name_start_p) {
-                    *player_name_start_p += 1;
-                    *player_name_end_p = wcschr(*player_name_start_p, 0x1);
-                }
+                findPlayerName();
             }
             break;
         }
