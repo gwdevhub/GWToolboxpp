@@ -628,7 +628,8 @@ void HotkeyEquipItem::Execute()
         item = nullptr;
         return;
     }
-    if (p->GetIsKnockedDown()) {
+    const GW::Skillbar* s =  GW::SkillbarMgr::GetPlayerSkillbar();
+    if (p->GetIsKnockedDown() || (s && s->casting)) {
         // Log::Info("knocked down or missing"); // Player knocked down or
         // casting; wait.
         return;
