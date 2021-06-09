@@ -567,7 +567,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_mes)
                     ->AddStartEvent(EventType::DoorOpen, DoorID::DoA_veil_trench_necro));
                 parent->AddChild(os->AddObjective(new Objective("Tendrils"), 3)
-                    //->AddStartEvent(EventType::ServerMessage, 4, L"\x8102\x223B\x10A\xB60")
+                    ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x34C1\x9FA1\xED8F\x1BE4")
                     ->AddEndEvent(EventType::DoACompleteZone, Veil));
             }
         },
