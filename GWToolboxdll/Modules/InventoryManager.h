@@ -231,22 +231,19 @@ private:
     
 
     struct PendingItem {
+
         uint32_t item_id = 0;
         uint32_t slot = 0;
         GW::Constants::Bag bag = GW::Constants::Bag::None;
         uint32_t uses = 0;
         uint32_t quantity = 0;
-        bool set(Item *item);
+        bool set(Item *item = nullptr);
+        GuiUtils::EncString name;
+        GuiUtils::EncString desc;
         Item *item();
     };
     struct PotentialItem : PendingItem {
-        std::wstring name;
-        std::string name_s;
-        std::wstring desc;
-        std::string desc_s;
-        std::wstring short_name;
         bool proceed = true;
-        bool sanitised = false;
     };
     std::vector<PotentialItem*> potential_salvage_all_items; // List of items that would be processed if user confirms Salvage All
     void ClearPotentialItems();
@@ -264,7 +261,5 @@ private:
     clock_t pending_salvage_at = 0;
     clock_t pending_identify_at = 0;
     PendingItem context_item;
-    std::wstring context_item_name_ws;
-    std::string context_item_name_s;
     bool pending_cancel_salvage = false;
 };

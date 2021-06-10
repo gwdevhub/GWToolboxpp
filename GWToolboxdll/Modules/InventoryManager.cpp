@@ -34,7 +34,7 @@ namespace {
         "Bag 1",
         "Bag 2"
     };
-    void OpenWiki(std::wstring& term) {
+    void OpenWiki(const std::wstring& term) {
         // @Enhancement: Would be nice to use GW's "/wiki" hook in here, but don't want to bother with another RVA so do it ourselves.
         // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
         if (!term.size())
@@ -956,15 +956,9 @@ void InventoryManager::FetchPotentialItems() {
     if (salvage_all_type != SalvageAllType::None) {
         ClearPotentialItems();
         while ((found = GetNextUnsalvagedItem(context_item.item(), found)) != nullptr) {
-            PotentialItem* item = new PotentialItem();
-            GW::UI::AsyncDecodeStr(found->complete_name_enc ? found->complete_name_enc : found->name_enc, &item->name);
-            GW::UI::AsyncDecodeStr(found->name_enc, &item->short_name);
-            if(found->info_string)
-                GW::UI::AsyncDecodeStr(found->info_string, &item->desc);
-            item->item_id = found->item_id;
-            item->slot = found->slot;
-            item->bag = static_cast<GW::Constants::Bag>(found->bag->index + 1);
-            potential_salvage_all_items.push_back(item);
+            auto pi = new PotentialItem();
+            pi->set(found);
+            potential_salvage_all_items.push_back(pi);
         }
     }
 }
@@ -1437,25 +1431,17 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_Text));
                     break;
                 }
-                if (!pi->name.empty() && pi->name_s.empty()) {
-                    pi->name_s = GuiUtils::WStringToString(pi->name);
-                    pi->name_s = std::regex_replace(pi->name_s, sanitiser, "");
-                }
                 ImGui::PushID(static_cast<int>(pi->item_id));
-                ImGui::Checkbox(pi->name_s.c_str(),&pi->proceed);
-                const float item_name_length = ImGui::CalcTextSize(pi->name_s.c_str(), NULL, true).x;
+                ImGui::Checkbox(pi->name.string().c_str(),&pi->proceed);
+                const float item_name_length = ImGui::CalcTextSize(pi->name.string().c_str(), NULL, true).x;
                 longest_item_name_length = item_name_length > longest_item_name_length ? item_name_length : longest_item_name_length;
                 ImGui::PopStyleColor();
                 if (ImGui::IsItemHovered()) {
-                    if (!pi->desc.empty() && pi->desc_s.empty()) {
-                        pi->desc_s = GuiUtils::WStringToString(pi->desc);
-                        pi->desc_s = std::regex_replace(pi->desc_s, sanitiser, "");
-                    }
-                    ImGui::SetTooltip("%s",pi->desc_s.c_str());
+                    ImGui::SetTooltip("%s", pi->desc.string().c_str());
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
-                    OpenWiki(pi->desc);
+                    OpenWiki(pi->name.wstring());
                 }
                 ImGui::PopID();
                 has_items_to_salvage |= pi->proceed;
@@ -1506,11 +1492,8 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
     const ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
-    if (context_item_name_s.empty() && !context_item_name_ws.empty()) {
-        context_item_name_s = GuiUtils::WStringToString(context_item_name_ws);
-    }
     
-    ImGui::Text(context_item_name_s.c_str());
+    ImGui::Text(context_item.name.string().c_str());
     ImGui::Separator();
     // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
@@ -1592,7 +1575,7 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
     }
     if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
-        OpenWiki(context_item_name_ws);
+        OpenWiki(context_item.name.wstring());
         goto end_popup;
     }
     end_popup:
@@ -1655,9 +1638,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
             return; // Double looped.
         if (!im.context_item.set(item))
             return;
-        im.context_item_name_ws.clear();
-        im.context_item_name_s.clear();
-        GW::UI::AsyncDecodeStr(item->name_enc, &im.context_item_name_ws);
         im.show_item_context_menu = true;
         status->blocked = true;
         return;
@@ -1854,6 +1834,8 @@ bool InventoryManager::PendingItem::set(InventoryManager::Item *item)
     quantity = item->quantity;
     uses = item->GetUses();
     bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
+    name.reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
+    desc.reset(item->info_string);
     return true;
 }
 
