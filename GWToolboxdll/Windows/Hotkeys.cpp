@@ -490,34 +490,178 @@ void HotkeyUseItem::Execute()
     }
 }
 
+HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(const GW::Item* item) {
+    set(item->model_id, item->complete_name_enc ? item->complete_name_enc : item->name_enc, item->info_string, item->mod_struct, item->mod_struct_size);
+}
+HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, size_t _mod_struct_size) {
+    set(_model_id, _name_enc, _info_string, _mod_struct, _mod_struct_size);
+}
+HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, size_t _mod_struct_size) {
+    model_id = _model_id;
+    enc_name.reset(_name_enc);
+    enc_desc.reset(_info_string);
+    mod_struct_size = 0;
+    if (_mod_struct) {
+        mod_struct_size = _mod_struct_size;
+        memcpy(mod_struct, _mod_struct, mod_struct_size * sizeof(GW::ItemModifier));
+    }
+    return this;
+}
+bool HotkeyEquipItemAttributes::check(GW::Item* item) {
+    if (!item || item->model_id != model_id || item->mod_struct_size != mod_struct_size)
+        return false;
+    if (wcscmp(item->complete_name_enc ? item->complete_name_enc : item->name_enc, enc_name.encoded().c_str()) != 0)
+        return false;
+    if (memcmp(mod_struct, item->mod_struct, item->mod_struct_size * sizeof(GW::ItemModifier)) != 0)
+        return false;
+    return true;
+}
+
 HotkeyEquipItem::HotkeyEquipItem(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     // @Cleanup: Add error handling
-    bag_idx = static_cast<size_t>(ini->GetLongValue(section, "Bag", 0));
-    slot_idx = static_cast<size_t>(ini->GetLongValue(section, "Slot", 0));
+    bag_idx = static_cast<size_t>(ini->GetLongValue(section, "Bag", bag_idx));
+    slot_idx = static_cast<size_t>(ini->GetLongValue(section, "Slot", slot_idx));
+    equip_by = static_cast<EquipBy>(ini->GetLongValue(section, "EquipBy", equip_by));
+    if (equip_by == ITEM) {
+        uint32_t model_id = ini->GetLongValue(section, "ModelId", 0);
+        std::string in = ini->GetValue(section, "EncodedName", "");
+        std::wstring enc_name;
+        if (in.size()) {
+            enc_name.resize((in.size() + 1) / 5,0);
+            ASSERT(GuiUtils::IniToArray(in, enc_name.data(), enc_name.size()));
+        }
+        in = ini->GetValue(section, "EncodedDesc", "");
+        std::wstring enc_desc;
+        if (in.size()) {
+            enc_desc.resize((in.size() + 1) / 5, 0);
+            ASSERT(GuiUtils::IniToArray(in, enc_desc.data(), enc_desc.size()));
+        }
+        in = ini->GetValue(section, "ModStruct", "");
+        std::vector<uint32_t> mod_structs;
+        if (!in.empty()) {
+            mod_structs.resize((in.size() + 1) / 9, 0);
+            ASSERT(GuiUtils::IniToArray(in, mod_structs.data(), mod_structs.size()));
+        }
+        item_attributes.set(model_id, enc_name.c_str(), enc_desc.c_str(), mod_structs.size() ? (GW::ItemModifier*)mod_structs.data() : nullptr, mod_structs.size());
+    }
 }
 void HotkeyEquipItem::Save(CSimpleIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
+    ini->SetLongValue(section, "EquipBy", static_cast<long>(equip_by));
     ini->SetLongValue(section, "Bag", static_cast<long>(bag_idx));
     ini->SetLongValue(section, "Slot", static_cast<long>(slot_idx));
+    if (equip_by == ITEM) {
+        HotkeyEquipItemAttributes atts = GetItemAttributes();
+        ini->SetLongValue(section, "ModelId", atts.model_id);
+        std::string out;
+        ASSERT(GuiUtils::ArrayToIni(atts.enc_name.encoded().c_str(), &out));
+        ini->SetValue(section, "EncodedName", out.c_str());
+        ASSERT(GuiUtils::ArrayToIni(atts.enc_desc.encoded().c_str(), &out));
+        ini->SetValue(section, "EncodedDesc", out.c_str());
+        ASSERT(GuiUtils::ArrayToIni(atts.mod_struct, atts.mod_struct_size, &out));
+        ini->SetLongValue(section, "ModStructSize", atts.mod_struct_size);
+        ini->SetValue(section, "ModStruct", out.c_str());
+    }
 }
 void HotkeyEquipItem::Description(char *buf, size_t bufsz) const
 {
-    snprintf(buf, bufsz, "Equip Item in bag %d slot %d", bag_idx, slot_idx);
+    if (equip_by == SLOT)
+        snprintf(buf, bufsz, "Equip Item in bag %d slot %d", bag_idx, slot_idx);
+    else {
+        snprintf(buf, bufsz, "Equip %s", GetItemAttributes().name().c_str());
+    }
+
 }
 void HotkeyEquipItem::Draw()
 {
-    if (ImGui::InputInt("Bag (1-5)", (int *)&bag_idx))
-        hotkeys_changed = true;
-    if (ImGui::InputInt("Slot (1-25)", (int *)&slot_idx))
-        hotkeys_changed = true;
+    constexpr char* bags[6] = { "None", "Backpack","Belt Pouch","Bag 1", "Bag 2","Equipment Pack" };
+    ImGui::Text("Equip By: "); ImGui::SameLine();
+    ImGui::RadioButton("Item", (int*)&equip_by, EquipBy::ITEM); 
+    ImGui::ShowHelp("Find and equip an item by its attributes, regardless of location in inventory.");
+    ImGui::SameLine();
+    ImGui::RadioButton("Slot", (int*)&equip_by, EquipBy::SLOT);
+    ImGui::ShowHelp("Find and equip an item in a specific slot, regarless of what it is.\nUseful for using the same hotkey across characters.");
+    if (equip_by == SLOT) {
+        if(ImGui::Combo("Bag", (int*)&bag_idx, bags,_countof(bags)))
+            hotkeys_changed = true;
+        if (ImGui::InputInt("Slot (1-25)", (int*)&slot_idx))
+            hotkeys_changed = true;
+    }
+    else {
+        static bool need_to_fetch_bag_items = false;
+        if (!item_attributes.model_id) {
+            ImGui::Text("No item chosen");
+        }
+        else {
+            ImGui::Text("%s", item_attributes.name().c_str());
+            if (!item_attributes.desc().empty()) {
+                ImGui::Text("%s", item_attributes.desc().c_str());
+            }
+        }
+        if (ImGui::Button("Edit")) {
+            need_to_fetch_bag_items = true;
+            ImGui::OpenPopup("Choose Item to Equip");
+        }
+        constexpr size_t bags_size = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack) + 1;
+        static std::vector<std::vector<HotkeyEquipItemAttributes>> available_items(bags_size);
+        if (ImGui::BeginPopupModal("Choose Item to Equip",0, ImGuiWindowFlags_AlwaysAutoResize)) {
+            if (need_to_fetch_bag_items) {
+                available_items.clear();
+                available_items.resize(bags_size);
+                for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size; i++) {
+                    GW::Bag* bag = GW::Items::GetBag(i);
+                    if (!bag)
+                        continue;
+                    GW::ItemArray& items = bag->items;
+                    for (size_t slot = 0; slot < items.size(); slot++) {
+                        const GW::Item* cur_item = items[slot];
+                        if (!IsEquippable(cur_item)) continue;
+                        available_items[i].push_back(cur_item);
+                    }
+                }
+                need_to_fetch_bag_items = false;
+            }
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
+            for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size; i++) {
+                auto& items = available_items[i];
+                if (items.empty())
+                    continue;
+                ImGui::Text(bags[i]);
+                ImGui::Indent();
+                for (auto& ai : available_items[i]) {
+                    ImGui::PushID(&ai);
+                    if (ImGui::Button(ai.name().c_str())) {
+                        item_attributes = ai;
+                        hotkeys_changed = true;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("%s",ai.desc().c_str());
+                        ImGui::EndTooltip();
+                    }
+                    ImGui::PopID();
+                }
+                ImGui::Unindent();
+            }
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+            if (ImGui::Button("Cancel###cancel_hotkey_equip_item")) {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+
+    }
     if (ImGui::Checkbox("Display error message on failure",
                         &show_error_on_failure))
         hotkeys_changed = true;
 }
-bool HotkeyEquipItem::IsEquippable(GW::Item *_item)
+bool HotkeyEquipItem::IsEquippable(const GW::Item *_item)
 {
     if (!_item)
         return false;
@@ -554,29 +698,56 @@ bool HotkeyEquipItem::IsEquippable(GW::Item *_item)
     return c && c->player_name &&
            wcscmp(c->player_name, _item->customized) == 0;*/
 }
+GW::Item* HotkeyEquipItem::FindMatchingItem(GW::Constants::Bag _bag_idx) {
+    GW::Bag* bag = GW::Items::GetBag(_bag_idx);
+    if (!bag) return nullptr;
+    GW::ItemArray& items = bag->items;
+    for (auto _item : items) {
+        if (item_attributes.check(_item))
+            return _item;
+    }
+    return nullptr;
+}
 void HotkeyEquipItem::Execute()
 {
     if (!CanUse())
         return;
     if (!ongoing) {
-        if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
-            if (show_error_on_failure)
-                Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
-            return;
+
+        if (equip_by == SLOT) {
+            if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
+                if (show_error_on_failure)
+                    Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+                return;
+            }
+            GW::Bag* b = GW::Items::GetBag(bag_idx);
+            if (!b) {
+                if (show_error_on_failure)
+                    Log::Error("Bag #%d not found!", bag_idx);
+                return;
+            }
+            GW::ItemArray items = b->items;
+            if (!items.valid() || slot_idx > items.size()) {
+                if (show_error_on_failure)
+                    Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+                return;
+            }
+            item = items.at(slot_idx - 1);
         }
-        GW::Bag *b = GW::Items::GetBag(bag_idx);
-        if (!b) {
-            if (show_error_on_failure)
-                Log::Error("Bag #%d not found!", bag_idx);
-            return;
+        else {
+            item = FindMatchingItem(GW::Constants::Bag::Equipped_Items);
+            constexpr size_t bags_size = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack) + 1;
+            for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size && !item; i++) {
+                item = FindMatchingItem(static_cast<GW::Constants::Bag>(i));
+            }
+            if (!item) {
+                if (show_error_on_failure)
+                    Log::Error("No equippable item matching your hotkey");
+                item = nullptr;
+                return;
+            }
         }
-        GW::ItemArray items = b->items;
-        if (!items.valid() || slot_idx > items.size()) {
-            if (show_error_on_failure)
-                Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
-            return;
-        }
-        item = items.at(slot_idx - 1);
+
         if (!IsEquippable(item)) {
             if (show_error_on_failure)
                 Log::Error("No equippable item in bag %d slot %d", bag_idx,

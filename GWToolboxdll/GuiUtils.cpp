@@ -22,6 +22,7 @@ namespace {
     bool fonts_loading = false;
     bool fonts_loaded = false;
 }
+
 // Has GuiUtils::LoadFonts() finished?
 bool GuiUtils::FontsLoaded() {
     return fonts_loaded;
@@ -332,6 +333,73 @@ bool GuiUtils::ParseFloat(const wchar_t *str, float *val) {
     *val = wcstof(str, &end);
     return str != end && errno != ERANGE;
 }
+bool GuiUtils::IniToArray(const std::string& in, wchar_t* out, size_t out_len) {
+    if ((in.size() + 1) / 5 > out_len)
+        return false;
+    size_t offset = 0, pos = 0, converted = 0;
+    do {
+        if (pos) pos++;
+        std::string substring(in.substr(pos, 4));
+        if (!ParseUInt(substring.c_str(), &converted, 16))
+            return false;
+        if (converted > 0xFFFF)
+            return false;
+        out[offset++] = (wchar_t)converted;
+    } while ((pos = in.find(' ', pos)) != std::string::npos);
+    while (offset < out_len) {
+        out[offset++] = 0;
+    }
+    return true;
+}
+bool GuiUtils::IniToArray(const std::string& in, uint32_t* out, size_t out_len) {
+    if ((in.size() + 1) / 9  > out_len)
+        return false;
+    size_t offset = 0, pos = 0, converted = 0;
+    do {
+        if (pos) pos++;
+        std::string substring(in.substr(pos, 8));
+        if (!ParseUInt(substring.c_str(), &converted, 16))
+            return false;
+        out[offset++] = converted;
+    } while ((pos = in.find(' ', pos)) != std::string::npos);
+    while (offset < out_len) {
+        out[offset++] = 0;
+    }
+    return true;
+}
+bool GuiUtils::ArrayToIni(const wchar_t* in, std::string* out)
+{
+    size_t len = wcslen(in);
+    if (!len) {
+        out->clear();
+        return true;
+    }
+    out->resize((len * 5) - 1, 0);
+    char* data = out->data();
+    size_t offset = 0;
+    for (size_t i = 0; i < len;i++) {
+        if (offset > 0)
+            data[offset++] = ' ';
+        offset += sprintf(&data[offset], "%04x", in[i]);
+    }
+    return true;
+}
+bool GuiUtils::ArrayToIni(const uint32_t* in, size_t in_len, std::string* out)
+{
+    if (!in_len) {
+        out->clear();
+        return true;
+    }
+    out->resize((in_len * 9) - 1, 0);
+    char* data = out->data();
+    size_t offset = 0;
+    for (size_t i = 0; i < in_len; i++) {
+        if (offset > 0)
+            data[offset++] = ' ';
+        offset += sprintf(&data[offset], "%08x", in[i]);
+    }
+    return true;
+}
 bool GuiUtils::ParseUInt(const char *str, unsigned int *val, int base) {
     char *end;
     *val = strtoul(str, &end, base);
@@ -371,4 +439,37 @@ char *GuiUtils::StrCopy(char *dest, const char *src, size_t dest_size) {
     strncpy(dest, src, dest_size - 1);
     dest[dest_size - 1] = 0;
     return dest;
+}
+
+void GuiUtils::EncString::reset(const wchar_t* _enc_string)
+{
+    encoded_ws.clear();
+    decoded_ws.clear();
+    decoded_s.clear();
+    decoding = sanitised = false;
+    if(_enc_string)
+        encoded_ws = _enc_string;
+}
+
+const std::wstring& GuiUtils::EncString::wstring()
+{
+    if (decoded_ws.empty() && !encoded_ws.empty() && !decoding) {
+        GW::UI::AsyncDecodeStr(encoded_ws.data(), &decoded_ws);
+        decoding = true;
+    }
+    if (decoding && !sanitised && !decoded_ws.empty()) {
+        sanitised = true;
+        static const std::wregex sanitiser(L"<[^>]+>");
+        decoded_ws = std::regex_replace(decoded_ws, sanitiser, L"");
+    }
+    return decoded_ws;
+}
+
+const std::string& GuiUtils::EncString::string()
+{
+    wstring();
+    if (sanitised && !decoded_ws.empty() && decoded_s.empty()) {
+        decoded_s = GuiUtils::WStringToString(decoded_ws);
+    }
+    return decoded_s;
 }

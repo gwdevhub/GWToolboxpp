@@ -95,10 +95,31 @@ public:
     void Execute() override;
 };
 
+class HotkeyEquipItemAttributes {
+public:
+    HotkeyEquipItemAttributes(uint32_t _model_id = 0, const wchar_t* _name_enc = 0, const wchar_t* _info_string = 0, const GW::ItemModifier* _mod_struct = 0, size_t _mod_struct_size = 0);
+    HotkeyEquipItemAttributes* set(uint32_t _model_id = 0, const wchar_t* _name_enc = 0, const wchar_t* _info_string = 0, const GW::ItemModifier* _mod_struct = 0, size_t _mod_struct_size = 0);
+    HotkeyEquipItemAttributes(const GW::Item* item);
+    const std::string& name() { return enc_name.string(); }
+    const std::wstring& name_ws() { return enc_name.wstring(); }
+    const std::string& desc() { return enc_desc.string(); }
+    const std::wstring& desc_ws() { return enc_desc.wstring(); }
+    bool check(GW::Item* item = nullptr);
+    uint32_t model_id = 0;
+    GuiUtils::EncString enc_name;
+    GuiUtils::EncString enc_desc;
+    size_t mod_struct_size = 0;
+    uint32_t mod_struct[16] = { 0 };
+};
 class HotkeyEquipItem : public TBHotkey {
 private:
     UINT bag_idx = 0;
     UINT slot_idx = 0;
+    HotkeyEquipItemAttributes item_attributes;
+    enum EquipBy : int {
+        ITEM,
+        SLOT
+    } equip_by = SLOT;
     GW::Item* item = nullptr;
     std::chrono::time_point<std::chrono::steady_clock> start_time;
     std::chrono::time_point<std::chrono::steady_clock> last_try;
@@ -115,7 +136,13 @@ public:
     void Description(char* buf, size_t bufsz) const override;
     void Execute() override;
 
-    bool IsEquippable(GW::Item* item);
+    bool IsEquippable(const GW::Item* item);
+
+    HotkeyEquipItemAttributes GetItemAttributes() const {
+        return item_attributes;
+    };
+
+    GW::Item* FindMatchingItem(GW::Constants::Bag bag_idx);
 };
 
 // hotkey to use an item
