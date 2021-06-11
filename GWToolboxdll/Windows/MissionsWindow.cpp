@@ -138,10 +138,19 @@ GW::Constants::MapID Mission::GetOutpost() {
 	GW::AreaInfo* map_info = nullptr;
 	float nearest_distance = FLT_MAX;
 	GW::Constants::MapID nearest_map_id = GW::Constants::MapID::None;
-	GW::Vec2f this_pos = { (float)this_map->icon_start_x,(float)this_map->icon_start_y };
-	if (!this_pos.x) {
-		this_pos = { (float)this_map->x,(float)this_map->y };
-	}
+
+	auto get_pos = [](GW::AreaInfo* map) {
+		GW::Vec2f pos = { (float)map->x,(float)map->y };
+		if (!pos.x) {
+			pos.x = (float)(map->icon_start_x + (map->icon_end_x - map->icon_start_x) / 2);
+			pos.y = (float)(map->icon_start_y + (map->icon_end_y - map->icon_start_y) / 2);
+		}
+		return pos;
+	};
+
+	GW::Vec2f this_pos = get_pos(this_map);
+	if(!this_pos.x)
+		this_pos = { (float)this_map->icon_start_x,(float)this_map->icon_start_y };
 	for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
 		map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
 		if (!map_info || !map_info->thumbnail_id || !map_info->GetIsOnWorldMap())
@@ -161,7 +170,7 @@ GW::Constants::MapID Mission::GetOutpost() {
 		}
 		if (!TravelWindow::Instance().IsMapUnlocked(static_cast<GW::Constants::MapID>(i)))
 			continue;
-		float dist = GW::GetDistance(this_pos, { (float)map_info->icon_start_x,(float)map_info->icon_start_y });
+		float dist = GW::GetDistance(this_pos, get_pos(map_info));
 		if (dist < nearest_distance) {
 			nearest_distance = dist;
 			nearest = map_info;
@@ -551,6 +560,8 @@ void MissionsWindow::Initialize_Nightfall()
 {
 	LoadTextures(NightfallMission::normal_mode_images);
 	LoadTextures(NightfallMission::hard_mode_images);
+	LoadTextures(TormentMission::normal_mode_images);
+	LoadTextures(TormentMission::hard_mode_images);
 
 	auto& nightfall_missions = missions.at(Campaign::Nightfall);
 	nightfall_missions.push_back(new NightfallMission(
@@ -751,7 +762,7 @@ void MissionsWindow::Draw(IDirect3DDevice9* device)
 					completed++;
 			}
 			char label[128];
-			snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f);
+			snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
 			if (ImGui::CollapsingHeader(label)) {
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 				for (size_t i = 0; i < camp_missions.size(); i++) {
@@ -774,7 +785,7 @@ void MissionsWindow::Draw(IDirect3DDevice9* device)
 					completed++;
 			}
 			char label[128];
-			snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f);
+			snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
 			if (ImGui::CollapsingHeader(label)) {
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 				for (size_t i = 0; i < camp_missions.size(); i++) {
