@@ -23,10 +23,10 @@ DWORD WINAPI init(HMODULE hModule) noexcept {
             printf("[SCAN] is_ingame = %p\n", found);
         }
 
-        /*DWORD *is_ingame = *found;
+        DWORD *is_ingame = *found;
         while (*is_ingame == 0) {
             Sleep(100);
-        }*/
+        }
         
         Log::Log("Creating toolbox thread\n");
         SafeThreadEntry(hModule);
