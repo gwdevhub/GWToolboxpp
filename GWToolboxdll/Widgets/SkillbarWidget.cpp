@@ -125,7 +125,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     ImGui::PushFont(GuiUtils::GetFont(font_recharge));
 
     GW::UI::WindowPosition* pos = GW::UI::GetWindowPosition(GW::UI::WindowID_Skillbar);
-    ImVec2 skillsize(static_cast<float>(m_skill_width), static_cast<float>(m_skill_height));
+    ImVec2 skillsize(m_skill_width, m_skill_height);
     ImVec2 winsize;
     if (snap_to_skillbar && pos) {
         if (pos->state & 0x2) {
@@ -167,7 +167,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             skillsize.x /= 4.f;
             break;
         }
-        skillsize.y = skillsize.x;
+        m_skill_width = m_skill_height = skillsize.y = skillsize.x;
         // NB: Skillbar is 1px off on x axis
         ImGui::SetNextWindowPos({ xAxis.x + 1.f,yAxis.x });
         winsize = { width,height };
@@ -298,9 +298,9 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
     ImVec2 size;
     if (layout == Layout::Column || layout == Layout::Columns) {
         size.x = effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size; // not really correct but works
-        size.y = static_cast<float>(m_skill_height);
+        size.y = m_skill_height;
     } else {
-        size.x = static_cast<float>(m_skill_width);
+        size.x = m_skill_width;
         size.y = effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size;
     }
 
@@ -365,9 +365,10 @@ void SkillbarWidget::LoadSettings(CSimpleIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
     layout = (Layout)ini->GetLongValue(Name(), VAR_NAME(layout), layout);
-    m_skill_height = ini->GetLongValue(Name(), "height", m_skill_height);
-    m_skill_width = ini->GetLongValue(Name(), "width", m_skill_width);
-
+    int i_skill_height = ini->GetLongValue(Name(), "height", 50);
+    m_skill_height = static_cast<float>(i_skill_height);
+    int i_skill_width = ini->GetLongValue(Name(), "width", 50);
+    m_skill_width = static_cast<float>(i_skill_width);
     const long medium_treshold_i =
         ini->GetLongValue(Name(), VAR_NAME(medium_treshold), static_cast<int>(medium_treshold));
     if (medium_treshold_i > 0) {
@@ -497,10 +498,10 @@ void SkillbarWidget::DrawSettingInternal()
     else {
         static const char* items[] = { "Row", "2 Rows", "Column", "2 Columns" };
         ImGui::Combo("Layout", (int*)&layout, items, 4);
-        int size[2]{ m_skill_width, m_skill_height };
+        int size[2]{ static_cast<int>(m_skill_width), static_cast<int>(m_skill_height) };
         if (ImGui::DragInt2("Skill size", size, 1.f, 1, 100)) {
-            m_skill_width = size[0];
-            m_skill_height = size[1];
+            m_skill_width = static_cast<float> (size[0]);
+            m_skill_height = static_cast<float>(size[1]);
         }
     }
 

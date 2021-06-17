@@ -920,11 +920,20 @@ bool AgentRenderer::CustomAgent::DrawHeader() {
     float cursor_pos = ImGui::GetCursorPosX();
     if (color_active) {
         changed |= ImGui::ColorButtonPicker("##color", &color);
+        if (ImGui::IsItemHovered()) {
+            const ImVec4 col = ImGui::ColorConvertU32ToFloat4(color);
+            ImGui::ColorTooltip("Minimap Color##color_tooltip", &col.x, 0);
+        }
+            
         ImGui::SameLine();
     }
     ImGui::SetCursorPosX(cursor_pos += button_width);
     if (color_text_active) {
         changed |= ImGui::ColorButtonPicker("##color_text", &color_text);
+        if (ImGui::IsItemHovered()) {
+            const ImVec4 col = ImGui::ColorConvertU32ToFloat4(color_text);
+            ImGui::ColorTooltip("Name Tag Color##color_tooltip", &col.x, 0);
+        }
         ImGui::SameLine();
     }
     ImGui::SetCursorPosX(cursor_pos += button_width);

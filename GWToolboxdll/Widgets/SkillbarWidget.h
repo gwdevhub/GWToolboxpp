@@ -60,8 +60,8 @@ private:
         Columns
     };
     Layout layout = Layout::Row;
-    int m_skill_width = 50;
-    int m_skill_height = 50;
+    float m_skill_width = 50.f;
+    float m_skill_height = 50.f;
 
     // duration -> color settings
     int medium_treshold = 5000; // long to medium color
