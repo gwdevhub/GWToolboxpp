@@ -2,6 +2,7 @@
 
 #include "CustomRenderer.h"
 
+#include <GWCA/Utilities/Hook.h>
 #include <GWCA/GameEntities/Agent.h>
 
 #include <Color.h>
@@ -68,9 +69,11 @@ private:
 
         // attributes to change
         Color color = 0xFFF00000;
+        Color color_text = 0xFFF00000;
         Shape_e shape = Tear;
         float size = 0.0f;
         bool color_active = true;
+        bool color_text_active = true;
         bool shape_active = true;
         bool size_active = true;
     };
@@ -148,4 +151,6 @@ private:
 
     bool agentcolors_changed = false;
     CSimpleIni* agentcolorinifile = nullptr;
+
+    GW::HookEntry UIMsg_Entry;
 };
