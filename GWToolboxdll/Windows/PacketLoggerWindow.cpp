@@ -216,7 +216,7 @@ static FieldType GetField(uint32_t type, uint32_t size, uint32_t count)
     case 11:
         switch (size) {
         case 1: return FieldType::Array8;
-        case 2: return FieldType::Array16;
+        case 2: return FieldType::Array32;
         case 4: return FieldType::Array32;
         }
     case 12:
@@ -356,15 +356,18 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
     }
     case FieldType::Array16: {
         PrintIndent(indent);
-        uint32_t length;
+        uint32_t length = count;
         Serialize<uint32_t>(bytes, &length);
         uint8_t* end = *bytes + (count * 2);
-        printf("Array16(%u) {\n", length);
-        uint16_t val;
-        for (size_t i = 0; i < length; i++) {
-            Serialize<uint16_t>(bytes, &val);
-            PrintIndent(indent + 4);
-            printf("[%zu] => %u,\n", i, val);
+        printf("Array16(%u of %u) {\n", length, count);
+        if (length < 64) {
+            uint16_t val;
+            for (size_t i = 0; i < length; i++) {
+                Serialize<uint16_t>(bytes, &val);
+                PrintIndent(indent + 4);
+                printf("[%zu] => %u,\n", i, val);
+            }
+
         }
         printf("}\n");
         *bytes = end;
@@ -372,15 +375,18 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
     }
     case FieldType::Array32: {
         PrintIndent(indent);
-        uint32_t length;
-        uint8_t* end = *bytes + (count * 4);
+        uint32_t length = count;
         Serialize<uint32_t>(bytes, &length);
-        printf("Array32(%u) {\n", length);
-        uint32_t val;
-        for (size_t i = 0; i < length; i++) {
-            Serialize<uint32_t>(bytes, &val);
-            PrintIndent(indent + 4);
-            printf("[%zu] => %u,\n", i, val);
+        uint8_t* end = *bytes + (count * 4);
+        printf("Array32(%u of %u) {\n", length, count);
+        if (length < 128) {
+            uint32_t val;
+            for (size_t i = 0; i < length; i++) {
+                Serialize<uint32_t>(bytes, &val);
+                PrintIndent(indent + 4);
+                printf("[%zu] => %u,\n", i, val);
+            }
+
         }
         printf("}\n");
         *bytes = end;
