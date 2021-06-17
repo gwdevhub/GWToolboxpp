@@ -914,7 +914,9 @@ bool AgentRenderer::CustomAgent::DrawHeader() {
     ImGui::SameLine(0, 18);
     bool changed = ImGui::Checkbox("##visible", &active);
     ImGui::SameLine();
-    changed |= ImGui::ColorButtonPicker("", &color);
+    changed |= ImGui::ColorButtonPicker("##color", &color);
+    ImGui::SameLine();
+    changed |= ImGui::ColorButtonPicker("##color_text", &color_text);
     ImGui::SameLine();
     ImGui::Text(name);
     return changed;
