@@ -300,6 +300,8 @@ AgentRenderer::~AgentRenderer() {
     }
     custom_agents.clear();
     custom_agents_map.clear();
+
+    GW::UI::RemoveUIMessageCallback(&UIMsg_Entry);
 }
 AgentRenderer::AgentRenderer() {
     shapes[Tear].AddVertex(1.8f, 0, Dark);      // A
@@ -365,6 +367,29 @@ AgentRenderer::AgentRenderer() {
             max_shape_verts = shapes[shape].vertices.size();
         }
     }
+
+    GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, [this](GW::HookStatus*, uint32_t msgid, void* wParam, void*) -> void {
+        switch (msgid) {
+            case GW::UI::kShowAgentNameTag:
+            case GW::UI::kSetAgentNameTagAttribs: {
+                GW::UI::AgentNameTagInfo* msg = (GW::UI::AgentNameTagInfo*)wParam;                
+
+                GW::Agent* agent = GW::Agents::GetAgentByID(msg->agent_id);
+                if (!agent) return;
+                const GW::AgentLiving* living = agent->GetAsAgentLiving();
+                if (!living) return;
+                const auto it = custom_agents_map.find(living->player_number);
+                if (it != custom_agents_map.end()) {
+                    for (const CustomAgent* ca : it->second) {
+                        if (!ca->active) continue;
+                        if (ca->mapId > 0 && ca->mapId != (DWORD)GW::Map::GetMapID()) continue;
+                        msg->text_color = ca->color_text;
+                    }
+                }
+                break;
+            }
+        }
+    });
 }
 
 void AgentRenderer::Shape_t::AddVertex(float x, float y, AgentRenderer::Color_Modifier mod) {
@@ -844,6 +869,7 @@ AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
     mapId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(mapId), static_cast<long>(mapId)));
 
     color = Colors::Load(ini, section, VAR_NAME(color), color);
+    color_text = Colors::Load(ini, section, VAR_NAME(color_text), color_text);
     int s = ini->GetLongValue(section, VAR_NAME(shape), shape);
     if (s >= 1 && s <= 4) {
         // this is a small hack because we used to have shape=0 -> default, now we just cast to Shape_e.
@@ -853,6 +879,7 @@ AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
     size = (float)ini->GetDoubleValue(section, VAR_NAME(size), size);
 
     color_active = ini->GetBoolValue(section, VAR_NAME(color_active), color_active);
+    color_text_active = ini->GetBoolValue(section, VAR_NAME(color_text_active), color_text_active);
     shape_active = ini->GetBoolValue(section, VAR_NAME(shape_active), shape_active);
     size_active = ini->GetBoolValue(section, VAR_NAME(size_active), size_active);
 }
@@ -873,10 +900,12 @@ void AgentRenderer::CustomAgent::SaveSettings(CSimpleIni* ini, const char* secti
     ini->SetLongValue(section, VAR_NAME(mapId), static_cast<long>(mapId));
 
     Colors::Save(ini, section, VAR_NAME(color), color);
+    Colors::Save(ini, section, VAR_NAME(color_text), color_text);
     ini->SetLongValue(section, VAR_NAME(shape), shape + 1);
     ini->SetDoubleValue(section, VAR_NAME(size), size);
 
     ini->SetBoolValue(section, VAR_NAME(color_active), color_active);
+    ini->SetBoolValue(section, VAR_NAME(color_text_active), color_text_active);
     ini->SetBoolValue(section, VAR_NAME(shape_active), shape_active);
     ini->SetBoolValue(section, VAR_NAME(size_active), size_active);
 }
@@ -919,8 +948,14 @@ bool AgentRenderer::CustomAgent::DrawSettings(AgentRenderer::CustomAgent::Operat
         if (ImGui::Checkbox("##color_active", &color_active)) changed = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("If unchecked, the default color will be used");
         ImGui::SameLine();
-        if (Colors::DrawSettingHueWheel("", &color, 0)) changed = true;
+        if (Colors::DrawSettingHueWheel("Color", &color, 0)) changed = true;
         ImGui::ShowHelp("The custom color for this agent.");
+
+        if (ImGui::Checkbox("##color_text_active", &color_text_active)) changed = true;
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("If unchecked, the default color will be used");
+        ImGui::SameLine();
+        if (Colors::DrawSettingHueWheel("Text color", &color_text, 0)) changed = true;
+        ImGui::ShowHelp("The custom text color for this agent.");
 
         if (ImGui::Checkbox("##size_active", &size_active)) changed = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("If unchecked, the default size will be used");
