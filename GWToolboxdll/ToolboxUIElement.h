@@ -29,6 +29,7 @@ public:
 
     virtual bool IsWindow() const { return false; }
     virtual bool IsWidget() const { return false; }
+    virtual bool ShowOnWorldMap() const { return false; }
 
     virtual char* TypeName() const { return "ui element"; }
 

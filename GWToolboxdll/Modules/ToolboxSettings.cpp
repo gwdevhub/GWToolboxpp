@@ -73,6 +73,7 @@
 #include <Widgets/VanquishWidget.h>
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/SkillbarWidget.h>
+#include <Widgets/WorldMapWidget.h>
 
 #include "ToolboxSettings.h"
 
@@ -149,6 +150,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_clock) optional_modules.push_back(&ClockWidget::Instance());
     if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
     if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
+    if (use_world_map) optional_modules.push_back(&WorldMapWidget::Instance());
 
     std::sort(
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_widgets),
@@ -212,7 +214,8 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Observer Target Window",&use_observer_target_window},
         {"Observer Party Window",&use_observer_party_window},
         {"Observer Export Window",&use_observer_export_window},
-        {"Vanquish counter",&use_vanquish}
+        {"Vanquish counter",&use_vanquish},
+        {"World Map",& use_vanquish}
     };
     ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
     size_t items_per_col = (size_t)ceil(features.size() / static_cast<float>(cols));

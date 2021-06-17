@@ -464,8 +464,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         if (!GW::UI::GetIsUIDrawn())
             return;
 
-        if (GW::UI::GetIsWorldMapShowing())
-            return;
+        bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
         if (GW::PreGameContext::instance())
             return; // Login screen
@@ -484,7 +483,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ImGui_ImplDX9_NewFrame();
         ImGui_ImplWin32_NewFrame();
 
-        Minimap::Render(device);
+        if(!world_map_showing)
+            Minimap::Render(device);
 
         ImGui::NewFrame();
 
@@ -494,8 +494,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ImGui::GetIO().KeysDown[VK_SHIFT] = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
         ImGui::GetIO().KeysDown[VK_MENU] = (GetKeyState(VK_MENU) & 0x8000) != 0;
         
-
         for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {
+            if (world_map_showing && !uielement->ShowOnWorldMap())
+                continue;
             uielement->Draw(device);
         }
         //for (TBModule* mod : GWToolbox::Instance().plugins) {
