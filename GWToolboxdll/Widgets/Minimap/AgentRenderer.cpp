@@ -914,11 +914,20 @@ void AgentRenderer::CustomAgent::SaveSettings(CSimpleIni* ini, const char* secti
 bool AgentRenderer::CustomAgent::DrawHeader() {
     ImGui::SameLine(0, 18);
     bool changed = ImGui::Checkbox("##visible", &active);
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float button_width = ImGui::GetFrameHeight() + style.ItemInnerSpacing.x;
     ImGui::SameLine();
-    changed |= ImGui::ColorButtonPicker("##color", &color);
-    ImGui::SameLine();
-    changed |= ImGui::ColorButtonPicker("##color_text", &color_text);
-    ImGui::SameLine();
+    float cursor_pos = ImGui::GetCursorPosX();
+    if (color_active) {
+        changed |= ImGui::ColorButtonPicker("##color", &color);
+        ImGui::SameLine();
+    }
+    ImGui::SetCursorPosX(cursor_pos += button_width);
+    if (color_text_active) {
+        changed |= ImGui::ColorButtonPicker("##color_text", &color_text);
+        ImGui::SameLine();
+    }
+    ImGui::SetCursorPosX(cursor_pos += button_width);
     ImGui::Text(name);
     return changed;
 }

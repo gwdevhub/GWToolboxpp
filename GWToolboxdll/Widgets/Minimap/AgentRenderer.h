@@ -73,9 +73,9 @@ private:
         Shape_e shape = Tear;
         float size = 0.0f;
         bool color_active = true;
-        bool color_text_active = true;
+        bool color_text_active = false;
         bool shape_active = true;
-        bool size_active = true;
+        bool size_active = false;
     };
 
     struct Shape_Vertex : public GW::Vec2f {
