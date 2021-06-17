@@ -382,6 +382,7 @@ AgentRenderer::AgentRenderer() {
                 if (it != custom_agents_map.end()) {
                     for (const CustomAgent* ca : it->second) {
                         if (!ca->active) continue;
+                        if (!ca->color_text_active) continue;
                         if (ca->mapId > 0 && ca->mapId != (DWORD)GW::Map::GetMapID()) continue;
                         msg->text_color = ca->color_text;
                     }
