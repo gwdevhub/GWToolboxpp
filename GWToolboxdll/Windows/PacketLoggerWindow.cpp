@@ -262,6 +262,12 @@ static void Serialize(uint8_t** bytes, T* val)
     *bytes = b + sizeof(T);
 }
 
+static void PrintString(int length, wchar_t* str) {
+    for (int i = 0; i < length && str[i]; i++) {
+        printf(i > 0 ? " %04x" : "%04x", str[i]);
+    }
+}
+
 static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_t indent)
 {
     switch (field) {
@@ -333,8 +339,9 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
         PrintIndent(indent);
         wchar_t* str = reinterpret_cast<wchar_t*>(*bytes);
         size_t length = wcsnlen(str, count);
-        wprintf(L"String(%zu) \"%.*s\"\n", length, static_cast<int>(length), str);
-        // PrintString(length, str);
+        printf("String(%zu) \"", length);
+        PrintString(length, str);
+        printf("\"\n");
         *bytes += (count * 2);
         break;
     }
