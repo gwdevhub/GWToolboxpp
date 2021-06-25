@@ -192,7 +192,9 @@ public:
     static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnWriteChat(GW::HookStatus* status, uint32_t msgid, void* wParam, void*);
+    static void OnSendChat(GW::HookStatus* status, GW::Chat::Channel , wchar_t*);
     static void OnAgentStartCast(GW::HookStatus* status, uint32_t msgid, void* wParam, void*);
+    static void OnOpenWiki(GW::HookStatus*, uint32_t msgid, void* wParam, void*);
     static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
     static void OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*);
     static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
@@ -201,6 +203,8 @@ public:
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
+
+    GuiUtils::EncString* pending_wiki_map_name = 0;
 
     bool tick_is_toggle = false;
 
@@ -351,6 +355,7 @@ private:
     GW::HookEntry OnPlayerChatMessage_Entry;
     GW::HookEntry OnWriteChat_Entry;
     GW::HookEntry OnAgentStartCast_Entry;
+    GW::HookEntry OnOpenWikiUrl_Entry;
     GW::HookEntry OnScreenShake_Entry;
     GW::HookEntry OnCast_Entry;
     GW::HookEntry OnPartyTargetChange_Entry;

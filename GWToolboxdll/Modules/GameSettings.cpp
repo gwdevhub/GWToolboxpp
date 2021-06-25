@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/Utilities/Scanner.h>
 
@@ -10,6 +11,7 @@
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -47,38 +49,6 @@
 #pragma warning(disable : 6011)
 
 namespace {
-    void SendChatCallback(GW::HookStatus *, GW::Chat::Channel chan, wchar_t msg[120]) {
-        if (!GameSettings::Instance().auto_url || !msg) return;
-        size_t len = wcslen(msg);
-        size_t max_len = 120;
-
-        if (chan == GW::Chat::Channel::CHANNEL_WHISPER) {
-            // msg == "Whisper Target Name,msg"
-            size_t i;
-            for (i = 0; i < len; i++)
-                if (msg[i] == ',')
-                    break;
-
-            if (i < len) {
-                msg += i + 1;
-                len -= i + 1;
-                max_len -= i + 1;
-            }
-        }
-
-        if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
-
-        if (len + 5 < max_len) {
-            for (size_t i = len; i != 0; --i)
-                msg[i] = msg[i - 1];
-            msg[0] = '[';
-            msg[len + 1] = ';';
-            msg[len + 2] = 'x';
-            msg[len + 3] = 'x';
-            msg[len + 4] = ']';
-            msg[len + 5] = 0;
-        }
-    }
 
     void FlashWindow() {
         FLASHWINFO flashInfo = { 0 };
@@ -728,7 +698,7 @@ void GameSettings::Initialize() {
     GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, OnPlayerChatMessage);
     GW::UI::RegisterUIMessageCallback(&OnWriteChat_Entry, OnWriteChat);
     GW::UI::RegisterUIMessageCallback(&OnAgentStartCast_Entry, OnAgentStartCast);
-    
+    GW::UI::RegisterUIMessageCallback(&OnOpenWikiUrl_Entry, OnOpenWiki);
 
     GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
@@ -747,7 +717,7 @@ void GameSettings::Initialize() {
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,&FriendStatusCallback);
     GW::CtoS::RegisterPacketCallback(&WhisperCallback_Entry, GAME_CMSG_PING_WEAPON_SET, &OnPingWeaponSet);
     GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, &OnCast);
-    GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
+    GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &OnSendChat);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
     GW::Chat::RegisterChatEventCallback(&OnPartyTargetChange_Entry, OnPartyTargetChange);
 
@@ -1333,6 +1303,13 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 
 void GameSettings::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
+    // See OnSendChat
+    if (pending_wiki_map_name && pending_wiki_map_name->wstring().length()) {
+        GuiUtils::OpenWiki(pending_wiki_map_name->wstring());
+        delete pending_wiki_map_name;
+        pending_wiki_map_name = 0;
+    }
+
     // Try to print any pending messages.
     for (auto it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage *m = *it;
@@ -2226,6 +2203,40 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, uint32_t msgid, void* wPa
     CloseClipboard();
 }
 
+// Turn /wiki into /wiki <location>
+void GameSettings::OnSendChat(GW::HookStatus* , GW::Chat::Channel chan, wchar_t* msg) {
+    if (!GameSettings::Instance().auto_url || !msg) return;
+    size_t len = wcslen(msg);
+    size_t max_len = 120;
+
+    if (chan == GW::Chat::Channel::CHANNEL_WHISPER) {
+        // msg == "Whisper Target Name,msg"
+        size_t i;
+        for (i = 0; i < len; i++)
+            if (msg[i] == ',')
+                break;
+
+        if (i < len) {
+            msg += i + 1;
+            len -= i + 1;
+            max_len -= i + 1;
+        }
+    }
+
+    if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
+
+    if (len + 5 < max_len) {
+        for (size_t i = len; i != 0; --i)
+            msg[i] = msg[i - 1];
+        msg[0] = '[';
+        msg[len + 1] = ';';
+        msg[len + 2] = 'x';
+        msg[len + 3] = 'x';
+        msg[len + 4] = ']';
+        msg[len + 5] = 0;
+    }
+}
+
 // Auto-drop UA when recasting
 void GameSettings::OnAgentStartCast(GW::HookStatus* , uint32_t msgid, void* wParam, void*) {
     if (!(msgid == 0x10000027 && wParam && Instance().drop_ua_on_cast))
@@ -2242,6 +2253,17 @@ void GameSettings::OnAgentStartCast(GW::HookStatus* , uint32_t msgid, void* wPar
         }
     }
 };
+
+// Redirect /wiki to /wiki <map_name>
+void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
+    if (msgid != GW::UI::kOpenWikiUrl)
+        return;
+    if (strstr((char*)wParam, "/wiki/Main_Page")) {
+        status->blocked = true;
+        GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
+        Instance().pending_wiki_map_name = new GuiUtils::EncString(map->name_id);
+    }
+}
 
 // Don't target chest as nearest item, Target green items from chest last
 void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
