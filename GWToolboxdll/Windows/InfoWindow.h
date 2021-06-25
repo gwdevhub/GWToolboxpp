@@ -97,7 +97,8 @@ private:
     void InfoField(const char* label, const char* fmt, ...);
     void EncInfoField(const char* label, const wchar_t* enc_string);
 
-    void DrawItemInfo(GW::Item* item, ForDecode* name, bool force_advanced = false);
+    void DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, bool force_advanced = false);
+    void DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool force_advanced = false);
     void DrawAgentInfo(GW::Agent* agent);
     DWORD mapfile = 0;
 

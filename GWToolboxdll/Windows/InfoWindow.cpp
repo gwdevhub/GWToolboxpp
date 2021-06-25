@@ -29,6 +29,7 @@
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 #include <GWToolbox.h>
 #include <Logger.h>
@@ -154,9 +155,34 @@ void InfoWindow::EncInfoField(const char* label, const wchar_t* enc_string) {
     ImGui::InputTextEx(label, NULL, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
 }
 
-void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name, bool force_advanced) {
+void InfoWindow::DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, bool force_advanced) {
+    if (!skill) return;
+    name->reset(skill->name);
+    static char info_id[16];
+    snprintf(info_id, _countof(info_id), "skill_info_%d", skill->skill_id);
+    ImGui::PushID(info_id);
+    InfoField("SkillID", "%d", skill->skill_id);
+    InfoField("Name", "%s", name->string().c_str());
+    auto draw_advanced = [&, skill]() {
+        InfoField("Addr", "%p", skill);
+        InfoField("Type", "%d", skill->type);
+        EncInfoField("Name Enc", name->encoded().c_str());
+        wchar_t out[8];
+        GW::UI::UInt32ToEncStr(skill->description,out,_countof(out));
+        EncInfoField("Desc Enc", out);
+    };
+    if (force_advanced)
+        draw_advanced();
+    else if (ImGui::TreeNodeEx("Advanced##skill", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        draw_advanced();
+        ImGui::TreePop();
+    }
+    ImGui::PopID();
+}
+
+void InfoWindow::DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool force_advanced) {
     if (!item) return;
-    name->init(item->single_item_name);
+    name->reset(item->single_item_name);
     static char slot[8] = "-";
     if (item->bag) {
         snprintf(slot, _countof(slot), "%d/%d", item->bag->index + 1, item->slot + 1);
@@ -166,7 +192,7 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name, bool force_advanc
     ImGui::PushID(info_id);
     InfoField("Bag/Slot", "%s",slot);
     InfoField("ModelID", "%d", item->model_id);
-    InfoField("Name", "%s", name->str());
+    InfoField("Name", "%s", name->string().c_str());
     auto draw_advanced = [&,item]() {
         InfoField("Addr", "%p", item);
         InfoField("Id", "%d", item->item_id);
@@ -233,7 +259,7 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
     }
     if (item && item_actual) {
         if (ImGui::TreeNodeEx("Item Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            static ForDecode item_name;
+            static GuiUtils::EncString item_name;
             DrawItemInfo(item_actual, &item_name);
             ImGui::TreePop();
         }
@@ -441,19 +467,23 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             }
             ImGui::PopItemWidth();
         }
+        if (ImGui::CollapsingHeader("Hovered Skill")) {
+            static GuiUtils::EncString skill_name;
+            DrawSkillInfo(GW::SkillbarMgr::GetHoveredSkill(), &skill_name, true);
+        }
         if (show_item && ImGui::CollapsingHeader("Hovered Item")) {
-            static ForDecode item_name;
+            static GuiUtils::EncString item_name;
             DrawItemInfo(GW::Items::GetHoveredItem(), &item_name, true);
         }
         if (show_item && ImGui::CollapsingHeader("Item")) {
             ImGui::Text("First item in inventory");
-            static ForDecode item_name;
+            static GuiUtils::EncString item_name;
             DrawItemInfo(GW::Items::GetItemBySlot(GW::Constants::Bag::Backpack, 1),&item_name);
         }
         #ifdef _DEBUG
         if (show_item && ImGui::CollapsingHeader("Quoted Item")) {
             ImGui::Text("Most recently quoted item (buy or sell) from trader");
-            static ForDecode quoted_name;
+            static GuiUtils::EncString quoted_name;
             DrawItemInfo(GW::Items::GetItemById(quoted_item_id),&quoted_name);
         }
         #endif
