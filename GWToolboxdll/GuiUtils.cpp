@@ -23,6 +23,25 @@ namespace {
     bool fonts_loaded = false;
 }
 
+void GuiUtils::OpenWiki(std::wstring term) {
+    // @Enhancement: Would be nice to use GW's "/wiki" hook in here, but don't want to bother with another RVA so do it ourselves.
+    // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
+    if (!term.size())
+        return;
+    uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
+    char* wiki_prefix = "https://wiki.guildwars.com/wiki/?search=%s";
+    switch (language) {
+    case 3: // German wiki
+        wiki_prefix = "https://www.guildwiki.de/wiki/?search=%s";
+        break;
+    }
+
+    char cmd[256];
+    snprintf(cmd, _countof(cmd), wiki_prefix, GuiUtils::WStringToString(term).c_str());
+    GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, cmd);
+    //ShellExecuteW(NULL, L"open", cmd, NULL, NULL, SW_SHOWNORMAL);
+}
+
 // Has GuiUtils::LoadFonts() finished?
 bool GuiUtils::FontsLoaded() {
     return fonts_loaded;
@@ -440,9 +459,24 @@ char *GuiUtils::StrCopy(char *dest, const char *src, size_t dest_size) {
     dest[dest_size - 1] = 0;
     return dest;
 }
-
+void GuiUtils::EncString::reset(const uint32_t _enc_string_id) {
+    if (_enc_string_id && encoded_ws.length()) {
+        uint32_t this_id = GW::UI::EncStrToUInt32(encoded_ws.c_str());
+        if (this_id == _enc_string_id)
+            return;
+    }
+    reset(nullptr);
+    if (_enc_string_id) {
+        wchar_t out[8] = { 0 };
+        if (!GW::UI::UInt32ToEncStr(_enc_string_id, out, _countof(out)))
+            return;
+        encoded_ws = out;
+    }
+}
 void GuiUtils::EncString::reset(const wchar_t* _enc_string)
 {
+    if (_enc_string && wcscmp(_enc_string, encoded_ws.c_str()) == 0)
+        return;
     encoded_ws.clear();
     decoded_ws.clear();
     decoded_s.clear();

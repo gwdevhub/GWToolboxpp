@@ -12,6 +12,7 @@ namespace GuiUtils {
         widget_large
     };
     void LoadFonts();
+    void OpenWiki(std::wstring term);
     bool FontsLoaded();
     ImFont* GetFont(FontSize size);
 
@@ -62,13 +63,17 @@ namespace GuiUtils {
         bool decoding = false;
         bool sanitised = false;
     public:
-        void reset(const wchar_t* _enc_string);
+        void reset(const uint32_t _enc_string_id = 0);
+        void reset(const wchar_t* _enc_string = nullptr);
         const std::wstring& wstring();
         const std::string& string();
         const std::wstring& encoded() {
             return encoded_ws;
         };
         EncString(const wchar_t* _enc_string = nullptr) {
+            reset(_enc_string);
+        }
+        EncString(const uint32_t _enc_string) {
             reset(_enc_string);
         }
     };
