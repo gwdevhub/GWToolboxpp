@@ -239,6 +239,7 @@ private:
         uint32_t quantity = 0;
         bool set(Item *item = nullptr);
         GuiUtils::EncString name;
+        GuiUtils::EncString single_item_name;
         GuiUtils::EncString desc;
         Item *item();
     };

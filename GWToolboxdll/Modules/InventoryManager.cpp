@@ -34,22 +34,6 @@ namespace {
         "Bag 1",
         "Bag 2"
     };
-    void OpenWiki(const std::wstring& term) {
-        // @Enhancement: Would be nice to use GW's "/wiki" hook in here, but don't want to bother with another RVA so do it ourselves.
-        // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
-        if (!term.size())
-            return;
-        uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
-        wchar_t* wiki_prefix = L"https://wiki.guildwars.com/wiki/?search=%s";
-        switch (language) {
-        case 3: // German wiki
-            wiki_prefix = L"https://www.guildwiki.de/wiki/?search=%s";
-            break;
-        }
-        wchar_t cmd[256];
-        swprintf(cmd, _countof(cmd), wiki_prefix, term.c_str());
-        ShellExecuteW(NULL, L"open", cmd, NULL, NULL, SW_SHOWNORMAL);
-    }
     static bool IsMapReady()
     {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
@@ -1441,7 +1425,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
-                    OpenWiki(pi->name.wstring());
+                    GuiUtils::OpenWiki(pi->single_item_name.wstring());
                 }
                 ImGui::PopID();
                 has_items_to_salvage |= pi->proceed;
@@ -1575,7 +1559,7 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
     }
     if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
-        OpenWiki(context_item.name.wstring());
+        GuiUtils::OpenWiki(context_item.single_item_name.wstring());
         goto end_popup;
     }
     end_popup:
@@ -1835,6 +1819,8 @@ bool InventoryManager::PendingItem::set(InventoryManager::Item *item)
     uses = item->GetUses();
     bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
     name.reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
+    single_item_name.reset(item->name_enc);
+    single_item_name.wstring(); // Trigger decode; this isn't done any other time
     desc.reset(item->info_string);
     return true;
 }
