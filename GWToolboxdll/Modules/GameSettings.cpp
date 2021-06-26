@@ -1302,7 +1302,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float delta) {
-    UNREFERENCED_PARAMETER(delta);
+    if (delta == 0.0f) return;
     // See OnSendChat
     if (pending_wiki_map_name && pending_wiki_map_name->wstring().length()) {
         GuiUtils::OpenWiki(pending_wiki_map_name->wstring());

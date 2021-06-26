@@ -366,6 +366,7 @@ void ChatCommands::Initialize() {
         GW::Chat::SendChat('/', "pingitem armor");
     });
     GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHeroBehaviour);
+    GW::Chat::CreateCommand(L"find", ChatCommands::CmdFindNpc);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -441,7 +442,52 @@ void ChatCommands::Update(float delta) {
         GW::CameraMgr::UpdateCameraPos();
     }
     skill_to_use.Update();
+    npc_to_find.Update();
 }
+void ChatCommands::FindNpc::Init(const wchar_t* _search) {
+    started = 0;
+    npc_names.clear();
+    if (!_search || !_search[0])
+        return;
+    search = GuiUtils::ToLower(_search);
+    npc_names.clear();
+    started = TIMER_INIT();
+    GW::AgentArray agents = GW::Agents::GetAgentArray();
+    for (GW::Agent* agent : agents) {
+        GW::AgentLiving* al = agent ? agent->GetAsAgentLiving() : nullptr;
+        if (!(al && al->IsNPC()))
+            continue;
+        npc_names.push_back({ al->agent_id,GW::Agents::GetAgentEncName(al) });
+    }
+}
+void ChatCommands::FindNpc::Update() {
+    if (!started) return;
+    if (TIMER_DIFF(started) > 3000) {
+        Log::Error("Timeout getting NPC names");
+        Init(nullptr);
+        return;
+    }
+    for (auto& enc_name : npc_names) {
+        if (enc_name.second.wstring().empty())
+            return; // Not all decoded yet
+    }
+    // Do search
+    size_t found = std::wstring::npos;
+    for (auto& enc_name : npc_names) {
+        found = GuiUtils::ToLower(enc_name.second.wstring()).find(search.c_str());
+        if (found == std::wstring::npos)
+            continue;
+        GW::Agent* agent = GW::Agents::GetAgentByID(enc_name.first);
+        if (agent) {
+            GW::Agents::ChangeTarget(agent->agent_id);
+            Init(nullptr);
+            return;
+        }
+    }
+    Log::WarningW(L"No NPC found matching %s", search.c_str());
+    Init(nullptr);
+}
+
 void ChatCommands::SkillToUse::Update() {
     if (!slot)
         return;
@@ -1005,6 +1051,12 @@ void ChatCommands::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv)
             }
         }
     }
+}
+
+void ChatCommands::CmdFindNpc(const wchar_t* message, int , LPWSTR* )
+{
+    const wchar_t* message_less_command = wcschr(message, ' ');
+    Instance().npc_to_find.Init(message_less_command + 1);
 }
 
 void ChatCommands::CmdPing(const wchar_t* message, int argc, LPWSTR* argv) {

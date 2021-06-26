@@ -56,6 +56,7 @@ private:
 
     static bool IsLuxon();
 
+    static void CmdFindNpc(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdEnterMission(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdAge2(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdDialog(const wchar_t *message, int argc, LPWSTR *argv);
@@ -91,6 +92,14 @@ private:
 
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;
+
+    struct FindNpc {
+        clock_t started = 0;
+        std::vector<std::pair<uint32_t,GuiUtils::EncString>> npc_names;
+        std::wstring search;
+        void Init(const wchar_t* search);
+        void Update();
+    } npc_to_find;
 
     struct SkillToUse {
         uint32_t slot = 0; // 1-8 range
