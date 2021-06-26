@@ -1053,9 +1053,13 @@ void ChatCommands::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv)
     }
 }
 
-void ChatCommands::CmdFindNpc(const wchar_t* message, int , LPWSTR* )
+void ChatCommands::CmdFindNpc(const wchar_t* message, int argc, LPWSTR* argv)
 {
     const wchar_t* message_less_command = wcschr(message, ' ');
+    if (!message_less_command || argc < 2) {
+        Log::ErrorW(L"Valid syntax: /%s [npc_name]", argv[0]);
+        return;
+    }
     Instance().npc_to_find.Init(message_less_command + 1);
 }
 
