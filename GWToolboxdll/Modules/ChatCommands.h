@@ -34,6 +34,14 @@ public:
         DWORD flags = 0;
     };
 
+    enum TargetType : uint32_t {
+        Gadget = 0,
+        Player,
+        Npc,
+        Item,
+        Living
+    };
+
     const char* Name() const override { return "Chat Commands"; }
     const char* SettingsName() const override { return "Game Settings"; }
 
@@ -56,7 +64,6 @@ private:
 
     static bool IsLuxon();
 
-    static void CmdFindNpc(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdEnterMission(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdAge2(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdDialog(const wchar_t *message, int argc, LPWSTR *argv);
@@ -87,17 +94,18 @@ private:
     static bool GetNPCInfoByName(const std::wstring name, PendingTransmo &transmo);
     static bool ParseScale(int scale,PendingTransmo& transmo);
     static bool GetTargetTransmoInfo(PendingTransmo& transmo);
+    static void TargetNearest(const wchar_t* model_id_or_name, TargetType type);
 
     static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);
 
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;
 
-    struct FindNpc {
+    struct SearchAgent {
         clock_t started = 0;
         std::vector<std::pair<uint32_t,GuiUtils::EncString>> npc_names;
         std::wstring search;
-        void Init(const wchar_t* search);
+        void Init(const wchar_t* search, TargetType type = Npc);
         void Update();
     } npc_to_find;
 
