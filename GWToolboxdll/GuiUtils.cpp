@@ -421,6 +421,7 @@ bool GuiUtils::ArrayToIni(const uint32_t* in, size_t in_len, std::string* out)
 }
 bool GuiUtils::ParseUInt(const char *str, unsigned int *val, int base) {
     char *end;
+    if (!str) return false;
     *val = strtoul(str, &end, base);
     if (str == end || errno == ERANGE)
         return false;
@@ -429,6 +430,7 @@ bool GuiUtils::ParseUInt(const char *str, unsigned int *val, int base) {
 }
 bool GuiUtils::ParseUInt(const wchar_t *str, unsigned int *val, int base) {
     wchar_t *end;
+    if (!str) return false;
     *val = wcstoul(str, &end, base);
     if (str == end || errno == ERANGE)
         return false;

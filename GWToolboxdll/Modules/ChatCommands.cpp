@@ -149,6 +149,10 @@ namespace {
         }
     }
 
+    static bool IsNearestStr(const wchar_t* str) {
+        return wcscmp(str, L"nearest") == 0 || wcscmp(str, L"closest") == 0;
+    }
+
 
     static std::map<std::string, ChatCommands::PendingTransmo> npc_transmos;
 } // namespace
@@ -931,7 +935,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
         return TargetEE();
     if (arg1 == L"vipers" || arg1 == L"hos")
         return TargetVipers();
-    if (arg1 == L"closest" || arg1 == L"nearest")
+    if (IsNearestStr(arg1.c_str()))
         return TargetNearest(L"0", Living);
     if (arg1 == L"getid") {
         const GW::AgentLiving* const target = GW::Agents::GetTargetAsAgentLiving();
@@ -952,17 +956,22 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
         return;
     }
     if (arg1 == L"item") {
-        if (argc < 2)
+        if (argc < 3)
             return Log::ErrorW(L"Syntax: /%s item [model_id|name]",argv[0]);
-        return TargetNearest(GetRemainingArgsWstr(message, 2),Npc);
+        return TargetNearest(GetRemainingArgsWstr(message, 2),Item);
+    }
+    if (arg1 == L"npc") {
+        if (argc < 3)
+            return Log::ErrorW(L"Syntax: /%s npc [npc_id|name]", argv[0]);
+        return TargetNearest(GetRemainingArgsWstr(message, 2), Npc);
     }
     if (arg1 == L"gadget") {
-        if (argc < 2)
+        if (argc < 3)
             return Log::ErrorW(L"Syntax: /%s gadget [gadget_id|name]", argv[0]);
         return TargetNearest(GetRemainingArgsWstr(message, 2), Gadget);
     }
     if (arg1 == L"player") {
-        if (argc < 2)
+        if (argc < 3)
             return Log::ErrorW(L"Syntax: /%s player [player_number|name]", argv[0]);
         return TargetNearest(GetRemainingArgsWstr(message, 2), Player);
     }
@@ -1257,7 +1266,8 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
 {
     uint32_t model_id = 0;
     // Searching by name; offload this to decode agent names first.
-    if (!GuiUtils::ParseUInt(model_id_or_name, &model_id)) {
+    if (!GuiUtils::ParseUInt(model_id_or_name, &model_id)
+        && !IsNearestStr(model_id_or_name)) {
         Instance().npc_to_find.Init(model_id_or_name,type);
         return;
     }
