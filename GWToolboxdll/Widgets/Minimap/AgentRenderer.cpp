@@ -588,7 +588,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 
     // don't draw dead spirits
     auto npcs = GW::Agents::GetNPCArray();
-    if (!living->GetIsDead() && npcs.valid() && living->player_number < npcs.size()) {
+    if (living->GetIsDead() && npcs.valid() && living->player_number < npcs.size()) {
         GW::NPC& npc = npcs[living->player_number];
         switch (npc.model_file_id) {
         case 0x22A34: // nature rituals
