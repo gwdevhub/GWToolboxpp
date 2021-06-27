@@ -50,6 +50,7 @@ void CustomRenderer::LoadMarkers()
             lines.back().p2.x = (float)inifile->GetDoubleValue(section, "x2", 0.0);
             lines.back().p2.y = (float)inifile->GetDoubleValue(section, "y2", 0.0);
             lines.back().map = (GW::Constants::MapID)inifile->GetLongValue(section, "map", 0);
+            lines.back().color = Colors::Load(inifile, section, "color", lines.back().color);
             lines.back().visible = inifile->GetBoolValue(section, "visible", true);
             inifile->Delete(section, nullptr);
         }
@@ -122,6 +123,7 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetDoubleValue(section, "y1", line.p1.y);
             inifile->SetDoubleValue(section, "x2", line.p2.x);
             inifile->SetDoubleValue(section, "y2", line.p2.y);
+            Colors::Save(inifile, section, "color", line.color);
             inifile->SetLongValue(section, "map", (long)line.map);
             inifile->SetBoolValue(section, "visible", line.visible);
         }
