@@ -588,7 +588,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 
     // don't draw dead spirits
     auto npcs = GW::Agents::GetNPCArray();
-    if (living->GetIsDead() && npcs.valid() && living->player_number < npcs.size()) {
+    if (!living->GetIsDead() && npcs.valid() && living->player_number < npcs.size()) {
         GW::NPC& npc = npcs[living->player_number];
         switch (npc.model_file_id) {
         case 0x22A34: // nature rituals
@@ -600,15 +600,15 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         }
     }
 
-    if (ca && ca->color_active) {
-        if (living->allegiance == 0x3 && living->hp > 0.0f && living->hp <= 0.9f) {
+    if (ca && ca->color_active && !living->GetIsDead()) {
+        if (living->allegiance == 0x3 && living->hp <= 0.9f) {
             return Colors::Sub(ca->color, color_agent_damaged_modifier);
         }
-        if (living->hp > 0.0f) return ca->color;
+        return ca->color;
     }
     // hostiles
     if (living->allegiance == 0x3) {
-        if(living->hp <= 0.0f) return color_hostile_dead;
+        if(living->GetIsDead()) return color_hostile_dead;
         const Color* c = &color_hostile;
         if (boss_colors && living->GetHasBossGlow()) {
             const auto prof = GetAgentProfession(living);
