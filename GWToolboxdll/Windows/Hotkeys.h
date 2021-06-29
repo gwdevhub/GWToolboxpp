@@ -260,14 +260,16 @@ public:
 // it will target the closest agent with the given PlayerNumber (aka modelID)
 class HotkeyTarget : public TBHotkey {
 private:
-    const uint32_t types[3] = { 0xDB,0x200,0x400 };
-    const char *type_labels[3] = { "NPC", "Signpost", "Item" };
-    const char *identifier_labels[3] = { "Model ID", "Gadget ID", "Item ModelID" };
+    const uint32_t types[4] = { 0xDB,0x200,0x400,0xDB };
+    const char *type_labels[4] = { "NPC", "Signpost", "Item", "Priority Target" };
+    const char *identifier_labels[4] = { "Model ID", "Gadget ID", "Item ModelID", "Party Member" };
+    const char* identifier_help[4] = { nullptr, nullptr, nullptr, "Select the party members priority target (0 = own target)" };
     enum HotkeyTargetType : int
     {
         NPC,
         Signpost,
         Item,
+        PriorityTarget,
         Count
     } type = HotkeyTargetType::NPC;
     uint32_t id = 0;
