@@ -254,19 +254,59 @@ void PconsWindow::OnVanquishComplete(GW::HookStatus *,GW::Packet::StoC::Vanquish
     instance.SetEnabled(false);
     Log::Info("Cons auto-disabled on completion");
 }
-void PconsWindow::CmdPcons(const wchar_t *, int argc, LPWSTR *argv)
-{
+void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv) {
     if (argc <= 1) {
         Instance().ToggleEnable();
-    } else { // we are ignoring parameters after the first
+    } else if (argc >= 2) {
         std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-        if (arg1 == L"on") {
-            Instance().SetEnabled(true);
-        } else if (arg1 == L"off") {
-            Instance().SetEnabled(false);
+        if (arg1 != L"on" && arg1 != L"off" && arg1 != L"toggle") {
+            Log::Error("Invalid argument '%ls', please use /pcons [on|off|toggle] [pcon]", argv[1]);
+        }
+        if (argc == 2) {
+            if (arg1 == L"on") {
+                Instance().SetEnabled(true);
+            } else if (arg1 == L"off") {
+                Instance().SetEnabled(false);
+            } else if (arg1 == L"toggle") {
+                Instance().ToggleEnable();
+            }
         } else {
-            Log::Error("Invalid argument '%ls', please use /pcons [|on|off]",
-                       argv[1]);
+            std::wstring argPcon = GuiUtils::ToLower(argv[2]);
+            for (int i = 3; i < argc; i++) {
+                argPcon.append(L" ");
+                argPcon.append(GuiUtils::ToLower(argv[i]));
+            }
+            std::vector<Pcon*> pcons = PconsWindow::Instance().pcons;
+            std::string compare = GuiUtils::WStringToString(argPcon);
+            unsigned int compareLength = compare.length();
+            Pcon* bestMatch = nullptr;
+            unsigned int bestMatchLength = 0;
+            for (size_t i = 0; i < pcons.size(); ++i) {
+                Pcon* pcon = pcons[i];
+                std::string pconName(pcon->chat);
+                std::string pconNameSanitized = GuiUtils::ToLower(pconName);
+                unsigned int pconNameLength = pconNameSanitized.length();
+                if (compareLength > pconNameLength) continue;
+                if (pconNameSanitized.rfind(compare) == std::string::npos) continue;
+                if (bestMatchLength < pconNameLength) {
+                    bestMatchLength = pconNameLength;
+                    bestMatch = pcon;
+                    if (bestMatchLength == pconNameLength) {
+                        break;
+                    }
+                }
+            }
+            if (bestMatch == nullptr) {
+                Log::Error("Could not find pcon %ls", argPcon.c_str());
+                return;
+            }
+            if (arg1 == L"on") {
+                bestMatch->SetEnabled(true);
+            } else if (arg1 == L"off") {
+                bestMatch->SetEnabled(false);
+            } else if (arg1 == L"toggle") {
+                bestMatch->Toggle();
+            }
         }
     }
 }
