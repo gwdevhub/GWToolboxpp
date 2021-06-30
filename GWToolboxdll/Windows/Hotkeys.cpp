@@ -1194,52 +1194,32 @@ void HotkeyTarget::Draw()
 }
 void HotkeyTarget::Execute()
 {
-    if (!CanUse() || id == 0)
+    if (!CanUse())
         return;
 
-    const GW::AgentArray& agents = GW::Agents::GetAgentArray();
-    if (!agents.valid())
+    constexpr size_t len = 122;
+    wchar_t* message = new wchar_t[len];
+    message[0] = 0;
+    switch (type) {
+    case HotkeyTargetType::Item:
+        swprintf(message, len, L"target item %d", id);
+        break;
+    case HotkeyTargetType::NPC:
+        swprintf(message, len, L"target npc %d", id);
+        break;
+    case HotkeyTargetType::Signpost:
+        swprintf(message, len, L"target gadget %d", id);
+        break;
+    default:
+        Log::ErrorW(L"Unknown target type %d", type);
+        delete[] message;
         return;
-
-    GW::Agent *me = agents[GW::Agents::GetPlayerId()];
-    if (me == nullptr)
-        return;
-
-    float distance = GW::Constants::SqrRange::Compass;
-    size_t closest = (size_t)-1;
-
-    for (size_t i = 0, size = agents.size();i < size; ++i) {
-        if (!agents[i] || agents[i]->type != types[type])
-            continue;
-        switch (types[type]) {
-            case 0x400: {
-                GW::AgentItem *agent = agents[i]->GetAsAgentItem();
-                if (!agent) continue;
-                GW::Item *item = GW::Items::GetItemById(agent->item_id);
-                if (!item || item->model_id != id)
-                    continue;
-            } break;
-            case 0x200: {
-                GW::AgentGadget *agent = agents[i]->GetAsAgentGadget();
-                if (!agent || agent->gadget_id != id)
-                    continue;
-            } break;
-            default: {
-                GW::AgentLiving *agent = agents[i]->GetAsAgentLiving();
-                if (!agent || agent->player_number != id || agent->hp <= 0)
-                    continue;
-            } break;
-        }
-        float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
-        if (newDistance < distance) {
-            closest = i;
-            distance = newDistance;
-        }
     }
-    if (closest != (size_t)-1) {
-        GW::Agent *agent = agents[closest];
-        GW::GameThread::Enqueue([agent] { GW::Agents::ChangeTarget(agent); });
-    }
+    GW::GameThread::Enqueue([message]() {
+        GW::Chat::SendChat('/', message);
+        delete[] message;
+        });
+    
     if (show_message_in_emote_channel) {
         char buf[256];
         Description(buf, 256);
