@@ -283,6 +283,9 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.\n"
         "'/target ee' to target best ebon escape agent.\n"
         "'/target hos' to target best vipers/hos agent.\n"
+        "'/target [name|model_id]' target nearest NPC by name or model_id.\n"
+        "'/target player [name|player_number]' target nearest player by name or player number.\n"
+        "'/target gadget [name|gadget_id]' target nearest interactive object by name or gadget_id.\n"
         "'/target priority [partymember]' to target priority target of party member.");
     ImGui::Bullet(); ImGui::Text("'/tb <name>' toggles the window or widget titled <name>.");
     ImGui::Bullet(); ImGui::Text("'/tb reset' moves Toolbox and Settings window to the top-left corner.");
