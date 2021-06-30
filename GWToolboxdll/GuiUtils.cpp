@@ -30,14 +30,22 @@ void GuiUtils::OpenWiki(std::wstring term) {
         return;
     uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
     char* wiki_prefix = "https://wiki.guildwars.com/wiki/?search=%s";
-    switch (language) {
-    case 3: // German wiki
+    switch (static_cast<GW::Constants::MapLanguage>(language)) {
+    case GW::Constants::MapLanguage::German: // German wiki
         wiki_prefix = "https://www.guildwiki.de/wiki/?search=%s";
         break;
+    case GW::Constants::MapLanguage::French: // French wiki
+        wiki_prefix = "https://www.gwiki.fr/w/index.php?search=%s";
+        break;
+
     }
 
+    
+
+
     char cmd[256];
-    snprintf(cmd, _countof(cmd), wiki_prefix, GuiUtils::WStringToString(term).c_str());
+    std::string encoded = UrlEncode(GuiUtils::WStringToString(term));
+    snprintf(cmd, _countof(cmd), wiki_prefix, encoded.c_str());
     GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, cmd);
     //ShellExecuteW(NULL, L"open", cmd, NULL, NULL, SW_SHOWNORMAL);
 }

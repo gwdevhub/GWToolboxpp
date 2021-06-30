@@ -1629,8 +1629,7 @@ void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
     switch (_name[0]) {
         case 0x200B: {
             // Zero-Width Space - wiki link
-            std::string s = "https://wiki.guildwars.com/wiki/" + GuiUtils::UrlEncode(GuiUtils::WStringToString(&_name[1]));
-            ShellExecute(NULL, "open", s.c_str(), NULL, NULL, SW_SHOWNORMAL);
+            GuiUtils::OpenWiki(&_name[1]);
             status->blocked = true;
             return;
         }
