@@ -961,10 +961,12 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
             return Log::ErrorW(L"Syntax: /%s item [model_id|name]",argv[0]);
         return TargetNearest(GetRemainingArgsWstr(message, 2),Item);
     }
-if (arg1 == L"priority") {
+    if (arg1 == L"priority") {
         const GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
-        if (!party) return;
-        GW::PlayerPartyMember partyMember = {};
+        if (!party || !party->players.valid()) return;
+
+        uint32_t calledTargetId = 0;
+
         if (argc == 2) {
             const GW::Agent* me = GW::Agents::GetPlayer();
             if (me == nullptr) return;
@@ -972,20 +974,42 @@ if (arg1 == L"priority") {
             if (!meLiving) return;
             for (size_t i = 0; i < party->players.size(); ++i) {
                 if (party->players[i].login_number != meLiving->login_number) continue;
-                partyMember = party->players[i];
+                calledTargetId = party->players[i].calledTargetId;
                 break;
             }
         } else {
-            uint32_t partyMemberIndex = 0;
-            GuiUtils::ParseUInt(argv[2], &partyMemberIndex);
-            if (partyMemberIndex <= 0 || partyMemberIndex > party->players.size()) return;
-            partyMember = party->players[partyMemberIndex - 1];
+            if (!party->heroes.valid()) return;
+            uint32_t partyMemberNumber = 0;
+            uint32_t partySize = party->players.size() + party->heroes.size();
+
+            if (!GuiUtils::ParseUInt(argv[2], &partyMemberNumber) || partyMemberNumber <= 0 ||
+                partyMemberNumber > partySize) {
+                Log::Error("Invalid argument '%ls', please use an integer value of 1 to %u", argv[2], partySize);
+                return;
+            }
+
+            uint32_t count = 0;
+            for (const GW::PlayerPartyMember& player : party->players) {
+                count++;
+                if (partyMemberNumber == count) {
+                    calledTargetId = player.calledTargetId;
+                    break;
+                }
+                for (const GW::HeroPartyMember& hero : party->heroes) {
+                    if (hero.owner_player_id == player.login_number) {
+                        count++;
+                    }
+                }
+                if (count > partyMemberNumber) {
+                    return;
+                }
+            }
         }
-        GW::Agent* agent = GW::Agents::GetAgentByID(partyMember.calledTargetId);
+        if (calledTargetId == 0) return;
+        GW::Agent* agent = GW::Agents::GetAgentByID(calledTargetId);
         if (!agent) return;
         GW::Agents::ChangeTarget(agent);
-return;
-}
+    }
     if (arg1 == L"npc") {
         if (argc < 3)
             return Log::ErrorW(L"Syntax: /%s npc [npc_id|name]", argv[0]);
