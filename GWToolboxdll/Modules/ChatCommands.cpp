@@ -984,7 +984,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 
             if (!GuiUtils::ParseUInt(argv[2], &partyMemberNumber) || partyMemberNumber <= 0 ||
                 partyMemberNumber > partySize) {
-                Log::Error("Invalid argument '%ls', please use an integer value of 1 to %ui", argv[2], partySize);
+                Log::Error("Invalid argument '%ls', please use an integer value of 1 to %u", argv[2], partySize);
                 return;
             }
 
