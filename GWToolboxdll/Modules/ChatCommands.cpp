@@ -282,7 +282,8 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/show <name>' opens the window or widget titled <name>.");
     ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.\n"
         "'/target ee' to target best ebon escape agent.\n"
-        "'/target hos' to target best vipers/hos agent.");
+        "'/target hos' to target best vipers/hos agent.\n"
+        "'/target priority [partymember]' to target priority target of party member.");
     ImGui::Bullet(); ImGui::Text("'/tb <name>' toggles the window or widget titled <name>.");
     ImGui::Bullet(); ImGui::Text("'/tb reset' moves Toolbox and Settings window to the top-left corner.");
     ImGui::Bullet(); ImGui::Text("'/tb quit' or '/tb exit' completely closes toolbox and all its windows.");
@@ -960,6 +961,31 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
             return Log::ErrorW(L"Syntax: /%s item [model_id|name]",argv[0]);
         return TargetNearest(GetRemainingArgsWstr(message, 2),Item);
     }
+if (arg1 == L"priority") {
+        const GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+        if (!party) return;
+        GW::PlayerPartyMember partyMember = {};
+        if (argc == 2) {
+            const GW::Agent* me = GW::Agents::GetPlayer();
+            if (me == nullptr) return;
+            const GW::AgentLiving* meLiving = me->GetAsAgentLiving();
+            if (!meLiving) return;
+            for (size_t i = 0; i < party->players.size(); ++i) {
+                if (party->players[i].login_number != meLiving->login_number) continue;
+                partyMember = party->players[i];
+                break;
+            }
+        } else {
+            uint32_t partyMemberIndex = 0;
+            GuiUtils::ParseUInt(argv[2], &partyMemberIndex);
+            if (partyMemberIndex <= 0 || partyMemberIndex > party->players.size()) return;
+            partyMember = party->players[partyMemberIndex - 1];
+        }
+        GW::Agent* agent = GW::Agents::GetAgentByID(partyMember.calledTargetId);
+        if (!agent) return;
+        GW::Agents::ChangeTarget(agent);
+return;
+}
     if (arg1 == L"npc") {
         if (argc < 3)
             return Log::ErrorW(L"Syntax: /%s npc [npc_id|name]", argv[0]);
