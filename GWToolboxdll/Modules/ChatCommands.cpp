@@ -243,7 +243,8 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/show <name>' opens the window or widget titled <name>.");
     ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.\n"
         "'/target ee' to target best ebon escape agent.\n"
-        "'/target hos' to target best vipers/hos agent.");
+        "'/target hos' to target best vipers/hos agent.\n"
+        "'/target priority [partymember]' to target priority target of party member.");
     ImGui::Bullet(); ImGui::Text("'/tb <name>' toggles the window or widget titled <name>.");
     ImGui::Bullet(); ImGui::Text("'/tb reset' moves Toolbox and Settings window to the top-left corner.");
     ImGui::Bullet(); ImGui::Text("'/tb quit' or '/tb exit' completely closes toolbox and all its windows.");
