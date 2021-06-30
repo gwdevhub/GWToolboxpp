@@ -909,9 +909,31 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
     } else if (arg1 == L"item" && argc > 2 &&
                GuiUtils::ParseUInt(argv[2], &target_id)) {
         TargetNearest(target_id, 0x400);
-    } else if (arg1 == L"gadget" && argc > 2 &&
-               GuiUtils::ParseUInt(argv[2], &target_id)) {
+    } else if (arg1 == L"gadget" && argc > 2 && GuiUtils::ParseUInt(argv[2], &target_id)) {
         TargetNearest(target_id, 0x200);
+    } else if (arg1 == L"priority") {
+        const GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+        if (!party) return;
+        GW::PlayerPartyMember partyMember = {};
+        if (argc == 2) {
+            const GW::Agent* me = GW::Agents::GetPlayer();
+            if (me == nullptr) return;
+            const GW::AgentLiving* meLiving = me->GetAsAgentLiving();
+            if (!meLiving) return;
+            for (size_t i = 0; i < party->players.size(); ++i) {
+                if (party->players[i].login_number != meLiving->login_number) continue;
+                partyMember = party->players[i];
+                break;
+            }
+        } else {
+            uint32_t partyMemberIndex = 0;
+            GuiUtils::ParseUInt(argv[2], &partyMemberIndex);
+            if (partyMemberIndex <= 0 || partyMemberIndex > party->players.size()) return;
+            partyMember = party->players[partyMemberIndex - 1];
+        }
+        GW::Agent* agent = GW::Agents::GetAgentByID(partyMember.calledTargetId);
+        if (!agent) return;
+        GW::Agents::ChangeTarget(agent);
     } else if (argc == 2 &&
                GuiUtils::ParseUInt(argv[1], &target_id)) {
         TargetNearest(target_id, 0xDB);
