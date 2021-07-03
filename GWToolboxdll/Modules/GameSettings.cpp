@@ -9,6 +9,7 @@
 
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Map.h>
@@ -1304,10 +1305,10 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 void GameSettings::Update(float delta) {
     if (delta == 0.0f) return;
     // See OnSendChat
-    if (pending_wiki_map_name && pending_wiki_map_name->wstring().length()) {
-        GuiUtils::OpenWiki(pending_wiki_map_name->wstring());
-        delete pending_wiki_map_name;
-        pending_wiki_map_name = 0;
+    if (pending_wiki_search_term && pending_wiki_search_term->wstring().length()) {
+        GuiUtils::OpenWiki(pending_wiki_search_term->wstring());
+        delete pending_wiki_search_term;
+        pending_wiki_search_term = 0;
     }
 
     // Try to print any pending messages.
@@ -2260,7 +2261,18 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wPar
     if (strstr((char*)wParam, "/wiki/Main_Page")) {
         status->blocked = true;
         GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
-        Instance().pending_wiki_map_name = new GuiUtils::EncString(map->name_id);
+        Instance().pending_wiki_search_term = new GuiUtils::EncString(map->name_id);
+    }
+    if (strstr((char*)wParam, "?search=quest")) {
+        status->blocked = true;
+        GW::WorldContext* c = GW::GameContext::instance()->world;
+        uint32_t quest_id = c->active_quest_id;
+        for (const GW::Quest& q : c->quest_log) {
+            if (q.quest_id == quest_id) {
+                Instance().pending_wiki_search_term = new GuiUtils::EncString((wchar_t*)q.h000C);
+                break;
+            }
+        }
     }
 }
 

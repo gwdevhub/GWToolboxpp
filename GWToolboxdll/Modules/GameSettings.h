@@ -204,7 +204,7 @@ public:
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
-    GuiUtils::EncString* pending_wiki_map_name = 0;
+    GuiUtils::EncString* pending_wiki_search_term = 0;
 
     bool tick_is_toggle = false;
 
