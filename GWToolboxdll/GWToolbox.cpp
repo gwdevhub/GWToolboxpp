@@ -37,6 +37,7 @@ namespace {
     long OldWndProc = 0;
     bool tb_initialized = false;
     bool tb_destroyed = false;
+    bool imgui_initialized = false;
 
     bool drawing_world = 0;
     int drawing_passes = 0;
@@ -161,7 +162,7 @@ LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
     static bool right_mouse_down = false;
 
-    if (!tb_initialized || tb_destroyed) {
+    if (!(imgui_initialized && tb_initialized && !tb_destroyed)) {
         return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
     }
 
@@ -335,6 +336,11 @@ void GWToolbox::Initialize() {
     if (tb_initialized || must_self_destruct)
         return;
     
+    Log::Log("installing event handler\n");
+    gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
+    OldWndProc = SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
+    Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
+
     imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
 
     Log::Log("Creating Toolbox\n");
@@ -425,7 +431,7 @@ void GWToolbox::Terminate() {
 }
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {
-    static bool imgui_initialized = false;
+
     // === runtime ===
     if (tb_initialized 
         && !GWToolbox::Instance().must_self_destruct
@@ -452,11 +458,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
                         Log::Error("Cannot load font!");
                     }
                 });
-
-            Log::Log("installing event handler\n");
-            gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
-            OldWndProc = SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
-            Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
             imgui_initialized = true;
         }
