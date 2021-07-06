@@ -528,7 +528,23 @@ void InventoryManager::Initialize() {
         });
 
     GW::Trade::RegisterOfferItemCallback(&on_offer_item_hook, OnOfferTradeItem);
+
+    GW::UI::RegisterDecodeStringCallback(&on_offer_item_hook, OnAsyncDecodeStr);
+
     inventory_bags_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_InventoryBags);
+}
+// Add "Tip: Hold Ctrl when requesting a quote to bulk buy." message to merchant window
+// Add "Tip: Hold Ctrl when requesting a quote to bulk sell." message to merchant window
+wchar_t* InventoryManager::OnAsyncDecodeStr(GW::HookStatus*, wchar_t* encoded_str) {
+    switch (encoded_str[0]) {
+    case 0x51B:
+        return L"\x51B\x2\x102\x2\x108\x107" "Tip: Hold Ctrl when requesting a quote to bulk buy." "\x1";
+        break;
+    case 0x522:
+        return L"\x522\x2\x102\x2\x108\x107" "Tip: Hold Ctrl when requesting a quote to bulk sell." "\x1";
+        break;
+    }
+    return encoded_str;
 }
 void InventoryManager::OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity) {
     if (ImGui::IsKeyDown(VK_SHIFT) || !Instance().trade_whole_stacks)

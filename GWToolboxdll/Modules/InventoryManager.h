@@ -68,6 +68,7 @@ public:
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
     static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
+    static wchar_t* OnAsyncDecodeStr(GW::HookStatus* status, wchar_t* encoded_str);
 
 
     IdentifyAllType identify_all_type = IdentifyAllType::None;

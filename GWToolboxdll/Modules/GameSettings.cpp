@@ -2259,7 +2259,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wPar
     if (msgid != GW::UI::kOpenWikiUrl)
         return;
     std::string url = GuiUtils::ToLower((char*)wParam);
-    if (strstr(url.c_str(), "/wiki/Main_Page")) {
+    if (strstr(url.c_str(), "/wiki/main_page")) {
         // Redirect /wiki to /wiki <current map name>
         status->blocked = true;
         GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
