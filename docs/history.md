@@ -7,6 +7,37 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.4
+
+* [Minor] Don't credit NPC kills in observer module
+* [Minor] Added option to show distance widget in percentage and/or absolute value
+* [Minor] Added option to show health widget in percentage and/or absolute value
+* [Minor] Added extra check for aftercast when using equip item hotkey
+* [Minor] Added support for french GWW when accessing wiki links
+* [Minor] Added hint to in-game trader window for bulk buy/sell
+* [New] Added `/target player [1-12|nearest|name]` command
+* [New] Added `/target priority [1-12]` command
+* [New] Extended `/target` command to allow partial NPC names instead of model id's e.g. `/target merchant`
+* [New] Added `/target item [model_id|nearest|name]` command
+* [New] Added custom name label color to minimap custom agents
+* [New] `/wiki` command to redirect to `/wiki <current map name>` to make it actually useful
+* [New] `/wiki quest` command to redirect to `/wiki <current quest name>`
+* [New] `/wiki target` command to redirect to `/wiki <current target name>`
+* [New] Extended equip item hotkey to choose specific items to equip instead of just by slot
+* [New] Added "Show All Areas" and "Hard Mode" toggles to world map view
+* [New] Added Missions module to track in-game vanquish/mission/dungeon progress
+* [New] Added option to focus GW when toolbox is launched
+* [New] Added option to copy a teambuild instead of having to recreate it manually
+* [New] Dialog hotkey now opens dialog with the target NPC when triggered
+* [New] Added option to color friend name tags differently when in an outpost
+* [New] Added `/ping [build]` chat command
+* [New] Added option to Ctrl + click a party member's damage in the damage monitor to print to chat
+* [Fix] Fixed bug causing minimap to sometimes show dead enemies as still alive
+* [Fix] Fixed bug causing item context menu wiki link to include item quantity when opening the website
+* [Fix] Fixed some NPC dialogs still mentioning the player name when obfuscator is on
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.4_Release/GWToolboxdll.dll)
+
 ## Version 5.3
 
 * [Fix] Fixed some map load crashes when using obfuscator
