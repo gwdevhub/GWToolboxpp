@@ -218,7 +218,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Observer Party Window",&use_observer_party_window},
         {"Observer Export Window",&use_observer_export_window},
         {"Vanquish counter",&use_vanquish},
-        {"World Map",& use_vanquish}
+        {"World Map",&use_world_map}
     };
     ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
     size_t items_per_col = (size_t)ceil(features.size() / static_cast<float>(cols));
@@ -314,6 +314,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_daily_quests = ini->GetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
     use_obfuscator = ini->GetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
     use_missions_window = ini->GetBoolValue(Name(), VAR_NAME(use_missions_window), use_missions_window);
+    use_world_map = ini->GetBoolValue(Name(), VAR_NAME(use_world_map), use_world_map);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -359,6 +360,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
     ini->SetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
     ini->SetBoolValue(Name(), VAR_NAME(use_missions_window), use_missions_window);
+    ini->SetBoolValue(Name(), VAR_NAME(use_world_map), use_world_map);
 }
 
 void ToolboxSettings::Draw(IDirect3DDevice9*) {
