@@ -2254,16 +2254,19 @@ void GameSettings::OnAgentStartCast(GW::HookStatus* , uint32_t msgid, void* wPar
     }
 };
 
-// Redirect /wiki to /wiki <map_name>
+// Redirect /wiki commands to go to useful pages
 void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
     if (msgid != GW::UI::kOpenWikiUrl)
         return;
-    if (strstr((char*)wParam, "/wiki/Main_Page")) {
+    std::string url = GuiUtils::ToLower((char*)wParam);
+    if (strstr(url.c_str(), "/wiki/Main_Page")) {
+        // Redirect /wiki to /wiki <current map name>
         status->blocked = true;
         GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
         Instance().pending_wiki_search_term = new GuiUtils::EncString(map->name_id);
     }
-    if (strstr((char*)wParam, "?search=quest")) {
+    else if (strstr(url.c_str(), "?search=quest")) {
+        // Redirect /wiki quest to /wiki <current quest name>
         status->blocked = true;
         GW::WorldContext* c = GW::GameContext::instance()->world;
         uint32_t quest_id = c->active_quest_id;
@@ -2272,6 +2275,14 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wPar
                 Instance().pending_wiki_search_term = new GuiUtils::EncString((wchar_t*)q.h000C);
                 break;
             }
+        }
+    }
+    else if (strstr(url.c_str(), "?search=target")) {
+        // Redirect /wiki target to /wiki <current target name>
+        status->blocked = true;
+        const GW::Agent* a = GW::Agents::GetTarget();
+        if (a) {
+            Instance().pending_wiki_search_term = new GuiUtils::EncString(GW::Agents::GetAgentEncName(a));
         }
     }
 }
