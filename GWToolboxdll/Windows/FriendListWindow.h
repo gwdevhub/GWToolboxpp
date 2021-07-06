@@ -176,6 +176,7 @@ private:
     bool lock_size_as_widget = true;
 
     Color hover_background_color = 0x33999999;
+    bool friend_name_tag_enabled = false;
     Color friend_name_tag_color = 0xff6060ff;
 
     clock_t friends_list_checked = 0;

@@ -405,7 +405,7 @@ void FriendListWindow::OnUIMessage(GW::HookStatus* status, uint32_t message_id, 
     switch (message_id) {
     case GW::UI::kSetAgentNameTagAttribs:
     case GW::UI::kShowAgentNameTag: {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !Instance().friend_name_tag_enabled)
             break;
         GW::UI::AgentNameTagInfo* tag = (GW::UI::AgentNameTagInfo*)wparam;
         wchar_t* player_name_start = wcsstr(tag->name_enc, L"\xba9\x107");
@@ -862,9 +862,11 @@ void FriendListWindow::DrawSettingInternal() {
     ImGui::Checkbox("Show my status", &show_my_status);
     ImGui::ShowHelp("e.g. 'You are: Online'");
 
-    Colors::DrawSettingHueWheel("Friend name tag color", &friend_name_tag_color);
+    ImGui::Checkbox("Custom name tag color for friends",&friend_name_tag_enabled);
     ImGui::ShowHelp("When targeting friends in an outpost");
-
+    if (friend_name_tag_enabled) {
+        Colors::DrawSettingHueWheel("Friend name tag color", &friend_name_tag_color);
+    }
     DrawChatSettings();
 }
 void FriendListWindow::RegisterSettingsContent() {
@@ -904,6 +906,7 @@ void FriendListWindow::LoadSettings(CSimpleIni* ini) {
     show_my_status = ini->GetBoolValue(Name(), VAR_NAME(show_my_status), show_my_status);
     
     hover_background_color = Colors::Load(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
+    friend_name_tag_enabled = ini->GetBoolValue(Name(), VAR_NAME(friend_name_tag_enabled), friend_name_tag_enabled);
     friend_name_tag_color = Colors::Load(ini, Name(), VAR_NAME(friend_name_tag_color), friend_name_tag_color);
 
     LoadFromFile();
@@ -920,6 +923,7 @@ void FriendListWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_my_status), show_my_status);
 
     Colors::Save(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
+    ini->SetBoolValue(Name(), VAR_NAME(friend_name_tag_enabled), friend_name_tag_enabled);
     Colors::Save(ini, Name(), VAR_NAME(friend_name_tag_color), friend_name_tag_color);
 
     SaveToFile();
