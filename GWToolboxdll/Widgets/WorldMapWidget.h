@@ -15,6 +15,8 @@ public:
     void Initialize() override;
 
 
+    virtual void RegisterSettingsContent() override { };
+
     bool ShowOnWorldMap() const { return true; }
 
     const char* Name() const override { return "World Map"; }

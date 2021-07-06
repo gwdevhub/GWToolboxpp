@@ -84,4 +84,5 @@ private:
     bool use_chatcommand = true;
     bool use_discordintegration = false;
     bool use_obfuscator = true;
+    bool use_missions_window = true;
 };

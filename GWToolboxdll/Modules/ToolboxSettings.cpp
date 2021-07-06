@@ -120,6 +120,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_observer_party_window) optional_modules.push_back(&ObserverPartyWindow::Instance());
     if (use_observer_export_window) optional_modules.push_back(&ObserverExportWindow::Instance());
     if (use_obfuscator) optional_modules.push_back(&Obfuscator::Instance());
+    if (use_missions_window) optional_modules.push_back(&MissionsWindow::Instance());
 
 #ifdef _DEBUG
 #if 0
@@ -129,7 +130,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&StringDecoderWindow::Instance());
     optional_modules.push_back(&DoorMonitorWindow::Instance());
     optional_modules.push_back(&SkillListingWindow::Instance());
-    optional_modules.push_back(&MissionsWindow::Instance());
+    
 
 #endif
     std::sort(
@@ -151,6 +152,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
     if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
     if (use_world_map) optional_modules.push_back(&WorldMapWidget::Instance());
+   
 
     std::sort(
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_widgets),
@@ -199,6 +201,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Info",&use_info},
         {"Materials",&use_materials},
         {"Minimap",&use_minimap},
+        {"Missions",&use_missions_window},
         {"Notepad",&use_notepad},
         {"Objective Timer",&use_objectivetimer},
         {"Obfuscator",&use_obfuscator},
@@ -310,6 +313,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_serverinfo = ini->GetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
     use_daily_quests = ini->GetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
     use_obfuscator = ini->GetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
+    use_missions_window = ini->GetBoolValue(Name(), VAR_NAME(use_missions_window), use_missions_window);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -354,6 +358,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
     ini->SetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
     ini->SetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
+    ini->SetBoolValue(Name(), VAR_NAME(use_missions_window), use_missions_window);
 }
 
 void ToolboxSettings::Draw(IDirect3DDevice9*) {
