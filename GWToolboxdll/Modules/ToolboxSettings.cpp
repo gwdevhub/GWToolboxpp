@@ -51,13 +51,13 @@
 #include <Windows/ObserverTargetWindow.h>
 #include <Windows/ObserverPartyWindow.h>
 #include <Windows/ObserverExportWindow.h>
+#include <Windows/MissionsWindow.h>
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
 #if 0
 #include <Windows/PartySearchWindow.h>
 #endif
-#include <Windows/MissionsWindow.h>
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
 #endif

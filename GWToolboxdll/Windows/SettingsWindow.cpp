@@ -175,13 +175,17 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
         ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2), ImColor(style.Colors[ImGuiCol_Text]), icon);
     }
 
-    if (is_showing) ImGui::PushID(section);
-    size_t i = 0;
-    for (auto& entry : settings_section->second) {
-        if (i && is_showing) ImGui::Separator();
-        entry.second(&settings_section->first, is_showing);
-        i++;
+    if (is_showing) {
+        ImGui::PushID(section);
+        size_t i = 0;
+        for (auto& entry : settings_section->second) {
+            if (i) ImGui::Separator();
+            ImGui::PushID(i);
+            entry.second(&settings_section->first, is_showing);
+            i++;
+            ImGui::PopID();
+        }
+        ImGui::PopID();
     }
-    if (is_showing) ImGui::PopID();
     return true;
 }
