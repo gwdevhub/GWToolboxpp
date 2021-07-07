@@ -54,10 +54,10 @@
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
-#include <Windows/MissionsWindow.h>
 #if 0
 #include <Windows/PartySearchWindow.h>
 #endif
+#include <Windows/MissionsWindow.h>
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
 #endif
