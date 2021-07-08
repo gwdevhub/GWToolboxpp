@@ -7,6 +7,15 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.5
+
+* [Fix] Removed unusable settings for world map widget
+* [Fix] Enabled mission window module for release
+* [Fix] Fixed jittery movement when camera smoothing is disabled
+* [Fix] Fixed bug in toolbox settings related to controls sharing the same ID
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.5_Release/GWToolboxdll.dll)
+
 ## Version 5.4
 
 * [Minor] Don't credit NPC kills in observer module
