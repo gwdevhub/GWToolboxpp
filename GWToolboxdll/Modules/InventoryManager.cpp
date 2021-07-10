@@ -535,8 +535,8 @@ void InventoryManager::Initialize() {
 }
 // Add "Tip: Hold Ctrl when requesting a quote to bulk buy." message to merchant window
 // Add "Tip: Hold Ctrl when requesting a quote to bulk sell." message to merchant window
-wchar_t* InventoryManager::OnAsyncDecodeStr(GW::HookStatus*, wchar_t* encoded_str) {
-    switch (encoded_str[0]) {
+wchar_t* InventoryManager::OnAsyncDecodeStr(GW::HookStatus*, GW::UI::DecodingString* to_decode) {
+    switch (to_decode->encoded[0]) {
     case 0x51B:
         return L"\x51B\x2\x102\x2\x108\x107" "Tip: Hold Ctrl when requesting a quote to bulk buy." "\x1";
         break;
@@ -544,7 +544,7 @@ wchar_t* InventoryManager::OnAsyncDecodeStr(GW::HookStatus*, wchar_t* encoded_st
         return L"\x522\x2\x102\x2\x108\x107" "Tip: Hold Ctrl when requesting a quote to bulk sell." "\x1";
         break;
     }
-    return encoded_str;
+    return to_decode->encoded.data();
 }
 void InventoryManager::OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity) {
     if (ImGui::IsKeyDown(VK_SHIFT) || !Instance().trade_whole_stacks)
