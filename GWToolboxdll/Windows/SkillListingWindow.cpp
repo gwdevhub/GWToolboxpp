@@ -184,7 +184,7 @@ nlohmann::json SkillListingWindow::Skill::ToJson() {
     json["c"] = skill->campaign;
     nlohmann::json z_json;
     if (HasExhaustion())
-        z_json["x"] = skill->h0034;
+        z_json["x"] = skill->overcast;
     if (skill->recharge)
         z_json["r"] = skill->recharge;
     if (skill->activation)
@@ -308,7 +308,7 @@ const wchar_t *SkillListingWindow::Skill::Description()
 const wchar_t *SkillListingWindow::Skill::Concise()
 {
     if (!concise_enc[0] &&
-        GW::UI::UInt32ToEncStr(skill->h0098, concise_enc, 16)) {
+        GW::UI::UInt32ToEncStr(skill->concise, concise_enc, 16)) {
         wchar_t buf[64] = {0};
         swprintf(
             buf, 64,
