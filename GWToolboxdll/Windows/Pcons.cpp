@@ -174,18 +174,16 @@ void Pcon::Update(int delay) {
         maptype = GW::Map::GetInstanceType();
         SetPlayerName();
         ResetCounts();
-        StopRefill();
-        refill_attempted = maptype != GW::Constants::InstanceType::Outpost;
+        Refill(false);
+        refill_attempted = false;
     }
-    if (maptype == GW::Constants::InstanceType::Loading || GW::Map::GetIsObserving())
-        return;
     if (!refill_attempted) {
-        refilling = refill_if_below_threshold;
+        Refill(refill_if_below_threshold);
         refill_attempted = true;
     }
     // Refill pcons if needed.
-    Refill();
-    if (refilling)
+    UpdateRefill();
+    if (maptype == GW::Constants::InstanceType::Loading || GW::Map::GetIsObserving())
         return;
     // Check pcon count in inventory
     if (!pcon_quantity_checked) {
@@ -337,23 +335,27 @@ uint32_t Pcon::MoveItem(GW::Item* item, GW::Bag* bag, size_t slot, size_t quanti
     }
     return quantity;
 }
-void Pcon::StopRefill() {
-    refilling = false;
-    if(pending_move_to_bag)
-        UnreserveSlotForMove(pending_move_to_bag->index, pending_move_to_slot);
-    pending_move_to_bag = 0;
-    pending_move_to_slot = 0;
-    pending_move_to_quantity = 0;
+void Pcon::Refill(bool do_refill) {
+    if (refilling == do_refill)
+        return;
+    refilling = do_refill;
+    if (!refilling) {
+        if (pending_move_to_bag)
+            UnreserveSlotForMove(pending_move_to_bag->index, pending_move_to_slot);
+        pending_move_to_bag = 0;
+        pending_move_to_slot = 0;
+        pending_move_to_quantity = 0;
+        return;
+    }
+    ResetCounts(); 
 }
-void Pcon::Refill() {
+void Pcon::UpdateRefill() {
     if (!refilling)
         return;
-    if (!*enabled || !PconsWindow::Instance().GetEnabled())
-        return StopRefill();
     if (!IsVisible())
-        return StopRefill();
+        goto refill_done;
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
-        return StopRefill();
+        goto refill_done;
     if (pending_move_to_quantity) {
         GW::Item* item = GW::Items::GetItemBySlot(pending_move_to_bag, pending_move_to_slot + 1);
         if (!item || !QuantityForEach(item) || item->quantity != pending_move_to_quantity)
@@ -362,15 +364,15 @@ void Pcon::Refill() {
     }
     quantity = CheckInventory();
     if (quantity >= threshold)
-        return StopRefill();
+        goto refill_done;
     quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
     int points_needed = threshold - quantity; // quantity is actually points e.g. 20 grog = 60 quantity
     size_t quantity_to_move = 0;
     if (points_needed < 1)
-        return StopRefill();
+        goto refill_done;
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr)
-        return StopRefill();
+        goto refill_done;
     for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
         GW::Bag* storageBag = bags[bagIndex];
         if (storageBag == nullptr) continue;    // No bag, skip
@@ -384,7 +386,7 @@ void Pcon::Refill() {
             GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(storageItem); // Now find a slot in inventory to move them to.
             if (inventoryItem == nullptr) {
                 printf("No more space for %s", chat);
-                return StopRefill(); // No space for more pcons in inventory.
+                goto refill_done; // No space for more pcons in inventory.
             }
             quantity_to_move = static_cast<size_t>(ceil((float)points_needed / (float)points_per_item));
             if (quantity_to_move > storageItem->quantity)       quantity_to_move = storageItem->quantity;
@@ -400,7 +402,9 @@ void Pcon::Refill() {
             return;
         }
     }
-    return StopRefill();
+    refill_done:
+    Refill(false);
+    pcon_quantity_checked = false;
 }
 
 int Pcon::CheckInventory(bool *used, size_t *used_qty_ptr, size_t from_bag,

@@ -46,6 +46,8 @@ protected:
     // Checks whether another pcon has reserved this slot.
     static bool IsSlotReservedForMove(size_t bagId, size_t slot);
 
+    void UpdateRefill();
+
     GW::Bag* pending_move_to_bag = nullptr;
     uint32_t pending_move_to_slot = 0;
     uint32_t pending_move_to_quantity = 0;
@@ -61,9 +63,8 @@ public:
                              size_t quantity = 0);
     static GW::Bag* GetBag(uint32_t bag_id);
     wchar_t* SetPlayerName();
-    // Fires off another thread to refill pcons. Sets refill_attempted to TRUE when finished.
-    void Refill();
-    void StopRefill();
+    // Pass true to start refill, or false to stop.
+    void Refill(bool do_refill = true);
     void SetEnabled(bool enabled);
     const bool IsEnabled() { return IsVisible() && *enabled; }
     virtual bool IsVisible() const;

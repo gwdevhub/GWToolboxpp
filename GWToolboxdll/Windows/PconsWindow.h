@@ -33,6 +33,8 @@ public:
 
     inline void ToggleEnable() { SetEnabled(!enabled); }
 
+    void Refill(bool do_refill = true);
+
     void Update(float delta) override;
 
     bool DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text) override;

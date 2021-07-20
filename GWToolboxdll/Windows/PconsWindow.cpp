@@ -259,7 +259,7 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv) {
         Instance().ToggleEnable();
     } else if (argc >= 2) {
         std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-        if (arg1 != L"on" && arg1 != L"off" && arg1 != L"toggle") {
+        if (arg1 != L"on" && arg1 != L"off" && arg1 != L"toggle" && arg1 != L"refill") {
             Log::Error("Invalid argument '%ls', please use /pcons [on|off|toggle] [pcon]", argv[1]);
         }
         if (argc == 2) {
@@ -269,6 +269,8 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv) {
                 Instance().SetEnabled(false);
             } else if (arg1 == L"toggle") {
                 Instance().ToggleEnable();
+            } else if (arg1 == L"refill") {
+                Instance().Refill();
             }
         } else {
             std::wstring argPcon = GuiUtils::ToLower(argv[2]);
@@ -306,6 +308,8 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv) {
                 bestMatch->SetEnabled(false);
             } else if (arg1 == L"toggle") {
                 bestMatch->Toggle();
+            } else if (arg1 == L"refill") {
+                bestMatch->Refill();
             }
         }
     }
@@ -419,15 +423,18 @@ void PconsWindow::MapChanged() {
 
     
 }
+void PconsWindow::Refill(bool do_refill) {
+    for (Pcon* pcon : pcons) {
+        pcon->Refill(do_refill && pcon->IsEnabled());
+    }
+}
 bool PconsWindow::GetEnabled() {
     return enabled;
 }
 bool PconsWindow::SetEnabled(bool b) {
     if (enabled == b) return enabled; // Do nothing - already enabled/disabled.
     enabled = b;
-    for (Pcon* pcon : pcons) {
-        pcon->ResetCounts();
-    }
+    Refill(enabled);
     switch (GW::Map::GetInstanceType()) {
     case GW::Constants::InstanceType::Outpost:
         if(tick_with_pcons)
