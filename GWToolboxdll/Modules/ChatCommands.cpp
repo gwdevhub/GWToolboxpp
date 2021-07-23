@@ -507,17 +507,19 @@ void ChatCommands::SearchAgent::Init(const wchar_t* _search, TargetType type) {
                 continue;
             break;
         case Player:
-            if(agent->type != 0xDB || !agent->GetAsAgentLiving()->IsPlayer())
+            if (agent->type != 0xDB || !agent->GetAsAgentLiving()->IsPlayer())
                 continue;
             break;
-        case Npc:
-            if (agent->type != 0xDB || !agent->GetAsAgentLiving()->IsNPC())
+        case Npc: {
+            const GW::AgentLiving* agent_living = agent->GetAsAgentLiving();
+            if (!agent_living || !agent_living->IsNPC() || !agent_living->GetIsAlive())
                 continue;
-            break;
-        case Living:
-            if (agent->type != 0xDB)
-                continue;
-            break;
+        } break;
+        case Living: {
+                const GW::AgentLiving* agent_living = agent->GetAsAgentLiving();
+                if (!agent_living || !agent_living->GetIsAlive())
+                    continue;
+        } break;
         default:
             continue;
         }
@@ -1359,7 +1361,7 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
             case Npc: {
                 // Target npc by model id
                 const GW::AgentLiving* const living_agent = agent->GetAsAgentLiving();
-                if (!living_agent || !living_agent->IsNPC() || (model_id && living_agent->player_number != model_id))
+                if (!living_agent || !living_agent->IsNPC() || !living_agent->GetIsAlive() || (model_id && living_agent->player_number != model_id))
                     continue;
             } break;
             case Player: {
@@ -1371,7 +1373,7 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
             case Living: {
                 // Target any living agent by model id
                 const GW::AgentLiving* const living_agent = agent->GetAsAgentLiving();
-                if (!living_agent || (model_id && living_agent->player_number != model_id))
+                if (!living_agent || !living_agent->GetIsAlive() || (model_id && living_agent->player_number != model_id))
                     continue;
             } break;
             default:
