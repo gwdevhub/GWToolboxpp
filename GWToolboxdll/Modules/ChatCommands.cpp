@@ -283,7 +283,7 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.\n"
         "'/target ee' to target best ebon escape agent.\n"
         "'/target hos' to target best vipers/hos agent.\n"
-        "'/target [name|model_id] [index]' target nearest NPC by name or model_id. \n\tIf index is specified, it will index-th by ID.\n"
+        "'/target [name|model_id] [index]' target nearest NPC by name or model_id. \n\tIf index is specified, it will target index-th by ID.\n"
         "'/target player [name|player_number]' target nearest player by name or player number.\n"
         "'/target gadget [name|gadget_id]' target nearest interactive object by name or gadget_id.\n"
         "'/target priority [partymember]' to target priority target of party member.");
