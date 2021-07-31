@@ -283,7 +283,7 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.\n"
         "'/target ee' to target best ebon escape agent.\n"
         "'/target hos' to target best vipers/hos agent.\n"
-        "'/target [name|model_id]' target nearest NPC by name or model_id.\n"
+        "'/target [name|model_id] [index]' target nearest NPC by name or model_id. \n\tIf index is specified, it will index-th by ID.\n"
         "'/target player [name|player_number]' target nearest player by name or player number.\n"
         "'/target gadget [name|gadget_id]' target nearest interactive object by name or gadget_id.\n"
         "'/target priority [partymember]' to target priority target of party member.");
@@ -922,19 +922,17 @@ void ChatCommands::CmdAfk(const wchar_t *message, int argc, LPWSTR *argv) {
     }
 }
 
+const wchar_t* ChatCommands::GetRemainingArgsWstr(const wchar_t* message, int argc_start) {
+    const wchar_t* out = message;
+    for (int i = 0; i < argc_start && out; i++) {
+        out = wcschr(out, ' ');
+        if (out) out++;
+    }
+    return out;
+};
 void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
     if (argc < 2)
         return Log::ErrorW(L"Missing argument for /%s", argv[0]);
-
-    auto GetRemainingArgsWstr = [](const wchar_t* message, int argc_start) {
-        const wchar_t* out = message;
-        for (int i = 0; i < argc_start && out; i++) {
-            out = wcschr(out, ' ');
-            if (out)
-                out++;
-        }
-        return out;
-    };
 
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
     if (arg1 == L"ee")
@@ -1320,11 +1318,20 @@ bool ChatCommands::GetTargetTransmoInfo(PendingTransmo &transmo)
 void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType type)
 {
     uint32_t model_id = 0;
+    uint32_t index = 0; // 0=nearest. 1=first by id, 2=second by id, etc.
+
     // Searching by name; offload this to decode agent names first.
-    if (!GuiUtils::ParseUInt(model_id_or_name, &model_id)
-        && !IsNearestStr(model_id_or_name)) {
-        Instance().npc_to_find.Init(model_id_or_name,type);
-        return;
+    if (GuiUtils::ParseUInt(model_id_or_name, &model_id)) {
+        // check if there's an index component
+        if (const wchar_t* rest = GetRemainingArgsWstr(model_id_or_name, 1)) {
+            GuiUtils::ParseUInt(rest, &index);
+        }
+
+    } else {
+        if (!IsNearestStr(model_id_or_name)) {
+            Instance().npc_to_find.Init(model_id_or_name, type);
+            return;
+        }
     }
 
     // target nearest agent
@@ -1338,6 +1345,7 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
 
     float distance = GW::Constants::SqrRange::Compass;
     size_t closest = 0;
+    size_t count = 0;
 
     for (const GW::Agent * agent : agents) {
         if (!agent || agent == me)
@@ -1379,10 +1387,18 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
             default:
                 continue;
         }
-        const float newDistance = GW::GetSquareDistance(me->pos, agent->pos);
-        if (newDistance < distance) {
-            closest = agent->agent_id;
-            distance = newDistance;
+        if (index == 0) { // target closest
+            const float newDistance = GW::GetSquareDistance(me->pos, agent->pos);
+            if (newDistance < distance) {
+                closest = agent->agent_id;
+                distance = newDistance;
+            }
+        } else { // target based on id
+            ++count;
+            if (count == index) {
+                closest = agent->agent_id;
+                break;
+            }
         }
     }
     if(closest) GW::Agents::ChangeTarget(closest);
