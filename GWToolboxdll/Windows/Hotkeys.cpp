@@ -682,6 +682,7 @@ bool HotkeyEquipItem::IsEquippable(const GW::Item *_item)
         case GW::Constants::ItemType::Daggers:
         case GW::Constants::ItemType::Scythe:
         case GW::Constants::ItemType::Spear:
+        case GW::Constants::ItemType::Costume_Headpiece:
         case GW::Constants::ItemType::Costume:
             break;
         default:
