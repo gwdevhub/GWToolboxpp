@@ -377,6 +377,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"dialog", ChatCommands::CmdDialog);
     GW::Chat::CreateCommand(L"show", ChatCommands::CmdShow);
     GW::Chat::CreateCommand(L"hide", ChatCommands::CmdHide);
+    GW::Chat::CreateCommand(L"toggle", ChatCommands::CmdToggle);
     GW::Chat::CreateCommand(L"tb", ChatCommands::CmdTB);
     GW::Chat::CreateCommand(L"zoom", ChatCommands::CmdZoom);
     GW::Chat::CreateCommand(L"camera", ChatCommands::CmdCamera);
@@ -805,16 +806,43 @@ void ChatCommands::CmdShow(const wchar_t *message, int argc, LPWSTR *argv) {
         }
     }
 }
+void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
+    std::wstring last_arg = GuiUtils::ToLower(argv[argc - 1]);
+    bool ignore_last_arg = false;
+    enum ActionType : bool {
+        Toggle,
+        On,
+        Off
+    } action = Toggle;
+    if (last_arg == L"on" || last_arg == L"1" || last_arg == L"show") {
+        action = On;
+        ignore_last_arg = true;
+    }
+    else if (last_arg == L"off" || last_arg == L"0" || last_arg == L"hide") {
+        action = Off;
+        ignore_last_arg = true;
+    }
 
-void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
-    std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
+    std::vector<ToolboxUIElement*> windows = MatchingWindows(message, ignore_last_arg ? argc - 1 : argc, argv);
     if (windows.empty()) {
-        Log::Error("Cannot find window '%ls'", argc > 1 ? argv[1] : L"");
-    } else {
-        for (ToolboxUIElement* window : windows) {
+        Log::Error("Cannot find window or command '%ls'", argc > 1 ? argv[1] : L"");
+        return;
+    }
+    for (ToolboxUIElement* window : windows) {
+        switch (action) {
+        case On:
+            window->visible = true;
+            break;
+        case Off:
             window->visible = false;
+            break;
+        default:
+            window->visible = !window->visible;
+            break;
         }
     }
+}
+void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdZoom(const wchar_t *message, int argc, LPWSTR *argv) {

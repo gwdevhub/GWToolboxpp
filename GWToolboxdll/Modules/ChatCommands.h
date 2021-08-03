@@ -76,6 +76,7 @@ private:
     static void CmdUseSkill(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdShow(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdHide(const wchar_t *message, int argc, LPWSTR *argv);
+    static void CmdToggle(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdZoom(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdCamera(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv);
