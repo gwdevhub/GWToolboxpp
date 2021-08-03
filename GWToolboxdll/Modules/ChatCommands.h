@@ -96,6 +96,7 @@ private:
     static bool ParseScale(int scale,PendingTransmo& transmo);
     static bool GetTargetTransmoInfo(PendingTransmo& transmo);
     static void TargetNearest(const wchar_t* model_id_or_name, TargetType type);
+    static const wchar_t* GetRemainingArgsWstr(const wchar_t* message, int argc_start);
 
     static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);
 
