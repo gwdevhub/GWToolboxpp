@@ -12,6 +12,7 @@
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Item.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -153,7 +154,6 @@ namespace {
         return wcscmp(str, L"nearest") == 0 || wcscmp(str, L"closest") == 0;
     }
 
-
     static std::map<std::string, ChatCommands::PendingTransmo> npc_transmos;
 } // namespace
 
@@ -276,10 +276,16 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
     ImGui::Bullet(); ImGui::Text("'/flag [all|<number>] [x] [y]' to flag a hero to coordinates [x],[y].");
     ImGui::Bullet(); ImGui::Text("'/flag <number> clear' to clear flag for a hero.");
-    ImGui::Bullet(); ImGui::Text("'/hide <name>' closes the window or widget titled <name>.");
+    
     ImGui::Bullet(); ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
     ImGui::Bullet(); ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");
-    ImGui::Bullet(); ImGui::Text("'/show <name>' opens the window or widget titled <name>.");
+    const char* toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
+    ImGui::Bullet(); ImGui::Text("'/show <name>' opens the window, in-game feature or widget titled <name>.");
+    ImGui::ShowHelp(toggle_hint);
+    ImGui::Bullet(); ImGui::Text("'/hide <name>' closes the window, in-game feature or widget titled <name>.");
+    ImGui::ShowHelp(toggle_hint);
+    ImGui::Bullet(); ImGui::Text("'/toggle <name> [on|off|toggle]' toggles the window, in-game feature or widget titled <name>.");
+    ImGui::ShowHelp(toggle_hint);
     ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.\n"
         "'/target ee' to target best ebon escape agent.\n"
         "'/target hos' to target best vipers/hos agent.\n"
@@ -295,11 +301,8 @@ void ChatCommands::DrawHelp() {
         "[dis] can be any of: ae, ae1, ee, eg, int, etc");
     ImGui::Bullet(); ImGui::Text("'/useskill <skill>' starts using the skill on recharge. "
         "Use the skill number instead of <skill> (e.g. '/useskill 5'). "
-        "It's possible to use more than one skill on recharge. "
         "Use empty '/useskill' or '/useskill stop' to stop all. "
         "Use '/useskill <skill>' to stop the skill.");
-    ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
-        "use empty '/zoom' to reset to the default value of 750.");
     const char* transmo_hint = "<npc_name> options: eye, zhu, kuunavang, beetle, polar, celepig, \n"
         "  destroyer, koss, bonedragon, smite, kanaxai, skeletonic, moa";
     ImGui::Bullet(); ImGui::Text("'/transmo <npc_name> [size (6-255)]' to change your appearance into an NPC.\n"
@@ -792,24 +795,26 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *, in
     return ret;
 }
 
-void ChatCommands::CmdShow(const wchar_t *message, int argc, LPWSTR *argv) {
-    std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
-    if (windows.empty()) {
-        if (argc == 2 && !wcscmp(argv[1], L"settings")) {
-            SettingsWindow::Instance().visible = true;
-        } else {
-            Log::Error("Cannot find window '%ls'", argc > 1 ? argv[1] : L"");
-        }
-    } else {
-        for (ToolboxUIElement* window : windows) {
-            window->visible = true;
-        }
-    }
+void ChatCommands::CmdShow(const wchar_t *message, int , LPWSTR *) {
+    std::wstring cmd = L"toggle ";
+    cmd.append(GetRemainingArgsWstr(message, 1));
+    cmd.append(L" on");
+    GW::Chat::SendChat('/', cmd.c_str());
+}
+void ChatCommands::CmdHide(const wchar_t* message, int, LPWSTR*) {
+    std::wstring cmd = L"toggle ";
+    cmd.append(GetRemainingArgsWstr(message, 1));
+    cmd.append(L" off");
+    GW::Chat::SendChat('/', cmd.c_str());
 }
 void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
+    if (argc < 2) {
+        Log::ErrorW(L"Invalid syntax: %s", message);
+        return;
+    }
     std::wstring last_arg = GuiUtils::ToLower(argv[argc - 1]);
     bool ignore_last_arg = false;
-    enum ActionType : bool {
+    enum ActionType : uint8_t {
         Toggle,
         On,
         Off
@@ -822,7 +827,40 @@ void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
         action = Off;
         ignore_last_arg = true;
     }
+    std::wstring second_arg = GuiUtils::ToLower(argv[1]);
 
+    GW::Constants::EquipmentStatus (*statusGetter)() = nullptr;
+    void (*statusSetter)(GW::Constants::EquipmentStatus) = nullptr;
+    if (second_arg == L"cape") {
+        statusGetter = &GW::Items::GetCapeStatus;
+        statusSetter = &GW::Items::SetCapeStatus;
+    }
+    else if (second_arg == L"head" || second_arg == L"helm") {
+        statusGetter = &GW::Items::GetHelmStatus;
+        statusSetter = &GW::Items::SetHelmStatus;
+    }
+    else if (second_arg == L"costume_head") {
+        statusGetter = &GW::Items::GetCostumeHeadpieceStatus;
+        statusSetter = &GW::Items::SetCostumeHeadpieceStatus;
+    }
+    else if (second_arg == L"costume") {
+        statusGetter = &GW::Items::GetCostumeBodyStatus;
+        statusSetter = &GW::Items::SetCostumeBodyStatus;
+    }
+    if (statusSetter) {
+        // Toggling visibility of equipment
+        switch (action) {
+        case On:
+            return statusSetter(GW::Constants::EquipmentStatus::AlwaysShow);
+        case Off:
+            return statusSetter(GW::Constants::EquipmentStatus::AlwaysHide);
+        default:
+            GW::Constants::EquipmentStatus current = statusGetter();
+            if (current == GW::Constants::EquipmentStatus::AlwaysShow)
+                return statusSetter(GW::Constants::EquipmentStatus::AlwaysHide);
+            return statusSetter(GW::Constants::EquipmentStatus::AlwaysShow);
+        }
+    }
     std::vector<ToolboxUIElement*> windows = MatchingWindows(message, ignore_last_arg ? argc - 1 : argc, argv);
     if (windows.empty()) {
         Log::Error("Cannot find window or command '%ls'", argc > 1 ? argv[1] : L"");
@@ -842,8 +880,7 @@ void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
         }
     }
 }
-void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
-}
+
 
 void ChatCommands::CmdZoom(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
