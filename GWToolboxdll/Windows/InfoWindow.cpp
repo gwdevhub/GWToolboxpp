@@ -546,6 +546,18 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
     }
     ImGui::End();
+#ifdef _DEBUG
+    // For debugging changes to flags/arrays etc
+    GW::GameContext* g = GW::GameContext::instance();
+    GW::CharContext* c = g->character;
+    GW::WorldContext* w = g->world;
+    GW::PartyContext* p = g->party;
+    GW::MapContext* m = g->map;
+    GW::ItemContext* i = g->items;
+    GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
+    (g || c || w || p || m || i || me || me_player);
+#endif
 }
 
 void InfoWindow::Update(float delta) {
