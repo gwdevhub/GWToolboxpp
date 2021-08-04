@@ -11,12 +11,7 @@
 
 #include <Modules/Resources.h>
 
-#define GWTOOLBOX_CHAN GW::Chat::Channel::CHANNEL_GWCA2
-#define GWTOOLBOX_SENDER L"GWToolbox++"
-#define GWTOOLBOX_SENDER_COL 0x00ccff
-#define GWTOOLBOX_WARNING_COL 0xFFFF44
-#define GWTOOLBOX_ERROR_COL 0xFF4444
-#define GWTOOLBOX_INFO_COL 0xFFFFFF
+
 
 namespace {
     FILE* logfile = nullptr;
@@ -179,14 +174,14 @@ static void _chatlog(LogType log_type, const wchar_t* message) {
     Log::LogW(L"[%s] %s\n", c, message);
 }
 static void _vchatlogW(LogType log_type, const wchar_t* format, va_list argv) {
-    wchar_t buf1[256];
-    vswprintf(buf1, 256, format, argv);
+    wchar_t buf1[512];
+    vswprintf(buf1, 512, format, argv);
     _chatlog(log_type, buf1);
 }
 
 static void _vchatlog(LogType log_type, const char* format, va_list argv) {
-    char buf1[256];
-    vsnprintf(buf1, 256, format, argv);
+    char buf1[512];
+    vsnprintf(buf1, 512, format, argv);
     std::wstring sbuf2 = GuiUtils::StringToWString(buf1);
     _chatlog(log_type, sbuf2.c_str());
 }
