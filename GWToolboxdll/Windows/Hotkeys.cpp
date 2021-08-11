@@ -1155,13 +1155,13 @@ HotkeyTarget::HotkeyTarget(CSimpleIni *ini, const char *section)
     name[0] = 0;
     if (!ini)
         return;
-    long ini_id = ini->GetLongValue(section, "TargetID", -1);
-    if (ini_id > 0)
-        id = static_cast<uint32_t>(ini_id);
+    std::string ini_name = ini->GetValue(section, "TargetID", "");
+    strcpy_s(id, ini_name.substr(0, sizeof(id) - 1).c_str());
+    id[sizeof(id) - 1] = 0;
     long ini_type = ini->GetLongValue(section, "TargetType", -1);
     if (ini_type >= HotkeyTargetType::NPC && ini_type < HotkeyTargetType::Count)
         type = static_cast<HotkeyTargetType>(ini_type);
-    std::string ini_name = ini->GetValue(section, "TargetName", "");
+    ini_name = ini->GetValue(section, "TargetName", "");
     strcpy_s(name, ini_name.substr(0, sizeof(name)-1).c_str());
     name[sizeof(name)-1] = 0;
     
@@ -1171,26 +1171,30 @@ HotkeyTarget::HotkeyTarget(CSimpleIni *ini, const char *section)
 void HotkeyTarget::Save(CSimpleIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
-    ini->SetLongValue(section, "TargetID", static_cast<long>(id));
+    ini->SetValue(section, "TargetID", id);
     ini->SetLongValue(section, "TargetType", static_cast<long>(type));
     ini->SetValue(section, "TargetName", name);
 }
 void HotkeyTarget::Description(char *buf, size_t bufsz) const
 {
     if (!name[0]) {
-        snprintf(buf, bufsz, "Target %s #%d", type_labels[type], id);
+        snprintf(buf, bufsz, "Target %s %s", type_labels[type], id);
     } else {
         snprintf(buf, bufsz, "Target %s", name);
     }
 }
 void HotkeyTarget::Draw()
 {
-    ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() / 3);
-    hotkeys_changed |= ImGui::Combo("Type", (int *)&type, type_labels, 3);
-    ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-    hotkeys_changed |= ImGui::InputInt(identifier_labels[type], (int *)&id);
+    const float w = ImGui::GetContentRegionAvail().x / 1.5f;
+    ImGui::PushItemWidth(w);
+    hotkeys_changed |= ImGui::Combo("Target Type", (int *)&type, type_labels, 3);
+    hotkeys_changed |= ImGui::InputText(identifier_labels[type], id, _countof(id));
     ImGui::PopItemWidth();
-    hotkeys_changed |= ImGui::InputText("Name", name, 140);
+    ImGui::ShowHelp("See Settings > Help > Chat Commands for /target options");
+    ImGui::PushItemWidth(w);
+    hotkeys_changed |= ImGui::InputText("Hotkey label", name, _countof(name));
+    ImGui::PopItemWidth();
+    ImGui::SameLine(0,0);    ImGui::TextDisabled(" (optional)");
     hotkeys_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
 }
 void HotkeyTarget::Execute()
@@ -1203,13 +1207,13 @@ void HotkeyTarget::Execute()
     message[0] = 0;
     switch (type) {
     case HotkeyTargetType::Item:
-        swprintf(message, len, L"target item %d", id);
+        swprintf(message, len, L"target item %S", id);
         break;
     case HotkeyTargetType::NPC:
-        swprintf(message, len, L"target npc %d", id);
+        swprintf(message, len, L"target npc %S", id);
         break;
     case HotkeyTargetType::Signpost:
-        swprintf(message, len, L"target gadget %d", id);
+        swprintf(message, len, L"target gadget %S", id);
         break;
     default:
         Log::ErrorW(L"Unknown target type %d", type);

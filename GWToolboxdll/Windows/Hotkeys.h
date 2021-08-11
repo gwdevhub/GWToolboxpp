@@ -262,7 +262,7 @@ class HotkeyTarget : public TBHotkey {
 private:
     const uint32_t types[3] = { 0xDB,0x200,0x400 };
     const char *type_labels[3] = { "NPC", "Signpost", "Item" };
-    const char *identifier_labels[3] = { "Model ID", "Gadget ID", "Item ModelID" };
+    const char *identifier_labels[3] = { "Model ID or Name", "Gadget ID or Name", "Item ModelID or Name" };
     enum HotkeyTargetType : int
     {
         NPC,
@@ -270,8 +270,8 @@ private:
         Item,
         Count
     } type = HotkeyTargetType::NPC;
-    uint32_t id = 0;
-    char name[140];
+    char id[140] = "nearest";
+    char name[140] = "";
 public:
     static const char* IniSection() { return "Target"; }
     const char* Name() const override { return IniSection(); }
