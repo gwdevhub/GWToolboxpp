@@ -37,9 +37,7 @@ namespace Missions {
         static Color is_daily_bg_color;
         static Color has_quest_bg_color;
         
-        wchar_t enc_mission_name[12] = { 0 };
-        std::wstring mission_name;
-        std::string mission_name_s;
+        GuiUtils::EncString name;
 
         GW::Constants::MapID outpost;
         GW::Constants::MapID map_to;
@@ -58,7 +56,6 @@ namespace Missions {
         virtual bool IsDaily(); // True if this mission is ZM or ZB today
         virtual bool HasQuest(); // True if the ZM or ZB is in quest log
         virtual bool IsCompleted();
-        std::string& Name();
     };
 
 

@@ -130,6 +130,9 @@ Mission::Mission(GW::Constants::MapID _outpost,
 	uint32_t _zm_quest)
 	: outpost(_outpost), zm_quest(_zm_quest), normal_mode_textures(_normal_mode_images), hard_mode_textures(_hard_mode_images) {
 	map_to = outpost;
+	GW::AreaInfo* map_info = GW::Map::GetMapInfo(outpost);
+	if (map_info)
+		name.reset(map_info->name_id);
 	};
 
 GW::Constants::MapID Mission::GetOutpost() {
@@ -211,7 +214,7 @@ void Mission::Draw(IDirect3DDevice9* )
 		
 	}
 	ImGui::PopID();
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip(Name().c_str());
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip(name.string().c_str());
 	ImGui::PopStyleColor();
 }
 
@@ -271,18 +274,6 @@ IDirect3DTexture9* Vanquish::GetMissionImage()
 bool Mission::IsDaily()
 {
 	return false;
-}
-
-std::string& Mission::Name() {
-	if (!enc_mission_name[0]) {
-		GW::AreaInfo* map_info = GW::Map::GetMapInfo(outpost);
-		if (map_info && GW::UI::UInt32ToEncStr(map_info->name_id, enc_mission_name, _countof(enc_mission_name)))
-			GW::UI::AsyncDecodeStr(enc_mission_name, &mission_name);
-	}
-	if (!mission_name.empty() && mission_name_s.empty()) {
-		mission_name_s = GuiUtils::WStringToString(mission_name);
-	}
-	return mission_name_s;
 }
 
 bool Mission::HasQuest()
@@ -520,39 +511,39 @@ void MissionsWindow::Initialize_Factions()
 	LoadTextures(Vanquish::hard_mode_images);
 
 	auto& this_vanquishes = vanquishes.at(Campaign::Factions);
-	this_vanquishes.push_back(new Vanquish(MapID::Haiju_Lagoon));
-	this_vanquishes.push_back(new Vanquish(MapID::Jaya_Bluffs));
-	this_vanquishes.push_back(new Vanquish(MapID::Kinya_Province));
-	this_vanquishes.push_back(new Vanquish(MapID::Minister_Chos_Estate_explorable));
-	this_vanquishes.push_back(new Vanquish(MapID::Panjiang_Peninsula));
-	this_vanquishes.push_back(new Vanquish(MapID::Saoshang_Trail));
-	this_vanquishes.push_back(new Vanquish(MapID::Sunqua_Vale));
-	this_vanquishes.push_back(new Vanquish(MapID::Zen_Daijun_explorable));
-	this_vanquishes.push_back(new Vanquish(MapID::Bukdek_Byway));
-	this_vanquishes.push_back(new Vanquish(MapID::Nahpui_Quarter_explorable));
-	this_vanquishes.push_back(new Vanquish(MapID::Pongmei_Valley));
-	this_vanquishes.push_back(new Vanquish(MapID::Raisu_Palace));
-	this_vanquishes.push_back(new Vanquish(MapID::Shadows_Passage));
-	this_vanquishes.push_back(new Vanquish(MapID::Shenzun_Tunnels));
-	this_vanquishes.push_back(new Vanquish(MapID::Sunjiang_District_explorable));
-	this_vanquishes.push_back(new Vanquish(MapID::Tahnnakai_Temple_explorable));
-	this_vanquishes.push_back(new Vanquish(MapID::Wajjun_Bazaar));
-	this_vanquishes.push_back(new Vanquish(MapID::Xaquang_Skyway));
+	this_vanquishes.push_back(new Vanquish(MapID::Haiju_Lagoon,QuestID::ZaishenVanquish::Haiju_Lagoon));
+	this_vanquishes.push_back(new Vanquish(MapID::Jaya_Bluffs, QuestID::ZaishenVanquish::Jaya_Bluffs));
+	this_vanquishes.push_back(new Vanquish(MapID::Kinya_Province, QuestID::ZaishenVanquish::Kinya_Province));
+	this_vanquishes.push_back(new Vanquish(MapID::Minister_Chos_Estate_explorable, QuestID::ZaishenVanquish::Minister_Chos_Estate));
+	this_vanquishes.push_back(new Vanquish(MapID::Panjiang_Peninsula, QuestID::ZaishenVanquish::Panjiang_Peninsula));
+	this_vanquishes.push_back(new Vanquish(MapID::Saoshang_Trail, QuestID::ZaishenVanquish::Saoshang_Trail));
+	this_vanquishes.push_back(new Vanquish(MapID::Sunqua_Vale, QuestID::ZaishenVanquish::Sunqua_Vale));
+	this_vanquishes.push_back(new Vanquish(MapID::Zen_Daijun_explorable, QuestID::ZaishenVanquish::Zen_Daijun));
+	this_vanquishes.push_back(new Vanquish(MapID::Bukdek_Byway, QuestID::ZaishenVanquish::Bukdek_Byway));
+	this_vanquishes.push_back(new Vanquish(MapID::Nahpui_Quarter_explorable, QuestID::ZaishenVanquish::Nahpui_Quarter));
+	this_vanquishes.push_back(new Vanquish(MapID::Pongmei_Valley, QuestID::ZaishenVanquish::Pongmei_Valley));
+	this_vanquishes.push_back(new Vanquish(MapID::Raisu_Palace, QuestID::ZaishenVanquish::Raisu_Palace));
+	this_vanquishes.push_back(new Vanquish(MapID::Shadows_Passage, QuestID::ZaishenVanquish::Shadows_Passage));
+	this_vanquishes.push_back(new Vanquish(MapID::Shenzun_Tunnels, QuestID::ZaishenVanquish::Shenzun_Tunnels));
+	this_vanquishes.push_back(new Vanquish(MapID::Sunjiang_District_explorable, QuestID::ZaishenVanquish::Sunjiang_District));
+	this_vanquishes.push_back(new Vanquish(MapID::Tahnnakai_Temple_explorable, QuestID::ZaishenVanquish::Tahnnakai_Temple));
+	this_vanquishes.push_back(new Vanquish(MapID::Wajjun_Bazaar, QuestID::ZaishenVanquish::Wajjun_Bazaar));
+	this_vanquishes.push_back(new Vanquish(MapID::Xaquang_Skyway, QuestID::ZaishenVanquish::Xaquang_Skyway));
 	this_vanquishes.push_back(new Vanquish(MapID::Arborstone_explorable));
-	this_vanquishes.push_back(new Vanquish(MapID::Drazach_Thicket));
-	this_vanquishes.push_back(new Vanquish(MapID::Ferndale));
+	this_vanquishes.push_back(new Vanquish(MapID::Drazach_Thicket, QuestID::ZaishenVanquish::Drazach_Thicket));
+	this_vanquishes.push_back(new Vanquish(MapID::Ferndale, QuestID::ZaishenVanquish::Ferndale));
 	this_vanquishes.push_back(new Vanquish(MapID::Melandrus_Hope));
-	this_vanquishes.push_back(new Vanquish(MapID::Morostav_Trail));
-	this_vanquishes.push_back(new Vanquish(MapID::Mourning_Veil_Falls));
-	this_vanquishes.push_back(new Vanquish(MapID::The_Eternal_Grove));
+	this_vanquishes.push_back(new Vanquish(MapID::Morostav_Trail, QuestID::ZaishenVanquish::Morostav_Trail));
+	this_vanquishes.push_back(new Vanquish(MapID::Mourning_Veil_Falls, QuestID::ZaishenVanquish::Mourning_Veil_Falls));
+	this_vanquishes.push_back(new Vanquish(MapID::The_Eternal_Grove, QuestID::ZaishenVanquish::The_Eternal_Grove));
 	this_vanquishes.push_back(new Vanquish(MapID::Archipelagos));
-	this_vanquishes.push_back(new Vanquish(MapID::Boreas_Seabed_explorable));
-	this_vanquishes.push_back(new Vanquish(MapID::Gyala_Hatchery));
-	this_vanquishes.push_back(new Vanquish(MapID::Maishang_Hills));
+	this_vanquishes.push_back(new Vanquish(MapID::Boreas_Seabed_explorable, QuestID::ZaishenVanquish::Boreas_Seabed));
+	this_vanquishes.push_back(new Vanquish(MapID::Gyala_Hatchery, QuestID::ZaishenVanquish::Gyala_Hatchery));
+	this_vanquishes.push_back(new Vanquish(MapID::Maishang_Hills, QuestID::ZaishenVanquish::Maishang_Hills));
 	this_vanquishes.push_back(new Vanquish(MapID::Mount_Qinkai));
-	this_vanquishes.push_back(new Vanquish(MapID::Rheas_Crater));
-	this_vanquishes.push_back(new Vanquish(MapID::Silent_Surf));
-	this_vanquishes.push_back(new Vanquish(MapID::Unwaking_Waters));
+	this_vanquishes.push_back(new Vanquish(MapID::Rheas_Crater, QuestID::ZaishenVanquish::Rheas_Crater));
+	this_vanquishes.push_back(new Vanquish(MapID::Silent_Surf, QuestID::ZaishenVanquish::Silent_Surf));
+	this_vanquishes.push_back(new Vanquish(MapID::Unwaking_Waters, QuestID::ZaishenVanquish::Unwaking_Waters));
 }
 
 
@@ -669,21 +660,21 @@ void MissionsWindow::Initialize_EotN()
 	LoadTextures(Vanquish::hard_mode_images);
 
 	auto& this_vanquishes = vanquishes.at(Campaign::EyeOfTheNorth);
-	this_vanquishes.push_back(new Vanquish(MapID::Bjora_Marches));
-	this_vanquishes.push_back(new Vanquish(MapID::Drakkar_Lake));
-	this_vanquishes.push_back(new Vanquish(MapID::Ice_Cliff_Chasms));
-	this_vanquishes.push_back(new Vanquish(MapID::Jaga_Moraine));
-	this_vanquishes.push_back(new Vanquish(MapID::Norrhart_Domains));
-	this_vanquishes.push_back(new Vanquish(MapID::Varajar_Fells));
-	this_vanquishes.push_back(new Vanquish(MapID::Dalada_Uplands));
-	this_vanquishes.push_back(new Vanquish(MapID::Grothmar_Wardowns));
-	this_vanquishes.push_back(new Vanquish(MapID::Sacnoth_Valley));
+	this_vanquishes.push_back(new Vanquish(MapID::Bjora_Marches, QuestID::ZaishenVanquish::Bjora_Marches));
+	this_vanquishes.push_back(new Vanquish(MapID::Drakkar_Lake, QuestID::ZaishenVanquish::Drakkar_Lake));
+	this_vanquishes.push_back(new Vanquish(MapID::Ice_Cliff_Chasms, QuestID::ZaishenVanquish::Ice_Cliff_Chasms));
+	this_vanquishes.push_back(new Vanquish(MapID::Jaga_Moraine, QuestID::ZaishenVanquish::Jaga_Moraine));
+	this_vanquishes.push_back(new Vanquish(MapID::Norrhart_Domains, QuestID::ZaishenVanquish::Norrhart_Domains));
+	this_vanquishes.push_back(new Vanquish(MapID::Varajar_Fells, QuestID::ZaishenVanquish::Varajar_Fells));
+	this_vanquishes.push_back(new Vanquish(MapID::Dalada_Uplands, QuestID::ZaishenVanquish::Dalada_Uplands));
+	this_vanquishes.push_back(new Vanquish(MapID::Grothmar_Wardowns, QuestID::ZaishenVanquish::Grothmar_Wardowns));
+	this_vanquishes.push_back(new Vanquish(MapID::Sacnoth_Valley, QuestID::ZaishenVanquish::Sacnoth_Valley));
 	this_vanquishes.push_back(new Vanquish(MapID::Alcazia_Tangle));
-	this_vanquishes.push_back(new Vanquish(MapID::Arbor_Bay));
-	this_vanquishes.push_back(new Vanquish(MapID::Magus_Stones));
-	this_vanquishes.push_back(new Vanquish(MapID::Riven_Earth));
-	this_vanquishes.push_back(new Vanquish(MapID::Sparkfly_Swamp));
-	this_vanquishes.push_back(new Vanquish(MapID::Verdant_Cascades));
+	this_vanquishes.push_back(new Vanquish(MapID::Arbor_Bay, QuestID::ZaishenVanquish::Arbor_Bay));
+	this_vanquishes.push_back(new Vanquish(MapID::Magus_Stones, QuestID::ZaishenVanquish::Magus_Stones));
+	this_vanquishes.push_back(new Vanquish(MapID::Riven_Earth, QuestID::ZaishenVanquish::Riven_Earth));
+	this_vanquishes.push_back(new Vanquish(MapID::Sparkfly_Swamp, QuestID::ZaishenVanquish::Sparkfly_Swamp));
+	this_vanquishes.push_back(new Vanquish(MapID::Verdant_Cascades, QuestID::ZaishenVanquish::Verdant_Cascades));
 }
 
 
