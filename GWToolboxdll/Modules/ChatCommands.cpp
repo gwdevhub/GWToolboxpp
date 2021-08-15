@@ -503,15 +503,15 @@ void ChatCommands::SearchAgent::Init(const wchar_t* _search, TargetType type) {
         if (!agent) continue;
         switch (type) {
         case Item:
-            if (agent->type != 0x200)
+            if (!agent->GetIsItemType())
                 continue;
             break;
         case Gadget:
-            if (agent->type != 0x400)
+            if (!agent->GetIsGadgetType())
                 continue;
             break;
         case Player:
-            if (agent->type != 0xDB || !agent->GetAsAgentLiving()->IsPlayer())
+            if (!agent->GetIsLivingType() || !agent->GetAsAgentLiving()->IsPlayer())
                 continue;
             break;
         case Npc: {
@@ -527,7 +527,10 @@ void ChatCommands::SearchAgent::Init(const wchar_t* _search, TargetType type) {
         default:
             continue;
         }
-        npc_names.push_back({ agent->agent_id,GW::Agents::GetAgentEncName(agent) });
+        const wchar_t* enc_name = GW::Agents::GetAgentEncName(agent);
+        if (!enc_name || !enc_name[0])
+            continue;
+        npc_names.push_back({ agent->agent_id, enc_name });
     }
 }
 void ChatCommands::SearchAgent::Update() {
