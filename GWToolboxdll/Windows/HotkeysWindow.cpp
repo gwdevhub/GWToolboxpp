@@ -4,6 +4,9 @@
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Agent.h>
 
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -16,6 +19,25 @@
 
 #include <Modules/Resources.h>
 #include <Windows/HotkeysWindow.h>
+
+// @Cleanup: Find the address for this without checking map garbage - how does inv window know to show "pvp equipment" button?
+bool HotkeysWindow::IsPvPCharacter() {
+    // This is the 3rd module that uses this function, should really be part of GWCA but leave here for now.
+    auto is_map_unlocked = [](GW::Constants::MapID map_id) {
+        GW::Array<uint32_t> unlocked_map = GW::GameContext::instance()->world->unlocked_map;
+        uint32_t real_index = (uint32_t)map_id / 32;
+        if (real_index >= unlocked_map.size())
+            return false;
+        uint32_t shift = (uint32_t)map_id % 32;
+        uint32_t flag = 1u << shift;
+        return (unlocked_map[real_index] & flag) != 0;
+    };
+    if (is_map_unlocked(GW::Constants::MapID::Ascalon_City_outpost)
+        || is_map_unlocked(GW::Constants::MapID::Shing_Jea_Monastery_outpost)
+        || is_map_unlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost))
+        return false;
+    return true;
+}
 
 void HotkeysWindow::Initialize() {
     ToolboxWindow::Initialize();
@@ -237,7 +259,8 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
                 && modifier == hk->modifier
                 && (hk->instance_type == -1 || hk->instance_type == instance_type)
                 && (hk->map_id == 0 || hk->map_id == static_cast<int>(map_id))
-                && (hk->prof_id == 0 || hk->prof_id == static_cast<int>(prof_id))) {
+                && (hk->prof_id == 0 || hk->prof_id == static_cast<int>(prof_id))
+                && (!is_pvp || hk->trigger_on_pvp_character)) {
 
                 hk->pressed = true;
                 current_hotkey = hk;
@@ -285,6 +308,7 @@ void HotkeysWindow::MapChanged() {
     if (!p) return;
     map_id = (uint32_t)GW::Map::GetMapID();
     prof_id = p->primary;
+    is_pvp = IsPvPCharacter();
     GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
     if (mt != GW::Constants::InstanceType::Loading) {
         for (TBHotkey* hk : hotkeys) {
@@ -293,7 +317,8 @@ void HotkeysWindow::MapChanged() {
                     || (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
                 && !hk->pressed
                 && (hk->map_id == 0 || hk->map_id == static_cast<int>(map_id))
-                && (hk->prof_id == 0 || hk->prof_id == static_cast<int>(prof_id))) {
+                && (hk->prof_id == 0 || hk->prof_id == static_cast<int>(prof_id))
+                && (!is_pvp || hk->trigger_on_pvp_character)) {
 
                 hk->pressed = true;
                 current_hotkey = hk;

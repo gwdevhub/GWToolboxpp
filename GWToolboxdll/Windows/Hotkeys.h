@@ -38,6 +38,7 @@ public:
     bool block_gw = false; // true to consume the keypress before passing to gw.
     bool trigger_on_explorable = false; // Trigger when entering explorable area
     bool trigger_on_outpost = false; // Trigger when entering outpost area
+    bool trigger_on_pvp_character = false; // Trigger when playing a PvP character
 
     int map_id = 0;
     int prof_id = 0;

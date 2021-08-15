@@ -109,6 +109,8 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
             section, VAR_NAME(trigger_on_explorable), trigger_on_explorable);
         trigger_on_outpost = ini->GetBoolValue(
             section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
+        trigger_on_pvp_character = ini->GetBoolValue(
+            section, VAR_NAME(trigger_on_pvp_character), trigger_on_pvp_character);
     }
 }
 bool TBHotkey::CanUse()
@@ -132,6 +134,8 @@ void TBHotkey::Save(CSimpleIni *ini, const char *section) const
                       trigger_on_explorable);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_outpost),
                       trigger_on_outpost);
+    ini->SetBoolValue(section, VAR_NAME(trigger_on_pvp_character),
+        trigger_on_pvp_character);
 }
 static const char *professions[] = {"Any",          "Warrior",     "Ranger",
                                     "Monk",         "Necromancer", "Mesmer",
@@ -211,6 +215,8 @@ void TBHotkey::Draw(Op *op)
         ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event");  
         hotkeys_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
         hotkeys_changed |= ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost);
+        hotkeys_changed |= ImGui::Checkbox("Trigger hotkey when playing on PvP character", &trigger_on_pvp_character);
+        ImGui::ShowHelp("Unless enabled, this hotkey will not activate when playing on a PvP only character.");
         int instance_type_tmp = instance_type + 1;
         if (ImGui::Combo("Instance Type", &instance_type_tmp, "Any\0Outpost\0Explorable")) {
             hotkeys_changed = true;

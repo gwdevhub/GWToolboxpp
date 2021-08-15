@@ -43,6 +43,8 @@ public:
 private:
     std::vector<TBHotkey*> hotkeys;             // list of hotkeys
 
+    bool IsPvPCharacter();
+
     long max_id_ = 0;
     bool block_hotkeys = false;
 
@@ -60,4 +62,5 @@ private:
     void MapChanged();
     uint32_t map_id = 0;
     uint32_t prof_id = 0;
+    bool is_pvp = 0;
 };
