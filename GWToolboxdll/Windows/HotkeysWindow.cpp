@@ -34,7 +34,8 @@ bool HotkeysWindow::IsPvPCharacter() {
     };
     if (is_map_unlocked(GW::Constants::MapID::Ascalon_City_outpost)
         || is_map_unlocked(GW::Constants::MapID::Shing_Jea_Monastery_outpost)
-        || is_map_unlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost))
+        || is_map_unlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost)
+        || is_map_unlocked(GW::Constants::MapID::Ascalon_City_pre_searing))
         return false;
     return true;
 }
