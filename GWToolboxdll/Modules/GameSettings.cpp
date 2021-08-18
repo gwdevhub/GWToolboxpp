@@ -650,6 +650,8 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &OnPartyDefeated);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
         switch (packet->Value_id) {
+        case 11:
+            OnAgentMarker(status, packet);
         case 21:
             OnAgentEffect(status, packet);
             break;
@@ -1703,6 +1705,14 @@ void GameSettings::OnPartyPlayerJoined(GW::HookStatus* status, GW::Packet::StoC:
             || (packet->party_id == current_party->party_id && GetPlayerIsLeader())) {
             FlashWindow();
         }
+    }
+}
+
+// Block overhead arrow marker for zaishen scout
+void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) {
+    const GW::Agent* a = GW::Agents::GetAgentByID(pak->agent_id);
+    if (a && wcscmp(GW::Agents::GetAgentEncName(a),L"\x8102\x6ED9\xD94E\xBF68\x4409") == 0) {
+        pak->Value_id = 12;
     }
 }
 

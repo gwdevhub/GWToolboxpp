@@ -313,6 +313,7 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
     }
     if (ImGui::TreeNodeEx("Advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         InfoField("Addr", "%p", agent);
+        EncInfoField("Name", GW::Agents::GetAgentEncName(agent));
         InfoField("Plane", "%d", agent->plane);
         InfoField("Type", "0x%X", agent->type);
         InfoField("Width", "%f", agent->width1);

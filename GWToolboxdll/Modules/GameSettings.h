@@ -170,6 +170,7 @@ public:
     static void OnStartWhisper(GW::HookStatus*, wchar_t* _name);
     static void OnAgentAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
     static void OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
+    static void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak);
     static void OnAgentEffect(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
     static void OnFactionDonate(GW::HookStatus*, uint32_t dialog_id);
     static void OnPartyDefeated(GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
