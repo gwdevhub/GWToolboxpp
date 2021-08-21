@@ -56,12 +56,13 @@ namespace GuiUtils {
     std::wstring ToWstr(std::string& str);
 
     class EncString {
-    private:
+    protected:
         std::wstring encoded_ws;
         std::wstring decoded_ws;
         std::string decoded_s;
         bool decoding = false;
         bool sanitised = false;
+        virtual void sanitise();
     public:
         void reset(const uint32_t _enc_string_id = 0);
         void reset(const wchar_t* _enc_string = nullptr);

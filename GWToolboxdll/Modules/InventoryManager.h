@@ -64,7 +64,7 @@ public:
     // Find an empty (or partially empty) inventory slot that this item can go into. !entire_stack = Returns slots that are the same item, but won't hold all of them.
     GW::Item* GetAvailableInventoryStack(GW::Item* like_item, bool entire_stack = false);
     // Checks model info and struct info to make sure item is the same.
-    bool IsSameItem(GW::Item* item1, GW::Item* item2);
+    static bool IsSameItem(GW::Item* item1, GW::Item* item2);
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
     static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
@@ -242,6 +242,21 @@ private:
         GuiUtils::EncString name;
         GuiUtils::EncString single_item_name;
         GuiUtils::EncString desc;
+
+        class PluralEncString : public GuiUtils::EncString {
+        protected:
+            void sanitise() override {
+                if (sanitised)
+                    return;
+                GuiUtils::EncString::sanitise();
+                if (sanitised) {
+                    static const std::wregex plural(L"256 ");
+                    decoded_ws = std::regex_replace(decoded_ws, plural, L"");
+                }
+            };
+        };
+        PluralEncString plural_item_name;
+
         Item *item();
     };
     struct PotentialItem : PendingItem {

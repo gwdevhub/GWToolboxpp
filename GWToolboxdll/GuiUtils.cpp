@@ -497,16 +497,20 @@ void GuiUtils::EncString::reset(const wchar_t* _enc_string)
 
 const std::wstring& GuiUtils::EncString::wstring()
 {
-    if (decoded_ws.empty() && !encoded_ws.empty() && !decoding) {
+    if (!decoding && !encoded_ws.empty()) {
         GW::UI::AsyncDecodeStr(encoded_ws.data(), &decoded_ws);
         decoding = true;
     }
-    if (decoding && !sanitised && !decoded_ws.empty()) {
+    sanitise();
+    return decoded_ws;
+}
+
+void GuiUtils::EncString::sanitise() {
+    if(!sanitised && !decoded_ws.empty()) {
         sanitised = true;
         static const std::wregex sanitiser(L"<[^>]+>");
         decoded_ws = std::regex_replace(decoded_ws, sanitiser, L"");
     }
-    return decoded_ws;
 }
 
 const std::string& GuiUtils::EncString::string()

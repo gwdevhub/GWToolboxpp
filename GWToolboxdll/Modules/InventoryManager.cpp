@@ -248,6 +248,26 @@ namespace {
         }
         pending_moves.clear();
     }
+    void move_all_item(InventoryManager::Item* like_item) {
+        ASSERT(like_item && like_item->bag);
+        if (like_item->bag->IsInventoryBag()) {
+            std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [like_item](InventoryManager::Item* cmp) {
+                return cmp && InventoryManager::IsSameItem(like_item, cmp);
+                });
+            for (auto& item : items) {
+                move_item_to_storage(item);
+            }
+        }
+        else {
+            std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, [like_item](InventoryManager::Item* cmp) {
+                return cmp && InventoryManager::IsSameItem(like_item, cmp);
+                });
+            for (auto& item : items) {
+                move_item_to_inventory(item);
+            }
+        }
+        pending_moves.clear();
+    }
     void store_all_upgrades() {
         std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](InventoryManager::Item* item) {
             return item && item->type == 8;
@@ -1123,12 +1143,13 @@ GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, bool
     }
     return best_item;
 }
-bool InventoryManager::IsSameItem(GW::Item* item1, GW::Item* item2) {
-    return item1 && item2
-        && (!item1->model_id || !item2->model_id || item1->model_id == item2->model_id)
-        && (!item1->model_file_id || !item2->model_file_id || item1->model_file_id == item2->model_file_id)
-        && (!item1->mod_struct_size || !item2->mod_struct_size || item1->mod_struct_size == item2->mod_struct_size)
-        && (!item1->interaction || !item2->interaction || item1->interaction == item2->interaction);
+bool InventoryManager::IsSameItem(GW::Item* criteria, GW::Item* item) {
+    return criteria && item
+        && (!criteria->model_id || criteria->model_id == item->model_id)
+        && (!criteria->model_file_id || criteria->model_file_id == item->model_file_id)
+        && (!criteria->mod_struct_size || criteria->mod_struct_size == item->mod_struct_size)
+        && (!criteria->interaction || criteria->interaction == item->interaction)
+        && (!criteria->mod_struct_size || memcmp(criteria->mod_struct,item->mod_struct,criteria->mod_struct_size * sizeof(criteria->mod_struct[0])) == 0);
 }
 bool InventoryManager::IsPendingIdentify() {
     if (!pending_identify_kit.item_id || !pending_identify_item.item_id)
@@ -1523,6 +1544,19 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
                 goto end_popup;
             }
         }
+        char buf[128];
+        if (context_item_actual->bag->IsInventoryBag()) {
+            snprintf(buf, 128, "Store All %s", context_item.plural_item_name.string().c_str());
+        }
+        else {
+            snprintf(buf, 128, "Withdraw All %s", context_item.plural_item_name.string().c_str());
+        }
+        if (ImGui::Button(buf, size)) {
+            ImGui::CloseCurrentPopup();
+            move_all_item(context_item_actual);
+            goto end_popup;
+        }
+
     }
     if (context_item_actual->IsIdentificationKit()) {
         IdentifyAllType type = IdentifyAllType::None;
@@ -1837,6 +1871,9 @@ bool InventoryManager::PendingItem::set(InventoryManager::Item *item)
     name.reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
     single_item_name.reset(item->name_enc);
     single_item_name.wstring(); // Trigger decode; this isn't done any other time
+    wchar_t plural_item_name_wc[128];
+    swprintf(plural_item_name_wc, 128, L"\xa3d\x10a\xa35\x101\x200\x10a%s\x1\x1", item->name_enc);
+    plural_item_name.reset(plural_item_name_wc);
     desc.reset(item->info_string);
     return true;
 }
