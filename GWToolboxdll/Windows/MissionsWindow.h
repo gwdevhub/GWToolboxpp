@@ -16,11 +16,12 @@
 namespace Missions {
 
     enum class Campaign : uint8_t {
+        Core,
         Prophecies,
         Factions,
         Nightfall,
         EyeOfTheNorth,
-        Dungeon,
+        Dungeon
     };
 
     struct MissionImage {
@@ -45,19 +46,47 @@ namespace Missions {
         const MissionImageList& normal_mode_textures;
         const MissionImageList& hard_mode_textures;
 
-        Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, uint32_t);
+        
 
     public:
-        static float icon_size;
+        Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, uint32_t);
+        static ImVec2 icon_size;
         GW::Constants::MapID GetOutpost();
 
-        void Draw(IDirect3DDevice9*);
+        virtual void Draw(IDirect3DDevice9*);
+        virtual void OnClick();
         virtual IDirect3DTexture9* GetMissionImage();
         virtual bool IsDaily(); // True if this mission is ZM or ZB today
         virtual bool HasQuest(); // True if the ZM or ZB is in quest log
         virtual bool IsCompleted();
     };
 
+    class PvESkill : public Mission {
+    protected:
+        
+        GW::Constants::SkillID skill_id;
+        const wchar_t* image_url = 0;
+        const wchar_t* image_name = 0;
+        IDirect3DTexture9* skill_image = 0;
+    public:
+        uint32_t profession = 0;
+        inline static MissionImageList dummy_var = {};
+        PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url);
+        IDirect3DTexture9* GetMissionImage() override;
+        bool IsDaily() override { return false; }
+        bool HasQuest() override { return false; }
+        bool IsCompleted() override;
+        void Draw(IDirect3DDevice9*) override;
+        void OnClick() override;
+    };
+    class FactionsPvESkill : public PvESkill {
+    protected:
+        GW::Constants::SkillID skill_id2;
+    public:
+        FactionsPvESkill(GW::Constants::SkillID kurzick_id, GW::Constants::SkillID luxon_id, const wchar_t* _image_url);
+        void Draw(IDirect3DDevice9*) override;
+        bool IsCompleted() override;
+    };
 
     class PropheciesMission : public Mission
     {
@@ -213,4 +242,12 @@ public:
         { Missions::Campaign::EyeOfTheNorth, {} },
         { Missions::Campaign::Dungeon, {} },
     };
+    std::map<Missions::Campaign, std::vector<Missions::PvESkill*>> pve_skills{
+        { Missions::Campaign::Factions, {} },
+        { Missions::Campaign::Nightfall, {} },
+        { Missions::Campaign::EyeOfTheNorth, {} },
+        { Missions::Campaign::Core, {} },
+    };
+protected:
+    bool only_pve_skills_for_my_profession = false;
 };

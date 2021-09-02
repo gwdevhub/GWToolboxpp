@@ -3,13 +3,18 @@
 
 #include <GWCA/Constants/Constants.h>
 
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Agent.h>
+
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include <Modules/Resources.h>
 
@@ -22,6 +27,7 @@ using namespace Missions;
 namespace {
 
 	const char* campaign_names[] = {
+		"Core",
 		"Prophecies",
 		"Factions",
 		"Nightfall",
@@ -111,7 +117,7 @@ Mission::MissionImageList Vanquish::hard_mode_images({
 
 Color Mission::is_daily_bg_color = Colors::ARGB(102, 0, 255, 0);
 Color Mission::has_quest_bg_color = Colors::ARGB(102, 0, 150, 0);
-float Mission::icon_size = 48.0f;
+ImVec2 Mission::icon_size = { 48.0f, 48.0f };
 
 static bool ArrayBoolAt(GW::Array<uint32_t>& array, uint32_t index)
 {
@@ -189,7 +195,7 @@ void Mission::Draw(IDirect3DDevice9* )
 
 	const float scale = ImGui::GetIO().FontGlobalScale;
 
-	ImVec2 s(icon_size * scale, icon_size * scale);
+	ImVec2 s(icon_size.x * scale, icon_size.y * scale);
 	ImVec4 bg = ImVec4(0, 0, 0, 0);
 	if (IsDaily()) {
 		bg = ImColor(is_daily_bg_color);
@@ -204,18 +210,20 @@ void Mission::Draw(IDirect3DDevice9* )
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 	ImGui::PushID((int)outpost);
 	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint)) {
-		GW::Constants::MapID travel_to = GetOutpost();
-		if (travel_to == GW::Constants::MapID::None) {
-			Log::Error("Failed to find nearest outpost");
-		}
-		else {
-			TravelWindow::Instance().Travel(travel_to, GW::Constants::District::Current, 0);
-		}
-		
+		OnClick();		
 	}
 	ImGui::PopID();
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip(name.string().c_str());
 	ImGui::PopStyleColor();
+}
+void Mission::OnClick() {
+	GW::Constants::MapID travel_to = GetOutpost();
+	if (travel_to == GW::Constants::MapID::None) {
+		Log::Error("Failed to find nearest outpost");
+	}
+	else {
+		TravelWindow::Instance().Travel(travel_to, GW::Constants::District::Current, 0);
+	}
 }
 
 
@@ -251,6 +259,63 @@ bool Mission::IsCompleted() {
 		missions_bonus = &ctx->missions_bonus_hm;
 	}
 	return ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost)) && ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
+}
+IDirect3DTexture9* PvESkill::GetMissionImage()
+{
+	if (!image_name) {
+		image_name = wcsrchr(image_url, '/');
+		ASSERT(image_name);
+		image_name++;
+		Resources::Instance().LoadTextureAsync(&skill_image, Resources::GetPath(L"img",image_name), image_url);
+	}
+	return skill_image;
+}
+PvESkill::PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url)
+	: Mission(GW::Constants::MapID::None, dummy_var, dummy_var, 0), skill_id(_skill_id), image_url(_image_url) {
+	GW::Skill& s = GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(skill_id));
+	name.reset(s.name);
+	profession = s.profession;
+}
+FactionsPvESkill::FactionsPvESkill(GW::Constants::SkillID kurzick_id, GW::Constants::SkillID luxon_id, const wchar_t* _image_url)
+	: PvESkill(kurzick_id, _image_url), skill_id2(luxon_id) {
+
+};
+bool FactionsPvESkill::IsCompleted() {
+	GW::WorldContext* ctx = GW::GameContext::instance()->world;
+	return ArrayBoolAt(ctx->unlocked_character_skills, static_cast<uint32_t>(skill_id)) || ArrayBoolAt(ctx->unlocked_character_skills, static_cast<uint32_t>(skill_id2));
+}
+void FactionsPvESkill::Draw(IDirect3DDevice9* device) {
+	icon_size.y *= 2;
+	PvESkill::Draw(device);
+	icon_size.y /= 2;
+}
+void PvESkill::OnClick() {
+	GuiUtils::OpenWiki(name.wstring());
+}
+void PvESkill::Draw(IDirect3DDevice9* device) {
+	ImVec2 cursor_pos = ImGui::GetCursorPos();
+	Mission::Draw(device);
+	
+	if (IsCompleted()) {
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0,0));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGuiStyle& s = ImGui::GetStyle();
+		float prev_border_size = s.FrameBorderSize;
+		s.FrameBorderSize = 1.f;
+		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.f, .75f, 0.f, 1.f));
+		ImGui::PushStyleColor(ImGuiCol_Button, 0);
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.f, 1.f, 0.f, 1.f));
+		ImGui::SetCursorPos(cursor_pos);
+		ImGui::ButtonEx(ICON_FA_CHECK, { icon_size.x * ImGui::GetIO().FontGlobalScale,icon_size.y * ImGui::GetIO().FontGlobalScale }, ImGuiButtonFlags_Disabled);
+		ImGui::PopStyleVar(3);
+		ImGui::PopStyleColor(3);
+		s.FrameBorderSize = prev_border_size;
+	}
+}
+bool PvESkill::IsCompleted() {
+	GW::WorldContext* ctx = GW::GameContext::instance()->world;
+	return ArrayBoolAt(ctx->unlocked_character_skills, static_cast<uint32_t>(skill_id));
 }
 bool EotNMission::IsCompleted() {
 	bool hardmode = GW::PartyMgr::GetIsPartyInHardMode();
@@ -337,6 +402,18 @@ void MissionsWindow::Initialize()
 	Initialize_Nightfall();
 	Initialize_EotN();
 	Initialize_Dungeons();
+
+	auto& skills = pve_skills.at(Campaign::Core);
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Together_as_one, L"https://wiki.guildwars.com/images/f/ff/%22Together_as_One%21%22.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Heroic_Refrain, L"https://wiki.guildwars.com/images/6/6e/Heroic_Refrain.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Judgement_Strike, L"https://wiki.guildwars.com/images/6/63/Judgment_Strike.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Over_the_Limit, L"https://wiki.guildwars.com/images/5/5a/Over_the_Limit.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Seven_Weapon_Stance, L"https://wiki.guildwars.com/images/d/d7/Seven_Weapons_Stance.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Theft, L"https://wiki.guildwars.com/images/9/91/Shadow_Theft.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Taker, L"https://wiki.guildwars.com/images/4/4e/Soul_Taker.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Time_Ward, L"https://wiki.guildwars.com/images/9/90/Time_Ward.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Revolution, L"https://wiki.guildwars.com/images/4/48/Vow_of_Revolution.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Weapons_of_Three_Forges, L"https://wiki.guildwars.com/images/0/08/Weapons_of_Three_Forges.jpg"));
 
 }
 
@@ -544,6 +621,18 @@ void MissionsWindow::Initialize_Factions()
 	this_vanquishes.push_back(new Vanquish(MapID::Rheas_Crater, QuestID::ZaishenVanquish::Rheas_Crater));
 	this_vanquishes.push_back(new Vanquish(MapID::Silent_Surf, QuestID::ZaishenVanquish::Silent_Surf));
 	this_vanquishes.push_back(new Vanquish(MapID::Unwaking_Waters, QuestID::ZaishenVanquish::Unwaking_Waters));
+
+	auto& skills = pve_skills.at(Campaign::Factions);
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Save_Yourselves_kurzick, GW::Constants::SkillID::Save_Yourselves_luxon, L"https://wiki.guildwars.com/images/1/1c/%22Save_Yourselves%21%22.jpg"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Aura_of_Holy_Might_kurzick, GW::Constants::SkillID::Aura_of_Holy_Might_luxon, L"https://wiki.guildwars.com/images/5/5c/Aura_of_Holy_Might.jpg"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Elemental_Lord_kurzick, GW::Constants::SkillID::Elemental_Lord_luxon, L"https://wiki.guildwars.com/images/2/27/Elemental_Lord.jpg"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Ether_Nightmare_kurzick, GW::Constants::SkillID::Ether_Nightmare_luxon, L"https://wiki.guildwars.com/images/6/68/Ether_Nightmare.jpg"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Selfless_Spirit_kurzick, GW::Constants::SkillID::Selfless_Spirit_luxon, L"https://wiki.guildwars.com/images/3/3e/Selfless_Spirit.jpg"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Shadow_Sanctuary_kurzick, GW::Constants::SkillID::Shadow_Sanctuary_luxon, L"https://wiki.guildwars.com/images/1/17/Shadow_Sanctuary.jpg"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Signet_of_Corruption_kurzick, GW::Constants::SkillID::Signet_of_Corruption_luxon, L"https://wiki.guildwars.com/images/1/18/Signet_of_Corruption.jpg"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Spear_of_Fury_kurzick, GW::Constants::SkillID::Spear_of_Fury_luxon, L"https://wiki.guildwars.com/images/b/be/Spear_of_Fury.jpg"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Summon_Spirits_kurzick, GW::Constants::SkillID::Summon_Spirits_luxon, L"https://wiki.guildwars.com/images/9/9c/Summon_Spirits.jpg"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Triple_Shot_kurzick, GW::Constants::SkillID::Triple_Shot_luxon, L"https://wiki.guildwars.com/images/f/f0/Triple_Shot.jpg"));
 }
 
 
@@ -633,6 +722,20 @@ void MissionsWindow::Initialize_Nightfall()
 	this_vanquishes.push_back(new Vanquish(MapID::The_Ruptured_Heart));
 	this_vanquishes.push_back(new Vanquish(MapID::The_Shattered_Ravines));
 	this_vanquishes.push_back(new Vanquish(MapID::The_Sulfurous_Wastes));
+
+	auto& skills = pve_skills.at(Campaign::Nightfall);
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Lightbringer_Signet, L"https://wiki.guildwars.com/images/4/43/Lightbringer_Signet.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Lightbringers_Gaze,  L"https://wiki.guildwars.com/images/c/c6/Lightbringer%27s_Gaze.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Critical_Agility,  L"https://wiki.guildwars.com/images/e/e8/Critical_Agility.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Cry_of_Pain,  L"https://wiki.guildwars.com/images/9/93/Cry_of_Pain.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Eternal_Aura, L"https://wiki.guildwars.com/images/a/ab/Eternal_Aura.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Intensity, L"https://wiki.guildwars.com/images/d/dc/Intensity.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Necrosis, L"https://wiki.guildwars.com/images/9/99/Necrosis.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Never_Rampage_Alone,  L"https://wiki.guildwars.com/images/d/d1/Never_Rampage_Alone.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Seed_of_Life,  L"https://wiki.guildwars.com/images/7/74/Seed_of_Life.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Sunspear_Rebirth_Signet, L"https://wiki.guildwars.com/images/e/e0/Sunspear_Rebirth_Signet.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Vampirism, L"https://wiki.guildwars.com/images/5/59/Vampirism.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Whirlwind_Attack, L"https://wiki.guildwars.com/images/2/2c/Whirlwind_Attack.jpg"));
 }
 
 
@@ -675,6 +778,61 @@ void MissionsWindow::Initialize_EotN()
 	this_vanquishes.push_back(new Vanquish(MapID::Riven_Earth, QuestID::ZaishenVanquish::Riven_Earth));
 	this_vanquishes.push_back(new Vanquish(MapID::Sparkfly_Swamp, QuestID::ZaishenVanquish::Sparkfly_Swamp));
 	this_vanquishes.push_back(new Vanquish(MapID::Verdant_Cascades, QuestID::ZaishenVanquish::Verdant_Cascades));
+
+	auto& skills = pve_skills.at(Campaign::EyeOfTheNorth);
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Air_of_Superiority, L"https://wiki.guildwars.com/images/9/9f/Air_of_Superiority.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Asuran_Scan, L"https://wiki.guildwars.com/images/a/a0/Asuran_Scan.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Mental_Block,  L"https://wiki.guildwars.com/images/e/ed/Mental_Block.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Mindbender, L"https://wiki.guildwars.com/images/c/c0/Mindbender.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Pain_Inverter, L"https://wiki.guildwars.com/images/9/91/Pain_Inverter.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Radiation_Field,  L"https://wiki.guildwars.com/images/3/31/Radiation_Field.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Smooth_Criminal, L"https://wiki.guildwars.com/images/3/33/Smooth_Criminal.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Ice_Imp, L"https://wiki.guildwars.com/images/2/2a/Summon_Ice_Imp.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Mursaat, L"https://wiki.guildwars.com/images/6/61/Summon_Mursaat.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Naga_Shaman, L"https://wiki.guildwars.com/images/f/f0/Summon_Naga_Shaman.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Ruby_Djinn, L"https://wiki.guildwars.com/images/a/a0/Summon_Ruby_Djinn.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Technobabble, L"https://wiki.guildwars.com/images/0/0a/Technobabble.jpg"));
+
+	skills.push_back(new PvESkill(GW::Constants::SkillID::By_Urals_Hammer, L"https://wiki.guildwars.com/images/d/df/%22By_Ural%27s_Hammer%21%22.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Dont_Trip, L"https://wiki.guildwars.com/images/c/c1/%22Don%27t_Trip%21%22.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Alkars_Alchemical_Acid, L"https://wiki.guildwars.com/images/4/43/Alkar%27s_Alchemical_Acid.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Black_Powder_Mine, L"https://wiki.guildwars.com/images/5/50/Black_Powder_Mine.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Brawling_Headbutt , L"https://wiki.guildwars.com/images/b/be/Brawling_Headbutt.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Breath_of_the_Great_Dwarf, L"https://wiki.guildwars.com/images/0/0e/Breath_of_the_Great_Dwarf.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Drunken_Master, L"https://wiki.guildwars.com/images/b/b3/Drunken_Master.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Dwarven_Stability, L"https://wiki.guildwars.com/images/4/4c/Dwarven_Stability.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ear_Bite, L"https://wiki.guildwars.com/images/c/c6/Ear_Bite.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Great_Dwarf_Armor, L"https://wiki.guildwars.com/images/e/e5/Great_Dwarf_Armor.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Great_Dwarf_Weapon, L"https://wiki.guildwars.com/images/a/ab/Great_Dwarf_Weapon.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Light_of_Deldrimor, L"https://wiki.guildwars.com/images/1/11/Light_of_Deldrimor.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Low_Blow, L"https://wiki.guildwars.com/images/8/86/Low_Blow.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Snow_Storm, L"https://wiki.guildwars.com/images/a/a0/Snow_Storm.jpg"));
+
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Deft_Strike, L"https://wiki.guildwars.com/images/6/62/Deft_Strike.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Battle_Standard_of_Courage, L"https://wiki.guildwars.com/images/5/53/Ebon_Battle_Standard_of_Courage.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Battle_Standard_of_Honor, L"https://wiki.guildwars.com/images/5/51/Ebon_Battle_Standard_of_Honor.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Battle_Standard_of_Wisdom, L"https://wiki.guildwars.com/images/e/eb/Ebon_Battle_Standard_of_Wisdom.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Escape, L"https://wiki.guildwars.com/images/b/bb/Ebon_Escape.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Vanguard_Assassin_Support, L"https://wiki.guildwars.com/images/0/03/Ebon_Vanguard_Assassin_Support.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Vanguard_Sniper_Support, L"https://wiki.guildwars.com/images/1/16/Ebon_Vanguard_Sniper_Support.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Infection, L"https://wiki.guildwars.com/images/6/66/Signet_of_Infection.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Sneak_Attack, L"https://wiki.guildwars.com/images/8/87/Sneak_Attack.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Tryptophan_Signet, L"https://wiki.guildwars.com/images/7/70/Tryptophan_Signet.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Weakness_Trap, L"https://wiki.guildwars.com/images/0/0d/Weakness_Trap.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Winds, L"https://wiki.guildwars.com/images/0/0e/Winds.jpg"));
+
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Dodge_This, L"https://wiki.guildwars.com/images/4/4b/%22Dodge_This%21%22.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Finish_Him, L"https://wiki.guildwars.com/images/6/61/%22Finish_Him%21%22.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::I_Am_Unstoppable, L"https://wiki.guildwars.com/images/e/ed/%22I_Am_Unstoppable%21%22.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::I_Am_the_Strongest, L"https://wiki.guildwars.com/images/e/ec/%22I_Am_the_Strongest%21%22.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::You_Are_All_Weaklings, L"https://wiki.guildwars.com/images/a/a4/%22You_Are_All_Weaklings%21%22.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::You_Move_Like_a_Dwarf, L"https://wiki.guildwars.com/images/6/6a/%22You_Move_Like_a_Dwarf%21%22.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::A_Touch_of_Guile, L"https://wiki.guildwars.com/images/2/2d/A_Touch_of_Guile.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Club_of_a_Thousand_Bears, L"https://wiki.guildwars.com/images/d/dc/Club_of_a_Thousand_Bears.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Feel_No_Pain, L"https://wiki.guildwars.com/images/f/fe/Feel_No_Pain.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Raven_Blessing, L"https://wiki.guildwars.com/images/0/0a/Raven_Blessing.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ursan_Blessing, L"https://wiki.guildwars.com/images/7/7b/Ursan_Blessing.jpg"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Volfen_Blessing, L"https://wiki.guildwars.com/images/b/b2/Volfen_Blessing.jpg"));
 }
 
 
@@ -731,6 +889,16 @@ void MissionsWindow::Terminate()
 			delete m;
 		}
 	}
+	for (auto camp : vanquishes) {
+		for (auto m : camp.second) {
+			delete m;
+		}
+	}
+	for (auto camp : pve_skills) {
+		for (auto m : camp.second) {
+			delete m;
+		}
+	}
 }
 
 
@@ -744,7 +912,7 @@ void MissionsWindow::Draw(IDirect3DDevice9* device)
 
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 
-		int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * Mission::icon_size + (ImGui::GetStyle().ItemSpacing.x)));
+		int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * Mission::icon_size.x + (ImGui::GetStyle().ItemSpacing.x)));
 		for (auto& camp : missions) {
 			auto& camp_missions = camp.second;
 			size_t completed = 0;
@@ -769,7 +937,7 @@ void MissionsWindow::Draw(IDirect3DDevice9* device)
 		for (auto& camp : vanquishes) {
 			auto& camp_missions = camp.second;
 			if (!camp_missions.size())
-				break;
+				continue;
 			size_t completed = 0;
 			for (size_t i = 0; i < camp_missions.size(); i++) {
 				if (camp_missions[i]->IsCompleted())
@@ -784,6 +952,36 @@ void MissionsWindow::Draw(IDirect3DDevice9* device)
 						ImGui::SameLine();
 					}
 					camp_missions.at(i)->Draw(device);
+				}
+				ImGui::PopStyleVar();
+			}
+		}
+		ImGui::Text("PvE Skills");
+		ImGui::SameLine(ImGui::GetContentRegionAvail().x / 2);
+		ImGui::Checkbox("Only show skills for my primary profession",&only_pve_skills_for_my_profession);
+		for (auto& camp : pve_skills) {
+			auto& camp_missions = camp.second;
+			size_t completed = 0;
+			GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+			std::vector<Missions::PvESkill*> skills_filtered;
+			for (size_t i = 0; i < camp_missions.size(); i++) {
+				if (only_pve_skills_for_my_profession && !(me && camp_missions[i]->profession == me->primary))
+					continue;
+				if (camp_missions[i]->IsCompleted())
+					completed++;
+				skills_filtered.push_back(camp_missions[i]);
+			}
+			if (!skills_filtered.size())
+				continue;
+			char label[128];
+			snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, skills_filtered.size(), ((float)completed / (float)skills_filtered.size()) * 100.f, camp.first);
+			if (ImGui::CollapsingHeader(label)) {
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+				for (size_t i = 0; i < skills_filtered.size(); i++) {
+					if (i % missions_per_row > 0) {
+						ImGui::SameLine();
+					}
+					skills_filtered.at(i)->Draw(device);
 				}
 				ImGui::PopStyleVar();
 			}
