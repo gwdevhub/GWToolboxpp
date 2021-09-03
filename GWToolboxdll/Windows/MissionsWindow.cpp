@@ -263,7 +263,7 @@ bool Mission::IsCompleted() {
 IDirect3DTexture9* PvESkill::GetMissionImage()
 {
 	if (!image_name) {
-		image_name = wcsrchr(image_url, '/');
+		image_name = wcsrchr(image_url, L'/');
 		ASSERT(image_name);
 		image_name++;
 		Resources::Instance().LoadTextureAsync(&skill_image, Resources::GetPath(L"img",image_name), image_url);
@@ -301,7 +301,7 @@ void PvESkill::Draw(IDirect3DDevice9* device) {
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 		ImGuiStyle& s = ImGui::GetStyle();
-		float prev_border_size = s.FrameBorderSize;
+		const float prev_border_size = s.FrameBorderSize;
 		s.FrameBorderSize = 1.f;
 		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.f, .75f, 0.f, 1.f));
 		ImGui::PushStyleColor(ImGuiCol_Button, 0);
