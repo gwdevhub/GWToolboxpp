@@ -278,8 +278,9 @@ namespace {
         pending_moves.clear();
     }
 
+
     // Move a whole stack into/out of storage
-    uint16_t move_item(GW::Item* item) {
+    uint16_t move_item(GW::Item* item, uint16_t quantity = 1000u) {
         // Expected behaviors
         //  When clicking on item in inventory
         //   case storage close (or move_item_to_current_storage_pane = false):
@@ -303,7 +304,7 @@ namespace {
             return 0;
         }
         bool is_inventory_item = item->bag->IsInventoryBag();
-        uint16_t remaining = item->quantity;
+        uint16_t remaining = std::min<uint16_t>(item->quantity, quantity);
         if (is_inventory_item) {
             remaining -= move_item_to_storage(item, remaining);
         }
@@ -376,6 +377,38 @@ namespace {
 
     GW::HookEntry on_offer_item_hook;
     bool check_context_menu_position = false;
+
+
+    struct PreMoveItemStruct {
+        uint32_t item_id;
+        uint32_t bag_id;
+        uint32_t slot;
+        bool prompt_split_stack = false;
+    };
+    typedef void(__cdecl* PreMoveItem_pt)(uint32_t unk0, PreMoveItemStruct* details);
+    PreMoveItem_pt PreMoveItemFunc;
+    PreMoveItem_pt RetPreMoveItem;
+
+    static void OnPreMoveItem(uint32_t type, PreMoveItemStruct* details) {
+        GW::HookBase::EnterHook();
+        InventoryManager::Instance().stack_prompt_item_id = 0;
+        RetPreMoveItem(type, details);
+        GW::HookBase::LeaveHook();
+    }
+
+    void prompt_split_stack(GW::Item* item) {
+        PreMoveItemStruct details;
+        details.item_id = item->item_id;
+        // Doesn't matter where the prompt is asking to move to, as long as its not the same slot; we're going to override later.
+        details.bag_id = static_cast<uint32_t>(GW::Constants::Bag::Backpack);// empty_bag_id;
+        details.slot = 0;// empty_slot;
+        if (item->bag->index == details.bag_id && item->slot == details.slot)
+            details.slot++;
+        details.prompt_split_stack = true;
+        OnPreMoveItem(7, &details);
+        InventoryManager::Instance().stack_prompt_item_id = item->item_id;
+    }
+
 
     int CountInventoryBagSlots() {
         int slots = 0;
@@ -531,6 +564,8 @@ void InventoryManager::Initialize() {
             CtoS_QuoteItem* quote = (CtoS_QuoteItem*)pak;
             requesting_quote_type = quote->type;
         });
+    GW::CtoS::RegisterPacketCallback(&ItemClick_Entry, GAME_CMSG_ITEM_SPLIT_STACK, OnMoveItemPacket);
+    GW::CtoS::RegisterPacketCallback(&ItemClick_Entry, GAME_CMSG_ITEM_MOVE, OnMoveItemPacket);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&ItemClick_Entry, [this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) {
         if (!requesting_quote_type)
             return;
@@ -552,6 +587,18 @@ void InventoryManager::Initialize() {
     GW::UI::RegisterDecodeStringCallback(&on_offer_item_hook, OnAsyncDecodeStr);
 
     inventory_bags_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_InventoryBags);
+
+    {
+        PreMoveItemFunc = (PreMoveItem_pt)GW::Scanner::Find(
+            "\x8B\x4E\x04\x83\xC4\x04\x83\xF9\x07\x72\x05", "xxxxxxxxxxx", -0x1D);
+        if (Verify(PreMoveItemFunc)) {
+            GW::HookBase::CreateHook(PreMoveItemFunc, OnPreMoveItem, (void**)&RetPreMoveItem);
+            GW::HookBase::EnableHooks(PreMoveItemFunc);
+        }
+            
+    }
+
+
 }
 // Add "Tip: Hold Ctrl when requesting a quote to bulk buy." message to merchant window
 // Add "Tip: Hold Ctrl when requesting a quote to bulk sell." message to merchant window
@@ -1677,8 +1724,27 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
         return;
     } else if (type == 7 && ImGui::IsKeyDown(VK_CONTROL) && GameSettings::Instance().move_item_on_ctrl_click) {
         // Move item on ctrl click
-        move_item(item);
+        if (ImGui::IsKeyDown(VK_SHIFT) && item->quantity > 1)
+            prompt_split_stack(item);
+        else
+            move_item(item);
     }
+}
+void InventoryManager::OnMoveItemPacket(GW::HookStatus* status, void* pak) {
+    auto& instance = Instance();
+    uint32_t* packet = (uint32_t*)pak;
+    uint32_t item_id = packet[1];
+    uint16_t quantity = 1000u;
+    
+    if (packet[0] == GAME_CMSG_ITEM_SPLIT_STACK)
+        quantity = (uint16_t)packet[2];
+    if (item_id != instance.stack_prompt_item_id) {
+        instance.stack_prompt_item_id = 0;
+        return;
+    }
+    instance.stack_prompt_item_id = 0;
+    status->blocked = true;
+    move_item(GW::Items::GetItemById(item_id), quantity);
 }
 void InventoryManager::ClearPotentialItems()
 {

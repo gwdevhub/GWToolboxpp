@@ -68,8 +68,8 @@ public:
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
     static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
+    static void OnMoveItemPacket(GW::HookStatus* status, void* pak);
     static wchar_t* OnAsyncDecodeStr(GW::HookStatus*, GW::UI::DecodingString* to_decode);
-
 
     IdentifyAllType identify_all_type = IdentifyAllType::None;
     SalvageAllType salvage_all_type = SalvageAllType::None;
@@ -181,6 +181,8 @@ public:
     Item* GetNextUnidentifiedItem(Item* start_after_item = nullptr);
     void Identify(Item* item, Item* kit);
     void Salvage(Item* item, Item* kit);
+
+    uint32_t stack_prompt_item_id = 0;
 private:
     struct CtoS_TransactItems {
         uint32_t header = GAME_CMSG_BUY_MATERIALS;
