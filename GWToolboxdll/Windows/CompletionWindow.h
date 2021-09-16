@@ -10,6 +10,7 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Utilities/Hook.h>
 #include <Modules/Resources.h>
 #include <Color.h>
 
@@ -46,28 +47,35 @@ namespace Missions {
         const MissionImageList& normal_mode_textures;
         const MissionImageList& hard_mode_textures;
 
-        
+        virtual bool IsCompleted();
 
     public:
         Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, uint32_t);
         static ImVec2 icon_size;
         GW::Constants::MapID GetOutpost();
 
-        virtual void Draw(IDirect3DDevice9*);
+        bool is_completed = false;
+
+        virtual bool Draw(IDirect3DDevice9*);
         virtual void OnClick();
         virtual IDirect3DTexture9* GetMissionImage();
         virtual bool IsDaily(); // True if this mission is ZM or ZB today
         virtual bool HasQuest(); // True if the ZM or ZB is in quest log
-        virtual bool IsCompleted();
+        bool CheckProgress() {
+            return is_completed = IsCompleted();
+        }
+        
     };
 
     class PvESkill : public Mission {
     protected:
         
         GW::Constants::SkillID skill_id;
+        bool img_loaded = false;
         const wchar_t* image_url = 0;
-        const wchar_t* image_name = 0;
         IDirect3DTexture9* skill_image = 0;
+
+        bool IsCompleted() override;
     public:
         uint32_t profession = 0;
         inline static MissionImageList dummy_var = {};
@@ -75,17 +83,18 @@ namespace Missions {
         IDirect3DTexture9* GetMissionImage() override;
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }
-        bool IsCompleted() override;
-        void Draw(IDirect3DDevice9*) override;
+        
+        virtual bool Draw(IDirect3DDevice9*) override;
         void OnClick() override;
     };
     class FactionsPvESkill : public PvESkill {
     protected:
         GW::Constants::SkillID skill_id2;
+        bool IsCompleted() override;
     public:
         FactionsPvESkill(GW::Constants::SkillID kurzick_id, GW::Constants::SkillID luxon_id, const wchar_t* _image_url);
-        void Draw(IDirect3DDevice9*) override;
-        bool IsCompleted() override;
+        bool Draw(IDirect3DDevice9*) override;
+        
     };
 
     class PropheciesMission : public Mission
@@ -146,13 +155,15 @@ namespace Missions {
 
     class Vanquish : public Mission
     {
+    protected:
+        bool IsCompleted() override;
     public:
         static MissionImageList hard_mode_images;
         Vanquish(GW::Constants::MapID _outpost, uint32_t _zm_quest = 0)
             : Mission(_outpost, hard_mode_images, hard_mode_images, _zm_quest) {
         }
 
-        bool IsCompleted();
+        
         IDirect3DTexture9* GetMissionImage();
     };
 
@@ -169,14 +180,14 @@ namespace Missions {
             const MissionImageList& _hard_mode_images,
             uint32_t _zm_quest)
             : Mission(_outpost, _normal_mode_images, _hard_mode_images, _zm_quest) {}
-
+        bool IsCompleted() override;
     public:
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
         EotNMission(GW::Constants::MapID _outpost, uint32_t _zm_quest = 0)
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) {}
 
-        bool IsCompleted();
+        
         IDirect3DTexture9* GetMissionImage();
     };
 
@@ -202,16 +213,19 @@ namespace Missions {
 
 
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
-class MissionsWindow : public ToolboxWindow {
-	MissionsWindow() {};
-	~MissionsWindow() {};
+class CompletionWindow : public ToolboxWindow {
+protected:
+    CSimpleIni* character_skills_unlocked_ini = nullptr;
+    bool hide_unlocked_skills = false;
+    const char* skills_ini_filename = "character_skills_unlocked.ini";
+
 public:
-	static MissionsWindow& Instance() {
-		static MissionsWindow instance;
+	static CompletionWindow& Instance() {
+		static CompletionWindow instance;
 		return instance;
 	}
 
-	const char* Name() const override { return "Missions"; }
+	const char* Name() const override { return "Completion"; }
     const char* Icon() const override { return ICON_FA_BOOK; }
 
 	void Initialize() override;
@@ -222,32 +236,21 @@ public:
 	void Initialize_Dungeons();
 	void Terminate() override;
 	void Draw(IDirect3DDevice9* pDevice) override;
-
+    void ParseSkillsUnlocked(wchar_t* character_name = 0, uint32_t* skills_unlocked_buffer = 0, size_t len = 0);
 
 	void DrawSettingInternal() override;
 	void LoadSettings(CSimpleIni* ini) override;
+    void LoadCharacterSkillsUnlocked();
 	void SaveSettings(CSimpleIni* ini) override;
+    void SaveCharacterSkillsUnlocked();
+    // Check explicitly rather than every frame
+    void CheckProgress();
 
-	std::map<Missions::Campaign, std::vector<Missions::Mission*>> missions{
-		{ Missions::Campaign::Prophecies, {} },
-		{ Missions::Campaign::Factions, {} },
-		{ Missions::Campaign::Nightfall, {} },
-		{ Missions::Campaign::EyeOfTheNorth, {} },
-		{ Missions::Campaign::Dungeon, {} },
-	};
-    std::map<Missions::Campaign, std::vector<Missions::Mission*>> vanquishes{
-        { Missions::Campaign::Prophecies, {} },
-        { Missions::Campaign::Factions, {} },
-        { Missions::Campaign::Nightfall, {} },
-        { Missions::Campaign::EyeOfTheNorth, {} },
-        { Missions::Campaign::Dungeon, {} },
-    };
-    std::map<Missions::Campaign, std::vector<Missions::PvESkill*>> pve_skills{
-        { Missions::Campaign::Factions, {} },
-        { Missions::Campaign::Nightfall, {} },
-        { Missions::Campaign::EyeOfTheNorth, {} },
-        { Missions::Campaign::Core, {} },
-    };
-protected:
-    bool only_pve_skills_for_my_profession = false;
+    std::unordered_map<std::wstring, std::vector<uint32_t>*> character_skills_unlocked;
+    GW::HookEntry skills_unlocked_stoc_entry;
+
+    std::map<Missions::Campaign, std::vector<Missions::Mission*>> missions;
+    std::map<Missions::Campaign, std::vector<Missions::Mission*>> vanquishes;
+    std::map<Missions::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
+    std::map<Missions::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
 };
