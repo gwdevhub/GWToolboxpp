@@ -13,6 +13,7 @@
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Title.h>
 
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -249,6 +250,176 @@ namespace {
         uint32_t is_party_member; // 1 or 0
         uint32_t target_identifier;
     } party_target_info;
+
+    struct SkillData {
+        GW::Constants::Profession primary;
+        GW::Constants::Profession secondary;
+        uint32_t attribute_count;
+        GW::Constants::Attribute attribute_keys[12];
+        uint32_t attribute_values[12];
+        GW::Constants::SkillID skill_ids[8];
+    };
+
+    // prophecies = factions
+    std::map<GW::Constants::SkillID, GW::Constants::SkillID> duplicate_skills = {
+        {GW::Constants::SkillID::Desperation_Blow, GW::Constants::SkillID::Drunken_Blow },
+        {GW::Constants::SkillID::Galrath_Slash, GW::Constants::SkillID::Silverwing_Slash },
+        {GW::Constants::SkillID::Griffons_Sweep, GW::Constants::SkillID::Leviathans_Sweep },
+        {GW::Constants::SkillID::Penetrating_Blow, GW::Constants::SkillID::Penetrating_Chop },
+        {GW::Constants::SkillID::Pure_Strike, GW::Constants::SkillID::Jaizhenju_Strike },
+
+        {GW::Constants::SkillID::Bestial_Pounce, GW::Constants::SkillID::Savage_Pounce },
+        {GW::Constants::SkillID::Dodge, GW::Constants::SkillID::Zojuns_Haste },
+        {GW::Constants::SkillID::Penetrating_Attack, GW::Constants::SkillID::Sundering_Attack },
+        {GW::Constants::SkillID::Point_Blank_Shot, GW::Constants::SkillID::Zojuns_Shot },
+        {GW::Constants::SkillID::Tigers_Fury, GW::Constants::SkillID::Bestial_Fury },
+
+        {GW::Constants::SkillID::Divine_Healing, GW::Constants::SkillID::Heavens_Delight },
+        {GW::Constants::SkillID::Heal_Area, GW::Constants::SkillID::Kareis_Healing_Circle },
+        {GW::Constants::SkillID::Heal_Other, GW::Constants::SkillID::Jameis_Gaze },
+        {GW::Constants::SkillID::Holy_Strike, GW::Constants::SkillID::Stonesoul_Strike },
+        {GW::Constants::SkillID::Symbol_of_Wrath, GW::Constants::SkillID::Kirins_Wrath },
+
+        {GW::Constants::SkillID::Desecrate_Enchantments, GW::Constants::SkillID::Defile_Enchantments },
+        {GW::Constants::SkillID::Shadow_Strike, GW::Constants::SkillID::Lifebane_Strike },
+        {GW::Constants::SkillID::Spinal_Shivers, GW::Constants::SkillID::Shivers_of_Dread },
+        {GW::Constants::SkillID::Touch_of_Agony, GW::Constants::SkillID::Wallows_Bite },
+        {GW::Constants::SkillID::Vampiric_Touch, GW::Constants::SkillID::Vampiric_Bite },
+
+        {GW::Constants::SkillID::Arcane_Thievery, GW::Constants::SkillID::Arcane_Larceny },
+        {GW::Constants::SkillID::Ethereal_Burden, GW::Constants::SkillID::Kitahs_Burden },
+        {GW::Constants::SkillID::Inspired_Enchantment, GW::Constants::SkillID::Revealed_Enchantment },
+        {GW::Constants::SkillID::Inspired_Hex, GW::Constants::SkillID::Revealed_Hex },
+        {GW::Constants::SkillID::Sympathetic_Visage, GW::Constants::SkillID::Ancestors_Visage },
+
+        {GW::Constants::SkillID::Earthquake, GW::Constants::SkillID::Dragons_Stomp }
+    };
+    // luxon = kurzick
+    std::map<GW::Constants::SkillID, GW::Constants::SkillID> factions_skills = {
+        {GW::Constants::SkillID::Save_Yourselves_luxon, GW::Constants::SkillID::Save_Yourselves_kurzick },
+        {GW::Constants::SkillID::Aura_of_Holy_Might_luxon, GW::Constants::SkillID::Aura_of_Holy_Might_kurzick },
+        {GW::Constants::SkillID::Elemental_Lord_luxon, GW::Constants::SkillID::Elemental_Lord_kurzick },
+        {GW::Constants::SkillID::Ether_Nightmare_luxon, GW::Constants::SkillID::Ether_Nightmare_kurzick },
+        {GW::Constants::SkillID::Selfless_Spirit_luxon, GW::Constants::SkillID::Selfless_Spirit_kurzick },
+        {GW::Constants::SkillID::Shadow_Sanctuary_luxon, GW::Constants::SkillID::Shadow_Sanctuary_kurzick },
+        {GW::Constants::SkillID::Signet_of_Corruption_luxon, GW::Constants::SkillID::Signet_of_Corruption_kurzick },
+        {GW::Constants::SkillID::Spear_of_Fury_luxon, GW::Constants::SkillID::Spear_of_Fury_kurzick },
+        {GW::Constants::SkillID::Summon_Spirits_luxon, GW::Constants::SkillID::Summon_Spirits_kurzick },
+        {GW::Constants::SkillID::Triple_Shot_luxon, GW::Constants::SkillID::Triple_Shot_kurzick }
+    };
+
+    bool IsSkillUnlocked(GW::Constants::SkillID skill_id) {
+        GW::GameContext* g = GW::GameContext::instance();
+        GW::WorldContext* w = g->world;
+
+        auto& array = w->unlocked_character_skills;
+
+        uint32_t index = static_cast<uint32_t>(skill_id);
+        uint32_t real_index = index / 32;
+        if (real_index >= array.size())
+            return false;
+        uint32_t shift = index % 32;
+        uint32_t flag = 1 << shift;
+        return (array[real_index] & flag) != 0;
+    }
+
+    struct LoadSkillBarPacket {
+        uint32_t header;
+        uint32_t agent_id;
+        uint32_t skill_ids_size = 8;
+        GW::Constants::SkillID skill_ids[8];
+    } skillbar_packet;
+
+    // Before the game loads the skill bar you want, copy the data over for checking once the bar is loaded.
+    void OnPreLoadSkillBar(GW::HookStatus*, void* packet) {
+        skillbar_packet = *(LoadSkillBarPacket*)packet;
+    }
+
+    // Takes SkillData* ptr, rectifies any missing dupe skills. True if bar has been tweaked.
+    bool FixLoadSkillData(GW::Constants::SkillID* skill_ids) {
+        auto find_skill = [](GW::Constants::SkillID* skill_ids, GW::Constants::SkillID skill_id) {
+            for (int i = 0; i < 8; i++) {
+                if (skill_ids[i] == skill_id)
+                    return i;
+            }
+            return -1;
+        };
+        int found_first;
+        int found_second;
+        bool unlocked_first;
+        bool unlocked_second;
+        bool tweaked = false;
+        GW::TitleArray titles;
+        for (auto& skill : duplicate_skills) {
+            found_first = find_skill(skill_ids, skill.first);
+            found_second = find_skill(skill_ids, skill.second);
+            if (found_first == -1 && found_second == -1)
+                continue;
+            unlocked_first = IsSkillUnlocked(skill.first);
+            unlocked_second = IsSkillUnlocked(skill.second);
+
+            if (found_first != -1 && found_second == -1
+                && !unlocked_first && unlocked_second) {
+                // First skill found in build template, second skill not already in template, user only has second skill
+                skill_ids[found_first] = skill.second;
+                tweaked = true;
+            }
+            else if (found_second != -1 && found_first == -1
+                && !unlocked_second && unlocked_first) {
+                // Second skill found in build template, first skill not already in template, user only has first skill
+                skill_ids[found_second] = skill.first;
+                tweaked = true;
+            }
+        }
+        for (auto& skill : factions_skills) {
+            found_first = find_skill(skill_ids, skill.first);
+            found_second = find_skill(skill_ids, skill.second);
+            if (found_first == -1 && found_second == -1)
+                continue;
+            unlocked_first = IsSkillUnlocked(skill.first);
+            unlocked_second = IsSkillUnlocked(skill.second);
+
+            if (found_first != -1 && found_second == -1
+                && !unlocked_first && unlocked_second) {
+                // First skill found in build template, second skill not already in template, user only has second skill
+                skill_ids[found_first] = skill.second;
+                tweaked = true;
+            }
+            else if (found_second != -1 && found_first == -1
+                && !unlocked_second && unlocked_first) {
+                // Second skill found in build template, first skill not already in template, user only has first skill
+                skill_ids[found_second] = skill.first;
+                tweaked = true;
+            }
+            else if (unlocked_first && unlocked_second) {
+                // Find skill with higher title track
+                titles = GW::GameContext::instance()->world->titles;
+                uint32_t kurzick_rank = titles.size() <= GW::Constants::TitleID::Kurzick ? 0 : titles[GW::Constants::TitleID::Kurzick].points_needed_current_rank;
+                uint32_t luxon_rank = titles.size() <= GW::Constants::TitleID::Luxon ? 0 : titles[GW::Constants::TitleID::Luxon].points_needed_current_rank;
+                if (kurzick_rank > luxon_rank) {
+                    skill_ids[std::max(found_first, found_second)] = skill.second;
+                    tweaked = true;
+                }
+                else if (kurzick_rank < luxon_rank) {
+                    skill_ids[std::max(found_first, found_second)] = skill.first;
+                    tweaked = true;
+                }
+            }
+        }
+        return tweaked;
+    }
+    // Checks loaded skillbar for any missing skills once the game has sent the packet
+    void OnPostLoadSkillBar(GW::HookStatus*, void* packet) {
+        LoadSkillBarPacket* post_pack = (LoadSkillBarPacket*)packet;
+        if (post_pack->agent_id != skillbar_packet.agent_id) {
+            skillbar_packet.agent_id = 0;
+            return;
+        }
+        if (FixLoadSkillData(skillbar_packet.skill_ids)) {
+            GW::CtoS::SendPacket(sizeof(skillbar_packet), &skillbar_packet);
+        }
+        skillbar_packet.agent_id = 0;
+    }
 
 }
 
@@ -646,6 +817,9 @@ void GameSettings::Initialize() {
             last_dialog_npc_id = agent->player_number;
         });
     GW::Agents::RegisterDialogCallback(&OnDialog_Entry, &OnFactionDonate);
+
+    GW::CtoS::RegisterPacketCallback(&OnDialog_Entry, GAME_CMSG_SKILLBAR_LOAD, OnPreLoadSkillBar);
+    GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILLBAR_UPDATE, OnPostLoadSkillBar, 0x8000);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &OnPartyDefeated);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
