@@ -7,6 +7,28 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.6
+
+* [Minor] Hide pointless quest marker for zaishen scout in all outposts
+* [Minor] Renamed Missions window to Completion window
+* [New] "Enter new stack size" prompt is now shown when ctrl + shift clicking an item in inventory/chest
+* [New] Prophecies/Factions dupe skills are checked and swapped in when loading a skillbar
+* [New] Kurzick/Luxon skills are checked and swapped in when loading a skillbar based on title progress
+* [New] Added PvE skill tracker to Completion window
+* [New] Added Elite skill tracker to Completion window
+* [New] Added extra context menu option to withdraw or store all of the same item
+* [New] Disable hotkeys on pvp characters by default; added a tickbox to re-enable a hotkey when playing a pvp only character
+* [New] Added `/toggle` command as a shortcut to `/hide` or `/show` depending on UI
+* [New] Added `/toggle helm, custome, costume_head, cape`
+* [New] Added `/pcons refill` and `/pcons refill <pcon_name>`
+* [New] Added `/target [name|model_id] [index]` to target nth NPC by name or model_id oin distance order
+* [Fix] Fixed ctrl + shift + h and shoft + print scrn not hiding toolbox UI
+* [Fix] Fixed crashing on character select, map load, and talking to NPCs for some clients
+* [Fix] Fixed bug causing `/target` command to target dead NPCs
+* [Fix] Fixed bug when using `/target` to target signposts
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.6_Release/GWToolboxdll.dll)
+
 ## Version 5.5
 
 * [Fix] Removed unusable settings for world map widget
