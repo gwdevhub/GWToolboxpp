@@ -178,7 +178,7 @@ void Pcon::Update(int delay) {
         refill_attempted = false;
     }
     if (!refill_attempted) {
-        Refill(refill_if_below_threshold);
+        Refill(refill_if_below_threshold && IsEnabled() && PconsWindow::Instance().GetEnabled());
         refill_attempted = true;
     }
     // Refill pcons if needed.
