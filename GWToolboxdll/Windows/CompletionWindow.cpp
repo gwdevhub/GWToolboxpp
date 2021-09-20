@@ -1520,6 +1520,8 @@ void CompletionWindow::LoadCharacterSkillsUnlocked() {
 	for (CSimpleIni::Entry& entry : entries) {
 		std::wstring name = GuiUtils::StringToWString(entry.pItem);
 		int len = character_skills_unlocked_ini->GetLongValue(entry.pItem, "length");
+		if (len < 1)
+			continue;
 		std::string val = character_skills_unlocked_ini->GetValue(entry.pItem, "values");
 		std::vector<uint32_t> skills_unlocked(len);
 		ASSERT(GuiUtils::IniToArray(val, skills_unlocked.data(), len));
