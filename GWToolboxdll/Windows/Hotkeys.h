@@ -60,7 +60,7 @@ public:
 
     virtual const char* Name() const = 0;
     virtual void Draw() = 0;
-    virtual void Description(char *buf, size_t bufsz) const = 0;
+    virtual int Description(char *buf, size_t bufsz) = 0;
     virtual void Execute() = 0;
     virtual void Toggle() { return Execute(); };
 protected:
@@ -92,7 +92,7 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
 
@@ -101,22 +101,30 @@ public:
     HotkeyEquipItemAttributes(uint32_t _model_id = 0, const wchar_t* _name_enc = 0, const wchar_t* _info_string = 0, const GW::ItemModifier* _mod_struct = 0, size_t _mod_struct_size = 0);
     HotkeyEquipItemAttributes* set(uint32_t _model_id = 0, const wchar_t* _name_enc = 0, const wchar_t* _info_string = 0, const GW::ItemModifier* _mod_struct = 0, size_t _mod_struct_size = 0);
     HotkeyEquipItemAttributes(const GW::Item* item);
-    const std::string& name() { return enc_name.string(); }
-    const std::wstring& name_ws() { return enc_name.wstring(); }
-    const std::string& desc() { return enc_desc.string(); }
-    const std::wstring& desc_ws() { return enc_desc.wstring(); }
     bool check(GW::Item* item = nullptr);
     uint32_t model_id = 0;
     GuiUtils::EncString enc_name;
     GuiUtils::EncString enc_desc;
     size_t mod_struct_size = 0;
     uint32_t mod_struct[16] = { 0 };
+    std::string& name() { return enc_name.string(); }
+    std::wstring& name_ws() { return enc_name.wstring(); }
+    std::string& desc() { return enc_desc.string(); }
+    std::wstring& desc_ws() { return enc_desc.wstring(); }
+    HotkeyEquipItemAttributes(const HotkeyEquipItemAttributes& temp_obj) {
+        *this = temp_obj;
+    };
+    HotkeyEquipItemAttributes& operator=(const HotkeyEquipItemAttributes& temp_obj) {
+        set(temp_obj.model_id, temp_obj.enc_name.encoded().c_str(), temp_obj.enc_desc.encoded().c_str());
+        memcpy(mod_struct, temp_obj.mod_struct, sizeof(temp_obj.mod_struct));
+        mod_struct_size = temp_obj.mod_struct_size;
+        return *this;
+    };
 };
 class HotkeyEquipItem : public TBHotkey {
 private:
     UINT bag_idx = 0;
     UINT slot_idx = 0;
-    HotkeyEquipItemAttributes item_attributes;
     enum EquipBy : int {
         ITEM,
         SLOT
@@ -126,6 +134,7 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> last_try;
     wchar_t* item_name = L"";
 public:
+    HotkeyEquipItemAttributes item_attributes;
     static const char* IniSection() { return "EquipItem"; }
     const char* Name() const override { return IniSection(); }
 
@@ -134,14 +143,10 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char* buf, size_t bufsz) const override;
+    int Description(char* buf, size_t bufsz) override;
     void Execute() override;
 
     bool IsEquippable(const GW::Item* item);
-
-    HotkeyEquipItemAttributes GetItemAttributes() const {
-        return item_attributes;
-    };
 
     GW::Item* FindMatchingItem(GW::Constants::Bag bag_idx);
 };
@@ -163,7 +168,7 @@ public:
     bool CanUse() override { return TBHotkey::CanUse() && item_id != 0; }
 
     void Draw() override;
-    void Description(char* buf, size_t bufsz) const override;
+    int Description(char* buf, size_t bufsz) override;
     void Execute() override;
 };
 
@@ -190,7 +195,7 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
 
@@ -216,7 +221,7 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
     void Toggle() override;
     bool IsToggled(bool force = false);
@@ -253,7 +258,7 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
 
@@ -282,7 +287,7 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
 
@@ -303,7 +308,7 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
 
@@ -320,7 +325,7 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
 
@@ -338,7 +343,7 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
 
@@ -356,7 +361,7 @@ public:
     void Save(CSimpleIni* ini, const char* section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
 
@@ -381,6 +386,6 @@ public:
     void Save(CSimpleIni *ini, const char *section) const override;
 
     void Draw() override;
-    void Description(char *buf, size_t bufsz) const override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };

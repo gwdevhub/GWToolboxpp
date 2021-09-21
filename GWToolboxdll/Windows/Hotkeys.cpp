@@ -182,22 +182,20 @@ void TBHotkey::Draw(Op *op)
 
     // === Header ===
     char header[256];
-    char desbuf[128];
-    char keybuf[128];
-    char profbuf[64] = {'\0'};
-    char mapbuf[64] = {'\0'};
+    char keybuf[64];
+    int written = 0;
+    written += Description(&header[written], _countof(header) - written);
     if (prof_id)
-        snprintf(profbuf, 64, " [%s]", professions[prof_id]);
+        written += snprintf(&header[written], _countof(header) - written, " [%s]", professions[prof_id]);
     if (map_id) {
         if (map_id < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID))
-            snprintf(mapbuf, 64, " [%s]", GW::Constants::NAME_FROM_ID[map_id]);
+            written += snprintf(&header[written], _countof(header) - written, " [%s]", GW::Constants::NAME_FROM_ID[map_id]);
         else
-            snprintf(mapbuf, 64, " [Map %d]", map_id);
+            written += snprintf(&header[written], _countof(header) - written, " [Map %d]", map_id);
     }
-    Description(desbuf, 128);
-    ModKeyName(keybuf, 128, modifier, hotkey, "<None>");
-    snprintf(header, 128, "%s [%s]%s%s###header%u", desbuf, keybuf, profbuf,
-             mapbuf, ui_id);
+    
+    ASSERT(ModKeyName(keybuf, _countof(keybuf), modifier, hotkey, "<None>") != -1);
+    ASSERT(snprintf(&header[written], _countof(header) - written, " [%s]###header%u", keybuf, ui_id) != -1);
     ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header)
                                    ? ImGuiTreeNodeFlags_AllowItemOverlap
                                    : 0;
@@ -232,8 +230,8 @@ void TBHotkey::Draw(Op *op)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("The hotkey can trigger only when selected");
         ImGui::SameLine();
-        char keybuf2[128];
-        snprintf(keybuf2, 128, "Hotkey: %s", keybuf);
+        char keybuf2[_countof(keybuf) + 8];
+        snprintf(keybuf2, _countof(keybuf2), "Hotkey: %s", keybuf);
         if (ImGui::Button(keybuf2, ImVec2(-70.0f, 0))) {
             HotkeySelector((WORD*)&hotkey, (DWORD*)&modifier);
         }
@@ -364,9 +362,9 @@ void HotkeySendChat::Save(CSimpleIni *ini, const char *section) const
     snprintf(buf, 8, "%c", channel);
     ini->SetValue(section, "channel", buf);
 }
-void HotkeySendChat::Description(char *buf, size_t bufsz) const
+int HotkeySendChat::Description(char *buf, size_t bufsz)
 {
-    snprintf(buf, bufsz, "Send chat '%c%s'", channel, message);
+    return snprintf(buf, bufsz, "Send chat '%c%s'", channel, message);
 }
 void HotkeySendChat::Draw()
 {
@@ -456,13 +454,11 @@ void HotkeyUseItem::Save(CSimpleIni *ini, const char *section) const
     ini->SetLongValue(section, "ItemID", static_cast<long>(item_id));
     ini->SetValue(section, "ItemName", name);
 }
-void HotkeyUseItem::Description(char *buf, size_t bufsz) const
+int HotkeyUseItem::Description(char *buf, size_t bufsz)
 {
-    if (name[0] == '\0') {
-        snprintf(buf, bufsz, "Use #%d", item_id);
-    } else {
-        snprintf(buf, bufsz, "Use %s", name);
-    }
+    if (!name[0])
+        return snprintf(buf, bufsz, "Use #%d", item_id);
+    return snprintf(buf, bufsz, "Use %s", name);
 }
 void HotkeyUseItem::Draw()
 {
@@ -560,26 +556,22 @@ void HotkeyEquipItem::Save(CSimpleIni *ini, const char *section) const
     ini->SetLongValue(section, "Bag", static_cast<long>(bag_idx));
     ini->SetLongValue(section, "Slot", static_cast<long>(slot_idx));
     if (equip_by == ITEM) {
-        HotkeyEquipItemAttributes atts = GetItemAttributes();
-        ini->SetLongValue(section, "ModelId", atts.model_id);
+        ini->SetLongValue(section, "ModelId", item_attributes.model_id);
         std::string out;
-        ASSERT(GuiUtils::ArrayToIni(atts.enc_name.encoded().c_str(), &out));
+        GuiUtils::ArrayToIni(item_attributes.enc_name.encoded().c_str(), &out);
         ini->SetValue(section, "EncodedName", out.c_str());
-        ASSERT(GuiUtils::ArrayToIni(atts.enc_desc.encoded().c_str(), &out));
+        ASSERT(GuiUtils::ArrayToIni(item_attributes.enc_desc.encoded().c_str(), &out));
         ini->SetValue(section, "EncodedDesc", out.c_str());
-        ASSERT(GuiUtils::ArrayToIni(atts.mod_struct, atts.mod_struct_size, &out));
-        ini->SetLongValue(section, "ModStructSize", atts.mod_struct_size);
+        ASSERT(GuiUtils::ArrayToIni(item_attributes.mod_struct, item_attributes.mod_struct_size, &out));
+        ini->SetLongValue(section, "ModStructSize", item_attributes.mod_struct_size);
         ini->SetValue(section, "ModStruct", out.c_str());
     }
 }
-void HotkeyEquipItem::Description(char *buf, size_t bufsz) const
+int HotkeyEquipItem::Description(char *buf, size_t bufsz)
 {
     if (equip_by == SLOT)
-        snprintf(buf, bufsz, "Equip Item in bag %d slot %d", bag_idx, slot_idx);
-    else {
-        snprintf(buf, bufsz, "Equip %s", GetItemAttributes().name().c_str());
-    }
-
+        return snprintf(buf, bufsz, "Equip Item in bag %d slot %d", bag_idx, slot_idx);
+    return snprintf(buf, bufsz, "Equip %s", item_attributes.name().c_str());
 }
 void HotkeyEquipItem::Draw()
 {
@@ -877,11 +869,11 @@ void HotkeyDropUseBuff::Save(CSimpleIni *ini, const char *section) const
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "SkillID", (long)id);
 }
-void HotkeyDropUseBuff::Description(char *buf, size_t bufsz) const
+int HotkeyDropUseBuff::Description(char *buf, size_t bufsz)
 {
     const char *skillname;
     GetText((void *)id, GetIndex(), &skillname);
-    snprintf(buf, bufsz, "Drop/Use %s", skillname);
+    return snprintf(buf, bufsz, "Drop/Use %s", skillname);
 }
 void HotkeyDropUseBuff::Draw()
 {
@@ -980,11 +972,11 @@ void HotkeyToggle::Save(CSimpleIni *ini, const char *section) const
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ToggleID", (long)target);
 }
-void HotkeyToggle::Description(char *buf, size_t bufsz) const
+int HotkeyToggle::Description(char *buf, size_t bufsz)
 {
     const char* name;
     GetText(nullptr, (int)target, &name);
-    snprintf(buf, bufsz, "Toggle %s", name);
+    return snprintf(buf, bufsz, "Toggle %s", name);
 }
 void HotkeyToggle::Draw()
 {
@@ -1105,11 +1097,11 @@ void HotkeyAction::Save(CSimpleIni *ini, const char *section) const
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ActionID", (long)action);
 }
-void HotkeyAction::Description(char *buf, size_t bufsz) const
+int HotkeyAction::Description(char *buf, size_t bufsz)
 {
     const char *name;
     GetText(nullptr, (int)action, &name);
-    snprintf(buf, bufsz, "%s", name);
+    return snprintf(buf, bufsz, "%s", name);
 }
 void HotkeyAction::Draw()
 {
@@ -1181,13 +1173,11 @@ void HotkeyTarget::Save(CSimpleIni *ini, const char *section) const
     ini->SetLongValue(section, "TargetType", static_cast<long>(type));
     ini->SetValue(section, "TargetName", name);
 }
-void HotkeyTarget::Description(char *buf, size_t bufsz) const
+int HotkeyTarget::Description(char *buf, size_t bufsz)
 {
-    if (!name[0]) {
-        snprintf(buf, bufsz, "Target %s %s", type_labels[type], id);
-    } else {
-        snprintf(buf, bufsz, "Target %s", name);
-    }
+    if (!name[0])
+        return snprintf(buf, bufsz, "Target %s %s", type_labels[type], id);
+    return snprintf(buf, bufsz, "Target %s", name);
 }
 void HotkeyTarget::Draw()
 {
@@ -1255,13 +1245,11 @@ void HotkeyMove::Save(CSimpleIni *ini, const char *section) const
     ini->SetDoubleValue(section, "distance", range);
     ini->SetValue(section, "name", name);
 }
-void HotkeyMove::Description(char *buf, size_t bufsz) const
+int HotkeyMove::Description(char *buf, size_t bufsz)
 {
-    if (name[0] == '\0') {
-        snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
-    } else {
-        snprintf(buf, bufsz, "Move to %s", name);
-    }
+    if (!name[0])
+        return snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
+    return snprintf(buf, bufsz, "Move to %s", name);
 }
 void HotkeyMove::Draw()
 {
@@ -1309,13 +1297,11 @@ void HotkeyDialog::Save(CSimpleIni *ini, const char *section) const
     ini->SetLongValue(section, "DialogID", static_cast<long>(id));
     ini->SetValue(section, "DialogName", name);
 }
-void HotkeyDialog::Description(char *buf, size_t bufsz) const
+int HotkeyDialog::Description(char *buf, size_t bufsz)
 {
-    if (name[0] == '\0') {
-        snprintf(buf, bufsz, "Dialog #%zu", id);
-    } else {
-        snprintf(buf, bufsz, "Dialog %s", name);
-    }
+    if (!name[0])
+        return snprintf(buf, bufsz, "Dialog #%zu", id);
+    return snprintf(buf, bufsz, "Dialog %s", name);
 }
 void HotkeyDialog::Draw()
 {
@@ -1361,12 +1347,12 @@ void HotkeyPingBuild::Save(CSimpleIni *ini, const char *section) const
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "BuildIndex", static_cast<long>(index));
 }
-void HotkeyPingBuild::Description(char *buf, size_t bufsz) const
+int HotkeyPingBuild::Description(char *buf, size_t bufsz)
 {
     const char *buildname = BuildsWindow::Instance().BuildName(index);
     if (buildname == nullptr)
         buildname = "<not found>";
-    snprintf(buf, bufsz, "Ping build '%s'", buildname);
+    return snprintf(buf, bufsz, "Ping build '%s'", buildname);
 }
 void HotkeyPingBuild::Draw()
 {
@@ -1404,12 +1390,12 @@ void HotkeyHeroTeamBuild::Save(CSimpleIni *ini, const char *section) const
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "BuildIndex", static_cast<long>(index));
 }
-void HotkeyHeroTeamBuild::Description(char *buf, size_t bufsz) const
+int HotkeyHeroTeamBuild::Description(char *buf, size_t bufsz)
 {
     const char *buildname = HeroBuildsWindow::Instance().BuildName(index);
     if (buildname == nullptr)
         buildname = "<not found>";
-    snprintf(buf, bufsz, "Load Hero Team Build '%s'", buildname);
+    return snprintf(buf, bufsz, "Load Hero Team Build '%s'", buildname);
 }
 void HotkeyHeroTeamBuild::Draw()
 {
@@ -1444,13 +1430,11 @@ void HotkeyFlagHero::Save(CSimpleIni *ini, const char *section) const
     ini->SetDoubleValue(section, "distance", distance);
     ini->SetLongValue(section, "hero", hero);
 }
-void HotkeyFlagHero::Description(char *buf, size_t bufsz) const
+int HotkeyFlagHero::Description(char *buf, size_t bufsz)
 {
-    if (hero == 0) {
-        snprintf(buf, bufsz, "Flag All Heroes");
-    } else {
-        snprintf(buf, bufsz, "Flag Hero %d", hero);
-    }
+    if (hero == 0)
+        return snprintf(buf, bufsz, "Flag All Heroes");
+    return snprintf(buf, bufsz, "Flag Hero %d", hero);
 }
 void HotkeyFlagHero::Draw()
 {
