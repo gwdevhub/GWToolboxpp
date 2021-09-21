@@ -495,10 +495,10 @@ void GuiUtils::EncString::reset(const wchar_t* _enc_string)
         encoded_ws = _enc_string;
 }
 
-const std::wstring& GuiUtils::EncString::wstring()
+std::wstring& GuiUtils::EncString::wstring()
 {
     if (!decoding && !encoded_ws.empty()) {
-        GW::UI::AsyncDecodeStr(encoded_ws.data(), &decoded_ws);
+        GW::UI::AsyncDecodeStr(encoded_ws.c_str(), &decoded_ws);
         decoding = true;
     }
     sanitise();
@@ -513,7 +513,7 @@ void GuiUtils::EncString::sanitise() {
     }
 }
 
-const std::string& GuiUtils::EncString::string()
+std::string& GuiUtils::EncString::string()
 {
     wstring();
     if (sanitised && !decoded_ws.empty() && decoded_s.empty()) {

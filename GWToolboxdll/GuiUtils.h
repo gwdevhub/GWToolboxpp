@@ -66,9 +66,9 @@ namespace GuiUtils {
     public:
         void reset(const uint32_t _enc_string_id = 0);
         void reset(const wchar_t* _enc_string = nullptr);
-        const std::wstring& wstring();
-        const std::string& string();
-        const std::wstring& encoded() {
+        std::wstring& wstring();
+        std::string& string();
+        const std::wstring& encoded() const {
             return encoded_ws;
         };
         EncString(const wchar_t* _enc_string = nullptr) {
@@ -76,6 +76,12 @@ namespace GuiUtils {
         }
         EncString(const uint32_t _enc_string) {
             reset(_enc_string);
+        }
+        // Disable object copying; decoded_ws is passed to GW by reference and would be bad to do this. Pass by pointer instead.
+        EncString(const EncString& temp_obj) = delete;
+        EncString& operator=(const EncString& temp_obj) = delete;
+        ~EncString() {
+            ASSERT(!decoding || !decoded_ws.empty());
         }
     };
 };
