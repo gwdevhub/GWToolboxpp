@@ -105,10 +105,15 @@ private:
 
     struct SearchAgent {
         clock_t started = 0;
-        std::vector<std::pair<uint32_t,GuiUtils::EncString>> npc_names;
+        std::vector<std::pair<uint32_t,GuiUtils::EncString*>> npc_names;
         std::wstring search;
         void Init(const wchar_t* search, TargetType type = Npc);
         void Update();
+        ~SearchAgent() {
+            for (auto it : npc_names)
+                delete it.second;
+            npc_names.clear();
+        }
     } npc_to_find;
 
     struct SkillToUse {

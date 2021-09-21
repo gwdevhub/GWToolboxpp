@@ -530,7 +530,7 @@ void ChatCommands::SearchAgent::Init(const wchar_t* _search, TargetType type) {
         const wchar_t* enc_name = GW::Agents::GetAgentEncName(agent);
         if (!enc_name || !enc_name[0])
             continue;
-        npc_names.push_back({ agent->agent_id, enc_name });
+        npc_names.push_back({ agent->agent_id, new GuiUtils::EncString(enc_name) });
     }
 }
 void ChatCommands::SearchAgent::Update() {
@@ -541,7 +541,7 @@ void ChatCommands::SearchAgent::Update() {
         return;
     }
     for (auto& enc_name : npc_names) {
-        if (enc_name.second.wstring().empty())
+        if (enc_name.second->wstring().empty())
             return; // Not all decoded yet
     }
     // Do search
@@ -552,7 +552,7 @@ void ChatCommands::SearchAgent::Update() {
     if (!me)
         return;
     for (auto& enc_name : npc_names) {
-        found = GuiUtils::ToLower(enc_name.second.wstring()).find(search.c_str());
+        found = GuiUtils::ToLower(enc_name.second->wstring()).find(search.c_str());
         if (found == std::wstring::npos)
             continue;
         GW::Agent* agent = GW::Agents::GetAgentByID(enc_name.first);
