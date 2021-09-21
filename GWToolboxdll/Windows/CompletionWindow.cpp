@@ -169,6 +169,10 @@ GW::Constants::MapID Mission::GetOutpost() {
 			pos.x = (float)(map->icon_start_x + (map->icon_end_x - map->icon_start_x) / 2);
 			pos.y = (float)(map->icon_start_y + (map->icon_end_y - map->icon_start_y) / 2);
 		}
+		if (!pos.x) {
+			pos.x = (float)(map->icon_start_x_dupe + (map->icon_end_x_dupe - map->icon_start_x_dupe) / 2);
+			pos.y = (float)(map->icon_start_y_dupe + (map->icon_end_y_dupe - map->icon_start_y_dupe) / 2);
+		}
 		return pos;
 	};
 
