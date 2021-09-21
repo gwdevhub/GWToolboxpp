@@ -448,6 +448,18 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     InfoField("Region", "%d", map_info->region);
                     InfoField("Type", "%d", map_info->type);
                     InfoField("Flags", "0x%X", map_info->flags);
+                    InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
+                    GW::Vec2f pos = { (float)map_info->x,(float)map_info->y };
+                    InfoField("Map Pos", "%.2f, %.2f", pos.x, pos.y);
+                    if (!pos.x) {
+                        pos.x = (float)(map_info->icon_start_x + (map_info->icon_end_x - map_info->icon_start_x) / 2);
+                        pos.y = (float)(map_info->icon_start_y + (map_info->icon_end_y - map_info->icon_start_y) / 2);
+                    }
+                    if (!pos.x) {
+                        pos.x = (float)(map_info->icon_start_x_dupe + (map_info->icon_end_x_dupe - map_info->icon_start_x_dupe) / 2);
+                        pos.y = (float)(map_info->icon_start_y_dupe + (map_info->icon_end_y_dupe - map_info->icon_start_y_dupe) / 2);
+                    }
+                    InfoField("Calculated Pos", "%.2f, %.2f", pos.x,pos.y);
                     static wchar_t name_enc[8];
                     if(GW::UI::UInt32ToEncStr(map_info->name_id,name_enc,8))
                         EncInfoField("Name Enc", name_enc);
