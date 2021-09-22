@@ -7,6 +7,15 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.7
+
+* [Fix] Fixed crashing related to stack overflow issues on string decoding
+* [Fix] Fixed bug causing wrong outpost teleport when clicking some EotN vanquish icons in completion window 
+* [Fix] Fixed bug causing crash for players who had a character without any skills (e.g. expired trial account)
+* [Fix] Fixed bug causing pcons to refill when disabled
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.7_Release/GWToolboxdll.dll)
+
 ## Version 5.6
 
 * [Minor] Hide pointless quest marker for zaishen scout in all outposts
