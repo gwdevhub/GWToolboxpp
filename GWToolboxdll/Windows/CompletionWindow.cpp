@@ -396,14 +396,10 @@ IDirect3DTexture9* EotNMission::GetMissionImage()
 	//TODO do these work like proph, factions, nf?
 	bool hardmode = GW::PartyMgr::GetIsPartyInHardMode();
 	auto* texture_list = &normal_mode_textures;
-	GW::WorldContext* ctx = GW::GameContext::instance()->world;
-	auto* missions_complete = &ctx->missions_bonus;
 	if (hardmode) {
 		texture_list = &hard_mode_textures;
-		missions_complete = &ctx->missions_bonus_hm;
 	}
-	uint32_t index = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost)) ? 1 : 0;
-	return texture_list->at(index).texture;
+	return texture_list->at(is_completed ? 1 : 0).texture;
 }
 
 
@@ -536,6 +532,9 @@ void CompletionWindow::Initialize()
 		Instance().CheckProgress();
 		});
 	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_INSTANCE_LOADED, [](GW::HookStatus*, void*) {
+		Instance().CheckProgress();
+		});
+	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_PARTY_SET_DIFFICULTY, [](GW::HookStatus*, void*) {
 		Instance().CheckProgress();
 		});
 	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_ADD_TO_WINDOW_COUNT, [](GW::HookStatus*, void*) {
@@ -1312,6 +1311,7 @@ void CompletionWindow::Initialize_Dungeons()
 void CompletionWindow::Terminate()
 {
 	GW::StoC::RemovePostCallback(GAME_SMSG_SKILLS_UNLOCKED, &skills_unlocked_stoc_entry);
+	GW::StoC::RemovePostCallback(GAME_SMSG_PARTY_SET_DIFFICULTY, &skills_unlocked_stoc_entry);
 	GW::StoC::RemovePostCallback(GAME_SMSG_INSTANCE_LOADED, &skills_unlocked_stoc_entry);
 	GW::StoC::RemovePostCallback(GAME_SMSG_SKILL_ADD_TO_WINDOW_COUNT, &skills_unlocked_stoc_entry);
 	auto clear_vec = [](auto& vec) {
