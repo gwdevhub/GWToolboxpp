@@ -66,9 +66,17 @@ private:
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
     };
 
+    struct SummonPending
+    {
+        uint32_t agent_id;
+        GW::Constants::SkillID skill_id;
+    };
+
     std::vector<uint32_t> allies_added_to_party;
     std::vector<PendingAddToParty> pending_add;
     std::queue<uint32_t> pending_remove;
+
+    std::queue<SummonPending> summons_pending;
 
     void AddSpecialNPC(SpecialNPCToAdd npc) {
         SpecialNPCToAdd* new_npc = new SpecialNPCToAdd(npc);
@@ -105,6 +113,7 @@ private:
 
     bool add_npcs_to_party_window = true; // Quick tickbox to disable the module without restarting TB
     bool add_player_numbers_to_party_window = false;
+    bool add_elite_skill_to_summons = false;
 
     char new_npc_alias[128] = { 0 };
     int new_npc_model_id = 0;
@@ -123,4 +132,7 @@ private:
     GW::HookEntry AgentAdd_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry GameThreadCallback_Entry;
+
+    GW::HookEntry Summon_AgentAdd_Entry;
+    GW::HookEntry Summon_GameThreadCallback_Entry;
 };

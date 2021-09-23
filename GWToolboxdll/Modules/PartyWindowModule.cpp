@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/GameContext.h>
@@ -8,6 +9,7 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -15,6 +17,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 #include <ImGuiAddons.h>
 #include <Logger.h>
@@ -22,6 +25,30 @@
 #include <Modules/PartyWindowModule.h>
 
 namespace {
+
+    std::map<uint32_t, GW::Constants::SkillID> summon_elites = {
+        {8990, GW::Constants::SkillID::Crippling_Slash},
+        {8991, GW::Constants::SkillID::Triple_Chop},
+        {8992, GW::Constants::SkillID::Barrage},
+        {8993, GW::Constants::SkillID::Quivering_Blade},
+        {8994, GW::Constants::SkillID::Hundred_Blades},
+        {8995, GW::Constants::SkillID::Broad_Head_Arrow},
+        {8996, GW::Constants::SkillID::Palm_Strike},
+        {8997, GW::Constants::SkillID::Life_Sheath},
+        {8998, GW::Constants::SkillID::No_Skill},
+        {8999, GW::Constants::SkillID::Fevered_Dreams},
+        {9000, GW::Constants::SkillID::Spiteful_Spirit},
+        {9001, GW::Constants::SkillID::Preservation},
+        {9002, GW::Constants::SkillID::Primal_Rage},
+        {9003, GW::Constants::SkillID::Glass_Arrows},
+        {9004, GW::Constants::SkillID::Way_of_the_Assassin},
+        {9005, GW::Constants::SkillID::Peace_and_Harmony},
+        {9006, GW::Constants::SkillID::Sandstorm},
+        {9007, GW::Constants::SkillID::Panic},
+        {9008, GW::Constants::SkillID::Aura_of_the_Lich},
+        {9009, GW::Constants::SkillID::Defiant_Was_Xinrae},
+    };
+
     static bool IsPvE() {
         GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
         if (!map) return false;
@@ -162,6 +189,43 @@ void PartyWindowModule::Initialize() {
             break; // Continue next frame
         }
         });
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(
+        &Summon_AgentAdd_Entry,
+        [&](GW::HookStatus*, GW::Packet::StoC::AgentAdd* pak) -> void {
+            if (!add_elite_skill_to_summons) return;
+            if (pak->type != 1) return; // Not a living agent.
+            uint32_t player_number = (pak->agent_type ^ 0x20000000);
+            auto summon_elite = summon_elites.find(player_number);
+            if (summon_elite == summon_elites.end()) return;
+            if (summon_elite->second == GW::Constants::SkillID::No_Skill) return;
+            summons_pending.push({pak->agent_id, summon_elite->second});
+        }
+    );
+
+    GW::GameThread::RegisterGameThreadCallback(
+        &Summon_GameThreadCallback_Entry,
+        [&](GW::HookStatus*) -> void {
+            while (summons_pending.size()) {
+                const SummonPending summon = summons_pending.front();
+
+                const uint32_t agent_id = summon.agent_id;
+                const GW::Constants::SkillID skill_id = summon.skill_id;
+
+                GW::Skill& skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(skill_id));
+
+                GW::AgentLiving* agentLiving = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(summon.agent_id));
+                if (!agentLiving) return;
+
+                wchar_t skill_name_enc[8] = {0};
+                GW::UI::UInt32ToEncStr(skill.name, skill_name_enc, 8);;
+
+                SetAgentName(agent_id, skill_name_enc);
+
+                summons_pending.pop();
+            }
+        }
+    );
 }
 void PartyWindowModule::CheckMap() {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
@@ -200,6 +264,7 @@ void PartyWindowModule::SignalTerminate() {
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&Summon_AgentAdd_Entry);
     ClearAddedAllies();
 }
 bool PartyWindowModule::CanTerminate() {
@@ -323,6 +388,8 @@ bool PartyWindowModule::ShouldAddAgentToPartyWindow(GW::Agent* _a) {
 void PartyWindowModule::DrawSettingInternal() {
     ImGui::Checkbox("Add player numbers to party window", &add_player_numbers_to_party_window);
     ImGui::ShowHelp("Will update on next map");
+    ImGui::Checkbox("Rename Tengu and Imperial Guard Ally summons to their respective elite skill", &add_elite_skill_to_summons);
+    ImGui::ShowHelp("Only works on newly spawned summons.");
     if (ImGui::Checkbox("Add special NPCs to party window", &add_npcs_to_party_window))
         CheckMap();
     ImGui::ShowHelp("Adds special NPCs to the Allies section of the party window within compass range.");
@@ -404,6 +471,7 @@ void PartyWindowModule::SaveSettings(CSimpleIni* ini) {
     ini->Delete(Name(), NULL, NULL);
 
     ini->SetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
+    ini->SetBoolValue(Name(), VAR_NAME(add_elite_skill_to_summons), add_elite_skill_to_summons);
     
     // - Re-fill settings.
     ini->SetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window), add_npcs_to_party_window);
@@ -426,6 +494,7 @@ void PartyWindowModule::LoadSettings(CSimpleIni* ini) {
 
     add_npcs_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window), add_npcs_to_party_window);
     add_player_numbers_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
+    add_elite_skill_to_summons = ini->GetBoolValue(Name(), VAR_NAME(add_elite_skill_to_summons), add_elite_skill_to_summons);
 
     ClearSpecialNPCs();
     for (CSimpleIniA::TNamesDepend::const_iterator i = keys.begin(); i != keys.end(); ++i) {
