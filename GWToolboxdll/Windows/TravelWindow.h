@@ -372,7 +372,7 @@ private:
         GW::Constants::MapID::Zos_Shivros_Channel,
         GW::Constants::MapID::Great_Temple_of_Balthazar_outpost
     };
-    const GW::Constants::MapID dungeon_map_ids[11]{
+    const GW::Constants::MapID dungeon_map_ids[12]{
         GW::Constants::MapID::Doomlore_Shrine_outpost,
         GW::Constants::MapID::Doomlore_Shrine_outpost,
         GW::Constants::MapID::Doomlore_Shrine_outpost,
@@ -383,9 +383,10 @@ private:
         GW::Constants::MapID::Sifhalla_outpost,
         GW::Constants::MapID::Olafstead_outpost,
         GW::Constants::MapID::Umbral_Grotto_outpost,
-        GW::Constants::MapID::Gadds_Encampment_outpost
+        GW::Constants::MapID::Gadds_Encampment_outpost,
+        GW::Constants::MapID::Deldrimor_War_Camp_outpost
     };
-    const char* searchable_dungeon_names[11]{
+    const char* searchable_dungeon_names[12]{
         "catacombs of kathandrax",
         "kathandrax",
         "rragars menagerie",
@@ -396,7 +397,8 @@ private:
         "sepulchre of dragrimmar",
         "ravens point",
         "vloxen excavations",
-        "bogroot growths"
+        "bogroot growths",
+        "sorrows furnace"
     };
     const char* searchable_map_names[187] {
         "abaddons gate",
