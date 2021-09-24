@@ -1396,11 +1396,11 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 		auto skills_title = [&, checkbox_offset](const char* title) {
 			ImGui::PushID(title);
 			ImGui::Text(title);
-			ImGui::ShowHelp("Guild Wars only shows skills unlocked for the current primary/secondary profession.\n\n"
-				"GWToolbox remembers skills unlocked for other professions,\nbut is only able to update this info when you switch to that profession.");
+			ImGui::ShowHelp("Guild Wars only shows skills learned for the current primary/secondary profession.\n\n"
+				"GWToolbox remembers skills learned for other professions,\nbut is only able to update this info when you switch to that profession.");
 			ImGui::SameLine(checkbox_offset);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
-			ImGui::Checkbox("Hide unlocked skills", &hide_unlocked_skills);
+			ImGui::Checkbox("Hide learned skills", &hide_unlocked_skills);
 			ImGui::PopStyleVar();
 			ImGui::PopID();
 		};
