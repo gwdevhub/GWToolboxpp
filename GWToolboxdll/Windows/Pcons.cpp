@@ -187,7 +187,7 @@ void Pcon::Update(int delay) {
         quantity = qty;
         if (maptype == GW::Constants::InstanceType::Outpost) {
             quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
-            if (IsEnabled() && PconsWindow::Instance().GetEnabled()) {
+            if (IsEnabled() && PconsWindow::Instance().GetEnabled() && !refilling) {
                 // Only warn user of low pcon count if is enabled and we're in an outpost.
                 if (quantity == 0) {
                     Log::Error("No more %s items found", chat);
