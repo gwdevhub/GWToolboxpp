@@ -799,8 +799,10 @@ void TravelWindow::Update(float delta) {
             std::string sanitised = GuiUtils::ToLower(GuiUtils::RemovePunctuation(searchable_explorable_areas_decode[i]->string()));
             char* out = new char[sanitised.length() + 1]; // NB: Delete this char* in destructor
             strcpy(out, sanitised.c_str());
+            delete searchable_explorable_areas_decode[i];
             searchable_explorable_areas.push_back(out);
         }
+        searchable_explorable_areas_decode.clear();
         fetched_searchable_explorable_areas = Ready;
         break;
     }
