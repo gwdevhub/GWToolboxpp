@@ -648,6 +648,10 @@ void TravelWindow::Terminate() {
     if (scroll_texture)
         scroll_texture->Release();
     scroll_texture = nullptr;
+    for (auto it : searchable_explorable_areas) {
+        delete[] it;
+    }
+    searchable_explorable_areas.clear();
 }
 
 void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid) {
@@ -768,6 +772,90 @@ void TravelWindow::Update(float delta) {
     if (scroll_to_outpost_id != GW::Constants::MapID::None) {
         ScrollToOutpost(scroll_to_outpost_id); // We're in the process of scrolling to an outpost
     }
+    // Dynamically generate a list of all explorable areas that the game has rather than storing another massive const array.
+    switch (fetched_searchable_explorable_areas) {
+    case Pending:
+        for (uint32_t i = 0; i < static_cast<uint32_t>(GW::Constants::MapID::Count); i++) {
+            GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
+            if (!map || !map->name_id || !map->GetIsOnWorldMap() || map->type != GW::RegionType::RegionType_ExplorableZone)
+                continue;
+            searchable_explorable_area_ids.push_back(static_cast<GW::Constants::MapID>(i));
+            GuiUtils::EncString* s = new GuiUtils::EncString(map->name_id);
+            s->string(); // Trigger decode
+            searchable_explorable_areas_decode.push_back(s);
+        }
+        fetched_searchable_explorable_areas = Decoding;
+        break;
+    case Decoding: {
+        bool ok = true;
+        for (size_t i = 0; i < searchable_explorable_areas_decode.size() && ok; i++) {
+            ok = !searchable_explorable_areas_decode[i]->string().empty();
+        }
+        if (ok)
+            fetched_searchable_explorable_areas = Decoded;
+    } break;
+    case Decoded:
+        for (size_t i = 0; i < searchable_explorable_areas_decode.size(); i++) {
+            std::string sanitised = GuiUtils::ToLower(GuiUtils::RemovePunctuation(searchable_explorable_areas_decode[i]->string()));
+            char* out = new char[sanitised.length() + 1]; // NB: Delete this char* in destructor
+            strcpy(out, sanitised.c_str());
+            searchable_explorable_areas.push_back(out);
+        }
+        fetched_searchable_explorable_areas = Ready;
+        break;
+    }
+
+}
+GW::Constants::MapID TravelWindow::GetNearestOutpost(GW::Constants::MapID map_to) {
+    GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
+    GW::AreaInfo* nearest = nullptr;
+    GW::AreaInfo* map_info = nullptr;
+    float nearest_distance = FLT_MAX;
+    GW::Constants::MapID nearest_map_id = GW::Constants::MapID::None;
+
+    auto get_pos = [](GW::AreaInfo* map) {
+        GW::Vec2f pos = { (float)map->x,(float)map->y };
+        if (!pos.x) {
+            pos.x = (float)(map->icon_start_x + (map->icon_end_x - map->icon_start_x) / 2);
+            pos.y = (float)(map->icon_start_y + (map->icon_end_y - map->icon_start_y) / 2);
+        }
+        if (!pos.x) {
+            pos.x = (float)(map->icon_start_x_dupe + (map->icon_end_x_dupe - map->icon_start_x_dupe) / 2);
+            pos.y = (float)(map->icon_start_y_dupe + (map->icon_end_y_dupe - map->icon_start_y_dupe) / 2);
+        }
+        return pos;
+    };
+
+    GW::Vec2f this_pos = get_pos(this_map);
+    if (!this_pos.x)
+        this_pos = { (float)this_map->icon_start_x,(float)this_map->icon_start_y };
+    for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
+        map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
+        if (!map_info || !map_info->thumbnail_id || !map_info->GetIsOnWorldMap())
+            continue;
+        if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing)
+            continue;
+        switch (map_info->type) {
+        case GW::RegionType::RegionType_City:
+        case GW::RegionType::RegionType_CompetitiveMission:
+        case GW::RegionType::RegionType_CooperativeMission:
+        case GW::RegionType::RegionType_EliteMission:
+        case GW::RegionType::RegionType_MissionOutpost:
+        case GW::RegionType::RegionType_Outpost:
+            break;
+        default:
+            continue;
+        }
+        if (!TravelWindow::Instance().IsMapUnlocked(static_cast<GW::Constants::MapID>(i)))
+            continue;
+        float dist = GW::GetDistance(this_pos, get_pos(map_info));
+        if (dist < nearest_distance) {
+            nearest_distance = dist;
+            nearest = map_info;
+            nearest_map_id = static_cast<GW::Constants::MapID>(i);
+        }
+    }
+    return nearest_map_id;
 }
 
 bool TravelWindow::IsWaitingForMapTravel() {
@@ -1338,6 +1426,12 @@ bool TravelWindow::ParseOutpost(const std::wstring &s, GW::Constants::MapID &out
         best_match_map_id = FindMatchingMap(compare, instance.searchable_map_names, instance.searchable_map_ids, _countof(instance.searchable_map_ids));
         if (best_match_map_id == GW::Constants::MapID::None)
             best_match_map_id = FindMatchingMap(compare, instance.searchable_dungeon_names, instance.dungeon_map_ids, _countof(instance.dungeon_map_ids));
+        if (best_match_map_id == GW::Constants::MapID::None && instance.fetched_searchable_explorable_areas == Ready) {
+            // find explorable area matching this, and then find nearest unlocked outpost.
+            best_match_map_id = FindMatchingMap(compare, const_cast<const char**>(instance.searchable_explorable_areas.data()), const_cast<const GW::Constants::MapID*>(instance.searchable_explorable_area_ids.data()), instance.searchable_explorable_area_ids.size());
+            if(best_match_map_id != GW::Constants::MapID::None)
+                best_match_map_id = GetNearestOutpost(best_match_map_id);
+        }
     }
 
     if (best_match_map_id != GW::Constants::MapID::None)

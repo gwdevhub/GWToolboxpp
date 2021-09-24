@@ -24,7 +24,7 @@ public:
 
     bool TravelFavorite(unsigned int idx);
 
-    bool IsMapUnlocked(GW::Constants::MapID map_id);
+    
 
     // Travel with checks, returns false if already in outpost or outpost not unlocked
     bool Travel(GW::Constants::MapID MapID, GW::Constants::District district, uint32_t district_number = 0);
@@ -49,8 +49,10 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
+    static bool IsMapUnlocked(GW::Constants::MapID map_id);
     static int RegionFromDistrict(GW::Constants::District district);
     static int LanguageFromDistrict(GW::Constants::District district);
+    static GW::Constants::MapID GetNearestOutpost(GW::Constants::MapID map_to);
 
     static void CmdTP(const wchar_t *message, int argc, LPWSTR *argv);
 
@@ -585,4 +587,14 @@ private:
         "zos shivros channel",
         "great temple of balthazar"
     };
+
+    std::vector<char*> searchable_explorable_areas;
+    std::vector<GuiUtils::EncString*> searchable_explorable_areas_decode;
+    std::vector<GW::Constants::MapID> searchable_explorable_area_ids;
+    enum FetchedMapNames : uint8_t {
+        Pending,
+        Decoding,
+        Decoded,
+        Ready
+    } fetched_searchable_explorable_areas = Pending;
 };

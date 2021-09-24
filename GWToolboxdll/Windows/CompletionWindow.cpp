@@ -157,55 +157,7 @@ Mission::Mission(GW::Constants::MapID _outpost,
 	};
 
 GW::Constants::MapID Mission::GetOutpost() {
-	GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
-	GW::AreaInfo* nearest = nullptr;
-	GW::AreaInfo* map_info = nullptr;
-	float nearest_distance = FLT_MAX;
-	GW::Constants::MapID nearest_map_id = GW::Constants::MapID::None;
-
-	auto get_pos = [](GW::AreaInfo* map) {
-		GW::Vec2f pos = { (float)map->x,(float)map->y };
-		if (!pos.x) {
-			pos.x = (float)(map->icon_start_x + (map->icon_end_x - map->icon_start_x) / 2);
-			pos.y = (float)(map->icon_start_y + (map->icon_end_y - map->icon_start_y) / 2);
-		}
-		if (!pos.x) {
-			pos.x = (float)(map->icon_start_x_dupe + (map->icon_end_x_dupe - map->icon_start_x_dupe) / 2);
-			pos.y = (float)(map->icon_start_y_dupe + (map->icon_end_y_dupe - map->icon_start_y_dupe) / 2);
-		}
-		return pos;
-	};
-
-	GW::Vec2f this_pos = get_pos(this_map);
-	if(!this_pos.x)
-		this_pos = { (float)this_map->icon_start_x,(float)this_map->icon_start_y };
-	for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
-		map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
-		if (!map_info || !map_info->thumbnail_id || !map_info->GetIsOnWorldMap())
-			continue;
-		if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing)
-			continue;
-		switch (map_info->type) {
-		case GW::RegionType::RegionType_City:
-		case GW::RegionType::RegionType_CompetitiveMission:
-		case GW::RegionType::RegionType_CooperativeMission:
-		case GW::RegionType::RegionType_EliteMission:
-		case GW::RegionType::RegionType_MissionOutpost:
-		case GW::RegionType::RegionType_Outpost:
-			break;
-		default:
-			continue;
-		}
-		if (!TravelWindow::Instance().IsMapUnlocked(static_cast<GW::Constants::MapID>(i)))
-			continue;
-		float dist = GW::GetDistance(this_pos, get_pos(map_info));
-		if (dist < nearest_distance) {
-			nearest_distance = dist;
-			nearest = map_info;
-			nearest_map_id = static_cast<GW::Constants::MapID>(i);
-		}
-	}
-	return nearest_map_id;
+	return TravelWindow::GetNearestOutpost(map_to);
 }
 bool Mission::Draw(IDirect3DDevice9* )
 {
