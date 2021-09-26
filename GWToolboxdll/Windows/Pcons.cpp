@@ -108,6 +108,7 @@ void Pcon::SetEnabled(bool b) {
     if (*enabled == b) return;
     *enabled = b;
     ResetCounts();
+    Refill(refill_if_below_threshold && IsEnabled() && PconsWindow::Instance().GetEnabled());
 }
 bool Pcon::IsVisible() const {
     return visible;
