@@ -686,24 +686,19 @@ void ChatCommands::CmdDialog(const wchar_t *, int argc, LPWSTR *argv) {
     }
 }
 
-void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR *) {
+void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR * argv) {
     if (!IsMapReady())
         return;
-    switch (GW::Map::GetInstanceType()) {
-    case GW::Constants::InstanceType::Outpost:
-        GW::Items::OpenXunlaiWindow();
-        break;
-    case GW::Constants::InstanceType::Explorable: {
+    if (wcscmp(argv[0], L"chest") == 0 
+        && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         const GW::Agent* const target = GW::Agents::GetTarget();
         if (target && target->type == 0x200) {
             GW::Agents::GoSignpost(target);
             GW::Items::OpenLockedChest();
         }
+        return;
     }
-        break;
-    default:
-        break;
-    }
+    GW::Items::OpenXunlaiWindow();
 }
 
 void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
@@ -775,6 +770,26 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
         Log::Error(buffer);
     }
 }
+
+GW::UI::WindowID ChatCommands::MatchingGWWindow(const wchar_t*, int argc, LPWSTR* argv) {
+    const std::map<GW::UI::WindowID, const wchar_t*> gw_windows = {
+        {GW::UI::WindowID_Compass,L"compass"},
+        {GW::UI::WindowID_HealthBar,L"healthbar"},
+        {GW::UI::WindowID_EnergyBar,L"energybar"},
+        {GW::UI::WindowID_ExperienceBar,L"experiencebar"},
+        {GW::UI::WindowID_Chat,L"chat"}
+    };
+    if (argc < 2)
+        return GW::UI::WindowID_Count;
+    const std::wstring arg = GuiUtils::ToLower(argv[1]);
+    if (arg.size() && arg != L"all") {
+        for (auto it : gw_windows) {
+            if (wcscmp(it.second, arg.c_str()) == 0)
+                return it.first;
+        }
+    }
+    return GW::UI::WindowID_Count;
+};
 
 std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *, int argc, LPWSTR *argv) {
     std::vector<ToolboxUIElement*> ret;
@@ -865,10 +880,10 @@ void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
         }
     }
     std::vector<ToolboxUIElement*> windows = MatchingWindows(message, ignore_last_arg ? argc - 1 : argc, argv);
-    if (windows.empty()) {
+    /*if (windows.empty()) {
         Log::Error("Cannot find window or command '%ls'", argc > 1 ? argv[1] : L"");
         return;
-    }
+    }*/
     for (ToolboxUIElement* window : windows) {
         switch (action) {
         case On:
@@ -881,6 +896,19 @@ void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
             window->visible = !window->visible;
             break;
         }
+    }
+    GW::UI::WindowID gw_window = MatchingGWWindow(message, ignore_last_arg ? argc - 1 : argc, argv);
+    if (gw_window < GW::UI::WindowID_Count) {
+        bool set = true;
+        switch (action) {
+        case Off:
+            set = false;
+            break;
+        case Toggle:
+            set = !GW::UI::GetWindowPosition(gw_window)->visible();
+            break;
+        }
+        GW::UI::SetWindowVisible(gw_window, set);
     }
 }
 

@@ -5,6 +5,8 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/Managers/UIMgr.h>
+
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
@@ -99,6 +101,7 @@ private:
     static const wchar_t* GetRemainingArgsWstr(const wchar_t* message, int argc_start);
 
     static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);
+    static GW::UI::WindowID MatchingGWWindow(const wchar_t*, int argc, LPWSTR* argv);
 
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;
