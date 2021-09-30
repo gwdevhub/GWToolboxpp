@@ -153,10 +153,6 @@ namespace {
         const size_t bag_index = storage1 + page;
         ASSERT(GW::Items::GetBag(bag_index));
 
-        // For materials, we always try to move what we can into the material page
-        if (remaining && item->GetIsMaterial())
-            remaining -= move_materials_to_storage(item);
-
         // if the item is stackable we try to complete stack that already exist in the current storage page
         if(remaining)
             remaining -= complete_existing_stack(item, bag_index, bag_index, remaining);
