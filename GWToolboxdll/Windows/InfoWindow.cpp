@@ -290,10 +290,7 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
         GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
         if (effects.valid()) {
             for (DWORD i = 0; i < effects.size(); ++i) {
-                ImGui::Text("id: %d", effects[i].skill_id);
-                uint32_t time = effects[i].GetTimeRemaining();
-                ImGui::SameLine();
-                ImGui::Text(" duration: %u", time / 1000);
+                ImGui::Text("id: %d | type: %d | skill: %d | duration: %u", effects[i].effect_id, effects[i].effect_type, effects[i].skill_id, effects[i].GetTimeRemaining() / 1000);
             }
         }
         ImGui::TreePop();

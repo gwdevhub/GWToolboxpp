@@ -74,7 +74,9 @@
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/SkillbarWidget.h>
 #include <Widgets/WorldMapWidget.h>
-
+#ifdef _DEBUG
+#include <Widgets/EffectsMonitorWidget.h>
+#endif
 #include "ToolboxSettings.h"
 
 //#define _FUN
@@ -98,6 +100,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
     if (use_teamspeak) optional_modules.push_back(&TeamspeakModule::Instance());
     if (use_observer) optional_modules.push_back(&ObserverModule::Instance());
+
 
     SettingsWindow::Instance().sep_windows = optional_modules.size();
     optional_modules.push_back(&SettingsWindow::Instance());
@@ -152,7 +155,9 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
     if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
     if (use_world_map) optional_modules.push_back(&WorldMapWidget::Instance());
-   
+#if _DEBUG
+    optional_modules.push_back(&EffectsMonitorWidget::Instance());
+#endif
 
     std::sort(
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_widgets),
