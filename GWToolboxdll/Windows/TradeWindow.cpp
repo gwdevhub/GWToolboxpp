@@ -615,6 +615,7 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
     print_game_chat_asc = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat_asc), print_game_chat_asc);
     filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
     filter_local_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_local_trade), filter_local_trade);
+    is_kamadan_chat = ini->GetBoolValue(Name(), VAR_NAME(is_kamadan_chat), is_kamadan_chat);
 
     std::ifstream alert_file;
     alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
@@ -624,6 +625,7 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
         ParseBuffer(alert_buf, alert_words);
     }
     alert_file.close();
+    SwitchSockets();
 }
 
 void TradeWindow::SaveSettings(CSimpleIni* ini) {
@@ -633,6 +635,7 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(print_game_chat_asc), print_game_chat_asc);
     ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
     ini->SetBoolValue(Name(), VAR_NAME(filter_local_trade), filter_local_trade);
+    ini->SetBoolValue(Name(), VAR_NAME(is_kamadan_chat), is_kamadan_chat);
 
     if (alertfile_dirty) {
         std::ofstream bycontent_file;
