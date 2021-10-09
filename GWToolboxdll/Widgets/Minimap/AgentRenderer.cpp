@@ -34,7 +34,7 @@ unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     LoadDefaultColors();
     color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
-    color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_lowhp_modifier), color_agent_damaged_modifier);
+    color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_damaged_modifier), color_agent_damaged_modifier);
     color_eoe = Colors::Load(ini, section, VAR_NAME(color_eoe), color_eoe);
     color_qz = Colors::Load(ini, section, VAR_NAME(color_qz), color_qz);
     color_winnowing = Colors::Load(ini, section, VAR_NAME(color_winnowing), color_winnowing);
