@@ -13,30 +13,15 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
 #include "EffectsMonitorWidget.h"
 
 #include "Timer.h"
 
-void EffectsMonitorWidget::Update(float)
-{
-    //if (!visible) return;
-    if (map_ready && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
-        cached_effects.clear();
-        map_ready = false;
-    }
-
-    if (!initialised) {
-        initialised = true;
-        GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, OnEffectUIMessage);
-        Refresh();
-    }
-    if (!map_ready && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        map_ready = true;
-    }
-}
-
-void EffectsMonitorWidget::Refresh() {
+void EffectsMonitorWidget::RefreshEffects() {
     GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
 
     if (effects.valid()) {
@@ -84,16 +69,20 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
         uint32_t player_id = GW::Agents::GetPlayerId();
         if (player_id && player_id != details->agent_id)
             break;
-        Instance().SetEffect(details->e, false);
+        Instance().SetEffect(details->e);
     }break;
     case 0x10000056: {// Renew effect
         const GW::Effect* e = Instance().GetEffect(*(uint32_t*)wParam);
         if (e)
-            Instance().SetEffect(e, true);
+            Instance().SetEffect(e);
     }break;
     case 0x10000057: {// Remove effect
         Instance().RemoveEffect((uint32_t)wParam);
     }break;
+    case 0x10000140: // Refresh preference e.g. window X/Y position
+    case 0x10000141: // Refresh GW UI element position
+        Instance().RefreshPosition();
+        break;
     }
 }
 void EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
@@ -104,6 +93,7 @@ void EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
                 by_type.second.erase(effects.begin() + i);
                 if (effects.size() == 0)
                     cached_effects.erase(by_type.first);
+                effect_count--;
                 return;
             } 
         }
@@ -119,43 +109,69 @@ const GW::Effect* EffectsMonitorWidget::GetEffect(uint32_t effect_id) {
     }
     return nullptr;
 }
-uint32_t EffectsMonitorWidget::GetEffectType(uint32_t skill_id) {
+uint32_t EffectsMonitorWidget::GetEffectSortOrder(uint32_t skill_id) {
     if (skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Hard_mode))
         return 0;
     const GW::Skill& skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    switch (static_cast<GW::Constants::SkillType>(skill.type)) {
-    case GW::Constants::SkillType::Condition:
-        return 1;
-    case GW::Constants::SkillType::Hex:
-        return 2;
-    case GW::Constants::SkillType::Ritual:
-        return 3;
-    case GW::Constants::SkillType::Skill:
-      if(skill.duration15)
-        return 4;
-      break;
-    case GW::Constants::SkillType::Stance:
+    // Lifted from GmEffect::ActivateEffect(), removed assertion and instead whack everything else into 0xd
+    switch (skill.type) {
+    case 3:
+        return 9;
+    case 4:
         return 5;
-    case GW::Constants::SkillType::Enchantment:
+    case 5:
+        return 7;
+    case 6:
+        return 0xc;
+    case 8:
+        return 4;
+    case 10:
+        return 8;
+    case 0xc:
+        return 0xb;
+    case 0x13:
+        return 10;
+    case 0x16:
         return 6;
     }
-    return 0xFF;
+    return 0xd;
 }
-void EffectsMonitorWidget::SetEffect(const GW::Effect* effect, bool renew) {
-    uint32_t type = GetEffectType(effect->skill_id);
+void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
+    uint32_t type = GetEffectSortOrder(effect->skill_id);
     if (cached_effects.find(type) == cached_effects.end())
         cached_effects[type] = std::vector<GW::Effect>();
+
     size_t current = GetEffectIndex(cached_effects[type], effect->skill_id);
-    if (current != 0xFF && !renew) {
+    if (current != 0xFF) {
         cached_effects[type].erase(cached_effects[type].begin() + current);
         current = 0xFF;
     }
-    if (current != 0xFF)
-        cached_effects[type][current] = *effect;
-    else
-        cached_effects[type].push_back(*effect);
+    cached_effects[type].push_back(*effect);
+    // Trigger durations for aspects etc
+    DurationExpired(cached_effects[type].back());
+    effect_count++;
 }
-
+bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
+    uint32_t timer = GW::MemoryMgr::GetSkillTimer();
+    switch (static_cast<GW::Constants::SkillID>(effect.skill_id)) {
+        case GW::Constants::SkillID::Aspect_of_Exhaustion:
+        case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
+        case GW::Constants::SkillID::Scorpion_Aspect:
+            effect.duration = 30.f;
+            effect.timestamp = timer;
+            return true;
+    }
+    if (!effect.duration)
+        return false;
+    // Effect expired
+    const GW::Effect* e = GetEffect(effect.effect_id);
+    if (!e) {
+        RemoveEffect(effect.effect_id);
+        return true;
+    }
+    return false;
+    // Got here; effect has expired, but game hasn't removed it yet e.g. lag. Still need to draw it.
+}
 size_t EffectsMonitorWidget::GetEffectIndex(const std::vector<GW::Effect>& arr, uint32_t skill_id) {
     for (size_t i = 0; i < arr.size(); i++) {
         if (arr[i].skill_id == skill_id)
@@ -163,20 +179,9 @@ size_t EffectsMonitorWidget::GetEffectIndex(const std::vector<GW::Effect>& arr, 
     }
     return 0xFF;
 }
-
-void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
-{
-    if (!visible) return;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
-
+void EffectsMonitorWidget::RefreshPosition() {
     GW::UI::WindowPosition* pos = GW::UI::GetWindowPosition(GW::UI::WindowID_EffectsMonitor);
-    ImVec2 skillsize(default_skill_width, default_skill_width);
-    ImVec2 winsize;
-    const auto window_flags = GetWinFlags();
-
-    float row_count = 1.f;
-    float skills_per_row = 99.f;
-    if (snap_to_gw_interface && pos) {
+    if (pos) {
         if (pos->state & 0x2) {
             // Default layout
             pos->state = 0x21;
@@ -186,82 +191,190 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         float uiscale = GuiUtils::GetGWScaleMultiplier();
         GW::Vec2f xAxis = pos->xAxis(uiscale);
         GW::Vec2f yAxis = pos->yAxis(uiscale);
-        float width = xAxis.y - xAxis.x;
-        float height = yAxis.y - yAxis.x;
-        layout = width > height ? Layout::Rows : Layout::Columns;
-        m_skill_width = skillsize.y = skillsize.x = std::min<float>(default_skill_width * uiscale, std::min<float>(width, height));
+        window_size = { std::roundf(xAxis.y - xAxis.x), std::roundf(yAxis.y - yAxis.x) };
+        window_pos = { std::roundf(xAxis.x),std::roundf(yAxis.x) };
+        layout = window_size.y > window_size.x ? Layout::Columns : Layout::Rows;
+        m_skill_width = std::roundf(std::min<float>(default_skill_width * uiscale, std::min<float>(window_size.x, window_size.y)));
         if (layout == Layout::Rows) {
-            row_count = height / m_skill_width;
-            skills_per_row = std::floor(width / m_skill_width);
+            row_count = std::floorf(window_size.y / m_skill_width);
+            skills_per_row = std::floorf(window_size.x / m_skill_width);
         }
         else {
-            row_count = width / m_skill_width;
-            skills_per_row = std::floor(height / m_skill_width);
+            row_count = std::floorf(window_size.x / m_skill_width);
+            skills_per_row = std::floorf(window_size.y / m_skill_width);
         }
-        ImGui::SetNextWindowPos({ xAxis.x,yAxis.x });
-        winsize = { width,height };
+
+        GW::Vec2f mid_point(window_pos.x + window_size.x / 2.f, window_pos.y + window_size.y / 2.f);
+        GW::Vec2f screen_size = { static_cast<float>(GW::Render::GetViewportWidth()) , static_cast<float>(GW::Render::GetViewportHeight()) };
+        imgui_pos = window_pos;
+        imgui_size = { screen_size.x - window_pos.x, screen_size.y - window_pos.y };
+        x_translate = 1.f;
+        if (mid_point.x > screen_size.x / 2.f) {
+            // Right aligned effects
+            x_translate = -1.f;
+            imgui_pos.x = 0.f;
+            imgui_size.x = window_pos.x + window_size.x;
+        }
+            
+        y_translate = 1.f;
+        if (mid_point.y > screen_size.y / 2.f) {
+            // Bottom aligned effects
+            y_translate = -1.f;
+            imgui_pos.y = 0.f;
+            imgui_size.y = window_pos.y + window_size.y;
+        }
+    }
+}
+
+void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
+{
+    if (!visible) return;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
+        if (map_ready) {
+            cached_effects.clear();
+            effect_count = 0;
+            map_ready = false;
+        }
+        return;
+    }
+    map_ready = true;
+
+    if (!initialised) {
+        initialised = true;
+        GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, OnEffectUIMessage);
+        GW::GameThread::Enqueue([]() {
+            Instance().RefreshEffects();
+            });
+        RefreshPosition();
     }
 
-    ImGui::SetNextWindowSize(winsize);
+    const auto window_flags = GetWinFlags(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
+    
+    ImGui::SetNextWindowSize(imgui_size);
+    ImGui::SetNextWindowPos(imgui_pos);
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f,0.0f));
     
     ImGui::Begin(Name(), nullptr, window_flags);
-    const ImVec2 winpos = ImGui::GetWindowPos();
 
-    ImVec2 pos1(winpos.x, winpos.y);
-    
-
-    char remaining_str[8];
+    ImVec2 skill_top_left({ imgui_pos.x, imgui_pos.y });
+    if (y_translate < 0) {
+        skill_top_left.y = imgui_pos.y + imgui_size.y - m_skill_width;
+    }
+    if (x_translate < 0) {
+        skill_top_left.x = imgui_pos.x + imgui_size.x - m_skill_width;
+    }
+    char remaining_str[16];
+    ImGui::PushFont(GuiUtils::GetFont(font_effects));
 draw_effects:
     float row_skills_drawn = 0.f;
-        for (auto& it : cached_effects) {
-            for (const GW::Effect& effect : it.second) {
-                if (effect.duration) {
-                    float remaining = effect.GetTimeRemaining() / 1000.f;
-                    if (remaining < effect.duration) {
-                        snprintf(remaining_str, _countof(remaining_str), remaining < 10.f ? "%.1f" : "%.0f", remaining);
-                        const ImVec2 label_size = ImGui::CalcTextSize(remaining_str);
-                        ImVec2 label_pos((pos1.x + skillsize.x / 2 - label_size.x / 2) + 1, (pos1.y + skillsize.y / 2 - label_size.y / 2) + 1);
-                        ImGui::GetWindowDrawList()->AddText(label_pos, Colors::Black(), remaining_str);
-                        label_pos.x--;
-                        label_pos.y--;
-                        ImGui::GetWindowDrawList()->AddText(label_pos, Colors::White(), remaining_str);
-                    }
-                    else {
-                        // Effect expired
-                        const GW::Effect* e = GetEffect(effect.effect_id);
-                        if (!e) {
-                            RemoveEffect(effect.effect_id);
-                            goto draw_effects;
-                        }
-                        // Got here; effect has expired, but game hasn't removed it yet e.g. lag. Still need to draw it.
-                    }
-
-                }
-                row_skills_drawn++;
-                ImVec2 pos2 = ImVec2(pos1.x + skillsize.x, pos1.y + skillsize.y);
-                if (layout == Layout::Rows) {
-                    pos1.x += skillsize.x;
-                    if (row_skills_drawn == skills_per_row) {
-                        pos1.y += skillsize.y;
-                        pos1.x = winpos.x;
-                    }
-                        
-                }
-                else {
-                    pos1.y += skillsize.y;
-                    if (row_skills_drawn == skills_per_row) {
-                        pos1.x += skillsize.x;
-                        pos1.y = winpos.y;
-                    }
-                        
+    float row_idx = 1.f;
+    int draw = 0;
+    for (auto& it : cached_effects) {
+        for (GW::Effect& effect : it.second) {
+            if (effect.duration) {
+                uint32_t remaining = effect.GetTimeRemaining();
+                draw = remaining < (uint32_t)effect.duration * 1000;
+                if (draw) {
+                    draw = UptimeToString(remaining_str, remaining);
+                } else if(DurationExpired(effect)) {
+                    goto draw_effects;
                 }
             }
+            else if(show_vanquish_counter && effect.skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Hard_mode)) {
+                size_t left = GW::Map::GetFoesToKill();
+                size_t killed = GW::Map::GetFoesKilled();
+                draw = left ? snprintf(remaining_str, 16, "%d/%d", killed, killed + left) : 0;
+            }
+            else {
+                draw = 0;
+            }
+            if (draw > 0) {
+                const ImVec2 label_size = ImGui::CalcTextSize(remaining_str);
+                ImVec2 label_pos(skill_top_left.x + m_skill_width - label_size.x - 1.f, skill_top_left.y + m_skill_width - label_size.y - 1.f);
+                if ((color_background & IM_COL32_A_MASK) != 0)
+                    ImGui::GetWindowDrawList()->AddRectFilled({ skill_top_left.x + m_skill_width - label_size.x - 2.f, skill_top_left.y + m_skill_width - label_size.y }, { skill_top_left.x + m_skill_width, skill_top_left.y + m_skill_width }, color_background);
+                if ((color_text_shadow & IM_COL32_A_MASK) != 0)
+                    ImGui::GetWindowDrawList()->AddText({ label_pos.x + 1, label_pos.y + 1 }, color_text_shadow, remaining_str);
+                ImGui::GetWindowDrawList()->AddText(label_pos, color_text_effects, remaining_str);
+            }
+            row_skills_drawn++;
+            if (layout == Layout::Rows) {
+                skill_top_left.x += (m_skill_width * x_translate);
+                if (row_skills_drawn == skills_per_row) {
+                    skill_top_left.y += (m_skill_width * y_translate);
+                    skill_top_left.x = x_translate > 0 ? imgui_pos.x : imgui_pos.x + imgui_size.x - m_skill_width;
+                    row_idx++;
+                    row_skills_drawn = 0;
+                }
+                        
+            }
+            else {
+                skill_top_left.y += (m_skill_width * y_translate);
+                if (row_skills_drawn == skills_per_row) {
+                    skill_top_left.x += (m_skill_width * x_translate);
+                    skill_top_left.y = y_translate > 0 ? imgui_pos.y : imgui_pos.y + imgui_size.y - m_skill_width;
+                    row_idx++;
+                    row_skills_drawn = 0;
+                }      
+            }
         }
-    
-    
-
+    }
+    ImGui::PopFont();
     ImGui::End();
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar(2);
+}
+void EffectsMonitorWidget::LoadSettings(CSimpleIni* ini)
+{
+    ToolboxWidget::LoadSettings(ini);
+
+    decimal_threshold = ini->GetLongValue(Name(), VAR_NAME(decimal_threshold), decimal_threshold);
+    round_up = ini->GetBoolValue(Name(), VAR_NAME(round_up), round_up);
+    show_vanquish_counter = ini->GetBoolValue(Name(), VAR_NAME(show_vanquish_counter), show_vanquish_counter);
+    font_effects = static_cast<GuiUtils::FontSize>(
+        ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
+    color_text_effects = Colors::Load(ini, Name(), VAR_NAME(color_text_effects), color_text_effects);
+    color_text_shadow = Colors::Load(ini, Name(), VAR_NAME(color_text_shadow), color_text_shadow);
+    color_background = Colors::Load(ini, Name(), VAR_NAME(color_background), color_background);
+}
+void EffectsMonitorWidget::SaveSettings(CSimpleIni* ini)
+{
+    ToolboxWidget::SaveSettings(ini);
+
+
+    ini->SetLongValue(Name(), VAR_NAME(decimal_threshold), decimal_threshold);
+    ini->SetBoolValue(Name(), VAR_NAME(round_up), round_up);
+    ini->SetBoolValue(Name(), VAR_NAME(show_vanquish_counter), show_vanquish_counter);
+
+    ini->SetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects));
+    Colors::Save(ini, Name(), VAR_NAME(color_text_effects), color_text_effects);
+    Colors::Save(ini, Name(), VAR_NAME(color_text_shadow), color_text_shadow);
+    Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
+}
+void EffectsMonitorWidget::DrawSettingInternal()
+{
+    ToolboxWidget::DrawSettingInternal();
+
+    constexpr char* font_sizes[] = { "16", "18", "20", "24", "42", "48" };
+
+    ImGui::PushID("effects_monitor_overlay_settings");
+    ImGui::Combo("Text size", reinterpret_cast<int*>(&font_effects), font_sizes, 6);
+    Colors::DrawSettingHueWheel("Text color", &color_text_effects);
+    Colors::DrawSettingHueWheel("Text shadow", &color_text_shadow);
+    Colors::DrawSettingHueWheel("Effect duration background", &color_background);
+    ImGui::InputInt("Text decimal threshold", &decimal_threshold);
+    ImGui::ShowHelp("When should decimal numbers start to show (in milliseconds)");
+    ImGui::Checkbox("Round up integers", &round_up);
+    ImGui::SameLine();
+    ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &show_vanquish_counter);
+    ImGui::PopID();
+}
+int EffectsMonitorWidget::UptimeToString(char arr[8], uint32_t cd) const
+{
+    if (cd >= static_cast<uint32_t>(decimal_threshold)) {
+        if (round_up) cd += 1000;
+        return snprintf(arr, 8, "%d", cd / 1000);
+    }
+    return snprintf(arr, 8, "%.1f", cd / 1000.f);
 }

@@ -7,7 +7,7 @@ class EffectsMonitorWidget final : public ToolboxWidget
 {
     EffectsMonitorWidget()
     {
-        is_resizable = false;
+        is_movable = is_resizable = false;
     };
     ~EffectsMonitorWidget(){};
 
@@ -24,16 +24,26 @@ public:
     }
     const char* Icon() const override { return ICON_FA_HISTORY; }
 
+    void LoadSettings(CSimpleIni* ini) override;
+    void SaveSettings(CSimpleIni* ini) override;
+    void DrawSettingInternal() override;
 
-    // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9 *pDevice) override;
-
-    void Update(float delta) override;
-
+    // Static handler for GW UI Message events. Updates ongoing effects and refreshes UI position.
     static void OnEffectUIMessage(GW::HookStatus*, uint32_t message_id, void* wParam, void* lParam);
 
 
 private:
+
+    GuiUtils::FontSize font_effects = GuiUtils::FontSize::header2;
+    Color color_text_effects = Colors::White();
+    Color color_background = Colors::ARGB(128, 0, 0, 0);
+    Color color_text_shadow = Colors::Black();
+
+    // duration -> string settings
+    int decimal_threshold = 600; // when to start displaying decimals
+    bool round_up = true;        // round up or down?
+    bool show_vanquish_counter = true;
 
     // Overall settings
     enum Layout
@@ -43,22 +53,41 @@ private:
     };
     Layout layout = Layout::Rows;
     const float default_skill_width = 52.f;
+    // Runtime params
     float m_skill_width = 52.f;
+    float row_count = 1.f;
+    float skills_per_row = 99.f;
+    ImVec2 window_pos = { 0.f, 0.f };
+    ImVec2 window_size = { 0.f, 0.f };
+    float x_translate = 1.f; // Multiplier for traversing effects on the x axis
+    float y_translate = -1.f; // Multiplier for traversing effects on the y axis
+    size_t effect_count = 0;
+    ImVec2 imgui_pos = { 0.f, 0.f };
+    ImVec2 imgui_size = { 0.f, 0.f };
+
     bool map_ready = false;
     bool initialised = false;
-
+    // Emulated effects in order of addition
     std::map<uint32_t,std::vector<GW::Effect>> cached_effects;
-
+    // Find index of active effect from gwtoolbox overlay
     size_t GetEffectIndex(const std::vector<GW::Effect>& arr, uint32_t skill_id);
-    void SetEffect(const GW::Effect* effect, bool renew = false);
+    // Update effect on the gwtoolbox overlay
+    void SetEffect(const GW::Effect* effect);
+    // Get matching effect from gwtoolbox overlay
     const GW::Effect* GetEffect(uint32_t effect_id);
+    // Remove effect from gwtoolbox overlay
     void RemoveEffect(uint32_t skill_id);
-    void Refresh();
+    // Forcefully removes then re-adds the current effects; used for initialising
+    void RefreshEffects();
+    // Find the drawing order of the skill based on the gw effect monitor
+    uint32_t GetEffectSortOrder(uint32_t skill_id);
+    // Recalculate position of widget based on gw effect monitor position
+    void RefreshPosition();
+    // Triggered when an effect has reached < 0 duration. Returns true if redraw is needed.
+    bool DurationExpired(GW::Effect& effect);
 
-    uint32_t GetEffectType(uint32_t skill_id);
+    int UptimeToString(char arr[8], uint32_t cd) const;
 
     GW::HookEntry OnEffect_Entry;
-
-    bool snap_to_gw_interface = true;
 
 };
