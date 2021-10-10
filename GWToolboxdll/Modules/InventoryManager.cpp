@@ -38,14 +38,17 @@ namespace {
     {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
     }
-    std::vector<uint32_t> pending_moves;
+    std::unordered_map<uint32_t, clock_t> pending_moves; // { bag_idx | slot, move_started_at }
     bool get_pending_move(uint32_t bag_idx, uint32_t slot) {
         uint32_t bag_slot = (uint32_t)bag_idx << 16 | slot;
-        return std::find(pending_moves.begin(), pending_moves.end(), bag_slot) != pending_moves.end();
+        auto found = pending_moves.find(bag_slot);
+        if (found == pending_moves.end())
+            return false;
+        return TIMER_DIFF(found->second) < 3000; // 3 second timeout incase of hanging moves
     }
     void set_pending_move(uint32_t bag_idx, uint32_t slot) {
         uint32_t bag_slot = (uint32_t)bag_idx << 16 | slot;
-        pending_moves.push_back(bag_slot);
+        pending_moves[bag_slot] = TIMER_INIT();
     }
     // GW Client doesn't actually know max material storage size for the account.
     // We can make a guess by checking how many materials are currently in storage.
