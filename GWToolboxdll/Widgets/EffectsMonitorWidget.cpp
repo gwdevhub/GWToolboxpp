@@ -3,6 +3,9 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Skill.h>
@@ -23,37 +26,37 @@
 
 void EffectsMonitorWidget::RefreshEffects() {
     GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-
-    if (effects.valid()) {
-        std::vector<GW::Effect> readd_effects;
-        for (GW::Effect& effect : effects) {
-            readd_effects.push_back(effect);
-        }
-        struct Packet : GW::Packet::StoC::PacketBase {
-            uint32_t agent_id;
-            uint32_t skill_id;
-            uint32_t effect_type;
-            uint32_t effect_id;
-            float duration;
-        } add;
-        add.header = GAME_SMSG_EFFECT_APPLIED;
-        struct Packet2 : GW::Packet::StoC::PacketBase {
-            uint32_t agent_id;
-            uint32_t effect_id;
-        } remove;
-        remove.header = GAME_SMSG_EFFECT_REMOVED;
-        add.agent_id = remove.agent_id = GW::Agents::GetPlayerId();
-
-        for (GW::Effect& effect : readd_effects) {
-            remove.effect_id = effect.effect_id;
-            GW::StoC::EmulatePacket(&remove);
-            add.skill_id = effect.skill_id;
-            add.effect_id = effect.effect_id;
-            add.duration = effect.duration;
-            add.effect_type = effect.effect_type;
-            GW::StoC::EmulatePacket(&add);
-        }
+    if (!effects.valid())
+        return;
+    std::vector<GW::Effect> readd_effects;
+    for (GW::Effect& effect : effects) {
+        readd_effects.push_back(effect);
     }
+    struct Packet : GW::Packet::StoC::PacketBase {
+        uint32_t agent_id;
+        uint32_t skill_id;
+        uint32_t effect_type;
+        uint32_t effect_id;
+        float duration;
+    } add;
+    add.header = GAME_SMSG_EFFECT_APPLIED;
+    struct Packet2 : GW::Packet::StoC::PacketBase {
+        uint32_t agent_id;
+        uint32_t effect_id;
+    } remove;
+    remove.header = GAME_SMSG_EFFECT_REMOVED;
+    add.agent_id = remove.agent_id = GW::Agents::GetPlayerId();
+
+    for (GW::Effect& effect : readd_effects) {
+        remove.effect_id = effect.effect_id;
+        GW::StoC::EmulatePacket(&remove);
+        add.skill_id = effect.skill_id;
+        add.effect_id = effect.effect_id;
+        add.duration = effect.duration;
+        add.effect_type = effect.effect_type;
+        GW::StoC::EmulatePacket(&add);
+    }
+    Instance().SetMoralePercent(GW::GameContext::instance()->world->morale);
 }
 void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_id, void* wParam, void* lParam) {
     UNREFERENCED_PARAMETER(wParam);
@@ -76,6 +79,16 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
         if (e)
             Instance().SetEffect(e);
     }break;
+    case 0x10000047: { // Morale boost/DP change
+        struct Payload {
+            uint32_t agent_id;
+            uint32_t percent;
+        } *details = (Payload*)wParam;
+        uint32_t player_id = GW::Agents::GetPlayerId();
+        if (player_id && player_id != details->agent_id)
+            break;
+        Instance().SetMoralePercent(details->percent);
+    } break;
     case 0x10000057: {// Remove effect
         Instance().RemoveEffect((uint32_t)wParam);
     }break;
@@ -83,6 +96,18 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
     case 0x10000141: // Refresh GW UI element position
         Instance().RefreshPosition();
         break;
+    }
+}
+void EffectsMonitorWidget::SetMoralePercent(uint32_t morale_percent) {
+    // The in-game effect monitor does something stupid to "inject" the morale boost because its not really a skill
+    // We're going to spoof it as a skill with effect id 0 to put it in the right place.
+    GW::Effect morale_effect = { 0 };
+    morale_effect.skill_id = morale_effect.effect_id = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
+    if (morale_percent == 100) {
+        RemoveEffect(morale_effect.effect_id);
+    }
+    else {
+        SetEffect(&morale_effect);
     }
 }
 void EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
@@ -110,8 +135,12 @@ const GW::Effect* EffectsMonitorWidget::GetEffect(uint32_t effect_id) {
     return nullptr;
 }
 uint32_t EffectsMonitorWidget::GetEffectSortOrder(uint32_t skill_id) {
-    if (skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Hard_mode))
+    switch (static_cast<GW::Constants::SkillID>(skill_id)) {
+    case GW::Constants::SkillID::Hard_mode:
         return 0;
+    case GW::Constants::SkillID::No_Skill:
+        return 1; // Morale boost from ui message 0x10000047
+    }
     const GW::Skill& skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
     // Lifted from GmEffect::ActivateEffect(), removed assertion and instead whack everything else into 0xd
     switch (skill.type) {
@@ -267,6 +296,9 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     }
     char remaining_str[16];
     ImGui::PushFont(GuiUtils::GetFont(font_effects));
+
+
+
 draw_effects:
     float row_skills_drawn = 0.f;
     float row_idx = 1.f;
@@ -302,22 +334,22 @@ draw_effects:
             row_skills_drawn++;
             if (layout == Layout::Rows) {
                 skill_top_left.x += (m_skill_width * x_translate);
-                if (row_skills_drawn == skills_per_row) {
+                if (row_skills_drawn == skills_per_row && row_idx < row_count) {
                     skill_top_left.y += (m_skill_width * y_translate);
                     skill_top_left.x = x_translate > 0 ? imgui_pos.x : imgui_pos.x + imgui_size.x - m_skill_width;
                     row_idx++;
                     row_skills_drawn = 0;
                 }
-                        
+
             }
             else {
                 skill_top_left.y += (m_skill_width * y_translate);
-                if (row_skills_drawn == skills_per_row) {
+                if (row_skills_drawn == skills_per_row && row_idx < row_count) {
                     skill_top_left.x += (m_skill_width * x_translate);
                     skill_top_left.y = y_translate > 0 ? imgui_pos.y : imgui_pos.y + imgui_size.y - m_skill_width;
                     row_idx++;
                     row_skills_drawn = 0;
-                }      
+                }
             }
         }
     }

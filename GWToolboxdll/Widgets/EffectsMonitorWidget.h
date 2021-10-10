@@ -85,6 +85,8 @@ private:
     void RefreshPosition();
     // Triggered when an effect has reached < 0 duration. Returns true if redraw is needed.
     bool DurationExpired(GW::Effect& effect);
+    // Adds or removes the morale "effect" depending on percent
+    void SetMoralePercent(uint32_t morale_percent);
 
     int UptimeToString(char arr[8], uint32_t cd) const;
 
