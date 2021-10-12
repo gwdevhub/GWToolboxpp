@@ -92,6 +92,10 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
     case 0x10000057: {// Remove effect
         Instance().RemoveEffect((uint32_t)wParam);
     }break;
+    case 0x1000010F: { // Map change
+        Instance().cached_effects.clear();
+        Instance().effect_count = 0;
+    } break;
     case 0x10000140: // Refresh preference e.g. window X/Y position
     case 0x10000141: // Refresh GW UI element position
         Instance().RefreshPosition();
@@ -258,15 +262,6 @@ void EffectsMonitorWidget::RefreshPosition() {
 void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 {
     if (!visible) return;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
-        if (map_ready) {
-            cached_effects.clear();
-            effect_count = 0;
-            map_ready = false;
-        }
-        return;
-    }
-    map_ready = true;
 
     if (!initialised) {
         initialised = true;

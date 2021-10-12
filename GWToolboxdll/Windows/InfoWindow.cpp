@@ -566,7 +566,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     GW::ItemContext* i = g->items;
     GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
-    (g || c || w || p || m || i || me || me_player);
+    GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+    (g || c || w || p || m || i || me || me_player || log);
 #endif
 }
 
