@@ -64,7 +64,7 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
     UNREFERENCED_PARAMETER(message_id);
     
     switch (message_id) {
-    case 0x10000055: {// Add effect
+    case GW::UI::kEffectAdd: {
         struct Payload {
             uint32_t agent_id;
             GW::Effect* e;
@@ -74,12 +74,12 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
             break;
         Instance().SetEffect(details->e);
     }break;
-    case 0x10000056: {// Renew effect
+    case GW::UI::kEffectRenew: {
         const GW::Effect* e = Instance().GetEffect(*(uint32_t*)wParam);
         if (e)
             Instance().SetEffect(e);
     }break;
-    case 0x10000047: { // Morale boost/DP change
+    case GW::UI::kMoraleChange: { // Morale boost/DP change
         struct Payload {
             uint32_t agent_id;
             uint32_t percent;
@@ -89,15 +89,15 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
             break;
         Instance().SetMoralePercent(details->percent);
     } break;
-    case 0x10000057: {// Remove effect
+    case GW::UI::kEffectRemove: {// Remove effect
         Instance().RemoveEffect((uint32_t)wParam);
     }break;
-    case 0x1000010F: { // Map change
+    case GW::UI::kMapChange: { // Map change
         Instance().cached_effects.clear();
         Instance().effect_count = 0;
     } break;
-    case 0x10000140: // Refresh preference e.g. window X/Y position
-    case 0x10000141: // Refresh GW UI element position
+    case GW::UI::kPreferenceChanged: // Refresh preference e.g. window X/Y position
+    case GW::UI::kUIPositionChanged: // Refresh GW UI element position
         Instance().RefreshPosition();
         break;
     }
