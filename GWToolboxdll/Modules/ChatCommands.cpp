@@ -13,6 +13,7 @@
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Quest.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -339,6 +340,10 @@ void ChatCommands::SaveSettings(CSimpleIni* ini) {
     ini->SetDoubleValue(Name(), VAR_NAME(cam_speed), cam_speed);
 }
 
+void ChatCommands::CmdPingQuest(const wchar_t* , int , LPWSTR* ) {
+    Instance().quest_ping.Init();
+}
+
 void ChatCommands::Initialize() {
     ToolboxModule::Initialize();
     const DWORD def_scale = 0x64000000;
@@ -398,6 +403,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
     GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
     GW::Chat::CreateCommand(L"ping", ChatCommands::CmdPing);
+    GW::Chat::CreateCommand(L"quest", ChatCommands::CmdPingQuest);
     GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
     GW::Chat::CreateCommand(L"transmotarget", ChatCommands::CmdTransmoTarget);
     GW::Chat::CreateCommand(L"transmoparty", ChatCommands::CmdTransmoParty);
@@ -489,6 +495,43 @@ void ChatCommands::Update(float delta) {
     }
     skill_to_use.Update();
     npc_to_find.Update();
+    quest_ping.Update();
+
+}
+void ChatCommands::QuestPing::Init() {
+    auto w = GW::GameContext::instance()->world;
+    if (!w->active_quest_id)
+        return;
+    for (auto& quest : w->quest_log) {
+        if (quest.quest_id != w->active_quest_id)
+            continue;
+        name.reset(quest.name);
+        objectives.reset(quest.objectives);
+        return;
+    }
+
+}
+void ChatCommands::QuestPing::Update() {
+    if (!name.wstring().empty()) {
+        wchar_t print_buf[128];
+        swprintf(print_buf, _countof(print_buf), L"Current Quest: %s", name.wstring().c_str());
+        GW::Chat::SendChat('#', print_buf);
+    }
+    if (!objectives.wstring().empty()) {
+        // Find current objective using regex
+        std::wregex current_obj_regex(L"\\{s\\}([^\\{]+)");
+        std::wsmatch m;
+        if (std::regex_search(objectives.wstring(), m, current_obj_regex)) {
+            wchar_t print_buf[128];
+            swprintf(print_buf, _countof(print_buf), L" - %s", m[1].str().c_str());
+            GW::Chat::SendChat('#', print_buf);
+        }
+        objectives.reset(nullptr);
+    }
+    if (!name.wstring().empty()) {
+        GW::Chat::SendChat('#', GuiUtils::WikiUrl(name.wstring().c_str()).c_str());
+        name.reset(nullptr);
+    }
 }
 void ChatCommands::SearchAgent::Init(const wchar_t* _search, TargetType type) {
     started = 0;

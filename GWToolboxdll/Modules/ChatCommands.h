@@ -7,6 +7,8 @@
 
 #include <GWCA/Managers/UIMgr.h>
 
+#include <GuiUtils.h>
+
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
@@ -91,6 +93,7 @@ private:
     static void CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdHeroBehaviour(const wchar_t *message, int argc, LPWSTR *argv);
+    static void CmdPingQuest(const wchar_t* message, int argc, LPWSTR* argv);
     
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string name, PendingTransmo &transmo);
@@ -125,6 +128,14 @@ private:
         clock_t skill_timer = clock();
         void Update();
     } skill_to_use;
+
+    struct QuestPing {
+        GuiUtils::EncString name;
+        GuiUtils::EncString description;
+        GuiUtils::EncString objectives;
+        void Update();
+        void Init();
+    } quest_ping;
 protected:
     const float SettingsWeighting() override { return  1.2f; };
 };
