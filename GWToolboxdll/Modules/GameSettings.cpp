@@ -2455,7 +2455,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wPar
         uint32_t quest_id = c->active_quest_id;
         for (const GW::Quest& q : c->quest_log) {
             if (q.quest_id == quest_id) {
-                Instance().pending_wiki_search_term = new GuiUtils::EncString((wchar_t*)q.h000C);
+                Instance().pending_wiki_search_term = new GuiUtils::EncString(q.name);
                 break;
             }
         }

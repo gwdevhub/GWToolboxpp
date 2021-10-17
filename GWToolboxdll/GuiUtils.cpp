@@ -22,12 +22,10 @@ namespace {
     bool fonts_loading = false;
     bool fonts_loaded = false;
 }
-
-void GuiUtils::OpenWiki(std::wstring term) {
-    // @Enhancement: Would be nice to use GW's "/wiki" hook in here, but don't want to bother with another RVA so do it ourselves.
+std::string GuiUtils::WikiUrl(std::wstring term) {
     // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
     if (!term.size())
-        return;
+        return "";
     uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
     char* wiki_prefix = "https://wiki.guildwars.com/wiki/?search=%s";
     switch (static_cast<GW::Constants::MapLanguage>(language)) {
@@ -39,14 +37,14 @@ void GuiUtils::OpenWiki(std::wstring term) {
         break;
 
     }
-
-    
-
-
     char cmd[256];
     std::string encoded = UrlEncode(GuiUtils::WStringToString(term));
     snprintf(cmd, _countof(cmd), wiki_prefix, encoded.c_str());
-    GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, cmd);
+    return cmd;
+}
+void GuiUtils::OpenWiki(std::wstring term) {
+    // @Enhancement: Would be nice to use GW's "/wiki" hook in here, but don't want to bother with another RVA so do it ourselves.
+    GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, (void*)WikiUrl(term).c_str());
     //ShellExecuteW(NULL, L"open", cmd, NULL, NULL, SW_SHOWNORMAL);
 }
 
@@ -393,6 +391,26 @@ bool GuiUtils::IniToArray(const std::string& in, uint32_t* out, size_t out_len) 
         out[offset++] = 0;
     }
     return true;
+}
+std::string GuiUtils::TimeToString(uint32_t utc_timestamp) {
+    time_t utc_timestamp_timet = (time_t)utc_timestamp;
+    struct tm timeinfo = *localtime(&utc_timestamp_timet);
+    time_t now = time(NULL);
+    struct tm nowinfo = *localtime(&now);
+    std::string out;
+    out.resize(64);
+    int written = 0;
+    if (timeinfo.tm_yday != nowinfo.tm_yday || timeinfo.tm_year != nowinfo.tm_year) {
+        char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        written += snprintf(&out[written], out.capacity() - written,
+            "%s %02d", months[timeinfo.tm_mon], timeinfo.tm_mday);
+    }
+    if (timeinfo.tm_year != nowinfo.tm_year) {
+        written += snprintf(&out[written], out.capacity() - written," %d", timeinfo.tm_year + 1900);
+    }
+    written += snprintf(&out[written], out.capacity() - written, written > 0 ? ", %02d:%02d" : " %02d:%02d",
+        timeinfo.tm_hour, timeinfo.tm_min);
+    return out;
 }
 bool GuiUtils::ArrayToIni(const wchar_t* in, std::string* out)
 {
