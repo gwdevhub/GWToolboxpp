@@ -180,6 +180,19 @@ void InfoWindow::DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, bool
     ImGui::PopID();
 }
 
+void InfoWindow::DrawGuildInfo(GW::Guild* guild) {
+    if (!guild) return;
+    ImGui::PushID(guild->index);
+    if (ImGui::TreeNodeEx("Guild Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        ImGui::PushID("guild_info");
+        InfoField("Addr", "0x%p", guild);
+        InfoField("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());
+        InfoField("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");
+        ImGui::PopID();
+        ImGui::TreePop();
+    }
+    ImGui::PopID();
+}
 void InfoWindow::DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool force_advanced) {
     if (!item) return;
     name->reset(item->single_item_name);
@@ -273,19 +286,7 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
             ImGui::TreePop();
         }
     }
-    if (guild) {
-        if (ImGui::TreeNodeEx("Guild Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            ImGui::PushID("guild_info");
-            InfoField("Addr", "%p", guild);
-            InfoField("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());
-            InfoField("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");
-            if (ImGui::Button("Go to Guild Hall")) {
-                GW::GuildMgr::TravelGH(guild->key);
-            }
-            ImGui::PopID();
-            ImGui::TreePop();
-        }
-    }
+    DrawGuildInfo(guild);
     if (is_player && ImGui::TreeNodeEx("Effects", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
         if (effects.valid()) {
@@ -559,6 +560,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 #ifdef _DEBUG
     // For debugging changes to flags/arrays etc
     GW::GameContext* g = GW::GameContext::instance();
+    GW::GuildContext* gu = g->guild;
     GW::CharContext* c = g->character;
     GW::WorldContext* w = g->world;
     GW::PartyContext* p = g->party;
@@ -567,7 +569,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
     GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    (g || c || w || p || m || i || me || me_player || log);
+    (g || c || w || p || m || i || me || me_player || log || gu);
 #endif
 }
 

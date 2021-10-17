@@ -1282,24 +1282,10 @@ void TravelWindow::CmdTP(const wchar_t *message, int argc, LPWSTR *argv)
     std::wstring argDistrict = GuiUtils::ToLower(argv[argc - 1]);
     // Guild hall
     if (argOutpost == L"gh") {
-        if (argc == 2) {
-            // "/tp gh"
-            if (IsInGH())
-                GW::GuildMgr::LeaveGH();
-            else
-                GW::GuildMgr::TravelGH();
-            return;
-        }
-        // "/tp gh lag" = travel to Guild Hall belonging to Zero Files Remaining [LaG]
-        std::wstring argGuildTag = GuiUtils::ToLower(argv[2]);
-        const GW::GuildArray& guilds = GW::GuildMgr::GetGuildArray();
-        for (GW::Guild *guild : guilds) {
-            if (guild && GuiUtils::ToLower(guild->tag) == argGuildTag) {
-                GW::GuildMgr::TravelGH(guild->key);
-                return;
-            }
-        }
-        Log::Error("[Error] Did not recognize guild '%ls'", argv[2]);
+        if (IsInGH())
+            GW::GuildMgr::LeaveGH();
+        else
+            GW::GuildMgr::TravelGH();
         return;
     }
     TravelWindow &instance = Instance();

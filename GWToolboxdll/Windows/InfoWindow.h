@@ -100,6 +100,7 @@ private:
     void DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, bool force_advanced = false);
     void DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool force_advanced = false);
     void DrawAgentInfo(GW::Agent* agent);
+    void DrawGuildInfo(GW::Guild* guild);
     DWORD mapfile = 0;
 
     std::vector<Status> status;
