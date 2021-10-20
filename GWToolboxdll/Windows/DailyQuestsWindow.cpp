@@ -1043,7 +1043,7 @@ namespace {
         else {
             swprintf(buf, _countof(buf), as_wiki_link ? L"%s: <a=1>\x200B%S</a>" : L"%s: %S", label, value);
         }
-        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buf);
+        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buf, nullptr, true);
     }
 }
 

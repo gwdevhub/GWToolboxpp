@@ -48,8 +48,8 @@ namespace GuiUtils {
     // Takes a wstring and translates into a string of hex values, separated by spaces
     bool ArrayToIni(const wchar_t* in, std::string* out);
     bool ArrayToIni(const uint32_t* in, size_t len, std::string* out);
-    bool IniToArray(const std::string& in, wchar_t* out, size_t out_len);
-    bool IniToArray(const std::string& in, uint32_t* out, size_t out_len);
+    size_t IniToArray(const std::string& in, wchar_t* out, size_t out_len);
+    size_t IniToArray(const std::string& in, uint32_t* out, size_t out_len);
     // Takes a string of hex values separated by spaces, and returns a wstring respresentation
     std::wstring IniToWString(std::string in);
 

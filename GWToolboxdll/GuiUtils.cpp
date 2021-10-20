@@ -358,39 +358,39 @@ bool GuiUtils::ParseFloat(const wchar_t *str, float *val) {
     *val = wcstof(str, &end);
     return str != end && errno != ERANGE;
 }
-bool GuiUtils::IniToArray(const std::string& in, wchar_t* out, size_t out_len) {
+size_t GuiUtils::IniToArray(const std::string& in, wchar_t* out, size_t out_len) {
     if ((in.size() + 1) / 5 > out_len)
-        return false;
+        return 0;
     size_t offset = 0, pos = 0, converted = 0;
     do {
         if (pos) pos++;
         std::string substring(in.substr(pos, 4));
         if (!ParseUInt(substring.c_str(), &converted, 16))
-            return false;
+            return 0;
         if (converted > 0xFFFF)
-            return false;
+            return 0;
         out[offset++] = (wchar_t)converted;
     } while ((pos = in.find(' ', pos)) != std::string::npos);
     while (offset < out_len) {
         out[offset++] = 0;
     }
-    return true;
+    return offset;
 }
-bool GuiUtils::IniToArray(const std::string& in, uint32_t* out, size_t out_len) {
+size_t GuiUtils::IniToArray(const std::string& in, uint32_t* out, size_t out_len) {
     if ((in.size() + 1) / 9  > out_len)
-        return false;
+        return 0;
     size_t offset = 0, pos = 0, converted = 0;
     do {
         if (pos) pos++;
         std::string substring(in.substr(pos, 8));
         if (!ParseUInt(substring.c_str(), &converted, 16))
-            return false;
+            return 0;
         out[offset++] = converted;
     } while ((pos = in.find(' ', pos)) != std::string::npos);
     while (offset < out_len) {
         out[offset++] = 0;
     }
-    return true;
+    return offset;
 }
 std::string GuiUtils::TimeToString(uint32_t utc_timestamp) {
     time_t utc_timestamp_timet = (time_t)utc_timestamp;

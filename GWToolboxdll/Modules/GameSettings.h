@@ -200,7 +200,6 @@ public:
     static void OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*);
     static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
     static void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
-    static void OnAfterAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
@@ -282,7 +281,45 @@ public:
 
     std::vector<PendingChatMessage*> pending_messages;
 
+    struct TBChatMessage {
+        std::wstring msg;
+        uint32_t channel;
+        FILETIME timestamp;
+        uint32_t gw_message_address = 0;
+        TBChatMessage(wchar_t* _message, uint32_t _channel, FILETIME _timestamp) {
+            msg = _message;
+            timestamp = _timestamp;
+            channel = _channel;
+        }
+    };
+    struct TBChatLog {
+        size_t next = 0;
+        std::wstring account;
+        bool injecting = false;
+        TBChatMessage* messages[GW::Chat::CHAT_LOG_LENGTH] = { 0 };
+        void Reset();
+        // Add new message
+        void Add(GW::Chat::ChatMessage* in);
+        // Add new message
+        void Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp);
+        // Save (encoded) chat log to file
+        void Save();
+        // Path to chat log file on disk
+        std::filesystem::path LogPath();
+        // Load chat log from file via account email address
+        void Load(const std::wstring& _account);
+        // Clear current chat log and prefill from tb chat log; chat box will update on map change
+        void Inject();
+        // Set up chat log, load from file if applicable. Returns true if initialised
+        bool Init();
+        ~TBChatLog() {
+            Reset();
+        }
+    } tb_chat_log;
+
 private:
+
+
     void UpdateFOV();
     void FactionEarnedCheckAndWarn();
     bool faction_checked = false;
