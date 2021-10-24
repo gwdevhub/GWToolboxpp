@@ -162,7 +162,7 @@ LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
     static bool right_mouse_down = false;
 
-    if (!(imgui_initialized && tb_initialized && !tb_destroyed)) {
+    if (!(!GW::PreGameContext::instance() && imgui_initialized && tb_initialized && !tb_destroyed)) {
         return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
     }
 
