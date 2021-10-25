@@ -828,7 +828,7 @@ void GameSettings::TBChatLog::Save() {
     CSimpleIni* inifile = new CSimpleIni(false, false, false);
     std::string msg_buf;
     char addr_buf[8];
-    for (int i = 0; messages[i]; i++) {
+    for (int i = 0; i < _countof(messages) && messages[i]; i++) {
         snprintf(addr_buf, 8, "%03x", i);
         ASSERT(GuiUtils::ArrayToIni(messages[i]->msg.data(), &msg_buf));
         inifile->SetValue(addr_buf, "message", msg_buf.c_str());
