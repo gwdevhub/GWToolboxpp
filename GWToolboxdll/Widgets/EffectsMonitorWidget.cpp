@@ -181,7 +181,8 @@ void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
     }
     cached_effects[type].push_back(*effect);
     // Trigger durations for aspects etc
-    DurationExpired(cached_effects[type].back());
+    if (!effect->duration)
+        DurationExpired(cached_effects[type].back());
     effect_count++;
 }
 bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
@@ -301,8 +302,8 @@ draw_effects:
     for (auto& it : cached_effects) {
         for (GW::Effect& effect : it.second) {
             if (effect.duration) {
-                uint32_t remaining = effect.GetTimeRemaining();
-                draw = remaining < (uint32_t)effect.duration * 1000;
+                DWORD remaining = effect.GetTimeRemaining();
+                draw = remaining < (DWORD)(effect.duration * 1000.f);
                 if (draw) {
                     draw = UptimeToString(remaining_str, remaining);
                 } else if(DurationExpired(effect)) {
