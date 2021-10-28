@@ -30,6 +30,7 @@
 #include <Modules/TeamspeakModule.h>
 #include <Modules/ObserverModule.h>
 #include <Modules/Obfuscator.h>
+#include <Modules/ChatLog.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -100,7 +101,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
     if (use_teamspeak) optional_modules.push_back(&TeamspeakModule::Instance());
     if (use_observer) optional_modules.push_back(&ObserverModule::Instance());
-
+    optional_modules.push_back(&ChatLog::Instance());
 
     SettingsWindow::Instance().sep_windows = optional_modules.size();
     optional_modules.push_back(&SettingsWindow::Instance());

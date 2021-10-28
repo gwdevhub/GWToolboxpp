@@ -392,9 +392,8 @@ size_t GuiUtils::IniToArray(const std::string& in, uint32_t* out, size_t out_len
     }
     return offset;
 }
-std::string GuiUtils::TimeToString(uint32_t utc_timestamp) {
-    time_t utc_timestamp_timet = (time_t)utc_timestamp;
-    struct tm timeinfo = *localtime(&utc_timestamp_timet);
+std::string GuiUtils::TimeToString(time_t utc_timestamp) {
+    struct tm timeinfo = *localtime(&utc_timestamp);
     time_t now = time(NULL);
     struct tm nowinfo = *localtime(&now);
     std::string out;
@@ -412,6 +411,19 @@ std::string GuiUtils::TimeToString(uint32_t utc_timestamp) {
         timeinfo.tm_hour, timeinfo.tm_min);
     return out;
 }
+std::string GuiUtils::TimeToString(uint32_t utc_timestamp) {
+    return TimeToString((time_t)utc_timestamp);
+}
+std::string GuiUtils::TimeToString(FILETIME utc_timestamp) {
+    return TimeToString(filetime_to_timet(utc_timestamp));
+}
+time_t GuiUtils::filetime_to_timet(const FILETIME& ft) {
+    ULARGE_INTEGER ull;    
+    ull.LowPart = ft.dwLowDateTime;    
+    ull.HighPart = ft.dwHighDateTime;    
+    return ull.QuadPart / 10000000ULL - 11644473600ULL; 
+}
+
 bool GuiUtils::ArrayToIni(const wchar_t* in, std::string* out)
 {
     size_t len = wcslen(in);

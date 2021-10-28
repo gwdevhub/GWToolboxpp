@@ -43,7 +43,10 @@ namespace GuiUtils {
     bool ParseFloat(const char *str, float *val);
     bool ParseFloat(const wchar_t *str, float *val);
 
+    time_t filetime_to_timet(const FILETIME& ft);
     std::string TimeToString(uint32_t utc_timestamp);
+    std::string TimeToString(time_t utc_timestamp);
+    std::string TimeToString(FILETIME utc_timestamp);
 
     // Takes a wstring and translates into a string of hex values, separated by spaces
     bool ArrayToIni(const wchar_t* in, std::string* out);

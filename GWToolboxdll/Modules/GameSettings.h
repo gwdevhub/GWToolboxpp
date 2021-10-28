@@ -246,6 +246,7 @@ public:
     clock_t afk_message_time = 0;
 
     bool show_timestamps = false;
+    bool enable_chat_log = true;
     bool show_timestamp_seconds = false;
     bool show_timestamp_24h = false;
     Color timestamps_color = 0;
@@ -280,42 +281,6 @@ public:
     static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
     std::vector<PendingChatMessage*> pending_messages;
-
-    struct TBChatMessage {
-        std::wstring msg;
-        uint32_t channel;
-        FILETIME timestamp;
-        uint32_t gw_message_address = 0;
-        TBChatMessage(wchar_t* _message, uint32_t _channel, FILETIME _timestamp) {
-            msg = _message;
-            timestamp = _timestamp;
-            channel = _channel;
-        }
-    };
-    struct TBChatLog {
-        size_t next = 0;
-        std::wstring account;
-        bool injecting = false;
-        TBChatMessage* messages[GW::Chat::CHAT_LOG_LENGTH] = { 0 };
-        void Reset();
-        // Add new message
-        void Add(GW::Chat::ChatMessage* in);
-        // Add new message
-        void Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp);
-        // Save (encoded) chat log to file
-        void Save();
-        // Path to chat log file on disk
-        std::filesystem::path LogPath();
-        // Load chat log from file via account email address
-        void Load(const std::wstring& _account);
-        // Clear current chat log and prefill from tb chat log; chat box will update on map change
-        void Inject();
-        // Set up chat log, load from file if applicable. Returns true if initialised
-        bool Init();
-        ~TBChatLog() {
-            Reset();
-        }
-    } tb_chat_log;
 
 private:
 

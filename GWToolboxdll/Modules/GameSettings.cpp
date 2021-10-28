@@ -772,168 +772,6 @@ const bool PendingChatMessage::PrintMessage() {
 };
 
 /*
-*   GWToolbox chat log begin
-*/
-namespace {
-    GameSettings::TBChatMessage* timestamp_override_message = 0;
-    GW::HookEntry PreAddToChatLog_entry;
-    // On fresh chat log, inject toolbox message history
-    void OnPreAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage*) {
-        GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-        GameSettings::TBChatLog& tb_log = GameSettings::Instance().tb_chat_log;
-        bool inject = (log->next == 0 && !log->messages[log->next]) || tb_log.Init();
-        if (inject) {
-            tb_log.Inject();
-        }
-            
-    }
-    GW::HookEntry PostAddToChatLog_entry;
-    // After adding chat log message, also add it to tb chat log.
-    void OnPostAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage* logged_message) {
-        if (logged_message) { // NB: Can be false if between maps
-            if (timestamp_override_message) {
-                logged_message->timestamp = timestamp_override_message->timestamp;
-                timestamp_override_message = 0;
-            }
-            else {
-                GameSettings::Instance().tb_chat_log.Add(logged_message);
-            }
-        }
-    }
-   
-}
-
-void GameSettings::TBChatLog::Reset() {
-    for (size_t i = 0; i < _countof(messages); i++) {
-        if (messages[i]) delete messages[i];
-        messages[i] = 0;
-    }
-    next = 0;
-}
-void GameSettings::TBChatLog::Add(GW::Chat::ChatMessage* in) {
-    Add(in->message, in->channel, in->timestamp);
-}
-void GameSettings::TBChatLog::Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp) {
-    if (injecting)
-        return;
-    if (messages[next])
-        delete messages[next];
-    messages[next] = new TBChatMessage(_message, _channel, _timestamp);
-    next++;
-    next &= (_countof(messages) - 1);
-}
-void GameSettings::TBChatLog::Save() {
-    if (account.empty())
-        return;
-    CSimpleIni* inifile = new CSimpleIni(false, false, false);
-    std::string msg_buf;
-    char addr_buf[8];
-    for (int i = 0; i < _countof(messages) && messages[i]; i++) {
-        snprintf(addr_buf, 8, "%03x", i);
-        ASSERT(GuiUtils::ArrayToIni(messages[i]->msg.data(), &msg_buf));
-        inifile->SetValue(addr_buf, "message", msg_buf.c_str());
-        inifile->SetLongValue(addr_buf, "dwLowDateTime", messages[i]->timestamp.dwLowDateTime);
-        inifile->SetLongValue(addr_buf, "dwHighDateTime", messages[i]->timestamp.dwHighDateTime);
-        inifile->SetLongValue(addr_buf, "channel", messages[i]->channel);
-    }
-    inifile->SaveFile(LogPath().c_str());
-    delete inifile;
-}
-std::filesystem::path GameSettings::TBChatLog::LogPath() {
-    wchar_t fn[128];
-    swprintf(fn, 128, L"%s.ini", account.c_str());
-    Resources::EnsureFolderExists(Resources::GetPath(L"chat logs"));
-    return Resources::GetPath(L"chat logs", fn);
-}
-void GameSettings::TBChatLog::Load(const std::wstring& _account) {
-    Reset();
-    account = _account;
-    CSimpleIni* inifile = new CSimpleIni(false, false, false);
-    inifile->LoadFile(LogPath().c_str());
-    CSimpleIni::TNamesDepend entries;
-    inifile->GetAllSections(entries);
-    const size_t buf_len = 512;
-    wchar_t buf[buf_len];
-    FILETIME t;
-    uint32_t channel = 0;
-    uint32_t addr = 0;
-    for (CSimpleIni::Entry& entry : entries) {
-        std::string message = inifile->GetValue(entry.pItem, "message", "");
-        if (message.empty())
-            continue;
-        size_t written = GuiUtils::IniToArray(message, buf, buf_len - 1);
-        if (!written)
-            continue;
-        if (!GuiUtils::ParseUInt(entry.pItem, &addr, 16))
-            continue;
-        buf[written] = 0;
-        t.dwLowDateTime = inifile->GetLongValue(entry.pItem, "dwLowDateTime", 0);
-        t.dwHighDateTime = inifile->GetLongValue(entry.pItem, "dwHighDateTime", 0);
-        channel = inifile->GetLongValue(entry.pItem, "channel", 0);
-        Add(buf, channel, t);
-    }
-    delete inifile;
-}
-void GameSettings::TBChatLog::Inject() {
-    if (injecting)
-        return;
-    GW::Chat::ChatBuffer& log = *GW::Chat::GetChatLog();
-    // Clear chat log (@Cleanup: will this cause hanging pointers? Doesn't look like it)
-    for (size_t i = 0; i < GW::Chat::CHAT_LOG_LENGTH; i++) {
-        log.messages[i] = 0;
-    }
-    log.next = 0;
-    // Fill chat log
-    size_t log_pos = log.next;
-    injecting = true;
-    for (size_t i = 0; i < _countof(tb_chat_log.messages) - 1 && messages[i]; i++) {
-        timestamp_override_message = messages[i];
-        GW::Chat::AddToChatLog(timestamp_override_message->msg.data(), timestamp_override_message->channel);
-        ASSERT(!timestamp_override_message && log_pos != log.next);
-        log_pos = log.next;
-    }
-    injecting = false;
-}
-bool GameSettings::TBChatLog::Init() {
-    std::wstring this_account = GW::GameContext::instance()->character->player_email;
-    if (this_account == account)
-        return false;
-    // GW Account changed, save this log and start fresh.
-    Save();
-    Load(this_account);
-    GW::Chat::ChatBuffer& log = *GW::Chat::GetChatLog();
-    size_t chat_log_idx = log.next;
-    size_t last_log_idx = chat_log_idx == 0 ? GW::Chat::CHAT_LOG_LENGTH - 1 : chat_log_idx - 1;
-    size_t last_tb_idx = next == 0 ? GW::Chat::CHAT_LOG_LENGTH - 1 : next - 1;
-    size_t copy_idx = GW::Chat::CHAT_LOG_LENGTH;
-    int cmp;
-    // Keep going until we find the earliest message in-game that isn't in the tb chat log
-    for (size_t start = last_log_idx; log.messages[last_log_idx];) {
-        if (messages[last_tb_idx]) {
-            cmp = CompareFileTime(&log.messages[last_log_idx]->timestamp, &messages[last_tb_idx]->timestamp);
-            if (cmp == -1)
-                break; // Gw log is earlier; break here.
-            if (cmp == 0 && log.messages[last_log_idx]->message == messages[last_tb_idx]->msg)
-                break; // This message has already been logged.
-        }
-        copy_idx = last_log_idx;
-        // This far, gw message is more recent than the chat log message so keep going back
-        last_log_idx = last_log_idx == 0 ? GW::Chat::CHAT_LOG_LENGTH - 1 : last_log_idx - 1;
-        if (last_log_idx == start)
-            break; // Log processed.
-    }
-    // Copy over from gw log to tb log
-    for (size_t start = copy_idx; copy_idx != GW::Chat::CHAT_LOG_LENGTH && log.messages[copy_idx];) {
-        Add(log.messages[copy_idx]);
-        copy_idx++;
-        copy_idx &= GW::Chat::CHAT_LOG_LENGTH - 1;
-        if (copy_idx == start)
-            break; // Log processed.
-    }
-    return true;
-}
-
-/*
 *   GWToolbox chat log end
 */
 
@@ -973,10 +811,8 @@ void GameSettings::Initialize() {
         }
     }
 
-    GW::Chat::RegisterChatLogCallback(&PreAddToChatLog_entry, OnPreAddToChatLog, -0x4000);
-    GW::Chat::RegisterChatLogCallback(&PostAddToChatLog_entry, OnPostAddToChatLog, 0x4000);
-    tb_chat_log.Init();
-    tb_chat_log.Inject();
+
+
     // Save last dialog sender, used for faction donate
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogSender>(
         &OnDialog_Entry,
@@ -1264,7 +1100,6 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     if (focus_window_on_launch) {
         FocusWindow();
     }
-    tb_chat_log.Init();
 }
 
 void GameSettings::RegisterSettingsContent() {
@@ -1384,8 +1219,6 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ::SaveChannelColor(ini, Name(), "whispers", GW::Chat::Channel::CHANNEL_WHISPER);
     ::SaveChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
     ::SaveChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
-
-    tb_chat_log.Save();
 }
 
 void GameSettings::DrawInventorySettings() {
