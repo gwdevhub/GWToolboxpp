@@ -160,6 +160,18 @@ namespace
     static bool runs_dirty = false;
 } // namespace
 
+void ObjectiveTimerWindow::CheckIsMapLoaded() {
+    if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer)
+        return;
+    map_load_pending = false;
+    if (InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
+        AddObjectiveSet((GW::Constants::MapID)InstanceLoadInfo->map_id);
+        Event(EventType::InstanceLoadInfo, InstanceLoadInfo->map_id);
+    }
+    if(InstanceLoadFile && InstanceLoadFile->map_fileID == 219215) {
+        AddDoAObjectiveSet(InstanceLoadFile->spawn_point);
+    }
+}
 void ObjectiveTimerWindow::Initialize()
 {
     ToolboxWindow::Initialize();
@@ -182,17 +194,28 @@ void ObjectiveTimerWindow::Initialize()
     // packet hooks used to create or manipulate objective sets:
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(
         &PartyDefeated_Entry, [this](GW::HookStatus*, GW::Packet::StoC::PartyDefeated*) { StopObjectives(); });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
+
+
+    // NB: Server may not send packets in the order we want them
+    // e.g. InstanceLoadInfo comes in before InstanceTimer which means the run start is whacked out
+    // keep track of the packets and only trigger relevent events when the needed packets are in.
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo* packet) { 
-            if (!packet->is_explorable) return;
-            AddObjectiveSet((GW::Constants::MapID)packet->map_id);
-            Event(EventType::InstanceLoadInfo, packet->map_id);
+            InstanceLoadInfo = new GW::Packet::StoC::InstanceLoadInfo;
+            memcpy(InstanceLoadInfo, packet, sizeof(GW::Packet::StoC::InstanceLoadInfo));
+            CheckIsMapLoaded();
         });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
         &InstanceLoadFile_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadFile* packet) {
-            if (packet->map_fileID == 219215) {
-                AddDoAObjectiveSet(packet->spawn_point);
-            }
+            InstanceLoadFile = new GW::Packet::StoC::InstanceLoadFile;
+            memcpy(InstanceLoadFile, packet, sizeof(GW::Packet::StoC::InstanceLoadFile));
+            CheckIsMapLoaded();
+        });
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceTimer>(
+        &InstanceLoadFile_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceTimer* packet) {
+            InstanceTimer = new GW::Packet::StoC::InstanceTimer;
+            memcpy(InstanceTimer, packet, sizeof(GW::Packet::StoC::InstanceTimer));
+            CheckIsMapLoaded();
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
         &GameSrvTransfer_Entry, [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* packet) {
@@ -212,8 +235,15 @@ void ObjectiveTimerWindow::Initialize()
             static uint32_t map_id = 0;
             Event(EventType::InstanceEnd, map_id);
             map_id = packet->map_id;
+            // Reset loading map vars (see CheckIsMapLoaded)
+            if (InstanceLoadFile) delete InstanceLoadFile;
+            InstanceLoadFile = 0;
+            if (InstanceLoadInfo) delete InstanceLoadInfo;
+            InstanceLoadInfo = 0;
+            if (InstanceTimer) delete InstanceTimer;
+            InstanceTimer = 0;
+            map_load_pending = true;
         }, -5);
-
     // packet hooks that trigger events:
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, 
         [this](GW::HookStatus*, GW::Packet::StoC::MessageServer*) {

@@ -46,6 +46,13 @@ private:
     std::thread run_loader;
     bool loading = false;
 
+    bool map_load_pending = false;
+    GW::Packet::StoC::InstanceLoadInfo* InstanceLoadInfo = 0;
+    GW::Packet::StoC::InstanceLoadFile* InstanceLoadFile = 0;
+    GW::Packet::StoC::InstanceTimer* InstanceTimer = 0;
+    // Checks that we've received all of the packets needed to start an objective set, then triggers necessary events
+    void CheckIsMapLoaded();
+
     // TODO: many of those are not hooked up
     enum class EventType {
         ServerMessage,      // id1=msg length, id2=pointer to msg

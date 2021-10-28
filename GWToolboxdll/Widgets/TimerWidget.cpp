@@ -26,6 +26,8 @@ namespace
 {
     steady_clock::time_point now() { return steady_clock::now(); }
 
+    bool instance_timer_valid = true;
+
     bool is_valid(const steady_clock::time_point& time) { return time.time_since_epoch().count(); }
 
     template <typename T>
@@ -61,6 +63,7 @@ void TimerWidget::Initialize() {
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
             cave_start = 0; // reset doa's cave timer
+            instance_timer_valid = false;
 
             if (print_time_zoning && in_explorable && !is_valid(run_completed)) {
                 // do this here, before we actually reset it
@@ -94,6 +97,10 @@ void TimerWidget::Initialize() {
             run_completed = steady_clock::time_point();
             in_explorable = pak->is_explorable;
         });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceTimer>(&GameSrvTransfer_Entry,
+        [this](GW::HookStatus*, GW::Packet::StoC::InstanceTimer*) -> void {
+            instance_timer_valid = true;
+        },5);
     in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     GW::Chat::CreateCommand(L"resettimer", [this](const wchar_t*, int, LPWSTR*) { 
         reset_next_loading_screen = true;
@@ -199,9 +206,11 @@ void TimerWidget::DrawSettingInternal() {
 
 std::chrono::milliseconds TimerWidget::GetTimer()
 {   
-    if (use_instance_timer || !is_valid(run_started)) {
-        return milliseconds(GW::Map::GetInstanceTime());
-
+    if (use_instance_timer) {
+        return milliseconds(instance_timer_valid ? GW::Map::GetInstanceTime() : 0);
+    }
+    if (!is_valid(run_started)) {
+        return milliseconds(0);
     } else if (is_valid(run_completed)) {
         return duration_cast<milliseconds>(run_completed - run_started);
 
