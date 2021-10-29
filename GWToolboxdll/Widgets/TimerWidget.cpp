@@ -49,7 +49,51 @@ namespace
         }
     }
 }
+// Called before map change
+void TimerWidget::OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*) {
+    if (print_time_zoning && in_explorable && !is_valid(run_completed)) {
+        // do this here, before we actually reset it
+        PrintTimer();
+    }
+    run_completed = now();
+}
+// Called just after map change
+void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak) {
+    cave_start = 0; // reset doa's cave timer
+    instance_timer_valid = false;
+    std::chrono::steady_clock::time_point now_tp = now();
+    run_completed = std::chrono::steady_clock::time_point();
 
+    // If reset_next_loading_screen, reset regardless of never_reset
+    if (reset_next_loading_screen) {
+        run_started = now_tp;
+        reset_next_loading_screen = false;
+    }
+
+    if (!never_reset) {
+        if (pak->is_explorable && !in_explorable) { // if zoning from outpost to explorable
+            run_started = now_tp;
+        }
+        else if (!pak->is_explorable) { // zoning back to outpost
+            run_started = now_tp;
+        }
+
+        GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)pak->map_id);
+        if (info) {
+            bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
+
+            if (new_in_dungeon && !in_dungeon) { // zoning from explorable to dungeon
+                run_started = now_tp;
+            }
+
+            in_dungeon = new_in_dungeon;
+        }
+    }
+    if(!is_valid(run_started))
+        run_started = now_tp;
+            
+    in_explorable = pak->is_explorable;
+}
 void TimerWidget::Initialize() {
     ToolboxWidget::Initialize();
 
@@ -59,45 +103,17 @@ void TimerWidget::Initialize() {
             if (packet->message[1] != 0x5765) return;
             cave_start = GW::Map::GetInstanceTime();
         });
-
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
-            cave_start = 0; // reset doa's cave timer
-            instance_timer_valid = false;
-
-            if (print_time_zoning && in_explorable && !is_valid(run_completed)) {
-                // do this here, before we actually reset it
-                PrintTimer();
-            }
-
-            if (!never_reset) {
-                if (reset_next_loading_screen) {
-                    run_started = now();
-                    reset_next_loading_screen = false;
-                }
-
-                if (pak->is_explorable && !in_explorable) { // if zoning from outpost to explorable
-                    run_started = now();
-                }
-                if (!pak->is_explorable) { // zoning back to outpost
-                    run_started = now();
-                }
-
-                GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)pak->map_id);
-                if (info) {
-                    bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
-
-                    if (new_in_dungeon && !in_dungeon) { // zoning from explorable to dungeon
-                        run_started = now();
-                    }
-
-                    in_dungeon = new_in_dungeon;
-                }
-            }
-            run_completed = steady_clock::time_point();
-            in_explorable = pak->is_explorable;
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceTimer>(&GameSrvTransfer_Entry,
+    
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&PreGameSrvTransfer_Entry, 
+        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
+        Instance().OnPreGameSrvTransfer(status, pak);
+        }, -0x10);
+    
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&PostGameSrvTransfer_Entry,
+        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
+            Instance().OnPostGameSrvTransfer(status, pak);
+        },0x5);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceTimer>(&InstanceTimer_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::InstanceTimer*) -> void {
             instance_timer_valid = true;
         },5);
@@ -109,6 +125,8 @@ void TimerWidget::Initialize() {
     GW::Chat::CreateCommand(L"timerreset", [this](const wchar_t*, int, LPWSTR*) { 
         reset_next_loading_screen = true; 
     });
+    if (!is_valid(run_started))
+        run_started = now() - milliseconds(GW::Map::GetInstanceTime());
 }
 
 

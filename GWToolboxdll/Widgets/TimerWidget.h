@@ -40,6 +40,9 @@ public:
     unsigned long GetTimerMs(); // time in milliseconds
     void PrintTimer(); // prints current timer to chat
 
+    void OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);
+    void OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);
+
 private:
     // those function write to extra_buffer and extra_color.
     // they return true if there is something to draw.
@@ -96,6 +99,8 @@ private:
 
     unsigned long cave_start = 0; // instance timer when cave started
     GW::HookEntry DisplayDialogue_Entry;
-    GW::HookEntry GameSrvTransfer_Entry;
+    GW::HookEntry PreGameSrvTransfer_Entry;
+    GW::HookEntry InstanceTimer_Entry;
+    GW::HookEntry PostGameSrvTransfer_Entry;
     const uint32_t CAVE_SPAWN_INTERVALS[12] = {12, 12, 12, 12, 12, 12, 10, 10, 10, 10, 10, 10};
 };
