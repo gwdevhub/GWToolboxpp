@@ -1,5 +1,7 @@
 #pragma once
 
+#include <GWCA/Constants/Constants.h>
+
 #include <resource.h>
 #include <ToolboxModule.h>
 #include <Utf8.h>
@@ -38,6 +40,8 @@ public:
     void LoadTextureAsync(IDirect3DTexture9 **tex, 
         const std::filesystem::path& path_to_file, const std::wstring& url);
 
+    // May return nullptr until icon has been downloaded and rendered
+    static IDirect3DTexture9* GetProfessionIcon(GW::Constants::Profession p);
 
     // checks if file exists, and downloads from server if it doesn't.
     // If the file exists, executes callback immediately,

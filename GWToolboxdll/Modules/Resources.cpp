@@ -27,6 +27,28 @@ namespace {
         swprintf(out, 32, L"Unknown D3D error %#08x", code);
         return out;
     }
+
+    struct ProfessionIcon {
+        ProfessionIcon(const wchar_t* path) {
+            wiki_path_to_file = path;
+        }
+        IDirect3DTexture9* texture = 0;
+        const wchar_t* wiki_path_to_file;
+        bool loading = false;
+    };
+    ProfessionIcon profession_icons[] = {
+        L"",
+        L"8/87/Warrior-tango-icon-48",
+        L"e/e8/Ranger-tango-icon-48",
+        L"5/53/Monk-tango-icon-48",
+        L"b/b1/Necromancer-tango-icon-48",
+        L"b/b1/Mesmer-tango-icon-48",
+        L"4/47/Elementalist-tango-icon-48",
+        L"2/2b/Assassin-tango-icon-48",
+        L"5/5b/Ritualist-tango-icon-48",
+        L"5/5e/Paragon-tango-icon-48",
+        L"3/38/Dervish-tango-icon-48"
+    };
 }
 
 void Resources::Initialize() {
@@ -138,6 +160,23 @@ void Resources::EnsureFileExists(
         // otherwise try to download it in the worker
         Download(path_to_file, url, callback);
     }
+}
+
+IDirect3DTexture9* Resources::GetProfessionIcon(GW::Constants::Profession p) {
+    auto& prof_icon = profession_icons[(uint32_t)p];
+    if (!prof_icon.loading ) {
+        prof_icon.loading = true;
+        if (prof_icon.wiki_path_to_file[0]) {
+            auto path = Resources::GetPath(L"img/professions");
+            Resources::EnsureFolderExists(path);
+            wchar_t local_image[MAX_PATH];
+            swprintf(local_image, _countof(local_image), L"%s/%d.png", path.c_str(), p);
+            wchar_t remote_image[255];
+            swprintf(remote_image, _countof(remote_image), L"https://wiki.guildwars.com/images/%s.png", prof_icon.wiki_path_to_file);
+            Instance().LoadTextureAsync(&prof_icon.texture, local_image, remote_image);
+        }
+    }
+    return prof_icon.texture;
 }
 
 void Resources::LoadTextureAsync(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file)
