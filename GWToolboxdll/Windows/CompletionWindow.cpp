@@ -1735,7 +1735,7 @@ CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, w
 		switch (type) {
 		case CompletionType::Mission:
 			buffer = w->missions_completed.m_buffer;
-			len = w->unlocked_character_skills.m_size;
+			len = w->missions_completed.m_size;
 			break;
 		case CompletionType::MissionBonus:
 			buffer = w->missions_bonus.m_buffer;
