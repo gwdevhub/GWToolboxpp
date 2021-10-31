@@ -65,17 +65,10 @@ namespace {
             return nullptr;
         return parties[party_id];
     }
-    GW::Player* GetPartyLeader(GW::PartyInfo* party, uint32_t* player_number = nullptr) {
-        if (!party || !party->players.valid()) 
+    GW::Player* GetPartyLeader(GW::PartyInfo* party) {
+        if (!(party && party->players.valid() && party->players.size())) 
             return nullptr;
-        for (auto& player : party->players) {
-            GW::Player* pplayer = GW::PlayerMgr::GetPlayerByID(player.login_number);
-            if (player_number)
-                *player_number = player.login_number;
-            if(pplayer)
-                return pplayer;
-        }
-        return nullptr;
+        return GW::PlayerMgr::GetPlayerByID(party->players[0].login_number);
     }
     GW::PartyInfo* GetPartyFromPlayer(uint32_t player_number) {
         GW::GameContext* g = GW::GameContext::instance();
@@ -103,6 +96,37 @@ namespace {
         "Guild",
         "Local"
     };
+    const char* DistrictAbbr(int32_t region, int32_t language) {
+        switch (static_cast<GW::Constants::MapRegion>(region)) {
+        case GW::Constants::MapRegion::International:
+            return "INT";
+        case GW::Constants::MapRegion::American:
+            return "AE";
+        case GW::Constants::MapRegion::Korean:
+            return "KR";
+        case GW::Constants::MapRegion::Chinese:
+            return "CN";
+        case GW::Constants::MapRegion::Japanese:
+            return "JP";
+        default:
+            switch (static_cast<GW::Constants::MapLanguage>(language)) {
+            case GW::Constants::MapLanguage::French:
+                return "FR";
+            case GW::Constants::MapLanguage::German:
+                return "DE";
+            case GW::Constants::MapLanguage::Italian:
+                return "IT";
+            case GW::Constants::MapLanguage::Spanish:
+                return "ES";
+            case GW::Constants::MapLanguage::Polish:
+                return "PL";
+            case GW::Constants::MapLanguage::Russian:
+                return "RU";
+            default:
+                return "EN";
+            }
+        }
+    }
 }
 
 uint32_t PartySearchWindow::TBParty::IdFromRegionParty(uint32_t party_id) {
@@ -164,7 +188,7 @@ bool PartySearchWindow::TBParty::FromLocalParty(GW::PartyInfo* party) {
 #pragma warning (push)
 #pragma warning (disable: 4244)
     if (!party) return false;
-    GW::Player* player = GetPartyLeader(party,&player_id);
+    GW::Player* player = GetPartyLeader(party);
     if (!player) return false;
     concat_party_id = IdFromLocalParty(party->party_id);
     hero_count = party->heroes.valid() ? party->heroes.size() : 0;
@@ -548,7 +572,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
         const float districtwidth = 100.0f * font_scale;
         const float message_left = districtleft + districtwidth + innerspacing;
 
-        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - (btn_width * (_countof(display_party_types) - 1)));
+        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - (btn_width * _countof(display_party_types)));
         ImGui::PushItemWidth(btn_width);
         float start_x = ImGui::GetCursorPosX();
         for (size_t i = 0; i < _countof(display_party_types); i++) {
@@ -591,10 +615,18 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
             ImGui::PushID(static_cast<int>(party->concat_party_id));
             
             char label[64];
-            snprintf(label, 64, "%s/%s %s",
-                GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)).c_str(),
-                GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->secondary)).c_str(),
-                party->player_name.c_str());
+            if (party->secondary) {
+                snprintf(label, 64, "%s/%s %s",
+                    GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)).c_str(),
+                    GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->secondary)).c_str(),
+                    party->player_name.c_str());
+            }
+            else {
+                snprintf(label, 64, "%s %s",
+                    GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)).c_str(),
+                    party->player_name.c_str());
+            }
+
             if (ImGui::Button(label, ImVec2(playernamewidth, 0))) {
                 std::wstring leader_name = GuiUtils::StringToWString(party->player_name);
                 // open whisper to player
@@ -605,7 +637,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
             ImGui::SameLine(partycountleft);
             ImGui::TextColored(party->party_size < max_party_size ? white : yellow,"%d/%d", party->party_size, max_party_size);
             ImGui::SameLine(districtleft);
-            ImGui::TextColored(party->language == language && party->district == district && party->map_id == map ? white : yellow, "%d - %d", party->language, party->district);
+            ImGui::TextColored(party->language == language && party->district == district && party->map_id == map ? white : yellow, "%s - %d", DistrictAbbr(party->region_id,party->language), party->district);
 
             /*auto map_name = map_names_by_id.find(party->map_id);
             if (map_name == map_names_by_id.end()) {

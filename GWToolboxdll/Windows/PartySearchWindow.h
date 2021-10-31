@@ -90,7 +90,7 @@ private:
     clock_t refresh_parties = 0;
     bool display_party_types[6] = { true, true, true, false, true, true };
     // Internal - mainly to hide Trade channel from the UI and networking
-    bool ignore_party_types[6] = { false, false, false, true, false, false };
+    bool ignore_party_types[6] = { false, false, false, false, false, false };
     uint32_t max_party_size = 0;
 
     easywsclient::WebSocket* ws_window = NULL;
