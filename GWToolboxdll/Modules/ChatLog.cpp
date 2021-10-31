@@ -66,6 +66,8 @@ void ChatLog::Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp) {
                 if (inject->prev != inject) {
                     inject->prev->next = new_message;
                 }
+                if (inject->next == inject)
+                    inject->next = new_message;
                 inject->prev = new_message;
                 recv_first = new_message;
                 goto trim_log;
@@ -79,6 +81,8 @@ void ChatLog::Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp) {
                 inject->next->prev = new_message;
             }
             inject->next = new_message;
+            if (inject->prev == inject)
+                inject->prev = new_message;
             if (inject == recv_last)
                 recv_last = new_message;
             goto trim_log;
@@ -149,15 +153,15 @@ void ChatLog::RemoveSent(TBSentMessage* message) {
 void ChatLog::Fetch() {
     if (!enabled)
         return;
-    GW::Chat::ChatBuffer& log = *GW::Chat::GetChatLog();
-    for (size_t i = 0; i < GW::Chat::CHAT_LOG_LENGTH; i++) {
-        if (log.messages[i])
-            Add(log.messages[i]);
+    GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+    for (size_t i = 0;log &&  i < GW::Chat::CHAT_LOG_LENGTH; i++) {
+        if (log->messages[i])
+            Add(log->messages[i]);
     }
 
     // Sent
     auto out_log = GetSentLog();
-    if (out_log && out_log->prev) {
+    if (out_log && out_log->count && out_log->prev) {
         GWSentMessage* oldest = out_log->prev;
         for (size_t i = out_log->count - 1; i < out_log->count; i--) {
             if (oldest->prev)
