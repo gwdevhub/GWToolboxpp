@@ -31,6 +31,7 @@
 #include <Modules/ObserverModule.h>
 #include <Modules/Obfuscator.h>
 #include <Modules/ChatLog.h>
+#include <Modules/HintsModule.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -102,6 +103,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_teamspeak) optional_modules.push_back(&TeamspeakModule::Instance());
     if (use_observer) optional_modules.push_back(&ObserverModule::Instance());
     optional_modules.push_back(&ChatLog::Instance());
+    optional_modules.push_back(&HintsModule::Instance());
 
     SettingsWindow::Instance().sep_windows = optional_modules.size();
     optional_modules.push_back(&SettingsWindow::Instance());
