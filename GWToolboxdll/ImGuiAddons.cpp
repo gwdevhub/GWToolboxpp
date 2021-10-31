@@ -64,13 +64,13 @@ bool ImGui::ConfirmButton(const char* label, bool* confirm_bool, const char* con
 	}
 	return *confirm_bool;
 }
-bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
+bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size, ImGuiButtonFlags flags)
 {
     char button_id[128];
     sprintf(button_id, "###icon_button_%s", label);
     const ImVec2& pos = ImGui::GetCursorScreenPos();
     const ImVec2 &textsize = ImGui::CalcTextSize(label);
-    bool clicked = ImGui::Button(button_id, size);
+    bool clicked = ImGui::ButtonEx(button_id, size, flags);
 
     const ImVec2& button_size = ImGui::GetItemRectSize();
     const float img_size = icon ? button_size.y : 0;
@@ -80,7 +80,7 @@ bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
     if (img_size)
         ImGui::GetWindowDrawList()->AddImage(icon, ImVec2(img_x, pos.y), ImVec2(img_x + img_size, pos.y + img_size));
     if (label)
-        ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + style.ItemSpacing.y / 2), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), label);
+        ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + style.FramePadding.y), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), label);
     return clicked;
 }
 bool ImGui::ColorButtonPicker(const char* label, Color* imcol, const ImGuiColorEditFlags flags)
