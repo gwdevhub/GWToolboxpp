@@ -11,6 +11,7 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Hero.h>
 
 #include <GWCA/GameContainers/GamePos.h>
 
@@ -43,6 +44,43 @@ namespace {
 
 	const char* CampaignName(const Campaign camp) {
 		return campaign_names[static_cast<uint8_t>(camp)];
+	}
+	const char* hero_names[] = {
+		"",
+		"Norgu",
+		"Goren",
+		"Tahlkora",
+		"Master of Whispers",
+		"Acolyte Jin",
+		"Koss",
+		"Dunkoro",
+		"Acolyte Sousuke",
+		"Melonni",
+		"Zhed Shadowhoof",
+		"General Morgahn",
+		"Margrid the Sly",
+		"Zenmai",
+		"Olias",
+		"Razah",
+		"M.O.X.",
+		"Keiran Thackeray",
+		"Jora",
+		"Pyre Fierceshot",
+		"Anton",
+		"Livia",
+		"Hayda",
+		"Kahmu",
+		"Gwen",
+		"Xandra",
+		"Vekk",
+		"Ogden Stonehealer",
+		"","","","","","","","",
+		"Miku",
+		"Zei Ri"
+	};
+
+	const wchar_t* GetPlayerName() {
+		return GW::GameContext::instance()->character->player_name;
 	}
 }
 
@@ -184,9 +222,12 @@ bool Mission::Draw(IDirect3DDevice9* )
 		OnClick();		
 	}
 	ImGui::PopID();
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip(name.string().c_str());
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip(Name());
 	ImGui::PopStyleColor();
 	return true;
+}
+const char* Mission::Name() {
+	return name.string().c_str();
 }
 void Mission::OnClick() {
 	GW::Constants::MapID travel_to = GetOutpost();
@@ -197,41 +238,103 @@ void Mission::OnClick() {
 		TravelWindow::Instance().Travel(travel_to, GW::Constants::District::Current, 0);
 	}
 }
-
-
+void Mission::CheckProgress(const std::wstring& player_name) {
+	is_completed = bonus = false;
+	auto& completion = CompletionWindow::Instance().character_completion;
+	auto found = completion.find(player_name);
+	if (found == completion.end())
+		return;
+	std::vector<uint32_t>* missions_complete = &found->second->mission;
+	std::vector<uint32_t>* missions_bonus = &found->second->mission_bonus;
+	if (CompletionWindow::Instance().IsHardMode()) {
+		missions_complete = &found->second->mission_hm;
+		missions_bonus = &found->second->mission_bonus_hm;
+	}
+	is_completed = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost));
+	bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
+}
 IDirect3DTexture9* Mission::GetMissionImage()
 {
-	bool hardmode = GW::PartyMgr::GetIsPartyInHardMode();
-	GW::WorldContext* ctx = GW::GameContext::instance()->world;
-	auto* missions_complete = &ctx->missions_completed;
-	auto* missions_bonus = &ctx->missions_bonus;
 	auto* texture_list = &normal_mode_textures;
 
-	if (hardmode) {
-		missions_complete = &ctx->missions_completed_hm;
-		missions_bonus = &ctx->missions_bonus_hm;
+	if (CompletionWindow::Instance().IsHardMode()) {
 		texture_list = &hard_mode_textures;
 	}
-
-
-	bool complete = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost));
-	bool bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
-	uint8_t index = complete + 2 * bonus;
+	uint8_t index = is_completed + 2 * bonus;
 
 	return texture_list->at(index).texture;
 }
-bool Mission::IsCompleted() {
-	bool hardmode = GW::PartyMgr::GetIsPartyInHardMode();
-	GW::WorldContext* ctx = GW::GameContext::instance()->world;
-	auto* missions_complete = &ctx->missions_completed;
-	auto* missions_bonus = &ctx->missions_bonus;
-
-	if (hardmode) {
-		missions_complete = &ctx->missions_completed_hm;
-		missions_bonus = &ctx->missions_bonus_hm;
-	}
-	return ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost)) && ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
+bool Mission::IsDaily()
+{
+	return false;
 }
+bool Mission::HasQuest()
+{
+	GW::WorldContext* ctx = GW::GameContext::instance()->world;
+	const auto& quests = ctx->quest_log;
+	for (size_t i = 0; i < quests.size(); i++) {
+		GW::Quest q = quests[i];
+		if (zm_quest != 0 && q.quest_id == zm_quest) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Dungeon::IsDaily()
+{
+	return false;
+}
+bool Dungeon::HasQuest()
+{
+	GW::WorldContext* ctx = GW::GameContext::instance()->world;
+	const auto& quests = ctx->quest_log;
+	for (size_t i = 0; i < quests.size(); i++) {
+		const GW::Quest& q = quests[i];
+		for (auto& zb : zb_quests) {
+			if (zb != 0 && q.quest_id == zb) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
+HeroUnlock::HeroUnlock(GW::Constants::HeroID _hero_id)
+	: PvESkill(GW::Constants::SkillID::No_Skill, nullptr) {
+	skill_id = (GW::Constants::SkillID)_hero_id;
+}
+void HeroUnlock::CheckProgress(const std::wstring& player_name) {
+	is_completed = false;
+	auto& skills = CompletionWindow::Instance().character_completion;
+	auto found = skills.find(player_name);
+	if (found == skills.end())
+		return;
+	auto& heroes = found->second->heroes;
+	is_completed = std::find(heroes.begin(), heroes.end(), (uint32_t)skill_id) != heroes.end();
+}
+const char* HeroUnlock::Name() {
+	return hero_names[(uint32_t)skill_id];
+}
+IDirect3DTexture9* HeroUnlock::GetMissionImage()
+{
+	if (!img_loaded) {
+		img_loaded = true;
+		auto path = Resources::GetPath(L"img/heros");
+		Resources::EnsureFolderExists(path);
+		wchar_t local_image[MAX_PATH];
+		swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
+		wchar_t remote_image[255];
+		swprintf(remote_image, _countof(remote_image), L"https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
+		Resources::Instance().LoadTextureAsync(&skill_image, local_image, remote_image);
+	}
+	return skill_image;
+}
+void HeroUnlock::OnClick() {
+	GuiUtils::OpenWiki(GuiUtils::StringToWString(hero_names[(uint32_t)skill_id]));
+}
+
 IDirect3DTexture9* PvESkill::GetMissionImage()
 {
 	if (!img_loaded) {
@@ -239,7 +342,7 @@ IDirect3DTexture9* PvESkill::GetMissionImage()
 		auto path = Resources::GetPath(L"img/skills");
 		Resources::EnsureFolderExists(path);
 		wchar_t local_image[MAX_PATH];
-		swprintf(local_image, _countof(local_image), L"%s/%d", path.c_str(), skill_id);
+		swprintf(local_image, _countof(local_image), L"%s/%d.jpg", path.c_str(), skill_id);
 		wchar_t remote_image[255];
 		swprintf(remote_image, _countof(remote_image), L"https://wiki.guildwars.com/images/%s.jpg", image_url);
 		Resources::Instance().LoadTextureAsync(&skill_image, local_image, remote_image);
@@ -248,27 +351,11 @@ IDirect3DTexture9* PvESkill::GetMissionImage()
 }
 PvESkill::PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url)
 	: Mission(GW::Constants::MapID::None, dummy_var, dummy_var, 0), skill_id(_skill_id), image_url(_image_url) {
-	GW::Skill& s = GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(skill_id));
-	name.reset(s.name);
-	profession = s.profession;
-}
-FactionsPvESkill::FactionsPvESkill(GW::Constants::SkillID kurzick_id, GW::Constants::SkillID luxon_id, const wchar_t* _image_url)
-	: PvESkill(kurzick_id, _image_url), skill_id2(luxon_id) {
-
-};
-bool FactionsPvESkill::IsCompleted() {
-	auto& skills = CompletionWindow::Instance().character_skills_unlocked;
-	auto found = skills.find(GW::GameContext::instance()->character->player_name);
-	if (found == skills.end())
-		return false;
-	auto& unlocked = *found->second;
-	return ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id)) || ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id2));
-}
-bool FactionsPvESkill::Draw(IDirect3DDevice9* device) {
-	icon_size.y *= 2;
-	bool drawn = PvESkill::Draw(device);
-	icon_size.y /= 2;
-	return drawn;
+	if (_skill_id != GW::Constants::SkillID::No_Skill) {
+		GW::Skill& s = GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(skill_id));
+		name.reset(s.name);
+		profession = s.profession;
+	}
 }
 void PvESkill::OnClick() {
 	GuiUtils::OpenWiki(name.wstring());
@@ -298,25 +385,66 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
 	}
 	return true;
 }
-bool PvESkill::IsCompleted() {
-	auto& skills = CompletionWindow::Instance().character_skills_unlocked;
-	auto found = skills.find(GW::GameContext::instance()->character->player_name);
+void PvESkill::CheckProgress(const std::wstring& player_name) {
+	is_completed = false;
+	auto& skills = CompletionWindow::Instance().character_completion;
+	auto found = skills.find(player_name);
 	if (found == skills.end())
-		return false;
-	return ArrayBoolAt(*found->second, static_cast<uint32_t>(skill_id));
+		return;
+	auto& unlocked = found->second->skills;
+	is_completed = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id));
 }
-bool EotNMission::IsCompleted() {
-	bool hardmode = GW::PartyMgr::GetIsPartyInHardMode();
-	GW::WorldContext* ctx = GW::GameContext::instance()->world;
-	auto* missions_bonus = &ctx->missions_bonus;
 
-	if (hardmode) {
-		missions_bonus = &ctx->missions_bonus_hm;
-	}
-	return ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
+FactionsPvESkill::FactionsPvESkill(GW::Constants::SkillID kurzick_id, GW::Constants::SkillID luxon_id, const wchar_t* _image_url)
+	: PvESkill(kurzick_id, _image_url), skill_id2(luxon_id) {
+
+};
+void FactionsPvESkill::CheckProgress(const std::wstring& player_name) {
+	is_completed = false;
+	auto& skills = CompletionWindow::Instance().character_completion;
+	auto found = skills.find(player_name);
+	if (found == skills.end())
+		return;
+	auto& unlocked = found->second->skills;
+	is_completed = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id)) || ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id2));
 }
-bool Vanquish::IsCompleted() {
-	return ArrayBoolAt(GW::GameContext::instance()->world->vanquished_areas, static_cast<uint32_t>(outpost));
+bool FactionsPvESkill::Draw(IDirect3DDevice9* device) {
+	icon_size.y *= 2;
+	bool drawn = PvESkill::Draw(device);
+	icon_size.y /= 2;
+	return drawn;
+}
+
+
+void EotNMission::CheckProgress(const std::wstring& player_name) {
+	is_completed = false;
+	auto& completion = CompletionWindow::Instance().character_completion;
+	auto found = completion.find(player_name);
+	if (found == completion.end())
+		return;
+	std::vector<uint32_t>* missions_bonus = &found->second->mission_bonus;
+	if (CompletionWindow::Instance().IsHardMode()) {
+		missions_bonus = &found->second->mission_bonus_hm;
+	}
+	is_completed = bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
+}
+IDirect3DTexture9* EotNMission::GetMissionImage()
+{
+	auto* texture_list = &normal_mode_textures;
+	if (CompletionWindow::Instance().IsHardMode()) {
+		texture_list = &hard_mode_textures;
+	}
+	return texture_list->at(is_completed ? 1 : 0).texture;
+}
+
+void Vanquish::CheckProgress(const std::wstring& player_name) {
+	is_completed = false;
+	auto& completion = CompletionWindow::Instance().character_completion;
+	auto found = completion.find(player_name);
+	if (found == completion.end())
+		return;
+	auto& unlocked = found->second->vanquishes;
+	is_completed = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
 }
 IDirect3DTexture9* Vanquish::GetMissionImage()
 {
@@ -324,62 +452,10 @@ IDirect3DTexture9* Vanquish::GetMissionImage()
 }
 
 
-bool Mission::IsDaily()
-{
-	return false;
-}
-
-bool Mission::HasQuest()
-{
-	GW::WorldContext* ctx = GW::GameContext::instance()->world;
-	const auto& quests = ctx->quest_log;
-	for (size_t i = 0; i < quests.size(); i++) {
-		GW::Quest q = quests[i];
-		if (zm_quest != 0 && q.quest_id == zm_quest) {
-			return true;
-		}
-	}
-	return false;
-}
-
-
-IDirect3DTexture9* EotNMission::GetMissionImage()
-{
-	//TODO do these work like proph, factions, nf?
-	bool hardmode = GW::PartyMgr::GetIsPartyInHardMode();
-	auto* texture_list = &normal_mode_textures;
-	if (hardmode) {
-		texture_list = &hard_mode_textures;
-	}
-	return texture_list->at(is_completed ? 1 : 0).texture;
-}
-
-
-bool Dungeon::IsDaily()
-{
-	return false;
-}
-
-
-bool Dungeon::HasQuest()
-{
-	GW::WorldContext* ctx = GW::GameContext::instance()->world;
-	const auto& quests = ctx->quest_log;
-	for (size_t i = 0; i < quests.size(); i++) {
-		const GW::Quest& q = quests[i];
-		for (auto& zb : zb_quests) {
-			if (zb != 0 && q.quest_id == zb) {
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
 void CompletionWindow::Initialize()
 {
 	ToolboxWindow::Initialize();
-	character_skills_unlocked_ini = new CSimpleIni(false, false, false);
+
 	//Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
 
 	missions = {
@@ -408,6 +484,11 @@ void CompletionWindow::Initialize()
 		{ Missions::Campaign::EyeOfTheNorth, {} },
 		{ Missions::Campaign::Core, {} },
 	};
+	 heros = {
+		{ Missions::Campaign::Factions, {} },
+		{ Missions::Campaign::Nightfall, {} },
+		{ Missions::Campaign::EyeOfTheNorth, {} }
+	 };
 
 	Initialize_Prophecies();
 	Initialize_Factions();
@@ -479,22 +560,54 @@ void CompletionWindow::Initialize()
 	skills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Revolution, L"4/48/Vow_of_Revolution"));
 	skills.push_back(new PvESkill(GW::Constants::SkillID::Heroic_Refrain, L"6/6e/Heroic_Refrain"));
 
+	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_MAPS_UNLOCKED, [](GW::HookStatus*, void*) {
+		Instance().ParseCompletionBuffer(CompletionType::Mission);
+		Instance().ParseCompletionBuffer(CompletionType::MissionBonus);
+		Instance().ParseCompletionBuffer(CompletionType::MissionBonusHM);
+		Instance().ParseCompletionBuffer(CompletionType::MissionHM);
+		Instance().CheckProgress();
+		});
+	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_PROGRESS, [](GW::HookStatus*, void*) {
+		Instance().ParseCompletionBuffer(CompletionType::Vanquishes);
+		Instance().CheckProgress();
+		});
+	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_COMPLETE, [](GW::HookStatus*, void*) {
+		Instance().ParseCompletionBuffer(CompletionType::Vanquishes);
+		Instance().CheckProgress();
+		});
+
+
 	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILLS_UNLOCKED, [](GW::HookStatus*, void*) {
-		Instance().ParseSkillsUnlocked();
+		Instance().ParseCompletionBuffer(CompletionType::Skills);
 		Instance().CheckProgress();
 		});
-	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_INSTANCE_LOADED, [](GW::HookStatus*, void*) {
-		Instance().CheckProgress();
-		});
-	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_PARTY_SET_DIFFICULTY, [](GW::HookStatus*, void*) {
-		Instance().CheckProgress();
+	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
+		uint32_t player_number = ((uint32_t*)pak)[1];
+		GW::CharContext* c = GW::GameContext::instance()->character;
+		if (player_number == c->player_number) {
+			GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
+			if (me) {
+				auto comp = Instance().GetCharacterCompletion(c->player_name);
+				if (comp)
+					comp->profession = (GW::Constants::Profession)me->primary;
+				Instance().ParseCompletionBuffer(CompletionType::Heroes);
+			}
+			Instance().CheckProgress();
+		}
 		});
 	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_ADD_TO_WINDOW_COUNT, [](GW::HookStatus*, void*) {
-		Instance().ParseSkillsUnlocked();
+		Instance().ParseCompletionBuffer(CompletionType::Skills);
 		Instance().CheckProgress();
 		});
-	ParseSkillsUnlocked();
+	ParseCompletionBuffer(CompletionType::Mission);
+	ParseCompletionBuffer(CompletionType::MissionBonus);
+	ParseCompletionBuffer(CompletionType::MissionBonusHM);
+	ParseCompletionBuffer(CompletionType::MissionHM);
+	ParseCompletionBuffer(CompletionType::Skills);
+	ParseCompletionBuffer(CompletionType::Vanquishes);
+	ParseCompletionBuffer(CompletionType::Heroes);
 	CheckProgress();
+	chosen_player_name = GW::GameContext::instance()->character->player_name;
 }
 
 
@@ -693,8 +806,6 @@ void CompletionWindow::Initialize_Prophecies()
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ward_Against_Harm, L"3/3f/Ward_Against_Harm"));
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Water_Trident, L"e/ee/Water_Trident"));
 }
-
-
 void CompletionWindow::Initialize_Factions()
 {
 	LoadTextures(FactionsMission::normal_mode_images);
@@ -879,9 +990,11 @@ void CompletionWindow::Initialize_Factions()
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Vengeful_Was_Khanhei, L"3/36/Vengeful_Was_Khanhei"));
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Wanderlust, L"c/cb/Wanderlust"));
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Weapon_of_Quickening, L"7/78/Weapon_of_Quickening"));
+
+	auto& h = heros.at(Campaign::Factions);
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Miku));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::ZeiRi));
 }
-
-
 void CompletionWindow::Initialize_Nightfall()
 {
 	LoadTextures(NightfallMission::normal_mode_images);
@@ -1114,9 +1227,25 @@ void CompletionWindow::Initialize_Nightfall()
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Song_of_Purification, L"5/57/Song_of_Purification"));
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Song_of_Restoration, L"9/9b/Song_of_Restoration"));
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Stunning_Strike, L"a/a6/Stunning_Strike"));
+
+	auto& h = heros.at(Campaign::Nightfall);
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::AcolyteJin));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::AcolyteSousuke));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Dunkoro));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::GeneralMorgahn));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Goren));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Koss));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::MargridTheSly));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::MasterOfWhispers));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Melonni));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::MOX));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Norgu));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Olias));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Razah));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Tahlkora));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Zenmai));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::ZhedShadowhoof));
 }
-
-
 void CompletionWindow::Initialize_EotN()
 {
 	LoadTextures(EotNMission::normal_mode_images);
@@ -1211,9 +1340,21 @@ void CompletionWindow::Initialize_EotN()
 	skills.push_back(new PvESkill(GW::Constants::SkillID::Raven_Blessing, L"0/0a/Raven_Blessing"));
 	skills.push_back(new PvESkill(GW::Constants::SkillID::Ursan_Blessing, L"7/7b/Ursan_Blessing"));
 	skills.push_back(new PvESkill(GW::Constants::SkillID::Volfen_Blessing, L"b/b2/Volfen_Blessing"));
+
+	auto& h = heros.at(Campaign::EyeOfTheNorth);
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Anton));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Gwen));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Hayda));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Jora));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Kahmu));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::KeiranThackeray));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Livia));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Ogden));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::PyreFierceshot));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Vekk));
+	h.push_back(new HeroUnlock(GW::Constants::HeroID::Xandra));
+
 }
-
-
 void CompletionWindow::Initialize_Dungeons()
 {
 	LoadTextures(Dungeon::normal_mode_images);
@@ -1230,42 +1371,44 @@ void CompletionWindow::Initialize_Dungeons()
 		MapID::Ooze_Pit_mission));
 	dungeons.push_back(new Dungeon(
 		MapID::Darkrime_Delves_Level_1));
-	dungeons.push_back(new Dungeon(
-		MapID::Frostmaws_Burrows_Level_1));
-	dungeons.push_back(new Dungeon(
-		MapID::Sepulchre_of_Dragrimmar_Level_1, Remnant_of_Antiquities));
-	dungeons.push_back(new Dungeon(
-		MapID::Ravens_Point_Level_1, Plague_of_Destruction));
-	dungeons.push_back(new Dungeon(
-		MapID::Vloxen_Excavations_Level_1 , Zoldark_the_Unholy));
-	dungeons.push_back(new Dungeon(
-		MapID::Bogroot_Growths_Level_1));
-	dungeons.push_back(new Dungeon(
-		MapID::Bloodstone_Caves_Level_1));
-	dungeons.push_back(new Dungeon(
-		MapID::Shards_of_Orr_Level_1, Fendi_Nin));
-	dungeons.push_back(new Dungeon(
-		MapID::Oolas_Lab_Level_1, TPS_Regulator_Golem));
-	dungeons.push_back(new Dungeon(
-		MapID::Arachnis_Haunt_Level_1, Arachni));
-	dungeons.push_back(new Dungeon(
-		MapID::Slavers_Exile_Level_1, {
-			Forgewight, Selvetarm, /*Justiciar_Thommis,*/ Rand_Stormweaver, Duncan_the_Black }));
-	dungeons.push_back(new Dungeon(
-		MapID::Fronis_Irontoes_Lair_mission, { QuestID::ZaishenBounty::Fronis_Irontoe }));
-	dungeons.push_back(new Dungeon(
-		MapID::Secret_Lair_of_the_Snowmen));
-	dungeons.push_back(new Dungeon(
-		MapID::Heart_of_the_Shiverpeaks_Level_1, { QuestID::ZaishenBounty::Magmus }));
+dungeons.push_back(new Dungeon(
+	MapID::Frostmaws_Burrows_Level_1));
+dungeons.push_back(new Dungeon(
+	MapID::Sepulchre_of_Dragrimmar_Level_1, Remnant_of_Antiquities));
+dungeons.push_back(new Dungeon(
+	MapID::Ravens_Point_Level_1, Plague_of_Destruction));
+dungeons.push_back(new Dungeon(
+	MapID::Vloxen_Excavations_Level_1, Zoldark_the_Unholy));
+dungeons.push_back(new Dungeon(
+	MapID::Bogroot_Growths_Level_1));
+dungeons.push_back(new Dungeon(
+	MapID::Bloodstone_Caves_Level_1));
+dungeons.push_back(new Dungeon(
+	MapID::Shards_of_Orr_Level_1, Fendi_Nin));
+dungeons.push_back(new Dungeon(
+	MapID::Oolas_Lab_Level_1, TPS_Regulator_Golem));
+dungeons.push_back(new Dungeon(
+	MapID::Arachnis_Haunt_Level_1, Arachni));
+dungeons.push_back(new Dungeon(
+	MapID::Slavers_Exile_Level_1, {
+		Forgewight, Selvetarm, /*Justiciar_Thommis,*/ Rand_Stormweaver, Duncan_the_Black }));
+dungeons.push_back(new Dungeon(
+	MapID::Fronis_Irontoes_Lair_mission, { QuestID::ZaishenBounty::Fronis_Irontoe }));
+dungeons.push_back(new Dungeon(
+	MapID::Secret_Lair_of_the_Snowmen));
+dungeons.push_back(new Dungeon(
+	MapID::Heart_of_the_Shiverpeaks_Level_1, { QuestID::ZaishenBounty::Magmus }));
 }
 
 
 void CompletionWindow::Terminate()
 {
-	GW::StoC::RemovePostCallback(GAME_SMSG_SKILLS_UNLOCKED, &skills_unlocked_stoc_entry);
-	GW::StoC::RemovePostCallback(GAME_SMSG_PARTY_SET_DIFFICULTY, &skills_unlocked_stoc_entry);
-	GW::StoC::RemovePostCallback(GAME_SMSG_INSTANCE_LOADED, &skills_unlocked_stoc_entry);
-	GW::StoC::RemovePostCallback(GAME_SMSG_SKILL_ADD_TO_WINDOW_COUNT, &skills_unlocked_stoc_entry);
+	GW::StoC::RemoveCallback(GAME_SMSG_MAPS_UNLOCKED, &skills_unlocked_stoc_entry);
+	GW::StoC::RemoveCallback(GAME_SMSG_VANQUISH_PROGRESS, &skills_unlocked_stoc_entry);
+	GW::StoC::RemoveCallback(GAME_SMSG_VANQUISH_COMPLETE, &skills_unlocked_stoc_entry);
+	GW::StoC::RemoveCallback(GAME_SMSG_SKILLS_UNLOCKED, &skills_unlocked_stoc_entry);
+	GW::StoC::RemoveCallback(GAME_SMSG_INSTANCE_LOADED, &skills_unlocked_stoc_entry);
+	GW::StoC::RemoveCallback(GAME_SMSG_SKILL_ADD_TO_WINDOW_COUNT, &skills_unlocked_stoc_entry);
 	auto clear_vec = [](auto& vec) {
 		for (auto& c : vec)
 			for (auto i : c.second)
@@ -1278,15 +1421,10 @@ void CompletionWindow::Terminate()
 	clear_vec(pve_skills);
 	clear_vec(elite_skills);
 
-	for (auto camp : character_skills_unlocked)
+	for (auto camp : character_completion)
 		delete camp.second;
-	character_skills_unlocked.clear();
-
-	if (character_skills_unlocked_ini)
-		delete character_skills_unlocked_ini;
+	character_completion.clear();
 }
-
-
 void CompletionWindow::Draw(IDirect3DDevice9* device)
 {
 	if (!visible) return;
@@ -1295,107 +1433,164 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 	ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_FirstUseEver);
 
-	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+	if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+		ImGui::End();
+		return;
+	}
+	constexpr float tabs_per_row = 4.f;
+	const ImVec2 tab_btn_size = { ImGui::GetContentRegionAvail().x / tabs_per_row, 0.f };
 
-		int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * Mission::icon_size.x + (ImGui::GetStyle().ItemSpacing.x)));
-		auto draw_missions = [missions_per_row, device](auto& camp_missions) {
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-			size_t drawn = 0;
-			for (size_t i = 0; i < camp_missions.size(); i++) {
-				if (drawn % missions_per_row > 0) {
-					ImGui::SameLine();
-				}
-				if (camp_missions[i]->Draw(device)) {
-					drawn++;
-				}
-				else {
-					ImGui::NewLine();
-				}
-			}
-			ImGui::PopStyleVar();
-		};
-		for (auto& camp : missions) {
-			auto& camp_missions = camp.second;
-			size_t completed = 0;
-			for (size_t i = 0; i < camp_missions.size(); i++) {
-				if (camp_missions[i]->is_completed)
-					completed++;
-			}
-			char label[128];
-			snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
-			if (ImGui::CollapsingHeader(label)) {
-				draw_missions(camp_missions);
-			}
-		}
-		ImGui::Text("Vanquishes");
-		for (auto& camp : vanquishes) {
-			auto& camp_missions = camp.second;
-			if (!camp_missions.size())
-				continue;
-			size_t completed = 0;
-			for (size_t i = 0; i < camp_missions.size(); i++) {
-				if (camp_missions[i]->is_completed)
-					completed++;
-			}
-			char label[128];
-			snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
-			if (ImGui::CollapsingHeader(label)) {
-				draw_missions(camp_missions);
-			}
-		}
-		const float checkbox_offset = ImGui::GetContentRegionAvail().x - 128.f * ImGui::GetIO().FontGlobalScale;
-
-		auto skills_title = [&, checkbox_offset](const char* title) {
-			ImGui::PushID(title);
-			ImGui::Text(title);
-			ImGui::ShowHelp("Guild Wars only shows skills learned for the current primary/secondary profession.\n\n"
-				"GWToolbox remembers skills learned for other professions,\nbut is only able to update this info when you switch to that profession.");
-			ImGui::SameLine(checkbox_offset);
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
-			ImGui::Checkbox("Hide learned skills", &hide_unlocked_skills);
-			ImGui::PopStyleVar();
-			ImGui::PopID();
-		};
-		skills_title("Elite Skills");
-		for (auto& camp : elite_skills) {
-			auto& camp_missions = camp.second;
-			size_t completed = 0;
-			std::vector<Missions::Mission*> skills_filtered;
-			for (size_t i = 0; i < camp_missions.size(); i++) {
-				if (camp_missions[i]->is_completed) {
-					completed++;
-					if (hide_unlocked_skills)
-						continue;
-				}
-				skills_filtered.push_back(camp_missions[i]);
-			}
-			char label[128];
-			snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
-			if (ImGui::CollapsingHeader(label)) {
-				draw_missions(skills_filtered);
-			}
-		}
-		skills_title("PvE Skills");
-		for (auto& camp : pve_skills) {
-			auto& camp_missions = camp.second;
-			size_t completed = 0;
-			std::vector<Missions::Mission*> skills_filtered;
-			for (size_t i = 0; i < camp_missions.size(); i++) {
-				if (camp_missions[i]->is_completed) {
-					completed++;
-					if (hide_unlocked_skills)
-						continue;
-				}
-				skills_filtered.push_back(camp_missions[i]);
-			}
-			char label[128];
-			snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
-			if (ImGui::CollapsingHeader(label)) {
-				draw_missions(skills_filtered);
-			}
-		}
+	const std::wstring* sel = 0;
+	if (chosen_player_name_s.empty()) {
+		chosen_player_name = GetPlayerName();
+		chosen_player_name_s = GuiUtils::WStringToString(chosen_player_name);
 	}
 
+	const float gscale = ImGui::GetIO().FontGlobalScale;
+	ImGui::Text("Choose Character");
+	ImGui::SameLine();
+	ImGui::PushItemWidth(200.f * gscale);
+	if (ImGui::BeginCombo("##completion_character_select", chosen_player_name_s.c_str())) // The second parameter is the label previewed before opening the combo.
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 2.f, 8.f });
+		bool is_selected = false;
+		for (auto& it : character_completion) {
+			is_selected = false;
+			if (!sel && chosen_player_name == it.first) {
+				is_selected = true;
+				sel = &it.first;
+			}
+
+			if (ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
+				chosen_player_name = it.first;
+				chosen_player_name_s = it.second->name_str;
+				CheckProgress();
+			}
+		}
+		ImGui::PopStyleVar();
+		ImGui::EndCombo();
+	}
+	ImGui::PopItemWidth();
+	ImGui::SameLine(ImGui::GetContentRegionAvail().x - (128.f * gscale));
+	if(ImGui::Checkbox("Hard mode", &hard_mode)) {
+		CheckProgress();
+	}
+	ImGui::Separator();
+	ImGui::BeginChild("completion_scroll");
+	int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * Mission::icon_size.x + (ImGui::GetStyle().ItemSpacing.x)));
+	auto draw_missions = [missions_per_row, device](auto& camp_missions) {
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		size_t drawn = 0;
+		for (size_t i = 0; i < camp_missions.size(); i++) {
+			if (drawn % missions_per_row > 0) {
+				ImGui::SameLine();
+			}
+			if (camp_missions[i]->Draw(device)) {
+				drawn++;
+			}
+			else {
+				ImGui::NewLine();
+			}
+		}
+		ImGui::PopStyleVar();
+	};
+	ImGui::Text("Missions");
+	for (auto& camp : missions) {
+		auto& camp_missions = camp.second;
+		size_t completed = 0;
+		for (size_t i = 0; i < camp_missions.size(); i++) {
+			if (camp_missions[i]->is_completed && camp_missions[i]->bonus)
+				completed++;
+		}
+		char label[128];
+		snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+		if (ImGui::CollapsingHeader(label)) {
+			draw_missions(camp_missions);
+		}
+	}
+	ImGui::Text("Vanquishes");
+	for (auto& camp : vanquishes) {
+		auto& camp_missions = camp.second;
+		if (!camp_missions.size())
+			continue;
+		size_t completed = 0;
+		for (size_t i = 0; i < camp_missions.size(); i++) {
+			if (camp_missions[i]->is_completed)
+				completed++;
+		}
+		char label[128];
+		snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+		if (ImGui::CollapsingHeader(label)) {
+			draw_missions(camp_missions);
+		}
+	}
+	const float checkbox_offset = ImGui::GetContentRegionAvail().x - 160.f * ImGui::GetIO().FontGlobalScale;
+
+	auto skills_title = [&, checkbox_offset](const char* title) {
+		ImGui::PushID(title);
+		ImGui::Text(title);
+		ImGui::ShowHelp("Guild Wars only shows skills learned for the current primary/secondary profession.\n\n"
+			"GWToolbox remembers skills learned for other professions,\nbut is only able to update this info when you switch to that profession.");
+		ImGui::SameLine(checkbox_offset);
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
+		ImGui::Checkbox("Hide learned skills", &hide_unlocked_skills);
+		ImGui::PopStyleVar();
+		ImGui::PopID();
+	};
+	skills_title("Elite Skills");
+	for (auto& camp : elite_skills) {
+		auto& camp_missions = camp.second;
+		size_t completed = 0;
+		std::vector<Missions::Mission*> skills_filtered;
+		for (size_t i = 0; i < camp_missions.size(); i++) {
+			if (camp_missions[i]->is_completed) {
+				completed++;
+				if (hide_unlocked_skills)
+					continue;
+			}
+			skills_filtered.push_back(camp_missions[i]);
+		}
+		char label[128];
+		snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+		if (ImGui::CollapsingHeader(label)) {
+			draw_missions(skills_filtered);
+		}
+	}
+	skills_title("PvE Skills");
+	for (auto& camp : pve_skills) {
+		auto& camp_missions = camp.second;
+		size_t completed = 0;
+		std::vector<Missions::Mission*> skills_filtered;
+		for (size_t i = 0; i < camp_missions.size(); i++) {
+			if (camp_missions[i]->is_completed) {
+				completed++;
+				if (hide_unlocked_skills)
+					continue;
+			}
+			skills_filtered.push_back(camp_missions[i]);
+		}
+		char label[128];
+		snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+		if (ImGui::CollapsingHeader(label)) {
+			draw_missions(skills_filtered);
+		}
+	}
+	ImGui::Text("Heroes");
+	for (auto& camp : heros) {
+		auto& camp_missions = camp.second;
+		size_t completed = 0;
+		for (size_t i = 0; i < camp_missions.size(); i++) {
+			if (camp_missions[i]->is_completed) {
+				completed++;
+			}
+		}
+		char label[128];
+		snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_heros_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+		if (ImGui::CollapsingHeader(label)) {
+			draw_missions(camp_missions);
+		}
+	}
+	ImGui::EndChild();
 	ImGui::End();
 }
 
@@ -1407,93 +1602,215 @@ void CompletionWindow::DrawSettingInternal()
 void CompletionWindow::LoadSettings(CSimpleIni* ini)
 {
 	ToolboxWindow::LoadSettings(ini);
-	LoadCharacterSkillsUnlocked();
+	CSimpleIni* completion_ini = new CSimpleIni(false, false, false);
+	completion_ini->LoadFile(Resources::GetPath(completion_ini_filename).c_str());
+	std::string ini_str;
+	std::wstring name_ws;
+	const char* ini_section;
+
+	auto read_ini_to_buf = [&](CompletionType type, const char* section) {
+		char ini_key_buf[64];
+		snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
+		int len = completion_ini->GetLongValue(ini_section, ini_key_buf, 0);
+		if (len < 1)
+			return;
+		snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
+		std::string val = completion_ini->GetValue(ini_section, ini_key_buf, "");
+		if (val.empty())
+			return;
+		std::vector<uint32_t> completion_buf(len);
+		ASSERT(GuiUtils::IniToArray(val, completion_buf.data(), len));
+		ParseCompletionBuffer(type, name_ws.data(), completion_buf.data(), completion_buf.size());
+	};
+
+	CSimpleIni::TNamesDepend entries;
+	completion_ini->GetAllSections(entries);
+	for (CSimpleIni::Entry& entry : entries) {
+		ini_section = entry.pItem;
+		name_ws = GuiUtils::StringToWString(ini_section);
+		
+		read_ini_to_buf(CompletionType::Mission, "mission");
+		read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus");
+		read_ini_to_buf(CompletionType::MissionHM, "mission_hm");
+		read_ini_to_buf(CompletionType::MissionBonusHM, "mission_bonus_hm");
+		read_ini_to_buf(CompletionType::Skills, "skills");
+		read_ini_to_buf(CompletionType::Vanquishes, "vanquishes");
+		read_ini_to_buf(CompletionType::Heroes, "heros");
+
+		Completion* c = GetCharacterCompletion(name_ws.data());
+		if(c)
+			c->profession = (GW::Constants::Profession)completion_ini->GetLongValue(ini_section, "profession", 0);
+	}
 	CheckProgress();
 }
-void CompletionWindow::CheckProgress() {
+CompletionWindow* CompletionWindow::CheckProgress() {
 	for (auto& camp : pve_skills) {
 		for (auto& skill : camp.second) {
-			skill->CheckProgress();
+			skill->CheckProgress(chosen_player_name);
 		}
 	}
 	for (auto& camp : elite_skills) {
 		for (auto& skill : camp.second) {
-			skill->CheckProgress();
+			skill->CheckProgress(chosen_player_name);
 		}
 	}
 	for (auto& camp : missions) {
 		for (auto& skill : camp.second) {
-			skill->CheckProgress();
+			skill->CheckProgress(chosen_player_name);
 		}
 	}
 	for (auto& camp : vanquishes) {
 		for (auto& skill : camp.second) {
-			skill->CheckProgress();
+			skill->CheckProgress(chosen_player_name);
 		}
 	}
+	for (auto& camp : heros) {
+		for (auto& skill : camp.second) {
+			skill->CheckProgress(chosen_player_name);
+		}
+	}
+	return this;
 }
 void CompletionWindow::SaveSettings(CSimpleIni* ini)
 {
 	ToolboxWindow::SaveSettings(ini);
-	SaveCharacterSkillsUnlocked();
-}
-// IF character_name is null, parse current logged in char.
-void CompletionWindow::ParseSkillsUnlocked(wchar_t* character_name, uint32_t* skills_unlocked_buffer, size_t len) {
-	if (!character_name) {
-		GW::GameContext* g = GW::GameContext::instance();
-		if (!g) return;
-		GW::CharContext* c = g->character;
-		if (!c) return;
-		GW::WorldContext* w = g->world;
-		if (!w) return;
-		character_name = c->player_name;
-		skills_unlocked_buffer = w->unlocked_character_skills.m_buffer;
-		len = w->unlocked_character_skills.m_size;
+	CSimpleIni* completion_ini = new CSimpleIni(false, false, false);
+	std::string ini_str;
+	std::string* name;
+	Completion* char_comp;
+
+	auto write_buf_to_ini = [completion_ini](const char* section, std::vector<uint32_t>* read, std::string& ini_str,std::string* name) {
+		char ini_key_buf[64];
+		snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
+		completion_ini->SetLongValue(name->c_str(), ini_key_buf, read->size());
+		ASSERT(GuiUtils::ArrayToIni(read->data(), read->size(), &ini_str));
+		snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
+		completion_ini->SetValue(name->c_str(), ini_key_buf, ini_str.c_str());
+	};
+
+	for (auto& char_unlocks : character_completion) {
+		
+		char_comp = char_unlocks.second;
+		name = &char_comp->name_str;
+		completion_ini->SetLongValue(name->c_str(), "profession", (uint32_t)char_comp->profession);
+		write_buf_to_ini("mission", &char_comp->mission, ini_str, name);
+		write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, ini_str, name);
+		write_buf_to_ini("mission_hm", &char_comp->mission_hm, ini_str, name);
+		write_buf_to_ini("mission_bonus_hm", &char_comp->mission_bonus_hm, ini_str, name);
+		write_buf_to_ini("skills", &char_comp->skills, ini_str, name);
+		write_buf_to_ini("vanquishes", &char_comp->vanquishes, ini_str, name);
+		write_buf_to_ini("heros", &char_comp->heroes, ini_str, name);
 	}
-	std::vector<uint32_t>* skills_ptr = 0;
-	auto found = character_skills_unlocked.find(character_name);
-	if (found == character_skills_unlocked.end()) {
-		skills_ptr = new std::vector<uint32_t>(len);
-		character_skills_unlocked[character_name] = skills_ptr;
+	completion_ini->SaveFile(Resources::GetPath(completion_ini_filename).c_str());
+	delete completion_ini;
+}
+
+CompletionWindow::Completion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, bool create_if_not_found) {
+	Completion* this_character_completion = 0;
+	auto found = character_completion.find(character_name);
+	if (found == character_completion.end()) {
+		if (create_if_not_found) {
+			this_character_completion = new Completion();
+			this_character_completion->name_str = GuiUtils::WStringToString(character_name);
+			character_completion[character_name] = this_character_completion;
+		}
 	}
 	else {
-		skills_ptr = found->second;
+		this_character_completion = found->second;
 	}
-	std::vector<uint32_t>& skills = *skills_ptr;
-	if (skills.size() < len) {
-		skills.resize(len);
+	return this_character_completion;
+}
+
+CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, wchar_t* character_name, uint32_t* buffer, size_t len) {
+	bool from_game = false;
+	if (!character_name) {
+		from_game = true;
+		GW::GameContext* g = GW::GameContext::instance();
+		if (!g) return this;
+		GW::CharContext* c = g->character;
+		if (!c) return this;
+		GW::WorldContext* w = g->world;
+		if (!w) return this;
+		character_name = c->player_name;
+		switch (type) {
+		case CompletionType::Mission:
+			buffer = w->missions_completed.m_buffer;
+			len = w->unlocked_character_skills.m_size;
+			break;
+		case CompletionType::MissionBonus:
+			buffer = w->missions_bonus.m_buffer;
+			len = w->missions_bonus.m_size;
+			break;
+		case CompletionType::MissionHM:
+			buffer = w->missions_completed_hm.m_buffer;
+			len = w->missions_completed_hm.m_size;
+			break;
+		case CompletionType::MissionBonusHM:
+			buffer = w->missions_bonus_hm.m_buffer;
+			len = w->missions_bonus_hm.m_size;
+			break;
+		case CompletionType::Skills:
+			buffer = w->unlocked_character_skills.m_buffer;
+			len = w->unlocked_character_skills.m_size;
+			break;
+		case CompletionType::Vanquishes:
+			buffer = w->vanquished_areas.m_buffer;
+			len = w->vanquished_areas.m_size;
+			break;
+		case CompletionType::Heroes:
+			buffer = (uint32_t*)w->hero_info.m_buffer;
+			len = w->hero_info.m_size;
+			break;
+		default:
+			ASSERT("Invalid CompletionType" && false);
+		}
+	}
+	Completion* this_character_completion = GetCharacterCompletion(character_name,true);
+	std::vector<uint32_t>* write_buf = 0;
+	switch (type) {
+	case CompletionType::Mission:
+		write_buf = &this_character_completion->mission;
+		break;
+	case CompletionType::MissionBonus:
+		write_buf = &this_character_completion->mission_bonus;
+		break;
+	case CompletionType::MissionHM:
+		write_buf = &this_character_completion->mission_hm;
+		break;
+	case CompletionType::MissionBonusHM:
+		write_buf = &this_character_completion->mission_bonus_hm;
+		break;
+	case CompletionType::Skills:
+		write_buf = &this_character_completion->skills;
+		break;
+	case CompletionType::Vanquishes:
+		write_buf = &this_character_completion->vanquishes;
+		break;
+	case CompletionType::Heroes: {
+		write_buf = &this_character_completion->heroes;
+		if (from_game) {
+			// Writing from game memory, not from file
+			std::vector<uint32_t>& write = *write_buf;
+			GW::HeroInfo* hero_arr = (GW::HeroInfo*)buffer;
+			if (write.size() < len) {
+				write.resize(len, 0);
+			}
+			for (size_t i = 0; i < len; i++) {
+				write[i] = hero_arr[i].hero_id;
+			}
+			return this;
+		}
+	} break;
+	default:
+		ASSERT("Invalid CompletionType" && false);
+	}
+	std::vector<uint32_t>& write = *write_buf;
+	if (write.size() < len) {
+		write.resize(len,0);
 	}
 	for (size_t i = 0; i < len; i++) {
-		skills[i] |= skills_unlocked_buffer[i];
+		write[i] = buffer[i];
 	}
+	return this;
 }
-void CompletionWindow::LoadCharacterSkillsUnlocked() {
 
-	character_skills_unlocked_ini->Reset();
-	character_skills_unlocked_ini->LoadFile(Resources::GetPath(L"character_skills_unlocked.ini").c_str());
-	CSimpleIni::TNamesDepend entries;
-	character_skills_unlocked_ini->GetAllSections(entries);	
-	for (CSimpleIni::Entry& entry : entries) {
-		std::wstring name = GuiUtils::StringToWString(entry.pItem);
-		int len = character_skills_unlocked_ini->GetLongValue(entry.pItem, "length");
-		if (len < 1)
-			continue;
-		std::string val = character_skills_unlocked_ini->GetValue(entry.pItem, "values");
-		std::vector<uint32_t> skills_unlocked(len);
-		ASSERT(GuiUtils::IniToArray(val, skills_unlocked.data(), len));
-		ParseSkillsUnlocked(name.data(), skills_unlocked.data(), skills_unlocked.size());
-	}
-	ParseSkillsUnlocked();
-}
-void CompletionWindow::SaveCharacterSkillsUnlocked() {
-	character_skills_unlocked_ini->Reset();
-	character_skills_unlocked_ini->LoadFile(Resources::GetPath(skills_ini_filename).c_str());
-	for (auto& char_skills : character_skills_unlocked) {
-		std::string name = GuiUtils::WStringToString(char_skills.first);
-		character_skills_unlocked_ini->SetLongValue(name.c_str(), "length", char_skills.second->size());
-		std::string skills_str;
-		ASSERT(GuiUtils::ArrayToIni(char_skills.second->data(), char_skills.second->size(), &skills_str));
-		character_skills_unlocked_ini->SetValue(name.c_str(), "values", skills_str.c_str());
-	}
-	character_skills_unlocked_ini->SaveFile(Resources::GetPath(skills_ini_filename).c_str());
-}

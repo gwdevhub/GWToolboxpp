@@ -47,7 +47,7 @@ namespace Missions {
         const MissionImageList& normal_mode_textures;
         const MissionImageList& hard_mode_textures;
 
-        virtual bool IsCompleted();
+
 
     public:
         Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, uint32_t);
@@ -55,17 +55,20 @@ namespace Missions {
         GW::Constants::MapID GetOutpost();
 
         bool is_completed = false;
+        bool bonus = false;
+
+        virtual const char* Name();
+
 
         virtual bool Draw(IDirect3DDevice9*);
         virtual void OnClick();
         virtual IDirect3DTexture9* GetMissionImage();
         virtual bool IsDaily(); // True if this mission is ZM or ZB today
         virtual bool HasQuest(); // True if the ZM or ZB is in quest log
-        bool CheckProgress() {
-            return is_completed = IsCompleted();
-        }
+        virtual void CheckProgress(const std::wstring& player_name);
         
     };
+
 
     class PvESkill : public Mission {
     protected:
@@ -74,26 +77,39 @@ namespace Missions {
         bool img_loaded = false;
         const wchar_t* image_url = 0;
         IDirect3DTexture9* skill_image = 0;
-
-        bool IsCompleted() override;
     public:
         uint32_t profession = 0;
         inline static MissionImageList dummy_var = {};
         PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url);
-        IDirect3DTexture9* GetMissionImage() override;
+        virtual IDirect3DTexture9* GetMissionImage() override;
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }
         
         virtual bool Draw(IDirect3DDevice9*) override;
-        void OnClick() override;
+        virtual void OnClick() override;
+
+        virtual void CheckProgress(const std::wstring& player_name) override;
     };
+
+    class HeroUnlock : public PvESkill {
+    public:
+        HeroUnlock(GW::Constants::HeroID _hero_id);
+        IDirect3DTexture9* GetMissionImage() override;
+
+        void OnClick() override;
+
+        virtual void CheckProgress(const std::wstring& player_name) override;
+        const char* Name() override;
+    };
+
     class FactionsPvESkill : public PvESkill {
     protected:
         GW::Constants::SkillID skill_id2;
-        bool IsCompleted() override;
     public:
         FactionsPvESkill(GW::Constants::SkillID kurzick_id, GW::Constants::SkillID luxon_id, const wchar_t* _image_url);
         bool Draw(IDirect3DDevice9*) override;
+        virtual void CheckProgress(const std::wstring& player_name) override;
+
         
     };
 
@@ -155,8 +171,6 @@ namespace Missions {
 
     class Vanquish : public Mission
     {
-    protected:
-        bool IsCompleted() override;
     public:
         static MissionImageList hard_mode_images;
         Vanquish(GW::Constants::MapID _outpost, uint32_t _zm_quest = 0)
@@ -165,6 +179,7 @@ namespace Missions {
 
         
         IDirect3DTexture9* GetMissionImage();
+        virtual void CheckProgress(const std::wstring& player_name) override;
     };
 
 
@@ -180,7 +195,6 @@ namespace Missions {
             const MissionImageList& _hard_mode_images,
             uint32_t _zm_quest)
             : Mission(_outpost, _normal_mode_images, _hard_mode_images, _zm_quest) {}
-        bool IsCompleted() override;
     public:
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
@@ -189,6 +203,7 @@ namespace Missions {
 
         
         IDirect3DTexture9* GetMissionImage();
+        virtual void CheckProgress(const std::wstring& player_name) override;
     };
 
 
@@ -215,9 +230,33 @@ namespace Missions {
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class CompletionWindow : public ToolboxWindow {
 protected:
-    CSimpleIni* character_skills_unlocked_ini = nullptr;
     bool hide_unlocked_skills = false;
-    const char* skills_ini_filename = "character_skills_unlocked.ini";
+    const char* completion_ini_filename = "character_completion.ini";
+
+    std::wstring chosen_player_name;
+    std::string chosen_player_name_s;
+    bool hard_mode = false;
+
+    enum CompletionType : uint8_t {
+        Skills,
+        Mission,
+        MissionBonus,
+        MissionHM,
+        MissionBonusHM,
+        Vanquishes,
+        Heroes
+    };
+    struct Completion {
+        GW::Constants::Profession profession;
+        std::string name_str;
+        std::vector<uint32_t> skills;
+        std::vector<uint32_t> mission;
+        std::vector<uint32_t> mission_bonus;
+        std::vector<uint32_t> mission_hm;
+        std::vector<uint32_t> mission_bonus_hm;
+        std::vector<uint32_t> vanquishes;
+        std::vector<uint32_t> heroes;
+    };
 
 public:
 	static CompletionWindow& Instance() {
@@ -228,6 +267,8 @@ public:
 	const char* Name() const override { return "Completion"; }
     const char* Icon() const override { return ICON_FA_BOOK; }
 
+    const bool IsHardMode() { return hard_mode; }
+
 	void Initialize() override;
 	void Initialize_Prophecies();
 	void Initialize_Factions();
@@ -236,21 +277,26 @@ public:
 	void Initialize_Dungeons();
 	void Terminate() override;
 	void Draw(IDirect3DDevice9* pDevice) override;
-    void ParseSkillsUnlocked(wchar_t* character_name = 0, uint32_t* skills_unlocked_buffer = 0, size_t len = 0);
+    
+    std::unordered_map<std::wstring, Completion*> character_completion;
+
+    Completion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
+
+    // IF character_name is null, parse current logged in char.
+    CompletionWindow* ParseCompletionBuffer(CompletionType type, wchar_t* character_name = 0, uint32_t* buffer = 0, size_t len = 0);
 
 	void DrawSettingInternal() override;
 	void LoadSettings(CSimpleIni* ini) override;
-    void LoadCharacterSkillsUnlocked();
 	void SaveSettings(CSimpleIni* ini) override;
-    void SaveCharacterSkillsUnlocked();
     // Check explicitly rather than every frame
-    void CheckProgress();
+    CompletionWindow* CheckProgress();
 
-    std::unordered_map<std::wstring, std::vector<uint32_t>*> character_skills_unlocked;
+
     GW::HookEntry skills_unlocked_stoc_entry;
 
     std::map<Missions::Campaign, std::vector<Missions::Mission*>> missions;
     std::map<Missions::Campaign, std::vector<Missions::Mission*>> vanquishes;
     std::map<Missions::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
     std::map<Missions::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
+    std::map<Missions::Campaign, std::vector<Missions::HeroUnlock*>> heros;
 };
