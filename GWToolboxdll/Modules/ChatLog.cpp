@@ -4,6 +4,7 @@
 #include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -23,9 +24,15 @@ namespace {
     ClearChatLog_pt ClearChatLog_Func = 0;
     typedef void(__cdecl* InitChatLog_pt)();
     InitChatLog_pt InitChatLog_Func = 0;
+
+
     
 }
-
+namespace GW {
+    namespace Chat {
+        const size_t SENT_LOG_LENGTH = 0x32;
+    }
+}
 //#define PRINT_CHAT_PACKETS
 void ChatLog::Reset() {
     while (recv_first) {
@@ -118,7 +125,7 @@ void ChatLog::AddSent(wchar_t* _message, uint32_t addr) {
     goto trim_log;
 trim_log:
     sent_count++;
-    while (sent_count > GW::Chat::CHAT_LOG_LENGTH) {
+    while (sent_count > GW::Chat::SENT_LOG_LENGTH) {
         RemoveSent(sent_first);
     }
 }
@@ -304,7 +311,13 @@ void ChatLog::Inject() {
             recv = recv->next;
         }
     }
+    InjectSent();
 
+done_injecting:
+    injecting = false;
+}
+void ChatLog::InjectSent() {
+    injecting = true;
     // Sent
     auto out_log = GetSentLog();
     if (!AddToSentLog_Func)
@@ -315,6 +328,9 @@ void ChatLog::Inject() {
     TBSentMessage* sent = sent_first;
     while (sent) {
         AddToSentLog_Func(sent->msg.data());
+        if (!out_log)
+            out_log = GetSentLog();
+        sent->gw_message_address = (uint32_t)out_log->prev->message;
         if (sent == sent_last)
             break;
         sent = sent->next;
@@ -374,6 +390,10 @@ void ChatLog::Initialize() {
 
     GW::Chat::RegisterChatLogCallback(&PreAddToChatLog_entry, OnPreAddToChatLog, -0x4000);
     GW::Chat::RegisterChatLogCallback(&PostAddToChatLog_entry, OnPostAddToChatLog, 0x4000);
+    GW::UI::RegisterUIMessageCallback(&UIMessage_Entry, [](GW::HookStatus*, uint32_t message_id, void*, void*) {
+        if(message_id == 0x1000008a)
+            Instance().InjectSent();
+        },0x8000);
     Init();
     Inject();
 }
@@ -403,10 +423,10 @@ void ChatLog::OnAddToSentLog(wchar_t* message) {
         Instance().Inject();
         log = Instance().GetSentLog();
     }
-    size_t count = log ? log->count : 0;
+    GWSentMessage* lastest_message = log ? log->prev : 0;
     RetAddToSentLog(message);
     log = Instance().GetSentLog();
-    if (log && count != log->count)
+    if (log && log->prev != lastest_message)
         Instance().AddSent(log->prev->message);
     GW::HookBase::LeaveHook();
 }
@@ -418,9 +438,7 @@ void ChatLog::OnPreAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::C
     if (inject) {
         Instance().Inject();
     }
-
 }
-
 void ChatLog::OnPostAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage* logged_message) {
     if (!Instance().enabled)
         return;

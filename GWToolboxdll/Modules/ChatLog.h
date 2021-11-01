@@ -63,6 +63,7 @@ private:
     void Load(const std::wstring& _account);
     // Clear current chat log and prefill from tb chat log; chat box will update on map change
     void Inject();
+    void InjectSent();
     // Set up chat log, load from file if applicable. Returns true if initialised
     bool Init();
     // Check outgoing log to see if message has already been added
@@ -105,7 +106,7 @@ private:
 
     GW::HookEntry PreAddToChatLog_entry;
     GW::HookEntry PostAddToChatLog_entry;
-    
+    GW::HookEntry UIMessage_Entry;
 
 public:
     static ChatLog& Instance() {
