@@ -16,14 +16,6 @@
 
 namespace Missions {
 
-    enum class Campaign : uint8_t {
-        Core,
-        Prophecies,
-        Factions,
-        Nightfall,
-        EyeOfTheNorth,
-        Dungeon
-    };
 
     struct MissionImage {
         const wchar_t* file_name;
@@ -294,9 +286,9 @@ public:
 
     GW::HookEntry skills_unlocked_stoc_entry;
 
-    std::map<Missions::Campaign, std::vector<Missions::Mission*>> missions;
-    std::map<Missions::Campaign, std::vector<Missions::Mission*>> vanquishes;
-    std::map<Missions::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
-    std::map<Missions::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
-    std::map<Missions::Campaign, std::vector<Missions::HeroUnlock*>> heros;
+    std::map<GW::Constants::Campaign, std::vector<Missions::Mission*>> missions;
+    std::map<GW::Constants::Campaign, std::vector<Missions::Mission*>> vanquishes;
+    std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
+    std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
+    std::map<GW::Constants::Campaign, std::vector<Missions::HeroUnlock*>> heros;
 };

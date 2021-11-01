@@ -459,35 +459,35 @@ void CompletionWindow::Initialize()
 	//Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
 
 	missions = {
-		{ Missions::Campaign::Prophecies, {} },
-		{ Missions::Campaign::Factions, {} },
-		{ Missions::Campaign::Nightfall, {} },
-		{ Missions::Campaign::EyeOfTheNorth, {} },
-		{ Missions::Campaign::Dungeon, {} },
+		{ GW::Constants::Campaign::Prophecies, {} },
+		{ GW::Constants::Campaign::Factions, {} },
+		{ GW::Constants::Campaign::Nightfall, {} },
+		{ GW::Constants::Campaign::EyeOfTheNorth, {} },
+		{ GW::Constants::Campaign::Dungeon, {} },
 	};
 	vanquishes = {
-		{ Missions::Campaign::Prophecies, {} },
-		{ Missions::Campaign::Factions, {} },
-		{ Missions::Campaign::Nightfall, {} },
-		{ Missions::Campaign::EyeOfTheNorth, {} },
-		{ Missions::Campaign::Dungeon, {} },
+		{ GW::Constants::Campaign::Prophecies, {} },
+		{ GW::Constants::Campaign::Factions, {} },
+		{ GW::Constants::Campaign::Nightfall, {} },
+		{ GW::Constants::Campaign::EyeOfTheNorth, {} },
+		{ GW::Constants::Campaign::Dungeon, {} },
 	};
 	elite_skills = {
-		{ Missions::Campaign::Prophecies, {} },
-		{ Missions::Campaign::Factions, {} },
-		{ Missions::Campaign::Nightfall, {} },
-		{ Missions::Campaign::Core, {} },
+		{ GW::Constants::Campaign::Prophecies, {} },
+		{ GW::Constants::Campaign::Factions, {} },
+		{ GW::Constants::Campaign::Nightfall, {} },
+		{ GW::Constants::Campaign::Core, {} },
 	};
 	 pve_skills = {
-		{ Missions::Campaign::Factions, {} },
-		{ Missions::Campaign::Nightfall, {} },
-		{ Missions::Campaign::EyeOfTheNorth, {} },
-		{ Missions::Campaign::Core, {} },
+		{ GW::Constants::Campaign::Factions, {} },
+		{ GW::Constants::Campaign::Nightfall, {} },
+		{ GW::Constants::Campaign::EyeOfTheNorth, {} },
+		{ GW::Constants::Campaign::Core, {} },
 	};
 	 heros = {
-		{ Missions::Campaign::Factions, {} },
-		{ Missions::Campaign::Nightfall, {} },
-		{ Missions::Campaign::EyeOfTheNorth, {} }
+		{ GW::Constants::Campaign::Factions, {} },
+		{ GW::Constants::Campaign::Nightfall, {} },
+		{ GW::Constants::Campaign::EyeOfTheNorth, {} }
 	 };
 
 	Initialize_Prophecies();

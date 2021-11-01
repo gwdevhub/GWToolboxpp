@@ -391,7 +391,7 @@ void ChatLog::Initialize() {
     GW::Chat::RegisterChatLogCallback(&PreAddToChatLog_entry, OnPreAddToChatLog, -0x4000);
     GW::Chat::RegisterChatLogCallback(&PostAddToChatLog_entry, OnPostAddToChatLog, 0x4000);
     GW::UI::RegisterUIMessageCallback(&UIMessage_Entry, [](GW::HookStatus*, uint32_t message_id, void*, void*) {
-        if(message_id == 0x1000008a)
+        if(message_id == GW::UI::kMapLoaded)
             Instance().InjectSent();
         },0x8000);
     Init();
