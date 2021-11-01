@@ -7,7 +7,7 @@
 
 class HintsModule : public ToolboxModule {
 protected:
-    bool block_repeat_attack_hint = true;
+    bool only_show_hints_once = false;
 public:
     static HintsModule& Instance() {
         static HintsModule instance;
@@ -18,6 +18,7 @@ public:
     const char* SettingsName() const override { return "In-Game Hints"; }
 
     void Initialize() override;
+    void Update(float) override;
     void DrawSettingInternal() override;
 
     static void OnUIMessage(GW::HookStatus*, uint32_t message_id, void* wparam, void* lparam);

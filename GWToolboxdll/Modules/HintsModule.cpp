@@ -2,6 +2,7 @@
 
 
 #include <GWCA/Constants/Maps.h>
+#include <GWCA/Constants/AgentIDs.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -10,10 +11,13 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Quest.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <ImGuiAddons.h>
 
@@ -33,7 +37,15 @@ namespace {
         return GW::Constants::Campaign::Factions;
     }
 
+    GW::SkillbarSkill* GetPlayerSkillbarSkill(GW::Constants::SkillID skill_id) {
+        auto skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+        if (!skillbar) return 0;
+        return skillbar->GetSkillById(skill_id);
+    }
+
     std::vector<uint32_t> hints_shown;
+    struct HintUIMessage;
+    std::vector<std::pair<clock_t, HintUIMessage*>> delayed_hints;
     struct HintUIMessage {
         uint32_t message_id = 0x10000000; // Used internally to avoid queueing more than 1 of the same hint
         wchar_t* message_encoded;
@@ -41,9 +53,17 @@ namespace {
         uint32_t message_timeout_ms = 15000;
         uint32_t style_bitmap = 0x12; // 0x18 = hint with left padding
         HintUIMessage(const wchar_t* message, uint32_t duration = 30000, uint32_t _message_id = 0) {
-            const size_t strlen = (wcslen(message) + 4) * sizeof(wchar_t);
-            message_encoded = (wchar_t*)malloc(strlen);
-            swprintf(message_encoded, strlen, L"\x108\x107%s\x1", message);
+            size_t strlen = (wcslen(message) + 1) * sizeof(wchar_t);
+            if (message[0] == 0x108) {
+                message_encoded = (wchar_t*)malloc(strlen);
+                // Already encoded
+                wcscpy(message_encoded, message);
+            }
+            else {
+                strlen += (3 * sizeof(wchar_t));
+                message_encoded = (wchar_t*)malloc(strlen);
+                swprintf(message_encoded, strlen, L"\x108\x107%s\x1", message);
+            }
             if(!_message_id)
                 _message_id = (uint32_t)message;
             message_id = _message_id;
@@ -54,10 +74,11 @@ namespace {
             free(message_encoded);
         }
         void Show() {
-            if (std::find(hints_shown.begin(), hints_shown.end(), message_id) != hints_shown.end())
-                return;
             GW::UI::SendUIMessage(GW::UI::kShowHint, this);
             hints_shown.push_back(message_id);
+        }
+        void Delay(clock_t delay_ms) {
+            delayed_hints.push_back(std::pair( clock() + delay_ms, new HintUIMessage(message_encoded,message_timeout_ms,message_id)));
         }
     };
     struct LastQuote {
@@ -93,20 +114,44 @@ namespace {
     constexpr TBHint BULK_BUY = { 0x20000004, L"Hold Ctrl when requesting a quote to bulk buy or sell from a trader" };
     constexpr TBHint EMBARK_WITHOUT_HOMELAND = { 0x20001000, L"To get back from Embark Beach to where you came from, talk to \x1\x2%s\x2\x108\x107 or use the '/tb travel' chat command." };
     constexpr TBHint ENDGAME_TROPHY = { 0x20002000, L"Talk to \x1\x2%s\x2\x108\x107 to receive a \x1\x2%s\x2\x108\x107. Those are worth a lot of money if you sell to another player, so rather than trading it in for a weapon, search on https://kamadan.gwtoolbox.com for a buyer." };
+    constexpr TBHint QUEST_HINT_ADVENTURE_WITH_AN_ALLY = { 0x20000005, L"If you don't have a friend available to join you for this quest, try adding everyone in Ascalon City (America English district) to your party. Someone will surely be happy to help you." };
+    constexpr TBHint NOLANI_ACADEMY_SHORTCUT = { 0x20000006, L"Turn right and head south to kill Bonfaaz Burntfur.It's a quicker route to the end - Prince Rurik will be fine on his own." };
+    constexpr TBHint CHARM_ANIMAL = { 0x20000007, L"Charm Animal is only needed for charming a pet. Consider bringing Comfort Animal instead." };
+    constexpr TBHint HEROS_HANDBOOK = { 0x2000008, L"Talk to Gedrel of Ascalon in Eye of the North to get a Hero's Handbook and Master Dungeon Guide." };
+
 }
 
 //#define PRINT_CHAT_PACKETS
 void HintsModule::Initialize() {
+    ToolboxModule::Initialize();
     GW::UI::RegisterUIMessageCallback(&hints_entry, OnUIMessage);
 }
-
+void HintsModule::Update(float) {
+    if (!delayed_hints.empty() 
+        && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
+        && GW::Agents::GetPlayer()) {
+        clock_t _now = clock();
+        for (auto it = delayed_hints.begin(); it != delayed_hints.end();it++) {
+            if (it->first < _now) {
+                it->second->Show();
+                delete it->second;
+                delayed_hints.erase(it);
+                break; // Skip frame
+            }
+        }
+    }
+}
 void HintsModule::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*) {
     switch (message_id) {
-    case GW::UI::kShowHint: {
-        HintUIMessage* msg = (HintUIMessage*)wparam;
-        if (Instance().block_repeat_attack_hint && wcscmp(msg->message_encoded, L"\x9c3") == 0) {
-            status->blocked = true;
+    case GW::UI::kStartMapLoad: {
+        if (GW::Map::GetIsInCinematic() && GW::Map::GetMapID() == GW::Constants::MapID::Cinematic_Eye_Vision_A) {
+            HintUIMessage(HEROS_HANDBOOK).Delay(1000);
         }
+    } break;
+    case GW::UI::kShowHint: {
+        // HintUIMessage* msg = (HintUIMessage*)wparam;
+        if (Instance().only_show_hints_once && std::find(hints_shown.begin(), hints_shown.end(), message_id) != hints_shown.end())
+            status->blocked = true;
     } break;
     case GW::UI::kWriteToChatLog: {
         GW::UI::UIChatMessage* msg = (GW::UI::UIChatMessage*)wparam;
@@ -118,6 +163,14 @@ void HintsModule::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void*
         GW::AgentLiving* chest = GW::Agents::GetTargetAsAgentLiving();
         if(chest && chest->player_number == 5001 && GW::GetDistance(GW::Agents::GetPlayer()->pos,chest->pos) < GW::Constants::Range::Nearby) {
             HintUIMessage(CHEST_CMD).Show();
+        }
+    } break;
+    case GW::UI::kQuestAdded: {
+        uint32_t quest_id = *(uint32_t*)wparam; // NB: wParam is just a pointer to packet content for QuestAdded
+        switch (quest_id) {
+        case 56: // Adventure with an ally
+            HintUIMessage(QUEST_HINT_ADVENTURE_WITH_AN_ALLY).Show();
+            break;
         }
     } break;
     case GW::UI::kQuotedItemPrice: {
@@ -163,11 +216,15 @@ void HintsModule::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void*
             swprintf(out, 256, ENDGAME_TROPHY.message, endgame_reward_npcs[endgame_msg_idx], endgame_reward_trophies[endgame_msg_idx]);
             HintUIMessage(out, 30000, ENDGAME_TROPHY.message_id & endgame_msg_idx).Show();
         }
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && GetPlayerSkillbarSkill(GW::Constants::SkillID::Charm_Animal)) {
+            HintUIMessage(CHARM_ANIMAL).Show();
+        }
+
         
     } break;
     }
 }
 void HintsModule::DrawSettingInternal() {
-    ImGui::Checkbox("Block \"ordering your character to attack repeatedly\" hint", &block_repeat_attack_hint);
-    ImGui::ShowHelp("Guild Wars keeps showing a hint to tell you not to repeatedly attack a foe.\nTick to stop it from popping up.");
+    ImGui::Checkbox("Only show hints once", &only_show_hints_once);
+    ImGui::ShowHelp("GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
 }
