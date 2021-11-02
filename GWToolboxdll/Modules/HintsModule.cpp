@@ -12,6 +12,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <GWCA/GameContainers/GamePos.h>
 
@@ -118,7 +119,7 @@ namespace {
     constexpr TBHint NOLANI_ACADEMY_SHORTCUT = { 0x20000006, L"Turn right and head south to kill Bonfaaz Burntfur.It's a quicker route to the end - Prince Rurik will be fine on his own." };
     constexpr TBHint CHARM_ANIMAL = { 0x20000007, L"Charm Animal is only needed for charming a pet. Consider bringing Comfort Animal instead." };
     constexpr TBHint HEROS_HANDBOOK = { 0x2000008, L"Talk to Gedrel of Ascalon in Eye of the North to get a Hero's Handbook and Master Dungeon Guide." };
-
+    constexpr TBHint BLACK_WIDOW_CHARM = { 0x2000009, L"If you're planning to charm a Black Widow, remember to flag your heroes away so they don't kill it." };
 }
 
 //#define PRINT_CHAT_PACKETS
@@ -143,6 +144,15 @@ void HintsModule::Update(float) {
 }
 void HintsModule::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*) {
     switch (message_id) {
+    case GW::UI::kObjectiveComplete: {
+        uint32_t objective_id = *(uint32_t*)wparam;
+        if (objective_id == 150 
+            && GW::Map::GetMapID() == GW::Constants::MapID::The_Underworld 
+            && GetPlayerSkillbarSkill(GW::Constants::SkillID::Charm_Animal) 
+            && GW::PartyMgr::GetPartyHeroCount()) {
+            HintUIMessage(BLACK_WIDOW_CHARM).Show();
+        }
+    } break;
     case GW::UI::kStartMapLoad: {
         if (GW::Map::GetIsInCinematic() && GW::Map::GetMapID() == GW::Constants::MapID::Cinematic_Eye_Vision_A) {
             HintUIMessage(HEROS_HANDBOOK).Delay(1000);
