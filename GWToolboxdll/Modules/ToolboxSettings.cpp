@@ -76,9 +76,7 @@
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/SkillbarWidget.h>
 #include <Widgets/WorldMapWidget.h>
-#ifdef _DEBUG
 #include <Widgets/EffectsMonitorWidget.h>
-#endif
 #include "ToolboxSettings.h"
 
 //#define _FUN
@@ -158,8 +156,9 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
     if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
     if (use_world_map) optional_modules.push_back(&WorldMapWidget::Instance());
+    if (use_effect_monitor) optional_modules.push_back(&EffectsMonitorWidget::Instance());
 #if _DEBUG
-    optional_modules.push_back(&EffectsMonitorWidget::Instance());
+    
 #endif
 
     std::sort(
@@ -202,6 +201,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Dialogs",&use_dialogs},
         {"Discord",&use_discord},
         {"Distance",&use_distance},
+        {"Effect Monitor",&use_effect_monitor},
         {"Health",&use_health},
         {"Hotkeys",&use_hotkeys},
         {"Friend List",&use_friendlist},
@@ -323,6 +323,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_obfuscator = ini->GetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
     use_completion_window = ini->GetBoolValue(Name(), VAR_NAME(use_completion_window), use_completion_window);
     use_world_map = ini->GetBoolValue(Name(), VAR_NAME(use_world_map), use_world_map);
+    use_effect_monitor = ini->GetBoolValue(Name(), VAR_NAME(use_effect_monitor), use_effect_monitor);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -369,6 +370,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
     ini->SetBoolValue(Name(), VAR_NAME(use_completion_window), use_completion_window);
     ini->SetBoolValue(Name(), VAR_NAME(use_world_map), use_world_map);
+    ini->SetBoolValue(Name(), VAR_NAME(use_effect_monitor), use_effect_monitor);
 }
 
 void ToolboxSettings::Draw(IDirect3DDevice9*) {
