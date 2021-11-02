@@ -20,6 +20,8 @@ public:
     void Initialize() override;
     void Update(float) override;
     void DrawSettingInternal() override;
+    void LoadSettings(CSimpleIni* ini) override;
+    void SaveSettings(CSimpleIni* ini) override;
 
     static void OnUIMessage(GW::HookStatus*, uint32_t message_id, void* wparam, void* lparam);
 

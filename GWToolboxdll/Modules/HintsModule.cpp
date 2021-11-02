@@ -21,8 +21,10 @@
 #include <GWCA/GameEntities/Skill.h>
 
 #include <ImGuiAddons.h>
+#include <GuiUtils.h>
 
 #include <Modules/HintsModule.h>
+#include <Defines.h>
 
 namespace {
     struct TBHint {
@@ -76,7 +78,6 @@ namespace {
         }
         void Show() {
             GW::UI::SendUIMessage(GW::UI::kShowHint, this);
-            hints_shown.push_back(message_id);
         }
         void Delay(clock_t delay_ms) {
             delayed_hints.push_back(std::pair( clock() + delay_ms, new HintUIMessage(message_encoded,message_timeout_ms,message_id)));
@@ -159,9 +160,14 @@ void HintsModule::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void*
         }
     } break;
     case GW::UI::kShowHint: {
-        // HintUIMessage* msg = (HintUIMessage*)wparam;
-        if (Instance().only_show_hints_once && std::find(hints_shown.begin(), hints_shown.end(), message_id) != hints_shown.end())
-            status->blocked = true;
+        HintUIMessage* msg = (HintUIMessage*)wparam;
+        if (std::find(hints_shown.begin(), hints_shown.end(), msg->message_id) != hints_shown.end()) {
+            if(Instance().only_show_hints_once)
+                status->blocked = true;
+        }
+        else {
+            hints_shown.push_back(msg->message_id);
+        }
     } break;
     case GW::UI::kWriteToChatLog: {
         GW::UI::UIChatMessage* msg = (GW::UI::UIChatMessage*)wparam;
@@ -237,4 +243,25 @@ void HintsModule::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void*
 void HintsModule::DrawSettingInternal() {
     ImGui::Checkbox("Only show hints once", &only_show_hints_once);
     ImGui::ShowHelp("GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
+    if (only_show_hints_once) {
+        ImGui::TextDisabled("%d hint(s) have already been shown in-game and won't be shown again", hints_shown.size());
+        if (ImGui::Button("Clear cached hints"))
+            hints_shown.clear();
+    }
+}
+void HintsModule::SaveSettings(CSimpleIni* ini) {
+    ToolboxModule::SaveSettings(ini);
+    std::string ini_str;
+    ini->SetBoolValue(Name(), VAR_NAME(only_show_hints_once), only_show_hints_once);
+    ASSERT(GuiUtils::ArrayToIni(hints_shown.data(), hints_shown.size(), &ini_str));
+    ini->SetValue(Name(), VAR_NAME(hints_shown), ini_str.c_str());
+}
+void HintsModule::LoadSettings(CSimpleIni* ini) {
+    ToolboxModule::SaveSettings(ini);
+    only_show_hints_once = ini->GetBoolValue(Name(), VAR_NAME(only_show_hints_once), only_show_hints_once);
+    std::string ini_str = ini->GetValue(Name(), VAR_NAME(hints_shown), "");
+    if (!ini_str.empty()) {
+        hints_shown.resize((ini_str.size() + 1) / 9);
+        ASSERT(GuiUtils::IniToArray(ini_str, hints_shown.data(), hints_shown.size()));
+    }
 }
