@@ -38,7 +38,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 
     if (!visible) return;
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(768, 768), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         drawn_settings.clear();
         ImColor sCol(102, 187, 238, 255);

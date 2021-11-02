@@ -7,6 +7,24 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.8
+* [New] Added option in Party Settings to rename tengu/imperial guard summons to their elise skill
+* [New] Completion overhaul; added hero tracking, hard mode toggle, character selector
+* [New] `/travel` command checks explorable areas if no matching outpost is found, tp's the player to closest unlocked outpost
+* [New] Added Effects Monitor overlay widget
+* [New] Added `/quest` chat command to send current quest details to team chat
+* [New] Added Chat Log module to keep a record of chat history and sent message logs even if logged out
+* [New] Added Hints module to start showing useful hints via the GW hints panel
+* [Minor] Added healthbar, energybar, experiencebar, compass and chat to `/toggle | /hide | /show` command to easily show/hide some GW UI bits 
+* [Fix] Fixed bugs with pcon refilling and warning messages in chat
+* [Fix] Minimap agent damaged modifier saves and loads correctly
+* [Fix] Fixed some bugs related to item moves with ctrl and shift click
+* [Fix] Fixed bug causing "move item to current storage pane" to store materials in material storage first
+* [Fix] Fixed bug preventing mouse interaction on char select
+* [Fix] Fixed bugs with objective timer showing wrong start time for runs
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.8_Release/GWToolboxdll.dll)
+
 ## Version 5.7
 
 * [Fix] Fixed crashing related to stack overflow issues on string decoding

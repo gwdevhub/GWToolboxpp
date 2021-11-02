@@ -369,7 +369,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
     /* Alerts window */
     if (show_alert_window) {
         const float &font_scale = ImGui::GetIO().FontGlobalScale;
-        ImGui::SetNextWindowSize(ImVec2(250.f * font_scale, 220.f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(768.f * font_scale, 768.f * font_scale), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
             DrawAlertsWindowContent(true);
         }

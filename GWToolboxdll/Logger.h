@@ -14,7 +14,7 @@ namespace Log {
     // === Setup and cleanup ====
     // in release redirects stdout and stderr to log file
     // in debug creates console
-    void InitializeLog();
+    bool InitializeLog();
     void InitializeChat();
     void Terminate();
 

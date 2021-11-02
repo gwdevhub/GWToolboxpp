@@ -347,6 +347,7 @@ void GWToolbox::Initialize() {
 
     GW::GameThread::RegisterGameThreadCallback(&Update_Entry, GWToolbox::Update);
 
+    Resources::Instance().EnsureFolderExists(Resources::GetSettingsFolderPath());
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\bonds"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\icons"));

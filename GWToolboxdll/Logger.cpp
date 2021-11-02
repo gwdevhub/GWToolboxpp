@@ -61,7 +61,7 @@ static void GWCAPanicHandler(
 }
 
 // === Setup and cleanup ====
-void Log::InitializeLog() {
+bool Log::InitializeLog() {
 #ifdef GWTOOLBOX_DEBUG
     logfile = stdout;
     AllocConsole();
@@ -69,11 +69,15 @@ void Log::InitializeLog() {
     freopen_s(&stderr_file, "CONOUT$", "w", stderr);
     SetConsoleTitle("GWTB++ Debug Console");
 #else
+    Resources::Instance().EnsureFolderExists(Resources::GetSettingsFolderPath());
     logfile = _wfreopen(Resources::GetPath(L"log.txt").c_str(), L"w", stdout);
+    if (!logfile)
+        return false;
 #endif
 
     GW::RegisterLogHandler(GWCALogHandler, nullptr);
     GW::RegisterPanicHandler(GWCAPanicHandler, nullptr);
+    return true;
 }
 
 void Log::InitializeChat() {

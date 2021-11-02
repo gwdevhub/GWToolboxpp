@@ -1442,7 +1442,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 
 	// TODO Button at the top to go to current daily
 	ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(768, 768), ImGuiCond_FirstUseEver);
 
 	if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		ImGui::End();

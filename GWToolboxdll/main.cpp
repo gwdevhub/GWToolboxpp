@@ -9,7 +9,11 @@
 // Do all your startup things here instead.
 DWORD WINAPI init(HMODULE hModule) noexcept {
     __try {
-        Log::InitializeLog();
+        if(!Log::InitializeLog()) {
+            MessageBoxA(0, "Failed to create outgoing log file.\nThis could be due to a file permissions error or antivirus blocking.", "GWToolbox++ - Clientside Error Detected", 0);
+            FreeLibraryAndExitThread(hModule, EXIT_SUCCESS);
+        }
+
         Log::Log("Waiting for logged character\n");
 
         GW::Scanner::Initialize();
@@ -19,9 +23,9 @@ DWORD WINAPI init(HMODULE hModule) noexcept {
         if (!(found && *found)) {
             MessageBoxA(0, "We can't determine if the character is ingame.\nContact the developers.", "GWToolbox++ - Clientside Error Detected", 0);
             FreeLibraryAndExitThread(hModule, EXIT_SUCCESS);
-        } else {
-            printf("[SCAN] is_ingame = %p\n", found);
         }
+        
+        printf("[SCAN] is_ingame = %p\n", found);
 
         DWORD *is_ingame = *found;
         while (*is_ingame == 0) {
