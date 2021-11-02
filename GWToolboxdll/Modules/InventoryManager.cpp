@@ -384,16 +384,6 @@ namespace {
         uint32_t slot;
         bool prompt_split_stack = false;
     };
-    typedef void(__cdecl* PreMoveItem_pt)(uint32_t unk0, PreMoveItemStruct* details);
-    PreMoveItem_pt PreMoveItemFunc;
-    PreMoveItem_pt RetPreMoveItem;
-
-    static void OnPreMoveItem(uint32_t type, PreMoveItemStruct* details) {
-        GW::HookBase::EnterHook();
-        InventoryManager::Instance().stack_prompt_item_id = 0;
-        RetPreMoveItem(type, details);
-        GW::HookBase::LeaveHook();
-    }
 
     void prompt_split_stack(GW::Item* item) {
         PreMoveItemStruct details;
@@ -404,7 +394,8 @@ namespace {
         if (item->bag->index == details.bag_id && item->slot == details.slot)
             details.slot++;
         details.prompt_split_stack = true;
-        OnPreMoveItem(7, &details);
+        GW::UI::SendUIMessage(GW::UI::kMoveItem, &details);
+        //OnPreMoveItem(7, &details);
         InventoryManager::Instance().stack_prompt_item_id = item->item_id;
     }
 
@@ -587,17 +578,10 @@ void InventoryManager::Initialize() {
 
     inventory_bags_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_InventoryBags);
 
-    {
-        PreMoveItemFunc = (PreMoveItem_pt)GW::Scanner::Find(
-            "\x8B\x4E\x04\x83\xC4\x04\x83\xF9\x07\x72\x05", "xxxxxxxxxxx", -0x1D);
-        if (Verify(PreMoveItemFunc)) {
-            GW::HookBase::CreateHook(PreMoveItemFunc, OnPreMoveItem, (void**)&RetPreMoveItem);
-            GW::HookBase::EnableHooks(PreMoveItemFunc);
-        }
-            
-    }
-
-
+    GW::UI::RegisterUIMessageCallback(&on_offer_item_hook, [](GW::HookStatus*, uint32_t message_id, void*, void*) {
+        if(message_id == GW::UI::kMoveItem)
+            Instance().stack_prompt_item_id = 0;
+        });
 }
 // Add "Tip: Hold Ctrl when requesting a quote to bulk buy." message to merchant window
 // Add "Tip: Hold Ctrl when requesting a quote to bulk sell." message to merchant window
@@ -1733,17 +1717,17 @@ void InventoryManager::OnMoveItemPacket(GW::HookStatus* status, void* pak) {
     auto& instance = Instance();
     uint32_t* packet = (uint32_t*)pak;
     uint32_t item_id = packet[1];
-    uint16_t quantity = 1000u;
+    uint32_t quantity = 1000u;
     
     if (packet[0] == GAME_CMSG_ITEM_SPLIT_STACK)
-        quantity = (uint16_t)packet[2];
+        quantity = packet[2];
     if (item_id != instance.stack_prompt_item_id) {
         instance.stack_prompt_item_id = 0;
         return;
     }
     instance.stack_prompt_item_id = 0;
     status->blocked = true;
-    move_item(GW::Items::GetItemById(item_id), quantity);
+    move_item(GW::Items::GetItemById(item_id), (uint16_t)quantity);
 }
 void InventoryManager::ClearPotentialItems()
 {
