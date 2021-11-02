@@ -82,6 +82,7 @@ namespace {
 	const wchar_t* GetPlayerName() {
 		return GW::GameContext::instance()->character->player_name;
 	}
+	wchar_t last_player_name[20];
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -599,6 +600,16 @@ void CompletionWindow::Initialize()
 		Instance().ParseCompletionBuffer(CompletionType::Skills);
 		Instance().CheckProgress();
 		});
+	// Reset chosen player name to be current character on login
+	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_INSTANCE_LOADED, [&](GW::HookStatus*, void*) {
+		if (wcscmp(GetPlayerName(), last_player_name) != 0) {
+			wcscpy(last_player_name, GetPlayerName());
+			chosen_player_name_s.clear();
+			chosen_player_name.clear();
+		}
+		Instance().ParseCompletionBuffer(CompletionType::Skills);
+		Instance().CheckProgress();
+		});
 	ParseCompletionBuffer(CompletionType::Mission);
 	ParseCompletionBuffer(CompletionType::MissionBonus);
 	ParseCompletionBuffer(CompletionType::MissionBonusHM);
@@ -607,7 +618,7 @@ void CompletionWindow::Initialize()
 	ParseCompletionBuffer(CompletionType::Vanquishes);
 	ParseCompletionBuffer(CompletionType::Heroes);
 	CheckProgress();
-	chosen_player_name = GW::GameContext::instance()->character->player_name;
+	wcscpy(last_player_name,GetPlayerName());
 }
 
 
@@ -1444,6 +1455,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 	if (chosen_player_name_s.empty()) {
 		chosen_player_name = GetPlayerName();
 		chosen_player_name_s = GuiUtils::WStringToString(chosen_player_name);
+		CheckProgress();
 	}
 
 	const float gscale = ImGui::GetIO().FontGlobalScale;
@@ -1809,7 +1821,7 @@ CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, w
 		write.resize(len,0);
 	}
 	for (size_t i = 0; i < len; i++) {
-		write[i] = buffer[i];
+		write[i] |= buffer[i];
 	}
 	return this;
 }
