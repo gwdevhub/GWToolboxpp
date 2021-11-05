@@ -162,10 +162,6 @@ LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
     static bool right_mouse_down = false;
 
-    if (!(!GW::PreGameContext::instance() && imgui_initialized && tb_initialized && !tb_destroyed)) {
-        return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
-    }
-
     if (Message == WM_CLOSE) {
         // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
         // we can't sleep here, because toolbox modules will probably be using the render loop to close off things like hooks
@@ -173,6 +169,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         defer_close = true;
         return 0;
     }
+
+    if (!(!GW::PreGameContext::instance() && imgui_initialized && tb_initialized && !tb_destroyed)) {
+        return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
+    }
+
+
 
     if (Message == WM_RBUTTONUP) right_mouse_down = false;
     if (Message == WM_RBUTTONDOWN) right_mouse_down = true;
@@ -432,7 +434,34 @@ void GWToolbox::Terminate() {
 }
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {
+    // === destruction ===
+    if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
+        if (!GuiUtils::FontsLoaded())
+            return;
+        for (ToolboxModule* module : GWToolbox::Instance().modules) {
+            if (!module->CanTerminate())
+                return;
+        }
 
+        GWToolbox::Instance().Terminate();
+        if (imgui_initialized) {
+            ImGui_ImplDX9_Shutdown();
+            ImGui_ImplWin32_Shutdown();
+            ImGui::DestroyContext();
+            imgui_initialized = false;
+        }
+
+
+        Log::Log("Restoring input hook\n");
+        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
+
+        GW::DisableHooks();
+        tb_initialized = false;
+        tb_destroyed = true;
+
+
+
+    }
     // === runtime ===
     if (tb_initialized 
         && !GWToolbox::Instance().must_self_destruct
@@ -516,31 +545,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
     }
 
-    // === destruction ===
-    if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
-        if (!GuiUtils::FontsLoaded())
-            return;
-        for (ToolboxModule* module : GWToolbox::Instance().modules) {
-            if (!module->CanTerminate())
-                return;
-        }
 
-        GWToolbox::Instance().Terminate();
-
-        ImGui_ImplDX9_Shutdown();
-        ImGui_ImplWin32_Shutdown();
-        ImGui::DestroyContext();
-
-        Log::Log("Restoring input hook\n");
-        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
-
-        GW::DisableHooks();
-        tb_initialized = false;
-        tb_destroyed = true;
-
-
-
-    }
     if(tb_destroyed && defer_close) {
         // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
         SendMessageW(gw_window_handle, WM_CLOSE, NULL, NULL);
