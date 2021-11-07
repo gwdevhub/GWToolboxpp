@@ -449,7 +449,7 @@ void Vanquish::CheckProgress(const std::wstring& player_name) {
 }
 IDirect3DTexture9* Vanquish::GetMissionImage()
 {
-	return hard_mode_textures.at(ArrayBoolAt(GW::GameContext::instance()->world->vanquished_areas, static_cast<uint32_t>(outpost))).texture;
+	return hard_mode_textures.at(is_completed).texture;
 }
 
 
@@ -1431,6 +1431,7 @@ void CompletionWindow::Terminate()
 	clear_vec(vanquishes);
 	clear_vec(pve_skills);
 	clear_vec(elite_skills);
+	clear_vec(heros);
 
 	for (auto camp : character_completion)
 		delete camp.second;
