@@ -419,6 +419,7 @@ void ChatCommands::Initialize() {
         GW::Chat::SendChat('/', "pingitem armor");
     });
     GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHeroBehaviour);
+    GW::Chat::CreateCommand(L"morale", ChatCommands::CmdMorale);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -709,6 +710,12 @@ void ChatCommands::CmdEnterMission(const wchar_t*, int argc, LPWSTR* argv) {
     }
 }
 
+void ChatCommands::CmdMorale(const wchar_t*, int , LPWSTR* ) {
+    if (GW::GameContext::instance()->world->morale == 0)
+        GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
+    else
+        GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0x7, GW::Agents::GetPlayerId());
+}
 void ChatCommands::CmdAge2(const wchar_t* , int, LPWSTR* ) {
     TimerWidget::Instance().PrintTimer();
 }
