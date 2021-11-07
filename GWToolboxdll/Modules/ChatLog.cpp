@@ -434,7 +434,7 @@ void ChatLog::OnPreAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::C
     if (!Instance().enabled || Instance().injecting)
         return;
     GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    bool inject = ((log->next == 0 && !log->messages[log->next]) || Instance().Init());
+    bool inject = ((log && log->next == 0 && !log->messages[log->next]) || !log || Instance().Init());
     if (inject) {
         Instance().Inject();
     }
