@@ -1019,6 +1019,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
     move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
     move_item_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
+    move_materials_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_materials_to_current_storage_pane), move_materials_to_current_storage_pane);
 
     flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
     flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
@@ -1153,6 +1154,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     
     ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
     ini->SetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
+    ini->SetBoolValue(Name(), VAR_NAME(move_materials_to_current_storage_pane), move_materials_to_current_storage_pane);
     ini->SetBoolValue(Name(), VAR_NAME(stop_screen_shake), stop_screen_shake);
 
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
@@ -1224,10 +1226,26 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 void GameSettings::DrawInventorySettings() {
     ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click);
     ImGui::Indent();
-    ImGui::Checkbox("Move item to current open storage pane on click", &move_item_to_current_storage_pane);
-    ImGui::ShowHelp("Enabled: Using Control+Click on an item in inventory with storage chest open,\n"
-        "try to deposit item into the currently displayed storage pane.\n"
-        "Disabled: Item will be stored into any available stack/slot in the chest.");
+    ImGui::Checkbox("Move items to current open storage pane on click", &move_item_to_current_storage_pane);
+    ImGui::ShowHelp("Materials follow different logic, see below");
+    ImGui::Indent();
+    char* logic = "Storage logic: Any available stack/slot";
+    if (move_item_to_current_storage_pane) {
+        logic = "Storage logic: Current storage pane > Any available stack/slot";
+    }
+    ImGui::TextDisabled(logic);
+    ImGui::Unindent();
+    ImGui::Checkbox("Move materials to current open storage pane on click", &move_materials_to_current_storage_pane);
+    ImGui::Indent();
+    logic = "Storage logic: Materials pane > Any available stack/slot";
+    if (move_materials_to_current_storage_pane) {
+        logic = "Storage logic: Current storage pane > Materials pane > Any available stack/slot";
+    }
+    else if (move_item_to_current_storage_pane) {
+        logic = "Storage logic: Materials pane > Current storage pane > Any available stack/slot";
+    }
+    ImGui::TextDisabled(logic);
+    ImGui::Unindent();
     ImGui::Unindent();
     ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
     ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
@@ -2117,8 +2135,7 @@ void GameSettings::OnSpeechDialogue(GW::HookStatus* status, GW::Packet::StoC::Di
     auto instance = &Instance();
     if (!instance->redirect_npc_messages_to_emote_chat)
         return; // Disabled or message pending
-    PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, pak->name);
-    if (m) instance->pending_messages.push_back(m);
+    GW::Chat::WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, pak->name);
     status->blocked = true; // consume original packet.
 }
 

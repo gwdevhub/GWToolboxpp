@@ -168,12 +168,19 @@ namespace {
         ASSERT(item && item->quantity);
         uint16_t to_move = std::min<uint16_t>(item->quantity,quantity);
         uint16_t remaining = to_move;
-        if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
+        bool is_storage_open = GW::Items::GetIsStorageOpen();
+        if (remaining && is_storage_open && item->GetIsMaterial() && GameSettings::Instance().move_materials_to_current_storage_pane) {
             size_t current_storage = GW::Items::GetStoragePage();
             remaining -= move_item_to_storage_page(item, current_storage, remaining);
         }
-        if (item->GetIsMaterial() && remaining)
+        if(remaining && item->GetIsMaterial())
             remaining -= move_materials_to_storage(item);
+
+        if (remaining && is_storage_open && GameSettings::Instance().move_item_to_current_storage_pane) {
+            size_t current_storage = GW::Items::GetStoragePage();
+            remaining -= move_item_to_storage_page(item, current_storage, remaining);
+        }
+        
         
         const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
         const size_t storage14 = static_cast<size_t>(GW::Constants::Bag::Storage_14);

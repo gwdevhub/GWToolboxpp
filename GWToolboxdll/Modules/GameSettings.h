@@ -214,6 +214,7 @@ public:
     // bool select_with_chat_doubleclick = false;
     bool move_item_on_ctrl_click = false;
     bool move_item_to_current_storage_pane = true;
+    bool move_materials_to_current_storage_pane = false;
     bool drop_ua_on_cast = false;
 
     bool focus_window_on_launch = true;
