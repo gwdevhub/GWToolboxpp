@@ -7,6 +7,19 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.9
+* [New] Added `/morale` chat command
+* [Minor] Added bulb icon in settings for hints
+* [Minor] Rewrite ctrl+click bahaviour for storing materials
+* [Fix] Fixed bug crashing on map change related to chat log
+* [Fix] Fixed effect monitor widget drawing in wrong place for players who have their effects in the default position on screen
+* [Fix] Fixed bug causing vanquish icons to not change when selecting character in completion window
+* [Fix] Fixed crash when loading gwtoolbox whilst in an outpost and triggering hotkeys on load
+* [Fix] Fixed bug preventing friend list messages from displaying in the current map that toolbox is loaded in
+* [Fix] Fixed out of memory error after closing toolbox from the char select screen
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.9_Release/GWToolboxdll.dll)
+
 ## Version 5.8
 * [New] Added option in Party Settings to rename tengu/imperial guard summons to their elise skill
 * [New] Completion overhaul; added hero tracking, hard mode toggle, character selector
