@@ -42,6 +42,7 @@ private:
     std::wstring account;
     bool injecting = false;
     bool enabled = true;
+    bool pending_inject = false;
     void SetEnabled(bool _enabled);
     void Reset();
     // Collect current in-game logs and combine them with the tb logs

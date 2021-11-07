@@ -230,8 +230,7 @@ void ChatLog::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
     Save();
     enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);
-    if (Init())
-        Inject();
+    Init();
 }
 std::filesystem::path ChatLog::LogPath(const wchar_t* prefix) {
     wchar_t fn[128];
@@ -287,6 +286,8 @@ void ChatLog::Load(const std::wstring& _account) {
 }
 void ChatLog::Inject() {
     if (injecting || !enabled || !ClearChatLog_Func || !InitChatLog_Func)
+        goto done_injecting;
+    if(!pending_inject)
         goto done_injecting;
     TBChatMessage* recv = recv_first;
     if (recv) {
@@ -344,7 +345,6 @@ void ChatLog::SetEnabled(bool _enabled) {
     enabled = _enabled;
     if (enabled) {
         Init();
-        Inject();
     }
 }
 bool ChatLog::Init() {
@@ -357,6 +357,7 @@ bool ChatLog::Init() {
     Save();
     Load(this_account);
     Fetch();
+    pending_inject = true;
     return true;
 }
 
@@ -390,24 +391,25 @@ void ChatLog::Initialize() {
 
     GW::Chat::RegisterChatLogCallback(&PreAddToChatLog_entry, OnPreAddToChatLog, -0x4000);
     GW::Chat::RegisterChatLogCallback(&PostAddToChatLog_entry, OnPostAddToChatLog, 0x4000);
-    GW::UI::RegisterUIMessageCallback(&UIMessage_Entry, [](GW::HookStatus*, uint32_t message_id, void*, void*) {
-        if(message_id == GW::UI::kMapLoaded)
-            Instance().InjectSent();
-        },0x8000);
+    GW::UI::RegisterUIMessageCallback(&UIMessage_Entry, [&](GW::HookStatus*, uint32_t message_id, void*, void*) {
+        switch (message_id) {
+        case GW::UI::kMapChange:
+            // NB: Friends list messages don't play well when clearing the chat log after the map has loaded.
+            // Instead, we trigger this immediately before map load.
+            // When the game world is rebuilt during map load, the log works properly again.
+            Init();
+            Inject();
+            break;
+        }
+        },-0x8000);
     Init();
-    Inject();
 }
 void ChatLog::RegisterSettingsContent() {
     ToolboxModule::RegisterSettingsContent("Chat Settings", ICON_FA_COMMENTS,
         [this](const std::string* section, bool is_showing) {
             UNREFERENCED_PARAMETER(section);
             if (!is_showing) return;
-            if (ImGui::Checkbox("Enable GWToolbox chat log", &Instance().enabled)) {
-                if (Instance().enabled) {
-                    Init();
-                    Inject();
-                }
-            }
+            ImGui::Checkbox("Enable GWToolbox chat log", &Instance().enabled);
             ImGui::ShowHelp("Guild Wars doesn't save your chat history or sent messages if you log out of the game.\nTurn this feature on to let GWToolbox keep better track of your chat history between logins");
         }, 0.8f);
 }
@@ -420,7 +422,7 @@ void ChatLog::OnAddToSentLog(wchar_t* message) {
     }
     GWSentLog* log = Instance().GetSentLog();
     if (!log || !log->count || Instance().Init()) {
-        Instance().Inject();
+        Instance().InjectSent();
         log = Instance().GetSentLog();
     }
     GWSentMessage* lastest_message = log ? log->prev : 0;
@@ -433,11 +435,8 @@ void ChatLog::OnAddToSentLog(wchar_t* message) {
 void ChatLog::OnPreAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage*) {
     if (!Instance().enabled || Instance().injecting)
         return;
-    GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    bool inject = ((log && log->next == 0 && !log->messages[log->next]) || !log || Instance().Init());
-    if (inject) {
-        Instance().Inject();
-    }
+    //GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+    //bool inject = ((log && log->next == 0 && !log->messages[log->next]) || !log || Instance().Init());
 }
 void ChatLog::OnPostAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage* logged_message) {
     if (!Instance().enabled)
