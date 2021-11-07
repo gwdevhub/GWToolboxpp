@@ -218,9 +218,9 @@ void EffectsMonitorWidget::RefreshPosition() {
     if (pos) {
         if (pos->state & 0x2) {
             // Default layout
-            pos->state = 0x21;
-            pos->p1 = { 224.5f,56.f };
-            pos->p2 = { 223.5f, 0.f };
+            pos->state = 0xd;
+            pos->p1 = { 0.f,0.f };
+            pos->p2 = { 312.f, 104.f };
         }
         float uiscale = GuiUtils::GetGWScaleMultiplier();
         GW::Vec2f xAxis = pos->xAxis(uiscale);
