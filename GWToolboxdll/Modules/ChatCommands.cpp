@@ -752,6 +752,8 @@ void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR * argv) {
 }
 
 void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
+    if (!ImGui::GetCurrentContext())
+        return; // Don't process window manips until ImGui is ready
     if (argc < 2) { // e.g. /tb
         MainWindow::Instance().visible ^= 1;
         return;

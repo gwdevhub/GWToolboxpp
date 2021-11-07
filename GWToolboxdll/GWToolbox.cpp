@@ -562,6 +562,7 @@ void GWToolbox::Update(GW::HookStatus *)
     if (!tb_initialized)
         GWToolbox::Instance().Initialize();
     if (tb_initialized
+        && imgui_initialized
         && !GWToolbox::Instance().must_self_destruct) {
 
         // @Enhancement:
