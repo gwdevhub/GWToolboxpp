@@ -52,7 +52,6 @@ Useful for packaging d3dx9 and vc140 components without having to install them s
 ### Requirements
 * WiX 3.1 or higher. Download the latest version from [https://wixtoolset.org/releases/](https://wixtoolset.org/releases/).
 * DirectX SDK. Download from [https://www.microsoft.com/en-gb/download/details.aspx?id=6812](https://www.microsoft.com/en-gb/download/details.aspx?id=6812)
-* Copy of Microsoft_VC140_CRT_x86.msm - this is installed when you install the runtime in Visual Studio
 
 1. Build the solution; CMake will create a gwtoolbox.wxs file in the repository directory.
 

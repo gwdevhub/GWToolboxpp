@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?define var.VCREDIST_FILE = "C:\Program Files (x86)\Common Files\Merge Modules\Microsoft_VC140_CRT_x86.msm" ?>
 <?define var.DIRECTX_SDK_DIR = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)" ?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
     <Product Id="*" Version="@GWTOOLBOXDLL_VERSION@" Language="1033" Name="GWToolboxpp" Manufacturer="GWToolbox">
@@ -52,8 +51,9 @@
               </Directory>
             </Directory>
             
-            <!-- Visual studio redist v140 -->
-            <Merge Id="VCRedist" SourceFile="$(var.VCREDIST_FILE)" DiskId="1" Language="0"/>
+            <!-- Visual studio redist -->
+            <Merge Id="VC140Redist" SourceFile="resources\Microsoft_VC140_CRT_x86.msm" DiskId="1" Language="0"/>
+            <Merge Id="VC142Redist" SourceFile="resources\Microsoft_VC142_CRT_x86.msm" DiskId="1" Language="0"/>
         </Directory>
         
         <!-- Step 2: Add the shortcut to your installer package -->
@@ -71,8 +71,11 @@
         </Feature>
         
         <!-- Visual studio redist v140 -->
-        <Feature Id="VCRedist" Title="Visual C++ 14.0 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
-          <MergeRef Id="VCRedist"/>
+        <Feature Id="VC140Redist" Title="Visual C++ 2017 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
+          <MergeRef Id="VC140Redist"/>
+        </Feature>
+        <Feature Id="VC142Redist" Title="Visual C++ 2019 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
+          <MergeRef Id="VC142Redist"/>
         </Feature>
         
         <!-- DirectX -->

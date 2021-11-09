@@ -654,8 +654,12 @@ void CompletionWindow::Initialize()
 			chosen_player_name_s.clear();
 			chosen_player_name.clear();
 		}
-		Instance().ParseCompletionBuffer(CompletionType::Skills);
-		Instance().CheckProgress();
+		ParseCompletionBuffer(CompletionType::Skills);
+		ParseCompletionBuffer(CompletionType::Mission);
+		ParseCompletionBuffer(CompletionType::MissionBonus);
+		ParseCompletionBuffer(CompletionType::MissionBonusHM);
+		ParseCompletionBuffer(CompletionType::MissionHM);
+		CheckProgress();
 		});
 	ParseCompletionBuffer(CompletionType::Mission);
 	ParseCompletionBuffer(CompletionType::MissionBonus);

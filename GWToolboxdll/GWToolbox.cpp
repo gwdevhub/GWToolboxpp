@@ -51,8 +51,8 @@ namespace {
 
     struct GWDebugInfo {
         size_t len;
-        uint32_t unk[0x83];
-        char buffer[0x80000];
+        uint32_t unk[0x82];
+        char buffer[0x80001];
     };
     static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorect size");
 
