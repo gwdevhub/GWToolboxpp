@@ -22,6 +22,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Modules/Resources.h>
 
@@ -83,6 +84,19 @@ namespace {
 		return GW::GameContext::instance()->character->player_name;
 	}
 	wchar_t last_player_name[20];
+
+	void GoToCharSelect() {
+
+		GW::GameThread::Enqueue([]() {
+			struct {
+				uint32_t unk = 1;
+				uint32_t unk1 = 2;
+				uint32_t unk2 = 3;
+			} wparam;
+			GW::UI::SendUIMessage(0x1000010e, &wparam,0);
+			});
+	}
+	bool show_as_list = false;
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -217,14 +231,45 @@ bool Mission::Draw(IDirect3DDevice9* )
 	ImVec2 uv0 = ImVec2(0, 0);
 	ImVec2 uv1 = ImVec2(1, 1);
 
+	const ImVec2 cursor_pos = ImGui::GetCursorPos();
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
 	ImGui::PushID((int)outpost);
-	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint)) {
-		OnClick();		
+	if (show_as_list) {
+		s.y /= 2.f;
+		if (ImGui::IconButton(Name(), (ImTextureID)texture, { s.x * 5.f, s.y }, 0, { s.x / 2.f, s.y }))
+			OnClick();
+	}
+	else {
+		if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint))
+			OnClick();
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip(Name());
 	}
 	ImGui::PopID();
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip(Name());
 	ImGui::PopStyleColor();
+	ImGui::PopStyleVar();
+
+	if (is_completed && bonus && show_as_list) {
+		const ImVec2 cursor_pos2 = ImGui::GetCursorPos();
+		ImVec2 icon_size_scaled = { icon_size.x * ImGui::GetIO().FontGlobalScale,icon_size.y * ImGui::GetIO().FontGlobalScale };
+		if (show_as_list) {
+			icon_size_scaled.x /= 2.f;
+			icon_size_scaled.y /= 2.f;
+		}
+		const float padding = 2.f;
+
+		const ImColor completed_bg = IM_COL32(0, 0x99, 0, 192);
+		const ImColor completed_text = IM_COL32(0xE5, 0xFF, 0xCC, 255);
+		ImGui::SetCursorPos(cursor_pos);
+		const ImVec2 screen_pos = ImGui::GetCursorScreenPos();
+		ImGui::RenderFrame(screen_pos, { screen_pos.x + icon_size_scaled.x, screen_pos.y + icon_size_scaled.y }, completed_bg, false, 0.f);
+
+		ImGui::SetCursorPos(cursor_pos);
+
+		const ImVec2 check_size = ImGui::CalcTextSize(ICON_FA_CHECK);
+		ImGui::GetWindowDrawList()->AddText({ screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2) }, completed_text, ICON_FA_CHECK);
+		ImGui::SetCursorPos(cursor_pos2);
+	}
 	return true;
 }
 const char* Mission::Name() {
@@ -313,7 +358,7 @@ void HeroUnlock::CheckProgress(const std::wstring& player_name) {
 	if (found == skills.end())
 		return;
 	auto& heroes = found->second->heroes;
-	is_completed = std::find(heroes.begin(), heroes.end(), (uint32_t)skill_id) != heroes.end();
+	is_completed = bonus = std::find(heroes.begin(), heroes.end(), (uint32_t)skill_id) != heroes.end();
 }
 const char* HeroUnlock::Name() {
 	return hero_names[(uint32_t)skill_id];
@@ -365,10 +410,13 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
 	const ImVec2 cursor_pos = ImGui::GetCursorPos();
 	if (!Mission::Draw(device))
 		return false;
-	
-	if (is_completed) {
-		const ImVec2 icon_size_scaled = { icon_size.x * ImGui::GetIO().FontGlobalScale,icon_size.y * ImGui::GetIO().FontGlobalScale };
-
+	if (is_completed && !show_as_list) {
+		const ImVec2 cursor_pos2 = ImGui::GetCursorPos();
+		ImVec2 icon_size_scaled = { icon_size.x * ImGui::GetIO().FontGlobalScale,icon_size.y * ImGui::GetIO().FontGlobalScale };
+		if (show_as_list) {
+			icon_size_scaled.x /= 2.f;
+			icon_size_scaled.y /= 2.f;
+		}
 		const float padding = 2.f;
 
 		const ImColor completed_bg = IM_COL32(0, 0x99, 0, 192);
@@ -379,10 +427,9 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
 
 		ImGui::SetCursorPos(cursor_pos);
 
-		ImGui::PushStyleColor(ImGuiCol_Button, 0);
-		ImGui::PushStyleColor(ImGuiCol_Text, completed_text.Value);
-		ImGui::ButtonEx(ICON_FA_CHECK, icon_size_scaled, ImGuiButtonFlags_Disabled);
-		ImGui::PopStyleColor(2);
+		const ImVec2 check_size = ImGui::CalcTextSize(ICON_FA_CHECK);
+		ImGui::GetWindowDrawList()->AddText({ screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2) }, completed_text, ICON_FA_CHECK);
+		ImGui::SetCursorPos(cursor_pos2);
 	}
 	return true;
 }
@@ -393,7 +440,7 @@ void PvESkill::CheckProgress(const std::wstring& player_name) {
 	if (found == skills.end())
 		return;
 	auto& unlocked = found->second->skills;
-	is_completed = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id));
+	is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id));
 }
 
 FactionsPvESkill::FactionsPvESkill(GW::Constants::SkillID kurzick_id, GW::Constants::SkillID luxon_id, const wchar_t* _image_url)
@@ -445,7 +492,7 @@ void Vanquish::CheckProgress(const std::wstring& player_name) {
 	if (found == completion.end())
 		return;
 	auto& unlocked = found->second->vanquishes;
-	is_completed = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
+	is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
 }
 IDirect3DTexture9* Vanquish::GetMissionImage()
 {
@@ -1484,13 +1531,19 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 		ImGui::EndCombo();
 	}
 	ImGui::PopItemWidth();
-	ImGui::SameLine(ImGui::GetContentRegionAvail().x - (128.f * gscale));
+	ImGui::SameLine(ImGui::GetContentRegionAvail().x - (200.f * gscale));
+	ImGui::Checkbox("View as list", &show_as_list);
+	ImGui::SameLine();
 	if(ImGui::Checkbox("Hard mode", &hard_mode)) {
 		CheckProgress();
 	}
 	ImGui::Separator();
 	ImGui::BeginChild("completion_scroll");
-	int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * Mission::icon_size.x + (ImGui::GetStyle().ItemSpacing.x)));
+	float single_item_width = Mission::icon_size.x;
+	if (show_as_list)
+		single_item_width *= 5.f;
+	int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x)));
+	const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
 	auto draw_missions = [missions_per_row, device](auto& camp_missions) {
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 		size_t drawn = 0;
@@ -1508,36 +1561,54 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 		ImGui::PopStyleVar();
 	};
 	ImGui::Text("Missions");
+	ImGui::SameLine(checkbox_offset);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
+	ImGui::Checkbox("Hide completed missions", &hide_completed_missions);
+	ImGui::PopStyleVar();
 	for (auto& camp : missions) {
 		auto& camp_missions = camp.second;
 		size_t completed = 0;
+		std::vector<Missions::Mission*> filtered;
 		for (size_t i = 0; i < camp_missions.size(); i++) {
-			if (camp_missions[i]->is_completed && camp_missions[i]->bonus)
+			if (camp_missions[i]->is_completed) {
 				completed++;
+				if (hide_completed_missions)
+					continue;
+			}
+			filtered.push_back(camp_missions[i]);
 		}
 		char label[128];
 		snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
 		if (ImGui::CollapsingHeader(label)) {
-			draw_missions(camp_missions);
+			draw_missions(filtered);
 		}
 	}
 	ImGui::Text("Vanquishes");
+	ImGui::SameLine(checkbox_offset);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
+	ImGui::Checkbox("Hide completed vanquishes", &hide_completed_vanquishes);
+	ImGui::PopStyleVar();
 	for (auto& camp : vanquishes) {
 		auto& camp_missions = camp.second;
 		if (!camp_missions.size())
 			continue;
 		size_t completed = 0;
+		std::vector<Missions::Mission*> filtered;
 		for (size_t i = 0; i < camp_missions.size(); i++) {
-			if (camp_missions[i]->is_completed)
+			if (camp_missions[i]->is_completed) {
 				completed++;
+				if (hide_completed_vanquishes)
+					continue;
+			}
+			filtered.push_back(camp_missions[i]);
 		}
 		char label[128];
 		snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
 		if (ImGui::CollapsingHeader(label)) {
-			draw_missions(camp_missions);
+			draw_missions(filtered);
 		}
 	}
-	const float checkbox_offset = ImGui::GetContentRegionAvail().x - 160.f * ImGui::GetIO().FontGlobalScale;
+
 
 	auto skills_title = [&, checkbox_offset](const char* title) {
 		ImGui::PushID(title);
@@ -1554,38 +1625,38 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 	for (auto& camp : elite_skills) {
 		auto& camp_missions = camp.second;
 		size_t completed = 0;
-		std::vector<Missions::Mission*> skills_filtered;
+		std::vector<Missions::Mission*> filtered;
 		for (size_t i = 0; i < camp_missions.size(); i++) {
 			if (camp_missions[i]->is_completed) {
 				completed++;
 				if (hide_unlocked_skills)
 					continue;
 			}
-			skills_filtered.push_back(camp_missions[i]);
+			filtered.push_back(camp_missions[i]);
 		}
 		char label[128];
 		snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
 		if (ImGui::CollapsingHeader(label)) {
-			draw_missions(skills_filtered);
+			draw_missions(filtered);
 		}
 	}
 	skills_title("PvE Skills");
 	for (auto& camp : pve_skills) {
 		auto& camp_missions = camp.second;
 		size_t completed = 0;
-		std::vector<Missions::Mission*> skills_filtered;
+		std::vector<Missions::Mission*> filtered;
 		for (size_t i = 0; i < camp_missions.size(); i++) {
 			if (camp_missions[i]->is_completed) {
 				completed++;
 				if (hide_unlocked_skills)
 					continue;
 			}
-			skills_filtered.push_back(camp_missions[i]);
+			filtered.push_back(camp_missions[i]);
 		}
 		char label[128];
 		snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
 		if (ImGui::CollapsingHeader(label)) {
-			draw_missions(skills_filtered);
+			draw_missions(filtered);
 		}
 	}
 	ImGui::Text("Heroes");

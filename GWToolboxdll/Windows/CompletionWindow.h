@@ -223,6 +223,8 @@ namespace Missions {
 class CompletionWindow : public ToolboxWindow {
 protected:
     bool hide_unlocked_skills = false;
+    bool hide_completed_vanquishes = false;
+    bool hide_completed_missions = false;
     const char* completion_ini_filename = "character_completion.ini";
 
     std::wstring chosen_player_name;

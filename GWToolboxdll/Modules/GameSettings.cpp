@@ -2598,7 +2598,7 @@ void GameSettings::OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, 
         GW::Player* agent = GW::PlayerMgr::GetPlayerByID(msg->player_number);
         if (!agent)
             return;
-        GW::Chat::WriteChatEnc((GW::Chat::Channel)msg->channel, msg->message, agent->name);
+        GW::Chat::WriteChatEnc((GW::Chat::Channel)msg->channel, msg->message, agent->name_enc);
     }
 }
 

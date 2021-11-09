@@ -499,13 +499,13 @@ char *GuiUtils::StrCopy(char *dest, const char *src, size_t dest_size) {
     dest[dest_size - 1] = 0;
     return dest;
 }
-void GuiUtils::EncString::reset(const uint32_t _enc_string_id) {
+void GuiUtils::EncString::reset(const uint32_t _enc_string_id, bool sanitise) {
     if (_enc_string_id && encoded_ws.length()) {
         uint32_t this_id = GW::UI::EncStrToUInt32(encoded_ws.c_str());
         if (this_id == _enc_string_id)
             return;
     }
-    reset(nullptr);
+    reset(nullptr, sanitise);
     if (_enc_string_id) {
         wchar_t out[8] = { 0 };
         if (!GW::UI::UInt32ToEncStr(_enc_string_id, out, _countof(out)))
@@ -513,14 +513,15 @@ void GuiUtils::EncString::reset(const uint32_t _enc_string_id) {
         encoded_ws = out;
     }
 }
-void GuiUtils::EncString::reset(const wchar_t* _enc_string)
+void GuiUtils::EncString::reset(const wchar_t* _enc_string, bool sanitise)
 {
     if (_enc_string && wcscmp(_enc_string, encoded_ws.c_str()) == 0)
         return;
     encoded_ws.clear();
     decoded_ws.clear();
     decoded_s.clear();
-    decoding = sanitised = false;
+    decoding = false;
+    sanitised = !sanitise;
     if(_enc_string)
         encoded_ws = _enc_string;
 }
