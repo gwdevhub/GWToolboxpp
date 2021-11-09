@@ -96,7 +96,7 @@ namespace {
 			GW::UI::SendUIMessage(0x1000010e, &wparam,0);
 			});
 	}
-	bool show_as_list = false;
+	bool show_as_list = true;
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -1546,20 +1546,58 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 	const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
 	auto draw_missions = [missions_per_row, device](auto& camp_missions) {
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		size_t drawn = 0;
+		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
+		size_t items_per_col = (size_t)ceil(camp_missions.size() / static_cast<float>(missions_per_row));
+		size_t col_count = 0;
 		for (size_t i = 0; i < camp_missions.size(); i++) {
-			if (drawn % missions_per_row > 0) {
-				ImGui::SameLine();
-			}
 			if (camp_missions[i]->Draw(device)) {
-				drawn++;
-			}
-			else {
-				ImGui::NewLine();
+				col_count++;
+				if (col_count == items_per_col) {
+					ImGui::NextColumn();
+					col_count = 0;
+				}
 			}
 		}
+		ImGui::Columns(1);
 		ImGui::PopStyleVar();
 	};
+	auto sort = [](auto& camp_missions) {
+		bool can_sort = true;
+		for (size_t i = 0; i < camp_missions.size() && can_sort; i++) {
+			if (!camp_missions[i]->Name()[0])
+				can_sort = false;
+		}
+		if (!can_sort)
+			return false;
+		std::sort(
+			camp_missions.begin(),
+			camp_missions.end(),
+			[](Missions::Mission* lhs, Missions::Mission* rhs) {
+				return strcmp(lhs->Name(), rhs->Name()) < 0;
+			});
+		return true;
+	};
+	if (pending_sort) {
+		bool sorted = true;
+		for (auto it = missions.begin(); sorted && it != missions.end(); it++) {
+			sorted = sort(it->second);
+		}
+		for (auto it = vanquishes.begin(); sorted && it != vanquishes.end(); it++) {
+			sorted = sort(it->second);
+		}
+		/*for (auto it = pve_skills.begin(); sorted && it != pve_skills.end(); it++) {
+			sorted = sort(it->second);
+		}
+		for (auto it = elite_skills.begin(); sorted && it != elite_skills.end(); it++) {
+			sorted = sort(it->second);
+		}*/
+		for (auto it = heros.begin(); sorted && it != heros.end(); it++) {
+			sorted = sort(it->second);
+		}
+		if (sorted)
+			pending_sort = false;
+	}
+
 	ImGui::Text("Missions");
 	ImGui::SameLine(checkbox_offset);
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
