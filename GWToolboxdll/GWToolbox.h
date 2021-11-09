@@ -59,6 +59,8 @@ public:
 
     bool right_mouse_down = false;
 
+    static void OnHandleCrash(char* description, uint32_t param_2, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6);
+
 private:
     std::vector<ToolboxModule*> modules;
 
@@ -73,4 +75,6 @@ private:
     CSimpleIni* inifile = nullptr;
 
     GW::HookEntry Update_Entry;
+    GW::HookEntry HandleCrash_Entry;
+
 };

@@ -229,7 +229,7 @@ void Log::WarningW(const wchar_t* format, ...) {
 }
 
 // === Crash Dump ===
-LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
+LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers, char* extra_info) {
     BOOL bMiniDumpSuccessful;
     wchar_t szFileName[MAX_PATH];
     HANDLE hDumpFile;
@@ -252,12 +252,28 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 
     ExpParam.ThreadId = GetCurrentThreadId();
     ExpParam.ExceptionPointers = pExceptionPointers;
-    ExpParam.ClientPointers = TRUE;
+    ExpParam.ClientPointers = pExceptionPointers != 0;
 
+    MINIDUMP_USER_STREAM_INFORMATION* extra_info_stream = 0;
+    
+    if (extra_info) {
+        extra_info_stream = new MINIDUMP_USER_STREAM_INFORMATION();
+        MINIDUMP_USER_STREAM* s = new MINIDUMP_USER_STREAM();
+        s->Type = MINIDUMP_STREAM_TYPE::CommentStreamA;
+        s->Buffer = extra_info;
+        s->BufferSize = (strlen(extra_info) + 1) * sizeof(extra_info[0]);
+        extra_info_stream->UserStreamCount = 1;
+        extra_info_stream->UserStreamArray = s;
+    }
     //MINIDUMP_TYPE flags = static_cast<MINIDUMP_TYPE>(MiniDumpWithDataSegs | MiniDumpWithPrivateReadWriteMemory);
     bMiniDumpSuccessful = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
-        hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
+        hDumpFile, MiniDumpWithDataSegs, &ExpParam, extra_info_stream, NULL);
     CloseHandle(hDumpFile);
+
+    if (extra_info_stream) {
+        delete extra_info_stream->UserStreamArray;
+        delete extra_info_stream;
+    }
     if (bMiniDumpSuccessful) {
         wchar_t buf[MAX_PATH];
         swprintf(buf, MAX_PATH, L"GWToolbox crashed, oops\n\n"
@@ -272,7 +288,9 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
             "I don't really know what to do, sorry, contact the developers.\n",
             L"GWToolbox++ Crash!", 0);
     }
-    abort();
+    if(pExceptionPointers != 0)
+        abort();
+    return 0;
 }
 
 void Log::FatalAssert(const char *expr, const char *file, unsigned line)

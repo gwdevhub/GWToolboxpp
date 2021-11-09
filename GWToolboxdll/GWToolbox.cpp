@@ -16,6 +16,8 @@
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 
+#include <GWCA/Utilities/Scanner.h>
+
 #include <CursorFix.h>
 #include <d3dx9_dynamic.h>
 #include <Defines.h>
@@ -46,6 +48,24 @@ namespace {
     bool defer_close = false;
 
     static HWND gw_window_handle = 0;
+
+    struct GWDebugInfo {
+        size_t len;
+        uint32_t unk[0x83];
+        char buffer[0x80000];
+    };
+    static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorect size");
+
+    typedef void(__cdecl* HandleCrash_pt)(GWDebugInfo* details, uint32_t param_2, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6);
+    HandleCrash_pt HandleCrash_Func = 0;
+    HandleCrash_pt RetHandleCrash = 0;
+
+    void OnGWCrash(GWDebugInfo* details, uint32_t param_2, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6) {
+        GW::HookBase::EnterHook();
+        Log::GenerateDump(0, details->buffer);
+        RetHandleCrash(details, param_2, param_3, param_4, param_5, param_6);
+        GW::HookBase::LeaveHook();
+    }
 }
 
 HMODULE GWToolbox::GetDLLModule() {
@@ -338,6 +358,12 @@ void GWToolbox::Initialize() {
     if (tb_initialized || must_self_destruct)
         return;
     
+    Log::Log("Rerouting GW crash handling through GWToolbox\n");
+    HandleCrash_Func = (HandleCrash_pt)GW::Scanner::Find("\x68\x00\x00\x08\x00\xff\x75\x1c", "xxxxxxxx", -0x4C);
+    if (HandleCrash_Func) {
+        GW::Hook::CreateHook(HandleCrash_Func, OnGWCrash, (void**)&RetHandleCrash);
+        GW::Hook::EnableHooks(HandleCrash_Func);
+    }
     Log::Log("installing event handler\n");
     gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
     OldWndProc = SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
@@ -422,6 +448,8 @@ void GWToolbox::Terminate() {
     inifile->Reset();
     delete inifile;
 
+
+
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
 
     for (ToolboxModule* module : modules) {
@@ -431,6 +459,8 @@ void GWToolbox::Terminate() {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
         Log::Info("Bye!");
     }
+    if (HandleCrash_Func)
+        GW::Hook::RemoveHook(HandleCrash_Func);
 }
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {
