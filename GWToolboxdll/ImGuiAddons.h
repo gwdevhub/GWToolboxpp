@@ -2,6 +2,8 @@
 
 typedef ImU32 Color;
 
+constexpr uint32_t ImGuiButtonFlags_AlignTextLeft = 1 << 20;
+
 namespace ImGui {
     // Shows '(?)' and the helptext when hovered
     IMGUI_API void ShowHelp(const char* help);
@@ -17,7 +19,7 @@ namespace ImGui {
 
     IMGUI_API bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");
 
-    IMGUI_API bool IconButton(const char *str_id, ImTextureID user_texture_id, const ImVec2 &size, ImGuiButtonFlags flags = ImGuiButtonFlags_None);
+    IMGUI_API bool IconButton(const char* str_id, ImTextureID user_texture_id, const ImVec2& size, ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ImVec2& icon_size = { 0.f, 0.f });
 
     IMGUI_API bool ColorButtonPicker(const char*, Color*, ImGuiColorEditFlags = 0);
 }
