@@ -44,6 +44,8 @@ private:
     int decimal_threshold = 600; // when to start displaying decimals
     bool round_up = true;        // round up or down?
     bool show_vanquish_counter = true;
+    uint32_t minion_count = 0;
+    uint32_t morale_percent = 100;
 
     // Overall settings
     enum Layout
@@ -87,6 +89,8 @@ private:
     bool DurationExpired(GW::Effect& effect);
     // Adds or removes the morale "effect" depending on percent
     void SetMoralePercent(uint32_t morale_percent);
+    // Adds or removes the minion count "effect" depending on percent
+    void CheckSetMinionCount();
 
     int UptimeToString(char arr[8], uint32_t cd) const;
 

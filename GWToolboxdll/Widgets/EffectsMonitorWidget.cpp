@@ -58,12 +58,26 @@ void EffectsMonitorWidget::RefreshEffects() {
     }
     Instance().SetMoralePercent(GW::GameContext::instance()->world->morale);
 }
+void EffectsMonitorWidget::CheckSetMinionCount() {
+    auto& minions_arr = GW::GameContext::instance()->world->controlled_minion_count;
+    uint32_t me = GW::Agents::GetPlayerId();
+    minion_count = 0;
+    for (size_t i = minions_arr.size() - 1; i < minions_arr.size(); i--) {
+        if (minions_arr[i].agent_id == me) {
+            minion_count = minions_arr[i].minion_count;
+            return;
+        }
+    }
+}
 void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_id, void* wParam, void* lParam) {
     UNREFERENCED_PARAMETER(wParam);
     UNREFERENCED_PARAMETER(lParam);
     UNREFERENCED_PARAMETER(message_id);
     
     switch (message_id) {
+    case 0x10000046: { // Minion count updated on effects monitor
+        Instance().CheckSetMinionCount();
+    } break;
     case GW::UI::kEffectAdd: {
         struct Payload {
             uint32_t agent_id;
@@ -102,17 +116,10 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
         break;
     }
 }
-void EffectsMonitorWidget::SetMoralePercent(uint32_t morale_percent) {
+void EffectsMonitorWidget::SetMoralePercent(uint32_t _morale_percent) {
     // The in-game effect monitor does something stupid to "inject" the morale boost because its not really a skill
     // We're going to spoof it as a skill with effect id 0 to put it in the right place.
-    GW::Effect morale_effect = { 0 };
-    morale_effect.skill_id = morale_effect.effect_id = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
-    if (morale_percent == 100) {
-        RemoveEffect(morale_effect.effect_id);
-    }
-    else {
-        SetEffect(&morale_effect);
-    }
+    morale_percent = _morale_percent;
 }
 void EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
     for (auto& by_type : cached_effects) {
@@ -299,6 +306,30 @@ draw_effects:
     float row_skills_drawn = 0.f;
     float row_idx = 1.f;
     int draw = 0;
+    auto next_effect = [&]() {
+        row_skills_drawn++;
+        if (layout == Layout::Rows) {
+            skill_top_left.x += (m_skill_width * x_translate);
+            if (row_skills_drawn == skills_per_row && row_idx < row_count) {
+                skill_top_left.y += (m_skill_width * y_translate);
+                skill_top_left.x = x_translate > 0 ? imgui_pos.x : imgui_pos.x + imgui_size.x - m_skill_width;
+                row_skills_drawn = 0;
+            }
+
+        }
+        else {
+            skill_top_left.y += (m_skill_width * y_translate);
+            if (row_skills_drawn == skills_per_row && row_idx < row_count) {
+                skill_top_left.x += (m_skill_width * x_translate);
+                skill_top_left.y = y_translate > 0 ? imgui_pos.y : imgui_pos.y + imgui_size.y - m_skill_width;
+                row_skills_drawn = 0;
+            }
+        }
+    };
+    if(morale_percent != 100)
+        next_effect();
+    if(minion_count)
+        next_effect();
     for (auto& it : cached_effects) {
         for (GW::Effect& effect : it.second) {
             if (effect.duration) {
@@ -327,26 +358,8 @@ draw_effects:
                     ImGui::GetWindowDrawList()->AddText({ label_pos.x + 1, label_pos.y + 1 }, color_text_shadow, remaining_str);
                 ImGui::GetWindowDrawList()->AddText(label_pos, color_text_effects, remaining_str);
             }
-            row_skills_drawn++;
-            if (layout == Layout::Rows) {
-                skill_top_left.x += (m_skill_width * x_translate);
-                if (row_skills_drawn == skills_per_row && row_idx < row_count) {
-                    skill_top_left.y += (m_skill_width * y_translate);
-                    skill_top_left.x = x_translate > 0 ? imgui_pos.x : imgui_pos.x + imgui_size.x - m_skill_width;
-                    row_idx++;
-                    row_skills_drawn = 0;
-                }
+            next_effect();
 
-            }
-            else {
-                skill_top_left.y += (m_skill_width * y_translate);
-                if (row_skills_drawn == skills_per_row && row_idx < row_count) {
-                    skill_top_left.x += (m_skill_width * x_translate);
-                    skill_top_left.y = y_translate > 0 ? imgui_pos.y : imgui_pos.y + imgui_size.y - m_skill_width;
-                    row_idx++;
-                    row_skills_drawn = 0;
-                }
-            }
         }
     }
     ImGui::PopFont();
