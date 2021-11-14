@@ -358,9 +358,8 @@ bool GuiUtils::ParseFloat(const wchar_t *str, float *val) {
     *val = wcstof(str, &end);
     return str != end && errno != ERANGE;
 }
-size_t GuiUtils::IniToArray(const std::string& in, wchar_t* out, size_t out_len) {
-    if ((in.size() + 1) / 5 > out_len)
-        return 0;
+size_t GuiUtils::IniToArray(const std::string& in, std::wstring& out) {
+    out.resize((in.size() + 1) / 5);
     size_t offset = 0, pos = 0, converted = 0;
     do {
         if (pos) pos++;
@@ -371,10 +370,12 @@ size_t GuiUtils::IniToArray(const std::string& in, wchar_t* out, size_t out_len)
             return 0;
         out[offset++] = (wchar_t)converted;
     } while ((pos = in.find(' ', pos)) != std::string::npos);
-    while (offset < out_len) {
-        out[offset++] = 0;
-    }
     return offset;
+}
+size_t GuiUtils::IniToArray(const std::string& in, std::vector<uint32_t>& out) {
+    out.resize((in.size() + 1) / 9);
+    out.resize(IniToArray(in, out.data(), out.size()));
+    return out.size();
 }
 size_t GuiUtils::IniToArray(const std::string& in, uint32_t* out, size_t out_len) {
     if ((in.size() + 1) / 9  > out_len)
@@ -424,9 +425,9 @@ time_t GuiUtils::filetime_to_timet(const FILETIME& ft) {
     return ull.QuadPart / 10000000ULL - 11644473600ULL; 
 }
 
-bool GuiUtils::ArrayToIni(const wchar_t* in, std::string* out)
+bool GuiUtils::ArrayToIni(const std::wstring& in, std::string* out)
 {
-    size_t len = wcslen(in);
+    size_t len = in.size();
     if (!len) {
         out->clear();
         return true;

@@ -247,7 +247,7 @@ void ChatLog::Load(const std::wstring& _account) {
     CSimpleIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
     const size_t buf_len = 512;
-    wchar_t buf[buf_len];
+    std::wstring buf;
     FILETIME t;
     uint32_t channel = 0;
     uint32_t addr = 0;
@@ -255,14 +255,13 @@ void ChatLog::Load(const std::wstring& _account) {
         std::string message = inifile->GetValue(entry.pItem, "message", "");
         if (message.empty())
             continue;
-        size_t written = GuiUtils::IniToArray(message, buf, buf_len - 1);
+        size_t written = GuiUtils::IniToArray(message,buf);
         if (!written)
             continue;
-        buf[written] = 0;
         t.dwLowDateTime = inifile->GetLongValue(entry.pItem, "dwLowDateTime", 0);
         t.dwHighDateTime = inifile->GetLongValue(entry.pItem, "dwHighDateTime", 0);
         channel = inifile->GetLongValue(entry.pItem, "channel", 0);
-        Add(buf, channel, t);
+        Add(buf.data(), channel, t);
     }
     delete inifile;
 
@@ -275,12 +274,11 @@ void ChatLog::Load(const std::wstring& _account) {
         std::string message = inifile->GetValue(entry.pItem, "message", "");
         if (message.empty())
             continue;
-        size_t written = GuiUtils::IniToArray(message, buf, buf_len - 1);
+        size_t written = GuiUtils::IniToArray(message, buf);
         if (!written)
             continue;
-        buf[written] = 0;
         addr = inifile->GetLongValue(entry.pItem, "addr", 0);
-        AddSent(buf, addr);
+        AddSent(buf.data(), addr);
     }
     delete inifile;
 }

@@ -49,10 +49,11 @@ namespace GuiUtils {
     std::string TimeToString(FILETIME utc_timestamp);
 
     // Takes a wstring and translates into a string of hex values, separated by spaces
-    bool ArrayToIni(const wchar_t* in, std::string* out);
+    bool ArrayToIni(const std::wstring& in, std::string* out);
     bool ArrayToIni(const uint32_t* in, size_t len, std::string* out);
-    size_t IniToArray(const std::string& in, wchar_t* out, size_t out_len);
+    size_t IniToArray(const std::string& in, std::wstring& out);
     size_t IniToArray(const std::string& in, uint32_t* out, size_t out_len);
+    size_t IniToArray(const std::string& in, std::vector<uint32_t>& out);
     // Takes a string of hex values separated by spaces, and returns a wstring respresentation
     std::wstring IniToWString(std::string in);
 
