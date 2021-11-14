@@ -92,12 +92,38 @@ TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
 TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
     : ui_id(++cur_ui_id)
 {
+    memset(prof_ids, false, sizeof(prof_ids));
     if (ini) {
         hotkey = ini->GetLongValue(section, VAR_NAME(hotkey), hotkey);
         modifier = ini->GetLongValue(section, VAR_NAME(modifier), modifier);
         active = ini->GetBoolValue(section, VAR_NAME(active), active);
-        map_id = ini->GetLongValue(section, VAR_NAME(map_id), map_id);
-        prof_id = ini->GetLongValue(section, VAR_NAME(prof_id), prof_id);
+
+        std::string ini_str = ini->GetValue(section, VAR_NAME(map_ids), "");
+        GuiUtils::IniToArray(ini_str, map_ids);
+        if (map_ids.empty()) {
+            // Legacy
+            int map_id = ini->GetLongValue(section, "map_id",0);
+            if (map_id > 0)
+                map_ids.push_back(map_id);
+        }
+
+        ini_str = ini->GetValue(section, VAR_NAME(prof_ids), "");
+        std::vector<uint32_t> prof_ids_tmp;
+        
+        GuiUtils::IniToArray(ini_str, prof_ids_tmp);
+        if (!prof_ids_tmp.empty()) {
+            for (auto prof_id : prof_ids_tmp) {
+                if (prof_id < _countof(prof_ids))
+                    prof_ids[prof_id] = true;
+            }
+        }
+        else {
+            // Legacy
+            int prof_id = ini->GetLongValue(section, "prof_id", 0);
+            if (prof_id > 0 && prof_id < _countof(prof_ids))
+                prof_ids[prof_id] = true;
+        }
+
         instance_type = ini->GetLongValue(section, VAR_NAME(instance_type), instance_type);
         show_message_in_emote_channel =
             ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
@@ -112,18 +138,26 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
         trigger_on_pvp_character = ini->GetBoolValue(
             section, VAR_NAME(trigger_on_pvp_character), trigger_on_pvp_character);
         std::string player_name_s = ini->GetValue(section, VAR_NAME(player_name), "");
-        memset(player_name, 0, _countof(player_name));
+        memset(player_name, 0, sizeof(player_name));
         if (!player_name_s.empty()) {
             strncpy(player_name, player_name_s.c_str(), _countof(player_name));
         }
     }
 }
+size_t TBHotkey::HasProfession() {
+    size_t out = 0;
+    for (size_t i = 1; i < _countof(prof_ids); i++) {
+        if (prof_ids[i])
+            out++;
+    }
+    return out;
+}
 bool TBHotkey::IsValid(const char* _player_name, GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, bool is_pvp_character) {
     return active 
         && (!is_pvp_character || trigger_on_pvp_character)
         && (instance_type == -1 || (GW::Constants::InstanceType)instance_type == _instance_type)
-        && (prof_id == 0 || (GW::Constants::Profession)(prof_id - 1) == _profession)
-        && (map_id == 0 || (GW::Constants::MapID)map_id == _map_id)
+        && (prof_ids[(size_t)_profession] || !HasProfession())
+        && (map_ids.empty() || std::find(map_ids.begin(), map_ids.end(), (uint32_t)_map_id) != map_ids.end())
         && (!player_name[0] || strcmp(_player_name,player_name) == 0);
 }
 bool TBHotkey::CanUse()
@@ -133,8 +167,6 @@ bool TBHotkey::CanUse()
 void TBHotkey::Save(CSimpleIni *ini, const char *section) const
 {
     ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
-    ini->SetLongValue(section, VAR_NAME(map_id), map_id);
-    ini->SetLongValue(section, VAR_NAME(prof_id), prof_id);
     ini->SetLongValue(section, VAR_NAME(modifier), modifier);
     ini->SetLongValue(section, VAR_NAME(instance_type), instance_type);
     ini->SetBoolValue(section, VAR_NAME(active), active);
@@ -150,6 +182,18 @@ void TBHotkey::Save(CSimpleIni *ini, const char *section) const
     ini->SetBoolValue(section, VAR_NAME(trigger_on_pvp_character),
         trigger_on_pvp_character);
     ini->SetValue(section, VAR_NAME(player_name), player_name);
+
+    std::string out;
+    std::vector<uint32_t> prof_ids_tmp;
+    for (size_t i = 0; i < _countof(prof_ids); i++) {
+        if(prof_ids[i])
+            prof_ids_tmp.push_back(i);
+    }
+    GuiUtils::ArrayToIni(prof_ids_tmp.data(), prof_ids_tmp.size(), &out);
+    ini->SetValue(section, VAR_NAME(prof_ids), out.c_str());
+
+    GuiUtils::ArrayToIni(map_ids.data(), map_ids.size(), &out);
+    ini->SetValue(section, VAR_NAME(map_ids), out.c_str());
 }
 char* TBHotkey::professions[] = {"Any",          "Warrior",     "Ranger",
                                     "Monk",         "Necromancer", "Mesmer",
@@ -198,15 +242,45 @@ bool TBHotkey::Draw(Op *op)
     // === Header ===
     char header[256];
     char keybuf[64];
+
     int written = 0;
     written += Description(&header[written], _countof(header) - written);
-    if (prof_id)
-        written += snprintf(&header[written], _countof(header) - written, " [%s]", professions[prof_id]);
-    if (map_id) {
-        if (map_id < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID))
-            written += snprintf(&header[written], _countof(header) - written, " [%s]", GW::Constants::NAME_FROM_ID[map_id]);
+    switch (HasProfession()) {
+    case 1:
+        for (size_t i = 1; i < _countof(prof_ids);i++) {
+            if (prof_ids[i])
+                written += snprintf(&header[written], _countof(header) - written, " [%s]", professions[i]);
+        }
+        break;
+    case 0:
+        break;
+    default: {
+        char prof_ids_buf[128];
+        int prof_ids_written = 0;
+        for (size_t i = 1; i < _countof(prof_ids); i++) {
+            if (!prof_ids[i])
+                continue;
+            char* format = ", %s";
+            if (!prof_ids_written)
+                format = "%s";
+            prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, GW::Constants::GetProfessionAcronym((GW::Constants::Profession)i).c_str());
+        }
+        written += snprintf(&header[written], _countof(header) - written, " [%s]", prof_ids_buf);
+    } break;
+        
+    }
+    switch (map_ids.size()) {
+    case 1:
+        if (map_ids[0] < _countof(GW::Constants::NAME_FROM_ID))
+            written += snprintf(&header[written], _countof(header) - written, " [%s]", GW::Constants::NAME_FROM_ID[map_ids[0]]);
         else
-            written += snprintf(&header[written], _countof(header) - written, " [Map %d]", map_id);
+            written += snprintf(&header[written], _countof(header) - written, " [Map %d]", map_ids[0]);
+        break;
+    case 0:
+        break;
+    default:
+        written += snprintf(&header[written], _countof(header) - written, " [%d Maps]", map_ids.size());
+        break;
     }
     
     ASSERT(ModKeyName(keybuf, _countof(keybuf), modifier, hotkey, "<None>") != -1);
@@ -218,32 +292,100 @@ bool TBHotkey::Draw(Op *op)
         ShowHeaderButtons();
     } else {
         ShowHeaderButtons();
+        ImGui::Indent();
         ImGui::PushID(static_cast<int>(ui_id));
         ImGui::PushItemWidth(-140.0f * scale);
         // === Specific section ===
         hotkey_changed |= Draw();
 
         // === Hotkey section ===
+        float& indent_offset = ImGui::GetCurrentWindow()->DC.Indent.x;
+        float offset_sameline = indent_offset + (ImGui::GetContentRegionAvail().x / 2);
         hotkey_changed |= ImGui::Checkbox("Block key in Guild Wars when triggered", &block_gw);
-        ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event");  
+        ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event"); 
+        ImGui::SameLine(offset_sameline);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost);
+        ImGui::SameLine(offset_sameline);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when playing on PvP character", &trigger_on_pvp_character);
         ImGui::ShowHelp("Unless enabled, this hotkey will not activate when playing on a PvP only character.");
         const float half_width = ImGui::GetContentRegionAvail().x / 2.f;
-        int instance_type_tmp = instance_type + 1;
-        if (ImGui::Combo("Instance Type", &instance_type_tmp, "Any\0Outpost\0Explorable")) {
+        ImGui::Separator();
+        ImGui::Text("Instance Type: ");
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Any ##instance_type_any", instance_type == -1)) {
+            instance_type = -1;
             hotkey_changed = true;
-            instance_type = instance_type_tmp - 1;
         }
-        hotkey_changed |= ImGui::InputInt("Map ID", &map_id);
-        ImGui::ShowHelp("Only trigger in the selected map (0 = Any map)");
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Outpost ##instance_type_outpost", instance_type == 0)) {
+            instance_type = 0;
+            hotkey_changed = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Explorable ##instance_type_explorable", instance_type == 1)) {
+            instance_type = 1;
+            hotkey_changed = true;
+        }
+        if (ImGui::CollapsingHeader("Map IDs")) {
+            ImGui::Indent();
+            
+            ImGui::TextDisabled("Only trigger in selected maps:");
+            float map_id_w = (140.f * scale);
+            if (map_ids.empty()) {
+                ImGui::Text("    This hotkey will trigger in any map - add a map ID below to limit to a map");
+            }
+            for (int i = 0; i < (int)map_ids.size(); i++) {
+                ImGui::PushID(i);
+                ImGui::Text("%d", map_ids[i]);
+                ImGui::SameLine(indent_offset + map_id_w);
+                if (ImGui::Button("X")) {
+                    map_ids.erase(map_ids.begin() + i);
+                    i--;
+                    hotkey_changed = true;
+                }
+                ImGui::PopID();
+            }
 
-        hotkey_changed |= ImGui::Combo("Profession", &prof_id, professions, 11);
-        ImGui::ShowHelp("Only trigger when player is the selected primary profession (0 = Any profession)");
+            static char map_id_input_buf[4];
+            ImGui::Separator();
+            ImGui::Text("Add Map ID:");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(map_id_w);
+            bool add_map_id = ImGui::InputText("##add_map_id", map_id_input_buf, _countof(map_id_input_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue);
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            add_map_id |= ImGui::Button("Add##add_map_id_for_hotkey", { 64.f * scale,0.f });
+            if (add_map_id) {
+                int map_id_out = 0;
+                if (strlen(map_id_input_buf) 
+                    && GuiUtils::ParseInt(map_id_input_buf, &map_id_out)
+                    && map_id_out > 0
+                    && std::find(map_ids.begin(), map_ids.end(), (uint32_t)map_id_input_buf) == map_ids.end()) {
+                    map_ids.push_back((uint32_t)map_id_out);
+                    memset(map_id_input_buf, 0, sizeof(map_id_input_buf));
+                    hotkey_changed = true;
+                }
+            }
+            ImGui::Unindent();
+        }
+        
+        if (ImGui::CollapsingHeader("Professions")) {
+            ImGui::Indent();
+            float prof_w = 140.f * scale;
+            int per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / prof_w);
+            ImGui::TextDisabled("Only trigger when player is one of these professions");
+            for (int i = 1; i < _countof(prof_ids); i++) {
+                int offset = ((i-1) % per_row);
+                if (i > 1 && offset != 0)
+                    ImGui::SameLine(prof_w * offset + indent_offset);
+                hotkey_changed |= ImGui::Checkbox(professions[i], &prof_ids[i]);
+            }
+            ImGui::Unindent();
+        }
 
-        hotkey_changed |= ImGui::InputText("Player Name", player_name, sizeof(player_name));
-        ImGui::ShowHelp("Only trigger for this player name (leave blank for any character name)");
+        hotkey_changed |= ImGui::InputTextEx("Character Name##hotkey_player_name", "Any Character Name", player_name, sizeof(player_name), ImVec2(0, 0), 0, 0, 0);
+        ImGui::ShowHelp("Only trigger for this character name (leave blank for any character name)");
 
         ImGui::Separator();
         hotkey_changed |= ImGui::Checkbox("###active", &active);
@@ -365,6 +507,7 @@ bool TBHotkey::Draw(Op *op)
         }
         ImGui::PopItemWidth();
         ImGui::PopID();
+        ImGui::Unindent();
     }
     return hotkey_changed;
 }
@@ -548,20 +691,17 @@ HotkeyEquipItem::HotkeyEquipItem(CSimpleIni *ini, const char *section)
         std::string in = ini->GetValue(section, "EncodedName", "");
         std::wstring enc_name;
         if (in.size()) {
-            enc_name.resize((in.size() + 1) / 5,0);
-            ASSERT(GuiUtils::IniToArray(in, enc_name.data(), enc_name.size()));
+            ASSERT(GuiUtils::IniToArray(in, enc_name));
         }
         in = ini->GetValue(section, "EncodedDesc", "");
         std::wstring enc_desc;
         if (in.size()) {
-            enc_desc.resize((in.size() + 1) / 5, 0);
-            ASSERT(GuiUtils::IniToArray(in, enc_desc.data(), enc_desc.size()));
+            ASSERT(GuiUtils::IniToArray(in, enc_desc));
         }
         in = ini->GetValue(section, "ModStruct", "");
         std::vector<uint32_t> mod_structs;
         if (!in.empty()) {
-            mod_structs.resize((in.size() + 1) / 9, 0);
-            ASSERT(GuiUtils::IniToArray(in, mod_structs.data(), mod_structs.size()));
+            ASSERT(GuiUtils::IniToArray(in, mod_structs));
         }
         item_attributes.set(model_id, enc_name.c_str(), enc_desc.c_str(), mod_structs.size() ? (GW::ItemModifier*)mod_structs.data() : nullptr, mod_structs.size());
     }

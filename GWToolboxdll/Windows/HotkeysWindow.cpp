@@ -66,12 +66,19 @@ bool HotkeysWindow::CheckSetValidHotkeys() {
     for (auto* hotkey : hotkeys) {
         if (hotkey->IsValid(player_name.c_str(), instance_type, primary, map_id, is_pvp))
             valid_hotkeys.push_back(hotkey);
-        if (by_profession.find(hotkey->prof_id) == by_profession.end())
-            by_profession[hotkey->prof_id] = std::vector<TBHotkey*>();
-        by_profession[hotkey->prof_id].push_back(hotkey);
-        if (by_map.find(hotkey->map_id) == by_map.end())
-            by_map[hotkey->map_id] = std::vector<TBHotkey*>();
-        by_map[hotkey->map_id].push_back(hotkey);
+        for (size_t i = 0; i < _countof(hotkey->prof_ids);i++) {
+            if (!hotkey->prof_ids[i])
+                continue;
+            if (by_profession.find(i) == by_profession.end())
+                by_profession[i] = std::vector<TBHotkey*>();
+            by_profession[i].push_back(hotkey);
+        }
+        for (auto h_map_id : hotkey->map_ids) {
+            if (by_map.find(h_map_id) == by_map.end())
+                by_map[h_map_id] = std::vector<TBHotkey*>();
+            by_map[h_map_id].push_back(hotkey);
+        }
+
         if (by_instance_type.find(hotkey->instance_type) == by_instance_type.end())
             by_instance_type[hotkey->instance_type] = std::vector<TBHotkey*>();
         by_instance_type[hotkey->instance_type].push_back(hotkey);

@@ -43,8 +43,8 @@ public:
     bool trigger_on_outpost = false; // Trigger when entering outpost area
     bool trigger_on_pvp_character = false; // Trigger when playing a PvP character
 
-    int map_id = 0;
-    int prof_id = 0;
+    std::vector<uint32_t> map_ids;
+    bool prof_ids[11];
     int instance_type = -1;
     char player_name[20] = "";
 
@@ -56,6 +56,9 @@ public:
     virtual ~TBHotkey(){};
 
     virtual bool CanUse();
+
+    // Whether this hotkey is limited to professions. Returns number of professions applicable
+    size_t HasProfession();
     // Whether this hotkey is valid for the current player/map
     virtual bool IsValid(const char* _player_name, GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, bool is_pvp_character);
 
