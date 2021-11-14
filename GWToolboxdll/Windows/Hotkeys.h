@@ -21,6 +21,9 @@ public:
         Op_BlockInput,
     };
 
+    static char* professions[];
+    static char* instance_types[];
+
     static bool show_active_in_header;
     static bool show_run_in_header;
     static bool hotkeys_changed;
@@ -43,6 +46,7 @@ public:
     int map_id = 0;
     int prof_id = 0;
     int instance_type = -1;
+    char player_name[20] = "";
 
     long hotkey = 0;
     long modifier = 0;
@@ -52,14 +56,16 @@ public:
     virtual ~TBHotkey(){};
 
     virtual bool CanUse();
+    // Whether this hotkey is valid for the current player/map
+    virtual bool IsValid(const char* _player_name, GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, bool is_pvp_character);
 
 
     virtual void Save(CSimpleIni* ini, const char* section) const;
 
-    void Draw(Op* op);
+    bool Draw(Op* op);
 
     virtual const char* Name() const = 0;
-    virtual void Draw() = 0;
+    virtual bool Draw() = 0;
     virtual int Description(char *buf, size_t bufsz) = 0;
     virtual void Execute() = 0;
     virtual void Toggle() { return Execute(); };
@@ -91,7 +97,7 @@ public:
 
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
@@ -142,7 +148,7 @@ public:
 
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char* buf, size_t bufsz) override;
     void Execute() override;
 
@@ -167,7 +173,7 @@ public:
 
     bool CanUse() override { return TBHotkey::CanUse() && item_id != 0; }
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char* buf, size_t bufsz) override;
     void Execute() override;
 };
@@ -194,7 +200,7 @@ public:
 
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
@@ -220,7 +226,7 @@ public:
     ~HotkeyToggle();
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
     void Toggle() override;
@@ -257,7 +263,7 @@ public:
 
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
@@ -286,7 +292,7 @@ public:
 
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
@@ -307,7 +313,7 @@ public:
 
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
@@ -324,7 +330,7 @@ public:
 
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
@@ -342,7 +348,7 @@ public:
 
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
@@ -360,7 +366,7 @@ public:
 
     void Save(CSimpleIni* ini, const char* section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
@@ -385,7 +391,7 @@ public:
 
     void Save(CSimpleIni *ini, const char *section) const override;
 
-    void Draw() override;
+    bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };
