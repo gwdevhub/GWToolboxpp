@@ -85,14 +85,14 @@ private:
     uint32_t GetEffectSortOrder(uint32_t skill_id);
     // Recalculate position of widget based on gw effect monitor position
     void RefreshPosition();
-    // Triggered when an effect has reached < 0 duration. Returns true if redraw is needed.
+    // Triggered when an effect has reached < 0 duration. Returns true if effect has been removed.
     bool DurationExpired(GW::Effect& effect);
     // Adds or removes the morale "effect" depending on percent
     void SetMoralePercent(uint32_t morale_percent);
     // Adds or removes the minion count "effect" depending on percent
     void CheckSetMinionCount();
 
-    int UptimeToString(char arr[8], uint32_t cd) const;
+    int UptimeToString(char arr[8], int cd) const;
 
     GW::HookEntry OnEffect_Entry;
 

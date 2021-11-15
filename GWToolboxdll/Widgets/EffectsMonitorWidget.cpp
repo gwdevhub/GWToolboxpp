@@ -200,10 +200,10 @@ bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
         case GW::Constants::SkillID::Scorpion_Aspect:
             effect.duration = 30.f;
             effect.timestamp = timer;
-            return true;
+            return false;
     }
     if (!effect.duration)
-        return false;
+        return &effect;
     // Effect expired
     const GW::Effect* e = GetEffect(effect.effect_id);
     if (!e) {
@@ -300,9 +300,6 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     char remaining_str[16];
     ImGui::PushFont(GuiUtils::GetFont(font_effects));
 
-
-
-draw_effects:
     float row_skills_drawn = 0.f;
     float row_idx = 1.f;
     int draw = 0;
@@ -331,14 +328,15 @@ draw_effects:
     if(minion_count)
         next_effect();
     for (auto& it : cached_effects) {
-        for (GW::Effect& effect : it.second) {
+        for (GW::Effect & effect : it.second) {
             if (effect.duration) {
                 DWORD remaining = effect.GetTimeRemaining();
                 draw = remaining < (DWORD)(effect.duration * 1000.f);
                 if (draw) {
                     draw = UptimeToString(remaining_str, remaining);
-                } else if(DurationExpired(effect)) {
-                    goto draw_effects;
+                }
+                else if (DurationExpired(effect)) {
+                    goto enddraw; // cached_effects is now invalidated; skip to end and redraw next frame
                 }
             }
             else if(show_vanquish_counter && effect.skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Hard_mode)) {
@@ -362,6 +360,7 @@ draw_effects:
 
         }
     }
+    enddraw:
     ImGui::PopFont();
     ImGui::End();
     ImGui::PopStyleVar(2);
@@ -411,9 +410,10 @@ void EffectsMonitorWidget::DrawSettingInternal()
     ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &show_vanquish_counter);
     ImGui::PopID();
 }
-int EffectsMonitorWidget::UptimeToString(char arr[8], uint32_t cd) const
+int EffectsMonitorWidget::UptimeToString(char arr[8], int cd) const
 {
-    if (cd >= static_cast<uint32_t>(decimal_threshold)) {
+    cd = std::abs(cd);
+    if (cd >= decimal_threshold) {
         if (round_up) cd += 1000;
         return snprintf(arr, 8, "%d", cd / 1000);
     }
