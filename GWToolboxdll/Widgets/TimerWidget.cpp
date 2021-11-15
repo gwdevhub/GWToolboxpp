@@ -143,7 +143,22 @@ void TimerWidget::LoadSettings(CSimpleIni *ini) {
     click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     print_time_zoning = ini->GetBoolValue(Name(), VAR_NAME(print_time_zoning), print_time_zoning);
     print_time_objective = ini->GetBoolValue(Name(), VAR_NAME(print_time_objective), print_time_objective);
-    show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
+    bool show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), true);
+    if (!show_extra_timers) {
+        // Legacy
+        show_deep_timer = false;
+        show_urgoz_timer = false;
+        show_doa_timer = false;
+        show_dhuum_timer = false;
+        show_dungeon_traps_timer = false;
+    }
+    else {
+        show_deep_timer = ini->GetBoolValue(Name(), VAR_NAME(show_deep_timer), show_deep_timer);
+        show_urgoz_timer = ini->GetBoolValue(Name(), VAR_NAME(show_urgoz_timer), show_urgoz_timer);
+        show_doa_timer = ini->GetBoolValue(Name(), VAR_NAME(show_doa_timer), show_doa_timer);
+        show_dhuum_timer = ini->GetBoolValue(Name(), VAR_NAME(show_dhuum_timer), show_dhuum_timer);
+        show_dungeon_traps_timer = ini->GetBoolValue(Name(), VAR_NAME(show_dungeon_traps_timer), show_dungeon_traps_timer);
+    }
     show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
     for (auto it : spirit_effects) {
         char ini_name[32];
@@ -163,8 +178,12 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
     ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(print_time_zoning), print_time_zoning);
     ini->SetBoolValue(Name(), VAR_NAME(print_time_objective), print_time_objective);
-    ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     ini->SetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
+    ini->SetBoolValue(Name(), VAR_NAME(show_deep_timer), show_deep_timer);
+    ini->SetBoolValue(Name(), VAR_NAME(show_doa_timer), show_doa_timer);
+    ini->SetBoolValue(Name(), VAR_NAME(show_urgoz_timer), show_urgoz_timer);
+    ini->SetBoolValue(Name(), VAR_NAME(show_dhuum_timer), show_dhuum_timer);
+    ini->SetBoolValue(Name(), VAR_NAME(show_dungeon_traps_timer), show_dungeon_traps_timer);
     for (auto it : spirit_effects) {
         char ini_name[32];
         snprintf(ini_name, 32, "spirit_effect_%d", it.first);
@@ -174,6 +193,27 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
 
 void TimerWidget::DrawSettingInternal() {
     ToolboxWidget::DrawSettingInternal();
+    float checkbox_w;
+    int cols, col_idx;
+    float& indent = ImGui::GetCurrentWindow()->DC.Indent.x;
+    auto next_col_maybe = [&]() {
+        if (col_idx) {
+            if (col_idx < cols) {
+                ImGui::SameLine((checkbox_w * col_idx) + indent);
+            }
+            else {
+                col_idx = 0;
+            }
+        }
+        col_idx++;
+
+    };
+    auto init_cols = [&](float width) {
+        checkbox_w = width * ImGui::GetIO().FontGlobalScale;
+        cols = (int)std::floor(ImGui::GetContentRegionAvail().x / checkbox_w);
+        col_idx = 0;
+    };
+
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     if (ImGui::RadioButton("Instance timer", use_instance_timer)) {
         use_instance_timer = true;
@@ -197,25 +237,38 @@ void TimerWidget::DrawSettingInternal() {
     }
     ImGui::Text("Print time:");
     ImGui::Indent();
+    init_cols(200.f);
+    next_col_maybe();
     ImGui::Checkbox("With Ctrl+Click on timer", &click_to_print_time);
+    next_col_maybe();
     ImGui::Checkbox("At objective completion", &print_time_objective);
+    next_col_maybe();
     ImGui::Checkbox("When leaving explorables", &print_time_zoning);
     ImGui::Unindent();
 
-    ImGui::Checkbox("Show extra timers", &show_extra_timers);
-    ImGui::ShowHelp("Such as Deep aspects");
+    ImGui::Text("Show extra timers:");
+    ImGui::Indent();
+    
+    std::vector<std::pair<char*, bool*>> timers = {
+        { "Deep aspects",&show_deep_timer},
+        { "DoA cave",&show_doa_timer},
+        { "Dhuum",&show_dhuum_timer},
+        { "Urgoz doors",&show_urgoz_timer},
+        { "Dungeon traps",&show_dungeon_traps_timer}
+    };
+    init_cols(140.f);
+    for (size_t i = 0; i < timers.size();i++) {
+        next_col_maybe();
+        ImGui::Checkbox(timers[i].first, timers[i].second);
+    }
+    ImGui::Unindent();
     ImGui::Checkbox("Show spirit timers", &show_spirit_timers);
     ImGui::ShowHelp("Time until spirits die in seconds");
     if (show_spirit_timers) {
         ImGui::Indent();
-        size_t i = 0;
+        init_cols(140.f);
         for (auto it : spirit_effects) {
-            if (i % 3 == 0) {
-                i = 0;
-            } else {
-                ImGui::SameLine(200.0f * ImGui::GetIO().FontGlobalScale * i);
-            }
-            i++;
+            next_col_maybe();
             ImGui::Checkbox(it.second, &spirit_effects_enabled[it.first]);
         }
         ImGui::Unindent();
@@ -285,25 +338,34 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
         }
 
-        if (show_extra_timers && (GetUrgozTimer() || GetDeepTimer() || GetDhuumTimer() || GetTrapTimer() || GetDoATimer())) {
-
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
-            ImVec2 cur2 = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur2.x + 2, cur2.y + 2));
-            ImGui::TextColored(ImColor(0, 0, 0), extra_buffer);
-            ImGui::SetCursorPos(cur2);
-            ImGui::TextColored(extra_color, extra_buffer);
-            ImGui::PopFont();
-        }
-        if (GetSpiritTimer()) {
+        char* buffer = extra_buffer;
+        auto drawTimer = [buffer](ImColor* extra_color = 0) {
             ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
             ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
-            ImGui::TextColored(ImColor(0, 0, 0), spirits_buffer);
+            ImGui::TextColored(ImColor(0, 0, 0), buffer);
             ImGui::SetCursorPos(cur2);
-            ImGui::Text(spirits_buffer);
+            if (extra_color) {
+                ImGui::TextColored(*extra_color, buffer);
+            }
+            else {
+                ImGui::Text(buffer);
+            }
             ImGui::PopFont();
-        }
+        };
+        if (show_deep_timer && GetDeepTimer())
+            drawTimer(&extra_color);
+        if (show_urgoz_timer && GetUrgozTimer())
+            drawTimer(&extra_color);
+        if (show_doa_timer && GetDoATimer())
+            drawTimer(&extra_color);
+        if (show_dungeon_traps_timer && GetTrapTimer())
+            drawTimer(&extra_color);
+        if (show_dhuum_timer && GetDhuumTimer())
+            drawTimer(&extra_color);
+        buffer = spirits_buffer;
+        if (show_spirit_timers && GetSpiritTimer())
+            drawTimer();
 
         if (click_to_print_time) {
             ImVec2 size = ImGui::GetWindowSize();
@@ -320,7 +382,6 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     ImGui::End();
     ImGui::PopStyleColor();
 }
-
 bool TimerWidget::GetUrgozTimer() {
     if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren) return false;
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return false;

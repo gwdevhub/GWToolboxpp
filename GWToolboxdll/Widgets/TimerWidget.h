@@ -44,6 +44,7 @@ public:
     void OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);
 
 private:
+
     // those function write to extra_buffer and extra_color.
     // they return true if there is something to draw.
     bool GetUrgozTimer();
@@ -69,7 +70,11 @@ private:
     };
 
     bool hide_in_outpost = false;
-    bool show_extra_timers = true;
+    bool show_deep_timer = true;
+    bool show_urgoz_timer = true;
+    bool show_doa_timer = true;
+    bool show_dhuum_timer = true;
+    bool show_dungeon_traps_timer = true;
     bool show_spirit_timers = true;
     std::map<GW::Constants::SkillID, bool> spirit_effects_enabled{
         {GW::Constants::SkillID::Edge_of_Extinction, true},
