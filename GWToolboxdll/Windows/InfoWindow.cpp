@@ -668,16 +668,18 @@ void InfoWindow::DrawResignlog() {
 }
 
 void InfoWindow::DrawSettingInternal() {
-    ImGui::Checkbox("Show widget toggles", &show_widgets);
-    ImGui::Checkbox("Show 'Open Xunlai Chest' button", &show_open_chest);
-    ImGui::Checkbox("Show Player", &show_player);
-    ImGui::Checkbox("Show Target", &show_target);
-    ImGui::Checkbox("Show Map", &show_map);
-    ImGui::Checkbox("Show Dialog", &show_dialog);
-    ImGui::Checkbox("Show Item", &show_item);
-    ImGui::Checkbox("Show Quest", &show_quest);
-    ImGui::Checkbox("Show Enemy Count", &show_mobcount);
-    ImGui::Checkbox("Show Resign Log", &show_resignlog);
+    ImGui::Separator();
+    ImGui::StartSpacedElements(250.f);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show widget toggles", &show_widgets);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show 'Open Xunlai Chest' button", &show_open_chest);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show Player", &show_player);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show Target", &show_target);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show Map", &show_map);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show Dialog", &show_dialog);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show Item", &show_item);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show Quest", &show_quest);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show Enemy Count", &show_mobcount);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show Resign Log", &show_resignlog);
 }
 
 void InfoWindow::LoadSettings(CSimpleIni* ini) {

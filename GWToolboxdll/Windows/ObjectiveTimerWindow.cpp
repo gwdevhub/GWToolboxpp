@@ -842,25 +842,28 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet
 
 void ObjectiveTimerWindow::DrawSettingInternal()
 {
-    clear_cached_times = ImGui::Checkbox("Show second decimal", &show_decimal);
-    ImGui::Checkbox("Show 'Start' column", &show_start_column);
-    ImGui::Checkbox("Show 'End' column", &show_end_column);
-    ImGui::Checkbox("Show 'Time' column", &show_time_column);
-    ImGui::Checkbox("Show detailed objectives", &show_detailed_objectives);
+    ImGui::Separator();
+    ImGui::StartSpacedElements(275.f);
+    ImGui::NextSpacedElement(); clear_cached_times = ImGui::Checkbox("Show second decimal", &show_decimal);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show 'Start' column", &show_start_column);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show 'End' column", &show_end_column);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show 'Time' column", &show_time_column);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show detailed objectives", &show_detailed_objectives);
     ImGui::ShowHelp("Currently only affects DoA objectives");
-    ImGui::Checkbox("Debug: log events", &show_debug_events);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Debug: log events", &show_debug_events);
     ImGui::ShowHelp(
         "Will spam your chat with the events used in the objective timer. \nUse for debugging and to ask for more stuff to be added");
-    ImGui::Checkbox("Show run start date/time", &show_start_date_time);
-    ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show run start date/time", &show_start_date_time);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
+    ImGui::NextSpacedElement();
     if (ImGui::Checkbox("Save/Load runs to disk", &save_to_disk)) {
         SaveRuns();
     }
     ImGui::ShowHelp(
         "Keep a record or your runs in JSON format on disk, and load past runs from disk when starting GWToolbox.");
-    ImGui::Checkbox("Show past runs", &show_past_runs);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Show past runs", &show_past_runs);
     ImGui::ShowHelp("Display from previous days in the Objective Timer window.");
-    ImGui::Checkbox("Automatic /age on completion", &auto_send_age);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Automatic /age on completion", &auto_send_age);
     ImGui::ShowHelp(
         "As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
     ComputeNColumns();

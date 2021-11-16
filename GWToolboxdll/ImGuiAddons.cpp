@@ -6,6 +6,34 @@
 
 using namespace std::string_literals;
 
+namespace ImGui {
+	float element_spacing_width = 0.f;
+	int element_spacing_cols = 1;
+	int element_spacing_col_idx = 0;
+	float* element_spacing_indent = 0;
+}
+const float& ImGui::FontScale() {
+	return ImGui::GetIO().FontGlobalScale;
+}
+void ImGui::StartSpacedElements(float width) {
+	element_spacing_width = width * FontScale();
+	element_spacing_cols = (int)std::floor(ImGui::GetContentRegionAvail().x / element_spacing_width);
+	element_spacing_col_idx = 0;
+	element_spacing_indent = &(ImGui::GetCurrentWindow()->DC.Indent.x);
+}
+void ImGui::NextSpacedElement() {
+	if (element_spacing_col_idx) {
+		if (element_spacing_col_idx < element_spacing_cols) {
+			ImGui::SameLine((element_spacing_width * element_spacing_col_idx) + *element_spacing_indent);
+		}
+		else {
+			element_spacing_col_idx = 0;
+		}
+	}
+	element_spacing_col_idx++;
+}
+
+
 void ImGui::ShowHelp(const char* help) {
 	ImGui::SameLine();
 	ImGui::TextDisabled("(?)");

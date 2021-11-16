@@ -5,6 +5,13 @@ typedef ImU32 Color;
 constexpr uint32_t ImGuiButtonFlags_AlignTextLeft = 1 << 20;
 
 namespace ImGui {
+    // Shorthand for ImGui::GetIO().GlobalFontScale
+    IMGUI_API const float& FontScale();
+    // Initialise available width etc for adding spaced elements. Must be called before calling NextSpacedElement()
+    IMGUI_API void StartSpacedElements(float width);
+    // Called before adding an imgui control that needs to be spaced. Call StartSpacedElements() before this.
+    IMGUI_API void NextSpacedElement();
+
     // Shows '(?)' and the helptext when hovered
     IMGUI_API void ShowHelp(const char* help);
     // Shows current text with a drop shadow

@@ -193,26 +193,6 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
 
 void TimerWidget::DrawSettingInternal() {
     ToolboxWidget::DrawSettingInternal();
-    float checkbox_w;
-    int cols, col_idx;
-    float& indent = ImGui::GetCurrentWindow()->DC.Indent.x;
-    auto next_col_maybe = [&]() {
-        if (col_idx) {
-            if (col_idx < cols) {
-                ImGui::SameLine((checkbox_w * col_idx) + indent);
-            }
-            else {
-                col_idx = 0;
-            }
-        }
-        col_idx++;
-
-    };
-    auto init_cols = [&](float width) {
-        checkbox_w = width * ImGui::GetIO().FontGlobalScale;
-        cols = (int)std::floor(ImGui::GetContentRegionAvail().x / checkbox_w);
-        col_idx = 0;
-    };
 
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     if (ImGui::RadioButton("Instance timer", use_instance_timer)) {
@@ -237,12 +217,12 @@ void TimerWidget::DrawSettingInternal() {
     }
     ImGui::Text("Print time:");
     ImGui::Indent();
-    init_cols(200.f);
-    next_col_maybe();
+    ImGui::StartSpacedElements(200.f);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("With Ctrl+Click on timer", &click_to_print_time);
-    next_col_maybe();
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("At objective completion", &print_time_objective);
-    next_col_maybe();
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("When leaving explorables", &print_time_zoning);
     ImGui::Unindent();
 
@@ -256,9 +236,9 @@ void TimerWidget::DrawSettingInternal() {
         { "Urgoz doors",&show_urgoz_timer},
         { "Dungeon traps",&show_dungeon_traps_timer}
     };
-    init_cols(140.f);
+    ImGui::StartSpacedElements(140.f);
     for (size_t i = 0; i < timers.size();i++) {
-        next_col_maybe();
+        ImGui::NextSpacedElement();
         ImGui::Checkbox(timers[i].first, timers[i].second);
     }
     ImGui::Unindent();
@@ -266,9 +246,9 @@ void TimerWidget::DrawSettingInternal() {
     ImGui::ShowHelp("Time until spirits die in seconds");
     if (show_spirit_timers) {
         ImGui::Indent();
-        init_cols(140.f);
+        ImGui::StartSpacedElements(140.f);
         for (auto it : spirit_effects) {
-            next_col_maybe();
+            ImGui::NextSpacedElement();
             ImGui::Checkbox(it.second, &spirit_effects_enabled[it.first]);
         }
         ImGui::Unindent();

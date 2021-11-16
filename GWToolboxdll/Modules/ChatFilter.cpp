@@ -601,32 +601,35 @@ bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 }
 
 void ChatFilter::DrawSettingInternal() {
-    const float half_width = ImGui::GetContentRegionAvail().x / 2;
+    constexpr float checkbox_w = 400.f;
     ImGui::Text("Block the following messages:");
     ImGui::Separator();
     ImGui::Text("Drops");
     ImGui::SameLine();
     ImGui::TextDisabled("('Rare' stands for Gold item, Ecto, Obby shard or Lockpick)");
-    ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
-    ImGui::SameLine(half_width); ImGui::Checkbox("A common item drops for you", &self_drop_common);
-    ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
-    ImGui::SameLine(half_width); ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
-    ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
-    ImGui::SameLine(half_width); ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
-    ImGui::Checkbox("You pick up a rare item", &player_pickup_rare);
-    ImGui::SameLine(half_width); ImGui::Checkbox("You pick up a common item", &player_pickup_common);
+    ImGui::StartSpacedElements(270.f);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("A common item drops for you", &self_drop_common);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("You pick up a rare item", &player_pickup_rare);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("You pick up a common item", &player_pickup_common);
 
     ImGui::Separator();
     ImGui::Text("Announcements");
-    ImGui::Checkbox("Guild Announcement", &guild_announcement);
-    ImGui::SameLine(half_width); ImGui::Checkbox("Hall of Heroes winners", &hoh_messages);
-    ImGui::Checkbox("Favor of the Gods announcements", &favor);
-    ImGui::SameLine(half_width); ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
-    ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
-    ImGui::SameLine(half_width); ImGui::Checkbox("'You gain x faction'", &faction_gain);
+    ImGui::StartSpacedElements(270.f);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Guild Announcement", &guild_announcement);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Hall of Heroes winners", &hoh_messages);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Favor of the Gods announcements", &favor);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("'You gain x faction'", &faction_gain);
     ImGui::Separator();
     ImGui::Text("Warnings");
-    ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
+    ImGui::StartSpacedElements(270.f);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
     ImGui::ShowHelp("'Item can only/cannot be used in towns or outposts.'\n\
 'This item cannot be used here.'\n\
 'Cannot use this item when no party members are dead.'\n\
@@ -635,34 +638,36 @@ void ChatFilter::DrawSettingInternal() {
 'That item has no uses remaining.'\n\
 'You must wait before using another tonic.'\n\
 'This item can only be used in a guild hall'");
-    ImGui::SameLine(half_width); ImGui::Checkbox("Invalid target", &invalid_target);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Invalid target", &invalid_target);
     ImGui::ShowHelp("'Invalid spell/attack target.'\n\
 'Spell failed. Spirits are not affected by this spell.'\n\
 'Your view of the target is obstructed.'\n\
 'That skill requires a different weapon type.'\n\
 'Target is out of range.'\n\
 'Target is immune to bleeding/disease/poison (no flesh.)'");
-    ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
-    ImGui::SameLine(half_width); ImGui::Checkbox("Opening chests", &opening_chest_messages);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Opening chests", &opening_chest_messages);
     ImGui::ShowHelp("'Chest is being used'\n\
 'The chest is locked. You must use a lockpick to open it.'\n\
 'The chest is locked. You must have the correct key or a lockpick.'\n\
 'The chest is empty.'");
-    ImGui::Checkbox("Item already identified", &item_already_identified);
-    ImGui::SameLine(half_width); ImGui::Checkbox("Not enough Adrenaline/Energy", &not_enough_energy);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Item already identified", &item_already_identified);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Not enough Adrenaline/Energy", &not_enough_energy);
 
     ImGui::Separator();
     ImGui::Text("Others");
-    ImGui::Checkbox("Earning skill points", &skill_points);
-    ImGui::SameLine(half_width); ImGui::Checkbox("PvP messages", &pvp_messages);
+    ImGui::StartSpacedElements(270.f);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Earning skill points", &skill_points);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("PvP messages", &pvp_messages);
     ImGui::ShowHelp("Such as 'A skill was updated for pvp!'");
-    ImGui::Checkbox("9 Rings messages", &ninerings);
-    ImGui::SameLine(half_width); ImGui::Checkbox("Lunar fortunes messages", &lunars);
-    ImGui::Checkbox("Challenge mission messages", &challenge_mission_messages);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("9 Rings messages", &ninerings);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Lunar fortunes messages", &lunars);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Challenge mission messages", &challenge_mission_messages);
     ImGui::ShowHelp("Such as 'Hold-out bonus: +2 points'");
-    ImGui::SameLine(half_width); ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
-    ImGui::Checkbox("'Player x might not reply because his/her status is set to away'", &away);
-    ImGui::SameLine(half_width); ImGui::Checkbox("Salvaging messages", &salvage_messages);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("'Player x might not reply...", &away);
+    ImGui::ShowHelp("...because his / her status is set to away'");
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Salvaging messages", &salvage_messages);
 
     ImGui::Separator();
     ImGui::Checkbox("Block messages from inactive chat channels", &block_messages_from_inactive_channels);

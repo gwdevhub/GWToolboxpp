@@ -1320,20 +1320,21 @@ void GameSettings::DrawChatSettings() {
 }
 
 void GameSettings::DrawSettingInternal() {
-    const float column_spacing = 300.0f * ImGui::GetIO().FontGlobalScale;
+    constexpr float checkbox_w = 270.f;
     ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
     ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
     ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
     ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
     ImGui::Text("Flash Guild Wars taskbar icon when:");
-    ImGui::Indent();
     ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
-    ImGui::Checkbox("Receiving a private message", &flash_window_on_pm);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
-    ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
-    ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
+    ImGui::Indent();
+    ImGui::StartSpacedElements(checkbox_w);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Receiving a private message", &flash_window_on_pm);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
     ImGui::Unindent();
 
     ImGui::Text("Show Guild Wars in foreground when:");
@@ -1341,30 +1342,36 @@ void GameSettings::DrawSettingInternal() {
         "the window from a minimized state when important events\n"
         "occur, such as entering instances.");
     ImGui::Indent();
+    ImGui::StartSpacedElements(checkbox_w);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &focus_window_on_launch);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
     ImGui::Unindent();
 
     ImGui::Text("Show a message when a friend:");
     ImGui::Indent();
-    ImGui::Checkbox("Logs in", &notify_when_friends_online);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &notify_when_friends_join_outpost);
-    ImGui::Checkbox("Logs out", &notify_when_friends_offline);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost);
+    ImGui::StartSpacedElements(checkbox_w);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Logs in", &notify_when_friends_online);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &notify_when_friends_join_outpost);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Logs out", &notify_when_friends_offline);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost);
     ImGui::Unindent();
 
     ImGui::Text("Show a message when a player:");
     ImGui::Indent();
-    ImGui::Checkbox("Joins your party", &notify_when_party_member_joins);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &notify_when_players_join_outpost);
-    ImGui::Checkbox("Leaves your party", &notify_when_party_member_leaves);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &notify_when_players_leave_outpost);
+    ImGui::StartSpacedElements(checkbox_w);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Joins your party", &notify_when_party_member_joins);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &notify_when_players_join_outpost);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Leaves your party", &notify_when_party_member_leaves);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &notify_when_players_leave_outpost);
     ImGui::Unindent();
 
     ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
     ImGui::SameLine();
-    ImGui::PushItemWidth(50);
+    ImGui::PushItemWidth(50.0f * ImGui::GetIO().FontGlobalScale);
     ImGui::InputInt("##awaydelay", &auto_set_away_delay, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
@@ -1410,16 +1417,16 @@ void GameSettings::DrawSettingInternal() {
     ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting",&drop_ua_on_cast);
     ImGui::Text("Disable animation and sound from consumables:");
     ImGui::Indent();
-    const char* doesnt_affect_me = "Only applies to other players";
-    ImGui::Checkbox("Tonics", &block_transmogrify_effect);
+    ImGui::StartSpacedElements(300.f);
+    constexpr char* doesnt_affect_me = "Only applies to other players";
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Tonics", &block_transmogrify_effect);
     ImGui::ShowHelp(doesnt_affect_me);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Sweets", &block_sugar_rush_effect);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Sweets", &block_sugar_rush_effect);
     ImGui::ShowHelp(doesnt_affect_me);
-    ImGui::Checkbox("Bottle rockets", &block_bottle_rockets);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Bottle rockets", &block_bottle_rockets);
     ImGui::ShowHelp(doesnt_affect_me);
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Party poppers", &block_party_poppers);
-    ImGui::ShowHelp(doesnt_affect_me);
-    ImGui::Checkbox("Snowman Summoners", &block_snowman_summoner);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Party poppers", &block_party_poppers);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Snowman Summoners", &block_snowman_summoner);
     ImGui::ShowHelp(doesnt_affect_me);
 #if 0
     //@Cleanup: Ghost in the box spawn effect suppressed, but still need to figure out how to suppress the death effect.
