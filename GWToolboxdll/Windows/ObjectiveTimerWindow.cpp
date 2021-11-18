@@ -158,6 +158,10 @@ namespace
         return std::max(GetTimestampWidth(), ImGui::GetWindowContentRegionWidth() - (GetTimestampWidth() * n_columns));
     }
     static bool runs_dirty = false;
+
+    DWORD time_point_ms() {
+        return static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+    }
 } // namespace
 
 void ObjectiveTimerWindow::CheckIsMapLoaded() {
@@ -1053,7 +1057,8 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetStarted()
 {
     if (IsStarted())
         return this;
-    start = TimerWidget::Instance().GetTimerMs();
+    start_time_point = time_point_ms(); // run_started_time_point
+    start = start_time_point - parent->instance_time; // Ms since run start
     PrintTime(cached_start, sizeof(cached_start), start);
     status = Status::Started;
     return this;
@@ -1063,7 +1068,9 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetDone()
     if (status == Status::Completed)
         return this;
     if (done == TIME_UNKNOWN) {
-        done = TimerWidget::Instance().GetTimerMs();
+        ASSERT(start_time_point);
+        done_time_point = time_point_ms();
+        done = done_time_point - start_time_point + start;
     }
     PrintTime(cached_done, sizeof(cached_done), done);
 
@@ -1117,7 +1124,7 @@ DWORD ObjectiveTimerWindow::Objective::GetDuration() {
     switch (status) {
     case Status::Started:
         ASSERT(start != TIME_UNKNOWN);
-        return duration = TimerWidget::Instance().GetTimerMs() - start;
+        return duration = time_point_ms() - start_time_point;
     case Status::Completed:
         ASSERT(done != TIME_UNKNOWN);
         // NB: An objective can be flagged as completed without being started if a following objective has been started.
@@ -1289,7 +1296,8 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
     : ui_id(cur_ui_id++)
 {
     system_time = static_cast<DWORD>(time(NULL));
-    instance_time = TimerWidget::Instance().GetTimerMs();
+    instance_time_point = time_point_ms();
+    instance_time = instance_time_point - TimerWidget::Instance().GetMapTimeElapsedMs();
     duration = TIME_UNKNOWN;
 }
 ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet() {
@@ -1376,8 +1384,7 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetStartTimeStr() {
 }
 DWORD ObjectiveTimerWindow::ObjectiveSet::GetDuration() {
     if (active) {
-        DWORD now = TimerWidget::Instance().GetTimerMs();
-        return duration = now - instance_time;
+        return duration = time_point_ms() - instance_time_point;
     }
     if (duration != TIME_UNKNOWN) {
         return duration;

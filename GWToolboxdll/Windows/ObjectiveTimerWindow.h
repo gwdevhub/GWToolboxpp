@@ -73,12 +73,16 @@ private:
         DungeonReward
     };
 
+    class ObjectiveSet;
+
     class Objective
     {
     public:
         char name[126] = "";
         int indent = 0;
         int starting_completes_n_previous_objectives = 0; // use -1 for all
+
+        ObjectiveSet* parent;
 
         struct Event {
             EventType type;
@@ -91,6 +95,8 @@ private:
 
         DWORD    start = 0;
         DWORD    done = 0;
+        DWORD start_time_point = 0;
+        DWORD done_time_point = 0;
         
         enum class Status {
             NotStarted,
@@ -132,7 +138,9 @@ private:
         ~ObjectiveSet();
 
         DWORD system_time;
+        // Ms since run start
         DWORD instance_time = (DWORD)-1;
+        DWORD instance_time_point = 0;
         DWORD duration = (DWORD)-1;
         DWORD GetDuration();
         const char* GetDurationStr();
@@ -148,6 +156,7 @@ private:
 
         Objective* AddObjective(Objective* obj, int starting_completes_num_previous = 0) { 
             obj->starting_completes_n_previous_objectives = starting_completes_num_previous;
+            obj->parent = this;
             objectives.push_back(obj); 
             return objectives.back();
         }
