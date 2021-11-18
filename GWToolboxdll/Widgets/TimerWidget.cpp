@@ -64,6 +64,8 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
     std::chrono::steady_clock::time_point now_tp = now();
     run_completed = std::chrono::steady_clock::time_point();
 
+    instance_started = now_tp;
+
     // If reset_next_loading_screen, reset regardless of never_reset
     if (reset_next_loading_screen) {
         run_started = now_tp;
@@ -255,11 +257,21 @@ void TimerWidget::DrawSettingInternal() {
     }
 }
 
-std::chrono::milliseconds TimerWidget::GetTimer()
-{   
+std::chrono::milliseconds TimerWidget::GetMapTimeElapsed() {
+    if (!is_valid(instance_started)) {
+        // Can happen if toolbox was started after map load
+        instance_started = now() - milliseconds(GW::Map::GetInstanceTime());
+    }
+    return duration_cast<milliseconds>(now() - instance_started);
+}
+std::chrono::milliseconds TimerWidget::GetTimer() {
     if (use_instance_timer) {
         return milliseconds(instance_timer_valid ? GW::Map::GetInstanceTime() : 0);
     }
+    return GetRunTimeElapsed();
+}
+std::chrono::milliseconds TimerWidget::GetRunTimeElapsed()
+{   
     if (!is_valid(run_started)) {
         return milliseconds(0);
     } else if (is_valid(run_completed)) {
@@ -269,8 +281,9 @@ std::chrono::milliseconds TimerWidget::GetTimer()
         return duration_cast<milliseconds>(now() - run_started);
     }
 }
-
 unsigned long TimerWidget::GetTimerMs() { return static_cast<unsigned long>(GetTimer().count()); }
+unsigned long TimerWidget::GetMapTimeElapsedMs() { return static_cast<unsigned long>(GetMapTimeElapsed().count()); }
+unsigned long TimerWidget::GetRunTimeElapsedMs() { return static_cast<unsigned long>(GetRunTimeElapsed().count()); }
 
 void TimerWidget::SetRunCompleted()
 {
