@@ -7,6 +7,21 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.10
+* [New] Added option to specify player name for hotkeys
+* [New] Hotkeys are now able to be triggered for more than 1 map id
+* [New] Hotkeys are now able to be triggered for more than 1 profession
+* [Minor] Added list view for completion window
+* [Minor] Added option to hide completed missions and vanquishes on completion window
+* [Minor] Any Guild Wars crash automatically creates a GWToolbox crash dump with all related info.
+* [Minor] Added vc142 to installer msi file
+* [Minor] Split extra timer options in Timer widget out for better control
+* [Fix] Fixed layout issues with checkboxes on smaller window sizes; most checkboxes are now responsive
+* [Fix] Further fixes to objective timer window should address recent issues with instance timer not resetting properly/invalid times
+* [Fix] Fixed occasional crashes related to incoming chat messages
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.10_Release/GWToolboxdll.dll)
+
 ## Version 5.9
 * [New] Added `/morale` chat command
 * [Minor] Added bulb icon in settings for hints
