@@ -1225,17 +1225,6 @@ void CompletionWindow::Initialize_Nightfall()
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Searing_Flames, L"3/39/Searing_Flames"));
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Stone_Sheath, L"9/9e/Stone_Sheath"));
 
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Blinding_Surge, L"a/a4/Blinding_Surge"));
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ether_Prism, L"3/39/Ether_Prism"));
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Icy_Shackles, L"d/d1/Icy_Shackles"));
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Invoke_Lightning, L"9/93/Invoke_Lightning"));
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Master_of_Magic, L"3/35/Master_of_Magic"));
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Mind_Blast, L"3/3d/Mind_Blast"));
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Sandstorm, L"7/75/Sandstorm"));
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Savannah_Heat, L"5/50/Savannah_Heat"));
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Searing_Flames, L"3/39/Searing_Flames"));
-	eskills.push_back(new PvESkill(GW::Constants::SkillID::Stone_Sheath, L"9/9e/Stone_Sheath"));
-
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Assault_Enchantments, L"d/d7/Assault_Enchantments"));
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Foxs_Promise, L"e/ed/Fox%27s_Promise"));
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Golden_Skull_Strike, L"0/05/Golden_Skull_Strike"));
@@ -1734,6 +1723,8 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
 	std::wstring name_ws;
 	const char* ini_section;
 
+	show_as_list = ini->GetBoolValue(Name(), VAR_NAME(show_as_list), show_as_list);
+
 	auto read_ini_to_buf = [&](CompletionType type, const char* section) {
 		char ini_key_buf[64];
 		snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
@@ -1804,6 +1795,8 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
 	std::string ini_str;
 	std::string* name;
 	Completion* char_comp;
+
+	ini->SetBoolValue(Name(), VAR_NAME(show_as_list), show_as_list);
 
 	auto write_buf_to_ini = [completion_ini](const char* section, std::vector<uint32_t>* read, std::string& ini_str,std::string* name) {
 		char ini_key_buf[64];
