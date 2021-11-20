@@ -7,6 +7,12 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.11
+* [Fix] Fixed crash when completing and objective that hasn't started in objective timer
+* [Fix] Fixed issues connecting to twitch
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.11_Release/GWToolboxdll.dll)
+
 ## Version 5.10
 * [New] Added option to specify player name for hotkeys
 * [New] Hotkeys are now able to be triggered for more than 1 map id
