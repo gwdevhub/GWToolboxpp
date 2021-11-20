@@ -1058,7 +1058,7 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetStarted()
     if (IsStarted())
         return this;
     start_time_point = time_point_ms(); // run_started_time_point
-    start = start_time_point - parent->instance_time; // Ms since run start
+    start = start_time_point - parent->instance_start_time_point; // Ms since run start
     PrintTime(cached_start, sizeof(cached_start), start);
     status = Status::Started;
     return this;
@@ -1070,7 +1070,7 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetDone()
     if (done == TIME_UNKNOWN) {
         done_time_point = time_point_ms();
         // NB: Objective may not have triggered a start point.
-        done = done_time_point - parent->instance_time;
+        done = done_time_point - parent->instance_start_time_point;
     }
     PrintTime(cached_done, sizeof(cached_done), done);
 
@@ -1296,8 +1296,8 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
     : ui_id(cur_ui_id++)
 {
     system_time = static_cast<DWORD>(time(NULL));
-    instance_time_point = time_point_ms();
-    instance_time = instance_time_point - TimerWidget::Instance().GetMapTimeElapsedMs();
+    run_start_time_point = time_point_ms();
+    instance_start_time_point = run_start_time_point - TimerWidget::Instance().GetMapTimeElapsedMs();
     duration = TIME_UNKNOWN;
 }
 ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet() {
@@ -1314,7 +1314,7 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
     os->system_time = json.at("utc_start").get<DWORD>();
     std::string name = json.at("name").get<std::string>();
     snprintf(os->name, sizeof(os->name), "%s", name.c_str());
-    os->instance_time = json.at("instance_start").get<DWORD>();
+    os->instance_start_time_point = json.at("instance_start").get<DWORD>();
     if(json.contains("duration"))
         os->duration = json.at("duration").get<DWORD>();
     nlohmann::json json_objs = json.at("objectives");
@@ -1330,7 +1330,7 @@ nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson()
 {
     nlohmann::json json;
     json["name"] = name;
-    json["instance_start"] = instance_time;
+    json["instance_start"] = instance_start_time_point;
     json["utc_start"] = system_time;
     nlohmann::json json_objectives;
     for (auto* obj : objectives) {
@@ -1384,7 +1384,7 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetStartTimeStr() {
 }
 DWORD ObjectiveTimerWindow::ObjectiveSet::GetDuration() {
     if (active) {
-        return duration = time_point_ms() - instance_time_point;
+        return duration = time_point_ms() - run_start_time_point;
     }
     if (duration != TIME_UNKNOWN) {
         return duration;

@@ -139,9 +139,9 @@ private:
 
         DWORD system_time;
         // Time point that this map was started in ms (i.e. instance_time_point - GetInstanceTime())
-        DWORD instance_time = (DWORD)-1;
+        DWORD instance_start_time_point = (DWORD)-1;
         // Time point that this objective set was created in ms (i.e. run started)
-        DWORD instance_time_point = 0;
+        DWORD run_start_time_point = 0;
         DWORD duration = (DWORD)-1;
         DWORD GetDuration();
         const char* GetDurationStr();
