@@ -118,6 +118,7 @@ int IRC::start(char* server, int port, char* nick, char* user, char* name, char*
         printf("IRC::start called when already connected\n");
         return 1;
     }
+	ping_sent = 0;
     //Ensure that servinfo is clear
     memset(&hints, 0, sizeof hints); //make sure the struct is empty
 
@@ -143,10 +144,7 @@ int IRC::start(char* server, int port, char* nick, char* user, char* name, char*
         return 1;
     }
 	disconnect();
-    t = std::thread([&]() {
-            message_loop();
-        });
-    t.detach();
+
     //Connect
     if (connect(irc_socket, servinfo->ai_addr, servinfo->ai_addrlen) == SOCKET_ERROR) {
         printf("Failed to connect: %d\n", WSAGetLastError());
@@ -156,8 +154,12 @@ int IRC::start(char* server, int port, char* nick, char* user, char* name, char*
 
     //We dont need this anymore
     freeaddrinfo(servinfo);
-	
+
 	connected=true;
+	t = std::thread([&]() {
+		message_loop();
+		});
+	t.detach();
     raw("PASS %s\r\n", pass);
     raw("USER %s\r\n", user);
     raw("NICK %s\r\n", user);
@@ -226,6 +228,7 @@ int IRC::ping() {
 	if (ping_sent && now - ping_sent > timeout) {
 		printf("IRC::ping failed to get pong response after timeout; graceful close?\n");
 		connected = false;
+		ping_sent = 0;
 		closesocket(irc_socket);
 		return 1;
 	}
