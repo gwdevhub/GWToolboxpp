@@ -56,14 +56,14 @@ namespace {
     };
     static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorect size");
 
-    typedef void(__cdecl* HandleCrash_pt)(GWDebugInfo* details, EXCEPTION_POINTERS* pExceptionPointers, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6);
+    typedef void(__cdecl* HandleCrash_pt)(GWDebugInfo* details, uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line);
     HandleCrash_pt HandleCrash_Func = 0;
     HandleCrash_pt RetHandleCrash = 0;
 
-    void OnGWCrash(GWDebugInfo* details, EXCEPTION_POINTERS* pExceptionPointers, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6) {
+    void OnGWCrash(GWDebugInfo* details, uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line) {
         GW::HookBase::EnterHook();
         Log::GenerateDump(pExceptionPointers, details->buffer);
-        RetHandleCrash(details, pExceptionPointers, param_3, param_4, param_5, param_6);
+        RetHandleCrash(details, param_2, pExceptionPointers, exception_message, exception_file, exception_line);
         GW::HookBase::LeaveHook();
     }
 }
