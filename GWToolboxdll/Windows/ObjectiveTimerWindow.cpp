@@ -1068,9 +1068,9 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetDone()
     if (status == Status::Completed)
         return this;
     if (done == TIME_UNKNOWN) {
-        ASSERT(start_time_point);
         done_time_point = time_point_ms();
-        done = done_time_point - start_time_point + start;
+        // NB: Objective may not have triggered a start point.
+        done = done_time_point - parent->instance_time;
     }
     PrintTime(cached_done, sizeof(cached_done), done);
 

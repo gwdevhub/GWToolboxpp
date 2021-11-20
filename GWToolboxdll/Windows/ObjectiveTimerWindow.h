@@ -138,8 +138,9 @@ private:
         ~ObjectiveSet();
 
         DWORD system_time;
-        // Ms since run start
+        // Time point that this map was started in ms (i.e. instance_time_point - GetInstanceTime())
         DWORD instance_time = (DWORD)-1;
+        // Time point that this objective set was created in ms (i.e. run started)
         DWORD instance_time_point = 0;
         DWORD duration = (DWORD)-1;
         DWORD GetDuration();
