@@ -331,8 +331,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
         }
 
-        char* buffer = extra_buffer;
-        auto drawTimer = [buffer](ImColor* extra_color = 0) {
+        auto drawTimer = [](char* buffer, ImColor* extra_color = 0) {
             ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
             ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
@@ -347,18 +346,17 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
         };
         if (show_deep_timer && GetDeepTimer())
-            drawTimer(&extra_color);
+            drawTimer(extra_buffer, &extra_color);
         if (show_urgoz_timer && GetUrgozTimer())
-            drawTimer(&extra_color);
+            drawTimer(extra_buffer, &extra_color);
         if (show_doa_timer && GetDoATimer())
-            drawTimer(&extra_color);
+            drawTimer(extra_buffer, &extra_color);
         if (show_dungeon_traps_timer && GetTrapTimer())
-            drawTimer(&extra_color);
+            drawTimer(extra_buffer, &extra_color);
         if (show_dhuum_timer && GetDhuumTimer())
-            drawTimer(&extra_color);
-        buffer = spirits_buffer;
+            drawTimer(extra_buffer, &extra_color);
         if (show_spirit_timers && GetSpiritTimer())
-            drawTimer();
+            drawTimer(spirits_buffer);
 
         if (click_to_print_time) {
             ImVec2 size = ImGui::GetWindowSize();
