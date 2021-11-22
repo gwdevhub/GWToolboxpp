@@ -144,23 +144,6 @@ void FriendListWindow::CmdWhisper(const wchar_t* message, int , LPWSTR* ) {
     GW::Chat::SendChat('"', wcschr(message, ' ') + 1);
 }
 /*  FriendListWindow::Friend    */
-
-void FriendListWindow::Friend::GetMapName() {
-    if (!current_map_id)
-        return;
-    GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(current_map_id));
-    if (!info) {
-        current_map_name[0] = 0;
-        return;
-    }
-    static wchar_t enc_str[16];
-    if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, 16)) {
-        current_map_name[0] = 0;
-        return;
-    }
-    GW::UI::AsyncDecodeStr(enc_str, current_map_name, 128);
-
-}
 // Get the Guild Wars friend object for this friend (if it exists)
 GW::Friend* FriendListWindow::Friend::GetFriend() {
     return GW::FriendListMgr::GetFriend((uint8_t*)&uuid_bytes);
@@ -258,8 +241,9 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendT
     }
     if (lf->current_map_id != map_id) {
         lf->current_map_id = map_id;
-        memset(lf->current_map_name, 0, sizeof lf->current_map_name);
-        lf->GetMapName();
+        GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
+        if (info)
+            lf->current_map_name.reset(info->name_id);
     }       
 
     // Check and copy charnames, only if player is NOT offline
@@ -310,8 +294,8 @@ const std::string FriendListWindow::Friend::GetCharactersHover(bool include_char
         str += GuiUtils::WStringToString(current_char->name);
         str += "\n";
     }
-    if (include_charname && current_map_name[0]) {
-        str += current_map_name;
+    if (include_charname && current_map_name.string().size()) {
+        str += current_map_name.string();
         str += "\n";
     }
     if (str.size())
@@ -809,11 +793,11 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
             }
             if (show_location) {
                 ImGui::SameLine(cols[++colIdx]);
-                if (lfp->current_map_name) {
+                if (lfp->current_map_name.string().size()) {
                     if (is_widget)
-                        ImGui::TextShadowed(lfp->current_map_name);
+                        ImGui::TextShadowed(lfp->current_map_name.string().c_str());
                     else
-                        ImGui::Text(lfp->current_map_name);
+                        ImGui::Text(lfp->current_map_name.string().c_str());
                 }
             }
         }
@@ -1035,7 +1019,7 @@ void FriendListWindow::SaveToFile() {
         //std::lock_guard<std::recursive_mutex> lock(friends_mutex);
         for (auto it = friends.begin(); it != friends.end(); ++it) {
             // do something
-            Friend lf = *it->second;
+            Friend& lf = *it->second;
             const char* uuid = lf.uuid.c_str();
             inifile->SetLongValue(uuid, "type", static_cast<long>(lf.type), NULL, false, true);
             inifile->SetValue(uuid, "alias", GuiUtils::WStringToString(lf.alias).c_str(), NULL, true);

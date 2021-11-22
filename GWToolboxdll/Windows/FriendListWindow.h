@@ -39,7 +39,7 @@ private:
         std::wstring alias;
         FriendListWindow* parent;
         Character* current_char = nullptr;
-        char current_map_name[128] = { 0 };
+        GuiUtils::EncString current_map_name;
         uint32_t current_map_id = 0;
         std::unordered_map<std::wstring, Character> characters;
         uint8_t status = static_cast<uint8_t>(GW::FriendStatus::FriendStatus_Offline); // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
@@ -50,7 +50,6 @@ private:
         Character* GetCharacter(const wchar_t*);
         Character* SetCharacter(const wchar_t*, uint8_t);
         GW::Friend* GetFriend();
-        void GetMapName();
         const std::string GetCharactersHover(bool include_charname = false);
         void StartWhisper();
         bool RemoveGWFriend();
