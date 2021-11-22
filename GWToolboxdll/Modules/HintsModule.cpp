@@ -98,16 +98,16 @@ namespace {
     constexpr wchar_t* endgame_reward_npcs[] = {
     L"",
     L"\x399E\x8A19\xC3B6\x2FE4", // King Jalis (Droks Explorable)
-    L"\x107\x108" "Suun\x1", // Suun (Divine Path) TODO: Encoded version of this name!
-    L"\x107\x108" "Keeper of Secrets\x1", // Keeper of Secrets (Throne of secrets) TODO: Encoded version of this name!
-    L"\x107\x108" "Droknar\x1",
+    L"\x108\x107" "Suun\x1", // Suun (Divine Path) TODO: Encoded version of this name!
+    L"\x108\x107" "Keeper of Secrets\x1", // Keeper of Secrets (Throne of secrets) TODO: Encoded version of this name!
+    L"\x108\x107" "Droknar\x1",
     };
     constexpr wchar_t* endgame_reward_trophies[] = {
         L"",
-        L"\x107\x108" "Deldrimor Talisman" "\x1", // King Jalis (Droks Explorable)
-        L"\x107\x108" "Amulet of the Mists" "\x1", // Suun (Divine Path) TODO: Encoded version of this name!
-        L"\x107\x108" "Book of Secrets" "\x1", // Keeper of Secrets (Throne of secrets) TODO: Encoded version of this name!
-        L"\x107\x108" "Droknar's Key" "\x1",
+        L"\x108\x107" "Deldrimor Talisman" "\x1", // King Jalis (Droks Explorable)
+        L"\x108\x107" "Amulet of the Mists" "\x1", // Suun (Divine Path) TODO: Encoded version of this name!
+        L"\x108\x107" "Book of Secrets" "\x1", // Keeper of Secrets (Throne of secrets) TODO: Encoded version of this name!
+        L"\x108\x107" "Droknar's Key" "\x1",
     };
     
     constexpr TBHint HINT_Q9_STR_SHIELDS = { 0x20000001, L"PvP Strength shields give 9 armor when you don't meet the requirement, so unless you can meet the req on a different attribute, use a Strength shield." };
