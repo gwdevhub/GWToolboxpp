@@ -1512,7 +1512,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 void GameSettings::Update(float) {
     // See OnSendChat
     if (pending_wiki_search_term && pending_wiki_search_term->wstring().length()) {
-        GuiUtils::OpenWiki(pending_wiki_search_term->wstring());
+        GuiUtils::SearchWiki(pending_wiki_search_term->wstring());
         delete pending_wiki_search_term;
         pending_wiki_search_term = 0;
     }
@@ -1836,7 +1836,7 @@ void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
     switch (_name[0]) {
         case 0x200B: {
             // Zero-Width Space - wiki link
-            GuiUtils::OpenWiki(&_name[1]);
+            GuiUtils::SearchWiki(&_name[1]);
             status->blocked = true;
             return;
         }
@@ -2476,6 +2476,12 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wPar
         // Redirect /wiki to /wiki <current map name>
         status->blocked = true;
         GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
+        /*char* buf = new char[32];
+        char* map_type = 0;
+        switch (map->type) {
+
+        }
+        snprintf(buf,32,"Game_link:%s_%d")*/
         Instance().pending_wiki_search_term = new GuiUtils::EncString(map->name_id);
     }
     else if (strstr(url.c_str(), "?search=quest")) {

@@ -378,7 +378,12 @@ IDirect3DTexture9* HeroUnlock::GetMissionImage()
 	return skill_image;
 }
 void HeroUnlock::OnClick() {
-	GuiUtils::OpenWiki(GuiUtils::StringToWString(hero_names[(uint32_t)skill_id]));
+	wchar_t* buf = new wchar_t[128];
+	swprintf(buf, 128, L"Game_link:Hero_%d", skill_id);
+	GW::GameThread::Enqueue([buf]() {
+		GuiUtils::OpenWiki(buf);
+		delete[] buf;
+		});
 }
 
 IDirect3DTexture9* PvESkill::GetMissionImage()
@@ -404,7 +409,12 @@ PvESkill::PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url)
 	}
 }
 void PvESkill::OnClick() {
-	GuiUtils::OpenWiki(name.wstring());
+	wchar_t* buf = new wchar_t[128];
+	swprintf(buf, 128, L"Game_link:Skill_%d", skill_id);
+	GW::GameThread::Enqueue([buf]() {
+		GuiUtils::OpenWiki(buf);
+		delete[] buf;
+		});
 }
 bool PvESkill::Draw(IDirect3DDevice9* device) {
 	const ImVec2 cursor_pos = ImGui::GetCursorPos();

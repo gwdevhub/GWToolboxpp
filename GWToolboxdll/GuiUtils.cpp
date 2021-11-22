@@ -21,30 +21,50 @@ namespace {
 
     bool fonts_loading = false;
     bool fonts_loaded = false;
-}
-std::string GuiUtils::WikiUrl(std::wstring term) {
-    // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
-    if (!term.size())
-        return "";
-    uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
-    char* wiki_prefix = "https://wiki.guildwars.com/wiki/?search=%s";
-    switch (static_cast<GW::Constants::MapLanguage>(language)) {
-    case GW::Constants::MapLanguage::German: // German wiki
-        wiki_prefix = "https://www.guildwiki.de/wiki/?search=%s";
-        break;
-    case GW::Constants::MapLanguage::French: // French wiki
-        wiki_prefix = "https://www.gwiki.fr/w/index.php?search=%s";
-        break;
 
+    char* GetWikiPrefix() {
+        /*uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
+        char* wiki_prefix = "https://wiki.guildwars.com/wiki/";
+        switch (static_cast<GW::Constants::MapLanguage>(language)) {
+        case GW::Constants::MapLanguage::German: // German wiki
+            wiki_prefix = "https://www.guildwiki.de/wiki/";
+            break;
+        case GW::Constants::MapLanguage::French: // French wiki
+            wiki_prefix = "https://www.gwiki.fr/w/index.php";
+            break;
+
+        }
+        return wiki_prefix;*/
+        return "https://wiki.guildwars.com/wiki/";
     }
+
+    int safe_ispunct(char c) {
+        if (c >= -1 && c <= 255)
+            return ispunct(c);
+        return 0;
+    };
+
+}
+std::string GuiUtils::WikiUrl(std::wstring url_path) {
+    // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
+    if (!url_path.size())
+        return GetWikiPrefix();
     char cmd[256];
-    std::string encoded = UrlEncode(GuiUtils::WStringToString(term));
-    snprintf(cmd, _countof(cmd), wiki_prefix, encoded.c_str());
+    std::string encoded = UrlEncode(GuiUtils::WStringToString(url_path));
+    snprintf(cmd, _countof(cmd), "%s%s", GetWikiPrefix(), encoded.c_str());
     return cmd;
 }
-void GuiUtils::OpenWiki(std::wstring term) {
+void GuiUtils::SearchWiki(std::wstring term) {
+    if (!term.size())
+        return;
+    char cmd[256];
+    std::string encoded = UrlEncode(GuiUtils::WStringToString(term));
+    ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
+    GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, (void*)cmd);
+}
+void GuiUtils::OpenWiki(std::wstring url_path) {
     // @Enhancement: Would be nice to use GW's "/wiki" hook in here, but don't want to bother with another RVA so do it ourselves.
-    GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, (void*)WikiUrl(term).c_str());
+    GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, (void*)WikiUrl(url_path).c_str());
     //ShellExecuteW(NULL, L"open", cmd, NULL, NULL, SW_SHOWNORMAL);
 }
 
@@ -325,7 +345,7 @@ std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
     return std::wstring(out);
 }
 std::string GuiUtils::RemovePunctuation(std::string s) {
-    s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
+    s.erase(std::remove_if(s.begin(), s.end(), &safe_ispunct), s.end());
     return s;
 }
 std::wstring GuiUtils::RemovePunctuation(std::wstring s) {

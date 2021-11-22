@@ -1499,7 +1499,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
-                    GuiUtils::OpenWiki(pi->single_item_name.wstring());
+                    GuiUtils::SearchWiki(pi->single_item_name.wstring());
                 }
                 ImGui::PopID();
                 has_items_to_salvage |= pi->proceed;
@@ -1646,7 +1646,7 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
     }
     if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
-        GuiUtils::OpenWiki(context_item.single_item_name.wstring());
+        GuiUtils::SearchWiki(context_item.single_item_name.wstring());
         goto end_popup;
     }
     end_popup:
