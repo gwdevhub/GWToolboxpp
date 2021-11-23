@@ -23,6 +23,7 @@ public:
     std::wstring GetEncodedString();
 
 private:
+    int encoded_id = 0;
     char encoded[2048] = { 0 };
     std::wstring decoded;
     int map_id = 0;

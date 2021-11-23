@@ -28,8 +28,18 @@ void StringDecoderWindow::Draw(IDirect3DDevice9 *pDevice)
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
-    ImGui::InputText("Encoded string:", encoded, 2048);
-    if (ImGui::Button("Decode")) {
+    bool decodeIt = ImGui::InputInt("Encoded string id:", &encoded_id, 1, 1, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal);
+    decodeIt |= ImGui::InputText("Encoded string:", encoded, 2048, ImGuiInputTextFlags_EnterReturnsTrue);
+    decodeIt |= ImGui::Button("Decode");
+    if(decodeIt)
+    {
+        wchar_t buf[8];
+        if (encoded_id >= 0 && GW::UI::UInt32ToEncStr(encoded_id, buf, _countof(buf))) {
+            int offset = 0;
+            for (size_t i = 0; buf[i]; i++) {
+                offset += sprintf(&encoded[offset], offset > 0 ? " 0x%04x" : "0x%04x", buf[i]);
+            }
+        }
         Decode();
     }
     ImGui::InputInt("Map ID:", &map_id);
