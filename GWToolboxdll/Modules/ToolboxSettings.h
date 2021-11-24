@@ -86,4 +86,5 @@ private:
     bool use_discordintegration = false;
     bool use_obfuscator = true;
     bool use_completion_window = true;
+    bool use_reroll_window = true;
 };

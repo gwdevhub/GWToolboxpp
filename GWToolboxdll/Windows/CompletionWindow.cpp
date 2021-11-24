@@ -26,6 +26,7 @@
 
 #include <Modules/Resources.h>
 
+#include <Windows/RerollWindow.h>
 #include <Windows/CompletionWindow.h>
 #include <Windows/TravelWindow.h>
 
@@ -83,19 +84,9 @@ namespace {
 	const wchar_t* GetPlayerName() {
 		return GW::GameContext::instance()->character->player_name;
 	}
+
 	wchar_t last_player_name[20];
 
-	void GoToCharSelect() {
-
-		GW::GameThread::Enqueue([]() {
-			struct {
-				uint32_t unk = 1;
-				uint32_t unk1 = 2;
-				uint32_t unk2 = 3;
-			} wparam;
-			GW::UI::SendUIMessage(0x1000010e, &wparam,0);
-			});
-	}
 	bool show_as_list = true;
 }
 
@@ -1534,6 +1525,11 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 		ImGui::EndCombo();
 	}
 	ImGui::PopItemWidth();
+#if 1
+	ImGui::SameLine();
+	if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0)
+		RerollWindow::Instance().Reroll(chosen_player_name.data());
+#endif
 	ImGui::SameLine(ImGui::GetContentRegionAvail().x - (200.f * gscale));
 	ImGui::Checkbox("View as list", &show_as_list);
 	ImGui::SameLine();

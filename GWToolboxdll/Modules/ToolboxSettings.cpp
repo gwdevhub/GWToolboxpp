@@ -63,6 +63,7 @@
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
 #endif
+#include <Windows/RerollWindow.h>
 
 
 #include <Widgets/TimerWidget.h>
@@ -125,6 +126,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_observer_export_window) optional_modules.push_back(&ObserverExportWindow::Instance());
     if (use_obfuscator) optional_modules.push_back(&Obfuscator::Instance());
     if (use_completion_window) optional_modules.push_back(&CompletionWindow::Instance());
+    if (use_reroll_window) optional_modules.push_back(&RerollWindow::Instance());
 
 #ifdef _DEBUG
 #if 0
@@ -196,6 +198,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Bonds",&use_bonds},
         {"Builds",&use_builds},
         {"Clock",&use_clock},
+        {"Completion",&use_completion_window},
         {"Daily Quests",&use_daily_quests},
         {"Damage",&use_damage},
         {"Dialogs",&use_dialogs},
@@ -209,12 +212,12 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Info",&use_info},
         {"Materials",&use_materials},
         {"Minimap",&use_minimap},
-        {"Progress",&use_completion_window},
         {"Notepad",&use_notepad},
         {"Objective Timer",&use_objectivetimer},
         {"Obfuscator",&use_obfuscator},
         {"Party Window",&use_partywindowmodule},
         {"Pcons",&use_pcons},
+        {"Reroll",&use_reroll_window},
         {"Timer",&use_timer},
         {"Trade",&use_trade},
         {"Travel",&use_travel},
@@ -324,6 +327,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_completion_window = ini->GetBoolValue(Name(), VAR_NAME(use_completion_window), use_completion_window);
     use_world_map = ini->GetBoolValue(Name(), VAR_NAME(use_world_map), use_world_map);
     use_effect_monitor = ini->GetBoolValue(Name(), VAR_NAME(use_effect_monitor), use_effect_monitor);
+    use_reroll_window = ini->GetBoolValue(Name(), VAR_NAME(use_reroll_window), use_reroll_window);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -371,6 +375,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_completion_window), use_completion_window);
     ini->SetBoolValue(Name(), VAR_NAME(use_world_map), use_world_map);
     ini->SetBoolValue(Name(), VAR_NAME(use_effect_monitor), use_effect_monitor);
+    ini->SetBoolValue(Name(), VAR_NAME(use_reroll_window), use_reroll_window);
 }
 
 void ToolboxSettings::Draw(IDirect3DDevice9*) {
