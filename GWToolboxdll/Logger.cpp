@@ -274,14 +274,23 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers, char* extr
         delete extra_info_stream->UserStreamArray;
         delete extra_info_stream;
     }
-    if (bMiniDumpSuccessful) {
+    if (bMiniDumpSuccessful && pExceptionPointers) {
+        wchar_t buf[MAX_PATH];
+        swprintf(buf, MAX_PATH, L"GWToolbox crashed, oops\n\n"
+            "A dump file has been created in:\n\n%s\n\n"
+            "Please send this file to the GWToolbox++ developers.\n"
+            "Thank you and sorry for the inconvenience.", szFileName);
+        MessageBoxW(0, buf, L"GWToolbox++ Crash!", 0);
+        abort();
         return 0;
     }
-    MessageBoxW(0,
-        L"GWToolbox crashed, oops\n\n"
-        "Error creating the dump file\n"
-        "I don't really know what to do, sorry, contact the developers.\n",
-        L"GWToolbox++ Crash!", 0);
+    if(!bMiniDumpSuccessful) {
+        MessageBoxW(0,
+            L"GWToolbox crashed, oops\n\n"
+            "Error creating the dump file\n"
+            "I don't really know what to do, sorry, contact the developers.\n",
+            L"GWToolbox++ Crash!", 0);
+    }
     return 0;
 }
 
