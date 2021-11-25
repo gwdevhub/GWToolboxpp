@@ -48,13 +48,13 @@ private:
     };
 
     struct AvailableDialog {
+        GuiUtils::EncString msg;
+        char dialog_buf[11];
         AvailableDialog(wchar_t* _message, uint32_t dialog_id) {
-            GW::UI::AsyncDecodeStr(_message, &msg_ws);
+            msg.reset(_message);
+            msg.string();
             snprintf(dialog_buf, sizeof(dialog_buf), "0x%X", dialog_id);
         };
-        std::wstring msg_ws;
-        std::string msg_s;
-        char dialog_buf[11];
     };
 
     std::vector<AvailableDialog*> available_dialogs;

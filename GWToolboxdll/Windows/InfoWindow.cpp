@@ -472,9 +472,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::ShowHelp("Talk to an NPC to see available dialogs");
             ImGui::PushItemWidth(140.0f * ImGui::GetIO().FontGlobalScale);
             for (auto dialog : available_dialogs) {
-                if (dialog->msg_s.empty() && !dialog->msg_ws.empty())
-                    dialog->msg_s = GuiUtils::WStringToString(dialog->msg_ws);
-                ImGui::InputText(dialog->msg_s.c_str(), dialog->dialog_buf, _countof(dialog->dialog_buf), ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputText(dialog->msg.string().c_str(), dialog->dialog_buf, _countof(dialog->dialog_buf), ImGuiInputTextFlags_ReadOnly);
             }
             ImGui::PopItemWidth();
         }
