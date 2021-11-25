@@ -438,32 +438,19 @@ void PartyWindowModule::DrawSettingInternal() {
     submitted |= ImGui::Button("Add");
     if (submitted) {
         if (new_npc_model_id < 1)
-            return Error("Invalid model id");
+            return Log::Error("Invalid model id");
         if (new_npc_map_id < 0 || new_npc_map_id > static_cast<int>(GW::Constants::MapID::Count))
-            return Error("Invalid map id");
+            return Log::Error("Invalid map id");
         std::string alias_str(new_npc_alias);
         if (alias_str.empty())
-            return Error("Empty value for Name");
+            return Log::Error("Empty value for Name");
         std::map<uint32_t, SpecialNPCToAdd*>::iterator it = user_defined_npcs_by_model_id.find(static_cast<uint32_t>(new_npc_model_id));
         if (it != user_defined_npcs_by_model_id.end())
-            return Error("Special NPC %s is already defined for model_id %d", it->second->alias.c_str(), new_npc_model_id);
+            return Log::Error("Special NPC %s is already defined for model_id %d", it->second->alias.c_str(), new_npc_model_id);
         AddSpecialNPC({ alias_str.c_str(), new_npc_model_id,static_cast<GW::Constants::MapID>(new_npc_map_id) });
         Log::Info("Added special NPC %s (%d)", alias_str.c_str(), new_npc_model_id);
         CheckMap();
     }
-}
-void PartyWindowModule::Error(const char* format, ...) {
-    char buffer[600];
-    va_list args;
-    va_start(args, format);
-    snprintf(buffer, 599, format, args);
-    va_end(args);
-
-    // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
-    std::string sbuffer(buffer);
-    GW::GameThread::Enqueue([sbuffer]() {
-        Log::Error(sbuffer.c_str());
-    });
 }
 void PartyWindowModule::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
