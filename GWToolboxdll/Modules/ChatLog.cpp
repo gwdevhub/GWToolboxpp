@@ -189,14 +189,21 @@ void ChatLog::Save() {
     char addr_buf[8];
     TBChatMessage* recv = recv_first;
     size_t i = 0;
+    std::string datetime_str;
     while (recv) {
-        snprintf(addr_buf, 8, "%03x", i++);
-        ASSERT(GuiUtils::ArrayToIni(recv->msg.data(), &msg_buf));
-        inifile->SetValue(addr_buf, "message", msg_buf.c_str());
-        inifile->SetLongValue(addr_buf, "dwLowDateTime", recv->timestamp.dwLowDateTime);
-        inifile->SetLongValue(addr_buf, "dwHighDateTime", recv->timestamp.dwHighDateTime);
-        inifile->SetLongValue(addr_buf, "channel", recv->channel);
-        inifile->SetValue(addr_buf, "datetime", GuiUtils::TimeToString(recv->timestamp).c_str());
+        if (GuiUtils::TimeToString(recv->timestamp, datetime_str)) {
+            snprintf(addr_buf, 8, "%03x", i++);
+            ASSERT(GuiUtils::ArrayToIni(recv->msg.data(), &msg_buf));
+            inifile->SetValue(addr_buf, "message", msg_buf.c_str());
+            inifile->SetLongValue(addr_buf, "dwLowDateTime", recv->timestamp.dwLowDateTime);
+            inifile->SetLongValue(addr_buf, "dwHighDateTime", recv->timestamp.dwHighDateTime);
+            inifile->SetLongValue(addr_buf, "channel", recv->channel);
+            inifile->SetValue(addr_buf, "datetime", datetime_str.c_str());
+        }
+        else {
+            Log::Log("Failed to turn timestamp for message %d into string",i);
+        }
+
         if (recv == recv_last)
             break;
         recv = recv->next;
