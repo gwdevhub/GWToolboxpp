@@ -159,7 +159,7 @@ const char* language_abbreviations[] = {
 };
 
 DiscordCreate_pt discordCreate;
-std::wstring map_name_decoded;
+GuiUtils::EncString map_name_decoded;
 short decoded_map_id = 0;
 int64_t pending_join_request_reply_user_id = 0;
 time_t pending_join_request_reply_user_at = 0;
@@ -274,6 +274,9 @@ void DiscordModule::Disconnect() {
 }
 void DiscordModule::Initialize() {
     ToolboxModule::Initialize();
+
+    strcpy(activity.name,"Guild Wars");
+    activity.application_id = DISCORD_APP_ID;
     // Initialise discord objects
     memset(&app, 0, sizeof(app));
     memset(&activities_events, 0, sizeof(activities_events));
@@ -645,14 +648,8 @@ void DiscordModule::UpdateActivity() {
 
         if (show_location_info) {
             // Details
-            if (map_id != decoded_map_id) {
-                map_name_decoded.clear();
-                decoded_map_id = static_cast<short>(map_id);
-                wchar_t enc_str[4];
-                if (GW::UI::UInt32ToEncStr(m->name_id, enc_str, 4))
-                    GW::UI::AsyncDecodeStr(enc_str, &map_name_decoded);
-            }
-            if (map_name_decoded.empty())
+            map_name_decoded.reset(m->name_id);
+            if (map_name_decoded.wstring().empty())
                 return; // Map name not decoded yet.
             map_region = static_cast<short>(m->region);
             char region_info[32] = { 0 };
@@ -687,7 +684,7 @@ void DiscordModule::UpdateActivity() {
                 sprintf(activity.details, "%S [%S]", g->name, g->tag);
             }
             else {
-                sprintf(activity.details, "%S", map_name_decoded.c_str());
+                sprintf(activity.details, "%s", map_name_decoded.string().c_str());
             }
             sprintf(activity.assets.large_image, "%s", region_assets[map_region]);
             sprintf(activity.assets.large_text, "Region: %s", region_names[map_region]);

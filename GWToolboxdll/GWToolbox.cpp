@@ -62,7 +62,7 @@ namespace {
 
     void OnGWCrash(GWDebugInfo* details, uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line) {
         GW::HookBase::EnterHook();
-        Log::GenerateDump(pExceptionPointers, details->buffer);
+        Log::GenerateDump(0, details->buffer);
         RetHandleCrash(details, param_2, pExceptionPointers, exception_message, exception_file, exception_line);
         GW::HookBase::LeaveHook();
     }

@@ -72,28 +72,6 @@ private:
         available_dialogs.clear();
     }
 
-    struct ForDecode {
-        std::wstring enc_ws;
-        std::wstring dec_ws;
-        std::string dec_s;
-        inline void init(const wchar_t* enc) {
-            if (enc_ws == enc || !enc)
-                return;
-            enc_ws = enc;
-            enc_ws.clear();
-            dec_ws.clear();
-            dec_s.clear();
-            GW::UI::AsyncDecodeStr(enc, &dec_ws);
-        }
-        inline char* str() {
-            if (dec_s.empty() && !dec_ws.empty()) {
-                static std::wregex repl(L"<[^>]+>");
-                std::wstring ws_repl = std::regex_replace(dec_ws, repl, L"");
-                dec_s = GuiUtils::WStringToString(ws_repl);
-            }
-            return (char*)dec_s.c_str();
-        }
-    };
     void InfoField(const char* label, const char* fmt, ...);
     void EncInfoField(const char* label, const wchar_t* enc_string);
 
