@@ -619,11 +619,11 @@ void Obfuscator::OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* pac
 
 void Obfuscator::ObfuscateGuild(bool obfuscate) {
     if (obfuscate && player_guild_obfuscated_name[0]) {
-        Log::Log("Tried to obfuscate guild, but already obfuscated");
+        //Log::Log("Tried to obfuscate guild, but already obfuscated");
         return;
     }
     if (!obfuscate && !player_guild_obfuscated_name[0]) {
-        Log::Log("Tried to unobfuscate guild, but already unobfuscated");
+        //Log::Log("Tried to unobfuscate guild, but already unobfuscated");
         return;
     }
     GW::GameContext* g = GW::GameContext::instance();
