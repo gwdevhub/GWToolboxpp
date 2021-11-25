@@ -23,6 +23,8 @@ namespace {
         LogType_Warning,
         LogType_Error
     };
+
+    bool crash_dumped = false;
 }
 
 static void GWCALogHandler(
@@ -230,6 +232,9 @@ void Log::WarningW(const wchar_t* format, ...) {
 
 // === Crash Dump ===
 LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers, char* extra_info) {
+    if (crash_dumped)
+        return; // Avoid subsequent crash dumps after the first.
+    crash_dumped = true;
     BOOL bMiniDumpSuccessful;
     wchar_t szFileName[MAX_PATH];
     HANDLE hDumpFile;
