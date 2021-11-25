@@ -413,30 +413,33 @@ size_t GuiUtils::IniToArray(const std::string& in, uint32_t* out, size_t out_len
     }
     return offset;
 }
-std::string GuiUtils::TimeToString(time_t utc_timestamp) {
-    struct tm timeinfo = *localtime(&utc_timestamp);
+size_t GuiUtils::TimeToString(time_t utc_timestamp, std::string& out) {
+    struct tm* timeinfo = localtime(&utc_timestamp);
+    if (!timeinfo)
+        return 0;
     time_t now = time(NULL);
-    struct tm nowinfo = *localtime(&now);
-    std::string out;
+    struct tm* nowinfo = localtime(&now);
+    if (!nowinfo)
+        return 0;
     out.resize(64);
     int written = 0;
-    if (timeinfo.tm_yday != nowinfo.tm_yday || timeinfo.tm_year != nowinfo.tm_year) {
+    if (timeinfo->tm_yday != nowinfo->tm_yday || timeinfo->tm_year != nowinfo->tm_year) {
         char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
         written += snprintf(&out[written], out.capacity() - written,
-            "%s %02d", months[timeinfo.tm_mon], timeinfo.tm_mday);
+            "%s %02d", months[timeinfo->tm_mon], timeinfo->tm_mday);
     }
-    if (timeinfo.tm_year != nowinfo.tm_year) {
-        written += snprintf(&out[written], out.capacity() - written," %d", timeinfo.tm_year + 1900);
+    if (timeinfo->tm_year != nowinfo->tm_year) {
+        written += snprintf(&out[written], out.capacity() - written," %d", timeinfo->tm_year + 1900);
     }
     written += snprintf(&out[written], out.capacity() - written, written > 0 ? ", %02d:%02d" : " %02d:%02d",
-        timeinfo.tm_hour, timeinfo.tm_min);
-    return out;
+        timeinfo->tm_hour, timeinfo->tm_min);
+    return out.size();
 }
-std::string GuiUtils::TimeToString(uint32_t utc_timestamp) {
-    return TimeToString((time_t)utc_timestamp);
+size_t GuiUtils::TimeToString(uint32_t utc_timestamp, std::string& out) {
+    return TimeToString((time_t)utc_timestamp, out);
 }
-std::string GuiUtils::TimeToString(FILETIME utc_timestamp) {
-    return TimeToString(filetime_to_timet(utc_timestamp));
+size_t GuiUtils::TimeToString(FILETIME utc_timestamp, std::string& out) {
+    return TimeToString(filetime_to_timet(utc_timestamp), out);
 }
 time_t GuiUtils::filetime_to_timet(const FILETIME& ft) {
     ULARGE_INTEGER ull;    
