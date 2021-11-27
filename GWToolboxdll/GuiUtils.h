@@ -72,6 +72,7 @@ namespace GuiUtils {
         bool sanitised = false;
         virtual void sanitise();
     public:
+        inline bool IsDecoding() { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string
         void reset(const uint32_t _enc_string_id = 0, bool sanitise = true);
@@ -93,7 +94,7 @@ namespace GuiUtils {
         EncString(const EncString& temp_obj) = delete;
         EncString& operator=(const EncString& temp_obj) = delete;
         ~EncString() {
-            ASSERT(!decoding || !decoded_ws.empty());
+            ASSERT(!IsDecoding());
         }
     };
 };
