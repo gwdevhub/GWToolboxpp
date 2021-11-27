@@ -30,6 +30,7 @@
 #include <Modules/GameSettings.h>
 #include <Modules/ToolboxTheme.h>
 #include <Modules/ToolboxSettings.h>
+#include <Modules/CrashHandler.h>
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
 
@@ -48,24 +49,6 @@ namespace {
     bool defer_close = false;
 
     static HWND gw_window_handle = 0;
-
-    struct GWDebugInfo {
-        size_t len;
-        uint32_t unk[0x82];
-        char buffer[0x80001];
-    };
-    static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorect size");
-
-    typedef void(__cdecl* HandleCrash_pt)(GWDebugInfo* details, uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line);
-    HandleCrash_pt HandleCrash_Func = 0;
-    HandleCrash_pt RetHandleCrash = 0;
-
-    void OnGWCrash(GWDebugInfo* details, uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line) {
-        GW::HookBase::EnterHook();
-        Log::GenerateDump(0, details->buffer);
-        RetHandleCrash(details, param_2, pExceptionPointers, exception_message, exception_file, exception_line);
-        GW::HookBase::LeaveHook();
-    }
 }
 
 HMODULE GWToolbox::GetDLLModule() {
@@ -294,7 +277,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         for (ToolboxModule* m : tb.GetModules()) {
             if (m->WndProc(Message, wParam, lParam)) captured = true;
         }
-        if (captured) return true;
+        if (captured) 
+            return true;
     }
         //if (!skip_mouse_capture) {
 
@@ -357,13 +341,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 void GWToolbox::Initialize() {
     if (tb_initialized || must_self_destruct)
         return;
-    
-    Log::Log("Rerouting GW crash handling through GWToolbox\n");
-    HandleCrash_Func = (HandleCrash_pt)GW::Scanner::Find("\x68\x00\x00\x08\x00\xff\x75\x1c", "xxxxxxxx", -0x4C);
-    if (HandleCrash_Func) {
-        GW::Hook::CreateHook(HandleCrash_Func, OnGWCrash, (void**)&RetHandleCrash);
-        GW::Hook::EnableHooks(HandleCrash_Func);
-    }
     Log::Log("installing event handler\n");
     gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
     OldWndProc = SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
@@ -396,6 +373,7 @@ void GWToolbox::Initialize() {
     OpenSettingsFile();
 
     Log::Log("Creating Modules\n");
+    core_modules.push_back(&CrashHandler::Instance());
     core_modules.push_back(&Resources::Instance());
     core_modules.push_back(&ToolboxTheme::Instance());
     core_modules.push_back(&ToolboxSettings::Instance());
@@ -459,8 +437,6 @@ void GWToolbox::Terminate() {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
         Log::Info("Bye!");
     }
-    if (HandleCrash_Func)
-        GW::Hook::RemoveHook(HandleCrash_Func);
 }
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {

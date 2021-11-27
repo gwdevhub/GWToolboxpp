@@ -43,8 +43,7 @@ namespace Log {
 
     // === Crash Dump ===
     // Creates minidump, to be called from within __except()
-    LONG WINAPI GenerateDump(
-        EXCEPTION_POINTERS* pExceptionPointers = 0, char* extra_info = 0);
+    LONG WINAPI GenerateDump(EXCEPTION_POINTERS* pExceptionPointers);
 
     void FatalAssert(const char *expr, const char *file, unsigned int line);
 };

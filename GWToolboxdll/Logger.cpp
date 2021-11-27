@@ -10,8 +10,7 @@
 #include <GuiUtils.h>
 
 #include <Modules/Resources.h>
-
-
+#include <Modules/CrashHandler.h>
 
 namespace {
     FILE* logfile = nullptr;
@@ -231,71 +230,19 @@ void Log::WarningW(const wchar_t* format, ...) {
 }
 
 // === Crash Dump ===
-LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers, char* extra_info) {
-    if (crash_dumped)
-        return 0; // Avoid subsequent crash dumps after the first.
-    crash_dumped = true;
-    BOOL bMiniDumpSuccessful;
-    wchar_t szFileName[MAX_PATH];
-    HANDLE hDumpFile;
-    SYSTEMTIME stLocalTime;
+
+LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
     MINIDUMP_EXCEPTION_INFORMATION ExpParam;
-
-    GetLocalTime(&stLocalTime);
-
-
-    std::wstring crash_folder = Resources::GetPath(L"crashes");
-    Resources::EnsureFolderExists(crash_folder.c_str());
-
-    StringCchPrintfW(szFileName, MAX_PATH, L"%s\\%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp", 
-        crash_folder.c_str(), GWTOOLBOXDLL_VERSION,
-        stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
-        stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
-        GetCurrentProcessId(), GetCurrentThreadId());
-    hDumpFile = CreateFileW(szFileName, GENERIC_READ | GENERIC_WRITE,
-        FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
-
     ExpParam.ThreadId = GetCurrentThreadId();
     ExpParam.ExceptionPointers = pExceptionPointers;
     ExpParam.ClientPointers = pExceptionPointers != 0;
 
-    MINIDUMP_USER_STREAM_INFORMATION* extra_info_stream = 0;
-    
-    if (extra_info) {
-        extra_info_stream = new MINIDUMP_USER_STREAM_INFORMATION();
-        MINIDUMP_USER_STREAM* s = new MINIDUMP_USER_STREAM();
-        s->Type = MINIDUMP_STREAM_TYPE::CommentStreamA;
-        s->Buffer = extra_info;
-        s->BufferSize = (strlen(extra_info) + 1) * sizeof(extra_info[0]);
-        extra_info_stream->UserStreamCount = 1;
-        extra_info_stream->UserStreamArray = s;
-    }
-    //MINIDUMP_TYPE flags = static_cast<MINIDUMP_TYPE>(MiniDumpWithDataSegs | MiniDumpWithPrivateReadWriteMemory);
-    bMiniDumpSuccessful = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
-        hDumpFile, MiniDumpWithDataSegs, &ExpParam, extra_info_stream, NULL);
-    CloseHandle(hDumpFile);
-
-    if (extra_info_stream) {
-        delete extra_info_stream->UserStreamArray;
-        delete extra_info_stream;
-    }
-    if (bMiniDumpSuccessful && pExceptionPointers) {
-        wchar_t buf[MAX_PATH];
-        swprintf(buf, MAX_PATH, L"GWToolbox crashed, oops\n\n"
-            "A dump file has been created in:\n\n%s\n\n"
-            "Please send this file to the GWToolbox++ developers.\n"
-            "Thank you and sorry for the inconvenience.", szFileName);
-        MessageBoxW(0, buf, L"GWToolbox++ Crash!", 0);
+    if (TBMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), 0, MiniDumpWithDataSegs, &ExpParam, 0, 0)) {
+#ifndef GWTOOLBOX_DEBUG
         abort();
-        return 0;
+#endif
     }
-    if(!bMiniDumpSuccessful) {
-        MessageBoxW(0,
-            L"GWToolbox crashed, oops\n\n"
-            "Error creating the dump file\n"
-            "I don't really know what to do, sorry, contact the developers.\n",
-            L"GWToolbox++ Crash!", 0);
-    }
+
     return 0;
 }
 

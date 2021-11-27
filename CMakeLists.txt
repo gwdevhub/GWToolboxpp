@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(gwtoolbox)
 
 set(GWTOOLBOXDLL_VERSION "5.11")
-set(GWTOOLBOXDLL_VERSION_BETA "beta1") # can be anything. Marks beta version if not empty. 
+set(GWTOOLBOXDLL_VERSION_BETA "beta2") # can be anything. Marks beta version if not empty. 
 set(GWTOOBOX_MODULE_VERSION "5,11,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 # Updates toolboxversion.txt after changes in the above version (make sure to run cmake .. or build the project)
