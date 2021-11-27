@@ -52,7 +52,6 @@ private:
         char dialog_buf[11];
         AvailableDialog(wchar_t* _message, uint32_t dialog_id) {
             msg.reset(_message);
-            msg.string();
             snprintf(dialog_buf, sizeof(dialog_buf), "0x%X", dialog_id);
         };
     };
@@ -65,13 +64,7 @@ private:
     void PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name);
     void DrawResignlog();
 
-    void ClearAvailableDialogs() {
-        for (auto dialog : available_dialogs) {
-            delete dialog;
-        }
-        available_dialogs.clear();
-    }
-
+    bool ClearAvailableDialogs();
     void InfoField(const char* label, const char* fmt, ...);
     void EncInfoField(const char* label, const wchar_t* enc_string);
 

@@ -68,7 +68,17 @@ void InfoWindow::Initialize() {
 
     GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
 }
-
+bool InfoWindow::ClearAvailableDialogs() {
+    for (auto dialog : available_dialogs) {
+        if (dialog->msg.IsDecoding())
+            return false;
+    }
+    for (auto dialog : available_dialogs) {
+        delete dialog;
+    }
+    available_dialogs.clear();
+    return true;
+}
 void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
     UNREFERENCED_PARAMETER(cmd);
     UNREFERENCED_PARAMETER(argc);
