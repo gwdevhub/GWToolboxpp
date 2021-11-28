@@ -31,7 +31,7 @@ public:
     static std::filesystem::path GetPath(const std::filesystem::path& folder, const std::filesystem::path& file);
 
     static utf8::string GetPathUtf8(std::wstring file);
-    static void EnsureFolderExists(const std::filesystem::path& path);
+    static bool EnsureFolderExists(const std::filesystem::path& path);
 
     // folder should not contain a trailing slash
     void LoadTextureAsync(IDirect3DTexture9** tex, const std::filesystem::path& path_to_file);

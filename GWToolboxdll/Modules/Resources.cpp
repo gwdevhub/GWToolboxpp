@@ -88,12 +88,9 @@ std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, co
     return GetSettingsFolderPath() / folder / file;
 }
 
-void Resources::EnsureFolderExists(const std::filesystem::path& path)
+bool Resources::EnsureFolderExists(const std::filesystem::path& path)
 {
-    if (!std::filesystem::exists(path))
-    {
-        std::filesystem::create_directory(path);
-    }
+    return std::filesystem::exists(path) || std::filesystem::create_directory(path);
 }
 
 utf8::string Resources::GetPathUtf8(std::wstring file) {
