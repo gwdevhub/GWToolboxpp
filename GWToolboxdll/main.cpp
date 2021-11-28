@@ -5,6 +5,7 @@
 #include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
+#include <Modules/CrashHandler.h>
 
 // Do all your startup things here instead.
 DWORD WINAPI init(HMODULE hModule) noexcept {

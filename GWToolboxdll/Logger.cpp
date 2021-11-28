@@ -42,24 +42,10 @@ static void GWCALogHandler(
 
     Log::Log("[GWCA] %s", msg);
 }
-
-static void GWCAPanicHandler(
-    void *context,
-    const char *expr,
-    const char *file,
-    unsigned int line,
-    const char *function)
-{
-    UNREFERENCED_PARAMETER(context);
-
-    Log::Log("[GWCA] Fatal error (expr: '%s', file: '%s', line: %u, function: '%s'",
-             expr, file, line, function);
-
-    __try {
-        __debugbreak();
-    } __except(EXCEPT_EXPRESSION_ENTRY) {
-    }
+void Log::FatalAssert(const char* expr, const char* file, unsigned line) {
+    return CrashHandler::FatalAssert(expr, file, line);
 }
+
 
 // === Setup and cleanup ====
 bool Log::InitializeLog() {
@@ -77,7 +63,6 @@ bool Log::InitializeLog() {
 #endif
 
     GW::RegisterLogHandler(GWCALogHandler, nullptr);
-    GW::RegisterPanicHandler(GWCAPanicHandler, nullptr);
     return true;
 }
 
@@ -229,32 +214,3 @@ void Log::WarningW(const wchar_t* format, ...) {
     va_end(vl);
 }
 
-// === Crash Dump ===
-
-LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
-    MINIDUMP_EXCEPTION_INFORMATION ExpParam;
-    ExpParam.ThreadId = GetCurrentThreadId();
-    ExpParam.ExceptionPointers = pExceptionPointers;
-    ExpParam.ClientPointers = pExceptionPointers != 0;
-
-    if (TBMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), 0, MiniDumpWithDataSegs, &ExpParam, 0, 0)) {
-#ifndef GWTOOLBOX_DEBUG
-        abort();
-#endif
-    }
-
-    return 0;
-}
-
-void Log::FatalAssert(const char *expr, const char *file, unsigned line)
-{
-    UNREFERENCED_PARAMETER(expr);
-    UNREFERENCED_PARAMETER(file);
-    UNREFERENCED_PARAMETER(line);
-    __try {
-        __debugbreak();
-    } __except(EXCEPT_EXPRESSION_ENTRY) {
-    }
-
-    abort();
-}

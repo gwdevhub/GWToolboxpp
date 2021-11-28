@@ -6,16 +6,6 @@
 #include <ToolboxModule.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
 
-#pragma comment(linker, "/export:TBMiniDumpWriteDump=_TBMiniDumpWriteDump@28")
-extern "C" DllExport BOOL WINAPI TBMiniDumpWriteDump(HANDLE hProcess,
-    DWORD ProcessId,
-    HANDLE hFile,
-    MINIDUMP_TYPE DumpType,
-    PMINIDUMP_EXCEPTION_INFORMATION ExceptionParam,
-    PMINIDUMP_USER_STREAM_INFORMATION UserStreamParam,
-    PMINIDUMP_CALLBACK_INFORMATION CallbackParam
-);
-
 class CrashHandler : public ToolboxModule {
     CrashHandler() {};
     ~CrashHandler() { Cleanup(); };
@@ -31,23 +21,31 @@ public:
 
     void Terminate() override;
 
-    // Used for intercepting GetProcAddress(hModule,"MiniDumpWriteDump")
-    static FARPROC TBGetProcAddress(HMODULE h, LPCSTR func_name);
+    struct GWDebugInfo {
+        size_t len;
+        uint32_t log_file_name[0x82];
+        char buffer[0x80001];
+    };
+    static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorect size");
 
-    // Used for intercepting LoadLibraryA("DbgHelp.dll")
-    static HMODULE TBLoadLibraryA(LPCSTR func_name);
+    static LONG WINAPI Crash(EXCEPTION_POINTERS* pExceptionPointers = 0);
+    static void FatalAssert(const char* expr, const char* file, unsigned line);
+    static void GWCAPanicHandler(
+        void*,
+        const char* expr,
+        const char* file,
+        unsigned int line,
+        const char* function);
+
+    static void OnGWCrash(GWDebugInfo*, uint32_t, EXCEPTION_POINTERS*, char*, char*, uint32_t);
 
 private:
-    // Only dump once per instance - GW likes to spit out 2/3 crash dumps after the initial one!
-    bool crash_dumped = false;
 
-    std::vector<GW::MemoryPatcher*> patches;
+    typedef void(__cdecl* HandleCrash_pt)(GWDebugInfo* details, uint32_t param_2, void* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line);
+    HandleCrash_pt HandleCrash_Func = 0;
+    HandleCrash_pt RetHandleCrash = 0;
 
-    char TBModuleName[MAX_PATH];
-    char* TBCrashDumpName = "TBMiniDumpWriteDump";
-    void GetDllName();
+    GWDebugInfo* gw_debug_info = 0;
+
     void Cleanup();
-
-
-
 };
