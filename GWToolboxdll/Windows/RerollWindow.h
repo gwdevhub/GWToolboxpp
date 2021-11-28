@@ -17,11 +17,16 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 
+    void Initialize() override;
     void Update(float) override;
     std::vector<std::wstring>* GetAvailableChars();
 
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
+
+    static void OnUIMessage(GW::HookStatus*, uint32_t msg_id, void*, void*);
+    // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
+    static void OnSetStatus(uint32_t status);
 
     void Reroll(wchar_t* character_name, bool same_map = true, bool same_party = true);
 
@@ -35,6 +40,7 @@ private:
     clock_t reroll_timeout = 0;
     uint32_t reroll_index_needed = 0;
     uint32_t reroll_index_current = 0xffffffdd;
+    uint32_t online_status = 1;
     GW::Constants::MapID map_id = GW::Constants::MapID::None;
     int district_id = 0;
     int region_id = 0;
@@ -70,6 +76,6 @@ private:
 
     void AddAvailableCharacter(const wchar_t* email, const wchar_t* charname);
 
-    GW::HookEntry* OnGoToCharSelect_Entry = 0;
+    GW::HookEntry OnGoToCharSelect_Entry;
     
 };

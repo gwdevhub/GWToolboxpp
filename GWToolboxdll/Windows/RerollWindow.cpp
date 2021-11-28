@@ -17,12 +17,17 @@
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
+
 #include <Modules/Resources.h>
 #include <Windows/RerollWindow.h>
 #include <Timer.h>
 #include <GWCA/Context/PreGameContext.h>
 #include <ImGuiAddons.h>
 #include <GuiUtils.h>
+#include <GWCA/Managers/FriendListMgr.h>
+
 
 namespace {
     GW::CharContext* GetCharContext() {
@@ -81,6 +86,9 @@ namespace {
         }
         return 0;
     }
+    typedef void(__cdecl* SetOnlineStatus_pt)(uint32_t status);
+    SetOnlineStatus_pt SetOnlineStatus_Func;
+    SetOnlineStatus_pt RetSetOnlineStatus;
 }
 
 RerollWindow::~RerollWindow() {
@@ -91,11 +99,6 @@ RerollWindow::~RerollWindow() {
     if (guild_hall_uuid) {
         delete guild_hall_uuid;
         guild_hall_uuid = 0;
-    }
-    if (OnGoToCharSelect_Entry) {
-        GW::UI::RemoveUIMessageCallback(OnGoToCharSelect_Entry);
-        delete OnGoToCharSelect_Entry;
-        OnGoToCharSelect_Entry = 0;
     }
 }
 void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -144,15 +147,32 @@ std::vector<std::wstring>* RerollWindow::GetAvailableChars() {
     const wchar_t* email = GetAccountEmail();
     return email ? account_characters[email] : 0;
 }
-void RerollWindow::Update(float) {
-    if (!OnGoToCharSelect_Entry) {
-        // Add an entry to check available characters at login screen
-        OnGoToCharSelect_Entry = new GW::HookEntry;
-        GW::UI::RegisterUIMessageCallback(OnGoToCharSelect_Entry, [&](GW::HookStatus*, uint32_t msg_id, void*, void*) {
-            if(msg_id == 0x10000170)
-                check_available_chars = true;
-            },0x4000);
+
+void RerollWindow::OnSetStatus(uint32_t status) {
+    GW::Hook::EnterHook();
+    if (Instance().reroll_stage == WaitForCharacterLoad)
+        status = Instance().online_status;
+    RetSetOnlineStatus(status);
+    GW::Hook::LeaveHook();
+}
+void RerollWindow::OnUIMessage(GW::HookStatus*, uint32_t msg_id, void*, void*) {
+    if (msg_id == 0x10000170)
+        Instance().check_available_chars = true;
+}
+
+void RerollWindow::Initialize() {
+    ToolboxWindow::Initialize();
+    // Add an entry to check available characters at login screen
+    GW::UI::RegisterUIMessageCallback(&OnGoToCharSelect_Entry, OnUIMessage, 0x4000);
+    // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
+    SetOnlineStatus_Func = (SetOnlineStatus_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\friend\\friendapi.cpp", "status < FRIEND_STATUSES", -0x11);
+    if (SetOnlineStatus_Func) {
+        GW::Hook::CreateHook(SetOnlineStatus_Func, OnSetStatus, (void**)&RetSetOnlineStatus);
+        GW::Hook::EnableHooks(SetOnlineStatus_Func);
     }
+}
+
+void RerollWindow::Update(float) {
     if (check_available_chars && IsCharSelectReady()) {
         auto chars = GW::PreGameContext::instance()->chars;
         const wchar_t* email = GetAccountEmail();
@@ -221,8 +241,8 @@ void RerollWindow::Update(float) {
                 return;
             }
             reroll_index_current = pgc->index_1;
-            SendMessage(h, WM_KEYDOWN, VK_LEFT, 0x014B0001);
-            SendMessage(h, WM_KEYUP, VK_LEFT, 0xC14B0001);
+            SendMessage(h, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
+            SendMessage(h, WM_KEYUP, VK_RIGHT, 0xC14D0001);
             return;
         }
         case WaitForCharacterLoad: {
@@ -301,6 +321,8 @@ void RerollWindow::Update(float) {
     }
 }
 void RerollWindow::AddAvailableCharacter(const wchar_t* email, const wchar_t* charname) {
+    if (!charname || !charname[0])
+        return;
     auto found = account_characters.find(email);
     if (found == account_characters.end() || !found->second) {
         account_characters[email] = new std::vector<std::wstring>();
@@ -362,6 +384,7 @@ void RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_pa
     district_id = GW::Map::GetDistrict();
     region_id = GW::Map::GetRegion();
     language_id = GW::Map::GetLanguage();
+    online_status = GW::FriendListMgr::GetMyStatus();
     if (guild_hall_uuid) {
         delete[] guild_hall_uuid;
         guild_hall_uuid = 0;
