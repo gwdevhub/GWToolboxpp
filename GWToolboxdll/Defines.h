@@ -16,20 +16,14 @@ Notes:
 - EXCEPTION_CONTINUE_SEARCH will not catch the exception and result in crash
 - EXCEPTION_EXECUTE_HANDLER will catch the exception and ignore the error
 */
-#ifdef GWTOOLBOX_DEBUG
+
 #ifndef EXCEPT_EXPRESSION_ENTRY
-#define EXCEPT_EXPRESSION_ENTRY EXCEPTION_CONTINUE_SEARCH
-#endif
-#ifndef EXCEPT_EXPRESSION_LOOP
-#define EXCEPT_EXPRESSION_LOOP EXCEPTION_CONTINUE_SEARCH
-#endif
-//#define EXCEPT_EXPRESSION_LOOP EXCEPTION_EXECUTE_HANDLER
-#else
-#ifndef EXCEPT_EXPRESSION_ENTRY
-#define EXCEPT_EXPRESSION_ENTRY Log::GenerateDump(GetExceptionInformation())
+#define EXCEPT_EXPRESSION_ENTRY CrashHandler::Crash(GetExceptionInformation())
 #endif
 //#define EXCEPT_EXPRESSION_ENTRY EXCEPTION_CONTINUE_SEARCH
 #ifndef EXCEPT_EXPRESSION_LOOP
 #define EXCEPT_EXPRESSION_LOOP EXCEPTION_EXECUTE_HANDLER
 #endif
-#endif
+
+#define ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))
+#define IM_ASSERT(expr) ASSERT(expr)
