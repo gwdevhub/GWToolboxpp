@@ -41,10 +41,14 @@ void CrashHandler::OnGWCrash(GWDebugInfo* details, uint32_t param_2, EXCEPTION_P
     GW::HookBase::EnterHook();
     if(!Instance().gw_debug_info)
         Instance().gw_debug_info = details;
-    
     if (!pExceptionPointers) {
         FatalAssert(exception_message, exception_file, exception_line);
     }
+    __try {
+        // Debug break here to catch stack trace in debug mode before dumping
+        __debugbreak();
+    }
+    __except (EXCEPTION_CONTINUE_EXECUTION) {}
         
     // Assertion here will throw a GWToolbox exception if pExceptionPointers isn't found; this will give us the correct call stack for a GW Assertion failure in the subsequent crash dump.
     if (CrashHandler::Crash(pExceptionPointers))

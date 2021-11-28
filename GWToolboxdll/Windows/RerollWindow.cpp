@@ -22,6 +22,7 @@
 #include <Timer.h>
 #include <GWCA/Context/PreGameContext.h>
 #include <ImGuiAddons.h>
+#include <GuiUtils.h>
 
 namespace {
     GW::CharContext* GetCharContext() {
@@ -42,6 +43,13 @@ namespace {
     const wchar_t* GetPlayerName() {
         auto c = GetCharContext();
         return c ? c->player_name : 0;
+    }
+    const wchar_t* GetAccountEmail() {
+        auto c = GetCharContext();
+        wchar_t* email = c ? c->player_email : 0;
+        if (email && !email[0])
+            email = 0;
+        return email;
     }
     GW::Guild* GetCurrentGH()
     {
@@ -79,9 +87,15 @@ RerollWindow::~RerollWindow() {
     for (auto it : account_characters) {
         delete it.second;
     }
+    account_characters.clear();
     if (guild_hall_uuid) {
         delete guild_hall_uuid;
         guild_hall_uuid = 0;
+    }
+    if (OnGoToCharSelect_Entry) {
+        GW::UI::RemoveUIMessageCallback(OnGoToCharSelect_Entry);
+        delete OnGoToCharSelect_Entry;
+        OnGoToCharSelect_Entry = 0;
     }
 }
 void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -127,23 +141,29 @@ void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
 
 }
 std::vector<std::wstring>* RerollWindow::GetAvailableChars() {
-    if (!current_account_email || !current_account_email[0])
-        return 0;
-    return account_characters[current_account_email];
+    const wchar_t* email = GetAccountEmail();
+    return email ? account_characters[email] : 0;
 }
 void RerollWindow::Update(float) {
+    if (!OnGoToCharSelect_Entry) {
+        // Add an entry to check available characters at login screen
+        OnGoToCharSelect_Entry = new GW::HookEntry;
+        GW::UI::RegisterUIMessageCallback(OnGoToCharSelect_Entry, [&](GW::HookStatus*, uint32_t msg_id, void*, void*) {
+            if(msg_id == 0x10000170)
+                check_available_chars = true;
+            },0x4000);
+    }
     if (check_available_chars && IsCharSelectReady()) {
         auto chars = GW::PreGameContext::instance()->chars;
-        auto email = GW::GameContext::instance()->character->player_email;
-        if (email && email[0]) {
-            if (account_characters.find(email) == account_characters.end()) {
-                account_characters[email] = new std::vector<std::wstring>();
+        const wchar_t* email = GetAccountEmail();
+        if (email) {
+            auto found = account_characters.find(email);
+            if (found != account_characters.end() && found->second) {
+                found->second->clear();
             }
-            account_characters[email]->clear();
             for (auto& p : chars) {
-                account_characters[email]->push_back(p.character_name);
+                AddAvailableCharacter(email, p.character_name);
             }
-            wcscpy(current_account_email, email);
             check_available_chars = false;
         }
     }
@@ -280,6 +300,13 @@ void RerollWindow::Update(float) {
         }
     }
 }
+void RerollWindow::AddAvailableCharacter(const wchar_t* email, const wchar_t* charname) {
+    auto found = account_characters.find(email);
+    if (found == account_characters.end() || !found->second) {
+        account_characters[email] = new std::vector<std::wstring>();
+    }
+    account_characters[email]->push_back(charname);
+}
 bool RerollWindow::IsInMap(bool include_district) {
     if (guild_hall_uuid) {
         GW::Guild* current_location = GetCurrentGH();
@@ -351,10 +378,30 @@ void RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_pa
 }
 void RerollWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
-
+    CSimpleIni::TNamesDepend keys;
+    if (ini->GetAllKeys("RerollWindow_AvailableChars", keys)) {
+        for (auto& it : keys) {
+            std::wstring charname_ws = GuiUtils::StringToWString(it.pItem);
+            std::string email_s = ini->GetValue("RerollWindow_AvailableChars", it.pItem, "");
+            if (email_s.empty()) continue;
+            std::wstring email_ws = GuiUtils::StringToWString(email_s);
+            AddAvailableCharacter(email_ws.c_str(), charname_ws.c_str());
+        }
+    }
+    travel_to_same_location_after_rerolling = ini->GetBoolValue(Name(), VAR_NAME(travel_to_same_location_after_rerolling), travel_to_same_location_after_rerolling);
+    rejoin_party_after_rerolling = ini->GetBoolValue(Name(), VAR_NAME(rejoin_party_after_rerolling), rejoin_party_after_rerolling);
 }
-
 void RerollWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
-
+    for (auto it : account_characters) {
+        std::string email_s = GuiUtils::WStringToString(it.first);
+        auto chars = it.second;
+        for (auto it2 = chars->begin(); it2 != chars->end(); it2++) {
+            std::string charname_s = GuiUtils::WStringToString(*it2);
+            if (charname_s.empty()) continue;
+            ini->SetValue("RerollWindow_AvailableChars", charname_s.c_str(), email_s.c_str());
+        }
+    }
+    ini->SetBoolValue(Name(), VAR_NAME(travel_to_same_location_after_rerolling), travel_to_same_location_after_rerolling);
+    ini->SetBoolValue(Name(), VAR_NAME(rejoin_party_after_rerolling), rejoin_party_after_rerolling);
 }

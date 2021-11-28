@@ -31,7 +31,6 @@ private:
     bool rejoin_party_after_rerolling = true;
 
     bool check_available_chars = true;
-    wchar_t current_account_email[128] = { 0 };
 
     clock_t reroll_timeout = 0;
     uint32_t reroll_index_needed = 0;
@@ -68,5 +67,9 @@ private:
 
     bool IsInMap(bool include_district = true);
     bool IsCharSelectReady();
+
+    void AddAvailableCharacter(const wchar_t* email, const wchar_t* charname);
+
+    GW::HookEntry* OnGoToCharSelect_Entry = 0;
     
 };
