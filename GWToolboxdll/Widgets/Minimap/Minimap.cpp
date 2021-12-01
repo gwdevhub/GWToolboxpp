@@ -400,17 +400,22 @@ void Minimap::DrawSettingInternal()
         Colors::DrawSettingHueWheel("Background", &hero_flag_window_background);
         ImGui::TreePop();
     }
-    ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
-    ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
+    ImGui::StartSpacedElements(300.f);
+    ImGui::NextSpacedElement();  ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
+    ImGui::NextSpacedElement();  ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
     ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
-    ImGui::Checkbox("Allow mouse click-through", &mouse_clickthrough);
-    ImGui::ShowHelp("Toolbox minimap will not capture mouse events");
-    if (mouse_clickthrough) {
+
+    ImGui::Text("Allow mouse click-through in:");
+    ImGui::Indent();
+    ImGui::StartSpacedElements(200.f);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Explorable areas", &mouse_clickthrough_in_explorable);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Outposts", &mouse_clickthrough_in_outpost);
+    bool click_modifiers_editable = !(mouse_clickthrough_in_explorable && mouse_clickthrough_in_outpost);
+    if (!click_modifiers_editable) {
         ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
     }
-    ImGui::Checkbox("Allow mouse click-through in outposts", &mouse_clickthrough_in_outpost);
-    ImGui::ShowHelp("Toolbox minimap will not capture mouse events when in an outpost");
+    ImGui::Unindent();
     ImGui::Text("Hold + Click modifiers");
     ImGui::ShowHelp("Define behaviour of holding keyboard keys and clicking the minimap.\n"
                     "Draw: ping and draw on the compass.\n"
@@ -421,17 +426,19 @@ void Minimap::DrawSettingInternal()
     ImGui::Combo("Control", reinterpret_cast<int *>(&key_ctrl_behavior), minimap_modifier_behavior_combo_str);
     ImGui::Combo("Shift", reinterpret_cast<int *>(&key_shift_behavior), minimap_modifier_behavior_combo_str);
     ImGui::Combo("Alt", reinterpret_cast<int *>(&key_alt_behavior), minimap_modifier_behavior_combo_str);
-    if (mouse_clickthrough) {
+    
+    if (!click_modifiers_editable) {
         ImGui::PopItemFlag();
         ImGui::PopStyleVar();
     }
-    ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
+    ImGui::StartSpacedElements(256.f);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
-    ImGui::Checkbox("Map Rotation", &rotate_minimap);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Map Rotation", &rotate_minimap);
     ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
-    ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
     ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
-    ImGui::Checkbox("Circular", &circular_map);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Circular", &circular_map);
     ImGui::ShowHelp("Whether the map should be circular like the compass or a square (default).");
 }
 
@@ -448,8 +455,8 @@ void Minimap::LoadSettings(CSimpleIni *ini)
     hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
     hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
     hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background", hero_flag_window_background);
-    mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
     mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
+    mouse_clickthrough_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_explorable), mouse_clickthrough_in_explorable);
     rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
     smooth_rotation = ini->GetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
     circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
@@ -474,8 +481,8 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     ini->SetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), hero_flag_controls_show);
     ini->SetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), hero_flag_window_attach);
     Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
-    ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough), mouse_clickthrough);
     ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_explorable), mouse_clickthrough_in_explorable);
     ini->SetLongValue(Name(), VAR_NAME(key_none_behavior), static_cast<long>(key_none_behavior));
     ini->SetLongValue(Name(), VAR_NAME(key_ctrl_behavior), static_cast<long>(key_ctrl_behavior));
     ini->SetLongValue(Name(), VAR_NAME(key_shift_behavior), static_cast<long>(key_shift_behavior));
@@ -914,7 +921,7 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
     if (is_observing)
         return false;
-    if (mouse_clickthrough)
+    if (mouse_clickthrough_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
         return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
     if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return false;
