@@ -404,6 +404,7 @@ void ChatLog::Initialize() {
             // When the game world is rebuilt during map load, the log works properly again.
             Init();
             Inject();
+            Save(); // Save the chat log on every map transition
             break;
         }
         },-0x8000);
