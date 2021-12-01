@@ -16,6 +16,8 @@
 #include <GWCA/Managers/TradeMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
+#include <GWCA/Utilities/Hooker.h>
+
 #include <Logger.h>
 #include <GuiUtils.h>
 #include <Modules/InventoryManager.h>
@@ -325,6 +327,17 @@ namespace {
 
     GW::UI::WindowPosition* inventory_bags_window_position = nullptr;
 
+    typedef void(__fastcall* AddItemRowToWindow_pt)(void* ecx, void* edx, uint32_t frame, uint32_t item_id);
+    AddItemRowToWindow_pt AddItemRowToWindow_Func = 0;
+    AddItemRowToWindow_pt RetAddItemRowToWindow = 0;
+
+    void __fastcall OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
+        GW::Hook::EnterHook();
+        GW::Item* item = GW::Items::GetItemById(item_id);
+        if(!item || item->value)
+            RetAddItemRowToWindow(ecx, edx, frame, item_id);
+        GW::Hook::LeaveHook();
+    }
 
     // x, y, z, w; Top, right, bottom, left
     struct Rect {
@@ -589,6 +602,12 @@ void InventoryManager::Initialize() {
         if(message_id == GW::UI::kMoveItem)
             Instance().stack_prompt_item_id = 0;
         });
+
+    AddItemRowToWindow_Func = (AddItemRowToWindow_pt)GW::Scanner::Find("\x83\xc4\x04\x80\x78\x04\x06\x0f\x84\xd3\x00\x00\x00\x6a\x02\xff\x37",0,-0x10);
+    if (AddItemRowToWindow_Func) {
+        GW::Hook::CreateHook(AddItemRowToWindow_Func, OnAddItemToWindow, (void**)&RetAddItemRowToWindow);
+        GW::Hook::EnableHooks(AddItemRowToWindow_Func);
+    }
 }
 // Add "Tip: Hold Ctrl when requesting a quote to bulk buy." message to merchant window
 // Add "Tip: Hold Ctrl when requesting a quote to bulk sell." message to merchant window
