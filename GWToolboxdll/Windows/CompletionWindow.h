@@ -228,8 +228,6 @@ protected:
     bool pending_sort = true;
     const char* completion_ini_filename = "character_completion.ini";
 
-    std::wstring chosen_player_name;
-    std::string chosen_player_name_s;
     bool hard_mode = false;
 
     enum CompletionType : uint8_t {

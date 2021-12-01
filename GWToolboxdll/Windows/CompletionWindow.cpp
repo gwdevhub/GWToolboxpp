@@ -88,6 +88,9 @@ namespace {
 	wchar_t last_player_name[20];
 
 	bool show_as_list = true;
+
+	std::wstring chosen_player_name;
+	std::string chosen_player_name_s;
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -268,6 +271,10 @@ const char* Mission::Name() {
 }
 void Mission::OnClick() {
 	GW::Constants::MapID travel_to = GetOutpost();
+	if (chosen_player_name != GetPlayerName()) {
+		RerollWindow::Instance().Reroll(chosen_player_name.data(), travel_to);
+		return;
+	}
 	if (travel_to == GW::Constants::MapID::None) {
 		Log::Error("Failed to find nearest outpost");
 	}
@@ -1528,7 +1535,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 #if 1
 	ImGui::SameLine();
 	if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0)
-		RerollWindow::Instance().Reroll(chosen_player_name.data());
+		RerollWindow::Instance().Reroll(chosen_player_name.data(),false,false);
 #endif
 	ImGui::SameLine(ImGui::GetContentRegionAvail().x - (200.f * gscale));
 	ImGui::Checkbox("View as list", &show_as_list);
