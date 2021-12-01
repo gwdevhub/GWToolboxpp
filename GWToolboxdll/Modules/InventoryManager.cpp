@@ -331,14 +331,6 @@ namespace {
     AddItemRowToWindow_pt AddItemRowToWindow_Func = 0;
     AddItemRowToWindow_pt RetAddItemRowToWindow = 0;
 
-    void __fastcall OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
-        GW::Hook::EnterHook();
-        GW::Item* item = GW::Items::GetItemById(item_id);
-        if(!item || item->value)
-            RetAddItemRowToWindow(ecx, edx, frame, item_id);
-        GW::Hook::LeaveHook();
-    }
-
     // x, y, z, w; Top, right, bottom, left
     struct Rect {
         float top, right, bottom, left;
@@ -622,6 +614,13 @@ wchar_t* InventoryManager::OnAsyncDecodeStr(GW::HookStatus*, GW::UI::DecodingStr
     }
     return to_decode->encoded.data();
 }
+void InventoryManager::OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
+    GW::Hook::EnterHook();
+    GW::Item* item = Instance().hide_unsellable_items ? GW::Items::GetItemById(item_id) : 0;
+    if (!item || item->value)
+        RetAddItemRowToWindow(ecx, edx, frame, item_id);
+    GW::Hook::LeaveHook();
+}
 void InventoryManager::OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity) {
     if (ImGui::IsKeyDown(VK_SHIFT) || !Instance().trade_whole_stacks)
         return; // Default behaviour; prompt user for amount
@@ -687,6 +686,8 @@ void InventoryManager::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
     ini->SetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
     ini->SetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
+    ini->SetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
+    
 }
 void InventoryManager::LoadSettings(CSimpleIni* ini) {
     ToolboxUIElement::LoadSettings(ini);
@@ -698,6 +699,8 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
     bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
     trade_whole_stacks = ini->GetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
     wiki_link_on_context_menu = ini->GetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
+    hide_unsellable_items = ini->GetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
+    
 }
 void InventoryManager::ClearSalvageSession(GW::HookStatus *status, void *)
 {
@@ -1233,6 +1236,7 @@ bool InventoryManager::IsPendingSalvage() {
 }
 void InventoryManager::DrawSettingInternal() {
     ImGui::TextDisabled("This module is responsible for extra item functions via ctrl+click, right click or double click");
+    ImGui::Checkbox("Hide unsellable items from merchant window", &hide_unsellable_items);
     ImGui::Checkbox("Move whole stacks into trade by default", &trade_whole_stacks);
     ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack into trade");
     ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &wiki_link_on_context_menu);

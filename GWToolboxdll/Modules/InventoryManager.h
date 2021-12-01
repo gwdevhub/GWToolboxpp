@@ -70,6 +70,8 @@ public:
     static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
     static void OnMoveItemPacket(GW::HookStatus* status, void* pak);
     static wchar_t* OnAsyncDecodeStr(GW::HookStatus*, GW::UI::DecodingString* to_decode);
+    static void __fastcall OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id);
+
 
     IdentifyAllType identify_all_type = IdentifyAllType::None;
     SalvageAllType salvage_all_type = SalvageAllType::None;
@@ -91,6 +93,7 @@ private:
     bool salvage_rare_mats = false;
     bool show_transact_quantity_popup = false;
     bool transaction_listeners_attached = false;
+    bool hide_unsellable_items = true;
 
     bool wiki_link_on_context_menu = false;
     bool right_click_context_menu_in_explorable = true;
