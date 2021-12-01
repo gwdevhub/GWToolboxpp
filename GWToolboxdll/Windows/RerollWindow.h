@@ -28,8 +28,8 @@ public:
     // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
     static void OnSetStatus(uint32_t status);
 
-    void Reroll(wchar_t* character_name, bool same_map = true, bool same_party = true);
-
+    bool Reroll(wchar_t* character_name, bool same_map = true, bool same_party = true);
+    bool Reroll(wchar_t* character_name, GW::Constants::MapID _map_id);
 private:
 
     bool travel_to_same_location_after_rerolling = true;

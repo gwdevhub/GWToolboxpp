@@ -334,7 +334,7 @@ bool RerollWindow::IsInMap(bool include_district) {
         GW::Guild* current_location = GetCurrentGH();
         return current_location && memcmp(&current_location->key, guild_hall_uuid, sizeof(*guild_hall_uuid)) == 0;
     }
-    return GW::Map::GetMapID() == map_id && (!include_district || GW::Map::GetDistrict() == district_id) && GW::Map::GetRegion() == region_id && GW::Map::GetLanguage() == language_id;
+    return GW::Map::GetMapID() == map_id && (!include_district || district_id == 0 || GW::Map::GetDistrict() == district_id) && GW::Map::GetRegion() == region_id && GW::Map::GetLanguage() == language_id;
 }
 void RerollWindow::RerollSuccess() {
     reroll_stage = None;
@@ -362,16 +362,23 @@ void RerollWindow::RerollFailed(wchar_t* reason) {
     reroll_timeout = TIMER_INIT() + 1000;
     reroll_stage = PendingLogout;
 }
-void RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_party) {
+bool RerollWindow::Reroll(wchar_t* character_name, GW::Constants::MapID _map_id) {
+    if (!Reroll(character_name, true, false))
+        return false;
+    map_id = _map_id;
+    district_id = 0;
+    return true;
+}
+bool RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_party) {
     reroll_stage = None;
     reverting_reroll = false;
     failed_message = 0;
     if (!character_name)
-        return;
+        return false;
     wcscpy(reroll_to_player_name, character_name);
     const wchar_t* player_name = GetPlayerName();
     if (!player_name)
-        return;
+        return false;
     wcscpy(initial_player_name, player_name);
     const wchar_t* party_leader_name = GetNextPartyLeader();
     if (party_leader_name) {
@@ -398,6 +405,7 @@ void RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_pa
     same_party = _same_party;
     reroll_timeout = TIMER_INIT() + 1000;
     reroll_stage = PendingLogout;
+    return true;
 }
 void RerollWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
