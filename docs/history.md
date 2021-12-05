@@ -7,6 +7,20 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.12
+* [Fix] Fixed crash when using `/t` command without any other args
+* [Fix] Fixed occasional crash talking to NPCs
+* [Fix] Fixed crash when loading chat log without a valid timestamp
+* [New] Added `/reroll` and `/rr` commands
+* [New] Added Reroll Window module
+* [New] Added option to hide unsellable items when talking to a merchant
+* [Minor] Chat logs now save on map change
+* [Minor] Greyed out mission names for maps that aren't unlocked yet in completion window
+* [Minor] Revisited clickthough settings in minimap widget
+* [Minor] Crash dialogs are handled exclusively by gwtoolbox, and contain more debug info
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.12_Release/GWToolboxdll.dll)
+
 ## Version 5.11
 * [Fix] Fixed crash when completing and objective that hasn't started in objective timer
 * [Fix] Fixed issues connecting to twitch
