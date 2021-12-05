@@ -48,6 +48,7 @@ namespace Missions {
 
         bool is_completed = false;
         bool bonus = false;
+        bool map_unlocked = true;
 
         virtual const char* Name();
 
@@ -237,7 +238,8 @@ protected:
         MissionHM,
         MissionBonusHM,
         Vanquishes,
-        Heroes
+        Heroes,
+        MapsUnlocked
     };
     struct Completion {
         GW::Constants::Profession profession;
@@ -249,6 +251,7 @@ protected:
         std::vector<uint32_t> mission_bonus_hm;
         std::vector<uint32_t> vanquishes;
         std::vector<uint32_t> heroes;
+        std::vector<uint32_t> maps_unlocked;
     };
 
 public:

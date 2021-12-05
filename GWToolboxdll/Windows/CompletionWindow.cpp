@@ -231,8 +231,14 @@ bool Mission::Draw(IDirect3DDevice9* )
 	ImGui::PushID((int)outpost);
 	if (show_as_list) {
 		s.y /= 2.f;
-		if (ImGui::IconButton(Name(), (ImTextureID)texture, { s.x * 5.f, s.y }, 0, { s.x / 2.f, s.y }))
-			OnClick();
+		if (!map_unlocked) {
+			ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+		}
+		bool clicked = ImGui::IconButton(Name(), (ImTextureID)texture, { s.x * 5.f, s.y }, 0, { s.x / 2.f, s.y });
+		if (!map_unlocked) {
+			ImGui::PopStyleColor();
+		}
+		if(clicked) OnClick();
 	}
 	else {
 		if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint))
@@ -294,6 +300,7 @@ void Mission::CheckProgress(const std::wstring& player_name) {
 		missions_complete = &found->second->mission_hm;
 		missions_bonus = &found->second->mission_bonus_hm;
 	}
+	map_unlocked = found->second->maps_unlocked.empty() || ArrayBoolAt(found->second->maps_unlocked, static_cast<uint32_t>(outpost));
 	is_completed = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost));
 	bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
 }
@@ -621,6 +628,7 @@ void CompletionWindow::Initialize()
 		Instance().ParseCompletionBuffer(CompletionType::MissionBonus);
 		Instance().ParseCompletionBuffer(CompletionType::MissionBonusHM);
 		Instance().ParseCompletionBuffer(CompletionType::MissionHM);
+		Instance().ParseCompletionBuffer(CompletionType::MapsUnlocked);
 		Instance().CheckProgress();
 		});
 	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_PROGRESS, [](GW::HookStatus*, void*) {
@@ -667,6 +675,7 @@ void CompletionWindow::Initialize()
 		ParseCompletionBuffer(CompletionType::MissionBonus);
 		ParseCompletionBuffer(CompletionType::MissionBonusHM);
 		ParseCompletionBuffer(CompletionType::MissionHM);
+		ParseCompletionBuffer(CompletionType::MapsUnlocked);
 		CheckProgress();
 		});
 	ParseCompletionBuffer(CompletionType::Mission);
@@ -676,6 +685,7 @@ void CompletionWindow::Initialize()
 	ParseCompletionBuffer(CompletionType::Skills);
 	ParseCompletionBuffer(CompletionType::Vanquishes);
 	ParseCompletionBuffer(CompletionType::Heroes);
+	ParseCompletionBuffer(CompletionType::MapsUnlocked);
 	CheckProgress();
 	wcscpy(last_player_name,GetPlayerName());
 }
@@ -1766,6 +1776,7 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
 		read_ini_to_buf(CompletionType::Skills, "skills");
 		read_ini_to_buf(CompletionType::Vanquishes, "vanquishes");
 		read_ini_to_buf(CompletionType::Heroes, "heros");
+		read_ini_to_buf(CompletionType::MapsUnlocked, "maps_unlocked");
 
 		Completion* c = GetCharacterCompletion(name_ws.data());
 		if(c)
@@ -1832,6 +1843,7 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
 		write_buf_to_ini("skills", &char_comp->skills, ini_str, name);
 		write_buf_to_ini("vanquishes", &char_comp->vanquishes, ini_str, name);
 		write_buf_to_ini("heros", &char_comp->heroes, ini_str, name);
+		write_buf_to_ini("maps_unlocked", &char_comp->maps_unlocked, ini_str, name);
 	}
 	completion_ini->SaveFile(Resources::GetPath(completion_ini_filename).c_str());
 	delete completion_ini;
@@ -1893,6 +1905,10 @@ CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, w
 			buffer = (uint32_t*)w->hero_info.m_buffer;
 			len = w->hero_info.m_size;
 			break;
+		case CompletionType::MapsUnlocked:
+			buffer = (uint32_t*)w->unlocked_map.m_buffer;
+			len = w->unlocked_map.m_size;
+			break;
 		default:
 			ASSERT("Invalid CompletionType" && false);
 		}
@@ -1933,6 +1949,9 @@ CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, w
 			return this;
 		}
 	} break;
+	case CompletionType::MapsUnlocked:
+		write_buf = &this_character_completion->maps_unlocked;
+		break;
 	default:
 		ASSERT("Invalid CompletionType" && false);
 	}
