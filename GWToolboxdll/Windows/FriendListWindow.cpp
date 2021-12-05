@@ -141,7 +141,9 @@ void FriendListWindow::CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR*
 }
 // Redirect /whisper player_name, message to GW::SendChat
 void FriendListWindow::CmdWhisper(const wchar_t* message, int , LPWSTR* ) {
-    GW::Chat::SendChat('"', wcschr(message, ' ') + 1);
+    const wchar_t* msg = wcschr(message, ' ');
+    if(msg)
+        GW::Chat::SendChat('"', msg + 1);
 }
 /*  FriendListWindow::Friend    */
 // Get the Guild Wars friend object for this friend (if it exists)
