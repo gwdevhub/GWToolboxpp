@@ -111,19 +111,24 @@ bool ImGui::IconButton(const char* label, ImTextureID icon, const ImVec2& size, 
 			img_size.x = icon_size.x;
 		if (icon_size.y > 0.f)
 			img_size.y = icon_size.y;
+		if (img_size.y == 0.f)
+			img_size.y = button_size.y - 2.f;
+		if (img_size.x == 0.f)
+			img_size.x = img_size.y;
 	}
 	const ImGuiStyle& style = ImGui::GetStyle();
-	float content_width = img_size.x + textsize.x + 3.f;
-	float content_x = pos.x;
+	float content_width = img_size.x + textsize.x + (style.FramePadding.x * 2.f);
+	float content_x = pos.x + style.FramePadding.x;
 	if (content_width < button_size.x) {
 		float avail_space = button_size.x - content_width;
-		content_x += avail_space * style.ButtonTextAlign.x;
+		content_x += (avail_space * style.ButtonTextAlign.x);
 	}
 	const float img_x = content_x;
+	const float img_y = pos.y + ((button_size.y - img_size.y) / 2.f);
 	const float text_x = img_x + img_size.x + 3.f;
 	const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
 	if (img_size.x)
-		ImGui::GetWindowDrawList()->AddImage(icon, ImVec2(img_x, pos.y), ImVec2(img_x + img_size.x, pos.y + img_size.y));
+		ImGui::GetWindowDrawList()->AddImage(icon, ImVec2(img_x, img_y), ImVec2(img_x + img_size.x, img_y + img_size.y));
 	if (label)
 		ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, text_y), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), label);
 	return clicked;

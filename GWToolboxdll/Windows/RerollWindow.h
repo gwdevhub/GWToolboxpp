@@ -3,7 +3,7 @@
 #include "ToolboxWindow.h"
 
 class RerollWindow : public ToolboxWindow {
-    RerollWindow() {};
+    RerollWindow();
     ~RerollWindow();
 public:
     static RerollWindow& Instance() {
@@ -28,6 +28,8 @@ public:
     // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
     static void OnSetStatus(uint32_t status);
 
+    static void CmdReroll(const wchar_t* message, int argc, LPWSTR* argv);
+
     bool Reroll(wchar_t* character_name, bool same_map = true, bool same_party = true);
     bool Reroll(wchar_t* character_name, GW::Constants::MapID _map_id);
 private:
@@ -36,6 +38,28 @@ private:
     bool rejoin_party_after_rerolling = true;
 
     bool check_available_chars = true;
+
+    // Can find out campaign etc from props array
+    struct AvailableCharacterInfo {
+        uint32_t h000[2];
+        uint32_t uuid[4];
+        wchar_t player_name[20];
+        uint32_t props[17];
+        uint32_t map_id() {
+            return (props[0] & 0xffff0000);
+        }
+        uint32_t primary() {
+            uint32_t prop = props[2];
+            uint32_t v1 = (prop & 0x00f00000);
+            uint32_t v2 = v1 >> 20;
+            return v2;
+        }
+        uint32_t campaign() {
+            return (props[8] & 0x00f00000) >> 5;
+        }
+    };
+    static_assert(sizeof(AvailableCharacterInfo) == 0x84);
+    GW::Array<AvailableCharacterInfo>* available_chars_ptr = 0;
 
     clock_t reroll_timeout = 0;
     uint32_t reroll_index_needed = 0;
@@ -60,10 +84,12 @@ private:
         CheckForCharname,
         NavigateToCharname,
         WaitForCharacterLoad,
+        WaitForScrollableOutpost,
         WaitForActiveDistrict,
         WaitForMapLoad,
         Done
     } reroll_stage = None;
+    uint32_t reroll_scroll_from_map_id = 0;
 
     void RerollFailed(wchar_t* reason);
 
