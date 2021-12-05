@@ -164,10 +164,10 @@ IDirect3DTexture9* Resources::GetProfessionIcon(GW::Constants::Profession p) {
     if (!prof_icon.loading ) {
         prof_icon.loading = true;
         if (prof_icon.wiki_path_to_file[0]) {
-            auto path = Resources::GetPath(L"img/professions");
+            auto path = Resources::GetPath(L"img\\professions");
             Resources::EnsureFolderExists(path);
             wchar_t local_image[MAX_PATH];
-            swprintf(local_image, _countof(local_image), L"%s/%d.png", path.c_str(), p);
+            swprintf(local_image, _countof(local_image), L"%s\\%d.png", path.c_str(), p);
             wchar_t remote_image[255];
             swprintf(remote_image, _countof(remote_image), L"https://wiki.guildwars.com/images/%s.png", prof_icon.wiki_path_to_file);
             Instance().LoadTextureAsync(&prof_icon.texture, local_image, remote_image);
