@@ -64,6 +64,7 @@ private:
     float x_translate = 1.f; // Multiplier for traversing effects on the x axis
     float y_translate = -1.f; // Multiplier for traversing effects on the y axis
     size_t effect_count = 0;
+    bool hard_mode = false;
     ImVec2 imgui_pos = { 0.f, 0.f };
     ImVec2 imgui_size = { 0.f, 0.f };
 

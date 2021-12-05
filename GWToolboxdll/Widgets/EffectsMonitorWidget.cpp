@@ -108,6 +108,7 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
     }break;
     case GW::UI::kMapChange: { // Map change
         Instance().cached_effects.clear();
+        Instance().hard_mode = false;
         Instance().effect_count = 0;
     } break;
     case GW::UI::kPreferenceChanged: // Refresh preference e.g. window X/Y position
@@ -190,6 +191,7 @@ void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
     // Trigger durations for aspects etc
     if (!effect->duration)
         DurationExpired(cached_effects[type].back());
+    hard_mode |= effect->skill_id == (uint32_t)GW::Constants::SkillID::Hard_mode;
     effect_count++;
 }
 bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
@@ -323,12 +325,19 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             }
         }
     };
-    if(morale_percent != 100)
-        next_effect();
-    if(minion_count)
-        next_effect();
+    auto skip_effects = [&]() {
+        if (morale_percent != 100)
+            next_effect();
+        if (minion_count)
+            next_effect();
+    };
+    if (!hard_mode) {
+        skip_effects();
+    }
+
     for (auto& it : cached_effects) {
-        for (GW::Effect & effect : it.second) {
+        for (size_t i = 0; i < it.second.size();i++) {
+            GW::Effect& effect = it.second[i];
             if (effect.duration) {
                 DWORD remaining = effect.GetTimeRemaining();
                 draw = remaining < (DWORD)(effect.duration * 1000.f);
@@ -339,10 +348,13 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
                     goto enddraw; // cached_effects is now invalidated; skip to end and redraw next frame
                 }
             }
-            else if(show_vanquish_counter && effect.skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Hard_mode)) {
-                size_t left = GW::Map::GetFoesToKill();
-                size_t killed = GW::Map::GetFoesKilled();
-                draw = left ? snprintf(remaining_str, 16, "%d/%d", killed, killed + left) : 0;
+            else if(effect.skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Hard_mode)) {
+                if (show_vanquish_counter) {
+                    size_t left = GW::Map::GetFoesToKill();
+                    size_t killed = GW::Map::GetFoesKilled();
+                    draw = left ? snprintf(remaining_str, 16, "%d/%d", killed, killed + left) : 0;
+                }
+                skip_effects();
             }
             else {
                 draw = 0;
