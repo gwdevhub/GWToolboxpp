@@ -12,7 +12,7 @@ public:
     }
 
     const char* Name() const override { return "Reroll"; }
-    const char* Icon() const override { return ICON_FA_CLIPBOARD; }
+    const char* Icon() const override { return ICON_FA_USERS; }
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -62,6 +62,7 @@ private:
     GW::Array<AvailableCharacterInfo>* available_chars_ptr = 0;
 
     clock_t reroll_timeout = 0;
+    clock_t reroll_stage_set = 0;
     uint32_t reroll_index_needed = 0;
     uint32_t reroll_index_current = 0xffffffdd;
     uint32_t online_status = 1;
@@ -80,6 +81,7 @@ private:
     enum RerollStage {
         None,
         PendingLogout,
+        PromptPendingLogout,
         WaitingForCharSelect,
         CheckForCharname,
         NavigateToCharname,

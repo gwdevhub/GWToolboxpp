@@ -171,6 +171,29 @@ void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
 
+    if (reroll_stage == PromptPendingLogout) {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+            reroll_stage = PendingLogout;
+        }
+        else {
+            ImGui::OpenPopup("##reroll_confirm_popup");
+            if (ImGui::BeginPopupModal("##reroll_confirm_popup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("You're currently in an explorable area.\nAre you sure you want to change character?");
+                bool check_key = TIMER_DIFF(reroll_stage_set) > 500; // Avoid enter key being read from last press
+                if (ImGui::Button("Yes", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(VK_RETURN))) {
+                    reroll_stage = PendingLogout;
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("No", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(VK_ESCAPE))) {
+                    reroll_stage = None;
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+        }
+    }
+
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
 
@@ -250,7 +273,7 @@ void RerollWindow::CmdReroll(const wchar_t* message, int argc, LPWSTR*) {
             continue;
         for (size_t j = 0; j < available_characters->size(); j++) {
             if (available_characters->at(j).primary() == i) {
-                Instance().Reroll(available_characters->at(j).player_name, false, true);
+                Instance().Reroll(available_characters->at(j).player_name, Instance().travel_to_same_location_after_rerolling, Instance().rejoin_party_after_rerolling);
                 return;
             }
         }
@@ -261,7 +284,7 @@ void RerollWindow::CmdReroll(const wchar_t* message, int argc, LPWSTR*) {
     for (size_t i = 0; i < available_characters->size(); i++) {
         if (!wcsstr(GuiUtils::ToLower(available_characters->at(i).player_name).c_str(), character_or_profession.c_str()))
             continue;
-        Instance().Reroll(available_characters->at(i).player_name, false, true);
+        Instance().Reroll(available_characters->at(i).player_name, Instance().travel_to_same_location_after_rerolling, Instance().rejoin_party_after_rerolling);
         return;
     }
     Log::Error("Failed to match profession or character name for command");
@@ -324,14 +347,14 @@ void RerollWindow::Update(float) {
             uint32_t logout = 1;
             GW::UI::SendUIMessage(0x1000009b, &logout);
             reroll_stage = WaitingForCharSelect;
-            reroll_timeout = TIMER_INIT() + 10000;
+            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 10000;
             return;
         }
         case WaitingForCharSelect: {
             if (!GetIsCharSelectReady())
                 return;
             reroll_stage = CheckForCharname;
-            reroll_timeout = TIMER_INIT() + 5000;
+            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 5000;
             return;
         }
         case CheckForCharname: {
@@ -342,7 +365,7 @@ void RerollWindow::Update(float) {
                     reroll_index_needed = i;
                     reroll_index_current = 0xffffffdd;
                     reroll_stage = NavigateToCharname;
-                    reroll_timeout = TIMER_INIT() + 3000;
+                    reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 3000;
                     return;
                 }
             }
@@ -360,7 +383,7 @@ void RerollWindow::Update(float) {
                 SendMessage(h, WM_CHAR, 'p', 0x00190001);
                 SendMessage(h, WM_KEYUP, 0x50, 0xC0190001);
                 reroll_stage = WaitForCharacterLoad;
-                reroll_timeout = TIMER_INIT() + 20000;
+                reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                 return;
             }
             reroll_index_current = pgc->index_1;
@@ -404,17 +427,17 @@ void RerollWindow::Update(float) {
                             }
                            
                             reroll_stage = WaitForScrollableOutpost;
-                            reroll_timeout = TIMER_INIT() + 20000;
+                            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                             return;
                         }
                         GW::Map::Travel(map_id, 0, region_id, language_id);
                         reroll_stage = WaitForActiveDistrict;
-                        reroll_timeout = TIMER_INIT() + 20000;
+                        reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                         return;
                     }
                 }
                 reroll_stage = WaitForMapLoad;
-                reroll_timeout = TIMER_INIT() + 20000;
+                reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                 return;
             }
             RerollSuccess();
@@ -430,7 +453,7 @@ void RerollWindow::Update(float) {
             }
             GW::Items::UseItem(scroll);
             reroll_stage = WaitForActiveDistrict;
-            reroll_timeout = TIMER_INIT() + 20000;
+            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
         } break;
 
         case WaitForActiveDistrict: {
@@ -443,7 +466,7 @@ void RerollWindow::Update(float) {
                 GW::Map::Travel(map_id, district_id, region_id, language_id);
             }
             reroll_stage = WaitForMapLoad;
-            reroll_timeout = TIMER_INIT() + 20000;
+            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
             return;
         }
         case WaitForMapLoad: {
@@ -496,13 +519,17 @@ bool RerollWindow::IsCharSelectReady() {
     return ui_state == 2;
 }
 void RerollWindow::RerollFailed(wchar_t* reason) {
+    if (reroll_stage == PromptPendingLogout) {
+        reroll_stage = None;
+        return;
+    }
     reroll_stage = None;
     if (reverting_reroll)
         return; // Can't do anything.
     failed_message = reason;
     reverting_reroll = true;
     wcscpy(reroll_to_player_name, initial_player_name);
-    same_map = true;
+    same_map = false;
     same_party = true;
     reroll_timeout = TIMER_INIT() + 1000;
     reroll_stage = PendingLogout;
@@ -520,9 +547,17 @@ bool RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_pa
     failed_message = 0;
     if (!character_name)
         return false;
+    bool found = false;
+    if (available_chars_ptr && available_chars_ptr->valid()) {
+        for (size_t i = 0; !found && i < available_chars_ptr->size(); i++) {
+            found = wcscmp(available_chars_ptr->at(i).player_name, character_name) == 0;
+        }
+    }
+    if (!found)
+        return false;
     wcscpy(reroll_to_player_name, character_name);
     const wchar_t* player_name = GetPlayerName();
-    if (!player_name)
+    if (!player_name || wcscmp(player_name,character_name) == 0)
         return false;
     wcscpy(initial_player_name, player_name);
     const wchar_t* party_leader_name = GetNextPartyLeader();
@@ -550,8 +585,8 @@ bool RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_pa
     }
     same_map = _same_map;
     same_party = _same_party;
-    reroll_timeout = TIMER_INIT() + 1000;
-    reroll_stage = PendingLogout;
+    reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
+    reroll_stage = PromptPendingLogout;
     return true;
 }
 void RerollWindow::LoadSettings(CSimpleIni* ini) {
