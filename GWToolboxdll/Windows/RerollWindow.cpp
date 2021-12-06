@@ -169,8 +169,6 @@ RerollWindow::RerollWindow() {
 }
 void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
-    if (!visible) return;
-
     if (reroll_stage == PromptPendingLogout) {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             reroll_stage = PendingLogout;
@@ -193,6 +191,9 @@ void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
             }
         }
     }
+    if (!visible) return;
+
+
 
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
@@ -538,6 +539,10 @@ bool RerollWindow::Reroll(wchar_t* character_name, GW::Constants::MapID _map_id)
     if (!Reroll(character_name, true, false))
         return false;
     map_id = _map_id;
+    if (guild_hall_uuid) {
+        delete[] guild_hall_uuid;
+        guild_hall_uuid = 0;
+    }
     district_id = 0;
     return true;
 }
