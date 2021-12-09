@@ -848,6 +848,8 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(GW::Constants::MapID map_to
         default:
             continue;
         }
+        if ((map_info->flags & 0x5000000) != 0)
+            continue; // e.g. "wrong" augury rock is map 119, no NPCs
         if (!TravelWindow::Instance().IsMapUnlocked(static_cast<GW::Constants::MapID>(i)))
             continue;
         float dist = GW::GetDistance(this_pos, get_pos(map_info));

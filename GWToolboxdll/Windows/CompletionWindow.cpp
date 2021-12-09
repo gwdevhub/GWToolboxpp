@@ -526,14 +526,14 @@ void CompletionWindow::Initialize()
 		{ GW::Constants::Campaign::Factions, {} },
 		{ GW::Constants::Campaign::Nightfall, {} },
 		{ GW::Constants::Campaign::EyeOfTheNorth, {} },
-		{ GW::Constants::Campaign::Dungeon, {} },
+		{ GW::Constants::Campaign::BonusMissionPack, {} },
 	};
 	vanquishes = {
 		{ GW::Constants::Campaign::Prophecies, {} },
 		{ GW::Constants::Campaign::Factions, {} },
 		{ GW::Constants::Campaign::Nightfall, {} },
 		{ GW::Constants::Campaign::EyeOfTheNorth, {} },
-		{ GW::Constants::Campaign::Dungeon, {} },
+		{ GW::Constants::Campaign::BonusMissionPack, {} },
 	};
 	elite_skills = {
 		{ GW::Constants::Campaign::Prophecies, {} },
@@ -1429,7 +1429,7 @@ void CompletionWindow::Initialize_Dungeons()
 	LoadTextures(Dungeon::normal_mode_images);
 	LoadTextures(Dungeon::hard_mode_images);
 	using namespace QuestID::ZaishenBounty;
-	auto& dungeons = missions.at(Campaign::Dungeon);
+	auto& dungeons = missions.at(Campaign::BonusMissionPack);
 	dungeons.push_back(new Dungeon(
 		MapID::Catacombs_of_Kathandrax_Level_1, Ilsundur_Lord_of_Fire));
 	dungeons.push_back(new Dungeon(

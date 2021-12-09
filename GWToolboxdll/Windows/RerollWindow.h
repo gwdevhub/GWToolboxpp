@@ -41,21 +41,21 @@ private:
 
     // Can find out campaign etc from props array
     struct AvailableCharacterInfo {
-        uint32_t h000[2];
-        uint32_t uuid[4];
-        wchar_t player_name[20];
-        uint32_t props[17];
+        /* + h0000 */ uint32_t h0000[2];
+        /* + h0008 */ uint32_t uuid[4];
+        /* + h0018 */ wchar_t player_name[20];
+        /* + h0040 */ uint32_t props[17];
         uint32_t map_id() {
             return (props[0] & 0xffff0000);
         }
         uint32_t primary() {
-            uint32_t prop = props[2];
-            uint32_t v1 = (prop & 0x00f00000);
-            uint32_t v2 = v1 >> 20;
-            return v2;
+            return (props[2] & 0x00f00000) >> 20;
         }
         uint32_t campaign() {
-            return (props[8] & 0x00f00000) >> 5;
+            return (props[7] & 0x000f0000) >> 16;
+        }
+        uint32_t level() {
+            return ((props[7] & 0x0ff00000) >> 20) - 64;
         }
     };
     static_assert(sizeof(AvailableCharacterInfo) == 0x84);
