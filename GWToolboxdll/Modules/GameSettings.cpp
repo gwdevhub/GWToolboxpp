@@ -1876,6 +1876,8 @@ void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
 void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* packet) {
     UNREFERENCED_PARAMETER(status);
     GameSettings *instance = &Instance();
+    if (status->blocked)
+        return;
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GetPlayerIsLeader())
         return;
     if (GW::PartyMgr::GetIsPlayerTicked()) {
@@ -2160,7 +2162,9 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 }
 
 // Flash/focus window on trade
-void GameSettings::OnTradeStarted(GW::HookStatus*, GW::Packet::StoC::TradeStart*) {
+void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::TradeStart*) {
+    if (status->blocked)
+        return;
     auto instance = &Instance();
     if (instance->flash_window_on_trade)
         FlashWindow();

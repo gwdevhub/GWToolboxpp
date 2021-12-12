@@ -21,6 +21,7 @@
 
 #include <Modules/Resources.h>
 #include <Windows/FriendListWindow.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
 /* Out of scope namespecey lookups */
 namespace
@@ -378,6 +379,18 @@ void FriendListWindow::Initialize() {
     GW::Chat::RegisterPrintChatCallback(&SendChat_Entry, OnPrintChat);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry,OnPlayerJoinInstance);
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, OnUIMessage);
+
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_JOIN_REQUEST, OnPartyInvite, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_REQUEST_CANCEL, OnPartyInvite, -0x8010);
+
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_REQUEST, OnTradePacket, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_ACKNOWLEDGE, OnTradePacket, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_TERMINATE, OnTradePacket, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_ADD_ITEM, OnTradePacket, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_CHANGE_OFFER, OnTradePacket, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_ACCEPT, OnTradePacket, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_OFFERED_COUNT, OnPartyInvite, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_RECEIVE_OFFER, OnPartyInvite, -0x8010);
 }
 void FriendListWindow::OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int) {
     switch (*message_ptr[0]) {
@@ -454,6 +467,57 @@ bool FriendListWindow::WriteError(MessageType message_type, const wchar_t* chara
     GW::Chat::WriteChatEnc(channel, buffer);
     return true;
 }
+void FriendListWindow::OnPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak) {
+    uint32_t party_id = ((uint32_t*)pak)[1];
+    GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo(party_id);
+    if (!(p && p->players.valid() && p->players.size()))
+        return;
+    auto& ignored_parties = Instance().ignored_parties;
+    switch (pak->header) {
+    case GAME_SMSG_PARTY_JOIN_REQUEST: {
+        if (ignored_parties.find(party_id) != ignored_parties.end())
+            ignored_parties.erase(party_id);
+        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(p->players[0].login_number);
+        if (!player_name)
+            return;
+        Friend* f = Instance().GetFriend(player_name);
+        if (!(f && f->type == static_cast<uint8_t>(GW::FriendType::FriendType_Ignore)))
+            return;
+        status->blocked = true;
+        ignored_parties.emplace(party_id, true);
+    } break;
+    default:
+        if (ignored_parties.find(party_id) != ignored_parties.end()) {
+            status->blocked = true;
+        }
+    }
+}
+void FriendListWindow::OnTradePacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak) {
+    switch (pak->header) {
+    case GAME_SMSG_TRADE_REQUEST: {
+        Instance().ignore_trade = false;
+        uint32_t player_number = ((uint32_t*)pak)[1];
+        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(player_number);
+        if (!player_name)
+            return;
+        Friend* f = Instance().GetFriend(player_name);
+        if (!(f && f->type == static_cast<uint8_t>(GW::FriendType::FriendType_Ignore)))
+            return;
+        status->blocked = true;
+        Instance().ignore_trade = true;
+        GW::CtoS::SendPacket(0x4, GAME_CMSG_TRADE_CANCEL);
+    } break;
+    case GAME_SMSG_TRADE_TERMINATE:
+        Instance().ignore_trade = false;
+        break;
+    default:
+        if (Instance().ignore_trade) {
+            status->blocked = true;
+        }
+        break;
+    }
+}
+
 
 void FriendListWindow::OnAddFriendError(GW::HookStatus* status, wchar_t*) {
     FriendListWindow& instance = Instance();

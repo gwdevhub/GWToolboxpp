@@ -71,6 +71,9 @@ private:
 
     bool RemoveFriend(Friend* f);
     void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out);
+
+    std::unordered_map<uint32_t,bool> ignored_parties;
+    bool ignore_trade = false;
 public:
     static FriendListWindow& Instance() {
         static FriendListWindow instance;
@@ -98,7 +101,9 @@ public:
     static void OnAddFriendError(GW::HookStatus* status, wchar_t* message);
     static void OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*);
     static void OnPrintChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t** message_ptr, FILETIME, int);
-
+    // Ignore party invitations from players on my ignore list
+    static void OnPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak);
+    static void OnTradePacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak);
     static void AddFriendAliasToMessage(wchar_t** message_ptr);
 
     const char* Name() const override { return "Friend List"; }
