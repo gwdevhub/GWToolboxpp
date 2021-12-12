@@ -382,6 +382,7 @@ void FriendListWindow::Initialize() {
 
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_JOIN_REQUEST, OnPartyInvite, -0x8010);
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_REQUEST_CANCEL, OnPartyInvite, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_REQUEST_RESPONSE, OnPartyInvite, -0x8010);
 
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_REQUEST, OnTradePacket, -0x8010);
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_ACKNOWLEDGE, OnTradePacket, -0x8010);
@@ -469,14 +470,14 @@ bool FriendListWindow::WriteError(MessageType message_type, const wchar_t* chara
 }
 void FriendListWindow::OnPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak) {
     uint32_t party_id = ((uint32_t*)pak)[1];
-    GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo(party_id);
-    if (!(p && p->players.valid() && p->players.size()))
-        return;
     auto& ignored_parties = Instance().ignored_parties;
     switch (pak->header) {
     case GAME_SMSG_PARTY_JOIN_REQUEST: {
         if (ignored_parties.find(party_id) != ignored_parties.end())
             ignored_parties.erase(party_id);
+        GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo(party_id);
+        if (!(p && p->players.valid() && p->players.size()))
+            return;
         wchar_t* player_name = GW::PlayerMgr::GetPlayerName(p->players[0].login_number);
         if (!player_name)
             return;
@@ -485,6 +486,7 @@ void FriendListWindow::OnPartyInvite(GW::HookStatus* status, GW::Packet::StoC::P
             return;
         status->blocked = true;
         ignored_parties.emplace(party_id, true);
+        //GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_ACCEPT_REFUSE,party_id);
     } break;
     default:
         if (ignored_parties.find(party_id) != ignored_parties.end()) {

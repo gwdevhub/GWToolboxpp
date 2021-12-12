@@ -810,7 +810,7 @@ void PacketLoggerWindow::Enable() {
         GW::StoC::RegisterPacketCallback(
             &hook_entry, i, [this](GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) -> void {
                 PacketHandler(status, packet);
-            }
+            }, -0x9000
         );
     }
     for (size_t i = 0; i < 180; i++) {
