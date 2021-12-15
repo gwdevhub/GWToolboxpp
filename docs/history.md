@@ -7,6 +7,13 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.13
+* [Fix] Fixed chat related crash when using obfuscator
+* [Fix] Fixed `/reroll` command not working unless reroll window is visible
+* [Minor] Automatically ignore trade requests and party invites from ignored players
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.13_Release/GWToolboxdll.dll)
+
 ## Version 5.12
 * [Fix] Fixed crash when using `/t` command without any other args
 * [Fix] Fixed occasional crash talking to NPCs
