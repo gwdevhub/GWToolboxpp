@@ -201,12 +201,16 @@ public:
     static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
     static void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
+    static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
     GuiUtils::EncString* pending_wiki_search_term = 0;
 
     bool tick_is_toggle = false;
+
+    bool limit_signets_of_capture = true;
+    uint32_t actual_signets_of_capture_amount = 1;
 
     bool shorthand_item_ping = true;
     bool openlinks = false;

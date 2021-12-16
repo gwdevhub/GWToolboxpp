@@ -659,7 +659,7 @@ void CompletionWindow::Initialize()
 			Instance().CheckProgress();
 		}
 		});
-	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_ADD_TO_WINDOW_COUNT, [](GW::HookStatus*, void*) {
+	GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, [](GW::HookStatus*, void*) {
 		Instance().ParseCompletionBuffer(CompletionType::Skills);
 		Instance().CheckProgress();
 		});
@@ -1477,7 +1477,7 @@ void CompletionWindow::Terminate()
 	GW::StoC::RemoveCallback(GAME_SMSG_VANQUISH_COMPLETE, &skills_unlocked_stoc_entry);
 	GW::StoC::RemoveCallback(GAME_SMSG_SKILLS_UNLOCKED, &skills_unlocked_stoc_entry);
 	GW::StoC::RemoveCallback(GAME_SMSG_INSTANCE_LOADED, &skills_unlocked_stoc_entry);
-	GW::StoC::RemoveCallback(GAME_SMSG_SKILL_ADD_TO_WINDOW_COUNT, &skills_unlocked_stoc_entry);
+	GW::StoC::RemoveCallback(GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, &skills_unlocked_stoc_entry);
 	auto clear_vec = [](auto& vec) {
 		for (auto& c : vec)
 			for (auto i : c.second)

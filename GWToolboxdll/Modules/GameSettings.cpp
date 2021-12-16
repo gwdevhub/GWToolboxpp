@@ -826,6 +826,8 @@ void GameSettings::Initialize() {
 
     GW::CtoS::RegisterPacketCallback(&OnDialog_Entry, GAME_CMSG_SKILLBAR_LOAD, OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILLBAR_UPDATE, OnPostLoadSkillBar, 0x8000);
+    GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, OnUpdateSkillCount, -0x3000);
+    GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_2, OnUpdateSkillCount, -0x3000);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &OnPartyDefeated);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
@@ -1078,6 +1080,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     block_bottle_rockets = ini->GetBoolValue(Name(), VAR_NAME(block_bottle_rockets), block_bottle_rockets);
     block_ghostinthebox_effect = ini->GetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
     block_sparkly_drops_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
+    limit_signets_of_capture = ini->GetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1212,6 +1215,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(block_bottle_rockets), block_bottle_rockets);
     ini->SetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
     ini->SetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
+    ini->SetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1436,6 +1440,8 @@ void GameSettings::DrawSettingInternal() {
     ImGui::Unindent();
     ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
     ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
+    ImGui::Checkbox("Limit signet of capture to 10 in skills window", &limit_signets_of_capture);
+    ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
@@ -2616,6 +2622,16 @@ void GameSettings::OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, 
         if (!agent)
             return;
         GW::Chat::WriteChatEnc((GW::Chat::Channel)msg->channel, msg->message, agent->name_enc);
+    }
+}
+
+// Hide more than 10 signets of capture
+void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet) {
+    GW::Packet::StoC::UpdateSkillCountAfterMapLoad* pak = (GW::Packet::StoC::UpdateSkillCountAfterMapLoad*)packet;
+    if (Instance().limit_signets_of_capture && static_cast<GW::Constants::SkillID>(pak->skill_id) == GW::Constants::SkillID::Signet_of_Capture) {
+        Instance().actual_signets_of_capture_amount = pak->count;
+        if (pak->count > 10)
+            pak->count = 10;
     }
 }
 
