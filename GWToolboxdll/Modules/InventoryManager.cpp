@@ -57,7 +57,7 @@ namespace {
     uint16_t MaxMaterialStorage() {
         uint16_t max_mat_storage_size = 250u;
         GW::Bag* bag = GW::Items::GetBag(GW::Constants::Bag::Material_Storage);
-        if (!bag || bag->items.valid() || !bag->items_count)
+        if (!bag || !bag->items.valid() || !bag->items_count)
             return max_mat_storage_size;
         GW::Item* b_item = nullptr;
         for (size_t i = GW::Constants::MaterialSlot::Bone; i < GW::Constants::MaterialSlot::N_MATS; i++) {
