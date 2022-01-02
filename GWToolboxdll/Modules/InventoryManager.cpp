@@ -40,17 +40,19 @@ namespace {
     {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
     }
-    std::unordered_map<uint32_t, clock_t> pending_moves; // { bag_idx | slot, move_started_at }
-    bool get_pending_move(uint32_t bag_idx, uint32_t slot) {
+    std::unordered_map<uint32_t, std::pair<uint16_t,clock_t>> pending_moves; // { bag_idx | slot, { quantity_to_move,move_started_at} }
+    uint16_t get_pending_move(uint32_t bag_idx, uint32_t slot) {
         uint32_t bag_slot = (uint32_t)bag_idx << 16 | slot;
         auto found = pending_moves.find(bag_slot);
         if (found == pending_moves.end())
-            return false;
-        return TIMER_DIFF(found->second) < 3000; // 3 second timeout incase of hanging moves
+            return 0;
+        if (TIMER_DIFF(found->second.second) > 3000) // 3 second timeout incase of hanging moves
+            return 0;
+        return found->second.first;
     }
-    void set_pending_move(uint32_t bag_idx, uint32_t slot) {
+    void set_pending_move(uint32_t bag_idx, uint32_t slot, uint16_t quantity_to_move) {
         uint32_t bag_slot = (uint32_t)bag_idx << 16 | slot;
-        pending_moves[bag_slot] = TIMER_INIT();
+        pending_moves[bag_slot] = { (uint16_t)(get_pending_move(bag_idx, slot) + quantity_to_move), TIMER_INIT() };
     }
     // GW Client doesn't actually know max material storage size for the account.
     // We can make a guess by checking how many materials are currently in storage.
@@ -70,6 +72,31 @@ namespace {
         }
         return max_mat_storage_size;
     }
+    // GW Client doesn't actually know max material storage size for the account.
+// We can make a guess by checking how many materials are currently in storage.
+    uint16_t MaxSlotSize(GW::Constants::Bag bag_idx) {
+        uint16_t slot_size = 250u;
+        switch (bag_idx) {
+        case GW::Constants::Bag::Material_Storage:
+            GW::Bag* bag = GW::Items::GetBag(bag_idx);
+            if (!bag || !bag->items.valid() || !bag->items_count)
+                return slot_size;
+            GW::Item* b_item = nullptr;
+            for (size_t i = GW::Constants::MaterialSlot::Bone; i < GW::Constants::MaterialSlot::N_MATS; i++) {
+                b_item = bag->items[i];
+                if (!b_item || b_item->quantity <= slot_size)
+                    continue;
+                while (b_item->quantity > slot_size) {
+                    slot_size += 250u;
+                }
+            }
+            break;
+        }
+        return slot_size;
+    }
+    uint16_t MaxSlotSize(uint32_t bag_idx) {
+        return MaxSlotSize(static_cast<GW::Constants::Bag>(bag_idx));
+    }
 
     uint16_t move_materials_to_storage(GW::Item* item) {
         ASSERT(item && item->quantity);
@@ -78,16 +105,21 @@ namespace {
         int islot = GW::Items::GetMaterialSlot(item);
         if (islot < 0 || (int)GW::Constants::N_MATS <= islot) return 0;
         uint32_t slot = static_cast<uint32_t>(islot);
-        const uint16_t max_in_slot = MaxMaterialStorage();
-        uint16_t availaible = max_in_slot;
+        const uint16_t max_in_slot = MaxSlotSize(GW::Constants::Bag::Material_Storage);
+        uint16_t available = max_in_slot;
         GW::Item* b_item = GW::Items::GetItemBySlot(GW::Constants::Bag::Material_Storage, slot + 1);
         if (b_item) {
             if (b_item->quantity >= max_in_slot)
                 return 0;
-            availaible = max_in_slot - b_item->quantity;
+            available -= b_item->quantity;
         }
-        uint16_t will_move = std::min<uint16_t>(item->quantity, availaible);
-        if (will_move) GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
+        uint16_t pending_move = get_pending_move((uint32_t)GW::Constants::Bag::Material_Storage, slot);
+        available -= pending_move;
+        uint16_t will_move = std::min<uint16_t>(item->quantity, available);
+        if (will_move) {
+            set_pending_move((uint32_t)GW::Constants::Bag::Material_Storage, slot, will_move);
+            GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
+        }
         return will_move;
     }
 
@@ -100,17 +132,18 @@ namespace {
         for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
             GW::Bag* bag = GW::Items::GetBag(bag_i);
             if (!bag) continue;
+            uint16_t max_slot_size = MaxSlotSize(bag_i);
             size_t slot = bag->find2(item);
             while (slot != GW::Bag::npos) {
                 GW::Item* b_item = bag->items[slot];
                 // b_item can be null in the case of birthday present for instance.
 
-                if (!get_pending_move(bag_i, slot) && b_item != nullptr && b_item->quantity < 250u) {
-                    uint16_t availaible = 250u - b_item->quantity;
+                if (b_item != nullptr && b_item->quantity < max_slot_size) {
+                    uint16_t availaible = max_slot_size - get_pending_move(bag_i, slot) - b_item->quantity;
                     uint16_t will_move = std::min<uint16_t>(availaible, remaining);
                     if (will_move > 0) {
                         GW::Items::MoveItem(item, b_item, will_move);
-                        set_pending_move(bag_i, slot);
+                        set_pending_move(bag_i, slot, will_move);
                         remaining -= will_move;
                     }
                     if (remaining == 0)
@@ -127,13 +160,18 @@ namespace {
         for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
             GW::Bag* bag = GW::Items::GetBag(bag_i);
             if (!bag) continue;
+            uint16_t max_slot_size = MaxSlotSize(bag_i);
             size_t slot = bag->find1(0);
             // The reason why we test if the slot has no item is because birthday present have ModelId == 0
             while (slot != GW::Bag::npos) {
-                if (!get_pending_move(bag_i, slot) && bag->items[slot] == nullptr) {
-                    set_pending_move(bag_i, slot);
-                    GW::Items::MoveItem(item, bag, slot, quantity);
-                    return quantity;
+                if (bag->items[slot] == nullptr) {
+                    uint16_t available = max_slot_size - get_pending_move(bag_i, slot);
+                    uint16_t will_move = std::min<uint16_t>(quantity, available);
+                    if (will_move > 0) {
+                        set_pending_move(bag_i, slot, will_move);
+                        GW::Items::MoveItem(item, bag, slot, will_move);
+                        return will_move;
+                    }
                 }
                 slot = bag->find1(0, slot + 1);
             }
@@ -187,10 +225,15 @@ namespace {
         const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
         const size_t storage14 = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 
-        if(remaining)
-            remaining -= complete_existing_stack(item, storage1, storage14, remaining);
         if (remaining)
-            remaining -= move_to_first_empty_slot(item, storage1, storage14, remaining);
+            remaining -= complete_existing_stack(item, storage1, storage14, remaining);
+        while (remaining) {
+            uint16_t moved = move_to_first_empty_slot(item, storage1, storage14, remaining);
+            if (!moved)
+                break;
+            remaining -= moved;
+        }
+
         return to_move - remaining;
     }
 
@@ -204,9 +247,11 @@ namespace {
         uint16_t remaining = to_move;
         // If item is stackable, try to complete similar stack
         remaining -= complete_existing_stack(item, backpack, bag2, remaining);
-        if (remaining == to_move) {
-            // If we moved some, drop out here. If we didn't move any, shift everything.
-            remaining -= move_to_first_empty_slot(item, backpack, bag2, remaining);
+        while (remaining) {
+            uint16_t moved = move_to_first_empty_slot(item, backpack, bag2, remaining);
+            if (!moved)
+                break;
+            remaining -= moved;
         }
             
         return to_move - remaining;
