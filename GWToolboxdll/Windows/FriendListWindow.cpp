@@ -757,8 +757,8 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         return ImGui::End();
 
     unsigned int colIdx = 0;
-    bool show_charname = ImGui::GetContentRegionAvail().x > 180.0f;
-    bool _show_location = ImGui::GetContentRegionAvail().x > 360.0f;
+    bool show_charname = ImGui::GetContentRegionAvail().x > cols[0];
+    bool _show_location = ImGui::GetContentRegionAvail().x > cols[1];
     if (!is_widget) {
         ImGui::Text("Name");
         if (show_charname) {
@@ -860,8 +860,9 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
             }
             if (show_location) {
-                ImGui::SameLine(cols[++colIdx]);
+                
                 if (lfp->current_map_name.string().size()) {
+                    ImGui::SameLine(cols[++colIdx]);
                     if (is_widget)
                         ImGui::TextShadowed(lfp->current_map_name.string().c_str());
                     else
