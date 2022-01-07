@@ -1687,8 +1687,43 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Dragons_Gullet:
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Vanguard);
         break;
-    default:
+    case GW::Constants::MapID::The_Sulfurous_Wastes:
+    case GW::Constants::MapID::Jokos_Domain:
+    case GW::Constants::MapID::The_Alkali_Pan:
+    case GW::Constants::MapID::Crystal_Overlook:
+    case GW::Constants::MapID::The_Ruptured_Heart:
+    case GW::Constants::MapID::Poisoned_Outcrops:
+    case GW::Constants::MapID::The_Shattered_Ravines:
+    case GW::Constants::MapID::Gate_of_Desolation:
+    case GW::Constants::MapID::Jennurs_Horde:
+    case GW::Constants::MapID::Nundu_Bay:
+    case GW::Constants::MapID::Grand_Court_of_Sebelkeh:
+    case GW::Constants::MapID::Dzagonur_Bastion:
+    case GW::Constants::MapID::Ruins_of_Morah:
+    case GW::Constants::MapID::The_Mouth_of_Torment_outpost:
+    case GW::Constants::MapID::Lair_of_the_Forgotten_outpost:
+    case GW::Constants::MapID::Bone_Palace_outpost:
+    case GW::Constants::MapID::Basalt_Grotto_outpost:
+    case GW::Constants::MapID::Gate_of_Torment_outpost:
+    case GW::Constants::MapID::Gate_of_Fear_outpost:
+    case GW::Constants::MapID::Gate_of_Secrets_outpost:
+    case GW::Constants::MapID::Gate_of_the_Nightfallen_Lands_outpost:
+    case GW::Constants::MapID::The_Shadow_Nexus:
+    case GW::Constants::MapID::Gate_of_Pain:
+    case GW::Constants::MapID::Gate_of_Madness:
+    case GW::Constants::MapID::Abaddons_Gate:
+    case GW::Constants::MapID::Depths_of_Madness:
+    case GW::Constants::MapID::Domain_of_Anguish:
+    case GW::Constants::MapID::Domain_of_Fear:
+    case GW::Constants::MapID::Domain_of_Pain:
+    case GW::Constants::MapID::Domain_of_Secrets:
+    case GW::Constants::MapID::Heart_of_Abaddon:
+    case GW::Constants::MapID::Nightfallen_Garden:
+    case GW::Constants::MapID::Nightfallen_Jahai:
+    case GW::Constants::MapID::Throne_of_Secrets:
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
+        break;
+    default: return;
     }
 }
 void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
