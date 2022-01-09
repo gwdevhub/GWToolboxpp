@@ -153,7 +153,6 @@ private:
     const std::map<const std::string, const DistrictAlias> shorthand_district_names = 
     {
         {"ae", {GW::Constants::District::American}},
-        {"ae1", {GW::Constants::District::American,1}},
         {"int", {GW::Constants::District::International}},
         {"ee", {GW::Constants::District::EuropeEnglish}},
         {"eg", {GW::Constants::District::EuropeGerman}},

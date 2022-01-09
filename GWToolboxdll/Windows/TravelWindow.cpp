@@ -1432,11 +1432,10 @@ bool TravelWindow::ParseDistrict(const std::wstring &s, GW::Constants::District 
 {
     std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
     std::string first_word = compare.substr(0, compare.find(' '));
+    char alias[3];
 
-    // Parse the district number
-    if (isdigit(first_word[first_word.length() - 1])) {
-        number = first_word[first_word.length() - 1] - 48;
-        first_word = first_word.substr(0, first_word.size() - 1);
+    if (sscanf(first_word.c_str(), "%2s%u", alias, &number) == 2) {
+        first_word = first_word.substr(0, strlen(alias));
     }
 
     // Shortcut words e.g "/tp ae" for american english
