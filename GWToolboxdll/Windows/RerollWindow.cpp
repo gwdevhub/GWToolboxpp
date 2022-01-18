@@ -478,12 +478,24 @@ void RerollWindow::Update(float) {
             
             if (same_party && party_leader[0]) {
                 GW::PartyInfo* player_party = GetPlayerParty();
-                if (player_party && player_party->GetPartySize() > 1)
+                if (player_party && player_party->GetPartySize() > 1) {
                     GW::PartyMgr::LeaveParty();
-                wchar_t msg_buf[32];
-                ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %s", party_leader) != -1);
-                GW::Chat::SendChat('/', msg_buf);
+                    GW::PartyMgr::KickAllHeroes();
+                }
+                reroll_stage = WaitForEmptyParty;
+                reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 3000;
+                return;
             }
+            RerollSuccess();
+            return;
+        case WaitForEmptyParty:
+            GW::PartyInfo* player_party = GetPlayerParty();
+            if (player_party && player_party->GetPartySize() > 1)
+                return;
+            wchar_t msg_buf[32];
+            ASSERT(same_party && party_leader[0]);
+            ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %s", party_leader) != -1);
+            GW::Chat::SendChat('/', msg_buf);
             RerollSuccess();
             return;
         }
