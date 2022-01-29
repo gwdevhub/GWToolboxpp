@@ -309,6 +309,14 @@ private:
     } pending_reinvite_type = None;
     uint32_t pending_reinvite_id = 0;
 
+    bool enable_camera_glitch_fix = true;
+    bool WndProcCameraGlitchFix(UINT Message, WPARAM wParam, LPARAM lParam);
+    LPARAM right_mouse_down_lparam = 0;
+    LPARAM original_right_mouse_down_lparam = 0;
+    int middle_x = 0;
+    int middle_y = 0;
+
+
     bool was_leading = true;
     bool check_message_on_party_change = true;
     bool npc_speech_bubbles_as_chat = false;

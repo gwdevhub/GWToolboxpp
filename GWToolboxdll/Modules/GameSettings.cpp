@@ -1082,6 +1082,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     block_sparkly_drops_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
     limit_signets_of_capture = ini->GetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
 
+    enable_camera_glitch_fix = ini->GetBoolValue(Name(), VAR_NAME(enable_camera_glitch_fix), enable_camera_glitch_fix);
+
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     ::LoadChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -1216,6 +1218,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
     ini->SetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
     ini->SetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
+
+    ini->SetBoolValue(Name(), VAR_NAME(enable_camera_glitch_fix), enable_camera_glitch_fix);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1416,6 +1420,10 @@ void GameSettings::DrawSettingInternal() {
         SetWindowTitle(set_window_title_as_charname);
     }
     ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
+    ImGui::Checkbox("Enable Camera Glitch Fix", &enable_camera_glitch_fix);
+    ImGui::ShowHelp("Guild Wars handles right clicking to look around in a way\n"
+        "that can make the camera 'jump' after releasing the right mouse button.\n"
+        "Enable this feature to let gwtoolbox intercept and fix it.");
     ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
     ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting",&drop_ua_on_cast);
@@ -1684,8 +1692,56 @@ void GameSettings::UpdateFOV() {
     }
 }
 
+// Guild Wars does something stupid with the camera position, 
+// sending window events to move the mouse to the middle of the screen on the game thread.
+// Seems to be an issue when the events come in before the game thread has processed the camera movement.
+// Causes camera to "jump" after right click is released.
+// Rather than mess around trying to calculate camera yaw/pitch etc, just manage the window events better.
+// Its hacky, but so is the GW logic in-game
+// 
+// Return true if event needs to be blocked due to camera glitch
+bool GameSettings::WndProcCameraGlitchFix(UINT Message, WPARAM wParam, LPARAM lParam) {
+    if (!enable_camera_glitch_fix)
+        return false;
+    switch (Message) {
+    case WM_RBUTTONDOWN:
+        original_right_mouse_down_lparam = lParam;
+        break;
+    case WM_RBUTTONUP:
+        if (right_mouse_down_lparam && lParam != original_right_mouse_down_lparam) {
+            // Re-send the right mouse up command to put the cursor back in the original position.
+            SendMessage(GW::MemoryMgr::GetGWWindowHandle(), Message, wParam, original_right_mouse_down_lparam);
+            return true;
+        }
+        break;
+    case WM_MOUSEMOVE:
+        if (wParam != MK_RBUTTON) {
+            right_mouse_down_lparam = 0;
+            break;
+        }
+        if (!right_mouse_down_lparam) {
+            right_mouse_down_lparam = lParam;
+            RECT rect;
+            ASSERT(GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), &rect));
+            middle_x = (int)((rect.right - rect.left) / 2);
+            middle_y = (int)((rect.bottom - rect.top) / 2);
+        }
+        int mouse_x = GET_X_LPARAM(lParam);
+        int mouse_y = GET_Y_LPARAM(lParam);
+        // Guild Wars forces the cursor into the middle of the screen, calculates the offset of this movement, and then sends an override WM_MOUSEMOVE.
+        // Block mouse movement if the cursor has jumped too far from the mid point of the screen (i.e. camera jump)
+        if (abs(mouse_x - middle_x) > 128
+            || abs(mouse_y - middle_y) > 128)
+            return true;
+        break;
+    }
+    return false;
+}
+
 bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
+    if (WndProcCameraGlitchFix(Message, wParam, lParam))
+        return true;
     // Open Whisper to targeted player with Ctrl + Enter
     if (Message == WM_KEYDOWN
         && wParam == VK_RETURN
