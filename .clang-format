@@ -76,14 +76,14 @@ BinPackParameters: true
 # We are not savages afterall ;)
 BreakBeforeBraces: Custom
 BraceWrapping:
-  AfterClass:            true
+  AfterClass:            false
   AfterControlStatement: false
-  AfterEnum:             true
-  AfterFunction:         true
+  AfterEnum:             false
+  AfterFunction:         false
   AfterNamespace:        true
   AfterObjCDeclaration:  true
-  AfterStruct:           true
-  AfterUnion:            true
+  AfterStruct:           false
+  AfterUnion:            false
   AfterExternBlock:      true
   AfterCaseLabel:        false
   BeforeCatch:           false
