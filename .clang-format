@@ -80,15 +80,15 @@ BraceWrapping:
   AfterControlStatement: false
   AfterEnum:             false
   AfterFunction:         false
-  AfterNamespace:        true
-  AfterObjCDeclaration:  true
   AfterStruct:           false
   AfterUnion:            false
-  AfterExternBlock:      true
   AfterCaseLabel:        false
   BeforeCatch:           false
   BeforeElse:            false
   IndentBraces:          false
+  AfterNamespace:        true
+  AfterObjCDeclaration:  true
+  AfterExternBlock:      true
   SplitEmptyFunction:    true
   SplitEmptyRecord:      true
   SplitEmptyNamespace:   true
