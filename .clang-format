@@ -86,7 +86,7 @@ BraceWrapping:
   BeforeCatch:           false
   BeforeElse:            false
   IndentBraces:          false
-  AfterNamespace:        true
+  AfterNamespace:        false
   AfterObjCDeclaration:  true
   AfterExternBlock:      true
   SplitEmptyFunction:    true
