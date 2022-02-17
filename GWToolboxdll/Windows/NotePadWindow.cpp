@@ -14,8 +14,8 @@ void NotePadWindow::Draw(IDirect3DDevice9* pDevice) {
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         ImVec2 cmax = ImGui::GetWindowContentRegionMax();
         ImVec2 cmin = ImGui::GetWindowContentRegionMin();
-        if (ImGui::InputTextMultiline("##source", text, TEXT_SIZE, ImVec2(cmax.x - cmin.x, cmax.y - cmin.y),
-                ImGuiInputTextFlags_AllowTabInput)) {
+        if (ImGui::InputTextMultiline("##source", text, TEXT_SIZE,
+            ImVec2(cmax.x - cmin.x, cmax.y - cmin.y), ImGuiInputTextFlags_AllowTabInput)) {
             filedirty = true;
         }
     }
