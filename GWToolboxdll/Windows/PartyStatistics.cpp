@@ -397,9 +397,9 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
         for (const auto& party_member_stats : party_stats) {
             DrawPartyMember(party_member_stats);
         }
-
-        ImGui::End();
     }
+
+    ImGui::End();
 }
 
 void PartyStatisticsWindow::DrawPartyMember(const PlayerSkillCounts& party_member_stats) {
