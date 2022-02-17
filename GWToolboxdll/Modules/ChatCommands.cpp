@@ -49,6 +49,7 @@
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
 #include <Widgets/TimerWidget.h>
+#include <Windows/PartyStatistics.h>
 
 
 #define F_PI 3.14159265358979323846f
@@ -420,6 +421,7 @@ void ChatCommands::Initialize() {
     });
     GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHeroBehaviour);
     GW::Chat::CreateCommand(L"morale", ChatCommands::CmdMorale);
+    GW::Chat::CreateCommand(L"morale", ChatCommands::CmdSkillStatistics);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -1726,5 +1728,45 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
         if (hero.owner_player_id == me->login_number) {
             GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero.agent_id, behaviour);
         }
+    }
+}
+
+void ChatCommands::CmdSkillStatistics(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
+
+    if (argc < 2) {
+        PartyStatisticsWindow::Instance().WritePartyStatistics();
+        return;
+    }
+
+    std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+
+    if (argc == 2) {
+        if (arg1 == L"reset") {
+            PartyStatisticsWindow::Instance().ResetPlayerStatistics();
+        } else {
+            auto player_number = uint32_t{0};
+            GuiUtils::ParseUInt(argv[1], &player_number);
+            --player_number; // List will start at index zero
+
+            PartyStatisticsWindow::Instance().WritePlayerStatistics(player_number);
+        }
+    } else if (argc == 3) {
+        if (arg1 == L"full") {
+            auto player_number = uint32_t{0};
+            GuiUtils::ParseUInt(argv[2], &player_number);
+            --player_number; // List will start at 5index zero
+
+            PartyStatisticsWindow::Instance().WritePlayerStatistics(player_number, static_cast<uint32_t>(-1), true);
+        }
+        auto player_number = uint32_t{0};
+        GuiUtils::ParseUInt(argv[1], &player_number);
+        --player_number; // List will start at index zero
+
+        auto skill_number = uint32_t{0};
+        GuiUtils::ParseUInt(argv[2], &skill_number);
+        --skill_number; // List will start at index zero
+
+        PartyStatisticsWindow::Instance().WritePlayerStatistics(player_number, skill_number);
     }
 }
