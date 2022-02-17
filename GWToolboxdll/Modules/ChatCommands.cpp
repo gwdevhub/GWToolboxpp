@@ -421,7 +421,7 @@ void ChatCommands::Initialize() {
     });
     GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHeroBehaviour);
     GW::Chat::CreateCommand(L"morale", ChatCommands::CmdMorale);
-    GW::Chat::CreateCommand(L"morale", ChatCommands::CmdSkillStatistics);
+    GW::Chat::CreateCommand(L"skillstats", ChatCommands::CmdSkillStatistics);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
