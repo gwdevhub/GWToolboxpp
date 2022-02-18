@@ -21,7 +21,7 @@
 #include <Modules/Resources.h>
 #include <Windows/PartyStatistics.h>
 
-void PartyStatisticsWindow::GetSkillName(const uint32_t skill_id, char* skill_name) {
+void PartyStatisticsWindow::GetSkillName(const uint32_t skill_id, char* const skill_name) {
     const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
 
     const auto length = size_t{32};
@@ -32,7 +32,7 @@ void PartyStatisticsWindow::GetSkillName(const uint32_t skill_id, char* skill_na
     }
 }
 
-void PartyStatisticsWindow::GetPlayerName(const GW::Agent* const agent, char* agent_name) {
+void PartyStatisticsWindow::GetPlayerName(const GW::Agent* const agent, char* const agent_name) {
     if (nullptr == agent_name || nullptr == agent) return;
 
     auto buffer = GW::Agents::GetAgentEncName(agent);

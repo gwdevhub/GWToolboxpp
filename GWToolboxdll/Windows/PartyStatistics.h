@@ -67,8 +67,8 @@ public:
 
 private:
     static const GW::Skillbar* GetPlayerSkillbar(const uint32_t player_id);
-    static void GetSkillName(const uint32_t skill_id, char* skill_name);
-    static void GetPlayerName(const GW::Agent* const agent, char* agent_name);
+    static void GetSkillName(const uint32_t skill_id, char* const skill_name);
+    static void GetPlayerName(const GW::Agent* const agent, char* const agent_name);
 
     void ClearPartyIndicies();
     void ClearPartyStats();
