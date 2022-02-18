@@ -306,7 +306,7 @@ void PartyStatisticsWindow::SetPartySkills() {
         const auto skillbar = GetPlayerSkillbar(id);
         auto skill_counts = SkillCounts{};
 
-        /* Skillbar for other players is unknown init with No_Skill*/
+        /* Skillbar for other players and henchmen is unknown init with No_Skill*/
         if (nullptr == skillbar) {
             for (size_t skill_idx = 0; skill_idx < MAX_NUM_SKILLS; ++skill_idx) {
                 skill_counts[skill_idx] = {NONE_SKILL, 0U};
@@ -349,7 +349,7 @@ void PartyStatisticsWindow::Initialize() {
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, &MapLoadedCallback);
 
-    /* Skill on self or party mate */
+    /* Skill on self or party player */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
         &GenericValueSelf_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) -> void {
             UNREFERENCED_PARAMETER(status);
@@ -362,7 +362,7 @@ void PartyStatisticsWindow::Initialize() {
             SkillCallback(value_id, caster_id, target_id, value, no_target);
         });
 
-    /* Skill on enemy */
+    /* Skill on enemy player */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::GenericValueTarget* packet) -> void {
             UNREFERENCED_PARAMETER(status);
@@ -413,7 +413,7 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkillCounts& party_membe
     // hero or hench is unknown in outpost
     if (nullptr == agent) {
         if (ImGui::CollapsingHeader("Hero Slot")) {
-            ImGui::Text("Hero data cannot be loded in outpost n/a");
+            ImGui::Text("Hero data cannot be loded in outpost.");
         }
         return;
     }
