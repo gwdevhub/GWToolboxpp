@@ -391,8 +391,6 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
     }
 
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        ImGui::Text("Skill Name: Abs. Skill Count - Perc. Skill Count");
-
         const auto party_size = party_stats.size();
 
         for (const auto& party_member_stats : party_stats) {
@@ -411,10 +409,10 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkillCounts& party_membe
 
     char agent_name[buffer_length] = {'\0'};
 
-    // hero id is unknown in outpost
+    // hero or hench is unknown in outpost
     if (nullptr == agent) {
-        if (ImGui::CollapsingHeader("Hero Slot")) {
-            ImGui::Text("Hero data cannot be loded in outpost n/a");
+        if (ImGui::CollapsingHeader("Hero/Henchman Slot")) {
+            ImGui::Text("Hero/Henchman data cannot be loded in outpost n/a");
         }
         return;
     }
