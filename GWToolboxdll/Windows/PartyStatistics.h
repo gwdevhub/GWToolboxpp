@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Managers/StoCMgr.h>
@@ -18,6 +19,7 @@ class PartyStatisticsWindow : public ToolboxWindow {
 public:
     static constexpr float TIME_DIFF_THRESH = 600.0F;
     static constexpr uint32_t MAX_NUM_SKILLS = 8;
+    static constexpr uint32_t NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
 
     typedef struct {
         uint32_t skill_id;
@@ -58,6 +60,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
+    static void PartyClearCallback();
     static void MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded* packet);
     static void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
         const uint32_t value, const bool no_target);
@@ -73,7 +76,6 @@ private:
 
     void ClearPartyIndicies();
     void ClearPartyStats();
-    void ClearCallback();
 
     void SetPartyIndicies();
     void SetPartyStats();
@@ -81,7 +83,9 @@ private:
     void SetPartyData();
 
     GW::HookEntry MapLoaded_Entry;
-    GW::HookEntry GenericValue_Entry;
+    GW::HookEntry PartyPlayerAdd_Callback;
+    GW::HookEntry PartyPlayerRemove_Callback;
+    GW::HookEntry GenericValueSelf_Entry;
     GW::HookEntry GenericValueTarget_Entry;
 
     PartyIndicies party_indicies;
