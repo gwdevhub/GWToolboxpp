@@ -79,7 +79,7 @@ void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC:
     }
 }
 
-void PartyStatisticsWindow::HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
+void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_t caster_id,
     const uint32_t target_id, const uint32_t value, const bool no_target) {
     auto agent_id = caster_id;
     const auto activated_skill_id = value;
@@ -358,7 +358,7 @@ void PartyStatisticsWindow::Initialize() {
             const auto target_id = 0U;
             const auto value = packet->value;
             const auto no_target = true;
-            HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
+            SkillCallback(value_id, caster_id, target_id, value, no_target);
         });
 
     /* Skill on enemy */
@@ -371,7 +371,7 @@ void PartyStatisticsWindow::Initialize() {
             const auto target_id = packet->target;
             const auto value = packet->value;
             const auto no_target = false;
-            HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
+            SkillCallback(value_id, caster_id, target_id, value, no_target);
         });
 
     party_stats.clear();

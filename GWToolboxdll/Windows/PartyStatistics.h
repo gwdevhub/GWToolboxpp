@@ -58,7 +58,7 @@ public:
     void DrawSettingInternal() override;
 
     static void MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded* packet);
-    static void HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
+    static void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
         const uint32_t value, const bool no_target);
 
     void WritePlayerStatistics(const uint32_t player_idx, const uint32_t skill_idx = -1, const bool full_info = false);
