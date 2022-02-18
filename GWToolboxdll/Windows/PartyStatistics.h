@@ -31,6 +31,7 @@ public:
     } PlayerSkillCounts;
 
     using PartySkillCounts = std::vector<PlayerSkillCounts>;
+    using PartyIndicies = std::map<uint32_t, size_t>;
 
     PartyStatisticsWindow()
         : party_stats(PartySkillCounts{})
@@ -70,20 +71,21 @@ private:
     static void GetPlayerName(const GW::Agent* const agent, char* agent_name);
 
     void ClearPartyIndicies();
-    void ClearPartyMember();
-    void ClearOnPartySizeChange();
+    void ClearPartyStats();
+    void ClearCallback();
 
     void SetPartyIndicies();
-    void SetPartyMemberNames();
-    void SetPartyMemberSkills();
-    void SetPartyMember();
+    void SetPartyStats();
+    void SetPartySkills();
+    void SetPartyData();
 
     GW::HookEntry MapLoaded_Entry;
     GW::HookEntry GenericValue_Entry;
     GW::HookEntry GenericValueTarget_Entry;
 
-    std::map<uint32_t, size_t> party_indicies;
+    PartyIndicies party_indicies;
     PartySkillCounts party_stats;
+
     clock_t send_timer;
     std::queue<std::wstring> chat_queue;
 

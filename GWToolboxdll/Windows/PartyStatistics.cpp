@@ -42,7 +42,7 @@ void PartyStatisticsWindow::GetPlayerName(const GW::Agent* const agent, char* ag
     GW::UI::AsyncDecodeStr(buffer, agent_name, length);
 }
 
-void PartyStatisticsWindow::ClearOnPartySizeChange() {
+void PartyStatisticsWindow::ClearCallback() {
     if (GW::Constants::InstanceType::Outpost != GW::Map::GetInstanceType()) return;
 
     static auto last_party_size = static_cast<size_t>(-1);
@@ -54,23 +54,23 @@ void PartyStatisticsWindow::ClearOnPartySizeChange() {
     const auto party_size_change = current_party_size != last_party_size;
     if (party_size_change) {
         ClearPartyIndicies();
-        ClearPartyMember();
-        SetPartyMember();
+        ClearPartyStats();
+        SetPartyData();
         last_party_size = current_party_size;
     }
 }
 
 void PartyStatisticsWindow::ClearPartyIndicies() { party_indicies.clear(); }
 
-void PartyStatisticsWindow::ClearPartyMember() { party_stats.clear(); }
+void PartyStatisticsWindow::ClearPartyStats() { party_stats.clear(); }
 
 void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded* packet) {
     UNREFERENCED_PARAMETER(packet);
     switch (GW::Map::GetInstanceType()) {
         case GW::Constants::InstanceType::Explorable: {
             Instance().ClearPartyIndicies();
-            Instance().ClearPartyMember();
-            Instance().SetPartyMember();
+            Instance().ClearPartyStats();
+            Instance().SetPartyData();
             break;
         }
         default: {
@@ -236,8 +236,8 @@ void PartyStatisticsWindow::WritePartyStatistics() {
 
 void PartyStatisticsWindow::ResetPlayerStatistics() {
     ClearPartyIndicies();
-    ClearPartyMember();
-    SetPartyMember();
+    ClearPartyStats();
+    SetPartyData();
 }
 
 const GW::Skillbar* PartyStatisticsWindow::GetPlayerSkillbar(const uint32_t player_id) {
@@ -276,7 +276,7 @@ void PartyStatisticsWindow::SetPartyIndicies() {
     }
 }
 
-void PartyStatisticsWindow::SetPartyMemberNames() {
+void PartyStatisticsWindow::SetPartyStats() {
     const auto info = GW::PartyMgr::GetPartyInfo();
     if (nullptr == info) return;
 
@@ -293,7 +293,7 @@ void PartyStatisticsWindow::SetPartyMemberNames() {
     }
 }
 
-void PartyStatisticsWindow::SetPartyMemberSkills() {
+void PartyStatisticsWindow::SetPartySkills() {
     auto party_idx = size_t{0};
     for (auto& member_stats : party_stats) {
         auto& player_skill_counts = party_stats[party_idx];
@@ -324,7 +324,7 @@ void PartyStatisticsWindow::SetPartyMemberSkills() {
     }
 }
 
-void PartyStatisticsWindow::SetPartyMember() {
+void PartyStatisticsWindow::SetPartyData() {
     if (!GW::PartyMgr::GetIsPartyLoaded()) return;
     if (!GW::Map::GetIsMapLoaded()) return;
 
@@ -337,8 +337,8 @@ void PartyStatisticsWindow::SetPartyMember() {
     party_stats = std::vector<PlayerSkillCounts>(party_size, PlayerSkillCounts{});
 
     SetPartyIndicies();
-    SetPartyMemberNames();
-    SetPartyMemberSkills();
+    SetPartyStats();
+    SetPartySkills();
 }
 
 void PartyStatisticsWindow::Initialize() {
@@ -384,10 +384,10 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!GW::PartyMgr::GetIsPartyLoaded()) return;
     if (!GW::Map::GetIsMapLoaded()) return;
 
-    ClearOnPartySizeChange();
+    ClearCallback();
 
     if (party_stats.empty()) {
-        SetPartyMember();
+        SetPartyData();
     }
 
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -411,8 +411,8 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkillCounts& party_membe
 
     // hero or hench is unknown in outpost
     if (nullptr == agent) {
-        if (ImGui::CollapsingHeader("Hero/Henchman Slot")) {
-            ImGui::Text("Hero/Henchman data cannot be loded in outpost n/a");
+        if (ImGui::CollapsingHeader("Hero Slot")) {
+            ImGui::Text("Hero data cannot be loded in outpost n/a");
         }
         return;
     }
