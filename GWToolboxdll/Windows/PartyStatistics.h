@@ -3,6 +3,7 @@
 #include <Timer.h>
 #include <array>
 #include <map>
+#include <set>
 #include <queue>
 #include <string>
 #include <utility>
@@ -21,6 +22,10 @@ public:
     static constexpr uint32_t MAX_NUM_SKILLS = 8;
     static constexpr uint32_t NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
 
+    using PartyIds = std::set<uint32_t>;
+    using PartyIndicies = std::map<uint32_t, size_t>;
+    using PartyNames = std::map<uint32_t, std::string>;
+
     typedef struct {
         uint32_t skill_id;
         uint32_t skill_count;
@@ -34,10 +39,12 @@ public:
     } PlayerSkillCounts;
 
     using PartySkillCounts = std::vector<PlayerSkillCounts>;
-    using PartyIndicies = std::map<uint32_t, size_t>;
 
     PartyStatisticsWindow()
-        : party_stats(PartySkillCounts{})
+        : party_ids(PartyIds{})
+        , party_stats(PartySkillCounts{})
+        , party_indicies(PartyIndicies{})
+        , party_names(PartyNames{})
         , chat_queue(std::queue<std::wstring>{})
         , send_timer(clock_t{}){};
     ~PartyStatisticsWindow(){};
@@ -64,8 +71,12 @@ public:
     static void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
         const uint32_t value, const bool no_target);
 
+    void WritePlayerStatisticsSingleSkill(const uint32_t player_idx, const uint32_t skill_idx);
+    void WritePlayerStatisticsAllSkillsFullInfo(const uint32_t player_idx);
+    void WritePlayerStatisticsAllSkills(const uint32_t player_idx);
     void WritePlayerStatistics(const uint32_t player_idx, const uint32_t skill_idx = -1, const bool full_info = false);
     void WritePartyStatistics();
+
     void ResetPlayerStatistics();
 
 private:
@@ -73,20 +84,21 @@ private:
     static void GetSkillName(const uint32_t skill_id, char* const skill_name);
     static void GetPlayerName(const GW::Agent* const agent, char* const agent_name);
 
-    void PartyClear();
-    void ClearPartyIndicies();
-    void ClearPartyStats();
+    bool PartySizeChange();
+
+    void SetPlayerStatistics();
 
     void SetPartyIndicies();
+    void SetPartyNames();
     void SetPartyStats();
-    void SetPartySkills();
-    void SetPartyData();
 
     GW::HookEntry MapLoaded_Entry;
     GW::HookEntry GenericValueSelf_Entry;
     GW::HookEntry GenericValueTarget_Entry;
 
+    PartyIds party_ids;
     PartyIndicies party_indicies;
+    PartyNames party_names;
     PartySkillCounts party_stats;
 
     clock_t send_timer;
