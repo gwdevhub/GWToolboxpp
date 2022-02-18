@@ -16,6 +16,7 @@
 
 class PartyStatisticsWindow : public ToolboxWindow {
 public:
+    static constexpr float TIME_DIFF_THRESH = 600.0F;
     static constexpr uint32_t MAX_NUM_SKILLS = 8;
 
     typedef struct {

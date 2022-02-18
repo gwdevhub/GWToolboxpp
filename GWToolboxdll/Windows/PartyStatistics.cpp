@@ -136,7 +136,7 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
 
 void PartyStatisticsWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
-    if (!chat_queue.empty() && TIMER_DIFF(send_timer) > 600.0F) {
+    if (!chat_queue.empty() && TIMER_DIFF(send_timer) > TIME_DIFF_THRESH) {
         send_timer = TIMER_INIT();
         if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType()) return;
         if (!GW::Agents::GetPlayer()) return;
