@@ -365,11 +365,12 @@ void PartyStatisticsWindow::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::GenericValueTarget* packet) -> void {
             UNREFERENCED_PARAMETER(status);
-            const uint32_t value_id = packet->Value_id;
-            const uint32_t caster_id = packet->caster;
-            const uint32_t target_id = packet->target;
-            const uint32_t value = packet->value;
-            const bool no_target = false;
+
+            const auto value_id = packet->Value_id;
+            const auto caster_id = packet->caster;
+            const auto target_id = packet->target;
+            const auto value = packet->value;
+            const auto no_target = false;
             HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
         });
 
@@ -423,7 +424,7 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkillCounts& party_membe
     snprintf(header_label, buffer_length, "%s", agent_name);
 
     static auto is_open = true;
-    if (ImGui::CollapsingHeader(header_label, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader(header_label, &is_open)) {
         auto total_num_skills = uint32_t{0};
         std::for_each(party_member_stats.skill_counts.begin(), party_member_stats.skill_counts.end(),
             [&total_num_skills](const SkillCount& p) { total_num_skills += p.skill_count; });
