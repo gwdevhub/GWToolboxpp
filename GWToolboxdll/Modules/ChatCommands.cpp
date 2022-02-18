@@ -1734,33 +1734,49 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
 void ChatCommands::CmdSkillStatistics(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
 
+    /* command: /skillstats */
     if (argc < 2) {
         PartyStatisticsWindow::Instance().WritePartyStatistics();
         return;
     }
 
-    std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    const auto arg1 = GuiUtils::ToLower(argv[1]);
 
     if (argc == 2) {
+        /* command: /skillstats reset */
         if (arg1 == L"reset") {
             PartyStatisticsWindow::Instance().ResetPlayerStatistics();
-        } else {
+        }
+        /* command: /skllstats playerNum */
+        else {
             auto player_number = uint32_t{0};
             GuiUtils::ParseUInt(argv[1], &player_number);
             --player_number; // List will start at index zero
 
             PartyStatisticsWindow::Instance().WritePlayerStatistics(player_number);
         }
-    } else if (argc == 3) {
-        if (arg1 == L"full") {
-            auto player_number = uint32_t{0};
-            GuiUtils::ParseUInt(argv[2], &player_number);
-            --player_number; // List will start at 5index zero
 
-            PartyStatisticsWindow::Instance().WritePlayerStatistics(player_number, static_cast<uint32_t>(-1), true);
-        }
+        return;
+    }
+
+    const auto arg2 = GuiUtils::ToLower(argv[2]);
+
+    if (argc >= 3) {
+        const auto full_team_idxs = static_cast<uint32_t>(-1);
+        const auto player_number_arg = argv[1];
         auto player_number = uint32_t{0};
-        GuiUtils::ParseUInt(argv[1], &player_number);
+
+        /* command: /skillstats playerNum full */
+        if (arg2 == L"full") {
+            GuiUtils::ParseUInt(player_number_arg, &player_number);
+            --player_number; // List will start at index zero
+
+            PartyStatisticsWindow::Instance().WritePlayerStatistics(player_number, full_team_idxs, true);
+            return;
+        }
+
+        /* command: /skillstats playerNum skillNum */
+        GuiUtils::ParseUInt(player_number_arg, &player_number);
         --player_number; // List will start at index zero
 
         auto skill_number = uint32_t{0};
