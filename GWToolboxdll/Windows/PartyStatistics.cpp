@@ -42,10 +42,22 @@ void PartyStatisticsWindow::GetPlayerName(const GW::Agent* const agent, char* co
     GW::UI::AsyncDecodeStr(buffer, agent_name, buffer_length);
 }
 
-void PartyStatisticsWindow::PartyClearCallback() {
-    Instance().ClearPartyIndicies();
-    Instance().ClearPartyStats();
-    Instance().SetPartyData();
+void PartyStatisticsWindow::PartyClear() {
+    if (GW::Constants::InstanceType::Outpost != GW::Map::GetInstanceType()) return;
+
+    static auto last_party_size = static_cast<size_t>(-1);
+    if (static_cast<size_t>(-1) == last_party_size) {
+        last_party_size = GW::PartyMgr::GetPartySize();
+    }
+
+    const auto current_party_size = GW::PartyMgr::GetPartySize();
+    const auto party_size_change = current_party_size != last_party_size;
+    if (party_size_change) {
+        ClearPartyIndicies();
+        ClearPartyStats();
+        SetPartyData();
+        last_party_size = current_party_size;
+    }
 }
 
 void PartyStatisticsWindow::ClearPartyIndicies() { party_indicies.clear(); }
@@ -68,8 +80,8 @@ void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC:
     }
 }
 
-void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
-    const uint32_t value, const bool no_target) {
+void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_t caster_id,
+    const uint32_t target_id, const uint32_t value, const bool no_target) {
     auto agent_id = caster_id;
     const auto activated_skill_id = value;
 
@@ -335,14 +347,6 @@ void PartyStatisticsWindow::Initialize() {
 
     ToolboxWindow::Initialize();
 
-    /* Reset party data on player add */
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Callback,
-        [this](GW::HookStatus*, GW::Packet::StoC::PartyPlayerAdd*) -> void { PartyClearCallback(); });
-
-    /* Reset party data on player remove */
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(&PartyPlayerRemove_Callback,
-        [this](GW::HookStatus*, GW::Packet::StoC::PartyPlayerRemove*) -> void { PartyClearCallback(); });
-
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, &MapLoadedCallback);
 
     /* Skill on self or party mate */
@@ -381,7 +385,7 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!GW::PartyMgr::GetIsPartyLoaded()) return;
     if (!GW::Map::GetIsMapLoaded()) return;
 
-    PartyClearCallback();
+    PartyClear();
 
     if (party_stats.empty()) {
         SetPartyData();

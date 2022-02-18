@@ -60,7 +60,6 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
-    static void PartyClearCallback();
     static void MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded* packet);
     static void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
         const uint32_t value, const bool no_target);
@@ -74,6 +73,7 @@ private:
     static void GetSkillName(const uint32_t skill_id, char* const skill_name);
     static void GetPlayerName(const GW::Agent* const agent, char* const agent_name);
 
+    void PartyClear();
     void ClearPartyIndicies();
     void ClearPartyStats();
 
@@ -83,8 +83,6 @@ private:
     void SetPartyData();
 
     GW::HookEntry MapLoaded_Entry;
-    GW::HookEntry PartyPlayerAdd_Callback;
-    GW::HookEntry PartyPlayerRemove_Callback;
     GW::HookEntry GenericValueSelf_Entry;
     GW::HookEntry GenericValueTarget_Entry;
 
