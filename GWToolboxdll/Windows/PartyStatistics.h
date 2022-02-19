@@ -96,8 +96,6 @@ private:
     void SetPartyNames();
     void SetPartyStats();
 
-    bool in_explorable = false;
-
     GW::HookEntry MapLoaded_Entry;
     GW::HookEntry GenericValueSelf_Entry;
     GW::HookEntry GenericValueTarget_Entry;
