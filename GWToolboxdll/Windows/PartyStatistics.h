@@ -18,9 +18,9 @@
 
 class PartyStatisticsWindow : public ToolboxWindow {
 public:
-    static constexpr float TIME_DIFF_THRESH = 600.0F;
-    static constexpr uint32_t MAX_NUM_SKILLS = 8;
-    static constexpr uint32_t NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
+    static constexpr auto TIME_DIFF_THRESH = float{600.0F};
+    static constexpr auto MAX_NUM_SKILLS = uint32_t{8};
+    static constexpr auto NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
 
     using PartyIds = std::set<uint32_t>;
     using PartyIndicies = std::map<uint32_t, size_t>;
@@ -42,7 +42,8 @@ public:
     using PartySkills = std::vector<PlayerSkills>;
 
     PartyStatisticsWindow()
-        : party_ids(PartyIds{})
+        : party_size(size_t{})
+        , party_ids(PartyIds{})
         , party_skills(PartySkills{})
         , party_indicies(PartyIndicies{})
         , party_names(PartyNames{})
@@ -100,6 +101,7 @@ private:
     GW::HookEntry GenericValueSelf_Entry;
     GW::HookEntry GenericValueTarget_Entry;
 
+    size_t party_size;
     PartyIds party_ids;
     PartyIndicies party_indicies;
     PartyNames party_names;

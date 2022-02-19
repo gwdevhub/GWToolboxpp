@@ -46,12 +46,14 @@ bool PartyStatisticsWindow::PartySizeChanged() {
     static auto last_party_size = static_cast<size_t>(-1);
     if (static_cast<size_t>(-1) == last_party_size) {
         last_party_size = GW::PartyMgr::GetPartySize();
+        party_size = last_party_size;
     }
 
     const auto current_party_size = GW::PartyMgr::GetPartySize();
     const auto party_size_change = current_party_size != last_party_size;
     if (party_size_change) {
         last_party_size = current_party_size;
+        party_size = last_party_size;
     }
 
     return party_size_change;
@@ -110,13 +112,13 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
 
     /* Other player skill casted for the first time */
     if (!skill_found) {
-        for (auto& [id, count, name] : member_skills) {
-            if (NONE_SKILL != id) continue;
+        for (auto& [skill_id, count, name] : member_skills) {
+            if (NONE_SKILL != skill_id) continue;
 
             char skill_name[buffer_length] = {'\0'};
             GetSkillName(activated_skill_id, skill_name);
 
-            id = activated_skill_id;
+            skill_id = activated_skill_id;
             count = 1;
             name = std::string{skill_name};
 
@@ -189,13 +191,13 @@ void PartyStatisticsWindow::WritePlayerStatisticsAllSkills(const uint32_t player
     for (size_t i = 0; i < num_skills; ++i) {
         const auto skill_count = member_skills[i].count;
 
-        if (i == (num_skills - 1)) {
-            member_stats_str += std::to_string(skill_count);
+        member_stats_str += std::to_string(skill_count);
 
-        } else {
-            member_stats_str += std::to_string(skill_count) + " - ";
+        if (i < (num_skills - 1)) {
+            member_stats_str += ", ";
         }
     }
+
     member_stats_str += "]";
 
     chat_queue.push(std::wstring(member_stats_str.begin(), member_stats_str.end()));
@@ -278,7 +280,7 @@ void PartyStatisticsWindow::SetPartyNames() {
     party_names.clear();
 
     for (const auto id : party_ids) {
-        party_names[id] = std::string{"Unknown Player"};
+        party_names[id] = std::string{"Hero/Henchman Slot"};
     }
 
     for (const auto agent : agents) {
@@ -292,7 +294,7 @@ void PartyStatisticsWindow::SetPartyNames() {
         char agent_name[buffer_length] = {'\0'};
         GetPlayerName(agent, agent_name);
 
-        if (0 == strlen(agent_name)) continue;
+        if (0 == strlen(agent_name)) continue; /* Should not occur */
 
         party_names[id] = std::string{agent_name};
     }
@@ -300,15 +302,6 @@ void PartyStatisticsWindow::SetPartyNames() {
 
 void PartyStatisticsWindow::SetPartyStats() {
     if (!GW::PartyMgr::GetIsPartyLoaded()) return;
-
-    const auto info = GW::PartyMgr::GetPartyInfo();
-    if (nullptr == info) return;
-
-    const auto party_size = GW::PartyMgr::GetPartySize();
-    if (0U == party_size) return;
-
-    const auto agents = GW::Agents::GetAgentArray();
-    if (!agents.valid()) return;
 
     party_skills.clear();
     party_skills = std::vector<PlayerSkills>(party_size, PlayerSkills{});
@@ -429,8 +422,6 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
     }
 
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        const auto party_size = party_skills.size();
-
         for (const auto& member_stats : party_skills) {
             DrawPartyMember(member_stats);
         }
@@ -443,22 +434,10 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkills& member_stats) {
     const auto buffer_length = size_t{32};
     char header_label[buffer_length] = {'\0'};
 
-    const auto agent = GW::Agents::GetAgentByID(member_stats.agent_id);
-
     const auto agent_name = party_names[member_stats.agent_id];
+    snprintf(header_label, buffer_length, "%s###%u", agent_name.c_str(), member_stats.agent_id);
 
-    snprintf(header_label, buffer_length, "%s", agent_name.c_str());
-
-    // hero or hench is unknown in outpost
-    if (nullptr == agent) {
-        if (ImGui::CollapsingHeader(header_label)) {
-            ImGui::Text("Hero/Hench data cannot be loded in outpost.");
-        }
-        return;
-    }
-
-    static auto is_open = true;
-    if (ImGui::CollapsingHeader(header_label, &is_open)) {
+    if (ImGui::CollapsingHeader(header_label)) {
         auto total_num_skills = uint32_t{0};
         std::for_each(member_stats.skills.begin(), member_stats.skills.end(),
             [&total_num_skills](const Skill& p) { total_num_skills += p.count; });
