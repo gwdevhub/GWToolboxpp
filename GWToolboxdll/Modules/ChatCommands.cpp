@@ -1745,7 +1745,7 @@ void ChatCommands::CmdSkillStatistics(const wchar_t* message, int argc, LPWSTR* 
     if (argc == 2) {
         /* command: /skillstats reset */
         if (arg1 == L"reset") {
-            PartyStatisticsWindow::Instance().ResetPlayerStatistics();
+            PartyStatisticsWindow::Instance().UnsetPlayerStatistics();
         }
         /* command: /skllstats playerNum */
         else {
