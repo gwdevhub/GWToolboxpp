@@ -3,8 +3,8 @@
 #include <Timer.h>
 #include <array>
 #include <map>
-#include <set>
 #include <queue>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -27,22 +27,23 @@ public:
     using PartyNames = std::map<uint32_t, std::string>;
 
     typedef struct {
-        uint32_t skill_id;
-        uint32_t skill_count;
-    } SkillCount;
+        uint32_t id;
+        uint32_t count;
+        std::string name;
+    } Skill;
 
-    using SkillCounts = std::array<SkillCount, MAX_NUM_SKILLS>;
+    using Skills = std::array<Skill, MAX_NUM_SKILLS>;
 
     typedef struct {
         uint32_t agent_id;
-        SkillCounts skill_counts;
-    } PlayerSkillCounts;
+        Skills skills;
+    } PlayerSkills;
 
-    using PartySkillCounts = std::vector<PlayerSkillCounts>;
+    using PartySkills = std::vector<PlayerSkills>;
 
     PartyStatisticsWindow()
         : party_ids(PartyIds{})
-        , party_stats(PartySkillCounts{})
+        , party_skills(PartySkills{})
         , party_indicies(PartyIndicies{})
         , party_names(PartyNames{})
         , chat_queue(std::queue<std::wstring>{})
@@ -58,17 +59,18 @@ public:
     const char* Icon() const override { return ICON_FA_TABLE; }
 
     void Initialize() override;
+    void Terminate() override;
 
     void Draw(IDirect3DDevice9* pDevice) override;
-    void DrawPartyMember(const PlayerSkillCounts& party_member_stats);
+    void DrawPartyMember(const PlayerSkills& party_member_stats);
     void Update(float delta) override;
 
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
-    static void MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded* packet);
-    static void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
+    void MapLoadedCallback();
+    void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
         const uint32_t value, const bool no_target);
 
     void WritePlayerStatisticsSingleSkill(const uint32_t player_idx, const uint32_t skill_idx);
@@ -77,20 +79,24 @@ public:
     void WritePlayerStatistics(const uint32_t player_idx, const uint32_t skill_idx = -1, const bool full_info = false);
     void WritePartyStatistics();
 
-    void ResetPlayerStatistics();
+    void UnsetPlayerStatistics();
 
 private:
     static const GW::Skillbar* GetPlayerSkillbar(const uint32_t player_id);
-    static void GetSkillName(const uint32_t skill_id, char* const skill_name);
+    static void GetSkillName(const uint32_t id, char* const skill_name);
     static void GetPlayerName(const GW::Agent* const agent, char* const agent_name);
+    static std::string GetSkillFullInfoString(
+        const std::string agent_name, const std::string skill_name, const uint32_t skill_count);
 
-    bool PartySizeChange();
+    bool PartySizeChanged();
 
     void SetPlayerStatistics();
 
     void SetPartyIndicies();
     void SetPartyNames();
     void SetPartyStats();
+
+    bool in_explorable = false;
 
     GW::HookEntry MapLoaded_Entry;
     GW::HookEntry GenericValueSelf_Entry;
@@ -99,7 +105,7 @@ private:
     PartyIds party_ids;
     PartyIndicies party_indicies;
     PartyNames party_names;
-    PartySkillCounts party_stats;
+    PartySkills party_skills;
 
     clock_t send_timer;
     std::queue<std::wstring> chat_queue;

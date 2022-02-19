@@ -42,7 +42,7 @@ void PartyStatisticsWindow::GetPlayerName(const GW::Agent* const agent, char* co
     GW::UI::AsyncDecodeStr(buffer, agent_name, buffer_length);
 }
 
-bool PartyStatisticsWindow::PartySizeChange() {
+bool PartyStatisticsWindow::PartySizeChanged() {
     static auto last_party_size = static_cast<size_t>(-1);
     if (static_cast<size_t>(-1) == last_party_size) {
         last_party_size = GW::PartyMgr::GetPartySize();
@@ -57,25 +57,30 @@ bool PartyStatisticsWindow::PartySizeChange() {
     return party_size_change;
 }
 
-void PartyStatisticsWindow::ResetPlayerStatistics() {
+void PartyStatisticsWindow::UnsetPlayerStatistics() {
     party_ids.clear();
     party_indicies.clear();
     party_names.clear();
-    party_stats.clear();
+    party_skills.clear();
 }
 
-void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded* packet) {
-    UNREFERENCED_PARAMETER(packet);
-
+void PartyStatisticsWindow::MapLoadedCallback() {
     switch (GW::Map::GetInstanceType()) {
-        case GW::Constants::InstanceType::Explorable: {
-            Instance().ResetPlayerStatistics();
-            Instance().SetPlayerStatistics();
+        case GW::Constants::InstanceType::Outpost: {
+            in_explorable = false;
+            UnsetPlayerStatistics();
+            SetPlayerStatistics();
             break;
         }
-        default: {
+        case GW::Constants::InstanceType::Explorable:
+            if (!in_explorable) {
+                in_explorable = true;
+                UnsetPlayerStatistics();
+                SetPlayerStatistics();
+            }
             break;
-        }
+        case GW::Constants::InstanceType::Loading:
+        default: break;
     }
 }
 
@@ -100,25 +105,35 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
         }
     }
 
-    const auto agent_idx = Instance().party_indicies[agent_id];
-    auto& member_skill_counts = Instance().party_stats[agent_idx].skill_counts;
+    if (party_indicies.empty() || party_skills.empty()) return;
 
-    const auto skill_it = std::find_if(member_skill_counts.begin(), member_skill_counts.end(),
-        [&activated_skill_id](const auto val) { return val.skill_id == activated_skill_id; });
-    const auto skill_found = skill_it != member_skill_counts.end();
+    const auto buffer_length = size_t{32};
 
+    const auto agent_idx = party_indicies[agent_id];
+    auto& member_skills = party_skills[agent_idx].skills;
+
+    const auto skill_it = std::find_if(member_skills.begin(), member_skills.end(),
+        [&activated_skill_id](const auto skill) { return skill.id == activated_skill_id; });
+    const auto skill_found = skill_it != member_skills.end();
+
+    /* Other player skill casted for the first time */
     if (!skill_found) {
-        for (auto& [skill_id, count] : member_skill_counts) {
-            if (NONE_SKILL != skill_id) continue;
+        for (auto& [id, count, name] : member_skills) {
+            if (NONE_SKILL != id) continue;
 
-            skill_id = activated_skill_id;
+            char skill_name[buffer_length] = {'\0'};
+            GetSkillName(activated_skill_id, skill_name);
+
+            id = activated_skill_id;
             count = 1;
+            name = std::string{skill_name};
+
             break;
         }
         return;
     }
 
-    for (auto& [skill_id, count] : member_skill_counts) {
+    for (auto& [skill_id, count, _] : member_skills) {
         if (activated_skill_id == skill_id) {
             ++count;
             break;
@@ -139,64 +154,48 @@ void PartyStatisticsWindow::Update(float delta) {
     }
 }
 
-std::string GetSkillFullInfoString(
-    const char* const agent_name, const char* const skill_name, const uint32_t skill_count) {
-    return std::string(agent_name) + std::string{" Used Skill "} + std::string{skill_name} + std::string{" "} +
-           std::to_string(skill_count) + std::string{" times."};
+std::string PartyStatisticsWindow::GetSkillFullInfoString(
+    const std::string agent_name, const std::string skill_name, const uint32_t skill_count) {
+    return agent_name + std::string{" Used Skill "} + skill_name + std::string{" "} + std::to_string(skill_count) +
+           std::string{" times."};
 }
 
 void PartyStatisticsWindow::WritePlayerStatisticsSingleSkill(const uint32_t player_idx, const uint32_t skill_idx) {
     if (skill_idx > (MAX_NUM_SKILLS - 1)) return;
 
-    const auto buffer_length = size_t{64};
-
-    const auto& party_member_stats = party_stats[player_idx];
-    const auto& party_member_skill_counts = party_member_stats.skill_counts;
+    const auto& party_member_stats = party_skills[player_idx];
+    const auto& party_member_skills = party_member_stats.skills;
     const auto& agent_name = party_names[party_member_stats.agent_id];
 
-    const auto num_skills = party_member_skill_counts.size();
+    const auto skill_count = party_member_skills[skill_idx].count;
+    const auto skill_name = party_member_skills[skill_idx].name;
 
-    const auto skill_id = party_member_skill_counts[skill_idx].skill_id;
-    const auto skill_count = party_member_skill_counts[skill_idx].skill_count;
-
-    char skill_name[buffer_length] = {'\0'};
-    GetSkillName(skill_id, skill_name);
-    const auto member_stats_str = GetSkillFullInfoString(agent_name.c_str(), skill_name, skill_count);
+    const auto member_stats_str = GetSkillFullInfoString(agent_name, skill_name, skill_count);
 
     chat_queue.push(std::wstring(member_stats_str.begin(), member_stats_str.end()));
 }
 
 void PartyStatisticsWindow::WritePlayerStatisticsAllSkillsFullInfo(const uint32_t player_idx) {
-    const auto buffer_length = size_t{64};
-
-    const auto& party_member_stats = party_stats[player_idx];
-    const auto& party_member_skill_counts = party_member_stats.skill_counts;
+    const auto& party_member_stats = party_skills[player_idx];
+    const auto& party_member_skills = party_member_stats.skills;
     const auto& agent_name = party_names[party_member_stats.agent_id];
 
-    const auto num_skills = party_member_skill_counts.size();
-
-    for (size_t i = 0; i < num_skills; ++i) {
-        const auto skill_id = party_member_skill_counts[i].skill_id;
-        const auto skill_count = party_member_skill_counts[i].skill_count;
-
-        char skill_name[buffer_length] = {'\0'};
-        GetSkillName(skill_id, skill_name);
-
-        const auto member_stats_str = GetSkillFullInfoString(agent_name.c_str(), skill_name, skill_count);
+    for (const auto& [_, skill_count, skill_name] : party_member_skills) {
+        const auto member_stats_str = GetSkillFullInfoString(agent_name, skill_name, skill_count);
 
         chat_queue.push(std::wstring(member_stats_str.begin(), member_stats_str.end()));
     }
 }
 
 void PartyStatisticsWindow::WritePlayerStatisticsAllSkills(const uint32_t player_idx) {
-    const auto& party_member_stats = party_stats[player_idx];
-    const auto& party_member_skill_counts = party_member_stats.skill_counts;
+    const auto& party_member_stats = party_skills[player_idx];
+    const auto& party_member_skills = party_member_stats.skills;
     const auto& agent_name = party_names[party_member_stats.agent_id];
 
     auto member_stats_str = std::string(agent_name) + std::string{" ["};
-    const auto num_skills = party_member_skill_counts.size();
+    const auto num_skills = party_member_skills.size();
     for (size_t i = 0; i < num_skills; ++i) {
-        const auto skill_count = party_member_skill_counts[i].skill_count;
+        const auto skill_count = party_member_skills[i].count;
 
         if (i == (num_skills - 1)) {
             member_stats_str += std::to_string(skill_count);
@@ -214,7 +213,7 @@ void PartyStatisticsWindow::WritePlayerStatistics(
     const uint32_t player_idx, const uint32_t skill_idx, const bool full_info) {
     if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType()) return;
 
-    if (player_idx >= party_stats.size()) return;
+    if (player_idx >= party_skills.size()) return;
 
     if (static_cast<uint32_t>(-1) != skill_idx) {
         WritePlayerStatisticsSingleSkill(player_idx, skill_idx);
@@ -226,7 +225,7 @@ void PartyStatisticsWindow::WritePlayerStatistics(
 }
 
 void PartyStatisticsWindow::WritePartyStatistics() {
-    for (size_t i = 0; i < party_stats.size(); ++i) {
+    for (size_t i = 0; i < party_skills.size(); ++i) {
         WritePlayerStatistics(i);
     }
 }
@@ -243,8 +242,6 @@ const GW::Skillbar* PartyStatisticsWindow::GetPlayerSkillbar(const uint32_t play
 }
 
 void PartyStatisticsWindow::SetPartyIndicies() {
-    if (!GW::PartyMgr::GetIsPartyLoaded()) return;
-
     GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (info == nullptr) return;
 
@@ -280,7 +277,7 @@ void PartyStatisticsWindow::SetPartyNames() {
     const auto buffer_length = size_t{32};
 
     for (const auto id : party_ids) {
-        party_names[id] = std::string{"Unknown"};
+        party_names[id] = std::string{"Unknown Player"};
     }
 
     for (const auto agent : agents) {
@@ -310,49 +307,48 @@ void PartyStatisticsWindow::SetPartyStats() {
     const auto agents = GW::Agents::GetAgentArray();
     if (!agents.valid()) return;
 
-    party_stats = std::vector<PlayerSkillCounts>(party_size, PlayerSkillCounts{});
+    party_skills = std::vector<PlayerSkills>(party_size, PlayerSkills{});
 
     for (const auto [agent_id, party_idx] : party_indicies) {
-        party_stats[party_idx] = {agent_id, SkillCounts{}};
+        party_skills[party_idx] = {agent_id, Skills{}};
     }
 
+    const auto buffer_length = size_t{32};
+
     auto party_idx = size_t{0};
-    for (auto& member_stats : party_stats) {
-        auto& player_skill_counts = party_stats[party_idx];
+    for (auto& member_stats : party_skills) {
+        auto& player_skills = party_skills[party_idx];
         ++party_idx;
 
         const auto id = member_stats.agent_id;
 
         const auto skillbar = GetPlayerSkillbar(id);
-        auto skill_counts = SkillCounts{};
+        auto skills = Skills{};
 
         /* Skillbar for other players and henchmen is unknown in outpost init with No_Skill */
         if (nullptr == skillbar) {
             for (size_t skill_idx = 0; skill_idx < MAX_NUM_SKILLS; ++skill_idx) {
-                skill_counts[skill_idx] = {NONE_SKILL, 0U};
+                skills[skill_idx] = {NONE_SKILL, 0U, std::string{"Unknown Skill"}};
             }
-            player_skill_counts.skill_counts = skill_counts;
+            player_skills.skills = skills;
             continue;
         }
 
         auto skill_idx = size_t{0};
         for (const auto& skill : skillbar->skills) {
-            skill_counts[skill_idx] = {skill.skill_id, 0U};
+            char skill_name[buffer_length] = {'\0'};
+            GetSkillName(skill.skill_id, skill_name);
+
+            skills[skill_idx] = {skill.skill_id, 0U, std::string{skill_name}};
             ++skill_idx;
         }
 
-        player_skill_counts.skill_counts = skill_counts;
+        player_skills.skills = skills;
     }
 }
 
 void PartyStatisticsWindow::SetPlayerStatistics() {
-    if (!GW::Map::GetIsMapLoaded()) return;
-
-    const auto party_size = GW::PartyMgr::GetPartySize();
-    if (0U == party_size) return;
-
-    const auto agents = GW::Agents::GetAgentArray();
-    if (!agents.valid()) return;
+    if (!GW::PartyMgr::GetIsPartyLoaded()) return;
 
     SetPartyIndicies();
     SetPartyNames();
@@ -364,7 +360,13 @@ void PartyStatisticsWindow::Initialize() {
 
     ToolboxWindow::Initialize();
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, &MapLoadedCallback);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(
+        &MapLoaded_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::MapLoaded* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
+            UNREFERENCED_PARAMETER(packet);
+
+            return MapLoadedCallback();
+        });
 
     /* Skill on self or party player */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
@@ -392,7 +394,12 @@ void PartyStatisticsWindow::Initialize() {
             SkillCallback(value_id, caster_id, target_id, value, no_target);
         });
 
-    ResetPlayerStatistics();
+    UnsetPlayerStatistics();
+}
+
+void PartyStatisticsWindow::Terminate() {
+    ToolboxWindow::Terminate();
+    UnsetPlayerStatistics();
 }
 
 void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -401,21 +408,21 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
 
     if (!GW::Map::GetIsMapLoaded()) return;
 
-    const auto party_size_changed = PartySizeChange();
+    const auto party_size_changed = PartySizeChanged();
 
     if (party_size_changed) {
-        ResetPlayerStatistics();
+        UnsetPlayerStatistics();
         SetPlayerStatistics();
     }
 
-    if (party_stats.empty()) {
+    if (party_skills.empty()) {
         SetPlayerStatistics();
     }
 
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        const auto party_size = party_stats.size();
+        const auto party_size = party_skills.size();
 
-        for (const auto& party_member_stats : party_stats) {
+        for (const auto& party_member_stats : party_skills) {
             DrawPartyMember(party_member_stats);
         }
     }
@@ -423,7 +430,7 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::End();
 }
 
-void PartyStatisticsWindow::DrawPartyMember(const PlayerSkillCounts& party_member_stats) {
+void PartyStatisticsWindow::DrawPartyMember(const PlayerSkills& party_member_stats) {
     const auto buffer_length = size_t{32};
     char header_label[buffer_length] = {'\0'};
 
@@ -444,24 +451,21 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkillCounts& party_membe
     static auto is_open = true;
     if (ImGui::CollapsingHeader(header_label, &is_open)) {
         auto total_num_skills = uint32_t{0};
-        std::for_each(party_member_stats.skill_counts.begin(), party_member_stats.skill_counts.end(),
-            [&total_num_skills](const SkillCount& p) { total_num_skills += p.skill_count; });
+        std::for_each(party_member_stats.skills.begin(), party_member_stats.skills.end(),
+            [&total_num_skills](const Skill& p) { total_num_skills += p.count; });
         if (static_cast<uint32_t>(0U) == total_num_skills) total_num_skills = 1U;
 
-        for (const auto [skill_id, count] : party_member_stats.skill_counts) {
-            char skill_name[buffer_length] = {'\0'};
-            GetSkillName(skill_id, skill_name);
-
-            const auto percentage = (static_cast<float>(count) / static_cast<float>(total_num_skills)) * 100.0F;
+        for (const auto [skill_id, skill_count, skill_name] : party_member_stats.skills) {
+            const auto percentage = (static_cast<float>(skill_count) / static_cast<float>(total_num_skills)) * 100.0F;
 
             if (show_perc_values && show_abs_values) {
-                ImGui::Text("%s: %u\t-\t%-3.2f%%", skill_name, count, percentage);
+                ImGui::Text("%s: %u\t-\t%-3.2f%%", skill_name.c_str(), skill_count, percentage);
             } else if (show_perc_values && !show_abs_values) {
-                ImGui::Text("%s: %-3.2f%%", skill_name, percentage);
+                ImGui::Text("%s: %-3.2f%%", skill_name.c_str(), percentage);
             } else if (!show_perc_values && show_abs_values) {
-                ImGui::Text("%s: %u", skill_name, percentage);
+                ImGui::Text("%s: %u", skill_name.c_str(), percentage);
             } else {
-                ImGui::Text("%s", skill_name);
+                ImGui::Text("%s", skill_name.c_str());
             }
         }
     }
