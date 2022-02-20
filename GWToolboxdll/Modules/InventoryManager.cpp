@@ -54,24 +54,7 @@ namespace {
         uint32_t bag_slot = (uint32_t)bag_idx << 16 | slot;
         pending_moves[bag_slot] = { (uint16_t)(get_pending_move(bag_idx, slot) + quantity_to_move), TIMER_INIT() };
     }
-    // GW Client doesn't actually know max material storage size for the account.
-    // We can make a guess by checking how many materials are currently in storage.
-    uint16_t MaxMaterialStorage() {
-        uint16_t max_mat_storage_size = 250u;
-        GW::Bag* bag = GW::Items::GetBag(GW::Constants::Bag::Material_Storage);
-        if (!bag || !bag->items.valid() || !bag->items_count)
-            return max_mat_storage_size;
-        GW::Item* b_item = nullptr;
-        for (size_t i = GW::Constants::MaterialSlot::Bone; i < GW::Constants::MaterialSlot::N_MATS; i++) {
-            b_item = bag->items[i];
-            if (!b_item || b_item->quantity <= max_mat_storage_size)
-                continue;
-            while (b_item->quantity > max_mat_storage_size) {
-                max_mat_storage_size += 250u;
-            }
-        }
-        return max_mat_storage_size;
-    }
+
     // GW Client doesn't actually know max material storage size for the account.
 // We can make a guess by checking how many materials are currently in storage.
     uint16_t MaxSlotSize(GW::Constants::Bag bag_idx) {
