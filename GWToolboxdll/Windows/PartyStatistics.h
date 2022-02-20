@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Timer.h>
 #include <array>
 #include <map>
 #include <queue>
@@ -14,13 +13,17 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Packets/StoC.h>
 
+#include <Timer.h>
 #include <ToolboxWindow.h>
 
 class PartyStatisticsWindow : public ToolboxWindow {
-public:
+protected:
     static constexpr auto TIME_DIFF_THRESH = float{600.0F};
-    static constexpr auto MAX_NUM_SKILLS = uint32_t{8};
+    static constexpr auto MAX_NUM_SKILLS = size_t{8};
+    static constexpr auto NONE_PLAYER_NAME = "Hero/Henchman Slot";
     static constexpr auto NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
+    static constexpr auto NONE_SKILL_NAME = "Unknown Skill";
+    static constexpr auto BUFFER_LENGTH = size_t{256};
 
     using PartyIds = std::set<uint32_t>;
     using PartyIndicies = std::map<uint32_t, size_t>;
@@ -41,6 +44,13 @@ public:
 
     using PartySkills = std::vector<PlayerSkills>;
 
+    static const GW::Skillbar* GetPlayerSkillbar(const uint32_t player_id);
+    static void GetSkillName(const uint32_t id, char* const skill_name);
+    static void GetPlayerName(const GW::Agent* const agent, char* const agent_name);
+    static std::string GetSkillFullInfoString(
+        const std::string agent_name, const std::string skill_name, const uint32_t skill_count);
+
+public:
     PartyStatisticsWindow()
         : party_size(size_t{})
         , party_ids(PartyIds{})
@@ -70,32 +80,24 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
-    void MapLoadedCallback();
-    void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
-        const uint32_t value, const bool no_target);
-
-    void WritePlayerStatisticsSingleSkill(const uint32_t player_idx, const uint32_t skill_idx);
-    void WritePlayerStatisticsAllSkillsFullInfo(const uint32_t player_idx);
-    void WritePlayerStatisticsAllSkills(const uint32_t player_idx);
-    void WritePlayerStatistics(const uint32_t player_idx, const uint32_t skill_idx = -1, const bool full_info = false);
     void WritePartyStatistics();
+    void WritePlayerStatistics(const uint32_t player_idx, const uint32_t skill_idx = -1, const bool full_info = false);
+    void WritePlayerStatisticsAllSkills(const uint32_t player_idx);
+    void WritePlayerStatisticsAllSkillsFullInfo(const uint32_t player_idx);
+    void WritePlayerStatisticsSingleSkillFullInfo(const uint32_t player_idx, const uint32_t skill_idx);
 
     void UnsetPlayerStatistics();
 
 private:
-    static const GW::Skillbar* GetPlayerSkillbar(const uint32_t player_id);
-    static void GetSkillName(const uint32_t id, char* const skill_name);
-    static void GetPlayerName(const GW::Agent* const agent, char* const agent_name);
-    static std::string GetSkillFullInfoString(
-        const std::string agent_name, const std::string skill_name, const uint32_t skill_count);
-
+    void MapLoadedCallback();
+    void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
+        const uint32_t value, const bool no_target);
     bool PartySizeChanged();
 
     void SetPlayerStatistics();
-
     void SetPartyIndicies();
     void SetPartyNames();
-    void SetPartyStats();
+    void SetPartySkills();
 
     GW::HookEntry MapLoaded_Entry;
     GW::HookEntry GenericValueSelf_Entry;
