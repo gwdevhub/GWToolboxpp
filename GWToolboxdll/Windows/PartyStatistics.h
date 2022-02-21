@@ -20,19 +20,19 @@ class PartyStatisticsWindow : public ToolboxWindow {
 protected:
     static constexpr auto TIME_DIFF_THRESH = float{600.0F};
     static constexpr auto MAX_NUM_SKILLS = size_t{8};
-    static constexpr auto NONE_PLAYER_NAME = "Hero/Henchman Slot";
+    static constexpr auto NONE_PLAYER_NAME = L"Hero/Henchman Slot";
     static constexpr auto NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
-    static constexpr auto NONE_SKILL_NAME = "Unknown Skill";
+    static constexpr auto NONE_SKILL_NAME = L"Unknown Skill";
     static constexpr auto BUFFER_LENGTH = size_t{256};
 
     using PartyIds = std::set<uint32_t>;
     using PartyIndicies = std::map<uint32_t, size_t>;
-    using PartyNames = std::map<uint32_t, std::string>;
+    using PartyNames = std::map<uint32_t, std::wstring>;
 
     typedef struct {
         uint32_t id;
         uint32_t count;
-        std::string name;
+        std::wstring name;
     } Skill;
 
     using Skills = std::array<Skill, MAX_NUM_SKILLS>;
@@ -45,16 +45,17 @@ protected:
     using PartySkills = std::vector<PlayerSkills>;
 
     static const GW::Skillbar* GetPlayerSkillbar(const uint32_t player_id);
-    static void GetSkillName(const uint32_t id, char* const skill_name);
-    static void GetPlayerName(const GW::Agent* const agent, char* const agent_name);
-    static std::string GetSkillFullInfoString(
-        const std::string agent_name, const std::string skill_name, const uint32_t skill_count);
+    static void GetSkillName(const uint32_t id, wchar_t* const skill_name);
+    static void GetPlayerName(const GW::Agent* const agent, wchar_t* const agent_name);
+    static std::wstring GetSkillString(
+        const std::wstring agent_name, const std::wstring& skill_name, const uint32_t& skill_count);
 
 public:
     PartyStatisticsWindow()
         : party_size(size_t{})
+        , self_party_idx(static_cast<size_t>(-1))
         , party_ids(PartyIds{})
-        , party_skills(PartySkills{})
+        , party_stats(PartySkills{})
         , party_indicies(PartyIndicies{})
         , party_names(PartyNames{})
         , chat_queue(std::queue<std::wstring>{})
@@ -73,22 +74,20 @@ public:
     void Terminate() override;
 
     void Draw(IDirect3DDevice9* pDevice) override;
-    void DrawPartyMember(const PlayerSkills& party_member_stats);
     void Update(float delta) override;
 
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
-    void WritePartyStatistics();
-    void WritePlayerStatistics(const uint32_t player_idx, const uint32_t skill_idx = -1, const bool full_info = false);
-    void WritePlayerStatisticsAllSkills(const uint32_t player_idx);
-    void WritePlayerStatisticsAllSkillsFullInfo(const uint32_t player_idx);
-    void WritePlayerStatisticsSingleSkillFullInfo(const uint32_t player_idx, const uint32_t skill_idx);
-
+    void WritePlayerStatistics(const uint32_t player_idx = -1, const uint32_t skill_idx = -1);
     void UnsetPlayerStatistics();
 
 private:
+    void DrawPartyMember(const PlayerSkills& player_stats, const size_t party_idx);
+    void WritePlayerStatisticsAllSkills(const uint32_t player_idx);
+    void WritePlayerStatisticsSingleSkill(const uint32_t player_idx, const uint32_t skill_idx);
+
     void MapLoadedCallback();
     void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
         const uint32_t value, const bool no_target);
@@ -99,19 +98,23 @@ private:
     void SetPartyNames();
     void SetPartySkills();
 
+    bool in_explorable = false;
+
     GW::HookEntry MapLoaded_Entry;
     GW::HookEntry GenericValueSelf_Entry;
     GW::HookEntry GenericValueTarget_Entry;
 
     size_t party_size;
+    size_t self_party_idx;
     PartyIds party_ids;
     PartyIndicies party_indicies;
     PartyNames party_names;
-    PartySkills party_skills;
+    PartySkills party_stats;
 
     clock_t send_timer;
     std::queue<std::wstring> chat_queue;
 
     bool show_abs_values = true;
     bool show_perc_values = true;
+    bool print_by_click = true;
 };

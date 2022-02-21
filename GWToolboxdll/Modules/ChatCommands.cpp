@@ -1735,8 +1735,9 @@ void ChatCommands::CmdSkillStatistics(const wchar_t* message, int argc, LPWSTR* 
     UNREFERENCED_PARAMETER(message);
 
     /* command: /skillstats */
+    /* will write the stats of the self player */
     if (argc < 2) {
-        PartyStatisticsWindow::Instance().WritePartyStatistics();
+        PartyStatisticsWindow::Instance().WritePlayerStatistics();
         return;
     }
 
@@ -1759,23 +1760,11 @@ void ChatCommands::CmdSkillStatistics(const wchar_t* message, int argc, LPWSTR* 
         return;
     }
 
-    const auto arg2 = GuiUtils::ToLower(argv[2]);
-
+    /* command: /skillstats playerNum skillNum */
     if (argc >= 3) {
-        const auto full_team_idxs = static_cast<uint32_t>(-1);
         const auto player_number_arg = argv[1];
         auto player_number = uint32_t{0};
 
-        /* command: /skillstats playerNum full */
-        if (arg2 == L"full") {
-            GuiUtils::ParseUInt(player_number_arg, &player_number);
-            --player_number; // List will start at index zero
-
-            PartyStatisticsWindow::Instance().WritePlayerStatistics(player_number, full_team_idxs, true);
-            return;
-        }
-
-        /* command: /skillstats playerNum skillNum */
         GuiUtils::ParseUInt(player_number_arg, &player_number);
         --player_number; // List will start at index zero
 
