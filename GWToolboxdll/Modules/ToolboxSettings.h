@@ -19,7 +19,7 @@ public:
     const char* Icon() const override { return ICON_FA_TOOLBOX;  }
 
     void LoadModules(CSimpleIni* ini);
-
+    
     void Update(float delta) override;
 
     void LoadSettings(CSimpleIni* ini) override;
