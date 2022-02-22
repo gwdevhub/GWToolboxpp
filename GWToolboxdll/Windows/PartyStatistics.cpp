@@ -225,18 +225,49 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkills& player_stats, co
             ImGui::SetCursorPos(ImVec2{ImGui::GetCursorPos().x, ImGui::GetCursorPos().y - height});
         }
 
+        char table_name[BUFFER_LENGTH] = {'\0'};
+        snprintf(table_name, BUFFER_LENGTH, "###Table%d", party_idx);
+
+        const float width = ImGui::GetWindowWidth();
+
+        if (show_perc_values && show_abs_values) {
+            ImGui::Columns(3, table_name, false);
+            ImGui::SetColumnWidth(0, width * 0.6F);
+            ImGui::SetColumnWidth(1, width * 0.2F);
+            ImGui::SetColumnWidth(2, width * 0.2F);
+        } else if (show_perc_values || show_abs_values) {
+            ImGui::Columns(2, table_name, false);
+            ImGui::SetColumnWidth(0, width * 0.7F);
+            ImGui::SetColumnWidth(1, width * 0.3F);
+        }
+
         for (const auto [skill_id, skill_count, skill_name] : player_stats.skills) {
             const float percentage = (static_cast<float>(skill_count) / static_cast<float>(total_num_skills)) * 100.0F;
 
+            ImGui::Text("%ls", skill_name.c_str());
+
             if (show_perc_values && show_abs_values) {
-                ImGui::Text("%ls: %u\t-\t%-3.2f%%", skill_name.c_str(), skill_count, percentage);
+                ImGui::NextColumn();
+                ImGui::Text("%u", skill_count);
+                ImGui::NextColumn();
+                ImGui::Text("%.2f%%", percentage);
+                ImGui::NextColumn();
+                ImGui::Separator();
             } else if (show_perc_values && !show_abs_values) {
-                ImGui::Text("%ls: %-3.2f%%", skill_name.c_str(), percentage);
+                ImGui::NextColumn();
+                ImGui::Text("%.2f%%", percentage);
+                ImGui::NextColumn();
+                ImGui::Separator();
             } else if (!show_perc_values && show_abs_values) {
-                ImGui::Text("%ls: %u", skill_name.c_str(), percentage);
-            } else {
-                ImGui::Text("%ls", skill_name.c_str());
+                ImGui::NextColumn();
+                ImGui::Text("%u", skill_count);
+                ImGui::NextColumn();
+                ImGui::Separator();
             }
+        }
+
+        if (show_perc_values || show_abs_values) {
+            ImGui::EndColumns();
         }
     }
 }
