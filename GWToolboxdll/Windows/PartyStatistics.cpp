@@ -84,13 +84,7 @@ void PartyStatisticsWindow::Initialize() {
 
     ToolboxWindow::Initialize();
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(
-        &MapLoaded_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::MapLoaded* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            UNREFERENCED_PARAMETER(packet);
-
-            return MapLoadedCallback();
-        });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, &MapLoadedCallback);
 
     /* Skill on self or party player */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
@@ -276,17 +270,17 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkills& player_stats, co
 /* Callback Methods */
 /********************/
 
-void PartyStatisticsWindow::MapLoadedCallback() {
+void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
     switch (GW::Map::GetInstanceType()) {
         case GW::Constants::InstanceType::Explorable: {
-            if (!in_explorable) {
-                in_explorable = true;
-                UnsetPlayerStatistics();
+            if (!Instance().in_explorable) {
+                Instance().in_explorable = true;
+                Instance().UnsetPlayerStatistics();
             }
             break;
         }
         case GW::Constants::InstanceType::Outpost: {
-            in_explorable = false;
+            Instance().in_explorable = false;
             break;
         }
         case GW::Constants::InstanceType::Loading:
