@@ -25,28 +25,32 @@
 /* Static Helper Methods */
 /*************************/
 
-std::wstring PartyStatisticsWindow::GetSkillName(const uint32_t skill_id) {
+std::wstring PartyStatisticsWindow::GetSkillName(
+    const uint32_t skill_id, const size_t party_idx, const size_t skill_idx) {
     const GW::Skill& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
 
-    wchar_t encoding_buffer[BUFFER_LENGTH] = {L'\0'};
-    wchar_t decoding_buffer[BUFFER_LENGTH] = {L'\0'};
+    const auto it = skills_to_encode.find(skill_id);
 
-    const size_t encoding_length{16};
-    if (GW::UI::UInt32ToEncStr(skill_data.name, encoding_buffer, encoding_length)) {
-        GW::UI::AsyncDecodeStr(encoding_buffer, decoding_buffer, BUFFER_LENGTH);
+    GuiUtils::EncString* skill_name_enc = nullptr;
+
+    if (skills_to_encode.end() == it) {
+        skill_name_enc = new GuiUtils::EncString(skill_data.name);
+        skills_to_encode[skill_id] = EncodingSkill{skill_name_enc, party_idx, skill_idx};
+    } else {
+        skill_name_enc = (*it).second.encoder;
     }
 
-    if ((nullptr == decoding_buffer) || ((nullptr != decoding_buffer) && (0U == wcslen(decoding_buffer)))) {
-        swprintf(decoding_buffer, BUFFER_LENGTH, UNKNOWN_SKILL_NAME);
-    }
+    if (!skill_name_enc || skill_name_enc->IsDecoding()) return UNKNOWN_SKILL_NAME;
 
-    std::wstring skill_name{decoding_buffer};
+    const std::wstring result = skill_name_enc->wstring();
 
-    if (NONE_SKILL_NAME == skill_name) {
-        skill_name = std::wstring{UNKNOWN_SKILL_NAME};
-    }
+    if (result.empty()) return UNKNOWN_SKILL_NAME;
 
-    return skill_name;
+    delete skill_name_enc;
+    skill_name_enc = nullptr;
+    skills_to_encode.erase(skill_id);
+
+    return result;
 }
 
 void PartyStatisticsWindow::GetPlayerName(const GW::Agent* const agent, wchar_t* const agent_name) {
@@ -120,6 +124,17 @@ void PartyStatisticsWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
 
     const bool party_size_changed = PartySizeChanged();
+
+    /* Work through the missing skill names */
+    if (skills_to_encode.size() > 0) {
+        const auto it = skills_to_encode.begin();
+        auto& [skill_id, encoding_skill_data] = *it;
+        const size_t party_idx = encoding_skill_data.party_idx;
+        const size_t skill_idx = encoding_skill_data.skill_idx;
+
+        const std::wstring skill_name = GetSkillName(skill_id, party_idx, skill_idx);
+        party_stats[party_idx].skills[skill_idx].name = skill_name;
+    }
 
     if ((party_size_changed || (party_size == 1U)) &&
         (GW::Constants::InstanceType::Outpost == GW::Map::GetInstanceType())) {
@@ -313,8 +328,8 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
 
     if (party_ids.find(agent_id) == party_ids.end()) return;
 
-    const size_t agent_idx = party_indicies[agent_id];
-    Skills& player_skills = party_stats[agent_idx].skills;
+    const size_t party_idx = party_indicies[agent_id];
+    Skills& player_skills = party_stats[party_idx].skills;
 
     const auto skill_it = std::find_if(player_skills.begin(), player_skills.end(),
         [&activated_skill_id](const auto& skill) { return skill.id == activated_skill_id; });
@@ -322,24 +337,21 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
 
     /* Other player skill casted for the first time */
     if (!skill_found) {
+        size_t skill_idx{0};
         for (auto& [id, count, name] : player_skills) {
             if (NONE_SKILL != id) continue;
 
             id = activated_skill_id;
             count = 1;
-            name = GetSkillName(activated_skill_id);
+            name = GetSkillName(activated_skill_id, party_idx, skill_idx);
 
             return;
         }
     }
 
-    for (auto& [id, count, name] : player_skills) {
+    for (auto& [id, count, _] : player_skills) {
         if (activated_skill_id != id) continue;
 
-        /* If previous skill name parsing was not successfull, try again */
-        if (name == UNKNOWN_SKILL_NAME) {
-            name = GetSkillName(id);
-        }
         ++count;
         return;
     }
@@ -469,7 +481,6 @@ void PartyStatisticsWindow::SetPartySkills() {
     size_t party_idx{0};
     for (PlayerSkills& player_stats : party_stats) {
         PlayerSkills& player_skills = party_stats[party_idx];
-        ++party_idx;
 
         const uint32_t id = player_stats.agent_id;
 
@@ -487,12 +498,13 @@ void PartyStatisticsWindow::SetPartySkills() {
 
         size_t skill_idx{0};
         for (const GW::SkillbarSkill& skill : skillbar->skills) {
-            const std::wstring skill_name = GetSkillName(skill.skill_id);
+            const std::wstring skill_name = GetSkillName(skill.skill_id, party_idx, skill_idx);
             skills[skill_idx] = {skill.skill_id, 0U, skill_name};
             ++skill_idx;
         }
 
         player_skills.skills = skills;
+        ++party_idx;
     }
 }
 

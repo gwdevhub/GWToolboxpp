@@ -44,8 +44,16 @@ protected:
 
     using PartySkills = std::vector<PlayerSkills>;
 
+    typedef struct {
+        GuiUtils::EncString* encoder;
+        size_t party_idx;
+        size_t skill_idx;
+    } EncodingSkill;
+
+    using EncodingSkills = std::map<uint32_t, EncodingSkill>;
+
     static const GW::Skillbar* GetPlayerSkillbar(const uint32_t player_id);
-    static std::wstring GetSkillName(const uint32_t id);
+    std::wstring GetSkillName(const uint32_t skill_id, const size_t party_idx, const size_t skill_idx);
     static void GetPlayerName(const GW::Agent* const agent, wchar_t* const agent_name);
     static std::wstring GetSkillString(
         const std::wstring agent_name, const std::wstring& skill_name, const uint32_t& skill_count);
@@ -59,6 +67,7 @@ public:
         , party_indicies(PartyIndicies{})
         , party_names(PartyNames{})
         , party_stats(PartySkills{})
+        , skills_to_encode(EncodingSkills{})
         , send_timer(clock_t{})
         , chat_queue(std::queue<std::wstring>{}){};
     ~PartyStatisticsWindow(){};
@@ -108,6 +117,7 @@ private:
     PartyIndicies party_indicies;
     PartyNames party_names;
     PartySkills party_stats;
+    EncodingSkills skills_to_encode;
 
     /* Chat messaging */
     clock_t send_timer;
