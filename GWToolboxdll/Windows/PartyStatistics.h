@@ -21,7 +21,6 @@ protected:
     static constexpr auto MAX_NUM_SKILLS = size_t{8};
     static constexpr auto NONE_PLAYER_NAME = L"Hero/Henchman Slot";
     static constexpr auto NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
-    static constexpr auto NONE_SKILL_NAME = L"(none)";
     static constexpr auto UNKNOWN_SKILL_NAME = L"Unknown Skill";
     static constexpr auto BUFFER_LENGTH = size_t{256};
 
