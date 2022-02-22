@@ -138,7 +138,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&StringDecoderWindow::Instance());
     optional_modules.push_back(&DoorMonitorWindow::Instance());
     optional_modules.push_back(&SkillListingWindow::Instance());
-
+    
 
 #endif
     std::sort(
@@ -162,7 +162,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_world_map) optional_modules.push_back(&WorldMapWidget::Instance());
     if (use_effect_monitor) optional_modules.push_back(&EffectsMonitorWidget::Instance());
 #if _DEBUG
-
+    
 #endif
 
     std::sort(
@@ -188,7 +188,7 @@ void ToolboxSettings::DrawSettingInternal() {
     DrawFreezeSetting();
     ImGui::Checkbox("Save Location Data", &save_location_data);
     ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
-
+    
     const size_t cols = (size_t)floor(ImGui::GetWindowWidth() / (170.0f * ImGui::GetIO().FontGlobalScale));
 
     ImGui::Separator();
@@ -247,7 +247,7 @@ void ToolboxSettings::DrawSettingInternal() {
     }
     ImGui::Columns(1);
     ImGui::PopID();
-
+    
     ImGui::Separator();
     if (ImGui::TreeNodeEx("Show the following in the main window:", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
 
@@ -389,7 +389,7 @@ void ToolboxSettings::Draw(IDirect3DDevice9*) {
 
 void ToolboxSettings::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
-
+    
 
     // save location data
     if (save_location_data && TIMER_DIFF(location_timer) > 1000) {
@@ -463,3 +463,4 @@ void ToolboxSettings::Update(float delta) {
         }
     }
 }
+
