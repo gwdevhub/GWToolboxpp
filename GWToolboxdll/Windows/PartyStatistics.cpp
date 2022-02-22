@@ -25,19 +25,28 @@
 /* Static Helper Methods */
 /*************************/
 
-void PartyStatisticsWindow::GetSkillName(const uint32_t skill_id, wchar_t* const skill_name) {
+std::wstring PartyStatisticsWindow::GetSkillName(const uint32_t skill_id) {
     const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
 
-    wchar_t buffer[BUFFER_LENGTH] = {L'\0'};
+    wchar_t encoding_buffer[BUFFER_LENGTH] = {L'\0'};
+    wchar_t decoding_buffer[BUFFER_LENGTH] = {L'\0'};
 
     const auto encoding_length = size_t{16};
-    if (GW::UI::UInt32ToEncStr(skill_data.name, buffer, encoding_length)) {
-        GW::UI::AsyncDecodeStr(buffer, skill_name, BUFFER_LENGTH);
+    if (GW::UI::UInt32ToEncStr(skill_data.name, encoding_buffer, encoding_length)) {
+        GW::UI::AsyncDecodeStr(encoding_buffer, decoding_buffer, BUFFER_LENGTH);
     }
 
-    if ((nullptr != skill_name) && (0U == wcslen(skill_name))) {
-        swprintf(skill_name, BUFFER_LENGTH, NONE_SKILL_NAME);
+    if ((nullptr == decoding_buffer) || ((nullptr != decoding_buffer) && (0U == wcslen(decoding_buffer)))) {
+        swprintf(decoding_buffer, BUFFER_LENGTH, UNKNOWN_SKILL_NAME);
     }
+
+    auto skill_name = std::wstring{decoding_buffer};
+
+    if (NONE_SKILL_NAME == skill_name) {
+        skill_name = std::wstring{UNKNOWN_SKILL_NAME};
+    }
+
+    return skill_name;
 }
 
 void PartyStatisticsWindow::GetPlayerName(const GW::Agent* const agent, wchar_t* const agent_name) {
@@ -291,12 +300,9 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
         for (auto& [id, count, name] : player_skills) {
             if (NONE_SKILL != id) continue;
 
-            wchar_t skill_name[BUFFER_LENGTH] = {L'\0'};
-            GetSkillName(activated_skill_id, skill_name);
-
             id = activated_skill_id;
             count = 1;
-            name = std::wstring{skill_name};
+            name = GetSkillName(activated_skill_id);
 
             return;
         }
@@ -306,10 +312,8 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
         if (activated_skill_id != id) continue;
 
         /* If previous skill name parsing was not successfull, try again */
-        if (name == NONE_SKILL_NAME) {
-            wchar_t skill_name[BUFFER_LENGTH] = {L'\0'};
-            GetSkillName(id, skill_name);
-            name = std::wstring{skill_name};
+        if (name == UNKNOWN_SKILL_NAME) {
+            name = GetSkillName(id);
         }
         ++count;
         return;
@@ -359,6 +363,7 @@ void PartyStatisticsWindow::SetPlayerStatistics() {
 
 void PartyStatisticsWindow::SetPartyIndicies() {
     if (!GW::PartyMgr::GetIsPartyLoaded()) return;
+    if (!GW::Map::GetIsMapLoaded()) return;
 
     GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (info == nullptr) return;
@@ -397,6 +402,7 @@ void PartyStatisticsWindow::SetPartyIndicies() {
 
 void PartyStatisticsWindow::SetPartyNames() {
     if (!GW::PartyMgr::GetIsPartyLoaded()) return;
+    if (!GW::Map::GetIsMapLoaded()) return;
 
     const auto agents = GW::Agents::GetAgentArray();
     if (!agents.valid()) return;
@@ -426,6 +432,7 @@ void PartyStatisticsWindow::SetPartyNames() {
 
 void PartyStatisticsWindow::SetPartySkills() {
     if (!GW::PartyMgr::GetIsPartyLoaded()) return;
+    if (!GW::Map::GetIsMapLoaded()) return;
 
     party_stats.clear();
     party_stats = PartySkills{party_size, PlayerSkills{}};
@@ -447,7 +454,7 @@ void PartyStatisticsWindow::SetPartySkills() {
         /* Skillbar for other players and henchmen is unknown in outpost init with No_Skill */
         if (nullptr == skillbar) {
             for (size_t skill_idx = 0; skill_idx < MAX_NUM_SKILLS; ++skill_idx) {
-                skills[skill_idx] = {NONE_SKILL, 0U, std::wstring{NONE_SKILL_NAME}};
+                skills[skill_idx] = {NONE_SKILL, 0U, std::wstring{UNKNOWN_SKILL_NAME}};
             }
             player_skills.skills = skills;
             continue;
@@ -455,10 +462,8 @@ void PartyStatisticsWindow::SetPartySkills() {
 
         auto skill_idx = size_t{0};
         for (const auto& skill : skillbar->skills) {
-            wchar_t skill_name[BUFFER_LENGTH] = {L'\0'};
-            GetSkillName(skill.skill_id, skill_name);
-
-            skills[skill_idx] = {skill.skill_id, 0U, std::wstring{skill_name}};
+            const auto skill_name = GetSkillName(skill.skill_id);
+            skills[skill_idx] = {skill.skill_id, 0U, skill_name};
             ++skill_idx;
         }
 

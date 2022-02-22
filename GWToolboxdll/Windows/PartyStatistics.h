@@ -21,7 +21,8 @@ protected:
     static constexpr auto MAX_NUM_SKILLS = size_t{8};
     static constexpr auto NONE_PLAYER_NAME = L"Hero/Henchman Slot";
     static constexpr auto NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
-    static constexpr auto NONE_SKILL_NAME = L"Unknown Skill";
+    static constexpr auto NONE_SKILL_NAME = L"(none)";
+    static constexpr auto UNKNOWN_SKILL_NAME = L"Unknown Skill";
     static constexpr auto BUFFER_LENGTH = size_t{256};
 
     using PartyIds = std::set<uint32_t>;
@@ -44,7 +45,7 @@ protected:
     using PartySkills = std::vector<PlayerSkills>;
 
     static const GW::Skillbar* GetPlayerSkillbar(const uint32_t player_id);
-    static void GetSkillName(const uint32_t id, wchar_t* const skill_name);
+    static std::wstring GetSkillName(const uint32_t id);
     static void GetPlayerName(const GW::Agent* const agent, wchar_t* const agent_name);
     static std::wstring GetSkillString(
         const std::wstring agent_name, const std::wstring& skill_name, const uint32_t& skill_count);
