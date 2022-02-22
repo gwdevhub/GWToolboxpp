@@ -278,7 +278,7 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
     ImGui::Bullet(); ImGui::Text("'/flag [all|<number>] [x] [y]' to flag a hero to coordinates [x],[y].");
     ImGui::Bullet(); ImGui::Text("'/flag <number> clear' to clear flag for a hero.");
-
+    
     ImGui::Bullet(); ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
     ImGui::Bullet(); ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");
     const char* toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
@@ -350,30 +350,30 @@ void ChatCommands::Initialize() {
     const DWORD def_scale = 0x64000000;
     // Available Transmo NPCs
     // @Enhancement: Ability to target an NPC in-game and add it to this list via a GUI
-    npc_transmos = {
-        {"charr", {163, def_scale, 0x0004c409, 0, 98820}},
-        {"reindeer", {5, def_scale, 277573, 277576, 32780}},
-        {"gwenpre", {244, def_scale, 116377, 116759, 98820}},
-        {"gwenchan", {245, def_scale, 116377, 283392, 98820}},
+    npc_transmos = { 
+        {"charr", {163, def_scale, 0x0004c409, 0, 98820}}, 
+        {"reindeer", {5, def_scale, 277573, 277576, 32780}}, 
+        {"gwenpre", {244, def_scale, 116377, 116759, 98820}}, 
+        {"gwenchan", {245, def_scale, 116377, 283392, 98820}}, 
         {"eye", {0x1f4, def_scale, 0x9d07, 0, 0}},
-        {"zhu", {298, def_scale, 170283, 170481, 98820}},
-        {"kuunavang", {309, def_scale, 157438, 157527, 98820}},
-        {"beetle", {329, def_scale, 207331, 279211, 98820}},
-        {"polar", {313, def_scale, 277551, 277556, 98820}},
-        {"celepig", {331, def_scale, 279205, 0, 0}},
-        {"mallyx", {315, def_scale, 243812, 0, 98820}},
-        {"bonedragon", {231, def_scale, 16768, 0, 0}},
-        {"destroyer", {312, def_scale, 285891, 285900, 98820}},
-        {"destroyer2", {146, def_scale, 285886, 285890, 32780}},
-        {"koss", {250, def_scale, 243282, 245053, 98820}},
-        {"smite", {346, def_scale, 129664, 0, 98820}},
-        {"dorian", {8299, def_scale, 86510, 0, 98820}},
-        {"kanaxai", {317, def_scale, 184176, 185319, 98820}},
-        {"skeletonic", {359, def_scale, 52356, 0, 98820}},
+        {"zhu", {298, def_scale, 170283, 170481, 98820}}, 
+        {"kuunavang", {309, def_scale, 157438, 157527, 98820}}, 
+        {"beetle", {329, def_scale, 207331, 279211, 98820}},     
+        {"polar", {313, def_scale, 277551, 277556, 98820}},    
+        {"celepig", {331, def_scale, 279205, 0, 0}},  
+        {"mallyx", {315, def_scale, 243812, 0, 98820}},     
+        {"bonedragon", {231, def_scale, 16768, 0, 0}},     
+        {"destroyer", {312, def_scale, 285891, 285900, 98820}},   
+        {"destroyer2", {146, def_scale, 285886, 285890, 32780}},    
+        {"koss", {250, def_scale, 243282, 245053, 98820}},     
+        {"smite", {346, def_scale, 129664, 0, 98820}}, 
+        {"dorian", {8299, def_scale, 86510, 0, 98820}},         
+        {"kanaxai", {317, def_scale, 184176, 185319, 98820}},         
+        {"skeletonic", {359, def_scale, 52356, 0, 98820}},          
         {"moa", {504, def_scale, 16689, 0, 98820}}
     };
 
-    // you can create commands here in-line with a lambda, but only if they are only
+    // you can create commands here in-line with a lambda, but only if they are only 
     // a couple of lines and not used multiple times
     GW::Chat::CreateCommand(L"ff", [](const wchar_t*, int, LPWSTR*) {
         GW::Chat::SendChat('/', "resign");
@@ -443,7 +443,7 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
                 case VK_W:
                 case VK_X:
                 case VK_Z:
-
+                
                 case VK_ESCAPE:
                 case VK_UP:
                 case VK_DOWN:
@@ -460,8 +460,8 @@ void ChatCommands::Update(float delta) {
 
     if (delta == 0.f) return;
 
-    if (GW::CameraMgr::GetCameraUnlock()
-        && !GW::Chat::GetIsTyping()
+    if (GW::CameraMgr::GetCameraUnlock() 
+        && !GW::Chat::GetIsTyping() 
         && !ImGui::GetIO().WantTextInput) {
 
         float forward = 0;
@@ -675,8 +675,8 @@ void ChatCommands::CmdEnterMission(const wchar_t*, int argc, LPWSTR* argv) {
     const char* const error_fow_uw_syntax = "Use '/enter fow' or '/enter uw' to trigger entry";
     const char* const error_no_scrolls = "Unable to enter elite area; no scroll found";
     const char* const error_not_leading = "Unable to enter mission; you're not party leader";
-
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+    
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) 
         return Log::Error(error_use_from_outpost);
 
     switch (GW::Map::GetMapID()) {
@@ -741,7 +741,7 @@ void ChatCommands::CmdDialog(const wchar_t *, int argc, LPWSTR *argv) {
 void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR * argv) {
     if (!IsMapReady())
         return;
-    if (wcscmp(argv[0], L"chest") == 0
+    if (wcscmp(argv[0], L"chest") == 0 
         && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         const GW::Agent* const target = GW::Agents::GetTarget();
         if (target && target->type == 0x200) {
@@ -760,7 +760,7 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
         MainWindow::Instance().visible ^= 1;
         return;
     }
-
+    
     if (argc < 3) {
         const std::wstring arg = GuiUtils::ToLower(argv[1]);
         if (arg == L"hide") { // e.g. /tb hide
@@ -1099,7 +1099,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
             Log::Info("Target model id (PlayerNumber) is %d", target->player_number);
         }
         return;
-    }
+    } 
     if (arg1 == L"getpos") {
         const GW::AgentLiving* const target = GW::Agents::GetTargetAsAgentLiving();
         if (target == nullptr) {
@@ -1316,15 +1316,15 @@ void ChatCommands::CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* ar
         GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 1), 3);
     else if (arg1 == L"offhand" || arg1 == L"shield")
         GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 2), 3);
-    else if (arg1 == L"chest")
+    else if (arg1 == L"chest")      
         GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 3), 2);
-    else if (arg1 == L"legs")
+    else if (arg1 == L"legs")       
         GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 4), 2);
     else if (arg1 == L"head")
         GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 5), 2);
-    else if (arg1 == L"boots" || arg1 == L"feet")
+    else if (arg1 == L"boots" || arg1 == L"feet")       
         GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 6), 2);
-    else if (arg1 == L"gloves" || arg1 == L"hands")
+    else if (arg1 == L"gloves" || arg1 == L"hands")     
         GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 7), 2);
     else if (arg1 == L"weapons") {
         GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 1),3);
@@ -1397,7 +1397,7 @@ bool ChatCommands::ParseScale(int scale, PendingTransmo& transmo) {
 }
 
 void ChatCommands::CmdTransmoTarget(const wchar_t*, int argc, LPWSTR* argv) {
-
+    
     const GW::AgentLiving* const target = GW::Agents::GetTargetAsAgentLiving();
     if (argc < 2) {
         Log::Error("Missing /transmotarget argument");
@@ -1428,7 +1428,7 @@ void ChatCommands::CmdTransmoTarget(const wchar_t*, int argc, LPWSTR* argv) {
 
 void ChatCommands::CmdTransmo(const wchar_t *, int argc, LPWSTR *argv) {
     PendingTransmo transmo;
-
+    
     if (argc > 1) {
         int iscale;
         if (wcsncmp(argv[1], L"reset", 5) == 0) {
