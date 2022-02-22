@@ -343,7 +343,11 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
     if (!skill_found) {
         size_t skill_idx{0};
         for (auto& [id, count, name] : player_skills) {
-            if (NONE_SKILL != id) continue;
+            if (NONE_SKILL != id) {
+                ++skill_idx;
+
+                continue;
+            }
 
             id = activated_skill_id;
             count = 1;
