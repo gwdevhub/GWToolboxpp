@@ -210,16 +210,16 @@ void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Checkbox("Re-join your party after rerolling", &rejoin_party_after_rerolling);
         const float btnw = ImGui::GetContentRegionAvail().x / 2.f;
         const ImVec2 btn_dim = { btnw,0.f };
-        char buf[50];
+        std::string buf;
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
         for (size_t i = 0; i < available_chars_ptr->size(); i++) {
             auto& character = available_chars_ptr->at(i);
             wchar_t* player_name = character.player_name;
             uint32_t profession = character.primary();
-            snprintf(buf, _countof(buf), "%ls", player_name);
+            buf = GuiUtils::WStringToString(player_name);
             if ((i % 2) != 0)
                 ImGui::SameLine();
-            if (ImGui::IconButton(buf, Resources::GetProfessionIcon((GW::Constants::Profession)profession),btn_dim)) {
+            if (ImGui::IconButton(buf.c_str(), Resources::GetProfessionIcon((GW::Constants::Profession)profession),btn_dim)) {
                 bool _same_map = travel_to_same_location_after_rerolling;
                 bool _same_party = travel_to_same_location_after_rerolling && rejoin_party_after_rerolling;
                 if (rejoin_party_after_rerolling && !_same_party) {
@@ -478,12 +478,24 @@ void RerollWindow::Update(float) {
             
             if (same_party && party_leader[0]) {
                 GW::PartyInfo* player_party = GetPlayerParty();
-                if (player_party && player_party->GetPartySize() > 1)
+                if (player_party && player_party->GetPartySize() > 1) {
                     GW::PartyMgr::LeaveParty();
-                wchar_t msg_buf[32];
-                ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %s", party_leader) != -1);
-                GW::Chat::SendChat('/', msg_buf);
+                    GW::PartyMgr::KickAllHeroes();
+                }
+                reroll_stage = WaitForEmptyParty;
+                reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 3000;
+                return;
             }
+            RerollSuccess();
+            return;
+        case WaitForEmptyParty:
+            GW::PartyInfo* player_party = GetPlayerParty();
+            if (player_party && player_party->GetPartySize() > 1)
+                return;
+            wchar_t msg_buf[32];
+            ASSERT(same_party && party_leader[0]);
+            ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %s", party_leader) != -1);
+            GW::Chat::SendChat('/', msg_buf);
             RerollSuccess();
             return;
         }

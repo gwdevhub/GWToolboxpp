@@ -212,7 +212,7 @@ void HintsModule::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void*
             wchar_t out[256];
             uint32_t campaign = (uint32_t)GetCharacterCampaign();
             swprintf(out, 256, EMBARK_WITHOUT_HOMELAND.message, embark_beach_campaign_npcs[campaign]);
-            HintUIMessage(out, 30000, EMBARK_WITHOUT_HOMELAND.message_id & campaign).Show();
+            HintUIMessage(out, 30000, EMBARK_WITHOUT_HOMELAND.message_id | campaign).Show();
         } break;
         case GW::Constants::MapID::Droknars_Forge_cinematic:
             endgame_msg_idx = 1;
@@ -230,7 +230,7 @@ void HintsModule::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void*
         if (endgame_msg_idx) {
             wchar_t out[256];
             swprintf(out, 256, ENDGAME_TROPHY.message, endgame_reward_npcs[endgame_msg_idx], endgame_reward_trophies[endgame_msg_idx]);
-            HintUIMessage(out, 30000, ENDGAME_TROPHY.message_id & endgame_msg_idx).Show();
+            HintUIMessage(out, 30000, ENDGAME_TROPHY.message_id | endgame_msg_idx).Show();
         }
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && GetPlayerSkillbarSkill(GW::Constants::SkillID::Charm_Animal)) {
             HintUIMessage(CHARM_ANIMAL).Show();

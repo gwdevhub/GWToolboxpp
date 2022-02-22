@@ -76,19 +76,19 @@ BinPackParameters: true
 # We are not savages afterall ;)
 BreakBeforeBraces: Custom
 BraceWrapping:
-  AfterClass:            true
+  AfterClass:            false
   AfterControlStatement: false
-  AfterEnum:             true
-  AfterFunction:         true
-  AfterNamespace:        true
-  AfterObjCDeclaration:  true
-  AfterStruct:           true
-  AfterUnion:            true
-  AfterExternBlock:      true
+  AfterEnum:             false
+  AfterFunction:         false
+  AfterStruct:           false
+  AfterUnion:            false
   AfterCaseLabel:        false
   BeforeCatch:           false
   BeforeElse:            false
   IndentBraces:          false
+  AfterNamespace:        false
+  AfterObjCDeclaration:  true
+  AfterExternBlock:      true
   SplitEmptyFunction:    true
   SplitEmptyRecord:      true
   SplitEmptyNamespace:   true
@@ -128,8 +128,8 @@ IndentCaseLabels: true
 # type
 IndentWrappedFunctionNames: false
 
-# Align pointer to the right
-# int *a;
+# Align pointer to the left
+# int* a;
 PointerAlignment: Left
 
 # Don't insert a space after a cast

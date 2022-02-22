@@ -201,12 +201,16 @@ public:
     static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
     static void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
+    static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
     GuiUtils::EncString* pending_wiki_search_term = 0;
 
     bool tick_is_toggle = false;
+
+    bool limit_signets_of_capture = true;
+    uint32_t actual_signets_of_capture_amount = 1;
 
     bool shorthand_item_ping = true;
     bool openlinks = false;
@@ -304,6 +308,14 @@ private:
         Henchman
     } pending_reinvite_type = None;
     uint32_t pending_reinvite_id = 0;
+
+    bool enable_camera_glitch_fix = true;
+    bool WndProcCameraGlitchFix(UINT Message, WPARAM wParam, LPARAM lParam);
+    LPARAM right_mouse_down_lparam = 0;
+    LPARAM original_right_mouse_down_lparam = 0;
+    int middle_x = 0;
+    int middle_y = 0;
+
 
     bool was_leading = true;
     bool check_message_on_party_change = true;

@@ -325,11 +325,14 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             }
         }
     };
+    bool skipped_effects = false;
     auto skip_effects = [&]() {
+        if (skipped_effects) return;
         if (morale_percent != 100)
             next_effect();
         if (minion_count)
             next_effect();
+        skipped_effects = true;
     };
     if (!hard_mode) {
         skip_effects();
@@ -354,7 +357,6 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
                     size_t killed = GW::Map::GetFoesKilled();
                     draw = left ? snprintf(remaining_str, 16, "%d/%d", killed, killed + left) : 0;
                 }
-                skip_effects();
             }
             else {
                 draw = 0;
@@ -368,6 +370,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
                     ImGui::GetWindowDrawList()->AddText({ label_pos.x + 1, label_pos.y + 1 }, color_text_shadow, remaining_str);
                 ImGui::GetWindowDrawList()->AddText(label_pos, color_text_effects, remaining_str);
             }
+            skip_effects();
             next_effect();
 
         }

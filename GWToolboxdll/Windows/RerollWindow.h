@@ -89,6 +89,7 @@ private:
         WaitForScrollableOutpost,
         WaitForActiveDistrict,
         WaitForMapLoad,
+        WaitForEmptyParty,
         Done
     } reroll_stage = None;
     uint32_t reroll_scroll_from_map_id = 0;
