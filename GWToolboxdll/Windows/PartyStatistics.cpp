@@ -508,6 +508,7 @@ void PartyStatisticsWindow::SetPartySkills() {
                 skills[skill_idx] = {NONE_SKILL, 0U, std::wstring{UNKNOWN_SKILL_NAME}};
             }
             player_skills.skills = skills;
+            ++party_idx;
             continue;
         }
 
