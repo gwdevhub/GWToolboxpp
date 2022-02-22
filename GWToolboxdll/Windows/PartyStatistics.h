@@ -18,7 +18,6 @@
 
 class PartyStatisticsWindow : public ToolboxWindow {
 protected:
-    static constexpr auto TIME_DIFF_THRESH = float{600.0F};
     static constexpr auto MAX_NUM_SKILLS = size_t{8};
     static constexpr auto NONE_PLAYER_NAME = L"Hero/Henchman Slot";
     static constexpr auto NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
@@ -52,14 +51,15 @@ protected:
 
 public:
     PartyStatisticsWindow()
-        : party_size(size_t{})
+        : in_explorable(false)
+        , party_size(size_t{})
         , self_party_idx(static_cast<size_t>(-1))
         , party_ids(PartyIds{})
-        , party_stats(PartySkills{})
         , party_indicies(PartyIndicies{})
         , party_names(PartyNames{})
-        , chat_queue(std::queue<std::wstring>{})
-        , send_timer(clock_t{}){};
+        , party_stats(PartySkills{})
+        , send_timer(clock_t{})
+        , chat_queue(std::queue<std::wstring>{}){};
     ~PartyStatisticsWindow(){};
 
     static PartyStatisticsWindow& Instance() {
@@ -98,12 +98,8 @@ private:
     void SetPartyNames();
     void SetPartySkills();
 
-    bool in_explorable = false;
-
-    GW::HookEntry MapLoaded_Entry;
-    GW::HookEntry GenericValueSelf_Entry;
-    GW::HookEntry GenericValueTarget_Entry;
-
+    /* Internal data  */
+    bool in_explorable;
     size_t party_size;
     size_t self_party_idx;
     PartyIds party_ids;
@@ -111,9 +107,16 @@ private:
     PartyNames party_names;
     PartySkills party_stats;
 
+    /* Chat messaging */
     clock_t send_timer;
     std::queue<std::wstring> chat_queue;
 
+    /* Callbacks */
+    GW::HookEntry MapLoaded_Entry;
+    GW::HookEntry GenericValueSelf_Entry;
+    GW::HookEntry GenericValueTarget_Entry;
+
+    /* Window settings */
     bool show_abs_values = true;
     bool show_perc_values = true;
     bool print_by_click = true;
