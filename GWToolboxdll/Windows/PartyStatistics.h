@@ -90,13 +90,14 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
-    void WritePlayerStatistics(const uint32_t player_idx = -1, const uint32_t skill_idx = -1);
+    static void CmdSkillStatistics(const wchar_t *message, int argc, LPWSTR *argv);
     void UnsetPlayerStatistics();
 
     static void MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
 
 private:
     void DrawPartyMember(const PlayerSkills& player_stats, const size_t party_idx);
+    void WritePlayerStatistics(const uint32_t player_idx = -1, const uint32_t skill_idx = -1);
     void WritePlayerStatisticsAllSkills(const uint32_t player_idx);
     void WritePlayerStatisticsSingleSkill(const uint32_t player_idx, const uint32_t skill_idx);
 

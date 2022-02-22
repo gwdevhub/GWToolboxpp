@@ -88,6 +88,8 @@ void PartyStatisticsWindow::Initialize() {
 
     ToolboxWindow::Initialize();
 
+    GW::Chat::CreateCommand(L"skillstats", CmdSkillStatistics);
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, &MapLoadedCallback);
 
     /* Skill on self or party player */
@@ -520,6 +522,51 @@ void PartyStatisticsWindow::SetPartySkills() {
 /************************/
 /* Chat Command Methods */
 /************************/
+
+void PartyStatisticsWindow::CmdSkillStatistics(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
+
+    /* command: /skillstats */
+    /* will write the stats of the self player */
+    if (argc < 2) {
+        PartyStatisticsWindow::Instance().WritePlayerStatistics();
+        return;
+    }
+
+    const auto arg1 = GuiUtils::ToLower(argv[1]);
+
+    if (argc == 2) {
+        /* command: /skillstats reset */
+        if (arg1 == L"reset") {
+            PartyStatisticsWindow::Instance().UnsetPlayerStatistics();
+        }
+        /* command: /skllstats playerNum */
+        else {
+            auto player_number = uint32_t{0};
+            GuiUtils::ParseUInt(argv[1], &player_number);
+            --player_number; // List will start at index zero
+
+            PartyStatisticsWindow::Instance().WritePlayerStatistics(player_number);
+        }
+
+        return;
+    }
+
+    /* command: /skillstats playerNum skillNum */
+    if (argc >= 3) {
+        const auto player_number_arg = argv[1];
+        auto player_number = uint32_t{0};
+
+        GuiUtils::ParseUInt(player_number_arg, &player_number);
+        --player_number; // List will start at index zero
+
+        auto skill_number = uint32_t{0};
+        GuiUtils::ParseUInt(argv[2], &skill_number);
+        --skill_number; // List will start at index zero
+
+        PartyStatisticsWindow::Instance().WritePlayerStatistics(player_number, skill_number);
+    }
+}
 
 void PartyStatisticsWindow::WritePlayerStatistics(const uint32_t player_idx, const uint32_t skill_idx) {
     if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType()) return;
