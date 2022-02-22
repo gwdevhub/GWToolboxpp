@@ -324,6 +324,8 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
         }
     }
 
+    if (NONE_SKILL == value) return;
+
     if (party_indicies.empty() || party_stats.empty()) return;
 
     if (party_ids.find(agent_id) == party_ids.end()) return;
@@ -381,6 +383,13 @@ bool PartyStatisticsWindow::PartySizeChanged() {
 /********************/
 
 void PartyStatisticsWindow::UnsetPlayerStatistics() {
+    for (auto& [_, skill_to_encode] : skills_to_encode) {
+        if (nullptr != skill_to_encode.encoder) {
+            delete skill_to_encode.encoder;
+        }
+    }
+    skills_to_encode.clear();
+
     party_ids.clear();
     party_indicies.clear();
     party_names.clear();
