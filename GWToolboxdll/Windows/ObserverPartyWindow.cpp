@@ -413,7 +413,6 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice) {
     // use ObserverPartyWindow::Draw for inspiration for colouring in backgrounds
 
     ObserverModule& observer_module = ObserverModule::Instance();
-    const bool is_active = observer_module.IsActive();
 
     // this should work with both 2/3(+?) parties, with preference on 2
 

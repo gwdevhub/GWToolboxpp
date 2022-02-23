@@ -256,7 +256,6 @@ bool Mission::Draw(IDirect3DDevice9* )
 			icon_size_scaled.x /= 2.f;
 			icon_size_scaled.y /= 2.f;
 		}
-		const float padding = 2.f;
 
 		const ImColor completed_bg = IM_COL32(0, 0x99, 0, 192);
 		const ImColor completed_text = IM_COL32(0xE5, 0xFF, 0xCC, 255);
@@ -432,7 +431,6 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
 			icon_size_scaled.x /= 2.f;
 			icon_size_scaled.y /= 2.f;
 		}
-		const float padding = 2.f;
 
 		const ImColor completed_bg = IM_COL32(0, 0x99, 0, 192);
 		const ImColor completed_text = IM_COL32(0xE5, 0xFF, 0xCC, 255);

@@ -154,7 +154,6 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice) {
         return ImGui::End();
 
     ObserverModule& om = ObserverModule::Instance();
-    const bool is_active = om.IsActive();
 
     Prepare();
     uint32_t tracking_agent_id = GetTracking();

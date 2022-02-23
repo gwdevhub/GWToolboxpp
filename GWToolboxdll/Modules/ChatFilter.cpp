@@ -601,7 +601,6 @@ bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 }
 
 void ChatFilter::DrawSettingInternal() {
-    constexpr float checkbox_w = 400.f;
     ImGui::Text("Block the following messages:");
     ImGui::Separator();
     ImGui::Text("Drops");

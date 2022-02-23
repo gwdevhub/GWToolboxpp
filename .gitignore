@@ -5,6 +5,19 @@ ipch/
 Archive/
 bin/
 
+# Cmake generated
+_deps/
+*.vcxproj
+*.vcxproj.filters
+*.sln
+*CMakeFiles*
+CMakeCache.txt
+*cmake_install.cmake
+*.tlog
+*.recipe
+*.lib
+*.res
+
 # Bloated Windows Databases
 *.sdf
 *.opensdf

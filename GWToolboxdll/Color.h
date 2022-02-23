@@ -104,8 +104,6 @@ namespace Colors {
         const ImGuiStyle& style = ImGui::GetStyle();
 
         const int n_components = alpha ? 4 : 4;
-        const int first_component = alpha ? 0 : 1;
-        const int last_component = 4;
 
         bool value_changed = false;
 

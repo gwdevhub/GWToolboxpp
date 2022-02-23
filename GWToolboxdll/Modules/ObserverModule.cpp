@@ -195,7 +195,6 @@ void ObserverModule::Initialize()
             const uint32_t caster_id = packet->agent_id;
             const uint32_t target_id = NO_AGENT;
             const uint32_t value = packet->value;
-            const float f_value = 0;
             const bool no_target = true;
             HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
     });
@@ -209,7 +208,6 @@ void ObserverModule::Initialize()
             const uint32_t value_id = packet->type;
             const uint32_t caster_id = packet->agent_id;
             const uint32_t target_id = NO_AGENT;
-            const uint32_t i_value = 0;
             const float value = packet->value;
             const bool no_target = true;
             HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
@@ -238,8 +236,6 @@ const bool ObserverModule::IsActive() {
 void ObserverModule::HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo *packet) {
     UNREFERENCED_PARAMETER(status);
     UNREFERENCED_PARAMETER(packet);
-
-    const bool was_active = IsActive();
 
     is_explorable = packet->is_explorable;
     is_observer = packet->is_observer;

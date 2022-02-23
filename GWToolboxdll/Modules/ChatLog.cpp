@@ -253,7 +253,6 @@ void ChatLog::Load(const std::wstring& _account) {
     inifile->LoadFile(LogPath(L"recv").c_str());
     CSimpleIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
-    const size_t buf_len = 512;
     std::wstring buf;
     FILETIME t;
     uint32_t channel = 0;

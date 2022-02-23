@@ -274,8 +274,6 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PushItemWidth(-120.0f);
             if (ImGui::InputText("Build Name", tbuild.name, 128)) builds_changed = true;
             ImGui::PopItemWidth();
-            const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
-            const float btn_offset = ImGui::GetContentRegionAvail().x - btn_width * 3 - ImGui::GetStyle().FramePadding.x * 3;
             for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
                 ImGui::PushID(static_cast<int>(j));
                 BuildsWindow::DrawBuildSection(tbuild, j);

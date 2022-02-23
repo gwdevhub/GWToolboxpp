@@ -309,7 +309,6 @@ bool TBHotkey::Draw(Op *op)
         ImGui::SameLine(offset_sameline);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when playing on PvP character", &trigger_on_pvp_character);
         ImGui::ShowHelp("Unless enabled, this hotkey will not activate when playing on a PvP only character.");
-        const float half_width = ImGui::GetContentRegionAvail().x / 2.f;
         ImGui::Separator();
         ImGui::Text("Instance Type: ");
         ImGui::SameLine();

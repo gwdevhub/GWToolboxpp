@@ -92,7 +92,6 @@ void EffectRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
     }
 }
 void EffectRenderer::DrawSettings() {
-    const float offset = ImGui::GetIO().FontGlobalScale * 150.0f;
     bool confirm = false;
     if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
         LoadDefaults();
