@@ -44,6 +44,7 @@
 #include <Windows/MaterialsWindow.h>
 #include <Windows/SettingsWindow.h>
 #include <Windows/NotePadWindow.h>
+#include <Windows/PartyStatistics.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Windows/FactionLeaderboardWindow.h>
@@ -127,6 +128,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_obfuscator) optional_modules.push_back(&Obfuscator::Instance());
     if (use_completion_window) optional_modules.push_back(&CompletionWindow::Instance());
     if (use_reroll_window) optional_modules.push_back(&RerollWindow::Instance());
+    if (use_team_statistics) optional_modules.push_back(&PartyStatisticsWindow::Instance());
 
 #ifdef _DEBUG
 #if 0
@@ -229,7 +231,8 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Observer Party Window",&use_observer_party_window},
         {"Observer Export Window",&use_observer_export_window},
         {"Vanquish counter",&use_vanquish},
-        {"World Map",&use_world_map}
+        {"World Map",&use_world_map},
+        {"Team Statistics",&use_team_statistics}
     };
     ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
     size_t items_per_col = (size_t)ceil(features.size() / static_cast<float>(cols));
@@ -328,6 +331,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_world_map = ini->GetBoolValue(Name(), VAR_NAME(use_world_map), use_world_map);
     use_effect_monitor = ini->GetBoolValue(Name(), VAR_NAME(use_effect_monitor), use_effect_monitor);
     use_reroll_window = ini->GetBoolValue(Name(), VAR_NAME(use_reroll_window), use_reroll_window);
+    use_team_statistics = ini->GetBoolValue(Name(), VAR_NAME(use_team_statistics), use_team_statistics);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -376,6 +380,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_world_map), use_world_map);
     ini->SetBoolValue(Name(), VAR_NAME(use_effect_monitor), use_effect_monitor);
     ini->SetBoolValue(Name(), VAR_NAME(use_reroll_window), use_reroll_window);
+    ini->SetBoolValue(Name(), VAR_NAME(use_team_statistics), use_team_statistics);
 }
 
 void ToolboxSettings::Draw(IDirect3DDevice9*) {

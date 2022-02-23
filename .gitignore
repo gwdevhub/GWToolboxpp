@@ -50,3 +50,6 @@ GWToolbox.aps
 *.sublime-workspace*
 .vs/
 build/
+
+# VSCode stuff
+.vscode/

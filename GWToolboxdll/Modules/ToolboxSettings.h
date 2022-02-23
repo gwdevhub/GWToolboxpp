@@ -87,4 +87,5 @@ private:
     bool use_obfuscator = true;
     bool use_completion_window = true;
     bool use_reroll_window = true;
+    bool use_team_statistics = true;
 };
