@@ -27,33 +27,36 @@
 #include <Modules/Resources.h>
 #include <Windows/PartyStatistics.h>
 
-
 /*************************/
 /* Static Helper Methods */
 /*************************/
 
 std::wstring& PartyStatisticsWindow::GetSkillName(const uint32_t skill_id) {
+    const auto found_it = skill_names.find(skill_id);
 
-    auto found = skill_names.find(skill_id);
-    if (found == skill_names.end()) {
+    if (found_it == skill_names.end()) {
         const GW::Skill& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
 
         skill_names[skill_id] = new GuiUtils::EncString(skill_data.name);
     }
+
     return skill_names[skill_id]->wstring();
 }
 
 std::wstring& PartyStatisticsWindow::GetPlayerName(uint32_t agent_id) {
     auto& agent_names = Instance().agent_names;
-    auto found = agent_names.find(agent_id);
-    if (found == agent_names.end()) {
+    const auto found_it = agent_names.find(agent_id);
+
+    if (found_it == agent_names.end()) {
         agent_names[agent_id] = new GuiUtils::EncString(GW::Agents::GetAgentEncName(agent_id));
     }
+
     return agent_names[agent_id]->wstring();
 }
 
 const GW::Skillbar* PartyStatisticsWindow::GetPlayerSkillbar(const uint32_t player_id) {
     const GW::SkillbarArray skillbar_array = GW::SkillbarMgr::GetSkillbarArray();
+
     if (!skillbar_array.valid()) return nullptr;
 
     for (const GW::Skillbar& skillbar : skillbar_array) {
@@ -116,7 +119,6 @@ void PartyStatisticsWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
 
     const bool party_size_changed = PartySizeChanged();
-
 
     if ((party_size_changed || (party_size == 1U)) &&
         (GW::Constants::InstanceType::Outpost == GW::Map::GetInstanceType())) {
@@ -195,7 +197,7 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkills& player_stats, co
     char header_label[BUFFER_LENGTH] = {'\0'};
 
     std::wstring* agent_name = party_names[player_stats.agent_id];
-    snprintf(header_label, BUFFER_LENGTH, "%ls###%u", agent_name ? agent_name->c_str() : L"Unknown party name", party_idx);
+    snprintf(header_label, BUFFER_LENGTH, "%ls###%u", agent_name ? agent_name->c_str() : L"Unknown Player", party_idx);
 
     if (ImGui::CollapsingHeader(header_label)) {
         uint32_t total_num_skills{0};
@@ -369,17 +371,18 @@ bool PartyStatisticsWindow::PartySizeChanged() {
 /********************/
 
 void PartyStatisticsWindow::UnsetPlayerStatistics() {
-
     party_ids.clear();
     party_indicies.clear();
     party_names.clear();
     party_stats.clear();
-    for (auto& it : skill_names) {
-        if (it.second) delete it.second;
+
+    for (auto& [_, encoder] : skill_names) {
+        if (encoder) delete encoder;
     }
     skill_names.clear();
-    for (auto& it : agent_names) {
-        if (it.second) delete it.second;
+
+    for (auto& [_, encoder] : agent_names) {
+        if (encoder) delete encoder;
     }
     agent_names.clear();
 }
