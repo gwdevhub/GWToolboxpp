@@ -1431,16 +1431,24 @@ bool TravelWindow::ParseOutpost(const std::wstring &s, GW::Constants::MapID &out
 bool TravelWindow::ParseDistrict(const std::wstring &s, GW::Constants::District &district, uint32_t &number)
 {
     std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
-    // Shortcut words e.g "/tp ae" for american english
     std::string first_word = compare.substr(0, compare.find(' '));
+    char alias[3];
 
-    TravelWindow &instance = Instance();
-    const auto &shorthand_outpost = instance.shorthand_district_names.find(first_word);
-    if (shorthand_outpost != instance.shorthand_district_names.end()) {
-        const DistrictAlias &outpost_info = shorthand_outpost->second;
-        district = outpost_info.district;
-        number = outpost_info.district_number;
-        return true;
+    if (sscanf(first_word.c_str(), "%2s%u", alias, &number) == 2) {
+        first_word = first_word.substr(0, strlen(alias));
     }
-    return false;
+
+    // Shortcut words e.g "/tp ae" for american english
+    TravelWindow& instance = Instance();
+    const auto& shorthand_outpost = instance.shorthand_district_names.find(first_word);
+
+    if (shorthand_outpost == instance.shorthand_district_names.end()) {
+        return false;
+    }
+
+    const DistrictAlias& outpost_info = shorthand_outpost->second;
+    district = outpost_info.district;
+    number = outpost_info.district_number ? outpost_info.district_number : number;
+
+    return true;
 }
