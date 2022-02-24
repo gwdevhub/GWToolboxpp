@@ -1432,23 +1432,22 @@ bool TravelWindow::ParseDistrict(const std::wstring &s, GW::Constants::District 
 {
     std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
     std::string first_word = compare.substr(0, compare.find(' '));
-    char alias[3];
 
-    if (sscanf(first_word.c_str(), "%2s%u", alias, &number) == 2) {
-        first_word = first_word.substr(0, strlen(alias));
+    const std::regex district_regex("([a-z]{2,3})(\\d)?");
+    std::smatch m;
+    if (!std::regex_search(first_word, m, district_regex)) {
+        return false;
     }
-
     // Shortcut words e.g "/tp ae" for american english
     TravelWindow& instance = Instance();
-    const auto& shorthand_outpost = instance.shorthand_district_names.find(first_word);
-
+    const auto& shorthand_outpost = instance.shorthand_district_names.find(m[1].str());
     if (shorthand_outpost == instance.shorthand_district_names.end()) {
         return false;
     }
-
-    const DistrictAlias& outpost_info = shorthand_outpost->second;
-    district = outpost_info.district;
-    number = outpost_info.district_number ? outpost_info.district_number : number;
+    district = shorthand_outpost->second.district;
+    if (m.size() > 2 && !GuiUtils::ParseUInt(m[2].str().c_str(), &number)) {
+        number = 0;
+    }
 
     return true;
 }
