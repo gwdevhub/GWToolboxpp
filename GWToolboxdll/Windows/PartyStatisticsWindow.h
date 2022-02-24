@@ -18,23 +18,19 @@
 
 class PartyStatisticsWindow : public ToolboxWindow {
 protected:
-    static constexpr auto MAX_NUM_SKILLS = size_t{8};
-    static constexpr auto NONE_PLAYER_NAME = L"Hero/Henchman Slot";
-    static constexpr auto NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
-    static constexpr auto UNKNOWN_SKILL_NAME = L"Unknown Skill";
-    static constexpr auto BUFFER_LENGTH = size_t{256};
+
 
     using PartyIds = std::set<uint32_t>;
     using PartyIndicies = std::map<uint32_t, size_t>;
     using PartyNames = std::map<uint32_t, std::wstring*>;
 
     struct Skill {
-        uint32_t id;
-        uint32_t count;
+        uint32_t id = 0;
+        uint32_t count = 0;
         std::wstring* name = 0;
     };
 
-    using Skills = std::array<Skill, MAX_NUM_SKILLS>;
+    using Skills = std::vector<Skill>;
 
     struct PlayerSkills {
         uint32_t agent_id;
@@ -69,7 +65,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "PartyStatistics"; }
+    const char* Name() const override { return "Party Statistics"; }
     const char* Icon() const override { return ICON_FA_TABLE; }
 
     void Initialize() override;

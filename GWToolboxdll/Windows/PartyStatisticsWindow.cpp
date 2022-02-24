@@ -25,11 +25,19 @@
 
 #include <GuiUtils.h>
 #include <Modules/Resources.h>
-#include <Windows/PartyStatistics.h>
+#include <Windows/PartyStatisticsWindow.h>
 
 /*************************/
 /* Static Helper Methods */
 /*************************/
+
+namespace {
+    constexpr wchar_t NONE_PLAYER_NAME[] = L"Hero/Henchman Slot";
+    constexpr uint32_t NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
+    constexpr wchar_t UNKNOWN_SKILL_NAME[] = L"Unknown Skill";
+    constexpr wchar_t UNKNOWN_PLAYER_NAME[] = L"Unknown Player";
+    constexpr uint8_t MAX_NUM_SKILLS = 8;
+}
 
 std::wstring& PartyStatisticsWindow::GetSkillName(const uint32_t skill_id) {
     const auto found_it = skill_names.find(skill_id);
@@ -151,7 +159,8 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible) return;
 
     if (!GW::Map::GetIsMapLoaded()) return;
-
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         size_t party_idx{0};
         for (const auto& player_stats : party_stats) {
@@ -194,10 +203,12 @@ void PartyStatisticsWindow::Terminate() {
 /***********************/
 
 void PartyStatisticsWindow::DrawPartyMember(const PlayerSkills& player_stats, const size_t party_idx) {
-    char header_label[BUFFER_LENGTH] = {'\0'};
+
+    constexpr size_t buffer_length = 255;
+    char header_label[buffer_length] = {'\0'};
 
     std::wstring* agent_name = party_names[player_stats.agent_id];
-    snprintf(header_label, BUFFER_LENGTH, "%ls###%u", agent_name ? agent_name->c_str() : L"Unknown Player", party_idx);
+    snprintf(header_label, buffer_length, "%ls###%u", agent_name ? agent_name->c_str() : UNKNOWN_PLAYER_NAME, party_idx);
 
     if (ImGui::CollapsingHeader(header_label)) {
         uint32_t total_num_skills{0};
@@ -207,8 +218,8 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkills& player_stats, co
 
         if (print_by_click) {
             ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0F);
-            char button_name[BUFFER_LENGTH] = {'\0'};
-            snprintf(button_name, BUFFER_LENGTH, "###WriteStatistics%d", party_idx);
+            char button_name[buffer_length] = {'\0'};
+            snprintf(button_name, buffer_length, "###WriteStatistics%d", party_idx);
             const float width = ImGui::GetWindowWidth();
             const float height = ImGui::GetTextLineHeightWithSpacing() * MAX_NUM_SKILLS;
             if (ImGui::Button(button_name, ImVec2(width, height)) && ImGui::IsKeyDown(VK_CONTROL)) {
@@ -218,8 +229,8 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkills& player_stats, co
             ImGui::SetCursorPos(ImVec2{ImGui::GetCursorPos().x, ImGui::GetCursorPos().y - height});
         }
 
-        char table_name[BUFFER_LENGTH] = {'\0'};
-        snprintf(table_name, BUFFER_LENGTH, "###Table%d", party_idx);
+        char table_name[buffer_length] = {'\0'};
+        snprintf(table_name, buffer_length, "###Table%d", party_idx);
 
         const float width = ImGui::GetWindowWidth();
 
@@ -469,19 +480,16 @@ void PartyStatisticsWindow::SetPartySkills() {
         const uint32_t id = player_stats.agent_id;
 
         const GW::Skillbar* const skillbar = GetPlayerSkillbar(id);
-        Skills skills{};
+        Skills skills(MAX_NUM_SKILLS);
 
         /* Skillbar for other players and henchmen is unknown in outpost init with No_Skill */
         if (nullptr == skillbar) {
-            for (size_t skill_idx = 0; skill_idx < MAX_NUM_SKILLS; ++skill_idx) {
-                skills[skill_idx] = {NONE_SKILL, 0U, 0};
-            }
             player_skills.skills = skills;
             ++party_idx;
             continue;
         }
 
-        size_t skill_idx{0};
+        size_t skill_idx = 0;
         for (const GW::SkillbarSkill& skill : skillbar->skills) {
             skills[skill_idx] = {skill.skill_id, 0U, &GetSkillName(skill.skill_id)};
             ++skill_idx;
