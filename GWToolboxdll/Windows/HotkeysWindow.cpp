@@ -53,6 +53,10 @@ void HotkeysWindow::Terminate() {
     for (TBHotkey* hotkey : hotkeys) {
         delete hotkey;
     }
+    for (auto& it : HotkeyGWKey::control_labels) {
+        if (it.second) delete it.second;
+        it.second = nullptr;
+    }
 }
 bool HotkeysWindow::IsMapReady()
 {

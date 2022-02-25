@@ -50,26 +50,9 @@ DWORD* TBHotkey::mod_out = nullptr;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
 std::vector<const char*> HotkeyGWKey::labels = {};
 std::vector < std::pair< GW::UI::ControlAction, GuiUtils::EncString* > > HotkeyGWKey::control_labels = {
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet1,0 },
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet2,0 },
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet3,0 },
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet4,0 },
-
-    {GW::UI::ControlAction::ControlAction_TargetNearestItem,0 },
-    {GW::UI::ControlAction::ControlAction_TargetNextItem,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPreviousItem,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMemberNext,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMemberPrevious,0 },
-    {GW::UI::ControlAction::ControlAction_TargetAllyNearest,0 },
-    {GW::UI::ControlAction::ControlAction_TargetSelf,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPriorityTarget,0 },
-    {GW::UI::ControlAction::ControlAction_TargetNearestEnemy,0 },
-    {GW::UI::ControlAction::ControlAction_TargetNextEnemy,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPreviousEnemy,0 },
-
-    {GW::UI::ControlAction::ControlAction_DropItem,0 },
-
-    {GW::UI::ControlAction::ControlAction_CommandParty,0 },
+    {GW::UI::ControlAction::ControlAction_Interact,0 },
+    {GW::UI::ControlAction::ControlAction_CancelAction,0 },
+    {GW::UI::ControlAction::ControlAction_ClearPartyCommands,0 },
     {GW::UI::ControlAction::ControlAction_CommandHero1,0 },
     {GW::UI::ControlAction::ControlAction_CommandHero2,0 },
     {GW::UI::ControlAction::ControlAction_CommandHero3,0 },
@@ -77,6 +60,67 @@ std::vector < std::pair< GW::UI::ControlAction, GuiUtils::EncString* > > HotkeyG
     {GW::UI::ControlAction::ControlAction_CommandHero5,0 },
     {GW::UI::ControlAction::ControlAction_CommandHero6,0 },
     {GW::UI::ControlAction::ControlAction_CommandHero7,0 },
+    {GW::UI::ControlAction::ControlAction_CommandParty,0 },
+
+    {GW::UI::ControlAction::ControlAction_DropItem,0 },
+    {GW::UI::ControlAction::ControlAction_Follow,0 },
+
+    {GW::UI::ControlAction::ControlAction_Hero1Skill1,0 },
+    {GW::UI::ControlAction::ControlAction_Hero1Skill2,0 },
+    {GW::UI::ControlAction::ControlAction_Hero1Skill3,0 },
+    {GW::UI::ControlAction::ControlAction_Hero1Skill4,0 },
+    {GW::UI::ControlAction::ControlAction_Hero1Skill5,0 },
+    {GW::UI::ControlAction::ControlAction_Hero1Skill6,0 },
+    {GW::UI::ControlAction::ControlAction_Hero1Skill7,0 },
+    {GW::UI::ControlAction::ControlAction_Hero1Skill8,0 },
+    {GW::UI::ControlAction::ControlAction_Hero2Skill1,0 },
+    {GW::UI::ControlAction::ControlAction_Hero2Skill2,0 },
+    {GW::UI::ControlAction::ControlAction_Hero2Skill3,0 },
+    {GW::UI::ControlAction::ControlAction_Hero2Skill4,0 },
+    {GW::UI::ControlAction::ControlAction_Hero2Skill5,0 },
+    {GW::UI::ControlAction::ControlAction_Hero2Skill6,0 },
+    {GW::UI::ControlAction::ControlAction_Hero2Skill7,0 },
+    {GW::UI::ControlAction::ControlAction_Hero2Skill8,0 },
+    {GW::UI::ControlAction::ControlAction_Hero3Skill1,0 },
+    {GW::UI::ControlAction::ControlAction_Hero3Skill2,0 },
+    {GW::UI::ControlAction::ControlAction_Hero3Skill3,0 },
+    {GW::UI::ControlAction::ControlAction_Hero3Skill4,0 },
+    {GW::UI::ControlAction::ControlAction_Hero3Skill5,0 },
+    {GW::UI::ControlAction::ControlAction_Hero3Skill6,0 },
+    {GW::UI::ControlAction::ControlAction_Hero3Skill7,0 },
+    {GW::UI::ControlAction::ControlAction_Hero3Skill8,0 },
+    {GW::UI::ControlAction::ControlAction_Hero4Skill1,0 },
+    {GW::UI::ControlAction::ControlAction_Hero4Skill2,0 },
+    {GW::UI::ControlAction::ControlAction_Hero4Skill3,0 },
+    {GW::UI::ControlAction::ControlAction_Hero4Skill4,0 },
+    {GW::UI::ControlAction::ControlAction_Hero4Skill5,0 },
+    {GW::UI::ControlAction::ControlAction_Hero4Skill6,0 },
+    {GW::UI::ControlAction::ControlAction_Hero4Skill7,0 },
+    {GW::UI::ControlAction::ControlAction_Hero4Skill8,0 },
+    {GW::UI::ControlAction::ControlAction_Hero5Skill1,0 },
+    {GW::UI::ControlAction::ControlAction_Hero5Skill2,0 },
+    {GW::UI::ControlAction::ControlAction_Hero5Skill3,0 },
+    {GW::UI::ControlAction::ControlAction_Hero5Skill4,0 },
+    {GW::UI::ControlAction::ControlAction_Hero5Skill5,0 },
+    {GW::UI::ControlAction::ControlAction_Hero5Skill6,0 },
+    {GW::UI::ControlAction::ControlAction_Hero5Skill7,0 },
+    {GW::UI::ControlAction::ControlAction_Hero5Skill8,0 },
+    {GW::UI::ControlAction::ControlAction_Hero6Skill1,0 },
+    {GW::UI::ControlAction::ControlAction_Hero6Skill2,0 },
+    {GW::UI::ControlAction::ControlAction_Hero6Skill3,0 },
+    {GW::UI::ControlAction::ControlAction_Hero6Skill4,0 },
+    {GW::UI::ControlAction::ControlAction_Hero6Skill5,0 },
+    {GW::UI::ControlAction::ControlAction_Hero6Skill6,0 },
+    {GW::UI::ControlAction::ControlAction_Hero6Skill7,0 },
+    {GW::UI::ControlAction::ControlAction_Hero6Skill8,0 },
+    {GW::UI::ControlAction::ControlAction_Hero7Skill1,0 },
+    {GW::UI::ControlAction::ControlAction_Hero7Skill2,0 },
+    {GW::UI::ControlAction::ControlAction_Hero7Skill3,0 },
+    {GW::UI::ControlAction::ControlAction_Hero7Skill4,0 },
+    {GW::UI::ControlAction::ControlAction_Hero7Skill5,0 },
+    {GW::UI::ControlAction::ControlAction_Hero7Skill6,0 },
+    {GW::UI::ControlAction::ControlAction_Hero7Skill7,0 },
+    {GW::UI::ControlAction::ControlAction_Hero7Skill8,0 },
 
     {GW::UI::ControlAction::ControlAction_UseSkill1,0 },
     {GW::UI::ControlAction::ControlAction_UseSkill2,0 },
@@ -86,6 +130,33 @@ std::vector < std::pair< GW::UI::ControlAction, GuiUtils::EncString* > > HotkeyG
     {GW::UI::ControlAction::ControlAction_UseSkill6,0 },
     {GW::UI::ControlAction::ControlAction_UseSkill7,0 },
     {GW::UI::ControlAction::ControlAction_UseSkill8,0 },
+
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet1,0 },
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet2,0 },
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet3,0 },
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet4,0 },
+
+    {GW::UI::ControlAction::ControlAction_TargetAllyNearest,0 },
+    {GW::UI::ControlAction::ControlAction_ClearTarget,0 },
+    {GW::UI::ControlAction::ControlAction_TargetNearestEnemy,0 },
+    {GW::UI::ControlAction::ControlAction_TargetNextEnemy,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPreviousEnemy,0 },
+    {GW::UI::ControlAction::ControlAction_TargetNearestItem,0 },
+    {GW::UI::ControlAction::ControlAction_TargetNextItem,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPreviousItem,0 },
+
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember1,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember2,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember3,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember4,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember5,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember6,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember7,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember8,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMemberNext,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMemberPrevious,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPriorityTarget,0 },
+    {GW::UI::ControlAction::ControlAction_TargetSelf,0 }
 };
 
 TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
@@ -1746,7 +1817,7 @@ bool HotkeyGWKey::Draw()
         return false;
     }
 
-    if (ImGui::Combo("Action###combo", (int*)&action_idx, labels.data(), labels.size(), 0x200)) {
+    if (ImGui::Combo("Action###combo", (int*)&action_idx, labels.data(), labels.size(), 10)) {
         action = control_labels[action_idx].first;
         return true;
     }
