@@ -7,6 +7,10 @@
 
 #include <GWCA/Managers/MapMgr.h>
 
+#include <GWCA/Managers/UIMgr.h>
+
+#include <GuiUtils.h>
+
 #include <Defines.h>
 
 // abstract class Toolbox Hotkey
@@ -396,5 +400,24 @@ public:
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
+    void Execute() override;
+};
+class HotkeyGWKey : public TBHotkey {
+private:
+    GW::UI::ControlAction action = GW::UI::ControlAction::ControlAction_ActivateWeaponSet1;
+    int action_idx = 0;
+    static std::vector<const char*> labels;
+public:
+    static std::vector < std::pair< GW::UI::ControlAction, GuiUtils::EncString* > > control_labels;
+
+    static const char* IniSection() { return "GWHotkey"; }
+    const char* Name() const override { return IniSection(); }
+
+    HotkeyGWKey(CSimpleIni* ini, const char* section);
+
+    void Save(CSimpleIni* ini, const char* section) const override;
+
+    bool Draw() override;
+    int Description(char* buf, size_t bufsz) override;
     void Execute() override;
 };

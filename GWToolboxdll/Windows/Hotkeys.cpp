@@ -48,6 +48,45 @@ unsigned int TBHotkey::cur_ui_id = 0;
 WORD* TBHotkey::key_out = nullptr;
 DWORD* TBHotkey::mod_out = nullptr;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
+std::vector<const char*> HotkeyGWKey::labels = {};
+std::vector < std::pair< GW::UI::ControlAction, GuiUtils::EncString* > > HotkeyGWKey::control_labels = {
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet1,0 },
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet2,0 },
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet3,0 },
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet4,0 },
+
+    {GW::UI::ControlAction::ControlAction_TargetNearestItem,0 },
+    {GW::UI::ControlAction::ControlAction_TargetNextItem,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPreviousItem,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMemberNext,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPartyMemberPrevious,0 },
+    {GW::UI::ControlAction::ControlAction_TargetAllyNearest,0 },
+    {GW::UI::ControlAction::ControlAction_TargetSelf,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPriorityTarget,0 },
+    {GW::UI::ControlAction::ControlAction_TargetNearestEnemy,0 },
+    {GW::UI::ControlAction::ControlAction_TargetNextEnemy,0 },
+    {GW::UI::ControlAction::ControlAction_TargetPreviousEnemy,0 },
+
+    {GW::UI::ControlAction::ControlAction_DropItem,0 },
+
+    {GW::UI::ControlAction::ControlAction_CommandParty,0 },
+    {GW::UI::ControlAction::ControlAction_CommandHero1,0 },
+    {GW::UI::ControlAction::ControlAction_CommandHero2,0 },
+    {GW::UI::ControlAction::ControlAction_CommandHero3,0 },
+    {GW::UI::ControlAction::ControlAction_CommandHero4,0 },
+    {GW::UI::ControlAction::ControlAction_CommandHero5,0 },
+    {GW::UI::ControlAction::ControlAction_CommandHero6,0 },
+    {GW::UI::ControlAction::ControlAction_CommandHero7,0 },
+
+    {GW::UI::ControlAction::ControlAction_UseSkill1,0 },
+    {GW::UI::ControlAction::ControlAction_UseSkill2,0 },
+    {GW::UI::ControlAction::ControlAction_UseSkill3,0 },
+    {GW::UI::ControlAction::ControlAction_UseSkill4,0 },
+    {GW::UI::ControlAction::ControlAction_UseSkill5,0 },
+    {GW::UI::ControlAction::ControlAction_UseSkill6,0 },
+    {GW::UI::ControlAction::ControlAction_UseSkill7,0 },
+    {GW::UI::ControlAction::ControlAction_UseSkill8,0 },
+};
 
 TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
 {
@@ -84,6 +123,8 @@ TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
         return new HotkeyEquipItem(ini, section);
     } else if (type.compare(HotkeyFlagHero::IniSection()) == 0) {
         return new HotkeyFlagHero(ini, section);
+    } else if (type.compare(HotkeyGWKey::IniSection()) == 0) {
+        return new HotkeyGWKey(ini, section);
     } else {
         return nullptr;
     }
@@ -1660,4 +1701,60 @@ void HotkeyFlagHero::Execute()
     } else {
         GW::PartyMgr::FlagHero(hero, pos);
     }
+}
+
+HotkeyGWKey::HotkeyGWKey(CSimpleIni* ini, const char* section)
+    : TBHotkey(ini, section)
+{
+    action = (GW::UI::ControlAction)ini->GetLongValue(section, "ActionID", (long)action);
+    auto found = std::find_if(control_labels.begin(), control_labels.end(), [&](std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
+        return action == in.first;
+        });
+    if (found != control_labels.end()) {
+        action_idx = std::distance(control_labels.begin(), found);
+    }
+}
+void HotkeyGWKey::Save(CSimpleIni* ini, const char* section) const
+{
+    TBHotkey::Save(ini, section);
+    ini->SetLongValue(section, "ActionID", (long)action);
+}
+int HotkeyGWKey::Description(char* buf, size_t bufsz)
+{
+    if (action_idx < 0 || action_idx >= (int)control_labels.size()) {
+        return snprintf(buf, bufsz, "Guild Wars Key: Unknown Action %d", action_idx);
+    }
+    return snprintf(buf, bufsz, "Guild Wars Key: %s", control_labels[action_idx].second->string().c_str());
+}
+bool HotkeyGWKey::Draw()
+{
+    if (!labels.size()) {
+        bool waiting = false;
+        for (auto it : control_labels) {
+            if (!it.second->string().size()) {
+                waiting = true;
+                break;
+            }
+            labels.push_back(it.second->string().c_str());
+        }
+        if (waiting) {
+            labels.clear();
+        }
+    }
+    if (!labels.size()) {
+        ImGui::Text("Waiting on endoded strings");
+        return false;
+    }
+
+    if (ImGui::Combo("Action###combo", (int*)&action_idx, labels.data(), labels.size(), 0x200)) {
+        action = control_labels[action_idx].first;
+        return true;
+    }
+    return false;
+}
+void HotkeyGWKey::Execute()
+{
+    GW::GameThread::Enqueue([&]() {
+        GW::UI::Keypress(action);
+        });
 }

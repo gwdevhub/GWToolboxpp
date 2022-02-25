@@ -1,8 +1,12 @@
 #pragma once 
 
+#include <GWCA/Managers/UIMgr.h>
+
 #include <Logger.h>
 #include <Timer.h>
 #include <ToolboxWindow.h>
+
+#include <GuiUtils.h>
 
 #include <Windows/Hotkeys.h>
 
@@ -48,6 +52,10 @@ private:
     std::vector<TBHotkey*> hotkeys;             // list of hotkeys
     // Subset of hotkeys that are valid to current character/map combo
     std::vector<TBHotkey*> valid_hotkeys;
+
+    typedef wchar_t*(__cdecl* GetActionLabel_pt)(GW::UI::ControlAction action);
+    GetActionLabel_pt GetActionLabel_Func = 0;
+
     // Ordered subsets
     enum GroupBy : int {
         None,

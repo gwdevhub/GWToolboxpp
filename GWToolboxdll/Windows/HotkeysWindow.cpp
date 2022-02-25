@@ -22,6 +22,7 @@
 
 #include <Modules/Resources.h>
 #include <Windows/HotkeysWindow.h>
+#include <GWCA/Utilities/Scanner.h>
 
 // @Cleanup: Find the address for this without checking map garbage - how does inv window know to show "pvp equipment" button?
 bool HotkeysWindow::IsPvPCharacter() {
@@ -36,6 +37,16 @@ void HotkeysWindow::Initialize() {
     ToolboxWindow::Initialize();
     clickerTimer = TIMER_INIT();
     dropCoinsTimer = TIMER_INIT();
+
+
+    GetActionLabel_Func = (GetActionLabel_pt)GW::Scanner::Find("\x83\xfe\x5b\x74\x27\x83\xfe\x5c\x74\x22\x83\xfe\x5d\x74\x1d", "xxxxxxxxxxxxxxx", -0x7);
+    GWCA_INFO("[SCAN] GetActionLabel_Func = %p\n", (void*)GetActionLabel_Func);
+    if (GetActionLabel_Func) {
+
+        for (auto& label : HotkeyGWKey::control_labels) {
+            label.second = new GuiUtils::EncString(GetActionLabel_Func(label.first));
+        }
+    }
 }
 void HotkeysWindow::Terminate() {
     ToolboxWindow::Terminate();
@@ -127,6 +138,10 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                 new_hotkey = new HotkeyAction(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Execute a single task such as opening chests\nor reapplying lightbringer title");
+            if (ImGui::Selectable("Guild Wars Key")) {
+                new_hotkey = new HotkeyGWKey(nullptr, nullptr);
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Trigger an in-game hotkey via toolbox");
             if (ImGui::Selectable("Target")) {
                 new_hotkey = new HotkeyTarget(nullptr, nullptr);
             }
