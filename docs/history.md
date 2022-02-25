@@ -7,6 +7,20 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.14
+* [New] Added Party Statistics Module
+* [New] Added GW Key Hotkeys to be able to bind modifier keys to in-game controls
+* [Fix] Fixed bug with some messages in the hints module
+* [Fix] Fixed issue preventing toolbox from guessing material storage stack size
+* [Fix] Fixed some player names not showing in the reroll window
+* [Fix] Vanquish count overlay moved to correct place
+* [Fix] UI tweaks to friend list window
+* [Minor] More districts recognised when using `/tp` command e.g. int1, ae4
+* [Minor] Reroll function now kicks all heroes before re-inviting to former party
+* [Minor] Added option to limit signets of capture on skills window to 10
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.14_Release/GWToolboxdll.dll)
+
 ## Version 5.13
 * [Fix] Fixed chat related crash when using obfuscator
 * [Fix] Fixed `/reroll` command not working unless reroll window is visible
