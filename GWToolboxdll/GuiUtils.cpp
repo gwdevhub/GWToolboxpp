@@ -537,6 +537,16 @@ void GuiUtils::EncString::reset(const uint32_t _enc_string_id, bool sanitise) {
         encoded_ws = out;
     }
 }
+void GuiUtils::EncString::language(GW::Constants::TextLanguage l)
+{
+    if (language_id == l)
+        return;
+    decoded_ws.clear();
+    decoded_s.clear();
+    decoding = sanitised = false;
+    language_id = l;
+}
+
 void GuiUtils::EncString::reset(const wchar_t* _enc_string, bool sanitise)
 {
     if (_enc_string && wcscmp(_enc_string, encoded_ws.c_str()) == 0)
@@ -553,7 +563,7 @@ void GuiUtils::EncString::reset(const wchar_t* _enc_string, bool sanitise)
 std::wstring& GuiUtils::EncString::wstring()
 {
     if (!decoding && !encoded_ws.empty()) {
-        GW::UI::AsyncDecodeStr(encoded_ws.c_str(), &decoded_ws);
+        GW::UI::AsyncDecodeStr(encoded_ws.c_str(), &decoded_ws,(uint32_t)language_id);
         decoding = true;
     }
     sanitise();

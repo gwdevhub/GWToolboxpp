@@ -294,6 +294,8 @@ void DiscordModule::Initialize() {
     params.network_events = &network_events;
     network_events.on_message = OnNetworkMessage;
 
+    map_name_decoded.language(GW::Constants::TextLanguage::English);
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Callback,
         [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
             UNREFERENCED_PARAMETER(status);

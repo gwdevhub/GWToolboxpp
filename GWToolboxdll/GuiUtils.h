@@ -1,5 +1,7 @@
 #pragma once
 
+#include <GWCA\Constants\Constants.h>
+
 #include <ImGuiAddons.h>
 
 namespace GuiUtils {
@@ -71,7 +73,9 @@ namespace GuiUtils {
         bool decoding = false;
         bool sanitised = false;
         virtual void sanitise();
+        GW::Constants::TextLanguage language_id = (GW::Constants::TextLanguage)-1;
     public:
+        void language(GW::Constants::TextLanguage l = (GW::Constants::TextLanguage)-1);
         inline bool IsDecoding() { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string
