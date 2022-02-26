@@ -247,7 +247,9 @@ void PartyStatisticsWindow::DrawPartyMember(const PlayerSkills& player_stats, co
 
         for (const auto [skill_id, skill_count, skill_name] : player_stats.skills) {
             const float percentage = (static_cast<float>(skill_count) / static_cast<float>(total_num_skills)) * 100.0F;
-
+            if (!skill_id) {
+                continue;
+            }
             ImGui::Text("%ls", skill_name->c_str());
 
             if (show_perc_values && show_abs_values) {
