@@ -8,6 +8,7 @@ If you are here to check toolbox features and for a download link to go [https:/
 ### Requirements
 * CMake 3.14 or higher. Download the latest version from [https://cmake.org/download/](https://cmake.org/download/). 
 * Visual Studio. You can download Visual Studio Community for free here: [https://visualstudio.microsoft.com/vs/community/](https://visualstudio.microsoft.com/vs/community/). You will also need the "Desktop development with C++" package. 
+* MSVC v142 C++ Build tools - install via Visual Studio:  Tools > Get Tools and features > Individual components
 * Git. [https://git-scm.com/](https://git-scm.com/)
 
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
@@ -24,13 +25,13 @@ If you are here to check toolbox features and for a download link to go [https:/
 5. Move into the build folder:
 `cd build`
 
-6. Run CMake. Run **one** of the following commands, depending on which version of Visual Studio you wish to use. You can also just run `cmake .. -A Win32 -B .` and it will use the default generator. 
+6. Run CMake. Run **one** of the following commands, depending on which version of Visual Studio you wish to use. You can also just run `cmake .. -T v142 -A Win32 -B .` and it will use the default generator. 
 
-`cmake .. -G "Visual Studio 16 2019" -A Win32 -B .`
+`cmake .. -G "Visual Studio 16 2019" -T v142 -A Win32 -B .`
 
-`cmake .. -G "Visual Studio 15 2017" -A Win32 -B .`
+`cmake .. -G "Visual Studio 15 2017" -T v142 -A Win32 -B .`
 
-`cmake .. -G "Visual Studio 14 2015" -A Win32 -B .`
+`cmake .. -G "Visual Studio 14 2015" -T v142 -A Win32 -B .`
 
 7. Open the project:
 `cmake --open .`
