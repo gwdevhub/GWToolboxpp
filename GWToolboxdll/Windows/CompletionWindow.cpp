@@ -394,13 +394,7 @@ IDirect3DTexture9* PvESkill::GetMissionImage()
 {
 	if (!img_loaded) {
 		img_loaded = true;
-		auto path = Resources::GetPath(L"img/skills");
-		Resources::EnsureFolderExists(path);
-		wchar_t local_image[MAX_PATH];
-		swprintf(local_image, _countof(local_image), L"%s/%d.jpg", path.c_str(), skill_id);
-		wchar_t remote_image[255];
-		swprintf(remote_image, _countof(remote_image), L"https://wiki.guildwars.com/images/%s.jpg", image_url);
-		Resources::Instance().LoadTextureAsync(&skill_image, local_image, remote_image);
+		Resources::Instance().LoadSkillImage((uint32_t)skill_id, &skill_image);
 	}
 	return skill_image;
 }

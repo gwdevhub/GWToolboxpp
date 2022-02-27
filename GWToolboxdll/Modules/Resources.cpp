@@ -6,7 +6,11 @@
 #include <GWToolbox.h>
 #include <Logger.h>
 
+#include <GuiUtils.h>
+
 #include <Modules/Resources.h>
+#include <GWCA/GameEntities/Item.h>
+#include <Timer.h>
 
 namespace {
     const wchar_t* d3dErrorMessage(HRESULT code) {
@@ -53,24 +57,41 @@ namespace {
 
 void Resources::Initialize() {
     ToolboxModule::Initialize();
-    worker = std::thread([this]() {
-        while (!should_stop) {
-            if (thread_jobs.empty()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            } else {
-                thread_jobs.front()();
-                thread_jobs.pop();
+    for (size_t i = 0; i < Resources::MAX_WORKERS; i++) {
+        workers.push_back(new std::thread([this]() {
+            while (!should_stop) {
+                queue_mutex.lock();
+                if (thread_jobs.empty()) {
+                    queue_mutex.unlock();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                }
+                else {
+                    std::function<void()> func = thread_jobs.front();
+                    thread_jobs.pop();
+                    queue_mutex.unlock();
+                    func();
+                }
             }
-        }
-    });
+            }));
+    }
+}
+void Resources::Cleanup() {
+    should_stop = true;
+    for (std::thread* worker : workers) {
+        if (!worker)
+            continue;
+        assert(worker->joinable());
+        worker->join();
+        delete worker;
+    }
+    workers.clear();
 }
 void Resources::Terminate() {
     ToolboxModule::Terminate();
-    should_stop = true;
-    if (worker.joinable()) worker.join();
+    Cleanup();
 }
 void Resources::EndLoading() {
-    thread_jobs.push([this]() { should_stop = true; });
+    EnqueueWorkerTask([this]() { should_stop = true; });
 }
 
 std::filesystem::path Resources::GetSettingsFolderPath()
@@ -114,11 +135,11 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::w
 void Resources::Download(
     const std::filesystem::path& path_to_file, const std::wstring& url, std::function<void(bool)> callback)
 {
-    thread_jobs.push([this, url, path_to_file, callback]() {
+    EnqueueWorkerTask([this, url, path_to_file, callback]() {
         bool success = Download(path_to_file, url);
         // and call the callback in the main thread
         todo.push([callback, success]() { callback(success); });
-    });
+        });
 }
 
 std::string Resources::Download(const std::wstring& url) const
@@ -141,7 +162,7 @@ std::string Resources::Download(const std::wstring& url) const
 }
 void Resources::Download(const std::wstring& url, std::function<void(std::string)> callback)
 {
-    thread_jobs.push([this, url, callback]() {
+    EnqueueWorkerTask([this, url, callback]() {
         const std::string& s = Download(url);
         todo.push([callback, s]() { callback(s); });
     });
@@ -313,5 +334,36 @@ void Resources::Update(float) {
     while (!todo.empty()) {
         todo.front()();
         todo.pop();
+    }
+}
+
+// Fetches skill page from GWW, parses out the image for the skill then downloads that to disk
+// Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
+void Resources::LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture) {
+
+    auto path = Resources::GetPath(L"img\\skills");
+    assert(Resources::EnsureFolderExists(path));
+
+    wchar_t path_to_file[MAX_PATH];
+    swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", Resources::GetPath(L"img\\skills").c_str(), skill_id);
+    if (std::filesystem::exists(path_to_file)) {
+        LoadTextureAsync(texture, path_to_file);
+    }
+    else {
+        wchar_t url[128];
+        swprintf(url, _countof(url), L"https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skill_id);
+        Download(url, [skill_id, texture](std::string response) {
+            char regex_str[128];
+            snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"].*%d.*['\"].+src=['\"]([^\"']+)", skill_id);
+            const std::regex image_finder(regex_str);
+            std::smatch m;
+            if (std::regex_search(response, m, image_finder)) {
+                wchar_t path_to_file[MAX_PATH];
+                swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", Resources::GetPath(L"img\\skills").c_str(), skill_id);
+                wchar_t url[128];
+                swprintf(url, _countof(url), L"https://wiki.guildwars.com%S", m[1].str().c_str());
+                Instance().LoadTextureAsync(texture, path_to_file, url);
+            }
+            });
     }
 }

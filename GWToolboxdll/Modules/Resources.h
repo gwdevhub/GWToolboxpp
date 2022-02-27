@@ -10,8 +10,10 @@ class Resources : public ToolboxModule {
     Resources() {};
     Resources(const Resources&) = delete;
     ~Resources() {
-        if (worker.joinable()) worker.join();
+        Cleanup();
     };
+private:
+    std::mutex queue_mutex;
 public:
     static Resources& Instance() {
         static Resources instance;
@@ -62,13 +64,17 @@ public:
     void Download(const std::wstring& url, 
         std::function<void(std::string file)> callback);
 
-    void EnqueueWorkerTask(std::function<void()> f) { thread_jobs.push(f); }
+    void EnqueueWorkerTask(std::function<void()> f) { queue_mutex.lock(); thread_jobs.push(f); queue_mutex.unlock();}
     void EnqueueMainTask(std::function<void()> f) { todo.push(f); }
 
     // Stops the worker thread once it's done with the current jobs.
     void EndLoading();
 
+    void LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture);
 private:
+    const size_t MAX_WORKERS = 5;
+    const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
+    const wchar_t* ITEM_IMAGES_PATH = L"img\\items_by_model_file_id";
     // tasks to be done async by the worker thread
     std::queue<std::function<void()>> thread_jobs;
 
@@ -79,7 +85,10 @@ private:
     std::queue<std::function<void()>> todo;
 
     bool should_stop = false;
-    std::thread worker;
+
+    std::vector<std::thread*> workers;
+
+    void Cleanup();
 
     static HRESULT TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, bool display_error = true);
     static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, bool display_error = true);
