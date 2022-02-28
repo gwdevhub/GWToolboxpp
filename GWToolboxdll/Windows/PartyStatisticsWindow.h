@@ -18,46 +18,36 @@
 
 class PartyStatisticsWindow : public ToolboxWindow {
 protected:
-
-
-    using PartyIds = std::set<uint32_t>;
-    using PartyIndicies = std::map<uint32_t, size_t>;
-    using PartyNames = std::map<uint32_t, std::wstring*>;
-
     struct Skill {
+        Skill(uint32_t _id) : id(_id) {
+            name = Instance().GetSkillName(id);
+            name->wstring();
+        }
         uint32_t id = 0;
         uint32_t count = 0;
-        std::wstring* name = 0;
+        GuiUtils::EncString* name = 0;
     };
 
-    using Skills = std::vector<Skill>;
-
-    struct PlayerSkills {
-        uint32_t agent_id;
-        Skills skills;
+    struct PartyMember {
+        PartyMember(uint32_t _agent_id) : agent_id(_agent_id) {
+            name = Instance().GetAgentName(agent_id);
+            name->wstring();
+        }
+        uint32_t agent_id = 0;
+        uint32_t total_skills_used = 0;
+        GuiUtils::EncString* name = 0;
+        std::vector<Skill> skills;
     };
 
-    using PartySkills = std::vector<PlayerSkills>;
-
-    static const GW::Skillbar* GetPlayerSkillbar(const uint32_t player_id);
-    std::wstring& GetSkillName(const uint32_t skill_id);
-    static std::wstring& GetPlayerName(uint32_t agent_id);
-    static std::wstring GetSkillString(
-        const std::wstring& agent_name, const std::wstring& skill_name, const uint32_t& skill_count);
+    const GW::Skillbar* GetAgentSkillbar(const uint32_t agent_id);
+    GuiUtils::EncString* GetSkillName(const uint32_t skill_id);
+    GuiUtils::EncString* GetAgentName(const uint32_t agent_id);
+    int GetSkillString(
+        const std::wstring& agent_name, const std::wstring& skill_name, const uint32_t skill_count, wchar_t* out, size_t len);
 
 public:
-    PartyStatisticsWindow()
-        : in_explorable(false)
-        , party_size(size_t{})
-        , self_party_idx(static_cast<size_t>(-1))
-        , party_ids(PartyIds{})
-        , party_indicies(PartyIndicies{})
-        , party_names(PartyNames{})
-        , party_stats(PartySkills{})
-        , send_timer(clock_t{})
-        , chat_queue(std::queue<std::wstring>{}){};
     ~PartyStatisticsWindow(){
-        UnsetPlayerStatistics();
+        UnsetPartyStatistics();
     };
 
     static PartyStatisticsWindow& Instance() {
@@ -79,39 +69,30 @@ public:
     void DrawSettingInternal() override;
 
     static void CmdSkillStatistics(const wchar_t *message, int argc, LPWSTR *argv);
-    void UnsetPlayerStatistics();
+    void UnsetPartyStatistics();
 
     static void MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
 
 private:
-    void DrawPartyMember(const PlayerSkills& player_stats, const size_t party_idx);
+    void DrawPartyMember(const size_t party_idx);
     void WritePlayerStatistics(const uint32_t player_idx = -1, const uint32_t skill_idx = -1);
     void WritePlayerStatisticsAllSkills(const uint32_t player_idx);
     void WritePlayerStatisticsSingleSkill(const uint32_t player_idx, const uint32_t skill_idx);
-
     void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
         const uint32_t value, const bool no_target);
-    bool PartySizeChanged();
 
-    void SetPlayerStatistics();
-    void SetPartyIndicies();
-    void SetPartyNames();
-    void SetPartySkills();
+    bool SetPartyMembers();
 
     /* Internal data  */
-    bool in_explorable;
-    size_t party_size;
-    size_t self_party_idx;
-    PartyIds party_ids;
-    PartyIndicies party_indicies;
-    PartyNames party_names;
-    PartySkills party_stats;
-
+    bool pending_party_members = true;
+    bool in_explorable = false;
+    uint32_t player_party_idx = 0xff;
+    std::vector<PartyMember> party_members;
     std::map<uint32_t, GuiUtils::EncString*> skill_names;
     std::map<GW::AgentID, GuiUtils::EncString*> agent_names;
 
     /* Chat messaging */
-    clock_t send_timer;
+    clock_t send_timer = 0;
     std::queue<std::wstring> chat_queue;
 
     /* Callbacks */
