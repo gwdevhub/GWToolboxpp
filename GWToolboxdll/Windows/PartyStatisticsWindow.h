@@ -42,13 +42,12 @@ protected:
     const GW::Skillbar* GetAgentSkillbar(const uint32_t agent_id);
     GuiUtils::EncString* GetSkillName(const uint32_t skill_id);
     GuiUtils::EncString* GetAgentName(const uint32_t agent_id);
+    IDirect3DTexture9* GetSkillImage(const uint32_t skill_id);
     int GetSkillString(
         const std::wstring& agent_name, const std::wstring& skill_name, const uint32_t skill_count, wchar_t* out, size_t len);
 
 public:
-    ~PartyStatisticsWindow(){
-        UnsetPartyStatistics();
-    };
+    ~PartyStatisticsWindow();
 
     static PartyStatisticsWindow& Instance() {
         static PartyStatisticsWindow instance;
@@ -84,11 +83,17 @@ private:
     bool SetPartyMembers();
 
     /* Internal data  */
+    size_t max_player_skills = 8;
     bool pending_party_members = true;
     bool in_explorable = false;
     uint32_t player_party_idx = 0xff;
     std::vector<PartyMember> party_members;
-    std::map<uint32_t, GuiUtils::EncString*> skill_names;
+    struct PendingSkillIcon {
+        bool loading = false;
+        IDirect3DTexture9* texture = 0;
+    };
+    std::map<uint32_t, PendingSkillIcon*> skill_images;
+    std::map<GW::AgentID, GuiUtils::EncString*> skill_names;
     std::map<GW::AgentID, GuiUtils::EncString*> agent_names;
 
     /* Chat messaging */

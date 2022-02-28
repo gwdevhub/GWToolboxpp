@@ -38,6 +38,28 @@ namespace {
     constexpr wchar_t UNKNOWN_PLAYER_NAME[] = L"Unknown Player";
 }
 
+IDirect3DTexture9* PartyStatisticsWindow::GetSkillImage(const uint32_t skill_id) {
+    const auto found_it = skill_images.find(skill_id);
+
+    if (found_it == skill_images.end()) {
+        PendingSkillIcon* psi = new PendingSkillIcon();
+        psi->loading = true;
+        skill_images[skill_id] = psi;
+        Resources::Instance().LoadSkillImage(skill_id, &psi->texture, [skill_id](IDirect3DTexture9** texture) {
+            if (!(texture && *texture)) {
+                Log::ErrorW(L"Failed to load skill icon for %d", skill_id);
+                return;
+            }
+            auto& skill_images = Instance().skill_images;
+            auto found_it = skill_images.find(skill_id);
+            if (found_it != skill_images.end()) {
+                found_it->second->texture = *texture;
+                found_it->second->loading = false;
+            }
+            });
+    }
+    return skill_images[skill_id]->texture;
+}
 GuiUtils::EncString* PartyStatisticsWindow::GetSkillName(const uint32_t skill_id) {
     const auto found_it = skill_names.find(skill_id);
 
@@ -46,10 +68,8 @@ GuiUtils::EncString* PartyStatisticsWindow::GetSkillName(const uint32_t skill_id
 
         skill_names[skill_id] = new GuiUtils::EncString(skill_data.name);
     }
-
     return skill_names[skill_id];
 }
-
 GuiUtils::EncString* PartyStatisticsWindow::GetAgentName(uint32_t agent_id) {
     const auto found_it = agent_names.find(agent_id);
 
@@ -195,29 +215,57 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
     snprintf(header_label, _countof(header_label), "%s###%u", party_member.name->string().c_str(), party_idx);
 
     if (ImGui::CollapsingHeader(header_label)) {
-        float total_num_skills = 0;
-        for (const Skill& skill : party_member.skills) {
-            total_num_skills += static_cast<float>(skill.count);
-        }
 
-        if (print_by_click) {
-            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0F);
-            char button_name[32];
-            snprintf(button_name, _countof(button_name), "###WriteStatistics%d", party_idx);
-            const float width = ImGui::GetWindowWidth();
-            const float height = ImGui::GetTextLineHeightWithSpacing() * party_member.skills.size();
-            if (ImGui::Button(button_name, ImVec2(width, height)) && ImGui::IsKeyDown(VK_CONTROL)) {
-                WritePlayerStatisticsAllSkills(party_idx);
-            }
-            ImGui::PopStyleVar();
-            ImGui::SetCursorPos(ImVec2{ImGui::GetCursorPos().x, ImGui::GetCursorPos().y - height});
-        }
+        const float start_y = ImGui::GetCursorPosY();
 
         char table_name[16];
         snprintf(table_name, _countof(table_name), "###Table%d", party_idx);
 
-        const float width = ImGui::GetWindowWidth();
+        const float width = ImGui::GetContentRegionAvail().x;
+        float percentage = 0.f;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
+        ImGui::Columns(party_member.skills.size(), table_name, false);
+        const float column_width = width / party_member.skills.size();
+        const float scale = ImGui::GetIO().FontGlobalScale;
+        const ImVec2 icon_size = { 32.f * scale, 32.f * scale };
+        for (size_t i = 0; i < party_member.skills.size();i++) {
+            ImGui::SetColumnWidth(i, column_width);
+            const Skill& skill = party_member.skills[i];
+            percentage = skill.count ? static_cast<float>(skill.count) / static_cast<float>(party_member.total_skills_used) * 100.f : 0.f;
+            if (i) {
+                ImGui::NextColumn();
+            }
+            auto* texture = GetSkillImage(skill.id);
+            if (texture) {
+                
+                ImVec2 s(column_width, column_width);
+                ImGui::Image((ImTextureID)texture, icon_size);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(skill.name->string().c_str());
+                }
+            }
+            if (show_abs_values) {
+                ImGui::Text("%u", skill.count);
+            }
+            if (show_perc_values) {
+                ImGui::Text("%.2f%%", percentage);
+            }
+        }
+        ImGui::EndColumns();
+        ImGui::PopStyleVar();
+        if (print_by_click) {
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0F);
+            char button_name[32];
+            snprintf(button_name, _countof(button_name), "###WriteStatistics%d", party_idx);
+            const float height = ImGui::GetCursorPosY() - start_y;
+            ImGui::SetCursorPosY(start_y);
+            if (ImGui::Button(button_name, ImVec2(width, height)) && ImGui::IsKeyDown(VK_CONTROL)) {
+                WritePlayerStatisticsAllSkills(party_idx);
+            }
+            ImGui::PopStyleVar();
+        }
 
+#if 0
         if (show_perc_values && show_abs_values) {
             ImGui::Columns(3, table_name, false);
             ImGui::SetColumnWidth(0, width * 0.6F);
@@ -257,6 +305,7 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
         if (show_perc_values || show_abs_values) {
             ImGui::EndColumns();
         }
+#endif
     }
 }
 
@@ -314,6 +363,8 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
         }
         party_member.total_skills_used++;
         found_skill->count++;
+        
+        break;
     }
 }
 
@@ -325,14 +376,22 @@ void PartyStatisticsWindow::UnsetPartyStatistics() {
     party_members.clear();
 
     for (auto& [_, encoder] : skill_names) {
-        if (encoder) delete encoder;
+        delete encoder;
     }
     skill_names.clear();
 
     for (auto& [_, encoder] : agent_names) {
-        if (encoder) delete encoder;
+        delete encoder;
     }
     agent_names.clear();
+}
+PartyStatisticsWindow::~PartyStatisticsWindow() {
+    UnsetPartyStatistics();
+    for (auto& [_, psi] : skill_images) {
+        assert(!psi->loading || psi->texture);
+        delete psi;
+    }
+    skill_images.clear();
 }
 
 bool PartyStatisticsWindow::SetPartyMembers() {

@@ -197,7 +197,7 @@ IDirect3DTexture9* Resources::GetProfessionIcon(GW::Constants::Profession p) {
     return prof_icon.texture;
 }
 
-void Resources::LoadTextureAsync(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file)
+void Resources::LoadTextureAsync(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, std::function<void(IDirect3DTexture9**)> callback)
 {
     if (std::filesystem::exists(path_to_file)) {
         // make sure we copy the path, not use the ref
@@ -244,23 +244,27 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule
 
 
 void Resources::LoadTextureAsync(
-    IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::wstring& url)
+    IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::wstring& url, std::function<void(IDirect3DTexture9**)> callback)
 {
-    EnsureFileExists(path_to_file, url, [this, path_to_file, texture](bool success) { 
+    EnsureFileExists(path_to_file, url, [this, path_to_file, texture, callback](bool success) {
         if (!success) {
             Log::ErrorW(L"Error downloading resource from url %s", path_to_file.c_str());
+            if (callback) {
+                callback(texture);
+            }
             return;
         }
         if (std::filesystem::exists(path_to_file)) {
-            toload.push([path_to_file, texture](IDirect3DDevice9* device) {
-                TryCreateTexture(device, path_to_file, texture);
-            });
+            LoadTextureAsync(texture, path_to_file, callback);
+        }
+        else {
+            callback(texture);
         }
     });
 }
 
 void Resources::LoadTextureAsync(IDirect3DTexture9** texture, 
-    const std::filesystem::path& path_to_file, WORD id)
+    const std::filesystem::path& path_to_file, WORD id, std::function<void(IDirect3DTexture9**)> callback)
 {
 
     // First, try to create the file in the gwtoolbox dir if it doesn't exist
@@ -270,18 +274,27 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
         if (!hResInfo) {
             DWORD wfErr = GetLastError();
             Log::Error("Error calling FindResourceA on resource id %u - Error is %lu", id, wfErr);
+            if (callback) {
+                callback(texture);
+            }
             return;
         }
         HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
         if (!hRes) {
             DWORD wfErr = GetLastError();
             Log::Error("Error calling LoadResource on resource id %u - Error is %lu", id, wfErr);
+            if (callback) {
+                callback(texture);
+            }
             return;
         }
         DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
         if (!size) {
             DWORD wfErr = GetLastError();
             Log::Error("Error calling SizeofResource on resource id %u - Error is %lu", id, wfErr);
+            if (callback) {
+                callback(texture);
+            }
             return;
         }
         // write to file so the user can customize his icons
@@ -302,21 +315,34 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
 
     if (std::filesystem::exists(path_to_file)) {
         // if file exists load it
-        toload.push([path_to_file, texture, id](IDirect3DDevice9* device) {
+        toload.push([callback,path_to_file, texture, id](IDirect3DDevice9* device) {
             HRESULT res = TryCreateTexture(device, path_to_file, texture, id == 0);
             if (!(res == D3D_OK && texture) && id != 0) {
                 Log::Log("Failed to load %ls from file; error code %ls", path_to_file.filename().c_str(), d3dErrorMessage(res));
                 TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture);
+                if (callback) {
+                    callback(texture);
+                }
+                return;
+            }
+            if (callback) {
+                callback(texture);
             }
         });
     } else if(id != 0) {
         // finally load the texture from the resource
-        toload.push([id, texture](IDirect3DDevice9* device) {
+        toload.push([callback, id, texture](IDirect3DDevice9* device) {
             TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture);
+            if (callback) {
+                callback(texture);
+            }
         });
     }
     else {
         Log::Error("Failed to load resource from file %ls; path doesn't exist and no resource available", path_to_file.filename().c_str());
+        if (callback) {
+            callback(texture);
+        }
     }
 }
 
@@ -339,20 +365,19 @@ void Resources::Update(float) {
 
 // Fetches skill page from GWW, parses out the image for the skill then downloads that to disk
 // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
-void Resources::LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture) {
-
+void Resources::LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture, std::function<void(IDirect3DTexture9**)> callback) {
     auto path = Resources::GetPath(L"img\\skills");
     assert(Resources::EnsureFolderExists(path));
 
     wchar_t path_to_file[MAX_PATH];
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", Resources::GetPath(L"img\\skills").c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
-        LoadTextureAsync(texture, path_to_file);
+        LoadTextureAsync(texture, path_to_file, callback);
     }
     else {
         wchar_t url[128];
         swprintf(url, _countof(url), L"https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skill_id);
-        Download(url, [skill_id, texture](std::string response) {
+        Download(url, [callback, skill_id, texture](std::string response) {
             char regex_str[128];
             snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"].*%d.*['\"].+src=['\"]([^\"']+)", skill_id);
             const std::regex image_finder(regex_str);
@@ -362,7 +387,7 @@ void Resources::LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture) {
                 swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", Resources::GetPath(L"img\\skills").c_str(), skill_id);
                 wchar_t url[128];
                 swprintf(url, _countof(url), L"https://wiki.guildwars.com%S", m[1].str().c_str());
-                Instance().LoadTextureAsync(texture, path_to_file, url);
+                Instance().LoadTextureAsync(texture, path_to_file, url, callback);
             }
             });
     }

@@ -36,11 +36,10 @@ public:
     static bool EnsureFolderExists(const std::filesystem::path& path);
 
     // folder should not contain a trailing slash
-    void LoadTextureAsync(IDirect3DTexture9** tex, const std::filesystem::path& path_to_file);
-    void LoadTextureAsync(IDirect3DTexture9** tex, 
-        const std::filesystem::path& path_to_file, WORD id);
+    void LoadTextureAsync(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, std::function<void(IDirect3DTexture9**)> callback = 0);
+    void LoadTextureAsync(IDirect3DTexture9** tex, const std::filesystem::path& path_to_file, WORD id, std::function<void(IDirect3DTexture9**)> callback = 0);
     void LoadTextureAsync(IDirect3DTexture9 **tex, 
-        const std::filesystem::path& path_to_file, const std::wstring& url);
+        const std::filesystem::path& path_to_file, const std::wstring& url, std::function<void(IDirect3DTexture9**)> callback = 0);
 
     // May return nullptr until icon has been downloaded and rendered
     static IDirect3DTexture9* GetProfessionIcon(GW::Constants::Profession p);
@@ -70,7 +69,7 @@ public:
     // Stops the worker thread once it's done with the current jobs.
     void EndLoading();
 
-    void LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture);
+    void LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture, std::function<void(IDirect3DTexture9**)> callback = 0);
 private:
     const size_t MAX_WORKERS = 5;
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
