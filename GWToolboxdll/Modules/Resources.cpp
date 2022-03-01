@@ -392,3 +392,31 @@ void Resources::LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture, s
             });
     }
 }
+
+void Resources::LoadItemImage(const std::wstring& item_name, IDirect3DTexture9** texture, std::function<void(IDirect3DTexture9**)> callback) {
+    auto path = GetPath(ITEM_IMAGES_PATH);
+    assert(EnsureFolderExists(path));
+
+    wchar_t path_to_file[MAX_PATH];
+    swprintf(path_to_file, _countof(path_to_file), L"%s\\%s.png", GetPath(ITEM_IMAGES_PATH).c_str(), item_name.c_str());
+    if (std::filesystem::exists(path_to_file)) {
+        LoadTextureAsync(texture, path_to_file, callback);
+    }
+    else {
+        wchar_t url[128];
+        swprintf(url, _countof(url), L"https://wiki.guildwars.com/index.php?search=%s", item_name.c_str());
+        Download(url, [&,callback, item_name, texture](std::string response) {
+            char regex_str[128];
+            snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"].*%s.*['\"].+src=['\"]([^\"']+)", GuiUtils::WStringToString(item_name).c_str());
+            const std::regex image_finder(regex_str);
+            std::smatch m;
+            if (std::regex_search(response, m, image_finder)) {
+                wchar_t path_to_file[MAX_PATH];
+                swprintf(path_to_file, _countof(path_to_file), L"%s\\%s.png", GetPath(ITEM_IMAGES_PATH).c_str(), item_name.c_str());
+                wchar_t url[128];
+                swprintf(url, _countof(url), L"https://wiki.guildwars.com%S", m[1].str().c_str());
+                Instance().LoadTextureAsync(texture, path_to_file, url, callback);
+            }
+            });
+    }
+}

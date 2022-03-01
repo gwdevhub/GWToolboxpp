@@ -13,7 +13,7 @@ class Resources : public ToolboxModule {
         Cleanup();
     };
 private:
-    std::mutex queue_mutex;
+    std::recursive_mutex queue_mutex;
 public:
     static Resources& Instance() {
         static Resources instance;
@@ -70,10 +70,11 @@ public:
     void EndLoading();
 
     void LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture, std::function<void(IDirect3DTexture9**)> callback = 0);
+    void LoadItemImage(const std::wstring& item_name, IDirect3DTexture9** texture, std::function<void(IDirect3DTexture9**)> callback = 0);
 private:
     const size_t MAX_WORKERS = 5;
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
-    const wchar_t* ITEM_IMAGES_PATH = L"img\\items_by_model_file_id";
+    const wchar_t* ITEM_IMAGES_PATH = L"img\\items";
     // tasks to be done async by the worker thread
     std::queue<std::function<void()>> thread_jobs;
 
