@@ -80,7 +80,7 @@ void Resources::Cleanup() {
     for (std::thread* worker : workers) {
         if (!worker)
             continue;
-        assert(worker->joinable());
+        ASSERT(worker->joinable());
         worker->join();
         delete worker;
     }
@@ -367,7 +367,7 @@ void Resources::Update(float) {
 // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
 void Resources::LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture, std::function<void(IDirect3DTexture9**)> callback) {
     auto path = Resources::GetPath(L"img\\skills");
-    assert(Resources::EnsureFolderExists(path));
+    ASSERT(Resources::EnsureFolderExists(path));
 
     wchar_t path_to_file[MAX_PATH];
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", Resources::GetPath(L"img\\skills").c_str(), skill_id);
@@ -395,7 +395,7 @@ void Resources::LoadSkillImage(uint32_t skill_id, IDirect3DTexture9** texture, s
 
 void Resources::LoadItemImage(const std::wstring& item_name, IDirect3DTexture9** texture, std::function<void(IDirect3DTexture9**)> callback) {
     auto path = GetPath(ITEM_IMAGES_PATH);
-    assert(EnsureFolderExists(path));
+    ASSERT(EnsureFolderExists(path));
 
     wchar_t path_to_file[MAX_PATH];
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%s.png", GetPath(ITEM_IMAGES_PATH).c_str(), item_name.c_str());

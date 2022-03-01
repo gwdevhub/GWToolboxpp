@@ -49,7 +49,7 @@ void ToolboxModule::RegisterSettingsContent(
         if (it == settings_icons.end()) {
             settings_icons[section] = icon;
         } else if (icon != it->second) {
-            assert(false && "Trying to set different icon for the same setting!");
+            ASSERT(false && "Trying to set different icon for the same setting!");
         }
     }
     auto it = settings_draw_callbacks[section].begin();

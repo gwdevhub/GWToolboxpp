@@ -94,7 +94,9 @@ const GW::Skillbar* PartyStatisticsWindow::GetAgentSkillbar(const uint32_t agent
 
 int PartyStatisticsWindow::GetSkillString(
     const std::wstring& agent_name, const std::wstring& skill_name, const uint32_t skill_count, wchar_t* out, size_t len) {
-    return swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.", agent_name.c_str(), skill_name.c_str(),skill_count);
+    int written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.", agent_name.c_str(), skill_name.c_str(), skill_count);
+    ASSERT(written != -1);
+    return written;
 }
 
 /**********************/
@@ -388,7 +390,7 @@ void PartyStatisticsWindow::UnsetPartyStatistics() {
 PartyStatisticsWindow::~PartyStatisticsWindow() {
     UnsetPartyStatistics();
     for (auto& [_, psi] : skill_images) {
-        assert(!psi->loading || psi->texture);
+        ASSERT(!psi->loading || psi->texture);
         delete psi;
     }
     skill_images.clear();
@@ -523,7 +525,7 @@ void PartyStatisticsWindow::WritePlayerStatisticsAllSkills(const uint32_t player
     wchar_t chat_str[256];
     for (const Skill& skill : party_member.skills) {
         if (0U == skill.count) continue;
-        assert(GetSkillString(party_member.name->wstring(), skill.name->wstring(), skill.count, chat_str, _countof(chat_str)) != -1);
+        GetSkillString(party_member.name->wstring(), skill.name->wstring(), skill.count, chat_str, _countof(chat_str));
         chat_queue.push(chat_str);
     }
 }
@@ -537,6 +539,6 @@ void PartyStatisticsWindow::WritePlayerStatisticsSingleSkill(const uint32_t play
     const Skill& skill = party_member.skills[skill_idx];
 
     wchar_t chat_str[256];
-    assert(GetSkillString(party_member.name->wstring(), skill.name->wstring(), skill.count, chat_str, _countof(chat_str)) != -1);
+    GetSkillString(party_member.name->wstring(), skill.name->wstring(), skill.count, chat_str, _countof(chat_str));
     chat_queue.push(chat_str);
 }
