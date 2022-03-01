@@ -635,7 +635,7 @@ namespace {
 
 void TravelWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&scroll_texture, Resources::GetPath(L"img\\materials", L"Scroll_of_Resurrection.png"), IDB_Mat_ResScroll);
+    Resources::Instance().LoadItemImage(L"Passage Scroll to the Deep", &scroll_texture);
     district = GW::Constants::District::Current;
     district_number = 0;
 

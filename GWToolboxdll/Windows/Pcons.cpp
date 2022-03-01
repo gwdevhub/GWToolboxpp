@@ -161,7 +161,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
     ImGui::Dummy(ImVec2(size, size));
 }
 void Pcon::Initialize() {
-    Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath(L"img/pcons", filename), res_id);
+    Resources::Instance().LoadItemImage(filename, &texture);
 }
 void Pcon::Terminate() {
     if (texture)

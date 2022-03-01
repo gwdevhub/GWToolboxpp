@@ -94,17 +94,12 @@ bool MaterialsWindow::GetIsInProgress() {
 
 void MaterialsWindow::Initialize() {
     ToolboxWindow::Initialize();
-
-    Resources::Instance().LoadTextureAsync(&tex_essence, Resources::GetPath(L"img\\icons", L"Essence_of_Celerity.png"), 
-        IDB_Pcons_Essence);
-    Resources::Instance().LoadTextureAsync(&tex_grail, Resources::GetPath(L"img\\icons", L"Grail_of_Might.png"), 
-        IDB_Pcons_Grail);
-    Resources::Instance().LoadTextureAsync(&tex_armor, Resources::GetPath(L"img\\icons", L"Armor_of_Salvation.png"), 
-        IDB_Pcons_Armor);
-    Resources::Instance().LoadTextureAsync(&tex_powerstone, Resources::GetPath(L"img\\icons", L"Powerstone_of_Courage.png"), 
-        IDB_Mat_Powerstone);
-    Resources::Instance().LoadTextureAsync(&tex_resscroll, Resources::GetPath(L"img\\icons", L"Scroll_of_Resurrection.png"), 
-        IDB_Mat_ResScroll);
+    
+    Resources::Instance().LoadItemImage(L"Essence of Celerity", &tex_essence);
+    Resources::Instance().LoadItemImage(L"Grail of Might", &tex_grail);
+    Resources::Instance().LoadItemImage(L"Armor of Salvation", &tex_armor);
+    Resources::Instance().LoadItemImage(L"Powerstone of Courage", &tex_powerstone);
+    Resources::Instance().LoadItemImage(L"Scroll of Resurrection", &tex_resscroll);
     
     for (int i = 0; i < N_MATS; ++i) {
         price[i] = PRICE_DEFAULT;
