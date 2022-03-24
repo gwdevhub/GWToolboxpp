@@ -64,7 +64,7 @@ private:
     void UseBuff(GW::AgentID target, DWORD buff_skillid);
     Bond GetBondBySkillID(DWORD skillid) const;
 
-    IDirect3DTexture9* textures[MAX_BONDS];
+    IDirect3DTexture9** textures[MAX_BONDS];
     Color background = 0;
     Color low_attribute_overlay = 0;
 

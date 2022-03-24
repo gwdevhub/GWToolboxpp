@@ -31,8 +31,8 @@
 void BondsWidget::Initialize() {
     ToolboxWidget::Initialize();
     for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
-    auto LoadBondTexture = [](IDirect3DTexture9** tex, GW::Constants::SkillID skill_id) -> void {
-        Resources::Instance().LoadSkillImage((uint32_t)skill_id, tex);
+    auto LoadBondTexture = [](IDirect3DTexture9*** tex, GW::Constants::SkillID skill_id) -> void {
+        *tex = Resources::GetSkillImage((uint32_t)skill_id);
     };
     LoadBondTexture(&textures[BalthazarSpirit],GW::Constants::SkillID::Balthazars_Spirit);
     LoadBondTexture(&textures[EssenceBond], GW::Constants::SkillID::Essence_Bond);
@@ -60,12 +60,6 @@ void BondsWidget::Initialize() {
 
 void BondsWidget::Terminate() {
     ToolboxWidget::Terminate();
-    for (int i = 0; i < MAX_BONDS; ++i) {
-        if (textures[i]) {
-            textures[i]->Release();
-            textures[i] = nullptr;
-        }
-    }
 }
 
 void BondsWidget::Draw(IDirect3DDevice9* device) {
@@ -170,8 +164,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 Bond bond = GetBondBySkillID(skill);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
-                if (textures[bond])
-                    ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
+                if (*textures[bond])
+                    ImGui::GetWindowDrawList()->AddImage((ImTextureID)*textures[bond], tl, br);
                 if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
                     GW::Effects::DropBuff(buffs[i].buff_id);
                     handled_click = true;
@@ -202,8 +196,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 Bond bond = GetBondBySkillID(skill);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
-                if (textures[bond])
-                    ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
+                if (*textures[bond])
+                    ImGui::GetWindowDrawList()->AddImage((ImTextureID)*textures[bond], tl, br);
                 if (overlay) {
                     ImGui::GetWindowDrawList()->AddRectFilled(tl, br, low_attribute_overlay);
                 }

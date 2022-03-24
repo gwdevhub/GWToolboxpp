@@ -446,10 +446,15 @@ void Minimap::LoadSettings(CSimpleIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
-        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
-        [](bool success) {
-            UNREFERENCED_PARAMETER(success);
-            Minimap::Instance().custom_renderer.LoadMarkers();
+        "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
+        [](bool success, const std::string& error) {
+            if (success) {
+                Minimap::Instance().custom_renderer.LoadMarkers();
+            }
+            else {
+                Log::Error("Failed to download Markers.ini\n%s", error.c_str());
+            }
+            
         });
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
     hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);

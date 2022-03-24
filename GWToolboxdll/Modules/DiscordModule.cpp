@@ -48,7 +48,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <Windows/TravelWindow.h>
 
 #define DISCORD_APP_ID 378706083788881961
-#define DISCORD_DLL_REMOTE_URL L"https://raw.githubusercontent.com/3vcloud/GWToolboxpp/master/resources/discord_game_sdk.dll"
+#define DISCORD_DLL_REMOTE_URL "https://raw.githubusercontent.com/3vcloud/GWToolboxpp/master/resources/discord_game_sdk.dll"
 
 typedef enum EDiscordResult(__cdecl* DiscordCreate_pt)(DiscordVersion version,struct DiscordCreateParams* params,struct IDiscordCore** result);
 
@@ -346,9 +346,9 @@ void DiscordModule::Initialize() {
     dll_location = Resources::GetPath(L"discord_game_sdk.dll");
     // NOTE: We're using the one we know matches our API version, not checking for any other discord dll on the machine.
     Resources::Instance().EnsureFileExists(dll_location, DISCORD_DLL_REMOTE_URL,
-        [&](bool success) {
+        [&](bool success, const std::string& error) {
             if (!success || !LoadDll()) {
-                //Log::Error("Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox");
+                Log::Log("Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%s",error.c_str());
                 return;
             }
             pending_discord_connect = pending_activity_update = discord_enabled;

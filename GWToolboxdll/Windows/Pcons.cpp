@@ -122,13 +122,13 @@ wchar_t* Pcon::SetPlayerName() {
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
-    if (texture == nullptr) return;
+    if (*texture == nullptr) return;
     ImVec2 pos = ImGui::GetCursorPos();
     ImVec2 s(size, size);
     ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color) : ImVec4(0, 0, 0, 0);
     ImVec4 tint(1, 1, 1, 1);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, 0, bg, tint)) {
+    if (ImGui::ImageButton((ImTextureID)*texture, s, uv0, uv1, 0, bg, tint)) {
         Toggle();
     }
     ImGui::PopStyleColor();
@@ -161,11 +161,9 @@ void Pcon::Draw(IDirect3DDevice9* device) {
     ImGui::Dummy(ImVec2(size, size));
 }
 void Pcon::Initialize() {
-    Resources::Instance().LoadItemImage(filename, &texture);
+    texture = Resources::GetItemImage(filename);
 }
 void Pcon::Terminate() {
-    if (texture)
-        texture->Release();
     texture = nullptr;
 }
 

@@ -39,26 +39,7 @@ namespace {
 }
 
 IDirect3DTexture9* PartyStatisticsWindow::GetSkillImage(const uint32_t skill_id) {
-    const auto found_it = skill_images.find(skill_id);
-
-    if (found_it == skill_images.end()) {
-        PendingSkillIcon* psi = new PendingSkillIcon();
-        psi->loading = true;
-        skill_images[skill_id] = psi;
-        Resources::Instance().LoadSkillImage(skill_id, &psi->texture, [skill_id](IDirect3DTexture9** texture) {
-            if (!(texture && *texture)) {
-                Log::ErrorW(L"Failed to load skill icon for %d", skill_id);
-                return;
-            }
-            auto& skill_images = Instance().skill_images;
-            auto found_it = skill_images.find(skill_id);
-            if (found_it != skill_images.end()) {
-                found_it->second->texture = *texture;
-                found_it->second->loading = false;
-            }
-            });
-    }
-    return skill_images[skill_id]->texture;
+    return *Resources::GetSkillImage(skill_id);
 }
 GuiUtils::EncString* PartyStatisticsWindow::GetSkillName(const uint32_t skill_id) {
     const auto found_it = skill_names.find(skill_id);

@@ -72,11 +72,11 @@ private:
     DWORD RequestPurchaseQuote(Material material);
     DWORD RequestSellQuote(Material material);
 
-    IDirect3DTexture9* tex_essence = nullptr;
-    IDirect3DTexture9* tex_grail = nullptr;
-    IDirect3DTexture9* tex_armor = nullptr;
-    IDirect3DTexture9* tex_powerstone = nullptr;
-    IDirect3DTexture9* tex_resscroll = nullptr;
+    IDirect3DTexture9** tex_essence = nullptr;
+    IDirect3DTexture9** tex_grail = nullptr;
+    IDirect3DTexture9** tex_armor = nullptr;
+    IDirect3DTexture9** tex_powerstone = nullptr;
+    IDirect3DTexture9** tex_resscroll = nullptr;
 
     // Negative values have special meanings:
     static const int PRICE_DEFAULT = -1;

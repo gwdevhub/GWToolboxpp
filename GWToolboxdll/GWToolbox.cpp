@@ -360,11 +360,14 @@ void GWToolbox::Initialize() {
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"location logs"));
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
-        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
-        [](bool success) {
+        "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
+        [](bool success, const std::string& error) {
         if (success) {
             GWToolbox::Instance().OpenSettingsFile();
             GWToolbox::Instance().LoadModuleSettings();
+        }
+        else {
+            Log::Error("Failed to download GWToolbox ini\n%s", error.c_str());
         }
     });
 
@@ -485,13 +488,13 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
             io.IniFilename = GWToolbox::Instance().imgui_inifile.bytes;
 
             Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
-                L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
-                [](bool success) {
+                "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
+                [](bool success, const std::string& error) {
                     if (success) {
                         GuiUtils::LoadFonts();
                     }
                     else {
-                        Log::Error("Cannot load font!");
+                        Log::Error("Cannot load font!\n%s",error.c_str());
                     }
                 });
 

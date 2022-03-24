@@ -56,17 +56,20 @@ void Updater::DrawSettingInternal() {
 
 void Updater::GetLatestRelease(GWToolboxRelease* release) {
     // Get list of releases
-    std::string releases_str = "";
+    std::string response;
     unsigned int tries = 0;
-    while (tries < 5 && releases_str.empty()) {
-        releases_str = Resources::Instance().Download(L"https://api.github.com/repos/HasKha/GWToolboxpp/releases");
+    const char* url = "https://api.github.com/repos/HasKha/GWToolboxpp/releases";
+    bool success = false;
+    do {
+        success = Resources::Instance().Download(url, &response);
         tries++;
-    }
-    if (releases_str.empty()) {
+    } while (!success && tries < 5);
+    if (!success) {
+        Log::Log("Failed to download %s\n%s", url, response.c_str());
         return;
     }
     using Json = nlohmann::json;
-    Json json = Json::parse(releases_str.c_str(), nullptr, false);
+    Json json = Json::parse(response.c_str(), nullptr, false);
     if (json == Json::value_t::discarded || !json.is_array() || !json.size())
         return;
     for (unsigned int i = 0; i < json.size(); i++) {
@@ -279,13 +282,13 @@ void Updater::DoUpdate() {
 
     // 2. download new dll
     Resources::Instance().Download(
-        dllfile, GuiUtils::StringToWString(latest_release.download_url),
-        [this, wdllfile, wdllold](bool success) -> void {
+        dllfile, latest_release.download_url,
+        [this, wdllfile, wdllold](bool success, const std::string& error) -> void {
         if (success) {
             step = Success;
             Log::Warning("Update successful, please restart toolbox.");
         } else {
-            Log::Error("Updated error - cannot download GWToolbox.dll");
+            Log::Error("Updated error - cannot download GWToolbox.dll\n%s",error.c_str());
             MoveFileW(wdllold.c_str(), wdllfile.c_str());
             step = Done;
         }

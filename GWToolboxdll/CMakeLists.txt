@@ -32,6 +32,7 @@ include(earcut)
 
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
+        RestClient
     imgui
     gwca
     directx
@@ -43,6 +44,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     simpleini
     imgui::fonts
     IconFontCppHeaders
+
     # libs:
     Urlmon.lib
     Shlwapi.lib

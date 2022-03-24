@@ -635,7 +635,7 @@ namespace {
 
 void TravelWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadItemImage(L"Passage Scroll to the Deep", &scroll_texture);
+    scroll_texture = Resources::GetItemImage(L"Passage Scroll to the Deep");
     district = GW::Constants::District::Current;
     district_number = 0;
 
@@ -645,9 +645,6 @@ void TravelWindow::Initialize() {
 }
 void TravelWindow::Terminate() {
     ToolboxWindow::Terminate();
-    if (scroll_texture)
-        scroll_texture->Release();
-    scroll_texture = nullptr;
     for (auto it : searchable_explorable_areas) {
         delete[] it;
     }
@@ -661,7 +658,7 @@ void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapI
     switch (mapid) {
         case GW::Constants::MapID::The_Deep:
         case GW::Constants::MapID::Urgozs_Warren:
-            clicked |= ImGui::IconButton(text, (ImTextureID) scroll_texture, ImVec2(w, 0));
+            clicked |= ImGui::IconButton(text, (ImTextureID) *scroll_texture, ImVec2(w, 0));
             break;
         default:
             clicked |= ImGui::Button(text, ImVec2(w, 0));

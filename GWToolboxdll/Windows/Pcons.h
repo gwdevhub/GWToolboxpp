@@ -119,7 +119,7 @@ protected:
     virtual size_t QuantityForEach(const GW::Item* item) const = 0;
 
 private:
-    IDirect3DTexture9* texture = nullptr;
+    IDirect3DTexture9** texture = nullptr;
     const ImVec2 uv0;
     const ImVec2 uv1;
 };

@@ -375,9 +375,9 @@ IDirect3DTexture9* HeroUnlock::GetMissionImage()
 		Resources::EnsureFolderExists(path);
 		wchar_t local_image[MAX_PATH];
 		swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
-		wchar_t remote_image[255];
-		swprintf(remote_image, _countof(remote_image), L"https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
-		Resources::Instance().LoadTextureAsync(&skill_image, local_image, remote_image);
+		char remote_image[128];
+		snprintf(remote_image, _countof(remote_image), "https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
+		Resources::Instance().LoadTexture(&skill_image, local_image, remote_image);
 	}
 	return skill_image;
 }
@@ -392,11 +392,7 @@ void HeroUnlock::OnClick() {
 
 IDirect3DTexture9* PvESkill::GetMissionImage()
 {
-	if (!img_loaded) {
-		img_loaded = true;
-		Resources::Instance().LoadSkillImage((uint32_t)skill_id, &skill_image);
-	}
-	return skill_image;
+	return *Resources::GetSkillImage((uint32_t)skill_id);
 }
 PvESkill::PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url)
 	: Mission(GW::Constants::MapID::None, dummy_var, dummy_var, 0), skill_id(_skill_id), image_url(_image_url) {
@@ -511,7 +507,7 @@ void CompletionWindow::Initialize()
 {
 	ToolboxWindow::Initialize();
 
-	//Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
+	//Resources::Instance().LoadTexture(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
 
 	missions = {
 		{ GW::Constants::Campaign::Prophecies, {} },
@@ -688,7 +684,7 @@ void LoadTextures(std::vector<MissionImage>& mission_images) {
 	for (auto& mission_image : mission_images) {
 		if (mission_image.texture)
 			continue;
-		Resources::Instance().LoadTextureAsync(
+		Resources::Instance().LoadTexture(
 			&mission_image.texture,
 			Resources::GetPath(L"img/missions", mission_image.file_name),
 			(WORD)mission_image.resource_id

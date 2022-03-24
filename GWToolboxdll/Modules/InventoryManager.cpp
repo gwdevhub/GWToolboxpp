@@ -24,6 +24,8 @@
 #include <Modules/GameSettings.h>
 #include <Windows/MaterialsWindow.h>
 
+#include <Modules/Resources.h>
+
 namespace {
     static ImVec4 ItemBlue = ImColor(153, 238, 255).Value;
     static ImVec4 ItemPurple = ImColor(187, 137, 237).Value;
@@ -1601,7 +1603,12 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
     const ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
-    
+    IDirect3DTexture9** tex = Resources::GetItemImage(context_item.single_item_name.wstring());
+    if (tex && *tex) {
+        const float text_height = ImGui::CalcTextSize(" ").y;
+        ImGui::Image(*tex, ImVec2(text_height, text_height));
+        ImGui::SameLine();
+    }
     ImGui::Text(context_item.name.string().c_str());
     ImGui::Separator();
     // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
