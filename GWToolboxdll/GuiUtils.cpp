@@ -268,10 +268,13 @@ std::string GuiUtils::UrlEncode(std::string s) {
     if (s.empty())
         return "";
     static char html5[256] = { 0 };
-    bool initialised = false;
+    static bool initialised = false;
     if (!initialised) {
         for(uint8_t i = 0; ; i++) {
-            html5[i] = (isalnum(i) || i == '*' || i == '-' || i == '.' || i == '_' || i == ' ') ? i : 0;
+            html5[i] = (isalnum(i) || i == '*' || i == '-' || i == '.' || i == '_') ? i : 0;
+            if (i == ' ') {
+                html5[i] = '+';
+            }
             if (i == 255) break;
         }
         initialised = true;
