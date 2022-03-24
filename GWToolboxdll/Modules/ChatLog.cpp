@@ -35,10 +35,10 @@ namespace GW {
 }
 //#define PRINT_CHAT_PACKETS
 void ChatLog::Reset() {
-    while (recv_first) {
+    while (recv_count && recv_first) {
         Remove(recv_first);
     }
-    while (sent_first) {
+    while (sent_count && sent_first) {
         RemoveSent(sent_first);
     }
 }
