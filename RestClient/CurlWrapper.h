@@ -80,6 +80,7 @@ public:
     void SetNoBody(bool enable);
     void SetTcpNoDelay(bool enable);
     void SetVerifyPeer(bool enable);
+    void SetVerifyHost(bool enable);
     void SetFollowLocation(bool enable);
     void SetProxy(const char *url);
     void SetProxy(const char *url, uint16_t port);
@@ -207,3 +208,9 @@ void ComposeUrl(std::string& url, const char* host, const char* path);
 void ComposeUrl(std::string& url, Protocol proto,
                 const char* host, const char* path);
 bool EscapeUrl(std::string& url, const char* pUrl);
+
+#ifdef _NDEBUG
+# define CHECK_CURL_EASY_SETOPT(handle, ...) CurlEasy::HandleOptionError(handle, curl_easy_setopt(handle->m_Handle, __VA_ARGS__), nullptr, 0)
+#else
+# define CHECK_CURL_EASY_SETOPT(handle,  ...) CurlEasy::HandleOptionError(handle, curl_easy_setopt(handle->m_Handle, __VA_ARGS__), __FILE__, __LINE__)
+#endif
