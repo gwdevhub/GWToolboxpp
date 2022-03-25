@@ -165,6 +165,9 @@ public:
         inline bool IsTradable() {
             return (interaction & 0x100) == 0;
         }
+        inline bool IsInscription() {
+            return (interaction & 0x25000000) == 0x25000000;
+        }
         inline bool IsBlue() {
             return single_item_name && single_item_name[0] == 0xA3F;
         }
@@ -245,8 +248,8 @@ private:
         uint32_t quantity = 0;
         bool set(Item *item = nullptr);
         GuiUtils::EncString name;
-        GuiUtils::EncString single_item_name;
         GuiUtils::EncString desc;
+        GuiUtils::EncString wiki_name;
 
         class PluralEncString : public GuiUtils::EncString {
         protected:

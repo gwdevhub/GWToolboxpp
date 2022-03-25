@@ -1552,7 +1552,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
-                    GuiUtils::SearchWiki(pi->single_item_name.wstring());
+                    GuiUtils::SearchWiki(pi->wiki_name.wstring());
                 }
                 ImGui::PopID();
                 has_items_to_salvage |= pi->proceed;
@@ -1603,7 +1603,7 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
     const ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
-    IDirect3DTexture9** tex = Resources::GetItemImage(context_item.single_item_name.wstring());
+    IDirect3DTexture9** tex = Resources::GetItemImage(context_item.wiki_name.wstring());
     if (tex && *tex) {
         const float text_height = ImGui::CalcTextSize(" ").y;
         ImGui::Image(*tex, ImVec2(text_height, text_height));
@@ -1704,7 +1704,7 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
     }
     if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
-        GuiUtils::SearchWiki(context_item.single_item_name.wstring());
+        GuiUtils::SearchWiki(context_item.wiki_name.wstring());
         goto end_popup;
     }
     end_popup:
@@ -1983,9 +1983,10 @@ bool InventoryManager::PendingItem::set(InventoryManager::Item *item)
     uses = item->GetUses();
     bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
     name.reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
-    single_item_name.reset(item->name_enc);
-    single_item_name.language(GW::Constants::TextLanguage::English);
-    single_item_name.wstring(); // Trigger decode; this isn't done any other time
+    // NB: This doesn't work for inscriptions; gww doesn't have a page per inscription.
+    wiki_name.reset(item->name_enc);
+    wiki_name.language(GW::Constants::TextLanguage::English);
+    wiki_name.wstring(); // Trigger decode; this isn't done any other time
     wchar_t plural_item_name_wc[128];
     swprintf(plural_item_name_wc, 128, L"\xa3d\x10a\xa35\x101\x200\x10a%s\x1\x1", item->name_enc);
     plural_item_name.reset(plural_item_name_wc);

@@ -57,13 +57,10 @@ namespace {
     const wchar_t* PROF_ICONS_PATH = L"img\\professions";
 
     // snprintf to a std::string (using a copy) - return false for chaining. Log to console if out is nullptr.
-    int wstring_printf(std::wstring* out = 0, const wchar_t* format = 0, ...) {
+
+    int wstring_vprintf(std::wstring* out, const wchar_t* format, va_list args) {
         wchar_t* err_buf = new wchar_t[512];
-        int written = -1;
-        va_list vl;
-        va_start(vl, format);
-        written = swprintf(err_buf, 512, format, vl);
-        va_end(vl);
+        int written = vswprintf(err_buf, 512, format, args);
         ASSERT(written != -1);
         if (out) {
             out->assign(err_buf);
@@ -74,13 +71,17 @@ namespace {
         delete[] err_buf;
         return written;
     }
-    int string_printf(std::string* out = 0, const char* format = 0, ...) {
-        char* err_buf = new char[512];
-        int written = -1;
+    int wstring_printf(std::wstring* out = 0, const wchar_t* format = 0, ...) {
         va_list vl;
         va_start(vl, format);
-        written = snprintf(err_buf, 512, format, vl);
+        int written = wstring_vprintf(out, format, vl);
         va_end(vl);
+        return written;
+    }
+
+    int string_vprintf(std::string* out, const char* format, va_list args) {
+        char* err_buf = new char[512];
+        int written = vsnprintf(err_buf, 512, format, args);
         ASSERT(written != -1);
         if (out) {
             out->assign(err_buf);
@@ -91,18 +92,23 @@ namespace {
         delete[] err_buf;
         return written;
     }
+    int string_printf(std::string* out = 0, const char* format = 0, ...) {
+        va_list vl;
+        va_start(vl, format);
+        int written = string_vprintf(out, format, vl);
+        va_end(vl);
+        return written;
+    }
 
     // snprintf error message, pass to callback as a failure. Used internally.
     void trigger_failure_callback(std::function<void(bool,const std::wstring&)> callback,const wchar_t* format, ...) {
-        wchar_t* err_buf = new wchar_t[MAX_PATH];
-        int written = -1;
+        std::wstring out;
         va_list vl;
         va_start(vl, format);
-        written = swprintf(err_buf, MAX_PATH, format, vl);
+        int written = wstring_vprintf(&out, format, vl);
         va_end(vl);
         ASSERT(written != -1);
-        callback(false, err_buf);
-        delete[] err_buf;
+        callback(false, out);
     };
 
 }
@@ -186,42 +192,30 @@ utf8::string Resources::GetPathUtf8(std::wstring file) {
 }
 
 bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring* response) {
-    auto err = [response](const wchar_t* format, ...) {
-        va_list vl;
-        va_start(vl, format);
-        if (response) {
-            wstring_printf(response, format, vl);
-        }
-        else {
-            Log::ErrorW(format, vl);
-        }
-        va_end(vl);
-        return false;
-    };
     if (std::filesystem::exists(path_to_file)) {
         if (!std::filesystem::remove(path_to_file)) {
-            return err(L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError());
+            return wstring_printf(response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
         }
     }
     if (std::filesystem::exists(path_to_file)) {
-        return err(L"File already exists @ %s", path_to_file.wstring().c_str());
+        return wstring_printf(response, L"File already exists @ %s", path_to_file.wstring().c_str()), false;
     }
 
     std::string content;
     if (!Download(url, &content)) {
-        return err(L"%S", content.c_str());
+        return wstring_printf(response,L"%S", content.c_str()), false;
     }
     if (!content.length()) {
-        return err(L"Failed to download %S, no content length", url.c_str());
+        return wstring_printf(response,L"Failed to download %S, no content length", url.c_str()), false;
     }
     FILE* fp = fopen(path_to_file.string().c_str(), "wb");
     if (!fp) {
-        return err(L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError());
+        return wstring_printf(response,L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     int written = fwrite(content.data(), content.size() + 1, 1, fp);
     fclose(fp);
     if(written != 1) {
-        return err(L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError());
+        return wstring_printf(response,L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     return true;
 }
@@ -599,7 +593,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
                 return;
             }
             std::string html_item_name = GuiUtils::HtmlEncode(m[1].str());
-            snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"][^>]*%s[^>]*['\"][^>]+src=['\"]([^\"']+)([.](png))", item_name_str.c_str());
+            snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"][^>]*%s[^>]*['\"][^>]+src=['\"]([^\"']+)([.](png))", html_item_name.c_str());
             if (!std::regex_search(response, m, std::regex(regex_str))) {
                 trigger_failure_callback(callback, L"Failed to find image HTML for %s from wiki", item_name.c_str());
                 return;
