@@ -209,7 +209,6 @@ GW::Constants::MapID Mission::GetOutpost() {
 bool Mission::Draw(IDirect3DDevice9* )
 {
 	auto texture = GetMissionImage();
-	if (texture == nullptr) return false;
 
 	const float scale = ImGui::GetIO().FontGlobalScale;
 
@@ -1734,7 +1733,9 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
 	std::wstring name_ws;
 	const char* ini_section;
 
-	show_as_list = ini->GetBoolValue(Name(), VAR_NAME(show_as_list), show_as_list);
+	hide_unlocked_skills = ini->GetBoolValue(Name(), VAR_NAME(hide_unlocked_skills), hide_unlocked_skills);
+	hide_completed_vanquishes = ini->GetBoolValue(Name(), VAR_NAME(hide_completed_vanquishes), hide_completed_vanquishes);
+	hide_completed_missions = ini->GetBoolValue(Name(), VAR_NAME(hide_completed_missions), hide_completed_missions);
 
 	auto read_ini_to_buf = [&](CompletionType type, const char* section) {
 		char ini_key_buf[64];
@@ -1809,6 +1810,9 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
 	Completion* char_comp;
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_as_list), show_as_list);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_unlocked_skills), hide_unlocked_skills);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_completed_vanquishes), hide_completed_vanquishes);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_completed_missions), hide_completed_missions);
 
 	auto write_buf_to_ini = [completion_ini](const char* section, std::vector<uint32_t>* read, std::string& ini_str,std::string* name) {
 		char ini_key_buf[64];
