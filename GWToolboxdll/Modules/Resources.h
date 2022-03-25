@@ -42,7 +42,9 @@ public:
     static bool EnsureFolderExists(const std::filesystem::path& path);
 
     // Generic callback used when loading async functions. If success is false, any error details are held in response.
-    typedef std::function<void(bool success, const std::string& response)> AsyncLoadCallback;
+    typedef std::function<void(bool success, const std::wstring& response)> AsyncLoadCallback;
+    // Callback for binary, usually only curl stuff; try to stick to wstrings where possible
+    typedef std::function<void(bool success, const std::string& response)> AsyncLoadMbCallback;
 
     // Load from file to D3DTexture, runs callback on completion
     void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback = 0);
@@ -64,13 +66,13 @@ public:
     void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
 
     // download to file, blocking. If an error occurs, details are held in response string
-    bool Download(const std::filesystem::path& path_to_file, const std::string& url, std::string* response = 0);
+    bool Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring* response = 0);
     // download to file, async, calls callback on completion. If an error occurs, details are held in response string
     void Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
     // download to memory, blocking. If an error occurs, details are held in response string
     bool Download(const std::string& url, std::string* response);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
-    void Download(const std::string& url, AsyncLoadCallback callback);
+    void Download(const std::string& url, AsyncLoadMbCallback callback);
 
     // Enqueue instruction to be called on worker thread, away from the render loop e.g. curl requests
     void EnqueueWorkerTask(std::function<void()> f) { worker_mutex.lock(); thread_jobs.push(f); worker_mutex.unlock();}
@@ -96,9 +98,9 @@ private:
 
     void Cleanup();
     // Assign IDirect3DTexture9* from file
-    static HRESULT TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::string* error = 0);
+    static HRESULT TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring* error);
     // Assign IDirect3DTexture9* from resource
-    static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::string* error = 0);
+    static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring* error);
     // Copy from compiled resource binary to file on local disk.
-    bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::string* error = 0);
+    bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring* error);
 };

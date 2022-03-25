@@ -58,7 +58,7 @@ void GuiUtils::SearchWiki(std::wstring term) {
     if (!term.size())
         return;
     char cmd[256];
-    std::string encoded = UrlEncode(GuiUtils::WStringToString(term));
+    std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
     ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
     GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, (void*)cmd);
 }
@@ -264,7 +264,44 @@ std::wstring GuiUtils::ToLower(std::wstring s) {
     });
     return s;
 }
-std::string GuiUtils::UrlEncode(std::string s) {
+std::string GuiUtils::HtmlEncode(std::string s) {
+    if (s.empty())
+        return "";
+    static char entities[256] = { 0 };
+    static bool initialised = false;
+    if (!initialised) {
+        for (uint8_t i = 0; i < 255; i++) {
+            switch (i) {
+            case '\'':
+            case '"':
+            case '&':
+            case '>':
+            case '<':
+                break;
+            default:
+                entities[i] = i;
+            }
+        }
+        initialised = true;
+    }
+    char out[256];
+    size_t len = 0;
+    const char* in = s.c_str();
+    for (size_t i = 0; in[i] && len < 255; i++) {
+        if (entities[in[i]]) {
+            out[len++] = entities[in[i]];
+        }
+        else {
+            int written = snprintf(&out[len], 255 - len, "&#%d;", in[i]);
+            if (written < 0)
+                return ""; // @Cleanup; how to gracefully fail?
+            len += written;
+        }
+    }
+    out[len] = 0;
+    return out;
+}
+std::string GuiUtils::UrlEncode(const std::string s) {
     if (s.empty())
         return "";
     static char html5[256] = { 0 };
@@ -300,22 +337,59 @@ std::string GuiUtils::UrlEncode(std::string s) {
 // Convert a wide Unicode string to an UTF8 string
 std::string GuiUtils::WStringToString(const std::wstring& wstr)
 {
-    // @Cleanup: No error handling whatsoever
-    if (wstr.empty()) return std::string();
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+    // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
+    if (wstr.empty()) return "";
+    // NB: GW uses code page 0 (CP_ACP)
+    int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+    ASSERT(size_needed != 0);
     std::string strTo(static_cast<size_t>(size_needed), 0);
-    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+    ASSERT(WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL));
     return strTo;
+}
+
+std::wstring GuiUtils::RemoveDiacritics(const std::wstring& in) {
+    static std::map<wchar_t, wchar_t> charmap;
+    if (charmap.empty()) {
+        const wchar_t* diacritics[] =
+        {
+            L"aàáảãạăằắẳẵặâầấẩẫậ",
+            L"AÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬ",
+            L"OÒÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢ",
+            L"EÈÉẺẼẸÊỀẾỂỄỆ",
+            L"UÙÚỦŨỤƯỪỨỬỮỰ",
+            L"IÌÍỈĨỊ",
+            L"YỲÝỶỸỴ",
+            L"DĐ",
+            L"oòóỏõọôồốổỗộơờớởỡợ",
+            L"eèéẻẽẹêềếểễệ",
+            L"uùúủũụưừứửữựû",
+            L"iìíỉĩị",
+            L"yỳýỷỹỵ",
+            L"dđ"
+        };
+        for (size_t i = 0; i < _countof(diacritics); i++) {
+            for(size_t j=1; diacritics[i][j];j++) {
+                charmap[diacritics[i][j]] = diacritics[i][0];
+            }
+        }
+    }
+    std::wstring out(in.length(), L'\0');
+    std::transform(in.begin(), in.end(), out.begin(), [&](wchar_t wc) ->wchar_t {
+        auto it = charmap.find(wc);
+        return it == charmap.end() ? wc : it->second; });
+    return out;
 }
 
 // Convert an UTF8 string to a wide Unicode String
 std::wstring GuiUtils::StringToWString(const std::string& str)
 {
-    // @Cleanup: No error handling whatsoever
+    // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
     if (str.empty()) return std::wstring();
-    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+    // NB: GW uses code page 0 (CP_ACP)
+    int size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, &str[0], (int)str.size(), NULL, 0);
+    ASSERT(size_needed != 0);
     std::wstring wstrTo(static_cast<size_t>(size_needed), 0);
-    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    ASSERT(MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed));
     return wstrTo;
 }
 std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
@@ -540,14 +614,15 @@ void GuiUtils::EncString::reset(const uint32_t _enc_string_id, bool sanitise) {
         encoded_ws = out;
     }
 }
-void GuiUtils::EncString::language(GW::Constants::TextLanguage l)
+GuiUtils::EncString* GuiUtils::EncString::language(GW::Constants::TextLanguage l)
 {
     if (language_id == l)
-        return;
+        return this;
     decoded_ws.clear();
     decoded_s.clear();
     decoding = sanitised = false;
     language_id = l;
+    return this;
 }
 
 void GuiUtils::EncString::reset(const wchar_t* _enc_string, bool sanitise)

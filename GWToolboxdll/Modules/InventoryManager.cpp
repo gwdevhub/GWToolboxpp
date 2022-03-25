@@ -1984,6 +1984,7 @@ bool InventoryManager::PendingItem::set(InventoryManager::Item *item)
     bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
     name.reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
     single_item_name.reset(item->name_enc);
+    single_item_name.language(GW::Constants::TextLanguage::English);
     single_item_name.wstring(); // Trigger decode; this isn't done any other time
     wchar_t plural_item_name_wc[128];
     swprintf(plural_item_name_wc, 128, L"\xa3d\x10a\xa35\x101\x200\x10a%s\x1\x1", item->name_enc);

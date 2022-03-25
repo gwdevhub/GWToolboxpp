@@ -374,7 +374,7 @@ void TeamspeakModule::DownloadPlugin(bool user_invoked, bool is_x64, const std::
             return;
         }
         Resources::Instance().Download(download_to, release.download_url,
-            [user_invoked](bool success, const std::string& error) -> void {
+            [user_invoked](bool success, const std::wstring& error) -> void {
                 auto& instance = Instance();
                 if (success) {
                     instance.step = Idle;
@@ -382,10 +382,10 @@ void TeamspeakModule::DownloadPlugin(bool user_invoked, bool is_x64, const std::
                 }
                 else {
                     if (user_invoked) {
-                        Log::Error("Updated error - cannot download teamspeak plugin dll\n%s", error.c_str());
+                        Log::ErrorW(L"Updated error - cannot download teamspeak plugin dll\n%s", error.c_str());
                     }
                     else {
-                        Log::Log("Updated error - cannot download teamspeak plugin dll\n%s", error.c_str());
+                        Log::LogW(L"Updated error - cannot download teamspeak plugin dll\n%s", error.c_str());
                     }
                         
                     instance.step = Idle;

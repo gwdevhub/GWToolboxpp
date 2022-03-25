@@ -361,13 +361,13 @@ void GWToolbox::Initialize() {
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"location logs"));
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
         "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
-        [](bool success, const std::string& error) {
+        [](bool success, const std::wstring& error) {
         if (success) {
             GWToolbox::Instance().OpenSettingsFile();
             GWToolbox::Instance().LoadModuleSettings();
         }
         else {
-            Log::Error("Failed to download GWToolbox ini\n%s", error.c_str());
+            Log::ErrorW(L"Failed to download GWToolbox ini\n%s", error.c_str());
         }
     });
 
@@ -489,12 +489,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
             Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
                 "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
-                [](bool success, const std::string& error) {
+                [](bool success, const std::wstring& error) {
                     if (success) {
                         GuiUtils::LoadFonts();
                     }
                     else {
-                        Log::Error("Cannot load font!\n%s",error.c_str());
+                        Log::ErrorW(L"Cannot load font!\n%s",error.c_str());
                     }
                 });
 

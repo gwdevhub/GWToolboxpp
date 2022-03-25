@@ -447,12 +447,12 @@ void Minimap::LoadSettings(CSimpleIni *ini)
     ToolboxWidget::LoadSettings(ini);
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
         "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
-        [](bool success, const std::string& error) {
+        [](bool success, const std::wstring& error) {
             if (success) {
                 Minimap::Instance().custom_renderer.LoadMarkers();
             }
             else {
-                Log::Error("Failed to download Markers.ini\n%s", error.c_str());
+                Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
             }
             
         });

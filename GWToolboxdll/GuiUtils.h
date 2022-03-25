@@ -29,8 +29,10 @@ namespace GuiUtils {
     std::string ToLower(std::string s);
     std::wstring ToLower(std::wstring s);
     std::string UrlEncode(std::string str);
+    std::string HtmlEncode(std::string str);
     std::wstring RemovePunctuation(std::wstring s);
     std::string RemovePunctuation(std::string s);
+    std::wstring RemoveDiacritics(const std::wstring& in);
 
     std::string WStringToString(const std::wstring& s);
     std::wstring StringToWString(const std::string& s);
@@ -75,7 +77,8 @@ namespace GuiUtils {
         virtual void sanitise();
         GW::Constants::TextLanguage language_id = (GW::Constants::TextLanguage)-1;
     public:
-        void language(GW::Constants::TextLanguage l = (GW::Constants::TextLanguage)-1);
+        // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
+        EncString* language(GW::Constants::TextLanguage l = (GW::Constants::TextLanguage)-1);
         inline bool IsDecoding() { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string

@@ -283,12 +283,12 @@ void Updater::DoUpdate() {
     // 2. download new dll
     Resources::Instance().Download(
         dllfile, latest_release.download_url,
-        [this, wdllfile, wdllold](bool success, const std::string& error) -> void {
+        [this, wdllfile, wdllold](bool success, const std::wstring& error) -> void {
         if (success) {
             step = Success;
-            Log::Warning("Update successful, please restart toolbox.");
+            Log::WarningW(L"Update successful, please restart toolbox.");
         } else {
-            Log::Error("Updated error - cannot download GWToolbox.dll\n%s",error.c_str());
+            Log::ErrorW(L"Updated error - cannot download GWToolbox.dll\n%s",error.c_str());
             MoveFileW(wdllold.c_str(), wdllfile.c_str());
             step = Done;
         }
