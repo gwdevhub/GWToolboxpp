@@ -2,8 +2,15 @@
 
 #include <GWCA/Constants/Constants.h>
 
+#include <GWCA/Packets/Opcodes.h>
+
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Attribute.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -12,6 +19,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
 #include <GuiUtils.h>
 #include <Logger.h>
@@ -26,11 +34,67 @@ bool order_by_changed = false;
 
 #define INI_FILENAME L"builds.ini"
 
+BuildsWindow::Build::Build(const char* n, const char* c) {
+    GuiUtils::StrCopy(name, n, sizeof(name));
+    GuiUtils::StrCopy(code, c, sizeof(code));
+    memset(&skill_template, sizeof(skill_template), 0);
+    skill_template.primary = skill_template.secondary = GW::Constants::Profession::None;
+}
+
+const GW::SkillbarMgr::SkillTemplate* BuildsWindow::Build::decode() {
+    if (!decoded() && !GW::SkillbarMgr::DecodeSkillTemplate(&skill_template, code)) {
+        skill_template.primary = skill_template.secondary = GW::Constants::Profession::None;
+    }
+    return decoded() ? &skill_template : nullptr;
+}
+
+const GW::Constants::SkillID* BuildsWindow::Build::skills() {
+    if (!decode()) {
+        return nullptr;
+    }
+    return skill_template.skills;
+}
+const GW::Constants::SkillID* BuildsWindow::GetPreferredSkillOrder(const GW::Constants::SkillID* skill_ids, size_t* found_idx) {
+    for (size_t k = 0; k < preferred_skill_order_builds.size();k++) {
+        Build& build = preferred_skill_order_builds[k];
+        bool found = false;
+        const GW::Constants::SkillID* skills = build.skills();
+        for (size_t i = 0; skills && i < 8; i++) {
+            found = false;
+            for (size_t j = 0; !found && j < 8; j++) {
+                found = (skill_ids[j] == skills[i]);
+            }
+            if (!found) {
+                break;
+            }
+        }
+        if (found) {
+            if (found_idx)
+                *found_idx = k;
+            return skills;
+        }
+    }
+    return nullptr;
+}
+void BuildsWindow::OnSkillbarLoad(GW::HookStatus*, void* packet) {
+    struct SkillbarLoadPacket {
+        uint32_t header;
+        uint32_t agent_id;
+        uint32_t skill_ids_size;
+        GW::Constants::SkillID skill_ids[8];
+    } *sbl_packet = (SkillbarLoadPacket*)packet;
+    const GW::Constants::SkillID* found = Instance().GetPreferredSkillOrder(sbl_packet->skill_ids);
+    if (found && memcmp(sbl_packet->skill_ids, found, sizeof(sbl_packet->skill_ids)) != 0) {
+        memcpy(sbl_packet->skill_ids, found, sizeof(sbl_packet->skill_ids));
+        Log::Info("Preferred skill order loaded");
+    }
+}
 void BuildsWindow::Initialize() {
     ToolboxWindow::Initialize();
     send_timer = TIMER_INIT();
 
     GW::Chat::CreateCommand(L"loadbuild", CmdLoad);
+    GW::CtoS::RegisterPacketCallback(&on_load_skills_entry, GAME_CMSG_SKILLBAR_LOAD, OnSkillbarLoad);
 }
 void BuildsWindow::DrawHelp() {
     if (!ImGui::TreeNodeEx("Build Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
@@ -109,6 +173,9 @@ void BuildsWindow::DrawSettingInternal() {
     if (ImGui::Checkbox("Name", &order_by_name)) {
         order_by_changed = true;
         order_by_index = !order_by_name;
+    }
+    if (ImGui::Button(ICON_FA_USER_COG " View Preferred Skill Orders")) {
+        preferred_skill_orders_visible = !preferred_skill_orders_visible;
     }
 }
 
@@ -216,6 +283,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
 
 void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
+    DrawPreferredSkillOrders(pDevice);
     // @Cleanup: Use the BuildsWindow instance, not a static variable
     static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
     GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
@@ -328,6 +396,113 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
     }
 }
 
+void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*) {
+    if (!preferred_skill_orders_visible)
+        return;
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
+    if (!ImGui::Begin("Preferred Skill Orders", &preferred_skill_orders_visible, 0)) {
+        ImGui::End();
+        return;
+    }
+    ImGui::Text("When a set of skills is loaded that matches a set from this list, reorder it to match");
+    const float skill_height = ImGui::CalcTextSize(" ").y * 2.f;
+    const ImVec2 skill_size = ImVec2(skill_height, skill_height);
+    ImGui::Indent();
+    for (size_t j = 0; j < preferred_skill_order_builds.size();j++) {
+        Build& build = preferred_skill_order_builds[j];
+        const GW::Constants::SkillID* skills = build.skills();
+        for (size_t i = 0; skills && i < 8; i++) {
+            if (i) {
+                ImGui::SameLine(0,0);
+            }
+            ImGui::Image((ImTextureID)*Resources::GetSkillImage((uint32_t)skills[i]), skill_size);
+            if (ImGui::IsItemHovered()) {
+                const GW::Skill& s = GW::SkillbarMgr::GetSkillConstantData((uint32_t)skills[i]);
+                preferred_skill_order_tooltip.reset(s.name);
+                ImGui::SetTooltip("%s", preferred_skill_order_tooltip.string().c_str());
+            }
+        }
+        ImGui::SameLine();
+        char btn_label[48];
+        snprintf(btn_label, sizeof(btn_label), "%s Remove###remove_preferred_skill_order_%d", ICON_FA_TRASH, j);
+        if (ImGui::Button(btn_label, ImVec2(0, skill_height))) {
+            preferred_skill_order_builds.erase(preferred_skill_order_builds.begin() + j);
+            Log::Info("Preferred skill order removed");
+            j--;
+        }
+    }
+    ImGui::Unindent();
+    ImGui::Separator();
+    ImGui::InputText("Build code###preferred_skill_order_code", preferred_skill_order_code,sizeof(preferred_skill_order_code));
+    ImGui::SameLine();
+    bool add_current = ImGui::Button(ICON_FA_COPY "###use_current_build_code");
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Copy current build");
+    }
+    if (add_current) {
+        GetCurrentSkillBar(preferred_skill_order_code, sizeof(preferred_skill_order_code));
+    }
+
+    if (ImGui::Button("Add###add_preferred_skill_order")) {
+        const char* err = AddPreferredBuild(preferred_skill_order_code);
+        if (err) {
+            Log::Warning("%s",err);
+        }
+        else {
+            builds_changed = true;
+            Log::Info("Preferred skill order updated");
+        }
+    }
+    ImGui::End();
+}
+const char* BuildsWindow::AddPreferredBuild(const char* code) {
+    GW::SkillbarMgr::SkillTemplate templ;
+    if (!GW::SkillbarMgr::DecodeSkillTemplate(&templ, code)) {
+        return "Failed to decode skill template from build code";
+    }
+    size_t found = 0;
+    if (GetPreferredSkillOrder(templ.skills,&found)) {
+        preferred_skill_order_builds[found] = { code,code };
+        return nullptr;
+    }
+    preferred_skill_order_builds.push_back({ code,code });
+    return nullptr;
+}
+bool BuildsWindow::GetCurrentSkillBar(char* out, size_t out_len) {
+    if (!(out && out_len))
+        return false;
+    GW::SkillbarMgr::SkillTemplate templ;
+    GW::AgentLiving* agent = GW::Agents::GetPlayerAsAgentLiving();
+    GW::Player* player = agent ? GW::PlayerMgr::GetPlayerByID(agent->player_number) : nullptr;
+    GW::Skillbar* player_skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!(player && player_skillbar))
+        return false;
+    templ.primary = (GW::Constants::Profession)player->primary;
+    templ.secondary = (GW::Constants::Profession)player->secondary;
+    GW::PartyAttributeArray& party_attributes = GW::GameContext::instance()->world->attributes;
+    size_t attribute_idx = 0;
+    for (const GW::PartyAttribute& agent_attributes : party_attributes) {
+        if (agent_attributes.agent_id != player->agent_id)
+            continue;
+        for (const GW::Attribute& attribute : agent_attributes.attribute) {
+            if (!attribute.level)
+                continue;
+            ASSERT(attribute_idx < _countof(templ.attributes));
+            templ.attributes[attribute_idx].attribute = (GW::Constants::Attribute)attribute.id;
+            templ.attributes[attribute_idx].points = attribute.level_base;
+            attribute_idx++;
+        }
+    }
+    for (attribute_idx; attribute_idx < _countof(templ.attributes); attribute_idx++) {
+        templ.attributes[attribute_idx].attribute = GW::Constants::Attribute::None;
+        templ.attributes[attribute_idx].points = 0;
+    }
+    for (size_t i = 0; i < _countof(templ.skills);i++) {
+        templ.skills[i] = (GW::Constants::SkillID)player_skillbar->skills[i].skill_id;
+    }
+    return GW::SkillbarMgr::EncodeSkillTemplate(templ, out, out_len) && GW::SkillbarMgr::DecodeSkillTemplate(&templ, out);
+}
 const char* BuildsWindow::BuildName(unsigned int idx) const {
     if (idx < teambuilds.size()) {
         return teambuilds[idx].name;
@@ -620,10 +795,22 @@ void BuildsWindow::LoadFromFile() {
     if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
     inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
 
+
+
     // then load
+    preferred_skill_order_builds.clear();
     CSimpleIni::TNamesDepend entries;
+    inifile->GetAllKeys("preferred_skill_orders",entries);
+    for (CSimpleIni::Entry& entry : entries) {
+        AddPreferredBuild(entry.pItem);
+    }
+
+    entries.clear();
     inifile->GetAllSections(entries);
     for (CSimpleIni::Entry& entry : entries) {
+        if (memcmp(entry.pItem, "builds", 6) != 0) {
+            continue;
+        }
         const char* section = entry.pItem;
         int count = inifile->GetLongValue(section, "count", 12);
         teambuilds.push_back(TeamBuild(inifile->GetValue(section, "buildname", "")));
@@ -669,6 +856,13 @@ void BuildsWindow::SaveToFile() {
 
         // clear builds from ini
         inifile->Reset();
+
+
+        for (unsigned int i = 0; i < preferred_skill_order_builds.size(); ++i) {
+            const Build& tbuild = preferred_skill_order_builds[i];
+            const char* section = "preferred_skill_orders";
+            inifile->SetValue(section, tbuild.code, tbuild.code);
+        }
 
         // then save
         for (unsigned int i = 0; i < teambuilds.size(); ++i) {
