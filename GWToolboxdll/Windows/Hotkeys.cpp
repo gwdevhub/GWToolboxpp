@@ -415,9 +415,11 @@ bool TBHotkey::Draw(Op *op)
         float offset_sameline = indent_offset + (ImGui::GetContentRegionAvail().x / 2);
         hotkey_changed |= ImGui::Checkbox("Block key in Guild Wars when triggered", &block_gw);
         ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event"); 
-        ImGui::SameLine(offset_sameline);
-        hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
-        hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost);
+        if (can_trigger_on_map_change) {
+            ImGui::SameLine(offset_sameline);
+            hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
+            hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost);
+        }
         ImGui::SameLine(offset_sameline);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when playing on PvP character", &trigger_on_pvp_character);
         ImGui::ShowHelp("Unless enabled, this hotkey will not activate when playing on a PvP only character.");
@@ -1777,6 +1779,7 @@ void HotkeyFlagHero::Execute()
 HotkeyGWKey::HotkeyGWKey(CSimpleIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
+    can_trigger_on_map_change = trigger_on_explorable = trigger_on_outpost = false;
     action = (GW::UI::ControlAction)ini->GetLongValue(section, "ActionID", (long)action);
     auto found = std::find_if(control_labels.begin(), control_labels.end(), [&](std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
         return action == in.first;
