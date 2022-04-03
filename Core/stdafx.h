@@ -6,6 +6,9 @@
 #ifndef NOMINMAX
 # define NOMINMAX
 #endif
+#ifdef NDEBUG
+#define assert(expression) (expression)
+#endif
 #include <Windows.h>
 
 #include <Shlobj.h>
