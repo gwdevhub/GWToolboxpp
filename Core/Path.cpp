@@ -46,16 +46,11 @@ void PathGetProgramDirectory(wchar_t *path, size_t length)
         filename[0] = 0;
 }
 
-bool PathGetAppDataDirectory(wchar_t *path, size_t length)
+bool PathGetDocumentsDirectory(wchar_t *path, size_t length)
 {
     assert(MAX_PATH <= length);
 
-    HRESULT result = SHGetFolderPathW(
-        nullptr,
-        CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE,
-        NULL,
-        0,
-        path);
+    HRESULT result = SHGetFolderPathW(nullptr, CSIDL_MYDOCUMENTS, NULL, 0, path);
 
     if (FAILED(result)) {
         fprintf(stderr, "SHGetFolderPathW failed (HRESULT:0x%lX)\n", result);
@@ -65,8 +60,35 @@ bool PathGetAppDataDirectory(wchar_t *path, size_t length)
     return true;
 }
 
-bool PathGetAppDataPath(wchar_t *path, size_t length, const wchar_t *suffix)
+bool PathGetDocumentsPath(wchar_t *path, size_t length, const wchar_t *suffix)
 {
+    if (!PathGetDocumentsDirectory(path, length)) {
+        fprintf(stderr, "PathGetDocumentsDirectory failed\n");
+        return false;
+    }
+
+    if (PathAppendW(path, suffix) != TRUE) {
+        fprintf(stderr, "PathAppendW failed\n");
+        return false;
+    }
+
+    return true;
+}
+
+bool PathGetAppDataDirectory(wchar_t* path, size_t length) {
+    assert(MAX_PATH <= length);
+
+    HRESULT result = SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, path);
+
+    if (FAILED(result)) {
+        fprintf(stderr, "SHGetFolderPathW failed (HRESULT:0x%lX)\n", result);
+        return false;
+    }
+
+    return true;
+}
+
+bool PathGetAppDataPath(wchar_t* path, size_t length, const wchar_t* suffix) {
     if (!PathGetAppDataDirectory(path, length)) {
         fprintf(stderr, "PathGetAppDataDirectory failed\n");
         return false;

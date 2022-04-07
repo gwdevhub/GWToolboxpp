@@ -6,8 +6,10 @@ void PathGetExeFileName(wchar_t *path, size_t length);
 
 void PathGetProgramDirectory(wchar_t *path, size_t length);
 
-bool PathGetAppDataDirectory(wchar_t *path, size_t length);
-bool PathGetAppDataPath(wchar_t *path, size_t length, const wchar_t *suffix);
+bool PathGetDocumentsDirectory(wchar_t *path, size_t length);
+bool PathGetDocumentsPath(wchar_t* path, size_t length, const wchar_t* suffix);
+bool PathGetAppDataDirectory(wchar_t* path, size_t length);
+bool PathGetAppDataPath(wchar_t* path, size_t length, const wchar_t* suffix);
 
 bool PathCreateDirectory(const wchar_t *path);
 
