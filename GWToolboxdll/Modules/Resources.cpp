@@ -13,6 +13,7 @@
 #include <Modules/Resources.h>
 #include <GWCA/GameEntities/Item.h>
 #include <Timer.h>
+#include <Path.h>
 
 namespace {
     const char* d3dErrorMessage(HRESULT code) {
@@ -176,15 +177,11 @@ std::filesystem::path Resources::GetSettingsFolderPath()
     WCHAR docbuf[MAX_PATH];
     SHGetFolderPathW(NULL, CSIDL_MYDOCUMENTS, NULL, 0, docbuf);
 
-    constexpr auto INFO_BUFFER_SIZE = 32;
-    wchar_t computername[INFO_BUFFER_SIZE];
-    DWORD bufCharCount = INFO_BUFFER_SIZE;
+    auto docpath = std::filesystem::path(docbuf) / "GWToolboxpp" / PathGetComputer();
 
-    if (!GetComputerNameW(computername, &bufCharCount)) {
-        fprintf(stderr, "Cannot get computer name.\n");
-        return apppath;
-    }
-    auto docpath = std::filesystem::path(docbuf) / "GWToolboxpp" / std::filesystem::path(computername);
+    if (PathMoveDataAndCreateSymlink(false)) {
+        return docpath;
+    };
 
     if (std::filesystem::exists(docpath) && std::filesystem::exists(docpath / "GWToolbox.ini")) {
         return docpath;

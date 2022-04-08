@@ -105,7 +105,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         RestartWithSameArgs(true);
     }
 
-    if (IsInstalled() && !MoveDataAndCreateSymlink() && !IsRunningAsAdmin()) {
+    if (IsInstalled() && !PathMoveDataAndCreateSymlink() && !IsRunningAsAdmin() && settings.noupdate) {
         int iRet = MessageBoxW(
             0, L"In order to update, the application will have to be restarted with administrative rights once.\nDo you wish to restart now?", L"GWToolbox", MB_YESNO);
 
