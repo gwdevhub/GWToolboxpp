@@ -177,7 +177,7 @@ std::filesystem::path Resources::GetSettingsFolderPath()
     WCHAR docbuf[MAX_PATH];
     SHGetFolderPathW(NULL, CSIDL_MYDOCUMENTS, NULL, 0, docbuf);
 
-    auto docpath = std::filesystem::path(docbuf) / "GWToolboxpp" / PathGetComputer();
+    auto docpath = std::filesystem::path(docbuf) / "GWToolboxpp" / PathGetComputerName();
 
     if (PathMoveDataAndCreateSymlink(false)) {
         return docpath;

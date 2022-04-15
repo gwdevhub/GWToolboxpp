@@ -17,5 +17,5 @@ bool PathCreateDirectory(const wchar_t *path);
 
 bool PathCompose(wchar_t *dest, size_t length, const wchar_t *left, const wchar_t *right);
 
-std::filesystem::path PathGetComputer();
+std::filesystem::path PathGetComputerName();
 bool PathMoveDataAndCreateSymlink(bool create_symlink = true);

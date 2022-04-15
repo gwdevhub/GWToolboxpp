@@ -159,7 +159,7 @@ static bool EnsureInstallationDirectoryExist(void)
     }
 
     // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\logs
-    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputer() / L"logs").c_str())) {
+    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputerName() / L"logs").c_str())) {
         fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"logs");
         return false;
     }
@@ -169,7 +169,7 @@ static bool EnsureInstallationDirectoryExist(void)
     }
 
     // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\crashes
-    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputer() / L"crashes").c_str())) {
+    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputerName() / L"crashes").c_str())) {
         fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"crashes");
         return false;
     }
@@ -179,7 +179,7 @@ static bool EnsureInstallationDirectoryExist(void)
     }
 
     // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\plugins
-    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputer() / L"plugins").c_str())) {
+    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputerName() / L"plugins").c_str())) {
         fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"plugins");
         return false;
     }
@@ -189,7 +189,7 @@ static bool EnsureInstallationDirectoryExist(void)
     }
 
     // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\data
-    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputer() / L"data").c_str())) {
+    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputerName() / L"data").c_str())) {
         fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"data");
         return false;
     }

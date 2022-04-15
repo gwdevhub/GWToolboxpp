@@ -142,7 +142,7 @@ bool PathCompose(wchar_t *dest, size_t length, const wchar_t *left, const wchar_
     return true;
 }
 
-fs::path PathGetComputer()
+fs::path PathGetComputerName()
 {
     constexpr auto INFO_BUFFER_SIZE = 32;
     WCHAR computername[INFO_BUFFER_SIZE];
@@ -179,7 +179,7 @@ bool PathMoveDataAndCreateSymlink(bool create_symlink = true)
         return true;
     }
 
-    if (fs::is_symlink(appdir) && fs::is_directory(docpath) && fs::is_directory(docpath / PathGetComputer())) {
+    if (fs::is_symlink(appdir) && fs::is_directory(docpath) && fs::is_directory(docpath / PathGetComputerName())) {
         return true;
     }
 
@@ -198,15 +198,15 @@ bool PathMoveDataAndCreateSymlink(bool create_symlink = true)
         for (fs::path p : fs::directory_iterator(apppath)) {
             if (!fs::exists(docpath / p.filename())) {
                 if (fs::is_directory(p)) {
-                    fs::path dir = (docpath / PathGetComputer() / p.filename()).parent_path();
+                    fs::path dir = (docpath / PathGetComputerName() / p.filename()).parent_path();
                     if (!fs::exists(dir)) {
                         fs::create_directories(dir, error);
                     }
-                    fs::rename(p, docpath / PathGetComputer() / p.filename(), error);
+                    fs::rename(p, docpath / PathGetComputerName() / p.filename(), error);
                 } else if (p.extension() != ".dll" && p.extension() != ".exe") {
-                    fs::path dir = (docpath / PathGetComputer() / p.filename()).parent_path();
+                    fs::path dir = (docpath / PathGetComputerName() / p.filename()).parent_path();
                     if (fs::exists(dir)) fs::create_directories(dir);
-                    fs::rename(p, docpath / PathGetComputer() / p.filename(), error);
+                    fs::rename(p, docpath / PathGetComputerName() / p.filename(), error);
                 } else {
                     fs::rename(p, docpath / p.filename(), error);
                 }
@@ -219,7 +219,7 @@ bool PathMoveDataAndCreateSymlink(bool create_symlink = true)
     }
 
     if (create_symlink) {
-        fs::create_directory_symlink(docpath, apppath, error);
+        fs::create_directory_symlink(docpath / PathGetComputerName(), apppath, error);
 
         if (error.value()) {
             fprintf(stderr, "Couldn't create symlink from appdir to docdir.\n");
