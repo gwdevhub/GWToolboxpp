@@ -49,6 +49,16 @@ namespace {
     bool defer_close = false;
 
     static HWND gw_window_handle = 0;
+    bool SaveIniToFile(CSimpleIni* ini, std::filesystem::path location) {
+        std::filesystem::path tmpFile = location;
+        tmpFile += ".tmp";
+        SI_Error res = ini->SaveFile(tmpFile.c_str());
+        if (res < 0) {
+            return false;
+        }
+        std::filesystem::rename(tmpFile, location);
+        return true;
+    }
 }
 
 HMODULE GWToolbox::GetDLLModule() {
@@ -421,8 +431,11 @@ void GWToolbox::SaveSettings() {
     for (ToolboxModule* module : modules) {
         module->SaveSettings(inifile);
     }
-    if (inifile) inifile->SaveFile(Resources::GetPath(L"GWToolbox.ini").c_str());
+    if (inifile) {
+        ASSERT(SaveIniToFile(inifile, Resources::GetPath(L"GWToolbox.ini")));
+    }
 }
+
 
 void GWToolbox::Terminate() {
     SaveSettings();
