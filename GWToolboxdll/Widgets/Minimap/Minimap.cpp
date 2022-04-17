@@ -1135,7 +1135,12 @@ bool Minimap::IsInside(int x, int y) const
 }
 bool Minimap::IsActive() const
 {
-    return visible && !loading && GW::Map::GetIsMapLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Agents::GetPlayerId() != 0;
+    return visible 
+        && !loading 
+        && GW::Map::GetIsMapLoaded() 
+        && !GW::UI::GetIsWorldMapShowing()
+        && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading 
+        && GW::Agents::GetPlayerId() != 0;
 }
 
 void Minimap::RenderSetupProjection(IDirect3DDevice9 *device) const
