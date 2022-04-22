@@ -157,7 +157,7 @@ fs::path PathGetComputerName()
     return computer;
 }
 
-bool PathMoveDataAndCreateSymlink(bool create_symlink = true)
+bool PathMoveDataAndCreateSymlink(const bool create_symlink = true)
 {
     wchar_t appdir[MAX_PATH];
     wchar_t docdir[MAX_PATH];
@@ -172,8 +172,8 @@ bool PathMoveDataAndCreateSymlink(bool create_symlink = true)
         return false;
     }
 
-    fs::path docpath = docdir;
-    fs::path apppath = appdir;
+    const fs::path docpath = docdir;
+    const fs::path apppath = appdir;
 
     if (!fs::exists(appdir) || fs::is_symlink(appdir)) {
         return true;
@@ -188,7 +188,7 @@ bool PathMoveDataAndCreateSymlink(bool create_symlink = true)
     }
 
     if (!fs::is_directory(docpath)) {
-        fprintf(stderr, "%USERPROFILE%/GWToolboxxpp exists and is not a directory.\n");
+        fprintf(stderr, "%%USERPROFILE%%/GWToolboxxpp exists and is not a directory.\n");
         return false;
     }
 
@@ -196,26 +196,35 @@ bool PathMoveDataAndCreateSymlink(bool create_symlink = true)
 
     if (fs::is_directory(apppath) && fs::is_directory(docpath)) {
         for (fs::path p : fs::directory_iterator(apppath)) {
-            if (!fs::exists(docpath / p.filename())) {
-                if (fs::is_directory(p)) {
-                    fs::path dir = (docpath / PathGetComputerName() / p.filename()).parent_path();
-                    if (!fs::exists(dir)) {
-                        fs::create_directories(dir, error);
+            if (fs::is_directory(p) || p.extension() != ".dll" && p.extension() != ".exe") {
+                if (fs::exists(docpath / PathGetComputerName() / p.filename())) continue;
+                if (const auto dir = (docpath / PathGetComputerName() / p.filename()).parent_path(); !fs::exists(dir)) {
+                    fs::create_directories(dir, error);
+                    if (error.value()) {
+                        fprintf(stderr, "%ls couldn't be created. Error code %d\n", dir.c_str(), error.value());
                     }
-                    fs::rename(p, docpath / PathGetComputerName() / p.filename(), error);
-                } else if (p.extension() != ".dll" && p.extension() != ".exe") {
-                    fs::path dir = (docpath / PathGetComputerName() / p.filename()).parent_path();
-                    if (fs::exists(dir)) fs::create_directories(dir);
-                    fs::rename(p, docpath / PathGetComputerName() / p.filename(), error);
-                } else {
-                    fs::rename(p, docpath / p.filename(), error);
+                }
+                fs::rename(p, docpath / PathGetComputerName() / p.filename(), error);
+                if (error.value()) {
+                    fprintf(stderr, "%ls couldn't be renamed to %ls. Error code %d\n", p.c_str(),
+                        (docpath / PathGetComputerName() / p.filename()).c_str(), error.value());
+                }
+            } else {
+                if (fs::exists(docpath / p.filename())) continue;
+                fs::rename(p, docpath / p.filename(), error);
+                if (error.value()) {
+                    fprintf(stderr, "%ls couldn't be renamed to %ls. Error code %d\n", p.c_str(),
+                        (docpath / p.filename()).c_str(), error.value());
                 }
             }
         }
     }
 
-    if (fs::is_directory(apppath)) {
-        fs::remove_all(apppath, error);
+    if (fs::is_directory(apppath) && fs::is_empty(apppath, error)) {
+        fs::remove(apppath, error);
+    } else if (!fs::is_empty(apppath, error)) {
+        fprintf(stderr, "%%LOCALAPPDATA%%/GWToolboxxpp still contains files that couldn't be moved. Error code %d\n", error.value());
+        return false;
     }
 
     if (create_symlink) {
