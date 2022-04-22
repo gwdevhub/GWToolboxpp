@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <filesystem>
 
 #include <Path.h>
 
@@ -6,6 +7,8 @@
 #include "Install.h"
 #include "Registry.h"
 #include "Settings.h"
+
+namespace fs = std::filesystem;
 
 static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
 {
@@ -64,8 +67,8 @@ static bool InstallUninstallKey()
     wcsftime(time_buf, ARRAYSIZE(time_buf), L"%Y%m%d", &local_time);
 
     wchar_t install_location[MAX_PATH];
-    if (!PathGetAppDataPath(install_location, MAX_PATH, L"GWToolboxpp")) {
-        fprintf(stderr, "PathGetAppDataPath failed\n");
+    if (!PathGetDocumentsPath(install_location, MAX_PATH, L"GWToolboxpp")) {
+        fprintf(stderr, "PathGetDocumentsPath failed\n");
         return false;
     }
 
@@ -145,9 +148,9 @@ static bool EnsureInstallationDirectoryExist(void)
     wchar_t path[MAX_PATH];
     wchar_t temp[MAX_PATH];
 
-    // Create %localappdata%\GWToolboxpp
-    if (!PathGetAppDataPath(path, MAX_PATH, L"GWToolboxpp\\")) {
-        fprintf(stderr, "PathGetAppDataPath failed\n");
+    // Create %USERPROFILE%\Documents\GWToolboxpp\ 
+    if (!PathGetDocumentsPath(path, MAX_PATH, L"GWToolboxpp\\")) {
+        fprintf(stderr, "PathGetDocumentsPath failed\n");
         return false;
     }
     if (!PathCreateDirectory(path)) {
@@ -155,42 +158,42 @@ static bool EnsureInstallationDirectoryExist(void)
         return false;
     }
 
-    // Create %localappdata%\GWToolboxpp\logs
-    if (!PathCompose(temp, MAX_PATH, path, L"logs")) {
+    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\logs
+    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputerName() / L"logs").c_str())) {
         fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"logs");
         return false;
     }
-    if (!PathCreateDirectory(temp)) {
+    if (!fs::create_directories(temp)) {
         fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
         return false;
     }
 
-    // Create %localappdata%\GWToolboxpp\crashes
-    if (!PathCompose(temp, MAX_PATH, path, L"crashes")) {
+    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\crashes
+    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputerName() / L"crashes").c_str())) {
         fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"crashes");
         return false;
     }
-    if (!PathCreateDirectory(temp)) {
+    if (!fs::create_directories(temp)) {
         fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
         return false;
     }
 
-    // Create %localappdata%\GWToolboxpp\plugins
-    if (!PathCompose(temp, MAX_PATH, path, L"plugins")) {
+    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\plugins
+    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputerName() / L"plugins").c_str())) {
         fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"plugins");
         return false;
     }
-    if (!PathCreateDirectory(temp)) {
+    if (!fs::create_directories(temp)) {
         fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
         return false;
     }
 
-    // Create %localappdata%\GWToolboxpp\data
-    if (!PathCompose(temp, MAX_PATH, path, L"data")) {
+    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\data
+    if (!PathCompose(temp, MAX_PATH, path, (PathGetComputerName() / L"data").c_str())) {
         fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"data");
         return false;
     }
-    if (!PathCreateDirectory(temp)) {
+    if (!fs::create_directories(temp)) {
         fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
         return false;
     }
@@ -203,8 +206,8 @@ static bool CopyInstaller(void)
     wchar_t dest_path[MAX_PATH];
     wchar_t source_path[MAX_PATH];
 
-    if (!PathGetAppDataPath(dest_path, MAX_PATH, L"GWToolboxpp\\GWToolbox.exe")) {
-        fprintf(stderr, "PathGetAppDataPath failed\n");
+    if (!PathGetDocumentsPath(dest_path, MAX_PATH, L"GWToolboxpp\\GWToolbox.exe")) {
+        fprintf(stderr, "PathGetDocumentsPath failed\n");
         return false;
     }
 
@@ -230,8 +233,8 @@ static bool DeleteInstallationDirectory(void)
     // moved to the recycle bin regardless of "FOF_ALLOWUNDO".
 
     wchar_t path[MAX_PATH + 2];
-    if (!PathGetAppDataPath(path, MAX_PATH, L"GWToolboxpp\\*")) {
-        fprintf(stderr, "PathGetAppDataPath failed\n");
+    if (!PathGetDocumentsPath(path, MAX_PATH, L"GWToolboxpp\\*")) {
+        fprintf(stderr, "PathGetDocumentsPath failed\n");
         return false;
     }
 
@@ -281,6 +284,10 @@ bool Install(bool quiet)
     if (!InstallSettingsKey()) {
         fprintf(stderr, "InstallSettingKeys failed\n");
         return false;
+    }
+
+    if (!PathMoveDataAndCreateSymlink(false)) {
+        fprintf(stderr, "MoveDataAndCreateSymlink failed\n");
     }
 
     if (!quiet) {

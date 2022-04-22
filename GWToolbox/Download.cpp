@@ -171,7 +171,7 @@ bool DownloadWindow::DownloadAllFiles()
     release_string[0] = 0;
 
     wchar_t dll_path[MAX_PATH];
-    PathGetAppDataPath(dll_path, MAX_PATH, L"GWToolboxpp\\GWToolboxdll.dll");
+    PathGetDocumentsPath(dll_path, MAX_PATH, L"GWToolboxpp\\GWToolboxdll.dll");
 
     char buffer[64];
     snprintf(buffer, 64, "Downloading version '%s'", release.tag_name.c_str());

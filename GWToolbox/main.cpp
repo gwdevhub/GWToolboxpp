@@ -105,6 +105,15 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         RestartWithSameArgs(true);
     }
 
+    if (IsInstalled() && !PathMoveDataAndCreateSymlink() && !IsRunningAsAdmin() && settings.noupdate) {
+        int iRet = MessageBoxW(
+            0, L"In order to update, the application will have to be restarted with administrative rights once.\nDo you wish to restart now?", L"GWToolbox", MB_YESNO);
+
+        if (iRet == IDYES) {
+            RestartWithSameArgs(true);
+        }
+    }
+
     AsyncRestScopeInit RestInitializer;
 
     Process proc;
@@ -137,7 +146,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             MB_YESNO);
 
         if (iRet == IDNO) {
-            fprintf(stderr, "Use doesn't want to install GWToolbox\n");
+            fprintf(stderr, "User doesn't want to install GWToolbox\n");
             return 1;
         }
 

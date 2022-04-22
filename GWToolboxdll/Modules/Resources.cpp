@@ -13,6 +13,7 @@
 #include <Modules/Resources.h>
 #include <GWCA/GameEntities/Item.h>
 #include <Timer.h>
+#include <Path.h>
 
 namespace {
     const char* d3dErrorMessage(HRESULT code) {
@@ -168,9 +169,34 @@ void Resources::EndLoading() {
 
 std::filesystem::path Resources::GetSettingsFolderPath()
 {
-    WCHAR path[MAX_PATH];
-    SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, path);
-    return std::filesystem::path(path) / "GWToolboxpp";
+    WCHAR appbuf[MAX_PATH];
+    SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, appbuf);
+
+    auto apppath = std::filesystem::path(appbuf) / "GWToolboxpp";
+
+    WCHAR docbuf[MAX_PATH];
+    SHGetFolderPathW(NULL, CSIDL_MYDOCUMENTS, NULL, 0, docbuf);
+
+    auto docpath = std::filesystem::path(docbuf) / "GWToolboxpp" / PathGetComputerName();
+
+    if (PathMoveDataAndCreateSymlink(false)) {
+        return docpath;
+    };
+
+    if (std::filesystem::exists(docpath) && std::filesystem::exists(docpath / "GWToolbox.ini")) {
+        return docpath;
+    }
+
+    if (!std::filesystem::exists(docpath) && std::filesystem::exists(apppath) &&
+        std::filesystem::exists(apppath / "GWToolbox.ini")) {
+        return apppath;
+    }
+
+    if (std::filesystem::create_directories(docpath)) {
+        return docpath;
+    }
+
+    return apppath;
 }
 std::filesystem::path Resources::GetPath(const std::filesystem::path& file)
 {
