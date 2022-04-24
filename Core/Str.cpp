@@ -2,6 +2,30 @@
 
 #include "Str.h"
 
+int SnprintfStr(std::string& out, const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    int written = vsnprintf(nullptr, 0, fmt, args);
+    if (written < 0)
+        return written;
+    out.reserve(written + 1);
+    written = vsnprintf(out.data(), out.capacity(), fmt, args);
+    va_end(args);
+    return written;
+}
+
+int SnprintfWstr(std::wstring& out, const wchar_t* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    int written = vswprintf(nullptr, 0, fmt, args);
+    if (written < 0)
+        return written;
+    out.reserve(written + 1);
+    written = vswprintf(out.data(), out.capacity(), fmt, args);
+    va_end(args);
+    return written;
+}
+
 void StrCopyA(char *dest, size_t size, const char *src)
 {
     size_t i;
