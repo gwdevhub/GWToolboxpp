@@ -169,30 +169,39 @@ void Resources::EndLoading() {
 
 std::filesystem::path Resources::GetSettingsFolderPath()
 {
-    WCHAR appbuf[MAX_PATH];
-    SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, appbuf);
+    std::filesystem::path apppath;
+    ASSERT(PathGetAppDataPath(apppath, L"GWToolboxpp"));
 
-    auto apppath = std::filesystem::path(appbuf) / "GWToolboxpp";
+    std::filesystem::path computer_name;
+    ASSERT(PathGetComputerName(computer_name));
 
-    WCHAR docbuf[MAX_PATH];
-    SHGetFolderPathW(NULL, CSIDL_MYDOCUMENTS, NULL, 0, docbuf);
+    std::filesystem::path docpath;
+    ASSERT(PathGetDocumentsPath(docpath, L"GWToolboxpp"));
+    docpath = docpath / computer_name;
 
-    auto docpath = std::filesystem::path(docbuf) / "GWToolboxpp" / PathGetComputerName();
-
-    if (PathMoveDataAndCreateSymlink(false)) {
-        return docpath;
-    };
-
-    if (std::filesystem::exists(docpath) && std::filesystem::exists(docpath / "GWToolbox.ini")) {
+    bool result;
+    ASSERT(PathExistsSafe(docpath / "GWToolbox.ini", &result));
+    if (result) {
         return docpath;
     }
 
-    if (!std::filesystem::exists(docpath) && std::filesystem::exists(apppath) &&
-        std::filesystem::exists(apppath / "GWToolbox.ini")) {
+    if (!Instance().migration_attempted) {
+        // Don't do this every time.
+        Instance().migration_attempted = true;
+        if (!PathMigrateDataAndCreateSymlink(false)) {
+            Log::Warning("Failed to migrate GWToolbox data");
+        }
+        else {
+            Log::InfoW(L"GWToolbox settings folder moved from %s to %s", apppath.wstring().c_str(), docpath.wstring().c_str());
+        }
+    }
+
+    ASSERT(PathExistsSafe(apppath / "GWToolbox.ini", &result));
+    if (result) {
         return apppath;
     }
 
-    if (std::filesystem::create_directories(docpath)) {
+    if (PathCreateDirectorySafe(docpath)) {
         return docpath;
     }
 

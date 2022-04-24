@@ -1,5 +1,8 @@
 #include "stdafx.h"
 
+#include <stdio.h>
+
+#include <Str.h>
 #include <Path.h>
 #include <RestClient.h>
 
@@ -8,6 +11,8 @@
 #include "Install.h"
 #include "Process.h"
 #include "Settings.h"
+
+static int logfile = 0;
 
 static void ShowError(const wchar_t* message) {
     MessageBoxW(
@@ -37,18 +42,20 @@ static bool InjectInstalledDllInProcess(Process *process)
         return true;
     }
 
-    wchar_t dllpath[MAX_PATH];
+    std::filesystem::path dllpath;
     if (settings.localdll) {
-        PathGetProgramDirectory(dllpath, MAX_PATH);
-    } else if (!GetInstallationLocation(dllpath, MAX_PATH)) {
+        if (!PathGetProgramDirectory(dllpath)) {
+            return false;
+        }
+    } else if (!GetInstallationLocation(dllpath)) {
         fprintf(stderr, "Couldn't find installation path\n");
         return false;
     }
 
-    PathCompose(dllpath, MAX_PATH, dllpath, L"GWToolboxdll.dll");
+    dllpath = dllpath / L"GWToolboxdll.dll";
 
     DWORD ExitCode;
-    if (!InjectRemoteThread(process, dllpath, &ExitCode)) {
+    if (!InjectRemoteThread(process, dllpath.wstring().c_str(), &ExitCode)) {
         fprintf(stderr, "InjectRemoteThread failed (ExitCode: %lu)\n", ExitCode);
         return false;
     }
@@ -92,6 +99,19 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     PSTR lpCmdLine, INT nCmdShow)
 #endif
 {
+    std::filesystem::path log_file_path;
+    if (!PathGetExeFullPath(log_file_path)) {
+        MessageBoxW(0, L"Failed to get qualified path for logs file.", L"GWToolbox", MB_OK | MB_TOPMOST);
+        return 0;
+    }
+    log_file_path = log_file_path.parent_path() / L"GWToolbox.error.log";
+    if (!freopen(log_file_path.string().c_str(), "w", stderr)) {
+        wchar_t buf[MAX_PATH + 128];
+        swprintf(buf, sizeof(buf), L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.", log_file_path.wstring().c_str());
+        MessageBoxW(0, buf, L"GWToolbox", MB_OK | MB_TOPMOST);
+        return 0;
+    }
+
     ParseRegSettings();
     ParseCommandLine();
 
@@ -105,12 +125,19 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         RestartWithSameArgs(true);
     }
 
-    if (IsInstalled() && !PathMoveDataAndCreateSymlink() && !IsRunningAsAdmin() && settings.noupdate) {
-        int iRet = MessageBoxW(
-            0, L"In order to update, the application will have to be restarted with administrative rights once.\nDo you wish to restart now?", L"GWToolbox", MB_YESNO);
+    if (IsInstalled()) {
+        if (!PathMigrateDataAndCreateSymlink(true)) {
+            if (IsRunningAsAdmin()) {
+                MessageBoxW(0, L"Failed to migrate settings folder for GWToolbox\n", L"GWToolbox", MB_OK | MB_TOPMOST);
+                return 0;
+            }
+            int iRet = MessageBoxW(
+                0, L"In order to update, the application will have to be restarted with administrative rights once.\nDo you wish to restart now?", L"GWToolbox", MB_YESNO | MB_TOPMOST);
 
-        if (iRet == IDYES) {
-            RestartWithSameArgs(true);
+            if (iRet == IDYES) {
+                RestartWithSameArgs(true);
+            }
+            return 0;
         }
     }
 
@@ -197,7 +224,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             L"Couldn't find character name RVA.\n"
             L"You need to update the launcher or contact the developpers.",
             L"GWToolbox - Error",
-            MB_OK | MB_ICONERROR);
+            MB_OK | MB_ICONERROR | MB_TOPMOST);
         return 1;
     }
 
@@ -217,7 +244,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                 L"If such process exist GWToolbox.exe may require administrator privileges.\n"
                 L"Do you want to restart as administrator?",
                 L"GWToolbox - Error",
-                MB_YESNO);
+                MB_YESNO | MB_TOPMOST);
 
             if (iRet == IDNO) {
                 fprintf(stderr, "User doesn't want to restart as admin\n");
@@ -236,7 +263,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             L"Couldn't find any valid process to start GWToolboxpp.\n"
             L"Ensure Guild Wars is running before trying to run GWToolbox.\n",
             L"GWToolbox - Error",
-            MB_RETRYCANCEL);
+            MB_RETRYCANCEL | MB_TOPMOST);
         if (iRet == IDCANCEL) {
             fprintf(stderr, "User doesn't want to retry\n");
             return 1;

@@ -1,32 +1,45 @@
 #include "stdafx.h"
 
 #include "Str.h"
+#include "Path.h"
 
 namespace fs = std::filesystem;
 
-void PathGetExeFullPath(wchar_t *path, size_t length)
+static std::error_code errcode; // Not thread safe
+
+bool PathGetExeFullPath(std::filesystem::path& out)
 {
-    DWORD result = GetModuleFileNameW(NULL, path, length);
-    if (result >= length)
+    wchar_t path[MAX_PATH];
+    DWORD result = GetModuleFileNameW(NULL, path, sizeof(path));
+    if (result >= sizeof(path)) {
         path[0] = 0;
+        fwprintf(stderr, L"%S: GetModuleFileNameW failed (%lu)\n", __func__, GetLastError());
+        return false;
+    }
+    out.assign(path);
+    return true;
+        
 }
 
-void PathGetExeFileName(wchar_t *path, size_t length)
+bool PathGetExeFileName(std::wstring& out)
 {
-    PathGetExeFullPath(path, length);
-
-    wchar_t *filename = PathFindFileNameW(path);
-    if (filename != path)
-        memmove(path, filename, StrBytesW(filename));
+    std::filesystem::path temp;
+    if (!PathGetExeFullPath(temp)) {
+        return false;
+    }
+    wchar_t* filename = PathFindFileNameW(temp.wstring().c_str());
+    out.assign(filename);
+    return true;
 }
 
-void PathRemoveFileName(wchar_t *path, size_t length, const wchar_t *src)
+bool PathRemoveFileName(wchar_t *path, size_t length, const wchar_t *src)
 {
     assert(MAX_PATH <= length);
 
     if (path != src)
         StrCopyW(path, length, src);
     PathRemoveFileSpecW(path);
+    return true;
 }
 
 void PathRemovePath(wchar_t *path, size_t length, const wchar_t *src)
@@ -38,86 +51,83 @@ void PathRemovePath(wchar_t *path, size_t length, const wchar_t *src)
     PathStripPathW(path);
 }
 
-void PathGetProgramDirectory(wchar_t *path, size_t length)
+bool PathGetProgramDirectory(std::filesystem::path& out)
 {
-    PathGetExeFullPath(path, length);
-
-    // Trim the filename from path to get the directory
-    wchar_t *filename = PathFindFileNameW(path);
-    if (filename != path)
-        filename[0] = 0;
+    if (!PathGetExeFullPath(out)) {
+        return false;
+    }
+    std::filesystem::path parent = out.parent_path();
+    out = parent;
+    return true;
 }
 
-bool PathGetDocumentsDirectory(wchar_t *path, size_t length)
+bool PathGetDocumentsPath(fs::path& out, const wchar_t* suffix = nullptr)
 {
-    assert(MAX_PATH <= length);
-
-    HRESULT result = SHGetFolderPathW(nullptr, CSIDL_MYDOCUMENTS, NULL, 0, path);
+    wchar_t temp[MAX_PATH];
+    HRESULT result = SHGetFolderPathW(nullptr, CSIDL_MYDOCUMENTS, NULL, 0, temp);
 
     if (FAILED(result)) {
-        fprintf(stderr, "SHGetFolderPathW failed (HRESULT:0x%lX)\n", result);
+        fwprintf(stderr, L"%S: SHGetFolderPathW failed (HRESULT:0x%lX)\n", __func__, result);
         return false;
     }
-
+    if (!temp[0]) {
+        fwprintf(stderr, L"%S: SHGetFolderPathW returned empty path\n", __func__);
+        return false;
+    }
+    if (suffix && suffix[0]) {
+        if (PathAppendW(temp, suffix) != TRUE) {
+            fwprintf(stderr, L"%S: PathAppendW failed\n", __func__);
+            return false;
+        }
+    }
+    out.assign(temp);
     return true;
 }
 
-bool PathGetDocumentsPath(wchar_t *path, size_t length, const wchar_t *suffix)
-{
-    if (!PathGetDocumentsDirectory(path, length)) {
-        fprintf(stderr, "PathGetDocumentsDirectory failed\n");
-        return false;
-    }
+bool PathGetAppDataPath(fs::path& out, const wchar_t* suffix = nullptr) {
 
-    if (PathAppendW(path, suffix) != TRUE) {
-        fprintf(stderr, "PathAppendW failed\n");
-        return false;
-    }
+    wchar_t temp[MAX_PATH];
 
-    return true;
-}
-
-bool PathGetAppDataDirectory(wchar_t* path, size_t length) {
-    assert(MAX_PATH <= length);
-
-    HRESULT result = SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, path);
+    HRESULT result = SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, temp);
 
     if (FAILED(result)) {
-        fprintf(stderr, "SHGetFolderPathW failed (HRESULT:0x%lX)\n", result);
+        fwprintf(stderr, L"%S: SHGetFolderPathW failed (HRESULT:0x%lX)\n", __func__, result);
         return false;
     }
-
+    if (!temp[0]) {
+        fwprintf(stderr, L"%S: SHGetFolderPathW returned empty path\n", __func__);
+        return false;
+    }
+    if (suffix && suffix[0]) {
+        if (PathAppendW(temp, suffix) != TRUE) {
+            fwprintf(stderr, L"%S: PathAppendW failed\n", __func__);
+            return false;
+        }
+    }
+    out.assign(temp);
     return true;
 }
 
-bool PathGetAppDataPath(wchar_t* path, size_t length, const wchar_t* suffix) {
-    if (!PathGetAppDataDirectory(path, length)) {
-        fprintf(stderr, "PathGetAppDataDirectory failed\n");
-        return false;
-    }
-
-    if (PathAppendW(path, suffix) != TRUE) {
-        fprintf(stderr, "PathAppendW failed\n");
-        return false;
-    }
-
-    return true;
-}
-
-bool PathCreateDirectory(const wchar_t *path)
+bool PathCreateDirectorySafe(const fs::path& path)
 {
-    if (CreateDirectoryW(path, NULL)) {
+    bool result;
+    if (!PathIsDirectorySafe(path, &result)) {
+        return false;
+    }
+    if (result) {
+        // Already a valid directory
         return true;
     }
-
-    DWORD LastError = GetLastError();
-    if (LastError == ERROR_ALREADY_EXISTS) {
-        if (PathIsDirectoryW(path))
-            return true;
-        fprintf(stderr, "PathCreateDirectory failed (%lu)\n", LastError);
+    result = fs::create_directories(path, errcode);
+    if (errcode.value()) {
+        fwprintf(stderr, L"%S: create_directories failed for %s (%lu, %S)\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        return false;
     }
-
-    return false;
+    if (!result) {
+        fwprintf(stderr, L"%S: Failed to create directory %s\n", __func__, path.wstring().c_str());
+        return false;
+    }
+    return true;
 }
 
 bool PathCompose(wchar_t *dest, size_t length, const wchar_t *left, const wchar_t *right)
@@ -126,7 +136,7 @@ bool PathCompose(wchar_t *dest, size_t length, const wchar_t *left, const wchar_
 
     size_t left_size = StrBytesW(left);
     if (length < left_size) {
-        fprintf(stderr, "Left string too long for the destination buffer\n");
+        fwprintf(stderr, L"%S: Left string too long for the destination buffer\n", __func__);
         return false;
     }
 
@@ -135,95 +145,230 @@ bool PathCompose(wchar_t *dest, size_t length, const wchar_t *left, const wchar_
     }
 
     if (PathAppendW(dest, right) != TRUE) {
-        fprintf(stderr, "PathAppendW failed\n");
+        fwprintf(stderr, L"%S: PathAppendW failed (%lu)\n", __func__, GetLastError());
         return false;
     }
 
     return true;
 }
 
-fs::path PathGetComputerName()
+bool PathGetComputerName(fs::path& out)
 {
-    constexpr auto INFO_BUFFER_SIZE = 32;
-    WCHAR computername[INFO_BUFFER_SIZE];
-    DWORD bufCharCount = INFO_BUFFER_SIZE;
-
-    if (!GetComputerNameW(computername, &bufCharCount)) {
-        fprintf(stderr, "Cannot get computer name.\n");
+    wchar_t temp[MAX_COMPUTERNAME_LENGTH + 1];
+    int written = sizeof(temp);
+    if (!GetComputerNameW(temp, (DWORD*)&written)) {
+        fwprintf(stderr, L"%S: Cannot get computer name. (%lu)\n", __func__, GetLastError());
+        return false;
     }
-
-    static fs::path computer = computername;
-
-    return computer;
+    if (!temp[0]) {
+        fwprintf(stderr, L"%S: GetComputerNameW returned no valid computer name.\n", __func__);
+        return false;
+    }
+    out.assign(temp);
+    return true;
 }
 
-bool PathMoveDataAndCreateSymlink(bool create_symlink = true)
-{
-    wchar_t appdir[MAX_PATH];
-    wchar_t docdir[MAX_PATH];
-
-    if (!PathGetDocumentsPath(docdir, MAX_PATH, L"GWToolboxpp")) {
-        fprintf(stderr, "Appdata directory not found.\n");
+bool PathRecursiveRemove(const fs::path& from) {
+    std::error_code errcode;
+    bool result;
+    fs::directory_iterator it;
+    if (!PathExistsSafe(from, &result)) {
         return false;
     }
-
-    if (!PathGetAppDataPath(appdir, MAX_PATH, L"GWToolboxpp")) {
-        fprintf(stderr, "Documents directory not found.\n");
-        return false;
-    }
-
-    fs::path docpath = docdir;
-    fs::path apppath = appdir;
-
-    if (!fs::exists(appdir) || fs::is_symlink(appdir)) {
+    if (!result) {
+        // Doesn't exist anyway
         return true;
     }
-
-    if (fs::is_symlink(appdir) && fs::is_directory(docpath) && fs::is_directory(docpath / PathGetComputerName())) {
-        return true;
-    }
-
-    if (!fs::exists(docpath)) {
-        fs::create_directory(docpath);
-    }
-
-    if (!fs::is_directory(docpath)) {
-        fprintf(stderr, "%USERPROFILE%/GWToolboxxpp exists and is not a directory.\n");
+    if (!PathIsDirectorySafe(from, &result)) {
         return false;
     }
-
-    auto error = std::error_code{};
-
-    if (fs::is_directory(apppath) && fs::is_directory(docpath)) {
-        for (fs::path p : fs::directory_iterator(apppath)) {
-            if (!fs::exists(docpath / p.filename())) {
-                if (fs::is_directory(p)) {
-                    fs::path dir = (docpath / PathGetComputerName() / p.filename()).parent_path();
-                    if (!fs::exists(dir)) {
-                        fs::create_directories(dir, error);
-                    }
-                    fs::rename(p, docpath / PathGetComputerName() / p.filename(), error);
-                } else if (p.extension() != ".dll" && p.extension() != ".exe") {
-                    fs::path dir = (docpath / PathGetComputerName() / p.filename()).parent_path();
-                    if (fs::exists(dir)) fs::create_directories(dir);
-                    fs::rename(p, docpath / PathGetComputerName() / p.filename(), error);
-                } else {
-                    fs::rename(p, docpath / p.filename(), error);
-                }
-            }
+    if (result) {
+        // directory
+        if (!PathDirectoryIteratorSafe(from, &it)) {
+            return false;
+        }
+        for (const fs::path& p : it) {
+            if (!PathRecursiveRemove(from / p.filename()))
+                return false;
         }
     }
+    result = fs::remove(from, errcode);
+    if (errcode.value()) {
+        fwprintf(stderr, L"%S: %s remove failed (%lu, %S)\n", __func__, from.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        return false;
+    }
+    if (!PathExistsSafe(from, &result)) {
+        return false;
+    }
+    if (result) {
+        fwprintf(stderr, L"%S: %s exists returned true after remove\n", __func__, from.wstring().c_str());
+        return false;
+    }
+    return true;
+}
 
-    if (fs::is_directory(apppath)) {
-        fs::remove_all(apppath, error);
+bool PathSafeCopy(const fs::path& from, const fs::path& to, bool copy_if_target_is_newer) {
+    bool result;
+    fs::directory_iterator it;
+    if (!PathExistsSafe(from, &result)) {
+        return false;
+    }
+    if (!result) {
+        fwprintf(stderr, L"%S: from doesn't exist %s\n", __func__, from.wstring().c_str());
+        return false;
+    }
+    if (!PathIsDirectorySafe(from, &result)) {
+        return false;
+    }
+    if (result) {
+        // directory
+        if (!PathDirectoryIteratorSafe(from, &it)) {
+            return false;
+        }
+        for (const fs::path& p : it) {
+            if (!PathSafeCopy(p, to / p.filename(), copy_if_target_is_newer))
+                return false;
+        }
+        return true;
+    }
+    
+    const fs::path& dir = to.parent_path();
+    if (!PathCreateDirectorySafe(dir)) {
+        return false;
+    }
+    auto copyOptions = fs::copy_options::recursive;
+    if (copy_if_target_is_newer)
+        copyOptions |= fs::copy_options::update_existing;
+    fs::copy(from, to, copyOptions, errcode);
+    // 17 = Already exists; this is ok.
+    switch(errcode.value()) {
+        case 0:
+        case 17: // Already exists
+        case 80: // Already exists
+            break;
+        default:
+            fwprintf(stderr, L"%S: copy %s failed (%lu, %S)\n", __func__, from.wstring().c_str(), errcode.value(), errcode.message().c_str());
+            return false;
+    }
+    if (!PathExistsSafe(to, &result)) {
+        return false;
+    }
+    if (!result) {
+        fwprintf(stderr, L"%S: to file doesn't exist after copy %s (%lu, %S)\n", __func__, from.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        return false;
+    }
+    return true;
+}
+bool PathExistsSafe(const fs::path& path, bool* out) {
+    std::error_code errcode;
+    *out = fs::exists(path, errcode);
+    if (errcode.value()) {
+        fwprintf(stderr, L"%S: exists failed %s (%lu, %S).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        return false;
+    }
+    return true;
+}
+bool PathDirectoryIteratorSafe(const fs::path& path, fs::directory_iterator* out) {
+    *out = fs::directory_iterator(path, errcode);
+    if (errcode.value()) {
+        fwprintf(stderr, L"%S: directory_iterator failed %s (%lu, %S)\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        return false;
+    }
+    return true;
+}
+bool PathIsDirectorySafe(const fs::path& path, bool* out) {
+    std::error_code errcode;
+    *out = fs::is_directory(path, errcode);
+    switch (errcode.value()) {
+    case 0:
+        break;
+    case 3:
+    case 2:
+        *out = false;
+        return true; // 2 = The system cannot find the file specified
+    default:
+        fwprintf(stderr, L"%S: is_directory failed %s (%lu, %S).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+        return false;
+    }
+    return true;
+}
+bool PathIsSymlinkSafe(const fs::path& path, bool* out) {
+    
+    *out = fs::is_symlink(path, errcode);
+    if (errcode.value()) {
+        switch (errcode.value()) {
+        case 0:
+            break;
+        case 3:
+        case 2:
+            *out = false;
+            return true; // 2 = The system cannot find the file specified
+        default:
+            fwprintf(stderr, L"%S: is_symlink failed %s (%lu, %S).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+            return false;
+        }
+    }
+    return true;
+}
+bool PathMigrateDataAndCreateSymlink(bool create_symlink)
+{
+    std::error_code errcode;
+    fs::directory_iterator it;
+    fs::path apppath;
+    bool result;
+    if (!PathGetAppDataPath(apppath, L"GWToolboxpp")) {
+        return false;
+    }
+    fs::path docpath;
+    if (!PathGetDocumentsPath(docpath, L"GWToolboxpp")) {
+        return false;
+    }
+    fs::path computer_name_path;
+    if (!PathGetComputerName(computer_name_path)) {
+        return false;
+    }
+    docpath = docpath / computer_name_path;
+
+    if (!PathExistsSafe(apppath, &result)) {
+        return false;
+    }
+    if (!result) {
+        // No legacy AppData folder for GWToolbox, nothing to do.
+        goto createsymlink;
     }
 
-    if (create_symlink) {
-        fs::create_directory_symlink(docpath / PathGetComputerName(), apppath, error);
+    if (!result) {
+        // AppData is not a directory, nothing to copy.
+        goto createsymlink;
+    }
 
-        if (error.value()) {
-            fprintf(stderr, "Couldn't create symlink from appdir to docdir.\n");
+
+    // Copy over all files from AppData/Local to new path
+    if (!PathDirectoryIteratorSafe(apppath, &it)) {
+        return false;
+    }
+    fwprintf(stdout, L"Copying content from %s to %s...", apppath.wstring().c_str(), docpath.wstring().c_str());
+    // @Cleanup: This bit can take a long time to do the manual copy. Think about a dialog window without writing a sea of code for it.
+    for (const fs::path& p : it) {
+        if (!PathSafeCopy(apppath / p.filename(), docpath / p.filename(), false))
             return false;
+    }
+    // At this point using PathSafeCopy we're confident that the files have been copied.
+    if (!PathRecursiveRemove(apppath)) {
+        return false;
+    }
+    createsymlink:
+    if (create_symlink) {
+        if (!PathIsSymlinkSafe(docpath, &result)) {
+            return false;
+        }
+        if (!result) {
+            fs::create_directory_symlink(docpath, apppath, errcode);
+
+            if (errcode.value()) {
+                fwprintf(stderr, L"%S: Couldn't create symlink from apppath to docpath (%lu, %S).\n", __func__, errcode.value(), errcode.message().c_str());
+                return false;
+            }
         }
     }
 

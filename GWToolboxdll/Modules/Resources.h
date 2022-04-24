@@ -18,7 +18,7 @@ private:
     std::recursive_mutex main_mutex;
     std::recursive_mutex dx_mutex;
     void InitRestClient(RestClient* r);
-
+    bool migration_attempted = false;
 public:
     static Resources& Instance() {
         static Resources instance;
