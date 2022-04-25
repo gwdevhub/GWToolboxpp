@@ -14,6 +14,7 @@
 #include <GWCA/GameEntities/Item.h>
 #include <Timer.h>
 #include <Path.h>
+#include <Str.h>
 
 namespace {
     const char* d3dErrorMessage(HRESULT code) {
@@ -57,56 +58,12 @@ namespace {
     const wchar_t* ITEM_IMAGES_PATH = L"img\\items";
     const wchar_t* PROF_ICONS_PATH = L"img\\professions";
 
-    // snprintf to a std::string (using a copy) - return false for chaining. Log to console if out is nullptr.
-
-    int wstring_vprintf(std::wstring* out, const wchar_t* format, va_list args) {
-        wchar_t* err_buf = new wchar_t[512];
-        int written = vswprintf(err_buf, 512, format, args);
-        ASSERT(written != -1);
-        if (out) {
-            out->assign(err_buf);
-        }
-        else {
-            Log::LogW(err_buf);
-        }
-        delete[] err_buf;
-        return written;
-    }
-    int wstring_printf(std::wstring* out = 0, const wchar_t* format = 0, ...) {
-        va_list vl;
-        va_start(vl, format);
-        int written = wstring_vprintf(out, format, vl);
-        va_end(vl);
-        return written;
-    }
-
-    int string_vprintf(std::string* out, const char* format, va_list args) {
-        char* err_buf = new char[512];
-        int written = vsnprintf(err_buf, 512, format, args);
-        ASSERT(written != -1);
-        if (out) {
-            out->assign(err_buf);
-        }
-        else {
-            Log::Log(err_buf);
-        }
-        delete[] err_buf;
-        return written;
-    }
-    int string_printf(std::string* out = 0, const char* format = 0, ...) {
-        va_list vl;
-        va_start(vl, format);
-        int written = string_vprintf(out, format, vl);
-        va_end(vl);
-        return written;
-    }
-
     // snprintf error message, pass to callback as a failure. Used internally.
     void trigger_failure_callback(std::function<void(bool,const std::wstring&)> callback,const wchar_t* format, ...) {
         std::wstring out;
         va_list vl;
         va_start(vl, format);
-        int written = wstring_vprintf(&out, format, vl);
+        int written = StrVswprintf(out, format, vl);
         va_end(vl);
         ASSERT(written != -1);
         callback(false, out);
@@ -229,28 +186,28 @@ utf8::string Resources::GetPathUtf8(std::wstring file) {
 bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring* response) {
     if (std::filesystem::exists(path_to_file)) {
         if (!std::filesystem::remove(path_to_file)) {
-            return wstring_printf(response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+            return StrSwprintf(*response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
         }
     }
     if (std::filesystem::exists(path_to_file)) {
-        return wstring_printf(response, L"File already exists @ %s", path_to_file.wstring().c_str()), false;
+        return StrSwprintf(*response, L"File already exists @ %s", path_to_file.wstring().c_str()), false;
     }
 
     std::string content;
     if (!Download(url, &content)) {
-        return wstring_printf(response,L"%S", content.c_str()), false;
+        return StrSwprintf(*response,L"%S", content.c_str()), false;
     }
     if (!content.length()) {
-        return wstring_printf(response,L"Failed to download %S, no content length", url.c_str()), false;
+        return StrSwprintf(*response,L"Failed to download %S, no content length", url.c_str()), false;
     }
     FILE* fp = fopen(path_to_file.string().c_str(), "wb");
     if (!fp) {
-        return wstring_printf(response,L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+        return StrSwprintf(*response,L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     int written = fwrite(content.data(), content.size() + 1, 1, fp);
     fclose(fp);
     if(written != 1) {
-        return wstring_printf(response,L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+        return StrSwprintf(*response,L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     return true;
 }
@@ -282,7 +239,7 @@ bool Resources::Download(const std::string& url, std::string* response)
     r.SetUrl(url.c_str());
     r.Execute();
     if (!r.IsSuccessful()) {
-        string_printf(response, "Failed to download %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
+        StrSprintf(*response, "Failed to download %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
         return false;
     }
     *response = std::move(r.GetContent());
@@ -322,11 +279,11 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
         res = D3DXCreateTextureFromFileExW(device, path_to_file.c_str(), D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, NULL, NULL, texture);
     } while (res == D3DERR_NOTAVAILABLE && tries < 3);
     if (res != D3D_OK) {
-        wstring_printf(error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
+        StrSwprintf(*error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
     }
     else if (!*texture) {
         res = D3DERR_NOTFOUND;
-        wstring_printf(error, L"Error loading resource from file %s - texture loaded is null", path_to_file.filename().wstring().c_str());
+        StrSwprintf(*error, L"Error loading resource from file %s - texture loaded is null", path_to_file.filename().wstring().c_str());
     }
     return res;
 }
@@ -339,11 +296,11 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule
         res = D3DXCreateTextureFromResourceExA(device, hSrcModule, id, D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, NULL, NULL, texture);
     } while (res == D3DERR_NOTAVAILABLE && tries < 3);
     if (res != D3D_OK) {
-        wstring_printf(error, L"Error loading resource for id %S, module %p - Error is %S", id, hSrcModule, d3dErrorMessage(res));
+        StrSwprintf(*error, L"Error loading resource for id %p, module %p - Error is %S", id, hSrcModule, d3dErrorMessage(res));
     }
     else if (!*texture) {
         res = D3DERR_NOTFOUND;
-        wstring_printf(error, L"Error loading resource for id %S, module %p - texture loaded is null", id, hSrcModule);
+        StrSwprintf(*error, L"Error loading resource for id %p, module %p - texture loaded is null", id, hSrcModule);
     }
     return res;
 }
@@ -407,17 +364,17 @@ bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_fil
     // otherwise try to install it from resource
     HRSRC hResInfo = FindResourceA(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
     if (!hResInfo) {
-        wstring_printf(error, L"Error calling FindResourceA on resource id %u - Error is %lu", id, GetLastError());
+        StrSwprintf(*error, L"Error calling FindResourceA on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
     HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
     if (!hRes) {
-        wstring_printf(error, L"Error calling LoadResource on resource id %u - Error is %lu", id, GetLastError());
+        StrSwprintf(*error, L"Error calling LoadResource on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
     DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
     if (!size) {
-        wstring_printf(error, L"Error calling SizeofResource on resource id %u - Error is %lu", id, GetLastError());
+        StrSwprintf(*error, L"Error calling SizeofResource on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
     // write to file so the user can customize his icons
@@ -425,11 +382,11 @@ bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_fil
     DWORD bytesWritten;
     BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
     if (wfRes != TRUE) {
-        wstring_printf(error, L"Error writing file %s - Error is %lu", path_to_file.filename().wstring().c_str(), GetLastError());
+        StrSwprintf(*error, L"Error writing file %s - Error is %lu", path_to_file.filename().wstring().c_str(), GetLastError());
         return false;
     }
     else if (bytesWritten != size) {
-        wstring_printf(error, L"Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.filename().wstring().c_str());
+        StrSwprintf(*error, L"Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.filename().wstring().c_str());
         return false;
     }
 
