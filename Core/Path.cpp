@@ -336,9 +336,25 @@ bool PathMigrateDataAndCreateSymlink(bool create_symlink)
         // No legacy AppData folder for GWToolbox, nothing to do.
         goto createsymlink;
     }
-
+    if (!PathIsDirectorySafe(apppath, &result)) {
+        return false;
+    }
     if (!result) {
         // AppData is not a directory, nothing to copy.
+        goto createsymlink;
+    }
+    if (!PathIsDirectorySafe(apppath, &result)) {
+        return false;
+    }
+    if (!result) {
+        // AppData is not a directory, nothing to copy.
+        goto createsymlink;
+    }
+    if (!PathIsSymlinkSafe(apppath, &result)) {
+        return false;
+    }
+    if (result) {
+        // AppData is already a symlink, nothing to copy.
         goto createsymlink;
     }
 
@@ -359,7 +375,7 @@ bool PathMigrateDataAndCreateSymlink(bool create_symlink)
     }
     createsymlink:
     if (create_symlink) {
-        if (!PathIsSymlinkSafe(docpath, &result)) {
+        if (!PathIsSymlinkSafe(apppath, &result)) {
             return false;
         }
         if (!result) {
