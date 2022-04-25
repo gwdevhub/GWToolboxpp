@@ -93,6 +93,7 @@ private:
     time_t last_activity_update = 0;
 
     bool LoadDll();
+    bool UnloadDll();
     bool Connect();
     void ConnectCanary();
     void Disconnect();

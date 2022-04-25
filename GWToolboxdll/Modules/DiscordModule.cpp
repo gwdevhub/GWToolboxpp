@@ -266,6 +266,7 @@ void DiscordModule::InviteUser(DiscordUser* user) {
 void DiscordModule::Terminate() {
     ToolboxModule::Terminate();
     Disconnect();
+    UnloadDll();
 }
 void DiscordModule::Disconnect() {
     if(discord_connected)
@@ -483,11 +484,16 @@ bool DiscordModule::LoadDll() {
     // resolve function address here
     discordCreate = (DiscordCreate_pt)((uintptr_t)(GetProcAddress(hGetProcIDDLL, "DiscordCreate")));
     if (!discordCreate) {
+        UnloadDll();
         Log::LogW(L"Failed to find address for DiscordCreate\n");
         return false;
     }
     Log::Log("Discord DLL hooked!\n");
     return true;
+}
+bool DiscordModule::UnloadDll() {
+    HINSTANCE hGetProcIDDLL = GetModuleHandleW(dll_location.c_str());
+    return !hGetProcIDDLL || FreeLibrary(hGetProcIDDLL);
 }
 void DiscordModule::DrawSettingInternal() {
     bool edited = false;
