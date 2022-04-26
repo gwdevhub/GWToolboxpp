@@ -884,6 +884,7 @@ void GameSettings::Initialize() {
     GW::UI::RegisterUIMessageCallback(&OnWriteChat_Entry, OnWriteChat);
     GW::UI::RegisterUIMessageCallback(&OnAgentStartCast_Entry, OnAgentStartCast);
     GW::UI::RegisterUIMessageCallback(&OnOpenWikiUrl_Entry, OnOpenWiki);
+    GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, OnAgentNameTag);
 
     GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
@@ -1091,6 +1092,14 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     ::LoadChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
     ::LoadChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
 
+    nametag_color_enemy = Colors::Load(ini, Name(), VAR_NAME(nametag_color_enemy), nametag_color_enemy);
+    nametag_color_gadget = Colors::Load(ini, Name(), VAR_NAME(nametag_color_gadget), nametag_color_gadget);
+    nametag_color_item = Colors::Load(ini, Name(), VAR_NAME(nametag_color_item), nametag_color_item);
+    nametag_color_npc = Colors::Load(ini, Name(), VAR_NAME(nametag_color_npc), nametag_color_npc);
+    nametag_color_player_in_party = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_in_party), nametag_color_player_in_party);
+    nametag_color_player_other = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_other), nametag_color_player_other);
+    nametag_color_player_self = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_self), nametag_color_player_self);
+
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     GW::UI::SetOpenLinks(openlinks);
     GW::Chat::ToggleTimestamps(show_timestamps);
@@ -1225,6 +1234,14 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ::SaveChannelColor(ini, Name(), "whispers", GW::Chat::Channel::CHANNEL_WHISPER);
     ::SaveChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
     ::SaveChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
+
+    Colors::Save(ini, Name(), VAR_NAME(nametag_color_enemy), nametag_color_enemy);
+    Colors::Save(ini, Name(), VAR_NAME(nametag_color_gadget), nametag_color_gadget);
+    Colors::Save(ini, Name(), VAR_NAME(nametag_color_item), nametag_color_item);
+    Colors::Save(ini, Name(), VAR_NAME(nametag_color_npc), nametag_color_npc);
+    Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_in_party), nametag_color_player_in_party);
+    Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_other), nametag_color_player_other);
+    Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_self), nametag_color_player_self);
 }
 
 void GameSettings::DrawInventorySettings() {
@@ -1347,12 +1364,9 @@ void GameSettings::DrawSettingInternal() {
         "occur, such as entering instances.");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &focus_window_on_launch);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &focus_window_on_launch);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
     ImGui::Unindent();
 
     ImGui::Text("Show a message when a friend:");
@@ -1442,6 +1456,18 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
     ImGui::Checkbox("Limit signet of capture to 10 in skills window", &limit_signets_of_capture);
     ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
+    ImGui::Text("In-game name tag colors:");
+    ImGui::Indent();
+    ImGui::StartSpacedElements(200.f);
+    uint32_t flags = ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs;
+    ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Myself", &nametag_color_player_self, flags);
+    ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("NPC", &nametag_color_npc, flags);
+    ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Enemy", &nametag_color_enemy, flags);
+    ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Gadget", &nametag_color_gadget, flags);
+    ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Other Player", &nametag_color_player_other, flags);
+    ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Other Player (In Party)", &nametag_color_player_in_party, flags);
+    ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Item", &nametag_color_item, flags);
+    ImGui::Unindent();
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
@@ -1735,7 +1761,7 @@ void GameSettings::FriendStatusCallback(
     GameSettings& game_setting = GameSettings::Instance();
     if (status == f->status)
         return;
-    wchar_t buffer[512];
+    wchar_t buffer[128];
     switch (status) {
     case GW::FriendStatus::FriendStatus_Offline:
         if (game_setting.notify_when_friends_offline) {
@@ -2632,6 +2658,22 @@ void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet) {
         Instance().actual_signets_of_capture_amount = pak->count;
         if (pak->count > 10)
             pak->count = 10;
+    }
+}
+
+// Default colour for agent name tags
+void GameSettings::OnAgentNameTag(GW::HookStatus*, uint32_t msgid, void* wParam, void*) {
+    if (msgid != GW::UI::kShowAgentNameTag && msgid != GW::UI::kSetAgentNameTagAttribs)
+        return;
+    GW::UI::AgentNameTagInfo* tag = (GW::UI::AgentNameTagInfo * )wParam;
+    switch (tag->text_color) {
+    case NAMETAG_COLOR_DEFAULT_NPC: tag->text_color = Instance().nametag_color_npc; break;
+    case NAMETAG_COLOR_DEFAULT_ENEMY: tag->text_color = Instance().nametag_color_enemy; break;
+    case NAMETAG_COLOR_DEFAULT_GADGET: tag->text_color = Instance().nametag_color_gadget; break;
+    case NAMETAG_COLOR_DEFAULT_PLAYER_IN_PARTY: tag->text_color = Instance().nametag_color_player_in_party; break;
+    case NAMETAG_COLOR_DEFAULT_PLAYER_OTHER: tag->text_color = Instance().nametag_color_player_other; break;
+    case NAMETAG_COLOR_DEFAULT_PLAYER_SELF: tag->text_color = Instance().nametag_color_player_self; break;
+    case NAMETAG_COLOR_DEFAULT_ITEM: tag->text_color = Instance().nametag_color_item; break;
     }
 }
 

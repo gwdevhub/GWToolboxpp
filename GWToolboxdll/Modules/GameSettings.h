@@ -36,6 +36,14 @@
 #include <Timer.h>
 #include <ToolboxModule.h>
 
+#define NAMETAG_COLOR_DEFAULT_NPC 0xFFA0FF00
+#define NAMETAG_COLOR_DEFAULT_PLAYER_SELF 0xFF40FF40
+#define NAMETAG_COLOR_DEFAULT_PLAYER_OTHER 0xFF9BBEFF
+#define NAMETAG_COLOR_DEFAULT_PLAYER_IN_PARTY 0xFF6060FF
+#define NAMETAG_COLOR_DEFAULT_GADGET 0xFFFFFF00
+#define NAMETAG_COLOR_DEFAULT_ENEMY 0xFFFF0000
+#define NAMETAG_COLOR_DEFAULT_ITEM 0x0
+
 class PendingChatMessage {
 protected:
     bool printed = false;
@@ -168,7 +176,6 @@ public:
     // Static callback functions
     static void OnPingWeaponSet(GW::HookStatus*, void* packet);
     static void OnStartWhisper(GW::HookStatus*, wchar_t* _name);
-    static void OnAgentAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
     static void OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
     static void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak);
     static void OnAgentEffect(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
@@ -202,6 +209,7 @@ public:
     static void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
     static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
+    static void OnAgentNameTag(GW::HookStatus* status, uint32_t msgid, void* wParam, void*);
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
@@ -282,6 +290,15 @@ public:
 
     bool auto_age2_on_age = true;
     bool auto_age_on_vanquish = false;
+
+    Color nametag_color_npc = NAMETAG_COLOR_DEFAULT_NPC;
+    Color nametag_color_player_self = NAMETAG_COLOR_DEFAULT_PLAYER_SELF;
+    Color nametag_color_player_other = NAMETAG_COLOR_DEFAULT_PLAYER_OTHER;
+    Color nametag_color_player_in_party = NAMETAG_COLOR_DEFAULT_PLAYER_IN_PARTY;
+    Color nametag_color_gadget = NAMETAG_COLOR_DEFAULT_GADGET;
+    Color nametag_color_enemy = NAMETAG_COLOR_DEFAULT_ENEMY;
+    Color nametag_color_item = NAMETAG_COLOR_DEFAULT_ITEM;
+
 
     static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
@@ -367,4 +384,5 @@ private:
     GW::HookEntry OnScreenShake_Entry;
     GW::HookEntry OnCast_Entry;
     GW::HookEntry OnPartyTargetChange_Entry;
+    GW::HookEntry OnAgentNameTag_Entry;
 };
