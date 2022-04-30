@@ -108,20 +108,41 @@ PconsWindow::PconsWindow() {
         ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
         ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
+    pcons.push_back(new PconGeneric(L"Scroll of Hunter's Insight", 5976, SkillID::Hunters_Insight, 20));
+    pcons.back()->visible = false; // sets the default, LoadSettings will overwrite this
+
+    // Refillers
     pcons.push_back(new PconRefiller("Scroll of Resurrection", "Scroll", "resscroll", L"Scroll of Resurrection", IDB_Mat_ResScroll,
         ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::ResScrolls, 5));
-    pcons.back()->visible = false; // sets the default, LoadSettings will overwrite this
     pcons.push_back(new PconRefiller("Powerstone of Courage", "Pstone", "pstone", L"Powerstone of Courage", IDB_Mat_Powerstone,
         ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::Powerstone, 5));
-    pcons.back()->visible = false; // sets the default, LoadSettings will overwrite this
+
+    // Summoning Stones
+    // @Cleanup: Add these items to GWCA or something
+    pcons.push_back(new PconRefiller(L"Tengu Support Flare",30209));
+    pcons.push_back(new PconRefiller(L"Imperial Guard Reinforcement Order", 30210));
+    pcons.push_back(new PconRefiller(L"Chitinous Summoning Stone", 30959));
+    pcons.push_back(new PconRefiller(L"Amber Summoning Stone", 30961));
+    pcons.push_back(new PconRefiller(L"Arctic Summoning Stone", 30962));
+    //pcons.push_back(new PconRefiller(L"Automaton Summoning Stone", ????));
+    pcons.push_back(new PconRefiller(L"Celestial Summoning Stone", 34176));
+    pcons.push_back(new PconRefiller(L"Mystical Summoning Stone", 30960));
+    pcons.push_back(new PconRefiller(L"Demonic Summoning Stone", 30963));
+    pcons.push_back(new PconRefiller(L"Gelatinous Summoning Stone", 30964));
+    pcons.push_back(new PconRefiller(L"Fossilized Summoning Stone", 30965));
+    pcons.push_back(new PconRefiller(L"Jadeite Summoning Stone", 30966));
+    pcons.push_back(new PconRefiller(L"Mischievous Summoning Stone", 31022));
+    pcons.push_back(new PconRefiller(L"Frosty Summoning Stone", 31023));
+    pcons.push_back(new PconRefiller(L"Mercantile Summoning Stone", 31154));
+    pcons.push_back(new PconRefiller(L"Mysterious Summoning Stone", 31155));
+    pcons.push_back(new PconRefiller(L"Zaishen Summoning Stone", 31156));
+    pcons.push_back(new PconRefiller(L"Ghastly Summoning Stone", 32557));
+    pcons.push_back(new PconRefiller(L"Shining Blade Warhorn", 35126));
 }
 void PconsWindow::Initialize() {
     ToolboxWindow::Initialize();
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
     Resources::Instance().LoadTexture(&button_texture, Resources::GetPath(L"img/icons", L"cupcake.png"), IDB_Icon_Cupcake);
-    for (Pcon* pcon : pcons) {
-        pcon->Initialize();
-    }
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentSetPlayer>(&AgentSetPlayer_Entry,
     [](GW::HookStatus *, GW::Packet::StoC::AgentSetPlayer *pak) -> void {
@@ -619,7 +640,7 @@ void PconsWindow::DrawSettingInternal() {
     if (ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");
         for (Pcon* pcon : pcons) {
-            ImGui::SliderInt(pcon->chat, &pcon->threshold, 0, 250);
+            ImGui::SliderInt(pcon->chat.c_str(), &pcon->threshold, 0, 250);
         }
         ImGui::TreePop();
     }
@@ -637,9 +658,9 @@ void PconsWindow::DrawSettingInternal() {
         ImGui::NextSpacedElement(); ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
         ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
         ImGui::NextSpacedElement(); ImGui::Checkbox("Hide city Pcons in explorable areas", &Pcon::hide_city_pcons_in_explorable_areas);
-        ImGui::StartSpacedElements(200.f);
+        ImGui::StartSpacedElements(280.f);
         for (Pcon* pcon : pcons) {
-            ImGui::NextSpacedElement(); ImGui::Checkbox(pcon->chat, &pcon->visible);
+            ImGui::NextSpacedElement(); ImGui::Checkbox(pcon->chat.c_str(), &pcon->visible);
         }
         ImGui::TreePop();
     }

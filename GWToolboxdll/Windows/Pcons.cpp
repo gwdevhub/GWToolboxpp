@@ -80,14 +80,14 @@ Pcon::Pcon(const char* chatname,
     , res_id(res_id_)
     , filename(filename_)
     , timer(TIMER_INIT())
-    , chat(chatname)
-    , abbrev(abbrevname)
-    , ini(ininame)
     , uv0(uv0_)
     , uv1(uv1_)
 {
     enabled = settings_by_charname[L"default"] = new bool(false);
     if (desc_) desc = desc_;
+    chat = chatname ? chatname : GuiUtils::WStringToString(filename);
+    abbrev = abbrevname ? abbrevname : GuiUtils::RemovePunctuation(chat);
+    ini = ininame ? ininame : GuiUtils::ToSlug(chat);
 }
 Pcon::~Pcon() {
     for (auto c : settings_by_charname) {
@@ -122,6 +122,9 @@ wchar_t* Pcon::SetPlayerName() {
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
+    if (!texture) {
+        texture = Resources::GetItemImage(filename);
+    }
     if (*texture == nullptr) return;
     ImVec2 pos = ImGui::GetCursorPos();
     ImVec2 s(size, size);
@@ -132,8 +135,9 @@ void Pcon::Draw(IDirect3DDevice9* device) {
         Toggle();
     }
     ImGui::PopStyleColor();
-    if (ImGui::IsItemHovered() && desc.size())
+    if (ImGui::IsItemHovered() && desc.size()) {
         ImGui::SetTooltip(desc.c_str());
+    }
     if (maptype != GW::Constants::InstanceType::Loading) {
         ImFont* f = GuiUtils::GetFont(GuiUtils::FontSize::header1);
         ImVec2 nextPos = ImGui::GetCursorPos();
@@ -159,9 +163,6 @@ void Pcon::Draw(IDirect3DDevice9* device) {
     
     ImGui::SetCursorPos(pos);
     ImGui::Dummy(ImVec2(size, size));
-}
-void Pcon::Initialize() {
-    texture = Resources::GetItemImage(filename);
 }
 void Pcon::Terminate() {
     texture = nullptr;
@@ -189,10 +190,10 @@ void Pcon::Update(int delay) {
             if (IsEnabled() && PconsWindow::Instance().GetEnabled() && !refilling) {
                 // Only warn user of low pcon count if is enabled and we're in an outpost.
                 if (quantity == 0) {
-                    Log::Error("No more %s items found", chat);
+                    Log::Error("No more %s items found", chat.c_str());
                 }
                 else if (quantity < threshold) {
-                    Log::Warning("Low on %s", chat);
+                    Log::Warning("Low on %s", chat.c_str());
                 }
             }
         }
@@ -253,7 +254,7 @@ void Pcon::AfterUsed(bool used, int qty) {
             if (quantity == 0) { // if we just used the last one
                 mapid = GW::Map::GetMapID();
                 maptype = GW::Map::GetInstanceType();
-                Log::Warning("Just used the last %s", chat);
+                Log::Warning("Just used the last %s", chat.c_str());
                 if (disable_when_not_found) SetEnabled(false);
             }
         }
@@ -264,7 +265,7 @@ void Pcon::AfterUsed(bool used, int qty) {
                 || maptype != GW::Map::GetInstanceType()) { // only yell at the user once
                 mapid = GW::Map::GetMapID();
                 maptype = GW::Map::GetInstanceType();
-                Log::Error("Cannot find %s", chat);
+                Log::Error("Cannot find %s", chat.c_str());
             }
         }
     }
@@ -379,7 +380,7 @@ void Pcon::UpdateRefill() {
             if (points_per_item < 1) continue; // This is not the pcon you're looking for...
             GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(storageItem); // Now find a slot in inventory to move them to.
             if (inventoryItem == nullptr) {
-                printf("No more space for %s", chat);
+                printf("No more space for %s", chat.c_str());
                 goto refill_done; // No space for more pcons in inventory.
             }
             quantity_to_move = static_cast<size_t>(ceil((float)points_needed / (float)points_per_item));
@@ -443,9 +444,9 @@ void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
     char buf_active[256];
     char buf_threshold[256];
     char buf_visible[256];
-    snprintf(buf_active, 256, "%s_active", ini);
-    snprintf(buf_threshold, 256, "%s_threshold", ini);
-    snprintf(buf_visible, 256, "%s_visible", ini);
+    snprintf(buf_active, 256, "%s_active", ini.c_str());
+    snprintf(buf_threshold, 256, "%s_threshold", ini.c_str());
+    snprintf(buf_visible, 256, "%s_visible", ini.c_str());
     threshold = inifile->GetLongValue(section, buf_threshold, threshold);
 
     bool* def = GetSettingsByName(L"default");
@@ -471,9 +472,9 @@ void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
     char buf_active[256];
     char buf_threshold[256];
     char buf_visible[256];
-    snprintf(buf_active, 256, "%s_active", ini);
-    snprintf(buf_threshold, 256, "%s_threshold", ini);
-    snprintf(buf_visible, 256, "%s_visible", ini);
+    snprintf(buf_active, 256, "%s_active", ini.c_str());
+    snprintf(buf_threshold, 256, "%s_threshold", ini.c_str());
+    snprintf(buf_visible, 256, "%s_visible", ini.c_str());
     inifile->SetLongValue(section, buf_threshold, threshold);
     inifile->SetBoolValue(section, buf_visible, visible);
 

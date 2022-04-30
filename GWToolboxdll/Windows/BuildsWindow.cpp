@@ -269,12 +269,12 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
         }
                 
         char pconlabel[128];
-        snprintf(pconlabel, 128, "%s###pcon_%s", pcon->chat, pcon->ini);
+        snprintf(pconlabel, 128, "%s###pcon_%s", pcon->chat.c_str(), pcon->ini.c_str());
         if (ImGui::Checkbox(pconlabel, &active)) {
             if (active)
                 build.pcons.emplace(pcon->ini);
             else
-                build.pcons.erase((char*)pcon->ini);
+                build.pcons.erase(pcon->ini);
             builds_changed = true;
         }
     }
