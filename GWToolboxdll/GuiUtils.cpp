@@ -250,7 +250,24 @@ float GuiUtils::GetPartyHealthbarHeight() {
         return GW::Constants::HealthbarHeight::Normal;
     }
 }
-
+std::string GuiUtils::ToSlug(std::string s) {
+    s = RemovePunctuation(s);
+    std::transform(s.begin(), s.end(), s.begin(), [](char c) -> char {
+        if (c == ' ')
+            return '_';
+        return static_cast<char>(::tolower(c));
+        });
+    return s;
+}
+std::wstring GuiUtils::ToSlug(std::wstring s) {
+    s = RemovePunctuation(s);
+    std::transform(s.begin(), s.end(), s.begin(), [](wchar_t c) -> wchar_t {
+        if (c == ' ')
+            return '_';
+        return static_cast<wchar_t>(::tolower(c));
+        });
+    return s;
+}
 std::string GuiUtils::ToLower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(), [](char c) -> char {
         return static_cast<char>(::tolower(c));

@@ -15,8 +15,10 @@ namespace ImGui {
 const float& ImGui::FontScale() {
 	return ImGui::GetIO().FontGlobalScale;
 }
-void ImGui::StartSpacedElements(float width) {
-	element_spacing_width = width * FontScale();
+void ImGui::StartSpacedElements(float width, bool include_font_scaling) {
+	element_spacing_width = width;
+	if (include_font_scaling)
+		element_spacing_width *= FontScale();
 	element_spacing_cols = (int)std::floor(ImGui::GetContentRegionAvail().x / element_spacing_width);
 	element_spacing_col_idx = 0;
 	element_spacing_indent = &(ImGui::GetCurrentWindow()->DC.Indent.x);
