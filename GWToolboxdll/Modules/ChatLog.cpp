@@ -332,6 +332,8 @@ void ChatLog::InjectSent() {
     // Fill chat log
     TBSentMessage* sent = sent_first;
     while (sent) {
+        if (!sent->msg.data())
+            continue;
         AddToSentLog_Func(sent->msg.data());
         if (!out_log)
             out_log = GetSentLog();

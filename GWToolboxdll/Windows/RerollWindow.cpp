@@ -219,7 +219,7 @@ void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
             buf = GuiUtils::WStringToString(player_name);
             if ((i % 2) != 0)
                 ImGui::SameLine();
-            if (ImGui::IconButton(buf.c_str(), Resources::GetProfessionIcon((GW::Constants::Profession)profession),btn_dim)) {
+            if (ImGui::IconButton(buf.c_str(), *Resources::GetProfessionIcon((GW::Constants::Profession)profession),btn_dim)) {
                 bool _same_map = travel_to_same_location_after_rerolling;
                 bool _same_party = travel_to_same_location_after_rerolling && rejoin_party_after_rerolling;
                 if (rejoin_party_after_rerolling && !_same_party) {
