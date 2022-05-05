@@ -1721,6 +1721,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Nightfallen_Garden:
     case GW::Constants::MapID::Nightfallen_Jahai:
     case GW::Constants::MapID::Throne_of_Secrets:
+    case GW::Constants::MapID::Yatendi_Canyons:
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
         break;
     default: return;
