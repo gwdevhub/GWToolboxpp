@@ -1684,6 +1684,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::The_Breach:
     case GW::Constants::MapID::Diessa_Lowlands:
     case GW::Constants::MapID::Flame_Temple_Corridor:
+    case GW::Constants::MapID::Eastern_Frontier:
     case GW::Constants::MapID::Dragons_Gullet:
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Vanguard);
         break;
@@ -1720,8 +1721,10 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Heart_of_Abaddon:
     case GW::Constants::MapID::Nightfallen_Garden:
     case GW::Constants::MapID::Nightfallen_Jahai:
+    case GW::Constants::MapID::Nightfallen_Coast:
     case GW::Constants::MapID::Throne_of_Secrets:
     case GW::Constants::MapID::Yatendi_Canyons:
+    case GW::Constants::MapID::Remains_of_Sahlahja:
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
         break;
     default: return;
