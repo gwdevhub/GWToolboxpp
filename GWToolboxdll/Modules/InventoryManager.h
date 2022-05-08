@@ -72,6 +72,8 @@ public:
     static wchar_t* OnAsyncDecodeStr(GW::HookStatus*, GW::UI::DecodingString* to_decode);
     static void __fastcall OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id);
 
+    static void OnUseItem(GW::HookStatus* status, void* packet);
+
 
     IdentifyAllType identify_all_type = IdentifyAllType::None;
     SalvageAllType salvage_all_type = SalvageAllType::None;
@@ -94,6 +96,8 @@ private:
     bool show_transact_quantity_popup = false;
     bool transaction_listeners_attached = false;
     bool hide_unsellable_items = true;
+
+    bool change_secondary_for_tome = true;
 
     bool wiki_link_on_context_menu = false;
     bool right_click_context_menu_in_explorable = true;
@@ -118,6 +122,7 @@ private:
     GW::HookEntry salvage_hook_entry;
     GW::HookEntry transaction_hook_entry;
     GW::HookEntry ItemClick_Entry;
+    
 
     void FetchPotentialItems();
     void AttachSalvageListeners();
@@ -131,6 +136,21 @@ private:
     static void ClearTransactionSession(GW::HookStatus* status = nullptr, void* packet = nullptr);
     void AttachTransactionListeners();
     void DetachTransactionListeners();
+
+    GW::HookEntry OnUseItem_Entry;
+    enum PendingTomeUseStage {
+        None,
+        PromptUser,
+        AwaitPromptReply,
+        ChangeProfession,
+        AwaitProfession,
+        UseItem
+    } tome_pending_stage;
+    uint32_t tome_pending_profession;
+    time_t tome_pending_timeout = 0;
+    uint32_t tome_pending_item_id = 0;
+    void DrawPendingTomeUsage();
+
 public:
     struct Item : GW::Item {
         GW::ItemModifier *GetModifier(uint32_t identifier);
