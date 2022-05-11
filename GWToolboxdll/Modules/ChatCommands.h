@@ -16,8 +16,8 @@ class ChatCommands : public ToolboxModule {
     const float DEFAULT_CAM_SPEED = 1000.f; // 600 units per sec
     const float ROTATION_SPEED = static_cast<float>(M_PI) / 3.f; // 6 seconds for full rotation
 
-    ChatCommands() {};
-    ~ChatCommands() {};
+    ChatCommands();
+    ~ChatCommands();
 public:
     static ChatCommands& Instance() {
         static ChatCommands instance;
@@ -109,6 +109,7 @@ private:
 
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;
+    uint32_t default_title_id;
 
     struct SearchAgent {
         clock_t started = 0;

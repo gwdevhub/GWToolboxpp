@@ -1375,13 +1375,11 @@ HotkeyAction::HotkeyAction(CSimpleIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     action = (Action)ini->GetLongValue(section, "ActionID", OpenXunlaiChest);
-    titleid = ini->GetLongValue(section, "TitleID", GW::Constants::TitleID::Lightbringer);
 }
 void HotkeyAction::Save(CSimpleIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ActionID", action);
-    ini->SetLongValue(section, "TitleID", titleid);
 }
 int HotkeyAction::Description(char *buf, size_t bufsz)
 {
@@ -1391,39 +1389,7 @@ int HotkeyAction::Description(char *buf, size_t bufsz)
 }
 bool HotkeyAction::Draw()
 {
-    using T = GW::Constants::TitleID;
-    static const std::vector<std::pair<uint32_t, std::string>> titlemap = {{998u, "Keep current title"},
-        {999u, "Remove title"}, {T::KoaBD, "Kind of a Big Deal (GWAMM)"}, {T::Lightbringer, "Lightbringer"},
-        {T::Hero, "Hero"}, {T::Gladiator, "Gladiator"}, {T::Champion, "Champion"},
-        {T::Kurzick, "Kurzick"}, {T::Luxon, "Luxon"}, {T::Drunkard, "Drunkard"}, {T::Survivor, "Survivor"},
-        {T::Lucky, "Lucky"}, {T::Unlucky, "Unlucky"}, {T::Sunspear, "Sunspear"}, {T::LDoA, "LDoA"},
-        {T::Commander, "Commander"}, {T::Gamer, "Gamer"}, {T::LegendaryCarto, "Legendary Cartographer"},
-        {T::LegendaryGuardian, "Legendary Guardian"}, {T::LegendarySkillHunter, "Legendary Skill Hunter"},
-        {T::LegendaryVanquisher, "Legendary Vanquisher"}, {T::Sweets, "Sweets"}, {T::Asuran, "Asuran"},
-        {T::Deldrimor, "Deldrimor"}, {T::Vanguard, "Vanguard"}, {T::Norn, "Norn"},
-        {T::MasterOfTheNorth, "Master of the North"}, {T::Party, "Party"}, {T::Zaishen, "Zaishen"},
-        {T::TreasureHunter, "Treasure Hunter"}, {T::Wisdom, "Wisdom"}, {T::Codex, "Codex"}};
-
     ImGui::Combo("Action###actioncombo", (int*)&action, GetText, nullptr, n_actions);
-    if (action == ReapplyTitle) {
-        const auto selected = std::find_if(titlemap.begin(), titlemap.end(),
-            [&](const std::pair<uint32_t, std::string>& pair) -> bool {
-                return pair.first == titleid;
-            }
-        );
-        std::string preview = "Select...";
-        if (selected != titlemap.end()) preview = selected->second;
-        if (ImGui::BeginCombo("Default###titlecombo", preview.c_str())) {
-            for (const auto& [id, str] : titlemap) {
-                if (ImGui::Selectable(str.c_str(), id == titleid)) {
-                    titleid = id;
-                }
-            }
-            ImGui::EndCombo();
-        }
-        ImGui::ShowHelp("Toolbox will reapply this title if there isn't an approriate title for the area you're in.\n \
-                         If your current character doesn't have the selected title, your title will be removed.");
-    }
     return true;
 }
 void HotkeyAction::Execute()
@@ -1454,9 +1420,7 @@ void HotkeyAction::Execute()
             }
             break;
         case HotkeyAction::ReapplyTitle: {
-            const auto buf = std::to_wstring(titleid);
-            const auto arg = buf.c_str();
-            ChatCommands::CmdReapplyTitle(nullptr, 1, const_cast<LPWSTR*>(&arg));
+            GW::Chat::SendChat('/', L"title");
             break;
         }
         case HotkeyAction::EnterChallenge:

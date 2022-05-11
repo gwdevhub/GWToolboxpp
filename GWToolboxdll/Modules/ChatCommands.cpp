@@ -14,6 +14,7 @@
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Quest.h>
+#include <GWCA/GameEntities/Title.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -52,6 +53,8 @@
 
 
 #define F_PI 3.14159265358979323846f
+#define CMDTITLE_KEEP_CURRENT 0xfffe
+#define CMDTITLE_REMOVE_CURRENT 0xffff
 
 namespace {
     const wchar_t *next_word(const wchar_t *str) {
@@ -156,6 +159,24 @@ namespace {
     }
 
     static std::map<std::string, ChatCommands::PendingTransmo> npc_transmos;
+
+    struct DecodedTitleName {
+        DecodedTitleName(GW::Constants::TitleID in) : title(in) {
+            GW::Title& t = GW::GameContext::instance()->world->titles[title];
+            name.reset(t.name_id());
+        };
+        GW::Constants::TitleID title;
+        GuiUtils::EncString name;
+    };
+    static std::vector< DecodedTitleName*> title_names;
+    static bool title_names_sorted = false;
+
+    GW::Array<GW::Title>* GetTitles() {
+        GW::GameContext* g = GW::GameContext::instance();
+        if (!g || !g->world) return nullptr;
+        return &g->world->titles;
+    }
+
 } // namespace
 
 void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
@@ -322,22 +343,72 @@ void ChatCommands::DrawHelp() {
     ImGui::TreePop();
 }
 
+ChatCommands::ChatCommands() {
+    default_title_id = GW::Constants::TitleID::Lightbringer;
+}
+
+ChatCommands::~ChatCommands() {
+    for (auto* it : title_names) {
+        delete it;
+    }
+    title_names.clear();
+}
+
 void ChatCommands::DrawSettingInternal() {
     ImGui::Text("'/cam unlock' options");
     ImGui::Indent();
     ImGui::Checkbox("Fix height when moving forward", &forward_fix_z);
     ImGui::InputFloat("Camera speed", &cam_speed);
     ImGui::Unindent();
+    std::string preview = "Select...";
+    switch (default_title_id) {
+    case CMDTITLE_KEEP_CURRENT:
+        preview = "Keep current title";
+        break;
+    case CMDTITLE_REMOVE_CURRENT:
+        preview = "Remove title";
+        break;
+    default:
+        const auto selected = std::find_if(title_names.begin(), title_names.end(), [&](auto* it) { return it->title == default_title_id; });
+
+        if (selected != title_names.end()) {
+            preview = (*selected)->name.string();
+        }
+        break;
+    }
+
+
+    ImGui::Text("Default '/title' command fallback action");
+    ImGui::ShowHelp("Toolbox will reapply this title if there isn't an approriate title for the area you're in.\nIf your current character doesn't have the selected title, nothing will happen.");
+    ImGui::Indent();
+    if (ImGui::BeginCombo("###title_command_fallback", preview.c_str())) {
+        if (ImGui::Selectable("Keep current title", CMDTITLE_KEEP_CURRENT == default_title_id)) {
+            default_title_id = CMDTITLE_KEEP_CURRENT;
+        }
+        if (ImGui::Selectable("Remove title", CMDTITLE_REMOVE_CURRENT == default_title_id)) {
+            default_title_id = CMDTITLE_REMOVE_CURRENT;
+        }
+        for (auto* it : title_names) {
+            if (ImGui::Selectable(it->name.string().c_str(), it->title == default_title_id)) {
+                default_title_id = it->title;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::Unindent();
+
 }
 
 void ChatCommands::LoadSettings(CSimpleIni* ini) {
     forward_fix_z = ini->GetBoolValue(Name(), VAR_NAME(forward_fix_z), forward_fix_z);
     cam_speed = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(cam_speed), DEFAULT_CAM_SPEED));
+    default_title_id = ini->GetLongValue(Name(), VAR_NAME(default_title_id), default_title_id);
 }
 
 void ChatCommands::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(forward_fix_z), forward_fix_z);
     ini->SetDoubleValue(Name(), VAR_NAME(cam_speed), cam_speed);
+    ini->SetLongValue(Name(), VAR_NAME(default_title_id), default_title_id);
 }
 
 void ChatCommands::CmdPingQuest(const wchar_t* , int , LPWSTR* ) {
@@ -454,6 +525,30 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 }
 
 void ChatCommands::Update(float delta) {
+    if (title_names.empty()) {
+        auto* titles = GetTitles();
+        if (titles) {
+            for (size_t i = 0; i < titles->size(); i++) {
+                title_names.push_back(new DecodedTitleName((GW::Constants::TitleID)i));
+            }
+        }
+    }
+    else if (!title_names_sorted) {
+        bool can_sort = true;
+        for (auto* title_name : title_names) {
+            if (title_name->name.IsDecoding()) {
+                can_sort = false;
+                break;
+            }
+        }
+        if (can_sort) {
+            std::sort(title_names.begin(), title_names.end(), [](DecodedTitleName* first, DecodedTitleName* second) {
+                return first->name.string() < second->name.string();
+                });
+            title_names_sorted = true;
+        }
+
+    }
     static bool keep_forward; // No init. should it be false as default
 
     if (delta == 0.f) return;
@@ -1597,11 +1692,12 @@ void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
-    uint32_t titleid = GW::Constants::TitleID::Lightbringer;
+    uint32_t title_id = Instance().default_title_id;
     if (argc > 0) {
         const std::wstring arg = argv[0];
         try {
-            titleid = std::stoi(arg);
+            title_id = std::stoi(arg);
+            goto apply;
         } catch ([[maybe_unused]] std::invalid_argument const& ex) {
         } catch ([[maybe_unused]] std::out_of_range const& ex) {
         }
@@ -1621,8 +1717,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Alcazia_Tangle:
     case GW::Constants::MapID::Sparkfly_Swamp:
     case GW::Constants::MapID::Verdant_Cascades:
-        GW::PlayerMgr::RemoveActiveTitle();
-        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Asuran);
+        title_id = GW::Constants::TitleID::Asuran;
         break;
     case GW::Constants::MapID::Glints_Challenge_mission:
     case GW::Constants::MapID::Central_Transfer_Chamber_outpost:
@@ -1637,8 +1732,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Ravens_Point_Level_1:
     case GW::Constants::MapID::Ravens_Point_Level_2:
     case GW::Constants::MapID::Ravens_Point_Level_3:
-        GW::PlayerMgr::RemoveActiveTitle();
-        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Deldrimor);
+        title_id = GW::Constants::TitleID::Deldrimor;
         break;
     case GW::Constants::MapID::Boreal_Station_outpost:
     case GW::Constants::MapID::Eye_of_the_North_outpost:
@@ -1659,8 +1753,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Cold_as_Ice:
     case GW::Constants::MapID::The_Norn_Fighting_Tournament:
         // @todo: case MapID for Bear Club for Women/Men
-        GW::PlayerMgr::RemoveActiveTitle();
-        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Norn);
+        title_id = GW::Constants::TitleID::Norn;
         break;
     case GW::Constants::MapID::Doomlore_Shrine_outpost:
     case GW::Constants::MapID::Longeyes_Ledge_outpost:
@@ -1695,8 +1788,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Flame_Temple_Corridor:
     case GW::Constants::MapID::Eastern_Frontier:
     case GW::Constants::MapID::Dragons_Gullet:
-        GW::PlayerMgr::RemoveActiveTitle();
-        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Vanguard);
+        title_id = GW::Constants::TitleID::Vanguard;
         break;
     case GW::Constants::MapID::The_Sulfurous_Wastes:
     case GW::Constants::MapID::Jokos_Domain:
@@ -1735,18 +1827,23 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Throne_of_Secrets:
     case GW::Constants::MapID::Yatendi_Canyons:
     case GW::Constants::MapID::Remains_of_Sahlahja:
-        GW::PlayerMgr::RemoveActiveTitle();
-        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
-        break;
-    default:
-        if (titleid != 998) {
-            GW::PlayerMgr::RemoveActiveTitle();
-            if (titleid != 999) {
-                GW::PlayerMgr::SetActiveTitle(static_cast<GW::Constants::TitleID>(titleid));
-            }
-        }
+        title_id = GW::Constants::TitleID::Lightbringer;
         break;
     }
+apply:
+    switch (title_id) {
+    case CMDTITLE_KEEP_CURRENT:
+        break;
+    case CMDTITLE_REMOVE_CURRENT:
+        GW::PlayerMgr::RemoveActiveTitle();
+        break;
+    default:
+        if (title_id > GW::Constants::TitleID::Codex)
+            return;
+        GW::PlayerMgr::SetActiveTitle(static_cast<GW::Constants::TitleID>(title_id));
+        break;
+    }
+
 }
 void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
 {

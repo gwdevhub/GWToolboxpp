@@ -259,7 +259,6 @@ class HotkeyAction : public TBHotkey {
         ReapplyTitle,
         EnterChallenge,
     };
-    uint32_t titleid = GW::Constants::TitleID::Lightbringer;
     static bool GetText(void*, int idx, const char** out_text);
 
 public:
