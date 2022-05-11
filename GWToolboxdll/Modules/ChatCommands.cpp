@@ -1597,11 +1597,17 @@ void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
-    UNREFERENCED_PARAMETER(argc);
-    UNREFERENCED_PARAMETER(argv);
+    uint32_t titleid = GW::Constants::TitleID::Lightbringer;
+    if (argc > 0) {
+        const std::wstring arg = argv[0];
+        try {
+            titleid = std::stoi(arg);
+        } catch ([[maybe_unused]] std::invalid_argument const& ex) {
+        } catch ([[maybe_unused]] std::out_of_range const& ex) {
+        }
+    }
     if (!IsMapReady())
         return;
-    GW::PlayerMgr::RemoveActiveTitle();
 
     switch (GW::Map::GetMapID()) {
     case GW::Constants::MapID::Rata_Sum_outpost:
@@ -1615,6 +1621,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Alcazia_Tangle:
     case GW::Constants::MapID::Sparkfly_Swamp:
     case GW::Constants::MapID::Verdant_Cascades:
+        GW::PlayerMgr::RemoveActiveTitle();
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Asuran);
         break;
     case GW::Constants::MapID::Glints_Challenge_mission:
@@ -1630,6 +1637,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Ravens_Point_Level_1:
     case GW::Constants::MapID::Ravens_Point_Level_2:
     case GW::Constants::MapID::Ravens_Point_Level_3:
+        GW::PlayerMgr::RemoveActiveTitle();
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Deldrimor);
         break;
     case GW::Constants::MapID::Boreal_Station_outpost:
@@ -1651,6 +1659,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Cold_as_Ice:
     case GW::Constants::MapID::The_Norn_Fighting_Tournament:
         // @todo: case MapID for Bear Club for Women/Men
+        GW::PlayerMgr::RemoveActiveTitle();
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Norn);
         break;
     case GW::Constants::MapID::Doomlore_Shrine_outpost:
@@ -1686,6 +1695,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Flame_Temple_Corridor:
     case GW::Constants::MapID::Eastern_Frontier:
     case GW::Constants::MapID::Dragons_Gullet:
+        GW::PlayerMgr::RemoveActiveTitle();
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Vanguard);
         break;
     case GW::Constants::MapID::The_Sulfurous_Wastes:
@@ -1725,9 +1735,17 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Throne_of_Secrets:
     case GW::Constants::MapID::Yatendi_Canyons:
     case GW::Constants::MapID::Remains_of_Sahlahja:
+        GW::PlayerMgr::RemoveActiveTitle();
         GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
         break;
-    default: return;
+    default:
+        if (titleid != 998) {
+            GW::PlayerMgr::RemoveActiveTitle();
+            if (titleid != 999) {
+                GW::PlayerMgr::SetActiveTitle(static_cast<GW::Constants::TitleID>(titleid));
+            }
+        }
+        break;
     }
 }
 void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
