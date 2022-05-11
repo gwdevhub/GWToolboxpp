@@ -577,7 +577,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
     GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    (g || c || w || p || m || i || me || me_player || log || gu);
+    GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
+    (g || c || w || p || m || i || me || me_player || log || gu || ai);
 #endif
 }
 
