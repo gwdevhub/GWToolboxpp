@@ -96,10 +96,6 @@ Resources::~Resources() {
         delete it.second;
     }
     map_names.clear();
-    for (auto it : region_names) {
-        delete it.second;
-    }
-    region_names.clear();
 };
 
 void Resources::InitRestClient(RestClient* r) {

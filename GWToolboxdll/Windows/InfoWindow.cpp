@@ -14,9 +14,11 @@
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Title.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -292,6 +294,12 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
             ImGui::PushID("player_info");
             InfoField("Addr", "%p", player);
             InfoField("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
+            if (player->active_title_tier) {
+                GW::TitleTier& tier = GW::GameContext::instance()->world->title_tiers[player->active_title_tier];
+                static GuiUtils::EncString title_enc_string;
+                title_enc_string.reset(tier.tier_name_enc);
+                InfoField("Current Title", "%s", title_enc_string.string().c_str());
+            }
             ImGui::PopID();
             ImGui::TreePop();
         }
