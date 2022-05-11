@@ -4,6 +4,8 @@
 
 #include <RestClient.h>
 
+#include <GuiUtils.h>
+
 #include <resource.h>
 #include <ToolboxModule.h>
 #include <Utf8.h>
@@ -57,10 +59,17 @@ public:
 
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetProfessionIcon(GW::Constants::Profession p);
+    // Fetches skill page from GWW, parses out the image for the skill then downloads that to disk
+    // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetSkillImage(uint32_t skill_id);
+    // Fetches item page from GWW, parses out the image for the item then downloads that to disk
+    // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
+
+    // Guaranteed to return a pointer, but may not yet be decoded.
+    GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);
 
     // Ensure file exists on disk, download from remote location if not found. If an error occurs, details are held in error string
     void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);

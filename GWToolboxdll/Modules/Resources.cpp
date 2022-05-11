@@ -2,6 +2,12 @@
 
 #include <d3dx9_dynamic.h>
 
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Map.h>
+
+#include <GWCA/Managers/MapMgr.h>
+
+
 #include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
@@ -11,7 +17,7 @@
 #include <RestClient.h>
 
 #include <Modules/Resources.h>
-#include <GWCA/GameEntities/Item.h>
+
 #include <Timer.h>
 #include <Path.h>
 #include <Str.h>
@@ -52,6 +58,7 @@ namespace {
     std::map<uint32_t, IDirect3DTexture9**> skill_images;
     std::map<std::wstring, IDirect3DTexture9**> item_images;
     std::map<uint32_t, IDirect3DTexture9**> profession_icons;
+    std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::string ns;
     const size_t MAX_WORKERS = 5;
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
@@ -85,6 +92,14 @@ Resources::~Resources() {
         delete it.second;
     }
     item_images.clear();
+    for (auto it : map_names) {
+        delete it.second;
+    }
+    map_names.clear();
+    for (auto it : region_names) {
+        delete it.second;
+    }
+    region_names.clear();
 };
 
 void Resources::InitRestClient(RestClient* r) {
@@ -460,8 +475,7 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
     }
     return texture;
 }
-// Fetches skill page from GWW, parses out the image for the skill then downloads that to disk
-// Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
+
 IDirect3DTexture9** Resources::GetSkillImage(uint32_t skill_id) {
     auto found = skill_images.find(skill_id);
     if (found != skill_images.end()) {
@@ -531,6 +545,18 @@ IDirect3DTexture9** Resources::GetSkillImage(uint32_t skill_id) {
         Instance().LoadTexture(texture, path_to_file, url, callback);
         });
     return texture;
+}
+
+GuiUtils::EncString* Resources::GetMapName(GW::Constants::MapID map_id) {
+    auto found = map_names.find(map_id);
+    if (found != map_names.end()) {
+        return found->second;
+    }
+    GW::AreaInfo* area = GW::Map::GetMapInfo(map_id);
+    ASSERT(area);
+    GuiUtils::EncString* enc_string = new GuiUtils::EncString(area->name_id, false);
+    map_names[map_id] = enc_string;
+    return enc_string;
 }
 
 IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
