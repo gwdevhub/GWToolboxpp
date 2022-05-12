@@ -1699,14 +1699,12 @@ void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
 void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
     uint32_t title_id = Instance().default_title_id;
-    if (argc > 0) {
-        const std::wstring arg = argv[0];
-        try {
-            title_id = std::stoi(arg);
-            goto apply;
-        } catch ([[maybe_unused]] std::invalid_argument const& ex) {
-        } catch ([[maybe_unused]] std::out_of_range const& ex) {
+    if (argc > 1) {
+        if (!GuiUtils::ParseUInt(argv[1], &title_id)) {
+            Log::Error("Syntax: /title [title_id]");
+            return;
         }
+        goto apply;
     }
     if (!IsMapReady())
         return;
@@ -1844,8 +1842,10 @@ apply:
         GW::PlayerMgr::RemoveActiveTitle();
         break;
     default:
-        if (title_id > GW::Constants::TitleID::Codex)
+        if (title_id > GW::Constants::TitleID::Codex) {
+            Log::Error("Invalid title_id %d",title_id);
             return;
+        }
         GW::PlayerMgr::SetActiveTitle(static_cast<GW::Constants::TitleID>(title_id));
         break;
     }
