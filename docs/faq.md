@@ -82,7 +82,7 @@ This is a bug that causes the Toolbox launcher to not download the icons. Delete
 `Font.ttf` can be found in the GitHub repository in the resource folder. Download [this file](https://github.com/HasKha/GWToolboxpp/blob/master/resources/Font.ttf) and navigate to `C:\Users\[Username]\AppData\Local\GWToolboxpp` and copy it to that folder.
 
 **I am missing icons in my Completion window. Help?** \\
-Missing icons are most likely not downloaded into your `C:\Users\[Username]\AppData\Local\GWToolboxpp\img` folder. All of the icons can be found in the [resources folder](https://github.com/HasKha/GWToolboxpp/tree/master/resources) in the GitHub repository where you can download them. By navigating to a single file, you will in most cases find a download button to download the individual file. If you are missing a lot of icons, you can download the repository from the [main page](https://github.com/HasKha/GWToolboxpp). Click *Code* and Download *Zip*. From the .zip-file, navigate to `GWToolboxpp-master.zip\GWToolboxpp-master\resources\` and drop the needed icon folder into `C:\Users\[Username]\AppData\Local\GWToolboxpp\img`.
+Missing icons are most likely not downloaded into your `C:\Users\%USERNAME%\Documents\GWToolboxpp\%COMPUTERNAME%\img` folder. All of the icons can be found in the [resources folder](https://github.com/HasKha/GWToolboxpp/tree/master/resources) in the GitHub repository where you can download them. By navigating to a single file, you will in most cases find a download button to download the individual file. If you are missing a lot of icons, you can download the repository from the [main page](https://github.com/HasKha/GWToolboxpp). Click *Code* and Download *Zip*. From the .zip-file, navigate to `GWToolboxpp-master.zip\GWToolboxpp-master\resources\` and drop the needed icon folder into `C:\Users\[Username]\AppData\Local\GWToolboxpp\img`.
 
 **Why isn't Toolbox remembering my settings when I restart! Help?** \\
 Toolbox settings are saved to the files in the [settings folder](settings#storage) when you close Toolbox or click "Save Now" at the bottom of the [Settings window](settings). Settings are loaded from those files when you launch Toolbox or click "Load Now".
@@ -93,7 +93,7 @@ Toolbox settings are saved to the files in the [settings folder](settings#storag
 **My Toolbox is not showing! Help?** \\
 There are a few different things that could have happened. Here's how to fix them:
 * Enter `/tb reset` and `/show settings`, in case you just moved the windows off-screen or hid all windows.
-* Enter `/tb exit` to close Toolbox, open the `theme.ini` file in `C:\Users\[User]\Appdata\GWToolboxpp`, and delete the line that says `GlobalAlpha`. Save the file and restart Toolbox.
+* Enter `/tb exit` to close Toolbox, open the `theme.ini` file in `C:\Users\%USERNAME%\Documents\GWToolboxpp\%COMPUTERNAME%`, and delete the line that says `GlobalAlpha`. Save the file and restart Toolbox.
 
 **One of my windows has collapsed! I can only see the title bar. How do I get the window back?** \\
 You probably minimized it by accident. Double-click on the title bar to expand it, or to collapse it again.
