@@ -527,10 +527,16 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 void ChatCommands::Update(float delta) {
     if (title_names.empty()) {
         auto* titles = GetTitles();
-        if (titles) {
-            for (size_t i = 0; i < titles->size(); i++) {
-                title_names.push_back(new DecodedTitleName((GW::Constants::TitleID)i));
+        for (size_t i = 0; titles && i < titles->size(); i++) {
+            switch ((GW::Constants::TitleID)i) {
+            case GW::Constants::TitleID::Deprecated_SkillHunter:
+            case GW::Constants::TitleID::Deprecated_TreasureHunter:
+            case GW::Constants::TitleID::Deprecated_Wisdom:
+                continue;
             }
+            DecodedTitleName* dtn = new DecodedTitleName((GW::Constants::TitleID)i);
+            title_names.push_back(dtn);
+            dtn->name.string(); // Trigger decode for sorting.
         }
     }
     else if (!title_names_sorted) {
