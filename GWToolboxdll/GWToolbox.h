@@ -34,9 +34,11 @@ public:
     static void FlashWindow();
 
     void StartSelfDestruct() {
-        SaveSettings();
-        for (ToolboxModule* module : modules) {
-            module->SignalTerminate();
+        if (initialized) {
+            SaveSettings();
+            for (ToolboxModule* module : modules) {
+                module->SignalTerminate();
+            }
         }
         must_self_destruct = true;
     }
@@ -61,6 +63,8 @@ public:
 
     static void OnHandleCrash(char* description, uint32_t param_2, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6);
 
+    bool IsInitialized() { return initialized; };
+
 private:
     std::vector<ToolboxModule*> modules;
 
@@ -76,5 +80,7 @@ private:
 
     GW::HookEntry Update_Entry;
     GW::HookEntry HandleCrash_Entry;
+
+    bool initialized = false;
 
 };

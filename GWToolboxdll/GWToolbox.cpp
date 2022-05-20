@@ -38,7 +38,6 @@ namespace {
     HMODULE dllmodule = 0;
 
     long OldWndProc = 0;
-    bool tb_initialized = false;
     bool tb_destroyed = false;
     bool imgui_initialized = false;
 
@@ -183,7 +182,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         return 0;
     }
 
-    if (!(!GW::PreGameContext::instance() && imgui_initialized && tb_initialized && !tb_destroyed)) {
+    if (!(!GW::PreGameContext::instance() && imgui_initialized && GWToolbox::Instance().IsInitialized() && !tb_destroyed)) {
         return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
     }
 
@@ -349,7 +348,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 }
 
 void GWToolbox::Initialize() {
-    if (tb_initialized || must_self_destruct)
+    if (initialized || must_self_destruct)
         return;
     Log::Log("installing event handler\n");
     gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
@@ -404,7 +403,7 @@ void GWToolbox::Initialize() {
         if(g && g->character && g->character->player_name)
             Log::InfoW(L"Hello!");
     }
-    tb_initialized = true;
+    initialized = true;
 }
 void GWToolbox::FlashWindow() {
     FLASHWINFO flashInfo = { 0 };
@@ -438,6 +437,8 @@ void GWToolbox::SaveSettings() {
 
 
 void GWToolbox::Terminate() {
+    if (!initialized)
+        return;
     SaveSettings();
     inifile->Reset();
     delete inifile;
@@ -457,7 +458,8 @@ void GWToolbox::Terminate() {
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {
     // === destruction ===
-    if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
+    auto& instance = GWToolbox::Instance();
+    if (instance.initialized && instance.must_self_destruct) {
         if (!GuiUtils::FontsLoaded())
             return;
         for (ToolboxModule* module : GWToolbox::Instance().modules) {
@@ -478,15 +480,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 
         GW::DisableHooks();
-        tb_initialized = false;
+        instance.initialized = false;
         tb_destroyed = true;
-
-
-
     }
     // === runtime ===
-    if (tb_initialized 
-        && !GWToolbox::Instance().must_self_destruct
+    if (instance.initialized
+        && !instance.must_self_destruct
         && GW::Render::GetViewportWidth() > 0
         && GW::Render::GetViewportHeight() > 0) {
 
@@ -581,9 +580,9 @@ void GWToolbox::Update(GW::HookStatus *)
         last_tick_count = GetTickCount();
 
     GWToolbox& tb = GWToolbox::Instance();
-    if (!tb_initialized)
-        GWToolbox::Instance().Initialize();
-    if (tb_initialized
+    if (!tb.initialized)
+        tb.Initialize();
+    if (tb.initialized
         && imgui_initialized
         && !GWToolbox::Instance().must_self_destruct) {
 
