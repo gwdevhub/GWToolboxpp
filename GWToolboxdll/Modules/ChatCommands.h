@@ -95,6 +95,7 @@ private:
     static void CmdHeroBehaviour(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdPingQuest(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdMorale(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdVolume(const wchar_t*, int argc, LPWSTR* argv);
     
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string name, PendingTransmo &transmo);

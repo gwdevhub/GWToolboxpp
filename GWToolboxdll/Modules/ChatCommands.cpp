@@ -340,6 +340,7 @@ void ChatCommands::DrawHelp() {
     ImGui::ShowHelp(transmo_hint);
     ImGui::Bullet(); ImGui::Text("'/pingitem <equipped_item>' to ping your equipment in chat.\n"
         "<equipped_item> options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume");
+    ImGui::Bullet(); ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
     ImGui::TreePop();
 }
 
@@ -491,6 +492,7 @@ void ChatCommands::Initialize() {
     });
     GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHeroBehaviour);
     GW::Chat::CreateCommand(L"morale", ChatCommands::CmdMorale);
+    GW::Chat::CreateCommand(L"volume", ChatCommands::CmdVolume);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -810,7 +812,6 @@ void ChatCommands::CmdEnterMission(const wchar_t*, int argc, LPWSTR* argv) {
         }
     }
 }
-
 void ChatCommands::CmdMorale(const wchar_t*, int , LPWSTR* ) {
     if (GW::GameContext::instance()->world->morale == 100)
         GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
@@ -1889,4 +1890,51 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
             GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero.agent_id, behaviour);
         }
     }
+}
+void ChatCommands::CmdVolume(const wchar_t*, int argc, LPWSTR* argv) {
+    const char* const syntax = "Syntax: '/volume [master|music|background|effects|dialog|ui] <amount (0-100)>'";
+    wchar_t* value;
+    GW::UI::Preference pref;
+    switch (argc) {
+    case 2:
+        pref = GW::UI::Preference::Preference_MasterVolume;
+        value = argv[1];
+        break;
+    case 3: {
+        wchar_t* pref_str = argv[1];
+        if (wcscmp(pref_str, L"master") == 0) {
+            pref = GW::UI::Preference::Preference_MasterVolume;
+        }
+        else if (wcscmp(pref_str, L"music") == 0) {
+            pref = GW::UI::Preference::Preference_MusicVolume;
+        }
+        else if (wcscmp(pref_str, L"background") == 0) {
+            pref = GW::UI::Preference::Preference_BackgroundVolume;
+        }
+        else if (wcscmp(pref_str, L"effects") == 0) {
+            pref = GW::UI::Preference::Preference_EffectsVolume;
+        }
+        else if (wcscmp(pref_str, L"dialog") == 0) {
+            pref = GW::UI::Preference::Preference_DialogVolume;
+        }
+        else if (wcscmp(pref_str, L"ui") == 0) {
+            pref = GW::UI::Preference::Preference_UIVolume;
+        }
+        else {
+            return Log::Error(syntax);
+        }
+        value = argv[2];
+        break;
+    }
+    default:
+        return Log::Error(syntax);
+    }
+    uint32_t value_dec;
+    if (!GuiUtils::ParseUInt(value, &value_dec, 10)) {
+        return Log::Error(syntax);
+    }
+    if (value_dec > 100) {
+        return Log::Error(syntax);
+    }
+    GW::UI::SetPreference(pref, value_dec);
 }
