@@ -6,7 +6,6 @@
 
 #include <ToolboxModule.h>
 
-#include <GWDatBrowser/GWUnpacker.h>
 
 class GWFileRequester : public ToolboxModule {
     GWFileRequester() {};
