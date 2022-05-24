@@ -703,15 +703,22 @@ void DiscordModule::UpdateActivity() {
             sprintf(activity.state, "In Game");
         }
     }
+     if (memcmp(&last_activity, &activity, sizeof(last_activity)) != 0) {
+         // Only update if activity is new.
+         last_activity_update = time(nullptr);
+         if (show_activity) {
+             Log::Log("Outgoing discord state = %s, %s\n", activity.details, activity.state);
+             app.activities->update_activity(app.activities, &activity, &app, UpdateActivityCallback);
+         }
+         else {
+             Log::Log("Clearing activity details\n");
+             app.activities->clear_activity(app.activities, &app, UpdateActivityCallback);
+         }
+         last_activity = activity;
+     }
+     else {
+         Log::Log("Tried to update discord activity, but nothing has changed.");
+     }
 
-    last_activity_update = time(nullptr);
-    if (show_activity) {
-        Log::Log("Outgoing discord state = %s, %s\n", activity.details, activity.state);
-        app.activities->update_activity(app.activities, &activity, &app, UpdateActivityCallback);
-    }
-    else {
-        Log::Log("Clearing activity details\n");
-        app.activities->clear_activity(app.activities, &app, UpdateActivityCallback);
-    }
     pending_activity_update = false;
 }

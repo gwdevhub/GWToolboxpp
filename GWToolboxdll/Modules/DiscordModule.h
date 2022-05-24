@@ -66,6 +66,7 @@ public:
 
     Application app;
     DiscordActivity activity;
+    DiscordActivity last_activity;
 
 private:
     DiscordCreateParams params;
