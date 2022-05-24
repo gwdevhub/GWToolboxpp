@@ -1892,7 +1892,7 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
     }
 }
 void ChatCommands::CmdVolume(const wchar_t*, int argc, LPWSTR* argv) {
-    const char* const syntax = "Syntax: '/volume [master|music|background|effects|dialog|ui] <amount (0-100)>'";
+    const char* const syntax = "Syntax: '/volume [master|music|background|effects|dialog|ui] [amount (0-100)]'";
     wchar_t* value;
     GW::UI::Preference pref;
     switch (argc) {
