@@ -2238,11 +2238,11 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
     if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam))
         return;
     uint32_t pref = *(uint32_t*)wParam; // { uint32_t pref, uint32_t value } - don't care about value atm.
-    if (pref == GW::UI::CheckboxPreference::CheckboxPreference_ShowChatTimestamps && Instance().show_timestamps) {
+    if (pref == GW::UI::Preference::Preference_ShowChatTimestamps && Instance().show_timestamps) {
         status->blocked = true; // Always block because this UI Message will redraw all timestamps later in the call stack
-        if (Instance().show_timestamps && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference::CheckboxPreference_ShowChatTimestamps) == 1) {
+        if (Instance().show_timestamps && GW::UI::GetPreference(GW::UI::Preference::Preference_ShowChatTimestamps) == 1) {
             Log::Error("Disable GWToolbox timestamps to enable this setting");
-            GW::UI::SetCheckboxPreference(GW::UI::CheckboxPreference::CheckboxPreference_ShowChatTimestamps, 0);
+            GW::UI::SetPreference(GW::UI::Preference::Preference_ShowChatTimestamps, 0);
         }
     }
 }
