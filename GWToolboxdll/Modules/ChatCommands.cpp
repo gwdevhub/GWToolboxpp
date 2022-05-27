@@ -1826,6 +1826,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Remains_of_Sahlahja:
     case GW::Constants::MapID::Ruins_of_Morah:
     case GW::Constants::MapID::The_Alkali_Pan:
+    case GW::Constants::MapID::The_Mirror_of_Lyss:
     case GW::Constants::MapID::The_Mouth_of_Torment_outpost:
     case GW::Constants::MapID::The_Ruptured_Heart:
     case GW::Constants::MapID::The_Shadow_Nexus:
