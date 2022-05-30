@@ -570,14 +570,14 @@ void Minimap::Draw(IDirect3DDevice9 *)
 
     // Check shadowstep location
     if (shadowstep_location.x != 0.0f || shadowstep_location.y != 0.0f) {
-        GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-        if (!effects.valid()) {
+        GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+        if (!effects) {
             shadowstep_location = GW::Vec2f();
         }
         else {
             bool found = false;
-            for (unsigned int i = 0; !found && i < effects.size(); ++i) {
-                found = effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk;
+            for (auto& effect : *effects) {
+                found = effect.skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || effect.skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk;
             }
             if (!found) {
                 shadowstep_location = GW::Vec2f();
@@ -890,15 +890,12 @@ GW::Vec2f Minimap::InterfaceToWorldVector(Vec2i pos) const
 
 void Minimap::SelectTarget(GW::Vec2f pos) const
 {
-    GW::AgentArray agents = GW::Agents::GetAgentArray();
-    if (!agents.valid())
-        return;
-
+    GW::AgentArray* agents = GW::Agents::GetAgentArray();
     float distance = 600.0f * 600.0f;
     size_t closest = static_cast<size_t>(-1);
 
-    for (size_t i = 0; i < agents.size(); ++i) {
-        GW::Agent *agent = agents[i];
+    for (size_t i = 0; agents && i < agents->size();i++) {
+        GW::Agent* agent = agents->at(i);
         if (agent == nullptr)
             continue;
         GW::AgentLiving *living = agent->GetAsAgentLiving();
@@ -910,7 +907,7 @@ void Minimap::SelectTarget(GW::Vec2f pos) const
             continue; // allow locked chests
         if (living && (living->player_number >= 230 && living->player_number <= 346))
             continue; // block all useless minis
-        const float newDistance = GW::GetSquareDistance(pos, agents[i]->pos);
+        const float newDistance = GW::GetSquareDistance(pos, living->pos);
         if (distance > newDistance) {
             distance = newDistance;
             closest = i;
@@ -918,7 +915,7 @@ void Minimap::SelectTarget(GW::Vec2f pos) const
     }
 
     if (closest != static_cast<size_t>(-1)) {
-        GW::Agents::ChangeTarget(agents[closest]);
+        GW::Agents::ChangeTarget(agents->at(closest));
     }
 }
 

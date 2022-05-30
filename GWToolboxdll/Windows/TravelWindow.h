@@ -49,7 +49,6 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
-    static bool IsMapUnlocked(GW::Constants::MapID map_id);
     static int RegionFromDistrict(GW::Constants::District district);
     static int LanguageFromDistrict(GW::Constants::District district);
     static GW::Constants::MapID GetNearestOutpost(GW::Constants::MapID map_to);

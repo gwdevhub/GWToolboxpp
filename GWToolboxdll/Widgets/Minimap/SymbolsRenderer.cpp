@@ -12,6 +12,7 @@
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
 #include <ImGuiAddons.h>
 
@@ -125,45 +126,32 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
     D3DXMATRIX translate, scale, rotate, world;
 
     
-    GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
-    DWORD qid = GW::GameContext::instance()->world->active_quest_id;
-    if (qlog.valid() && qid > 0) {
-        GW::Vec2f qpos(0, 0);
-        bool qfound = false;
-        for (unsigned int i = 0; i < qlog.size(); ++i) {
-            GW::Quest q = qlog[i];
-            if (q.quest_id == qid) {
-                qpos = GW::Vec2f(q.marker.x, q.marker.y);
-                qfound = true;
-                break;
-            }
-        }
+    GW::Quest* quest = GW::PlayerMgr::GetActiveQuest();
+    if (quest) {
+        GW::Vec2f qpos = { quest->marker.x, quest->marker.y };
+        const float compass_scale = Minimap::Instance().Scale();
+        const float marker_scale = (1.0f / compass_scale);
+        D3DXMatrixRotationZ(&rotate, -tau / 5);
+        D3DXMatrixScaling(&scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, 1.0f);
+        D3DXMatrixTranslation(&translate, qpos.x, qpos.y, 0);
+        world = rotate * scale * translate;
+        device->SetTransform(D3DTS_WORLD, &world);
+        device->DrawPrimitive(type, star_offset, star_ntriangles);
 
-        if (qfound) {
-            const float compass_scale = Minimap::Instance().Scale();
-            const float marker_scale = (1.0f / compass_scale);
-            D3DXMatrixRotationZ(&rotate, -tau / 5);
+        GW::Vec2f mypos = me->pos;
+        GW::Vec2f v = qpos - mypos;
+        const float max_quest_range = (GW::Constants::Range::Compass - 250.0f) / compass_scale;
+        const float max_quest_range_sqr = max_quest_range * max_quest_range;
+        if (GW::GetSquaredNorm(v) > max_quest_range_sqr) {
+            v = GW::Normalize(v) * max_quest_range;
+
+            float angle = std::atan2(v.y, v.x);
+            D3DXMatrixRotationZ(&rotate, angle - (float)M_PI_2);
             D3DXMatrixScaling(&scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, 1.0f);
-            D3DXMatrixTranslation(&translate, qpos.x, qpos.y, 0);
+            D3DXMatrixTranslation(&translate, me->pos.x + v.x, me->pos.y + v.y, 0);
             world = rotate * scale * translate;
             device->SetTransform(D3DTS_WORLD, &world);
-            device->DrawPrimitive(type, star_offset, star_ntriangles);
-
-            GW::Vec2f mypos = me->pos;
-            GW::Vec2f v = qpos - mypos;
-            const float max_quest_range = (GW::Constants::Range::Compass - 250.0f) / compass_scale;
-            const float max_quest_range_sqr = max_quest_range * max_quest_range;
-            if (GW::GetSquaredNorm(v) > max_quest_range_sqr) {
-                v = GW::Normalize(v) * max_quest_range;
-                
-                float angle = std::atan2(v.y, v.x);
-                D3DXMatrixRotationZ(&rotate, angle - (float)M_PI_2);
-                D3DXMatrixScaling(&scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, 1.0f);
-                D3DXMatrixTranslation(&translate, me->pos.x + v.x, me->pos.y + v.y, 0);
-                world = rotate * scale * translate;
-                device->SetTransform(D3DTS_WORLD, &world);
-                device->DrawPrimitive(type, arrow_offset, arrow_ntriangles);
-            }
+            device->DrawPrimitive(type, arrow_offset, arrow_ntriangles);
         }
     }
 

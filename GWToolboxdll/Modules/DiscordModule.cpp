@@ -236,28 +236,6 @@ DWORD GetProcId(char* ProcName) {
 
     return pid;
 }
-// Used to figure out if this char has access to the outpost without waiting for server error
-bool DiscordModule::IsMapUnlocked(uint32_t map_id) {
-    GW::Array<uint32_t> unlocked_map = GW::GameContext::instance()->world->unlocked_map;
-    uint32_t real_index = map_id / 32;
-    if (real_index >= unlocked_map.size())
-        return false;
-    uint32_t shift = map_id % 32u;
-    uint32_t flag = 1u << shift;
-    return (unlocked_map[real_index] & flag) != 0;
-}
-// Returns guild struct of current location. Returns null on fail or non-guild map.
-GW::Guild* DiscordModule::GetCurrentGH() {
-    GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
-    if (!m || m->type != GW::RegionType::RegionType_GuildHall) return nullptr;
-    GW::Array<GW::Guild*> guilds = GW::GuildMgr::GetGuildArray();
-    if (!guilds.valid()) return nullptr;
-    for (size_t i = 0; i < guilds.size(); i++) {
-        if (!guilds[i]) continue;
-        return guilds[i];
-    }
-    return nullptr;
-}
 void DiscordModule::InviteUser(DiscordUser* user) {
     char invite_str[128];
     sprintf(invite_str, "%s, %s", activity.details, activity.state);
@@ -360,7 +338,7 @@ bool DiscordModule::IsInJoinablePartyMap() {
         return false;
     if (join_in_progress.ghkey[0]) {
         // If ghkey is set, we need to be in a guild hall
-        GW::Guild* g = GetCurrentGH();
+        GW::Guild* g = GW::GuildMgr::GetCurrentGH();
         if (!g) return false;
         for (size_t i = 0; i < 4; i++) {
             if(join_in_progress.ghkey[i] != g->key.k[i])
@@ -392,7 +370,7 @@ void DiscordModule::JoinParty() {
         return FailedJoin("No Party to join");
     if (!IsInJoinablePartyMap()) {
         Log::Log("Not in the same map; try to travel there.\n");
-        if (!IsMapUnlocked(join_in_progress.map_id))
+        if (!GW::Map::GetIsMapUnlocked((GW::Constants::MapID)join_in_progress.map_id))
             return FailedJoin("Cannot enter outpost on this character");
         if (join_in_progress.ghkey[0]) {
             Log::Log("Travelling to guild hall\n");
@@ -583,7 +561,7 @@ void DiscordModule::UpdateActivity() {
         return;
     bool is_guild_hall = m->type == GW::RegionType::RegionType_GuildHall;
     if (is_guild_hall) {
-        g = GetCurrentGH();
+        g = GW::GuildMgr::GetCurrentGH();
         if (!g) return; // Current gh not found - guild array not loaded yet
     }
     bool show_activity = !hide_activity_when_offline || GW::FriendListMgr::GetMyStatus() != 0;

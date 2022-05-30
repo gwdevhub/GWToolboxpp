@@ -148,13 +148,14 @@ namespace {
     GW::Player* GetPlayerByName(const wchar_t* _name) {
         if (!_name) return NULL;
         std::wstring name = GuiUtils::SanitizePlayerName(_name);
-        GW::PlayerArray& players = GW::PlayerMgr::GetPlayerArray();
-        for (GW::Player& player : players) {
+        GW::PlayerArray* players = GW::PlayerMgr::GetPlayerArray();
+        if (!players) return nullptr;
+        for (GW::Player& player : *players) {
             if (!player.name) continue;
             if (name == GuiUtils::SanitizePlayerName(player.name))
                 return &player;
         }
-        return NULL;
+        return nullptr;
     }
 
     void WhisperCallback(GW::HookStatus *, const wchar_t *from, const wchar_t *msg) {
@@ -350,7 +351,6 @@ namespace {
         bool unlocked_first;
         bool unlocked_second;
         bool tweaked = false;
-        GW::TitleArray titles;
         for (auto& skill : duplicate_skills) {
             found_first = find_skill(skill_ids, skill.first);
             found_second = find_skill(skill_ids, skill.second);
@@ -394,7 +394,7 @@ namespace {
             }
             else if (unlocked_first && unlocked_second) {
                 // Find skill with higher title track
-                titles = GW::GameContext::instance()->world->titles;
+                GW::TitleArray& titles = GW::GameContext::instance()->world->titles;
                 uint32_t kurzick_rank = titles.size() <= GW::Constants::TitleID::Kurzick ? 0 : titles[GW::Constants::TitleID::Kurzick].points_needed_current_rank;
                 uint32_t luxon_rank = titles.size() <= GW::Constants::TitleID::Luxon ? 0 : titles[GW::Constants::TitleID::Luxon].points_needed_current_rank;
                 if (kurzick_rank > luxon_rank) {
@@ -906,6 +906,8 @@ void GameSettings::Initialize() {
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &OnSendChat);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
     GW::Chat::RegisterChatEventCallback(&OnPartyTargetChange_Entry, OnPartyTargetChange);
+    GW::CtoS::RegisterPacketCallback(&OnEnterMission_Entry, GAME_CMSG_PARTY_ENTER_CHALLENGE, OnEnterMission);
+    GW::CtoS::RegisterPacketCallback(&OnSendDialog_Entry, GAME_CMSG_SEND_DIALOG, OnSendDialog);
 
 
 
@@ -914,6 +916,19 @@ void GameSettings::Initialize() {
     AF::ApplyPatchesIfItsTime();
 #endif
 
+}
+void GameSettings::OnEnterMission(GW::HookStatus* , void*) {
+    auto& instance = Instance();
+    if (instance.is_prompting_hard_mode_mission)
+        return;
+    if (GW::PartyMgr::GetIsPartyInHardMode())
+        return;
+    if (!GW::PartyMgr::GetIsHardModeUnlocked())
+        return;
+    // TODO;
+}
+void GameSettings::OnSendDialog(GW::HookStatus* , void* ) {
+    // TODO;
 }
 // Same as GW::PartyMgr::GetPlayerIsLeader() but has an extra check to ignore disconnected people.
 bool GameSettings::GetPlayerIsLeader() {
@@ -956,7 +971,7 @@ void GameSettings::MessageOnPartyChange() {
         return; // Party not ready yet.
     bool is_leading = false;
     std::vector<std::wstring> current_party_names;
-    GW::PlayerPartyMemberArray current_party_players = current_party->players; // Copy the player array here to avoid ptr issues.
+    GW::PlayerPartyMemberArray& current_party_players = current_party->players; // Copy the player array here to avoid ptr issues.
     for (size_t i = 0; i < current_party_players.size(); i++) {
         if (!current_party_players[i].login_number)
             continue;
@@ -1889,7 +1904,7 @@ void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
         return; // - Next logic only applicable when Ctrl is held
 
     std::wstring name = GuiUtils::SanitizePlayerName(_name);
-    if (ImGui::GetIO().KeyShift && GW::PartyMgr::GetPlayerIsLeader()) {
+    if (ImGui::GetIO().KeyShift && GW::PartyMgr::GetIsLeader()) {
         wchar_t buf[64];
         swprintf(buf, 64, L"invite %s", name.c_str());
         GW::Chat::SendChat('/', buf);
@@ -2075,7 +2090,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, uint32_t dialog_id) {
     default:
         return;
     }
-    GW::GuildContext* c = GW::GuildMgr::GetGuildContext();
+    GW::GuildContext* c = GW::GuildContext::instance();
     if (!c || !c->player_guild_index || c->guilds[c->player_guild_index]->faction != allegiance)
         return; // Alliance isn't the right faction. Return here and the NPC will reply.
     if (*current_faction < 5000)
@@ -2092,8 +2107,6 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus* status, GW::Packet::Sto
         return; // Dont notify about player leaving
     if (!pak->player_number || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
         return; // Only message in an outpost.
-    if (pak->player_number >= GW::PlayerMgr::GetPlayerArray().size())
-        return; // Not a valid player.
     wchar_t* player_name = GW::PlayerMgr::GetPlayerName(pak->player_number);
     if (!player_name)
         return; // Failed to get name
@@ -2569,10 +2582,8 @@ void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* 
         return;
     uint32_t override_manual_agent_id = 0;
     GW::Item* target_item = nullptr;
-    const GW::AgentArray agents = GW::Agents::GetAgentArray();
-    if (!agents.valid())
-        return;
-    GW::Agent* me = GW::Agents::GetPlayer();
+    const GW::AgentArray* agents = GW::Agents::GetAgentArray();
+    GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
     if (!me)
         return;
     // If the item targeted is a green that belongs to me, and its next to the chest, try to find another item instead.
@@ -2580,7 +2591,7 @@ void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* 
         target_item = GW::Items::GetItemById(((GW::AgentItem*)chosen_target)->item_id);
         if (!target_item || (target_item->interaction & 0x10) == 0)
             return; // Failed to get target item, or is not green.
-        for (auto* agent : agents) {
+        for (auto* agent : *agents) {
             if (!agent) continue;
             if (!agent->GetIsGadgetType()) continue;
             if (GW::GetDistance(agent->pos, chosen_target->pos) <= GW::Constants::Range::Nearby) {
@@ -2596,7 +2607,7 @@ void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* 
     if (chosen_target->GetIsGadgetType()) {
         float closest_item_dist = GW::Constants::Range::Compass;
         GW::AgentItem* agent_item = nullptr;
-        for (auto* agent : agents) {
+        for (auto* agent : *agents) {
             if (!agent || !agent->GetIsItemType()) continue;
             agent_item = agent->GetAsAgentItem();
             if (!agent_item || agent_item->owner != me->agent_id) continue;
@@ -2679,10 +2690,11 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, uint32_t msgid, void* wParam,
 
 float GameSettings::GetSkillRange(uint32_t skill_id)
 {
-    const auto constant_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    const auto* constant_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    if (!constant_data) return 0.f;
     using T = GW::Constants::SkillType;
     using S = GW::Constants::SkillID;
-    switch (static_cast<T>(constant_data.type)) {
+    switch (static_cast<T>(constant_data->type)) {
         case GW::Constants::SkillType::Hex:
         case GW::Constants::SkillType::Spell:
         case GW::Constants::SkillType::Enchantment:
@@ -2697,7 +2709,7 @@ float GameSettings::GetSkillRange(uint32_t skill_id)
         default:
         return 0.f;
     }
-    switch (static_cast<GW::Constants::SkillID>(constant_data.skill_id)) {
+    switch (static_cast<GW::Constants::SkillID>(constant_data->skill_id)) {
         case S::A_Touch_of_Guile:
         case S::Blackout:
         case S::Blood_Ritual:

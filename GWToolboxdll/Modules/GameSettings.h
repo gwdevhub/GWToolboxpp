@@ -210,6 +210,8 @@ public:
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
     static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
     static void OnAgentNameTag(GW::HookStatus* status, uint32_t msgid, void* wParam, void*);
+    static void OnEnterMission(GW::HookStatus* status, void* packet);
+    static void OnSendDialog(GW::HookStatus* status, void* packet);
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
@@ -339,6 +341,8 @@ private:
     bool hide_player_speech_bubbles = false;
     bool improve_move_to_cast = false;
 
+    bool is_prompting_hard_mode_mission = 0;
+
     static float GetSkillRange(uint32_t);
 
     void DrawChannelColor(const char *name, GW::Chat::Channel chan);
@@ -385,4 +389,6 @@ private:
     GW::HookEntry OnCast_Entry;
     GW::HookEntry OnPartyTargetChange_Entry;
     GW::HookEntry OnAgentNameTag_Entry;
+    GW::HookEntry OnEnterMission_Entry;
+    GW::HookEntry OnSendDialog_Entry;
 };

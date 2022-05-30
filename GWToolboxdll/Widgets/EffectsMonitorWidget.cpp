@@ -25,11 +25,11 @@
 #include "Timer.h"
 
 void EffectsMonitorWidget::RefreshEffects() {
-    GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-    if (!effects.valid())
+    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects)
         return;
     std::vector<GW::Effect> readd_effects;
-    for (GW::Effect& effect : effects) {
+    for (GW::Effect& effect : *effects) {
         readd_effects.push_back(effect);
     }
     struct Packet : GW::Packet::StoC::PacketBase {
@@ -137,10 +137,10 @@ void EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
     }
 }
 const GW::Effect* EffectsMonitorWidget::GetEffect(uint32_t effect_id) {
-    const GW::EffectArray& effects = GW::Effects::GetPlayerEffectArray();
-    if (!effects.valid())
+    const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects)
         return nullptr;
-    for (const GW::Effect& effect : effects) {
+    for (const GW::Effect& effect : *effects) {
         if (effect.effect_id == effect_id)
             return &effect;
     }
@@ -153,9 +153,9 @@ uint32_t EffectsMonitorWidget::GetEffectSortOrder(uint32_t skill_id) {
     case GW::Constants::SkillID::No_Skill:
         return 1; // Morale boost from ui message 0x10000047
     }
-    const GW::Skill& skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    const GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
     // Lifted from GmEffect::ActivateEffect(), removed assertion and instead whack everything else into 0xd
-    switch (skill.type) {
+    switch (skill->type) {
     case 3:
         return 9;
     case 4:

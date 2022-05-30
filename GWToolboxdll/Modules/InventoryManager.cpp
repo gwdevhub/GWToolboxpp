@@ -1096,7 +1096,7 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(Item* start_af
     for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
         GW::Bag* bag = GW::Items::GetBag(bag_i);
         if (!bag) continue;
-        GW::ItemArray items = bag->items;
+        GW::ItemArray& items = bag->items;
         items_found = 0;
         for (size_t i = 0; i < items.size() && items_found < bag->items_count; i++) {
             item = static_cast<Item*>(items[i]);
@@ -1153,7 +1153,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item*
             continue;
         GW::Bag* bag = GW::Items::GetBag(bag_i);
         if (!bag) continue;
-        GW::ItemArray items = bag->items;
+        GW::ItemArray& items = bag->items;
         items_found = 0;
         for (size_t i = (bag_i == start_bag ? start_position : 0); i < items.size() && items_found < bag->items_count; i++) {
             item = static_cast<Item*>(items[i]);
@@ -1909,11 +1909,11 @@ void InventoryManager::DrawPendingTomeUsage() {
                 tome_pending_stage = PendingTomeUseStage::UseItem;
                 return;
             }
-            auto* world = GW::GameContext::instance()->world;
+            auto* world = GW::WorldContext::instance();
             if (!world) {
                 goto cancel;
             }
-            GW::Array< GW::ProfessionState> profession_unlocks_array = world->party_profession_states;
+            GW::Array< GW::ProfessionState>& profession_unlocks_array = world->party_profession_states;
             GW::ProfessionState* found = 0;
             for (size_t i = 0; !found && profession_unlocks_array.valid() && i < profession_unlocks_array.size(); i++) {
                 if (profession_unlocks_array[i].agent_id == player->agent_id)

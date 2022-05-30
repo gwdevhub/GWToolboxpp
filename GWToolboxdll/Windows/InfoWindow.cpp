@@ -88,20 +88,15 @@ void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
     GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (info == nullptr) return;
-    GW::PlayerPartyMemberArray partymembers = info->players;
+    GW::PlayerPartyMemberArray& partymembers = info->players;
     if (!partymembers.valid()) return;
-    GW::PlayerArray players = GW::Agents::GetPlayerArray();
-    if (!players.valid()) return;
     auto instance = &Instance();
     size_t index_max = std::min<size_t>(instance->status.size(), partymembers.size());
     for (size_t i = 0; i < index_max; ++i) {
         GW::PlayerPartyMember& partymember = partymembers[i];
-        if (partymember.login_number >= players.size()) continue;
-        GW::Player& player = players[partymember.login_number];
-
         wchar_t buffer[256];
         if (instance->status[i] == Connected) {
-            instance->PrintResignStatus(buffer, 256, i, player.name);
+            instance->PrintResignStatus(buffer, 256, i, GW::PlayerMgr::GetPlayerName(partymember.login_number));
             instance->send_queue.push(std::wstring(buffer));
         }
     }
@@ -125,21 +120,18 @@ void InfoWindow::OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* p
     // get all the data
     GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (info == nullptr) return;
-    GW::PlayerPartyMemberArray partymembers = info->players;
+    GW::PlayerPartyMemberArray& partymembers = info->players;
     if (!partymembers.valid()) return;
-    GW::PlayerArray players = GW::Agents::GetPlayerArray();
-    if (!players.valid()) return;
 
     // Prepare the name
     wchar_t* start = wcschr(pak->message, 0x107) + 1;
     std::wstring buf(start, wcschr(start, 0x1) - start);
     // set the right index in party
     auto instance = &Instance();
-    for (unsigned i = 0; i < partymembers.size(); ++i) {
-        if (i >= instance->status.size()) continue;
+    for (size_t i = 0; i < partymembers.size() && i < instance->status.size();i++) {
         if (instance->status[i] == Resigned) continue;
-        if (partymembers[i].login_number >= players.size()) continue;
-        if (GuiUtils::SanitizePlayerName(players[partymembers[i].login_number].name) == buf) {
+        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymembers[i].login_number);
+        if (player_name && GuiUtils::SanitizePlayerName(player_name) == buf) {
             instance->status[i] = Resigned;
             Instance().timestamp[i] = GW::Map::GetInstanceTime();
             break;
@@ -261,9 +253,9 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
 
     GW::Guild* guild = nullptr;
     if (player && living->tags->guild_id) {
-        const GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
-        if (guilds.valid() && living->tags->guild_id < guilds.size())
-            guild = guilds[living->tags->guild_id];
+        GW::GuildArray* guilds = GW::GuildMgr::GetGuildArray();
+        if (guilds && living->tags->guild_id < guilds->size())
+            guild = guilds->at((uint32_t)living->tags->guild_id);
     }
 
     char imgui_id[16];
@@ -306,22 +298,22 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
     }
     DrawGuildInfo(guild);
     if (is_player && ImGui::TreeNodeEx("Effects", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-        if (effects.valid()) {
-            for (DWORD i = 0; i < effects.size(); ++i) {
-                ImGui::Text("id: %d | type: %d | skill: %d | duration: %u", effects[i].effect_id, effects[i].effect_type, effects[i].skill_id, effects[i].GetTimeRemaining() / 1000);
+        GW::EffectArray* effects = GW::Effects::GetAgentEffects(agent->agent_id);
+        if (effects) {
+            for (auto& effect : *effects) {
+                ImGui::Text("id: %d | type: %d | skill: %d | duration: %u", effect.effect_id, effect.effect_type, effect.skill_id, effect.GetTimeRemaining() / 1000);
             }
         }
         ImGui::TreePop();
     }
     if (is_player && ImGui::TreeNodeEx("Buffs", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        GW::BuffArray effects = GW::Effects::GetPlayerBuffArray();
-        if (effects.valid()) {
-            for (DWORD i = 0; i < effects.size(); ++i) {
-                ImGui::Text("id: %d", effects[i].skill_id);
-                if (effects[i].target_agent_id) {
+        GW::BuffArray* effects = GW::Effects::GetAgentBuffs(agent->agent_id);
+        if (effects) {
+            for (auto& effect : *effects) {
+                ImGui::Text("id: %d", effect.skill_id);
+                if (effect.target_agent_id) {
                     ImGui::SameLine();
-                    ImGui::Text(" target: %d", effects[i].target_agent_id);
+                    ImGui::Text(" target: %d", effect.target_agent_id);
                 }
             }
         }
@@ -377,10 +369,9 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
             InfoField ("NPC Scale", "0x%X", npc->scale);
             ImGui::PopID();
         }
-        auto map_agents = GW::Agents::GetMapAgentArray();
-        if (map_agents.valid() && agent->agent_id < map_agents.size()) {
-            const GW::MapAgent& map_agent = map_agents[agent->agent_id];
-            InfoField("Map agent effects", "0x%X", map_agent.effects);
+        GW::MapAgent* map_agent = GW::Agents::GetMapAgentByID(agent->agent_id);
+        if (map_agent) {
+            InfoField("Map agent effects", "0x%X", map_agent->effects);
         }
         ImGui::TreePop();
     }
@@ -515,17 +506,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         #endif
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
-            GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
-            DWORD qid = GW::GameContext::instance()->world->active_quest_id;
-            if (qid && qlog.valid()) {
-                for (unsigned int i = 0; i < qlog.size(); ++i) {
-                    GW::Quest& q = qlog[i];
-                    if (q.quest_id == qid) {
-                        ImGui::Text("ID: 0x%X", q.quest_id);
-                        ImGui::Text("Marker: (%.0f, %.0f)", q.marker.x, q.marker.y);
-                        break;
-                    }
-                }
+            GW::Quest* q = GW::PlayerMgr::GetActiveQuest();
+            if (q) {
+                ImGui::Text("ID: 0x%X", q->quest_id);
+                ImGui::Text("Marker: (%.0f, %.0f)", q->marker.x, q->marker.y);
             }
         }
         if (show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
@@ -534,17 +518,15 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             int cast_count = 0;
             int spirit_count = 0;
             int compass_count = 0;
-            GW::AgentArray agents = GW::Agents::GetAgentArray();
+            GW::AgentArray* agents = GW::Agents::GetAgentArray();
             GW::Agent* player = GW::Agents::GetPlayer();
             if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-                && agents.valid()
+                && agents
                 && player != nullptr) {
 
-                for (unsigned int i = 0; i < agents.size(); ++i) {
-                    if (agents[i] == nullptr) continue; // ignore nothings
-                    GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
-                    if (agent == nullptr) continue;
-                    if (agent->allegiance != 0x3) continue; // ignore non-hostiles
+                for (auto* a : *agents) {
+                    GW::AgentLiving* agent = a ? a->GetAsAgentLiving() : nullptr;
+                    if (!(agent && agent->allegiance == 0x3)) continue; // ignore non-hostiles
                     if (agent->GetIsDead()) continue; // ignore dead 
                     float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
                     if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor
@@ -605,7 +587,7 @@ void InfoWindow::Update(float delta) {
     if (show_resignlog
         && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
         && GW::PartyMgr::GetPartyInfo()) {
-        GW::PlayerPartyMemberArray partymembers = GW::PartyMgr::GetPartyInfo()->players;
+        GW::PlayerPartyMemberArray& partymembers = GW::PartyMgr::GetPartyInfo()->players;
         if (partymembers.valid()) {
             if (partymembers.size() != status.size()) {
                 status.resize(partymembers.size(), Unknown);
@@ -641,6 +623,7 @@ const char* InfoWindow::GetStatusStr(Status status) {
 }
 
 void InfoWindow::PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name) {
+    if (!player_name) return;
     ASSERT(index < status.size());
     Status player_status = status[index];
     const char* status_str = GetStatusStr(player_status);
@@ -654,24 +637,22 @@ void InfoWindow::DrawResignlog() {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
     GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (info == nullptr) return;
-    GW::PlayerPartyMemberArray partymembers = info->players;
+    GW::PlayerPartyMemberArray& partymembers = info->players;
     if (!partymembers.valid()) return;
-    GW::PlayerArray players = GW::Agents::GetPlayerArray();
-    if (!players.valid()) return;
     for (size_t i = 0; i < partymembers.size(); ++i) {
         GW::PlayerPartyMember& partymember = partymembers[i];
-        if (partymember.login_number >= players.size()) continue;
-        GW::Player& player = players[partymember.login_number];
+        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymember.login_number);
+        if (!player_name) continue;
         ImGui::PushID(static_cast<int>(i));
         if (ImGui::Button("Send")) {
             // Todo: wording probably needs improvement
             wchar_t buf[256];
-            PrintResignStatus(buf, 256, i, player.name);
+            PrintResignStatus(buf, 256, i, player_name);
             GW::Chat::SendChat('#', buf);
         }
         ImGui::SameLine();
         const char* status_str = GetStatusStr(status[i]);
-        ImGui::Text("%d. %S - %s", i + 1, player.name, status_str);
+        ImGui::Text("%d. %S - %s", i + 1, player_name, status_str);
         if (status[i] != Unknown) {
             ImGui::SameLine();
             ImGui::TextDisabled("[%d:%02d:%02d.%03d]",

@@ -45,9 +45,9 @@ GuiUtils::EncString* PartyStatisticsWindow::GetSkillName(const uint32_t skill_id
     const auto found_it = skill_names.find(skill_id);
 
     if (found_it == skill_names.end()) {
-        const GW::Skill& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-
-        skill_names[skill_id] = new GuiUtils::EncString(skill_data.name);
+        const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+        ASSERT(skill_data);
+        skill_names[skill_id] = new GuiUtils::EncString(skill_data->name);
     }
     return skill_names[skill_id];
 }
@@ -62,11 +62,11 @@ GuiUtils::EncString* PartyStatisticsWindow::GetAgentName(uint32_t agent_id) {
 }
 
 const GW::Skillbar* PartyStatisticsWindow::GetAgentSkillbar(const uint32_t agent_id) {
-    const GW::SkillbarArray skillbar_array = GW::SkillbarMgr::GetSkillbarArray();
+    const GW::SkillbarArray* skillbar_array = GW::SkillbarMgr::GetSkillbarArray();
 
-    if (!skillbar_array.valid()) return nullptr;
+    if (!skillbar_array) return nullptr;
 
-    for (const GW::Skillbar& skillbar : skillbar_array) {
+    for (const GW::Skillbar& skillbar : *skillbar_array) {
         if (skillbar.agent_id == agent_id) return &skillbar;
     }
 
@@ -384,10 +384,6 @@ bool PartyStatisticsWindow::SetPartyMembers() {
     GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (info == nullptr) return false;
 
-    GW::PlayerArray players = GW::Agents::GetPlayerArray();
-    if (!players.valid()) return false;
-
-
     uint32_t my_player_id = GW::Agents::GetPlayerId();
     const GW::Skillbar* my_skillbar = GetAgentSkillbar(my_player_id);
     if (!my_skillbar) {
@@ -396,27 +392,31 @@ bool PartyStatisticsWindow::SetPartyMembers() {
     party_members.clear();
     player_party_idx = 0;
     for (GW::PlayerPartyMember& player : info->players) {
-        uint32_t id = players[player.login_number].agent_id;
+        uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
         party_members.push_back(id);
         if (id == my_player_id) {
             player_party_idx = party_members.size() - 1;
         }
+        if (!info->heroes.valid())
+            continue;
         for (GW::HeroPartyMember& hero : info->heroes) {
-            if (hero.owner_player_id == player.login_number) {
-                party_members.push_back(hero.agent_id);
-                const GW::Skillbar* skillbar = GetAgentSkillbar(hero.agent_id);
-                if (skillbar) {
-                    PartyMember& party_member = party_members.back();
-                    /* Skillbar for other players and henchmen is unknown in outpost init with No_Skill */
-                    for (const GW::SkillbarSkill& skill : skillbar->skills) {
-                        party_member.skills.push_back(skill.skill_id);
-                    }
-                }
+            if (hero.owner_player_id != player.login_number)
+                continue;
+            party_members.push_back(hero.agent_id);
+            const GW::Skillbar* skillbar = GetAgentSkillbar(hero.agent_id);
+            if (!skillbar) 
+                continue;
+            PartyMember& party_member = party_members.back();
+            /* Skillbar for other players and henchmen is unknown in outpost init with No_Skill */
+            for (const GW::SkillbarSkill& skill : skillbar->skills) {
+                party_member.skills.push_back(skill.skill_id);
             }
         }
     }
-    for (GW::HenchmanPartyMember& hench : info->henchmen) {
-        party_members.push_back(hench.agent_id);
+    if (info->henchmen.valid()) {
+        for (GW::HenchmanPartyMember& hench : info->henchmen) {
+            party_members.push_back(hench.agent_id);
+        }
     }
     for (const GW::SkillbarSkill& skill : my_skillbar->skills) {
         party_members[player_party_idx].skills.push_back(skill.skill_id);

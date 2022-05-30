@@ -90,8 +90,9 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 	// ignore heals
 	if (packet->value >= 0) return;
 
-	const GW::AgentArray agents = GW::Agents::GetAgentArray();
-
+	const GW::AgentArray* agents_ptr = GW::Agents::GetAgentArray();
+	if (!agents_ptr) return;
+	auto& agents = *agents_ptr;
 	// get cause agent
 	if (packet->cause_id >= agents.size()) return;
 	if (!agents[packet->cause_id]) return;
@@ -181,16 +182,10 @@ void PartyDamage::Update(float delta) {
 
 void PartyDamage::CreatePartyIndexMap() {
 	if (!GW::PartyMgr::GetIsPartyLoaded()) return;
-	
 	const GW::PartyInfo* const info = GW::PartyMgr::GetPartyInfo();
-	if (info == nullptr) return;
-
-	const GW::PlayerArray players = GW::Agents::GetPlayerArray();
-	if (!players.valid()) return;
-
 	size_t index = 0;
     for (const GW::PlayerPartyMember& player : info->players) {
-		uint32_t id = players[player.login_number].agent_id;
+		uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
 		if (id == GW::Agents::GetPlayerId()) player_index = index;
 		party_index[id] = index++;
 

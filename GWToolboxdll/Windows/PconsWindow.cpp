@@ -397,13 +397,8 @@ void PconsWindow::Update(float delta) {
         MapChanged(); // Map changed.
     if (!player && instance_type == GW::Constants::InstanceType::Explorable)
         player = GW::Agents::GetPlayer(); // Won't be immediately able to get player ptr on map load, so put here.
-    if (!Pcon::map_has_effects_array && player != nullptr) {
-        // If we haven't yet found an effects array for this map, try to find it.
-        GW::AgentEffectsArray partyEffects = GW::Effects::GetPartyEffectArray();
-        if (partyEffects.valid()) {
-            for (size_t i = 0; i < partyEffects.size() && !Pcon::map_has_effects_array; i++)
-                Pcon::map_has_effects_array = partyEffects[i].agent_id == player->agent_id;
-        }
+    if (!Pcon::map_has_effects_array) {
+        Pcon::map_has_effects_array = GW::Effects::GetPlayerEffectsArray() != nullptr;
     }
     in_vanquishable_area = GW::Map::GetFoesToKill() != 0;
     CheckBossRangeAutoDisable();

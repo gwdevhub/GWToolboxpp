@@ -86,7 +86,6 @@ private:
     int price[N_MATS] = {};
 
     // int max = 0;
-    GW::MerchItemArray GetMerchItems() const;
     GW::Item *GetMerchItem(Material mat) const;
     GW::Item *GetBagItem(Material mat) const;
 

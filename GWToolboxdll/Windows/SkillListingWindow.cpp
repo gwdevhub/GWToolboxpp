@@ -115,7 +115,7 @@ void SkillListingWindow::Initialize() {
     ToolboxWindow::Initialize();
     skills.resize((size_t)GW::Constants::SkillID::Count);
     for (size_t i = 0; i < skills.size(); i++) {
-        GW::Skill* s = &GW::SkillbarMgr::GetSkillConstantData(i);
+        GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(i);
         if (!s || !s->skill_id || !s->skill_equip_type) continue;
         skills[i] = new Skill(s);
     }

@@ -418,11 +418,9 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     vertices_count = 0;
 
     // get stuff
-    GW::AgentArray agents = GW::Agents::GetAgentArray();
-    if (!agents.valid()) return;
-
-    GW::NPCArray npcs = GW::Agents::GetNPCArray();
-    if (!npcs.valid()) return;
+    GW::AgentArray* agents = GW::Agents::GetAgentArray();
+    GW::NPCArray* npcs = agents ? GW::Agents::GetNPCArray() : nullptr;
+    if (!npcs) return;
 
     GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
     GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
@@ -435,9 +433,9 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     }
 
     // 1. eoes
-    for (size_t i = 0; i < agents.size(); ++i) {
-        if (!agents[i]) continue;
-        GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
+    for (GW::Agent* agent_ptr : *agents) {
+        if (!agent_ptr) continue;
+        GW::AgentLiving* agent = agent_ptr->GetAsAgentLiving();
         if (agent == nullptr) continue;
         if (agent->GetIsDead()) continue;
         switch (agent->player_number) {
@@ -482,25 +480,25 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
         });
     };
 
-    for (size_t i = 0; i < agents.size(); ++i) {
-        if (!agents[i]) continue;
-        if (target == agents[i]) continue; // will draw target at the end
-        if (agents[i]->GetIsGadgetType()) {
-            GW::AgentGadget* agent = agents[i]->GetAsAgentGadget();
+    for (GW::Agent* agent_ptr : *agents) {
+        if (!agent_ptr) continue;
+        if (target == agent_ptr) continue; // will draw target at the end
+        if (agent_ptr->GetIsGadgetType()) {
+            GW::AgentGadget* agent = agent_ptr->GetAsAgentGadget();
             if(GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && agent->extra_type == 7602) continue;
         }
-        else if (agents[i]->GetIsLivingType()) {
-            GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
+        else if (agent_ptr->GetIsLivingType()) {
+            GW::AgentLiving* agent = agent_ptr->GetAsAgentLiving();
             if (agent->player_number <= 12) continue;
             if (!show_hidden_npcs
                 && agent->IsNPC()
-                && agent->player_number < npcs.size()
-                && (npcs[agent->player_number].npc_flags & 0x10000) > 0) continue;
+                && agent->player_number < npcs->size()
+                && (npcs->at(agent->player_number).npc_flags & 0x10000) > 0) continue;
         }
-        if (AddCustomAgentsToDraw(agents[i])) {
+        if (AddCustomAgentsToDraw(agent_ptr)) {
             // found a custom agent to draw, we'll draw them later
         } else {
-            Enqueue(agents[i]);
+            Enqueue(agent_ptr);
         }
         if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
     }
@@ -529,9 +527,9 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     // note: we don't support custom agents for players
 
     // 5. players
-    for (size_t i = 0; i < agents.size(); ++i) {
-        if (!agents[i]) continue;
-        GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
+    for (GW::Agent* agent_ptr : *agents) {
+        if (!agent_ptr) continue;
+        GW::AgentLiving* agent = agent_ptr->GetAsAgentLiving();
         if (agent == nullptr) continue;
         if (agent->player_number > 12) continue;
         if (agent == player) continue; // will draw player at the end
@@ -587,10 +585,10 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     const GW::AgentLiving* living = agent->GetAsAgentLiving();
 
     // don't draw dead spirits
-    auto npcs = GW::Agents::GetNPCArray();
-    if (living->GetIsDead() && npcs.valid() && living->player_number < npcs.size()) {
-        GW::NPC& npc = npcs[living->player_number];
-        switch (npc.model_file_id) {
+
+    auto* npc = living->GetIsDead() && living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
+    if (npc) {
+        switch (npc->model_file_id) {
         case 0x22A34: // nature rituals
         case 0x2D0E4: // defensive binding rituals
         case 0x2D07E: // offensive binding rituals
@@ -813,10 +811,9 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const Cus
         return ca->shape;
     }
 
-    auto npcs = GW::Agents::GetNPCArray();
-    if (npcs.valid() && living->player_number < npcs.size()) {
-        GW::NPC& npc = npcs[living->player_number];
-        switch (npc.model_file_id) {
+    auto* npc = living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
+    if (npc) {
+        switch (npc->model_file_id) {
         case 0x22A34: // nature rituals
         case 0x2D0E4: // defensive binding rituals
         case 0x2963E: // dummies

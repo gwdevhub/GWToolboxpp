@@ -26,28 +26,6 @@
 #include <Windows/Pcons.h>
 #include <Windows/PconsWindow.h>
 
-namespace {
-    GW::EffectArray* GetEffects() {
-        GW::Agent* player = GW::Agents::GetPlayer();
-        if (!player) return nullptr;  // player doesn't exist?
-
-        GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
-        // @Remark:
-        // If the agent doesn't have any effects, the effect array is not created.
-        // We also know that the player exist, so the effect can be created.
-        if (!AgEffects.valid()) return nullptr;
-
-        for (size_t i = 0; i < AgEffects.size(); i++) {
-            if (AgEffects[i].agent_id == player->agent_id && AgEffects[i].effects.valid()) {
-                return &AgEffects[i].effects;
-            }
-        }
-
-        // That's a bit of an odd cases, but we choose to take no risk
-        // and not pop the pcons.
-        return nullptr;
-    }
-}
 using namespace GW::Constants;
 
 float Pcon::size = 46.0f;
@@ -279,7 +257,7 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem) { // Scan b
     for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) { // Work from last bag to first; pcons at bottom of inventory
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr) continue;   // No bag, skip
-        GW::ItemArray items = bag->items;
+        GW::ItemArray& items = bag->items;
         if (!items.valid()) continue;   // No item array, skip
         for (size_t i = items.size(); i > 0; i--) { // Work from last slot to first; pcons at bottom of inventory
             size_t slotIndex = i - 1;
@@ -371,7 +349,7 @@ void Pcon::UpdateRefill() {
     for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
         GW::Bag* storageBag = bags[bagIndex];
         if (storageBag == nullptr) continue;    // No bag, skip
-        GW::ItemArray storageItems = storageBag->items;
+        GW::ItemArray& storageItems = storageBag->items;
         if (!storageItems.valid()) continue;    // No item array, skip
         for (size_t i = 0; i < storageItems.size() && storageItems.valid(); i++) {
             GW::Item* storageItem = storageItems[i];
@@ -385,8 +363,6 @@ void Pcon::UpdateRefill() {
             }
             quantity_to_move = static_cast<size_t>(ceil((float)points_needed / (float)points_per_item));
             if (quantity_to_move > storageItem->quantity)       quantity_to_move = storageItem->quantity;
-            // Get slot of bag moving into
-            GW::ItemArray invBagItems = inventoryItem->bag->items;
             size_t slot_to = inventoryItem->slot;
             GW::Bag* bag_to = inventoryItem->bag;
             pending_move_to_quantity = inventoryItem->quantity + MoveItem(storageItem, bag_to, slot_to, quantity_to_move);
@@ -412,7 +388,7 @@ int Pcon::CheckInventory(bool *used, size_t *used_qty_ptr, size_t from_bag,
     for (size_t bagIndex = from_bag; bagIndex <= to_bag; ++bagIndex) {
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr) continue;   // No bag, skip
-        GW::ItemArray items = bag->items;
+        GW::ItemArray& items = bag->items;
         if (!items.valid()) continue;   // No item array, skip
         for (size_t i = 0; i < items.size(); i++) {
             GW::Item* item = items[i];
@@ -504,12 +480,12 @@ bool PconGeneric::CanUseByEffect() const {
     if (!_player)
         return false; // player doesn't exist?
 
-    GW::EffectArray* effects = GetEffects();
+    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects) return true;
 
-    for (DWORD i = 0; i < effects->size(); i++) {
-        if (effects->at(i).skill_id == (DWORD)effectID)
-            return effects->at(i).GetTimeRemaining() < 1000;
+    for (auto& effect : *effects) {
+        if (effect.skill_id == (DWORD)effectID)
+            return effect.GetTimeRemaining() < 1000;
     }
     return true;
 }
@@ -519,15 +495,15 @@ bool PconCons::CanUseByEffect() const {
     if (!PconGeneric::CanUseByEffect()) return false;
     if (!GW::PartyMgr::GetIsPartyLoaded()) return false;
 
-    GW::MapAgentArray mapAgents = GW::Agents::GetMapAgentArray();
-    if (!mapAgents.valid()) return false;
+    GW::MapAgentArray* mapAgents = GW::Agents::GetMapAgentArray();
+    if (!mapAgents) return false;
 
     size_t n_players = GW::Agents::GetAmountOfPlayersInInstance();
     for (size_t i = 1; i <= n_players; ++i) {
         DWORD currentPlayerAgID = GW::Agents::GetAgentIdByLoginNumber(i);
         if (currentPlayerAgID <= 0) return false;
-        if (currentPlayerAgID >= mapAgents.size()) return false;
-        if (mapAgents[currentPlayerAgID].GetIsDead()) return false;
+        if (currentPlayerAgID >= mapAgents->size()) return false;
+        if (mapAgents->at(currentPlayerAgID).GetIsDead()) return false;
     }
 
     return true;
@@ -548,7 +524,7 @@ bool PconCity::CanUseByEffect() const {
     if (!_player)
         return false; // player doesn't exist?
 
-    GW::EffectArray* effects = GetEffects();
+    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects) return true;
 
     if (_player->move_x == 0.0f && _player->move_y == 0.0f)
@@ -668,12 +644,5 @@ bool PconLunar::CanUseByEffect() const {
     if (!_player)
         return false; // player doesn't exist?
 
-    GW::EffectArray* effects = GetEffects();
-    if (!effects) return true;
-
-    for (DWORD i = 0; i < effects->size(); i++) {
-        if (effects->at(i).skill_id == (DWORD)GW::Constants::SkillID::Lunar_Blessing)
-            return false;
-    }
-    return true;
+    return GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Lunar_Blessing) == nullptr;
 }

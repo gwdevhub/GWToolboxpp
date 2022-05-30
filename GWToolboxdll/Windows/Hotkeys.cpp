@@ -1008,7 +1008,7 @@ void HotkeyEquipItem::Execute()
                     Log::Error("Bag #%d not found!", bag_idx);
                 return;
             }
-            GW::ItemArray items = b->items;
+            GW::ItemArray& items = b->items;
             if (!items.valid() || slot_idx > items.size()) {
                 if (show_error_on_failure)
                     Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);

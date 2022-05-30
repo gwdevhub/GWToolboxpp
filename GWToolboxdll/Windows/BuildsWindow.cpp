@@ -418,9 +418,11 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*) {
             }
             ImGui::Image((ImTextureID)*Resources::GetSkillImage((uint32_t)skills[i]), skill_size);
             if (ImGui::IsItemHovered()) {
-                const GW::Skill& s = GW::SkillbarMgr::GetSkillConstantData((uint32_t)skills[i]);
-                preferred_skill_order_tooltip.reset(s.name);
-                ImGui::SetTooltip("%s", preferred_skill_order_tooltip.string().c_str());
+                const GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData((uint32_t)skills[i]);
+                if (s) {
+                    preferred_skill_order_tooltip.reset(s->name);
+                    ImGui::SetTooltip("%s", preferred_skill_order_tooltip.string().c_str());
+                }
             }
         }
         ImGui::SameLine();

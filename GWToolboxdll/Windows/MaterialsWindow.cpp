@@ -22,22 +22,11 @@
 
 static const DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 
-GW::MerchItemArray MaterialsWindow::GetMerchItems() const {
-    GW::MerchItemArray items = {};
-    GW::GameContext *game_ctx = GW::GameContext::instance();
-    if (!(game_ctx && game_ctx->world)) return items;
-    return game_ctx->world->merch_items;
-}
-
 GW::Item *MaterialsWindow::GetMerchItem(Material mat) const {
     uint32_t model_id = GetModelID(mat);
-    GW::ItemArray items = GW::Items::GetItemArray();
     for (uint32_t item_id : merch_items) {
-        if (item_id >= items.size())
-            continue;
-        GW::Item *item = items[item_id];
-        if (!item) continue;
-        if (item->model_id == model_id)
+        GW::Item* item = GW::Items::GetItemById(item_id);
+        if (item && item->model_id == model_id)
             return item;
     }
     return nullptr;
@@ -179,10 +168,13 @@ void MaterialsWindow::Initialize() {
     [this](GW::HookStatus *, GW::Packet::StoC::ItemStreamEnd *pak) -> void {
         // @Remark: unk1 = 13 means "selling" tab
         if (pak->unk1 != 12) return;
-        GW::MerchItemArray items = GetMerchItems();
+        GW::MerchItemArray* items = GW::Merchant::GetMerchantItemsArray();
         merch_items.clear();
-        for (size_t i = 0; i < items.size(); i++)
-            merch_items.push_back(items[i]);
+        if (items) {
+            for (auto item_id : *items)
+                merch_items.push_back(item_id);
+        }
+
     });
 }
 

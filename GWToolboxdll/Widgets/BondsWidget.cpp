@@ -19,7 +19,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
-
+#include <GWCA/Managers/PlayerMgr.h>
 
 #include <GuiUtils.h>
 #include <Modules/Resources.h>
@@ -69,10 +69,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
     const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-    const GW::PlayerArray& players = GW::Agents::GetPlayerArray();
-    if (info == nullptr) return;
-    if (!players.valid()) return;
-    if (!info->players.valid()) return;
+    const GW::PlayerArray* players = info ? GW::Agents::GetPlayerArray() : nullptr;
+    if (!players) return;
     // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
 
     // ==== Get bonds ====
@@ -85,8 +83,6 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     // @Cleanup: This doesn't need to be done every frame - only when the party has been changed
     if (!FetchPartyInfo())
         return;
-
-    const GW::AgentEffectsArray &effects = GW::Effects::GetPartyEffectArray();
 
     // ==== Draw ====
     const float img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
@@ -147,14 +143,12 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         };
 
         bool handled_click = false;
-        const size_t effect_cnt = effects.valid() ? effects.size() : 0;
-        const size_t buff_cnt = effect_cnt > 0 && effects[0].buffs.valid() ? effects[0].buffs.size() : 0;
-        
-        if (buff_cnt > 0) {
-            const GW::BuffArray &buffs = effects[0].buffs; // first one is for players, after are heroes
-            for (unsigned int i = 0; i < buffs.size(); ++i) {
-                DWORD agent = buffs[i].target_agent_id;
-                DWORD skill = buffs[i].skill_id;
+
+        GW::BuffArray* buffs = GW::Effects::GetPlayerBuffs();
+        if (buffs) {
+            for (auto& buff : *buffs) {
+                DWORD agent = buff.target_agent_id;
+                DWORD skill = buff.skill_id;
                 if (party_map.find(agent) == party_map.end())
                     continue; // bond target not in party
                 if (bond_map.find(skill) == bond_map.end())
@@ -167,7 +161,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 if (*textures[bond])
                     ImGui::GetWindowDrawList()->AddImage((ImTextureID)*textures[bond], tl, br);
                 if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
-                    GW::Effects::DropBuff(buffs[i].buff_id);
+                    GW::Effects::DropBuff(buff.buff_id);
                     handled_click = true;
                 }
             }
@@ -175,20 +169,23 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         
 
         // Player and hero effects that aren't bonds
-        for (unsigned int i = 0; i < effect_cnt; ++i) {
-            const GW::EffectArray& agentEffects = effects[i].effects;
-            DWORD agent = effects[i].agent_id;
-            for (unsigned int j = 0; j < agentEffects.size(); ++j) {
-                const GW::Effect& effect = agentEffects[j];
+        const GW::AgentEffectsArray* agent_effects_array = GW::Effects::GetPartyEffectsArray();
+        for (auto& agent_effects_it : *agent_effects_array) {
+            auto& agentEffects = agent_effects_it.effects;
+            if (!agentEffects.valid())
+                continue;
+            DWORD agent = agent_effects_it.agent_id;
+            for (const GW::Effect& effect : agentEffects) {
                 DWORD skill = effect.skill_id;
                 if (bond_map.find(skill) == bond_map.end()) continue;
 
                 bool overlay = false;
-                const GW::PartyAttribute& partyAttribute = GW::GameContext::instance()->world->attributes[0];
-                const GW::Skill& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill);
-                if (skill_data.duration0 == 0x20000)
+                const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent);
+                if (!agentAttributes) continue;
+                const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill);
+                if (!skill_data || skill_data->duration0 == 0x20000)
                     continue; // Maintained skill/enchantment
-                const GW::Attribute& attribute = partyAttribute.attribute[skill_data.attribute];
+                const GW::Attribute& attribute = agentAttributes[skill_data->attribute];
                 if (effect.effect_type < attribute.level) overlay = true;
 
                 size_t y = party_map[agent];
@@ -351,16 +348,14 @@ bool BondsWidget::FetchBondSkills()
 bool BondsWidget::FetchPartyInfo()
 {
     const GW::PartyInfo *info = GW::PartyMgr::GetPartyInfo();
-    if (info == nullptr || !info->players.valid())
-        return false;
-    const GW::PlayerArray &players = GW::Agents::GetPlayerArray();
-    if (!players.valid())
+    if (!info)
         return false;
     party_list.clear();
     party_map.clear();
     allies_start = 255;
     for (const GW::PlayerPartyMember &player : info->players) {
-        DWORD id = players[player.login_number].agent_id;
+        DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
+        if (!id) continue;
         party_map[id] = party_list.size();
         party_list.push_back(id);
 

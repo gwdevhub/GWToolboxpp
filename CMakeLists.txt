@@ -20,7 +20,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
+ 
 add_compile_definitions(
     "NOMINMAX"
     "_USE_MATH_DEFINES"

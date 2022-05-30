@@ -51,7 +51,7 @@ namespace {
         GW::GameContext* g = GW::GameContext::instance();
         if (!g || !g->party) 
             return nullptr;
-        auto parties = g->party->party_search;
+        auto& parties = g->party->party_search;
         if (!parties.valid() || !(party_id < parties.size()))
             return nullptr;
         return parties[party_id];
@@ -60,7 +60,7 @@ namespace {
         GW::GameContext* g = GW::GameContext::instance();
         if (!g || !g->party)
             return nullptr;
-        auto parties = g->party->parties;
+        auto& parties = g->party->parties;
         if (!parties.valid() || !(party_id < parties.size()))
             return nullptr;
         return parties[party_id];
@@ -74,7 +74,7 @@ namespace {
         GW::GameContext* g = GW::GameContext::instance();
         if (!g || !g->party)
             return nullptr;
-        auto parties = g->party->parties;
+        auto& parties = g->party->parties;
         if (!parties.valid())
             return nullptr;
         for (size_t i = 0; i < parties.size(); i++) {
@@ -260,8 +260,8 @@ void PartySearchWindow::FillParties() {
         uint32_t id;
     } packet;
     packet.header = GAME_SMSG_UPDATE_AGENT_PARTYSIZE;
-    GW::PlayerArray& players = GW::PlayerMgr::GetPlayerArray();
-    for (size_t i = 0; players.valid() && i < players.size(); i++) {
+    GW::PlayerArray* players = GW::PlayerMgr::GetPlayerArray();
+    for (size_t i = 0; players && i < players->size(); i++) {
         packet.id = i;
         OnRegionPartyUpdated(nullptr, &packet);
     }
@@ -269,7 +269,7 @@ void PartySearchWindow::FillParties() {
     if (!g || !g->party)
         return;
     packet.header = GAME_SMSG_PARTY_PLAYER_ADD;
-    auto local_parties = g->party->parties;
+    auto& local_parties = g->party->parties;
     for (size_t i = 0; local_parties.valid() && i < local_parties.size(); i++) {
         GW::PartyInfo* party = local_parties[i];
         if (!party) continue;
@@ -277,7 +277,7 @@ void PartySearchWindow::FillParties() {
         OnRegionPartyUpdated(nullptr, &packet);
     }
     packet.header = GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT;
-    auto region_parties = g->party->party_search;
+    auto& region_parties = g->party->party_search;
     for (size_t i = 0; region_parties.valid() && i < region_parties.size(); i++) {
         auto* party = region_parties[i];
         if (!party) continue;
@@ -597,14 +597,13 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
         }
         ImGui::Separator();
         ImGui::BeginChild("lfg_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
-        GW::PartyContext* party_ctx = GW::GameContext::instance()->party;
         ImVec4 green(0x00,0xff,0x00,0xff);
         ImVec4 yellow(0xff, 0xff, 0x00, 0xff);
         ImVec4 white(0xff, 0xff, 0xff, 0xff);
         int32_t language = GW::Map::GetLanguage();
         int32_t district = GW::Map::GetDistrict();
         uint32_t map = static_cast<uint32_t>(GW::Map::GetMapID());
-        auto parties = party_ctx->party_search;
+        //auto& parties = party_ctx->party_search;
         for (auto it : party_advertisements) {
             auto* party = it.second;
             if (!party) continue;
