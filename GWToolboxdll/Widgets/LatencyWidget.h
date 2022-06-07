@@ -12,14 +12,14 @@ class LatencyWidget : public ToolboxWidget {
 
 private:
     GW::HookEntry Ping_Entry;
-    int red_threshold;
+    int red_threshold = 250;
 
 public:
     static LatencyWidget& Instance() {
         static LatencyWidget instance;
         return instance;
     }
-    uint32_t ping_ms;
+    uint32_t ping_ms = 0;
 
     const char* Name() const override { return "Latency"; }
     const char* Icon() const override { return ICON_FA_BEER; }

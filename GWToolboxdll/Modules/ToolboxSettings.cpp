@@ -79,6 +79,7 @@
 #include <Widgets/SkillbarWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Widgets/EffectsMonitorWidget.h>
+#include <Widgets/LatencyWidget.h>
 #include "ToolboxSettings.h"
 
 //#define _FUN
@@ -161,6 +162,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
     if (use_world_map) optional_modules.push_back(&WorldMapWidget::Instance());
     if (use_effect_monitor) optional_modules.push_back(&EffectsMonitorWidget::Instance());
+    if (use_effect_monitor) optional_modules.push_back(&LatencyWidget::Instance());
 #if _DEBUG
     
 #endif

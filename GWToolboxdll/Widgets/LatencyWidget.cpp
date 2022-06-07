@@ -5,6 +5,8 @@
 #include <GWCA/Packets/StoC.h>
 #include <GuiUtils.h>
 #include <Widgets/LatencyWidget.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Constants/Constants.h>
 
 void LatencyWidget::Initialize() {
     ToolboxWidget::Initialize();
@@ -24,9 +26,10 @@ uint32_t LatencyWidget::GetPing() { return ping_ms; }
 void LatencyWidget::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(180.0f, 60.0f), ImGuiCond_FirstUseEver);
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
 
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
@@ -53,15 +56,19 @@ void LatencyWidget::Draw(IDirect3DDevice9* pDevice) {
 void LatencyWidget::LoadSettings(CSimpleIni* ini) {
     ToolboxWidget::LoadSettings(ini);
 
-    red_threshold = (float)ini->GetDoubleValue(Name(), "red_threshold", 300);
+    red_threshold = ini->GetLongValue(Name(), "red_threshold", 300);
+
 }
 
 void LatencyWidget::SaveSettings(CSimpleIni* ini) {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetDoubleValue(Name(), VAR_NAME(red_threshold), red_threshold);
+    ini->SetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
 }
 
-void LatencyWidget::DrawSettingInternal() { ImGui::SliderInt("Red ping threshold", &red_threshold, 0, 1000); }
+void LatencyWidget::DrawSettingInternal() { 
+
+    ImGui::SliderInt("Red ping threshold", &red_threshold, 0, 500); 
+}
 
 ImColor LatencyWidget::GetColorForPing(uint32_t ping) {
     LatencyWidget& instance = Instance();
