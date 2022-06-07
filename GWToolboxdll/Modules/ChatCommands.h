@@ -92,7 +92,11 @@ private:
     static void CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdHeroBehaviour(const wchar_t *message, int argc, LPWSTR *argv);
+    static void CmdHeroBehaviour(const wchar_t* message, int argc, LPWSTR* argv);
+    static void SetHardMode(const wchar_t*, int argc, LPWSTR* argv);
+    static void SetNormalMode(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdAnimation(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdAnimationTarget(const wchar_t*, int argc, LPWSTR* argv);
     static void CmdPingQuest(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdMorale(const wchar_t*, int argc, LPWSTR* argv);
     

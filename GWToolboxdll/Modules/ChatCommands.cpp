@@ -420,6 +420,11 @@ void ChatCommands::Initialize() {
     });
     GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHeroBehaviour);
     GW::Chat::CreateCommand(L"morale", ChatCommands::CmdMorale);
+    GW::Chat::CreateCommand(L"nm", ChatCommands::SetNormalMode);
+    GW::Chat::CreateCommand(L"hm", ChatCommands::SetHardMode);
+    GW::Chat::CreateCommand(L"normalmode", ChatCommands::SetNormalMode);
+    GW::Chat::CreateCommand(L"hardmode", ChatCommands::SetHardMode);
+    GW::Chat::CreateCommand(L"animation", ChatCommands::CmdAnimation);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -1762,4 +1767,58 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
             GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero.agent_id, behaviour);
         }
     }
+}
+
+void ChatCommands::SetHardMode(const wchar_t*, int argc, LPWSTR* argv) {
+    
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_SET_DIFFICULTY, 1); 
+
+}
+
+void ChatCommands::SetNormalMode(const wchar_t*, int argc, LPWSTR* argv) {
+    
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_SET_DIFFICULTY, 0);
+}
+
+void ChatCommands::CmdAnimation(const wchar_t*, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(argc);
+
+    if (argc < 3) return Log::Error("Missing /animation argument. Use /animation me/target number");
+    
+    uint32_t agentid;
+    const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+
+    if (arg1 == L"me") {
+        GW::AgentLiving* agent = GW::Agents::GetPlayerAsAgentLiving();
+        agentid = agent->agent_id;
+    } else if (arg1 == L"target") {
+        GW::AgentLiving* agent = GW::Agents::GetTargetAsAgentLiving();
+        if (agent) {
+            agentid = agent->agent_id;
+        } else {
+            return Log::Error("No target chosen");
+        }
+    } else {
+        return Log::Error("Invalid argument for /animation. It can be one of: me | target");
+    }
+
+    uint32_t animationid = _wtoi(argv[2]);
+    if (animationid < 1 || animationid > 2076) {
+        Log::Error("Must be between [1, 2076]");
+        return;
+    } 
+
+    GW::GameThread::Enqueue([animationid, agentid]() {
+        GW::Packet::StoC::GenericValue packet;
+        packet.Value_id = 20;
+        packet.agent_id = agentid;
+        packet.value = animationid;
+        GW::StoC::EmulatePacket(&packet);
+    });
+    
+
 }
