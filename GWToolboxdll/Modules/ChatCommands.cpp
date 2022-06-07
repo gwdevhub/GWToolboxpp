@@ -1936,3 +1936,5 @@ void ChatCommands::CmdVolume(const wchar_t*, int argc, LPWSTR* argv) {
     }
     GW::UI::SetPreference(pref, value_dec);
 }
+
+//What the fuck I am on dev
