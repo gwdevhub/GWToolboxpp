@@ -11,6 +11,7 @@
 void LatencyWidget::Initialize() {
     ToolboxWidget::Initialize();
     GW::StoC::RegisterPacketCallback(&Ping_Entry, GAME_SMSG_PING_REPLY, PingUpdate, 0x800);
+    GW::Chat::CreateCommand(L"pingping", LatencyWidget::pingping);
 }
 
 void LatencyWidget::Update(float delta) { UNREFERENCED_PARAMETER(delta); }
@@ -43,7 +44,7 @@ void LatencyWidget::Draw(IDirect3DDevice9* pDevice) {
         ImVec2 min = ImGui::GetWindowPos();
         ImVec2 max(min.x + size.x, min.y + size.y);
         if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
-            char buffer[256];
+            char buffer[32];
             snprintf(buffer, sizeof(buffer), "My ping is %u ms", GetPing());
             GW::Chat::SendChat('#', buffer);
         }
@@ -71,4 +72,13 @@ ImColor LatencyWidget::GetColorForPing(uint32_t ping) {
     float x = ping / (float)instance.red_threshold;
     ImColor myColor = ImColor(2.0f * x, 2.0f * (1 - x), 0.0f);
     return myColor;
+}
+
+void LatencyWidget::pingping(const wchar_t*, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    LatencyWidget& instance = Instance();
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "My ping is %u ms", instance.GetPing());
+    GW::Chat::SendChat('#', buffer);
 }

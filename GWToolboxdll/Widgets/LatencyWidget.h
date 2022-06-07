@@ -22,7 +22,7 @@ public:
     uint32_t ping_ms = 0;
 
     const char* Name() const override { return "Latency"; }
-    const char* Icon() const override { return ICON_FA_BEER; }
+    const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
     void Initialize() override;
     void Update(float delta) override;
@@ -41,4 +41,5 @@ public:
     void DrawSettingInternal();
 
     static ImColor GetColorForPing(uint32_t ping);
+    static void pingping(const wchar_t*, int argc, LPWSTR* argv);
 };
