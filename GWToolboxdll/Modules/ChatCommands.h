@@ -96,6 +96,9 @@ private:
     static void CmdPingQuest(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdMorale(const wchar_t*, int argc, LPWSTR* argv);
     static void CmdVolume(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdSetHardMode(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdSetNormalMode(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdAnimation(const wchar_t*, int argc, LPWSTR* argv);
     
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string name, PendingTransmo &transmo);
