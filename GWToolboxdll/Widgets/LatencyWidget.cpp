@@ -1,11 +1,14 @@
-#include "GWCA/Packets/Opcodes.h"
 #include "stdafx.h"
-#include <GWCA/Constants/Constants.h>
+
+#include <GWCA/Packets/Opcodes.h>
+#include <GWCA/Packets/StoC.h>
+
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Packets/StoC.h>
+
 #include <GuiUtils.h>
+
 #include <Widgets/LatencyWidget.h>
 
 namespace {
@@ -16,7 +19,7 @@ namespace {
 
 void LatencyWidget::Initialize() {
     ToolboxWidget::Initialize();
-    GW::StoC::RegisterPacketCallback(&Ping_Entry, GAME_SMSG_PING_REPLY, PingUpdate, 0x800);
+    GW::StoC::RegisterPacketCallback(&Ping_Entry, GAME_SMSG_PING_REPLY, OnServerPing, 0x800);
     GW::Chat::CreateCommand(L"ping", LatencyWidget::SendPing);
 }
 
@@ -59,7 +62,7 @@ void LatencyWidget::Draw(IDirect3DDevice9* pDevice) {
 
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
         ImVec2 cur = ImGui::GetCursorPos();
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
+        ImGui::PushFont(GuiUtils::GetFont((GuiUtils::FontSize)font_size));
         ImGui::SetCursorPos(cur);
         uint32_t ping = GetPing();
         ImGui::TextColored(GetColorForPing(ping), "%ums", ping);
@@ -87,17 +90,40 @@ void LatencyWidget::LoadSettings(CSimpleIni* ini) {
 
     red_threshold = ini->GetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
     show_avg_ping = ini->GetBoolValue(Name(), VAR_NAME(show_avg_ping), show_avg_ping);
+    red_threshold = ini->GetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
+    font_size = ini->GetLongValue(Name(), VAR_NAME(font_size), (int)font_size);
+    switch (font_size) {
+    case (int)GuiUtils::FontSize::widget_label:
+    case (int)GuiUtils::FontSize::widget_small:
+    case (int)GuiUtils::FontSize::widget_large:
+        break;
+    default:
+        font_size = (int)GuiUtils::FontSize::widget_small;
+        break;
+    }
 }
 
 void LatencyWidget::SaveSettings(CSimpleIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
     ini->SetBoolValue(Name(), VAR_NAME(show_avg_ping), show_avg_ping);
+    ini->SetLongValue(Name(), VAR_NAME(font_size), font_size);
 }
 
 void LatencyWidget::DrawSettingInternal() { 
     ImGui::SliderInt("Red ping threshold", &red_threshold, 0, 1000);
     ImGui::Checkbox("Show average ping", &show_avg_ping);
+    ImGui::Text("Font Size");
+    ImGui::Indent();
+    if (ImGui::RadioButton("Small", font_size == (int)GuiUtils::FontSize::widget_label))
+        font_size = (int)GuiUtils::FontSize::widget_label;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Medium", font_size == (int)GuiUtils::FontSize::widget_small))
+        font_size = (int)GuiUtils::FontSize::widget_small;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Large", font_size == (int)GuiUtils::FontSize::widget_large))
+        font_size = (int)GuiUtils::FontSize::widget_large;
+    ImGui::Unindent();
 }
 
 ImColor LatencyWidget::GetColorForPing(uint32_t ping) {

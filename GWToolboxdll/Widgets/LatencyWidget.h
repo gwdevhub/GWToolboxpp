@@ -14,6 +14,7 @@ private:
     GW::HookEntry Ping_Entry;
     int red_threshold = 250;
     bool show_avg_ping = false;
+    int font_size = 0;
 public:
     static LatencyWidget& Instance() {
         static LatencyWidget instance;
