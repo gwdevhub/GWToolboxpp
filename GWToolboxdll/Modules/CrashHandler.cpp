@@ -20,9 +20,10 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, unsigned line
 {
     __try {
         __debugbreak();
-        char exception_message[512];
-        snprintf(exception_message, _countof(exception_message), "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
-        throw std::exception(exception_message);
+        size_t len = snprintf(NULL,0, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
+        Instance().tb_exception_message = new char[len + 1];
+        snprintf(Instance().tb_exception_message, len + 1, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
+        throw std::runtime_error(Instance().tb_exception_message);
     }
     __except (EXCEPT_EXPRESSION_ENTRY) {
     }
@@ -101,6 +102,16 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
         UserStreamParam->UserStreamCount = 1;
         UserStreamParam->UserStreamArray = s;
     }
+    else if (Instance().tb_exception_message) {
+        char* extra_info = Instance().tb_exception_message;
+        UserStreamParam = new MINIDUMP_USER_STREAM_INFORMATION();
+        MINIDUMP_USER_STREAM* s = new MINIDUMP_USER_STREAM();
+        s->Type = MINIDUMP_STREAM_TYPE::CommentStreamA;
+        s->Buffer = extra_info;
+        s->BufferSize = (strlen(extra_info) + 1) * sizeof(extra_info[0]);
+        UserStreamParam->UserStreamCount = 1;
+        UserStreamParam->UserStreamArray = s;
+    }
     MINIDUMP_EXCEPTION_INFORMATION* ExpParam = 0;
     if (pExceptionPointers) {
         ExpParam = new MINIDUMP_EXCEPTION_INFORMATION;
@@ -111,6 +122,9 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
 
     BOOL success = MiniDumpWriteDump(GetCurrentProcess(), ProcessId, hFile, (MINIDUMP_TYPE)(MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs), ExpParam, UserStreamParam, 0);
     CloseHandle(hFile);
+    if (Instance().tb_exception_message) {
+        delete[] Instance().tb_exception_message;
+    }
     if (UserStreamParam) {
         delete UserStreamParam->UserStreamArray;
         delete UserStreamParam;
