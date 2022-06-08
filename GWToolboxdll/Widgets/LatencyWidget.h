@@ -13,13 +13,13 @@ class LatencyWidget : public ToolboxWidget {
 private:
     GW::HookEntry Ping_Entry;
     int red_threshold = 250;
-
+    bool show_avg_ping = false;
 public:
     static LatencyWidget& Instance() {
         static LatencyWidget instance;
         return instance;
     }
-    uint32_t ping_ms = 0;
+
 
     const char* Name() const override { return "Latency"; }
     const char* Icon() const override { return ICON_FA_STOPWATCH; }
@@ -27,9 +27,10 @@ public:
     void Initialize() override;
     void Update(float delta) override;
 
-    static void PingUpdate(GW::HookStatus*, void* packet);
+    static void OnServerPing(GW::HookStatus*, void* packet);
 
     uint32_t GetPing();
+    uint32_t GetAveragePing();
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -41,5 +42,5 @@ public:
     void DrawSettingInternal();
 
     static ImColor GetColorForPing(uint32_t ping);
-    static void pingping(const wchar_t*, int argc, LPWSTR* argv);
+    static void SendPing(const wchar_t* = 0, int argc = 0, LPWSTR* argv = 0);
 };

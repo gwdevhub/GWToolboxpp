@@ -8,21 +8,45 @@
 #include <GuiUtils.h>
 #include <Widgets/LatencyWidget.h>
 
+namespace {
+    constexpr size_t ping_history_len = 10; // GW checks last 10 pings for avg
+    uint32_t ping_history[ping_history_len] = { 0 };
+    size_t ping_index = 0;
+}
+
 void LatencyWidget::Initialize() {
     ToolboxWidget::Initialize();
     GW::StoC::RegisterPacketCallback(&Ping_Entry, GAME_SMSG_PING_REPLY, PingUpdate, 0x800);
-    GW::Chat::CreateCommand(L"pingping", LatencyWidget::pingping);
+    GW::Chat::CreateCommand(L"ping", LatencyWidget::SendPing);
 }
 
 void LatencyWidget::Update(float delta) { UNREFERENCED_PARAMETER(delta); }
 
-void LatencyWidget::PingUpdate(GW::HookStatus*, void* packet) {
-    LatencyWidget& instance = Instance();
+void LatencyWidget::OnServerPing(GW::HookStatus*, void* packet) {
     uint32_t* packet_as_uint_array = (uint32_t*)packet;
-    instance.ping_ms = packet_as_uint_array[1];
+    uint32_t ping = packet_as_uint_array[1];
+    if (ping > 4999)
+        return; // GW checks this too.
+    if (ping_history[ping_index]) {
+        ping_index++;
+        if (ping_index == ping_history_len) {
+            ping_index = 0;
+        }
+    }
+    ping_history[ping_index] = ping;
+
 }
 
-uint32_t LatencyWidget::GetPing() { return ping_ms; }
+uint32_t LatencyWidget::GetPing() { return ping_history[ping_index]; }
+uint32_t LatencyWidget::GetAveragePing() {
+    size_t count = 0;
+    size_t sum = 0;
+    for (size_t i = 0; ping_history[i] && i < ping_history_len; i++) {
+        count++;
+        sum += ping_history[i];
+    }
+    return count ? sum / count : 0;
+}
 
 void LatencyWidget::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
@@ -37,16 +61,20 @@ void LatencyWidget::Draw(IDirect3DDevice9* pDevice) {
         ImVec2 cur = ImGui::GetCursorPos();
         ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
         ImGui::SetCursorPos(cur);
-        ImGui::TextColored(GetColorForPing(GetPing()), "%u ms", GetPing());
+        uint32_t ping = GetPing();
+        ImGui::TextColored(GetColorForPing(ping), "%ums", ping);
+        if (show_avg_ping) {
+            ping = GetAveragePing();
+            ImGui::TextColored(GetColorForPing(ping), "%ums", ping);
+        }
+        
         ImGui::PopFont();
 
         ImVec2 size = ImGui::GetWindowSize();
         ImVec2 min = ImGui::GetWindowPos();
         ImVec2 max(min.x + size.x, min.y + size.y);
         if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
-            char buffer[32];
-            snprintf(buffer, sizeof(buffer), "My ping is %u ms", GetPing());
-            GW::Chat::SendChat('#', buffer);
+            SendPing();
         }
     }
 
@@ -57,15 +85,20 @@ void LatencyWidget::Draw(IDirect3DDevice9* pDevice) {
 void LatencyWidget::LoadSettings(CSimpleIni* ini) {
     ToolboxWidget::LoadSettings(ini);
 
-    red_threshold = ini->GetLongValue(Name(), "red_threshold", 300);
+    red_threshold = ini->GetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
+    show_avg_ping = ini->GetBoolValue(Name(), VAR_NAME(show_avg_ping), show_avg_ping);
 }
 
 void LatencyWidget::SaveSettings(CSimpleIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
+    ini->SetBoolValue(Name(), VAR_NAME(show_avg_ping), show_avg_ping);
 }
 
-void LatencyWidget::DrawSettingInternal() { ImGui::SliderInt("Red ping threshold", &red_threshold, 0, 500); }
+void LatencyWidget::DrawSettingInternal() { 
+    ImGui::SliderInt("Red ping threshold", &red_threshold, 0, 1000);
+    ImGui::Checkbox("Show average ping", &show_avg_ping);
+}
 
 ImColor LatencyWidget::GetColorForPing(uint32_t ping) {
     LatencyWidget& instance = Instance();
@@ -74,11 +107,9 @@ ImColor LatencyWidget::GetColorForPing(uint32_t ping) {
     return myColor;
 }
 
-void LatencyWidget::pingping(const wchar_t*, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(argc);
-    UNREFERENCED_PARAMETER(argv);
+void LatencyWidget::SendPing(const wchar_t*, int , LPWSTR* ) {
     LatencyWidget& instance = Instance();
-    char buffer[32];
-    snprintf(buffer, sizeof(buffer), "My ping is %u ms", instance.GetPing());
+    char buffer[48];
+    snprintf(buffer, sizeof(buffer), "Current Ping: %ums, Avg Ping: %ums", instance.GetPing(), instance.GetAveragePing());
     GW::Chat::SendChat('#', buffer);
 }
