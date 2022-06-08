@@ -473,6 +473,7 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
 }
 
 IDirect3DTexture9** Resources::GetSkillImage(uint32_t skill_id) {
+    if (!skill_id) return nullptr;
     auto found = skill_images.find(skill_id);
     if (found != skill_images.end()) {
         return found->second;
