@@ -53,9 +53,9 @@ class CustomRenderer : public VBuffer
         LineCircle,
         FullCircle
     };
-    struct CustomMarker
+    struct CustomMarker final : VBuffer
     {
-        CustomMarker(float x, float y, float s, Shape sh, GW::Constants::MapID m, const char* n)
+        CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* n)
             : pos(x, y)
             , size(s)
             , shape(sh)
@@ -67,21 +67,25 @@ class CustomRenderer : public VBuffer
             else
                 GuiUtils::StrCopy(name, "marker", sizeof(name));
         };
-        CustomMarker(const char* n);
+        explicit CustomMarker(const char* n);
         GW::Vec2f pos;
         float size;
         Shape shape;
         GW::Constants::MapID map;
         bool visible;
         char name[128]{};
+        Color color{0x00FFFFFF};
         Color color_sub{0x00FFFFFF};
+        void Render(IDirect3DDevice9* device) override;
+
+    private:
+        void Initialize(IDirect3DDevice9* device) override;
     };
 
     struct CustomPolygon final : VBuffer
     {
         CustomPolygon(GW::Constants::MapID m, const char* n)
-            : map(m)
-        {
+            : map(m), shape() {
             if (n)
                 GuiUtils::StrCopy(name, n, sizeof name);
             else
@@ -97,11 +101,11 @@ class CustomRenderer : public VBuffer
         char name[128]{};
         Color color{0xA0FFFFFF};
         Color color_sub{0x00FFFFFF};
-        const static auto max_points = 21;
-        void Initialize(IDirect3DDevice9* device) override;
+        constexpr static auto max_points = 21;
         void Render(IDirect3DDevice9* device) override;
 
     private:
+        void Initialize(IDirect3DDevice9* device) override;
         std::vector<unsigned> point_indices{};
     };
 
@@ -129,11 +133,6 @@ private:
         char tooltip_str[128];
     } map_id_tooltip;
 
-
-    class FullCircle : public VBuffer
-    {
-        void Initialize(IDirect3DDevice9* device) override;
-    } fullcircle;
     class LineCircle : public VBuffer
     {
         void Initialize(IDirect3DDevice9* device) override;
