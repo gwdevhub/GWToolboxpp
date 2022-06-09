@@ -52,6 +52,7 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     color_ally_minion = Colors::Load(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
     color_ally_dead = Colors::Load(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
     boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
+    agent_border = ini->GetBoolValue(section, VAR_NAME(agent_border), agent_border);
 
     LoadDefaultSizes();
     size_default = (float)ini->GetDoubleValue(section, VAR_NAME(size_default), 75.0);
@@ -119,6 +120,7 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
+    ini->SetBoolValue(section, VAR_NAME(agent_border), agent_border);
 
     SaveCustomAgents();
 }
@@ -171,6 +173,7 @@ void AgentRenderer::LoadDefaultColors() {
     size_boss = 125.0f;
     size_minion = 50.0f;
     boss_colors = true;
+    agent_border = true;
 }
 void AgentRenderer::DrawSettings() {
     
@@ -568,6 +571,10 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
         // Target highlight if this is the current or next target
         if (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id)
             Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
+        else {
+            if (agent_border)
+                Enqueue(shape, agent, size + 20.0f, Colors::Sub(0xFF000000, IM_COL32(0, 0, 0, 50)));
+        }
     }
     return Enqueue(shape, agent, size, color);
 }
@@ -859,6 +866,7 @@ AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
     color_text_active = ini->GetBoolValue(section, VAR_NAME(color_text_active), color_text_active);
     shape_active = ini->GetBoolValue(section, VAR_NAME(shape_active), shape_active);
     size_active = ini->GetBoolValue(section, VAR_NAME(size_active), size_active);
+    agent_border = ini->GetBoolValue(section, VAR_NAME(agent_border), agent_border);
 }
 
 AgentRenderer::CustomAgent::CustomAgent(DWORD _modelId, Color _color, const char* _name)
@@ -885,6 +893,7 @@ void AgentRenderer::CustomAgent::SaveSettings(CSimpleIni* ini, const char* secti
     ini->SetBoolValue(section, VAR_NAME(color_text_active), color_text_active);
     ini->SetBoolValue(section, VAR_NAME(shape_active), shape_active);
     ini->SetBoolValue(section, VAR_NAME(size_active), size_active);
+    ini->SetBoolValue(section, VAR_NAME(agent_border), agent_border);
 }
 
 bool AgentRenderer::CustomAgent::DrawHeader() {
