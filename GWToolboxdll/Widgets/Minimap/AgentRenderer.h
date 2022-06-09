@@ -27,6 +27,7 @@ public:
     bool show_hidden_npcs = false;
     bool boss_colors = true;
     bool agent_border = true;
+    int agent_border_thickness;
     uint32_t auto_target_id = 0;
 
 private:
@@ -78,6 +79,7 @@ private:
         bool shape_active = true;
         bool size_active = false;
         bool agent_border = true;
+        int agent_border_thickness;
     };
 
     struct Shape_Vertex : public GW::Vec2f {

@@ -62,6 +62,7 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     size_boss = (float)ini->GetDoubleValue(section, VAR_NAME(size_boss), 125.0);
     size_minion = (float)ini->GetDoubleValue(section, VAR_NAME(size_minion), 50.0);
     default_shape = (Shape_e)ini->GetLongValue(section, VAR_NAME(default_shape), default_shape);
+    agent_border_thickness = (int)ini->GetLongValue(section, VAR_NAME(agent_border_thickness), 20);
 
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     
@@ -117,6 +118,7 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
     ini->SetDoubleValue(section, VAR_NAME(size_boss), size_boss);
     ini->SetDoubleValue(section, VAR_NAME(size_minion), size_minion);
     ini->SetLongValue(section, VAR_NAME(default_shape), static_cast<long>(default_shape));
+    ini->SetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness);
 
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
@@ -573,7 +575,7 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
             Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
         else {
             if (agent_border)
-                Enqueue(shape, agent, size + 20.0f, Colors::Sub(0xFF000000, IM_COL32(0, 0, 0, 50)));
+                Enqueue(shape, agent, size + agent_border_thickness, Colors::Sub(0xFF000000, IM_COL32(0, 0, 0, 50)));
         }
     }
     return Enqueue(shape, agent, size, color);
