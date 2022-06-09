@@ -504,8 +504,8 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     }
     // 3. custom colored models
     SortCustomAgentsToDraw();
-    for (const auto pair : custom_agents_to_draw) {
-        Enqueue(pair.first, pair.second);
+    for (const auto& [fst, snd] : custom_agents_to_draw) {
+        Enqueue(fst, snd);
         if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
     }
     custom_agents_to_draw.clear();
@@ -514,8 +514,8 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     if (target && target->player_number > 12) {
         if (AddCustomAgentsToDraw(target)) {
             SortCustomAgentsToDraw();
-            for (const auto pair : custom_agents_to_draw) {
-                Enqueue(pair.first, pair.second);
+            for (const auto& [fst, snd] : custom_agents_to_draw) {
+                Enqueue(fst, snd);
                 if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
             }
             custom_agents_to_draw.clear();
@@ -633,28 +633,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             }
             return b;
         };
-        auto sign = [](GW::Vec2f p1, GW::Vec2f p2, GW::Vec2f p3)-> float {
-            return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
-        };
-
-        auto in_triangle = [sign](GW::Vec2f pt, GW::Vec2f v1, GW::Vec2f v2, GW::Vec2f v3) -> bool {
-
-            const float d1 = sign(pt, v1, v2);
-            const float d2 = sign(pt, v2, v3);
-            const float d3 = sign(pt, v3, v1);
-
-            const bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
-            const bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-
-            return !(has_neg && has_pos);
-        };
-
-        auto is_inside_triangles = [in_triangle](const GW::Vec2f pos, const std::vector<GW::Vec2f> points) -> bool {
-            for (auto i = 0u; i < points.size() - 2; i++) {
-                if (in_triangle(pos, points[i], points[i + 1], points[i + 2])) return true;;
-            }
-            return false;
-        };
+        
         auto is_inside_circle = [](const GW::Vec2f pos, const GW::Vec2f circle, const float radius) -> bool {
             return GW::GetSquareDistance(pos, circle) <= radius * radius;
         };
@@ -664,7 +643,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
                 c = &polygon.color_sub;
             }
         }
-        for (const auto marker : markers) {
+        for (const auto& marker : markers) {
             if (!is_relevant_circle(marker)) continue;
             if (is_inside_circle(living->pos, marker.pos, marker.size)) {
                 c = &marker.color_sub;

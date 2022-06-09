@@ -45,11 +45,11 @@ void CustomRenderer::LoadMarkers()
         const char* section = entry.pItem;
         if (strncmp(section, "customline", 10) == 0) {
             lines.push_back(CustomLine(inifile->GetValue(section, "name", "line")));
-            lines.back().p1.x = (float)inifile->GetDoubleValue(section, "x1", 0.0);
-            lines.back().p1.y = (float)inifile->GetDoubleValue(section, "y1", 0.0);
-            lines.back().p2.x = (float)inifile->GetDoubleValue(section, "x2", 0.0);
-            lines.back().p2.y = (float)inifile->GetDoubleValue(section, "y2", 0.0);
-            lines.back().map = (GW::Constants::MapID)inifile->GetLongValue(section, "map", 0);
+            lines.back().p1.x = static_cast<float>(inifile->GetDoubleValue(section, "x1", 0.0));
+            lines.back().p1.y = static_cast<float>(inifile->GetDoubleValue(section, "y1", 0.0));
+            lines.back().p2.x = static_cast<float>(inifile->GetDoubleValue(section, "x2", 0.0));
+            lines.back().p2.y = static_cast<float>(inifile->GetDoubleValue(section, "y2", 0.0));
+            lines.back().map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
             lines.back().color = Colors::Load(inifile, section, "color", lines.back().color);
             lines.back().visible = inifile->GetBoolValue(section, "visible", true);
             inifile->Delete(section, nullptr);
@@ -61,6 +61,7 @@ void CustomRenderer::LoadMarkers()
             marker.size = static_cast<float>(inifile->GetDoubleValue(section, "size", 0.0));
             marker.shape = static_cast<Shape>(inifile->GetLongValue(section, "shape", 0));
             marker.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
+            marker.color = Colors::Load(inifile, section, "color", marker.color);
             marker.color_sub = Colors::Load(inifile, section, "color_sub", marker.color_sub);
             marker.visible = inifile->GetBoolValue(section, "visible", true);
             markers.push_back(marker);
@@ -114,7 +115,7 @@ void CustomRenderer::SaveMarkers() const
         }
 
         // then save
-        for (unsigned i = 0; i < lines.size(); ++i) {
+        for (auto i = 0u; i < lines.size(); i++) {
             const CustomLine& line = lines[i];
             char section[32];
             snprintf(section, 32, "customline%03d", i);
@@ -124,10 +125,10 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetDoubleValue(section, "x2", line.p2.x);
             inifile->SetDoubleValue(section, "y2", line.p2.y);
             Colors::Save(inifile, section, "color", line.color);
-            inifile->SetLongValue(section, "map", (long)line.map);
+            inifile->SetLongValue(section, "map", static_cast<long>(line.map));
             inifile->SetBoolValue(section, "visible", line.visible);
         }
-        for (unsigned i = 0; i < markers.size(); ++i) {
+        for (auto i = 0u; i < markers.size(); i++) {
             const CustomMarker& marker = markers[i];
             char section[32];
             snprintf(section, 32, "custommarker%03d", i);
@@ -138,9 +139,10 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetLongValue(section, "shape", static_cast<long>(marker.shape));
             inifile->SetLongValue(section, "map", static_cast<long>(marker.map));
             inifile->SetBoolValue(section, "visible", marker.visible);
+            Colors::Save(inifile, section, "color", marker.color);
             Colors::Save(inifile, section, "color_sub", marker.color_sub);
         }
-        for (auto i = 0u; i < polygons.size(); ++i) {
+        for (auto i = 0u; i < polygons.size(); i++) {
             const CustomPolygon& polygon = polygons[i];
             char section[32];
             snprintf(section, 32, "custompolygon%03d", i);
@@ -164,7 +166,6 @@ void CustomRenderer::SaveMarkers() const
 void CustomRenderer::Invalidate()
 {
     VBuffer::Invalidate();
-    fullcircle.Invalidate();
     linecircle.Invalidate();
 }
 void CustomRenderer::SetTooltipMapID(const GW::Constants::MapID& map_id) {
@@ -232,7 +233,7 @@ void CustomRenderer::DrawLineSettings() {
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
         ImGui::SameLine(0.0f, spacing);
-        bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
+        const bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
         ImGui::PopID();
         if (remove) {
@@ -252,46 +253,60 @@ void CustomRenderer::DrawMarkerSettings() {
     if (Colors::DrawSettingHueWheel("Color", &color)) Invalidate();
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
     ImGui::PushID("markers");
-    float input_item_width = (ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 8) / 8;
+    const auto input_item_width = (ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 8) / 8;
     for (size_t i = 0; i < markers.size(); ++i) {
         CustomMarker& marker = markers[i];
+        bool marker_changed = false;
         ImGui::PushID(static_cast<int>(i));
-        ImGui::Checkbox("##visible", &marker.visible);
+        marker_changed |= ImGui::Checkbox("##visible", &marker.visible);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
         ImGui::SameLine(0.0f, spacing);
         ImGui::PushItemWidth(input_item_width);
-        markers_changed |= ImGui::DragFloat("##x", &marker.pos.x, 1.0f, 0.0f, 0.0f, "%.0f");
+        marker_changed |= ImGui::DragFloat("##x", &marker.pos.x, 1.0f, 0.0f, 0.0f, "%.0f");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Marker X Position");
         ImGui::SameLine(0.0f, spacing);
-        markers_changed |= ImGui::DragFloat("##y", &marker.pos.y, 1.0f, 0.0f, 0.0f, "%.0f");
+        marker_changed |= ImGui::DragFloat("##y", &marker.pos.y, 1.0f, 0.0f, 0.0f, "%.0f");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Marker Y Position");
         ImGui::SameLine(0.0f, spacing);
-        markers_changed |= ImGui::DragFloat("##size", &marker.size, 1.0f, 0.0f, 0.0f, "%.0f");
+        marker_changed |= ImGui::DragFloat("##size", &marker.size, 1.0f, 0.0f, 0.0f, "%.0f");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Size");
         ImGui::SameLine(0.0f, spacing);
 
         static const char* const types[] = { "Circle", "FillCircle" };
-        markers_changed |= ImGui::Combo("##type", reinterpret_cast<int*>(&marker.shape), types, 2);
+        marker_changed |= ImGui::Combo("##type", reinterpret_cast<int*>(&marker.shape), types, 2);
         ImGui::SameLine(0.0f, spacing);
 
-        ImGui::ColorButtonPicker("##colorsub", &marker.color_sub);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color in which hostile agents inside this polygon are drawn.\n\nNOTE: An alpha channel of 0 will disable this color.");
+        marker_changed |= ImGui::ColorButtonPicker("##colorsub", &marker.color_sub);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color in which hostile agents inside this polygon are drawn.\nNOTE: An alpha channel of 0 will disable this color.");
         ImGui::SameLine(0.0f, spacing);
 
-        markers_changed |= ImGui::InputInt("##map", (int*)&marker.map, 0);
+        marker_changed |= ImGui::ColorButtonPicker("##color", &marker.color);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(
+                "Color of the circle.\nNOTE: An alpha channel of 0 will fall back to the default color.");
+        ImGui::SameLine(0.0f, spacing);
+
+        marker_changed |= ImGui::InputInt("##map", reinterpret_cast<int*>(&marker.map), 0);
         if (ImGui::IsItemHovered()) SetTooltipMapID(marker.map);
         ImGui::SameLine(0.0f, spacing);
         ImGui::PopItemWidth();
         ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() - ImGui::GetCursorPosX() - spacing - 20.0f);
-        markers_changed |= ImGui::InputText("##name", marker.name, 128);
+        marker_changed |= ImGui::InputText("##name", marker.name, 128);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
         ImGui::SameLine(0.0f, spacing);
-        bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
+        const bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
         ImGui::PopID();
+        if (marker_changed) {
+            marker.Invalidate();
+            markers_changed = true;
+        }
         if (remove) {
             markers.erase(markers.begin() + static_cast<int>(i));
+            for (auto& mark : markers) {
+                mark.Invalidate();
+            }
             markers_changed = true;
         }
     }
@@ -300,12 +315,15 @@ void CustomRenderer::DrawMarkerSettings() {
         char buf[32];
         snprintf(buf, 32, "marker%zu", markers.size());
         markers.push_back(CustomMarker(buf));
+        // invalidate in crease vector size increased and reallocated array
+        for (auto& mark : markers) {
+            mark.Invalidate();
+        }
         markers_changed = true;
     }
 }
 CustomRenderer::CustomMarker::CustomMarker(const char* n) : CustomMarker(0, 0, 100.0f, Shape::LineCircle, GW::Map::GetMapID(), n) {
-    auto* const player = GW::Agents::GetPlayerAsAgentLiving();
-    if (player) {
+    if (const auto* const player = GW::Agents::GetPlayerAsAgentLiving()) {
         pos.x = player->pos.x;
         pos.y = player->pos.y;
     }
@@ -359,14 +377,13 @@ void CustomRenderer::DrawPolygonSettings() {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
         ImGui::PopItemWidth();
         ImGui::SameLine(0.0f, spacing);
-        bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
+        const bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
 
         if (show_details) {
             ImGui::Indent();
             if (polygon.points.size() < CustomPolygon::max_points && ImGui::Button("Add Polygon Point##add")) {
-                auto* const player = GW::Agents::GetPlayerAsAgentLiving();
-                if (player) {
+                if (const auto* const player = GW::Agents::GetPlayerAsAgentLiving()) {
                     polygon.points.emplace_back(player->pos.x, player->pos.y);
                     polygon_changed = true;
                 }
@@ -395,7 +412,7 @@ void CustomRenderer::DrawPolygonSettings() {
             markers_changed = true;
             break;
         }
-        else if (polygon_changed) {
+        if (polygon_changed) {
             polygon.Invalidate();
         }
         markers_changed |= polygon_changed;
@@ -405,6 +422,7 @@ void CustomRenderer::DrawPolygonSettings() {
         char buf[32];
         snprintf(buf, 32, "polygon%zu", polygons.size());
         polygons.emplace_back(buf);
+        // invalidate in crease vector size increased and reallocated array
         for (auto& poly : polygons) {
             poly.Invalidate();
         }
@@ -496,57 +514,93 @@ void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
 
         buffer->Unlock();
     }
+    initialized = true;
 }
 
 void CustomRenderer::CustomPolygon::Render(IDirect3DDevice9* device)
 {
     if (!initialized) {
-        initialized = true;
         Initialize(device);
     }
-    if (filled) {
-        if (points.size() < 3) return;
-        if (visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
-            device->SetFVF(D3DFVF_CUSTOMVERTEX);
-            device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-            device->DrawPrimitive(type, 0, point_indices.size() / 3);
-        }
-    } else {
-        if (points.size() < 2) return;
-        if (visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
-            device->SetFVF(D3DFVF_CUSTOMVERTEX);
-            device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-            device->DrawPrimitive(type, 0, points.size() - 1);
-        }
+    if (filled && points.size() < 3 || !filled && points.size() < 2) return;
+    
+    if (visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
+        const auto primitive_count = filled ? point_indices.size() / 3 : points.size() - 1;
+        device->SetFVF(D3DFVF_CUSTOMVERTEX);
+        device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+        device->DrawPrimitive(type, 0, primitive_count);
     }
 }
 
-void CustomRenderer::FullCircle::Initialize(IDirect3DDevice9* device)
-{
-    type = D3DPT_TRIANGLEFAN;
-    count = 48; // polycount
-    unsigned int vertex_count = count + 2;
-    D3DVertex* _vertices = nullptr;
+void CustomRenderer::CustomMarker::Initialize(IDirect3DDevice9* device) {
+    const auto colour = (color >> IM_COL32_A_SHIFT == 0) ? CustomRenderer::color : color;
+    if (shape == Shape::FullCircle) {
+        type = D3DPT_TRIANGLEFAN;
+        count = 48;
+        const unsigned vertex_count = count + 2;
+        D3DVertex* _vertices = nullptr;
 
-    if (buffer) buffer->Release();
-    device->CreateVertexBuffer(
-        sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID**)&_vertices, D3DLOCK_DISCARD);
+        if (buffer) buffer->Release();
+        device->CreateVertexBuffer(
+            sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+        buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
 
-    const float PI = 3.1415927f;
-    _vertices[0].x = 0.0f;
-    _vertices[0].y = 0.0f;
-    _vertices[0].z = 0.0f;
-    _vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
-    for (size_t i = 1; i < vertex_count; ++i) {
-        float angle = (i - 1) * (2 * PI / count);
-        _vertices[i].x = std::cos(angle);
-        _vertices[i].y = std::sin(angle);
-        _vertices[i].z = 0.0f;
-        _vertices[i].color = color;
+        _vertices[0].x = 0.0f;
+        _vertices[0].y = 0.0f;
+        _vertices[0].z = 0.0f;
+        _vertices[0].color = Colors::Sub(colour, Colors::ARGB(50, 0, 0, 0));
+        for (auto i = 1u; i < vertex_count; ++i) {
+            constexpr auto pi = static_cast<float>(M_PI);
+            const float angle = (i - 1) * (2 * pi / static_cast<float>(count));
+            _vertices[i].x = std::cos(angle);
+            _vertices[i].y = std::sin(angle);
+            _vertices[i].z = 0.0f;
+            _vertices[i].color = colour;
+        }
+
+        buffer->Unlock();
+    } else {
+        type = D3DPT_LINESTRIP;
+        count = 48;
+        const auto vertex_count = count + 1;
+        D3DVertex* _vertices = nullptr;
+
+        if (buffer) buffer->Release();
+        device->CreateVertexBuffer(
+            sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+        buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
+
+        for (auto i = 0u; i < count; ++i) {
+            constexpr auto pi = static_cast<float>(M_PI);
+            const float angle = i * (2 * pi / (count + 1));
+            _vertices[i].x = std::cos(angle);
+            _vertices[i].y = std::sin(angle);
+            _vertices[i].z = 0.0f;
+            _vertices[i].color = colour;
+        }
+        _vertices[count] = _vertices[0];
+
+        buffer->Unlock();
+    }
+    initialized = true;
+}
+
+void CustomRenderer::CustomMarker::Render(IDirect3DDevice9* device) {
+    if (!initialized) {
+        Initialize(device);
     }
 
-    buffer->Unlock();
+    if (!(visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID()))) return;
+
+    D3DXMATRIX translate, scale, world;
+    D3DXMatrixTranslation(&translate, pos.x, pos.y, 0.0f);
+    D3DXMatrixScaling(&scale, size, size, 1.0f);
+    world = scale * translate;
+    device->SetTransform(D3DTS_WORLD, &world);
+
+    device->SetFVF(D3DFVF_CUSTOMVERTEX);
+    device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+    device->DrawPrimitive(type, 0, count);
 }
 
 void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device)
@@ -559,7 +613,7 @@ void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device)
     if (buffer) buffer->Release();
     device->CreateVertexBuffer(
         sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID**)&_vertices, D3DLOCK_DISCARD);
+    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
 
     for (size_t i = 0; i < count; ++i) {
         float angle = i * (2 * static_cast<float>(M_PI) / (count + 1));
@@ -583,8 +637,8 @@ void CustomRenderer::Render(IDirect3DDevice9* device)
     DrawCustomMarkers(device);
 
     vertices_count = 0;
-    HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
-    if (FAILED(res)) printf("PingsLinesRenderer Lock() error: HRESULT: 0x%lX\n", res);
+    if (const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD); FAILED(res))
+        printf("PingsLinesRenderer Lock() error: HRESULT: 0x%lX\n", res);
 
     DrawCustomLines(device);
 
@@ -607,29 +661,12 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
             polygon.Render(device);
         }
 
-        for (const CustomMarker& marker : markers) {
-            if (marker.visible && (marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID())) {
-                D3DXMATRIX translate, scale, world;
-                D3DXMatrixTranslation(&translate, marker.pos.x, marker.pos.y, 0.0f);
-                D3DXMatrixScaling(&scale, marker.size, marker.size, 1.0f);
-                world = scale * translate;
-                device->SetTransform(D3DTS_WORLD, &world);
-
-                switch (marker.shape) {
-                    case Shape::LineCircle:
-                        linecircle.Render(device);
-                        break;
-                    case Shape::FullCircle:
-                        fullcircle.Render(device);
-                        break;
-                }
-            }
+        for (CustomMarker& marker : markers) {
+            marker.Render(device);
         }
 
-        GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
-        if (flags.valid()) {
-            for (unsigned i = 0; i < flags.size(); ++i) {
-                GW::HeroFlag& flag = flags[i];
+        if (GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags; flags.valid()) {
+            for (const auto& flag : flags) {
                 D3DXMATRIX translate, scale, world;
                 D3DXMatrixTranslation(&translate, flag.flag.x, flag.flag.y, 0.0f);
                 D3DXMatrixScaling(&scale, 200.0f, 200.0f, 1.0f);
