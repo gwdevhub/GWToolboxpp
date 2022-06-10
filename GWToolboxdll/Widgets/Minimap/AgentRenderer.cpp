@@ -568,17 +568,22 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 }
 
 void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
-    Color color = GetColor(agent, ca);
-    float size = GetSize(agent, ca);
-    Shape_e shape = GetShape(agent, ca);
+    const auto color = GetColor(agent, ca);
+    const auto alpha = color >> IM_COL32_A_SHIFT & 0xFFu;
+    const auto size = GetSize(agent, ca);
+    const auto shape = GetShape(agent, ca);
     // No target highlight if BigCircle
     if (shape != BigCircle) {
         // Target highlight if this is the current or next target
-        if (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id)
+        if (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id) {
             Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
-        else {
-            if (agent_border) Enqueue(shape, agent, size + agent_border_thickness, 0xCD000000);
+            return Enqueue(shape, agent, size, color);
         }
+    }
+    if (!alpha) return;
+    if (agent_border) {
+        Enqueue(shape, agent, size + static_cast<float>(agent_border_thickness),
+            Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
     }
     return Enqueue(shape, agent, size, color);
 }
