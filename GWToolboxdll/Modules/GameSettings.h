@@ -196,6 +196,7 @@ public:
     static void OnSpeechBubble(GW::HookStatus*, GW::Packet::StoC::SpeechBubble*);
     static void OnSpeechDialogue(GW::HookStatus*, GW::Packet::StoC::DisplayDialogue*);
     static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
+    static void OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak);
     static void OnScreenShake(GW::HookStatus*, void* packet);
     static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
@@ -233,6 +234,7 @@ public:
 
     bool focus_window_on_launch = true;
     bool flash_window_on_pm = false;
+    bool flash_window_on_guild_chat = false;
     bool flash_window_on_party_invite = false;
     bool flash_window_on_zoning = false;
     bool focus_window_on_zoning = false;
@@ -375,6 +377,7 @@ private:
     GW::HookEntry DisplayDialogue_Entry;
     GW::HookEntry MessageNPC_Entry;
     GW::HookEntry MessageLocal_Entry;
+    GW::HookEntry MessageGlobal_Entry;
     GW::HookEntry MessageServer_Entry;
     GW::HookEntry PlayerJoinInstance_Entry;
     GW::HookEntry PlayerLeaveInstance_Entry;
