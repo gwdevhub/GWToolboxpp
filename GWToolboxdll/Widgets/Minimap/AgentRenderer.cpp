@@ -55,14 +55,16 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     agent_border = ini->GetBoolValue(section, VAR_NAME(agent_border), agent_border);
 
     LoadDefaultSizes();
-    size_default = (float)ini->GetDoubleValue(section, VAR_NAME(size_default), 75.0);
-    size_player = (float)ini->GetDoubleValue(section, VAR_NAME(size_player), 100.0);
-    size_signpost = (float)ini->GetDoubleValue(section, VAR_NAME(size_signpost), 50.0);
-    size_item = (float)ini->GetDoubleValue(section, VAR_NAME(size_item), 25.0);
-    size_boss = (float)ini->GetDoubleValue(section, VAR_NAME(size_boss), 125.0);
-    size_minion = (float)ini->GetDoubleValue(section, VAR_NAME(size_minion), 50.0);
-    default_shape = (Shape_e)ini->GetLongValue(section, VAR_NAME(default_shape), default_shape);
-    agent_border_thickness = (uint32_t)ini->GetLongValue(section, VAR_NAME(agent_border_thickness), 20);
+    size_default = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_default), 75.0));
+    size_player = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_player), 100.0));
+    size_signpost = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_signpost), 50.0));
+    size_item = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_item), 25.0));
+    size_boss = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_boss), 125.0));
+    size_minion = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_minion), 50.0));
+    default_shape = static_cast<Shape_e>(ini->GetLongValue(section, VAR_NAME(default_shape), default_shape));
+    agent_border_thickness =
+        static_cast<uint32_t>(ini->GetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness));
+
 
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     
@@ -83,7 +85,7 @@ void AgentRenderer::LoadCustomAgents() {
 
     for (const CSimpleIni::Entry& entry : entries) {
         // we know that all sections are agent colors, don't even check the section names
-        CustomAgent* customAgent = new CustomAgent(agentcolorinifile, entry.pItem);
+        auto* customAgent = new CustomAgent(agentcolorinifile, entry.pItem);
         customAgent->index = custom_agents.size();
         custom_agents.push_back(customAgent);
     }
@@ -133,8 +135,8 @@ void AgentRenderer::SaveCustomAgents() const {
         agentcolorinifile->Reset();
 
         // then save again
-        char buf[256];
         for (unsigned int i = 0; i < custom_agents.size(); ++i) {
+            char buf[256];
             snprintf(buf, 256, "customagent%03d", i);
             custom_agents[i]->SaveSettings(agentcolorinifile, buf);
         }
@@ -305,6 +307,7 @@ AgentRenderer::~AgentRenderer() {
     }
     custom_agents.clear();
     custom_agents_map.clear();
+    VBuffer::Invalidate();
 
     GW::UI::RemoveUIMessageCallback(&UIMsg_Entry);
 }
@@ -377,7 +380,7 @@ AgentRenderer::AgentRenderer() {
         switch (msgid) {
             case GW::UI::kShowAgentNameTag:
             case GW::UI::kSetAgentNameTagAttribs: {
-                GW::UI::AgentNameTagInfo* msg = (GW::UI::AgentNameTagInfo*)wParam;                
+                GW::UI::AgentNameTagInfo* msg = static_cast<GW::UI::AgentNameTagInfo*>(wParam);                
 
                 GW::Agent* agent = GW::Agents::GetAgentByID(msg->agent_id);
                 if (!agent) return;
@@ -388,7 +391,7 @@ AgentRenderer::AgentRenderer() {
                     for (const CustomAgent* ca : it->second) {
                         if (!ca->active) continue;
                         if (!ca->color_text_active) continue;
-                        if (ca->mapId > 0 && ca->mapId != (DWORD)GW::Map::GetMapID()) continue;
+                        if (ca->mapId > 0 && ca->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
                         msg->text_color = ca->color_text;
                     }
                 }
@@ -470,7 +473,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
         if (it != custom_agents_map.end()) {
             for (const CustomAgent* ca : it->second) {
                 if (!ca->active) continue;
-                if (ca->mapId > 0 && ca->mapId != (DWORD)GW::Map::GetMapID()) continue;
+                if (ca->mapId > 0 && ca->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
                 custom_agents_to_draw.push_back({ agent, ca });
                 found_custom_agent = true;
             }
@@ -859,9 +862,9 @@ AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
     if (s >= 1 && s <= 4) {
         // this is a small hack because we used to have shape=0 -> default, now we just cast to Shape_e.
         // but shape=1 on file is still tear (which is Shape_e::Tear == 0).
-        shape = (Shape_e)(s - 1);
+        shape = static_cast<Shape_e>(s - 1);
     }
-    size = (float)ini->GetDoubleValue(section, VAR_NAME(size), size);
+    size = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size), size));
 
     color_active = ini->GetBoolValue(section, VAR_NAME(color_active), color_active);
     color_text_active = ini->GetBoolValue(section, VAR_NAME(color_text_active), color_text_active);

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "CustomRenderer.h"
-
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/GameEntities/Agent.h>
 
@@ -11,7 +9,7 @@
 class AgentRenderer : public VBuffer {
 public:
     AgentRenderer();
-    virtual ~AgentRenderer();
+    ~AgentRenderer() override;
 
     void Render(IDirect3DDevice9* device) override;
 
@@ -27,11 +25,13 @@ public:
     bool show_hidden_npcs = false;
     bool boss_colors = true;
     bool agent_border = true;
-    int agent_border_thickness;
+
+    unsigned int agent_border_thickness = 20;
+
     uint32_t auto_target_id = 0;
 
 private:
-    static const size_t shape_size = 4;
+    static constexpr size_t shape_size = 4;
     enum Shape_e { Tear, Circle, Quad, BigCircle };
     enum Color_Modifier {
         None, // rgb 0,0,0
