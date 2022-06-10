@@ -78,8 +78,6 @@ private:
         bool color_text_active = false;
         bool shape_active = true;
         bool size_active = false;
-        bool agent_border = true;
-        int agent_border_thickness;
     };
 
     struct Shape_Vertex : public GW::Vec2f {
