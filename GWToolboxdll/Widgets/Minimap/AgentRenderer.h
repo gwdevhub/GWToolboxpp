@@ -25,7 +25,9 @@ public:
     bool show_hidden_npcs = false;
     bool boss_colors = true;
     bool agent_border = true;
+
     unsigned int agent_border_thickness = 20;
+
     uint32_t auto_target_id = 0;
 
 private:

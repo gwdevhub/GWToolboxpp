@@ -65,6 +65,7 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     agent_border_thickness =
         static_cast<uint32_t>(ini->GetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness));
 
+
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     
     LoadCustomAgents();
@@ -176,6 +177,7 @@ void AgentRenderer::LoadDefaultColors() {
     size_boss = 125.0f;
     size_minion = 50.0f;
     boss_colors = true;
+    agent_border = true;
 }
 void AgentRenderer::DrawSettings() {
     
