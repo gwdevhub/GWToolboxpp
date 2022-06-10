@@ -165,8 +165,7 @@ namespace {
         auto const status = static_cast<GW::FriendStatus>(GW::FriendListMgr::GetMyStatus());
         if (status == GW::FriendStatus::FriendStatus_Away && !game_setting.afk_message.empty()) {
             wchar_t buffer[120];
-            // @Cleanup: Do without this cast
-            DWORD diff_time = static_cast<DWORD>((clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC);
+            const auto diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
             wchar_t time_buffer[128];
             PrintTime(time_buffer, 128, diff_time);
             swprintf(buffer, 120, L"Automatic message: \"%s\" (%s ago)", game_setting.afk_message.c_str(), time_buffer);
@@ -861,6 +860,7 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, &OnVanquishComplete);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&VanquishComplete_Entry, &OnDungeonReward);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, &OnServerMessage);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&MessageGlobal_Entry, &OnGlobalMessage);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry,&OnNPCChatMessage);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, &OnLocalChatMessage);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, &OnMapLoaded);
@@ -1040,7 +1040,10 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     move_materials_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_materials_to_current_storage_pane), move_materials_to_current_storage_pane);
 
     flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
-    flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
+    flash_window_on_guild_chat =
+        ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_guild_chat), flash_window_on_guild_chat);
+    flash_window_on_party_invite =
+        ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
     flash_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
     flash_window_on_cinematic = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_cinematic), flash_window_on_cinematic);
     focus_window_on_launch = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_launch), focus_window_on_launch);
@@ -1185,6 +1188,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(stop_screen_shake), stop_screen_shake);
 
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
+    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_guild_chat), flash_window_on_guild_chat);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_launch), focus_window_on_launch);
@@ -1366,6 +1370,7 @@ void GameSettings::DrawSettingInternal() {
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Receiving a private message", &flash_window_on_pm);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Receiving a guild message", &flash_window_on_guild_chat);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
@@ -2165,6 +2170,17 @@ void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
     if (wmemcmp(msg, L"\x8101\x641F\x86C3\xE149\x53E8", 5) == 0 || wmemcmp(msg, L"\x8101\x641E\xE7AD\xEF64\x1676", 5) == 0) {
         GW::Chat::SendChat('/', "age2");
     }
+}
+
+// Flash window on guild chat message
+void GameSettings::OnGlobalMessage([[maybe_unused]] GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak) {
+    if (!Instance().flash_window_on_guild_chat ||
+        static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GUILD)
+        return; // Disabled or messsage not from guild chat
+        const auto sender_name = std::wstring(pak->sender_name);
+    if (const auto player_name = GetPlayerName(); sender_name == player_name)
+        return; // we sent the message ourselves
+    FlashWindow();
 }
 
 // Print NPC speech bubbles to emote chat.
