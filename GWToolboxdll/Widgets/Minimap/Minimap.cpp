@@ -403,6 +403,7 @@ void Minimap::DrawSettingInternal()
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();  ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
     ImGui::NextSpacedElement();  ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
+    ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
     ImGui::NextSpacedElement();  ImGui::Checkbox("Add black border to agents", &agent_renderer.agent_border);
     ImGui::SliderInt("Border thickness", &agent_renderer.agent_border_thickness, 1, 50);
 
