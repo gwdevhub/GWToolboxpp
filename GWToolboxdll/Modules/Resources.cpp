@@ -108,6 +108,64 @@ void Resources::InitRestClient(RestClient* r) {
     r->SetVerifyPeer(false);
 }
 
+HRESULT Resources::ResolveShortcut(std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path)
+{
+    HRESULT hRes = E_FAIL;
+    if (in_shortcut_path.extension() != ".lnk") {
+        out_actual_path = in_shortcut_path;
+        return S_OK;
+    }
+    hRes = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (!SUCCEEDED(hRes))
+        return hRes;
+    IShellLink* psl = NULL;
+
+    // buffer that receives the null-terminated string
+    // for the drive and path
+    TCHAR szPath[MAX_PATH];
+    // buffer that receives the null-terminated
+    // string for the description
+    TCHAR szDesc[MAX_PATH];
+    // structure that receives the information about the shortcut
+    WIN32_FIND_DATA wfd;
+
+    // Get a pointer to the IShellLink interface
+    hRes = CoCreateInstance(CLSID_ShellLink,
+        NULL,
+        CLSCTX_INPROC_SERVER,
+        IID_IShellLink,
+        (void**)&psl);
+    if (!SUCCEEDED(hRes))
+        goto finished;
+    // Get a pointer to the IPersistFile interface
+    IPersistFile* ppf = NULL;
+    psl->QueryInterface(IID_IPersistFile, (void**)&ppf);
+
+    // IPersistFile is using LPCOLESTR,
+    // Open the shortcut file and initialize it from its contents
+    hRes = ppf->Load(in_shortcut_path.wstring().c_str(), STGM_READ);
+    if (!SUCCEEDED(hRes))
+        goto finished;
+    // Try to find the target of a shortcut,
+    // even if it has been moved or renamed
+    hRes = psl->Resolve(NULL, SLR_UPDATE);
+    if (!SUCCEEDED(hRes))
+        goto finished;
+    // Get the path to the shortcut target
+    hRes = psl->GetPath(szPath, MAX_PATH, &wfd, SLGP_RAWPATH);
+    if (!SUCCEEDED(hRes))
+        goto finished;
+
+    // Get the description of the target
+    hRes = psl->GetDescription(szDesc, MAX_PATH);
+    if (!SUCCEEDED(hRes))
+        goto finished;
+    out_actual_path = szPath;
+finished:
+    CoUninitialize();
+    return hRes;
+}
+
 void Resources::Initialize() {
     ToolboxModule::Initialize();
     for (size_t i = 0; i < MAX_WORKERS; i++) {

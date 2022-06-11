@@ -19,9 +19,16 @@ void PluginManager::RefreshDlls() {
 
 	if (std::filesystem::exists(module_folder) && std::filesystem::is_directory(module_folder)) {
 		for (auto& p : std::filesystem::directory_iterator(module_folder)) {
-			if (p.is_regular_file() && p.path().extension() == ".dll") {
-				if (!LoadDLL(p.path())) {
-					Log::Error("Failed to load plugin %s", p.path().filename().string().c_str());
+			std::filesystem::path file_path = p.path();
+			std::filesystem::path ext = file_path.extension();
+			if (ext == ".lnk") {
+				if (!SUCCEEDED(Resources::ResolveShortcut(file_path, file_path)))
+					continue;
+				ext = file_path.extension();
+			}
+			if (ext == ".dll") {
+				if (!LoadDLL(file_path)) {
+					Log::Error("Failed to load plugin %s", file_path.filename().string().c_str());
 				}
 			}
 		}
