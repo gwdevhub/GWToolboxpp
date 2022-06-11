@@ -138,28 +138,27 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             if (!topleft) {
                 ++x; ++y;
             }
-            return ImVec2(win_x + x * img_size, 
+            return ImVec2(win_x + x * img_size,
                 win_y + y * img_size);
         };
 
         bool handled_click = false;
 
-        GW::BuffArray* buffs = GW::Effects::GetPlayerBuffs();
-        if (buffs) {
-            for (auto& buff : *buffs) {
-                DWORD agent = buff.target_agent_id;
-                DWORD skill = buff.skill_id;
+        if (GW::BuffArray* buffs = GW::Effects::GetPlayerBuffs()) {
+            for (const auto& buff : *buffs) {
+                const auto agent = buff.target_agent_id;
+                const auto skill = buff.skill_id;
                 if (party_map.find(agent) == party_map.end())
                     continue; // bond target not in party
                 if (bond_map.find(skill) == bond_map.end())
                     continue; // bond with a skill not in skillbar
                 size_t y = party_map[agent];
                 size_t x = bond_map[skill];
-                Bond bond = GetBondBySkillID(skill);
+                const Bond bond = GetBondBySkillID(skill);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
                 if (*textures[bond])
-                    ImGui::GetWindowDrawList()->AddImage((ImTextureID)*textures[bond], tl, br);
+                    ImGui::GetWindowDrawList()->AddImage(*textures[bond], tl, br);
                 if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
                     GW::Effects::DropBuff(buff.buff_id);
                     handled_click = true;
@@ -167,36 +166,40 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             }
         }
         
-
         // Player and hero effects that aren't bonds
-        const GW::AgentEffectsArray* agent_effects_array = GW::Effects::GetPartyEffectsArray();
-        for (auto& agent_effects_it : *agent_effects_array) {
-            auto& agentEffects = agent_effects_it.effects;
-            if (!agentEffects.valid())
-                continue;
-            DWORD agent = agent_effects_it.agent_id;
-            for (const GW::Effect& effect : agentEffects) {
-                DWORD skill = effect.skill_id;
-                if (bond_map.find(skill) == bond_map.end()) continue;
+        if (const GW::AgentEffectsArray* agent_effects_array = GW::Effects::GetPartyEffectsArray();
+            agent_effects_array != nullptr) {
+            for (auto& agent_effects_it : *agent_effects_array) {
+                auto& agent_effects = agent_effects_it.effects;
+                if (!agent_effects.valid()) continue;
+                const auto agent_id = agent_effects_it.agent_id;
+                for (const GW::Effect& effect : agent_effects) {
+                    const auto skill_id = effect.skill_id;
+                    if (bond_map.find(skill_id) == bond_map.end()) continue;
 
-                bool overlay = false;
-                const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent);
-                if (!agentAttributes) continue;
-                const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill);
-                if (!skill_data || skill_data->duration0 == 0x20000)
-                    continue; // Maintained skill/enchantment
-                const GW::Attribute& attribute = agentAttributes[skill_data->attribute];
-                if (effect.effect_type < attribute.level) overlay = true;
+                    bool overlay = false;
+                    const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                    if (!skill_data || skill_data->duration0 == 0x20000) continue; // Maintained skill/enchantment
+                    const GW::Attribute* attribute;
+                    const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
+                    if (!agentAttributes) { // nullptr for heros as they have agent_id 0 in world->attributes
+                        const GW::PartyAttribute& partyAttribute = GW::GameContext::instance()->world->attributes[0];
+                        attribute = &partyAttribute.attribute[skill_data->attribute];
+                    } else {
+                        attribute = &agentAttributes[skill_data->attribute];
+                    }
+                    if (!attribute) continue;
+                    if (effect.effect_type < attribute->level) overlay = true;
 
-                size_t y = party_map[agent];
-                size_t x = bond_map[skill];
-                Bond bond = GetBondBySkillID(skill);
-                ImVec2 tl = GetGridPos(x, y, true);
-                ImVec2 br = GetGridPos(x, y, false);
-                if (*textures[bond])
-                    ImGui::GetWindowDrawList()->AddImage((ImTextureID)*textures[bond], tl, br);
-                if (overlay) {
-                    ImGui::GetWindowDrawList()->AddRectFilled(tl, br, low_attribute_overlay);
+                    size_t y = party_map[agent_id];
+                    size_t x = bond_map[skill_id];
+                    const Bond bond = GetBondBySkillID(skill_id);
+                    ImVec2 tl = GetGridPos(x, y, true);
+                    ImVec2 br = GetGridPos(x, y, false);
+                    if (*textures[bond]) ImGui::GetWindowDrawList()->AddImage(*textures[bond], tl, br);
+                    if (overlay) {
+                        ImGui::GetWindowDrawList()->AddRectFilled(tl, br, low_attribute_overlay);
+                    }
                 }
             }
         }
@@ -335,8 +338,8 @@ bool BondsWidget::FetchBondSkills()
         return false;
     bond_list.clear();
     bond_map.clear();
-    for (int slot = 0; slot < 8; ++slot) {
-        DWORD SkillID = bar->skills[slot].skill_id;
+    for (const auto& skill : bar->skills) {
+        DWORD SkillID = skill.skill_id;
         Bond bond = GetBondBySkillID(SkillID);
         if (bond != Bond::None) {
             bond_map[SkillID] = bond_list.size();
