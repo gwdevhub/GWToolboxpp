@@ -70,10 +70,7 @@
           <ComponentRef Id="ApplicationShortcut" />  
         </Feature>
         
-        <!-- Visual studio redist v140 -->
-        <Feature Id="VC140Redist" Title="Visual C++ 2017 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
-          <MergeRef Id="VC140Redist"/>
-        </Feature>
+        <!-- Visual studio redist v142 -->
         <Feature Id="VC142Redist" Title="Visual C++ 2019 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
           <MergeRef Id="VC142Redist"/>
         </Feature>
