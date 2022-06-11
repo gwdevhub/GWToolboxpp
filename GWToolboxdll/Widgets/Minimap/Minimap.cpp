@@ -911,7 +911,7 @@ void Minimap::SelectTarget(GW::Vec2f pos) const
             continue; // allow locked chests
         if (living && (living->player_number >= 230 && living->player_number <= 346))
             continue; // block all useless minis
-        const float newDistance = GW::GetSquareDistance(pos, living->pos);
+        const float newDistance = GW::GetSquareDistance(pos, agent->pos);
         if (distance > newDistance) {
             distance = newDistance;
             closest = i;

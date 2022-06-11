@@ -55,12 +55,12 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     agent_border = ini->GetBoolValue(section, VAR_NAME(agent_border), agent_border);
 
     LoadDefaultSizes();
-    size_default = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_default), 75.0));
-    size_player = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_player), 100.0));
-    size_signpost = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_signpost), 50.0));
-    size_item = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_item), 25.0));
-    size_boss = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_boss), 125.0));
-    size_minion = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_minion), 50.0));
+    size_default = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_default), size_default));
+    size_player = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_player), size_player));
+    size_signpost = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_signpost), size_signpost));
+    size_item = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_item), size_item));
+    size_boss = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_boss), size_boss));
+    size_minion = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_minion), size_minion));
     default_shape = static_cast<Shape_e>(ini->GetLongValue(section, VAR_NAME(default_shape), default_shape));
     agent_border_thickness =
         static_cast<uint32_t>(ini->GetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness));
