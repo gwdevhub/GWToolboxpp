@@ -16,10 +16,7 @@ class TBModule; // Full declaration below.
 //
 // Dll interface. You must implement those functions
 // 
-DLLAPI TBModule* getObj();
-
-DLLAPI const char* getName();
-
+DLLAPI TBModule* TBModuleInstance();
 
 class TBModule {
 public:
@@ -28,7 +25,7 @@ public:
 	TBModule(const TBModule&) = delete;
 
 	// name of the window and the ini section
-	virtual const char* Name() const = 0;
+	virtual const char* Name() const { return "Clock"; };
 
 	// Initialize module
 	virtual void Initialize(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }

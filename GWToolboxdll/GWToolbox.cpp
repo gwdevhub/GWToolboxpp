@@ -391,6 +391,8 @@ void GWToolbox::Initialize() {
     core_modules.push_back(&ToolboxSettings::Instance());
     core_modules.push_back(&MainWindow::Instance());
 
+    plugin_manager.RefreshDlls();
+
     for (ToolboxModule* module : core_modules) {
         module->LoadSettings(inifile);
         module->Initialize();
@@ -551,9 +553,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
                 continue;
             uielement->Draw(device);
         }
-        //for (TBModule* mod : GWToolbox::Instance().plugins) {
-        //    mod->Draw(device);
-        //}
+        for (TBModule* mod : GWToolbox::Instance().plugins) {
+            mod->Draw(device);
+        }
 
 #ifdef _DEBUG
         // Feel free to uncomment to play with ImGui's features

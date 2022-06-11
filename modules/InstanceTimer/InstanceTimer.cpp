@@ -15,12 +15,9 @@
 
 #include "GuiUtils.h"
 
-DLLAPI TBModule* getObj() {
-    return new InstanceTimer();
-}
-
-DLLAPI const char* getName() {
-    return "Instance Timer";
+DLLAPI TBModule* TBModuleInstance() {
+    static InstanceTimer instance;
+    return &instance;
 }
 
 void InstanceTimer::LoadSettings(CSimpleIni *ini) {

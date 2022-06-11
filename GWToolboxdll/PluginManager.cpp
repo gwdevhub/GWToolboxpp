@@ -20,7 +20,9 @@ void PluginManager::RefreshDlls() {
 	if (std::filesystem::exists(module_folder) && std::filesystem::is_directory(module_folder)) {
 		for (auto& p : std::filesystem::directory_iterator(module_folder)) {
 			if (p.is_regular_file() && p.path().extension() == ".dll") {
-				plugins.push_back({ p.path(), nullptr });
+				if (!LoadDLL(p.path())) {
+					Log::Error("Failed to load plugin %s", p.path().filename().string().c_str());
+				}
 			}
 		}
 	}
@@ -31,16 +33,7 @@ void PluginManager::Draw() {
 		ImGui::PushID("Plugins");
 
 		for (auto& plugin : plugins) {
-			auto s = plugin.path.string();
-			ImGui::Text("%s", s.c_str());
-
-			ImGui::SameLine();
-			if (ImGui::SmallButton("Load")) {
-				TBModule* module = LoadDLL(plugin.path);
-				module->Initialize(ImGui::GetCurrentContext());
-				plugin.instance = module;
-				//GWToolbox::Instance().AddPlugin(module); // TODO: Re-add
-			}
+			ImGui::Text("%s", plugin.path.string().c_str());
 		}
 
 		ImGui::Separator();
@@ -53,19 +46,19 @@ void PluginManager::Draw() {
 }
 
 TBModule* PluginManager::LoadDLL(const std::filesystem::path& path) {
-	auto s = path.string();
-	HINSTANCE dll = LoadLibrary(s.c_str());
-	if (!dll) {
-		// error!
-		return nullptr;
+	for (auto& plugin : plugins) {
+		if (plugin.path == path)
+			return plugin.instance;
 	}
-
-	typedef const char* (__cdecl* NameProc)();
-	NameProc namefunc = (NameProc)GetProcAddress(dll, "getName");
-	std::cout << "loaded " << namefunc() << std::endl;
-
+	HINSTANCE dll = LoadLibraryW(path.wstring().c_str());
 	typedef TBModule* (__cdecl* ObjProc)();
-	ObjProc objfunc = (ObjProc)GetProcAddress(dll, "getObj");
-	return objfunc();
+	ObjProc objfunc = dll ? (ObjProc)GetProcAddress(dll, "TBModuleInstance") : nullptr;
+	if (!objfunc)
+		return nullptr;
+	Plugin p;
+	p.instance = objfunc();
+	p.path = path;
+	plugins.push_back(p);
+	return p.instance;
 }
 

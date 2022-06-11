@@ -6,6 +6,7 @@
 #include <Defines.h>
 #include <GuiUtils.h>
 #include <GWToolbox.h>
+#include <PluginManager.h>
 
 #include <Modules/ChatCommands.h>
 #include <Modules/GameSettings.h>
@@ -84,6 +85,9 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Checkbox("Hide Settings when entering explorable area", &hide_when_entering_explorable);
 
         ImGui::Text("General:");
+
+        GWToolbox::Instance().GetPluginManger().Draw();
+
         if (ImGui::CollapsingHeader("Help")) {
             if (ImGui::TreeNodeEx("General Interface", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ImGui::Bullet(); ImGui::Text("Double-click on the title bar to collapse a window.");

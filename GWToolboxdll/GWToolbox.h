@@ -5,6 +5,7 @@
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 #include <Utf8.h>
+#include <PluginManager.h>
 
 DWORD __stdcall SafeThreadEntry(LPVOID mod);
 DWORD __stdcall ThreadEntry(LPVOID);
@@ -65,6 +66,8 @@ public:
 
     bool IsInitialized() { return initialized; };
 
+    void AddPlugin(TBModule* mod) { plugins.push_back(mod); }
+    PluginManager& GetPluginManger() { return plugin_manager; };
 private:
     std::vector<ToolboxModule*> modules;
 
@@ -74,11 +77,16 @@ private:
     std::vector<ToolboxModule*> optional_modules;
     // List of modules that are UI elements. They can be disable
     std::vector<ToolboxUIElement*> uielements;
+    // Plugins
+    std::vector<TBModule*> plugins;
 
     utf8::string imgui_inifile;
     CSimpleIni* inifile = nullptr;
 
     GW::HookEntry Update_Entry;
+
+    PluginManager plugin_manager;
+
     GW::HookEntry HandleCrash_Entry;
 
     bool initialized = false;
