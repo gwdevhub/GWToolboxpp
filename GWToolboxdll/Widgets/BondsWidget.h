@@ -10,32 +10,9 @@
 #include <Defines.h>
 #include <ToolboxWidget.h>
 
-class BondsWidget : public ToolboxWidget {
-    static const int MAX_BONDS = 20;
-    enum Bond {
-        BalthazarSpirit,
-        EssenceBond,
-        HolyVeil,
-        LifeAttunement,
-        LifeBarrier,
-        LifeBond,
-        LiveVicariously,
-        Mending,
-        ProtectiveBond,
-        PurifyingVeil,
-        Retribution,
-        StrengthOfHonor,
-        Succor,
-        VitalBlessing,
-        WatchfulSpirit,
-        HeroicRefrain,
-        BurningRefrain,
-        MendingRefrain,
-        BladeturnRefrain,
-        HastyRefrain,
-        None
-    };
+using namespace GW::Constants;
 
+class BondsWidget : public ToolboxWidget {
     BondsWidget() {};
     ~BondsWidget() {};
 public:
@@ -61,15 +38,36 @@ public:
     void DrawSettingInternal() override;
 
 private:
-    void UseBuff(GW::AgentID target, DWORD buff_skillid);
-    Bond GetBondBySkillID(DWORD skillid) const;
+    std::vector<SkillID> skills{
+        SkillID::Balthazars_Spirit,
+        SkillID::Essence_Bond,
+        SkillID::Holy_Veil,
+        SkillID::Life_Attunement,
+        SkillID::Life_Barrier,
+        SkillID::Life_Bond,
+        SkillID::Live_Vicariously,
+        SkillID::Mending,
+        SkillID::Protective_Bond,
+        SkillID::Purifying_Veil,
+        SkillID::Retribution,
+        SkillID::Strength_of_Honor,
+        SkillID::Succor,
+        SkillID::Vital_Blessing,
+        SkillID::Watchful_Spirit,
+        SkillID::Heroic_Refrain,
+        SkillID::Burning_Refrain,
+        SkillID::Mending_Refrain,
+        SkillID::Bladeturn_Refrain,
+        SkillID::Hasty_Refrain,
+    };
 
-    IDirect3DTexture9** textures[MAX_BONDS];
+    void UseBuff(GW::AgentID target, DWORD buff_skillid);
+
     Color background = 0;
     Color low_attribute_overlay = 0;
 
-    std::vector<size_t> bond_list;              // index to skill id
-    std::unordered_map<DWORD, size_t> bond_map; // skill id to index
+    std::vector<SkillID> bond_list;               // index to skill id
+    std::unordered_map<SkillID, size_t> bond_map; // skill id to index
     bool FetchBondSkills();
 
     std::vector<GW::AgentID> party_list;               // index to agent id

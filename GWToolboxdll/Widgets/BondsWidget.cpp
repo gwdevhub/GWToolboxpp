@@ -26,35 +26,8 @@
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/BondsWidget.h>
 
-//DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
-
 void BondsWidget::Initialize() {
     ToolboxWidget::Initialize();
-    for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
-    auto LoadBondTexture = [](IDirect3DTexture9*** tex, GW::Constants::SkillID skill_id) -> void {
-        *tex = Resources::GetSkillImage((uint32_t)skill_id);
-    };
-    LoadBondTexture(&textures[BalthazarSpirit],GW::Constants::SkillID::Balthazars_Spirit);
-    LoadBondTexture(&textures[EssenceBond], GW::Constants::SkillID::Essence_Bond);
-    LoadBondTexture(&textures[HolyVeil], GW::Constants::SkillID::Holy_Veil);
-    LoadBondTexture(&textures[LifeAttunement], GW::Constants::SkillID::Life_Attunement);
-    LoadBondTexture(&textures[LifeBarrier], GW::Constants::SkillID::Life_Barrier);
-    LoadBondTexture(&textures[LifeBond], GW::Constants::SkillID::Life_Bond);
-    LoadBondTexture(&textures[LiveVicariously], GW::Constants::SkillID::Live_Vicariously);
-    LoadBondTexture(&textures[Mending], GW::Constants::SkillID::Mending);
-    LoadBondTexture(&textures[ProtectiveBond], GW::Constants::SkillID::Protective_Bond);
-    LoadBondTexture(&textures[PurifyingVeil], GW::Constants::SkillID::Purifying_Veil);
-    LoadBondTexture(&textures[Retribution], GW::Constants::SkillID::Retribution);
-    LoadBondTexture(&textures[StrengthOfHonor], GW::Constants::SkillID::Strength_of_Honor);
-    LoadBondTexture(&textures[Succor], GW::Constants::SkillID::Succor);
-    LoadBondTexture(&textures[VitalBlessing], GW::Constants::SkillID::Vital_Blessing);
-    LoadBondTexture(&textures[WatchfulSpirit], GW::Constants::SkillID::Watchful_Spirit);
-    LoadBondTexture(&textures[HeroicRefrain], GW::Constants::SkillID::Heroic_Refrain);
-    LoadBondTexture(&textures[BurningRefrain], GW::Constants::SkillID::Burning_Refrain);
-    LoadBondTexture(&textures[MendingRefrain], GW::Constants::SkillID::Mending_Refrain);
-    LoadBondTexture(&textures[BladeturnRefrain], GW::Constants::SkillID::Bladeturn_Refrain);
-    LoadBondTexture(&textures[HastyRefrain], GW::Constants::SkillID::Hasty_Refrain);
-
     party_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID_PartyWindow);
 }
 
@@ -147,18 +120,18 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         if (GW::BuffArray* buffs = GW::Effects::GetPlayerBuffs()) {
             for (const auto& buff : *buffs) {
                 const auto agent = buff.target_agent_id;
-                const auto skill = buff.skill_id;
+                const auto skill = static_cast<SkillID>(buff.skill_id);
                 if (party_map.find(agent) == party_map.end())
                     continue; // bond target not in party
                 if (bond_map.find(skill) == bond_map.end())
                     continue; // bond with a skill not in skillbar
                 size_t y = party_map[agent];
                 size_t x = bond_map[skill];
-                const Bond bond = GetBondBySkillID(skill);
+                auto texture = *Resources::GetSkillImage(buff.skill_id);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
-                if (*textures[bond])
-                    ImGui::GetWindowDrawList()->AddImage(*textures[bond], tl, br);
+                if (texture)
+                    ImGui::GetWindowDrawList()->AddImage(texture, tl, br);
                 if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
                     GW::Effects::DropBuff(buff.buff_id);
                     handled_click = true;
@@ -174,11 +147,11 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 if (!agent_effects.valid()) continue;
                 const auto agent_id = agent_effects_it.agent_id;
                 for (const GW::Effect& effect : agent_effects) {
-                    const auto skill_id = effect.skill_id;
+                    const auto skill_id = static_cast<SkillID>(effect.skill_id);
                     if (bond_map.find(skill_id) == bond_map.end()) continue;
 
                     bool overlay = false;
-                    const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                    const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData((uint32_t) skill_id);
                     if (!skill_data || skill_data->duration0 == 0x20000) continue; // Maintained skill/enchantment
                     const GW::Attribute* attribute;
                     const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
@@ -193,10 +166,11 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 
                     size_t y = party_map[agent_id];
                     size_t x = bond_map[skill_id];
-                    const Bond bond = GetBondBySkillID(skill_id);
+
+                    auto texture = *Resources::GetSkillImage((uint32_t) skill_id);
                     ImVec2 tl = GetGridPos(x, y, true);
                     ImVec2 br = GetGridPos(x, y, false);
-                    if (*textures[bond]) ImGui::GetWindowDrawList()->AddImage(*textures[bond], tl, br);
+                    if (texture) ImGui::GetWindowDrawList()->AddImage(texture, tl, br);
                     if (overlay) {
                         ImGui::GetWindowDrawList()->AddRectFilled(tl, br, low_attribute_overlay);
                     }
@@ -213,7 +187,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                         continue;
                     ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
                     if (ImGui::IsMouseReleased(0))
-                        UseBuff(party_list[y], bond_list[x]);
+                        UseBuff(party_list[y], (DWORD) bond_list[x]);
                 }
             }
         }
@@ -304,33 +278,6 @@ void BondsWidget::DrawSettingInternal() {
     if (row_height < 0) row_height = 0;
 }
 
-BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid) const {
-    using namespace GW::Constants;
-    switch ((GW::Constants::SkillID)skillid) {
-    case SkillID::Balthazars_Spirit: return Bond::BalthazarSpirit;
-    case SkillID::Essence_Bond: return Bond::EssenceBond;
-    case SkillID::Holy_Veil: return Bond::HolyVeil;
-    case SkillID::Life_Attunement: return Bond::LifeAttunement;
-    case SkillID::Life_Barrier: return Bond::LifeBarrier;
-    case SkillID::Life_Bond: return Bond::LifeBond;
-    case SkillID::Live_Vicariously: return Bond::LiveVicariously;
-    case SkillID::Mending: return Bond::Mending;
-    case SkillID::Protective_Bond: return Bond::ProtectiveBond;
-    case SkillID::Purifying_Veil: return Bond::PurifyingVeil;
-    case SkillID::Retribution: return Bond::Retribution;
-    case SkillID::Strength_of_Honor: return Bond::StrengthOfHonor;
-    case SkillID::Succor: return Bond::Succor;
-    case SkillID::Vital_Blessing: return Bond::VitalBlessing;
-    case SkillID::Watchful_Spirit: return Bond::WatchfulSpirit;
-    case SkillID::Heroic_Refrain: return Bond::HeroicRefrain;
-    case SkillID::Burning_Refrain: return Bond::BurningRefrain;
-    case SkillID::Mending_Refrain: return Bond::MendingRefrain;
-    case SkillID::Bladeturn_Refrain: return Bond::BladeturnRefrain;
-    case SkillID::Hasty_Refrain: return Bond::HastyRefrain;
-    default: return Bond::None;
-    }
-}
-
 bool BondsWidget::FetchBondSkills()
 {
     const GW::Skillbar *bar = GW::SkillbarMgr::GetPlayerSkillbar();
@@ -339,11 +286,10 @@ bool BondsWidget::FetchBondSkills()
     bond_list.clear();
     bond_map.clear();
     for (const auto& skill : bar->skills) {
-        DWORD SkillID = skill.skill_id;
-        Bond bond = GetBondBySkillID(SkillID);
-        if (bond != Bond::None) {
-            bond_map[SkillID] = bond_list.size();
-            bond_list.push_back(SkillID);
+        auto skill_id = static_cast<SkillID>(skill.skill_id);
+        if (std::find(skills.begin(), skills.end(), skill_id) != skills.end()) {
+            bond_map[skill_id] = bond_list.size();
+            bond_list.push_back(skill_id);
         }
     }
     return true;
