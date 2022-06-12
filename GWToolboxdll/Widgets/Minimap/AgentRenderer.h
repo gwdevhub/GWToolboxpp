@@ -24,9 +24,8 @@ public:
 
     bool show_hidden_npcs = false;
     bool boss_colors = true;
-    bool agent_border = true;
-
-    unsigned int agent_border_thickness = 0;
+    bool agent_border = false;
+    unsigned int agent_border_thickness = 20;
 
     uint32_t auto_target_id = 0;
 
@@ -143,12 +142,12 @@ private:
     void BuildCustomAgentsMap();
     //const CustomAgent* FindValidCustomAgent(DWORD modelid) const;
 
-    float size_default = 75.f;
-    float size_player = 100.f;
-    float size_signpost = 50.f;
-    float size_item = 25.f;
-    float size_boss = 125.f;
-    float size_minion = 50.f;
+    float size_default = 0.f;
+    float size_player = 0.f;
+    float size_signpost = 0.f;
+    float size_item = 0.f;
+    float size_boss = 0.f;
+    float size_minion = 0.f;
     Shape_e default_shape = Tear;
 
     bool agentcolors_changed = false;
