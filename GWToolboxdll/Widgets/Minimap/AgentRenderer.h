@@ -142,12 +142,12 @@ private:
     void BuildCustomAgentsMap();
     //const CustomAgent* FindValidCustomAgent(DWORD modelid) const;
 
-    float size_default = 0.f;
-    float size_player = 0.f;
-    float size_signpost = 0.f;
-    float size_item = 0.f;
-    float size_boss = 0.f;
-    float size_minion = 0.f;
+    float size_default = 75.f;
+    float size_player = 100.f;
+    float size_signpost = 50.f;
+    float size_item = 25.f;
+    float size_boss = 125.f;
+    float size_minion = 50.f;
     Shape_e default_shape = Tear;
 
     bool agentcolors_changed = false;
