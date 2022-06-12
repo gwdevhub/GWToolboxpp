@@ -196,7 +196,7 @@ public:
     static void OnSpeechBubble(GW::HookStatus*, GW::Packet::StoC::SpeechBubble*);
     static void OnSpeechDialogue(GW::HookStatus*, GW::Packet::StoC::DisplayDialogue*);
     static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
-    static void OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak);
+    static void OnGlobalMessage(GW::HookStatus*, GW::Packet::StoC::MessageGlobal*);
     static void OnScreenShake(GW::HookStatus*, void* packet);
     static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
     static void OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);

@@ -1851,6 +1851,16 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC
 
 // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
 void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
+    if (const auto friendlist = GW::FriendListMgr::GetFriendList(); friendlist != nullptr) {
+        const auto sender = GetPlayerName(pak->player_number);
+        for (const auto& frnd : friendlist->friends) {
+            if (frnd->type != 1) continue; // check only for ignores
+            if (wcscmp(frnd->charname, sender.c_str()) == 0) {
+                status->blocked = true; // block packet if player is ignored
+                break;
+            }
+        }
+    }
     if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number)
         return; // Not team chat or no sender
     std::wstring message(GetMessageCore());
@@ -2173,7 +2183,16 @@ void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
 }
 
 // Flash window on guild chat message
-void GameSettings::OnGlobalMessage([[maybe_unused]] GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak) {
+void GameSettings::OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak) {
+    if (const auto friendlist = GW::FriendListMgr::GetFriendList(); friendlist != nullptr) {
+        for (const auto& frnd : friendlist->friends) {
+            if (frnd->type != 1) continue; // check only for ignores
+            if (wcscmp(frnd->charname, pak->sender_name) == 0) {
+                status->blocked = true; // block packet if player is ignored
+                break;
+            }
+        }
+    }
     if (!Instance().flash_window_on_guild_chat ||
         static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GUILD)
         return; // Disabled or messsage not from guild chat
