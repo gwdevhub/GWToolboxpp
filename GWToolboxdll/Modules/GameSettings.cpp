@@ -58,8 +58,8 @@ namespace {
         flashInfo.cbSize = sizeof(FLASHWINFO);
         flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
         if (!flashInfo.hwnd) return;
-        flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
-        flashInfo.uCount = 0;
+        flashInfo.dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG;
+        flashInfo.uCount = 5;
         flashInfo.dwTimeout = 0;
         FlashWindowEx(&flashInfo);
     }
