@@ -58,8 +58,8 @@ namespace {
         flashInfo.cbSize = sizeof(FLASHWINFO);
         flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
         if (!flashInfo.hwnd) return;
-        flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
-        flashInfo.uCount = 0;
+        flashInfo.dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG;
+        flashInfo.uCount = 5;
         flashInfo.dwTimeout = 0;
         FlashWindowEx(&flashInfo);
     }
@@ -1849,38 +1849,6 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC
     }
 }
 
-// Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
-void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
-    if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number)
-        return; // Not team chat or no sender
-    std::wstring message(GetMessageCore());
-    if (message[0] != 0x778 && message[0] != 0x781)
-        return; // Not "I'm Following X" or "I'm Targeting X" message.
-    size_t start_idx = message.find(L"\xba9\x107");
-    if (start_idx == std::wstring::npos)
-        return; // Not a player name.
-    start_idx += 2;
-    size_t end_idx = message.find(L"\x1", start_idx);
-    if (end_idx == std::wstring::npos)
-        return; // Not a player name, this should never happen.
-    std::wstring player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx));
-    if (player_pinged.empty())
-        return; // No recipient
-    GW::Player* sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
-    if (!sender)
-        return;// No sender
-    auto instance = &Instance();
-    if (instance->flash_window_on_name_ping && GetPlayerName() == player_pinged)
-        FlashWindow(); // Flash window - we've been followed!
-    // Allow clickable player name
-    message.insert(start_idx, L"<a=1>");
-    message.insert(end_idx + 5, L"</a>");
-    PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, message.c_str(), sender->name_enc);
-    if (m) instance->pending_messages.push_back(m);
-    ::ClearMessageCore();
-    status->blocked = true; // consume original packet.
-}
-
 // Open links on player name click, Ctrl + click name to target, Ctrl + Shift + click name to invite
 void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
     if (!_name) return;
@@ -2172,15 +2140,61 @@ void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
     }
 }
 
-// Flash window on guild chat message
-void GameSettings::OnGlobalMessage([[maybe_unused]] GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak) {
-    if (!Instance().flash_window_on_guild_chat ||
+void GameSettings::OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak) {
+    if (const auto friendlist = GW::FriendListMgr::GetFriendList(); friendlist != nullptr) {
+        for (const auto& frnd : friendlist->friends) {
+            if (frnd == nullptr || frnd->type != GW::FriendType::FriendType_Ignore) continue; // check only for ignores
+            if (wcscmp(frnd->charname, pak->sender_name) == 0) {
+                status->blocked = true; // block packet if player is ignored
+                return;
+            }
+        }
+    }
+    if (!Instance().flash_window_on_guild_chat ||   // Flash window on guild chat message
         static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GUILD)
         return; // Disabled or messsage not from guild chat
         const auto sender_name = std::wstring(pak->sender_name);
     if (const auto player_name = GetPlayerName(); sender_name == player_name)
         return; // we sent the message ourselves
     FlashWindow();
+}
+
+// Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
+void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
+    if (const auto friendlist = GW::FriendListMgr::GetFriendList(); friendlist != nullptr) {
+        const auto sender = GetPlayerName(pak->player_number);
+        for (const auto& frnd : friendlist->friends) {
+            if (frnd == nullptr || frnd->type != GW::FriendType::FriendType_Ignore) continue; // check only for ignores
+            if (wcscmp(frnd->charname, sender.c_str()) == 0) {
+                status->blocked = true; // block packet if player is ignored
+                break;
+            }
+        }
+    }
+    if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number)
+        return; // Not team chat or no sender
+    std::wstring message(GetMessageCore());
+    if (message[0] != 0x778 && message[0] != 0x781) return; // Not "I'm Following X" or "I'm Targeting X" message.
+    size_t start_idx = message.find(L"\xba9\x107");
+    if (start_idx == std::wstring::npos) return; // Not a player name.
+    start_idx += 2;
+    size_t end_idx = message.find(L"\x1", start_idx);
+    if (end_idx == std::wstring::npos) return; // Not a player name, this should never happen.
+    std::wstring player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx));
+    if (player_pinged.empty()) return; // No recipient
+    GW::Player* sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
+    if (!sender) return; // No sender
+    auto instance = &Instance();
+    if (instance->flash_window_on_name_ping && GetPlayerName() == player_pinged)
+        FlashWindow(); // Flash window - we've been followed!
+    // Allow clickable player name
+    message.insert(start_idx, L"<a=1>");
+    message.insert(end_idx + 5, L"</a>");
+    PendingChatMessage* m =
+        PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, message.c_str(), sender->name_enc);
+    if (m) instance->pending_messages.push_back(m);
+    ::ClearMessageCore();
+    status->blocked = true; // consume original packet.
 }
 
 // Print NPC speech bubbles to emote chat.
