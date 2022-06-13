@@ -1815,7 +1815,7 @@ void InventoryManager::OnUseItem(GW::HookStatus* status, void* packet) {
         return;
     uint32_t item_id = ((uint32_t*)packet)[1];
     auto& instance = Instance();
-    if (instance.tome_pending_timeout && instance.tome_pending_item_id == item_id)
+    if (instance.tome_pending_stage != PendingTomeUseStage::None)
         return;
     GW::Item* item = GW::Items::GetItemById(item_id);
     if (!item) return;
@@ -1871,7 +1871,7 @@ void InventoryManager::DrawPendingTomeUsage() {
     }
     if (tome_pending_stage == PendingTomeUseStage::PromptUser) {
         const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
-        if (player && player->secondary == tome_pending_profession) {
+        if (player && (player->secondary == tome_pending_profession || player->primary == tome_pending_profession)) {
             tome_pending_stage = PendingTomeUseStage::UseItem;
             return;
         }
