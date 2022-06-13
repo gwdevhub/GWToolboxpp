@@ -708,7 +708,6 @@ namespace GuiUtils {
         }
         return decoded_s;
     }
-
 }
 
 

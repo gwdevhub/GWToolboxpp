@@ -416,7 +416,7 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*) {
             if (i) {
                 ImGui::SameLine(0,0);
             }
-            ImGui::Image((ImTextureID)*Resources::GetSkillImage((uint32_t)skills[i]), skill_size);
+            ImGui::ImageCropped(*Resources::GetSkillImage((uint32_t)skills[i]), skill_size);
             if (ImGui::IsItemHovered()) {
                 const GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData((uint32_t)skills[i]);
                 if (s) {

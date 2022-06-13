@@ -240,6 +240,9 @@ bool Mission::Draw(IDirect3DDevice9* )
 		if(clicked) OnClick();
 	}
 	else {
+		if (texture) {
+			uv1 = ImGui::CalculateUvCrop(texture, s);
+		}
 		if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint))
 			OnClick();
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip(Name());

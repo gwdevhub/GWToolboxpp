@@ -373,7 +373,6 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule
     }
     return res;
 }
-
 void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback)
 {
     EnqueueDxTask([path_to_file, texture, callback](IDirect3DDevice9* device) {
@@ -531,7 +530,7 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
 }
 
 IDirect3DTexture9** Resources::GetSkillImage(uint32_t skill_id) {
-    if (!skill_id) return nullptr;
+    
     auto found = skill_images.find(skill_id);
     if (found != skill_images.end()) {
         return found->second;
@@ -547,6 +546,8 @@ IDirect3DTexture9** Resources::GetSkillImage(uint32_t skill_id) {
     IDirect3DTexture9** texture = (IDirect3DTexture9**)malloc(sizeof(IDirect3DTexture9*));
     *texture = 0;
     skill_images[skill_id] = texture;
+    if (!skill_id) 
+        return texture;
     static std::filesystem::path path = Resources::GetPath(SKILL_IMAGES_PATH);
     if (!Resources::EnsureFolderExists(path)) {
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());

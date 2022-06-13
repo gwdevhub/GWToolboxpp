@@ -130,8 +130,9 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 auto texture = *Resources::GetSkillImage(buff.skill_id);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
-                if (texture)
-                    ImGui::GetWindowDrawList()->AddImage(texture, tl, br);
+                if (texture) {
+                    ImGui::AddImageCropped(texture, tl, br);
+                }
                 if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
                     GW::Effects::DropBuff(buff.buff_id);
                     handled_click = true;
@@ -170,7 +171,9 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                     auto texture = *Resources::GetSkillImage((uint32_t) skill_id);
                     ImVec2 tl = GetGridPos(x, y, true);
                     ImVec2 br = GetGridPos(x, y, false);
-                    if (texture) ImGui::GetWindowDrawList()->AddImage(texture, tl, br);
+                    if (texture) {
+                        ImGui::AddImageCropped(texture, tl, br);
+                    }
                     if (overlay) {
                         ImGui::GetWindowDrawList()->AddRectFilled(tl, br, low_attribute_overlay);
                     }

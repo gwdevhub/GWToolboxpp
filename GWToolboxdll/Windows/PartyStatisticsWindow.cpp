@@ -222,7 +222,7 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
             if (texture) {
                 
                 ImVec2 s(column_width, column_width);
-                ImGui::Image((ImTextureID)texture, icon_size);
+                ImGui::ImageCropped((ImTextureID)texture, icon_size);
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip(skill.name->string().c_str());
                 }
