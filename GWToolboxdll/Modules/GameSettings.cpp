@@ -1807,7 +1807,7 @@ void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::Sto
     GameSettings *instance = &Instance();
     if (status->blocked)
         return;
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GetPlayerIsLeader())
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GW::PartyMgr::GetIsLeader())
         return;
     if (GW::PartyMgr::GetIsPlayerTicked()) {
         GW::PartyInfo* other_party = GW::PartyMgr::GetPartyInfo(packet->target_party_id);
@@ -1838,7 +1838,7 @@ void GameSettings::OnPartyPlayerJoined(GW::HookStatus* status, GW::Packet::StoC:
         GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
         if (!me) return;
         if (packet->player_id == me->login_number
-            || (packet->party_id == current_party->party_id && GetPlayerIsLeader())) {
+            || (packet->party_id == current_party->party_id && GW::PartyMgr::GetIsLeader())) {
             FlashWindow();
         }
     }
@@ -2031,7 +2031,7 @@ void GameSettings::OnNPCChatMessage(GW::HookStatus* status, GW::Packet::StoC::Me
 // Automatically return to outpost on defeat
 void GameSettings::OnPartyDefeated(GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) {
     UNREFERENCED_PARAMETER(status);
-    if (!Instance().auto_return_on_defeat || !GetPlayerIsLeader())
+    if (!Instance().auto_return_on_defeat || !GW::PartyMgr::GetIsLeader())
         return;
     GW::CtoS::SendPacket(0x4, GAME_CMSG_PARTY_RETURN_TO_OUTPOST);
 }

@@ -355,8 +355,6 @@ private:
         const wchar_t *name,
         const wchar_t *charname);
 
-    static bool GetPlayerIsLeader();
-
     GW::HookEntry VanquishComplete_Entry;
     GW::HookEntry StartWhisperCallback_Entry;
     GW::HookEntry WhisperCallback_Entry;

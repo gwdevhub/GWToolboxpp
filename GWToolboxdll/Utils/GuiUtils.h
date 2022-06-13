@@ -1,8 +1,12 @@
 #pragma once
 
-#include <GWCA\Constants\Constants.h>
-
 #include <ImGuiAddons.h>
+
+namespace GW {
+    namespace Constants {
+        enum class TextLanguage;
+    }
+}
 
 namespace GuiUtils {
     enum class FontSize {
@@ -42,7 +46,7 @@ namespace GuiUtils {
     std::wstring SanitizePlayerName(std::wstring in);
 
     // Extract first unencoded substring from gw encoded string. Pass second and third args to know where the player name was found in the original string.
-    std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, wchar_t** start_pos_out = nullptr, wchar_t** out_pos_out = nullptr);
+    std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** out_pos_out = nullptr);
 
     bool ParseInt(const char *str, int *val, int base = 0);
     bool ParseInt(const wchar_t *str, int *val, int base = 0);

@@ -420,7 +420,7 @@ void FriendListWindow::OnUIMessage(GW::HookStatus* status, uint32_t message_id, 
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !Instance().friend_name_tag_enabled)
             break;
         GW::UI::AgentNameTagInfo* tag = (GW::UI::AgentNameTagInfo*)wparam;
-        std::wstring player_name = GetPlayerNameFromEncodedString(tag->name_enc);
+        std::wstring player_name = GuiUtils::GetPlayerNameFromEncodedString(tag->name_enc);
         Friend* f = Instance().GetFriend(player_name.c_str());
         if (f && f->type == GW::FriendType::Friend)
             tag->text_color = Instance().friend_name_tag_color;
@@ -587,7 +587,7 @@ void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr) {
 void FriendListWindow::OnFriendAlreadyAdded(GW::HookStatus *status, wchar_t *message)
 {
     FriendListWindow &instance = Instance();
-    std::wstring player_name = GetPlayerNameFromEncodedString(message);
+    std::wstring player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
     Friend *f = instance.GetFriend(player_name.c_str());
     if (f) {
         f->SetCharacter(player_name.c_str());
@@ -601,7 +601,7 @@ void FriendListWindow::OnFriendAlreadyAdded(GW::HookStatus *status, wchar_t *mes
 void FriendListWindow::OnPlayerNotOnline(GW::HookStatus *status, wchar_t *message)
 {
     FriendListWindow &instance = Instance();
-    std::wstring player_name = GetPlayerNameFromEncodedString(message);
+    std::wstring player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
     Friend *f = instance.GetFriend(player_name.c_str());
     if (f) {
         // If this player is already in my friend list, send the message directly.
