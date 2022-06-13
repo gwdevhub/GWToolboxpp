@@ -38,15 +38,18 @@ private:
     DWORD GetNumericSegment(const wchar_t *message) const;
     bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
     bool IsRare(const wchar_t* item_segment) const;
-    // Blocks/flushes StoC packets if they need blocking
-    void BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel);
+    // Sets HookStatus to blocked if packet has content that hits the filter.
+    static void BlockIfApplicable(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet);
+    // Ensure the message buffer is cleared if this packet has been blocked
+    static void ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*);
+
     // Should this message for this channel be ignored either by encoded string or content?
     bool ShouldIgnore(const wchar_t* message, uint32_t channel);
     // Should this message be ignored by encoded string?
     bool ShouldIgnore(const wchar_t *message);
     // Should this message be ignored by content?
     bool ShouldIgnoreByContent(const wchar_t *message, size_t size = 1024);
-    bool ShouldIgnoreBySender(const wchar_t *sender, size_t size);
+    bool ShouldIgnoreBySender(const std::wstring& sender);
     // Should this channel be checked for ignored messages?
     bool ShouldFilterByChannel(uint32_t channel);
     // Should this channel be blocked altogether?

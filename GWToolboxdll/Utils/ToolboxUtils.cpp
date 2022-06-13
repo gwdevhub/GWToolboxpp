@@ -4,12 +4,14 @@
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Player.h>
 
 #include <Utils/GuiUtils.h>
 
 #include "ToolboxUtils.h"
+#include <GWCA/Packets/Opcodes.h>
 
 namespace ToolboxUtils {
     GW::Player* GetPlayerByName(const wchar_t* _name) {
@@ -47,8 +49,23 @@ namespace ToolboxUtils {
         auto* buf = GetMessageBuffer();
         return buf ? buf->begin() : nullptr;
     }
-    void ClearMessageCore() {
+    bool ClearMessageCore() {
         auto* buf = GetMessageBuffer();
-        if (buf) buf->clear();
+        if (!buf)
+            return false;
+        buf->clear();
+        return true;
+    }
+    const std::wstring GetSenderFromPacket(GW::Packet::StoC::PacketBase* packet) {
+        switch (packet->header) {
+        case GAME_SMSG_CHAT_MESSAGE_GLOBAL: {
+            auto p = (GW::Packet::StoC::MessageGlobal*)packet;
+            return p->sender_name;
+        } break;
+        case GAME_SMSG_CHAT_MESSAGE_LOCAL:
+        case GAME_SMSG_TRADE_REQUEST: 
+            return GetPlayerName(((uint32_t*)packet)[1]);
+        }
+        return L"";
     }
 }

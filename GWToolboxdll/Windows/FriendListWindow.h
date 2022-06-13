@@ -80,14 +80,15 @@ public:
         return instance;
     }
     // Encoded message types as received via encoded chat message
-    enum MessageType : wchar_t {
+    enum class MessageType : wchar_t {
         CANNOT_ADD_YOURSELF_AS_A_FRIEND = 0x2f3,
         EXCEEDED_MAX_NUMBER_OF_FRIENDS,
         CHARACTER_NAME_X_DOES_NOT_EXIST,
         FRIEND_ALREADY_ADDED_AS_X,
         INCOMING_WHISPER = 0x76d,
         OUTGOING_WHISPER,
-        PLAYER_X_NOT_ONLINE = 0x881
+        PLAYER_NAME_IS_INVALID = 0x880,
+        PLAYER_X_NOT_ONLINE
     };
     bool WriteError(MessageType message_type, const wchar_t* character_name);
 
@@ -101,6 +102,7 @@ public:
     static void OnAddFriendError(GW::HookStatus* status, wchar_t* message);
     static void OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*);
     static void OnPrintChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t** message_ptr, FILETIME, int);
+    static void OnChatMessage(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet);
     // Ignore party invitations from players on my ignore list
 
     static bool GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak);

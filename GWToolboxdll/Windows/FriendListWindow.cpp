@@ -117,6 +117,7 @@ namespace
         return player_name;
     }
 }
+// Find out whether the player related to this packet is on the current player's ignore list.
 bool FriendListWindow::GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak) {
     switch (pak->header) {
         case GAME_SMSG_CHAT_MESSAGE_LOCAL:
@@ -129,9 +130,11 @@ bool FriendListWindow::GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak) {
     }
     return false;
 }
+// Find out whether a player in the current map is on the current player's ignore list.
 bool FriendListWindow::GetIsPlayerIgnored(uint32_t player_number) {
     return GetIsPlayerIgnored(GetPlayerName(player_number));
 }
+// Find out whether this player's name is on the current player's ignore list.
 bool FriendListWindow::GetIsPlayerIgnored(const std::wstring& player_name) {
     return !player_name.empty() && FriendListWindow::Instance().GetFriend(player_name.c_str()) != nullptr;
 }
@@ -402,8 +405,8 @@ void FriendListWindow::Initialize() {
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_ADD_ITEM, OnTradePacket, -0x8010);
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_CHANGE_OFFER, OnTradePacket, -0x8010);
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_ACCEPT, OnTradePacket, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_OFFERED_COUNT, OnPartyInvite, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_RECEIVE_OFFER, OnPartyInvite, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_OFFERED_COUNT, OnTradePacket, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_RECEIVE_OFFER, OnTradePacket, -0x8010);
 }
 void FriendListWindow::OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int) {
     switch (*message_ptr[0]) {
@@ -429,9 +432,10 @@ void FriendListWindow::OnUIMessage(GW::HookStatus* status, uint32_t message_id, 
         UIChatMessage* uimsg = static_cast<UIChatMessage*>(wparam);
         wchar_t* message = uimsg->message;
         std::wstring message_w = message;
-        switch (message[0]) {
+        switch (static_cast<MessageType>(message[0])) {
         case MessageType::CANNOT_ADD_YOURSELF_AS_A_FRIEND: // You cannot add yourself as a friend.
         case MessageType::EXCEEDED_MAX_NUMBER_OF_FRIENDS: // You have exceeded the maximum number of characters on your Friends list.
+        case MessageType::PLAYER_NAME_IS_INVALID: // The player name is invalid
         case MessageType::CHARACTER_NAME_X_DOES_NOT_EXIST: // The Character name "" does not exist
             OnAddFriendError(status, message);
             break;
@@ -514,8 +518,6 @@ void FriendListWindow::OnTradePacket(GW::HookStatus* status, GW::Packet::StoC::P
         break;
     }
 }
-
-
 void FriendListWindow::OnAddFriendError(GW::HookStatus* status, wchar_t*) {
     FriendListWindow& instance = Instance();
     if (instance.pending_whisper.charname.size()) {
