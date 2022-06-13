@@ -5,7 +5,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/GameEntities/Skill.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Timer.h>
 #include <ToolboxWindow.h>
 

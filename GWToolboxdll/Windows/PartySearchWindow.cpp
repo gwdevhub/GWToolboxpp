@@ -23,7 +23,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 
 #include <Logger.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 
 #include <Modules/Resources.h>

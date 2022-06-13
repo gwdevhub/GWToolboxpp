@@ -9,7 +9,7 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
 #include <Modules/ChatLog.h>

@@ -14,7 +14,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MerchantMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Logger.h>
 
 #include <Modules/Resources.h>

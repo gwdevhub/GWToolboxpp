@@ -23,6 +23,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Friendslist.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GuildMgr.h>
@@ -40,7 +41,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <sha1.hpp>
 
 #include <Logger.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 
 #include <Modules/DiscordModule.h>
@@ -564,7 +565,7 @@ void DiscordModule::UpdateActivity() {
         g = GW::GuildMgr::GetCurrentGH();
         if (!g) return; // Current gh not found - guild array not loaded yet
     }
-    bool show_activity = !hide_activity_when_offline || GW::FriendListMgr::GetMyStatus() != 0;
+    bool show_activity = !hide_activity_when_offline || GW::FriendListMgr::GetMyStatus() != GW::FriendStatus::Offline;
     if (!show_activity) {
         Disconnect(); // Disconnect from discord if we're set to offline
         return;

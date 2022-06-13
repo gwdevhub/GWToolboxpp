@@ -14,7 +14,7 @@
 
 #include <GWCA/Packets/StoC.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Widgets/WorldMapWidget.h>
 namespace {
 

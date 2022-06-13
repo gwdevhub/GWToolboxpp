@@ -7,7 +7,7 @@
 
 #include <GWCA/Managers/UIMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>

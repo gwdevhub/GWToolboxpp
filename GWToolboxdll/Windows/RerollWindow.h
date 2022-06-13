@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ToolboxWindow.h"
+#include <GWCA/GameEntities/Friendslist.h>
 
 class RerollWindow : public ToolboxWindow {
     RerollWindow();
@@ -26,7 +27,7 @@ public:
 
     static void OnUIMessage(GW::HookStatus*, uint32_t msg_id, void*, void*);
     // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
-    static void OnSetStatus(uint32_t status);
+    static void OnSetStatus(GW::FriendStatus status);
 
     static void CmdReroll(const wchar_t* message, int argc, LPWSTR* argv);
 
@@ -65,7 +66,7 @@ private:
     clock_t reroll_stage_set = 0;
     uint32_t reroll_index_needed = 0;
     uint32_t reroll_index_current = 0xffffffdd;
-    uint32_t online_status = 1;
+    GW::FriendStatus online_status = GW::FriendStatus::Online;
     GW::Constants::MapID map_id = GW::Constants::MapID::None;
     int district_id = 0;
     int region_id = 0;

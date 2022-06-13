@@ -23,7 +23,7 @@
 
 #include <GWCA/Packets/StoC.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
 #include <Windows/PartyStatisticsWindow.h>
 

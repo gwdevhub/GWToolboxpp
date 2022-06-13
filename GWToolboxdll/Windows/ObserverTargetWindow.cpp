@@ -9,7 +9,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 
 #include <Logger.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Modules/ObserverModule.h>
 #include <Windows/ObserverTargetWindow.h>

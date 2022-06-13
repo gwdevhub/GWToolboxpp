@@ -21,7 +21,7 @@
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/BondsWidget.h>

@@ -15,6 +15,7 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Title.h>
+#include <GWCA/GameEntities/Friendslist.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -36,7 +37,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 #include <Keys.h>
 #include <Logger.h>
@@ -1167,7 +1168,7 @@ void ChatCommands::CmdDamage(const wchar_t *message, int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdAfk(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(argv);
-    GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
+    GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
     GameSettings& settings = GameSettings::Instance();
     if (argc > 1) {
         const wchar_t *afk_msg = next_word(message);

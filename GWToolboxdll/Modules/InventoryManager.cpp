@@ -19,7 +19,7 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <Logger.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/GameSettings.h>
 #include <Windows/MaterialsWindow.h>

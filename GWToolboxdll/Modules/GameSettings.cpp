@@ -39,8 +39,10 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
+#include <Utils/GuiUtils.h>
+#include <Utils/ToolboxUtils.h>
+
 #include <Logger.h>
-#include <GuiUtils.h>
 #include <GWToolbox.h>
 #include <Timer.h>
 #include <Color.h>
@@ -51,24 +53,10 @@
 
 #pragma warning(disable : 6011)
 
-namespace {
+using namespace GuiUtils;
+using namespace ToolboxUtils;
 
-    void FlashWindow() {
-        FLASHWINFO flashInfo = { 0 };
-        flashInfo.cbSize = sizeof(FLASHWINFO);
-        flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
-        if (!flashInfo.hwnd) return;
-        flashInfo.dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG;
-        flashInfo.uCount = 5;
-        flashInfo.dwTimeout = 0;
-        FlashWindowEx(&flashInfo);
-    }
-    void FocusWindow() {
-        HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
-        if (!hwnd) return;
-        SetForegroundWindow(hwnd);
-        ShowWindow(hwnd, SW_RESTORE);
-    }
+namespace {
 
     void PrintTime(wchar_t *buffer, size_t n, DWORD time_sec) {
         DWORD secs = time_sec % 60;
@@ -92,48 +80,6 @@ namespace {
             swprintf(buffer, n, L"%lu %s", time, time_unit);
         }
     }
-    
-    struct PartyInfo : GW::PartyInfo {
-        size_t GetPartySize() {
-            return players.size() + henchmen.size() + heroes.size();
-        }
-    };
-    static wchar_t* GetMessageCore() {
-        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-        return buff ? buff->begin() : nullptr;
-    }
-    static void ClearMessageCore() {
-        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-        if (buff && buff->valid())
-            buff->clear();
-    }
-
-    PartyInfo* GetPartyInfo(uint32_t party_id = 0) {
-        if (!party_id)
-            return (PartyInfo*)GW::PartyMgr::GetPartyInfo();
-        GW::PartyContext* p = GW::GameContext::instance()->party;
-        if (!p || !p->parties.valid() || party_id >= p->parties.size())
-            return nullptr;
-        return (PartyInfo*)p->parties[party_id];
-    }
-
-    const std::wstring GetPlayerName(uint32_t player_number = 0) {
-        GW::Player* player = nullptr;
-        if (!player_number) {
-            player = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
-            if (!player || !player->name) {
-                // Map not loaded; try to get from character context
-                auto* g = GW::GameContext::instance();
-                if (!g || !g->character || !g->character->player_name)
-                    return L"";
-                return g->character->player_name;
-            }
-        }
-        else {
-            player = GW::PlayerMgr::GetPlayerByID(player_number);
-        }
-        return player && player->name ? GuiUtils::SanitizePlayerName(player->name) : L"";
-    }
 
     void SetWindowTitle(bool enabled) {
         if (!enabled)
@@ -145,25 +91,14 @@ namespace {
             SetWindowTextW(hwnd, title.c_str());
     }
 
-    GW::Player* GetPlayerByName(const wchar_t* _name) {
-        if (!_name) return NULL;
-        std::wstring name = GuiUtils::SanitizePlayerName(_name);
-        GW::PlayerArray* players = GW::PlayerMgr::GetPlayerArray();
-        if (!players) return nullptr;
-        for (GW::Player& player : *players) {
-            if (!player.name) continue;
-            if (name == GuiUtils::SanitizePlayerName(player.name))
-                return &player;
-        }
-        return nullptr;
-    }
+
 
     void WhisperCallback(GW::HookStatus *, const wchar_t *from, const wchar_t *msg) {
         UNREFERENCED_PARAMETER(msg);
         GameSettings&  game_setting = GameSettings::Instance();
         if (game_setting.flash_window_on_pm) FlashWindow();
         auto const status = static_cast<GW::FriendStatus>(GW::FriendListMgr::GetMyStatus());
-        if (status == GW::FriendStatus::FriendStatus_Away && !game_setting.afk_message.empty()) {
+        if (status == GW::FriendStatus::Away && !game_setting.afk_message.empty()) {
             wchar_t buffer[120];
             const auto diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
             wchar_t time_buffer[128];
@@ -309,21 +244,6 @@ namespace {
         {GW::Constants::SkillID::Triple_Shot_luxon, GW::Constants::SkillID::Triple_Shot_kurzick }
     };
 
-    bool IsSkillUnlocked(GW::Constants::SkillID skill_id) {
-        GW::GameContext* g = GW::GameContext::instance();
-        GW::WorldContext* w = g->world;
-
-        auto& array = w->unlocked_character_skills;
-
-        uint32_t index = static_cast<uint32_t>(skill_id);
-        uint32_t real_index = index / 32;
-        if (real_index >= array.size())
-            return false;
-        uint32_t shift = index % 32;
-        uint32_t flag = 1 << shift;
-        return (array[real_index] & flag) != 0;
-    }
-
     struct LoadSkillBarPacket {
         uint32_t header;
         uint32_t agent_id;
@@ -355,8 +275,8 @@ namespace {
             found_second = find_skill(skill_ids, skill.second);
             if (found_first == -1 && found_second == -1)
                 continue;
-            unlocked_first = IsSkillUnlocked(skill.first);
-            unlocked_second = IsSkillUnlocked(skill.second);
+            unlocked_first = GW::SkillbarMgr::GetIsSkillUnlocked(skill.first);
+            unlocked_second = GW::SkillbarMgr::GetIsSkillUnlocked(skill.second);
 
             if (found_first != -1 && found_second == -1
                 && !unlocked_first && unlocked_second) {
@@ -376,8 +296,8 @@ namespace {
             found_second = find_skill(skill_ids, skill.second);
             if (found_first == -1 && found_second == -1)
                 continue;
-            unlocked_first = IsSkillUnlocked(skill.first);
-            unlocked_second = IsSkillUnlocked(skill.second);
+            unlocked_first = GW::SkillbarMgr::GetIsSkillUnlocked(skill.first);
+            unlocked_second = GW::SkillbarMgr::GetIsSkillUnlocked(skill.second);
 
             if (found_first != -1 && found_second == -1
                 && !unlocked_first && unlocked_second) {
@@ -930,17 +850,6 @@ void GameSettings::OnEnterMission(GW::HookStatus* , void*) {
 void GameSettings::OnSendDialog(GW::HookStatus* , void* ) {
     // TODO;
 }
-// Same as GW::PartyMgr::GetPlayerIsLeader() but has an extra check to ignore disconnected people.
-bool GameSettings::GetPlayerIsLeader() {
-    GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
-    if (!(party && party->players.size())) return false;
-    for (auto &player : party->players) {
-        if (!player.connected())
-            continue;
-        return player.login_number == GW::PlayerMgr::GetPlayerNumber();
-    }
-    return false;
-}
 
 // Helper function; avoids doing string checks on offline friends.
 GW::Friend* GameSettings::GetOnlineFriend(wchar_t* account, wchar_t* playing) {
@@ -952,9 +861,9 @@ GW::Friend* GameSettings::GetOnlineFriend(wchar_t* account, wchar_t* playing) {
     for (GW::Friend* it : friends) {
         if (n_found == n_friends) break;
         if (!it) continue;
-        if (it->type != GW::FriendType::FriendType_Friend) continue;
+        if (it->type != GW::FriendType::Friend) continue;
         n_found++;
-        if (it->status != GW::FriendStatus::FriendStatus_Online) continue;
+        if (it->status != GW::FriendStatus::Online) continue;
         if (account && !wcsncmp(it->alias, account, 20))
             return it;
         if (playing && !wcsncmp(it->charname, playing, 20))
@@ -1582,8 +1491,8 @@ void GameSettings::Update(float) {
     }
     if (auto_set_away
         && TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000
-        && GW::FriendListMgr::GetMyStatus() == (DWORD)GW::Constants::OnlineStatus::ONLINE) {
-        GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
+        && GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Online) {
+        GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
         activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
     }
     //UpdateFOV();
@@ -1759,9 +1668,9 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     static clock_t set_online_timer = TIMER_INIT();
     if (auto_set_online
         && TIMER_DIFF(set_online_timer) > 5000 // to avoid spamming in case of failure
-        && GW::FriendListMgr::GetMyStatus() == (DWORD)GW::Constants::OnlineStatus::AWAY) {
+        && GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Away) {
         printf("%X\n", Message);
-        GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::ONLINE);
+        GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online);
         set_online_timer = TIMER_INIT();
     }
 
@@ -1783,16 +1692,16 @@ void GameSettings::FriendStatusCallback(
         return;
     wchar_t buffer[128];
     switch (status) {
-    case GW::FriendStatus::FriendStatus_Offline:
+    case GW::FriendStatus::Offline:
         if (game_setting.notify_when_friends_offline) {
             swprintf(buffer, _countof(buffer), L"%s (%s) has just logged out.", charname, alias);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
         return;
-    case GW::FriendStatus::FriendStatus_Away:
-    case GW::FriendStatus::FriendStatus_DND:
-    case GW::FriendStatus::FriendStatus_Online:
-        if (f->status != GW::FriendStatus::FriendStatus_Offline)
+    case GW::FriendStatus::Away:
+    case GW::FriendStatus::DND:
+    case GW::FriendStatus::Online:
+        if (f->status != GW::FriendStatus::Offline)
             return;
         if (game_setting.notify_when_friends_online) {
             swprintf(buffer, _countof(buffer), L"<a=1>%s</a> (%s) has just logged in.</c>", charname, alias);
@@ -1901,8 +1810,8 @@ void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::Sto
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GetPlayerIsLeader())
         return;
     if (GW::PartyMgr::GetIsPlayerTicked()) {
-        PartyInfo* other_party = GetPartyInfo(packet->target_party_id);
-        PartyInfo* my_party = GetPartyInfo();
+        GW::PartyInfo* other_party = GW::PartyMgr::GetPartyInfo(packet->target_party_id);
+        GW::PartyInfo* my_party = GW::PartyMgr::GetPartyInfo();
         if (instance->auto_accept_invites && other_party && my_party && my_party->GetPartySize() <= other_party->GetPartySize()) {
             // Auto accept if I'm joining a bigger party
             GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_ACCEPT_INVITE, packet->target_party_id);
@@ -2140,16 +2049,10 @@ void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
     }
 }
 
+// Flash window on guild chat message
 void GameSettings::OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak) {
-    if (const auto friendlist = GW::FriendListMgr::GetFriendList(); friendlist != nullptr) {
-        for (const auto& frnd : friendlist->friends) {
-            if (frnd == nullptr || frnd->type != GW::FriendType::FriendType_Ignore) continue; // check only for ignores
-            if (wcscmp(frnd->charname, pak->sender_name) == 0) {
-                status->blocked = true; // block packet if player is ignored
-                return;
-            }
-        }
-    }
+    if(status->blocked)
+        return; // Sender blocked, packet handled.
     if (!Instance().flash_window_on_guild_chat ||   // Flash window on guild chat message
         static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GUILD)
         return; // Disabled or messsage not from guild chat
@@ -2159,18 +2062,12 @@ void GameSettings::OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
     FlashWindow();
 }
 
+
+
 // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
 void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
-    if (const auto friendlist = GW::FriendListMgr::GetFriendList(); friendlist != nullptr) {
-        const auto sender = GetPlayerName(pak->player_number);
-        for (const auto& frnd : friendlist->friends) {
-            if (frnd == nullptr || frnd->type != GW::FriendType::FriendType_Ignore) continue; // check only for ignores
-            if (wcscmp(frnd->charname, sender.c_str()) == 0) {
-                status->blocked = true; // block packet if player is ignored
-                break;
-            }
-        }
-    }
+    if (status->blocked)
+        return; // Sender blocked, packet handled.
     if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number)
         return; // Not team chat or no sender
     std::wstring message(GetMessageCore());

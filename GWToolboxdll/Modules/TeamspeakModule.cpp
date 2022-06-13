@@ -25,7 +25,7 @@
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <ImGuiAddons.h>
 
 #include <Modules/Resources.h>

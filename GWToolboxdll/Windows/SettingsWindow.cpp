@@ -4,7 +4,7 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Defines.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 #include <PluginManager.h>
 

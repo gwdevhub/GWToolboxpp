@@ -7,7 +7,7 @@
 #include <GWCA\GameEntities\Skill.h>
 #include "GWCA\Managers\UIMgr.h"
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Timer.h>
 #include <ToolboxWindow.h>
 #include <Color.h>

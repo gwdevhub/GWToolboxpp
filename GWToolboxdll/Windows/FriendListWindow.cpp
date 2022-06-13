@@ -2,6 +2,8 @@
 
 #include <GWCA/Packets/StoC.h>
 
+#include <GWCA/Context/CharContext.h>
+
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
@@ -14,6 +16,7 @@
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
 #include <Logger.h>
 #include <base64.h>
@@ -21,20 +24,14 @@
 
 #include <Modules/Resources.h>
 #include <Windows/FriendListWindow.h>
-#include <GWCA/Managers/CtoSMgr.h>
+
+#include <Utils/ToolboxUtils.h>
+
 
 /* Out of scope namespecey lookups */
+using namespace ToolboxUtils;
 namespace
 {
-    static const std::wstring GetPlayerNameFromEncodedString(const wchar_t *message)
-    {
-        const wchar_t* start = wcschr(message, 0x107);
-        if (!start) return L"";
-        const wchar_t* end = wcschr(start, 0x1);
-        if (!end) return L"";
-        std::wstring name(start + 1, end);
-        return name;
-    }
     const ImColor ProfColors[11] = {0xFFFFFFFF, 0xFFEEAA33, 0xFF55AA00,
                                     0xFF4444BB, 0xFF00AA55, 0xFF8800AA,
                                     0xFFBB3333, 0xFFAA0088, 0xFF00AAAA,
@@ -69,16 +66,16 @@ namespace
         }
         return &current_map;
     }
-    static char *GetStatusText(uint8_t status)
+    static char *GetStatusText(GW::FriendStatus status)
     {
-        switch (static_cast<GW::FriendStatus>(status)) {
-            case GW::FriendStatus::FriendStatus_Offline:
+        switch (status) {
+            case GW::FriendStatus::Offline:
                 return "Offline";
-            case GW::FriendStatus::FriendStatus_Online:
+            case GW::FriendStatus::Online:
                 return "Online";
-            case GW::FriendStatus::FriendStatus_DND:
+            case GW::FriendStatus::DND:
                 return "Do not disturb";
-            case GW::FriendStatus::FriendStatus_Away:
+            case GW::FriendStatus::Away:
                 return "Away";
         }
         return "Unknown";
@@ -119,6 +116,24 @@ namespace
         }
         return player_name;
     }
+}
+bool FriendListWindow::GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak) {
+    switch (pak->header) {
+        case GAME_SMSG_CHAT_MESSAGE_LOCAL:
+        case GAME_SMSG_TRADE_REQUEST:
+            return GetIsPlayerIgnored(((uint32_t*)pak)[1]);
+        case GAME_SMSG_CHAT_MESSAGE_GLOBAL: {
+            auto p = (GW::Packet::StoC::MessageGlobal*)pak;
+            return GetIsPlayerIgnored(std::wstring(p->sender_name));
+        }
+    }
+    return false;
+}
+bool FriendListWindow::GetIsPlayerIgnored(uint32_t player_number) {
+    return GetIsPlayerIgnored(GetPlayerName(player_number));
+}
+bool FriendListWindow::GetIsPlayerIgnored(const std::wstring& player_name) {
+    return !player_name.empty() && FriendListWindow::Instance().GetFriend(player_name.c_str()) != nullptr;
 }
 void FriendListWindow::CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
@@ -205,7 +220,7 @@ bool FriendListWindow::Friend::ValidUuid() {
 /* Setters */
 // Update local friend record from raw info.
 FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendType type, GW::FriendStatus status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
-    if (type != GW::FriendType::FriendType_Friend && type != GW::FriendType::FriendType_Ignore)
+    if (type != GW::FriendType::Friend && type != GW::FriendType::Ignore)
         return nullptr;
     // Validate UUID (When a friend is created GW doesn't immediately have the right UUID)
     bool is_valid_uuid = false;
@@ -227,7 +242,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendT
         lf->alias = std::wstring(alias);
         friends.emplace(uuid_c, lf);
     }
-    lf->type = static_cast<uint8_t>(type);
+    lf->type = type;
     bool uuid_changed = strcmp(lf->uuid.c_str(), uuid_c) != 0;
     bool alias_changed = alias && wcscmp(alias, lf->alias.c_str()) != 0;
     if (uuid_changed) {
@@ -250,18 +265,15 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendT
     }       
 
     // Check and copy charnames, only if player is NOT offline
-    if (!charname || status == GW::FriendStatus::FriendStatus_Offline)
+    if (!charname || status == GW::FriendStatus::Offline)
         lf->current_char = nullptr;
-    if (status != GW::FriendStatus::FriendStatus_Offline && charname) {
+    if (status != GW::FriendStatus::Offline && charname) {
         lf->current_char = lf->SetCharacter(charname);
         uuid_by_name.emplace(charname, lf->uuid);
     }
-    // @Cleanup: This 255 is really odd.
-    if (status != static_cast<GW::FriendStatus>(255)) {
-        if (lf->status != status)
-            need_to_reorder_friends = true;
-        lf->status = static_cast<uint8_t>(status);
-    }
+    if (lf->status != status)
+        need_to_reorder_friends = true;
+    lf->status = status;
     friends_changed = true;
     return lf;
 }
@@ -368,11 +380,11 @@ void FriendListWindow::Initialize() {
     GW::Chat::CreateCommand(L"whisper", CmdWhisper);
     GW::Chat::CreateCommand(L"t", CmdWhisper);
     GW::Chat::CreateCommand(L"w", CmdWhisper);
-    GW::Chat::CreateCommand(L"away", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY); });
-    GW::Chat::CreateCommand(L"online", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::ONLINE); });
-    GW::Chat::CreateCommand(L"offline", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::OFFLINE); });
-    GW::Chat::CreateCommand(L"busy", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::DO_NOT_DISTURB); });
-    GW::Chat::CreateCommand(L"dnd", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::DO_NOT_DISTURB); });
+    GW::Chat::CreateCommand(L"away", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away); });
+    GW::Chat::CreateCommand(L"online", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online); });
+    GW::Chat::CreateCommand(L"offline", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Offline); });
+    GW::Chat::CreateCommand(L"busy", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::DND); });
+    GW::Chat::CreateCommand(L"dnd", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::DND); });
 
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, OnFriendUpdated);
     GW::Chat::RegisterSendChatCallback(&SendChat_Entry, OnOutgoingWhisper);
@@ -408,17 +420,9 @@ void FriendListWindow::OnUIMessage(GW::HookStatus* status, uint32_t message_id, 
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !Instance().friend_name_tag_enabled)
             break;
         GW::UI::AgentNameTagInfo* tag = (GW::UI::AgentNameTagInfo*)wparam;
-        wchar_t* player_name_start = wcsstr(tag->name_enc, L"\xba9\x107");
-        if (!player_name_start)
-            break;
-        wchar_t* player_name_end = wcschr(player_name_start, 0x1);
-        if (!player_name_end)
-            break;
-        player_name_start += 2;
-        player_name_end[0] = 0;
-        Friend* f = Instance().GetFriend(player_name_start);
-        player_name_end[0] = 0x1;
-        if (f)
+        std::wstring player_name = GetPlayerNameFromEncodedString(tag->name_enc);
+        Friend* f = Instance().GetFriend(player_name.c_str());
+        if (f && f->type == GW::FriendType::Friend)
             tag->text_color = Instance().friend_name_tag_color;
     } break;
     case GW::UI::kWriteToChatLog: {
@@ -478,14 +482,10 @@ void FriendListWindow::OnPartyInvite(GW::HookStatus* status, GW::Packet::StoC::P
         GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo(party_id);
         if (!(p && p->players.valid() && p->players.size()))
             return;
-        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(p->players[0].login_number);
-        if (!player_name)
-            return;
-        Friend* f = Instance().GetFriend(player_name);
-        if (!(f && f->type == static_cast<uint8_t>(GW::FriendType::FriendType_Ignore)))
-            return;
-        status->blocked = true;
-        ignored_parties.emplace(party_id, true);
+        if (GetIsPlayerIgnored(p->players[0].login_number)) {
+            status->blocked = true;
+            ignored_parties.emplace(party_id, true);
+        }
         //GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_ACCEPT_REFUSE,party_id);
     } break;
     default:
@@ -498,16 +498,11 @@ void FriendListWindow::OnTradePacket(GW::HookStatus* status, GW::Packet::StoC::P
     switch (pak->header) {
     case GAME_SMSG_TRADE_REQUEST: {
         Instance().ignore_trade = false;
-        uint32_t player_number = ((uint32_t*)pak)[1];
-        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(player_number);
-        if (!player_name)
-            return;
-        Friend* f = Instance().GetFriend(player_name);
-        if (!(f && f->type == static_cast<uint8_t>(GW::FriendType::FriendType_Ignore)))
-            return;
-        status->blocked = true;
-        Instance().ignore_trade = true;
-        GW::CtoS::SendPacket(0x4, GAME_CMSG_TRADE_CANCEL);
+        if (GetIsPlayerIgnored(((uint32_t*)pak)[1])) {
+            status->blocked = true;
+            Instance().ignore_trade = true;
+            GW::CtoS::SendPacket(0x4, GAME_CMSG_TRADE_CANCEL);
+        }
     } break;
     case GAME_SMSG_TRADE_TERMINATE:
         Instance().ignore_trade = false;
@@ -775,7 +770,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     float height = ImGui::GetTextLineHeightWithSpacing();
     ImVec2 pos;
     if (show_my_status) {
-        uint32_t status = GW::FriendListMgr::GetMyStatus();
+        uint32_t status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
         ImGui::Text("You are:");
         ImGui::SameLine();
         pos = ImGui::GetCursorPos();
@@ -787,13 +782,13 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
             status++;
             if (status == 4)
                 status = 0;
-            GW::FriendListMgr::SetFriendListStatus(static_cast<GW::Constants::OnlineStatus>(status));
+            GW::FriendListMgr::SetFriendListStatus(static_cast<GW::FriendStatus>(status));
         }
     }
     std::vector<Friend*> friends_online;
     for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
         Friend* lfp = it->second;
-        if (lfp->type != GW::FriendType::FriendType_Friend) continue;
+        if (lfp->type != GW::FriendType::Friend) continue;
         // Get actual object instead of pointer just in case it becomes invalid half way through the draw.
         if (lfp->IsOffline()) continue;
         if (lfp->alias.empty()) continue;
@@ -1045,7 +1040,7 @@ void FriendListWindow::LoadFromFile() {
             lf->uuid = entry.pItem;
             lf->uuid_bytes = StringToGuid(lf->uuid);
             lf->alias = GuiUtils::StringToWString(inifile->GetValue(entry.pItem, "alias", ""));
-            lf->type = static_cast<uint8_t>(inifile->GetLongValue(entry.pItem, "type", static_cast<long>(lf->type)));
+            lf->type = static_cast<GW::FriendType>(inifile->GetLongValue(entry.pItem, "type", static_cast<long>(lf->type)));
             if (lf->uuid.empty() || lf->alias.empty()) {
                 delete lf;
                 continue; // Error, alias or uuid empty.

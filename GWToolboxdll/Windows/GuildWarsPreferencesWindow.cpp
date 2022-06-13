@@ -10,7 +10,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 #include <Logger.h>
 

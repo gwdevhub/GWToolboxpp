@@ -12,7 +12,7 @@
 #include <GWToolbox.h>
 #include <Logger.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <RestClient.h>
 

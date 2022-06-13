@@ -4,7 +4,7 @@
 
 #include <RestClient.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <resource.h>
 #include <ToolboxModule.h>

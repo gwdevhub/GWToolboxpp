@@ -12,7 +12,7 @@
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Logger.h>
 #include <Timer.h>
 

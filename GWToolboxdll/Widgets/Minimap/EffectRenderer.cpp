@@ -15,7 +15,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/EffectRenderer.h>
 
 namespace {

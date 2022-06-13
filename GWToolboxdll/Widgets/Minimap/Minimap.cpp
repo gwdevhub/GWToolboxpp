@@ -26,7 +26,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
 

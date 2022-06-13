@@ -21,7 +21,7 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Logger.h>
 
 #include <Modules/Resources.h>

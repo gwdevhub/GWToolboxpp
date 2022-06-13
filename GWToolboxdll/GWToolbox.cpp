@@ -21,7 +21,7 @@
 #include <CursorFix.h>
 #include <d3dx9_dynamic.h>
 #include <Defines.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 #include <Logger.h>
 

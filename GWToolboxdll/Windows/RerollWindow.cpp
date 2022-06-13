@@ -30,7 +30,7 @@
 #include <Timer.h>
 
 #include <ImGuiAddons.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 
 
@@ -78,7 +78,7 @@ namespace {
         }
         return 0;
     }
-    typedef void(__cdecl* SetOnlineStatus_pt)(uint32_t status);
+    typedef void(__cdecl* SetOnlineStatus_pt)(GW::FriendStatus status);
     SetOnlineStatus_pt SetOnlineStatus_Func;
     SetOnlineStatus_pt RetSetOnlineStatus;
 
@@ -278,7 +278,7 @@ void RerollWindow::CmdReroll(const wchar_t* message, int argc, LPWSTR*) {
     return;
 }
 
-void RerollWindow::OnSetStatus(uint32_t status) {
+void RerollWindow::OnSetStatus(GW::FriendStatus status) {
     GW::Hook::EnterHook();
     if (Instance().reroll_stage == WaitForCharacterLoad)
         status = Instance().online_status;

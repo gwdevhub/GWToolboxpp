@@ -6,7 +6,7 @@
 #include <Timer.h>
 #include <ToolboxWindow.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Windows/Hotkeys.h>
 

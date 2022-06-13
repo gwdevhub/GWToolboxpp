@@ -15,7 +15,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/Minimap.h>
 
 void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {

@@ -21,7 +21,7 @@
 #include <GWCA/GameEntities/Skill.h>
 
 #include <ImGuiAddons.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Modules/HintsModule.h>
 #include <Defines.h>
