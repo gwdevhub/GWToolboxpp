@@ -136,7 +136,8 @@ bool FriendListWindow::GetIsPlayerIgnored(uint32_t player_number) {
 }
 // Find out whether this player's name is on the current player's ignore list.
 bool FriendListWindow::GetIsPlayerIgnored(const std::wstring& player_name) {
-    return !player_name.empty() && FriendListWindow::Instance().GetFriend(player_name.c_str()) != nullptr;
+    auto* f = player_name.empty() ? nullptr : FriendListWindow::Instance().GetFriend(player_name.c_str());
+    return f && f->type == GW::FriendType::Ignore;
 }
 void FriendListWindow::CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
