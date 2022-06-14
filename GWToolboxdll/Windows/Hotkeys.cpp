@@ -280,12 +280,13 @@ size_t TBHotkey::HasProfession() {
     return out;
 }
 bool TBHotkey::IsValid(const char* _player_name, GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, bool is_pvp_character) {
-    return active 
+    return active
         && (!is_pvp_character || trigger_on_pvp_character)
         && (instance_type == -1 || (GW::Constants::InstanceType)instance_type == _instance_type)
         && (prof_ids[(size_t)_profession] || !HasProfession())
         && (map_ids.empty() || std::find(map_ids.begin(), map_ids.end(), (uint32_t)_map_id) != map_ids.end())
-        && (!player_name[0] || strcmp(_player_name,player_name) == 0);
+        && (!player_name[0] || strcmp(_player_name, player_name) == 0)
+        && IsInRangeOfNPC();
 }
 bool TBHotkey::CanUse()
 {
@@ -321,6 +322,9 @@ void TBHotkey::Save(CSimpleIni *ini, const char *section) const
 
     GuiUtils::ArrayToIni(map_ids.data(), map_ids.size(), &out);
     ini->SetValue(section, VAR_NAME(map_ids), out.c_str());
+
+    ini->SetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance);
+    ini->SetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
 }
 char* TBHotkey::professions[] = {"Any",          "Warrior",     "Ranger",
                                     "Monk",         "Necromancer", "Mesmer",
@@ -511,7 +515,17 @@ bool TBHotkey::Draw(Op *op)
             }
             ImGui::Unindent();
         }
-
+        
+        ImGui::PushItemWidth(60.0f * scale);
+        ImGui::Text("Trigger within ");
+        ImGui::SameLine(0, 0);
+        hotkey_changed |= ImGui::InputFloat("##in_range_of_distance", &in_range_of_distance, 0.f,0.f, "%.0f");
+        ImGui::SameLine(0, 0);
+        ImGui::Text(" gwinches of NPC Id: ");
+        ImGui::SameLine(0, 0);
+        hotkey_changed |= ImGui::InputInt("##in_range_of_npc_id",(int*) &in_range_of_npc_id, 0,0);
+        ImGui::PopItemWidth();
+        ImGui::ShowHelp("Only trigger when in range of a certain NPC");
         hotkey_changed |= ImGui::InputTextEx("Character Name##hotkey_player_name", "Any Character Name", player_name, sizeof(player_name), ImVec2(0, 0), 0, 0, 0);
         ImGui::ShowHelp("Only trigger for this character name (leave blank for any character name)");
 
@@ -639,7 +653,24 @@ bool TBHotkey::Draw(Op *op)
     }
     return hotkey_changed;
 }
-
+bool TBHotkey::IsInRangeOfNPC() {
+    if (!(in_range_of_npc_id && in_range_of_distance > 0.f))
+        return true;
+    auto* agents = GW::Agents::GetAgentArray();
+    if (!agents)
+        return false;
+    auto* me = GW::Agents::GetPlayer();
+    for (auto agent : *agents) {
+        if (!(agent && agent->type == 0xDB)) 
+            continue;
+        auto* living = agent->GetAsAgentLiving();
+        if (living->login_number || living->player_number != (uint16_t)in_range_of_npc_id)
+            continue;
+        if (GW::GetDistance(agent->pos, me->pos) < in_range_of_distance)
+            return true;
+    }
+    return false;
+}
 HotkeySendChat::HotkeySendChat(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
