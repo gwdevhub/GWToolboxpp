@@ -1,34 +1,9 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-#include <GWCA/Utilities/MemoryPatcher.h>
-
-#include <GWCA/Constants/Constants.h>
-#include <GWCA/Constants/Skills.h>
-
-#include <GWCA/GameEntities/Item.h>
-#include <GWCA/GameEntities/Party.h>
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Player.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/GameContainers/List.h>
-
-#include <GWCA/Context/AgentContext.h>
-#include <GWCA/Context/GadgetContext.h>
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
-#include <GWCA/Context/CharContext.h>
-
-#include <GWCA/Managers/FriendListMgr.h>
-#include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/ItemMgr.h>
-
+#include <GWCA/Utilities/Hook.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
 
 #include <Color.h>
 #include <Defines.h>
@@ -44,6 +19,15 @@
 #define NAMETAG_COLOR_DEFAULT_ENEMY 0xFFFF0000
 #define NAMETAG_COLOR_DEFAULT_ITEM 0x0
 
+namespace GW {
+    namespace Chat {
+        enum Channel;
+    }
+    struct Item;
+    struct Friend;
+    enum class FriendStatus : uint32_t;
+}
+
 class PendingChatMessage {
 protected:
     bool printed = false;
@@ -56,36 +40,11 @@ protected:
     std::wstring output_sender;
     GW::Chat::Channel channel;
 public:
-    PendingChatMessage(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) : channel(channel) {
-        invalid = !enc_message || !enc_sender;
-        if (!invalid) {
-            wcscpy(encoded_sender, enc_sender);
-            wcscpy(encoded_message, enc_message);
-            Init();
-        }
-    };
-    static PendingChatMessage* queueSend(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) {
-        PendingChatMessage* m = new PendingChatMessage(channel, enc_message, enc_sender);
-        if (m->invalid) {
-            delete m;
-            return nullptr;
-        }
-        m->SendIt();
-        return m;
-    }
-    static PendingChatMessage* queuePrint(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) {
-        PendingChatMessage* m = new PendingChatMessage(channel, enc_message, enc_sender);
-        if (m->invalid) {
-            delete m;
-            return nullptr;
-        }
-        return m;
-    }
-    void SendIt() {
-        print = false;
-        send = true;
-    }
-    static bool IsStringEncoded(const wchar_t* str) {
+    PendingChatMessage(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
+    static PendingChatMessage* queueSend(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
+    static PendingChatMessage* queuePrint(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
+    inline void SendIt() {  print = false; send = true;}
+    inline static bool IsStringEncoded(const wchar_t* str) {
         return str && (str[0] < L' ' || str[0] > L'~');
     }
     const bool IsDecoded() {
@@ -102,39 +61,10 @@ public:
     static bool Cooldown();
     bool invalid = true; // Set when we can't find the agent name for some reason, or arguments passed are empty.
 protected:
-    std::vector<std::wstring> SanitiseForSend() {
-        std::wregex no_tags(L"<[^>]+>"), no_new_lines(L"\n");
-        std::wstring sanitised, sanitised2, temp;
-        std::regex_replace(std::back_inserter(sanitised), output_message.begin(), output_message.end(), no_tags, L"");
-        std::regex_replace(std::back_inserter(sanitised2), sanitised.begin(), sanitised.end(), no_new_lines, L"|");
-        std::vector<std::wstring> parts;
-        std::wstringstream wss(sanitised2);
-        while (std::getline(wss, temp, L'|'))
-            parts.push_back(temp);
-        return parts;
-    }
+    std::vector<std::wstring> SanitiseForSend();
     const bool PrintMessage();
     const bool Send();
-    void Init() {
-        if (!invalid) {
-            if (IsStringEncoded(this->encoded_message)) {
-                //Log::LogW(L"message IS encoded, ");
-                GW::UI::AsyncDecodeStr(encoded_message, &output_message);
-            }
-            else {
-                output_message = std::wstring(encoded_message);
-                //Log::LogW(L"message NOT encoded, ");
-            }
-            if (IsStringEncoded(this->encoded_sender)) {
-                //Log::LogW(L"sender IS encoded\n");
-                GW::UI::AsyncDecodeStr(encoded_sender, &output_sender);
-            }
-            else {
-                //Log::LogW(L"sender NOT encoded\n");
-                output_sender = std::wstring(encoded_sender);
-            }
-        }
-    }
+    void Init();
 
 };
 

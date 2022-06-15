@@ -18,10 +18,42 @@
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 
+#include <Color.h>
+
 #define IniFilename L"Markers.ini"
 
 using namespace std::string_literals;
 
+CustomRenderer::CustomLine::CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n)
+    : p1(x1, y1)
+    , p2(x2, y2)
+    , map(m)
+    , visible(true)
+{
+    if (n)
+        GuiUtils::StrCopy(name, n, sizeof(name));
+    else
+        GuiUtils::StrCopy(name, "line", sizeof(name));
+};
+CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* n)
+    : pos(x, y)
+    , size(s)
+    , shape(sh)
+    , map(m)
+    , visible(true)
+{
+    if (n)
+        GuiUtils::StrCopy(name, n, sizeof(name));
+    else
+        GuiUtils::StrCopy(name, "marker", sizeof(name));
+};
+CustomRenderer::CustomPolygon::CustomPolygon(GW::Constants::MapID m, const char* n)
+    : map(m), shape() {
+    if (n)
+        GuiUtils::StrCopy(name, n, sizeof name);
+    else
+        GuiUtils::StrCopy(name, "marker", sizeof name);
+};
 void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section)
 {
     color = Colors::Load(ini, section, "color_custom_markers", 0xFFFFFFFF);

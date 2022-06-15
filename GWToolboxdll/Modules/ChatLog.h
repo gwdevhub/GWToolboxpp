@@ -4,6 +4,13 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <ToolboxModule.h>
+#include <minwindef.h>
+
+namespace GW {
+    namespace Chat {
+        struct ChatMessage;
+    }
+}
 
 class ChatLog : public ToolboxModule {
     ChatLog() {};

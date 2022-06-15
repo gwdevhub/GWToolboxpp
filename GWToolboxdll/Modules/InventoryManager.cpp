@@ -2,8 +2,12 @@
 
 #include <GWCA/Packets/Opcodes.h>
 
+#include <GWCA/GameEntities/Agent.h>
+
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/TradeContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
@@ -15,6 +19,9 @@
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/TradeMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 
@@ -1048,7 +1055,7 @@ void InventoryManager::Salvage(Item* item, Item* kit) {
     if (!(pending_salvage_item.set(item) && pending_salvage_kit.set(kit)))
         return;
     AttachSalvageListeners();
-    GW::CtoS::SendPacket(0x10, GAME_CMSG_ITEM_SALVAGE_SESSION_OPEN, GW::GameContext::instance()->world->salvage_session_id, pending_salvage_kit.item_id, pending_salvage_item.item_id);
+    GW::CtoS::SendPacket(0x10, GAME_CMSG_ITEM_SALVAGE_SESSION_OPEN, GW::WorldContext::instance()->salvage_session_id, pending_salvage_kit.item_id, pending_salvage_item.item_id);
     pending_salvage_at = (clock() / CLOCKS_PER_SEC);
     is_salvaging = true;
 }
@@ -1961,10 +1968,10 @@ bool InventoryManager::Item::IsWeaponSetItem()
 {
     if (!IsWeapon())
         return false;
-    GW::GameContext* g = GW::GameContext::instance();
-    if (!g || !g->items || !g->items->inventory)
+    GW::ItemContext* c = GW::ItemContext::instance();
+    if (c || !c->inventory)
         return false;
-    GW::WeapondSet *weapon_sets = g->items->inventory->weapon_sets;
+    GW::WeapondSet *weapon_sets = c->inventory->weapon_sets;
     for (size_t i = 0; i < 4; i++) {
         if (weapon_sets[i].offhand == this)
             return true;
@@ -2197,4 +2204,14 @@ InventoryManager::CtoS_TransactItems InventoryManager::PendingTransaction::trans
 bool InventoryManager::PendingTransaction::selling()
 {
     return type == GW::Merchant::TransactionType::MerchantSell || type == GW::Merchant::TransactionType::TraderSell;
+}
+
+void InventoryManager::PendingItem::PluralEncString::sanitise() {
+    if (sanitised)
+        return;
+    GuiUtils::EncString::sanitise();
+    if (sanitised) {
+        static const std::wregex plural(L"256 ");
+        decoded_ws = std::regex_replace(decoded_ws, plural, L"");
+    }
 }

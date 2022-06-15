@@ -1,12 +1,19 @@
 #include "stdafx.h"
 
-
-#include <GWCA/Constants/Skills.h>
 #include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Skills.h>
+
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Quest.h>
@@ -18,6 +25,7 @@
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/GuildContext.h>
+#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Constants/AgentIDs.h>
 
@@ -26,7 +34,6 @@
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
-
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
@@ -35,6 +42,10 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -313,7 +324,7 @@ namespace {
             }
             else if (unlocked_first && unlocked_second) {
                 // Find skill with higher title track
-                GW::TitleArray& titles = GW::GameContext::instance()->world->titles;
+                GW::TitleArray& titles = GW::WorldContext::instance()->titles;
                 uint32_t kurzick_rank = titles.size() <= GW::Constants::TitleID::Kurzick ? 0 : titles[GW::Constants::TitleID::Kurzick].points_needed_current_rank;
                 uint32_t luxon_rank = titles.size() <= GW::Constants::TitleID::Luxon ? 0 : titles[GW::Constants::TitleID::Luxon].points_needed_current_rank;
                 if (kurzick_rank > luxon_rank) {
@@ -634,6 +645,33 @@ void GameSettings::PingItem(uint32_t item_id, uint32_t parts) {
     return PingItem(GW::Items::GetItemById(item_id), parts);
 }
 
+PendingChatMessage::PendingChatMessage(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) : channel(channel) {
+    invalid = !enc_message || !enc_sender;
+    if (!invalid) {
+        wcscpy(encoded_sender, enc_sender);
+        wcscpy(encoded_message, enc_message);
+        Init();
+    }
+}
+PendingChatMessage* PendingChatMessage::queueSend(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) {
+    PendingChatMessage* m = new PendingChatMessage(channel, enc_message, enc_sender);
+    if (m->invalid) {
+        delete m;
+        return nullptr;
+    }
+    m->SendIt();
+    return m;
+}
+
+PendingChatMessage* PendingChatMessage::queuePrint(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) {
+    PendingChatMessage* m = new PendingChatMessage(channel, enc_message, enc_sender);
+    if (m->invalid) {
+        delete m;
+        return nullptr;
+    }
+    return m;
+}
+
 bool PendingChatMessage::Cooldown() {
     return last_send && clock() < last_send + (clock_t)(CLOCKS_PER_SEC / 2);
 }
@@ -667,6 +705,37 @@ const bool PendingChatMessage::Send() {
     }
     printed = true;
     return printed;
+}
+void PendingChatMessage::Init() {
+    if (!invalid) {
+        if (IsStringEncoded(this->encoded_message)) {
+            //Log::LogW(L"message IS encoded, ");
+            GW::UI::AsyncDecodeStr(encoded_message, &output_message);
+        }
+        else {
+            output_message = std::wstring(encoded_message);
+            //Log::LogW(L"message NOT encoded, ");
+        }
+        if (IsStringEncoded(this->encoded_sender)) {
+            //Log::LogW(L"sender IS encoded\n");
+            GW::UI::AsyncDecodeStr(encoded_sender, &output_sender);
+        }
+        else {
+            //Log::LogW(L"sender NOT encoded\n");
+            output_sender = std::wstring(encoded_sender);
+        }
+    }
+}
+std::vector<std::wstring> PendingChatMessage::SanitiseForSend() {
+    std::wregex no_tags(L"<[^>]+>"), no_new_lines(L"\n");
+    std::wstring sanitised, sanitised2, temp;
+    std::regex_replace(std::back_inserter(sanitised), output_message.begin(), output_message.end(), no_tags, L"");
+    std::regex_replace(std::back_inserter(sanitised2), sanitised.begin(), sanitised.end(), no_new_lines, L"|");
+    std::vector<std::wstring> parts;
+    std::wstringstream wss(sanitised2);
+    while (std::getline(wss, temp, L'|'))
+        parts.push_back(temp);
+    return parts;
 }
 const bool PendingChatMessage::PrintMessage() {
     if (!IsDecoded() || this->invalid) return false; // Not ready or invalid.
@@ -1409,7 +1478,7 @@ void GameSettings::FactionEarnedCheckAndWarn() {
     if (faction_checked)
         return; // Already checked.
     faction_checked = true;
-    GW::WorldContext * world_context = GW::GameContext::instance()->world;
+    GW::WorldContext * world_context = GW::WorldContext::instance();
     if (!world_context || !world_context->max_luxon || !world_context->total_earned_kurzick) {
         faction_checked = false;
         return; // No world context yet.
@@ -1962,11 +2031,11 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, uint32_t dialog_id) {
     // Dialog 135 is also used for other NPCs e.g. zaishen keys. Use last_dialog_npc_id to compare.
     switch (last_dialog_npc_id) {
     case LuxonFactionNPC:
-        current_faction = &GW::GameContext::instance()->world->current_luxon;
+        current_faction = &GW::WorldContext::instance()->current_luxon;
         allegiance = 1;
         break;
     case KurzickFactionNPC:
-        current_faction = &GW::GameContext::instance()->world->current_kurzick;
+        current_faction = &GW::WorldContext::instance()->current_kurzick;
         allegiance = 0;
         break;
     default:
@@ -2463,7 +2532,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wPar
     else if (strstr(url.c_str(), "?search=quest")) {
         // Redirect /wiki quest to /wiki <current quest name>
         status->blocked = true;
-        GW::WorldContext* c = GW::GameContext::instance()->world;
+        GW::WorldContext* c = GW::WorldContext::instance();
         uint32_t quest_id = c->active_quest_id;
         for (const GW::Quest& q : c->quest_log) {
             if (q.quest_id == quest_id) {

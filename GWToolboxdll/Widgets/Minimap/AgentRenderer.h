@@ -1,11 +1,15 @@
 #pragma once
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/GameEntities/Agent.h>
 
-#include <Color.h>
+#include <GWCA/GameContainers/GamePos.h>
+
 #include <Widgets/Minimap/VBuffer.h>
 
+namespace GW {
+    struct Agent;
+}
+typedef uint32_t Color;
 class AgentRenderer : public VBuffer {
 public:
     AgentRenderer();

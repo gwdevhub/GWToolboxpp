@@ -8,6 +8,7 @@
 #include <GWCA/GWCA.h>
 
 #include <GWCA/Context/PreGameContext.h>
+#include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -401,8 +402,8 @@ void GWToolbox::Initialize() {
     ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        auto* g = GW::GameContext::instance();
-        if(g && g->character && g->character->player_name)
+        auto* c = GW::CharContext::instance();
+        if(c && c->player_name)
             Log::InfoW(L"Hello!");
     }
     initialized = true;

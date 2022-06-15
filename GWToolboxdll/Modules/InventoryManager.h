@@ -1,12 +1,10 @@
 #pragma once
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/GameContainers/Array.h>
 
-#include <GWCA/Constants/Constants.h>
-#include <GWCA/Packets/StoC.h>
 #include <GWCA/GameEntities/Item.h>
-#include <GWCA/Managers/ItemMgr.h>
+
+#include <GWCA/Packets/StoC.h>
 
 #include <ToolboxWidget.h>
 namespace GW {
@@ -273,15 +271,7 @@ private:
 
         class PluralEncString : public GuiUtils::EncString {
         protected:
-            void sanitise() override {
-                if (sanitised)
-                    return;
-                GuiUtils::EncString::sanitise();
-                if (sanitised) {
-                    static const std::wregex plural(L"256 ");
-                    decoded_ws = std::regex_replace(decoded_ws, plural, L"");
-                }
-            };
+            void sanitise() override;
         };
         PluralEncString plural_item_name;
 

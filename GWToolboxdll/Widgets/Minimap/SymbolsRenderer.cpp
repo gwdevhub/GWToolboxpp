@@ -7,6 +7,7 @@
 
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>

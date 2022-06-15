@@ -1,10 +1,14 @@
 #pragma once
 
-#include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-#include <Color.h>
 #include <Widgets/Minimap/VBuffer.h>
+
+namespace GW {
+    namespace Constants {
+        enum class MapID;
+    }
+}
 
 namespace mapbox // enable mapbox::earcut to work with GW::Vec2f as Point
 {
@@ -28,19 +32,9 @@ class CustomRenderer : public VBuffer
     friend class AgentRenderer;
     struct CustomLine
     {
-        CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n)
-            : p1(x1, y1)
-            , p2(x2, y2)
-            , map(m)
-            , visible(true)
-        {
-            if (n)
-                GuiUtils::StrCopy(name, n, sizeof(name));
-            else
-                GuiUtils::StrCopy(name, "line", sizeof(name));
-        };
+        CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n);
         CustomLine(const char* n)
-            : CustomLine(0, 0, 0, 0, GW::Constants::MapID::None, n){};
+            : CustomLine(0, 0, 0, 0, (GW::Constants::MapID)0, n){};
         GW::Vec2f p1;
         GW::Vec2f p2;
         GW::Constants::MapID map;
@@ -55,18 +49,7 @@ class CustomRenderer : public VBuffer
     };
     struct CustomMarker final : VBuffer
     {
-        CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* n)
-            : pos(x, y)
-            , size(s)
-            , shape(sh)
-            , map(m)
-            , visible(true)
-        {
-            if (n)
-                GuiUtils::StrCopy(name, n, sizeof(name));
-            else
-                GuiUtils::StrCopy(name, "marker", sizeof(name));
-        };
+        CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* n);
         explicit CustomMarker(const char* n);
         GW::Vec2f pos;
         float size;
@@ -84,13 +67,7 @@ class CustomRenderer : public VBuffer
 
     struct CustomPolygon final : VBuffer
     {
-        CustomPolygon(GW::Constants::MapID m, const char* n)
-            : map(m), shape() {
-            if (n)
-                GuiUtils::StrCopy(name, n, sizeof name);
-            else
-                GuiUtils::StrCopy(name, "marker", sizeof name);
-        };
+        CustomPolygon(GW::Constants::MapID m, const char* n);
         CustomPolygon(const char* n);
 
         std::vector<GW::Vec2f> points{};
@@ -128,7 +105,7 @@ private:
     void EnqueueVertex(float x, float y, Color color);
     void SetTooltipMapID(const GW::Constants::MapID& map_id);
     struct MapTooltip {
-        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        GW::Constants::MapID map_id = (GW::Constants::MapID)0;
         std::wstring map_name_ws;
         char tooltip_str[128];
     } map_id_tooltip;
