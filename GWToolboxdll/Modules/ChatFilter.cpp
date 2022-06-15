@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <GWCA/Packets/StoC.h>
+
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 

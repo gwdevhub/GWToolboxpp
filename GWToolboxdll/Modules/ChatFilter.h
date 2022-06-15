@@ -1,10 +1,16 @@
 #pragma once
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <ToolboxModule.h>
 
+namespace GW {
+    namespace Packet {
+        namespace StoC {
+            struct PacketBase;
+        }
+    }
+}
 class ChatFilter : public ToolboxModule {
     ChatFilter() {};
     ~ChatFilter() {};
