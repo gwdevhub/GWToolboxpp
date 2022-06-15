@@ -52,7 +52,6 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     color_ally_minion = Colors::Load(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
     color_ally_dead = Colors::Load(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
     boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
-    agent_border = ini->GetBoolValue(section, VAR_NAME(agent_border), agent_border);
 
     LoadDefaultSizes();
     size_default = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_default), size_default));
@@ -124,7 +123,6 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
-    ini->SetBoolValue(section, VAR_NAME(agent_border), agent_border);
 
     SaveCustomAgents();
 }
@@ -177,7 +175,7 @@ void AgentRenderer::LoadDefaultColors() {
     size_boss = 125.0f;
     size_minion = 50.0f;
     boss_colors = true;
-    agent_border = true;
+    agent_border_thickness = 0;
 }
 void AgentRenderer::DrawSettings() {
     
@@ -581,7 +579,7 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
         }
     }
     if (!alpha) return;
-    if (agent_border) {
+    if (agent_border_thickness && agent->GetIsLivingType()) {
         Enqueue(shape, agent, size + static_cast<float>(agent_border_thickness),
             Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
     }
