@@ -46,9 +46,9 @@ static void printchar(wchar_t c) {
 void ChatFilter::Initialize() {
     ToolboxModule::Initialize();
 
-    GW::StoC::RegisterPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_SERVER, BlockIfApplicable);
-    GW::StoC::RegisterPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, BlockIfApplicable);
-    GW::StoC::RegisterPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, BlockIfApplicable);
+    GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_SERVER, BlockIfApplicable);
+    GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, BlockIfApplicable);
+    GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, BlockIfApplicable);
 
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_SERVER, ClearMessageBufferIfBlocked);
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, ClearMessageBufferIfBlocked);
