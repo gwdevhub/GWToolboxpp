@@ -24,8 +24,6 @@ bool PathGetAppDataPath(std::filesystem::path& out, const wchar_t* suffix);
 // create_directories without catch; returns false on failure
 bool PathCreateDirectorySafe(const std::filesystem::path& path);
 
-bool PathCompose(wchar_t *dest, size_t length, const wchar_t *left, const wchar_t *right);
-
 // Performs manually recursive copy. Useful for figuring out which file is in use when using std::filesystem::copy on a directory fails.
 bool PathSafeCopy(const std::filesystem::path& from, const std::filesystem::path& to, bool copy_if_target_is_newer = false);
 

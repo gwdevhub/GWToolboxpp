@@ -235,8 +235,9 @@ bool TeamspeakModule::GetTeamspeakProcess(std::filesystem::path* filename, PBOOL
             Log::Log("Failed to call QueryFullProcessImageNameW on PID %d (%04X)\n", aProcesses[i], GetLastError());
             continue;
         }
-        if (StrStrW(szProcessName, L"ts3client_win64.exe") == NULL
-            && StrStrW(szProcessName, L"ts3client_win32.exe") == NULL) {
+        std::wstring processNameWs(szProcessName);
+        if (processNameWs.find(L"ts3client_win64.exe") == std::wstring::npos
+            && processNameWs.find(L"ts3client_win32.exe") == std::wstring::npos) {
             CloseHandle(hProcess);
             continue; // This is not the droid you're looking for...
         }

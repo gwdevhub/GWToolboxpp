@@ -27,28 +27,8 @@ bool PathGetExeFileName(std::wstring& out)
     if (!PathGetExeFullPath(temp)) {
         return false;
     }
-    wchar_t* filename = PathFindFileNameW(temp.wstring().c_str());
-    out.assign(filename);
+    out.assign(temp.filename());
     return true;
-}
-
-bool PathRemoveFileName(wchar_t *path, size_t length, const wchar_t *src)
-{
-    assert(MAX_PATH <= length);
-
-    if (path != src)
-        StrCopyW(path, length, src);
-    PathRemoveFileSpecW(path);
-    return true;
-}
-
-void PathRemovePath(wchar_t *path, size_t length, const wchar_t *src)
-{
-    assert(MAX_PATH <= length);
-
-    if (path != src)
-        StrCopyW(path, length, src);
-    PathStripPathW(path);
 }
 
 bool PathGetProgramDirectory(std::filesystem::path& out)
@@ -74,13 +54,11 @@ bool PathGetDocumentsPath(fs::path& out, const wchar_t* suffix = nullptr)
         fwprintf(stderr, L"%S: SHGetFolderPathW returned empty path\n", __func__);
         return false;
     }
+    fs::path p = temp;
     if (suffix && suffix[0]) {
-        if (PathAppendW(temp, suffix) != TRUE) {
-            fwprintf(stderr, L"%S: PathAppendW failed\n", __func__);
-            return false;
-        }
+        p = p.append(suffix);
     }
-    out.assign(temp);
+    out.assign(p);
     return true;
 }
 
@@ -98,13 +76,11 @@ bool PathGetAppDataPath(fs::path& out, const wchar_t* suffix = nullptr) {
         fwprintf(stderr, L"%S: SHGetFolderPathW returned empty path\n", __func__);
         return false;
     }
+    fs::path p = temp;
     if (suffix && suffix[0]) {
-        if (PathAppendW(temp, suffix) != TRUE) {
-            fwprintf(stderr, L"%S: PathAppendW failed\n", __func__);
-            return false;
-        }
+        p = p.append(suffix);
     }
-    out.assign(temp);
+    out.assign(p);
     return true;
 }
 
@@ -127,28 +103,6 @@ bool PathCreateDirectorySafe(const fs::path& path)
         fwprintf(stderr, L"%S: Failed to create directory %s\n", __func__, path.wstring().c_str());
         return false;
     }
-    return true;
-}
-
-bool PathCompose(wchar_t *dest, size_t length, const wchar_t *left, const wchar_t *right)
-{
-    assert(MAX_PATH <= length);
-
-    size_t left_size = StrBytesW(left);
-    if (length < left_size) {
-        fwprintf(stderr, L"%S: Left string too long for the destination buffer\n", __func__);
-        return false;
-    }
-
-    if (dest != left) {
-        memmove(dest, left, left_size);
-    }
-
-    if (PathAppendW(dest, right) != TRUE) {
-        fwprintf(stderr, L"%S: PathAppendW failed (%lu)\n", __func__, GetLastError());
-        return false;
-    }
-
     return true;
 }
 

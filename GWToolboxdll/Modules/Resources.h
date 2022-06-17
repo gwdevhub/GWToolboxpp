@@ -1,16 +1,20 @@
 #pragma once
 
-#include <GWCA/Constants/Constants.h>
-
 #include <RestClient.h>
-
-#include <Utils/GuiUtils.h>
 
 #include <resource.h>
 #include <ToolboxModule.h>
 #include <Utf8.h>
 
-
+namespace GuiUtils {
+    class EncString;
+}
+namespace GW {
+    namespace Constants {
+        enum class Profession;
+        enum class MapID;
+    }
+}
 class Resources : public ToolboxModule {
     Resources();
     Resources(const Resources&) = delete;

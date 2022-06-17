@@ -92,18 +92,14 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
     }
 
     MINIDUMP_USER_STREAM_INFORMATION* UserStreamParam = 0;
+    char* extra_info = nullptr;
     if (Instance().gw_debug_info) {
-        char* extra_info = Instance().gw_debug_info->buffer;
-        UserStreamParam = new MINIDUMP_USER_STREAM_INFORMATION();
-        MINIDUMP_USER_STREAM* s = new MINIDUMP_USER_STREAM();
-        s->Type = MINIDUMP_STREAM_TYPE::CommentStreamA;
-        s->Buffer = extra_info;
-        s->BufferSize = (strlen(extra_info) + 1) * sizeof(extra_info[0]);
-        UserStreamParam->UserStreamCount = 1;
-        UserStreamParam->UserStreamArray = s;
+        extra_info = Instance().gw_debug_info->buffer;
     }
     else if (Instance().tb_exception_message) {
-        char* extra_info = Instance().tb_exception_message;
+        extra_info = Instance().tb_exception_message;
+    }
+    if (extra_info) {
         UserStreamParam = new MINIDUMP_USER_STREAM_INFORMATION();
         MINIDUMP_USER_STREAM* s = new MINIDUMP_USER_STREAM();
         s->Type = MINIDUMP_STREAM_TYPE::CommentStreamA;
