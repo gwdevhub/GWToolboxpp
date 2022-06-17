@@ -32,6 +32,9 @@
 #include <Modules/Obfuscator.h>
 #include <Modules/ChatLog.h>
 #include <Modules/HintsModule.h>
+#ifdef _DEBUG
+#include <Modules/GWFileRequester.h>
+#endif
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -132,6 +135,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_party_statistics) optional_modules.push_back(&PartyStatisticsWindow::Instance());
 
 #ifdef _DEBUG
+    optional_modules.push_back(&GWFileRequester::Instance());
 #if 0
     optional_modules.push_back(&PartySearchWindow::Instance());
 #endif

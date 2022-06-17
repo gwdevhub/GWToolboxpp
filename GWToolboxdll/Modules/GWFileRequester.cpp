@@ -16,9 +16,15 @@
 #include <GWDatBrowser/AtexReader.cpp>
 #pragma warning( pop )
 
+#include <GWCA/GameEntities/Map.h>
+
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+
+#include <Utils/GuiUtils.h>
+
 #include <gdiplus.h>
 #include <Timer.h>
-#pragma comment(lib, "gdiplus.lib")
 
 namespace {
     char* strnstr(char* str, const char* substr, size_t n)
@@ -60,6 +66,27 @@ namespace {
         delete[] imageCodecInfo;
         return -1;
     }
+
+    void CmdDownloadMapFile(const wchar_t*, int, wchar_t**) {
+        GW::AreaInfo* i = GW::Map::GetMapInfo();
+        if (!(i && i->file_id))
+            return;
+        char buf[32];
+        snprintf(buf, sizeof(buf), "downloadfile %d", i->file_id);
+        GW::Chat::SendChat('/', buf);
+    }
+    void CmdDownloadFile(const wchar_t*, int argc, wchar_t** argv) {
+        const wchar_t* syntax = L"Syntax: /downloadfile [file_id]";
+        if (argc < 2)
+            return Log::ErrorW(syntax);
+        uint32_t file_id = 0;
+        if (!GuiUtils::ParseUInt(argv[1], &file_id, 10))
+            return Log::ErrorW(syntax);
+        Log::Info("Downloading file_id %d...", file_id);
+        GWFileRequester::Instance().load_file(file_id, [](GWFileRequester::GWResource* out) {
+            Log::Info("File id %d downloaded! %p", out);
+            });
+    }
 }
 
 void GWFileRequester::Initialize() {
@@ -76,6 +103,9 @@ void GWFileRequester::Initialize() {
         memcpy(copy.data, out->data, copy.data_len);
         GWFileRequester::Instance().load_texture_from_resource(copy, nullptr);
         });
+
+    GW::Chat::CreateCommand(L"mapfile", CmdDownloadMapFile);
+    GW::Chat::CreateCommand(L"downloadfile", CmdDownloadFile);
     // Example TODO, skill image raw texture
     // ...
 
@@ -239,6 +269,7 @@ int GWFileRequester::process_resource_request(GWResourceRequest* file_request) {
         }
         FStoC_FileManifest file_manifest = *file_manifest_ptr;
         unsigned char* compressed = (unsigned char*)malloc(file_manifest.size_compressed + 1);
+        ASSERT(compressed);
         size_t downloaded = 0;
         while (downloaded < file_manifest.size_compressed) {
             FStoC_FileData* response = (FStoC_FileData*)this->recv(sizeof(FStoC_FileData));

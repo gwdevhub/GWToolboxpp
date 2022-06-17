@@ -332,12 +332,13 @@ void ChatLog::InjectSent() {
     // Fill chat log
     TBSentMessage* sent = sent_first;
     while (sent) {
-        if (!sent->msg.data())
-            continue;
-        AddToSentLog_Func(sent->msg.data());
-        if (!out_log)
-            out_log = GetSentLog();
-        sent->gw_message_address = (uint32_t)out_log->prev->message;
+        if (sent->msg.data() && sent->msg.length()) {
+            // Only add to log if the message has content
+            AddToSentLog_Func(sent->msg.data());
+            if (!out_log)
+                out_log = GetSentLog();
+            sent->gw_message_address = (uint32_t)out_log->prev->message;
+        }
         if (sent == sent_last)
             break;
         sent = sent->next;
