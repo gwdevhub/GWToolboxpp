@@ -87,6 +87,28 @@ namespace {
             Log::Info("File id %d downloaded! %p", out);
             });
     }
+    void CmdDownloadImage(const wchar_t*, int argc, wchar_t** argv) {
+        const wchar_t* syntax = L"Syntax: /downloadimage [file_id]";
+        if (argc < 2)
+            return Log::ErrorW(syntax);
+        uint32_t file_id = 0;
+        if (!GuiUtils::ParseUInt(argv[1], &file_id, 10))
+            return Log::ErrorW(syntax);
+        Log::Info("Downloading file_id %d...", file_id);
+        GWFileRequester::Instance().load_file(file_id, [file_id](GWFileRequester::GWResource* out) {
+            if (!out) {
+                Log::Error("Failed to download file %d", file_id);
+                return;
+            }
+
+            GWFileRequester::GWResource copy = *out;
+            copy.data = (unsigned char*)malloc(copy.data_len);
+            memcpy(copy.data, out->data, copy.data_len);
+            GWFileRequester::Instance().load_texture_from_resource(copy, nullptr);
+            Log::Info("Img id %d downloaded! %p", file_id);
+            free(copy.data);
+            });
+    }
 }
 
 void GWFileRequester::Initialize() {
@@ -102,10 +124,12 @@ void GWFileRequester::Initialize() {
         copy.data = (unsigned char*)malloc(copy.data_len);
         memcpy(copy.data, out->data, copy.data_len);
         GWFileRequester::Instance().load_texture_from_resource(copy, nullptr);
+        free(copy.data);
         });
 
     GW::Chat::CreateCommand(L"mapfile", CmdDownloadMapFile);
     GW::Chat::CreateCommand(L"downloadfile", CmdDownloadFile);
+    GW::Chat::CreateCommand(L"downloadimage", CmdDownloadImage);
     // Example TODO, skill image raw texture
     // ...
 
