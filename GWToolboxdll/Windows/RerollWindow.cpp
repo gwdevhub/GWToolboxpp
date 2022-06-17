@@ -1,5 +1,8 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
+
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Party.h>
@@ -31,6 +34,7 @@
 
 #include <ImGuiAddons.h>
 #include <Utils/GuiUtils.h>
+
 
 
 

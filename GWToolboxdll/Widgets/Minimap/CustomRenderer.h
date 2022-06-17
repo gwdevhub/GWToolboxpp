@@ -9,7 +9,7 @@ namespace GW {
         enum class MapID;
     }
 }
-
+typedef uint32_t Color;
 namespace mapbox // enable mapbox::earcut to work with GW::Vec2f as Point
 {
     namespace util
