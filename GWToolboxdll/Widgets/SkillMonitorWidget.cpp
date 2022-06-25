@@ -38,7 +38,6 @@ void SkillMonitorWidget::Initialize() {
             CasttimeCallback(packet->type, packet->target_id, packet->value);
         });
 
-    /* Skill on self or party player */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
         &GenericValueSelf_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) -> void {
             UNREFERENCED_PARAMETER(status);
@@ -50,7 +49,6 @@ void SkillMonitorWidget::Initialize() {
             SkillCallback(value_id, caster_id, value);
         });
 
-    /* Skill on enemy player */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::GenericValueTarget* packet) -> void {
             UNREFERENCED_PARAMETER(status);
