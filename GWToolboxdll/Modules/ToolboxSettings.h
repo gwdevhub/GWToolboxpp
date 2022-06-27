@@ -92,4 +92,5 @@ private:
     bool use_reroll_window = true;
     bool use_party_statistics = true;
     bool use_latency_widget = true;
+    bool use_skill_monitor = true;
 };
