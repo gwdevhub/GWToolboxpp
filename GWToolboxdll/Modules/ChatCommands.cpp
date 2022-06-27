@@ -176,6 +176,13 @@ namespace {
         return &g->world->titles;
     }
 
+    typedef void(__cdecl* SetMuted_pt)(bool mute);
+    SetMuted_pt SetMuted_Func;
+    typedef void(__cdecl* PostMute_pt)(int param);
+    PostMute_pt PostMuted_Func;
+
+    bool* is_muted = 0;
+
 } // namespace
 
 void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
@@ -497,6 +504,16 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"normalmode", ChatCommands::CmdSetNormalMode);
     GW::Chat::CreateCommand(L"hardmode", ChatCommands::CmdSetHardMode);
     GW::Chat::CreateCommand(L"animation", ChatCommands::CmdAnimation);
+
+    uintptr_t address = GW::Scanner::Find("\x83\xc4\x04\xc7\x45\x08\x00\x00\x00\x00", "xxxxxxxxxx", -5);
+    if (address) {
+        SetMuted_Func = (SetMuted_pt)GW::Scanner::FunctionFromNearCall(address);
+        PostMuted_Func = (PostMute_pt)GW::Scanner::FunctionFromNearCall(address + 0x10);
+        is_muted = *(bool**)(((uintptr_t)SetMuted_Func) + 0x6);
+        
+    }
+    GW::Chat::CreateCommand(L"mute", CmdMute);
+        
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -1951,22 +1968,18 @@ void ChatCommands::CmdVolume(const wchar_t*, int argc, LPWSTR* argv) {
     GW::UI::SetPreference(pref, value_dec);
 }
 
-void ChatCommands::CmdSetHardMode(const wchar_t*, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(argc);
-    UNREFERENCED_PARAMETER(argv);
-    GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_SET_DIFFICULTY, 1);
+void ChatCommands::CmdSetHardMode(const wchar_t*, int , LPWSTR* ) {
+    GW::PartyMgr::SetHardMode(true);
 }
 
-void ChatCommands::CmdSetNormalMode(const wchar_t*, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(argc);
-    UNREFERENCED_PARAMETER(argv);
-    GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_SET_DIFFICULTY, 0);
+void ChatCommands::CmdSetNormalMode(const wchar_t*, int , LPWSTR* ) {
+    GW::PartyMgr::SetHardMode(false);
 }
 
 void ChatCommands::CmdAnimation(const wchar_t*, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(argc);
+    const char* syntax = "Syntax: '/animation [me|target] [animation_id (1-2076)]'";
 
-    if (argc < 3) return Log::Error("Missing /animation argument. Use /animation me/target number");
+    if (argc < 3) return Log::Error(syntax);
 
     uint32_t agentid;
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
@@ -1976,20 +1989,16 @@ void ChatCommands::CmdAnimation(const wchar_t*, int argc, LPWSTR* argv) {
         agentid = agent->agent_id;
     } else if (arg1 == L"target") {
         GW::AgentLiving* agent = GW::Agents::GetTargetAsAgentLiving();
-        if (agent) {
-            agentid = agent->agent_id;
-        } else {
+        if(!agent)
             return Log::Error("No target chosen");
-        }
+        agentid = agent->agent_id;
     } else {
-        return Log::Error("Invalid argument for /animation. It can be one of: me | target");
+        return Log::Error(syntax);
     }
 
-    uint32_t animationid = _wtoi(argv[2]);
-    if (animationid < 1 || animationid > 2076) {
-        Log::Error("Must be between [1, 2076]");
-        return;
-    }
+    uint32_t animationid = 0;
+    if (!GuiUtils::ParseUInt(argv[2],&animationid) || animationid < 1 || animationid > 2076)
+        return Log::Error(syntax);
 
     GW::GameThread::Enqueue([animationid, agentid]() {
         GW::Packet::StoC::GenericValue packet;
@@ -1998,4 +2007,10 @@ void ChatCommands::CmdAnimation(const wchar_t*, int argc, LPWSTR* argv) {
         packet.value = animationid;
         GW::StoC::EmulatePacket(&packet);
     });
+}
+void ChatCommands::CmdMute(const wchar_t*, int , LPWSTR* ) {
+    if (SetMuted_Func) {
+        SetMuted_Func(!(*is_muted));
+        PostMuted_Func(0);
+    }
 }

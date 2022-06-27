@@ -99,6 +99,7 @@ private:
     static void CmdSetHardMode(const wchar_t*, int argc, LPWSTR* argv);
     static void CmdSetNormalMode(const wchar_t*, int argc, LPWSTR* argv);
     static void CmdAnimation(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdMute(const wchar_t*, int argc, LPWSTR* argv);
     
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string name, PendingTransmo &transmo);
