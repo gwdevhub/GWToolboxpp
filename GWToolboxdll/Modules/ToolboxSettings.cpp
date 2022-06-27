@@ -136,6 +136,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_party_statistics) optional_modules.push_back(&PartyStatisticsWindow::Instance());
 
 #ifdef _DEBUG
+    optional_modules.push_back(&GWFileRequester::Instance());
 #if 0
     optional_modules.push_back(&PartySearchWindow::Instance());
 #endif
