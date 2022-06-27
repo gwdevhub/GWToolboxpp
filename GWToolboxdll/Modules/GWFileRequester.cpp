@@ -118,15 +118,15 @@ void GWFileRequester::Initialize() {
     socket_thread = std::thread([&]() {
         message_loop();
         });
-    // Example, dbay present FFNA > Image not working.
-    GWFileRequester::Instance().load_file(193281, [](GWFileRequester::GWResource* out) {
+    // Example, bday present FFNA > Image not working.
+    /*GWFileRequester::Instance().load_file(193281, [](GWFileRequester::GWResource* out) {
         GWFileRequester::GWResource copy = *out;
         copy.data = (unsigned char*)malloc(copy.data_len);
         memcpy(copy.data, out->data, copy.data_len);
         GWFileRequester::Instance().load_texture_from_resource(copy, nullptr);
         free(copy.data);
         });
-
+    */
     GW::Chat::CreateCommand(L"mapfile", CmdDownloadMapFile);
     GW::Chat::CreateCommand(L"downloadfile", CmdDownloadFile);
     GW::Chat::CreateCommand(L"downloadimage", CmdDownloadImage);
