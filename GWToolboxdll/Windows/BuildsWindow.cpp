@@ -485,13 +485,16 @@ bool BuildsWindow::GetCurrentSkillBar(char* out, size_t out_len) {
     GW::PartyAttributeArray& party_attributes = GW::GameContext::instance()->world->attributes;
     size_t attribute_idx = 0;
     for (const GW::PartyAttribute& agent_attributes : party_attributes) {
-        if (agent_attributes.agent_id != player->agent_id)
+        if (agent_attributes.agent_id != agent->agent_id)
             continue;
-        for (const GW::Attribute& attribute : agent_attributes.attribute) {
-            if (!attribute.level)
+        for (size_t attribute_id = 0; attribute_id < _countof(agent_attributes.attribute); attribute_id++) {
+            if (static_cast<GW::Constants::Attribute>(attribute_id) > GW::Constants::Attribute::Mysticism)
+                continue;
+            const GW::Attribute& attribute = agent_attributes.attribute[attribute_id];
+            if (!attribute.level_base)
                 continue;
             ASSERT(attribute_idx < _countof(templ.attributes));
-            templ.attributes[attribute_idx].attribute = (GW::Constants::Attribute)attribute.id;
+            templ.attributes[attribute_idx].attribute = (GW::Constants::Attribute)attribute_id;
             templ.attributes[attribute_idx].points = attribute.level_base;
             attribute_idx++;
         }
