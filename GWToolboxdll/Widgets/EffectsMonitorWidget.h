@@ -31,6 +31,8 @@ public:
     void Draw(IDirect3DDevice9 *pDevice) override;
     // Static handler for GW UI Message events. Updates ongoing effects and refreshes UI position.
     static void OnEffectUIMessage(GW::HookStatus*, uint32_t message_id, void* wParam, void* lParam);
+    // Triggered before StoC handling of add/renew/remove effect.
+    static void OnPreUpdateEffect(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);
 
 
 private:
@@ -63,7 +65,6 @@ private:
     ImVec2 window_size = { 0.f, 0.f };
     float x_translate = 1.f; // Multiplier for traversing effects on the x axis
     float y_translate = -1.f; // Multiplier for traversing effects on the y axis
-    size_t effect_count = 0;
     bool hard_mode = false;
     ImVec2 imgui_pos = { 0.f, 0.f };
     ImVec2 imgui_size = { 0.f, 0.f };
@@ -78,8 +79,10 @@ private:
     void SetEffect(const GW::Effect* effect);
     // Get matching effect from gwtoolbox overlay
     const GW::Effect* GetEffect(uint32_t effect_id);
-    // Remove effect from gwtoolbox overlay
-    void RemoveEffect(uint32_t skill_id);
+    // Get matching effect from gwtoolbox overlay
+    const GW::Effect* GetLongestEffectBySkillId(uint32_t skill_id);
+    // Remove effect from gwtoolbox overlay. Will only remove if the game has also removed it, otherwise false.
+    bool RemoveEffect(uint32_t skill_id);
     // Forcefully removes then re-adds the current effects; used for initialising
     void RefreshEffects();
     // Find the drawing order of the skill based on the gw effect monitor
