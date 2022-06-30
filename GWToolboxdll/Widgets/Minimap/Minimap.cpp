@@ -581,6 +581,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
             bool found = false;
             for (auto& effect : *effects) {
                 found = effect.skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || effect.skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk;
+                if (found) break;
             }
             if (!found) {
                 shadowstep_location = GW::Vec2f();
