@@ -417,7 +417,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 });
             }
         }
-        
+
         if (ImGui::CollapsingHeader("Camera")) {
             GW::Camera* cam = GW::CameraMgr::GetCamera();
             if (cam != nullptr) {
@@ -526,7 +526,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 
                 for (auto* a : *agents) {
                     GW::AgentLiving* agent = a ? a->GetAsAgentLiving() : nullptr;
-                    if (!(agent && agent->allegiance == 0x3)) continue; // ignore non-hostiles
+                    if (!(agent && agent->allegiance == static_cast<uint8_t>(GW::Constants::Allegiance::Enemy))) continue; // ignore non-hostiles
                     if (agent->GetIsDead()) continue; // ignore dead 
                     float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
                     if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor

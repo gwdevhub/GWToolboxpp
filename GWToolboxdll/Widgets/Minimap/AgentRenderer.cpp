@@ -614,13 +614,13 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     }
 
     if (ca && ca->color_active && !living->GetIsDead()) {
-        if (living->allegiance == 0x3 && living->hp <= 0.9f) {
+        if (living->allegiance == static_cast<uint8_t>(GW::Constants::Allegiance::Enemy) && living->hp <= 0.9f) {
             return Colors::Sub(ca->color, color_agent_damaged_modifier);
         }
         return ca->color;
     }
     // hostiles
-    if (living->allegiance == 0x3) {
+    if (living->allegiance == static_cast<uint8_t>(GW::Constants::Allegiance::Enemy)) {
         if(living->GetIsDead()) return color_hostile_dead;
         const Color* c = &color_hostile;
         if (boss_colors && living->GetHasBossGlow()) {
@@ -669,15 +669,15 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     }
 
     // neutrals
-    if (living->allegiance == 0x2) return color_neutral;
+    if (living->allegiance == static_cast<uint8_t>(GW::Constants::Allegiance::Neutral)) return color_neutral;
 
     // friendly
     if (living->GetIsDead()) return color_ally_dead;
-    switch (living->allegiance) {
-    case 0x1: return color_ally; // ally
-    case 0x6: return color_ally_npc; // npc / minipet
-    case 0x4: return color_ally_spirit; // spirit / pet
-    case 0x5: return color_ally_minion; // minion
+    switch (static_cast<GW::Constants::Allegiance>(living->allegiance)) {
+    case GW::Constants::Allegiance::Ally_NonAttackable: return color_ally;
+    case GW::Constants::Allegiance::Npc_Minipet: return color_ally_npc;
+    case GW::Constants::Allegiance::Spirit_Pet: return color_ally_spirit;
+    case GW::Constants::Allegiance::Minion: return color_ally_minion;
     default: break;
     }
 
@@ -695,17 +695,17 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
 
     if (living->GetHasBossGlow()) return size_boss;
 
-    switch (living->allegiance) {
-    case 0x1: // ally
-    case 0x2: // neutral
-    case 0x4: // spirit / pet
-    case 0x6: // npc / minipet
+    switch (static_cast<GW::Constants::Allegiance>(living->allegiance)) {
+    case GW::Constants::Allegiance::Ally_NonAttackable:
+    case GW::Constants::Allegiance::Neutral:
+    case GW::Constants::Allegiance::Spirit_Pet:
+    case GW::Constants::Allegiance::Npc_Minipet:
         return size_default;
 
-    case 0x5: // minion
+    case GW::Constants::Allegiance::Minion:
         return size_minion;
 
-    case 0x3: // hostile
+    case GW::Constants::Allegiance::Enemy:
         switch (living->player_number) {
         case GW::Constants::ModelID::Rotscale:
 

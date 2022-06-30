@@ -152,7 +152,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
     if (settings->stoc_header && settings->stoc_header != pak->header)
         return;
     GW::AgentLiving* caster = static_cast<GW::AgentLiving * >(GW::Agents::GetAgentByID(pak->agent_id));
-    if (!caster || caster->allegiance != 0x3) return;
+    if (!caster || caster->allegiance != static_cast<uint8_t>(GW::Constants::Allegiance::Enemy)) return;
     aoe_effects.push_back(new Effect(pak->value, caster->pos.x, caster->pos.y, settings->duration, settings->range, &settings->color));
 }
 void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
@@ -167,7 +167,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
         return;
     if (pak->caster == pak->target) return;
     GW::AgentLiving* caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->caster));
-    if (!caster || caster->allegiance != 0x3) return;
+    if (!caster || caster->allegiance != static_cast<uint8_t>(GW::Constants::Allegiance::Enemy)) return;
     GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
     if (!target) return;
     aoe_effects.push_back(new Effect(pak->value, target->pos.x, target->pos.y, settings->duration, settings->range, &settings->color));
@@ -184,7 +184,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) {
     if (settings->stoc_header && settings->stoc_header != pak->header)
         return;
     GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-    if (!a || a->allegiance != 0x3) return;
+    if (!a || a->allegiance != static_cast<uint8_t>(GW::Constants::Allegiance::Enemy)) return;
     aoe_effects.push_back(new Effect(pak->effect_id, pak->coords.x, pak->coords.y, settings->duration, settings->range, &settings->color));
 }
 void EffectRenderer::Initialize(IDirect3DDevice9* device) {

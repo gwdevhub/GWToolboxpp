@@ -218,10 +218,10 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
     if (target && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         Color *color = nullptr;
         size_t target_circle_render_index = 0;
-        if (target->allegiance == 0x1 && target->GetIsDead()) {
+        if (target->allegiance == static_cast<uint8_t>(GW::Constants::Allegiance::Ally_NonAttackable) && target->GetIsDead()) {
             color = &color_range_res_aggro;
             target_circle_render_index = 1;
-        } else if (target->allegiance == 0x3) {
+        } else if (target->allegiance == static_cast<uint8_t>(GW::Constants::Allegiance::Enemy)) {
             color = &color_range_chain_aggro;
         }
         
