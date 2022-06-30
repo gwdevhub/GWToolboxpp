@@ -526,7 +526,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 
                 for (auto* a : *agents) {
                     GW::AgentLiving* agent = a ? a->GetAsAgentLiving() : nullptr;
-                    if (!(agent && agent->allegiance == 0x3)) continue; // ignore non-hostiles
+                    if (!(agent && agent->allegiance == GW::Constants::Allegiance::Enemy)) continue; // ignore non-hostiles
                     if (agent->GetIsDead()) continue; // ignore dead 
                     float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
                     if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor

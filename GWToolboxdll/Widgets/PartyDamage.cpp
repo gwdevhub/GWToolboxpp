@@ -99,7 +99,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
     const GW::AgentLiving* const cause = agents[packet->cause_id]->GetAsAgentLiving();
 
 	if (cause == nullptr) return;
-	if (cause->allegiance != 0x1) return;
+	if (cause->allegiance != GW::Constants::Allegiance::Ally_NonAttackable) return;
     const auto cause_it = party_index.find(cause->agent_id);
 	if (cause_it == party_index.end()) return;  // ignore damage done by non-party members
 
@@ -110,7 +110,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 	if (target == nullptr) return;
 	if (target->login_number != 0) return; // ignore player-inflicted damage
 										        // such as Life bond or sacrifice
-	if (target->allegiance == 0x1) return; // ignore damage inflicted to allies in general
+	if (target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable) return; // ignore damage inflicted to allies in general
 	// warning: note damage to allied spirits, minions or stones may still trigger
 	// you can do damage like that by standing in bugged dart traps in eye of the north
 	// or maybe with some skills that damage minions/spirits

@@ -332,7 +332,7 @@ bool PartyWindowModule::ShouldRemoveAgentFromPartyWindow(uint32_t agent_id) {
         if (a->agent_id != allies_added_to_party[i])
             continue;
         // Ally turned enemy, or is dead.
-        return a->allegiance == 0x3 || a->GetIsDead() || a->GetIsDeadByTypeMap();
+        return a->allegiance == GW::Constants::Allegiance::Enemy || a->GetIsDead() || a->GetIsDeadByTypeMap();
     }
     return false;
 }
@@ -379,7 +379,7 @@ bool PartyWindowModule::ShouldAddAgentToPartyWindow(GW::Agent* _a) {
     GW::AgentLiving* a = _a ? _a->GetAsAgentLiving() : nullptr;
     if (!a || !a->IsNPC())
         return false;
-    if (a->GetIsDead() || a->GetIsDeadByTypeMap() || a->allegiance == 0x3)
+    if (a->GetIsDead() || a->GetIsDeadByTypeMap() || a->allegiance == GW::Constants::Allegiance::Enemy)
         return false; // Dont add dead NPCs.
     std::vector<uint32_t>::iterator it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), a->agent_id);
     if (it != allies_added_to_party.end())
@@ -509,7 +509,7 @@ void PartyWindowModule::LoadSettings(CSimpleIni* ini) {
 }
 GW::AgentLiving* PartyWindowModule::PendingAddToParty::GetAgent() {
     GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-    if (!a || !a->GetIsLivingType() || a->player_number != player_number || a->allegiance == 0x3)
+    if (!a || !a->GetIsLivingType() || a->player_number != player_number || a->allegiance == GW::Constants::Allegiance::Enemy)
         return nullptr;
     GW::NPC* npc = GW::Agents::GetNPCByID(player_number);
     if (!npc)

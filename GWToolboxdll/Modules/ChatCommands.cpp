@@ -136,7 +136,7 @@ namespace {
             const GW::AgentLiving* const agent = static_cast<GW::AgentLiving*>(agents->at(i));
             if (agent == nullptr || agent == me
                 || !agent->GetIsLivingType() || agent->GetIsDead()
-                || agent->allegiance == 0x3)
+                || agent->allegiance == GW::Constants::Allegiance::Enemy)
                 continue;
             const float this_distance = GW::GetSquareDistance(me->pos, agent->pos);
             if (this_distance > max_distance || distance > this_distance)
