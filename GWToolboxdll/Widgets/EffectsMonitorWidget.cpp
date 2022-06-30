@@ -109,7 +109,6 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
     case GW::UI::kMapChange: { // Map change
         Instance().cached_effects.clear();
         Instance().hard_mode = false;
-        Instance().effect_count = 0;
     } break;
     case GW::UI::kPreferenceChanged: // Refresh preference e.g. window X/Y position
     case GW::UI::kUIPositionChanged: // Refresh GW UI element position

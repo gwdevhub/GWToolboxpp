@@ -31,8 +31,6 @@ public:
     void Draw(IDirect3DDevice9 *pDevice) override;
     // Static handler for GW UI Message events. Updates ongoing effects and refreshes UI position.
     static void OnEffectUIMessage(GW::HookStatus*, uint32_t message_id, void* wParam, void* lParam);
-    // Triggered before StoC handling of add/renew/remove effect.
-    static void OnPreUpdateEffect(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);
 
 
 private:
