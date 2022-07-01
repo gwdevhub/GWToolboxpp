@@ -320,13 +320,13 @@ bool BondsWidget::FetchPartyInfo()
         }
     }
     if (show_allies && info->others.valid()) {
-        allies_start = party_list.size();
         for (const DWORD ally_id : info->others) {
-            GW::Agent *agent = GW::Agents::GetAgentByID(ally_id);
-            GW::AgentLiving *ally = agent ? agent->GetAsAgentLiving() : nullptr;
-            if (ally && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
-                party_map[ally_id] = party_list.size();
-                party_list.push_back(ally_id);
+            GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
+            GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
+            if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
+                if (allies_start == 255)
+                    allies_start = party_map.size();
+                party_map[ally_id] = party_map.size();
             }
         }
     }

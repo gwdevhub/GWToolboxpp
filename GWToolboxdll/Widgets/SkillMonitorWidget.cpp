@@ -322,6 +322,7 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
 
     switch (value_id) {
         case GenericValueID::instant_skill_activated:
+        case GenericValueID::attack_skill_activated:
         case GenericValueID::skill_activated: {
             float casttime = casttime_map[caster_id];
             const bool isInstant = value_id == GenericValueID::instant_skill_activated;
@@ -345,6 +346,7 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
         }
         case GenericValueID::skill_stopped:
         case GenericValueID::skill_finished:
+        case GenericValueID::attack_skill_finished:
         {
             auto casting = find_if(skill_history->begin(), skill_history->end(),
                 [&](SkillActivation skill_activation) { return skill_activation.status == CASTING; });
@@ -406,11 +408,12 @@ bool SkillMonitorWidget::FetchPartyInfo() {
         }
     }
     if (info->others.valid()) {
-        allies_start = party_map.size();
         for (const DWORD ally_id : info->others) {
             GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
             GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
-            if (ally && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
+            if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
+                if(allies_start == 255)
+                    allies_start = party_map.size();
                 party_map[ally_id] = party_map.size();
             }
         }
