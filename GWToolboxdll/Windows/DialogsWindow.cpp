@@ -116,7 +116,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::Button("Reward", ImVec2(60.0f, 0))) {
                     GW::Agents::SendDialog(
-                        QuestRewardDialog(IndexToDialogID(fav_index[index])));
+                        QuestRewardDialog(IndexToQuestID(fav_index[index])));
                 }
                 ImGui::PopID();
             }
