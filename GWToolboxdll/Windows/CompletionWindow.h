@@ -35,14 +35,14 @@ namespace Missions {
 
         GW::Constants::MapID outpost;
         GW::Constants::MapID map_to;
-        uint32_t zm_quest;
+        GW::Constants::QuestID zm_quest;
         const MissionImageList& normal_mode_textures;
         const MissionImageList& hard_mode_textures;
 
 
 
     public:
-        Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, uint32_t);
+        Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, GW::Constants::QuestID = (GW::Constants::QuestID)0);
         static ImVec2 icon_size;
         GW::Constants::MapID GetOutpost();
 
@@ -111,7 +111,7 @@ namespace Missions {
     public:
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
-        PropheciesMission(GW::Constants::MapID _outpost, uint32_t _zm_quest = 0)
+        PropheciesMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = (GW::Constants::QuestID)0)
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) {}
     };
 
@@ -124,7 +124,7 @@ namespace Missions {
     public:
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
-        FactionsMission(GW::Constants::MapID _outpost, uint32_t _zm_quest = 0)
+        FactionsMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = (GW::Constants::QuestID)0)
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) {}
     };
 
@@ -139,13 +139,13 @@ namespace Missions {
         NightfallMission(GW::Constants::MapID _outpost,
             const MissionImageList& _normal_mode_images,
             const MissionImageList& _hard_mode_images,
-            uint32_t _zm_quest)
+            GW::Constants::QuestID _zm_quest)
             : Mission(_outpost, _normal_mode_images, _hard_mode_images, _zm_quest) {}
 
     public:
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
-        NightfallMission(GW::Constants::MapID _outpost, uint32_t _zm_quest = 0)
+        NightfallMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = (GW::Constants::QuestID)0)
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) {}
     };
 
@@ -158,7 +158,7 @@ namespace Missions {
     public:
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
-        TormentMission(GW::Constants::MapID _outpost, uint32_t _zm_quest = 0)
+        TormentMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = (GW::Constants::QuestID)0)
             : NightfallMission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) {}
     };
 
@@ -166,7 +166,7 @@ namespace Missions {
     {
     public:
         static MissionImageList hard_mode_images;
-        Vanquish(GW::Constants::MapID _outpost, uint32_t _zm_quest = 0)
+        Vanquish(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = (GW::Constants::QuestID)0)
             : Mission(_outpost, hard_mode_images, hard_mode_images, _zm_quest) {
         }
 
@@ -186,12 +186,12 @@ namespace Missions {
         EotNMission(GW::Constants::MapID _outpost,
             const MissionImageList& _normal_mode_images,
             const MissionImageList& _hard_mode_images,
-            uint32_t _zm_quest)
+            GW::Constants::QuestID _zm_quest = (GW::Constants::QuestID)0)
             : Mission(_outpost, _normal_mode_images, _hard_mode_images, _zm_quest) {}
     public:
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
-        EotNMission(GW::Constants::MapID _outpost, uint32_t _zm_quest = 0)
+        EotNMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = (GW::Constants::QuestID)0)
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) {}
 
         
@@ -204,15 +204,15 @@ namespace Missions {
     {
     private:
 
-        std::vector<uint32_t> zb_quests;
+        std::vector<GW::Constants::QuestID> zb_quests;
 
     public:
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
-        Dungeon(GW::Constants::MapID _outpost, std::vector<uint32_t> _zb_quests)
-            : EotNMission(_outpost, normal_mode_images, hard_mode_images, 0), zb_quests(_zb_quests) {}
-        Dungeon(GW::Constants::MapID _outpost, uint32_t _zb_quest = 0)
-            : EotNMission(_outpost, normal_mode_images, hard_mode_images, 0), zb_quests({ _zb_quest }) {}
+        Dungeon(GW::Constants::MapID _outpost, std::vector<GW::Constants::QuestID> _zb_quests)
+            : EotNMission(_outpost, normal_mode_images, hard_mode_images), zb_quests(_zb_quests) {}
+        Dungeon(GW::Constants::MapID _outpost, GW::Constants::QuestID _zb_quest = (GW::Constants::QuestID)0)
+            : EotNMission(_outpost, normal_mode_images, hard_mode_images), zb_quests({ _zb_quest }) {}
 
         bool IsDaily() override;
         bool HasQuest() override;

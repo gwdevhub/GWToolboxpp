@@ -2521,24 +2521,17 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wPar
         // Redirect /wiki to /wiki <current map name>
         status->blocked = true;
         GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
-        /*char* buf = new char[32];
-        char* map_type = 0;
-        switch (map->type) {
-
-        }
-        snprintf(buf,32,"Game_link:%s_%d")*/
         Instance().pending_wiki_search_term = new GuiUtils::EncString(map->name_id);
     }
     else if (strstr(url.c_str(), "?search=quest")) {
         // Redirect /wiki quest to /wiki <current quest name>
         status->blocked = true;
-        GW::WorldContext* c = GW::WorldContext::instance();
-        uint32_t quest_id = c->active_quest_id;
-        for (const GW::Quest& q : c->quest_log) {
-            if (q.quest_id == quest_id) {
-                Instance().pending_wiki_search_term = new GuiUtils::EncString(q.name);
-                break;
-            }
+        auto* quest = GW::PlayerMgr::GetActiveQuest();
+        if (quest) {
+            Instance().pending_wiki_search_term = new GuiUtils::EncString(quest->name);
+        }
+        else {
+            Log::Error("No current active quest");
         }
     }
     else if (strstr(url.c_str(), "?search=target")) {
@@ -2547,6 +2540,9 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wPar
         const GW::Agent* a = GW::Agents::GetTarget();
         if (a) {
             Instance().pending_wiki_search_term = new GuiUtils::EncString(GW::Agents::GetAgentEncName(a));
+        }
+        else {
+            Log::Error("No current target");
         }
     }
 }

@@ -4,6 +4,12 @@
 
 #include <ToolboxWindow.h>
 
+namespace GW {
+    namespace Constants {
+        enum class QuestID;
+    }
+}
+
 class DialogsWindow : public ToolboxWindow {
     DialogsWindow() {};
     ~DialogsWindow() {};
@@ -23,10 +29,10 @@ public:
     void DrawSettingInternal() override;
 
 private:
-    inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }
-    inline DWORD QuestRewardDialog(DWORD quest) { return (quest << 8) | 0x800007; }
+    inline DWORD QuestAcceptDialog(GW::Constants::QuestID quest) { return ((int)quest << 8) | 0x800001; }
+    inline DWORD QuestRewardDialog(GW::Constants::QuestID quest) { return ((int)quest << 8) | 0x800007; }
 
-    DWORD IndexToQuestID(int index);
+    GW::Constants::QuestID IndexToQuestID(int index);
     DWORD IndexToDialogID(int index);
 
     int fav_count = 0;

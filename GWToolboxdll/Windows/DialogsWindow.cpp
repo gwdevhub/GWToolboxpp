@@ -83,10 +83,10 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 
         if (show_common) {
-            DialogButton(0, 2, "Four Horseman", "Take quest in Planes", QuestAcceptDialog(GW::Constants::QuestID::UW::Planes));
-            DialogButton(1, 2, "Demon Assassin", "Take quest in Mountains", QuestAcceptDialog(GW::Constants::QuestID::UW::Mnt));
-            DialogButton(0, 2, "Tower of Strength", "Take quest", QuestAcceptDialog(GW::Constants::QuestID::Fow::Tos));
-            DialogButton(1, 2, "Foundry Reward", "Accept quest reward", QuestRewardDialog(GW::Constants::QuestID::Doa::FoundryBreakout));
+            DialogButton(0, 2, "Four Horseman", "Take quest in Planes", QuestAcceptDialog(GW::Constants::QuestID::UW_Planes));
+            DialogButton(1, 2, "Demon Assassin", "Take quest in Mountains", QuestAcceptDialog(GW::Constants::QuestID::UW_Mnt));
+            DialogButton(0, 2, "Tower of Strength", "Take quest", QuestAcceptDialog(GW::Constants::QuestID::Fow_Tos));
+            DialogButton(1, 2, "Foundry Reward", "Accept quest reward", QuestRewardDialog(GW::Constants::QuestID::Doa_FoundryBreakout));
             ImGui::Separator();
         }
         if (show_uwteles) {
@@ -203,38 +203,38 @@ void DialogsWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_custom), show_custom);
 }
 
-DWORD DialogsWindow::IndexToQuestID(int index) {
+GW::Constants::QuestID DialogsWindow::IndexToQuestID(int index) {
     switch (index) {
-    case 0: return GW::Constants::QuestID::UW::Chamber;
-    case 1: return GW::Constants::QuestID::UW::Wastes;
-    case 2: return GW::Constants::QuestID::UW::UWG;
-    case 3: return GW::Constants::QuestID::UW::Mnt;
-    case 4: return GW::Constants::QuestID::UW::Pits;
-    case 5: return GW::Constants::QuestID::UW::Planes;
-    case 6: return GW::Constants::QuestID::UW::Pools;
-    case 7: return GW::Constants::QuestID::UW::Escort;
-    case 8: return GW::Constants::QuestID::UW::Restore;
-    case 9: return GW::Constants::QuestID::UW::Vale;
-    case 10: return GW::Constants::QuestID::Fow::Defend;
-    case 11: return GW::Constants::QuestID::Fow::ArmyOfDarknesses;
-    case 12: return GW::Constants::QuestID::Fow::WailingLord;
-    case 13: return GW::Constants::QuestID::Fow::Griffons;
-    case 14: return GW::Constants::QuestID::Fow::Slaves;
-    case 15: return GW::Constants::QuestID::Fow::Restore;
-    case 16: return GW::Constants::QuestID::Fow::Hunt;
-    case 17: return GW::Constants::QuestID::Fow::Forgemaster;
-    case 18: return GW::Constants::QuestID::Fow::Tos;
-    case 19: return GW::Constants::QuestID::Fow::Toc;
-    case 20: return GW::Constants::QuestID::Fow::Khobay;
-    case 21: return GW::Constants::QuestID::Doa::DeathbringerCompany;
-    case 22: return GW::Constants::QuestID::Doa::RiftBetweenUs;
-    case 23: return GW::Constants::QuestID::Doa::ToTheRescue;
-    case 24: return GW::Constants::QuestID::Doa::City;
-    case 25: return GW::Constants::QuestID::Doa::BreachingStygianVeil;
-    case 26: return GW::Constants::QuestID::Doa::BroodWars;
-    case 27: return GW::Constants::QuestID::Doa::FoundryOfFailedCreations;
-    case 28: return GW::Constants::QuestID::Doa::FoundryBreakout;
-    default: return 0;
+    case 0: return GW::Constants::QuestID::UW_Chamber;
+    case 1: return GW::Constants::QuestID::UW_Wastes;
+    case 2: return GW::Constants::QuestID::UW_UWG;
+    case 3: return GW::Constants::QuestID::UW_Mnt;
+    case 4: return GW::Constants::QuestID::UW_Pits;
+    case 5: return GW::Constants::QuestID::UW_Planes;
+    case 6: return GW::Constants::QuestID::UW_Pools;
+    case 7: return GW::Constants::QuestID::UW_Escort;
+    case 8: return GW::Constants::QuestID::UW_Restore;
+    case 9: return GW::Constants::QuestID::UW_Vale;
+    case 10: return GW::Constants::QuestID::Fow_Defend;
+    case 11: return GW::Constants::QuestID::Fow_ArmyOfDarknesses;
+    case 12: return GW::Constants::QuestID::Fow_WailingLord;
+    case 13: return GW::Constants::QuestID::Fow_Griffons;
+    case 14: return GW::Constants::QuestID::Fow_Slaves;
+    case 15: return GW::Constants::QuestID::Fow_Restore;
+    case 16: return GW::Constants::QuestID::Fow_Hunt;
+    case 17: return GW::Constants::QuestID::Fow_Forgemaster;
+    case 18: return GW::Constants::QuestID::Fow_Tos;
+    case 19: return GW::Constants::QuestID::Fow_Toc;
+    case 20: return GW::Constants::QuestID::Fow_Khobay;
+    case 21: return GW::Constants::QuestID::Doa_DeathbringerCompany;
+    case 22: return GW::Constants::QuestID::Doa_RiftBetweenUs;
+    case 23: return GW::Constants::QuestID::Doa_ToTheRescue;
+    case 24: return GW::Constants::QuestID::Doa_City;
+    case 25: return GW::Constants::QuestID::Doa_BreachingStygianVeil;
+    case 26: return GW::Constants::QuestID::Doa_BroodWars;
+    case 27: return GW::Constants::QuestID::Doa_FoundryOfFailedCreations;
+    case 28: return GW::Constants::QuestID::Doa_FoundryBreakout;
+    default: return GW::Constants::QuestID::None;
     }
 }
 

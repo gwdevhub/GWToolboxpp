@@ -624,17 +624,11 @@ void ChatCommands::Update(float delta) {
 
 }
 void ChatCommands::QuestPing::Init() {
-    auto w = GW::GameContext::instance()->world;
-    if (!w->active_quest_id)
-        return;
-    for (auto& quest : w->quest_log) {
-        if (quest.quest_id != w->active_quest_id)
-            continue;
-        name.reset(quest.name);
-        objectives.reset(quest.objectives);
-        return;
+    auto* quest = GW::PlayerMgr::GetActiveQuest();
+    if (quest) {
+        name.reset(quest->name);
+        objectives.reset(quest->objectives);
     }
-
 }
 void ChatCommands::QuestPing::Update() {
     if (!name.wstring().empty()) {
