@@ -35,7 +35,7 @@ void EffectsMonitorWidget::RefreshEffects() {
     struct Packet : GW::Packet::StoC::PacketBase {
         uint32_t agent_id;
         uint32_t skill_id;
-        uint32_t effect_type;
+        uint32_t attribute_level;
         uint32_t effect_id;
         float duration;
     } add;
@@ -53,7 +53,7 @@ void EffectsMonitorWidget::RefreshEffects() {
         add.skill_id = effect.skill_id;
         add.effect_id = effect.effect_id;
         add.duration = effect.duration;
-        add.effect_type = effect.effect_type;
+        add.attribute_level = effect.attribute_level;
         GW::StoC::EmulatePacket(&add);
     }
     Instance().SetMoralePercent(GW::GameContext::instance()->world->morale);

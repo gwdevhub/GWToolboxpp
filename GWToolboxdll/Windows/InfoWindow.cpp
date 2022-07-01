@@ -301,7 +301,7 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
         GW::EffectArray* effects = GW::Effects::GetAgentEffects(agent->agent_id);
         if (effects) {
             for (auto& effect : *effects) {
-                ImGui::Text("id: %d | type: %d | skill: %d | duration: %u", effect.effect_id, effect.effect_type, effect.skill_id, effect.GetTimeRemaining() / 1000);
+                ImGui::Text("id: %d | attrib level: %d | skill: %d | duration: %u", effect.effect_id, effect.attribute_level, effect.skill_id, effect.GetTimeRemaining() / 1000);
             }
         }
         ImGui::TreePop();
