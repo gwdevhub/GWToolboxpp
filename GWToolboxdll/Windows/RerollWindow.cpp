@@ -1,5 +1,8 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
+
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Party.h>
@@ -30,7 +33,8 @@
 #include <Timer.h>
 
 #include <ImGuiAddons.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
+
 
 
 
@@ -62,21 +66,7 @@ namespace {
             email = 0;
         return email;
     }
-    GW::Guild* GetCurrentGH()
-    {
-        GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
-        if (!m || m->type != GW::RegionType::RegionType_GuildHall)
-            return nullptr;
-        const GW::Array<GW::Guild*>& guilds = GW::GuildMgr::GetGuildArray();
-        if (!guilds.valid())
-            return nullptr;
-        for (size_t i = 0; i < guilds.size(); i++) {
-            if (!guilds[i])
-                continue;
-            return guilds[i];
-        }
-        return nullptr;
-    }
+
     const wchar_t* GetNextPartyLeader() {
         GW::PartyInfo* player_party = GetPlayerParty();
         if (!player_party || !player_party->players.valid() || player_party->players.size() < 2)
@@ -92,7 +82,7 @@ namespace {
         }
         return 0;
     }
-    typedef void(__cdecl* SetOnlineStatus_pt)(uint32_t status);
+    typedef void(__cdecl* SetOnlineStatus_pt)(GW::FriendStatus status);
     SetOnlineStatus_pt SetOnlineStatus_Func;
     SetOnlineStatus_pt RetSetOnlineStatus;
 
@@ -219,7 +209,7 @@ void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
             buf = GuiUtils::WStringToString(player_name);
             if ((i % 2) != 0)
                 ImGui::SameLine();
-            if (ImGui::IconButton(buf.c_str(), Resources::GetProfessionIcon((GW::Constants::Profession)profession),btn_dim)) {
+            if (ImGui::IconButton(buf.c_str(), *Resources::GetProfessionIcon((GW::Constants::Profession)profession),btn_dim)) {
                 bool _same_map = travel_to_same_location_after_rerolling;
                 bool _same_party = travel_to_same_location_after_rerolling && rejoin_party_after_rerolling;
                 if (rejoin_party_after_rerolling && !_same_party) {
@@ -292,7 +282,7 @@ void RerollWindow::CmdReroll(const wchar_t* message, int argc, LPWSTR*) {
     return;
 }
 
-void RerollWindow::OnSetStatus(uint32_t status) {
+void RerollWindow::OnSetStatus(GW::FriendStatus status) {
     GW::Hook::EnterHook();
     if (Instance().reroll_stage == WaitForCharacterLoad)
         status = Instance().online_status;
@@ -325,7 +315,7 @@ void RerollWindow::Initialize() {
 
 void RerollWindow::Update(float) {
     if (check_available_chars && IsCharSelectReady()) {
-        auto chars = GW::PreGameContext::instance()->chars;
+        auto& chars = GW::PreGameContext::instance()->chars;
         const wchar_t* email = GetAccountEmail();
         if (email) {
             auto found = account_characters.find(email);
@@ -512,7 +502,7 @@ void RerollWindow::AddAvailableCharacter(const wchar_t* email, const wchar_t* ch
 }
 bool RerollWindow::IsInMap(bool include_district) {
     if (guild_hall_uuid) {
-        GW::Guild* current_location = GetCurrentGH();
+        GW::Guild* current_location = GW::GuildMgr::GetCurrentGH();
         return current_location && memcmp(&current_location->key, guild_hall_uuid, sizeof(*guild_hall_uuid)) == 0;
     }
     return GW::Map::GetMapID() == map_id && (!include_district || district_id == 0 || GW::Map::GetDistrict() == district_id) && GW::Map::GetRegion() == region_id && GW::Map::GetLanguage() == language_id;
@@ -595,7 +585,7 @@ bool RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_pa
         delete[] guild_hall_uuid;
         guild_hall_uuid = 0;
     }
-    GW::Guild* current_guild_hall = GetCurrentGH();
+    GW::Guild* current_guild_hall = GW::GuildMgr::GetCurrentGH();
     if (current_guild_hall) {
         guild_hall_uuid = new uint32_t[4];
         memcpy(guild_hall_uuid, &current_guild_hall->key, sizeof(current_guild_hall->key));

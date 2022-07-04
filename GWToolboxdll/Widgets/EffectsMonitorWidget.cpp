@@ -25,17 +25,17 @@
 #include "Timer.h"
 
 void EffectsMonitorWidget::RefreshEffects() {
-    GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-    if (!effects.valid())
+    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects)
         return;
     std::vector<GW::Effect> readd_effects;
-    for (GW::Effect& effect : effects) {
+    for (GW::Effect& effect : *effects) {
         readd_effects.push_back(effect);
     }
     struct Packet : GW::Packet::StoC::PacketBase {
         uint32_t agent_id;
         uint32_t skill_id;
-        uint32_t effect_type;
+        uint32_t attribute_level;
         uint32_t effect_id;
         float duration;
     } add;
@@ -53,7 +53,7 @@ void EffectsMonitorWidget::RefreshEffects() {
         add.skill_id = effect.skill_id;
         add.effect_id = effect.effect_id;
         add.duration = effect.duration;
-        add.effect_type = effect.effect_type;
+        add.attribute_level = effect.attribute_level;
         GW::StoC::EmulatePacket(&add);
     }
     Instance().SetMoralePercent(GW::GameContext::instance()->world->morale);
@@ -109,7 +109,6 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
     case GW::UI::kMapChange: { // Map change
         Instance().cached_effects.clear();
         Instance().hard_mode = false;
-        Instance().effect_count = 0;
     } break;
     case GW::UI::kPreferenceChanged: // Refresh preference e.g. window X/Y position
     case GW::UI::kUIPositionChanged: // Refresh GW UI element position
@@ -122,29 +121,48 @@ void EffectsMonitorWidget::SetMoralePercent(uint32_t _morale_percent) {
     // We're going to spoof it as a skill with effect id 0 to put it in the right place.
     morale_percent = _morale_percent;
 }
-void EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
+bool EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
+    if (GetEffect(effect_id))
+        return false; // Game hasn't removed the effect yet.
     for (auto& by_type : cached_effects) {
         auto& effects = by_type.second;
         for (size_t i = 0; i < effects.size();i++) {
-            if (effects[i].effect_id == effect_id) {
-                by_type.second.erase(effects.begin() + i);
-                if (effects.size() == 0)
-                    cached_effects.erase(by_type.first);
-                effect_count--;
-                return;
-            } 
+            if (effects[i].effect_id != effect_id)
+                continue;
+            const GW::Effect* existing = GetLongestEffectBySkillId(effects[i].skill_id);
+            if (existing) {
+                memcpy(&effects[i], existing, sizeof(*existing));
+                return false; // Game hasn't removed the effect yet (copy the effect over)
+            }
+            by_type.second.erase(effects.begin() + i);
+            if (effects.size() == 0)
+                cached_effects.erase(by_type.first);
+            return true;
         }
     }
+    return false;
 }
 const GW::Effect* EffectsMonitorWidget::GetEffect(uint32_t effect_id) {
-    const GW::EffectArray& effects = GW::Effects::GetPlayerEffectArray();
-    if (!effects.valid())
+    const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects)
         return nullptr;
-    for (const GW::Effect& effect : effects) {
+    for (const GW::Effect& effect : *effects) {
         if (effect.effect_id == effect_id)
             return &effect;
     }
     return nullptr;
+}
+const GW::Effect* EffectsMonitorWidget::GetLongestEffectBySkillId(uint32_t skill_id) {
+    const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects)
+        return nullptr;
+    const GW::Effect* found = nullptr;
+    for (const GW::Effect& effect : *effects) {
+        if (effect.skill_id == skill_id && (!found || effect.GetTimeRemaining() > found->GetTimeRemaining())) {
+            found = &effect;
+        }
+    }
+    return found;
 }
 uint32_t EffectsMonitorWidget::GetEffectSortOrder(uint32_t skill_id) {
     switch (static_cast<GW::Constants::SkillID>(skill_id)) {
@@ -153,9 +171,9 @@ uint32_t EffectsMonitorWidget::GetEffectSortOrder(uint32_t skill_id) {
     case GW::Constants::SkillID::No_Skill:
         return 1; // Morale boost from ui message 0x10000047
     }
-    const GW::Skill& skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    const GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
     // Lifted from GmEffect::ActivateEffect(), removed assertion and instead whack everything else into 0xd
-    switch (skill.type) {
+    switch (skill->type) {
     case 3:
         return 9;
     case 4:
@@ -182,6 +200,11 @@ void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
     if (cached_effects.find(type) == cached_effects.end())
         cached_effects[type] = std::vector<GW::Effect>();
 
+    // Player can stand in range of more than 1 spirit; use the longest effect duration for the effect monitor
+    if (effect->duration) {
+        effect = GetLongestEffectBySkillId(effect->skill_id);
+    }
+
     size_t current = GetEffectIndex(cached_effects[type], effect->skill_id);
     if (current != 0xFF) {
         cached_effects[type].erase(cached_effects[type].begin() + current);
@@ -192,7 +215,6 @@ void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
     if (!effect->duration)
         DurationExpired(cached_effects[type].back());
     hard_mode |= effect->skill_id == (uint32_t)GW::Constants::SkillID::Hard_mode;
-    effect_count++;
 }
 bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
     uint32_t timer = GW::MemoryMgr::GetSkillTimer();
@@ -207,13 +229,8 @@ bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
     if (!effect.duration)
         return &effect;
     // Effect expired
-    const GW::Effect* e = GetEffect(effect.effect_id);
-    if (!e) {
-        RemoveEffect(effect.effect_id);
-        return true;
-    }
-    return false;
-    // Got here; effect has expired, but game hasn't removed it yet e.g. lag. Still need to draw it.
+    return RemoveEffect(effect.effect_id);
+    
 }
 size_t EffectsMonitorWidget::GetEffectIndex(const std::vector<GW::Effect>& arr, uint32_t skill_id) {
     for (size_t i = 0; i < arr.size(); i++) {
@@ -275,7 +292,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 
     if (!initialised) {
         initialised = true;
-        GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, OnEffectUIMessage);
+        GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, OnEffectUIMessage,0x8000);
         GW::GameThread::Enqueue([]() {
             Instance().RefreshEffects();
             });

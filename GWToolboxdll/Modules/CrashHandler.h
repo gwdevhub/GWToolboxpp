@@ -46,6 +46,7 @@ private:
     HandleCrash_pt RetHandleCrash = 0;
 
     GWDebugInfo* gw_debug_info = 0;
+    char* tb_exception_message = 0;
 
     void Cleanup();
 };

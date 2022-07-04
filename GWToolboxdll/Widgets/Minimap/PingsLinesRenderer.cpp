@@ -15,7 +15,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/Minimap.h>
 
 void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
@@ -306,22 +306,8 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
     if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
 
     GW::Buff *recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
-    if (!recall || recall->skill_id == 0) {
-        recall_target = 0;
-        return;
-    }
-    GW::Agent* player = GW::Agents::GetPlayer();
-    if (player == nullptr) {
-        recall_target = 0;
-        return;
-    }
-
-    GW::AgentArray agents = GW::Agents::GetAgentArray();
-    if (!agents.valid() || recall_target >= agents.size()) {
-        recall_target = 0;
-        return;
-    }
-    GW::Agent* target = agents[recall_target];
+    GW::Agent* player = recall && recall->skill_id ? GW::Agents::GetPlayer() : nullptr;
+    GW::Agent* target = player ? GW::Agents::GetAgentByID(recall_target) : nullptr;
     if (target == nullptr) {
         // This can happen if you recall something that then despawns before you drop recall.
         recall_target = 0;

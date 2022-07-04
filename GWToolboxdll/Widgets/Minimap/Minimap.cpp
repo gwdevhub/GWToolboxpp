@@ -10,6 +10,7 @@
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -26,7 +27,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
@@ -405,6 +406,8 @@ void Minimap::DrawSettingInternal()
     ImGui::NextSpacedElement();  ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
     ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
 
+    ImGui::SliderInt("Agent Border thickness", reinterpret_cast<int*>(&agent_renderer.agent_border_thickness), 0, 50);
+
     ImGui::Text("Allow mouse click-through in:");
     ImGui::Indent();
     ImGui::StartSpacedElements(200.f);
@@ -446,10 +449,15 @@ void Minimap::LoadSettings(CSimpleIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
-        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
-        [](bool success) {
-            UNREFERENCED_PARAMETER(success);
-            Minimap::Instance().custom_renderer.LoadMarkers();
+        "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
+        [](bool success, const std::wstring& error) {
+            if (success) {
+                Minimap::Instance().custom_renderer.LoadMarkers();
+            }
+            else {
+                Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
+            }
+            
         });
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
     hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
@@ -565,14 +573,15 @@ void Minimap::Draw(IDirect3DDevice9 *)
 
     // Check shadowstep location
     if (shadowstep_location.x != 0.0f || shadowstep_location.y != 0.0f) {
-        GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-        if (!effects.valid()) {
+        GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+        if (!effects) {
             shadowstep_location = GW::Vec2f();
         }
         else {
             bool found = false;
-            for (unsigned int i = 0; !found && i < effects.size(); ++i) {
-                found = effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk;
+            for (auto& effect : *effects) {
+                found = effect.skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || effect.skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk;
+                if (found) break;
             }
             if (!found) {
                 shadowstep_location = GW::Vec2f();
@@ -885,15 +894,12 @@ GW::Vec2f Minimap::InterfaceToWorldVector(Vec2i pos) const
 
 void Minimap::SelectTarget(GW::Vec2f pos) const
 {
-    GW::AgentArray agents = GW::Agents::GetAgentArray();
-    if (!agents.valid())
-        return;
-
+    GW::AgentArray* agents = GW::Agents::GetAgentArray();
     float distance = 600.0f * 600.0f;
     size_t closest = static_cast<size_t>(-1);
 
-    for (size_t i = 0; i < agents.size(); ++i) {
-        GW::Agent *agent = agents[i];
+    for (size_t i = 0; agents && i < agents->size();i++) {
+        GW::Agent* agent = agents->at(i);
         if (agent == nullptr)
             continue;
         GW::AgentLiving *living = agent->GetAsAgentLiving();
@@ -905,7 +911,7 @@ void Minimap::SelectTarget(GW::Vec2f pos) const
             continue; // allow locked chests
         if (living && (living->player_number >= 230 && living->player_number <= 346))
             continue; // block all useless minis
-        const float newDistance = GW::GetSquareDistance(pos, agents[i]->pos);
+        const float newDistance = GW::GetSquareDistance(pos, agent->pos);
         if (distance > newDistance) {
             distance = newDistance;
             closest = i;
@@ -913,7 +919,7 @@ void Minimap::SelectTarget(GW::Vec2f pos) const
     }
 
     if (closest != static_cast<size_t>(-1)) {
-        GW::Agents::ChangeTarget(agents[closest]);
+        GW::Agents::ChangeTarget(agents->at(closest));
     }
 }
 
@@ -1130,7 +1136,12 @@ bool Minimap::IsInside(int x, int y) const
 }
 bool Minimap::IsActive() const
 {
-    return visible && !loading && GW::Map::GetIsMapLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Agents::GetPlayerId() != 0;
+    return visible 
+        && !loading 
+        && GW::Map::GetIsMapLoaded() 
+        && !GW::UI::GetIsWorldMapShowing()
+        && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading 
+        && GW::Agents::GetPlayerId() != 0;
 }
 
 void Minimap::RenderSetupProjection(IDirect3DDevice9 *device) const

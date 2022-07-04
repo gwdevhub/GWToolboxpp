@@ -6,7 +6,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 
 class FactionLeaderboardWindow : public ToolboxWindow {

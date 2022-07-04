@@ -11,7 +11,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 
 #include <Logger.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
 #include <Modules/ObserverModule.h>
@@ -465,9 +465,9 @@ void ObserverExportWindow::ExportToJSON(Version version) {
     }
 
     Resources::EnsureFolderExists(Resources::GetPath(L"observer"));
-    std::wstring file_location = Resources::GetPath(L"observer\\" + GuiUtils::StringToWString(filename));
-    if (PathFileExistsW(file_location.c_str())) {
-        DeleteFileW(file_location.c_str());
+    auto file_location = Resources::GetPath(L"observer\\" + GuiUtils::StringToWString(filename));
+    if (std::filesystem::exists(file_location)) {
+        std::filesystem::remove(file_location);
     }
 
     std::ofstream out(file_location);
@@ -475,11 +475,11 @@ void ObserverExportWindow::ExportToJSON(Version version) {
     out.close();
     wchar_t file_location_wc[512];
     size_t msg_len = 0;
-    const wchar_t* message = file_location.c_str();
+    const std::wstring message = file_location.wstring();
 
     size_t max_len = _countof(file_location_wc) - 1;
     
-    for (size_t i = 0; i < file_location.length(); i++) {
+    for (size_t i = 0; i < message.length(); i++) {
         // Break on the end of the message
         if (!message[i])
             break;

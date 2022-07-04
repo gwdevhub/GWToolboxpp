@@ -15,7 +15,7 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWToolbox.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
@@ -90,15 +90,16 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 	// ignore heals
 	if (packet->value >= 0) return;
 
-	const GW::AgentArray agents = GW::Agents::GetAgentArray();
-
+	const GW::AgentArray* agents_ptr = GW::Agents::GetAgentArray();
+	if (!agents_ptr) return;
+	auto& agents = *agents_ptr;
 	// get cause agent
 	if (packet->cause_id >= agents.size()) return;
 	if (!agents[packet->cause_id]) return;
     const GW::AgentLiving* const cause = agents[packet->cause_id]->GetAsAgentLiving();
 
 	if (cause == nullptr) return;
-	if (cause->allegiance != 0x1) return;
+	if (cause->allegiance != GW::Constants::Allegiance::Ally_NonAttackable) return;
     const auto cause_it = party_index.find(cause->agent_id);
 	if (cause_it == party_index.end()) return;  // ignore damage done by non-party members
 
@@ -109,7 +110,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 	if (target == nullptr) return;
 	if (target->login_number != 0) return; // ignore player-inflicted damage
 										        // such as Life bond or sacrifice
-	if (target->allegiance == 0x1) return; // ignore damage inflicted to allies in general
+	if (target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable) return; // ignore damage inflicted to allies in general
 	// warning: note damage to allied spirits, minions or stones may still trigger
 	// you can do damage like that by standing in bugged dart traps in eye of the north
 	// or maybe with some skills that damage minions/spirits
@@ -181,16 +182,10 @@ void PartyDamage::Update(float delta) {
 
 void PartyDamage::CreatePartyIndexMap() {
 	if (!GW::PartyMgr::GetIsPartyLoaded()) return;
-	
 	const GW::PartyInfo* const info = GW::PartyMgr::GetPartyInfo();
-	if (info == nullptr) return;
-
-	const GW::PlayerArray players = GW::Agents::GetPlayerArray();
-	if (!players.valid()) return;
-
 	size_t index = 0;
     for (const GW::PlayerPartyMember& player : info->players) {
-		uint32_t id = players[player.login_number].agent_id;
+		uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
 		if (id == GW::Agents::GetPlayerId()) player_index = index;
 		party_index[id] = index++;
 

@@ -2,8 +2,12 @@
 
 #include <GWCA/Packets/Opcodes.h>
 
+#include <GWCA/GameEntities/Agent.h>
+
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/TradeContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
@@ -15,14 +19,19 @@
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/TradeMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 
 #include <Logger.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/GameSettings.h>
 #include <Windows/MaterialsWindow.h>
+
+#include <Modules/Resources.h>
 
 namespace {
     static ImVec4 ItemBlue = ImColor(153, 238, 255).Value;
@@ -628,6 +637,7 @@ void InventoryManager::Initialize() {
         GW::Hook::CreateHook(AddItemRowToWindow_Func, OnAddItemToWindow, (void**)&RetAddItemRowToWindow);
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
     }
+    GW::CtoS::RegisterPacketCallback(&OnUseItem_Entry, GAME_CMSG_ITEM_USE, &OnUseItem);
 }
 // Add "Tip: Hold Ctrl when requesting a quote to bulk buy." message to merchant window
 // Add "Tip: Hold Ctrl when requesting a quote to bulk sell." message to merchant window
@@ -715,7 +725,7 @@ void InventoryManager::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
     ini->SetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
     ini->SetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
-    
+    ini->SetBoolValue(Name(), VAR_NAME(change_secondary_for_tome), change_secondary_for_tome);
 }
 void InventoryManager::LoadSettings(CSimpleIni* ini) {
     ToolboxUIElement::LoadSettings(ini);
@@ -728,6 +738,8 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
     trade_whole_stacks = ini->GetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
     wiki_link_on_context_menu = ini->GetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
     hide_unsellable_items = ini->GetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
+    change_secondary_for_tome = ini->GetBoolValue(Name(), VAR_NAME(change_secondary_for_tome), change_secondary_for_tome);
+    
     
 }
 void InventoryManager::ClearSalvageSession(GW::HookStatus *status, void *)
@@ -1043,7 +1055,7 @@ void InventoryManager::Salvage(Item* item, Item* kit) {
     if (!(pending_salvage_item.set(item) && pending_salvage_kit.set(kit)))
         return;
     AttachSalvageListeners();
-    GW::CtoS::SendPacket(0x10, GAME_CMSG_ITEM_SALVAGE_SESSION_OPEN, GW::GameContext::instance()->world->salvage_session_id, pending_salvage_kit.item_id, pending_salvage_item.item_id);
+    GW::CtoS::SendPacket(0x10, GAME_CMSG_ITEM_SALVAGE_SESSION_OPEN, GW::WorldContext::instance()->salvage_session_id, pending_salvage_kit.item_id, pending_salvage_item.item_id);
     pending_salvage_at = (clock() / CLOCKS_PER_SEC);
     is_salvaging = true;
 }
@@ -1091,7 +1103,7 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(Item* start_af
     for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
         GW::Bag* bag = GW::Items::GetBag(bag_i);
         if (!bag) continue;
-        GW::ItemArray items = bag->items;
+        GW::ItemArray& items = bag->items;
         items_found = 0;
         for (size_t i = 0; i < items.size() && items_found < bag->items_count; i++) {
             item = static_cast<Item*>(items[i]);
@@ -1148,7 +1160,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item*
             continue;
         GW::Bag* bag = GW::Items::GetBag(bag_i);
         if (!bag) continue;
-        GW::ItemArray items = bag->items;
+        GW::ItemArray& items = bag->items;
         items_found = 0;
         for (size_t i = (bag_i == start_bag ? start_position : 0); i < items.size() && items_found < bag->items_count; i++) {
             item = static_cast<Item*>(items[i]);
@@ -1268,6 +1280,7 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::Checkbox("Move whole stacks into trade by default", &trade_whole_stacks);
     ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack into trade");
     ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &wiki_link_on_context_menu);
+    ImGui::Checkbox("Prompt to change secondary profession when using a tome", &change_secondary_for_tome);
     ImGui::Text("Right click an item to open context menu in:");
     ImGui::Indent();
     ImGui::Checkbox("Exporable Area", &right_click_context_menu_in_explorable);
@@ -1288,6 +1301,7 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::Checkbox("Bag 1", &bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     ImGui::SameLine();
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
+
 }
 void InventoryManager::Update(float) {
     if (check_context_menu_position) {
@@ -1349,6 +1363,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
     if (!GW::Map::GetIsMapLoaded())
         return;
+    DrawPendingTomeUsage();
 #if 0
     DrawInventoryOverlay();
 #endif
@@ -1550,7 +1565,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
-                    GuiUtils::SearchWiki(pi->single_item_name.wstring());
+                    GuiUtils::SearchWiki(pi->wiki_name.wstring());
                 }
                 ImGui::PopID();
                 has_items_to_salvage |= pi->proceed;
@@ -1601,7 +1616,12 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
     const ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
-    
+    /*IDirect3DTexture9** tex = Resources::GetItemImage(context_item.wiki_name.wstring());
+    if (tex && *tex) {
+        const float text_height = ImGui::CalcTextSize(" ").y;
+        ImGui::Image(*tex, ImVec2(text_height, text_height));
+        ImGui::SameLine();
+    }*/
     ImGui::Text(context_item.name.string().c_str());
     ImGui::Separator();
     // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
@@ -1697,7 +1717,7 @@ bool InventoryManager::DrawItemContextMenu(bool open) {
     }
     if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
-        GuiUtils::SearchWiki(context_item.single_item_name.wstring());
+        GuiUtils::SearchWiki(context_item.wiki_name.wstring());
         goto end_popup;
     }
     end_popup:
@@ -1795,14 +1815,163 @@ void InventoryManager::ClearPotentialItems()
     potential_salvage_all_items.clear();
 }
 
+// Change secondary if using a tome
+void InventoryManager::OnUseItem(GW::HookStatus* status, void* packet) {
+    uint32_t header = *(uint32_t*)packet;
+    if (header != GAME_CMSG_ITEM_USE)
+        return;
+    uint32_t item_id = ((uint32_t*)packet)[1];
+    auto& instance = Instance();
+    if (instance.tome_pending_stage != PendingTomeUseStage::None)
+        return;
+    GW::Item* item = GW::Items::GetItemById(item_id);
+    if (!item) return;
+    GW::Constants::Profession profession_needed = GW::Constants::Profession::None;
+    switch (item->model_id) {
+    case 21786:case 21796:
+        profession_needed = GW::Constants::Profession::Assassin;
+        break;
+    case 21787:case 21797:
+        profession_needed = GW::Constants::Profession::Mesmer;
+        break;
+    case 21788:case 21798:
+        profession_needed = GW::Constants::Profession::Necromancer;
+        break;
+    case 21789:case 21799:
+        profession_needed = GW::Constants::Profession::Elementalist;
+        break;
+    case 21790:case 21800:
+        profession_needed = GW::Constants::Profession::Monk;
+        break;
+    case 21791:case 21801:
+        profession_needed = GW::Constants::Profession::Warrior;
+        break;
+    case 21792:case 21802:
+        profession_needed = GW::Constants::Profession::Ranger;
+        break;
+    case 21793:case 21803:
+        profession_needed = GW::Constants::Profession::Dervish;
+        break;
+    case 21794:case 21804:
+        profession_needed = GW::Constants::Profession::Ritualist;
+        break;
+    case 21795:case 21805:
+        profession_needed = GW::Constants::Profession::Paragon;
+        break;
+    }
+    if (profession_needed != GW::Constants::Profession::None) {
+        instance.tome_pending_profession = (uint32_t)profession_needed;
+        instance.tome_pending_item_id = item_id;
+        instance.tome_pending_stage = PendingTomeUseStage::PromptUser;
+        status->blocked = true;
+    }
+}
+
+// Run every frame; if we're pending aa change of secondary profession to use a tome, check and action.
+void InventoryManager::DrawPendingTomeUsage() {
+    if (tome_pending_stage == PendingTomeUseStage::None)
+        return;
+    constexpr char* popup_label = "Change secondary profession?###change-secondary";
+    if (tome_pending_timeout && TIMER_INIT() > tome_pending_timeout) {
+        Log::Error("Timeout reached trying to change profession for tome use");
+        goto cancel;
+    }
+    if (tome_pending_stage == PendingTomeUseStage::PromptUser) {
+        const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+        if (player && (player->secondary == tome_pending_profession || player->primary == tome_pending_profession)) {
+            tome_pending_stage = PendingTomeUseStage::UseItem;
+            return;
+        }
+        const auto& d = ImGui::GetIO().DisplaySize;
+        ImGui::SetNextWindowPos({ d.x * .5f,d.y * .5f }, 0, ImVec2(0.5f, 0.5f));
+        ImGui::OpenPopup(popup_label);
+        tome_pending_stage = PendingTomeUseStage::AwaitPromptReply;
+    }
+    if (ImGui::BeginPopupModal(popup_label, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Changing your secondary profession will change your skills and attributes.\nDo you want to continue?");
+        if (ImGui::Button("OK", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter))) {
+            tome_pending_stage = PendingTomeUseStage::ChangeProfession;
+            tome_pending_timeout = TIMER_INIT() + 3000;
+            ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetFocusID(ImGui::GetItemID(), ImGui::GetCurrentWindow());
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+        return;
+    }
+    if (tome_pending_stage == PendingTomeUseStage::AwaitPromptReply) {
+        // Popup not drawn; cancelled.
+        goto cancel;
+    }
+
+
+    switch (tome_pending_stage) {
+        case PendingTomeUseStage::ChangeProfession: {
+            const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+            if (player && player->secondary == tome_pending_profession) {
+                tome_pending_stage = PendingTomeUseStage::UseItem;
+                return;
+            }
+            auto* world = GW::WorldContext::instance();
+            if (!world) {
+                goto cancel;
+            }
+            GW::Array< GW::ProfessionState>& profession_unlocks_array = world->party_profession_states;
+            GW::ProfessionState* found = 0;
+            for (size_t i = 0; !found && profession_unlocks_array.valid() && i < profession_unlocks_array.size(); i++) {
+                if (profession_unlocks_array[i].agent_id == player->agent_id)
+                    found = &profession_unlocks_array[i];
+            }
+            if (!found) {
+                Log::Error("Player's profession info not found in world->party_profession_states");
+                goto cancel;
+            }
+            if (((found->unlocked_professions >> tome_pending_profession) & 1) != 1) {
+                // Skip to use item error; profession isn't unlocked
+                tome_pending_stage = PendingTomeUseStage::UseItem;
+                return;
+            }
+            GW::PlayerMgr::ChangeSecondProfession((GW::Constants::Profession)tome_pending_profession);
+            tome_pending_stage = PendingTomeUseStage::AwaitProfession;
+            return;
+        }
+    
+
+                                             
+        case PendingTomeUseStage::AwaitProfession: {
+            const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+            if (player && player->secondary == tome_pending_profession) {
+                tome_pending_stage = PendingTomeUseStage::UseItem;
+            }
+            return;
+        }
+        case PendingTomeUseStage::UseItem: {
+            GW::Item* item = GW::Items::GetItemById(tome_pending_item_id);
+            if (item) {
+                GW::Items::UseItem(item);
+            }
+            goto cancel;
+        }
+    }
+cancel:
+    tome_pending_stage = PendingTomeUseStage::None;
+    tome_pending_timeout = 0;
+    tome_pending_item_id = 0;
+    tome_pending_profession = 0;
+}
+
 bool InventoryManager::Item::IsWeaponSetItem()
 {
     if (!IsWeapon())
         return false;
-    GW::GameContext* g = GW::GameContext::instance();
-    if (!g || !g->items || !g->items->inventory)
+    GW::ItemContext* c = GW::ItemContext::instance();
+    if (c || !c->inventory)
         return false;
-    GW::WeapondSet *weapon_sets = g->items->inventory->weapon_sets;
+    GW::WeapondSet *weapon_sets = c->inventory->weapon_sets;
     for (size_t i = 0; i < 4; i++) {
         if (weapon_sets[i].offhand == this)
             return true;
@@ -1976,8 +2145,10 @@ bool InventoryManager::PendingItem::set(InventoryManager::Item *item)
     uses = item->GetUses();
     bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
     name.reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
-    single_item_name.reset(item->name_enc);
-    single_item_name.wstring(); // Trigger decode; this isn't done any other time
+    // NB: This doesn't work for inscriptions; gww doesn't have a page per inscription.
+    wiki_name.reset(item->name_enc);
+    wiki_name.language(GW::Constants::TextLanguage::English);
+    wiki_name.wstring(); // Trigger decode; this isn't done any other time
     wchar_t plural_item_name_wc[128];
     swprintf(plural_item_name_wc, 128, L"\xa3d\x10a\xa35\x101\x200\x10a%s\x1\x1", item->name_enc);
     plural_item_name.reset(plural_item_name_wc);
@@ -2033,4 +2204,14 @@ InventoryManager::CtoS_TransactItems InventoryManager::PendingTransaction::trans
 bool InventoryManager::PendingTransaction::selling()
 {
     return type == GW::Merchant::TransactionType::MerchantSell || type == GW::Merchant::TransactionType::TraderSell;
+}
+
+void InventoryManager::PendingItem::PluralEncString::sanitise() {
+    if (sanitised)
+        return;
+    GuiUtils::EncString::sanitise();
+    if (sanitised) {
+        static const std::wregex plural(L"256 ");
+        decoded_ws = std::regex_replace(decoded_ws, plural, L"");
+    }
 }

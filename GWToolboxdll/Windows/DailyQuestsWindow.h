@@ -5,6 +5,12 @@
 #include <ToolboxWindow.h>
 #include <ToolboxUIElement.h>
 
+namespace GW {
+    namespace Constants {
+        enum class QuestID;
+    }
+}
+
 class DailyQuests : public ToolboxWindow {
     DailyQuests() {};
     ~DailyQuests() {};
@@ -65,4 +71,8 @@ private:
     static void CmdZaishenVanquish(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdVanguard(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdNicholas(const wchar_t *message, int argc, LPWSTR *argv);
+
+    class ZaishenMission {
+        ZaishenMission(GW::Constants::QuestID _quest_id, GW::Constants::MapID _map_id);
+    };
 };

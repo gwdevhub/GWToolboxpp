@@ -83,11 +83,12 @@ void AprilFools::SetEnabled(bool is_enabled) {
         return;
     enabled = is_enabled;
     if (enabled) {
-        GW::PlayerArray players = GW::Agents::GetPlayerArray();
-        for (uint32_t i = 0; players.valid() && i < players.size(); i++) {
-            auto agent = GW::Agents::GetAgentByID(players[i].agent_id);
+        GW::PlayerArray* players = GW::Agents::GetPlayerArray();
+        if (!players) return;
+        for (auto& player : *players) {
+            auto agent = GW::Agents::GetAgentByID(player.agent_id);
             if (agent)
-                player_agents.emplace(players[i].agent_id, agent);
+                player_agents.emplace(player.agent_id, agent);
         }
         Log::Info("April Fools 2020 enabled. Type '/aprilfools' to disable it");
     }

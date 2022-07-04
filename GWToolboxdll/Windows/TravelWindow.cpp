@@ -24,7 +24,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 
 #include <Modules/Resources.h>
@@ -587,40 +587,14 @@ namespace {
         }
         return true;
     }
-    // Returns guild struct of current location. Returns null on fail or non-guild map.
-    static GW::Guild *GetCurrentGH()
-    {
-        GW::AreaInfo *m = GW::Map::GetCurrentMapInfo();
-        if (!m || m->type != GW::RegionType::RegionType_GuildHall)
-            return nullptr;
-        const GW::Array<GW::Guild *>& guilds = GW::GuildMgr::GetGuildArray();
-        if (!guilds.valid())
-            return nullptr;
-        for (size_t i = 0; i < guilds.size(); i++) {
-            if (!guilds[i])
-                continue;
-            return guilds[i];
-        }
-        return nullptr;
-    }
-    static GW::Guild *GetPlayerGH()
-    {
-        const GW::Array<GW::Guild *> &guilds = GW::GuildMgr::GetGuildArray();
-        if (!guilds.valid())
-            return nullptr;
-        uint32_t guild_idx = GW::GuildMgr::GetPlayerGuildIndex();
-        if (guild_idx >= guilds.size())
-            return nullptr;
-        return guilds[guild_idx];
-    }
     static bool IsInGH()
     {
-        GW::Guild *gh = GetCurrentGH();
-        return gh && gh == GetPlayerGH();
+        auto* p = GW::GuildMgr::GetPlayerGuild();
+        return p && p == GW::GuildMgr::GetCurrentGH();
     }
     static bool IsLuxon()
     {
-        GW::GuildContext *c = GW::GuildMgr::GetGuildContext();
+        GW::GuildContext* c = GW::GuildContext::instance();
         return c && c->player_guild_index && c->guilds[c->player_guild_index]->faction;
     }
     static bool IsAlreadyInOutpost(GW::Constants::MapID outpost_id, GW::Constants::District _district, uint32_t _district_number = 0)
@@ -635,7 +609,7 @@ namespace {
 
 void TravelWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&scroll_texture, Resources::GetPath(L"img\\materials", L"Scroll_of_Resurrection.png"), IDB_Mat_ResScroll);
+    scroll_texture = Resources::GetItemImage(L"Passage Scroll to the Deep");
     district = GW::Constants::District::Current;
     district_number = 0;
 
@@ -645,9 +619,6 @@ void TravelWindow::Initialize() {
 }
 void TravelWindow::Terminate() {
     ToolboxWindow::Terminate();
-    if (scroll_texture)
-        scroll_texture->Release();
-    scroll_texture = nullptr;
     for (auto it : searchable_explorable_areas) {
         delete[] it;
     }
@@ -661,7 +632,7 @@ void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapI
     switch (mapid) {
         case GW::Constants::MapID::The_Deep:
         case GW::Constants::MapID::Urgozs_Warren:
-            clicked |= ImGui::IconButton(text, (ImTextureID) scroll_texture, ImVec2(w, 0));
+            clicked |= ImGui::IconButton(text, (ImTextureID) *scroll_texture, ImVec2(w, 0));
             break;
         default:
             clicked |= ImGui::Button(text, ImVec2(w, 0));
@@ -850,7 +821,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(GW::Constants::MapID map_to
         }
         //if ((map_info->flags & 0x5000000) != 0)
          //   continue; // e.g. "wrong" augury rock is map 119, no NPCs
-        if (!TravelWindow::Instance().IsMapUnlocked(static_cast<GW::Constants::MapID>(i)))
+        if (!GW::Map::GetIsMapUnlocked(static_cast<GW::Constants::MapID>(i)))
             continue;
         float dist = GW::GetDistance(this_pos, get_pos(map_info));
         if (dist < nearest_distance) {
@@ -940,7 +911,7 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
 bool TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return false;
-    if (!IsMapUnlocked(MapID)) {
+    if (!GW::Map::GetIsMapUnlocked(MapID)) {
         const GW::AreaInfo* map = GW::Map::GetMapInfo(MapID);
         wchar_t map_name_buf[8];
         wchar_t err_message_buf[256] = L"[Error] Your character does not have that map unlocked";
@@ -965,15 +936,6 @@ bool TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _d
     }
     return true;
     //return GW::Map::Travel(MapID, District, district_number);
-}
-bool TravelWindow::IsMapUnlocked(GW::Constants::MapID map_id) {
-    GW::Array<uint32_t> unlocked_map = GW::GameContext::instance()->world->unlocked_map;
-    uint32_t real_index = (uint32_t)map_id / 32;
-    if (real_index >= unlocked_map.size())
-        return false;
-    uint32_t shift = (uint32_t)map_id % 32;
-    uint32_t flag = 1u << shift;
-    return (unlocked_map[real_index] & flag) != 0;
 }
 void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
     struct MapStruct {

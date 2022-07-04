@@ -195,6 +195,10 @@ void CurlEasy::SetVerifyPeer(bool enable)
 {
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_SSL_VERIFYPEER, static_cast<long>(enable));
 }
+void CurlEasy::SetVerifyHost(bool enable)
+{
+    CHECK_CURL_EASY_SETOPT(this, CURLOPT_SSL_VERIFYHOST, static_cast<long>(enable));
+}
 
 void CurlEasy::SetFollowLocation(bool enable)
 {

@@ -7,7 +7,7 @@
 #include <GWCA\Managers\UIMgr.h>
 
 #include <Defines.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 
 class InfoWindow : public ToolboxWindow {

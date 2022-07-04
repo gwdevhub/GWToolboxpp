@@ -11,7 +11,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 
 #include <Color.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 
 class FriendListWindow : public ToolboxWindow {
@@ -42,8 +42,8 @@ private:
         GuiUtils::EncString current_map_name;
         uint32_t current_map_id = 0;
         std::unordered_map<std::wstring, Character> characters;
-        uint8_t status = static_cast<uint8_t>(GW::FriendStatus::FriendStatus_Offline); // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
-        uint8_t type = static_cast<uint8_t>(GW::FriendType::FriendType_Unknow);
+        GW::FriendStatus status = GW::FriendStatus::Offline;
+        GW::FriendType type = GW::FriendType::Unknow;
         clock_t last_update = 0;
         std::string cached_charnames_hover_str;
         bool cached_charnames_hover = false;
@@ -55,7 +55,7 @@ private:
         bool RemoveGWFriend();
         bool ValidUuid();
         const bool IsOffline() {
-            return status < GW::FriendStatus::FriendStatus_Online || status > GW::FriendStatus::FriendStatus_Away;
+            return status == GW::FriendStatus::Offline;
         };
         const bool NeedToUpdate(clock_t now) {
             return (now - last_update) > 10000; // 10 Second stale.
@@ -80,14 +80,15 @@ public:
         return instance;
     }
     // Encoded message types as received via encoded chat message
-    enum MessageType : wchar_t {
+    enum class MessageType : wchar_t {
         CANNOT_ADD_YOURSELF_AS_A_FRIEND = 0x2f3,
         EXCEEDED_MAX_NUMBER_OF_FRIENDS,
         CHARACTER_NAME_X_DOES_NOT_EXIST,
         FRIEND_ALREADY_ADDED_AS_X,
         INCOMING_WHISPER = 0x76d,
         OUTGOING_WHISPER,
-        PLAYER_X_NOT_ONLINE = 0x881
+        PLAYER_NAME_IS_INVALID = 0x880,
+        PLAYER_X_NOT_ONLINE
     };
     bool WriteError(MessageType message_type, const wchar_t* character_name);
 
@@ -101,7 +102,13 @@ public:
     static void OnAddFriendError(GW::HookStatus* status, wchar_t* message);
     static void OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*);
     static void OnPrintChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t** message_ptr, FILETIME, int);
+    static void OnChatMessage(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet);
     // Ignore party invitations from players on my ignore list
+
+    static bool GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak);
+    static bool GetIsPlayerIgnored(uint32_t player_id);
+    static bool GetIsPlayerIgnored(const std::wstring& player_name);
+
     static void OnPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak);
     static void OnTradePacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak);
     static void AddFriendAliasToMessage(wchar_t** message_ptr);

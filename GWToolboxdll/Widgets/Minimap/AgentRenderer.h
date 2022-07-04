@@ -1,17 +1,19 @@
 #pragma once
 
-#include "CustomRenderer.h"
-
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/GameEntities/Agent.h>
 
-#include <Color.h>
+#include <GWCA/GameContainers/GamePos.h>
+
 #include <Widgets/Minimap/VBuffer.h>
 
+namespace GW {
+    struct Agent;
+}
+typedef uint32_t Color;
 class AgentRenderer : public VBuffer {
 public:
     AgentRenderer();
-    virtual ~AgentRenderer();
+    ~AgentRenderer() override;
 
     void Render(IDirect3DDevice9* device) override;
 
@@ -26,10 +28,12 @@ public:
 
     bool show_hidden_npcs = false;
     bool boss_colors = true;
+    uint32_t agent_border_thickness = 0;
+
     uint32_t auto_target_id = 0;
 
 private:
-    static const size_t shape_size = 4;
+    static constexpr size_t shape_size = 4;
     enum Shape_e { Tear, Circle, Quad, BigCircle };
     enum Color_Modifier {
         None, // rgb 0,0,0
@@ -141,12 +145,12 @@ private:
     void BuildCustomAgentsMap();
     //const CustomAgent* FindValidCustomAgent(DWORD modelid) const;
 
-    float size_default = 0.f;
-    float size_player = 0.f;
-    float size_signpost = 0.f;
-    float size_item = 0.f;
-    float size_boss = 0.f;
-    float size_minion = 0.f;
+    float size_default = 75.f;
+    float size_player = 100.f;
+    float size_signpost = 50.f;
+    float size_item = 25.f;
+    float size_boss = 125.f;
+    float size_minion = 50.f;
     Shape_e default_shape = Tear;
 
     bool agentcolors_changed = false;

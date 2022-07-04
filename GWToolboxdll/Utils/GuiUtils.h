@@ -2,6 +2,12 @@
 
 #include <ImGuiAddons.h>
 
+namespace GW {
+    namespace Constants {
+        enum class TextLanguage;
+    }
+}
+
 namespace GuiUtils {
     enum class FontSize {
         text,
@@ -24,16 +30,23 @@ namespace GuiUtils {
     // Reposition a rect within its container to make sure it isn't overflowing it.
     ImVec4& ClampRect(ImVec4& rect, ImVec4& viewport);
 
+    std::string ToSlug(std::string s);
+    std::wstring ToSlug(std::wstring s);
     std::string ToLower(std::string s);
     std::wstring ToLower(std::wstring s);
     std::string UrlEncode(std::string str);
+    std::string HtmlEncode(std::string str);
     std::wstring RemovePunctuation(std::wstring s);
     std::string RemovePunctuation(std::string s);
+    std::wstring RemoveDiacritics(const std::wstring& in);
 
     std::string WStringToString(const std::wstring& s);
     std::wstring StringToWString(const std::string& s);
 
     std::wstring SanitizePlayerName(std::wstring in);
+
+    // Extract first unencoded substring from gw encoded string. Pass second and third args to know where the player name was found in the original string.
+    std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** out_pos_out = nullptr);
 
     bool ParseInt(const char *str, int *val, int base = 0);
     bool ParseInt(const wchar_t *str, int *val, int base = 0);
@@ -63,6 +76,9 @@ namespace GuiUtils {
     size_t wcstostr(char* dest, const wchar_t* src, size_t n);
     std::wstring ToWstr(std::string& str);
 
+    void FlashWindow();
+    void FocusWindow();
+
     class EncString {
     protected:
         std::wstring encoded_ws;
@@ -71,7 +87,10 @@ namespace GuiUtils {
         bool decoding = false;
         bool sanitised = false;
         virtual void sanitise();
+        GW::Constants::TextLanguage language_id = (GW::Constants::TextLanguage)-1;
     public:
+        // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
+        EncString* language(GW::Constants::TextLanguage l = (GW::Constants::TextLanguage)-1);
         inline bool IsDecoding() { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string

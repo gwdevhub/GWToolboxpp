@@ -5,6 +5,7 @@
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 #include <Utf8.h>
+#include <PluginManager.h>
 
 DWORD __stdcall SafeThreadEntry(LPVOID mod);
 DWORD __stdcall ThreadEntry(LPVOID);
@@ -34,9 +35,11 @@ public:
     static void FlashWindow();
 
     void StartSelfDestruct() {
-        SaveSettings();
-        for (ToolboxModule* module : modules) {
-            module->SignalTerminate();
+        if (initialized) {
+            SaveSettings();
+            for (ToolboxModule* module : modules) {
+                module->SignalTerminate();
+            }
         }
         must_self_destruct = true;
     }
@@ -61,6 +64,10 @@ public:
 
     static void OnHandleCrash(char* description, uint32_t param_2, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6);
 
+    bool IsInitialized() { return initialized; };
+
+    void AddPlugin(TBModule* mod) { plugins.push_back(mod); }
+    PluginManager& GetPluginManger() { return plugin_manager; };
 private:
     std::vector<ToolboxModule*> modules;
 
@@ -70,11 +77,18 @@ private:
     std::vector<ToolboxModule*> optional_modules;
     // List of modules that are UI elements. They can be disable
     std::vector<ToolboxUIElement*> uielements;
+    // Plugins
+    std::vector<TBModule*> plugins;
 
     utf8::string imgui_inifile;
     CSimpleIni* inifile = nullptr;
 
     GW::HookEntry Update_Entry;
+
+    PluginManager plugin_manager;
+
     GW::HookEntry HandleCrash_Entry;
+
+    bool initialized = false;
 
 };

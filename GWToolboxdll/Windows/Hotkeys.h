@@ -9,7 +9,7 @@
 
 #include <GWCA/Managers/UIMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Defines.h>
 
@@ -46,11 +46,14 @@ public:
     bool trigger_on_explorable = false; // Trigger when entering explorable area
     bool trigger_on_outpost = false; // Trigger when entering outpost area
     bool trigger_on_pvp_character = false; // Trigger when playing a PvP character
+    bool can_trigger_on_map_change = true; // Some hotkeys cant trigger on map change e.g. Guild Wars Key
 
     std::vector<uint32_t> map_ids;
     bool prof_ids[11];
     int instance_type = -1;
     char player_name[20] = "";
+    uint32_t in_range_of_npc_id = 0;
+    float in_range_of_distance = 0.f;
 
     long hotkey = 0;
     long modifier = 0;
@@ -81,6 +84,7 @@ protected:
     static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
     static bool isExplorable() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
     static bool isOutpost() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
+    bool IsInRangeOfNPC();
 
     const unsigned int ui_id = 0;   // an internal id to ensure interface consistency
 

@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <GWCA/Packets/StoC.h>
+
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
@@ -9,6 +11,7 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 
+#include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
@@ -21,6 +24,8 @@
 
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
+#include <GWCA/GameEntities/Friendslist.h>
+#include <Utils/ToolboxUtils.h>
 
 //#define PRINT_CHAT_PACKETS
 
@@ -40,61 +45,59 @@ static void printchar(wchar_t c) {
     }
 }
 
-static wchar_t* GetMessageCore() {
-    GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-    return buff ? buff->begin() : nullptr;
-}
-// Due to the way ChatFilter works, if a previous message was blocked then the buffer would still contain the last message.
-// Clear down the message buffer if the packet has been blocked.
-static void ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*) {
-    if (!status->blocked)
-        return;
-    GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-    if (!buff || !buff->valid()) {
-        Log::Log("Failed to clear message buffer!\n");
-        return;
-    }
-    buff->clear();
-}
 void ChatFilter::Initialize() {
     ToolboxModule::Initialize();
 
-    // server messages
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&BlockIfApplicable_Entry,
-    [this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
-        BlockIfApplicable(status, GetMessageCore(), pak->channel);
-    });
-    
+    GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_SERVER, BlockIfApplicable);
+    GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, BlockIfApplicable);
+    GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, BlockIfApplicable);
 
-    // global messages
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&BlockIfApplicable_Entry,
-    [this](GW::HookStatus *status, GW::Packet::StoC::MessageGlobal* pak) -> void {
-        BlockIfApplicable(status, GetMessageCore(), pak->channel);
-    });
-    
-    // local messages
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&BlockIfApplicable_Entry,
-    [this](GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak) -> void {
-        BlockIfApplicable(status, GetMessageCore(), pak->channel);
-    });
+    GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_SERVER, ClearMessageBufferIfBlocked);
+    GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, ClearMessageBufferIfBlocked);
+    GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, ClearMessageBufferIfBlocked);
 
-    GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageServer>(&ClearIfApplicable_Entry, ClearMessageBufferIfBlocked);
-    GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageGlobal>(&ClearIfApplicable_Entry, ClearMessageBufferIfBlocked);
-    GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageLocal>(&ClearIfApplicable_Entry, ClearMessageBufferIfBlocked);
-
-    GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry,
-    [this](GW::HookStatus *status, int channel, wchar_t *message) -> void {
-        BlockIfApplicable(status, message, static_cast<uint32_t>(channel));
-    });
+    GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry, [](GW::HookStatus* status, int channel, wchar_t* message) {
+        if (Instance().ShouldIgnore(message, static_cast<uint32_t>(channel))) {
+            status->blocked = true;
+        }
+        });
 }
-void ChatFilter::BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel) {
-    if (message && ShouldIgnore(message, channel)) {
-        /*Log::Log("ChatFilter Blocked:\n");
-        for (size_t i = 0; message[i]; i++)
-            printchar(message[i]);
-        printf("\n");*/
+void ChatFilter::BlockIfApplicable(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) {
+    if (status->blocked)
+        return;
+    uint32_t channel = 0;
+    const wchar_t* message = nullptr;
+    switch (packet->header) {
+        case GAME_SMSG_CHAT_MESSAGE_GLOBAL: {
+            auto p = (GW::Packet::StoC::MessageGlobal*)packet;
+            channel = p->channel;
+            message = ToolboxUtils::GetMessageCore();
+        } break;
+        case GAME_SMSG_CHAT_MESSAGE_SERVER: {
+            auto p = (GW::Packet::StoC::MessageServer*)packet;
+            channel = p->channel;
+            message = ToolboxUtils::GetMessageCore();
+        } break;
+        case GAME_SMSG_CHAT_MESSAGE_LOCAL: {
+            auto p = (GW::Packet::StoC::MessageLocal*)packet;
+            channel = p->channel;
+            message = ToolboxUtils::GetMessageCore();
+        } break;
+        default:
+            return;
+    }
+    if (Instance().ShouldIgnore(message, channel)) {
+        // Message channel is hidden, or message content is blocked
         status->blocked = true;
     }
+    else if (Instance().ShouldIgnoreBySender(ToolboxUtils::GetSenderFromPacket(packet))) {
+        // Sender is in player's ignore list
+        status->blocked = true;
+    }
+}
+void ChatFilter::ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*) {
+    if (status->blocked)
+        ToolboxUtils::ClearMessageCore();
 }
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
@@ -553,51 +556,37 @@ bool ChatFilter::ShouldFilterByChannel(uint32_t channel) {
 bool ChatFilter::ShouldBlockByChannel(uint32_t channel) {
     if (Instance().block_messages_from_inactive_channels) {
         // Don't log chat messages if the channel is turned off - avoids hitting the chat log limit
-        GW::UI::CheckboxPreference prefCheck = GW::UI::CheckboxPreference_Count;
+        GW::UI::Preference prefCheck = (GW::UI::Preference)0xffff;
         switch (static_cast<GW::Chat::Channel>(channel)) {
         case GW::Chat::Channel::CHANNEL_ALL:
-            prefCheck = GW::UI::CheckboxPreference_ChannelLocal;
+            prefCheck = GW::UI::Preference_ChannelLocal;
             break;
         case GW::Chat::Channel::CHANNEL_GROUP:
         case GW::Chat::Channel::CHANNEL_ALLIES:
-            prefCheck = GW::UI::CheckboxPreference_ChannelGroup;
+            prefCheck = GW::UI::Preference_ChannelGroup;
             break;
         case GW::Chat::Channel::CHANNEL_EMOTE:
-            prefCheck = GW::UI::CheckboxPreference_ChannelEmotes;
+            prefCheck = GW::UI::Preference_ChannelEmotes;
             break;
         case GW::Chat::Channel::CHANNEL_GUILD:
-            prefCheck = GW::UI::CheckboxPreference_ChannelGuild;
+            prefCheck = GW::UI::Preference_ChannelGuild;
             break;
         case GW::Chat::Channel::CHANNEL_ALLIANCE:
-            prefCheck = GW::UI::CheckboxPreference_ChannelAlliance;
+            prefCheck = GW::UI::Preference_ChannelAlliance;
             break;
         case GW::Chat::Channel::CHANNEL_TRADE:
-            prefCheck = GW::UI::CheckboxPreference_ChannelTrade;
+            prefCheck = GW::UI::Preference_ChannelTrade;
             break;
         }
-        if(prefCheck != GW::UI::CheckboxPreference_Count
-            && GW::UI::GetCheckboxPreference(prefCheck) == 1) {
+        if(prefCheck != (GW::UI::Preference)0xffff
+            && GW::UI::GetPreference(prefCheck) == 1) {
             return true;
         }
     }
     return false;
 }
-bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
-    UNREFERENCED_PARAMETER(sender);
-    UNREFERENCED_PARAMETER(size);
-#ifdef EXTENDED_IGNORE_LIST
-    if (sender == nullptr) return false;
-    char s[32];
-    for (size_t i = 0; i < size; i++) {
-        if (sender[i] & ~0xff) return false; // We currently don't support non-ascii names
-        s[i] = tolower(sender[i]);
-        if (sender[i] == 0)
-            break;
-    }
-    if (byauthor_words.find(s) != byauthor_words.end())
-        return true;
-#endif
-    return false;
+bool ChatFilter::ShouldIgnoreBySender(const std::wstring& sender) {
+    return GW::FriendListMgr::GetFriend(nullptr, sender.c_str(), GW::FriendType::Ignore) != nullptr;
 }
 
 void ChatFilter::DrawSettingInternal() {
@@ -772,3 +761,4 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) c
         }
     }
 }
+

@@ -19,53 +19,20 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
-
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/BondsWidget.h>
 
-//DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
-
 void BondsWidget::Initialize() {
     ToolboxWidget::Initialize();
-    for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
-    auto LoadBondTexture = [](IDirect3DTexture9** tex, const wchar_t* name, WORD id) -> void {
-        Resources::Instance().LoadTextureAsync(tex, Resources::GetPath(L"img/bonds", name), id);
-    };
-    LoadBondTexture(&textures[BalthazarSpirit], L"Balthazar's_Spirit.jpg", IDB_Bond_BalthazarsSpirit);
-    LoadBondTexture(&textures[EssenceBond], L"Essence_Bond.jpg", IDB_Bond_EssenceBond);
-    LoadBondTexture(&textures[HolyVeil], L"Holy_Veil.jpg", IDB_Bond_HolyVeil);
-    LoadBondTexture(&textures[LifeAttunement], L"Life_Attunement.jpg", IDB_Bond_LifeAttunement);
-    LoadBondTexture(&textures[LifeBarrier], L"Life_Barrier.jpg", IDB_Bond_LifeBarrier);
-    LoadBondTexture(&textures[LifeBond], L"Life_Bond.jpg", IDB_Bond_LifeBond);
-    LoadBondTexture(&textures[LiveVicariously], L"Live_Vicariously.jpg", IDB_Bond_LiveVicariously);
-    LoadBondTexture(&textures[Mending], L"Mending.jpg", IDB_Bond_Mending);
-    LoadBondTexture(&textures[ProtectiveBond], L"Protective_Bond.jpg", IDB_Bond_ProtectiveBond);
-    LoadBondTexture(&textures[PurifyingVeil], L"Purifying_Veil.jpg", IDB_Bond_PurifyingVeil);
-    LoadBondTexture(&textures[Retribution], L"Retribution.jpg", IDB_Bond_Retribution);
-    LoadBondTexture(&textures[StrengthOfHonor], L"Strength_of_Honor.jpg", IDB_Bond_StrengthOfHonor);
-    LoadBondTexture(&textures[Succor], L"Succor.jpg", IDB_Bond_Succor);
-    LoadBondTexture(&textures[VitalBlessing], L"Vital_Blessing.jpg", IDB_Bond_VitalBlessing);
-    LoadBondTexture(&textures[WatchfulSpirit], L"Watchful_Spirit.jpg", IDB_Bond_WatchfulSpirit);
-    LoadBondTexture(&textures[HeroicRefrain], L"Heroic_Refrain.png", IDB_Bond_HeroicRefrain);
-    LoadBondTexture(&textures[BurningRefrain], L"Burning_Refrain.png", IDB_Bond_BurningRefrain);
-    LoadBondTexture(&textures[MendingRefrain], L"Mending_Refrain.png", IDB_Bond_MendingRefrain);
-    LoadBondTexture(&textures[BladeturnRefrain], L"Bladeturn_Refrain.png", IDB_Bond_BladeturnRefrain);
-    LoadBondTexture(&textures[HastyRefrain], L"Hasty_Refrain.png", IDB_Bond_HastyRefrain);
-
     party_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID_PartyWindow);
 }
 
 void BondsWidget::Terminate() {
     ToolboxWidget::Terminate();
-    for (int i = 0; i < MAX_BONDS; ++i) {
-        if (textures[i]) {
-            textures[i]->Release();
-            textures[i] = nullptr;
-        }
-    }
 }
 
 void BondsWidget::Draw(IDirect3DDevice9* device) {
@@ -75,10 +42,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
     const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-    const GW::PlayerArray& players = GW::Agents::GetPlayerArray();
-    if (info == nullptr) return;
-    if (!players.valid()) return;
-    if (!info->players.valid()) return;
+    const GW::PlayerArray* players = info ? GW::Agents::GetPlayerArray() : nullptr;
+    if (!players) return;
     // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
 
     // ==== Get bonds ====
@@ -91,8 +56,6 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     // @Cleanup: This doesn't need to be done every frame - only when the party has been changed
     if (!FetchPartyInfo())
         return;
-
-    const GW::AgentEffectsArray &effects = GW::Effects::GetPartyEffectArray();
 
     // ==== Draw ====
     const float img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
@@ -148,64 +111,66 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             if (!topleft) {
                 ++x; ++y;
             }
-            return ImVec2(win_x + x * img_size, 
+            return ImVec2(win_x + x * img_size,
                 win_y + y * img_size);
         };
 
         bool handled_click = false;
-        const size_t effect_cnt = effects.valid() ? effects.size() : 0;
-        const size_t buff_cnt = effect_cnt > 0 && effects[0].buffs.valid() ? effects[0].buffs.size() : 0;
-        
-        if (buff_cnt > 0) {
-            const GW::BuffArray &buffs = effects[0].buffs; // first one is for players, after are heroes
-            for (unsigned int i = 0; i < buffs.size(); ++i) {
-                DWORD agent = buffs[i].target_agent_id;
-                DWORD skill = buffs[i].skill_id;
+
+        if (GW::BuffArray* buffs = GW::Effects::GetPlayerBuffs()) {
+            for (const auto& buff : *buffs) {
+                const auto agent = buff.target_agent_id;
+                const auto skill = static_cast<SkillID>(buff.skill_id);
                 if (party_map.find(agent) == party_map.end())
                     continue; // bond target not in party
                 if (bond_map.find(skill) == bond_map.end())
                     continue; // bond with a skill not in skillbar
                 size_t y = party_map[agent];
                 size_t x = bond_map[skill];
-                Bond bond = GetBondBySkillID(skill);
+                auto texture = *Resources::GetSkillImage(buff.skill_id);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
-                if (textures[bond])
-                    ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
+                if (texture) {
+                    ImGui::AddImageCropped(texture, tl, br);
+                }
                 if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
-                    GW::Effects::DropBuff(buffs[i].buff_id);
+                    GW::Effects::DropBuff(buff.buff_id);
                     handled_click = true;
                 }
             }
         }
         
-
         // Player and hero effects that aren't bonds
-        for (unsigned int i = 0; i < effect_cnt; ++i) {
-            const GW::EffectArray& agentEffects = effects[i].effects;
-            DWORD agent = effects[i].agent_id;
-            for (unsigned int j = 0; j < agentEffects.size(); ++j) {
-                const GW::Effect& effect = agentEffects[j];
-                DWORD skill = effect.skill_id;
-                if (bond_map.find(skill) == bond_map.end()) continue;
+        if (const GW::AgentEffectsArray* agent_effects_array = GW::Effects::GetPartyEffectsArray();
+            agent_effects_array != nullptr) {
+            for (auto& agent_effects_it : *agent_effects_array) {
+                auto& agent_effects = agent_effects_it.effects;
+                if (!agent_effects.valid()) continue;
+                const auto agent_id = agent_effects_it.agent_id;
+                for (const GW::Effect& effect : agent_effects) {
+                    const auto skill_id = static_cast<SkillID>(effect.skill_id);
+                    if (bond_map.find(skill_id) == bond_map.end()) continue;
 
-                bool overlay = false;
-                const GW::PartyAttribute& partyAttribute = GW::GameContext::instance()->world->attributes[0];
-                const GW::Skill& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill);
-                if (skill_data.duration0 == 0x20000)
-                    continue; // Maintained skill/enchantment
-                const GW::Attribute& attribute = partyAttribute.attribute[skill_data.attribute];
-                if (effect.effect_type < attribute.level) overlay = true;
+                    bool overlay = false;
+                    const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData((uint32_t) skill_id);
+                    if (!skill_data || skill_data->duration0 == 0x20000) continue; // Maintained skill/enchantment
+                    const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
+                    assert(agentAttributes);
+                    agentAttributes = &agentAttributes[skill_data->attribute];
+                    overlay = effect.attribute_level < agentAttributes->level;
 
-                size_t y = party_map[agent];
-                size_t x = bond_map[skill];
-                Bond bond = GetBondBySkillID(skill);
-                ImVec2 tl = GetGridPos(x, y, true);
-                ImVec2 br = GetGridPos(x, y, false);
-                if (textures[bond])
-                    ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
-                if (overlay) {
-                    ImGui::GetWindowDrawList()->AddRectFilled(tl, br, low_attribute_overlay);
+                    size_t y = party_map[agent_id];
+                    size_t x = bond_map[skill_id];
+
+                    auto texture = *Resources::GetSkillImage((uint32_t) skill_id);
+                    ImVec2 tl = GetGridPos(x, y, true);
+                    ImVec2 br = GetGridPos(x, y, false);
+                    if (texture) {
+                        ImGui::AddImageCropped(texture, tl, br);
+                    }
+                    if (overlay) {
+                        ImGui::GetWindowDrawList()->AddRectFilled(tl, br, low_attribute_overlay);
+                    }
                 }
             }
         }
@@ -219,7 +184,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                         continue;
                     ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
                     if (ImGui::IsMouseReleased(0))
-                        UseBuff(party_list[y], bond_list[x]);
+                        UseBuff(party_list[y], (DWORD) bond_list[x]);
                 }
             }
         }
@@ -310,33 +275,6 @@ void BondsWidget::DrawSettingInternal() {
     if (row_height < 0) row_height = 0;
 }
 
-BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid) const {
-    using namespace GW::Constants;
-    switch ((GW::Constants::SkillID)skillid) {
-    case SkillID::Balthazars_Spirit: return Bond::BalthazarSpirit;
-    case SkillID::Essence_Bond: return Bond::EssenceBond;
-    case SkillID::Holy_Veil: return Bond::HolyVeil;
-    case SkillID::Life_Attunement: return Bond::LifeAttunement;
-    case SkillID::Life_Barrier: return Bond::LifeBarrier;
-    case SkillID::Life_Bond: return Bond::LifeBond;
-    case SkillID::Live_Vicariously: return Bond::LiveVicariously;
-    case SkillID::Mending: return Bond::Mending;
-    case SkillID::Protective_Bond: return Bond::ProtectiveBond;
-    case SkillID::Purifying_Veil: return Bond::PurifyingVeil;
-    case SkillID::Retribution: return Bond::Retribution;
-    case SkillID::Strength_of_Honor: return Bond::StrengthOfHonor;
-    case SkillID::Succor: return Bond::Succor;
-    case SkillID::Vital_Blessing: return Bond::VitalBlessing;
-    case SkillID::Watchful_Spirit: return Bond::WatchfulSpirit;
-    case SkillID::Heroic_Refrain: return Bond::HeroicRefrain;
-    case SkillID::Burning_Refrain: return Bond::BurningRefrain;
-    case SkillID::Mending_Refrain: return Bond::MendingRefrain;
-    case SkillID::Bladeturn_Refrain: return Bond::BladeturnRefrain;
-    case SkillID::Hasty_Refrain: return Bond::HastyRefrain;
-    default: return Bond::None;
-    }
-}
-
 bool BondsWidget::FetchBondSkills()
 {
     const GW::Skillbar *bar = GW::SkillbarMgr::GetPlayerSkillbar();
@@ -344,12 +282,11 @@ bool BondsWidget::FetchBondSkills()
         return false;
     bond_list.clear();
     bond_map.clear();
-    for (int slot = 0; slot < 8; ++slot) {
-        DWORD SkillID = bar->skills[slot].skill_id;
-        Bond bond = GetBondBySkillID(SkillID);
-        if (bond != Bond::None) {
-            bond_map[SkillID] = bond_list.size();
-            bond_list.push_back(SkillID);
+    for (const auto& skill : bar->skills) {
+        auto skill_id = static_cast<SkillID>(skill.skill_id);
+        if (std::find(skills.begin(), skills.end(), skill_id) != skills.end()) {
+            bond_map[skill_id] = bond_list.size();
+            bond_list.push_back(skill_id);
         }
     }
     return true;
@@ -357,16 +294,14 @@ bool BondsWidget::FetchBondSkills()
 bool BondsWidget::FetchPartyInfo()
 {
     const GW::PartyInfo *info = GW::PartyMgr::GetPartyInfo();
-    if (info == nullptr || !info->players.valid())
-        return false;
-    const GW::PlayerArray &players = GW::Agents::GetPlayerArray();
-    if (!players.valid())
+    if (!info)
         return false;
     party_list.clear();
     party_map.clear();
     allies_start = 255;
     for (const GW::PlayerPartyMember &player : info->players) {
-        DWORD id = players[player.login_number].agent_id;
+        DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
+        if (!id) continue;
         party_map[id] = party_list.size();
         party_list.push_back(id);
 
@@ -385,13 +320,13 @@ bool BondsWidget::FetchPartyInfo()
         }
     }
     if (show_allies && info->others.valid()) {
-        allies_start = party_list.size();
         for (const DWORD ally_id : info->others) {
-            GW::Agent *agent = GW::Agents::GetAgentByID(ally_id);
-            GW::AgentLiving *ally = agent ? agent->GetAsAgentLiving() : nullptr;
-            if (ally && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
-                party_map[ally_id] = party_list.size();
-                party_list.push_back(ally_id);
+            GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
+            GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
+            if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
+                if (allies_start == 255)
+                    allies_start = party_map.size();
+                party_map[ally_id] = party_map.size();
             }
         }
     }

@@ -25,7 +25,7 @@
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Logger.h>
 #include <ImGuiAddons.h>
 #include <Modules/Obfuscator.h>

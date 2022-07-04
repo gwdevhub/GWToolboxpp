@@ -8,7 +8,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Widgets/VanquishWidget.h>
 
 void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {

@@ -4,8 +4,9 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Defines.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
+#include <PluginManager.h>
 
 #include <Modules/ChatCommands.h>
 #include <Modules/GameSettings.h>
@@ -84,6 +85,9 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Checkbox("Hide Settings when entering explorable area", &hide_when_entering_explorable);
 
         ImGui::Text("General:");
+
+        GWToolbox::Instance().GetPluginManger().Draw();
+
         if (ImGui::CollapsingHeader("Help")) {
             if (ImGui::TreeNodeEx("General Interface", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ImGui::Bullet(); ImGui::Text("Double-click on the title bar to collapse a window.");
@@ -175,15 +179,17 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
         ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2), ImColor(style.Colors[ImGuiCol_Text]), icon);
     }
 
-    if (is_showing) ImGui::PushID(section);
-    size_t i = 0;
-    for (auto& entry : settings_section->second) {
-        ImGui::PushID(&settings_section->second);
-        if (i && is_showing) ImGui::Separator();
-        entry.second(&settings_section->first, is_showing);
-        i++;
+    if (is_showing) {
+        ImGui::PushID(section);
+        size_t i = 0;
+        for (auto& entry : settings_section->second) {
+            if (i) ImGui::Separator();
+            ImGui::PushID(i);
+            entry.second(&settings_section->first, is_showing);
+            i++;
+            ImGui::PopID();
+        }
         ImGui::PopID();
     }
-    if (is_showing) ImGui::PopID();
     return true;
 }

@@ -20,7 +20,9 @@ target_sources(GWToolboxdll PRIVATE ${SOURCES})
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX /ZI)
+set_target_properties(GWToolboxdll PROPERTIES LINK_FLAGS -SAFESEH:NO)
 
+target_link_options(GWToolboxdll PRIVATE /IGNORE:4099)
 
 target_include_directories(GWToolboxdll PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -32,6 +34,7 @@ include(earcut)
 
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
+        RestClient
     imgui
     gwca
     directx
@@ -43,10 +46,9 @@ target_link_libraries(GWToolboxdll PRIVATE
     simpleini
     imgui::fonts
     IconFontCppHeaders
+
     # libs:
-    Urlmon.lib
-    Shlwapi.lib
-    Wininet.lib
     Dbghelp.lib # for MiniDump
+    gdiplus.lib # For GWFileRequester module
     xinput9_1_0.lib # for Win7 legacy support
     )

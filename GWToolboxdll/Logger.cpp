@@ -7,7 +7,7 @@
 
 #include <Defines.h>
 #include <Logger.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
 #include <Modules/CrashHandler.h>

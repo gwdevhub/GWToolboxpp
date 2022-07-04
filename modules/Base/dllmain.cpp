@@ -5,7 +5,7 @@
 
 
 
-DLLAPI BOOL WINAPI DllMain(HINSTANCE hInst, DWORD reason, LPVOID reserved) {
+DLLAPI BOOL WINAPI DllMain(HINSTANCE , DWORD reason, LPVOID) {
 	switch (reason) {
 	case DLL_PROCESS_ATTACH: break;
 	case DLL_PROCESS_DETACH: break;
@@ -14,8 +14,6 @@ DLLAPI BOOL WINAPI DllMain(HINSTANCE hInst, DWORD reason, LPVOID reserved) {
 	default:
 		break;
 	}
-
-	std::cout << "dllmain executed. Reason: " << reason << std::endl;
 
 	return TRUE;
 }

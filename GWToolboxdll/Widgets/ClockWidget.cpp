@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Widgets/ClockWidget.h>
 #include <Modules/ToolboxSettings.h>

@@ -1,11 +1,15 @@
 #pragma once
 
-#include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-#include <Color.h>
 #include <Widgets/Minimap/VBuffer.h>
 
+namespace GW {
+    namespace Constants {
+        enum class MapID;
+    }
+}
+typedef uint32_t Color;
 namespace mapbox // enable mapbox::earcut to work with GW::Vec2f as Point
 {
     namespace util
@@ -28,19 +32,9 @@ class CustomRenderer : public VBuffer
     friend class AgentRenderer;
     struct CustomLine
     {
-        CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n)
-            : p1(x1, y1)
-            , p2(x2, y2)
-            , map(m)
-            , visible(true)
-        {
-            if (n)
-                GuiUtils::StrCopy(name, n, sizeof(name));
-            else
-                GuiUtils::StrCopy(name, "line", sizeof(name));
-        };
+        CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n);
         CustomLine(const char* n)
-            : CustomLine(0, 0, 0, 0, GW::Constants::MapID::None, n){};
+            : CustomLine(0, 0, 0, 0, (GW::Constants::MapID)0, n){};
         GW::Vec2f p1;
         GW::Vec2f p2;
         GW::Constants::MapID map;
@@ -53,40 +47,27 @@ class CustomRenderer : public VBuffer
         LineCircle,
         FullCircle
     };
-    struct CustomMarker
+    struct CustomMarker final : VBuffer
     {
-        CustomMarker(float x, float y, float s, Shape sh, GW::Constants::MapID m, const char* n)
-            : pos(x, y)
-            , size(s)
-            , shape(sh)
-            , map(m)
-            , visible(true)
-        {
-            if (n)
-                GuiUtils::StrCopy(name, n, sizeof(name));
-            else
-                GuiUtils::StrCopy(name, "marker", sizeof(name));
-        };
-        CustomMarker(const char* n);
+        CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* n);
+        explicit CustomMarker(const char* n);
         GW::Vec2f pos;
         float size;
         Shape shape;
         GW::Constants::MapID map;
         bool visible;
         char name[128]{};
+        Color color{0x00FFFFFF};
         Color color_sub{0x00FFFFFF};
+        void Render(IDirect3DDevice9* device) override;
+
+    private:
+        void Initialize(IDirect3DDevice9* device) override;
     };
 
     struct CustomPolygon final : VBuffer
     {
-        CustomPolygon(GW::Constants::MapID m, const char* n)
-            : map(m)
-        {
-            if (n)
-                GuiUtils::StrCopy(name, n, sizeof name);
-            else
-                GuiUtils::StrCopy(name, "marker", sizeof name);
-        };
+        CustomPolygon(GW::Constants::MapID m, const char* n);
         CustomPolygon(const char* n);
 
         std::vector<GW::Vec2f> points{};
@@ -97,11 +78,11 @@ class CustomRenderer : public VBuffer
         char name[128]{};
         Color color{0xA0FFFFFF};
         Color color_sub{0x00FFFFFF};
-        const static auto max_points = 21;
-        void Initialize(IDirect3DDevice9* device) override;
+        constexpr static auto max_points = 21;
         void Render(IDirect3DDevice9* device) override;
 
     private:
+        void Initialize(IDirect3DDevice9* device) override;
         std::vector<unsigned> point_indices{};
     };
 
@@ -124,16 +105,11 @@ private:
     void EnqueueVertex(float x, float y, Color color);
     void SetTooltipMapID(const GW::Constants::MapID& map_id);
     struct MapTooltip {
-        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        GW::Constants::MapID map_id = (GW::Constants::MapID)0;
         std::wstring map_name_ws;
         char tooltip_str[128];
     } map_id_tooltip;
 
-
-    class FullCircle : public VBuffer
-    {
-        void Initialize(IDirect3DDevice9* device) override;
-    } fullcircle;
     class LineCircle : public VBuffer
     {
         void Initialize(IDirect3DDevice9* device) override;

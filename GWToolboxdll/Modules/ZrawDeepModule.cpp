@@ -76,12 +76,11 @@ namespace {
     }
     const bool IsWholePartyTransformed() {
         GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
-        if (!p || !p->players.valid()) return false;
-        GW::PlayerArray players = GW::Agents::GetPlayerArray();
-        if (!players.valid()) return false;
-        for (auto player : p->players) {
-            if (!player.login_number || player.login_number >= players.size()) continue;
-            GW::Player* p2 = &players[player.login_number];
+        GW::PlayerArray* players = p ? GW::Agents::GetPlayerArray() : nullptr;
+        if (!players) return false;
+        for (auto& player : p->players) {
+            if (!player.login_number || player.login_number >= players->size()) continue;
+            GW::Player* p2 = &players->at(player.login_number);
             if (!p2) continue;
             GW::AgentLiving* pa = (GW::AgentLiving*)GW::Agents::GetAgentByID(p2->agent_id);
             if (pa && pa->GetIsLivingType() && (pa->transmog_npc_id ^ 0x20000000) != GW::Constants::ModelID::Minipet::Kanaxai)
@@ -147,10 +146,14 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
                 }
             });
 
-        GW::AgentArray agents = GW::Agents::GetAgentArray();
-        for (size_t i = 0; !kanaxai_agent_id && agents.valid() && i < agents.size(); i++) {
-            if (IsKanaxai(agents[i]))
-                kanaxai_agent_id = agents[i]->agent_id;
+        GW::AgentArray* agents = GW::Agents::GetAgentArray();
+        if (agents) {
+            for (auto* agent : *agents) {
+                if (IsKanaxai(agent)) {
+                    kanaxai_agent_id = agent->agent_id;
+                    break;
+                }
+            }
         }
     }
     else {

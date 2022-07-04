@@ -14,11 +14,9 @@ public:
 	PluginManager(const PluginManager&) = delete;
 
 	void Draw();
-
+	void RefreshDlls();
 private:
 	TBModule* LoadDLL(const std::filesystem::path& path);
-
-	void RefreshDlls();
 
 	std::vector<Plugin> plugins;
 };

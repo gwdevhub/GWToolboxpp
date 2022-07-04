@@ -7,7 +7,7 @@
 #include <GWCA/GameEntities/Map.h>
 
 #include <Logger.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Windows/StringDecoderWindow.h>
 

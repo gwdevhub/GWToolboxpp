@@ -7,7 +7,7 @@
 
 #include <GWCA/Managers/UIMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
@@ -16,8 +16,8 @@ class ChatCommands : public ToolboxModule {
     const float DEFAULT_CAM_SPEED = 1000.f; // 600 units per sec
     const float ROTATION_SPEED = static_cast<float>(M_PI) / 3.f; // 6 seconds for full rotation
 
-    ChatCommands() {};
-    ~ChatCommands() {};
+    ChatCommands();
+    ~ChatCommands();
 public:
     static ChatCommands& Instance() {
         static ChatCommands instance;
@@ -95,6 +95,11 @@ private:
     static void CmdHeroBehaviour(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdPingQuest(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdMorale(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdVolume(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdSetHardMode(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdSetNormalMode(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdAnimation(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdMute(const wchar_t*, int argc, LPWSTR* argv);
     
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string name, PendingTransmo &transmo);
@@ -109,6 +114,7 @@ private:
 
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;
+    uint32_t default_title_id;
 
     struct SearchAgent {
         clock_t started = 0;

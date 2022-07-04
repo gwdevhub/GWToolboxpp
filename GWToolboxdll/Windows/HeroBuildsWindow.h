@@ -3,7 +3,7 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Party.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Timer.h>
 #include <ToolboxWindow.h>
 

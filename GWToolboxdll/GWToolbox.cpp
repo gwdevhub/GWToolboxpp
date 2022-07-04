@@ -8,6 +8,7 @@
 #include <GWCA/GWCA.h>
 
 #include <GWCA/Context/PreGameContext.h>
+#include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -21,7 +22,7 @@
 #include <CursorFix.h>
 #include <d3dx9_dynamic.h>
 #include <Defines.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 #include <Logger.h>
 
@@ -38,7 +39,6 @@ namespace {
     HMODULE dllmodule = 0;
 
     long OldWndProc = 0;
-    bool tb_initialized = false;
     bool tb_destroyed = false;
     bool imgui_initialized = false;
 
@@ -49,6 +49,16 @@ namespace {
     bool defer_close = false;
 
     static HWND gw_window_handle = 0;
+    bool SaveIniToFile(CSimpleIni* ini, std::filesystem::path location) {
+        std::filesystem::path tmpFile = location;
+        tmpFile += ".tmp";
+        SI_Error res = ini->SaveFile(tmpFile.c_str());
+        if (res < 0) {
+            return false;
+        }
+        std::filesystem::rename(tmpFile, location);
+        return true;
+    }
 }
 
 HMODULE GWToolbox::GetDLLModule() {
@@ -173,7 +183,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         return 0;
     }
 
-    if (!(!GW::PreGameContext::instance() && imgui_initialized && tb_initialized && !tb_destroyed)) {
+    if (!(!GW::PreGameContext::instance() && imgui_initialized && GWToolbox::Instance().IsInitialized() && !tb_destroyed)) {
         return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
     }
 
@@ -339,7 +349,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 }
 
 void GWToolbox::Initialize() {
-    if (tb_initialized || must_self_destruct)
+    if (initialized || must_self_destruct)
         return;
     Log::Log("installing event handler\n");
     gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
@@ -360,11 +370,14 @@ void GWToolbox::Initialize() {
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"location logs"));
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
-        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
-        [](bool success) {
+        "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
+        [](bool success, const std::wstring& error) {
         if (success) {
             GWToolbox::Instance().OpenSettingsFile();
             GWToolbox::Instance().LoadModuleSettings();
+        }
+        else {
+            Log::ErrorW(L"Failed to download GWToolbox ini\n%s", error.c_str());
         }
     });
 
@@ -379,6 +392,8 @@ void GWToolbox::Initialize() {
     core_modules.push_back(&ToolboxSettings::Instance());
     core_modules.push_back(&MainWindow::Instance());
 
+    plugin_manager.RefreshDlls();
+
     for (ToolboxModule* module : core_modules) {
         module->LoadSettings(inifile);
         module->Initialize();
@@ -387,18 +402,18 @@ void GWToolbox::Initialize() {
     ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        auto* g = GW::GameContext::instance();
-        if(g && g->character && g->character->player_name)
+        auto* c = GW::CharContext::instance();
+        if(c && c->player_name)
             Log::InfoW(L"Hello!");
     }
-    tb_initialized = true;
+    initialized = true;
 }
 void GWToolbox::FlashWindow() {
     FLASHWINFO flashInfo = { 0 };
     flashInfo.cbSize = sizeof(FLASHWINFO);
     flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
     flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
-    flashInfo.uCount = 0;
+    flashInfo.uCount = 5;
     flashInfo.dwTimeout = 0;
     FlashWindowEx(&flashInfo);
 }
@@ -418,10 +433,15 @@ void GWToolbox::SaveSettings() {
     for (ToolboxModule* module : modules) {
         module->SaveSettings(inifile);
     }
-    if (inifile) inifile->SaveFile(Resources::GetPath(L"GWToolbox.ini").c_str());
+    if (inifile) {
+        ASSERT(SaveIniToFile(inifile, Resources::GetPath(L"GWToolbox.ini")));
+    }
 }
 
+
 void GWToolbox::Terminate() {
+    if (!initialized)
+        return;
     SaveSettings();
     inifile->Reset();
     delete inifile;
@@ -441,7 +461,8 @@ void GWToolbox::Terminate() {
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {
     // === destruction ===
-    if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
+    auto& instance = GWToolbox::Instance();
+    if (instance.initialized && instance.must_self_destruct) {
         if (!GuiUtils::FontsLoaded())
             return;
         for (ToolboxModule* module : GWToolbox::Instance().modules) {
@@ -462,15 +483,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 
         GW::DisableHooks();
-        tb_initialized = false;
+        instance.initialized = false;
         tb_destroyed = true;
-
-
-
     }
     // === runtime ===
-    if (tb_initialized 
-        && !GWToolbox::Instance().must_self_destruct
+    if (instance.initialized
+        && !instance.must_self_destruct
         && GW::Render::GetViewportWidth() > 0
         && GW::Render::GetViewportHeight() > 0) {
 
@@ -485,13 +503,13 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
             io.IniFilename = GWToolbox::Instance().imgui_inifile.bytes;
 
             Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
-                L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
-                [](bool success) {
+                "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
+                [](bool success, const std::wstring& error) {
                     if (success) {
                         GuiUtils::LoadFonts();
                     }
                     else {
-                        Log::Error("Cannot load font!");
+                        Log::ErrorW(L"Cannot load font!\n%s",error.c_str());
                     }
                 });
 
@@ -536,9 +554,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
                 continue;
             uielement->Draw(device);
         }
-        //for (TBModule* mod : GWToolbox::Instance().plugins) {
-        //    mod->Draw(device);
-        //}
+        for (TBModule* mod : GWToolbox::Instance().plugins) {
+            mod->Draw(device);
+        }
 
 #ifdef _DEBUG
         // Feel free to uncomment to play with ImGui's features
@@ -565,9 +583,9 @@ void GWToolbox::Update(GW::HookStatus *)
         last_tick_count = GetTickCount();
 
     GWToolbox& tb = GWToolbox::Instance();
-    if (!tb_initialized)
-        GWToolbox::Instance().Initialize();
-    if (tb_initialized
+    if (!tb.initialized)
+        tb.Initialize();
+    if (tb.initialized
         && imgui_initialized
         && !GWToolbox::Instance().must_self_destruct) {
 

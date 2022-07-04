@@ -24,7 +24,7 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWToolbox.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Logger.h>
 
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))

@@ -7,6 +7,8 @@
 #include "Registry.h"
 #include "Settings.h"
 
+namespace fs = std::filesystem;
+
 static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
 {
     HANDLE hFile = CreateFileW(
@@ -63,34 +65,22 @@ static bool InstallUninstallKey()
     localtime_s(&local_time , &raw_time);
     wcsftime(time_buf, ARRAYSIZE(time_buf), L"%Y%m%d", &local_time);
 
-    wchar_t install_location[MAX_PATH];
-    if (!PathGetAppDataPath(install_location, MAX_PATH, L"GWToolboxpp")) {
-        fprintf(stderr, "PathGetAppDataPath failed\n");
+    fs::path install_location;
+    if (!PathGetDocumentsPath(install_location, L"GWToolboxpp")) {
         return false;
     }
-
-    wchar_t dll_path[MAX_PATH];
-    if (!PathCompose(dll_path, MAX_PATH, install_location, L"GWToolboxdll.dll")) {
-        fprintf(stderr, "PathCompose failed\n");
-        return false;
-    }
-
-    wchar_t installer_path[MAX_PATH];
-    if (!PathCompose(installer_path, MAX_PATH, install_location, L"GWToolbox.exe")) {
-        fprintf(stderr, "PathCompose failed\n");
-        return false;
-    }
+    fs::path dll_path = install_location / L"GWToolboxdll.dll";
+    fs::path installer_path = install_location / L"GWToolbox.exe";
 
     DWORD dll_size;
-    if (!GetFileSizeAsDword(dll_path, &dll_size)) {
-        fprintf(stderr, "GetFileSizeAsDword failed\n");
+    if (!GetFileSizeAsDword(dll_path.wstring().c_str(), &dll_size)) {
         return false;
     }
 
     wchar_t uninstall[MAX_PATH + 64];
     wchar_t uninstall_quiet[MAX_PATH + 64];
-    _snwprintf_s(uninstall, ARRAYSIZE(uninstall), L"%ls /uninstall", installer_path);
-    _snwprintf_s(uninstall_quiet, ARRAYSIZE(uninstall_quiet), L"%ls /uninstall /quiet", installer_path);
+    _snwprintf_s(uninstall, ARRAYSIZE(uninstall), L"%s /uninstall", installer_path.wstring().c_str());
+    _snwprintf_s(uninstall_quiet, ARRAYSIZE(uninstall_quiet), L"%s /uninstall /quiet", installer_path.wstring().c_str());
 
     HKEY UninstallKey;
     if (!CreateUninstallKey(&UninstallKey)) {
@@ -100,11 +90,11 @@ static bool InstallUninstallKey()
 
     // current date as YYYYMMDD
     if (!RegWriteStr(UninstallKey, L"DisplayName", L"GWToolbox") ||
-        !RegWriteStr(UninstallKey, L"DisplayIcon", installer_path) ||
+        !RegWriteStr(UninstallKey, L"DisplayIcon", installer_path.wstring().c_str()) ||
         !RegWriteStr(UninstallKey, L"DisplayVersion", L"3.0") ||
         !RegWriteDWORD(UninstallKey, L"EstimatedSize", dll_size / 1000) ||
         !RegWriteStr(UninstallKey, L"InstallDate", time_buf) ||
-        !RegWriteStr(UninstallKey, L"InstallLocation", install_location) ||
+        !RegWriteStr(UninstallKey, L"InstallLocation", install_location.wstring().c_str()) ||
         !RegWriteDWORD(UninstallKey, L"NoModify", 1) ||
         !RegWriteDWORD(UninstallKey, L"NoRepair", 1) ||
         !RegWriteStr(UninstallKey, L"UninstallString", uninstall) ||
@@ -142,79 +132,57 @@ static bool InstallSettingsKey()
 
 static bool EnsureInstallationDirectoryExist(void)
 {
-    wchar_t path[MAX_PATH];
     wchar_t temp[MAX_PATH];
 
-    // Create %localappdata%\GWToolboxpp
-    if (!PathGetAppDataPath(path, MAX_PATH, L"GWToolboxpp\\")) {
-        fprintf(stderr, "PathGetAppDataPath failed\n");
+    fs::path docpath;
+    if (!PathGetDocumentsPath(docpath, L"GWToolboxpp")) {
         return false;
     }
-    if (!PathCreateDirectory(path)) {
-        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", path);
+    std::filesystem::path computer_name;
+    if (!PathGetComputerName(computer_name)) {
         return false;
     }
+    docpath = docpath / computer_name; // %USERPROFILE%\Documents\GWToolboxpp\<Computername>
 
-    // Create %localappdata%\GWToolboxpp\logs
-    if (!PathCompose(temp, MAX_PATH, path, L"logs")) {
-        fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"logs");
+    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\crashes
+    fs::path crashes = docpath / L"crashes";
+    if (!PathCreateDirectorySafe(crashes)) {
         return false;
     }
-    if (!PathCreateDirectory(temp)) {
-        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
+    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\logs
+    fs::path logs = docpath / L"logs";
+    if (!PathCreateDirectorySafe(logs)) {
         return false;
     }
-
-    // Create %localappdata%\GWToolboxpp\crashes
-    if (!PathCompose(temp, MAX_PATH, path, L"crashes")) {
-        fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"crashes");
+    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\plugins
+    fs::path plugins = docpath / L"plugins";
+    if (!PathCreateDirectorySafe(plugins)) {
         return false;
     }
-    if (!PathCreateDirectory(temp)) {
-        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
+    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\data
+    fs::path data = docpath / L"data";
+    if (!PathCreateDirectorySafe(data)) {
         return false;
     }
-
-    // Create %localappdata%\GWToolboxpp\plugins
-    if (!PathCompose(temp, MAX_PATH, path, L"plugins")) {
-        fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"plugins");
-        return false;
-    }
-    if (!PathCreateDirectory(temp)) {
-        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
-        return false;
-    }
-
-    // Create %localappdata%\GWToolboxpp\data
-    if (!PathCompose(temp, MAX_PATH, path, L"data")) {
-        fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"data");
-        return false;
-    }
-    if (!PathCreateDirectory(temp)) {
-        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
-        return false;
-    }
-
     return true;
 }
 
 static bool CopyInstaller(void)
 {
-    wchar_t dest_path[MAX_PATH];
-    wchar_t source_path[MAX_PATH];
+    std::filesystem::path dest_path;
 
-    if (!PathGetAppDataPath(dest_path, MAX_PATH, L"GWToolboxpp\\GWToolbox.exe")) {
-        fprintf(stderr, "PathGetAppDataPath failed\n");
+    if (!PathGetDocumentsPath(dest_path, L"GWToolboxpp\\GWToolbox.exe")) {
+        return false;
+    }
+    std::filesystem::path source_path;
+    if (!PathGetExeFullPath(source_path)) {
         return false;
     }
 
-    PathGetExeFullPath(source_path, MAX_PATH);
-
-    if (wcsncmp(dest_path, source_path, MAX_PATH) == 0)
+    if (source_path == dest_path)
         return true;
 
-    if (CopyFileW(source_path, dest_path, FALSE) != TRUE) {
-        fprintf(stderr, "CopyFileW failed (%lu)\n", GetLastError());
+    if (!PathSafeCopy(source_path, dest_path, true)) {
         return false;
     }
 
@@ -230,10 +198,11 @@ static bool DeleteInstallationDirectory(void)
     // moved to the recycle bin regardless of "FOF_ALLOWUNDO".
 
     wchar_t path[MAX_PATH + 2];
-    if (!PathGetAppDataPath(path, MAX_PATH, L"GWToolboxpp\\*")) {
-        fprintf(stderr, "PathGetAppDataPath failed\n");
+    std::filesystem::path fspath;
+    if (!PathGetDocumentsPath(fspath, L"GWToolboxpp\\*")) {
         return false;
     }
+    wcscpy(path, fspath.wstring().c_str());
 
     size_t n_path = wcslen(path);
     path[n_path + 1] = 0;
@@ -258,6 +227,12 @@ bool Install(bool quiet)
 {
     if (IsInstalled())
         return true;
+
+    if (!PathMigrateDataAndCreateSymlink(false)) {
+        fwprintf(stderr, L"PathMigrateDataAndCreateSymlink failed\n");
+        return false;
+    }
+
     if (!EnsureInstallationDirectoryExist()) {
         fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
         return false;
@@ -337,20 +312,19 @@ bool IsInstalled()
     return true;
 }
 
-bool GetInstallationLocation(wchar_t *path, size_t length)
+bool GetInstallationLocation(fs::path& out)
 {
     HKEY UninstallKey;
     if (!OpenUninstallKey(&UninstallKey)) {
-        fprintf(stderr, "OpenUninstallKey failed\n");
         return false;
     }
-
-    if (!RegReadStr(UninstallKey, L"InstallLocation", path, length)) {
-        fprintf(stderr, "RegReadStr failed\n");
+    wchar_t temp[MAX_PATH];
+    if (!RegReadStr(UninstallKey, L"InstallLocation", temp, sizeof(temp))) {
         RegCloseKey(UninstallKey);
         return false;
     }
 
     RegCloseKey(UninstallKey);
+    out.assign(temp);
     return true;
 }

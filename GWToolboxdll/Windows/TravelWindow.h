@@ -49,7 +49,6 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
-    static bool IsMapUnlocked(GW::Constants::MapID map_id);
     static int RegionFromDistrict(GW::Constants::District district);
     static int LanguageFromDistrict(GW::Constants::District district);
     static GW::Constants::MapID GetNearestOutpost(GW::Constants::MapID map_to);
@@ -81,7 +80,7 @@ private:
     bool map_travel_countdown_started = false;
     bool pending_map_travel = false;
 
-    IDirect3DTexture9 *scroll_texture = nullptr;
+    IDirect3DTexture9** scroll_texture = nullptr;
 
     /* Not used, but good to keep for reference!
     enum error_message_ids {

@@ -12,7 +12,7 @@
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <Logger.h>
 #include <Timer.h>
 
@@ -393,18 +393,18 @@ bool TimerWidget::GetSpiritTimer() {
 
     if (!show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
 
-    GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-    if (!effects.valid()) return false;
+    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects) return false;
 
     int offset = 0;
-    for (DWORD i = 0; i < effects.size(); ++i) {
-        if (!effects[i].duration)
+    for (auto& effect : *effects) {
+        if (!effect.duration)
             continue;
-        SkillID effect_id = (SkillID)effects[i].skill_id;
+        SkillID effect_id = (SkillID)effect.skill_id;
         auto spirit_effect_enabled = spirit_effects_enabled.find(effect_id);
         if (spirit_effect_enabled == spirit_effects_enabled.end() || !(spirit_effect_enabled->second))
             continue;
-        offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effects[i].GetTimeRemaining() / 1000);
+        offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effect.GetTimeRemaining() / 1000);
     }
     if (!offset) 
         return false;
@@ -418,13 +418,13 @@ bool TimerWidget::GetDeepTimer() {
     if (GW::Map::GetMapID() != MapID::The_Deep) return false;
     if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
     
-    GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-    if (!effects.valid()) return false;
+    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects) return false;
 
     static clock_t start = -1;
     SkillID skill = SkillID::No_Skill;
-    for (DWORD i = 0; i < effects.size() && skill == SkillID::No_Skill; ++i) {
-        SkillID effect_id = (SkillID)effects[i].skill_id;
+    for (auto& effect : *effects) {
+        SkillID effect_id = (SkillID)effect.skill_id;
         switch (effect_id) {
         case SkillID::Aspect_of_Exhaustion:
         case SkillID::Aspect_of_Depletion_energy_loss:
@@ -434,6 +434,8 @@ bool TimerWidget::GetDeepTimer() {
         default:
             break;
         }
+        if (skill != SkillID::No_Skill)
+            break;
     }
     if (skill == SkillID::No_Skill) {
         start = -1;

@@ -9,7 +9,7 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Modules/CrashHandler.h>
 #include <Modules/Resources.h>
@@ -20,9 +20,10 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, unsigned line
 {
     __try {
         __debugbreak();
-        char exception_message[512];
-        snprintf(exception_message, _countof(exception_message), "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
-        throw std::exception(exception_message);
+        size_t len = snprintf(NULL,0, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
+        Instance().tb_exception_message = new char[len + 1];
+        snprintf(Instance().tb_exception_message, len + 1, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
+        throw std::runtime_error(Instance().tb_exception_message);
     }
     __except (EXCEPT_EXPRESSION_ENTRY) {
     }
@@ -91,8 +92,14 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
     }
 
     MINIDUMP_USER_STREAM_INFORMATION* UserStreamParam = 0;
+    char* extra_info = nullptr;
     if (Instance().gw_debug_info) {
-        char* extra_info = Instance().gw_debug_info->buffer;
+        extra_info = Instance().gw_debug_info->buffer;
+    }
+    else if (Instance().tb_exception_message) {
+        extra_info = Instance().tb_exception_message;
+    }
+    if (extra_info) {
         UserStreamParam = new MINIDUMP_USER_STREAM_INFORMATION();
         MINIDUMP_USER_STREAM* s = new MINIDUMP_USER_STREAM();
         s->Type = MINIDUMP_STREAM_TYPE::CommentStreamA;
@@ -111,6 +118,9 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
 
     BOOL success = MiniDumpWriteDump(GetCurrentProcess(), ProcessId, hFile, (MINIDUMP_TYPE)(MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs), ExpParam, UserStreamParam, 0);
     CloseHandle(hFile);
+    if (Instance().tb_exception_message) {
+        delete[] Instance().tb_exception_message;
+    }
     if (UserStreamParam) {
         delete UserStreamParam->UserStreamArray;
         delete UserStreamParam;

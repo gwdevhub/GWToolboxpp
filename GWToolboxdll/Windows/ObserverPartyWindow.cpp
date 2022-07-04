@@ -3,7 +3,7 @@
 
 
 #include <Logger.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <GWCA/Utilities/Macros.h>
 #include <GWCA/Utilities/Scanner.h>

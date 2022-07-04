@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #ifdef RGB
 #undef RGB
@@ -52,8 +52,8 @@ namespace Colors {
     }
 
     static void Save(CSimpleIni* ini, const char* section, const char* key, Color val) {
-        char buf[64];
-        snprintf(buf, 64, "0x%X", val);
+        char buf[11];
+        snprintf(buf, sizeof(buf), "0x%X", val);
         ini->SetValue(section, key, buf);
     }
 

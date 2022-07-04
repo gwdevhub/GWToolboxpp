@@ -1,14 +1,37 @@
 #pragma once
 
-// @Cleanup: Add return values
-void PathGetExeFullPath(wchar_t *path, size_t length);
-void PathGetExeFileName(wchar_t *path, size_t length);
+#include <filesystem>
 
-void PathGetProgramDirectory(wchar_t *path, size_t length);
+// is_directory without catch; returns false on failure
+bool PathIsDirectorySafe(const std::filesystem::path& path, bool* out);
+// is_symlink without catch; returns false on failure
+bool PathIsSymlinkSafe(const std::filesystem::path& path, bool* out);
+// directory_iterator without catch; returns false on failure
+bool PathDirectoryIteratorSafe(const std::filesystem::path& path, std::filesystem::directory_iterator* out);
+// exists without catch; returns false on failure
+bool PathExistsSafe(const std::filesystem::path& path, bool* out);
 
-bool PathGetAppDataDirectory(wchar_t *path, size_t length);
-bool PathGetAppDataPath(wchar_t *path, size_t length, const wchar_t *suffix);
+// Get absolute path of current running executable
+bool PathGetExeFullPath(std::filesystem::path& out);
+// Get basename of current running executable
+bool PathGetExeFileName(std::wstring& out);
 
-bool PathCreateDirectory(const wchar_t *path);
+bool PathGetProgramDirectory(std::filesystem::path& out);
 
-bool PathCompose(wchar_t *dest, size_t length, const wchar_t *left, const wchar_t *right);
+bool PathGetDocumentsPath(std::filesystem::path& out, const wchar_t* suffix);
+bool PathGetAppDataPath(std::filesystem::path& out, const wchar_t* suffix);
+
+// create_directories without catch; returns false on failure
+bool PathCreateDirectorySafe(const std::filesystem::path& path);
+
+// Performs manually recursive copy. Useful for figuring out which file is in use when using std::filesystem::copy on a directory fails.
+bool PathSafeCopy(const std::filesystem::path& from, const std::filesystem::path& to, bool copy_if_target_is_newer = false);
+
+// Performs manually recursive remove. Useful for figuring out which file is in use when std::filesystem::remove_all fails.
+// This function will be MUCH slower than doing remove_all
+bool PathRecursiveRemove(const std::filesystem::path& from);
+
+bool PathGetComputerName(std::filesystem::path& out);
+bool PathMigrateDataAndCreateSymlink(bool create_symlink = false);
+
+

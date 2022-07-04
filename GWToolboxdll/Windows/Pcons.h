@@ -30,6 +30,7 @@ public:
     static bool hide_city_pcons_in_explorable_areas;
 
 protected:
+
     Pcon(const char* chatname,
         const char* abbrevname,
         const char* ininame,
@@ -37,6 +38,8 @@ protected:
         WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
         ImVec2 uv0, ImVec2 uv1, int threshold,
         const char* desc = nullptr);
+    Pcon(const wchar_t* file, int threshold = 20)
+        :Pcon(0, 0, 0, file, 0, { 0,0 }, { 1,1 }, threshold) {}
     Pcon(const Pcon&) = delete;
     virtual ~Pcon();
     bool* GetSettingsByName(const wchar_t* name);
@@ -52,7 +55,6 @@ protected:
     uint32_t pending_move_to_slot = 0;
     uint32_t pending_move_to_quantity = 0;
 public:
-    void Initialize();
     void Terminate();
 
     virtual void Draw(IDirect3DDevice9* device);
@@ -90,10 +92,10 @@ public:
 
     clock_t timer = 0;
 
-    const char* const chat;
-    const char* const abbrev;
+    std::string chat;
+    std::string abbrev;
     std::string desc;
-    const char* const ini;
+    std::string ini;
 
 protected:
     // Cycles through character's inventory to find a matching (incomplete) stack, or an empty pane.
@@ -119,14 +121,17 @@ protected:
     virtual size_t QuantityForEach(const GW::Item* item) const = 0;
 
 private:
-    IDirect3DTexture9* texture = nullptr;
-    const ImVec2 uv0;
-    const ImVec2 uv1;
+    IDirect3DTexture9** texture = nullptr;
+    const ImVec2 uv0 = { 0,0 };
+    const ImVec2 uv1 = { 1,1 };
 };
 
 // A generic Pcon has an item_id and effect_id
 class PconGeneric : public Pcon {
 public:
+    PconGeneric(const wchar_t* file, DWORD item, GW::Constants::SkillID effect, int threshold = 20)
+        :Pcon(file,  threshold),
+        itemID(item), effectID(effect) {}
     PconGeneric(const char* chat,
         const char* abbrev,
         const char* ini,
@@ -188,7 +193,10 @@ public:
 // Used only in outposts for refilling
 class PconRefiller : public PconCity {
 public:
-    
+    PconRefiller(const wchar_t* file, DWORD item, int threshold = 250)
+        : PconRefiller(0, 0, 0, file, 0, { 0,0 }, { 1,1 }, item, threshold) {
+        visible = false;
+    };
     PconRefiller(const char* chat,
         const char* abbrev,
         const char* ini,

@@ -13,7 +13,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 
 #include <Defines.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 
 #include <Modules/Updater.h>
@@ -32,6 +32,9 @@
 #include <Modules/Obfuscator.h>
 #include <Modules/ChatLog.h>
 #include <Modules/HintsModule.h>
+#ifdef _DEBUG
+#include <Modules/GWFileRequester.h>
+#endif
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -77,9 +80,11 @@
 #include <Widgets/VanquishWidget.h>
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/SkillbarWidget.h>
+#include <Widgets/SkillMonitorWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Widgets/EffectsMonitorWidget.h>
 #include "ToolboxSettings.h"
+#include <Widgets/LatencyWidget.h>
 
 //#define _FUN
 
@@ -131,6 +136,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_party_statistics) optional_modules.push_back(&PartyStatisticsWindow::Instance());
 
 #ifdef _DEBUG
+    optional_modules.push_back(&GWFileRequester::Instance());
 #if 0
     optional_modules.push_back(&PartySearchWindow::Instance());
 #endif
@@ -161,6 +167,8 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
     if (use_world_map) optional_modules.push_back(&WorldMapWidget::Instance());
     if (use_effect_monitor) optional_modules.push_back(&EffectsMonitorWidget::Instance());
+    if (use_latency_widget) optional_modules.push_back(&LatencyWidget::Instance());
+    if (use_skill_monitor) optional_modules.push_back(&SkillMonitorWidget::Instance());
 #if _DEBUG
     
 #endif
@@ -212,6 +220,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Friend List",&use_friendlist},
         {"Hero Builds",&use_herobuilds},
         {"Info",&use_info},
+        {"Latency Widget", &use_latency_widget},
         {"Materials",&use_materials},
         {"Minimap",&use_minimap},
         {"Notepad",&use_notepad},
@@ -220,6 +229,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Party Window",&use_partywindowmodule},
         {"Pcons",&use_pcons},
         {"Reroll",&use_reroll_window},
+        {"Skill Monitor",&use_skill_monitor},
         {"Timer",&use_timer},
         {"Trade",&use_trade},
         {"Travel",&use_travel},
@@ -332,6 +342,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_effect_monitor = ini->GetBoolValue(Name(), VAR_NAME(use_effect_monitor), use_effect_monitor);
     use_reroll_window = ini->GetBoolValue(Name(), VAR_NAME(use_reroll_window), use_reroll_window);
     use_party_statistics = ini->GetBoolValue(Name(), VAR_NAME(use_party_statistics), use_party_statistics);
+    use_skill_monitor = ini->GetBoolValue(Name(), VAR_NAME(use_skill_monitor), use_skill_monitor);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -381,6 +392,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_effect_monitor), use_effect_monitor);
     ini->SetBoolValue(Name(), VAR_NAME(use_reroll_window), use_reroll_window);
     ini->SetBoolValue(Name(), VAR_NAME(use_party_statistics), use_party_statistics);
+    ini->SetBoolValue(Name(), VAR_NAME(use_skill_monitor), use_skill_monitor);
 }
 
 void ToolboxSettings::Draw(IDirect3DDevice9*) {

@@ -72,11 +72,11 @@ private:
     DWORD RequestPurchaseQuote(Material material);
     DWORD RequestSellQuote(Material material);
 
-    IDirect3DTexture9* tex_essence = nullptr;
-    IDirect3DTexture9* tex_grail = nullptr;
-    IDirect3DTexture9* tex_armor = nullptr;
-    IDirect3DTexture9* tex_powerstone = nullptr;
-    IDirect3DTexture9* tex_resscroll = nullptr;
+    IDirect3DTexture9** tex_essence = nullptr;
+    IDirect3DTexture9** tex_grail = nullptr;
+    IDirect3DTexture9** tex_armor = nullptr;
+    IDirect3DTexture9** tex_powerstone = nullptr;
+    IDirect3DTexture9** tex_resscroll = nullptr;
 
     // Negative values have special meanings:
     static const int PRICE_DEFAULT = -1;
@@ -86,7 +86,6 @@ private:
     int price[N_MATS] = {};
 
     // int max = 0;
-    GW::MerchItemArray GetMerchItems() const;
     GW::Item *GetMerchItem(Material mat) const;
     GW::Item *GetBagItem(Material mat) const;
 

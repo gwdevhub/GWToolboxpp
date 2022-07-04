@@ -37,6 +37,7 @@ struct curl_blob {
 };
 
 CURL_EXTERN CURL *curl_easy_init(void);
+#undef curl_easy_setopt
 CURL_EXTERN CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...);
 CURL_EXTERN CURLcode curl_easy_perform(CURL *curl);
 CURL_EXTERN void curl_easy_cleanup(CURL *curl);

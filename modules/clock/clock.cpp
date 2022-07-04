@@ -1,15 +1,8 @@
 #include "clock.h"
 
-DLLAPI TBModule* getObj() {
-	return new Clock();
-}
-
-DLLAPI const char* getName() {
-	return "Clock";
-}
-
-const char* Clock::Name() const {
-	return getName();
+DLLAPI TBModule* TBModuleInstance() {
+	static Clock instance;
+	return &instance;
 }
 
 void Clock::Draw(IDirect3DDevice9* device) {

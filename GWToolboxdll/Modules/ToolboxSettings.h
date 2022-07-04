@@ -1,9 +1,12 @@
 #pragma once
 
-#include <GWCA/Constants/Maps.h>
-
 #include <ToolboxUIElement.h>
 
+namespace GW {
+    namespace Constants {
+        enum class MapID;
+    }
+}
 class ToolboxSettings : public ToolboxUIElement {
     ToolboxSettings() {};
     ToolboxSettings(const ToolboxSettings&) = delete;
@@ -37,7 +40,7 @@ public:
 private:
     // === location stuff ===
     clock_t location_timer = 0;
-    GW::Constants::MapID location_current_map = GW::Constants::MapID::None;
+    GW::Constants::MapID location_current_map = (GW::Constants::MapID)0;
     std::wofstream location_file;
     bool save_location_data = false;
 
@@ -88,4 +91,6 @@ private:
     bool use_completion_window = true;
     bool use_reroll_window = true;
     bool use_party_statistics = true;
+    bool use_latency_widget = true;
+    bool use_skill_monitor = true;
 };

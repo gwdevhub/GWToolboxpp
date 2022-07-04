@@ -4,6 +4,7 @@ using Json = nlohmann::json;
 
 #include <File.h>
 #include <Path.h>
+#include <Str.h>
 
 #include <RestClient.h>
 
@@ -170,8 +171,10 @@ bool DownloadWindow::DownloadAllFiles()
     // don't used it!
     release_string[0] = 0;
 
-    wchar_t dll_path[MAX_PATH];
-    PathGetAppDataPath(dll_path, MAX_PATH, L"GWToolboxpp\\GWToolboxdll.dll");
+    std::filesystem::path dll_path;
+    if (!PathGetDocumentsPath(dll_path, L"GWToolboxpp\\GWToolboxdll.dll")) {
+        return false;
+    }
 
     char buffer[64];
     snprintf(buffer, 64, "Downloading version '%s'", release.tag_name.c_str());
@@ -217,9 +220,9 @@ bool DownloadWindow::DownloadAllFiles()
             }
 
             std::string& file_content = downloader.GetContent();
-            if (!WriteEntireFile(dll_path, file_content.c_str(), file_content.size())) {
-                fprintf(stderr, "WriteEntireFile failed on '%ls' with %zu bytes\n",
-                    dll_path, file_content.size());
+            if (!WriteEntireFile(dll_path.wstring().c_str(), file_content.c_str(), file_content.size())) {
+                fwprintf(stderr, L"WriteEntireFile failed on '%s' with %zu bytes\n",
+                    dll_path.wstring().c_str(), file_content.size());
                 return false;
             }
 

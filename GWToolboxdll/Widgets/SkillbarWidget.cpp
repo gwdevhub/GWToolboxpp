@@ -37,8 +37,10 @@ void SkillbarWidget::skill_cooldown_to_string(char arr[16], uint32_t cd) const
 std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t skillId)
 {
     std::vector<Effect> ret;
-    for (const GW::Effect& effect : GW::Effects::GetPlayerEffectArray()) {
-        if (effect.skill_id == skillId && effect.effect_type != 7 /*hex*/) {
+    auto* effects = GW::Effects::GetPlayerEffects();
+    if (!effects) return ret;
+    for (const GW::Effect& effect : *effects) {
+        if (effect.skill_id == skillId) {
             Effect e;
             e.remaining = effect.GetTimeRemaining();
             if (effect.duration) {
@@ -55,8 +57,10 @@ std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t s
 SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const uint32_t skillId)
 {
     SkillbarWidget::Effect ret;
-    for (const GW::Effect& effect : GW::Effects::GetPlayerEffectArray()) {
-        if (effect.skill_id == skillId && effect.effect_type != 7 /*hex*/) {
+    auto* effects = GW::Effects::GetPlayerEffects();
+    if (!effects) return ret;
+    for (const GW::Effect& effect : *effects) {
+        if (effect.skill_id == skillId) {
             const auto remaining = effect.GetTimeRemaining();
             if (ret.remaining < remaining) {
                 ret.remaining = remaining;
@@ -92,11 +96,12 @@ void SkillbarWidget::Update(float)
         const Effect& effect = get_longest_effect(skill_id);
         m_skills[it].color = UptimeToColor(effect.remaining);
         if (display_effect_monitor) {
-            const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+            const auto* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+            if (!skill_data) continue;
             m_skills[it].effects.clear();
             if (display_multiple_effects && has_sf 
-                && skill_data.profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) 
-                && skill_data.type == static_cast<uint32_t>(GW::Constants::SkillType::Enchantment)) {
+                && skill_data->profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) 
+                && skill_data->type == static_cast<uint32_t>(GW::Constants::SkillType::Enchantment)) {
 
                 m_skills[it].effects = get_effects(skill_id);
                 std::sort(m_skills[it].effects.begin(), m_skills[it].effects.end(),

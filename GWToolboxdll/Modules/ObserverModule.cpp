@@ -25,7 +25,7 @@
 #include <GWCA/GameEntities/Skill.h>
 
 #include <GWToolbox.h>
-#include <GuiUtils.h>
+#include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
@@ -973,10 +973,10 @@ bool ObserverModule::InitializeObserverSession() {
     if (!SynchroniseParties()) return false;
 
     // load all other agents
-    const GW::AgentArray agents = GW::Agents::GetAgentArray();
-    if (!agents.valid()) return false;
+    const GW::AgentArray* agents = GW::Agents::GetAgentArray();
+    if (!agents) return false;
 
-    for (GW::Agent* agent : agents) {
+    for (GW::Agent* agent : *agents) {
         // not found (maybe hasn't loaded in yet)?
         if (!agent) continue;
         // trigger lazy load
@@ -1004,7 +1004,7 @@ bool ObserverModule::SynchroniseParties() {
     GW::PartyContext* party_ctx = GW::GameContext::instance()->party;
     if (!party_ctx) return false;
 
-    GW::Array<GW::PartyInfo*> parties = party_ctx->parties;
+    GW::Array<GW::PartyInfo*>& parties = party_ctx->parties;
     if (!parties.valid()) return false;
 
     for (const GW::PartyInfo* party_info : parties) {
@@ -1077,9 +1077,7 @@ ObserverModule::ObservableGuild* ObserverModule::GetObservableGuildById(const ui
 
     // create if active
     if (!IsActive()) return nullptr;
-    const GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
-    if (!guilds.valid() && guild_id >= guilds.size()) return nullptr;
-    GW::Guild* guild = guilds[guild_id];
+    GW::Guild* guild = GW::GuildMgr::GetGuildInfo(guild_id);
     if (!guild) return nullptr;
 
     ObserverModule::ObservableGuild* observable_guild = CreateObservableGuild(*guild);
@@ -1153,9 +1151,9 @@ ObserverModule::ObservableSkill* ObserverModule::GetObservableSkillById(uint32_t
 
     // create if active
     if (!IsActive()) return nullptr;
-    const GW::Skill& gw_skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    if (gw_skill.skill_id == 0) return nullptr;
-    ObservableSkill* skill = CreateObservableSkill(gw_skill);
+    const GW::Skill* gw_skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    if (!gw_skill) return nullptr;
+    ObservableSkill* skill = CreateObservableSkill(*gw_skill);
     return skill;
 }
 
@@ -1498,11 +1496,9 @@ ObserverModule::ObservableParty::~ObservableParty() {
 // Synchronise the ObservableParty with its agents/members
 // Does not load Party Allies (others) (Pets, Guild Lord, Bodyguard, ...)
 bool ObserverModule::ObservableParty::SynchroniseParty() {
-    GW::PartyContext* party_ctx = GW::GameContext::instance()->party;
-    if (!party_ctx) return false;
-
-    const GW::PlayerArray& players = GW::Agents::GetPlayerArray();
-    if (!players.valid()) return false;
+    GW::PartyContext* party_ctx = GW::PartyContext::instance();
+    GW::PlayerArray* players = party_ctx ? GW::Agents::GetPlayerArray() : nullptr;
+    if (!players) return false;
 
     const GW::Array<GW::PartyInfo*>& parties = party_ctx->parties;
     if (!parties.valid()) return false;
@@ -1541,7 +1537,7 @@ bool ObserverModule::ObservableParty::SynchroniseParty() {
     // fill agent_ids and notify the agents
     for (const GW::PlayerPartyMember& party_player : party_info->players) {
         // notify the player of their party & position
-        const GW::Player& player = players[party_player.login_number];
+        const GW::Player& player = players->at(party_player.login_number);
         if (player.agent_id != 0) {
             // if agent_id is 0, the agent either hasn't loaded or has disconnected
             // if the agent has simply disconnected we keep them from agent_ids
