@@ -1,8 +1,10 @@
-# GWToolbox++
+# JonsToolbox++
 
-## A set of tools for Guild Wars Speed Clearers
+## A set of tools for Guild Wars Players
 
-If you are here to check toolbox features and for a download link to go [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/). Keep reading for information on how to download and build from the source.
+This is based on [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/), with tidier features and more stability.
+
+If you are here to check toolbox features and for a download link to go [https://3vcloud.github.io/JonsToolbox/](https://3vcloud.github.io/JonsToolbox/). Keep reading for information on how to download and build from the source.
 
 ## How to download, build, and run
 ### Requirements
@@ -14,35 +16,22 @@ If you are here to check toolbox features and for a download link to go [https:/
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
 
 2. Clone the repository recursively: 
-`git clone --recursive https://github.com/haskha/GWToolboxpp.git`
+`git clone --recursive https://github.com/3vcloud/JonsToolbox.git`
 
 3. Navigate to the GWToolboxpp folder: 
 `cd GWToolboxpp`
 
-4. Create the build folder:
-`mkdir build`
+4. Build: `cmake .. -T v142 -A Win32 -B build`
 
-5. Move into the build folder:
-`cd build`
+5. Open: `cmake --open build`
 
-6. Run CMake. Run **one** of the following commands, depending on which version of Visual Studio you wish to use. You can also just run `cmake .. -T v142 -A Win32 -B .` and it will use the default generator. 
+6. Set the configuration to **Debug**
 
-`cmake .. -G "Visual Studio 16 2019" -T v142 -A Win32 -B .`
+7. Set "GWToolbox" as the startup project. Right click on the **GWToolbox** _project_ and hit "Set as Startup Project"
 
-`cmake .. -G "Visual Studio 15 2017" -T v142 -A Win32 -B .`
+8. Build the solution. 
 
-`cmake .. -G "Visual Studio 14 2015" -T v142 -A Win32 -B .`
-
-7. Open the project:
-`cmake --open .`
-
-8. Set the configuration to **Debug**
-
-9. Set "GWToolbox" as the startup project. Right click on the **GWToolbox** _project_ and hit "Set as Startup Project"
-
-10. Build the solution. 
-
-11. Add `/localdll` (and optionally `/quiet`) to the GWToolbox project: right click on GWToolbox project -> Properties -> Debugging -> Command arguments. Keep in mind this is a per-configuration (Debug or Release) setting. This will make the launcher use the GWToolbox DLL you build, rather than the one already installed. 
+9. Add `/localdll` (and optionally `/quiet`) to the GWToolbox project: right click on GWToolbox project -> Properties -> Debugging -> Command arguments. Keep in mind this is a per-configuration (Debug or Release) setting. This will make the launcher use the GWToolbox DLL you build, rather than the one already installed. 
 
 10. Run. You may have to launch Visual Studio as administrator.
 
@@ -112,5 +101,4 @@ Both Widgets and Windows can also have a panel in Settings, and share common cod
  **and everyone working/suggesting ideas!**
 
 **Images:**
-* All images in `resources/bonds`, `resources/materials`, and `resources/pcons` are property of ArenaNet.
 * All images in `resources/icons` are from www.flaticon.com 
