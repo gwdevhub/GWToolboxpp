@@ -39,6 +39,8 @@ std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t s
     std::vector<Effect> ret;
     auto* effects = GW::Effects::GetPlayerEffects();
     if (!effects) return ret;
+    const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skillId);
+    if (skill_data && skill_data->type == static_cast<uint32_t>(GW::Constants::SkillType::Hex)) return ret;
     for (const GW::Effect& effect : *effects) {
         if (effect.skill_id == skillId) {
             Effect e;
@@ -59,6 +61,8 @@ SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const uint32_t skillId
     SkillbarWidget::Effect ret;
     auto* effects = GW::Effects::GetPlayerEffects();
     if (!effects) return ret;
+    const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skillId);
+    if (skill_data && skill_data->type == static_cast<uint32_t>(GW::Constants::SkillType::Hex)) return ret;
     for (const GW::Effect& effect : *effects) {
         if (effect.skill_id == skillId) {
             const auto remaining = effect.GetTimeRemaining();
