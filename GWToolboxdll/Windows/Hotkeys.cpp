@@ -1114,28 +1114,18 @@ void HotkeyEquipItem::Execute()
     }
     const GW::Skillbar* s =  GW::SkillbarMgr::GetPlayerSkillbar();
     if (p->GetIsKnockedDown() || (s && s->casting)) {
-        // Log::Info("knocked down or missing"); // Player knocked down or
-        // casting; wait.
+        // Player knocked down or casting; wait.
         return;
     }
     if (p->skill) {
-        GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // Cancel action
-                                                              // if casting a
-                                                              // skill. Return
-                                                              // here and wait
-                                                              // before
-                                                              // equipping
-                                                              // items.
-        // Log::Info("cancel action");
+        // Casting atm
         return;
     }
     if (p->GetIsIdle() || p->GetIsMoving()) {
         GW::Items::EquipItem(item);
-        // Log::Info("equip %d", item->item_id);
     } else {
-        GW::Agents::Move(p->pos); // Move to clear model state e.g. attacking,
-                                  // aftercast
-        // Log::Info("not idle nor moving, %d",p->model_state);
+        // Move to clear model state e.g. attacking, aftercast
+        GW::Agents::Move(p->pos); 
     }
 }
 
