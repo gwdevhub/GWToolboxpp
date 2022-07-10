@@ -1449,7 +1449,8 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                     if (item) {
                         // Set initial transaction amount to be the entire stack
                         pending_transaction_amount = item->quantity;
-                        if (item->GetIsMaterial() && !item->IsRareMaterial() && pending_transaction.type == GW::Merchant::TraderSell) {
+                        if (item->GetIsMaterial() && !item->IsRareMaterial() 
+                            && (GW::Merchant::TransactionType)pending_transaction.type == GW::Merchant::TransactionType::TraderSell) {
                             pending_transaction_amount = static_cast<int>(floor(pending_transaction_amount / 10));
                         }
                     }
@@ -2203,7 +2204,8 @@ InventoryManager::CtoS_TransactItems InventoryManager::PendingTransaction::trans
 
 bool InventoryManager::PendingTransaction::selling()
 {
-    return type == GW::Merchant::TransactionType::MerchantSell || type == GW::Merchant::TransactionType::TraderSell;
+    return (GW::Merchant::TransactionType)type == GW::Merchant::TransactionType::MerchantSell 
+        || (GW::Merchant::TransactionType)type == GW::Merchant::TransactionType::TraderSell;
 }
 
 void InventoryManager::PendingItem::PluralEncString::sanitise() {
