@@ -244,6 +244,7 @@ int GWFileRequester::message_loop() {
             process_resource_request(file_request);
             delete file_request;
         }
+        Sleep(500);
     }
     return 0;
 }
