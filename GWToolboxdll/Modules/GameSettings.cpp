@@ -324,9 +324,10 @@ namespace {
             }
             else if (unlocked_first && unlocked_second) {
                 // Find skill with higher title track
-                GW::TitleArray& titles = GW::WorldContext::instance()->titles;
-                uint32_t kurzick_rank = titles.size() <= GW::Constants::TitleID::Kurzick ? 0 : titles[GW::Constants::TitleID::Kurzick].points_needed_current_rank;
-                uint32_t luxon_rank = titles.size() <= GW::Constants::TitleID::Luxon ? 0 : titles[GW::Constants::TitleID::Luxon].points_needed_current_rank;
+                auto kurzick_title = GW::PlayerMgr::GetTitleTrack(GW::Constants::TitleID::Kurzick);
+                uint32_t kurzick_rank = kurzick_title ? kurzick_title->points_needed_current_rank : 0;
+                auto luxon_title = GW::PlayerMgr::GetTitleTrack(GW::Constants::TitleID::Luxon);
+                uint32_t luxon_rank = luxon_title ? luxon_title->points_needed_current_rank : 0;
                 if (kurzick_rank > luxon_rank) {
                     skill_ids[std::max(found_first, found_second)] = skill.second;
                     tweaked = true;
