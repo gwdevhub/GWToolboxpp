@@ -36,6 +36,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Managers/TradeMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
@@ -161,7 +162,7 @@ namespace {
 
     struct DecodedTitleName {
         DecodedTitleName(GW::Constants::TitleID in) : title(in) {
-            GW::Title& t = GW::GameContext::instance()->world->titles[title];
+            GW::Title& t = GW::GameContext::instance()->world->titles[(uint32_t)title];
             name.reset(t.name_id());
         };
         GW::Constants::TitleID title;
@@ -351,7 +352,7 @@ void ChatCommands::DrawHelp() {
 }
 
 ChatCommands::ChatCommands() {
-    default_title_id = GW::Constants::TitleID::Lightbringer;
+    default_title_id = (uint32_t)GW::Constants::TitleID::Lightbringer;
 }
 
 ChatCommands::~ChatCommands() {
@@ -376,7 +377,7 @@ void ChatCommands::DrawSettingInternal() {
         preview = "Remove title";
         break;
     default:
-        const auto selected = std::find_if(title_names.begin(), title_names.end(), [&](auto* it) { return it->title == default_title_id; });
+        const auto selected = std::find_if(title_names.begin(), title_names.end(), [&](auto* it) { return (uint32_t)it->title == default_title_id; });
 
         if (selected != title_names.end()) {
             preview = (*selected)->name.string();
@@ -396,8 +397,8 @@ void ChatCommands::DrawSettingInternal() {
             default_title_id = CMDTITLE_REMOVE_CURRENT;
         }
         for (auto* it : title_names) {
-            if (ImGui::Selectable(it->name.string().c_str(), it->title == default_title_id)) {
-                default_title_id = it->title;
+            if (ImGui::Selectable(it->name.string().c_str(), (uint32_t)it->title == default_title_id)) {
+                default_title_id = (uint32_t)it->title;
             }
         }
         ImGui::EndCombo();
@@ -1018,37 +1019,36 @@ void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
     }
     std::wstring second_arg = GuiUtils::ToLower(argv[1]);
 
-    GW::Constants::EquipmentStatus (*statusGetter)() = nullptr;
-    void (*statusSetter)(GW::Constants::EquipmentStatus) = nullptr;
+    GW::EquipmentType equipment_slot = GW::EquipmentType::Unknown;
+
     if (second_arg == L"cape") {
-        statusGetter = &GW::Items::GetCapeStatus;
-        statusSetter = &GW::Items::SetCapeStatus;
+        equipment_slot = GW::EquipmentType::Cape;
     }
     else if (second_arg == L"head" || second_arg == L"helm") {
-        statusGetter = &GW::Items::GetHelmStatus;
-        statusSetter = &GW::Items::SetHelmStatus;
+        equipment_slot = GW::EquipmentType::Helm;
     }
     else if (second_arg == L"costume_head") {
-        statusGetter = &GW::Items::GetCostumeHeadpieceStatus;
-        statusSetter = &GW::Items::SetCostumeHeadpieceStatus;
+        equipment_slot = GW::EquipmentType::CostumeHeadpiece;
     }
     else if (second_arg == L"costume") {
-        statusGetter = &GW::Items::GetCostumeBodyStatus;
-        statusSetter = &GW::Items::SetCostumeBodyStatus;
+        equipment_slot = GW::EquipmentType::CostumeBody;
     }
-    if (statusSetter) {
+    if (equipment_slot != GW::EquipmentType::Unknown) {
+        GW::EquipmentStatus state = GW::Items::GetEquipmentVisibility(equipment_slot);
         // Toggling visibility of equipment
         switch (action) {
         case On:
-            return statusSetter(GW::Constants::EquipmentStatus::AlwaysShow);
+            state = GW::EquipmentStatus::AlwaysShow;
+            break;
         case Off:
-            return statusSetter(GW::Constants::EquipmentStatus::AlwaysHide);
+            state = GW::EquipmentStatus::AlwaysHide;
+            break;
         default:
-            GW::Constants::EquipmentStatus current = statusGetter();
-            if (current == GW::Constants::EquipmentStatus::AlwaysShow)
-                return statusSetter(GW::Constants::EquipmentStatus::AlwaysHide);
-            return statusSetter(GW::Constants::EquipmentStatus::AlwaysShow);
+            state = (state == GW::EquipmentStatus::AlwaysShow ? GW::EquipmentStatus::AlwaysHide : GW::EquipmentStatus::AlwaysShow);
+            break;
         }
+        ASSERT(GW::Items::SetEquipmentVisibility(equipment_slot, state));
+        return;
     }
     std::vector<ToolboxUIElement*> windows = MatchingWindows(message, ignore_last_arg ? argc - 1 : argc, argv);
     /*if (windows.empty()) {
@@ -1736,7 +1736,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Umbral_Grotto_outpost:
     case GW::Constants::MapID::Verdant_Cascades:
     case GW::Constants::MapID::Vloxs_Falls:
-        title_id = GW::Constants::TitleID::Asuran;
+        title_id = (uint32_t)GW::Constants::TitleID::Asuran;
         break;
     case GW::Constants::MapID::A_Gate_Too_Far_Level_1:
     case GW::Constants::MapID::A_Gate_Too_Far_Level_2:
@@ -1751,7 +1751,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Ravens_Point_Level_1:
     case GW::Constants::MapID::Ravens_Point_Level_2:
     case GW::Constants::MapID::Ravens_Point_Level_3:
-        title_id = GW::Constants::TitleID::Deldrimor;
+        title_id = (uint32_t)GW::Constants::TitleID::Deldrimor;
         break;
     case GW::Constants::MapID::Attack_of_the_Nornbear:
     case GW::Constants::MapID::Bjora_Marches:
@@ -1772,7 +1772,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::The_Norn_Fighting_Tournament:
     case GW::Constants::MapID::Varajar_Fells:
         // @todo: case MapID for Bear Club for Women/Men
-        title_id = GW::Constants::TitleID::Norn;
+        title_id = (uint32_t)GW::Constants::TitleID::Norn;
         break;
     case GW::Constants::MapID::Against_the_Charr:
     case GW::Constants::MapID::Ascalon_City_outpost:
@@ -1807,7 +1807,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Warband_of_Brothers_Level_1:
     case GW::Constants::MapID::Warband_of_Brothers_Level_2:
     case GW::Constants::MapID::Warband_of_Brothers_Level_3:
-        title_id = GW::Constants::TitleID::Vanguard;
+        title_id = (uint32_t)GW::Constants::TitleID::Vanguard;
         break;
     case GW::Constants::MapID::Abaddons_Gate:
     case GW::Constants::MapID::Basalt_Grotto_outpost:
@@ -1849,7 +1849,7 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Throne_of_Secrets:
     case GW::Constants::MapID::Vehtendi_Valley:
     case GW::Constants::MapID::Yatendi_Canyons:
-        title_id = GW::Constants::TitleID::Lightbringer;
+        title_id = (uint32_t)GW::Constants::TitleID::Lightbringer;
         break;
     }
 apply:
@@ -1868,7 +1868,7 @@ apply:
     case CMDTITLE_KEEP_CURRENT:
         break;
     default:
-        if (title_id > GW::Constants::TitleID::Codex) {
+        if (title_id > (uint32_t)GW::Constants::TitleID::Codex) {
             Log::Error("Invalid title_id %d",title_id);
             return;
         }
