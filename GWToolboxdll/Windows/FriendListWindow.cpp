@@ -16,7 +16,7 @@
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Managers/TradeMgr.h>
 
 #include <Logger.h>
 #include <base64.h>
@@ -127,6 +127,15 @@ bool FriendListWindow::GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak) {
             auto p = (GW::Packet::StoC::MessageGlobal*)pak;
             return GetIsPlayerIgnored(std::wstring(p->sender_name));
         }
+        case GAME_SMSG_PARTY_REQUEST_CANCEL:
+        case GAME_SMSG_PARTY_REQUEST_RESPONSE:
+        case GAME_SMSG_PARTY_JOIN_REQUEST: {
+            uint32_t party_id = ((uint32_t*)pak)[1];
+            GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo(party_id);
+            if (p && p->players.size()) {
+                return GetIsPlayerIgnored(p->players[0].login_number);
+            }
+        } break;
     }
     return false;
 }
@@ -400,14 +409,7 @@ void FriendListWindow::Initialize() {
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_REQUEST_CANCEL, OnPartyInvite, -0x8010);
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_REQUEST_RESPONSE, OnPartyInvite, -0x8010);
 
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_REQUEST, OnTradePacket, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_ACKNOWLEDGE, OnTradePacket, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_TERMINATE, OnTradePacket, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_ADD_ITEM, OnTradePacket, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_CHANGE_OFFER, OnTradePacket, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_ACCEPT, OnTradePacket, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_OFFERED_COUNT, OnTradePacket, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_RECEIVE_OFFER, OnTradePacket, -0x8010);
+    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_REQUEST, OnTradePacket, 0x8000);
 }
 void FriendListWindow::OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int) {
     switch (*message_ptr[0]) {
@@ -478,46 +480,12 @@ bool FriendListWindow::WriteError(MessageType message_type, const wchar_t* chara
     return true;
 }
 void FriendListWindow::OnPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak) {
-    uint32_t party_id = ((uint32_t*)pak)[1];
-    auto& ignored_parties = Instance().ignored_parties;
-    switch (pak->header) {
-    case GAME_SMSG_PARTY_JOIN_REQUEST: {
-        if (ignored_parties.find(party_id) != ignored_parties.end())
-            ignored_parties.erase(party_id);
-        GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo(party_id);
-        if (!(p && p->players.valid() && p->players.size()))
-            return;
-        if (GetIsPlayerIgnored(p->players[0].login_number)) {
-            status->blocked = true;
-            ignored_parties.emplace(party_id, true);
-        }
-        //GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_ACCEPT_REFUSE,party_id);
-    } break;
-    default:
-        if (ignored_parties.find(party_id) != ignored_parties.end()) {
-            status->blocked = true;
-        }
-    }
+    if (GetIsPlayerIgnored(pak))
+        status->blocked = true;
 }
-void FriendListWindow::OnTradePacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak) {
-    switch (pak->header) {
-    case GAME_SMSG_TRADE_REQUEST: {
-        Instance().ignore_trade = false;
-        if (GetIsPlayerIgnored(((uint32_t*)pak)[1])) {
-            status->blocked = true;
-            Instance().ignore_trade = true;
-            GW::CtoS::SendPacket(0x4, GAME_CMSG_TRADE_CANCEL);
-        }
-    } break;
-    case GAME_SMSG_TRADE_TERMINATE:
-        Instance().ignore_trade = false;
-        break;
-    default:
-        if (Instance().ignore_trade) {
-            status->blocked = true;
-        }
-        break;
-    }
+void FriendListWindow::OnTradePacket(GW::HookStatus* , GW::Packet::StoC::PacketBase* pak) {
+    if (GetIsPlayerIgnored(pak))
+        GW::Trade::CancelTrade();
 }
 void FriendListWindow::OnAddFriendError(GW::HookStatus* status, wchar_t*) {
     FriendListWindow& instance = Instance();
