@@ -11,6 +11,7 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/NPC.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -892,34 +893,40 @@ GW::Vec2f Minimap::InterfaceToWorldVector(Vec2i pos) const
     return v;
 }
 
-void Minimap::SelectTarget(GW::Vec2f pos) const
+void Minimap::SelectTarget(const GW::Vec2f pos) const
 {
-    GW::AgentArray* agents = GW::Agents::GetAgentArray();
-    float distance = 600.0f * 600.0f;
-    size_t closest = static_cast<size_t>(-1);
+    const auto* agents = GW::Agents::GetAgentArray();
+    if (agents == nullptr) return;
+    auto distance = 600.0f * 600.0f;
+    const GW::Agent* closest = nullptr;
 
-    for (size_t i = 0; agents && i < agents->size();i++) {
-        GW::Agent* agent = agents->at(i);
+    for (const auto* agent : *agents) {
         if (agent == nullptr)
             continue;
-        GW::AgentLiving *living = agent->GetAsAgentLiving();
+        const auto* living = agent->GetAsAgentLiving();
         if (living && living->GetIsDead())
             continue;
         if (agent->GetIsItemType())
             continue;
         if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id != 8141)
             continue; // allow locked chests
+        if (living && agent->GetIsLivingType()) {
+            if (const auto npcs = GW::Agents::GetNPCArray();
+                !agent_renderer.show_hidden_npcs && living->IsNPC() && living->player_number < npcs->size() &&
+                (npcs->at(living->player_number).npc_flags & 0x10000) > 0)
+                continue;
+        }
         if (living && (living->player_number >= 230 && living->player_number <= 346))
             continue; // block all useless minis
         const float newDistance = GW::GetSquareDistance(pos, agent->pos);
         if (distance > newDistance) {
             distance = newDistance;
-            closest = i;
+            closest = agent;
         }
     }
 
-    if (closest != static_cast<size_t>(-1)) {
-        GW::Agents::ChangeTarget(agents->at(closest));
+    if (closest != nullptr) {
+        GW::Agents::ChangeTarget(closest);
     }
 }
 
