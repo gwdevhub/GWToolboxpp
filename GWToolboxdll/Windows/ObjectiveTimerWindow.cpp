@@ -1275,17 +1275,15 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(EventType type, uint32_t id1, uin
 }
 void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
 {
-    bool done = true;
-    for (Objective* obj : objectives) {
-        if (obj->done == TIME_UNKNOWN) {
-            done = false;
-            break;
-        }
-    }
-    if (done) {
+    if (!std::any_of(
+            objectives.begin(), objectives.end(), [](const Objective* obj) { return obj->done == TIME_UNKNOWN; })) {
         duration = GetDuration();
+        // make sure there isn't an objective finishing later
+        const auto max = std::max_element(objectives.begin(), objectives.end(),
+            [](const Objective* a, const Objective* b) { return a->done < b->done; });
+        duration = std::max((*max)->done, duration);
         active = false;
-        if (ObjectiveTimerWindow::Instance().auto_send_age) {
+        if (Instance().auto_send_age) {
             GW::Chat::SendChat('/', "age");
         }
         TimerWidget::Instance().SetRunCompleted();
@@ -1390,16 +1388,11 @@ DWORD ObjectiveTimerWindow::ObjectiveSet::GetDuration() {
         return duration;
     }
     // Recent obj timer update didn't save run duration to disk. For failed runs we can't find duration...
-    if (!objectives.size() || !objectives.back()->IsDone()) {
+    if (objectives.empty() || !objectives.back()->IsDone()) {
         return TIME_UNKNOWN;
     }
     // ... but for completed runs, we can figure this out from the objectives.
-    for (auto* obj : objectives) {
-        if (!obj->IsStarted())
-            continue;
-        return duration = objectives.back()->done - obj->start;
-    }
-    return TIME_UNKNOWN;
+    return objectives.back()->done;
 }
 const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr() {
     if (!cached_time[0] || active) {
