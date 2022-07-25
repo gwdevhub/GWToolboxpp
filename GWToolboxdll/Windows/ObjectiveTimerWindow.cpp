@@ -2,6 +2,7 @@
 
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Modules/Resources.h>
+#include <Modules/GameSettings.h>
 #include <Widgets/TimerWidget.h>
 
 #include <GWCA/Constants/Constants.h>
@@ -168,7 +169,7 @@ void ObjectiveTimerWindow::CheckIsMapLoaded() {
     if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer)
         return;
     map_load_pending = false;
-    if (InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
+    if (TimerWidget::Instance().GetRunTimeStart() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
         AddObjectiveSet((GW::Constants::MapID)InstanceLoadInfo->map_id);
         Event(EventType::InstanceLoadInfo, InstanceLoadInfo->map_id);
     }
@@ -1286,7 +1287,7 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
         if (Instance().auto_send_age) {
             GW::Chat::SendChat('/', "age");
         }
-        TimerWidget::Instance().SetRunCompleted();
+        TimerWidget::Instance().SetRunCompleted(GameSettings::Instance().auto_age2_on_age);
     }
 }
 
@@ -1294,7 +1295,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
     : ui_id(cur_ui_id++)
 {
     system_time = static_cast<DWORD>(time(NULL));
-    run_start_time_point = time_point_ms();
+    run_start_time_point = TimerWidget::Instance().GetRunTimeStart() != TIME_UNKNOWN ? TimerWidget::Instance().GetRunTimeStart() : time_point_ms();
     instance_start_time_point = run_start_time_point - TimerWidget::Instance().GetMapTimeElapsedMs();
     duration = TIME_UNKNOWN;
 }
