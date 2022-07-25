@@ -79,7 +79,7 @@ void SkillListingWindow::ExportToJSON() {
     nlohmann::json json;
     for (size_t i = 0; i < skills.size(); i++) {
         if (!skills[i]) continue;
-        json[skills[i]->skill->skill_id] = skills[i]->ToJson();
+        json[(uint32_t)skills[i]->skill->skill_id] = skills[i]->ToJson();
     }
     auto file_location = Resources::GetPath(L"skills.json");
     if (std::filesystem::exists(file_location)) {
@@ -115,8 +115,8 @@ void SkillListingWindow::Initialize() {
     ToolboxWindow::Initialize();
     skills.resize((size_t)GW::Constants::SkillID::Count);
     for (size_t i = 0; i < skills.size(); i++) {
-        GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(i);
-        if (!s || !s->skill_id || !s->skill_equip_type) continue;
+        GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)i);
+        if (!s || s->skill_id == (GW::Constants::SkillID)0 || !s->skill_equip_type) continue;
         skills[i] = new Skill(s);
     }
 }

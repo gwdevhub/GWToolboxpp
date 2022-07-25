@@ -630,7 +630,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
                 std::wstring leader_name = GuiUtils::StringToWString(party->player_name);
                 // open whisper to player
                 GW::GameThread::Enqueue([leader_name]() {
-                    GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)leader_name.data(), nullptr);
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)leader_name.data(), nullptr);
                     });
             }
             ImGui::SameLine(partycountleft);

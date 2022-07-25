@@ -94,7 +94,7 @@ namespace {
         if (!pgc || !pgc->chars.valid())
             return false;
         uint32_t ui_state = 10;
-        GW::UI::SendUIMessage(0x10000170, 0, &ui_state);
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kCheckUIState, 0, &ui_state);
         return ui_state == 2;
     }
 
@@ -289,15 +289,15 @@ void RerollWindow::OnSetStatus(GW::FriendStatus status) {
     RetSetOnlineStatus(status);
     GW::Hook::LeaveHook();
 }
-void RerollWindow::OnUIMessage(GW::HookStatus*, uint32_t msg_id, void*, void*) {
-    if (msg_id == 0x10000170)
+void RerollWindow::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msg_id, void*, void*) {
+    if (msg_id == GW::UI::UIMessage::kCheckUIState)
         Instance().check_available_chars = true;
 }
 
 void RerollWindow::Initialize() {
     ToolboxWindow::Initialize();
     // Add an entry to check available characters at login screen
-    GW::UI::RegisterUIMessageCallback(&OnGoToCharSelect_Entry, OnUIMessage, 0x4000);
+    GW::UI::RegisterUIMessageCallback(&OnGoToCharSelect_Entry, GW::UI::UIMessage::kCheckUIState, OnUIMessage, 0x4000);
     // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
     SetOnlineStatus_Func = (SetOnlineStatus_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\friend\\friendapi.cpp", "status < FRIEND_STATUSES", -0x11);
     if (SetOnlineStatus_Func) {
@@ -336,7 +336,7 @@ void RerollWindow::Update(float) {
     switch (reroll_stage) {
         case PendingLogout: {
             uint32_t logout = 1;
-            GW::UI::SendUIMessage(0x1000009b, &logout);
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kLogout, (void*) &logout);
             reroll_stage = WaitingForCharSelect;
             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 10000;
             return;
@@ -518,7 +518,7 @@ bool RerollWindow::IsCharSelectReady() {
     if (!pgc || !pgc->chars.valid())
         return false;
     uint32_t ui_state = 10;
-    GW::UI::SendUIMessage(0x10000170, 0, &ui_state);
+    GW::UI::SendUIMessage(GW::UI::UIMessage::kCheckUIState, 0, &ui_state);
     return ui_state == 2;
 }
 void RerollWindow::RerollFailed(wchar_t* reason) {

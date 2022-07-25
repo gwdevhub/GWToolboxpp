@@ -187,7 +187,7 @@ void FriendListWindow::Friend::StartWhisper() {
     GW::GameThread::Enqueue([charname, alias_c]() {
         if(!charname[0])
             return Log::Error("Player %S is not logged in", alias_c);
-        GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)charname, nullptr);
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)charname, nullptr);
     });
 }
 // Get the character belonging to this friend (e.g. to find profession etc)
@@ -403,7 +403,15 @@ void FriendListWindow::Initialize() {
     GW::Chat::RegisterSendChatCallback(&SendChat_Entry, OnOutgoingWhisper);
     GW::Chat::RegisterPrintChatCallback(&SendChat_Entry, OnPrintChat);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry,OnPlayerJoinInstance);
-    GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, OnUIMessage);
+
+    const GW::UI::UIMessage hook_messages[] = {
+        GW::UI::UIMessage::kSetAgentNameTagAttribs,
+        GW::UI::UIMessage::kShowAgentNameTag,
+        GW::UI::UIMessage::kWriteToChatLog
+    };
+    for (auto message_id : hook_messages) {
+        GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
+    }
 
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_JOIN_REQUEST, OnPartyInvite, -0x8010);
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_REQUEST_CANCEL, OnPartyInvite, -0x8010);
@@ -419,10 +427,10 @@ void FriendListWindow::OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t**
         break;
     }
 }
-void FriendListWindow::OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*) {
+void FriendListWindow::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
     switch (message_id) {
-    case GW::UI::kSetAgentNameTagAttribs:
-    case GW::UI::kShowAgentNameTag: {
+    case GW::UI::UIMessage::kSetAgentNameTagAttribs:
+    case GW::UI::UIMessage::kShowAgentNameTag: {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !Instance().friend_name_tag_enabled)
             break;
         GW::UI::AgentNameTagInfo* tag = (GW::UI::AgentNameTagInfo*)wparam;
@@ -431,7 +439,7 @@ void FriendListWindow::OnUIMessage(GW::HookStatus* status, uint32_t message_id, 
         if (f && f->type == GW::FriendType::Friend)
             tag->text_color = Instance().friend_name_tag_color;
     } break;
-    case GW::UI::kWriteToChatLog: {
+    case GW::UI::UIMessage::kWriteToChatLog: {
         UIChatMessage* uimsg = static_cast<UIChatMessage*>(wparam);
         wchar_t* message = uimsg->message;
         std::wstring message_w = message;

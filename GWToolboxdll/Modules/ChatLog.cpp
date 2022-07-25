@@ -398,17 +398,13 @@ void ChatLog::Initialize() {
 
     GW::Chat::RegisterChatLogCallback(&PreAddToChatLog_entry, OnPreAddToChatLog, -0x4000);
     GW::Chat::RegisterChatLogCallback(&PostAddToChatLog_entry, OnPostAddToChatLog, 0x4000);
-    GW::UI::RegisterUIMessageCallback(&UIMessage_Entry, [&](GW::HookStatus*, uint32_t message_id, void*, void*) {
-        switch (message_id) {
-        case GW::UI::kMapChange:
-            // NB: Friends list messages don't play well when clearing the chat log after the map has loaded.
-            // Instead, we trigger this immediately before map load.
-            // When the game world is rebuilt during map load, the log works properly again.
-            Init();
-            Inject();
-            Save(); // Save the chat log on every map transition
-            break;
-        }
+    GW::UI::RegisterUIMessageCallback(&UIMessage_Entry, GW::UI::UIMessage::kMapChange,[&](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        // NB: Friends list messages don't play well when clearing the chat log after the map has loaded.
+        // Instead, we trigger this immediately before map load.
+        // When the game world is rebuilt during map load, the log works properly again.
+        Init();
+        Inject();
+        Save(); // Save the chat log on every map transition
         },-0x8000);
     Init();
 }

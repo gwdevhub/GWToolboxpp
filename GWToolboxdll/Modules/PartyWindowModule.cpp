@@ -212,7 +212,7 @@ void PartyWindowModule::Initialize() {
                 const uint32_t agent_id = summon.agent_id;
                 const GW::Constants::SkillID skill_id = summon.skill_id;
 
-                GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(skill_id));
+                GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
 
                 GW::AgentLiving* agentLiving = skill ? static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(summon.agent_id)) : nullptr;
                 if (!agentLiving) return;

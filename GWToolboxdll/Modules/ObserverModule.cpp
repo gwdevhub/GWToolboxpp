@@ -331,7 +331,7 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             break;
 
         case GW::Packet::StoC::GenericValueID::instant_skill_activated:
-            HandleInstantSkillActivated(caster_id, target_id, value);
+            HandleInstantSkillActivated(caster_id, target_id, (GW::Constants::SkillID)value);
             break;
 
         case GW::Packet::StoC::GenericValueID::attack_skill_stopped:
@@ -353,7 +353,7 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
                 _target_id = caster_id;
             }
             // handle
-            HandleAttackSkillStarted(_caster_id, _target_id, value);
+            HandleAttackSkillStarted(_caster_id, _target_id, (GW::Constants::SkillID)value);
             break;
         }
 
@@ -386,7 +386,7 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
                 _caster_id = target_id;
                 _target_id = caster_id;
             }
-            HandleSkillActivated(_caster_id, _target_id, value);
+            HandleSkillActivated(_caster_id, _target_id, (GW::Constants::SkillID)value);
             break;
         }
     };
@@ -531,7 +531,7 @@ void ObserverModule::HandleAttackSkillStopped(const uint32_t agent_id) {
 
 
 // Handle InstantSkillActivated Packet
-void ObserverModule::HandleInstantSkillActivated(const uint32_t caster_id, const uint32_t target_id, const uint32_t skill_id) {
+void ObserverModule::HandleInstantSkillActivated(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id) {
     // assuming there are no instant attack skills...
     TargetAction* action = new TargetAction(caster_id, target_id, false, true, skill_id);
     if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Instant, action))
@@ -540,7 +540,7 @@ void ObserverModule::HandleInstantSkillActivated(const uint32_t caster_id, const
 
 
 // Handle AttackSkillActivated Packet
-void ObserverModule::HandleAttackSkillStarted(const uint32_t caster_id, const uint32_t target_id, const uint32_t skill_id) {
+void ObserverModule::HandleAttackSkillStarted(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id) {
     TargetAction* action = new TargetAction(caster_id, target_id, true, true, skill_id);
     if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Started, action))
         delete action;
@@ -560,7 +560,7 @@ void ObserverModule::HandleSkillStopped(const uint32_t agent_id) {
 
 
 // Handle SkillActivated Packet
-void ObserverModule::HandleSkillActivated(const uint32_t caster_id, const uint32_t target_id, uint32_t skill_id) {
+void ObserverModule::HandleSkillActivated(const uint32_t caster_id, const uint32_t target_id, GW::Constants::SkillID skill_id) {
     TargetAction* action = new TargetAction(caster_id, target_id, false, true, skill_id);
     if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Started, action))
         delete action;
@@ -1139,7 +1139,7 @@ ObserverModule::ObservableAgent* ObserverModule::CreateObservableAgent(const GW:
 
 
 // Lazy load an ObservableSkill using a skill_id
-ObserverModule::ObservableSkill* ObserverModule::GetObservableSkillById(uint32_t skill_id) {
+ObserverModule::ObservableSkill* ObserverModule::GetObservableSkillById(GW::Constants::SkillID skill_id) {
     // short circuit for skill_id = 0
     if (skill_id == NO_SKILL) return nullptr;
 
@@ -1371,7 +1371,7 @@ ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetAtt
 
 // Get skills used by this agent
 // Lazy initialises the skill_id
-ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillUsed(const uint32_t skill_id) {
+ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillUsed(const GW::Constants::SkillID skill_id) {
     auto it_skill = skills_used.find(skill_id);
     if (it_skill == skills_used.end()) {
         // skill not registered
@@ -1390,7 +1390,7 @@ ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSki
 
 // Get skills used received by this agent
 // Lazy initialises the skill_id
-ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillReceived(const uint32_t skill_id) {
+ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillReceived(const GW::Constants::SkillID skill_id) {
     auto it_skill = skills_received.find(skill_id);
     if (it_skill == skills_received.end()) {
         // skill not registered
@@ -1410,25 +1410,25 @@ ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSki
 
 // Get a skill received by this agent, from another agent
 // Lazy initialises the skill_id and caster_agent_id
-ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkillReceivedFrom(const uint32_t caster_agent_id, const uint32_t skill_id) {
+ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkillReceivedFrom(const uint32_t caster_agent_id, const GW::Constants::SkillID skill_id) {
     auto it_caster = skills_received_from_agents.find(caster_agent_id);
     if (it_caster == skills_received_from_agents.end()) {
         // receiver and his skills are not registered with this agent
-        std::vector<uint32_t> received_skill_ids = {skill_id};
+        std::vector<GW::Constants::SkillID> received_skill_ids = {skill_id};
         skill_ids_received_from_agents.insert({ caster_agent_id, received_skill_ids });
         ObservedSkill* observed_skill = new ObservedSkill(skill_id);
-        std::unordered_map<uint32_t, ObservedSkill*> received_skills = {{skill_id, observed_skill}};
+        std::unordered_map<GW::Constants::SkillID, ObservedSkill*> received_skills = {{skill_id, observed_skill}};
         skills_received_from_agents.insert({caster_agent_id, received_skills});
         return *observed_skill;
     } else {
         // receiver is registered with this agent
-        std::unordered_map<uint32_t, ObservedSkill*>& used_by_caster = it_caster->second;
+        std::unordered_map<GW::Constants::SkillID, ObservedSkill*>& used_by_caster = it_caster->second;
         auto it_observed_skill = used_by_caster.find(skill_id);
         // does receiver have the skill registered from/against us?
         if (it_observed_skill == used_by_caster.end()) {
             // caster hasn't registered this skill with this agent
             // add & re-sort skill_ids by the caster
-            std::vector<uint32_t>& skills_ids_received_by_agent_vec = skill_ids_received_from_agents.find(caster_agent_id)->second;
+            std::vector<GW::Constants::SkillID>& skills_ids_received_by_agent_vec = skill_ids_received_from_agents.find(caster_agent_id)->second;
             skills_ids_received_by_agent_vec.push_back(skill_id);
             // re-sort
             std::sort(skills_ids_received_by_agent_vec.begin(), skills_ids_received_by_agent_vec.end());
@@ -1446,25 +1446,25 @@ ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkil
 
 // Get a skill received by this agent, from another agent
 // Lazy initialises the skill_id and caster_agent_id
-ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkillUsedOn(const uint32_t target_agent_id, const uint32_t skill_id) {
+ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkillUsedOn(const uint32_t target_agent_id, const GW::Constants::SkillID skill_id) {
     auto it_target = skills_used_on_agents.find(target_agent_id);
     if (it_target == skills_used_on_agents.end()) {
         // receiver and his skills are not registered with this agent
-        std::vector<uint32_t> used_skill_ids = {skill_id};
+        std::vector<GW::Constants::SkillID> used_skill_ids = {skill_id};
         skill_ids_used_on_agents.insert({ target_agent_id, used_skill_ids });
         ObservedSkill* observed_skill = new ObservedSkill(skill_id);
-        std::unordered_map<uint32_t, ObservedSkill*> used_skills = {{skill_id, observed_skill}};
+        std::unordered_map<GW::Constants::SkillID, ObservedSkill*> used_skills = {{skill_id, observed_skill}};
         skills_used_on_agents.insert({target_agent_id, used_skills});
         return *observed_skill;
     } else {
-        std::unordered_map<uint32_t, ObservedSkill*>& used_on_target = it_target->second;
+        std::unordered_map<GW::Constants::SkillID, ObservedSkill*>& used_on_target = it_target->second;
         // receiver is registered with this agent
         auto it_observed_skill = used_on_target.find(skill_id);
         // does receiver have the skill registered from/against us?
         if (it_observed_skill == used_on_target.end()) {
             // target hasn't registered this skill with this agent
             // add & re-sort skill_ids by the caster
-            std::vector<uint32_t>& skills_ids_used_on_agent_vec = skill_ids_used_on_agents.find(target_agent_id)->second;
+            std::vector<GW::Constants::SkillID>& skills_ids_used_on_agent_vec = skill_ids_used_on_agents.find(target_agent_id)->second;
             skills_ids_used_on_agent_vec.push_back(skill_id);
             // re-sort
             std::sort(skills_ids_used_on_agent_vec.begin(), skills_ids_used_on_agent_vec.end());
@@ -1673,7 +1673,7 @@ const std::string ObserverModule::ObservableSkill::Name() {
 
 // Name + skill_id of the Skill
 const std::string ObserverModule::ObservableSkill::DebugName() {
-    return std::string("(") + std::to_string(skill_id) + ") \"" + GuiUtils::WStringToString(DecName()) + "\"";
+    return std::string("(") + std::to_string((uint32_t)skill_id) + ") \"" + GuiUtils::WStringToString(DecName()) + "\"";
 }
 
 

@@ -95,5 +95,7 @@ private:
 
     GW::HookEntry MessageCore_Entry;
     GW::HookEntry InstanceLoadFile_Entry;
-    GW::HookEntry OnDialog_Entry;
+    GW::HookEntry OnDialogBody_Entry;
+    GW::HookEntry OnDialogButton_Entry;
+    GW::HookEntry OnSendDialog_Entry;
 };

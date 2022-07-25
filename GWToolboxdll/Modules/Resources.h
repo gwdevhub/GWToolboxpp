@@ -13,6 +13,7 @@ namespace GW {
     namespace Constants {
         enum class Profession;
         enum class MapID;
+        enum class SkillID;
     }
 }
 class Resources : public ToolboxModule {
@@ -67,7 +68,7 @@ public:
     // Fetches skill page from GWW, parses out the image for the skill then downloads that to disk
     // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
-    static IDirect3DTexture9** GetSkillImage(uint32_t skill_id);
+    static IDirect3DTexture9** GetSkillImage(GW::Constants::SkillID skill_id);
     // Fetches item page from GWW, parses out the image for the item then downloads that to disk
     // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded

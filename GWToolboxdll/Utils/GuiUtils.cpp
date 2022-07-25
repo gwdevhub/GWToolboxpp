@@ -80,10 +80,10 @@ namespace GuiUtils {
         char cmd[256];
         std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
         ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
-        GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, (void*)cmd);
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)cmd);
     }
     void OpenWiki(std::wstring url_path) {
-        GW::UI::SendUIMessage(GW::UI::kOpenWikiUrl, (void*)WikiUrl(url_path).c_str());
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)WikiUrl(url_path).c_str());
     }
     // Has LoadFonts() finished?
     bool FontsLoaded() {

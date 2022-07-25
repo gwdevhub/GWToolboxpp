@@ -19,11 +19,11 @@
 class PartyStatisticsWindow : public ToolboxWindow {
 protected:
     struct Skill {
-        Skill(uint32_t _id) : id(_id) {
+        Skill(GW::Constants::SkillID _id) : id(_id) {
             name = Instance().GetSkillName(id);
             name->wstring();
         }
-        uint32_t id = 0;
+        GW::Constants::SkillID id = (GW::Constants::SkillID)0;
         uint32_t count = 0;
         GuiUtils::EncString* name = 0;
     };
@@ -40,9 +40,9 @@ protected:
     };
 
     const GW::Skillbar* GetAgentSkillbar(const uint32_t agent_id);
-    GuiUtils::EncString* GetSkillName(const uint32_t skill_id);
+    GuiUtils::EncString* GetSkillName(const GW::Constants::SkillID skill_id);
     GuiUtils::EncString* GetAgentName(const uint32_t agent_id);
-    IDirect3DTexture9* GetSkillImage(const uint32_t skill_id);
+    IDirect3DTexture9* GetSkillImage(const GW::Constants::SkillID skill_id);
     int GetSkillString(
         const std::wstring& agent_name, const std::wstring& skill_name, const uint32_t skill_count, wchar_t* out, size_t len);
 
@@ -93,7 +93,7 @@ private:
         IDirect3DTexture9* texture = 0;
     };
     std::map<uint32_t, PendingSkillIcon*> skill_images;
-    std::map<GW::AgentID, GuiUtils::EncString*> skill_names;
+    std::map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
     std::map<GW::AgentID, GuiUtils::EncString*> agent_names;
 
     /* Chat messaging */

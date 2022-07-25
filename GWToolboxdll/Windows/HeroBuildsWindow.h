@@ -2,6 +2,7 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Hero.h>
 
 #include <Utils/GuiUtils.h>
 #include <Timer.h>
@@ -28,7 +29,7 @@ private:
         char code[BUFFER_SIZE];
         int hero_index;
         uint32_t behavior = 1;
-        int show_panel = 0;
+        bool show_panel = false;
     };
 
     struct TeamHeroBuild {
@@ -110,16 +111,16 @@ private:
         size_t party_hero_index = 0xFFFFFFFF;
         GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
         int show_panel = 0;
-        uint32_t behavior = 1;
+        GW::HeroBehavior behavior = GW::HeroBehavior::Guard;
         clock_t started = 0;
         CodeOnHero(const char *c = "", GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, int _show_panel = 0, uint32_t _behavior = 1)
             : heroid(i)
             , show_panel(_show_panel)
-            , behavior(_behavior)
+            , behavior((GW::HeroBehavior)_behavior)
         {
             snprintf(code, BUFFER_SIZE, "%s", c);
-            if (behavior < 0 || behavior > 2)
-                behavior = 1;
+            if (behavior > GW::HeroBehavior::Avoid)
+                behavior = GW::HeroBehavior::Guard;
         }
         // True when processing is done
         bool Process();

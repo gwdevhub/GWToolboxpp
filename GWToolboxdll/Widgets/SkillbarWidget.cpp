@@ -34,13 +34,13 @@ void SkillbarWidget::skill_cooldown_to_string(char arr[16], uint32_t cd) const
     }
 }
 
-std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t skillId)
+std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const GW::Constants::SkillID skillId)
 {
     std::vector<Effect> ret;
     auto* effects = GW::Effects::GetPlayerEffects();
     if (!effects) return ret;
     const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skillId);
-    if (skill_data && skill_data->type == static_cast<uint32_t>(GW::Constants::SkillType::Hex)) return ret;
+    if (skill_data && skill_data->type == GW::Constants::SkillType::Hex) return ret;
     for (const GW::Effect& effect : *effects) {
         if (effect.skill_id == skillId) {
             Effect e;
@@ -56,13 +56,13 @@ std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const uint32_t s
     return ret;
 }
 
-SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const uint32_t skillId)
+SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const GW::Constants::SkillID skillId)
 {
     SkillbarWidget::Effect ret;
     auto* effects = GW::Effects::GetPlayerEffects();
     if (!effects) return ret;
     const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skillId);
-    if (skill_data && skill_data->type == static_cast<uint32_t>(GW::Constants::SkillType::Hex)) return ret;
+    if (skill_data && skill_data->type == GW::Constants::SkillType::Hex) return ret;
     for (const GW::Effect& effect : *effects) {
         if (effect.skill_id == skillId) {
             const auto remaining = effect.GetTimeRemaining();
@@ -89,14 +89,14 @@ void SkillbarWidget::Update(float)
 
     bool has_sf = false;
     for (size_t i = 0; i < 8 && !has_sf; i++) {
-        has_sf = skillbar->skills[i].skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Shadow_Form);
+        has_sf = skillbar->skills[i].skill_id == GW::Constants::SkillID::Shadow_Form;
     }
 
     for (size_t it = 0u; it < 8; it++) {
         skill_cooldown_to_string(m_skills[it].cooldown, skillbar->skills[it].GetRecharge());
         if (!display_skill_overlay && !display_effect_monitor)
             continue;
-        const uint32_t& skill_id = skillbar->skills[it].skill_id;
+        const GW::Constants::SkillID& skill_id = skillbar->skills[it].skill_id;
         const Effect& effect = get_longest_effect(skill_id);
         m_skills[it].color = UptimeToColor(effect.remaining);
         if (display_effect_monitor) {
@@ -105,7 +105,7 @@ void SkillbarWidget::Update(float)
             m_skills[it].effects.clear();
             if (display_multiple_effects && has_sf 
                 && skill_data->profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) 
-                && skill_data->type == static_cast<uint32_t>(GW::Constants::SkillType::Enchantment)) {
+                && skill_data->type == GW::Constants::SkillType::Enchantment) {
 
                 m_skills[it].effects = get_effects(skill_id);
                 std::sort(m_skills[it].effects.begin(), m_skills[it].effects.end(),

@@ -50,7 +50,7 @@ void EffectsMonitorWidget::RefreshEffects() {
     for (GW::Effect& effect : readd_effects) {
         remove.effect_id = effect.effect_id;
         GW::StoC::EmulatePacket(&remove);
-        add.skill_id = effect.skill_id;
+        add.skill_id = (uint32_t)effect.skill_id;
         add.effect_id = effect.effect_id;
         add.duration = effect.duration;
         add.attribute_level = effect.attribute_level;
@@ -69,16 +69,13 @@ void EffectsMonitorWidget::CheckSetMinionCount() {
         }
     }
 }
-void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_id, void* wParam, void* lParam) {
-    UNREFERENCED_PARAMETER(wParam);
-    UNREFERENCED_PARAMETER(lParam);
-    UNREFERENCED_PARAMETER(message_id);
+void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void* ) {
     
     switch (message_id) {
-    case 0x10000046: { // Minion count updated on effects monitor
+    case GW::UI::UIMessage::kMinionCountUpdated: { // Minion count updated on effects monitor
         Instance().CheckSetMinionCount();
     } break;
-    case GW::UI::kEffectAdd: {
+    case GW::UI::UIMessage::kEffectAdd: {
         struct Payload {
             uint32_t agent_id;
             GW::Effect* e;
@@ -88,12 +85,12 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
             break;
         Instance().SetEffect(details->e);
     }break;
-    case GW::UI::kEffectRenew: {
+    case GW::UI::UIMessage::kEffectRenew: {
         const GW::Effect* e = Instance().GetEffect(*(uint32_t*)wParam);
         if (e)
             Instance().SetEffect(e);
     }break;
-    case GW::UI::kMoraleChange: { // Morale boost/DP change
+    case GW::UI::UIMessage::kMoraleChange: { // Morale boost/DP change
         struct Payload {
             uint32_t agent_id;
             uint32_t percent;
@@ -103,15 +100,15 @@ void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, uint32_t message_i
             break;
         Instance().SetMoralePercent(details->percent);
     } break;
-    case GW::UI::kEffectRemove: {// Remove effect
+    case GW::UI::UIMessage::kEffectRemove: {// Remove effect
         Instance().RemoveEffect((uint32_t)wParam);
     }break;
-    case GW::UI::kMapChange: { // Map change
+    case GW::UI::UIMessage::kMapChange: { // Map change
         Instance().cached_effects.clear();
         Instance().hard_mode = false;
     } break;
-    case GW::UI::kPreferenceChanged: // Refresh preference e.g. window X/Y position
-    case GW::UI::kUIPositionChanged: // Refresh GW UI element position
+    case GW::UI::UIMessage::kPreferenceChanged: // Refresh preference e.g. window X/Y position
+    case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
         Instance().RefreshPosition();
         break;
     }
@@ -152,7 +149,7 @@ const GW::Effect* EffectsMonitorWidget::GetEffect(uint32_t effect_id) {
     }
     return nullptr;
 }
-const GW::Effect* EffectsMonitorWidget::GetLongestEffectBySkillId(uint32_t skill_id) {
+const GW::Effect* EffectsMonitorWidget::GetLongestEffectBySkillId(GW::Constants::SkillID skill_id) {
     const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects)
         return nullptr;
@@ -164,8 +161,8 @@ const GW::Effect* EffectsMonitorWidget::GetLongestEffectBySkillId(uint32_t skill
     }
     return found;
 }
-uint32_t EffectsMonitorWidget::GetEffectSortOrder(uint32_t skill_id) {
-    switch (static_cast<GW::Constants::SkillID>(skill_id)) {
+uint32_t EffectsMonitorWidget::GetEffectSortOrder(GW::Constants::SkillID skill_id) {
+    switch (skill_id) {
     case GW::Constants::SkillID::Hard_mode:
         return 0;
     case GW::Constants::SkillID::No_Skill:
@@ -174,23 +171,23 @@ uint32_t EffectsMonitorWidget::GetEffectSortOrder(uint32_t skill_id) {
     const GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
     // Lifted from GmEffect::ActivateEffect(), removed assertion and instead whack everything else into 0xd
     switch (skill->type) {
-    case 3:
+    case GW::Constants::SkillType::Stance:
         return 9;
-    case 4:
+    case GW::Constants::SkillType::Hex:
         return 5;
-    case 5:
+    case GW::Constants::SkillType::Spell:
         return 7;
-    case 6:
+    case GW::Constants::SkillType::Enchantment:
         return 0xc;
-    case 8:
+    case GW::Constants::SkillType::Condition:
         return 4;
-    case 10:
+    case GW::Constants::SkillType::Skill:
         return 8;
-    case 0xc:
+    case GW::Constants::SkillType::Glyph:
         return 0xb;
-    case 0x13:
+    case GW::Constants::SkillType::Preparation:
         return 10;
-    case 0x16:
+    case GW::Constants::SkillType::Ritual:
         return 6;
     }
     return 0xd;
@@ -214,11 +211,11 @@ void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
     // Trigger durations for aspects etc
     if (!effect->duration)
         DurationExpired(cached_effects[type].back());
-    hard_mode |= effect->skill_id == (uint32_t)GW::Constants::SkillID::Hard_mode;
+    hard_mode |= effect->skill_id == GW::Constants::SkillID::Hard_mode;
 }
 bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
     uint32_t timer = GW::MemoryMgr::GetSkillTimer();
-    switch (static_cast<GW::Constants::SkillID>(effect.skill_id)) {
+    switch (effect.skill_id) {
         case GW::Constants::SkillID::Aspect_of_Exhaustion:
         case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
         case GW::Constants::SkillID::Scorpion_Aspect:
@@ -232,7 +229,7 @@ bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
     return RemoveEffect(effect.effect_id);
     
 }
-size_t EffectsMonitorWidget::GetEffectIndex(const std::vector<GW::Effect>& arr, uint32_t skill_id) {
+size_t EffectsMonitorWidget::GetEffectIndex(const std::vector<GW::Effect>& arr, GW::Constants::SkillID skill_id) {
     for (size_t i = 0; i < arr.size(); i++) {
         if (arr[i].skill_id == skill_id)
             return i;
@@ -292,7 +289,20 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 
     if (!initialised) {
         initialised = true;
-        GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, OnEffectUIMessage,0x8000);
+        const GW::UI::UIMessage hook_messages[] = {
+            GW::UI::UIMessage::kMinionCountUpdated,
+            GW::UI::UIMessage::kEffectAdd,
+            GW::UI::UIMessage::kEffectRenew,
+            GW::UI::UIMessage::kMoraleChange,
+            GW::UI::UIMessage::kEffectRemove,
+            GW::UI::UIMessage::kMapChange,
+            GW::UI::UIMessage::kPreferenceChanged,
+            GW::UI::UIMessage::kUIPositionChanged
+        };
+        for (auto message_id : hook_messages) {
+            GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, message_id, OnEffectUIMessage, 0x8000);
+        }
+        
         GW::GameThread::Enqueue([]() {
             Instance().RefreshEffects();
             });
@@ -368,7 +378,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
                     goto enddraw; // cached_effects is now invalidated; skip to end and redraw next frame
                 }
             }
-            else if(effect.skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Hard_mode)) {
+            else if(effect.skill_id == GW::Constants::SkillID::Hard_mode) {
                 if (show_vanquish_counter) {
                     size_t left = GW::Map::GetFoesToKill();
                     size_t killed = GW::Map::GetFoesKilled();

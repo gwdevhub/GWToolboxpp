@@ -47,7 +47,7 @@ include(utf8proc)
 include(easywsclient)
 include(simpleini)
 include(discord_game_sdk)
-include(earcut)
+include(earcut) 
 
 add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)

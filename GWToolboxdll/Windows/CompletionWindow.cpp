@@ -397,12 +397,12 @@ void HeroUnlock::OnClick() {
 
 IDirect3DTexture9* PvESkill::GetMissionImage()
 {
-	return *Resources::GetSkillImage((uint32_t)skill_id);
+	return *Resources::GetSkillImage(skill_id);
 }
 PvESkill::PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url)
 	: Mission(GW::Constants::MapID::None, dummy_var, dummy_var), skill_id(_skill_id), image_url(_image_url) {
 	if (_skill_id != GW::Constants::SkillID::No_Skill) {
-		GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(skill_id));
+		GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skill_id);
 		if (s) {
 			name.reset(s->name);
 			profession = s->profession;

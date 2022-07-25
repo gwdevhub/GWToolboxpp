@@ -8,12 +8,17 @@
 
 namespace GW {
     struct Agent;
+    namespace UI {
+        enum class UIMessage : uint32_t;
+    }
 }
 typedef uint32_t Color;
 class AgentRenderer : public VBuffer {
 public:
     AgentRenderer();
+    
     ~AgentRenderer() override;
+    static AgentRenderer& Instance();
 
     void Render(IDirect3DDevice9* device) override;
 
@@ -33,6 +38,8 @@ public:
     uint32_t auto_target_id = 0;
 
 private:
+    static AgentRenderer* instance;
+
     static constexpr size_t shape_size = 4;
     enum Shape_e { Tear, Circle, Quad, BigCircle };
     enum Color_Modifier {
@@ -157,4 +164,5 @@ private:
     CSimpleIni* agentcolorinifile = nullptr;
 
     GW::HookEntry UIMsg_Entry;
+    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
 };

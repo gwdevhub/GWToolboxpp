@@ -180,9 +180,9 @@ namespace {
             const GW::AgentLiving* target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(target_id));
             return target && target->GetIsLivingType() ? target : nullptr;
         }
-        const uint32_t GetSkill() {
+        const GW::Constants::SkillID GetSkill() {
             const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-            return skillbar && skillbar->IsValid() ? skillbar->skills[slot].skill_id : 0;
+            return skillbar && skillbar->IsValid() ? skillbar->skills[slot].skill_id : GW::Constants::SkillID::No_Skill;
         }
     } pending_cast;
 
@@ -811,7 +811,7 @@ void GameSettings::Initialize() {
             if (!agent) return;
             last_dialog_npc_id = agent->player_number;
         });
-    GW::Agents::RegisterDialogCallback(&OnDialog_Entry, &OnFactionDonate);
+    GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, &OnFactionDonate);
 
     GW::CtoS::RegisterPacketCallback(&OnDialog_Entry, GAME_CMSG_SKILLBAR_LOAD, OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILLBAR_UPDATE, OnPostLoadSkillBar, 0x8000);
@@ -868,13 +868,14 @@ void GameSettings::Initialize() {
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, &OnScreenShake);
 
-    GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, &OnCheckboxPreferenceChanged);
-    GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, OnChangeTarget);
-    GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, OnPlayerChatMessage);
-    GW::UI::RegisterUIMessageCallback(&OnWriteChat_Entry, OnWriteChat);
-    GW::UI::RegisterUIMessageCallback(&OnAgentStartCast_Entry, OnAgentStartCast);
-    GW::UI::RegisterUIMessageCallback(&OnOpenWikiUrl_Entry, OnOpenWiki);
-    GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, OnAgentNameTag);
+    GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, GW::UI::UIMessage::kCheckboxPreference, &OnCheckboxPreferenceChanged);
+    GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, GW::UI::UIMessage::kChangeTarget, OnChangeTarget);
+    GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, GW::UI::UIMessage::kPlayerChatMessage, OnPlayerChatMessage);
+    GW::UI::RegisterUIMessageCallback(&OnWriteChat_Entry, GW::UI::UIMessage::kWriteToChatLog, OnWriteChat);
+    GW::UI::RegisterUIMessageCallback(&OnAgentStartCast_Entry, GW::UI::UIMessage::kAgentStartCasting, OnAgentStartCast);
+    GW::UI::RegisterUIMessageCallback(&OnOpenWikiUrl_Entry, GW::UI::UIMessage::kOpenWikiUrl, OnOpenWiki);
+    GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kShowAgentNameTag, OnAgentNameTag);
+    GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kSetAgentNameTagAttribs, OnAgentNameTag);
 
     GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
@@ -896,10 +897,9 @@ void GameSettings::Initialize() {
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &OnSendChat);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
     GW::Chat::RegisterChatEventCallback(&OnPartyTargetChange_Entry, OnPartyTargetChange);
-    GW::CtoS::RegisterPacketCallback(&OnEnterMission_Entry, GAME_CMSG_PARTY_ENTER_CHALLENGE, OnEnterMission);
-    GW::CtoS::RegisterPacketCallback(&OnSendDialog_Entry, GAME_CMSG_SEND_DIALOG, OnSendDialog);
 
-
+    GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendDialog, OnPreSendDialog, -0x8000);
+    GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendDialog, OnPostSendDialog, 0x8000);
 
     GW::Chat::CreateCommand(L"reinvite", GameSettings::CmdReinvite);
 #ifdef APRIL_FOOLS
@@ -907,18 +907,16 @@ void GameSettings::Initialize() {
 #endif
 
 }
-void GameSettings::OnEnterMission(GW::HookStatus* , void*) {
-    auto& instance = Instance();
-    if (instance.is_prompting_hard_mode_mission)
-        return;
-    if (GW::PartyMgr::GetIsPartyInHardMode())
-        return;
-    if (!GW::PartyMgr::GetIsHardModeUnlocked())
-        return;
-    // TODO;
+void GameSettings::OnDialogButton(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+    Instance().available_dialog_ids.push_back((uint32_t)wparam);
 }
-void GameSettings::OnSendDialog(GW::HookStatus* , void* ) {
-    // TODO;
+void GameSettings::OnPreSendDialog(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void* ) {
+    auto found = std::find(Instance().available_dialog_ids.begin(), Instance().available_dialog_ids.end(), (uint32_t)wparam);
+    if (found == Instance().available_dialog_ids.end())
+        status->blocked = true;
+}
+void GameSettings::OnPostSendDialog(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+    Instance().available_dialog_ids.clear();
 }
 
 // Helper function; avoids doing string checks on offline friends.
@@ -1595,8 +1593,8 @@ void GameSettings::Update(float) {
         }
 
         if (casting && me->GetIsMoving() && !me->skill && !me->GetIsCasting()) { // casting/skill don't update fast enough, so delay the rupt
-            const uint32_t cast_skill = pending_cast.GetSkill();
-            if (!cast_skill) // Skill ID no longer valid
+            auto cast_skill = pending_cast.GetSkill();
+            if (cast_skill == GW::Constants::SkillID::No_Skill) // Skill ID no longer valid
                 return pending_cast.reset();
 
             const float range = GetSkillRange(cast_skill);
@@ -1722,7 +1720,7 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
             const wchar_t* player_name = GW::PlayerMgr::GetPlayerName(target->login_number);
             ctrl_enter_whisper = true;
             GW::GameThread::Enqueue([player_name]() {
-                GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)player_name, nullptr);
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)player_name);
                 ctrl_enter_whisper = false;
                 });
             return true;
@@ -2021,7 +2019,8 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::Ge
 }
 
 // Skip char name entry dialog when donating faction
-void GameSettings::OnFactionDonate(GW::HookStatus* status, uint32_t dialog_id) {
+void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
+    uint32_t dialog_id = (uint32_t)wparam;
     if (dialog_id != 135) return;
     const int LuxonFactionNPC = GW::Constants::ModelID::Urgoz::HoppingVampire - 102;
     const int KurzickFactionNPC = LuxonFactionNPC - 229;
@@ -2048,7 +2047,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, uint32_t dialog_id) {
     if (*current_faction < 5000)
         return; // Not enough to donate. Return here and the NPC will reply.
     status->blocked = true;
-    GW::CtoS::SendPacket(0x10, GAME_CMSG_DEPOSIT_FACTION, 0, allegiance, 5000);
+    GW::PlayerMgr::DepositFaction(allegiance);
 }
 
 // Show a message when player leaves the outpost
@@ -2131,8 +2130,6 @@ void GameSettings::OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
         return; // we sent the message ourselves
     FlashWindow();
 }
-
-
 
 // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
 void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
@@ -2243,7 +2240,7 @@ void GameSettings::OnMapTravel(GW::HookStatus* status, GW::Packet::StoC::GameSrv
 }
 
 // Disable native timestamps
-void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t msgid, void* wParam, void* lParam) {
+void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void* lParam) {
     UNREFERENCED_PARAMETER(lParam);
     if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam))
         return;
@@ -2411,14 +2408,12 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
 }
 
 // Turn screenshots into clickable links
-void GameSettings::OnWriteChat(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
+void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) {
     static bool is_redirecting = false;
     if (is_redirecting) {
         is_redirecting = false;
         return;
     }
-    if (!(msgid == GW::UI::kWriteToChatLog && wParam))
-        return;
     PlayerChatMessage* msg = static_cast<PlayerChatMessage*>(wParam);
     if (msg->channel != GW::Chat::Channel::CHANNEL_GLOBAL)
         return;
@@ -2497,8 +2492,8 @@ void GameSettings::OnSendChat(GW::HookStatus* , GW::Chat::Channel chan, wchar_t*
 }
 
 // Auto-drop UA when recasting
-void GameSettings::OnAgentStartCast(GW::HookStatus* , uint32_t msgid, void* wParam, void*) {
-    if (!(msgid == 0x10000027 && wParam && Instance().drop_ua_on_cast))
+void GameSettings::OnAgentStartCast(GW::HookStatus* , GW::UI::UIMessage, void* wParam, void*) {
+    if (!(wParam && Instance().drop_ua_on_cast))
         return;
     struct Casting {
         uint32_t agent_id;
@@ -2507,16 +2502,14 @@ void GameSettings::OnAgentStartCast(GW::HookStatus* , uint32_t msgid, void* wPar
     if (casting->agent_id == GW::Agents::GetPlayerId() && casting->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
         // Cancel UA before recast
         const GW::Buff* buff = GW::Effects::GetPlayerBuffBySkillId(casting->skill_id);
-        if (buff && buff->skill_id) {
+        if (buff && buff->skill_id != GW::Constants::SkillID::No_Skill) {
             GW::Effects::DropBuff(buff->buff_id);
         }
     }
 };
 
 // Redirect /wiki commands to go to useful pages
-void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
-    if (msgid != GW::UI::kOpenWikiUrl)
-        return;
+void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) {
     std::string url = GuiUtils::ToLower((char*)wParam);
     if (strstr(url.c_str(), "/wiki/main_page")) {
         // Redirect /wiki to /wiki <current map name>
@@ -2549,9 +2542,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, uint32_t msgid, void* wPar
 }
 
 // Don't target chest as nearest item, Target green items from chest last
-void GameSettings::OnChangeTarget(GW::HookStatus* status, uint32_t msgid, void* wParam, void*) {
-    if (!(msgid == GW::UI::kChangeTarget && wParam))
-        return;
+void GameSettings::OnChangeTarget(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) {
     GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
     // Logic for re-inviting players
     if (msg->manual_target_id) {
@@ -2644,8 +2635,8 @@ void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
 }
 
 // Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
-void GameSettings::OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*) {
-    if (msg_id == 0x10000081 && Instance().hide_player_speech_bubbles) {
+void GameSettings::OnPlayerChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) {
+    if (Instance().hide_player_speech_bubbles) {
         status->blocked = true;
         PlayerChatMessage* msg = (PlayerChatMessage*)wParam;
         GW::Player* agent = GW::PlayerMgr::GetPlayerByID(msg->player_number);
@@ -2666,8 +2657,8 @@ void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet) {
 }
 
 // Default colour for agent name tags
-void GameSettings::OnAgentNameTag(GW::HookStatus*, uint32_t msgid, void* wParam, void*) {
-    if (msgid != GW::UI::kShowAgentNameTag && msgid != GW::UI::kSetAgentNameTagAttribs)
+void GameSettings::OnAgentNameTag(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*) {
+    if (msgid != GW::UI::UIMessage::kShowAgentNameTag && msgid != GW::UI::UIMessage::kSetAgentNameTagAttribs)
         return;
     GW::UI::AgentNameTagInfo* tag = (GW::UI::AgentNameTagInfo * )wParam;
     switch (tag->text_color) {
@@ -2681,7 +2672,7 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, uint32_t msgid, void* wParam,
     }
 }
 
-float GameSettings::GetSkillRange(uint32_t skill_id)
+float GameSettings::GetSkillRange(GW::Constants::SkillID skill_id)
 {
     const auto* constant_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
     if (!constant_data) return 0.f;

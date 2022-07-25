@@ -100,7 +100,7 @@ public:
     static void OnPlayerNotOnline(GW::HookStatus *status, wchar_t *message);
     static void OnFriendUpdated(GW::HookStatus*, GW::Friend* f, GW::FriendStatus status, const wchar_t* alias, const wchar_t* charname);
     static void OnAddFriendError(GW::HookStatus* status, wchar_t* message);
-    static void OnUIMessage(GW::HookStatus* status, uint32_t message_id, void* wparam, void*);
+    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage , void*, void*);
     static void OnPrintChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t** message_ptr, FILETIME, int);
     static void OnChatMessage(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet);
     // Ignore party invitations from players on my ignore list

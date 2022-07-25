@@ -9,6 +9,12 @@
 #include <Timer.h>
 #include <ToolboxWindow.h>
 
+namespace GW {
+    namespace UI {
+        enum class UIMessage : uint32_t;
+    }
+}
+
 class BuildsWindow : public ToolboxWindow {
 private:
     struct Build {
@@ -81,8 +87,6 @@ private:
     void Load(const TeamBuild& tbuild, unsigned int idx);
     // Toggle pcons for a specific build
     void LoadPcons(const TeamBuild& tbuild, unsigned int idx);
-    // View a teambuild
-    void View(const TeamBuild& tbuild);
     // View a specific build from a teambuild
     void View(const TeamBuild& tbuild, unsigned int idx);
     // Load build by name or code, without specific teambuild assigned.
@@ -119,7 +123,7 @@ private:
     const GW::Constants::SkillID* GetPreferredSkillOrder(const GW::Constants::SkillID*, size_t* found_idx = nullptr);
     GW::HookEntry on_load_skills_entry;
     // Triggered when a set of skills is about to be loaded on player or hero
-    static void OnSkillbarLoad(GW::HookStatus*, void* packet);
+    static void OnSkillbarLoad(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*);
     // Attempt to add a preferred build by code and name
     const char* AddPreferredBuild(const char* code);
 

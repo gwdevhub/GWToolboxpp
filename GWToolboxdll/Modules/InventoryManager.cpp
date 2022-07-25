@@ -443,7 +443,7 @@ namespace {
         if (item->bag->index == details.bag_id && item->slot == details.slot)
             details.slot++;
         details.prompt_split_stack = true;
-        GW::UI::SendUIMessage(GW::UI::kMoveItem, &details);
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kMoveItem, &details);
         //OnPreMoveItem(7, &details);
         InventoryManager::Instance().stack_prompt_item_id = item->item_id;
     }
@@ -623,13 +623,10 @@ void InventoryManager::Initialize() {
 
     GW::Trade::RegisterOfferItemCallback(&on_offer_item_hook, OnOfferTradeItem);
 
-    GW::UI::RegisterDecodeStringCallback(&on_offer_item_hook, OnAsyncDecodeStr);
-
     inventory_bags_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_InventoryBags);
 
-    GW::UI::RegisterUIMessageCallback(&on_offer_item_hook, [](GW::HookStatus*, uint32_t message_id, void*, void*) {
-        if(message_id == GW::UI::kMoveItem)
-            Instance().stack_prompt_item_id = 0;
+    GW::UI::RegisterUIMessageCallback(&on_offer_item_hook, GW::UI::UIMessage::kMoveItem, [](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        Instance().stack_prompt_item_id = 0;
         });
 
     AddItemRowToWindow_Func = (AddItemRowToWindow_pt)GW::Scanner::Find("\x83\xc4\x04\x80\x78\x04\x06\x0f\x84\xd3\x00\x00\x00\x6a\x02\xff\x37",0,-0x10);

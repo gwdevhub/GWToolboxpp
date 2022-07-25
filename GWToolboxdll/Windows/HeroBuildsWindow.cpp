@@ -408,7 +408,7 @@ void HeroBuildsWindow::View(const TeamHeroBuild& tbuild, size_t idx) {
     t->name = new wchar_t[buffer_size];
     MultiByteToWideChar(CP_UTF8, 0, build_name.c_str(), -1, t->name, buffer_size);
     GW::GameThread::Enqueue([t] {
-        GW::UI::SendUIMessage(GW::UI::kOpenTemplate, t);
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenTemplate, t);
         delete[] t->code.m_buffer;
         delete[] t->name;
         delete t;
@@ -746,9 +746,9 @@ bool HeroBuildsWindow::CodeOnHero::Process() {
             if (code[0]) // Build optional
                 GW::SkillbarMgr::LoadSkillTemplate(code, party_hero_index);
             if (show_panel)
-                GW::UI::SendUIMessage(GW::UI::UIMessage::kShowHeroPanel, heroid);
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kShowHeroPanel, (void*)heroid);
             else
-                GW::UI::SendUIMessage(GW::UI::UIMessage::kHideHeroPanel, heroid);
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kHideHeroPanel, (void*)heroid);
             if (flag->hero_behavior != behavior)
                 GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero->agent_id, behavior);
         }

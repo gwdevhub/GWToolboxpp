@@ -30,6 +30,8 @@ namespace {
     static uint32_t auto_target_id = 0;
 }
 
+AgentRenderer* AgentRenderer::instance = 0;
+
 unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
@@ -310,7 +312,9 @@ AgentRenderer::~AgentRenderer() {
 
     GW::UI::RemoveUIMessageCallback(&UIMsg_Entry);
 }
+AgentRenderer& AgentRenderer::Instance() { return *instance; }
 AgentRenderer::AgentRenderer() {
+    instance = this;
     shapes[Tear].AddVertex(1.8f, 0, Dark);      // A
     shapes[Tear].AddVertex(0.7f, 0.7f, Dark);   // B
     shapes[Tear].AddVertex(0.0f, 0.0f, Light);  // O
@@ -374,32 +378,38 @@ AgentRenderer::AgentRenderer() {
             max_shape_verts = shapes[shape].vertices.size();
         }
     }
+    const GW::UI::UIMessage hook_messages[] = {
+        GW::UI::UIMessage::kShowAgentNameTag,
+        GW::UI::UIMessage::kSetAgentNameTagAttribs
+    };
+    for (auto message_id : hook_messages) {
+        GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
+    }
+}
+void AgentRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*) {
+    switch (msgid) {
+    case GW::UI::UIMessage::kShowAgentNameTag:
+    case GW::UI::UIMessage::kSetAgentNameTagAttribs: {
+        GW::UI::AgentNameTagInfo* msg = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
 
-    GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, [this](GW::HookStatus*, uint32_t msgid, void* wParam, void*) -> void {
-        switch (msgid) {
-            case GW::UI::kShowAgentNameTag:
-            case GW::UI::kSetAgentNameTagAttribs: {
-                GW::UI::AgentNameTagInfo* msg = static_cast<GW::UI::AgentNameTagInfo*>(wParam);                
-
-                GW::Agent* agent = GW::Agents::GetAgentByID(msg->agent_id);
-                if (!agent) return;
-                const GW::AgentLiving* living = agent->GetAsAgentLiving();
-                if (!living) return;
-                const auto it = custom_agents_map.find(living->player_number);
-                if (it != custom_agents_map.end()) {
-                    for (const CustomAgent* ca : it->second) {
-                        if (!ca->active) continue;
-                        if (!ca->color_text_active) continue;
-                        if (ca->mapId > 0 && ca->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
-                        msg->text_color = ca->color_text;
-                    }
-                }
-                break;
+        GW::Agent* agent = GW::Agents::GetAgentByID(msg->agent_id);
+        if (!agent) return;
+        const GW::AgentLiving* living = agent->GetAsAgentLiving();
+        if (!living) return;
+        auto& custom_agents_map = Instance().custom_agents_map;
+        const auto it = custom_agents_map.find(living->player_number);
+        if (it != custom_agents_map.end()) {
+            for (const CustomAgent* ca : it->second) {
+                if (!ca->active) continue;
+                if (!ca->color_text_active) continue;
+                if (ca->mapId > 0 && ca->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
+                msg->text_color = ca->color_text;
             }
         }
-    });
+        break;
+    }
+    }
 }
-
 void AgentRenderer::Shape_t::AddVertex(float x, float y, AgentRenderer::Color_Modifier mod) {
     vertices.push_back(Shape_Vertex(x, y, mod));
 }

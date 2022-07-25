@@ -205,32 +205,15 @@ void Minimap::Initialize()
                 effect_renderer.PacketCallback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(&SkillActivate_Entry, &SkillActivateCallback);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry, [this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadInfo *packet) -> void { is_observing = packet->is_observer != 0; });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadFile* packet) -> void {
-        UNREFERENCED_PARAMETER(packet);
-        pmap_renderer.Invalidate();
-        loading = false;
-        // Compass fix to allow hero flagging controls
-        GW::UI::WindowPosition* compass_info = GW::UI::GetWindowPosition(GW::UI::WindowID_Compass);
-        if (compass_info && !compass_info->visible()) {
-            // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
-            compass_fix_pending = true;
-            GW::UI::SetWindowVisible(GW::UI::WindowID_Compass, true);
-        }
-    });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, [this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *pak) -> void {
-        UNREFERENCED_PARAMETER(pak);
-        loading = true;
-        agent_renderer.auto_target_id = 0;
-    });
-    GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, [this](GW::HookStatus*, uint32_t msgid, void* wParam , void* ) -> void {
-        if (msgid != GW::UI::kChangeTarget)
-            return;
-        GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
-        agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
-    });
+    const GW::UI::UIMessage hook_messages[] = {
+        GW::UI::UIMessage::kStartMapLoad,
+        GW::UI::UIMessage::kMapLoaded,
+        GW::UI::UIMessage::kChangeTarget,
+        GW::UI::UIMessage::kAgentStartCasting
+    };
+    for (auto message_id : hook_messages) {
+        GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
+    }
 
     last_moved = TIMER_INIT();
 
@@ -238,12 +221,40 @@ void Minimap::Initialize()
 
     GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
 }
-void Minimap::SkillActivateCallback(GW::HookStatus*, GW::Packet::StoC::SkillActivate *pak)
-{
-    if (pak->agent_id == GW::Agents::GetPlayerId()) {
-        if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
-            Instance().shadowstep_location = GW::Agents::GetPlayer()->pos;
+void Minimap::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*) {
+    auto& instance = Instance();
+    switch (msgid) {
+    case GW::UI::UIMessage::kMapLoaded: {
+        instance.pmap_renderer.Invalidate();
+        instance.loading = false;
+        // Compass fix to allow hero flagging controls
+        GW::UI::WindowPosition* compass_info = GW::UI::GetWindowPosition(GW::UI::WindowID_Compass);
+        if (compass_info && !compass_info->visible()) {
+            // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
+            compass_fix_pending = true;
+            GW::UI::SetWindowVisible(GW::UI::WindowID_Compass, true);
         }
+        instance.is_observing = GW::Map::GetIsObserving();
+    } break;
+    case GW::UI::UIMessage::kAgentStartCasting: {
+        struct Payload {
+            uint32_t agent_id;
+            GW::Constants::SkillID skill_id;
+        } *payload = (Payload*)wParam;
+        if (payload->agent_id == GW::Agents::GetPlayerId()) {
+            if (payload->skill_id == GW::Constants::SkillID::Shadow_of_Haste || payload->skill_id == GW::Constants::SkillID::Shadow_Walk) {
+                instance.shadowstep_location = GW::Agents::GetPlayer()->pos;
+            }
+        }
+    } break;
+    case GW::UI::UIMessage::kStartMapLoad: {
+        instance.loading = true;
+        instance.agent_renderer.auto_target_id = 0;
+    } break;
+    case GW::UI::UIMessage::kChangeTarget: {
+        GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
+        instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
+    } break;
     }
 }
 
@@ -580,7 +591,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
         else {
             bool found = false;
             for (auto& effect : *effects) {
-                found = effect.skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste || effect.skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk;
+                found = effect.skill_id == GW::Constants::SkillID::Shadow_of_Haste || effect.skill_id == GW::Constants::SkillID::Shadow_Walk;
                 if (found) break;
             }
             if (!found) {

@@ -100,8 +100,8 @@ private:
 
     // Internal utils
     Color UptimeToColor(uint32_t uptime) const;
-    void skill_cooldown_to_string(char* arr, uint32_t cooldown) const;
-    static std::vector<Effect> get_effects(uint32_t skillId);
-    static Effect get_longest_effect(uint32_t skillId);
+    static std::vector<Effect> get_effects(GW::Constants::SkillID skillId);
+    static Effect get_longest_effect(GW::Constants::SkillID skillId);
+    void skill_cooldown_to_string(char arr[16], uint32_t cd) const;
     void DrawDurationThresholds();
 };

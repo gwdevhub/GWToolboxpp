@@ -26,6 +26,12 @@ namespace GW {
     struct Item;
     struct Friend;
     enum class FriendStatus : uint32_t;
+    namespace Constants {
+        enum class SkillID;
+    }
+    namespace UI {
+        enum class UIMessage : uint32_t;
+    }
 }
 
 class PendingChatMessage {
@@ -109,7 +115,7 @@ public:
     static void OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
     static void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak);
     static void OnAgentEffect(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
-    static void OnFactionDonate(GW::HookStatus*, uint32_t dialog_id);
+    static void OnFactionDonate(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     static void OnPartyDefeated(GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
     static void OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::VanquishComplete*);
     static void OnDungeonReward(GW::HookStatus*, GW::Packet::StoC::DungeonReward*);
@@ -128,21 +134,23 @@ public:
     static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
     static void OnGlobalMessage(GW::HookStatus*, GW::Packet::StoC::MessageGlobal*);
     static void OnScreenShake(GW::HookStatus*, void* packet);
-    static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
-    static void OnChangeTarget(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
-    static void OnWriteChat(GW::HookStatus* status, uint32_t msgid, void* wParam, void*);
+    static void OnCheckboxPreferenceChanged(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void* lParam);
+    static void OnChangeTarget(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void* lParam);
+    static void OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
     static void OnSendChat(GW::HookStatus* status, GW::Chat::Channel , wchar_t*);
-    static void OnAgentStartCast(GW::HookStatus* status, uint32_t msgid, void* wParam, void*);
-    static void OnOpenWiki(GW::HookStatus*, uint32_t msgid, void* wParam, void*);
+    static void OnAgentStartCast(GW::HookStatus* status, GW::UI::UIMessage, void*, void*);
+    static void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
-    static void OnPlayerChatMessage(GW::HookStatus* status, uint32_t msg_id, void* wParam, void*);
+    static void OnPlayerChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void*, void*);
     static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
     static void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
     static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
-    static void OnAgentNameTag(GW::HookStatus* status, uint32_t msgid, void* wParam, void*);
-    static void OnEnterMission(GW::HookStatus* status, void* packet);
-    static void OnSendDialog(GW::HookStatus* status, void* packet);
+    static void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
+
+    static void OnDialogButton(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnPreSendDialog(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnPostSendDialog(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
@@ -225,6 +233,8 @@ public:
     bool auto_age2_on_age = true;
     bool auto_age_on_vanquish = false;
 
+    bool auto_open_locked_chest = false;
+
     Color nametag_color_npc = NAMETAG_COLOR_DEFAULT_NPC;
     Color nametag_color_player_self = NAMETAG_COLOR_DEFAULT_PLAYER_SELF;
     Color nametag_color_player_other = NAMETAG_COLOR_DEFAULT_PLAYER_OTHER;
@@ -252,6 +262,8 @@ private:
     GW::MemoryPatcher gold_confirm_patch;
     std::vector<std::wstring> previous_party_names;
 
+    std::vector<uint32_t> available_dialog_ids;
+
     enum ReinviteType : uint8_t {
         None,
         Player,
@@ -275,7 +287,7 @@ private:
 
     bool is_prompting_hard_mode_mission = 0;
 
-    static float GetSkillRange(uint32_t);
+    static float GetSkillRange(GW::Constants::SkillID);
 
     void DrawChannelColor(const char *name, GW::Chat::Channel chan);
     static void FriendStatusCallback(
@@ -321,5 +333,6 @@ private:
     GW::HookEntry OnPartyTargetChange_Entry;
     GW::HookEntry OnAgentNameTag_Entry;
     GW::HookEntry OnEnterMission_Entry;
-    GW::HookEntry OnSendDialog_Entry;
+    GW::HookEntry OnPreSendDialog_Entry;
+    GW::HookEntry OnPostSendDialog_Entry;
 };

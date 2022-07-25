@@ -62,7 +62,8 @@ const GW::Constants::SkillID* BuildsWindow::GetPreferredSkillOrder(const GW::Con
         for (size_t i = 0; skills && i < 8; i++) {
             found = false;
             for (size_t j = 0; !found && j < 8; j++) {
-                found = (skill_ids[j] == skills[i]);
+                auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_ids[j]);
+                found = skill && (skill->skill_id == skills[i] || skill->skill_id_pvp == skills[i]);
             }
             if (!found) {
                 break;
@@ -76,16 +77,17 @@ const GW::Constants::SkillID* BuildsWindow::GetPreferredSkillOrder(const GW::Con
     }
     return nullptr;
 }
-void BuildsWindow::OnSkillbarLoad(GW::HookStatus*, void* packet) {
-    struct SkillbarLoadPacket {
-        uint32_t header;
+void BuildsWindow::OnSkillbarLoad(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+    if (message_id != GW::UI::UIMessage::kSendLoadSkillbar)
+        return;
+    struct Pack {
         uint32_t agent_id;
-        uint32_t skill_ids_size;
-        GW::Constants::SkillID skill_ids[8];
-    } *sbl_packet = (SkillbarLoadPacket*)packet;
-    const GW::Constants::SkillID* found = Instance().GetPreferredSkillOrder(sbl_packet->skill_ids);
-    if (found && memcmp(sbl_packet->skill_ids, found, sizeof(sbl_packet->skill_ids)) != 0) {
-        memcpy(sbl_packet->skill_ids, found, sizeof(sbl_packet->skill_ids));
+        GW::Constants::SkillID skills[8];
+    } *pack = (Pack*)wParam;
+    const GW::Constants::SkillID* found = Instance().GetPreferredSkillOrder(pack->skills);
+    if (found && memcmp(pack->skills, found, sizeof(pack->skills)) != 0) {
+        // Copy across the new order before the send is done
+        memcpy(pack->skills, found, sizeof(pack->skills));
         Log::Info("Preferred skill order loaded");
     }
 }
@@ -94,7 +96,8 @@ void BuildsWindow::Initialize() {
     send_timer = TIMER_INIT();
 
     GW::Chat::CreateCommand(L"loadbuild", CmdLoad);
-    GW::CtoS::RegisterPacketCallback(&on_load_skills_entry, GAME_CMSG_SKILLBAR_LOAD, OnSkillbarLoad);
+    GW::UI::RegisterUIMessageCallback(&on_load_skills_entry, GW::UI::UIMessage::kSendLoadSkillbar, OnSkillbarLoad);
+    //GW::CtoS::RegisterPacketCallback(&on_load_skills_entry, GAME_CMSG_SKILLBAR_LOAD, OnSkillbarLoad);
 }
 void BuildsWindow::DrawHelp() {
     if (!ImGui::TreeNodeEx("Build Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
@@ -416,9 +419,9 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*) {
             if (i) {
                 ImGui::SameLine(0,0);
             }
-            ImGui::ImageCropped(*Resources::GetSkillImage((uint32_t)skills[i]), skill_size);
+            ImGui::ImageCropped(*Resources::GetSkillImage(skills[i]), skill_size);
             if (ImGui::IsItemHovered()) {
-                const GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData((uint32_t)skills[i]);
+                const GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skills[i]);
                 if (s) {
                     preferred_skill_order_tooltip.reset(s->name);
                     ImGui::SetTooltip("%s", preferred_skill_order_tooltip.string().c_str());
@@ -504,7 +507,9 @@ bool BuildsWindow::GetCurrentSkillBar(char* out, size_t out_len) {
         templ.attributes[attribute_idx].points = 0;
     }
     for (size_t i = 0; i < _countof(templ.skills);i++) {
-        templ.skills[i] = (GW::Constants::SkillID)player_skillbar->skills[i].skill_id;
+        // Ensure skill encoded is the pve version
+        auto* skill = GW::SkillbarMgr::GetSkillConstantData(player_skillbar->skills[i].skill_id);
+        templ.skills[i] = skill->IsPvP() ? skill->skill_id_pvp : skill->skill_id;
     }
     return GW::SkillbarMgr::EncodeSkillTemplate(templ, out, out_len) && GW::SkillbarMgr::DecodeSkillTemplate(&templ, out);
 }
@@ -539,7 +544,7 @@ void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx) {
     t->name = new wchar_t[128];
     MultiByteToWideChar(CP_UTF8, 0, build.name, -1, t->name, 128);
     GW::GameThread::Enqueue([t] {
-        GW::UI::SendUIMessage(GW::UI::kOpenTemplate, t);
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenTemplate, t);
         delete[] t->code.m_buffer;
         delete[] t->name;
         });

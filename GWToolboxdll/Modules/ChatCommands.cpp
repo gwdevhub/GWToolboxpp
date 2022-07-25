@@ -16,6 +16,7 @@
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Title.h>
 #include <GWCA/GameEntities/Friendslist.h>
+#include <GWCA/GameEntities/Hero.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -35,8 +36,9 @@
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/TradeMgr.h>
+
+#include <GWCA/Utilities/Scanner.h>
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
@@ -749,9 +751,9 @@ void ChatCommands::SkillToUse::Update() {
     }
     uint32_t lslot = slot - 1;
     const GW::SkillbarSkill& skill = skillbar->skills[lslot];
-    if (!skill.skill_id
-        || skill.skill_id == (uint32_t)GW::Constants::SkillID::Mystic_Healing
-        || skill.skill_id == (uint32_t)GW::Constants::SkillID::Cautery_Signet) {
+    if (skill.skill_id == GW::Constants::SkillID::No_Skill
+        || skill.skill_id == GW::Constants::SkillID::Mystic_Healing
+        || skill.skill_id == GW::Constants::SkillID::Cautery_Signet) {
         slot = 0;
         return;
     }
@@ -823,7 +825,7 @@ void ChatCommands::CmdEnterMission(const wchar_t*, int argc, LPWSTR* argv) {
             return Log::Error(error_not_leading);
         const GW::PartyContext* const p = GW::GameContext::instance()->party;
         if (p && (p->flag & 0x8) != 0) {
-            GW::CtoS::SendPacket(4, GAME_CMSG_PARTY_CANCEL_ENTER_CHALLENGE);
+            GW::Map::CancelEnterChallenge();
         }
         else {
             GW::Map::EnterChallenge();
@@ -834,7 +836,7 @@ void ChatCommands::CmdMorale(const wchar_t*, int , LPWSTR* ) {
     if (GW::GameContext::instance()->world->morale == 100)
         GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
     else
-        GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0x7, GW::Agents::GetPlayerId());
+        GW::Agents::CallTarget(GW::Agents::GetPlayer(), GW::CallTargetType::Morale);
 }
 void ChatCommands::CmdAge2(const wchar_t* , int, LPWSTR* ) {
     TimerWidget::Instance().PrintTimer();
@@ -856,25 +858,19 @@ void ChatCommands::CmdDialog(const wchar_t *, int argc, LPWSTR *argv) {
     }
 }
 
-void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR * argv) {
+void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR * ) {
     if (!IsMapReady())
         return;
-    if (wcscmp(argv[0], L"chest") == 0
-        && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        const GW::Agent* const target = GW::Agents::GetTarget();
-        if (target && target->type == 0x200) {
-            GW::Agents::GoSignpost(target);
-            GW::Items::OpenLockedChest();
-        }
-        return;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+        GW::Items::OpenXunlaiWindow();
     }
-    GW::Items::OpenXunlaiWindow();
+
 }
 
 void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
     if (!ImGui::GetCurrentContext())
         return; // Don't process window manips until ImGui is ready
-    if (argc < 2) { // e.g. /tb
+    if (argc < 2) { // e.g. /tbs
         MainWindow::Instance().visible ^= 1;
         return;
     }
@@ -1885,33 +1881,24 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
     if (argc < 2)
         return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
     // set behavior based on command message
-    int behaviour = 1; // guard by default
+    GW::HeroBehavior behaviour = GW::HeroBehavior::Guard; // guard by default
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
     if (arg1 == L"avoid") {
-        behaviour = 2; // avoid combat
+        behaviour = GW::HeroBehavior::Avoid; // avoid combat
     } else if (arg1 == L"guard") {
-        behaviour = 1; // guard
+        behaviour = GW::HeroBehavior::Guard; // guard
     } else if (arg1 == L"attack") {
-        behaviour = 0; // attack
+        behaviour = GW::HeroBehavior::Attack; // attack
     } else {
         return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
     }
 
-    const GW::PartyInfo* const party_info = GW::PartyMgr::GetPartyInfo();
-    if (!party_info)
-        return Log::Error("Could not retrieve party info");
-    const GW::HeroPartyMemberArray& party_heros = party_info->heroes;
-    if (!party_heros.valid())
-        return Log::Error("Party heroes validation failed");
-    const GW::AgentLiving* const me = GW::Agents::GetPlayerAsAgentLiving();
-    if (!me)
-        return Log::Error("Failed to get player");
-
-    //execute in explorable area or outpost
-    for (const GW::HeroPartyMember& hero : party_heros) {
-        if (hero.owner_player_id == me->login_number) {
-            GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero.agent_id, behaviour);
-        }
+    GW::WorldContext* w = GW::WorldContext::instance();
+    GW::HeroFlagArray* f = w ? &w->hero_flags : nullptr;
+    if (!(f && f->size()))
+        return;
+    for (auto& hero : *f) {
+        GW::PartyMgr::SetHeroBehavior(hero.agent_id, behaviour);
     }
 }
 void ChatCommands::CmdVolume(const wchar_t*, int argc, LPWSTR* argv) {

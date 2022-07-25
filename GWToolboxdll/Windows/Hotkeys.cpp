@@ -1215,7 +1215,7 @@ void HotkeyDropUseBuff::Execute()
         return;
 
     GW::Buff *buff = GW::Effects::GetPlayerBuffBySkillId(id);
-    if (buff && buff->skill_id) {
+    if (buff) {
         GW::Effects::DropBuff(buff->buff_id);
     } else {
         int islot = GW::SkillbarMgr::GetSkillSlot(id);

@@ -30,7 +30,7 @@ public:
 
     void Draw(IDirect3DDevice9 *pDevice) override;
     // Static handler for GW UI Message events. Updates ongoing effects and refreshes UI position.
-    static void OnEffectUIMessage(GW::HookStatus*, uint32_t message_id, void* wParam, void* lParam);
+    static void OnEffectUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void*, void*);
 
 
 private:
@@ -72,19 +72,19 @@ private:
     // Emulated effects in order of addition
     std::map<uint32_t,std::vector<GW::Effect>> cached_effects;
     // Find index of active effect from gwtoolbox overlay
-    size_t GetEffectIndex(const std::vector<GW::Effect>& arr, uint32_t skill_id);
+    size_t GetEffectIndex(const std::vector<GW::Effect>& arr, GW::Constants::SkillID skill_id);
     // Update effect on the gwtoolbox overlay
     void SetEffect(const GW::Effect* effect);
     // Get matching effect from gwtoolbox overlay
     const GW::Effect* GetEffect(uint32_t effect_id);
     // Get matching effect from gwtoolbox overlay
-    const GW::Effect* GetLongestEffectBySkillId(uint32_t skill_id);
+    const GW::Effect* GetLongestEffectBySkillId(GW::Constants::SkillID skill_id);
     // Remove effect from gwtoolbox overlay. Will only remove if the game has also removed it, otherwise false.
-    bool RemoveEffect(uint32_t skill_id);
+    bool RemoveEffect(uint32_t effect_id);
     // Forcefully removes then re-adds the current effects; used for initialising
     void RefreshEffects();
     // Find the drawing order of the skill based on the gw effect monitor
-    uint32_t GetEffectSortOrder(uint32_t skill_id);
+    uint32_t GetEffectSortOrder(GW::Constants::SkillID skill_id);
     // Recalculate position of widget based on gw effect monitor position
     void RefreshPosition();
     // Triggered when an effect has reached < 0 duration. Returns true if effect has been removed.

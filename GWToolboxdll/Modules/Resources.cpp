@@ -55,7 +55,7 @@ namespace {
         "5/5e/Paragon-tango-icon-48",
         "3/38/Dervish-tango-icon-48"
     };
-    std::map<uint32_t, IDirect3DTexture9**> skill_images;
+    std::map<GW::Constants::SkillID, IDirect3DTexture9**> skill_images;
     std::map<std::wstring, IDirect3DTexture9**> item_images;
     std::map<uint32_t, IDirect3DTexture9**> profession_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
@@ -529,7 +529,7 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
     return texture;
 }
 
-IDirect3DTexture9** Resources::GetSkillImage(uint32_t skill_id) {
+IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
     
     auto found = skill_images.find(skill_id);
     if (found != skill_images.end()) {
@@ -546,7 +546,7 @@ IDirect3DTexture9** Resources::GetSkillImage(uint32_t skill_id) {
     IDirect3DTexture9** texture = (IDirect3DTexture9**)malloc(sizeof(IDirect3DTexture9*));
     *texture = 0;
     skill_images[skill_id] = texture;
-    if (!skill_id) 
+    if (skill_id == (GW::Constants::SkillID)0)
         return texture;
     static std::filesystem::path path = Resources::GetPath(SKILL_IMAGES_PATH);
     if (!Resources::EnsureFolderExists(path)) {

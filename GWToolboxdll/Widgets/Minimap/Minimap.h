@@ -85,9 +85,6 @@ public:
     D3DXVECTOR2 GetGwinchScale() const;
     GW::Vec2f ShadowstepLocation() const;
 
-    static void SkillActivateCallback(GW::HookStatus*,GW::Packet::StoC::SkillActivate*);
-
-
     // 0 is 'all' flag, 1 to 7 is each hero
     bool FlagHero(uint32_t idx);
 
@@ -156,4 +153,5 @@ private:
     GW::HookEntry InstanceLoadInfo_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry UIMsg_Entry;
+    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
 };

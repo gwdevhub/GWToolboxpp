@@ -93,8 +93,11 @@ std::wstring StringDecoderWindow::GetEncodedString()
         Log::Log("%s\n", results[i].c_str());
         wchar_t c;
         unsigned int lval = 0;
-        if (!GuiUtils::ParseUInt(results[i].c_str(), &lval))
-            continue;
+        int base = results[i].rfind("0x", 0) == 0 ? 0 : 16;
+        if (!GuiUtils::ParseUInt(results[i].c_str(), &lval, base)) {
+            Log::Error("Failed to ParseUInt %s", results[i].c_str());
+            return L"";
+        }
         c = static_cast<wchar_t>(lval);
         encodedW[i] = c;
         printchar(encodedW[i]);

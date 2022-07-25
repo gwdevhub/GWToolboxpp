@@ -152,7 +152,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                     if (bond_map.find(skill_id) == bond_map.end()) continue;
 
                     bool overlay = false;
-                    const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData((uint32_t) skill_id);
+                    const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
                     if (!skill_data || skill_data->duration0 == 0x20000) continue; // Maintained skill/enchantment
                     const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
                     assert(agentAttributes);
@@ -162,7 +162,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                     size_t y = party_map[agent_id];
                     size_t x = bond_map[skill_id];
 
-                    auto texture = *Resources::GetSkillImage((uint32_t) skill_id);
+                    auto texture = *Resources::GetSkillImage( skill_id);
                     ImVec2 tl = GetGridPos(x, y, true);
                     ImVec2 br = GetGridPos(x, y, false);
                     if (texture) {

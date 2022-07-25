@@ -450,7 +450,7 @@ void Obfuscator::OnPrintChat(GW::HookStatus* , GW::Chat::Channel channel, wchar_
         return;
     *message_ptr = Instance().ObfuscateMessage(channel, *message_ptr);
 }
-void Obfuscator::OnPreUIMessage(GW::HookStatus*, uint32_t msg_id, void* wParam, void* ) {
+void Obfuscator::OnPreUIMessage(GW::HookStatus*, GW::UI::UIMessage msg_id, void* wParam, void* ) {
     if (Instance().status != Enabled)
         return;
     switch (msg_id) {
@@ -655,7 +655,7 @@ void Obfuscator::ObfuscateGuild(bool obfuscate) {
             wcscpy(player_guild_obfuscated_name, player->invited_name);
             Log::LogW(L"Guild player obfuscated from %s to %s",original, player->invited_name);
             // Redraw roster position for obfuscated name
-            GW::UI::SendUIMessage(0x100000d8, &player->name_ptr);
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kGuildMemberUpdated, &player->name_ptr);
         } else {
             if (player->current_name[0])
                 UnobfuscateName(player->current_name, player->current_name, _countof(player->current_name));
@@ -758,8 +758,8 @@ void Obfuscator::Initialize() {
     // Post resignlog hook
     GW::StoC::RegisterPacketCallback(&stoc_hook2, GAME_SMSG_CHAT_MESSAGE_CORE, OnStoCPacket, post_hook_altitude);
 
-    GW::UI::RegisterUIMessageCallback(&stoc_hook, OnPreUIMessage, pre_hook_altitude);
-
+    GW::UI::RegisterUIMessageCallback(&stoc_hook, GW::UI::UIMessage::kDialogBody, OnPreUIMessage, pre_hook_altitude);
+    GW::UI::RegisterUIMessageCallback(&stoc_hook, GW::UI::UIMessage::kWriteToChatLog, OnPreUIMessage, pre_hook_altitude);
     GW::Chat::RegisterSendChatCallback(&ctos_hook, OnSendChat);
 
     GW::Chat::RegisterPrintChatCallback(&ctos_hook, OnPrintChat);

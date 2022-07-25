@@ -306,7 +306,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
     if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
 
     GW::Buff *recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
-    GW::Agent* player = recall && recall->skill_id ? GW::Agents::GetPlayer() : nullptr;
+    GW::Agent* player = recall && recall->skill_id != GW::Constants::SkillID::No_Skill ? GW::Agents::GetPlayer() : nullptr;
     GW::Agent* target = player ? GW::Agents::GetAgentByID(recall_target) : nullptr;
     if (target == nullptr) {
         // This can happen if you recall something that then despawns before you drop recall.

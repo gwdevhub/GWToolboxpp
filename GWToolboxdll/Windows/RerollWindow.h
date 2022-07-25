@@ -25,7 +25,7 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
 
-    static void OnUIMessage(GW::HookStatus*, uint32_t msg_id, void*, void*);
+
     // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
     static void OnSetStatus(GW::FriendStatus status);
 
@@ -107,5 +107,5 @@ private:
     void AddAvailableCharacter(const wchar_t* email, const wchar_t* charname);
 
     GW::HookEntry OnGoToCharSelect_Entry;
-    
+    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msg_id, void*, void*);
 };

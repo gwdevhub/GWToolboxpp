@@ -484,7 +484,7 @@ bool PconGeneric::CanUseByEffect() const {
     if (!effects) return true;
 
     for (auto& effect : *effects) {
-        if (effect.skill_id == (DWORD)effectID)
+        if (effect.skill_id == effectID)
             return effect.GetTimeRemaining() < 1000;
     }
     return true;
@@ -532,11 +532,11 @@ bool PconCity::CanUseByEffect() const {
 
     for (DWORD i = 0; i < effects->size(); i++) {
         if (effects->at(i).GetTimeRemaining() < 1000) continue;
-        if (effects->at(i).skill_id == (DWORD)SkillID::Sugar_Rush_short
-            || effects->at(i).skill_id == (DWORD)SkillID::Sugar_Rush_medium
-            || effects->at(i).skill_id == (DWORD)SkillID::Sugar_Rush_long
-            || effects->at(i).skill_id == (DWORD)SkillID::Sugar_Jolt_short
-            || effects->at(i).skill_id == (DWORD)SkillID::Sugar_Jolt_long) {
+        if (effects->at(i).skill_id == SkillID::Sugar_Rush_short
+            || effects->at(i).skill_id == SkillID::Sugar_Rush_medium
+            || effects->at(i).skill_id == SkillID::Sugar_Rush_long
+            || effects->at(i).skill_id == SkillID::Sugar_Jolt_short
+            || effects->at(i).skill_id == SkillID::Sugar_Jolt_long) {
             return false; // already on
         }
     }

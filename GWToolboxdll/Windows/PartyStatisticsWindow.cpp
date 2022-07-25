@@ -38,10 +38,10 @@ namespace {
     constexpr wchar_t UNKNOWN_PLAYER_NAME[] = L"Unknown Player";
 }
 
-IDirect3DTexture9* PartyStatisticsWindow::GetSkillImage(const uint32_t skill_id) {
+IDirect3DTexture9* PartyStatisticsWindow::GetSkillImage(const GW::Constants::SkillID skill_id) {
     return *Resources::GetSkillImage(skill_id);
 }
-GuiUtils::EncString* PartyStatisticsWindow::GetSkillName(const uint32_t skill_id) {
+GuiUtils::EncString* PartyStatisticsWindow::GetSkillName(const GW::Constants::SkillID skill_id) {
     const auto found_it = skill_names.find(skill_id);
 
     if (found_it == skill_names.end()) {
@@ -310,7 +310,7 @@ void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC:
 void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
     const uint32_t value, const bool no_target) {
     uint32_t agent_id = caster_id;
-    const uint32_t activated_skill_id = value;
+    const GW::Constants::SkillID activated_skill_id = (GW::Constants::SkillID)value;
 
     switch (value_id) {
         case GW::Packet::StoC::GenericValueID::instant_skill_activated:

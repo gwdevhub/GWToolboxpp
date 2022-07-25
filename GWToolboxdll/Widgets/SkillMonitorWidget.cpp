@@ -139,7 +139,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
                 const auto& skill_activation = skill_history.at(i);
                 size_t xIndex = history_flip_direction ? history_length - skill_history.size() + i : skill_history.size() - 1 - i;
 
-                auto texture = *Resources::GetSkillImage((uint32_t)skill_activation.id);
+                auto texture = *Resources::GetSkillImage(skill_activation.id);
                 ImVec2 tl = GetGridPos(xIndex, y, true);
                 ImVec2 br = GetGridPos(xIndex, y, false);
 
@@ -327,7 +327,7 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
             float casttime = casttime_map[caster_id];
             const bool isInstant = value_id == GenericValueID::instant_skill_activated;
             if (!isInstant && !casttime) {
-                GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(value);
+                GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)value);
                 if (skill) {
                     casttime = skill->activation;
                 }

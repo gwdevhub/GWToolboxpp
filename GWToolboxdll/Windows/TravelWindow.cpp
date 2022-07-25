@@ -951,7 +951,7 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
     t->language_id = LanguageFromDistrict(_district);
 
     GW::GameThread::Enqueue([t] {
-        GW::UI::SendUIMessage(GW::UI::kTravel, t);
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kTravel, (void*)t);
         delete t;
     });
 }

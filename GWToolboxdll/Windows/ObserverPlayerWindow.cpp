@@ -127,12 +127,12 @@ void ObserverPlayerWindow::DrawAction(const std::string& name, const ObserverMod
 }
 
 // Draw the skills of a player
-void ObserverPlayerWindow::DrawSkills(const std::unordered_map<uint32_t, ObserverModule::ObservedSkill*>& skills,
-    const std::vector<uint32_t>& skill_ids) {
+void ObserverPlayerWindow::DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,
+    const std::vector<GW::Constants::SkillID>& skill_ids) {
 
     float offset = 0;
     size_t i = 0;
-    for (uint32_t skill_id : skill_ids) {
+    for (auto skill_id : skill_ids) {
         i += 1;
         offset = 0;
         ObserverModule::ObservableSkill* skill = ObserverModule::Instance().GetObservableSkillById(skill_id);

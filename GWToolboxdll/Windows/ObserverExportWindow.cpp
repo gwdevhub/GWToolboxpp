@@ -80,7 +80,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1() {
                     json_agent["secondary"]       = agent->secondary;
                     json_agent["profession"]      = agent->profession;
                     json_agent["stats"] = shared_stats_to_json(agent->stats);
-                    for (uint32_t skill_id : agent->stats.skill_ids_used) {
+                    for (auto skill_id : agent->stats.skill_ids_used) {
                         // parties -> party -> agents -> agent -> skills
                         ObserverModule::ObservableSkill* skill = ObserverModule::Instance().GetObservableSkillById(skill_id);
                         if (!skill) {
@@ -184,7 +184,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
     const std::vector<uint32_t>& guild_ids = om.GetObservableGuildIds();
     const std::vector<uint32_t>& agent_ids = om.GetObservableAgentIds();
     const std::vector<uint32_t>& party_ids = om.GetObservablePartyIds();
-    const std::vector<uint32_t>& skill_ids = om.GetObservableSkillIds();
+    const std::vector<GW::Constants::SkillID>& skill_ids = om.GetObservableSkillIds();
 
     // guilds
     json["guilds"]["ids"] = guild_ids;
@@ -212,8 +212,8 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
     // skills
     json["skills"]["ids"] = skill_ids;
     json["skills"]["by_id"] = {};
-    for (uint32_t skill_id : skill_ids) {
-        std::string skill_id_s = std::to_string(skill_id);
+    for (auto skill_id : skill_ids) {
+        std::string skill_id_s = std::to_string((uint32_t)skill_id);
         ObserverModule::ObservableSkill* skill = om.GetObservableSkillById(skill_id);
         if (!skill) {
             json["skills"]["by_id"][skill_id_s] = nlohmann::json::value_t::null;
@@ -335,8 +335,8 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
 
         // skills used
         json["agents"]["by_id"][agent_id_s]["stats"]["skill_ids_used"] = agent->stats.skill_ids_used;
-        for (uint32_t skill_id : agent->stats.skill_ids_used) {
-            std::string skill_id_s = std::to_string(skill_id);
+        for (auto skill_id : agent->stats.skill_ids_used) {
+            std::string skill_id_s = std::to_string((uint32_t)skill_id);
             const auto it_skill = agent->stats.skills_used.find(skill_id);
             if (it_skill == agent->stats.skills_used.end()) {
                 json["agents"]["by_id"][agent_id_s]["stats"]["skills_used"][skill_id_s] = nlohmann::json::value_t::null;
@@ -348,8 +348,8 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
 
         // skills received
         json["agents"]["by_id"][agent_id_s]["stats"]["skill_ids_received"] = agent->stats.skill_ids_received;
-        for (uint32_t skill_id : agent->stats.skill_ids_received) {
-            std::string skill_id_s = std::to_string(skill_id);
+        for (auto skill_id : agent->stats.skill_ids_received) {
+            std::string skill_id_s = std::to_string((uint32_t)skill_id);
             const auto it_skill = agent->stats.skills_received.find(skill_id);
             if (it_skill == agent->stats.skills_received.end()) {
                 json["agents"]["by_id"][agent_id_s]["stats"]["skills_received"][skill_id_s] = nlohmann::json::value_t::null;
@@ -367,8 +367,8 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
                 json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s] = nlohmann::json::value_t::null;
                 continue;
             }
-            for (uint32_t skill_id : agent_skill_ids) {
-                std::string skill_id_s = std::to_string(skill_id);
+            for (auto skill_id : agent_skill_ids) {
+                std::string skill_id_s = std::to_string((uint32_t)skill_id);
                 auto it_skill = it_target->second.find(skill_id);
                 if (it_skill == it_target->second.end()) {
                     json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s][skill_id_s] = nlohmann::json::value_t::null;
@@ -386,8 +386,8 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0() {
                 json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s] = nlohmann::json::value_t::null;
                 continue;
             }
-            for (uint32_t skill_id : agent_skill_ids) {
-                std::string skill_id_s = std::to_string(skill_id);
+            for (auto skill_id : agent_skill_ids) {
+                std::string skill_id_s = std::to_string((uint32_t)skill_id);
                 auto it_skill = it_target->second.find(skill_id);
                 if (it_skill == it_target->second.end()) {
                     json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s][skill_id_s] = nlohmann::json::value_t::null;

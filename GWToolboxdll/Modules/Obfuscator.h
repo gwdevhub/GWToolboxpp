@@ -44,8 +44,7 @@ public:
     } status = Disabled;
 private:
     static void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);
-    static void OnPostStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);
-    static void OnPreUIMessage(GW::HookStatus*, uint32_t msg_id, void* wParam, void* lParam);
+    static void OnPreUIMessage(GW::HookStatus*, GW::UI::UIMessage msg_id, void* wParam, void* lParam);
     static void OnSendChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t* message);
     static void OnPrintChat(GW::HookStatus* status, GW::Chat::Channel, wchar_t** message, FILETIME, int);
     static void CmdObfuscate(const wchar_t* cmd, int argc, wchar_t** argv);

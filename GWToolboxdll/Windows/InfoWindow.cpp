@@ -59,15 +59,21 @@ void InfoWindow::Initialize() {
         [this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) -> void {
             quoted_item_id = packet->itemid;
         });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogSender>(&OnDialog_Entry, [this](...) {
-            ClearAvailableDialogs();
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogButton>(&OnDialog_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::DialogButton* packet) -> void {
-            available_dialogs.push_back(new AvailableDialog(packet->message, packet->dialog_id));
-        });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,OnInstanceLoad);
-
+    GW::UI::RegisterUIMessageCallback(&OnDialogBody_Entry, GW::UI::UIMessage::kDialogBody, [](GW::HookStatus* status, GW::UI::UIMessage, void* , void*) {
+        if(!status->blocked)
+            Instance().ClearAvailableDialogs();
+        },0x8000);
+    GW::UI::RegisterUIMessageCallback(&OnDialogButton_Entry, GW::UI::UIMessage::kDialogButton, [](GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
+        if (!status->blocked) {
+            auto btn = (GW::UI::DialogButtonInfo*)wparam;
+            Instance().available_dialogs.push_back(new AvailableDialog(btn->message, btn->dialog_id));
+        }
+        }, 0x8000);
+    GW::UI::RegisterUIMessageCallback(&OnSendDialog_Entry, GW::UI::UIMessage::kSendDialog, [](GW::HookStatus* status, GW::UI::UIMessage, void*, void*) {
+        if (!status->blocked)
+            Instance().ClearAvailableDialogs();
+        },0x8000);
     GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
 }
 bool InfoWindow::ClearAvailableDialogs() {

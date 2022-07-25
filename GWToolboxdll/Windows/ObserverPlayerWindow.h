@@ -38,8 +38,8 @@ public:
     void DrawHeaders();
     void DrawAction(const std::string& name, const ObserverModule::ObservedAction* action);
 
-    void DrawSkills(const std::unordered_map<uint32_t, ObserverModule::ObservedSkill*>& skills,
-        const std::vector<uint32_t>& skill_ids);
+    void DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,
+        const std::vector<GW::Constants::SkillID>& skill_ids);
 
     const char* Name() const override { return "Observer Player"; };
     const char* Icon() const override { return ICON_FA_EYE; }
