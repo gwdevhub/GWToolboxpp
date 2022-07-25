@@ -110,7 +110,7 @@ public:
     void SetAfkMessage(std::wstring&& message);
 
     // Static callback functions
-    static void OnPingWeaponSet(GW::HookStatus*, void* packet);
+    static void OnPingWeaponSet(GW::HookStatus*, GW::UI::UIMessage , void*, void*);
     static void OnStartWhisper(GW::HookStatus*, wchar_t* _name);
     static void OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
     static void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak);

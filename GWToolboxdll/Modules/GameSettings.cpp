@@ -33,7 +33,6 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
@@ -254,7 +253,6 @@ namespace {
         {GW::Constants::SkillID::Summon_Spirits_luxon, GW::Constants::SkillID::Summon_Spirits_kurzick },
         {GW::Constants::SkillID::Triple_Shot_luxon, GW::Constants::SkillID::Triple_Shot_kurzick }
     };
-
     struct LoadSkillBarPacket {
         uint32_t header;
         uint32_t agent_id;
@@ -263,8 +261,15 @@ namespace {
     } skillbar_packet;
 
     // Before the game loads the skill bar you want, copy the data over for checking once the bar is loaded.
-    void OnPreLoadSkillBar(GW::HookStatus*, void* packet) {
-        skillbar_packet = *(LoadSkillBarPacket*)packet;
+    void OnPreLoadSkillBar(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+        ASSERT(message_id == GW::UI::UIMessage::kSendLoadSkillbar && wparam);
+        struct Pack {
+            uint32_t agent_id;
+            GW::Constants::SkillID skill_ids[8];
+        } *packet = (Pack*)wparam;
+        // @Enhancement: may cause weird stuff if we load loads of builds at once; heros could get mixed up with player. Use a map.
+        memcpy(skillbar_packet.skill_ids, wparam, sizeof(skillbar_packet.skill_ids));
+        skillbar_packet.agent_id = packet->agent_id;
     }
 
     // Takes SkillData* ptr, rectifies any missing dupe skills. True if bar has been tweaked.
@@ -347,8 +352,8 @@ namespace {
             skillbar_packet.agent_id = 0;
             return;
         }
-        if (FixLoadSkillData(skillbar_packet.skill_ids)) {
-            GW::CtoS::SendPacket(sizeof(skillbar_packet), &skillbar_packet);
+        if (skillbar_packet.agent_id && FixLoadSkillData(skillbar_packet.skill_ids)) {
+            GW::SkillbarMgr::LoadSkillbar(skillbar_packet.skill_ids,_countof(skillbar_packet.skill_ids),GW::PartyMgr::GetAgentHeroID(skillbar_packet.agent_id));
         }
         skillbar_packet.agent_id = 0;
     }
@@ -812,13 +817,12 @@ void GameSettings::Initialize() {
             last_dialog_npc_id = agent->player_number;
         });
     GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, &OnFactionDonate);
-
-    GW::CtoS::RegisterPacketCallback(&OnDialog_Entry, GAME_CMSG_SKILLBAR_LOAD, OnPreLoadSkillBar);
+    GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILLBAR_UPDATE, OnPostLoadSkillBar, 0x8000);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, OnUpdateSkillCount, -0x3000);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_2, OnUpdateSkillCount, -0x3000);
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &OnPartyDefeated);
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &OnPartyDefeated);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
         switch (packet->Value_id) {
         case 11:
@@ -892,7 +896,7 @@ void GameSettings::Initialize() {
         });
     GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, &OnStartWhisper);
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,&FriendStatusCallback);
-    GW::CtoS::RegisterPacketCallback(&WhisperCallback_Entry, GAME_CMSG_PING_WEAPON_SET, &OnPingWeaponSet);
+    GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendPingWeaponSet, OnPingWeaponSet);
     GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, &OnCast);
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &OnSendChat);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
@@ -1674,7 +1678,7 @@ void GameSettings::Update(float) {
             }
         }
         if (!still_in_party) {
-            GW::CtoS::SendPacket(0x8, GAME_CMSG_HERO_ADD, pending_reinvite_id);
+            GW::PartyMgr::AddHero(pending_reinvite_id);
             pending_reinvite_type = None;
         }
     } break;
@@ -1702,7 +1706,7 @@ void GameSettings::Update(float) {
             }
         }
         if (!still_in_party) {
-            GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_INVITE_NPC, pending_reinvite_id);
+            GW::PartyMgr::AddHenchman(pending_reinvite_id);
             pending_reinvite_type = None;
         }
     } break;
@@ -1793,18 +1797,17 @@ void GameSettings::FriendStatusCallback(
 }
 
 // Show weapon description/mods when pinged
-void GameSettings::OnPingWeaponSet(GW::HookStatus* status, void* packet) {
+void GameSettings::OnPingWeaponSet(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+    ASSERT(message_id == GW::UI::UIMessage::kSendPingWeaponSet && wparam);
     if (!Instance().shorthand_item_ping)
         return;
-    struct PingItemPacket {
-        uint32_t header;
-        uint32_t unk0;
-        uint32_t item_id_1;
-        uint32_t item_id_2;
-    };
-    PingItemPacket* pack = static_cast<PingItemPacket*>(packet);
-    PingItem(pack->item_id_1, PING_PARTS::NAME | PING_PARTS::DESC);
-    PingItem(pack->item_id_2, PING_PARTS::NAME | PING_PARTS::DESC);
+    struct Packet {
+        uint32_t agent_id;
+        uint32_t weapon_item_id;
+        uint32_t offhand_item_id;
+    } * pack = (Packet*)wparam;
+    PingItem(pack->weapon_item_id, PING_PARTS::NAME | PING_PARTS::DESC);
+    PingItem(pack->offhand_item_id, PING_PARTS::NAME | PING_PARTS::DESC);
     status->blocked = true;
 }
 
@@ -1895,11 +1898,11 @@ void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::Sto
         GW::PartyInfo* my_party = GW::PartyMgr::GetPartyInfo();
         if (instance->auto_accept_invites && other_party && my_party && my_party->GetPartySize() <= other_party->GetPartySize()) {
             // Auto accept if I'm joining a bigger party
-            GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_ACCEPT_INVITE, packet->target_party_id);
+            GW::PartyMgr::RespondToPartyRequest(packet->target_party_id, true);
         }
         if (instance->auto_accept_join_requests && other_party && my_party && my_party->GetPartySize() > other_party->GetPartySize()) {
             // Auto accept join requests if I'm the bigger party
-            GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_ACCEPT_INVITE, packet->target_party_id);
+            GW::PartyMgr::RespondToPartyRequest(packet->target_party_id, true);
         }
     }
     if (instance->flash_window_on_party_invite)
@@ -2115,7 +2118,7 @@ void GameSettings::OnPartyDefeated(GW::HookStatus* status, GW::Packet::StoC::Par
     UNREFERENCED_PARAMETER(status);
     if (!Instance().auto_return_on_defeat || !GW::PartyMgr::GetIsLeader())
         return;
-    GW::CtoS::SendPacket(0x4, GAME_CMSG_PARTY_RETURN_TO_OUTPOST);
+    GW::PartyMgr::ReturnToOutpost();
 }
 
 // Automatically send /age2 on /age.
@@ -2365,7 +2368,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
                 return;
             }
             target_identifier = next_player_agent->login_number;
-            GW::CtoS::SendPacket(0x4, GAME_CMSG_PARTY_LEAVE_GROUP);
+            GW::PartyMgr::LeaveParty();
             return;
         }
         else if (!leading) {
@@ -2375,7 +2378,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
         }
         else if (target_in_party) {
             // Kick this player and re-invite
-            GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_KICK_PLAYER, target_identifier);
+            GW::PartyMgr::KickPlayer(target_identifier);
         }
         else {
             // We want to re-invite a player that isn't in the party already; do nothing and we'll invite the player on next frame.
@@ -2402,7 +2405,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
             return;
         }
         // Kick this hero
-        GW::CtoS::SendPacket(0x8, GAME_CMSG_HERO_KICK, target_identifier);
+        GW::PartyMgr::KickHero(target_identifier);
         break;
     case Henchman:
         if (!leading) {
@@ -2411,7 +2414,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
             return;
         }
         // Kick this henchman
-        GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_KICK_NPC, target_identifier);
+        GW::PartyMgr::KickHenchman(target_identifier);
         break;
     default:
         Log::ErrorW(L"Target a party member to re-invite");

@@ -14,7 +14,6 @@
 
 #include <GWCA/Packets/Opcodes.h>
 
-#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>

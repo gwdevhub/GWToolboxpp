@@ -15,7 +15,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
@@ -411,7 +411,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
         if (advertise_dirty) {
             if (!is_seeking) {
                 if (player_party_search.message[0])
-                    GW::CtoS::SendPacket(0x4, GAME_CMSG_PARTY_SEARCH_CANCEL);
+                    GW::PartyMgr::SearchPartyCancel();
             }
             else {
                 struct {
@@ -423,7 +423,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
                 packet.search_type = search_type;
                 std::wstring out = GuiUtils::StringToWString(player_party_search_text);
                 swprintf(packet.advert, _countof(packet.advert), L"%s", out.c_str());
-                GW::CtoS::SendPacket(sizeof(packet), &packet);
+
+                GW::PartyMgr::SearchParty(search_type, out.data());
             }
         }
         ImGui::Separator();
