@@ -2,6 +2,7 @@
 
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Modules/Resources.h>
+#include <Modules/GameSettings.h>
 #include <Widgets/TimerWidget.h>
 
 #include <GWCA/Constants/Constants.h>
@@ -168,7 +169,7 @@ void ObjectiveTimerWindow::CheckIsMapLoaded() {
     if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer)
         return;
     map_load_pending = false;
-    if (InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
+    if (TimerWidget::Instance().GetRunTimeStart() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
         AddObjectiveSet((GW::Constants::MapID)InstanceLoadInfo->map_id);
         Event(EventType::InstanceLoadInfo, InstanceLoadInfo->map_id);
     }
@@ -1275,20 +1276,18 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(EventType type, uint32_t id1, uin
 }
 void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
 {
-    bool done = true;
-    for (Objective* obj : objectives) {
-        if (obj->done == TIME_UNKNOWN) {
-            done = false;
-            break;
-        }
-    }
-    if (done) {
+    if (!std::any_of(
+            objectives.begin(), objectives.end(), [](const Objective* obj) { return obj->done == TIME_UNKNOWN; })) {
         duration = GetDuration();
+        // make sure there isn't an objective finishing later
+        const auto max = std::max_element(objectives.begin(), objectives.end(),
+            [](const Objective* a, const Objective* b) { return a->done < b->done; });
+        duration = std::max((*max)->done, duration);
         active = false;
-        if (ObjectiveTimerWindow::Instance().auto_send_age) {
+        if (Instance().auto_send_age) {
             GW::Chat::SendChat('/', "age");
         }
-        TimerWidget::Instance().SetRunCompleted();
+        TimerWidget::Instance().SetRunCompleted(GameSettings::Instance().auto_age2_on_age);
     }
 }
 
@@ -1296,7 +1295,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
     : ui_id(cur_ui_id++)
 {
     system_time = static_cast<DWORD>(time(NULL));
-    run_start_time_point = time_point_ms();
+    run_start_time_point = TimerWidget::Instance().GetRunTimeStart() != TIME_UNKNOWN ? TimerWidget::Instance().GetRunTimeStart() : time_point_ms();
     instance_start_time_point = run_start_time_point - TimerWidget::Instance().GetMapTimeElapsedMs();
     duration = TIME_UNKNOWN;
 }
@@ -1390,16 +1389,11 @@ DWORD ObjectiveTimerWindow::ObjectiveSet::GetDuration() {
         return duration;
     }
     // Recent obj timer update didn't save run duration to disk. For failed runs we can't find duration...
-    if (!objectives.size() || !objectives.back()->IsDone()) {
+    if (objectives.empty() || !objectives.back()->IsDone()) {
         return TIME_UNKNOWN;
     }
     // ... but for completed runs, we can figure this out from the objectives.
-    for (auto* obj : objectives) {
-        if (!obj->IsStarted())
-            continue;
-        return duration = objectives.back()->done - obj->start;
-    }
-    return TIME_UNKNOWN;
+    return objectives.back()->done;
 }
 const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr() {
     if (!cached_time[0] || active) {

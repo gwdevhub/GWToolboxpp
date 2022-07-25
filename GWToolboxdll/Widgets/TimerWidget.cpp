@@ -17,7 +17,6 @@
 #include <Timer.h>
 
 #include <Modules/GameSettings.h>
-#include <Modules/ToolboxSettings.h>
 #include <Widgets/TimerWidget.h>
 
 using namespace std::chrono;
@@ -281,16 +280,25 @@ std::chrono::milliseconds TimerWidget::GetRunTimeElapsed()
         return duration_cast<milliseconds>(now() - run_started);
     }
 }
+unsigned long TimerWidget::GetRunTimeStart() const
+{
+    if (!is_valid(run_started)) {
+        return static_cast<unsigned long>(-1);
+    } 
+    return static_cast<unsigned long>(duration_cast<milliseconds>(run_started.time_since_epoch()).count());
+}
+
 unsigned long TimerWidget::GetTimerMs() { return static_cast<unsigned long>(GetTimer().count()); }
 unsigned long TimerWidget::GetMapTimeElapsedMs() { return static_cast<unsigned long>(GetMapTimeElapsed().count()); }
 unsigned long TimerWidget::GetRunTimeElapsedMs() { return static_cast<unsigned long>(GetRunTimeElapsed().count()); }
 
-void TimerWidget::SetRunCompleted()
+
+void TimerWidget::SetRunCompleted(const bool no_print)
 {
     if (is_valid(run_started) && stop_at_objective_completion) {
         run_completed = now();
     }
-    if (print_time_objective && is_valid(run_started) && is_valid(run_completed)) {
+    if (print_time_objective && is_valid(run_started) && is_valid(run_completed) && !no_print) {
         PrintTimer();
     }
 }
