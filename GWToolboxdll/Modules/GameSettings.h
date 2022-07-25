@@ -148,9 +148,7 @@ public:
     static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
     static void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
 
-    static void OnDialogButton(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
-    static void OnPreSendDialog(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
-    static void OnPostSendDialog(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
 
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 

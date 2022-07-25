@@ -898,8 +898,15 @@ void GameSettings::Initialize() {
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
     GW::Chat::RegisterChatEventCallback(&OnPartyTargetChange_Entry, OnPartyTargetChange);
 
-    GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendDialog, OnPreSendDialog, -0x8000);
-    GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendDialog, OnPostSendDialog, 0x8000);
+    const GW::UI::UIMessage dialog_ui_messages[] = {
+        GW::UI::UIMessage::kSendDialog,
+        GW::UI::UIMessage::kDialogBody,
+        GW::UI::UIMessage::kDialogButton
+    };
+    for (auto message_id : dialog_ui_messages) {
+        GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, message_id, OnDialogUIMessage);
+    }
+    
 
     GW::Chat::CreateCommand(L"reinvite", GameSettings::CmdReinvite);
 #ifdef APRIL_FOOLS
@@ -907,16 +914,22 @@ void GameSettings::Initialize() {
 #endif
 
 }
-void GameSettings::OnDialogButton(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
-    Instance().available_dialog_ids.push_back((uint32_t)wparam);
-}
-void GameSettings::OnPreSendDialog(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void* ) {
-    auto found = std::find(Instance().available_dialog_ids.begin(), Instance().available_dialog_ids.end(), (uint32_t)wparam);
-    if (found == Instance().available_dialog_ids.end())
-        status->blocked = true;
-}
-void GameSettings::OnPostSendDialog(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-    Instance().available_dialog_ids.clear();
+void GameSettings::OnDialogUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* ) {
+    auto& available_dialog_ids = Instance().available_dialog_ids;
+    switch (message_id) {
+        case GW::UI::UIMessage::kDialogBody: {
+            available_dialog_ids.clear();
+        } break;
+        case GW::UI::UIMessage::kDialogButton: {
+            GW::UI::DialogButtonInfo* info = (GW::UI::DialogButtonInfo*)wparam;
+            available_dialog_ids.push_back(info->dialog_id);
+        } break;
+        case GW::UI::UIMessage::kSendDialog: {
+            auto found = std::find(available_dialog_ids.begin(), available_dialog_ids.end(), (uint32_t)wparam);
+            if (found == available_dialog_ids.end())
+                status->blocked = true;
+        } break;
+    }
 }
 
 // Helper function; avoids doing string checks on offline friends.
@@ -2047,7 +2060,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
     if (*current_faction < 5000)
         return; // Not enough to donate. Return here and the NPC will reply.
     status->blocked = true;
-    GW::PlayerMgr::DepositFaction(allegiance);
+    //GW::PlayerMgr::DepositFaction(allegiance);
 }
 
 // Show a message when player leaves the outpost
