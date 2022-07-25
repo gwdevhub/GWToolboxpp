@@ -35,7 +35,7 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void SetRunCompleted(); // call when the objectives are completed to stop the timer
+    void SetRunCompleted(bool no_print = false); // call when the objectives are completed to stop the timer
     // Time in ms since the current instance was created, based on when the map loading screen was shown.
     std::chrono::milliseconds GetMapTimeElapsed();
     // Time in ms since the current run was started. May be different to when the current instance was created.
@@ -45,6 +45,7 @@ public:
     unsigned long GetTimerMs(); // time in milliseconds
     unsigned long GetMapTimeElapsedMs();
     unsigned long GetRunTimeElapsedMs();
+    unsigned long GetRunTimeStart() const;
     void PrintTimer(); // prints current timer to chat
 
     void OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);
