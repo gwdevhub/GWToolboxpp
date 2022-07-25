@@ -750,7 +750,7 @@ bool HeroBuildsWindow::CodeOnHero::Process() {
             else
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kHideHeroPanel, (void*)heroid);
             if (flag->hero_behavior != behavior)
-                GW::CtoS::SendPacket(0xC, GAME_CMSG_HERO_BEHAVIOR, hero->agent_id, behavior);
+                GW::PartyMgr::SetHeroBehavior(hero->agent_id, behavior);
         }
         stage = Finished;
     case Finished: // Success, hero added and build loaded.

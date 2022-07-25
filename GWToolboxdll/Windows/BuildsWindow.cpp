@@ -19,7 +19,6 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
