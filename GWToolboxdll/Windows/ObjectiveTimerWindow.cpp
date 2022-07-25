@@ -169,7 +169,7 @@ void ObjectiveTimerWindow::CheckIsMapLoaded() {
     if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer)
         return;
     map_load_pending = false;
-    if (TimerWidget::Instance().GetRunTimeStart() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
+    if (TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
         AddObjectiveSet((GW::Constants::MapID)InstanceLoadInfo->map_id);
         Event(EventType::InstanceLoadInfo, InstanceLoadInfo->map_id);
     }
@@ -1295,7 +1295,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
     : ui_id(cur_ui_id++)
 {
     system_time = static_cast<DWORD>(time(NULL));
-    run_start_time_point = TimerWidget::Instance().GetRunTimeStart() != TIME_UNKNOWN ? TimerWidget::Instance().GetRunTimeStart() : time_point_ms();
+    run_start_time_point = TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN ? TimerWidget::Instance().GetStartPoint() : time_point_ms();
     duration = TIME_UNKNOWN;
 }
 ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet() {
