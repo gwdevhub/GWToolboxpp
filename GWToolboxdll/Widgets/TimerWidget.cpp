@@ -280,12 +280,13 @@ std::chrono::milliseconds TimerWidget::GetRunTimeElapsed()
         return duration_cast<milliseconds>(now() - run_started);
     }
 }
-unsigned long TimerWidget::GetRunTimeStart() const
+unsigned long TimerWidget::GetStartPoint() const
 {
-    if (!is_valid(run_started)) {
+    const auto time_point = use_instance_timer ? instance_started : run_started;
+    if (!is_valid(time_point)) {
         return static_cast<unsigned long>(-1);
     } 
-    return static_cast<unsigned long>(duration_cast<milliseconds>(run_started.time_since_epoch()).count());
+    return static_cast<unsigned long>(duration_cast<milliseconds>(time_point.time_since_epoch()).count());
 }
 
 unsigned long TimerWidget::GetTimerMs() { return static_cast<unsigned long>(GetTimer().count()); }

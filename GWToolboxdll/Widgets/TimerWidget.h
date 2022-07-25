@@ -45,7 +45,7 @@ public:
     unsigned long GetTimerMs(); // time in milliseconds
     unsigned long GetMapTimeElapsedMs();
     unsigned long GetRunTimeElapsedMs();
-    unsigned long GetRunTimeStart() const;
+    unsigned long GetStartPoint() const;
     void PrintTimer(); // prints current timer to chat
 
     void OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);
