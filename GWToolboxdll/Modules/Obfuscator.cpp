@@ -15,7 +15,6 @@
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -24,6 +23,9 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
+#include <GWCA/Utilities/Hook.h>
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 
 #include <Utils/GuiUtils.h>
 #include <Logger.h>

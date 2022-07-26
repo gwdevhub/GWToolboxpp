@@ -16,7 +16,6 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
@@ -300,12 +299,7 @@ uint32_t Pcon::MoveItem(GW::Item* item, GW::Bag* bag, size_t slot, size_t quanti
     uint32_t originalQuantity = destItem ? destItem->quantity : 0u;
     uint32_t vacantQuantity = 250 - originalQuantity;
     if (quantity > 1 && vacantQuantity < quantity) quantity = vacantQuantity;
-    if (quantity == item->quantity) { // Move the whole thing.
-        GW::CtoS::SendPacket(0x10, GAME_CMSG_ITEM_MOVE, item->item_id, bag->bag_id, slot);
-    }
-    else { // Split stack
-        GW::CtoS::SendPacket(0x14, GAME_CMSG_ITEM_SPLIT_STACK, item->item_id, quantity, bag->bag_id, slot);
-    }
+    GW::Items::MoveItem(item, bag, slot, quantity);
     return quantity;
 }
 void Pcon::Refill(bool do_refill) {

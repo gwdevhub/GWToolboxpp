@@ -66,8 +66,9 @@ public:
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
     static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
-    static void OnMoveItemPacket(GW::HookStatus* status, void* pak);
-    static wchar_t* OnAsyncDecodeStr(GW::HookStatus*, GW::UI::DecodingString* to_decode);
+    static void OnMoveItemPacket(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnRequestQuote(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     static void __fastcall OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id);
 
     static void OnUseItem(GW::HookStatus* status, void* packet);
@@ -208,17 +209,17 @@ public:
 
     uint32_t stack_prompt_item_id = 0;
 private:
-    struct CtoS_TransactItems {
-        uint32_t header = GAME_CMSG_BUY_MATERIALS;
+    struct TransactItems {
         uint32_t type;
-        uint32_t gold_give = 0;
+        uint32_t gold_give;
         uint32_t item_give_count = 0;
         uint32_t item_give_ids[16];
-        uint32_t gold_recv = 0;
+        uint32_t item_give_quantities[16];
+        uint32_t gold_recv;
         uint32_t item_recv_count = 0;
         uint32_t item_recv_ids[16];
+        uint32_t item_recv_quantities[16];
     };
-    static_assert(sizeof(CtoS_TransactItems) == 0x98);
     struct CtoS_QuoteItem {
         uint32_t header = GAME_CMSG_REQUEST_QUOTE;
         uint32_t type;
@@ -250,7 +251,7 @@ private:
             state_timestamp = clock();
         }
         CtoS_QuoteItem quote();
-        CtoS_TransactItems transact();
+        TransactItems transact();
         Item* item();
         bool in_progress() { return state > State::Prompt; }
         bool selling();

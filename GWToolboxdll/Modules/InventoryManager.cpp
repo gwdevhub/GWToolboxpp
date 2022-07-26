@@ -10,7 +10,6 @@
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -24,6 +23,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/Scanner.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
@@ -588,67 +588,88 @@ InventoryManager::~InventoryManager()
 {
     ClearPotentialItems();
 }
-void InventoryManager::Initialize() {
-    ToolboxUIElement::Initialize();
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&on_map_change_entry, [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
-        CancelAll();
-        });
-    GW::Items::RegisterItemClickCallback(&ItemClick_Entry, ItemClickCallback);
-    GW::CtoS::RegisterPacketCallback(&ItemClick_Entry, GAME_CMSG_REQUEST_QUOTE,
-        [this](GW::HookStatus*, void* pak) -> void {
-            requesting_quote_type = 0;
-            if (pending_transaction.in_progress() || !ImGui::IsKeyDown(VK_CONTROL) || MaterialsWindow::Instance().GetIsInProgress()) {
-                return;
-            }
-            CtoS_QuoteItem* quote = (CtoS_QuoteItem*)pak;
-            requesting_quote_type = quote->type;
-        });
-    GW::CtoS::RegisterPacketCallback(&ItemClick_Entry, GAME_CMSG_ITEM_SPLIT_STACK, OnMoveItemPacket);
-    GW::CtoS::RegisterPacketCallback(&ItemClick_Entry, GAME_CMSG_ITEM_MOVE, OnMoveItemPacket);
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&ItemClick_Entry, [this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) {
+void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+    auto& instance = Instance();
+    switch (message_id) {
+        // About to request a quote for an item
+    case GW::UI::UIMessage::kSendMerchantRequestQuote: { 
+        requesting_quote_type = 0;
+        if (instance.pending_transaction.in_progress() || !ImGui::IsKeyDown(VK_CONTROL) || MaterialsWindow::Instance().GetIsInProgress()) {
+            return;
+        }
+        requesting_quote_type = *(uint32_t*)wparam;
+    } break;
+        // About to move an item
+    case GW::UI::UIMessage::kSendMoveItem: { 
+        uint32_t* packet = (uint32_t*)wparam;
+        uint32_t item_id = packet[0];
+        uint32_t quantity = packet[1];
+
+        if (item_id != instance.stack_prompt_item_id) {
+            instance.stack_prompt_item_id = 0;
+            return;
+        }
+        instance.stack_prompt_item_id = 0;
+        status->blocked = true;
+        move_item(GW::Items::GetItemById(item_id), (uint16_t)quantity);
+    } break;
+        // Quote for item has been received
+    case GW::UI::UIMessage::kQuotedItemPrice: { 
         if (!requesting_quote_type)
             return;
-        if (pending_transaction.in_progress())
+        if (instance.pending_transaction.in_progress())
             return;
-        pending_cancel_transaction = true;
-        GW::Item* requested_item = GW::Items::GetItemById(packet->itemid);
+        instance.pending_cancel_transaction = true;
+        uint32_t* packet = (uint32_t*)wparam;
+        uint32_t item_id = packet[0];
+        uint32_t price = packet[1];
+        GW::Item* requested_item = GW::Items::GetItemById(item_id);
         if (!requested_item)
             return;
-        pending_transaction.type = requesting_quote_type;
-        pending_transaction.item_id = requested_item->item_id;
-        pending_transaction.price = packet->price;
+        instance.pending_transaction.type = requesting_quote_type;
+        instance.pending_transaction.item_id = item_id;
+        instance.pending_transaction.price = price;
         requesting_quote_type = 0;
-        show_transact_quantity_popup = true;
-        });
+        instance.show_transact_quantity_popup = true;
+    } break;
+        // Map left; cancel all actions
+    case GW::UI::UIMessage::kStartMapLoad: {
+        instance.CancelAll();
+    } break;
+        // Item moved; clear prompt
+    case GW::UI::UIMessage::kMoveItem: {
+        instance.stack_prompt_item_id = 0;
+    } break;
+    }
+}
+
+void InventoryManager::Initialize() {
+    ToolboxUIElement::Initialize();
+    GW::Items::RegisterItemClickCallback(&ItemClick_Entry, ItemClickCallback);
+
+    GW::UI::UIMessage message_id_hooks[] = {
+        GW::UI::UIMessage::kSendMoveItem,
+        GW::UI::UIMessage::kSendMerchantRequestQuote,
+        GW::UI::UIMessage::kQuotedItemPrice,
+        GW::UI::UIMessage::kStartMapLoad,
+        GW::UI::UIMessage::kMoveItem,
+        GW::UI::UIMessage::kSendUseItem
+    };
+    for (auto message_id : message_id_hooks) {
+        GW::UI::RegisterUIMessageCallback(&ItemClick_Entry, message_id, OnUIMessage);
+    }
 
     GW::Trade::RegisterOfferItemCallback(&on_offer_item_hook, OnOfferTradeItem);
 
     inventory_bags_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_InventoryBags);
-
-    GW::UI::RegisterUIMessageCallback(&on_offer_item_hook, GW::UI::UIMessage::kMoveItem, [](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-        Instance().stack_prompt_item_id = 0;
-        });
 
     AddItemRowToWindow_Func = (AddItemRowToWindow_pt)GW::Scanner::Find("\x83\xc4\x04\x80\x78\x04\x06\x0f\x84\xd3\x00\x00\x00\x6a\x02\xff\x37",0,-0x10);
     if (AddItemRowToWindow_Func) {
         GW::Hook::CreateHook(AddItemRowToWindow_Func, OnAddItemToWindow, (void**)&RetAddItemRowToWindow);
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
     }
-    GW::CtoS::RegisterPacketCallback(&OnUseItem_Entry, GAME_CMSG_ITEM_USE, &OnUseItem);
 }
-// Add "Tip: Hold Ctrl when requesting a quote to bulk buy." message to merchant window
-// Add "Tip: Hold Ctrl when requesting a quote to bulk sell." message to merchant window
-wchar_t* InventoryManager::OnAsyncDecodeStr(GW::HookStatus*, GW::UI::DecodingString* to_decode) {
-    switch (to_decode->encoded[0]) {
-    case 0x51B:
-        return L"\x51B\x2\x102\x2\x108\x107" "Tip: Hold Ctrl when requesting a quote to bulk buy." "\x1";
-        break;
-    case 0x522:
-        return L"\x522\x2\x102\x2\x108\x107" "Tip: Hold Ctrl when requesting a quote to bulk sell." "\x1";
-        break;
-    }
-    return to_decode->encoded.data();
-}
+// Hide unsellable items from merchant
 void InventoryManager::OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
     GW::Hook::EnterHook();
     GW::Item* item = Instance().hide_unsellable_items ? GW::Items::GetItemById(item_id) : 0;
@@ -799,7 +820,7 @@ void InventoryManager::AttachSalvageListeners() {
         &salvage_hook_entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::SalvageSessionSuccess*) {
             ClearSalvageSession(status);
-            GW::CtoS::SendPacket(0x4, GAME_CMSG_ITEM_SALVAGE_SESSION_DONE);
+            GW::Items::SalvageSessionDone();
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSession>(
         &salvage_hook_entry,
@@ -902,7 +923,7 @@ void InventoryManager::ContinueSalvage() {
     if (current_item && current_salvage_session.salvage_item_id != 0) {
         // Popup dialog for salvage; salvage materials and cycle.
         ClearSalvageSession();
-        GW::CtoS::SendPacket(0x4, GAME_CMSG_ITEM_SALVAGE_MATERIALS);
+        GW::Items::SalvageMaterials();
         pending_salvage_at = (clock() / CLOCKS_PER_SEC);
         is_salvaging = true;
         return;
@@ -942,7 +963,7 @@ void InventoryManager::ContinueTransaction() {
         pending_transaction.setState(PendingTransaction::State::Quoting);
         auto packet = pending_transaction.quote();
         AttachTransactionListeners();
-        GW::CtoS::SendPacket(&packet);
+        GW::Merchant::RequestQuote((GW::Merchant::TransactionType)packet.type, { 0, packet.item_give_count,packet.item_give_ids }, { 0, packet.item_recv_count,packet.item_recv_ids });
     }break;
     case PendingTransaction::State::Quoting:
         // Check for timeout having asked for a quote.
@@ -968,7 +989,9 @@ void InventoryManager::ContinueTransaction() {
         pending_transaction.setState(PendingTransaction::State::Transacting);
         auto packet = pending_transaction.transact();
         AttachTransactionListeners();
-        GW::CtoS::SendPacket(&packet);
+        GW::Merchant::TransactItems((GW::Merchant::TransactionType)packet.type,
+            packet.gold_give, { packet.item_give_count, packet.item_give_ids, packet.item_give_quantities },
+            packet.gold_recv, { packet.item_recv_count, packet.item_recv_ids, packet.item_recv_quantities });
     }break;
     case PendingTransaction::State::Transacting:
         // Check for timeout having agreed to buy or sell
@@ -1052,7 +1075,7 @@ void InventoryManager::Salvage(Item* item, Item* kit) {
     if (!(pending_salvage_item.set(item) && pending_salvage_kit.set(kit)))
         return;
     AttachSalvageListeners();
-    GW::CtoS::SendPacket(0x10, GAME_CMSG_ITEM_SALVAGE_SESSION_OPEN, GW::WorldContext::instance()->salvage_session_id, pending_salvage_kit.item_id, pending_salvage_item.item_id);
+    GW::Items::SalvageStart(pending_salvage_kit.item_id, pending_salvage_item.item_id);
     pending_salvage_at = (clock() / CLOCKS_PER_SEC);
     is_salvaging = true;
 }
@@ -1063,7 +1086,7 @@ void InventoryManager::Identify(Item* item, Item* kit) {
         return;
     if(!(pending_identify_item.set(item) && pending_identify_kit.set(kit)))
         return;
-    GW::CtoS::SendPacket(0xC, GAME_CMSG_ITEM_IDENTIFY, pending_identify_kit.item_id, pending_identify_item.item_id);
+    GW::Items::IdentifyItem(pending_identify_kit.item_id, pending_identify_item.item_id);
     pending_identify_at = (clock() / CLOCKS_PER_SEC);
     is_identifying = true;
 }
@@ -1789,22 +1812,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
             move_item(item);
     }
 }
-void InventoryManager::OnMoveItemPacket(GW::HookStatus* status, void* pak) {
-    auto& instance = Instance();
-    uint32_t* packet = (uint32_t*)pak;
-    uint32_t item_id = packet[1];
-    uint32_t quantity = 1000u;
-    
-    if (packet[0] == GAME_CMSG_ITEM_SPLIT_STACK)
-        quantity = packet[2];
-    if (item_id != instance.stack_prompt_item_id) {
-        instance.stack_prompt_item_id = 0;
-        return;
-    }
-    instance.stack_prompt_item_id = 0;
-    status->blocked = true;
-    move_item(GW::Items::GetItemById(item_id), (uint16_t)quantity);
-}
 void InventoryManager::ClearPotentialItems()
 {
     for (PotentialItem* item : potential_salvage_all_items) {
@@ -2182,19 +2189,21 @@ InventoryManager::CtoS_QuoteItem InventoryManager::PendingTransaction::quote()
     }
     return q;
 }
-InventoryManager::CtoS_TransactItems InventoryManager::PendingTransaction::transact()
+InventoryManager::TransactItems InventoryManager::PendingTransaction::transact()
 {
-    CtoS_TransactItems q;
+    TransactItems q;
     q.type = type;
     if (selling()) {
         q.gold_recv = price;
         q.item_give_count = 1;
         q.item_give_ids[0] = item_id;
+        q.item_give_quantities[0] = 1;
     }
     else {
         q.gold_give = price;
         q.item_recv_count = 1;
         q.item_recv_ids[0] = item_id;
+        q.item_recv_quantities[0] = 1;
     }
     return q;
 }
