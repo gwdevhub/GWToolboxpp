@@ -176,7 +176,7 @@ nlohmann::json SkillListingWindow::Skill::ToJson() {
     json["cd"] = GuiUtils::WStringToString(GWWConcise());
     json["t"] = skill->type;
     json["p"] = skill->profession;
-    json["a"] = IsPvE() ? 255 - skill->h002A[0] : skill->attribute;
+    json["a"] = IsPvE() ? 255 - skill->title : skill->attribute;
     if (IsElite())
         json["e"] = 1;
     json["c"] = skill->campaign;
@@ -204,7 +204,7 @@ nlohmann::json SkillListingWindow::Skill::ToJson() {
 }
 const std::wstring SkillListingWindow::Skill::GetSkillType() {
     std::wstring str(IsElite() ? L"Elite " : L"");
-    switch (skill->type) {
+    switch ((uint32_t)skill->type) {
         case 3:
             return str += L"Stance", str;
         case 4:
