@@ -169,7 +169,7 @@ void ObjectiveTimerWindow::CheckIsMapLoaded() {
     if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer)
         return;
     map_load_pending = false;
-    if (TimerWidget::Instance().GetRunTimeStart() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
+    if (TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
         AddObjectiveSet((GW::Constants::MapID)InstanceLoadInfo->map_id);
         Event(EventType::InstanceLoadInfo, InstanceLoadInfo->map_id);
     }
@@ -1059,7 +1059,7 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetStarted()
     if (IsStarted())
         return this;
     start_time_point = time_point_ms(); // run_started_time_point
-    start = start_time_point - parent->instance_start_time_point; // Ms since run start
+    start = start_time_point - parent->run_start_time_point; // Ms since run start
     PrintTime(cached_start, sizeof(cached_start), start);
     status = Status::Started;
     return this;
@@ -1071,7 +1071,7 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetDone()
     if (done == TIME_UNKNOWN) {
         done_time_point = time_point_ms();
         // NB: Objective may not have triggered a start point.
-        done = done_time_point - parent->instance_start_time_point;
+        done = done_time_point - parent->run_start_time_point;
     }
     PrintTime(cached_done, sizeof(cached_done), done);
 
@@ -1295,8 +1295,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
     : ui_id(cur_ui_id++)
 {
     system_time = static_cast<DWORD>(time(NULL));
-    run_start_time_point = TimerWidget::Instance().GetRunTimeStart() != TIME_UNKNOWN ? TimerWidget::Instance().GetRunTimeStart() : time_point_ms();
-    instance_start_time_point = run_start_time_point - TimerWidget::Instance().GetMapTimeElapsedMs();
+    run_start_time_point = TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN ? TimerWidget::Instance().GetStartPoint() : time_point_ms();
     duration = TIME_UNKNOWN;
 }
 ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet() {
@@ -1313,7 +1312,7 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
     os->system_time = json.at("utc_start").get<DWORD>();
     std::string name = json.at("name").get<std::string>();
     snprintf(os->name, sizeof(os->name), "%s", name.c_str());
-    os->instance_start_time_point = json.at("instance_start").get<DWORD>();
+    os->run_start_time_point = json.at("instance_start").get<DWORD>();
     if(json.contains("duration"))
         os->duration = json.at("duration").get<DWORD>();
     nlohmann::json json_objs = json.at("objectives");
@@ -1329,7 +1328,7 @@ nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson()
 {
     nlohmann::json json;
     json["name"] = name;
-    json["instance_start"] = instance_start_time_point;
+    json["instance_start"] = run_start_time_point;
     json["utc_start"] = system_time;
     nlohmann::json json_objectives;
     for (auto* obj : objectives) {
