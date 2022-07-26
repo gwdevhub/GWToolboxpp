@@ -224,7 +224,7 @@ namespace {
 void HintsModule::Initialize() {
     ToolboxModule::Initialize();
     GW::UI::RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kObjectiveComplete, OnObjectiveComplete_UIMessage);
-    GW::UI::RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kStartMapLoad, OnStartMapLoad_UIMessage);
+    GW::UI::RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kMapChange, OnStartMapLoad_UIMessage);
     GW::UI::RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kShowHint, OnShowHint_UIMessage);
     GW::UI::RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kMapLoaded, OnMapLoaded_UIMessage);
     GW::UI::RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kWriteToChatLog, OnWriteToChatLog_UIMessage);

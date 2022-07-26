@@ -207,7 +207,7 @@ void Minimap::Initialize()
         }
     });
     const GW::UI::UIMessage hook_messages[] = {
-        GW::UI::UIMessage::kStartMapLoad,
+        GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kChangeTarget,
         GW::UI::UIMessage::kAgentStartCasting
@@ -248,7 +248,7 @@ void Minimap::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam
             }
         }
     } break;
-    case GW::UI::UIMessage::kStartMapLoad: {
+    case GW::UI::UIMessage::kMapChange: {
         instance.loading = true;
         instance.agent_renderer.auto_target_id = 0;
     } break;

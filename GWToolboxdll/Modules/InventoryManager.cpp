@@ -633,7 +633,7 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage mes
         instance.show_transact_quantity_popup = true;
     } break;
         // Map left; cancel all actions
-    case GW::UI::UIMessage::kStartMapLoad: {
+    case GW::UI::UIMessage::kMapChange: {
         instance.CancelAll();
     } break;
         // Item moved; clear prompt
@@ -651,7 +651,7 @@ void InventoryManager::Initialize() {
         GW::UI::UIMessage::kSendMoveItem,
         GW::UI::UIMessage::kSendMerchantRequestQuote,
         GW::UI::UIMessage::kQuotedItemPrice,
-        GW::UI::UIMessage::kStartMapLoad,
+        GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMoveItem,
         GW::UI::UIMessage::kSendUseItem
     };
