@@ -166,12 +166,12 @@ void Minimap::Initialize()
     GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus* ,uint32_t key) {
         if (key != GW::UI::ControlAction_ReverseCamera)
             return;
-        reverse_camera = true;
+        camera_currently_reversed = true;
         });
     GW::UI::RegisterKeyupCallback(&AgentPinged_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != GW::UI::ControlAction_ReverseCamera)
             return;
-        reverse_camera = false;
+        camera_currently_reversed = false;
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry, [this](GW::HookStatus *, GW::Packet::StoC::AgentPinged *pak) -> void {
@@ -568,7 +568,7 @@ float Minimap::GetMapRotation() const
     if (rotate_minimap) {
         yaw = smooth_rotation ? GW::CameraMgr::GetCamera()->GetCurrentYaw() : GW::CameraMgr::GetYaw();
     }
-    if (reverse_camera && flip_on_reverse) {
+    if (camera_currently_reversed && flip_on_reverse) {
         yaw = M_PI_F + yaw;
     }
     return yaw;

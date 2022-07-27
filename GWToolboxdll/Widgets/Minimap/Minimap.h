@@ -110,7 +110,7 @@ private:
     bool IsKeyDown(MinimapModifierBehaviour mmb) const;
 
     bool mousedown = false;
-    bool reverse_camera = false;
+    bool camera_currently_reversed = false;
 
     Vec2i location;
     Vec2i size;
