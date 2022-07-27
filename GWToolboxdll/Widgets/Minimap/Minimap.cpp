@@ -451,10 +451,13 @@ void Minimap::DrawSettingInternal()
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
     ImGui::NextSpacedElement(); ImGui::Checkbox("Map Rotation", &rotate_minimap);
     ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Flip when reversed", &flip_on_reverse);
+    ImGui::ShowHelp("Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
     ImGui::NextSpacedElement(); ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
     ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
     ImGui::NextSpacedElement(); ImGui::Checkbox("Circular", &circular_map);
-    ImGui::ShowHelp("Whether the map should be circular like the compass or a square (default).");
+    ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
 }
 
 void Minimap::LoadSettings(CSimpleIni *ini)
@@ -478,6 +481,7 @@ void Minimap::LoadSettings(CSimpleIni *ini)
     mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
     mouse_clickthrough_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_explorable), mouse_clickthrough_in_explorable);
     rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
+    flip_on_reverse = ini->GetBoolValue(Name(), VAR_NAME(flip_on_reverse), flip_on_reverse);
     smooth_rotation = ini->GetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
     circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
@@ -509,6 +513,7 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     ini->SetLongValue(Name(), VAR_NAME(key_alt_behavior), static_cast<long>(key_alt_behavior));
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
     ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
+    ini->SetBoolValue(Name(), VAR_NAME(flip_on_reverse), flip_on_reverse);
     ini->SetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
     ini->SetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
     range_renderer.SaveSettings(ini, Name());
@@ -563,7 +568,7 @@ float Minimap::GetMapRotation() const
     if (rotate_minimap) {
         yaw = smooth_rotation ? GW::CameraMgr::GetCamera()->GetCurrentYaw() : GW::CameraMgr::GetYaw();
     }
-    if (reverse_camera) {
+    if (reverse_camera && flip_on_reverse) {
         yaw = M_PI_F + yaw;
     }
     return yaw;
