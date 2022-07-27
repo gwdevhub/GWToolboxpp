@@ -170,7 +170,7 @@ namespace {
         GW::Constants::TitleID title;
         GuiUtils::EncString name;
     };
-    static std::vector< DecodedTitleName*> title_names;
+    static std::vector<DecodedTitleName*> title_names;
     static bool title_names_sorted = false;
 
     GW::Array<GW::Title>* GetTitles() {
@@ -1707,9 +1707,10 @@ void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
     MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
 }
 
-void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(message);
-    uint32_t title_id = Instance().default_title_id;
+void ChatCommands::CmdReapplyTitle([[maybe_unused]] const wchar_t* message, int argc, LPWSTR* argv) {
+    const uint32_t title_action = Instance().default_title_id;
+    constexpr auto TITLE_ID_INVALID = static_cast<uint32_t>(-1);
+    uint32_t title_id = TITLE_ID_INVALID;
     if (argc > 1) {
         if (!GuiUtils::ParseUInt(argv[1], &title_id)) {
             Log::Error("Syntax: /title [title_id]");
@@ -1847,25 +1848,26 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     case GW::Constants::MapID::Yatendi_Canyons:
         title_id = (uint32_t)GW::Constants::TitleID::Lightbringer;
         break;
+    default: break;
     }
 apply:
     auto* current_title = GW::PlayerMgr::GetActiveTitle();
-    if (current_title) {
-        title_id = current_title->title_id();
-    }
-    if (title_id == CMDTITLE_KEEP_CURRENT && current_title) {
+    if (title_action == CMDTITLE_KEEP_CURRENT && title_id == TITLE_ID_INVALID) {
+        if (!current_title) return;
         title_id = current_title->title_id();
     }
     if (current_title) {
         GW::PlayerMgr::RemoveActiveTitle();
     }
-    switch (title_id) {
+    switch (title_action) {
     case CMDTITLE_REMOVE_CURRENT:
-    case CMDTITLE_KEEP_CURRENT:
         break;
     default:
+        if (title_id == TITLE_ID_INVALID) {
+            title_id = title_action;
+        }
         if (title_id > (uint32_t)GW::Constants::TitleID::Codex) {
-            Log::Error("Invalid title_id %d",title_id);
+            Log::Error("Invalid title_id %d", title_id);
             return;
         }
         GW::PlayerMgr::SetActiveTitle(static_cast<GW::Constants::TitleID>(title_id));
