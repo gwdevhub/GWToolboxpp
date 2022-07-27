@@ -129,6 +129,7 @@ private:
 
     bool mouse_clickthrough_in_explorable = false;
     bool mouse_clickthrough_in_outpost = false;
+    bool flip_on_reverse = false;
     bool rotate_minimap = true;
     bool smooth_rotation = true;
     bool circular_map = true;
