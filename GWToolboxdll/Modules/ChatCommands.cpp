@@ -1850,9 +1850,6 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     }
 apply:
     auto* current_title = GW::PlayerMgr::GetActiveTitle();
-    if (current_title) {
-        title_id = current_title->title_id();
-    }
     if (title_id == CMDTITLE_KEEP_CURRENT && current_title) {
         title_id = current_title->title_id();
     }
@@ -1861,7 +1858,6 @@ apply:
     }
     switch (title_id) {
     case CMDTITLE_REMOVE_CURRENT:
-    case CMDTITLE_KEEP_CURRENT:
         break;
     default:
         if (title_id > (uint32_t)GW::Constants::TitleID::Codex) {
