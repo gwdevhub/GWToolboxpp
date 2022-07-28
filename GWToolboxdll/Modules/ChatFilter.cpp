@@ -124,6 +124,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
     LOAD_BOOL(favor);
     LOAD_BOOL(ninerings);
     LOAD_BOOL(noonehearsyou);
+    LOAD_BOOL(away);
     LOAD_BOOL(lunars);
     LOAD_BOOL(messagebycontent);
     LOAD_BOOL(you_have_been_playing_for);
@@ -203,6 +204,7 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
     SAVE_BOOL(favor);
     SAVE_BOOL(ninerings);
     SAVE_BOOL(noonehearsyou);
+    SAVE_BOOL(away);
     SAVE_BOOL(lunars);
     SAVE_BOOL(messagebycontent);
     SAVE_BOOL(you_have_been_playing_for);
