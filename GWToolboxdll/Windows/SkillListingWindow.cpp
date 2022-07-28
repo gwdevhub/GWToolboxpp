@@ -116,7 +116,7 @@ void SkillListingWindow::Initialize() {
     skills.resize((size_t)GW::Constants::SkillID::Count);
     for (size_t i = 0; i < skills.size(); i++) {
         GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)i);
-        if (!s || s->skill_id == (GW::Constants::SkillID)0 || !s->skill_equip_type) continue;
+        if (!s || s->skill_id == (GW::Constants::SkillID)0) continue;
         skills[i] = new Skill(s);
     }
 }
@@ -131,8 +131,9 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
     float offset = 0.0f;
     const float tiny_text_width = 50.0f * ImGui::GetIO().FontGlobalScale;
     const float long_text_width = 200.0f * ImGui::GetIO().FontGlobalScale;
+
     ImGui::Text("#");
-    ImGui::SameLine(offset += tiny_text_width);
+    ImGui::SameLine(offset += tiny_text_width + tiny_text_width);
     ImGui::Text("Name");
     ImGui::SameLine(offset += long_text_width);
     ImGui::Text("Attr");
@@ -150,10 +151,12 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         if (!skills[i]) continue;
         if (!search_term.empty() && GuiUtils::ToLower(skills[i]->Name()).find(search_term) == std::wstring::npos)
             continue;
+        offset = 0;
         ImGui::Text("%d", i);
         if (!ImGui::IsItemVisible())
             continue;
-        offset = 0;
+        ImGui::SameLine(offset += tiny_text_width);
+        ImGui::ImageCropped(*Resources::GetSkillImage(skills[i]->skill->skill_id), { 20.f,20.f });        
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%S",skills[i]->Name());
         if (ImGui::IsItemHovered())
@@ -164,6 +167,17 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Text("%s", GW::Constants::GetProfessionAcronym((GW::Constants::Profession)skills[i]->skill->profession).c_str());
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%d", skills[i]->skill->type);
+        ImGui::SameLine();
+        char buf2[16];
+        snprintf(buf2, _countof(buf2), "Wiki###wiki_%d", i);
+        if (ImGui::SmallButton(buf2)) {
+            char* url = new char[128];
+            snprintf(url, 128, "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skills[i]->skill->skill_id);
+            GW::GameThread::Enqueue([url]() {
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, url);
+                delete[] url;
+                });            
+        }
     }
     if (ImGui::Button("Export to JSON"))
         ExportToJSON();
