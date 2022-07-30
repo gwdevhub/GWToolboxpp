@@ -168,7 +168,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%d", skills[i]->skill->type);
         ImGui::SameLine();
-        char buf2[16];
+        char buf2[32];
         snprintf(buf2, _countof(buf2), "Wiki###wiki_%d", i);
         if (ImGui::SmallButton(buf2)) {
             char* url = new char[128];

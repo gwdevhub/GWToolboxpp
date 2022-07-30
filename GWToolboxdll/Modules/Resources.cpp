@@ -577,10 +577,29 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
 
         char regex_str[255];
         // Find a valid png or jpg image inside the HTML response, <img alt="<skill_id>" src="<location_of_image>"
-        ASSERT(snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"].*%d.*['\"][^>]+src=['\"]([^\"']+)([.](png|jpg))", skill_id) != -1);
-        const std::regex image_finder(regex_str);
+        ASSERT(snprintf(regex_str, sizeof(regex_str), "class=\"skill-image\"[\\s\\S]*?<img[^>]+src=['\"]([^\"']+)([.](png|jpg))") != -1);
+        std::regex image_finder(regex_str);
         std::smatch m;
-        if (!std::regex_search(response, m, image_finder)) {
+        std::regex_search(response, m, image_finder);
+        if (!m.size()) {
+            // Search condition e..g Crippled
+            ASSERT(snprintf(regex_str, sizeof(regex_str), "<blockquote[\\s\\S]*?<img[^>]+src=['\"]([^\"']+)([.](png|jpg))") != -1);
+            image_finder = regex_str;
+            std::regex_search(response, m, image_finder);
+        }
+        if (!m.size()) {
+            // Search blessing
+            ASSERT(snprintf(regex_str, sizeof(regex_str), "class=\"blessing-infobox\"[\\s\\S]*?<img[^>]+src=['\"]([^\"']+)([.](png|jpg))") != -1);
+            image_finder = regex_str;
+            std::regex_search(response, m, image_finder);
+        }
+        if (!m.size()) {
+            // Search bounty
+            ASSERT(snprintf(regex_str, sizeof(regex_str), "class=\"bounty-infobox\"[\\s\\S]*?<img[^>]+src=['\"]([^\"']+)([.](png|jpg))") != -1);
+            image_finder = regex_str;
+            std::regex_search(response, m, image_finder);
+        }
+        if (!m.size()) {
             trigger_failure_callback(callback, L"Regex failed loading skill id %d", skill_id);
             return;
         }
