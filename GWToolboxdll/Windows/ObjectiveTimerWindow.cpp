@@ -229,7 +229,7 @@ void ObjectiveTimerWindow::Initialize()
             if (!info) return; // we should always have this
 
             static bool in_dungeon = false;
-            bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
+            bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
             if (in_dungeon && !new_in_dungeon) { // moved from dungeon to outside
                 StopObjectives();
             } else if (!packet->is_explorable) { // zoning to outpost
@@ -453,7 +453,7 @@ void ObjectiveTimerWindow::AddObjectiveSet(GW::Constants::MapID map_id)
             // Others:
         case MapID::The_Underworld_PvP:
             if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo()) {
-                if (info->type == GW::RegionType::RegionType_ExplorableZone) {
+                if (info->type == GW::RegionType::ExplorableZone) {
                     AddToPKObjectiveSet();
                 }
             }

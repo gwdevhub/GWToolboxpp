@@ -424,7 +424,7 @@ bool GWFileRequester::load_texture_from_resource(GWResource& in, IDirect3DTextur
     log(L"Image for file id %d processed into a bitmap!");
 
     wchar_t filename[128];
-    swprintf(filename, _countof(filename), L"%d.bmp", image.file_id);
+    swprintf(filename, _countof(filename), L"%d.png", image.file_id);
     // Check if we've already downloaded it
     auto gwfiles = Resources::GetPath(L"data", L"gwfilepngs");
     Resources::EnsureFolderExists(gwfiles);

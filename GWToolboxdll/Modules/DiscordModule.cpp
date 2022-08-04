@@ -560,7 +560,7 @@ void DiscordModule::UpdateActivity() {
     GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (!p || !m || !a || !c)
         return;
-    bool is_guild_hall = m->type == GW::RegionType::RegionType_GuildHall;
+    bool is_guild_hall = m->type == GW::RegionType::GuildHall;
     if (is_guild_hall) {
         g = GW::GuildMgr::GetCurrentGH();
         if (!g) return; // Current gh not found - guild array not loaded yet

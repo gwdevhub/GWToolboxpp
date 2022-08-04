@@ -81,7 +81,7 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
 
         GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)pak->map_id);
         if (info) {
-            bool new_in_dungeon = (info->type == GW::RegionType_Dungeon);
+            bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
 
             if (new_in_dungeon && !in_dungeon) { // zoning from explorable to dungeon
                 run_started = now_tp;

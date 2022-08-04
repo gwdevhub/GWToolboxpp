@@ -94,10 +94,11 @@ public:
 
     std::string chat;
     std::string abbrev;
-    std::string desc;
+    std::string& description() { return desc; };
     std::string ini;
 
 protected:
+    std::string desc;
     // Cycles through character's inventory to find a matching (incomplete) stack, or an empty pane.
     GW::Item* FindVacantStackOrSlotInInventory(GW::Item* likeItem = nullptr);
     GW::AgentLiving* player = nullptr;

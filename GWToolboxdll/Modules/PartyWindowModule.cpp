@@ -53,13 +53,13 @@ namespace {
         GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
         if (!map) return false;
         switch (static_cast<GW::RegionType>(map->type)) {
-        case GW::RegionType::RegionType_AllianceBattle:
-        case GW::RegionType::RegionType_Arena:
-        case GW::RegionType::RegionType_GuildBattleArea:
-        case GW::RegionType::RegionType_CompetitiveMission:
-        case GW::RegionType::RegionType_ZaishenBattle:
-        case GW::RegionType::RegionType_HeroesAscent:
-        case GW::RegionType::RegionType_HeroBattleArea:
+        case GW::RegionType::AllianceBattle:
+        case GW::RegionType::Arena:
+        case GW::RegionType::GuildBattleArea:
+        case GW::RegionType::CompetitiveMission:
+        case GW::RegionType::ZaishenBattle:
+        case GW::RegionType::HeroesAscent:
+        case GW::RegionType::HeroBattleArea:
             return false;
         default:
             return true;
@@ -108,13 +108,13 @@ namespace {
         GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
         if (!i) return false;
         switch (i->type) {
-        case GW::RegionType_AllianceBattle:
-        case GW::RegionType_Arena:
-        case GW::RegionType_CompetitiveMission:
-        case GW::RegionType_GuildBattleArea:
-        case GW::RegionType_HeroBattleArea:
-        case GW::RegionType_HeroesAscent:
-        case GW::RegionType_ZaishenBattle:
+        case GW::RegionType::AllianceBattle:
+        case GW::RegionType::Arena:
+        case GW::RegionType::CompetitiveMission:
+        case GW::RegionType::GuildBattleArea:
+        case GW::RegionType::HeroBattleArea:
+        case GW::RegionType::HeroesAscent:
+        case GW::RegionType::ZaishenBattle:
             return true;
         default:
             return false;

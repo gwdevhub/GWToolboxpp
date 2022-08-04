@@ -748,7 +748,7 @@ void TravelWindow::Update(float delta) {
     case Pending:
         for (uint32_t i = 0; i < static_cast<uint32_t>(GW::Constants::MapID::Count); i++) {
             GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
-            if (!map || !map->name_id || !map->GetIsOnWorldMap() || map->type != GW::RegionType::RegionType_ExplorableZone)
+            if (!map || !map->name_id || !map->GetIsOnWorldMap() || map->type != GW::RegionType::ExplorableZone)
                 continue;
             searchable_explorable_area_ids.push_back(static_cast<GW::Constants::MapID>(i));
             GuiUtils::EncString* s = new GuiUtils::EncString(map->name_id);
@@ -809,12 +809,12 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(GW::Constants::MapID map_to
         if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing)
             continue;
         switch (map_info->type) {
-        case GW::RegionType::RegionType_City:
-        case GW::RegionType::RegionType_CompetitiveMission:
-        case GW::RegionType::RegionType_CooperativeMission:
-        case GW::RegionType::RegionType_EliteMission:
-        case GW::RegionType::RegionType_MissionOutpost:
-        case GW::RegionType::RegionType_Outpost:
+        case GW::RegionType::City:
+        case GW::RegionType::CompetitiveMission:
+        case GW::RegionType::CooperativeMission:
+        case GW::RegionType::EliteMission:
+        case GW::RegionType::MissionOutpost:
+        case GW::RegionType::Outpost:
             break;
         default:
             continue;

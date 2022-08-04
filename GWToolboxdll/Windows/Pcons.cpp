@@ -112,8 +112,12 @@ void Pcon::Draw(IDirect3DDevice9* device) {
         Toggle();
     }
     ImGui::PopStyleColor();
-    if (ImGui::IsItemHovered() && desc.size()) {
-        ImGui::SetTooltip(desc.c_str());
+    if (maptype == GW::Constants::InstanceType::Explorable)
+        return; // Don't draw in explorable areas - this is only for refilling in an outpost!
+    if (ImGui::IsItemHovered()) {
+        char out[128];
+        snprintf(out, 128, "%s\n%s", chat.c_str(), desc.c_str());
+        ImGui::SetTooltip(out);
     }
     if (maptype != GW::Constants::InstanceType::Loading) {
         ImFont* f = GuiUtils::GetFont(GuiUtils::FontSize::header1);

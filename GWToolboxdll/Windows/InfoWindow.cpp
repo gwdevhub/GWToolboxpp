@@ -460,6 +460,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     InfoField("Continent", "%d", map_info->continent);
                     InfoField("Region", "%d", map_info->region);
                     InfoField("Type", "%d", map_info->type);
+                    InfoField("Instance Info Type", "%d", GW::Map::GetMapTypeInstanceInfo(map_info->type)->request_instance_map_type);
                     InfoField("Flags", "0x%X", map_info->flags);
                     InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
                     GW::Vec2f pos = { (float)map_info->x,(float)map_info->y };

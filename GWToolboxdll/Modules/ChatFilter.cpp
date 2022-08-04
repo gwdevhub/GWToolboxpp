@@ -34,7 +34,7 @@
 
 static bool IsInChallengeMission() {
     GW::AreaInfo* a = GW::Map::GetCurrentMapInfo();
-    return a && a->type == GW::RegionType_Challenge;
+    return a && a->type == GW::RegionType::Challenge;
 }
 
 static void printchar(wchar_t c) {
