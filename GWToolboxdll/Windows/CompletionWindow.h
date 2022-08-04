@@ -73,7 +73,7 @@ namespace Missions {
     public:
         uint32_t profession = 0;
         inline static MissionImageList dummy_var = {};
-        PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url);
+        PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url = 0);
         virtual IDirect3DTexture9* GetMissionImage() override;
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }
@@ -96,13 +96,9 @@ namespace Missions {
     };
 
     class FactionsPvESkill : public PvESkill {
-    protected:
-        GW::Constants::SkillID skill_id2;
     public:
-        FactionsPvESkill(GW::Constants::SkillID kurzick_id, GW::Constants::SkillID luxon_id, const wchar_t* _image_url);
+        FactionsPvESkill(GW::Constants::SkillID skill_id);
         bool Draw(IDirect3DDevice9*) override;
-        virtual void CheckProgress(const std::wstring& player_name) override;
-
         
     };
 

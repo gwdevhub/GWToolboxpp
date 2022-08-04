@@ -439,7 +439,7 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
 		ImGui::SetCursorPos(cursor_pos);
 
 		const ImVec2 check_size = ImGui::CalcTextSize(ICON_FA_CHECK);
-		ImGui::GetWindowDrawList()->AddText({ screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2) }, completed_text, ICON_FA_CHECK);
+		ImGui::GetWindowDrawList()->AddText({ screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2.f), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2.f) }, completed_text, ICON_FA_CHECK);
 		ImGui::SetCursorPos(cursor_pos2);
 	}
 	return true;
@@ -454,23 +454,29 @@ void PvESkill::CheckProgress(const std::wstring& player_name) {
 	is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id));
 }
 
-FactionsPvESkill::FactionsPvESkill(GW::Constants::SkillID kurzick_id, GW::Constants::SkillID luxon_id, const wchar_t* _image_url)
-	: PvESkill(kurzick_id, _image_url), skill_id2(luxon_id) {
-
+FactionsPvESkill::FactionsPvESkill(GW::Constants::SkillID skill_id)
+	: PvESkill(skill_id) {
+	GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+	uint32_t faction_id = 0x6C3D;
+	if ((GW::Constants::TitleID)s->title == GW::Constants::TitleID::Luxon) {
+		faction_id = 0x6C3E;
+	}
+	if (s) {
+		std::wstring buf;
+		buf.resize(32,0);
+		GW::UI::UInt32ToEncStr(s->name, buf.data(), buf.size());
+		buf.resize(wcslen(buf.data()));
+		buf += L"\x2\x108\x107 - \x1\x2";
+		buf.resize(wcslen(buf.data()) + 4, 0);
+		GW::UI::UInt32ToEncStr(faction_id, buf.data() + buf.size() - 4, 4);
+		buf.resize(wcslen(buf.data()) + 1,0);
+		name.reset(buf.c_str());
+	}
 };
-void FactionsPvESkill::CheckProgress(const std::wstring& player_name) {
-	is_completed = false;
-	auto& skills = CompletionWindow::Instance().character_completion;
-	auto found = skills.find(player_name);
-	if (found == skills.end())
-		return;
-	auto& unlocked = found->second->skills;
-	is_completed = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id)) || ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id2));
-}
 bool FactionsPvESkill::Draw(IDirect3DDevice9* device) {
-	icon_size.y *= 2;
+	//icon_size.y *= 2.f;
 	bool drawn = PvESkill::Draw(device);
-	icon_size.y /= 2;
+	//icon_size.y /= 2.f;
 	return drawn;
 }
 
@@ -957,16 +963,35 @@ void CompletionWindow::Initialize_Factions()
 	this_vanquishes.push_back(new Vanquish(MapID::Unwaking_Waters, QuestID::ZaishenVanquish_Unwaking_Waters));
 
 	auto& skills = pve_skills.at(Campaign::Factions);
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Save_Yourselves_kurzick, GW::Constants::SkillID::Save_Yourselves_luxon, L"1/1c/%22Save_Yourselves%21%22"));
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Aura_of_Holy_Might_kurzick, GW::Constants::SkillID::Aura_of_Holy_Might_luxon, L"5/5c/Aura_of_Holy_Might"));
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Elemental_Lord_kurzick, GW::Constants::SkillID::Elemental_Lord_luxon, L"2/27/Elemental_Lord"));
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Ether_Nightmare_kurzick, GW::Constants::SkillID::Ether_Nightmare_luxon, L"6/68/Ether_Nightmare"));
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Selfless_Spirit_kurzick, GW::Constants::SkillID::Selfless_Spirit_luxon, L"3/3e/Selfless_Spirit"));
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Shadow_Sanctuary_kurzick, GW::Constants::SkillID::Shadow_Sanctuary_luxon, L"1/17/Shadow_Sanctuary"));
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Signet_of_Corruption_kurzick, GW::Constants::SkillID::Signet_of_Corruption_luxon, L"1/18/Signet_of_Corruption"));
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Spear_of_Fury_kurzick, GW::Constants::SkillID::Spear_of_Fury_luxon, L"b/be/Spear_of_Fury"));
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Summon_Spirits_kurzick, GW::Constants::SkillID::Summon_Spirits_luxon, L"9/9c/Summon_Spirits"));
-	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Triple_Shot_kurzick, GW::Constants::SkillID::Triple_Shot_luxon, L"f/f0/Triple_Shot"));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Save_Yourselves_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Save_Yourselves_luxon));
+	
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Aura_of_Holy_Might_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Aura_of_Holy_Might_luxon));
+
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Elemental_Lord_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Elemental_Lord_luxon));
+
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Ether_Nightmare_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Ether_Nightmare_luxon));
+
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Selfless_Spirit_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Selfless_Spirit_luxon));
+
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Shadow_Sanctuary_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Shadow_Sanctuary_luxon));
+
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Signet_of_Corruption_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Signet_of_Corruption_luxon));
+
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Spear_of_Fury_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Spear_of_Fury_luxon));
+
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Summon_Spirits_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Summon_Spirits_luxon));
+
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Triple_Shot_kurzick));
+	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Triple_Shot_luxon));
 
 	auto& eskills = elite_skills.at(Campaign::Factions);
 	eskills.push_back(new PvESkill(GW::Constants::SkillID::Coward, L"9/9c/%22Coward%21%22"));
@@ -1159,6 +1184,7 @@ void CompletionWindow::Initialize_Nightfall()
 	this_vanquishes.push_back(new Vanquish(MapID::The_Sulfurous_Wastes));
 
 	auto& skills = pve_skills.at(Campaign::Nightfall);
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Theres_Nothing_to_Fear));
 	skills.push_back(new PvESkill(GW::Constants::SkillID::Lightbringer_Signet, L"4/43/Lightbringer_Signet"));
 	skills.push_back(new PvESkill(GW::Constants::SkillID::Lightbringers_Gaze,  L"c/c6/Lightbringer%27s_Gaze"));
 	skills.push_back(new PvESkill(GW::Constants::SkillID::Critical_Agility,  L"e/e8/Critical_Agility"));
