@@ -1849,11 +1849,11 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
         break;
     }
 apply:
-    auto* current_title = GW::PlayerMgr::GetActiveTitle();
-    if (title_id == CMDTITLE_KEEP_CURRENT && current_title) {
-        title_id = (uint32_t)current_title->title_id();
+    GW::Constants::TitleID current_title = GW::PlayerMgr::GetActiveTitleId();
+    if (title_id == CMDTITLE_KEEP_CURRENT && current_title != GW::Constants::TitleID::None) {
+        title_id = (uint32_t)current_title;
     }
-    if (current_title) {
+    if (current_title != GW::Constants::TitleID::None) {
         GW::PlayerMgr::RemoveActiveTitle();
     }
     switch (title_id) {

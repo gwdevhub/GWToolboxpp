@@ -75,6 +75,12 @@ void InfoWindow::Initialize() {
             Instance().ClearAvailableDialogs();
         },0x8000);
     GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
+
+    for (size_t i = 0; i < 30; i++) {
+        auto* f = GW::Map::GetMapTypeInstanceInfo((GW::RegionType)i);
+        if (!f) continue;
+        Log::Info("Map type %d = %d",f->map_region_type,f->request_instance_map_type);
+    }
 }
 bool InfoWindow::ClearAvailableDialogs() {
     for (auto dialog : available_dialogs) {
