@@ -164,8 +164,7 @@ namespace {
 
     struct DecodedTitleName {
         DecodedTitleName(GW::Constants::TitleID in) : title(in) {
-            GW::Title& t = GW::GameContext::instance()->world->titles[(uint32_t)title];
-            name.reset(t.name_id());
+            name.reset(GW::PlayerMgr::GetTitleData(title)->name_id);
         };
         GW::Constants::TitleID title;
         GuiUtils::EncString name;
