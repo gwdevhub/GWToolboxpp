@@ -17,6 +17,7 @@ public:
     static bool disable_when_not_found;
     static bool refill_if_below_threshold;
     static bool pcons_by_character;
+    static bool hide_quantities_in_explorable;
     static Color enabled_bg_color;
     static DWORD player_id;
 

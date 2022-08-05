@@ -78,6 +78,7 @@ private:
     bool same_map = false;
     bool same_party = false;
     wchar_t* failed_message = 0;
+    bool return_on_fail = false;
     bool reverting_reroll = false;
     enum RerollStage {
         None,

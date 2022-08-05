@@ -196,8 +196,9 @@ void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
     }
     else {
         ImGui::Text("Click on a character name to switch to that character.");
-        ImGui::Checkbox("Travel to same location after rerolling",&travel_to_same_location_after_rerolling);
+        ImGui::Checkbox("Travel to same location after rerolling", &travel_to_same_location_after_rerolling);
         ImGui::Checkbox("Re-join your party after rerolling", &rejoin_party_after_rerolling);
+        ImGui::Checkbox("Return to original character on fail", &return_on_fail);
         const float btnw = ImGui::GetContentRegionAvail().x / 2.f;
         const ImVec2 btn_dim = { btnw,0.f };
         std::string buf;
@@ -279,7 +280,6 @@ void RerollWindow::CmdReroll(const wchar_t* message, int argc, LPWSTR*) {
         return;
     }
     Log::Error("Failed to match profession or character name for command");
-    return;
 }
 
 void RerollWindow::OnSetStatus(GW::FriendStatus status) {
@@ -335,8 +335,8 @@ void RerollWindow::Update(float) {
     GW::PreGameContext* pgc = GW::PreGameContext::instance();
     switch (reroll_stage) {
         case PendingLogout: {
-            uint32_t logout = 1;
-            GW::UI::SendUIMessage(GW::UI::UIMessage::kLogout, (void*) &logout);
+            uint32_t to_character_select = 1;
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kLogout, (void*)&to_character_select);
             reroll_stage = WaitingForCharSelect;
             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 10000;
             return;
@@ -530,6 +530,9 @@ void RerollWindow::RerollFailed(wchar_t* reason) {
     if (reverting_reroll)
         return; // Can't do anything.
     failed_message = reason;
+    if (!return_on_fail) {
+        return;
+    }
     reverting_reroll = true;
     wcscpy(reroll_to_player_name, initial_player_name);
     same_map = false;
@@ -610,6 +613,7 @@ void RerollWindow::LoadSettings(CSimpleIni* ini) {
     }
     travel_to_same_location_after_rerolling = ini->GetBoolValue(Name(), VAR_NAME(travel_to_same_location_after_rerolling), travel_to_same_location_after_rerolling);
     rejoin_party_after_rerolling = ini->GetBoolValue(Name(), VAR_NAME(rejoin_party_after_rerolling), rejoin_party_after_rerolling);
+    return_on_fail = ini->GetBoolValue(Name(), VAR_NAME(return_on_fail), return_on_fail);
 }
 void RerollWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
@@ -624,4 +628,5 @@ void RerollWindow::SaveSettings(CSimpleIni* ini) {
     }
     ini->SetBoolValue(Name(), VAR_NAME(travel_to_same_location_after_rerolling), travel_to_same_location_after_rerolling);
     ini->SetBoolValue(Name(), VAR_NAME(rejoin_party_after_rerolling), rejoin_party_after_rerolling);
+    ini->SetBoolValue(Name(), VAR_NAME(return_on_fail), return_on_fail);
 }

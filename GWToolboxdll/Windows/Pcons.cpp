@@ -41,6 +41,7 @@ bool Pcon::suppress_drunk_text = false;
 bool Pcon::suppress_drunk_emotes = false;
 bool Pcon::suppress_lunar_skills = false;
 bool Pcon::pcons_by_character = true;
+bool Pcon::hide_quantities_in_explorable = true;
 bool Pcon::hide_city_pcons_in_explorable_areas = false;
 
 // 22 is the highest bag index. 25 is the most slots in any single bag.
@@ -112,7 +113,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
         Toggle();
     }
     ImGui::PopStyleColor();
-    if (maptype == GW::Constants::InstanceType::Explorable)
+    if (maptype == GW::Constants::InstanceType::Explorable && hide_quantities_in_explorable)
         return; // Don't draw in explorable areas - this is only for refilling in an outpost!
     if (ImGui::IsItemHovered()) {
         char out[128];
