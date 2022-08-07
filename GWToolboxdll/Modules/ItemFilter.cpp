@@ -74,6 +74,10 @@ namespace GW::Constants::ItemID {
     // Bundles
     constexpr int UnholyText = 2619;
 
+    // Money
+    constexpr int GoldCoin = 2510;
+    constexpr int GoldCoins = 2511;
+
 } // namespace GW::Constants::ItemID
 
 namespace {
@@ -217,14 +221,20 @@ namespace {
         GW::Constants::ItemID::PhantomKey,
         GW::Constants::ItemID::Lockpick,
         GW::Constants::ItemID::ResScrolls,
+        GW::Constants::ItemID::GoldCoin,
 
         // Quest Items
         GW::Constants::ItemID::UnholyText,
     };
 
-    const std::vector<ItemModelID> never_hide_for_party = {GW::Constants::ItemID::EternalBlade,
-        GW::Constants::ItemID::VoltaicSpear, GW::Constants::ItemID::MiniDhuum, GW::Constants::ItemID::CrystallineSword,
-        GW::Constants::ItemID::DSR};
+    const std::vector<ItemModelID> never_hide_for_party = {
+        GW::Constants::ItemID::EternalBlade,
+        GW::Constants::ItemID::VoltaicSpear,
+        GW::Constants::ItemID::MiniDhuum,
+        GW::Constants::ItemID::CrystallineSword,
+        GW::Constants::ItemID::DSR,
+        GW::Constants::ItemID::GoldCoin,
+    };
 
 } // namespace
 
@@ -276,10 +286,20 @@ void ItemFilter::OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::PacketBase
     if (!item) return;
 
     const auto* player = GW::Agents::GetCharacter();
-    if (player == nullptr) return; // spectating, do not suppress
+    if (player == nullptr) return;
+
+    if (player->max_energy == 0 || player->login_number == 0) {
+        // we're spectating, not sure what our own player is
+        if (Instance().WantToHide(*item, false) && Instance().WantToHide(*item, true)) {
+            // only block items that we want to block for player and party
+            status->blocked = true;
+            Instance().suppressed_packets.push_back(*packet);
+        }
+        return;
+    }
 
     const auto owner = GetItemOwner(*item);
-    const auto can_pick_up = owner == nullptr           // not reserved
+    const auto can_pick_up = owner == nullptr                    // not reserved
                              || owner->agent_id == player->agent_id; // reserved for user
 
     if (Instance().WantToHide(*item, can_pick_up)) {
@@ -309,7 +329,6 @@ void ItemFilter::OnMapLoad(GW::HookStatus* status, GW::Packet::StoC::PacketBase*
 bool ItemFilter::WantToHide(const GW::Item& item, const bool can_pick_up) const {
     const auto rarity = GetRarity(item);
     if (can_pick_up) {
-
         if (std::find(never_hide_for_user.begin(), never_hide_for_user.end(), item.model_id) !=
             never_hide_for_user.end())
             return false;
