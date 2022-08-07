@@ -85,6 +85,7 @@ private:
     bool use_gamesettings = true;
     bool use_updater = true;
     bool use_chatfilter = true;
+    bool use_itemfilter = true;
     bool use_chatcommand = true;
     bool use_discordintegration = false;
     bool use_obfuscator = true;
