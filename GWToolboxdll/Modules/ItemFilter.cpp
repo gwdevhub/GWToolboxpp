@@ -236,7 +236,7 @@ namespace {
         GW::Constants::ItemID::GoldCoin,
     };
 
-} // namespace
+}
 
 void ItemFilter::Initialize() {
     ToolboxModule::Initialize();

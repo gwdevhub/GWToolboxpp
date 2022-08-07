@@ -22,6 +22,7 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Item Filter"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_COINS; }
     [[nodiscard]] const char* SettingsName() const override { return "Item Settings"; }
 
     void Initialize() override;
