@@ -1,10 +1,10 @@
 #pragma once
 
-#include <GWCA/GameEntities/Item.h>
-#include <ToolboxModule.h>
-
-#include <memory>
 #include <vector>
+
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/Packets/StoC.h>
+#include <ToolboxModule.h>
 
 using ItemModelID = decltype(GW::Item::model_id);
 enum class Rarity : uint8_t { White, Blue, Purple, Gold, Green, Unknown };

@@ -1,14 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-
-#include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
-
-#include <GWCA/Packets/StoC.h>
-
-#include <GWCA/GameEntities/Party.h>
-
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
@@ -84,13 +77,8 @@
 #include <Widgets/SkillMonitorWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Widgets/EffectsMonitorWidget.h>
-#include "ToolboxSettings.h"
-
-
 #include <Widgets/LatencyWidget.h>
-
-//#define _FUN
-
+#include "ToolboxSettings.h"
 
 bool ToolboxSettings::move_all = false;
 
