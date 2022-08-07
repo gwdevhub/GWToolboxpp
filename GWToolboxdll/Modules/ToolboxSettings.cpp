@@ -19,6 +19,7 @@
 #include <Modules/Updater.h>
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
+#include <Modules/ItemFilter.h>
 #include <Modules/ChatCommands.h>
 #include <Modules/GameSettings.h>
 #include <Modules/DiscordModule.h>
@@ -84,6 +85,8 @@
 #include <Widgets/WorldMapWidget.h>
 #include <Widgets/EffectsMonitorWidget.h>
 #include "ToolboxSettings.h"
+
+
 #include <Widgets/LatencyWidget.h>
 
 //#define _FUN
@@ -98,6 +101,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 
     if (use_chatcommand) optional_modules.push_back(&ChatCommands::Instance());
     if (use_chatfilter) optional_modules.push_back(&ChatFilter::Instance());
+    if (use_itemfilter) optional_modules.push_back(&ItemFilter::Instance());
     optional_modules.push_back(&GameSettings::Instance());
     optional_modules.push_back(&InventoryManager::Instance());
     if (use_partywindowmodule) optional_modules.push_back(&PartyWindowModule::Instance());
@@ -322,6 +326,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_gamesettings = ini->GetBoolValue(Name(), VAR_NAME(use_gamesettings), use_gamesettings);
     use_updater = ini->GetBoolValue(Name(), VAR_NAME(use_updater), use_updater);
     use_chatfilter = ini->GetBoolValue(Name(), VAR_NAME(use_chatfilter), use_chatfilter);
+    use_itemfilter = ini->GetBoolValue(Name(), VAR_NAME(use_itemfilter), use_itemfilter);
     use_chatcommand = ini->GetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
     use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
     use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
@@ -384,6 +389,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_gamesettings), use_gamesettings);
     ini->SetBoolValue(Name(), VAR_NAME(use_updater), use_updater);
     ini->SetBoolValue(Name(), VAR_NAME(use_chatfilter), use_chatfilter);
+    ini->SetBoolValue(Name(), VAR_NAME(use_itemfilter), use_itemfilter);
     ini->SetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
     ini->SetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
     ini->SetBoolValue(Name(), VAR_NAME(use_obfuscator), use_obfuscator);
