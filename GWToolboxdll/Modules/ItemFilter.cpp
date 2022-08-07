@@ -107,7 +107,11 @@ namespace {
         if (!item.agent_id) return nullptr;
         const auto agent = GW::Agents::GetAgentByID(item.agent_id);
         if (!agent) return nullptr;
-        return agent->GetAsAgentLiving();
+        const auto itemagent = agent->GetAsAgentItem();
+        if (!itemagent) return nullptr;
+        const auto owner = GW::Agents::GetAgentByID(itemagent->owner);
+        if (!owner) return nullptr;
+        return owner->GetAsAgentLiving();
     }
 
     const GW::Item* IsItem(const GW::Packet::StoC::AgentAdd& packet) {
