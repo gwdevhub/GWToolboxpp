@@ -12,9 +12,7 @@
 
 class InfoWindow : public ToolboxWindow {
     InfoWindow() {};
-    ~InfoWindow() {
-        ClearAvailableDialogs();
-    };
+    ~InfoWindow() {};
 public:
     static InfoWindow& Instance() {
         static InfoWindow instance;
@@ -47,24 +45,11 @@ private:
         Left
     };
 
-    struct AvailableDialog {
-        GuiUtils::EncString msg;
-        char dialog_buf[11];
-        AvailableDialog(wchar_t* _message, uint32_t dialog_id) {
-            msg.reset(_message);
-            snprintf(dialog_buf, sizeof(dialog_buf), "0x%X", dialog_id);
-        };
-    };
-
-    std::vector<AvailableDialog*> available_dialogs;
-
-
     static const char* GetStatusStr(Status status);
 
     void PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name);
     void DrawResignlog();
 
-    bool ClearAvailableDialogs();
     void InfoField(const char* label, const char* fmt, ...);
     void EncInfoField(const char* label, const wchar_t* enc_string);
 

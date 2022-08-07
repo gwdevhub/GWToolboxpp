@@ -50,6 +50,7 @@
 #include <Windows/StringDecoderWindow.h>
 
 #include <Modules/ToolboxSettings.h>
+#include <Modules/DialogModule.h>
 
 void InfoWindow::Initialize() {
     ToolboxWindow::Initialize();
@@ -60,20 +61,6 @@ void InfoWindow::Initialize() {
             quoted_item_id = packet->itemid;
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,OnInstanceLoad);
-    GW::UI::RegisterUIMessageCallback(&OnDialogBody_Entry, GW::UI::UIMessage::kDialogBody, [](GW::HookStatus* status, GW::UI::UIMessage, void* , void*) {
-        if(!status->blocked)
-            Instance().ClearAvailableDialogs();
-        },0x8000);
-    GW::UI::RegisterUIMessageCallback(&OnDialogButton_Entry, GW::UI::UIMessage::kDialogButton, [](GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
-        if (!status->blocked) {
-            auto btn = (GW::UI::DialogButtonInfo*)wparam;
-            Instance().available_dialogs.push_back(new AvailableDialog(btn->message, btn->dialog_id));
-        }
-        }, 0x8000);
-    GW::UI::RegisterUIMessageCallback(&OnSendDialog_Entry, GW::UI::UIMessage::kSendDialog, [](GW::HookStatus* status, GW::UI::UIMessage, void*, void*) {
-        if (!status->blocked)
-            Instance().ClearAvailableDialogs();
-        },0x8000);
     GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
 
     for (size_t i = 0; i < 30; i++) {
@@ -81,17 +68,6 @@ void InfoWindow::Initialize() {
         if (!f) continue;
         Log::Info("Map type %d = %d",f->map_region_type,f->request_instance_map_type);
     }
-}
-bool InfoWindow::ClearAvailableDialogs() {
-    for (auto dialog : available_dialogs) {
-        if (dialog->msg.IsDecoding())
-            return false;
-    }
-    for (auto dialog : available_dialogs) {
-        delete dialog;
-    }
-    available_dialogs.clear();
-    return true;
 }
 void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
     UNREFERENCED_PARAMETER(cmd);
@@ -489,14 +465,24 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopID();
         }
         if (show_dialog && ImGui::CollapsingHeader("Dialog")) {
+            EncInfoField("Dialog Body", DialogModule::Instance().GetDialogBody());
             InfoField("Last Dialog", "0x%X", GW::Agents::GetLastDialogId());
             ImGui::Text("Available NPC Dialogs:");
             ImGui::ShowHelp("Talk to an NPC to see available dialogs");
-            ImGui::PushItemWidth(140.0f * ImGui::GetIO().FontGlobalScale);
-            for (auto dialog : available_dialogs) {
-                ImGui::InputText(dialog->msg.string().c_str(), dialog->dialog_buf, _countof(dialog->dialog_buf), ImGuiInputTextFlags_ReadOnly);
+            auto messages = DialogModule::Instance().GetDialogButtonMessages();
+            auto buttons = DialogModule::Instance().GetDialogButtons();
+            char bbuf[48];
+            for (size_t i = 0; i < buttons.size();i++) {
+                snprintf(bbuf, _countof(bbuf), "Send###send_dialog_%d", i);
+                if (ImGui::Button(bbuf)) {
+                    uint32_t dialog_id = buttons[i]->dialog_id;
+                    GW::GameThread::Enqueue([dialog_id]() {
+                        GW::Agents::SendDialog(dialog_id);
+                        });
+                }
+                ImGui::SameLine();
+                InfoField(messages[i]->string().c_str(), "0x%X", buttons[i]->dialog_id);
             }
-            ImGui::PopItemWidth();
         }
         if (ImGui::CollapsingHeader("Hovered Skill")) {
             static GuiUtils::EncString skill_name;

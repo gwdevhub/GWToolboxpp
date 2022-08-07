@@ -918,25 +918,15 @@ void GameSettings::Initialize() {
 #endif
 
 }
-void GameSettings::OnDialogUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* ) {
-    auto& available_dialog_ids = Instance().available_dialog_ids;
+void GameSettings::OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void* ) {
     switch (message_id) {
-        case GW::UI::UIMessage::kDialogBody: {
-            available_dialog_ids.clear();
-        } break;
         case GW::UI::UIMessage::kDialogButton: {
             GW::UI::DialogButtonInfo* info = (GW::UI::DialogButtonInfo*)wparam;
-            available_dialog_ids.push_back(info->dialog_id);
             // 8101 7f88 010a 8101 730e 0001
             if (wcscmp(info->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
                 // Auto use lockpick
                 GW::Items::OpenLockedChest(false);
             }
-        } break;
-        case GW::UI::UIMessage::kSendDialog: {
-            auto found = std::find(available_dialog_ids.begin(), available_dialog_ids.end(), (uint32_t)wparam);
-            if (found == available_dialog_ids.end())
-                status->blocked = true;
         } break;
     }
 }
