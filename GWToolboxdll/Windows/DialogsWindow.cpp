@@ -11,6 +11,7 @@
 
 #include <Modules/Resources.h>
 #include <Windows/DialogsWindow.h>
+#include <Modules/DialogModule.h>
 
 static const char* const questnames[] = {
     "UW - Chamber",
@@ -43,24 +44,25 @@ static const char* const questnames[] = {
     "DoA - Foundry 1: Foundry Of Failed Creations",
     "DoA - Foundry 2: Foundry Breakout"
 };
-static const char* const dialognames[] = {
-    "Craft fow armor",
-    "Prof Change - Warrior",
-    "Prof Change - Ranger",
-    "Prof Change - Monk",
-    "Prof Change - Necro",
-    "Prof Change - Mesmer",
-    "Prof Change - Elementalist",
-    "Prof Change - Assassin",
-    "Prof Change - Ritualist",
-    "Prof Change - Paragon",
-    "Prof Change - Dervish",
-    "Kama -> Docks @ Hahnna",
-    "Docks -> Kaineng @ Mhenlo",
-    "Docks -> LA Gate @ Mhenlo",
-    "LA Gate -> LA @ Neiro",
-    "Faction mission outpost",
-    "Nightfall mission outpost",
+
+static std::map<const char*,std::vector<int>> dialogs_by_name = {
+    {"Craft fow armor",{GW::Constants::DialogID::FowCraftArmor}},
+    {"Prof Change - Warrior",{GW::Constants::DialogID::ProfChangeWarrior + 1, GW::Constants::DialogID::ProfChangeWarrior}},
+    {"Prof Change - Ranger",{GW::Constants::DialogID::ProfChangeRanger + 1, GW::Constants::DialogID::ProfChangeRanger}},
+    {"Prof Change - Monk",{GW::Constants::DialogID::ProfChangeMonk + 1, GW::Constants::DialogID::ProfChangeMonk}},
+    {"Prof Change - Necro",{GW::Constants::DialogID::ProfChangeNecro + 1, GW::Constants::DialogID::ProfChangeNecro}},
+    {"Prof Change - Mesmer",{GW::Constants::DialogID::ProfChangeMesmer + 1, GW::Constants::DialogID::ProfChangeMesmer}},
+    {"Prof Change - Elementalist",{GW::Constants::DialogID::ProfChangeEle + 1, GW::Constants::DialogID::ProfChangeEle}},
+    {"Prof Change - Assassin",{GW::Constants::DialogID::ProfChangeAssassin + 1, GW::Constants::DialogID::ProfChangeAssassin}},
+    {"Prof Change - Ritualist",{GW::Constants::DialogID::ProfChangeRitualist + 1, GW::Constants::DialogID::ProfChangeRitualist}},
+    {"Prof Change - Paragon",{GW::Constants::DialogID::ProfChangeParagon + 1, GW::Constants::DialogID::ProfChangeParagon}},
+    {"Prof Change - Dervish",{GW::Constants::DialogID::ProfChangeDervish + 1, GW::Constants::DialogID::ProfChangeDervish}},
+    {"Kama -> Docks @ Hahnna",{GW::Constants::DialogID::FerryKamadanToDocks}},
+    {"Docks -> Kaineng @ Mhenlo",{GW::Constants::DialogID::FerryDocksToKaineng}},
+    {"Docks -> LA Gate @ Mhenlo",{GW::Constants::DialogID::FerryDocksToLA}},
+    {"LA Gate -> LA @ Neiro",{GW::Constants::DialogID::FerryGateToLA}},
+    {"Faction mission outpost",{GW::Constants::DialogID::FactionMissionOutpost}},
+    {"Nightfall mission outpost",{GW::Constants::DialogID::NightfallMissionOutpost}}
 };
 
 void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -123,14 +125,27 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::Separator();
         }
         if (show_custom) {
-            const int n_dialogs = _countof(dialognames);
+            const int n_dialogs = dialogs_by_name.size();
             static int dialogindex = 0;
             ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-            ImGui::Combo("###dialogcombo", &dialogindex, dialognames, n_dialogs);
+            auto current = std::next(dialogs_by_name.begin(), dialogindex);
+            if (ImGui::BeginCombo("###dialogcombo", current->first)) {
+                int offset = 0;
+                for (auto it = dialogs_by_name.begin(); it != dialogs_by_name.end(); it++) {
+                    if (ImGui::Selectable(it->first, it == current)) {
+                        dialogindex = offset;
+                        break;
+                    }
+                    offset++;
+                }
+                ImGui::EndCombo();
+            }
             ImGui::PopItemWidth();
             ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
             if (ImGui::Button("Send##1", ImVec2(60.0f, 0))) {
-                GW::Agents::SendDialog(IndexToDialogID(dialogindex));
+                for (uint32_t dialog_id : current->second) {
+                    DialogModule::Instance().SendDialog(dialog_id);
+                }
             }
 
             ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
@@ -144,7 +159,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
                 int iid;
                 if (GuiUtils::ParseInt(customdialogbuf, &iid) && (0 <= iid)) {
                     uint32_t id = static_cast<uint32_t>(iid);
-                    GW::Agents::SendDialog(id);
+                    DialogModule::Instance().SendDialog(id);
                 } else {
                     Log::Error("Invalid dialog number '%s'", customdialogbuf);
                 }
