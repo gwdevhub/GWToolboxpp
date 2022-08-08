@@ -62,12 +62,6 @@ void InfoWindow::Initialize() {
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,OnInstanceLoad);
     GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
-
-    for (size_t i = 0; i < 30; i++) {
-        auto* f = GW::Map::GetMapTypeInstanceInfo((GW::RegionType)i);
-        if (!f) continue;
-        Log::Info("Map type %d = %d",f->map_region_type,f->request_instance_map_type);
-    }
 }
 void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
     UNREFERENCED_PARAMETER(cmd);
