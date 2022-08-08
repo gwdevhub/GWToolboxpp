@@ -11,9 +11,7 @@ enum class Rarity : uint8_t { White, Blue, Purple, Gold, Green, Unknown };
 
 class ItemFilter : public ToolboxModule {
     ItemFilter() = default;
-    ~ItemFilter() override {
-        SpawnSuppressedItems();
-    }
+    ~ItemFilter() override = default;
 
 public:
     static ItemFilter& Instance() {
@@ -26,6 +24,7 @@ public:
     [[nodiscard]] const char* SettingsName() const override { return "Item Settings"; }
 
     void Initialize() override;
+    void Terminate() override { SpawnSuppressedItems(); }
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
