@@ -140,8 +140,15 @@ void DialogModule::Initialize() {
     }
 }
 void DialogModule::SendDialog(uint32_t dialog_id) {
-    queued_dialogs_to_send.push_back({ TIMER_INIT(),dialog_id });
+    queued_dialogs_to_send.emplace_back(TIMER_INIT(), dialog_id);
 }
+
+void DialogModule::SendDialogs(std::initializer_list<uint32_t> dialog_ids) {
+    for (const auto dialog_id : dialog_ids) {
+        SendDialog(dialog_id);
+    }
+}
+
 void DialogModule::Update(float) {
     for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end();it++) {
         if (TIMER_DIFF(it->first) > 3000) {
