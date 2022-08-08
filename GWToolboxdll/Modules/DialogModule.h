@@ -24,7 +24,9 @@ public:
 
     void Initialize() override;
     void Terminate() override;
+    void Update(float) override;
     const wchar_t* GetDialogBody();
+    void SendDialog(uint32_t dialog_id);
     uint32_t GetDialogAgent();
     const std::vector<GW::UI::DialogButtonInfo*>& GetDialogButtons();
     const std::vector<GuiUtils::EncString*>& DialogModule::GetDialogButtonMessages();

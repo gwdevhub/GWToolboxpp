@@ -3,11 +3,15 @@
 #include <Utils/GuiUtils.h>
 
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 
 #include <Logger.h>
 #include <Modules/DialogModule.h>
-#include <GWCA/Utilities/Scanner.h>
-#include <GWCA/Utilities/Hooker.h>
+
+#include <Timer.h>
 
 namespace {
     GW::UI::UIInteractionCallback NPCDialogUICallback_Func = 0;
@@ -18,6 +22,8 @@ namespace {
 
     GW::UI::DialogBodyInfo dialog_info;
     GuiUtils::EncString dialog_body;
+
+
 
     DialogModule& Instance() {
         return DialogModule::Instance();
@@ -95,18 +101,29 @@ namespace {
         } break;
         }
     }
+    bool IsDialogButtonAvailable(uint32_t dialog_id) {
+        for (auto d : dialog_buttons) {
+            if (d->dialog_id == dialog_id)
+                return true;
+        }
+        return false;
+    }
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
         case GW::UI::UIMessage::kSendDialog: {
-            for (auto* d : dialog_buttons) {
-                if (d->dialog_id == (uint32_t)wparam)
-                    return;
+            if (!IsDialogButtonAvailable((uint32_t)wparam)) {
+                status->blocked = true;
             }
-            status->blocked = true;
+            else {
+                ResetDialog();
+            }
         } break;
         }
     }
+
     GW::HookEntry dialog_hook;
+
+    std::vector<std::pair<clock_t, uint32_t>> queued_dialogs_to_send;
 }
 
 void DialogModule::Initialize() {
@@ -125,6 +142,23 @@ void DialogModule::Initialize() {
     if (NPCDialogUICallback_Func) {
         GW::HookBase::CreateHook(NPCDialogUICallback_Func, OnNPCDialogUICallback, (void**)&NPCDialogUICallback_Ret);
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
+    }
+}
+void DialogModule::SendDialog(uint32_t dialog_id) {
+    queued_dialogs_to_send.push_back({ TIMER_INIT(),dialog_id });
+}
+void DialogModule::Update(float) {
+    for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end();it++) {
+        if (TIMER_DIFF(it->first) > 3000) {
+            // NB: Show timeout error message?
+            queued_dialogs_to_send.erase(it);
+            break;
+        }
+        if (IsDialogButtonAvailable(it->second)) {
+            GW::Agents::SendDialog(it->second);
+            queued_dialogs_to_send.erase(it);
+            break;
+        }
     }
 }
 void DialogModule::Terminate() {
