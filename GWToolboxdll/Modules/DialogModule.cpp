@@ -6,8 +6,13 @@
 
 #include <Logger.h>
 #include <Modules/DialogModule.h>
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 
 namespace {
+    GW::UI::UIInteractionCallback NPCDialogUICallback_Func = 0;
+    GW::UI::UIInteractionCallback NPCDialogUICallback_Ret = 0;
+
     std::vector<GW::UI::DialogButtonInfo*> dialog_buttons;
     std::vector<GuiUtils::EncString*> dialog_button_messages;
 
@@ -63,6 +68,14 @@ namespace {
         dialog_button_messages.clear();
         dialog_info.agent_id = 0;
     }
+    void OnNPCDialogUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam) {
+        GW::HookBase::EnterHook();
+        if (message->message_id == 0xb) {
+            ResetDialog();
+        }
+        NPCDialogUICallback_Ret(message, wparam,lparam);
+        GW::HookBase::LeaveHook();
+    }
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
         if (status->blocked) {
             // Blocked elsewhere.
@@ -107,6 +120,15 @@ void DialogModule::Initialize() {
         GW::UI::RegisterUIMessageCallback(&dialog_hook, message_id, OnPreUIMessage,-0x1);
         GW::UI::RegisterUIMessageCallback(&dialog_hook, message_id, OnPostUIMessage, 0x500);
     }
+    // NB: Can also be found via floating dialogs array in memory. We're not using hooks for any of the other floating dialogs, but would be good to document later.
+    NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\game\\gmnpc.cpp", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb);
+    if (NPCDialogUICallback_Func) {
+        GW::HookBase::CreateHook(NPCDialogUICallback_Func, OnNPCDialogUICallback, (void**)&NPCDialogUICallback_Ret);
+        GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
+    }
+}
+void DialogModule::Terminate() {
+    GW::HookBase::RemoveHook(NPCDialogUICallback_Func);
 }
 const wchar_t* DialogModule::GetDialogBody()
 {

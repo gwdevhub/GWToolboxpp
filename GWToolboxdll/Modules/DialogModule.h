@@ -23,6 +23,7 @@ public:
     const char* Name() const override { return "Dialogs"; }
 
     void Initialize() override;
+    void Terminate() override;
     const wchar_t* GetDialogBody();
     uint32_t GetDialogAgent();
     const std::vector<GW::UI::DialogButtonInfo*>& GetDialogButtons();
