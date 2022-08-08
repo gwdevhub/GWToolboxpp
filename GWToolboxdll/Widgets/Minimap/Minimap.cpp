@@ -950,8 +950,12 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
     if (is_observing)
         return false;
-    if (mouse_clickthrough_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
-        return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
+    if (mouse_clickthrough_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+        if (!IsKeyDown(MinimapModifierBehaviour::Target) &&
+            !IsKeyDown(MinimapModifierBehaviour::Walk) &&
+            !IsKeyDown(MinimapModifierBehaviour::Move))
+            return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
+    }
     if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return false;
     switch (Message) {

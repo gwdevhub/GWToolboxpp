@@ -23,11 +23,6 @@ namespace {
     GW::UI::DialogBodyInfo dialog_info;
     GuiUtils::EncString dialog_body;
 
-
-
-    DialogModule& Instance() {
-        return DialogModule::Instance();
-    }
     void OnDialogButtonAdded(GW::UI::DialogButtonInfo* wparam) {
         GW::UI::DialogButtonInfo* button_info = new GW::UI::DialogButtonInfo();
         memcpy(button_info, wparam, sizeof(*button_info));
