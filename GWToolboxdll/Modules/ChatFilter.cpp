@@ -763,4 +763,3 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) c
         }
     }
 }
-
