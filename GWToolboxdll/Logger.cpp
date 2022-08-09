@@ -170,9 +170,11 @@ static void _vchatlogW(LogType log_type, const wchar_t* format, va_list argv) {
 }
 
 static void _vchatlog(LogType log_type, const char* format, va_list argv) {
-    char buf1[512];
-    vsnprintf(buf1, 512, format, argv);
-    std::wstring sbuf2 = GuiUtils::StringToWString(buf1);
+    size_t len = vsnprintf(NULL, 0, format, argv);
+    char* buf = (char*)malloc(len + 1);
+    vsnprintf(buf, len+1, format, argv);
+    std::wstring sbuf2 = GuiUtils::StringToWString(buf);
+    delete buf;
     _chatlog(log_type, sbuf2.c_str());
 }
 
