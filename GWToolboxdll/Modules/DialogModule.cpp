@@ -2,6 +2,8 @@
 
 #include <Utils/GuiUtils.h>
 
+#include <GWCA/Constants/QuestIDs.h>
+
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
@@ -185,7 +187,12 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
             case 23: // quest reward icon
                 to_use = dialog_button;
         }
-        if (to_use && to_use->dialog_id == 0x806703) continue; // skip uwg unless it's the only available dialog
+        if (to_use) {
+            const auto quest_id = static_cast<GW::Constants::QuestID>(to_use->dialog_id ^ 0x800003 >> 8);
+            if (quest_id == GW::Constants::QuestID::UW_UWG) {
+                continue; // skip unless it's the only available dialog - certain quests almost always want to be taken last
+            }
+        }
         break;
     }
     if (to_use) {

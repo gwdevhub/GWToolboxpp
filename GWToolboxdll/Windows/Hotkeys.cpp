@@ -1423,8 +1423,8 @@ void HotkeyAction::Execute()
             break;
         case HotkeyAction::OpenLockedChest: {
             if (isExplorable()) {
-                GW::Agent *target = GW::Agents::GetTarget();
-                if (target && target->type == 0x200) {
+                GW::Agent* target = GW::Agents::GetTarget();
+                if (target && target->GetIsGadgetType()) {
                     GW::Agents::GoSignpost(target);
                     GW::Items::OpenLockedChest();
                 }
@@ -1623,7 +1623,7 @@ void HotkeyDialog::Execute()
         return;
     }
     if (isExplorable()) {
-        if (const auto* target = GW::Agents::GetTarget(); target && target->type == 0xDB) {
+        if (const auto* target = GW::Agents::GetTargetAsAgentLiving()) {
             GW::Agents::GoNPC(target);
         }
     }
