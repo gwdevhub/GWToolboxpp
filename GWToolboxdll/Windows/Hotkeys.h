@@ -331,7 +331,7 @@ public:
 
 class HotkeyDialog : public TBHotkey {
 public:
-    size_t id = 0;
+    uint32_t id = 0;
     char name[140];
 
     static const char* IniSection() { return "Dialog"; }

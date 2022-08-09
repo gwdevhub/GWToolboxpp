@@ -97,11 +97,10 @@ namespace {
         }
     }
     bool IsDialogButtonAvailable(uint32_t dialog_id) {
-        for (auto d : dialog_buttons) {
-            if (d->dialog_id == dialog_id)
-                return true;
-        }
-        return false;
+        return std::any_of(
+            dialog_buttons.begin(), dialog_buttons.end(), [dialog_id](const GW::UI::DialogButtonInfo* d) -> bool {
+                return d->dialog_id == dialog_id;
+            });
     }
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
@@ -151,7 +150,7 @@ void DialogModule::SendDialogs(std::initializer_list<uint32_t> dialog_ids) {
 }
 
 void DialogModule::Update(float) {
-    for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end();it++) {
+    for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end(); it++) {
         if (TIMER_DIFF(it->first) > 3000) {
             // NB: Show timeout error message?
             queued_dialogs_to_send.erase(it);
@@ -175,6 +174,31 @@ const std::vector<GuiUtils::EncString*>& DialogModule::GetDialogButtonMessages()
 {
     return dialog_button_messages;
 }
+
+uint32_t DialogModule::AcceptFirstAvailableQuest() {
+    if (dialog_buttons.empty()) return 0;
+    const GW::UI::DialogButtonInfo* to_use = nullptr;
+    for (const auto dialog_button : dialog_buttons) {
+        switch (dialog_button->button_icon) {
+            case 16: // quest accept icon
+            case 18: // quest enquire icon
+            case 23: // quest reward icon
+                to_use = dialog_button;
+        }
+        if (to_use && to_use->dialog_id == 0x806703) continue; // skip uwg unless it's the only available dialog
+        break;
+    }
+    if (to_use) {
+        SendDialog(to_use->dialog_id);
+        if (to_use->button_icon == 18) {
+            SendDialog(to_use->dialog_id - 2); // quest accept dialog
+            return to_use->dialog_id - 2;
+        }
+        return to_use->dialog_id;
+    }
+    return 0;
+}
+
 uint32_t DialogModule::GetDialogAgent()
 {
     return dialog_info.agent_id;

@@ -30,4 +30,5 @@ public:
     static uint32_t GetDialogAgent();
     static const std::vector<GW::UI::DialogButtonInfo*>& GetDialogButtons();
     static const std::vector<GuiUtils::EncString*>& DialogModule::GetDialogButtonMessages();
+    static uint32_t AcceptFirstAvailableQuest();
 };
