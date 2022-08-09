@@ -84,12 +84,12 @@ private:
     }
     void RemoveSpecialNPC(uint32_t model_id) {
         user_defined_npcs_by_model_id.erase(model_id);
-        for (uint32_t i = 0; i < user_defined_npcs.size(); i++) {
-            if (!user_defined_npcs[i])
+        for (auto& user_defined_npc : user_defined_npcs) {
+            if (!user_defined_npc)
                 continue;
-            if (user_defined_npcs[i]->model_id == model_id) {
-                delete user_defined_npcs[i];
-                user_defined_npcs[i] = nullptr;
+            if (user_defined_npc->model_id == model_id) {
+                delete user_defined_npc;
+                user_defined_npc = nullptr;
                 // Don't actually call erase() because its mad dodgy, but set to nullptr instead.
                 break;
             }
@@ -97,9 +97,9 @@ private:
     }
     void ClearSpecialNPCs() {
         user_defined_npcs_by_model_id.clear();
-        for (uint32_t i = 0; i < user_defined_npcs.size(); i++) {
-            if (!user_defined_npcs[i]) continue;
-            delete user_defined_npcs[i];
+        for (const auto& user_defined_npc : user_defined_npcs) {
+            if (!user_defined_npc) continue;
+            delete user_defined_npc;
         }
         user_defined_npcs.clear();
     }
@@ -113,6 +113,7 @@ private:
     bool add_npcs_to_party_window = true; // Quick tickbox to disable the module without restarting TB
     bool add_player_numbers_to_party_window = false;
     bool add_elite_skill_to_summons = false;
+    bool remove_dead_imperials = false;
 
     char new_npc_alias[128] = { 0 };
     int new_npc_model_id = 0;
@@ -122,7 +123,7 @@ private:
 
     bool ShouldAddAgentToPartyWindow(uint32_t agent_type);
     bool ShouldAddAgentToPartyWindow(GW::Agent* agent);
-    bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id);
+    bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id) const;
     void RemoveAllyActual(uint32_t agent_id);
     void AddAllyActual(PendingAddToParty &p);
 
