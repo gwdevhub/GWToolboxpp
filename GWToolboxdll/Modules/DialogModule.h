@@ -1,5 +1,6 @@
 #pragma once
 #include <ToolboxModule.h>
+
 namespace GuiUtils {
     class EncString;
 }
@@ -11,8 +12,9 @@ namespace GW {
 struct DialogButton;
 
 class DialogModule : public ToolboxModule {
-    DialogModule() = default;;
+    DialogModule() = default;
     ~DialogModule() override = default;
+
 public:
     static DialogModule& Instance() {
         static DialogModule instance;
@@ -29,6 +31,6 @@ public:
     static void SendDialogs(std::initializer_list<uint32_t> dialog_ids);
     static uint32_t GetDialogAgent();
     static const std::vector<GW::UI::DialogButtonInfo*>& GetDialogButtons();
-    static const std::vector<GuiUtils::EncString*>& DialogModule::GetDialogButtonMessages();
+    static const std::vector<GuiUtils::EncString*>& GetDialogButtonMessages();
     static uint32_t AcceptFirstAvailableQuest();
 };

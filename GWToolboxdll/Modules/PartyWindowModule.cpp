@@ -130,17 +130,6 @@ void PartyWindowModule::Initialize() {
             UNREFERENCED_PARAMETER(status);
             if (!add_npcs_to_party_window || pak->state != 16)
                 return; // Not dead.
-            if (remove_dead_imperials) {
-                if (const auto* agent = GW::Agents::GetAgentByID(pak->agent_id); agent && agent->GetAsAgentLiving()) {
-                    const auto player_number = agent->GetAsAgentLiving()->player_number;
-                    if (player_number == GW::Constants::ModelID::SummoningStone::ImperialCripplingSlash ||
-                        player_number == GW::Constants::ModelID::SummoningStone::ImperialQuiveringBlade ||
-                        player_number == GW::Constants::ModelID::SummoningStone::ImperialTripleChop ||
-                        player_number == GW::Constants::ModelID::SummoningStone::ImperialBarrage)
-                        pending_remove.push(pak->agent_id);
-                    return;
-                }
-            }
             if (std::find(allies_added_to_party.begin(), allies_added_to_party.end(), pak->agent_id) == allies_added_to_party.end())
                 return; // Not added via toolbox
             pending_remove.push(pak->agent_id);
@@ -150,6 +139,22 @@ void PartyWindowModule::Initialize() {
         &AgentRemove_Entry,
         [&](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* pak) -> void {
             UNREFERENCED_PARAMETER(status);
+            if (remove_dead_imperials) {
+                if (const auto* agent = GW::Agents::GetAgentByID(pak->agent_id); agent && agent->GetAsAgentLiving()) {
+                    const auto player_number = agent->GetAsAgentLiving()->player_number;
+                    if (player_number == GW::Constants::ModelID::SummoningStone::ImperialCripplingSlash ||
+                        player_number == GW::Constants::ModelID::SummoningStone::ImperialQuiveringBlade ||
+                        player_number == GW::Constants::ModelID::SummoningStone::ImperialTripleChop ||
+                        player_number == GW::Constants::ModelID::SummoningStone::ImperialBarrage) {
+                        if (std::find(removed_canthans.begin(), removed_canthans.end(), pak->agent_id) ==
+                            removed_canthans.end()) {
+                            pending_remove.push(pak->agent_id);
+                            removed_canthans.push_back(pak->agent_id);
+                        }
+                    }
+                    return;
+                }
+            }
             if (std::find(allies_added_to_party.begin(), allies_added_to_party.end(), pak->agent_id) == allies_added_to_party.end())
                 return; // Not added via toolbox
             pending_remove.push(pak->agent_id);
@@ -173,8 +178,8 @@ void PartyWindowModule::Initialize() {
         [&](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* pak) -> void {
             UNREFERENCED_PARAMETER(status);
             allies_added_to_party.clear();
-            while (!pending_remove.empty())
-                pending_remove.pop();
+            removed_canthans.clear();
+            pending_remove = {};
             pending_add.clear();
             is_explorable = pak->is_explorable != 0;
         });

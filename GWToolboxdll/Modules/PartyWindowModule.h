@@ -10,8 +10,8 @@
 #include <Timer.h>
 
 class PartyWindowModule : public ToolboxModule {
-    PartyWindowModule() {};
-    ~PartyWindowModule() {
+    PartyWindowModule() = default;
+    ~PartyWindowModule() override {
         ClearSpecialNPCs();
     }
 public:
@@ -74,6 +74,7 @@ private:
     std::vector<uint32_t> allies_added_to_party;
     std::vector<PendingAddToParty> pending_add;
     std::queue<uint32_t> pending_remove;
+    std::vector<uint32_t> removed_canthans{};
 
     std::queue<SummonPending> summons_pending;
 
