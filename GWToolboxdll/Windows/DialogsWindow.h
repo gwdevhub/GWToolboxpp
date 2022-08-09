@@ -11,8 +11,8 @@ namespace GW {
 }
 
 class DialogsWindow : public ToolboxWindow {
-    DialogsWindow() {};
-    ~DialogsWindow() {};
+    DialogsWindow() = default;
+    ~DialogsWindow() override = default;;
 public:
     static DialogsWindow& Instance() {
         static DialogsWindow instance;
@@ -29,14 +29,31 @@ public:
     void DrawSettingInternal() override;
 
 private:
-    inline DWORD QuestAcceptDialog(GW::Constants::QuestID quest) { return ((int)quest << 8) | 0x800001; }
-    inline DWORD QuestRewardDialog(GW::Constants::QuestID quest) { return ((int)quest << 8) | 0x800007; }
+    static constexpr uint32_t QuestEnquireDialog(GW::Constants::QuestID quest) {
+        return static_cast<int>(quest) << 8 | 0x800003;
+    }
+    static constexpr uint32_t QuestAcceptDialog(GW::Constants::QuestID quest) {
+        return static_cast<int>(quest) << 8 | 0x800001;
+    }
+    static constexpr uint32_t QuestRewardDialog(GW::Constants::QuestID quest) {
+        return static_cast<int>(quest) << 8 | 0x800007;
+    }
 
-    GW::Constants::QuestID IndexToQuestID(int index);
-    DWORD IndexToDialogID(int index);
+    static constexpr std::initializer_list<uint32_t> QuestAcceptDialogList(GW::Constants::QuestID quest) {
+        return {
+            static_cast<uint32_t>(quest) << 8 | 0x800003,
+            static_cast<uint32_t>(quest) << 8 | 0x800001
+        };
+    }
+    static constexpr std::initializer_list<uint32_t> UwTeleportDialogList(const uint32_t location_confirmation) {
+        return {0x7F, location_confirmation - 7, location_confirmation};
+    }
+
+    static GW::Constants::QuestID IndexToQuestID(int index);
+    static uint32_t IndexToDialogID(int index);
 
     int fav_count = 0;
-    std::vector<int> fav_index;
+    std::vector<int> fav_index{};
 
     bool show_common = true;
     bool show_uwteles = true;
