@@ -52,6 +52,14 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/DialogModule.h>
 
+InfoWindow::~InfoWindow()
+{
+    for (auto a : target_achievements) {
+        delete a.second;
+    }
+    target_achievements.clear();
+}
+
 void InfoWindow::Initialize() {
     ToolboxWindow::Initialize();
 
@@ -179,6 +187,26 @@ void InfoWindow::DrawGuildInfo(GW::Guild* guild) {
     }
     ImGui::PopID();
 }
+void InfoWindow::DrawHomAchievements(const GW::Player* player) {
+    if (ImGui::TreeNodeEx("Hall of Monuments Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (target_achievements.find(player->name) == target_achievements.end()) {
+            HallOfMonumentsAchievements* a = new HallOfMonumentsAchievements();
+            wcscpy(a->character_name, player->name);
+            target_achievements[a->character_name] = a;
+            HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(a->character_name, a);
+        }
+        auto hom_result = target_achievements[player->name];
+        if (ImGui::Button("Go to Hom Calculator")) {
+            hom_result->OpenInBrowser();
+        }
+        InfoField("Devotion Points", "%d/%d", hom_result->devotion_points_total, 8);
+        InfoField("Fellowship Points", "%d/%d", hom_result->fellowship_points_total, 8);
+        InfoField("Honor Points", "%d/%d", hom_result->honor_points_total, 18);
+        InfoField("Resilience Points", "%d/%d", hom_result->resilience_points_total, 8);
+        InfoField("Valor Points", "%d/%d", hom_result->valor_points_total, 8);
+        ImGui::TreePop();
+    }
+}
 void InfoWindow::DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool force_advanced) {
     if (!item) return;
     name->reset(item->single_item_name);
@@ -240,9 +268,6 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
             guild = guilds->at((uint32_t)living->tags->guild_id);
     }
 
-    char imgui_id[16];
-    snprintf(imgui_id, _countof(imgui_id), "agent_info_%d", agent->agent_id);
-    ImGui::PushID(imgui_id);
     InfoField("Agent ID", "%d", agent->agent_id);
     ImGui::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
     InfoField("X pos", "%.2f", agent->pos.x);
@@ -277,6 +302,7 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
             ImGui::PopID();
             ImGui::TreePop();
         }
+        DrawHomAchievements(player);
     }
     DrawGuildInfo(guild);
     if (is_player && ImGui::TreeNodeEx("Effects", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -357,7 +383,6 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
         }
         ImGui::TreePop();
     }
-    ImGui::PopID();
 }
 void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
@@ -409,10 +434,14 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             }
         }
         if (show_player && ImGui::CollapsingHeader("Player")) {
+            ImGui::PushID("player_info");
             DrawAgentInfo(GW::Agents::GetPlayer());
+            ImGui::PopID();
         }
         if (show_target && ImGui::CollapsingHeader("Target")) {
+            ImGui::PushID("target_info");
             DrawAgentInfo(GW::Agents::GetTarget());
+            ImGui::PopID();
         }
         if (show_map && ImGui::CollapsingHeader("Map")) {
             ImGui::PushID("map_info");

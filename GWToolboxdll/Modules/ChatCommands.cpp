@@ -54,6 +54,7 @@
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
 #include <Widgets/TimerWidget.h>
+#include <Modules/HallOfMonumentsModule.h>
 
 
 #define F_PI 3.14159265358979323846f
@@ -184,6 +185,23 @@ namespace {
     PostMute_pt PostMuted_Func;
 
     bool* is_muted = 0;
+
+    void CmdSkillImage(const wchar_t*, int, LPWSTR* argv) {
+
+        uint32_t skill_id = 0;
+        GuiUtils::ParseUInt(argv[1], &skill_id);
+        GW::Packet::StoC::UpdateSkillbarSkill* s = new GW::Packet::StoC::UpdateSkillbarSkill();
+        s->agent_id = GW::Agents::GetPlayerId();
+        s->skill_slot = 0;
+        s->skill_id = skill_id;
+        GW::GameThread::Enqueue([s]() {
+            GW::StoC::EmulatePacket(s);
+            delete s;
+            });
+    }
+
+    HallOfMonumentsAchievements hom_achievements;
+    int hom_achievements_result = 1;
 
 } // namespace
 
@@ -474,6 +492,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"dmg", ChatCommands::CmdDamage);
     GW::Chat::CreateCommand(L"observer:reset", ChatCommands::CmdObserverReset);
 
+    GW::Chat::CreateCommand(L"skillimage", CmdSkillImage);
     GW::Chat::CreateCommand(L"chest", ChatCommands::CmdChest);
     GW::Chat::CreateCommand(L"xunlai", ChatCommands::CmdChest);
     GW::Chat::CreateCommand(L"afk", ChatCommands::CmdAfk);
@@ -506,6 +525,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"normalmode", ChatCommands::CmdSetNormalMode);
     GW::Chat::CreateCommand(L"hardmode", ChatCommands::CmdSetHardMode);
     GW::Chat::CreateCommand(L"animation", ChatCommands::CmdAnimation);
+    GW::Chat::CreateCommand(L"hom", ChatCommands::CmdHom);
 
     uintptr_t address = GW::Scanner::Find("\x83\xc4\x04\xc7\x45\x08\x00\x00\x00\x00", "xxxxxxxxxx", -5);
     if (address) {
@@ -623,6 +643,12 @@ void ChatCommands::Update(float delta) {
     skill_to_use.Update();
     npc_to_find.Update();
     quest_ping.Update();
+
+    if (hom_achievements_result == 0) {
+        hom_achievements_result = 1;
+        hom_achievements.OpenInBrowser();
+        
+    }
 
 }
 void ChatCommands::QuestPing::Init() {
@@ -1536,6 +1562,45 @@ void ChatCommands::CmdTransmoTarget(const wchar_t*, int argc, LPWSTR* argv) {
             return;
     }
     TransmoAgent(target->agent_id, transmo);
+}
+
+void ChatCommands::CmdHom(const wchar_t* message, int argc, LPWSTR* ) {
+    wchar_t* player_name = 0;
+    if (argc > 1) {
+        std::wstring args = GetRemainingArgsWstr(message, 1);
+        
+        if (args == L"me") {
+            player_name = new wchar_t[20];
+            wcscpy(player_name, GW::PlayerMgr::GetPlayerName(0));
+            goto get_achievements;
+        }
+        if (args.find(L" ") != std::wstring::npos && args.size() < 20) {
+            player_name = new wchar_t[20];
+            wcscpy(player_name, args.c_str());
+            goto get_achievements;
+        }
+        if (!args.empty()) {
+            goto get_achievements;
+        }
+    }
+
+    auto target = GW::Agents::GetTargetAsAgentLiving();
+    auto player = target && target->IsPlayer()  ? GW::PlayerMgr::GetPlayerByID(target->player_number) : nullptr;
+    if (player) {
+        player_name = new wchar_t[20];
+        wcscpy(player_name, player->name);
+        goto get_achievements;
+    }
+get_achievements:
+    if (player_name && player_name[0]) {
+        memset(&hom_achievements, 0, sizeof(hom_achievements));
+        HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(player_name, &hom_achievements,&hom_achievements_result);
+    }
+    else {
+        Log::Error("Invalid player name for hall of monuments command");
+    }
+    if(player_name)
+        delete[] player_name;
 }
 
 void ChatCommands::CmdTransmo(const wchar_t *, int argc, LPWSTR *argv) {

@@ -9,10 +9,11 @@
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
+#include <Modules/HallOfMonumentsModule.h>
 
 class InfoWindow : public ToolboxWindow {
     InfoWindow() {};
-    ~InfoWindow() {};
+    ~InfoWindow();
 public:
     static InfoWindow& Instance() {
         static InfoWindow instance;
@@ -57,7 +58,10 @@ private:
     void DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool force_advanced = false);
     void DrawAgentInfo(GW::Agent* agent);
     void DrawGuildInfo(GW::Guild* guild);
+    void DrawHomAchievements(const GW::Player* player);
     DWORD mapfile = 0;
+
+    std::map<std::wstring,HallOfMonumentsAchievements*> target_achievements;
 
     std::vector<Status> status;
     std::vector<unsigned long> timestamp;

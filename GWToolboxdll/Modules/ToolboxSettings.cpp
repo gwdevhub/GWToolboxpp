@@ -29,6 +29,7 @@
 #ifdef _DEBUG
 #include <Modules/GWFileRequester.h>
 #endif
+#include <Modules/HallOfMonumentsModule.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -136,6 +137,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&StringDecoderWindow::Instance());
     optional_modules.push_back(&DoorMonitorWindow::Instance());
     optional_modules.push_back(&SkillListingWindow::Instance());
+    optional_modules.push_back(&HallOfMonumentsModule::Instance());
     
 
 #endif
