@@ -14,8 +14,8 @@
 #include <Timer.h>
 
 namespace {
-    GW::UI::UIInteractionCallback NPCDialogUICallback_Func = 0;
-    GW::UI::UIInteractionCallback NPCDialogUICallback_Ret = 0;
+    GW::UI::UIInteractionCallback NPCDialogUICallback_Func = nullptr;
+    GW::UI::UIInteractionCallback NPCDialogUICallback_Ret = nullptr;
 
     std::vector<GW::UI::DialogButtonInfo*> dialog_buttons;
     std::vector<GuiUtils::EncString*> dialog_button_messages;
@@ -59,11 +59,11 @@ namespace {
     }
     // Wipe dialog ready for new one
     void ResetDialog() {
-        for (auto d : dialog_buttons) {
+        for (const auto d : dialog_buttons) {
             delete d;
         }
         dialog_buttons.clear();
-        for (auto d : dialog_button_messages) {
+        for (const auto d : dialog_button_messages) {
             delete d;
         }
         dialog_button_messages.clear();
@@ -128,12 +128,13 @@ void DialogModule::Initialize() {
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kDialogButton
     };
-    for (auto message_id : dialog_ui_messages) {
+    for (const auto message_id : dialog_ui_messages) {
         GW::UI::RegisterUIMessageCallback(&dialog_hook, message_id, OnPreUIMessage,-0x1);
         GW::UI::RegisterUIMessageCallback(&dialog_hook, message_id, OnPostUIMessage, 0x500);
     }
     // NB: Can also be found via floating dialogs array in memory. We're not using hooks for any of the other floating dialogs, but would be good to document later.
-    NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\game\\gmnpc.cpp", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb);
+    NPCDialogUICallback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(GW::Scanner::FindAssertion(
+        "p:\\code\\gw\\ui\\game\\gmnpc.cpp", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb));
     if (NPCDialogUICallback_Func) {
         GW::HookBase::CreateHook(NPCDialogUICallback_Func, OnNPCDialogUICallback, (void**)&NPCDialogUICallback_Ret);
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);

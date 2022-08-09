@@ -71,8 +71,12 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
         float w = (ImGui::GetWindowContentRegionWidth()
             - ImGui::GetStyle().ItemInnerSpacing.x * (x_qty - 1)) / x_qty;
         if (ImGui::Button(text, ImVec2(w, 0))) {
-            if (const auto target = GW::Agents::GetTarget()) {
-                GW::Agents::GoNPC(target);
+            if (DialogModule::GetDialogButtons().empty()) {
+                if (const auto target = GW::Agents::GetTarget()) {
+                    GW::Agents::GoNPC(target);
+                    DialogModule::SendDialogs(dialogs);
+                }
+            } else {
                 DialogModule::SendDialogs(dialogs);
             }
         }
@@ -91,7 +95,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
             DialogButton(
                 1, 2, "Demon Assassin", "Take quest in Mountains", QuestAcceptDialogList(GW::Constants::QuestID::UW_Mnt));
             DialogButton(0, 2, "Tower of Strength", "Take quest", QuestAcceptDialogList(GW::Constants::QuestID::Fow_Tos));
-            DialogButton(1, 2, "Foundry Reward", "Accept reward",{QuestRewardDialog(GW::Constants::QuestID::Doa_FoundryBreakout)});
+            DialogButton(1, 2, "Foundry Reward", "Accept reward", {QuestRewardDialog(GW::Constants::QuestID::Doa_FoundryBreakout)});
             ImGui::Separator();
         }
         if (show_uwteles) {
@@ -101,7 +105,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
             DialogButton(3, 4, "Pools", "Teleport Pools", UwTeleportDialogList(GW::Constants::DialogID::UwTelePools));
             DialogButton(0, 3, "Planes", "Teleport Planes", UwTeleportDialogList(GW::Constants::DialogID::UwTelePlanes));
             DialogButton(1, 3, "Wastes", "Teleport Wastes", UwTeleportDialogList(GW::Constants::DialogID::UwTeleWastes));
-            DialogButton(2, 3, "Mountains", "Teleport Mountains",UwTeleportDialogList(GW::Constants::DialogID::UwTeleMnt));
+            DialogButton(2, 3, "Mountains", "Teleport Mountains", UwTeleportDialogList(GW::Constants::DialogID::UwTeleMnt));
             ImGui::Separator();
         }
         constexpr size_t n_quests = _countof(questnames);
@@ -113,15 +117,23 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
                 ImGui::PopItemWidth();
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::Button("Take", ImVec2(40.0f, 0))) {
-                    if (const auto target = GW::Agents::GetTarget()) {
-                        GW::Agents::GoNPC(target);
+                    if (DialogModule::GetDialogButtons().empty()) {
+                        if (const auto target = GW::Agents::GetTarget()) {
+                            GW::Agents::GoNPC(target);
+                            DialogModule::SendDialogs(QuestAcceptDialogList(IndexToQuestID(fav_index[i])));
+                        }
+                    } else {
                         DialogModule::SendDialogs(QuestAcceptDialogList(IndexToQuestID(fav_index[i])));
                     }
                 }
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::Button("Reward", ImVec2(60.0f, 0))) {
-                    if (const auto target = GW::Agents::GetTarget()) {
-                        GW::Agents::GoNPC(target);
+                    if (DialogModule::GetDialogButtons().empty()) {
+                        if (const auto target = GW::Agents::GetTarget()) {
+                            GW::Agents::GoNPC(target);
+                            DialogModule::SendDialog(QuestRewardDialog(IndexToQuestID(fav_index[i])));
+                        }
+                    } else {
                         DialogModule::SendDialog(QuestRewardDialog(IndexToQuestID(fav_index[i])));
                     }
                 }
@@ -222,7 +234,7 @@ void DialogsWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_custom), show_custom);
 }
 
-GW::Constants::QuestID DialogsWindow::IndexToQuestID(int index) {
+GW::Constants::QuestID DialogsWindow::IndexToQuestID(const int index) {
     switch (index) {
     case 0: return GW::Constants::QuestID::UW_Chamber;
     case 1: return GW::Constants::QuestID::UW_Wastes;
@@ -257,7 +269,7 @@ GW::Constants::QuestID DialogsWindow::IndexToQuestID(int index) {
     }
 }
 
-uint32_t DialogsWindow::IndexToDialogID(int index) {
+uint32_t DialogsWindow::IndexToDialogID(const int index) {
     switch (index) {
     case 0: return GW::Constants::DialogID::FowCraftArmor;
     case 1: return GW::Constants::DialogID::ProfChangeWarrior;

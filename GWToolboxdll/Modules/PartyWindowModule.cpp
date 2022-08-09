@@ -131,14 +131,13 @@ void PartyWindowModule::Initialize() {
             if (!add_npcs_to_party_window || pak->state != 16)
                 return; // Not dead.
             if (remove_dead_imperials) {
-                const auto* agent = GW::Agents::GetAgentByID(pak->agent_id);
-                if (agent && agent->GetAsAgentLiving()) {
+                if (const auto* agent = GW::Agents::GetAgentByID(pak->agent_id); agent && agent->GetAsAgentLiving()) {
                     const auto player_number = agent->GetAsAgentLiving()->player_number;
                     if (player_number == GW::Constants::ModelID::SummoningStone::ImperialCripplingSlash ||
                         player_number == GW::Constants::ModelID::SummoningStone::ImperialQuiveringBlade ||
                         player_number == GW::Constants::ModelID::SummoningStone::ImperialTripleChop ||
                         player_number == GW::Constants::ModelID::SummoningStone::ImperialBarrage)
-                    pending_remove.push(pak->agent_id);
+                        pending_remove.push(pak->agent_id);
                     return;
                 }
             }
