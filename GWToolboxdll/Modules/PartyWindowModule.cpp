@@ -140,7 +140,7 @@ void PartyWindowModule::Initialize() {
         [&](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* pak) -> void {
             UNREFERENCED_PARAMETER(status);
             if (remove_dead_imperials) {
-                if (const auto* agent = GW::Agents::GetAgentByID(pak->agent_id); agent && agent->GetAsAgentLiving()) {
+                if (const auto* agent = GW::Agents::GetAgentByID(pak->agent_id); agent && agent->GetAsAgentLiving() && agent->GetAsAgentLiving()->GetIsDead()) {
                     const auto player_number = agent->GetAsAgentLiving()->player_number;
                     if (player_number == GW::Constants::ModelID::SummoningStone::ImperialCripplingSlash ||
                         player_number == GW::Constants::ModelID::SummoningStone::ImperialQuiveringBlade ||
