@@ -7,6 +7,50 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.15
+* [New] Item and skills images now load on demand from Guild Wars Wiki instead of being compiled inside toolbox
+* [New] Added Preferred Skill Ordes window via settings > builds
+* [New] Added option to override default nametag colour for in-game agents via game settings
+* [New] Added option to manage summoning stones in the pcons window via pcons settings
+* [New] Show prompt to switch secondary profession when trying to use a tome for a different profession
+* [New] Option to override default title used when `/title` doesn't apply to the current map
+* [New] Exposed a `Terminate` function for other third party dll's to close toolbox
+* [New] `/volume` chat command
+* [New] Enabled/fixed the use of third party dll plugins
+* [New] Auto reject invitations and chat messages from ignored players
+* [New] Option to only trigger hotkey in range of NPC
+* [New] Added SkillMonitor widget to see what allies are casting
+* [New] Added ItemFilter module
+* [New] Added `/hom` chat command, added info to info window
+* [Minor] Added dialog hotkey option to auto accept first available quest
+* [Minor] Added option to remove imperial guard summons
+* [Minor] Added option whether to change back to previous character on a failed reroll
+* [Minor] Added option to auto use lockpick
+* [Minor] Removed ability to target hidden agents
+* [Minor] Removed ability to use dialogs that aren't given by the server
+* [Minor] Preventing `/chest` command form opening locked chests from afar
+* [Minor] Black borders on agents in minimap
+* [Minor] Custom agent circle colors
+* [Minor] Map info on discord is always in English
+* [Minor] Ensure wiki link searches for English item name when accessing via context menu
+* [Minor] Save preference to hide completed areas in the completion window module
+* [Minor] GWToolboxpp folder moved to `%USERPROFILE%/Documents/<Computername>
+* [Minor] Various fixes to GWToolbox launcher
+* [Minor] Added GW Hotkey commands for hero 9 to 12
+* [Minor] Added GW Hotkey commands for per/hero commander
+* [Minor] Added more maps for default `/title` option
+* [Minor] Added target title tier info
+* [Fix] Fixed chat filter option for "player x is away" from being saved to file
+* [Fix] Fixed some objective timer bugs
+* [Fix] Fixed Discord blocking main thread then updating server
+* [Fix] Removed option to toggle gw hotkeys on map change due to the game not being ready to receive the command
+* [Fix] Fixed UI checkboxes for position and size lock on main window
+* [Fix] Fixed various crashes/bugs in party statistics window module
+* [Fix] Fixed not being able to use mouse where the toolbox minimap is located on screen when in world map view
+* [Fix] Fixed discord dll not being unloaded when closing toolbox
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.15_Release/GWToolboxdll.dll)
+
 ## Version 5.14
 * [New] Added Party Statistics Module
 * [New] Added GW Key Hotkeys to be able to bind modifier keys to in-game controls
