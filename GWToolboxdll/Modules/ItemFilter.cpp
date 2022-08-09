@@ -250,6 +250,15 @@ void ItemFilter::Initialize() {
     GW::StoC::RegisterPacketCallback(&OnMapLoad_Entry, GW::Packet::StoC::MapLoaded::STATIC_HEADER, OnMapLoad);
 }
 
+void ItemFilter::SignalTerminate() {
+    ToolboxModule::SignalTerminate();
+
+    SpawnSuppressedItems();
+    GW::StoC::RemoveCallback(GW::Packet::StoC::AgentAdd::STATIC_HEADER, &OnAgentAdd_Entry);
+    GW::StoC::RemoveCallback(GW::Packet::StoC::AgentRemove::STATIC_HEADER, &OnAgentRemove_Entry);
+    GW::StoC::RemoveCallback(GW::Packet::StoC::MapLoaded::STATIC_HEADER, &OnMapLoad_Entry);
+}
+
 void ItemFilter::LoadSettings(CSimpleIniA* ini) {
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(hide_player_white);

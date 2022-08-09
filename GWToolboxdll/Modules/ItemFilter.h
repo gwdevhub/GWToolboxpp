@@ -24,7 +24,8 @@ public:
     [[nodiscard]] const char* SettingsName() const override { return "Item Settings"; }
 
     void Initialize() override;
-    void Terminate() override { SpawnSuppressedItems(); }
+    void SignalTerminate() override;
+    bool CanTerminate() override { return suppressed_packets.empty(); }
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
@@ -35,6 +36,7 @@ public:
 
 private:
     std::vector<GW::Packet::StoC::AgentAdd> suppressed_packets{};
+    bool enabled = true;
 
     [[nodiscard]] bool WantToHide(const GW::Item& item, bool can_pick_up) const;
     bool hide_player_white = false;

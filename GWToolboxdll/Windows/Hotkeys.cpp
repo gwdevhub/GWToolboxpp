@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
@@ -11,8 +10,6 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Hero.h>
-
-#include <GWCA/Packets/Opcodes.h>
 
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -27,7 +24,7 @@
 #include <Keys.h>
 #include <Logger.h>
 
-#include <Modules/ChatCommands.h>
+#include <Modules/DialogModule.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/Hotkeys.h>
@@ -1426,8 +1423,8 @@ void HotkeyAction::Execute()
             break;
         case HotkeyAction::OpenLockedChest: {
             if (isExplorable()) {
-                GW::Agent *target = GW::Agents::GetTarget();
-                if (target && target->type == 0x200) {
+                GW::Agent* target = GW::Agents::GetTarget();
+                if (target && target->GetIsGadgetType()) {
                     GW::Agents::GoSignpost(target);
                     GW::Items::OpenLockedChest();
                 }
@@ -1605,7 +1602,8 @@ int HotkeyDialog::Description(char *buf, size_t bufsz)
 }
 bool HotkeyDialog::Draw()
 {
-    bool hotkey_changed = ImGui::InputInt("Dialog ID", (int*)&id);
+    bool hotkey_changed = ImGui::InputInt("Dialog ID", reinterpret_cast<int*>(&id));
+    ImGui::ShowHelp("If dialog is 0, accepts the first available quest dialog (either reward or accept quest).");
     hotkey_changed |= ImGui::InputText("Dialog Name", name, _countof(name));
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
     return hotkey_changed;
@@ -1614,15 +1612,22 @@ void HotkeyDialog::Execute()
 {
     if (!CanUse())
         return;
-    if (id == 0)
+    if (id == 0) {
+        if (DialogModule::GetDialogButtons().empty()) {
+            if (const auto* target = GW::Agents::GetTargetAsAgentLiving()) {
+                GW::Agents::GoNPC(target);
+            }
+        } else {
+            DialogModule::AcceptFirstAvailableQuest();
+        }
         return;
+    }
     if (isExplorable()) {
-        GW::Agent *target = GW::Agents::GetTarget();
-        if (target && target->type == 0xDB) {
+        if (const auto* target = GW::Agents::GetTargetAsAgentLiving()) {
             GW::Agents::GoNPC(target);
         }
     }
-    GW::Agents::SendDialog(id);
+    DialogModule::SendDialog(id);
     if (show_message_in_emote_channel)
         Log::Info("Sent dialog %s (%d)", name, id);
 }
