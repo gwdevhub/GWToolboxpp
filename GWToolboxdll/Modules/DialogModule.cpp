@@ -25,6 +25,7 @@ namespace {
     std::vector<GuiUtils::EncString*> dialog_button_messages;
 
     GW::UI::DialogBodyInfo dialog_info;
+    uint32_t last_agent_id = 0;
     GuiUtils::EncString dialog_body;
 
     GW::HookEntry dialog_hook;
@@ -80,6 +81,8 @@ namespace {
         GW::HookBase::EnterHook();
         if (message->message_id == 0xb) {
             ResetDialog();
+            if(dialog_info.agent_id)
+                last_agent_id = dialog_info.agent_id;
             dialog_info.agent_id = 0;
         }
         NPCDialogUICallback_Ret(message, wparam,lparam);
@@ -87,8 +90,8 @@ namespace {
     }
     void OnDialogClosedByServer() {
         if (queued_dialogs_to_send.empty())
-            return; // No more dialogs, all good
-        GW::Agent* npc = GW::Agents::GetAgentByID(dialog_info.agent_id);
+            return;
+        GW::Agent* npc = GW::Agents::GetAgentByID(last_agent_id);
         GW::Agent* me = GW::Agents::GetPlayer();
         if (npc && me && GW::GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area)
             GW::Agents::GoNPC(npc);
@@ -99,16 +102,6 @@ namespace {
             return;
         }
         switch (message_id) {
-        case GW::UI::UIMessage::kDialogBody: {
-            ResetDialog();
-            memcpy(&dialog_info, wparam, sizeof(dialog_info));
-            if (!dialog_info.message_enc) {
-                OnDialogClosedByServer(); 
-                return; // Dialog closed.
-            } 
-            dialog_body.reset(dialog_info.message_enc);
-            GW::UI::AsyncDecodeStr(dialog_info.message_enc, OnDialogBodyDecoded);
-        } break;
         case GW::UI::UIMessage::kDialogButton: {
             OnDialogButtonAdded((GW::UI::DialogButtonInfo*)wparam);
         } break;
@@ -122,6 +115,17 @@ namespace {
     }
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
+        case GW::UI::UIMessage::kDialogBody: {
+            ResetDialog();
+            GW::UI::DialogBodyInfo* new_dialog_info = (GW::UI::DialogBodyInfo*)wparam;
+            if (!new_dialog_info->message_enc) {
+                OnDialogClosedByServer();
+                return; // Dialog closed.
+            }
+            memcpy(&dialog_info, wparam, sizeof(dialog_info));
+            dialog_body.reset(dialog_info.message_enc);
+            GW::UI::AsyncDecodeStr(dialog_info.message_enc, OnDialogBodyDecoded);
+        } break;
         case GW::UI::UIMessage::kSendDialog: {
             if (!IsDialogButtonAvailable((uint32_t)wparam)) {
                 status->blocked = true;
@@ -161,17 +165,16 @@ void DialogModule::SendDialog(uint32_t dialog_id) {
     if (already_queued)
         return; // Don't redo any logic.
 
-    if ((dialog_id & 0x800001) == 0x800001) {
-        // Dialog is for accepting a quest; queue up the enquire dialog option aswell
+    if ((dialog_id & 0x800000) != 0) {
+        // Quest related dialog
         uint32_t quest_id = (dialog_id ^ 0x800000) >> 8;
-        uint32_t enquire_dialog_id = (quest_id << 8) | 0x800003;
-        SendDialog(enquire_dialog_id);
-    }
-    if ((dialog_id & 0x800004) == 0x800004) {
-        // Dialog is for accepting reward for a quest; queue up the enquire dialog option aswell
-        uint32_t quest_id = (dialog_id & 0x800000) >> 8;
-        uint32_t enquire_dialog_id = (quest_id << 8) | 0x800003;
-        SendDialog(enquire_dialog_id);
+        switch ((dialog_id & 0xf)) {
+        case 1:// Dialog is for taking a quest
+        case 7:// Dialog is for accepting a quest reward
+            uint32_t enquire_dialog_id = (quest_id << 8) | 0x800003;
+            SendDialog(enquire_dialog_id);
+            break;
+        }
     }
     if ((dialog_id & 0xf84) == dialog_id && ((dialog_id & 0xfff) >> 8) != 0) {
         // Dialog is for changing profession; queue up the enquire dialog option aswell
@@ -195,8 +198,11 @@ void DialogModule::Update(float) {
             break;
         }
         if (IsDialogButtonAvailable(it->first)) {
+            
             GW::Agents::SendDialog(it->first);
+            Log::Info("Sent dialog 0x%X", it->first);
             queued_dialogs_to_send.erase(it);
+            
             break;
         }
     }
@@ -215,29 +221,31 @@ const std::vector<GuiUtils::EncString*>& DialogModule::GetDialogButtonMessages()
 
 uint32_t DialogModule::AcceptFirstAvailableQuest() {
     if (dialog_buttons.empty()) return 0;
-    const GW::UI::DialogButtonInfo* to_use = nullptr;
+    std::vector<uint32_t> available_quests;
     for (const auto dialog_button : dialog_buttons) {
-        switch (dialog_button->button_icon) {
-            case 16: // quest accept icon
-            case 18: // quest enquire icon
-            case 23: // quest reward icon
-                to_use = dialog_button;
+        uint32_t dialog_id = dialog_button->dialog_id;
+        if ((dialog_id & 0x800000) == 0)
+            continue;
+        // Quest related dialog
+        uint32_t quest_id = (dialog_id ^ 0x800000) >> 8;
+        switch ((dialog_id & 0xff)) {
+        case 1: // Dialog is for taking a quest
+        case 3: // Dialog is for quest enquiry
+        case 7: // Dialog is for accepting a quest reward
+            available_quests.push_back(quest_id);
+            break;
+        default:
+            break;
         }
-        if (to_use) {
-            const auto quest_id = static_cast<GW::Constants::QuestID>(to_use->dialog_id ^ 0x800003 >> 8);
-            if (quest_id == GW::Constants::QuestID::UW_UWG) {
-                continue; // skip unless it's the only available dialog - certain quests almost always want to be taken last
-            }
-        }
-        break;
     }
-    if (to_use) {
-        SendDialog(to_use->dialog_id);
-        if (to_use->button_icon == 18) {
-            SendDialog(to_use->dialog_id - 2); // quest accept dialog
-            return to_use->dialog_id - 2;
+    for (auto quest_id : available_quests) {
+        if (quest_id == (uint32_t)GW::Constants::QuestID::UW_UWG 
+            && available_quests.size() > 1) {
+            // skip unless it's the only available dialog - certain quests almost always want to be taken last
+            continue;
         }
-        return to_use->dialog_id;
+        SendDialog((quest_id << 8) | 0x800001);
+        return quest_id;
     }
     return 0;
 }

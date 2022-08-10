@@ -887,7 +887,7 @@ void ChatCommands::CmdDialog(const wchar_t*, int argc, LPWSTR* argv) {
     if (!DialogModule::GetDialogAgent()) {
         const auto* target = GW::Agents::GetTargetAsAgentLiving();
         const auto* me = GW::Agents::GetPlayer();
-        if (target && target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable
+        if (target && target->allegiance == GW::Constants::Allegiance::Npc_Minipet
             && GW::GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
             GW::Agents::GoNPC(target);
         }
