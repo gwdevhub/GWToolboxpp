@@ -923,7 +923,7 @@ void GameSettings::OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
         case GW::UI::UIMessage::kDialogButton: {
             GW::UI::DialogButtonInfo* info = (GW::UI::DialogButtonInfo*)wparam;
             // 8101 7f88 010a 8101 730e 0001
-            if (wcscmp(info->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
+            if (Instance().auto_open_locked_chest && wcscmp(info->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
                 // Auto use lockpick
                 GW::Items::OpenLockedChest(false);
             }
@@ -1089,6 +1089,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     block_ghostinthebox_effect = ini->GetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
     block_sparkly_drops_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
     limit_signets_of_capture = ini->GetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
+    auto_open_locked_chest = ini->GetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1233,6 +1234,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
     ini->SetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
     ini->SetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
+    ini->SetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1442,6 +1444,7 @@ void GameSettings::DrawSettingInternal() {
     ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
     ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting",&drop_ua_on_cast);
+    ImGui::Checkbox("Auto use lockpick when interacting with locked chest", &auto_open_locked_chest);
     ImGui::Text("Disable animation and sound from consumables:");
     ImGui::Indent();
     ImGui::StartSpacedElements(300.f);

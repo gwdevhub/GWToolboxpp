@@ -40,6 +40,8 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Minor] Added GW Hotkey commands for per/hero commander
 * [Minor] Added more maps for default `/title` option
 * [Minor] Added target title tier info
+* [Minor] Option to toggle reverse minimap when reverse camera is pressed
+* [Fix] Fixed bug on effect monitor being messed up when moving between 2 spirits of the same type
 * [Fix] Fixed chat filter option for "player x is away" from being saved to file
 * [Fix] Fixed some objective timer bugs
 * [Fix] Fixed Discord blocking main thread then updating server
@@ -48,6 +50,8 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed various crashes/bugs in party statistics window module
 * [Fix] Fixed not being able to use mouse where the toolbox minimap is located on screen when in world map view
 * [Fix] Fixed discord dll not being unloaded when closing toolbox
+
+...and loads of other stuff I've forgotten to write down
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.15_Release/GWToolboxdll.dll)
 
