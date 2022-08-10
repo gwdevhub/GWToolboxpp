@@ -957,7 +957,9 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
             return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
     }
     if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
-        return false;
+        if (!IsKeyDown(MinimapModifierBehaviour::Target) && !IsKeyDown(MinimapModifierBehaviour::Walk) &&
+            !IsKeyDown(MinimapModifierBehaviour::Move))
+            return false;
     switch (Message) {
         case WM_MOUSEMOVE:
             return OnMouseMove(Message, wParam, lParam);
