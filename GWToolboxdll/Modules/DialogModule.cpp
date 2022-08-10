@@ -132,7 +132,10 @@ namespace {
             }
         } break;
         case GW::UI::UIMessage::kSendDialog: {
-            if (!IsDialogButtonAvailable((uint32_t)wparam)) {
+            uint32_t dialog_id = (uint32_t)wparam;
+            if ((dialog_id & 0xff000000) != 0)
+                break; // Don't handle merchant interaction dialogs.
+            if (!IsDialogButtonAvailable(dialog_id)) {
                 status->blocked = true;
             }
             else {
@@ -141,8 +144,6 @@ namespace {
         } break;
         }
     }
-
-
 }
 
 void DialogModule::Initialize() {
@@ -202,12 +203,17 @@ void DialogModule::Update(float) {
             queued_dialogs_to_send.erase(it);
             break;
         }
-        if (IsDialogButtonAvailable(it->first)) {
-            
-            GW::Agents::SendDialog(it->first);
-            //Log::Info("Sent dialog 0x%X", it->first);
+        if (!GetDialogAgent())
+            continue;
+        if (it->first == 0) {
+            // If dialog queued is id 0, this means sue player wants to take (or accept) the first available quest.
+            AcceptFirstAvailableQuest();
             queued_dialogs_to_send.erase(it);
-            
+            break;
+        }
+        if (IsDialogButtonAvailable(it->first)) {
+            GW::Agents::SendDialog(it->first);
+            queued_dialogs_to_send.erase(it);
             break;
         }
     }

@@ -892,13 +892,7 @@ void ChatCommands::CmdDialog(const wchar_t*, int argc, LPWSTR* argv) {
             GW::Agents::GoNPC(target);
         }
     }
-    if (id == 0) {
-        DialogModule::AcceptFirstAvailableQuest();
-    }
-    else {
-        DialogModule::SendDialog(id);
-    }
-    //Log::Info("Sent Dialog 0x%X", id);
+    DialogModule::SendDialog(id);
 }
 
 void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR * ) {
