@@ -60,6 +60,7 @@
 #include <Windows/StringDecoderWindow.h>
 #include <Modules/GameSettings.h>
 #include <Modules/Resources.h>
+#include <Modules/DialogModule.h>
 
 #pragma warning(disable : 6011)
 
@@ -2035,15 +2036,29 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::Ge
 // Skip char name entry dialog when donating faction
 void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
     uint32_t dialog_id = (uint32_t)wparam;
-    if (dialog_id != 135) return;
+    if (dialog_id != 0x87)
+        return;
+    GW::UI::DialogButtonInfo* found = 0;
+    for (auto dialog : DialogModule::Instance().GetDialogButtons()) {
+        if (dialog->dialog_id != dialog_id)
+            continue;
+        found = dialog;
+        break;
+
+    }
+    if (wcscmp(found->message, L"\x8102\x0444\xa441\xc28e\x0193") != 0)
+        return; // Not faction donation message
+    GW::Agent* npc = GW::Agents::GetAgentByID(DialogModule::GetDialogAgent());
     const int LuxonFactionNPC = GW::Constants::ModelID::Urgoz::HoppingVampire - 102;
     const int KurzickFactionNPC = LuxonFactionNPC - 229;
+    if (!npc)
+        return;
     auto instance = &Instance();
-    if (!instance->skip_entering_name_for_faction_donate) return;
+    if (!instance->skip_entering_name_for_faction_donate) 
+        return;
     uint32_t* current_faction = nullptr;
     uint32_t allegiance = 0;
-    // Dialog 135 is also used for other NPCs e.g. zaishen keys. Use last_dialog_npc_id to compare.
-    switch (last_dialog_npc_id) {
+    switch (npc->GetAsAgentLiving()->player_number) {
     case LuxonFactionNPC:
         current_faction = &GW::WorldContext::instance()->current_luxon;
         allegiance = 1;
@@ -2061,7 +2076,8 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
     if (*current_faction < 5000)
         return; // Not enough to donate. Return here and the NPC will reply.
     status->blocked = true;
-    //GW::PlayerMgr::DepositFaction(allegiance);
+    GW::PlayerMgr::DepositFaction(allegiance);
+    GW::Agents::GoNPC(npc);
 }
 
 // Show a message when player leaves the outpost

@@ -102,6 +102,16 @@ namespace {
             return;
         }
         switch (message_id) {
+        case GW::UI::UIMessage::kDialogBody: {
+            ResetDialog();
+            GW::UI::DialogBodyInfo* new_dialog_info = (GW::UI::DialogBodyInfo*)wparam;
+            if (!new_dialog_info->message_enc) {
+                return; // Dialog closed.
+            }
+            memcpy(&dialog_info, wparam, sizeof(dialog_info));
+            dialog_body.reset(dialog_info.message_enc);
+            GW::UI::AsyncDecodeStr(dialog_info.message_enc, OnDialogBodyDecoded);
+        } break;
         case GW::UI::UIMessage::kDialogButton: {
             OnDialogButtonAdded((GW::UI::DialogButtonInfo*)wparam);
         } break;
@@ -116,15 +126,10 @@ namespace {
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
         case GW::UI::UIMessage::kDialogBody: {
-            ResetDialog();
             GW::UI::DialogBodyInfo* new_dialog_info = (GW::UI::DialogBodyInfo*)wparam;
             if (!new_dialog_info->message_enc) {
                 OnDialogClosedByServer();
-                return; // Dialog closed.
             }
-            memcpy(&dialog_info, wparam, sizeof(dialog_info));
-            dialog_body.reset(dialog_info.message_enc);
-            GW::UI::AsyncDecodeStr(dialog_info.message_enc, OnDialogBodyDecoded);
         } break;
         case GW::UI::UIMessage::kSendDialog: {
             if (!IsDialogButtonAvailable((uint32_t)wparam)) {
@@ -200,7 +205,7 @@ void DialogModule::Update(float) {
         if (IsDialogButtonAvailable(it->first)) {
             
             GW::Agents::SendDialog(it->first);
-            Log::Info("Sent dialog 0x%X", it->first);
+            //Log::Info("Sent dialog 0x%X", it->first);
             queued_dialogs_to_send.erase(it);
             
             break;
