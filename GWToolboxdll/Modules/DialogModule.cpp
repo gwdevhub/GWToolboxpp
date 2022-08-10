@@ -249,7 +249,8 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
             // skip unless it's the only available dialog - certain quests almost always want to be taken last
             continue;
         }
-        SendDialog((quest_id << 8) | 0x800001);
+        SendDialog((quest_id << 8) | 0x800001); // Take quest
+        SendDialog((quest_id << 8) | 0x800007); // Accept reward
         return quest_id;
     }
     return 0;

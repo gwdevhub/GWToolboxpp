@@ -504,6 +504,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                         });
                 }
                 ImGui::SameLine();
+                InfoField("Icon", "0x%X", buttons[i]->button_icon);
                 InfoField(messages[i]->string().c_str(), "0x%X", buttons[i]->dialog_id);
             }
         }
