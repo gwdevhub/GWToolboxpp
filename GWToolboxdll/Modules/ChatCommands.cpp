@@ -55,6 +55,7 @@
 #include <Windows/SettingsWindow.h>
 #include <Widgets/TimerWidget.h>
 #include <Modules/HallOfMonumentsModule.h>
+#include <Modules/DialogModule.h>
 
 
 #define F_PI 3.14159265358979323846f
@@ -867,20 +868,37 @@ void ChatCommands::CmdAge2(const wchar_t* , int, LPWSTR* ) {
     TimerWidget::Instance().PrintTimer();
 }
 
-void ChatCommands::CmdDialog(const wchar_t *, int argc, LPWSTR *argv) {
+void ChatCommands::CmdDialog(const wchar_t*, int argc, LPWSTR* argv) {
     if (!IsMapReady())
         return;
+    const char* syntax = "Syntax: '/dialog [dialog_id]' (e.g. '/dialog 0x184')\nSyntax: '/dialog take' (to take first available quest)";
     if (argc <= 1) {
-        Log::Error("Please provide an integer or hex argument");
-    } else {
-        uint32_t id = 0;
-        if (GuiUtils::ParseUInt(argv[1], &id)) {
-            GW::Agents::SendDialog(id);
-            Log::Info("Sent Dialog 0x%X", id);
-        } else {
-            Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
+        Log::Error(syntax);
+        return;
+    }
+    uint32_t id = 0;
+    if (wcscmp(argv[1], L"take") == 0) {
+        id = 0;
+    }
+    else if (!(GuiUtils::ParseUInt(argv[1], &id) && id)) {
+        Log::Error(syntax);
+        return;
+    }
+    if (!DialogModule::GetDialogAgent()) {
+        const auto* target = GW::Agents::GetTargetAsAgentLiving();
+        const auto* me = GW::Agents::GetPlayer();
+        if (target && target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable
+            && GW::GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
+            GW::Agents::GoNPC(target);
         }
     }
+    if (id == 0) {
+        DialogModule::AcceptFirstAvailableQuest();
+    }
+    else {
+        DialogModule::SendDialog(id);
+    }
+    //Log::Info("Sent Dialog 0x%X", id);
 }
 
 void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR * ) {

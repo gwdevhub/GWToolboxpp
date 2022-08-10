@@ -4,6 +4,8 @@
 
 #include <GWCA/Constants/QuestIDs.h>
 
+#include <GWCA/GameEntities/Agent.h>
+
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
@@ -24,6 +26,10 @@ namespace {
 
     GW::UI::DialogBodyInfo dialog_info;
     GuiUtils::EncString dialog_body;
+
+    GW::HookEntry dialog_hook;
+
+    std::map<uint32_t, clock_t> queued_dialogs_to_send;
 
     void OnDialogButtonAdded(GW::UI::DialogButtonInfo* wparam) {
         GW::UI::DialogButtonInfo* button_info = new GW::UI::DialogButtonInfo();
@@ -69,15 +75,23 @@ namespace {
             delete d;
         }
         dialog_button_messages.clear();
-        dialog_info.agent_id = 0;
     }
     void OnNPCDialogUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam) {
         GW::HookBase::EnterHook();
         if (message->message_id == 0xb) {
             ResetDialog();
+            dialog_info.agent_id = 0;
         }
         NPCDialogUICallback_Ret(message, wparam,lparam);
         GW::HookBase::LeaveHook();
+    }
+    void OnDialogClosedByServer() {
+        if (queued_dialogs_to_send.empty())
+            return; // No more dialogs, all good
+        GW::Agent* npc = GW::Agents::GetAgentByID(dialog_info.agent_id);
+        GW::Agent* me = GW::Agents::GetPlayer();
+        if (npc && me && GW::GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area)
+            GW::Agents::GoNPC(npc);
     }
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
         if (status->blocked) {
@@ -88,8 +102,10 @@ namespace {
         case GW::UI::UIMessage::kDialogBody: {
             ResetDialog();
             memcpy(&dialog_info, wparam, sizeof(dialog_info));
-            if (!dialog_info.message_enc)
+            if (!dialog_info.message_enc) {
+                OnDialogClosedByServer(); 
                 return; // Dialog closed.
+            } 
             dialog_body.reset(dialog_info.message_enc);
             GW::UI::AsyncDecodeStr(dialog_info.message_enc, OnDialogBodyDecoded);
         } break;
@@ -117,9 +133,7 @@ namespace {
         }
     }
 
-    GW::HookEntry dialog_hook;
 
-    std::vector<std::pair<clock_t, uint32_t>> queued_dialogs_to_send;
 }
 
 void DialogModule::Initialize() {
@@ -142,7 +156,29 @@ void DialogModule::Initialize() {
     }
 }
 void DialogModule::SendDialog(uint32_t dialog_id) {
-    queued_dialogs_to_send.emplace_back(TIMER_INIT(), dialog_id);
+    bool already_queued = queued_dialogs_to_send.find(dialog_id) != queued_dialogs_to_send.end();
+    queued_dialogs_to_send[dialog_id] = TIMER_INIT();
+    if (already_queued)
+        return; // Don't redo any logic.
+
+    if ((dialog_id & 0x800001) == 0x800001) {
+        // Dialog is for accepting a quest; queue up the enquire dialog option aswell
+        uint32_t quest_id = (dialog_id ^ 0x800000) >> 8;
+        uint32_t enquire_dialog_id = (quest_id << 8) | 0x800003;
+        SendDialog(enquire_dialog_id);
+    }
+    if ((dialog_id & 0x800004) == 0x800004) {
+        // Dialog is for accepting reward for a quest; queue up the enquire dialog option aswell
+        uint32_t quest_id = (dialog_id & 0x800000) >> 8;
+        uint32_t enquire_dialog_id = (quest_id << 8) | 0x800003;
+        SendDialog(enquire_dialog_id);
+    }
+    if ((dialog_id & 0xf84) == dialog_id && ((dialog_id & 0xfff) >> 8) != 0) {
+        // Dialog is for changing profession; queue up the enquire dialog option aswell
+        uint32_t profession_id = (dialog_id & 0xfff) >> 8;
+        uint32_t enquire_dialog_id = (profession_id << 8) | 0x85;
+        SendDialog(enquire_dialog_id);
+    }
 }
 
 void DialogModule::SendDialogs(std::initializer_list<uint32_t> dialog_ids) {
@@ -153,13 +189,13 @@ void DialogModule::SendDialogs(std::initializer_list<uint32_t> dialog_ids) {
 
 void DialogModule::Update(float) {
     for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end(); it++) {
-        if (TIMER_DIFF(it->first) > 3000) {
+        if (TIMER_DIFF(it->second) > 3000) {
             // NB: Show timeout error message?
             queued_dialogs_to_send.erase(it);
             break;
         }
-        if (IsDialogButtonAvailable(it->second)) {
-            GW::Agents::SendDialog(it->second);
+        if (IsDialogButtonAvailable(it->first)) {
+            GW::Agents::SendDialog(it->first);
             queued_dialogs_to_send.erase(it);
             break;
         }

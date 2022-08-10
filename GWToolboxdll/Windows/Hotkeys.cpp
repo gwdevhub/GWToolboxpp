@@ -1612,22 +1612,15 @@ void HotkeyDialog::Execute()
 {
     if (!CanUse())
         return;
+    char buf[32];
     if (id == 0) {
-        if (DialogModule::GetDialogButtons().empty()) {
-            if (const auto* target = GW::Agents::GetTargetAsAgentLiving()) {
-                GW::Agents::GoNPC(target);
-            }
-        } else {
-            DialogModule::AcceptFirstAvailableQuest();
-        }
-        return;
+        snprintf(buf, _countof(buf), "dialog take");
     }
-    if (isExplorable()) {
-        if (const auto* target = GW::Agents::GetTargetAsAgentLiving()) {
-            GW::Agents::GoNPC(target);
-        }
+    else {
+        snprintf(buf, _countof(buf), "dialog 0x%X", id);
     }
-    DialogModule::SendDialog(id);
+    
+    GW::Chat::SendChat('/', buf);
     if (show_message_in_emote_channel)
         Log::Info("Sent dialog %s (%d)", name, id);
 }
