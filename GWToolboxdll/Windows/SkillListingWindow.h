@@ -66,23 +66,26 @@ public:
         wchar_t concise_gww[256] = { 0 };
     };
 private:
-    SkillListingWindow() {};
-    ~SkillListingWindow() {
-        for (unsigned int i = 0; i < skills.size(); i++) {
-            if(skills[i]) delete skills[i];
+    SkillListingWindow() = default;
+    ~SkillListingWindow() override {
+        for (const auto skill : skills) {
+            if (skill) delete skill;
         }
         skills.clear();
     };
 
-    std::vector<Skill* > skills;
+    std::vector<Skill*> skills{};
 public:
     static SkillListingWindow& Instance() {
         static SkillListingWindow instance;
         return instance;
     }
-    void ExportToJSON();
+
     const char* Name() const override { return "Guild Wars Skill List"; }
+    const char* Icon() const override { return ICON_FA_LIST; }
+
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
 
+    void ExportToJSON();
 };
