@@ -15,7 +15,7 @@ void Updater::LoadSettings(CSimpleIni* ini) {
 #ifdef _DEBUG
     mode = 0;
 #else
-    mode = ini->GetLongValue(Name(), "update_mode", mode);
+    mode = (Mode)ini->GetLongValue(Name(), "update_mode", (int)mode);
 #endif
     CheckForUpdate();
 }
@@ -25,7 +25,7 @@ void Updater::SaveSettings(CSimpleIni* ini) {
 #ifdef _DEBUG
     return;
 #else
-    ini->SetLongValue(Name(), "update_mode", mode);
+    ini->SetLongValue(Name(), "update_mode", (int)mode);
     ini->SetValue(Name(), "dllversion", GWTOOLBOXDLL_VERSION);
 
     HMODULE module = GWToolbox::GetDLLModule();
@@ -48,10 +48,10 @@ void Updater::DrawSettingInternal() {
     if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates",ImVec2(btnWidth,0)) && step != Checking) {
         CheckForUpdate(true);
     }
-    ImGui::RadioButton("Do not check for updates", &mode, 0);
-    ImGui::RadioButton("Check and display a message", &mode, 1);
-    ImGui::RadioButton("Check and ask before updating", &mode, 2);
-    ImGui::RadioButton("Check and automatically update", &mode, 3);
+    ImGui::RadioButton("Do not check for updates", (int*) & mode, (int)Mode::DontCheckForUpdates);
+    ImGui::RadioButton("Check and display a message", (int*)&mode, (int)Mode::CheckAndWarn);
+    ImGui::RadioButton("Check and ask before updating", (int*)&mode, (int)Mode::CheckAndAsk);
+    ImGui::RadioButton("Check and automatically update", (int*)&mode, (int)Mode::CheckAndAutoUpdate);
 }
 
 void Updater::GetLatestRelease(GWToolboxRelease* release) {
@@ -102,13 +102,13 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
 void Updater::CheckForUpdate(const bool forced) {
     step = Checking;
     last_check = clock();
-    if (!forced && mode == 0) {
+    if (!forced && mode == Mode::DontCheckForUpdates) {
         step = Done;
         return;
     }
 
     Resources::Instance().EnqueueWorkerTask([this,forced]() {
-        if (!forced && mode == 0)
+        if (!forced && mode == Mode::DontCheckForUpdates)
             return; // Do not check for updates
         // Here we are in the worker thread and can do blocking operations
         // Reminder: do not send stuff to gw chat from this thread!
