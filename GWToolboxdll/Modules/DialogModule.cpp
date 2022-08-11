@@ -181,12 +181,33 @@ void DialogModule::SendDialog(uint32_t dialog_id) {
             SendDialog(enquire_dialog_id);
             break;
         }
+        return;
     }
     if ((dialog_id & 0xf84) == dialog_id && ((dialog_id & 0xfff) >> 8) != 0) {
         // Dialog is for changing profession; queue up the enquire dialog option aswell
         uint32_t profession_id = (dialog_id & 0xfff) >> 8;
         uint32_t enquire_dialog_id = (profession_id << 8) | 0x85;
         SendDialog(enquire_dialog_id);
+        return;
+    }
+    switch (dialog_id) {
+    case GW::Constants::DialogID::UwTeleLab:
+    case GW::Constants::DialogID::UwTeleVale:
+    case GW::Constants::DialogID::UwTelePits:
+    case GW::Constants::DialogID::UwTelePools:
+    case GW::Constants::DialogID::UwTelePlanes:
+    case GW::Constants::DialogID::UwTeleWastes:
+    case GW::Constants::DialogID::UwTeleMnt: {
+        GW::Agent* dialog_agent = GW::Agents::GetAgentByID(GetDialogAgent());
+        if (dialog_agent 
+            && dialog_agent->type == (uint32_t)GW::Constants::AgentType::Living
+            && dialog_agent->GetAsAgentLiving()->player_number == GW::Constants::ModelID::UW::Reapers) {
+            // Reaper teleport dialog; queue up prerequisites.
+            SendDialog(0x7f);
+            SendDialog(dialog_id - 0x7);
+        }
+    } break;
+        
     }
 }
 

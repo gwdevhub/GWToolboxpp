@@ -39,16 +39,6 @@ private:
         return static_cast<int>(quest) << 8 | 0x800007;
     }
 
-    static constexpr std::initializer_list<uint32_t> QuestAcceptDialogList(GW::Constants::QuestID quest) {
-        return {
-            static_cast<uint32_t>(quest) << 8 | 0x800003,
-            static_cast<uint32_t>(quest) << 8 | 0x800001
-        };
-    }
-    static constexpr std::initializer_list<uint32_t> UwTeleportDialogList(const uint32_t location_confirmation) {
-        return {0x7F, location_confirmation - 7, location_confirmation};
-    }
-
     static GW::Constants::QuestID IndexToQuestID(int index);
     static uint32_t IndexToDialogID(int index);
 
@@ -60,5 +50,5 @@ private:
     bool show_favorites = true;
     bool show_custom = true;
 
-    char customdialogbuf[64] = "";
+    char customdialogbuf[11] = "";
 };
