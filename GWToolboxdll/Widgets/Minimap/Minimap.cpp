@@ -210,7 +210,7 @@ void Minimap::Initialize()
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kChangeTarget,
-        GW::UI::UIMessage::kAgentStartCasting
+        GW::UI::UIMessage::kSkillActivated
     };
     for (auto message_id : hook_messages) {
         GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
@@ -237,7 +237,7 @@ void Minimap::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam
         }
         instance.is_observing = GW::Map::GetIsObserving();
     } break;
-    case GW::UI::UIMessage::kAgentStartCasting: {
+    case GW::UI::UIMessage::kSkillActivated: {
         struct Payload {
             uint32_t agent_id;
             GW::Constants::SkillID skill_id;
