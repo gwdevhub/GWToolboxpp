@@ -52,7 +52,6 @@
             </Directory>
             
             <!-- Visual studio redist -->
-            <Merge Id="VC140Redist" SourceFile="resources\Microsoft_VC140_CRT_x86.msm" DiskId="1" Language="0"/>
             <Merge Id="VC142Redist" SourceFile="resources\Microsoft_VC142_CRT_x86.msm" DiskId="1" Language="0"/>
         </Directory>
         

@@ -102,6 +102,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_observer) optional_modules.push_back(&ObserverModule::Instance());
     optional_modules.push_back(&ChatLog::Instance());
     optional_modules.push_back(&HintsModule::Instance());
+    optional_modules.push_back(&HallOfMonumentsModule::Instance());
 
     SettingsWindow::Instance().sep_windows = optional_modules.size();
     optional_modules.push_back(&SettingsWindow::Instance());
@@ -137,7 +138,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&StringDecoderWindow::Instance());
     optional_modules.push_back(&DoorMonitorWindow::Instance());
     optional_modules.push_back(&SkillListingWindow::Instance());
-    optional_modules.push_back(&HallOfMonumentsModule::Instance());
+
     
 
 #endif
