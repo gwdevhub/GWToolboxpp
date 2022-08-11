@@ -335,8 +335,8 @@ void RerollWindow::Update(float) {
     GW::PreGameContext* pgc = GW::PreGameContext::instance();
     switch (reroll_stage) {
         case PendingLogout: {
-            uint32_t to_character_select = 1;
-            GW::UI::SendUIMessage(GW::UI::UIMessage::kLogout, (void*)&to_character_select);
+            uint32_t logout[] = {0, 0};
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kLogout, (void*)logout);
             reroll_stage = WaitingForCharSelect;
             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 10000;
             return;
