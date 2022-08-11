@@ -29,14 +29,21 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
-
     void Update([[maybe_unused]] float delta) override {}
 
+    [[nodiscard]] GW::AgentID GetItemOwner(GW::ItemID id) const;
     void SpawnSuppressedItems();
 
 private:
+    struct ItemOwner {
+        GW::ItemID item;
+        GW::AgentID owner;
+
+        bool operator==(GW::ItemID const id) const { return item == id; }
+    };
+
     std::vector<GW::Packet::StoC::AgentAdd> suppressed_packets{};
-    bool enabled = true;
+    std::vector<ItemOwner> item_owners{};
 
     [[nodiscard]] bool WantToHide(const GW::Item& item, bool can_pick_up) const;
     bool hide_player_white = false;
@@ -53,8 +60,12 @@ private:
     static void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
     static void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
     static void OnMapLoad(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
+    static void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
+    static void OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
 
     GW::HookEntry OnAgentAdd_Entry;
     GW::HookEntry OnAgentRemove_Entry;
     GW::HookEntry OnMapLoad_Entry;
+    GW::HookEntry OnItemReuseId_Entry;
+    GW::HookEntry OnItemUpdateOwner_Entry;
 };
