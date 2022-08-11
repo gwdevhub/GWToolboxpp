@@ -17,6 +17,8 @@ public:
     }
 
     const char* Name() const override { return "Packet Logger"; }
+    const char* Icon() const override { return ICON_FA_BOX; };
+
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingInternal() override;
 

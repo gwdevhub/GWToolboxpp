@@ -9,12 +9,10 @@
 #include <PluginManager.h>
 
 #include <Modules/ChatCommands.h>
-#include <Modules/GameSettings.h>
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
 #include <Modules/ToolboxTheme.h>
 #include <Modules/Updater.h>
-#include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
 
 void SettingsWindow::LoadSettings(CSimpleIni* ini) {
@@ -157,6 +155,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 
 bool SettingsWindow::DrawSettingsSection(const char* section)
 {
+    if (strcmp(section, "") == 0) return true;
     const auto& callbacks = ToolboxModule::GetSettingsCallbacks();
     const auto& icons = ToolboxModule::GetSettingsIcons();
 
