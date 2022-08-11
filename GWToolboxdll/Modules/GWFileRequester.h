@@ -8,10 +8,11 @@
 
 
 class GWFileRequester : public ToolboxModule {
-    GWFileRequester() {};
-    GWFileRequester(const GWFileRequester&) = delete;
-    ~GWFileRequester() {};
+    GWFileRequester() = default;
+    ~GWFileRequester() override = default;
+
 public:
+    GWFileRequester(const GWFileRequester&) = delete;
     static GWFileRequester& Instance() {
         static GWFileRequester instance;
         return instance;
@@ -19,7 +20,8 @@ public:
     void Initialize() override;
     void Terminate() override;
 
-    const char* Name() const override { return "GWFileRequester"; }
+    const char* Name() const override { return "GW File Requester"; }
+    const char* Icon() const override { return ICON_FA_FILE_DOWNLOAD; }
     struct GWResource {
         uint32_t file_id = 0;
         unsigned char* data = 0;

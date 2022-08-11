@@ -190,10 +190,10 @@ void InfoWindow::DrawGuildInfo(GW::Guild* guild) {
 void InfoWindow::DrawHomAchievements(const GW::Player* player) {
     if (ImGui::TreeNodeEx("Hall of Monuments Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         if (target_achievements.find(player->name) == target_achievements.end()) {
-            HallOfMonumentsAchievements* a = new HallOfMonumentsAchievements();
-            wcscpy(a->character_name, player->name);
-            target_achievements[a->character_name] = a;
-            HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(a->character_name, a);
+            auto* achievements = new HallOfMonumentsAchievements();
+            wcscpy(achievements->character_name, player->name);
+            target_achievements[achievements->character_name] = achievements;
+            HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(achievements->character_name, achievements);
         }
         auto hom_result = target_achievements[player->name];
         if (ImGui::Button("Go to Hom Calculator")) {

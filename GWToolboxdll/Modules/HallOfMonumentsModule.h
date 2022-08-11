@@ -268,8 +268,8 @@ struct HallOfMonumentsAchievements {
 };
 
 class HallOfMonumentsModule : public ToolboxModule {
-    HallOfMonumentsModule() {};
-    ~HallOfMonumentsModule() {};
+    HallOfMonumentsModule() = default;
+    ~HallOfMonumentsModule() override = default;
 public:
     static HallOfMonumentsModule& Instance() {
         static HallOfMonumentsModule instance;
@@ -277,6 +277,7 @@ public:
     }
 
     const char* Name() const override { return "Hall of Monuments"; }
+    const char* SettingsName() const override { return ""; };
 
     // Decode a zero terminated base64 encoded hom code
     bool DecodeHomCode(const char* in, HallOfMonumentsAchievements* out);
@@ -287,5 +288,5 @@ public:
 private:
     GW::HookEntry stoc_hook;
 
-    std::map<uint32_t, GW::Agent*> player_agents;
+    std::map<uint32_t, GW::Agent*> player_agents{};
 };

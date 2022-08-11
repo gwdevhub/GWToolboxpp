@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include "Str.h"
 #include "Path.h"
 
 namespace fs = std::filesystem;
@@ -10,7 +9,7 @@ static std::error_code errcode; // Not thread safe
 bool PathGetExeFullPath(std::filesystem::path& out)
 {
     wchar_t path[MAX_PATH];
-    DWORD result = GetModuleFileNameW(NULL, path, sizeof(path));
+    const auto result = GetModuleFileNameW(NULL, path, MAX_PATH);
     if (result >= sizeof(path)) {
         path[0] = 0;
         fwprintf(stderr, L"%S: GetModuleFileNameW failed (%lu)\n", __func__, GetLastError());
@@ -123,7 +122,7 @@ bool PathGetComputerName(fs::path& out)
 }
 
 bool PathRecursiveRemove(const fs::path& from) {
-    std::error_code errcode;
+    std::error_code error_code;
     bool result;
     fs::directory_iterator it;
     if (!PathExistsSafe(from, &result)) {
@@ -141,14 +140,14 @@ bool PathRecursiveRemove(const fs::path& from) {
         if (!PathDirectoryIteratorSafe(from, &it)) {
             return false;
         }
-        for (const fs::path& p : it) {
+        for (const fs::path p : it) {
             if (!PathRecursiveRemove(from / p.filename()))
                 return false;
         }
     }
-    result = fs::remove(from, errcode);
-    if (errcode.value()) {
-        fwprintf(stderr, L"%S: %s remove failed (%lu, %S)\n", __func__, from.wstring().c_str(), errcode.value(), errcode.message().c_str());
+    result = fs::remove(from, error_code);
+    if (error_code.value()) {
+        fwprintf(stderr, L"%S: %s remove failed (%lu, %S)\n", __func__, from.wstring().c_str(), error_code.value(), error_code.message().c_str());
         return false;
     }
     if (!PathExistsSafe(from, &result)) {
@@ -179,11 +178,9 @@ bool PathSafeCopy(const fs::path& from, const fs::path& to, bool copy_if_target_
         if (!PathDirectoryIteratorSafe(from, &it)) {
             return false;
         }
-        for (const fs::path& p : it) {
-            if (!PathSafeCopy(p, to / p.filename(), copy_if_target_is_newer))
-                return false;
-        }
-        return true;
+        return std::all_of(begin(it), end(it), [=](const fs::path& p) {
+            return PathSafeCopy(p, to / p.filename(), copy_if_target_is_newer);
+        });
     }
     
     const fs::path& dir = to.parent_path();
@@ -319,8 +316,9 @@ bool PathMigrateDataAndCreateSymlink(bool create_symlink)
     }
     fwprintf(stdout, L"Copying content from %s to %s...", apppath.wstring().c_str(), docpath.wstring().c_str());
     // @Cleanup: This bit can take a long time to do the manual copy. Think about a dialog window without writing a sea of code for it.
-    for (const fs::path& p : it) {
-        if (!PathSafeCopy(apppath / p.filename(), docpath / p.filename(), false))
+    for (const fs::path p : it) {
+        const auto targetpath = p.extension() == ".dll" || p.extension() == ".exe" ? docpath : docpath.parent_path();
+        if (!PathSafeCopy(apppath / p.filename(), targetpath / p.filename(), false))
             return false;
     }
     // At this point using PathSafeCopy we're confident that the files have been copied.
