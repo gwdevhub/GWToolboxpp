@@ -13,7 +13,7 @@
 void Updater::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
 #ifdef _DEBUG
-    mode = 0;
+    mode = (Mode)0;
 #else
     mode = (Mode)ini->GetLongValue(Name(), "update_mode", (int)mode);
 #endif
