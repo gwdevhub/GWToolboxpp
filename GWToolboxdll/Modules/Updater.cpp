@@ -108,6 +108,8 @@ void Updater::CheckForUpdate(const bool forced) {
     }
 
     Resources::Instance().EnqueueWorkerTask([this,forced]() {
+        if (!forced && mode == 0)
+            return; // Do not check for updates
         // Here we are in the worker thread and can do blocking operations
         // Reminder: do not send stuff to gw chat from this thread!
         GWToolboxRelease release;
@@ -133,33 +135,28 @@ void Updater::CheckForUpdate(const bool forced) {
         }
         latest_release = release;
         forced_ask = forced;
-        step = Asking;
+        step = NewVersionAvailable;
     });
 }
 
 void Updater::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
-    if (step == Asking && !latest_release.version.empty()) {
+    if (step == NewVersionAvailable && !latest_release.version.empty()) {
+        Mode iMode = forced_ask ? Mode::CheckAndAsk : mode;
         
-        if (!notified) {
-            notified = true;
-            Log::Warning("GWToolbox++ version %s is available! You have %s%s.",
-                latest_release.version.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA);
-        }
-
-        int iMode = forced_ask ? 2 : mode;
-        
+        // NB: Mode::DontCheckForUpdates shouldn't get this far, but we don't do anything anyway
         switch (iMode) {
-        case 0: // no updating
+
+        case Mode::CheckAndWarn: // check and warn
+            if (!notified) {
+                notified = true;
+                Log::Warning("GWToolbox++ version %s is available! You have %s%s.",
+                    latest_release.version.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA);
+            }
             step = Done;
             break;
 
-        case 1: // check and warn
-
-            step = Done;
-            break;
-
-        case 2: { // check and ask
+        case Mode::CheckAndAsk: { // check and ask
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
             ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
@@ -170,25 +167,25 @@ void Updater::Draw(IDirect3DDevice9* device) {
 
             ImGui::Text("");
             ImGui::Text("Do you want to update?");
-            if (ImGui::Button("Later", ImVec2(100, 0))) {
+            if (ImGui::Button("Later###gwtoolbox_dont_update", ImVec2(100, 0))) {
                 step = Done;
             }
             ImGui::SameLine();
-            if (ImGui::Button("OK", ImVec2(100, 0))) {
+            if (ImGui::Button("OK###gwtoolbox_do_update", ImVec2(100, 0))) {
                 DoUpdate();
             }
             ImGui::End();
             if (!visible) {
                 step = Done;
             }
-            break;
-        }
+        } break;
 
-        case 3: // check and do
+        case Mode::CheckAndAutoUpdate: // check and do
             DoUpdate();
             break;
 
         default:
+            step = Done;
             break;
         }
 

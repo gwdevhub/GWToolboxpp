@@ -341,6 +341,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_reroll_window = ini->GetBoolValue(Name(), VAR_NAME(use_reroll_window), use_reroll_window);
     use_party_statistics = ini->GetBoolValue(Name(), VAR_NAME(use_party_statistics), use_party_statistics);
     use_skill_monitor = ini->GetBoolValue(Name(), VAR_NAME(use_skill_monitor), use_skill_monitor);
+    use_latency_widget = ini->GetBoolValue(Name(), VAR_NAME(use_latency_widget), use_latency_widget);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -392,6 +393,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_reroll_window), use_reroll_window);
     ini->SetBoolValue(Name(), VAR_NAME(use_party_statistics), use_party_statistics);
     ini->SetBoolValue(Name(), VAR_NAME(use_skill_monitor), use_skill_monitor);
+    ini->SetBoolValue(Name(), VAR_NAME(use_latency_widget), use_latency_widget);
 }
 
 void ToolboxSettings::Draw(IDirect3DDevice9*) {
