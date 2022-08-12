@@ -619,7 +619,7 @@ void TravelWindow::Initialize() {
 }
 void TravelWindow::Terminate() {
     ToolboxWindow::Terminate();
-    for (auto it : searchable_explorable_areas) {
+    for (const auto it : searchable_explorable_areas) {
         delete[] it;
     }
     searchable_explorable_areas.clear();

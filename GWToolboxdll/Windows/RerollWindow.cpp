@@ -146,7 +146,7 @@ namespace {
 }
 
 RerollWindow::~RerollWindow() {
-    for (auto it : account_characters) {
+    for (const auto& it : account_characters) {
         delete it.second;
     }
     account_characters.clear();
@@ -617,7 +617,7 @@ void RerollWindow::LoadSettings(CSimpleIni* ini) {
 }
 void RerollWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
-    for (auto it : account_characters) {
+    for (const auto& it : account_characters) {
         std::string email_s = GuiUtils::WStringToString(it.first);
         auto chars = it.second;
         for (auto it2 = chars->begin(); it2 != chars->end(); it2++) {

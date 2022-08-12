@@ -923,7 +923,7 @@ void GameSettings::Initialize() {
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kDialogButton
     };
-    for (auto message_id : dialog_ui_messages) {
+    for (const auto message_id : dialog_ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, message_id, OnDialogUIMessage);
     }
     
@@ -2068,7 +2068,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
     if (dialog_id != 0x87)
         return;
     GW::UI::DialogButtonInfo* found = 0;
-    for (auto dialog : DialogModule::Instance().GetDialogButtons()) {
+    for (const auto dialog : DialogModule::Instance().GetDialogButtons()) {
         if (dialog->dialog_id != dialog_id)
             continue;
         found = dialog;

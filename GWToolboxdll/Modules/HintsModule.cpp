@@ -238,7 +238,7 @@ void HintsModule::Update(float) {
         && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
         && GW::Agents::GetPlayer()) {
         clock_t _now = clock();
-        for (auto it = delayed_hints.begin(); it != delayed_hints.end();it++) {
+        for (auto it = delayed_hints.begin(); it != delayed_hints.end(); it++) {
             if (it->first < _now) {
                 it->second->Show();
                 delete it->second;

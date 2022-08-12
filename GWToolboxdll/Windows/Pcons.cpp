@@ -67,7 +67,7 @@ Pcon::Pcon(const char* chatname,
     ini = ininame ? ininame : GuiUtils::ToSlug(chat);
 }
 Pcon::~Pcon() {
-    for (auto c : settings_by_charname) {
+    for (const auto& c : settings_by_charname) {
         delete c.second;
     }
     settings_by_charname.clear();
@@ -77,7 +77,7 @@ Pcon::~Pcon() {
 void Pcon::ResetCounts() {
     refill_attempted = false;
     pcon_quantity_checked = false;
-    for (auto i : reserved_bag_slots) {
+    for (auto& i : reserved_bag_slots) {
         i.clear();
     }
 }
@@ -450,7 +450,7 @@ void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
     inifile->SetLongValue(section, buf_threshold, threshold);
     inifile->SetBoolValue(section, buf_visible, visible);
 
-    for (auto charname_pcons : settings_by_charname) {
+    for (const auto& charname_pcons : settings_by_charname) {
         bool* _enabled = charname_pcons.second;
         if (charname_pcons.first == L"default") {
             inifile->SetBoolValue(section, buf_active, *_enabled);

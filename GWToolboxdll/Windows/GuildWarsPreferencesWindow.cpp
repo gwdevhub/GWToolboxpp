@@ -125,7 +125,7 @@ namespace {
     };
 
     void GetCurrentPreferences(GWPreferences* out) {
-        for (auto it : out->window_positions) {
+        for (const auto it : out->window_positions) {
             delete it;
         }
         out->window_positions.clear();
@@ -134,7 +134,7 @@ namespace {
                 continue;
             out->window_positions.push_back(new WindowPreference(i,GW::UI::GetWindowPosition(i)));
         }
-        for (auto it : out->preferences) {
+        for (const auto it : out->preferences) {
             delete it;
         }
         out->preferences.clear();

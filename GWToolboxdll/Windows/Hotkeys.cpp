@@ -235,7 +235,7 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
         
         GuiUtils::IniToArray(ini_str, prof_ids_tmp);
         if (!prof_ids_tmp.empty()) {
-            for (auto prof_id : prof_ids_tmp) {
+            for (const auto prof_id : prof_ids_tmp) {
                 if (prof_id < _countof(prof_ids))
                     prof_ids[prof_id] = true;
             }
@@ -652,7 +652,7 @@ bool TBHotkey::IsInRangeOfNPC() {
     if (!agents)
         return false;
     auto* me = GW::Agents::GetPlayer();
-    for (auto agent : *agents) {
+    for (const auto agent : *agents) {
         if (!(agent && agent->type == 0xDB)) 
             continue;
         auto* living = agent->GetAsAgentLiving();
@@ -1007,7 +1007,7 @@ GW::Item* HotkeyEquipItem::FindMatchingItem(GW::Constants::Bag _bag_idx) {
     GW::Bag* bag = GW::Items::GetBag(_bag_idx);
     if (!bag) return nullptr;
     GW::ItemArray& items = bag->items;
-    for (auto _item : items) {
+    for (const auto _item : items) {
         if (item_attributes.check(_item))
             return _item;
     }
@@ -1832,10 +1832,10 @@ int HotkeyGWKey::Description(char* buf, size_t bufsz)
 }
 bool HotkeyGWKey::Draw()
 {
-    if (!labels.size()) {
+    if (labels.empty()) {
         bool waiting = false;
-        for (auto it : control_labels) {
-            if (!it.second->string().size()) {
+        for (const auto& it : control_labels) {
+            if (it.second->string().empty()) {
                 waiting = true;
                 break;
             }
@@ -1845,7 +1845,7 @@ bool HotkeyGWKey::Draw()
             labels.clear();
         }
     }
-    if (!labels.size()) {
+    if (labels.empty()) {
         ImGui::Text("Waiting on endoded strings");
         return false;
     }
