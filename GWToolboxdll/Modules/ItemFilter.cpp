@@ -166,7 +166,7 @@ void ItemFilter::Initialize() {
     GW::StoC::RegisterPacketCallback(
         &OnItemReuseId_Entry, GW::Packet::StoC::ItemGeneral_ReuseID::STATIC_HEADER, OnItemReuseId);
     GW::StoC::RegisterPacketCallback(
-        &OnItemUpdateOwner_Entry, GW::Packet::StoC::UpdateItemOwner::STATIC_HEADER, OnItemUpdateOwner);
+        &OnItemUpdateOwner_Entry, GW::Packet::StoC::ItemUpdateOwner::STATIC_HEADER, OnItemUpdateOwner);
 }
 
 void ItemFilter::SignalTerminate() {
@@ -177,7 +177,7 @@ void ItemFilter::SignalTerminate() {
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::UpdateItemOwner>(&OnItemUpdateOwner_Entry);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry);
 }
 
 void ItemFilter::LoadSettings(CSimpleIniA* ini) {
@@ -275,7 +275,7 @@ GW::AgentID ItemFilter::GetItemOwner(const GW::ItemID id) const {
 }
 
 void ItemFilter::OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::PacketBase* basepacket) {
-    const auto packet = reinterpret_cast<GW::Packet::StoC::UpdateItemOwner*>(basepacket);
+    const auto packet = reinterpret_cast<GW::Packet::StoC::ItemUpdateOwner*>(basepacket);
     auto const it = std::find(Instance().item_owners.begin(), Instance().item_owners.end(), packet->item_id);
 
     if (it == Instance().item_owners.end()) {

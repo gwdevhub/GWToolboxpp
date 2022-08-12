@@ -98,7 +98,7 @@ void PartyStatisticsWindow::Initialize() {
         &GenericValueSelf_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) -> void {
             UNREFERENCED_PARAMETER(status);
 
-            const uint32_t value_id = packet->Value_id;
+            const uint32_t value_id = packet->value_id;
             const uint32_t caster_id = packet->agent_id;
             const uint32_t target_id = 0U;
             const uint32_t value = packet->value;

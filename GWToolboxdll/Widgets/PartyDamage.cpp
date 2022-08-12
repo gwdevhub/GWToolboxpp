@@ -1,4 +1,6 @@
+#include "Color.h"
 #include "stdafx.h"
+#include "Timer.h"
 
 #include <GWCA/GameContainers/GamePos.h>
 
@@ -213,13 +215,13 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 
 	uint32_t max_recent = 0;
     uint32_t max = 0;
-	for (size_t i = 0; i < MAX_PLAYERS; ++i) {
-		if (max_recent < damage[i].recent_damage) {
-			max_recent = damage[i].recent_damage;
+	for (const auto& i : damage) {
+		if (max_recent < i.recent_damage) {
+			max_recent = i.recent_damage;
 		}
 
-		if (max < damage[i].damage) {
-            max = damage[i].damage;
+		if (max < i.damage) {
+            max = i.damage;
         }
 	}
 

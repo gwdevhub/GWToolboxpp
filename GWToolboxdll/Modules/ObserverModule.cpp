@@ -191,7 +191,7 @@ void ObserverModule::Initialize()
             if (!IsActive()) return;
             if (!InitializeObserverSession()) return;
 
-            const uint32_t value_id = packet->Value_id;
+            const uint32_t value_id = packet->value_id;
             const uint32_t caster_id = packet->agent_id;
             const uint32_t target_id = NO_AGENT;
             const uint32_t value = packet->value;
