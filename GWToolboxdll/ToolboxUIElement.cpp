@@ -10,9 +10,8 @@ const char* ToolboxUIElement::UIName() const {
         static char buf[128]; 
         sprintf(buf, "%s  %s", Icon(), Name());
         return buf;
-    } else {
-        return Name();
     }
+    return Name();
 }
 
 void ToolboxUIElement::Initialize() {
@@ -56,8 +55,7 @@ void ToolboxUIElement::RegisterSettingsContent() {
 void ToolboxUIElement::DrawSizeAndPositionSettings() {
     ImVec2 pos(0, 0);
     ImVec2 size(100.0f, 100.0f);
-    ImGuiWindow* window = ImGui::FindWindowByName(Name());
-    if (window) {
+    if (const auto window = ImGui::FindWindowByName(Name())) {
         pos = window->Pos;
         size = window->Size;
     }
@@ -129,7 +127,7 @@ bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
     } else {
         text_x = pos.x + img_size + ImGui::GetStyle().ItemSpacing.x;
     }
-    bool clicked = ImGui::Button("", ImVec2(width, ImGui::GetTextLineHeightWithSpacing()));
+    const bool clicked = ImGui::Button("", ImVec2(width, ImGui::GetTextLineHeightWithSpacing()));
     if (show_icon) {
         if (button_texture != nullptr) {
             ImGui::GetWindowDrawList()->AddImage(

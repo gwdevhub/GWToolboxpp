@@ -1,8 +1,6 @@
 #pragma once
-#include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/GameEntities/Agent.h>
 
 #include <ToolboxModule.h>
 
@@ -21,7 +19,9 @@ public:
     void Terminate() override;
 
     const char* Name() const override { return "GW File Requester"; }
+    const char* SettingsName() const override { return ""; }
     const char* Icon() const override { return ICON_FA_FILE_DOWNLOAD; }
+
     struct GWResource {
         uint32_t file_id = 0;
         unsigned char* data = 0;
