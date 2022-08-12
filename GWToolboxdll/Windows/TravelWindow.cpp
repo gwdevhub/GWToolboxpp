@@ -627,7 +627,7 @@ void TravelWindow::Terminate() {
 
 void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid) {
     if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
+    float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - ImGui::GetStyle().WindowPadding.x;
     bool clicked = false;
     switch (mapid) {
         case GW::Constants::MapID::The_Deep:

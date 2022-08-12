@@ -308,7 +308,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
             for (TeamBuild& tbuild : teambuilds) {
                 ImGui::PushID(static_cast<int>(tbuild.ui_id));
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
-                if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth()-ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
+                if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetContentRegionAvail().x -ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
                     if (one_teambuild_at_a_time && !tbuild.edit_open) {
                         for (auto& tb : teambuilds) {
                             tb.edit_open = false;
@@ -323,7 +323,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 ImGui::PopID();
             }
-            if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+            if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 teambuilds.push_back(TeamBuild(""));
                 teambuilds.back().edit_open = true; // open by default
                 teambuilds.back().builds.resize(4, Build("", ""));
@@ -350,8 +350,8 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
                 ImGui::PopID();
             }
             if (ImGui::Checkbox("Show numbers", &tbuild.show_numbers)) builds_changed = true;
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
-            if (ImGui::Button("Add Build", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x * 0.6f);
+            if (ImGui::Button("Add Build", ImVec2(ImGui::GetContentRegionAvail().x * 0.4f, 0))) {
                 tbuild.builds.push_back(Build("", ""));
                 builds_changed = true;
             }
@@ -374,8 +374,8 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
                 ImGui::OpenPopup("Delete Teambuild?");
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the teambuild");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
-            if (ImGui::Button("Close", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x * 0.6f);
+            if (ImGui::Button("Close", ImVec2(ImGui::GetContentRegionAvail().x * 0.4f, 0))) {
                 tbuild.edit_open = false;
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Close this window");
@@ -895,7 +895,7 @@ void BuildsWindow::SaveToFile() {
                     std::string pconsval;
                     snprintf(pconskey, 16, "pcons%d", j);
                     size_t k = 0;
-                    for (auto pconstr : build.pcons) {
+                    for (auto& pconstr : build.pcons) {
                         if (k) pconsval += ",";
                         k = 1;
                         pconsval += pconstr;

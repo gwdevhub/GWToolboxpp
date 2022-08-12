@@ -388,7 +388,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
     /* Search bar header */
     const float &font_scale = ImGui::GetIO().FontGlobalScale;
     const float btn_width = 80.0f * font_scale;
-    const float search_bar_width = (ImGui::GetWindowContentRegionWidth() - (btn_width * 4) - ImGui::GetStyle().ItemInnerSpacing.x * 7);
+    const float search_bar_width = (ImGui::GetContentRegionAvail().x - (btn_width * 4) - ImGui::GetStyle().ItemInnerSpacing.x * 7);
     if (GetInKamadanAE1(false) || GetInAscalonAE1(false)) {
         bool advertise_dirty = false;
         static int search_type = static_cast<int>(GW::PartySearchType::PartySearchType_Trade);
@@ -556,7 +556,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
         snprintf(buf, 128, "Powered by %s", is_kamadan_chat ? https_host_kmd : https_host_asc);
     }
 
-    if (ImGui::Button(buf, ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))) {
+    if (ImGui::Button(buf, ImVec2(ImGui::GetContentRegionAvail().x, 20.0f))) {
         CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
         ShellExecuteA(NULL, "open", is_kamadan_chat ? https_host_kmd : https_host_asc, NULL, NULL, SW_SHOWNORMAL);
     }

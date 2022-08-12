@@ -67,7 +67,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::SameLine();
             ImGui::Text("(Debug)");
 #endif
-        float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
+        float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2;
         if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
             CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
             ShellExecuteW(NULL, L"open", Resources::GetSettingsFolderPath().c_str(), NULL, NULL, SW_SHOWNORMAL);

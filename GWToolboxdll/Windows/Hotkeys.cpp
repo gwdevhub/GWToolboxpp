@@ -426,10 +426,10 @@ bool TBHotkey::Draw(Op *op)
         hotkey_changed |= Draw();
 
         // === Hotkey section ===
-        float& indent_offset = ImGui::GetCurrentWindow()->DC.Indent.x;
-        float offset_sameline = indent_offset + (ImGui::GetContentRegionAvail().x / 2);
+        const float indent_offset = ImGui::GetCurrentWindow()->DC.Indent.x;
+        const float offset_sameline = indent_offset + (ImGui::GetContentRegionAvail().x / 2);
         hotkey_changed |= ImGui::Checkbox("Block key in Guild Wars when triggered", &block_gw);
-        ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event"); 
+        ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event");
         if (can_trigger_on_map_change) {
             ImGui::SameLine(offset_sameline);
             hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
@@ -602,28 +602,24 @@ bool TBHotkey::Draw(Op *op)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Execute the hotkey now");
 
+        const auto btn_width = ImGui::GetContentRegionAvail().x / 3.0f;
+
         // === Move and delete buttons ===
-        if (ImGui::Button("Move Up",
-                          ImVec2(ImGui::GetWindowContentRegionWidth() / 3.0f,
-                                 0))) {
+        if (ImGui::Button("Move Up", ImVec2(btn_width, 0))) {
             *op = Op_MoveUp;
             hotkey_changed = true;
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Move the hotkey up in the list");
         ImGui::SameLine();
-        if (ImGui::Button("Move Down",
-                          ImVec2(ImGui::GetWindowContentRegionWidth() / 3.0f,
-                                 0))) {
+        if (ImGui::Button("Move Down", ImVec2(btn_width, 0))) {
             *op = Op_MoveDown;
             hotkey_changed = true;
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Move the hotkey down in the list");
         ImGui::SameLine();
-        if (ImGui::Button("Delete",
-                          ImVec2(ImGui::GetWindowContentRegionWidth() / 3.0f,
-                                 0))) {
+        if (ImGui::Button("Delete", ImVec2(btn_width, 0))) {
             ImGui::OpenPopup("Delete Hotkey?");
         }
         if (ImGui::IsItemHovered())

@@ -117,7 +117,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 #if 0
         ImGui::Combo("Group By", (int*)&group_by, "None\0Profession\0Map\0Player Name");
 #endif
-        if (ImGui::Button("Create Hotkey...", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+        if (ImGui::Button("Create Hotkey...", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
             ImGui::OpenPopup("Create Hotkey");
         }
         if (ImGui::BeginPopup("Create Hotkey")) {

@@ -655,7 +655,8 @@ void Minimap::Draw(IDirect3DDevice9 *)
                 static const char *flag_txt[] = {"All", "1", "2", "3", "4", "5", "6", "7", "8"};
                 GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
                 const unsigned int num_heroflags = player_heroes.size() + 1;
-                const float w_but = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x * (num_heroflags)) / (num_heroflags + 1);
+                const float w_but = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * num_heroflags) /
+                    (num_heroflags + 1);
 
                 for (unsigned int i = 0; i < num_heroflags; ++i) {
                     if (i > 0)

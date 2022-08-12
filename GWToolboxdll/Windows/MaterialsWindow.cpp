@@ -405,7 +405,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Separator();
 
         float width2 = 100.0f;
-        float width1 = (ImGui::GetWindowContentRegionWidth() - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2);
+        float width1 = (ImGui::GetContentRegionAvail().x - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2);
 
         // === generic materials ===
         static int common_idx = 0;

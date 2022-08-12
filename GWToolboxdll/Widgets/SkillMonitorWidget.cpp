@@ -132,7 +132,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
         };
 
         for (auto& [agent_id, party_slot] : party_map) {
-            auto skill_history = history[agent_id];
+            auto& skill_history = history[agent_id];
             size_t y = party_slot;
 
             for (size_t i = 0; i < skill_history.size(); i++) {
@@ -150,7 +150,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
                 if (status_border_thickness != 0) {
                     ImGui::PushClipRect(tl, br, true);
                     ImGui::GetWindowDrawList()->AddRect(tl, br, GetColor(skill_activation.status), 0.f,
-                        ImDrawCornerFlags_None, static_cast<float>(status_border_thickness));
+                        ImDrawFlags_RoundCornersNone, static_cast<float>(status_border_thickness));
                     ImGui::PopClipRect();
                 }
                 

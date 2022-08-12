@@ -260,7 +260,7 @@ void CustomRenderer::DrawLineSettings() {
         ImGui::SameLine(0.0f, spacing);
 
         ImGui::PopItemWidth();
-        ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() - ImGui::GetCursorPosX() - spacing - 20.0f);
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetCursorPosX() - spacing - 20.0f);
         markers_changed |= ImGui::InputText("##name", line.name, 128);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
@@ -322,7 +322,7 @@ void CustomRenderer::DrawMarkerSettings() {
         if (ImGui::IsItemHovered()) SetTooltipMapID(marker.map);
         ImGui::SameLine(0.0f, spacing);
         ImGui::PopItemWidth();
-        ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() - ImGui::GetCursorPosX() - spacing - 20.0f);
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetCursorPosX() - spacing - 20.0f);
         marker_changed |= ImGui::InputText("##name", marker.name, 128);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
@@ -404,7 +404,7 @@ void CustomRenderer::DrawPolygonSettings() {
         ImGui::SameLine(0.0f, spacing);
 
         ImGui::PopItemWidth();
-        ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() - ImGui::GetCursorPosX() - spacing - 20.0f);
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetCursorPosX() - spacing - 20.0f);
         markers_changed |= ImGui::InputText("##name", polygon.name, 128);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
         ImGui::PopItemWidth();

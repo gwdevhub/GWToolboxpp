@@ -342,7 +342,7 @@ bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool s
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
-        ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+        ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
         ToggleEnable();
     }
     ImGui::PopStyleColor();
@@ -357,7 +357,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
     if (show_enable_button) {
         ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
         if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
-            ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+            ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
             ToggleEnable();
         }
         ImGui::PopStyleColor();
