@@ -122,10 +122,10 @@ void WorldMapWidget::Draw(IDirect3DDevice9 *pDevice) {
         GW::WorldContext* world = GW::GameContext::instance()->world;
         UNREFERENCED_PARAMETER(world);
         ImGui::Checkbox("Show all areas", &showing_all_outposts);
-        show_all_rect = ImGui::GetCurrentWindow()->DC.LastItemRect;
+        show_all_rect = ImGui::GetCurrentContext()->LastItemData.Rect;
         bool is_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
         ImGui::Checkbox("Hard mode", &is_hard_mode);
-        hard_mode_rect = ImGui::GetCurrentWindow()->DC.LastItemRect;
+        hard_mode_rect = ImGui::GetCurrentContext()->LastItemData.Rect;
     }
     ImGui::End();
     ImGui::PopStyleColor();

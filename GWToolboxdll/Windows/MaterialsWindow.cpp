@@ -224,7 +224,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
             EnqueueQuote(Feather);
             EnqueueQuote(PileofGlitteringDust);
         }
-        h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+        h = ImGui::GetCurrentContext()->LastItemData.Rect.GetHeight();
         static int qty_essence = 1;
         ImGui::SetCursorPosX(x);
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
@@ -263,7 +263,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
             EnqueueQuote(IronIngot);
             EnqueueQuote(PileofGlitteringDust);
         }
-        h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+        h = ImGui::GetCurrentContext()->LastItemData.Rect.GetHeight();
         static int qty_grail = 1;
         ImGui::SetCursorPosX(x);
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
@@ -302,7 +302,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
             EnqueueQuote(IronIngot);
             EnqueueQuote(Bone);
         }
-        h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+        h = ImGui::GetCurrentContext()->LastItemData.Rect.GetHeight();
         static int qty_armor = 1;
         ImGui::SetCursorPosX(x);
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
@@ -340,7 +340,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
             EnqueueQuote(GraniteSlab);
             EnqueueQuote(PileofGlitteringDust);
         }
-        h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+        h = ImGui::GetCurrentContext()->LastItemData.Rect.GetHeight();
         static int qty_pstone = 1;
         ImGui::SetCursorPosX(x);
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
@@ -378,7 +378,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
             EnqueueQuote(PlantFiber);
             EnqueueQuote(Bone);
         }
-        h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+        h = ImGui::GetCurrentContext()->LastItemData.Rect.GetHeight();
         static int qty_resscroll = 1;
         ImGui::SetCursorPosX(x);
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
