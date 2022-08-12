@@ -233,6 +233,10 @@ public:
 
     bool auto_open_locked_chest = false;
 
+    bool show_faction_gain = true;
+    bool show_experience_gain = true;
+    bool show_no_experience_gain = true;
+
     Color nametag_color_npc = NAMETAG_COLOR_DEFAULT_NPC;
     Color nametag_color_player_self = NAMETAG_COLOR_DEFAULT_PLAYER_SELF;
     Color nametag_color_player_other = NAMETAG_COLOR_DEFAULT_PLAYER_OTHER;

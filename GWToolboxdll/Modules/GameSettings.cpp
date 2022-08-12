@@ -69,6 +69,11 @@ using namespace ToolboxUtils;
 
 namespace {
 
+    GameSettings& Instance() {
+        return GameSettings::Instance();
+    }
+
+
     void PrintTime(wchar_t *buffer, size_t n, DWORD time_sec) {
         DWORD secs = time_sec % 60;
         DWORD minutes = (time_sec / 60) % 60;
@@ -357,6 +362,28 @@ namespace {
             GW::SkillbarMgr::LoadSkillbar(skillbar_packet.skill_ids,_countof(skillbar_packet.skill_ids),GW::PartyMgr::GetAgentHeroID(skillbar_packet.agent_id));
         }
         skillbar_packet.agent_id = 0;
+    }
+
+    typedef void(__cdecl* ShowAgentFactionGain_pt)(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained);
+    ShowAgentFactionGain_pt ShowAgentFactionGain_Func = 0;;
+    ShowAgentFactionGain_pt ShowAgentFactionGain_Ret = 0;
+    void OnShowAgentFactionGain(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained) {
+        GW::Hook::EnterHook();
+        bool blocked = !Instance().show_faction_gain && agent_id == GW::Agents::GetPlayerId();
+        if (!blocked)
+            ShowAgentFactionGain_Ret(agent_id, stat_type, amount_gained);
+        GW::Hook::LeaveHook();
+    }
+    typedef void(__cdecl* ShowAgentExperienceGain_pt)(uint32_t agent_id, uint32_t amount_gained);
+    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = 0;;
+    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Ret = 0;
+    void OnShowAgentExperienceGain(uint32_t agent_id, uint32_t amount_gained) {
+        GW::Hook::EnterHook();
+        bool blocked = agent_id == GW::Agents::GetPlayerId() 
+            && (!Instance().show_experience_gain || (!Instance().show_no_experience_gain && amount_gained == 0));
+        if (!blocked)
+            ShowAgentExperienceGain_Ret(agent_id, amount_gained);
+        GW::Hook::LeaveHook();
     }
 
 }
@@ -773,50 +800,43 @@ const bool PendingChatMessage::PrintMessage() {
 void GameSettings::Initialize() {
     ToolboxModule::Initialize();
     
-    {
-        // Patch that allow storage page (and Anniversary page) to work.
-        uintptr_t found = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
-        printf("[SCAN] StoragePatch = %p\n", (void *)found);
+    uintptr_t address;
 
-        // Xunlai Chest has a behavior where if you
-        // 1. Open chest on page 1 to 14
-        // 2. Close chest & open it again
-        // -> You should still be on the same page
-        // But, if you try with the material page (or anniversary page in the case when you bought all other storage page)
-        // you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
-        // when they added anniversary page so we do it ourself.
-        DWORD page_max = 14;
-        ctrl_click_patch.SetPatch(found, &page_max, 1);
-        ctrl_click_patch.TogglePatch(true);
+    // Patch that allow storage page (and Anniversary page) to work.
+    address = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
+    printf("[SCAN] StoragePatch = %p\n", (void *)address);
+
+    // Xunlai Chest has a behavior where if you
+    // 1. Open chest on page 1 to 14
+    // 2. Close chest & open it again
+    // -> You should still be on the same page
+    // But, if you try with the material page (or anniversary page in the case when you bought all other storage page)
+    // you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
+    // when they added anniversary page so we do it ourself.
+    DWORD page_max = 14;
+    ctrl_click_patch.SetPatch(address, &page_max, 1);
+    ctrl_click_patch.TogglePatch(true);
+
+    address = GW::Scanner::Find("\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
+    printf("[SCAN] TomePatch = %p\n", (void *)address);
+    if (address) {
+        tome_patch.SetPatch(address, "\x75\x1E\x90\x90\x90\x90\x90", 7);
+    }
+    address = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
+    printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)address);
+    if (address) {
+        gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
     }
 
-    {
-        uintptr_t found = GW::Scanner::Find("\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
-        printf("[SCAN] TomePatch = %p\n", (void *)found);
-        if (found) {
-            tome_patch.SetPatch(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);
-        }
-    }
+    address = GW::Scanner::Find("\x8b\x7d\x08\x8b\x70\x2c\x83\xff\x0f","xxxxxxxxx");
+    ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);
+    ShowAgentExperienceGain_Func = (ShowAgentExperienceGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x4f);
 
-    {
-        uintptr_t found = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
-        printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)found);
-        if (found) {
-            gold_confirm_patch.SetPatch(found, "\x90\x90", 2);
-        }
-    }
+    GW::HookBase::CreateHook(ShowAgentFactionGain_Func, OnShowAgentFactionGain, (void**)&ShowAgentFactionGain_Ret);
+    GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
+    GW::HookBase::CreateHook(ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, (void**)&ShowAgentExperienceGain_Ret);
+    GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
 
-
-
-    // Save last dialog sender, used for faction donate
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogSender>(
-        &OnDialog_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::DialogSender* pak) {
-            UNREFERENCED_PARAMETER(status);
-            auto *agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-            if (!agent) return;
-            last_dialog_npc_id = agent->player_number;
-        });
     GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, &OnFactionDonate);
     GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILLBAR_UPDATE, OnPostLoadSkillBar, 0x8000);
@@ -1091,6 +1111,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     block_sparkly_drops_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
     limit_signets_of_capture = ini->GetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
     auto_open_locked_chest = ini->GetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
+    show_faction_gain = ini->GetBoolValue(Name(), VAR_NAME(show_faction_gain), show_faction_gain);
+    show_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(show_experience_gain), show_experience_gain);
+    show_no_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(show_no_experience_gain), show_no_experience_gain);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1236,6 +1259,10 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
     ini->SetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
     ini->SetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
+
+    ini->SetBoolValue(Name(), VAR_NAME(show_faction_gain), show_faction_gain);
+    ini->SetBoolValue(Name(), VAR_NAME(show_experience_gain), show_experience_gain);
+    ini->SetBoolValue(Name(), VAR_NAME(show_no_experience_gain), show_no_experience_gain);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1446,6 +1473,13 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
     ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting",&drop_ua_on_cast);
     ImGui::Checkbox("Auto use lockpick when interacting with locked chest", &auto_open_locked_chest);
+    ImGui::Text("Show message above character when:");
+    ImGui::Indent();
+    ImGui::StartSpacedElements(checkbox_w);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Gaining faction", &show_faction_gain);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Gaining experience", &show_experience_gain);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Gaining 0 experience", &show_no_experience_gain);
+    ImGui::Unindent();
     ImGui::Text("Disable animation and sound from consumables:");
     ImGui::Indent();
     ImGui::StartSpacedElements(300.f);
