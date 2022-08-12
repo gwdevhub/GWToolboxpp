@@ -597,7 +597,7 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::Text("Drops");
     ImGui::SameLine();
     ImGui::TextDisabled("('Rare' stands for Gold item, Ecto, Obby shard or Lockpick)");
-    ImGui::StartSpacedElements(270.f);
+    ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement(); ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
     ImGui::NextSpacedElement(); ImGui::Checkbox("A common item drops for you", &self_drop_common);
     ImGui::NextSpacedElement(); ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
@@ -609,7 +609,7 @@ void ChatFilter::DrawSettingInternal() {
 
     ImGui::Separator();
     ImGui::Text("Announcements");
-    ImGui::StartSpacedElements(270.f);
+    ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement(); ImGui::Checkbox("Guild Announcement", &guild_announcement);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Hall of Heroes winners", &hoh_messages);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Favor of the Gods announcements", &favor);
@@ -618,7 +618,7 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::NextSpacedElement(); ImGui::Checkbox("'You gain x faction'", &faction_gain);
     ImGui::Separator();
     ImGui::Text("Warnings");
-    ImGui::StartSpacedElements(270.f);
+    ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement(); ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
     ImGui::ShowHelp("'Item can only/cannot be used in towns or outposts.'\n\
 'This item cannot be used here.'\n\
@@ -646,7 +646,7 @@ void ChatFilter::DrawSettingInternal() {
 
     ImGui::Separator();
     ImGui::Text("Others");
-    ImGui::StartSpacedElements(270.f);
+    ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement(); ImGui::Checkbox("Earning skill points", &skill_points);
     ImGui::NextSpacedElement(); ImGui::Checkbox("PvP messages", &pvp_messages);
     ImGui::ShowHelp("Such as 'A skill was updated for pvp!'");

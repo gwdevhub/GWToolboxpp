@@ -184,9 +184,13 @@ void DialogsWindow::DrawSettingInternal() {
     }
     ImGui::PopItemWidth();
     ImGui::Text("Show:");
+    ImGui::StartSpacedElements(200.f * ImGui::FontScale());
     ImGui::Checkbox("Common 4", &show_common);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("UW Teles", &show_uwteles);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Favorites", &show_favorites);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Custom", &show_custom);
 }
 

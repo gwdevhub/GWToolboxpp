@@ -52,6 +52,9 @@
 
 #include <Modules/GameSettings.h>
 #include <Modules/DialogModule.h>
+#ifdef _DEBUG
+#include <Windows/StringDecoderWindow.h>
+#endif
 
 #pragma warning(disable : 6011)
 
@@ -61,6 +64,7 @@ using namespace ToolboxUtils;
 namespace {
 
     GameSettings& Instance() {
+
         return GameSettings::Instance();
     }
 
@@ -1419,7 +1423,7 @@ void GameSettings::DrawSettingInternal() {
 
     ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
     ImGui::SameLine();
-    ImGui::PushItemWidth(50.0f * ImGui::GetIO().FontGlobalScale);
+    ImGui::PushItemWidth(50.0f * ImGui::FontScale());
     ImGui::InputInt("##awaydelay", &auto_set_away_delay, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
@@ -1473,7 +1477,7 @@ void GameSettings::DrawSettingInternal() {
     ImGui::Unindent();
     ImGui::Text("Disable animation and sound from consumables:");
     ImGui::Indent();
-    ImGui::StartSpacedElements(300.f);
+    ImGui::StartSpacedElements(checkbox_w);
     constexpr const char* doesnt_affect_me = "Only applies to other players";
     ImGui::NextSpacedElement(); ImGui::Checkbox("Tonics", &block_transmogrify_effect);
     ImGui::ShowHelp(doesnt_affect_me);
@@ -1496,7 +1500,7 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
     ImGui::Text("In-game name tag colors:");
     ImGui::Indent();
-    ImGui::StartSpacedElements(200.f);
+    ImGui::StartSpacedElements(checkbox_w);
     uint32_t flags = ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs;
     ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Myself", &nametag_color_player_self, flags);
     ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("NPC", &nametag_color_npc, flags);
