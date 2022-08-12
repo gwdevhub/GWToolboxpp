@@ -7,6 +7,18 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 5.16
+* [New] Added option in game settings to suppress overhead info for experience/faction gained
+* [Minor] `/dialog take` now also takes quest rewards
+* [Fix] Fixed bug preventing access to skill purchases or trader navigation
+* [Fix] Fixed bug preventing drawing or pings on the toolbox minimap being sent to the server
+* [Fix] Fixed bug causing gwtoolbox to auto update regardless of user preference
+* [Fix] Fixed bug stopping shadow walk marker from being shown on minimap
+* [Fix] Fixed ownership logic in ItemFilter module
+* [Fix] Fixed bug causing rerolling to log out completely rather than to char select screen
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.16_Release/GWToolboxdll.dll)
+
 ## Version 5.15
 * [New] Item and skills images now load on demand from Guild Wars Wiki instead of being compiled inside toolbox
 * [New] Added Preferred Skill Ordes window via settings > builds
