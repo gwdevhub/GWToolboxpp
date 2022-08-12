@@ -113,9 +113,9 @@ bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
 
     ImGui::PushStyleColor(ImGuiCol_Button, visible ?
         ImGui::GetStyle().Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));
-    ImVec2 pos = ImGui::GetCursorScreenPos();
-    ImVec2 textsize = ImGui::CalcTextSize(Name());
-    float width = ImGui::GetWindowContentRegionWidth();
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    const ImVec2 textsize = ImGui::CalcTextSize(Name());
+    const float width = ImGui::GetContentRegionAvail().x;
     
     float img_size = 0;
     if (show_icon) {

@@ -81,8 +81,8 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible) return;
     auto DialogButton = [](int x_idx, int x_qty, const char* text, const char* help, uint32_t dialog_id) -> void {
         if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-        float w = (ImGui::GetWindowContentRegionWidth()
-            - ImGui::GetStyle().ItemInnerSpacing.x * (x_qty - 1)) / x_qty;
+        float w = (ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x
+                   - ImGui::GetStyle().ItemInnerSpacing.x * (x_qty - 1)) / x_qty;
         if (ImGui::Button(text, ImVec2(w, 0))) {
             GoNPCSendDialog(dialog_id);
 

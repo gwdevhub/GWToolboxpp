@@ -10,7 +10,6 @@
 
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Party.h>
-#include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
@@ -18,12 +17,9 @@
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Camera.h>
-#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Title.h>
 
-#include <GWCA/Context/ItemContext.h>
-#include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
 
@@ -31,12 +27,10 @@
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
@@ -46,7 +40,6 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 
-#include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
 #include <Utils/GuiUtils.h>
@@ -57,9 +50,7 @@
 #include <Timer.h>
 #include <Color.h>
 
-#include <Windows/StringDecoderWindow.h>
 #include <Modules/GameSettings.h>
-#include <Modules/Resources.h>
 #include <Modules/DialogModule.h>
 
 #pragma warning(disable : 6011)
@@ -365,22 +356,22 @@ namespace {
     }
 
     typedef void(__cdecl* ShowAgentFactionGain_pt)(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained);
-    ShowAgentFactionGain_pt ShowAgentFactionGain_Func = 0;;
-    ShowAgentFactionGain_pt ShowAgentFactionGain_Ret = 0;
+    ShowAgentFactionGain_pt ShowAgentFactionGain_Func = nullptr;;
+    ShowAgentFactionGain_pt ShowAgentFactionGain_Ret = nullptr;
     void OnShowAgentFactionGain(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained) {
         GW::Hook::EnterHook();
-        bool blocked = !Instance().show_faction_gain && agent_id == GW::Agents::GetPlayerId();
+        const bool blocked = Instance().block_faction_gain && agent_id == GW::Agents::GetPlayerId();
         if (!blocked)
             ShowAgentFactionGain_Ret(agent_id, stat_type, amount_gained);
         GW::Hook::LeaveHook();
     }
     typedef void(__cdecl* ShowAgentExperienceGain_pt)(uint32_t agent_id, uint32_t amount_gained);
-    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = 0;;
-    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Ret = 0;
+    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = nullptr;
+    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Ret = nullptr;
     void OnShowAgentExperienceGain(uint32_t agent_id, uint32_t amount_gained) {
         GW::Hook::EnterHook();
-        bool blocked = agent_id == GW::Agents::GetPlayerId() 
-            && (!Instance().show_experience_gain || (!Instance().show_no_experience_gain && amount_gained == 0));
+        const bool blocked = agent_id == GW::Agents::GetPlayerId() 
+                             && (Instance().block_experience_gain || Instance().block_zero_experience_gain && amount_gained == 0);
         if (!blocked)
             ShowAgentExperienceGain_Ret(agent_id, amount_gained);
         GW::Hook::LeaveHook();
@@ -1111,9 +1102,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     block_sparkly_drops_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
     limit_signets_of_capture = ini->GetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
     auto_open_locked_chest = ini->GetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
-    show_faction_gain = ini->GetBoolValue(Name(), VAR_NAME(show_faction_gain), show_faction_gain);
-    show_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(show_experience_gain), show_experience_gain);
-    show_no_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(show_no_experience_gain), show_no_experience_gain);
+    block_faction_gain = ini->GetBoolValue(Name(), VAR_NAME(block_faction_gain), block_faction_gain);
+    block_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(block_experience_gain), block_experience_gain);
+    block_zero_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(block_zero_experience_gain), block_zero_experience_gain);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1260,9 +1251,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
     ini->SetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
 
-    ini->SetBoolValue(Name(), VAR_NAME(show_faction_gain), show_faction_gain);
-    ini->SetBoolValue(Name(), VAR_NAME(show_experience_gain), show_experience_gain);
-    ini->SetBoolValue(Name(), VAR_NAME(show_no_experience_gain), show_no_experience_gain);
+    ini->SetBoolValue(Name(), VAR_NAME(block_faction_gain), block_faction_gain);
+    ini->SetBoolValue(Name(), VAR_NAME(block_experience_gain), block_experience_gain);
+    ini->SetBoolValue(Name(), VAR_NAME(block_zero_experience_gain), block_zero_experience_gain);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1473,17 +1464,17 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
     ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting",&drop_ua_on_cast);
     ImGui::Checkbox("Auto use lockpick when interacting with locked chest", &auto_open_locked_chest);
-    ImGui::Text("Show message above character when:");
+    ImGui::Text("Block floating numbers above character when:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Gaining faction", &show_faction_gain);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Gaining experience", &show_experience_gain);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Gaining 0 experience", &show_no_experience_gain);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Gaining faction", &block_faction_gain);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Gaining experience", &block_experience_gain);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Gaining 0 experience", &block_zero_experience_gain);
     ImGui::Unindent();
     ImGui::Text("Disable animation and sound from consumables:");
     ImGui::Indent();
     ImGui::StartSpacedElements(300.f);
-    constexpr char* doesnt_affect_me = "Only applies to other players";
+    constexpr const char* doesnt_affect_me = "Only applies to other players";
     ImGui::NextSpacedElement(); ImGui::Checkbox("Tonics", &block_transmogrify_effect);
     ImGui::ShowHelp(doesnt_affect_me);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Sweets", &block_sugar_rush_effect);
@@ -1506,7 +1497,7 @@ void GameSettings::DrawSettingInternal() {
     ImGui::Text("In-game name tag colors:");
     ImGui::Indent();
     ImGui::StartSpacedElements(200.f);
-    uint32_t flags = ImGuiColorEditFlags__DisplayMask | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs;
+    uint32_t flags = ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs;
     ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Myself", &nametag_color_player_self, flags);
     ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("NPC", &nametag_color_npc, flags);
     ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Enemy", &nametag_color_enemy, flags);

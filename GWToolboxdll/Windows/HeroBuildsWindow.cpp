@@ -170,7 +170,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
             for (TeamHeroBuild& tbuild : teambuilds) {
                 ImGui::PushID(static_cast<int>(tbuild.ui_id));
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
-                if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth() - item_spacing - btn_width, 0))) {
+                if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width, 0))) {
                     if (one_teambuild_at_a_time && !tbuild.edit_open) {
                         for (auto &tb : teambuilds) {
                             tb.edit_open = false;
@@ -189,7 +189,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(ImGui::GetIO().KeyCtrl ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
                 ImGui::PopID();
             }
-            if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+            if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 TeamHeroBuild tb = TeamHeroBuild("");
                 tb.builds.reserve(8); // at this point why don't we use a static array ??
                 tb.builds.push_back(HeroBuild("", "", -2));
@@ -240,7 +240,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
             const float icon_btn_width = btn_width / 1.75f;
             const float panel_width = btn_width + 12.0f;
             const float item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-            const float text_item_width = (ImGui::GetWindowContentRegionWidth() - btn_width - btn_width - btn_width - panel_width - (item_spacing * 3)) / 3;
+            const float text_item_width = (ImGui::GetContentRegionAvail().x - btn_width - btn_width - btn_width - panel_width - (item_spacing * 3)) / 3;
             float offset = btn_width;
             ImGui::SetCursorPosX(offset);
             ImGui::Text("Name");
@@ -366,9 +366,8 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
             const static char* modes[] = { "Don't change", "Normal Mode", "Hard Mode" };
             ImGui::Combo("Mode", &tbuild.mode, modes, 3);
             ImGui::PopItemWidth();
-            ImGui::SameLine(ImGui::GetWindowWidth() -
-                ImGui::GetStyle().WindowPadding.x - ImGui::GetWindowContentRegionWidth() * 0.4f);
-            if (ImGui::Button("Close", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
+            ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x - 40);
+            if (ImGui::Button("Close", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 tbuild.edit_open = false;
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Close this window");

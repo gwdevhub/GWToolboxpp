@@ -572,7 +572,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
         const float districtwidth = 100.0f * font_scale;
         const float message_left = districtleft + districtwidth + innerspacing;
 
-        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - (btn_width * _countof(display_party_types)));
+        ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - (btn_width * _countof(display_party_types)));
         ImGui::PushItemWidth(btn_width);
         float start_x = ImGui::GetCursorPosX();
         for (size_t i = 0; i < _countof(display_party_types); i++) {
@@ -591,7 +591,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
         ImGui::SameLine(message_left);
         ImGui::Text("Description");
         ImGui::SameLine(message_left);
-        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - btn_width);
+        ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - btn_width);
         if (ImGui::Button("Alerts", ImVec2(btn_width, 0))) {
             show_alert_window = !show_alert_window;
         }
@@ -662,7 +662,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
     if (!buf[0]) {
         snprintf(buf, 128, "Powered by %s", https_host);
     }
-    if (ImGui::Button(buf, ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))) {
+    if (ImGui::Button(buf, ImVec2(ImGui::GetContentRegionAvail().x, 20.0f))) {
         CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
         ShellExecuteA(NULL, "open", https_host, NULL, NULL, SW_SHOWNORMAL);
     }

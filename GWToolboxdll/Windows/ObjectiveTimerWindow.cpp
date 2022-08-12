@@ -156,7 +156,7 @@ namespace
     float GetTimestampWidth() { return (65.0f * ImGui::GetIO().FontGlobalScale); }
     float GetLabelWidth()
     {
-        return std::max(GetTimestampWidth(), ImGui::GetWindowContentRegionWidth() - (GetTimestampWidth() * n_columns));
+        return std::max(GetTimestampWidth(), ImGui::GetContentRegionAvail().x - (GetTimestampWidth() * n_columns));
     }
     static bool runs_dirty = false;
 
