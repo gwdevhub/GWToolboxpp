@@ -19,7 +19,7 @@ public:
     void Terminate() override;
 
     const char* Name() const override { return "GW File Requester"; }
-    const char* SettingsName() const override { return ""; }
+    bool HasSettings() override { return false; }
     const char* Icon() const override { return ICON_FA_FILE_DOWNLOAD; }
 
     struct GWResource {
@@ -44,7 +44,7 @@ private:
 
     // Socket/conn related
     int fs_socket = 0;
-    inline bool connected() { return fs_socket != 0; };
+    bool connected() const { return fs_socket != 0; }
     bool needs_to_shutdown = false;
     char socket_domain[64];
     std::thread socket_thread;
@@ -91,8 +91,8 @@ private:
         FStoC_Header header;
         short size;
         int data[7]; // Variable length
-        inline int asset_manifest_file() { return data[1]; }
-        inline int exe_file() { return data[2]; }
+        int asset_manifest_file() { return data[1]; }
+        int exe_file() { return data[2]; }
     };
     // Keep a copy of main manifest in memory.
     FStoC_MainManifest main_manifest;
@@ -127,7 +127,7 @@ private:
     struct FStoC_FileData { // And MoreData
         FStoC_Header header;
         short size;
-        inline char* data() { return (char*)((this) + sizeof(*this)); };
+        char* data() { return (char*)((this) + sizeof(*this)); }
     };
     static_assert(sizeof(FStoC_FileData) == 4, "FStoC_FileData has invalid size");
 
