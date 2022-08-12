@@ -39,16 +39,15 @@ void ToolboxModule::RegisterSettingsContent() {
         SettingsWeighting());
 }
 void ToolboxModule::RegisterSettingsContent(
-    const char* section, const char* icon, SectionDrawCallback callback, float weighting)
+    const char* section, const char* icon, const SectionDrawCallback& callback, float weighting)
 {
     if (settings_draw_callbacks.find(section) == settings_draw_callbacks.end()) {
         settings_draw_callbacks.emplace(section, SectionDrawCallbackList());
     }
     if (icon) {
-        auto it = settings_icons.find(section);
-        if (it == settings_icons.end()) {
+        if (const auto ic = settings_icons.find(section); ic == settings_icons.end()) {
             settings_icons[section] = icon;
-        } else if (icon != it->second) {
+        } else if (icon != ic->second) {
             ASSERT(false && "Trying to set different icon for the same setting!");
         }
     }
@@ -57,5 +56,5 @@ void ToolboxModule::RegisterSettingsContent(
         if (it->first > weighting)
             break;
     }
-    settings_draw_callbacks[section].insert(it, { weighting,callback });
+    settings_draw_callbacks[section].insert(it, { weighting, callback });
 }

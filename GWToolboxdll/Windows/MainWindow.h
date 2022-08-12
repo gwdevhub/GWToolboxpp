@@ -60,5 +60,5 @@ private:
         {"Settings",0.82f}
     };
 protected:
-    const float SettingsWeighting() override { return 1.1f; };
+    float SettingsWeighting() override { return 1.1f; };
 };

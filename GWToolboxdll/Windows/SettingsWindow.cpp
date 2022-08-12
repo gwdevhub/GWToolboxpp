@@ -166,29 +166,27 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     
     static char buf[128];
     sprintf(buf, "      %s", section);
-    auto pos = ImGui::GetCursorScreenPos();
+    const auto pos = ImGui::GetCursorScreenPos();
     const bool& is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
 
     const char* icon = nullptr;
-    auto it = icons.find(section);
-    if (it != icons.end()) icon = it->second;
+    if (const auto it = icons.find(section); it != icons.end())
+        icon = it->second;
     if (icon) {
         const auto& style = ImGui::GetStyle();
         const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
         ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2), ImColor(style.Colors[ImGuiCol_Text]), icon);
     }
-
-    if (is_showing) {
-        ImGui::PushID(section);
-        size_t i = 0;
-        for (auto& entry : settings_section->second) {
-            if (i) ImGui::Separator();
-            ImGui::PushID(i);
-            entry.second(&settings_section->first, is_showing);
-            i++;
-            ImGui::PopID();
-        }
+    
+    ImGui::PushID(section);
+    size_t i = 0;
+    for (const auto& [flt, setting_callback] : settings_section->second) {
+        if (i && is_showing) ImGui::Separator();
+        ImGui::PushID(i);
+        setting_callback(&settings_section->first, is_showing);
+        i++;
         ImGui::PopID();
     }
+    ImGui::PopID();
     return true;
 }

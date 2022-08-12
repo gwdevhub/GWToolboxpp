@@ -146,5 +146,5 @@ private:
         void Init();
     } quest_ping;
 protected:
-    const float SettingsWeighting() override { return  1.2f; };
+    float SettingsWeighting() override { return  1.2f; };
 };

@@ -87,6 +87,9 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     SettingsWindow::Instance().sep_modules = optional_modules.size();
     optional_modules.push_back(&Updater::Instance());
 
+#ifdef _DEBUG
+    optional_modules.push_back(&GWFileRequester::Instance());
+#endif
 
     if (use_chatcommand) optional_modules.push_back(&ChatCommands::Instance());
     if (use_chatfilter) optional_modules.push_back(&ChatFilter::Instance());
@@ -130,7 +133,6 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_party_statistics) optional_modules.push_back(&PartyStatisticsWindow::Instance());
 
 #ifdef _DEBUG
-    optional_modules.push_back(&GWFileRequester::Instance());
 #if 0
     optional_modules.push_back(&PartySearchWindow::Instance());
 #endif
@@ -138,9 +140,6 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&StringDecoderWindow::Instance());
     optional_modules.push_back(&DoorMonitorWindow::Instance());
     optional_modules.push_back(&SkillListingWindow::Instance());
-
-    
-
 #endif
     std::sort(
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_windows),
