@@ -235,7 +235,7 @@ public:
 
     bool block_faction_gain = false;
     bool block_experience_gain = false;
-    bool block_zero_experience_gain = false;
+    bool block_zero_experience_gain = true;
 
     Color nametag_color_npc = NAMETAG_COLOR_DEFAULT_NPC;
     Color nametag_color_player_self = NAMETAG_COLOR_DEFAULT_PLAYER_SELF;
