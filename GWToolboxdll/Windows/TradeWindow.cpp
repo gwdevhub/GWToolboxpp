@@ -284,7 +284,7 @@ void TradeWindow::fetch() {
                            [](char c) -> char {
                                return static_cast<char>(::tolower(c));
                            });
-            for (auto term : searched_words) {
+            for (auto& term : searched_words) {
                 if (input.find(term) != std::string::npos)
                     continue; // Searched word no found; drop out
                 add_to_window = false;
