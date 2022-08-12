@@ -1,10 +1,8 @@
-# JonsToolbox++
+# GWToolbox++
 
 ## A set of tools for Guild Wars Players
 
-This is based on [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/), with tidier features and more stability.
-
-If you are here to check toolbox features and for a download link to go [https://3vcloud.github.io/JonsToolbox/](https://3vcloud.github.io/JonsToolbox/). Keep reading for information on how to download and build from the source.
+If you are here to check toolbox features and for a download link to go [https://gwtoolbox.com](https://gwtoolbox.com). Keep reading for information on how to download and build from the source.
 
 ## How to download, build, and run
 ### Requirements
@@ -16,7 +14,7 @@ If you are here to check toolbox features and for a download link to go [https:/
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
 
 2. Clone the repository recursively: 
-`git clone --recursive https://github.com/3vcloud/JonsToolbox.git`
+`git clone --recursive https://github.com/Haskha/GWToolboxpp.git`
 
 3. Navigate to the GWToolboxpp folder: 
 `cd GWToolboxpp`

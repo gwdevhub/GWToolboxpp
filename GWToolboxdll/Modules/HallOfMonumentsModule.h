@@ -277,7 +277,8 @@ public:
     }
 
     const char* Name() const override { return "Hall of Monuments"; }
-    const char* SettingsName() const override { return ""; };
+
+    bool HasSettings() override { return false; }
 
     // Decode a zero terminated base64 encoded hom code
     bool DecodeHomCode(const char* in, HallOfMonumentsAchievements* out);
