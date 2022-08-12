@@ -11,8 +11,8 @@
 #include <ToolboxWidget.h>
 
 class SkillMonitorWidget : public ToolboxWidget {
-    SkillMonitorWidget(){};
-    ~SkillMonitorWidget(){};
+    SkillMonitorWidget() = default;
+    ~SkillMonitorWidget() override = default;
 
 public:
     static SkillMonitorWidget& Instance() {
@@ -65,8 +65,8 @@ private:
         return Colors::Empty();
     }
 
-    void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t value);
-    void CasttimeCallback(const uint32_t value_id, const uint32_t caster_id, const float value);
+    void SkillCallback(uint32_t value_id, uint32_t caster_id, uint32_t value);
+    void CasttimeCallback(uint32_t value_id, uint32_t caster_id, float value);
 
     GW::UI::WindowPosition* party_window_position = nullptr;
 
@@ -84,6 +84,7 @@ private:
     bool FetchPartyInfo();
 
     bool hide_in_outpost = false;
+    bool show_non_party_members = false;
     Color background = Colors::ARGB(76, 0, 0, 0);
 
     bool snap_to_party_window = true;
@@ -104,5 +105,4 @@ private:
 
     int history_length = 5;
     int history_timeout = 5000;
-
 };
