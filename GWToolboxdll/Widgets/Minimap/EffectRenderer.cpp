@@ -56,36 +56,36 @@ void EffectRenderer::LoadDefaults() {
     aoe_effect_triggers.emplace(Spike_Trap_Activate, new EffectTrigger(Spike_Trap, 2000, GW::Constants::Range::Nearby));
 }
 EffectRenderer::~EffectRenderer() {
-    for (auto settings : aoe_effect_settings) {
+    for (const auto& settings : aoe_effect_settings) {
         delete settings.second;
     }
     aoe_effect_settings.clear();
-    for (auto triggers : aoe_effect_triggers) {
+    for (const auto& triggers : aoe_effect_triggers) {
         delete triggers.second;
     }
     aoe_effect_triggers.clear();
 }
 void EffectRenderer::Invalidate() {
     VBuffer::Invalidate();
-    for (auto p : aoe_effects) {
+    for (const auto p : aoe_effects) {
         delete p;
     }
     aoe_effects.clear();
-    for (auto trigger : aoe_effect_triggers) {
+    for (const auto& trigger : aoe_effect_triggers) {
         trigger.second->triggers_handled.clear();
     }
 }
 void EffectRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     Invalidate();
     LoadDefaults();
-    for (auto settings : aoe_effect_settings) {
+    for (const auto& settings : aoe_effect_settings) {
         char color_buf[64];
         sprintf(color_buf, "color_aoe_effect_%d", settings.first);
         settings.second->color = Colors::Load(ini, section, color_buf, settings.second->color);
     }
 }
 void EffectRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
-    for (auto settings : aoe_effect_settings) {
+    for (const auto& settings : aoe_effect_settings) {
         char color_buf[64];
         sprintf(color_buf, "color_aoe_effect_%d", settings.first);
         Colors::Save(ini, section, color_buf, settings.second->color);
@@ -96,7 +96,7 @@ void EffectRenderer::DrawSettings() {
     if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
         LoadDefaults();
     }
-    for (auto s : aoe_effect_settings) {
+    for (const auto& s : aoe_effect_settings) {
         ImGui::PushID(static_cast<int>(s.first));
         Colors::DrawSettingHueWheel("", &s.second->color, 0);
         ImGui::SameLine();

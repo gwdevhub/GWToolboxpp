@@ -645,7 +645,7 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     if (pcons_loaded.size()) {
         std::string pcons_str;
         size_t i = 0;
-        for (auto pcon : pcons_loaded) {
+        for (const auto pcon : pcons_loaded) {
             if (i) pcons_str += ", ";
             i = 1;
             pcons_str += pcon->abbrev;
@@ -656,7 +656,7 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     if (pcons_not_visible.size()) {
         std::string pcons_str;
         size_t i = 0;
-        for (auto pcon : pcons_not_visible) {
+        for (const auto pcon : pcons_not_visible) {
             if (i) pcons_str += ", ";
             i = 1;
             pcons_str += pcon->abbrev;
@@ -681,7 +681,7 @@ void BuildsWindow::SendPcons(const TeamBuild& tbuild, unsigned int idx, bool inc
         pconsStr = buf;
     }
     size_t cnt = 0;
-    for (auto pcon : PconsWindow::Instance().pcons) {
+    for (const auto pcon : PconsWindow::Instance().pcons) {
         if (build.pcons.find(pcon->ini) == build.pcons.end())
             continue;
         if (cnt) pconsStr += ", ";

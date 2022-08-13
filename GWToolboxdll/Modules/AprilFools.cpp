@@ -93,7 +93,7 @@ void AprilFools::SetEnabled(bool is_enabled) {
         Log::Info("April Fools 2020 enabled. Type '/aprilfools' to disable it");
     }
     else {
-        for (auto agent : player_agents) {
+        for (const auto& agent : player_agents) {
             SetInfected(agent.second, false);
         }
         player_agents.clear();

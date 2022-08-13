@@ -314,7 +314,7 @@ bool TradeWindow::IsTradeAlert(std::string &message)
     std::regex word_regex;
     std::smatch m;
     static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
-    for (auto &word : alert_words) {
+    for (const auto& word : alert_words) {
         if (std::regex_search(word, m, regex_check)) {
             try {
                 word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);

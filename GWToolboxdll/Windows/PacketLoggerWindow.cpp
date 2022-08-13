@@ -73,7 +73,7 @@ namespace {
     }
     void ExportMapInfo() {
         nlohmann::json json;
-        for (auto it : maps) {
+        for (const auto& it : maps) {
             json[it.first] = it.second->ToJson();
             delete it.second;
         }
@@ -578,7 +578,7 @@ void PacketLoggerWindow::SaveMessageLog() {
     std::wofstream myFile(filename.bytes);
 
     // Send column names to the stream
-    for (auto it : message_log)
+    for (const auto& it : message_log)
     {
         if (!it.second || !it.second->length())
             continue;
@@ -592,7 +592,7 @@ void PacketLoggerWindow::SaveMessageLog() {
 }
 
 void PacketLoggerWindow::ClearMessageLog() {
-    for (auto it : message_log) {
+    for (const auto& it : message_log) {
         if (it.second)
             delete it.second;
     }

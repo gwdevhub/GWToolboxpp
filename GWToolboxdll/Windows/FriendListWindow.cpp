@@ -1028,7 +1028,7 @@ void FriendListWindow::LoadFromFile() {
             // Grab char names
             std::unordered_map<std::wstring, uint8_t> charnames;
             LoadCharnames(entry.pItem, &charnames);
-            for (auto it : charnames) {
+            for (const auto& it : charnames) {
                 lf->SetCharacter(it.first.c_str(), it.second);
             }
             if (lf->characters.empty()) {
@@ -1069,14 +1069,14 @@ void FriendListWindow::SaveToFile() {
             // Append to existing charnames, but don't duplicate. This allows multiple accounts to contribute to the friend list.
             std::unordered_map<std::wstring, uint8_t> charnames;
             LoadCharnames(uuid, &charnames);
-            for (auto char_it : lf.characters) {
+            for (const auto& char_it : lf.characters) {
                 const auto& found = charnames.find(char_it.first);
                 // Note: Don't overwrite the profession
                 if (found == charnames.end() || char_it.second.profession != 0)
                     charnames.emplace(char_it.first, char_it.second.profession);
             }
             inifile->DeleteValue(uuid, "charname", NULL);
-            for (auto char_it : charnames) {
+            for (const auto& char_it : charnames) {
                 char charname[128] = { 0 };
                 snprintf(charname, 128, "%s,%d",
                     GuiUtils::WStringToString(char_it.first).c_str(),
@@ -1085,5 +1085,5 @@ void FriendListWindow::SaveToFile() {
             }
         }
         inifile->SaveFile(Resources::GetPath(ini_filename).c_str());
-        });
+    });
 }

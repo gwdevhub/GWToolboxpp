@@ -161,7 +161,7 @@ void TimerWidget::LoadSettings(CSimpleIni *ini) {
         show_dungeon_traps_timer = ini->GetBoolValue(Name(), VAR_NAME(show_dungeon_traps_timer), show_dungeon_traps_timer);
     }
     show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
-    for (auto it : spirit_effects) {
+    for (const auto& it : spirit_effects) {
         char ini_name[32];
         snprintf(ini_name, 32, "spirit_effect_%d", it.first);
         spirit_effects_enabled[it.first] = ini->GetBoolValue(Name(), ini_name, spirit_effects_enabled[it.first]);
@@ -185,7 +185,7 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_urgoz_timer), show_urgoz_timer);
     ini->SetBoolValue(Name(), VAR_NAME(show_dhuum_timer), show_dhuum_timer);
     ini->SetBoolValue(Name(), VAR_NAME(show_dungeon_traps_timer), show_dungeon_traps_timer);
-    for (auto it : spirit_effects) {
+    for (const auto& it : spirit_effects) {
         char ini_name[32];
         snprintf(ini_name, 32, "spirit_effect_%d", it.first);
         ini->SetBoolValue(Name(), ini_name, spirit_effects_enabled[it.first]);
@@ -248,7 +248,7 @@ void TimerWidget::DrawSettingInternal() {
     if (show_spirit_timers) {
         ImGui::Indent();
         ImGui::StartSpacedElements(140.f);
-        for (auto it : spirit_effects) {
+        for (const auto& it : spirit_effects) {
             ImGui::NextSpacedElement();
             ImGui::Checkbox(it.second, &spirit_effects_enabled[it.first]);
         }

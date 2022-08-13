@@ -172,7 +172,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
                 if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width, 0))) {
                     if (one_teambuild_at_a_time && !tbuild.edit_open) {
-                        for (auto &tb : teambuilds) {
+                        for (auto& tb : teambuilds) {
                             tb.edit_open = false;
                         }
                     }

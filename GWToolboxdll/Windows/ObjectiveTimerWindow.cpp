@@ -988,7 +988,7 @@ void ObjectiveTimerWindow::SaveRuns()
                 file.open(Resources::GetPath(L"runs", it.first));
                 if (file.is_open()) {
                     nlohmann::json os_json_arr;
-                    for (auto os : it.second) {
+                    for (const auto os : it.second) {
                         os_json_arr.push_back(os->ToJson());
                     }
                     file << os_json_arr << std::endl;

@@ -1006,7 +1006,7 @@ GW::UI::WindowID ChatCommands::MatchingGWWindow(const wchar_t*, int argc, LPWSTR
         return GW::UI::WindowID_Count;
     const std::wstring arg = GuiUtils::ToLower(argv[1]);
     if (arg.size() && arg != L"all") {
-        for (auto it : gw_windows) {
+        for (const auto& it : gw_windows) {
             if (wcscmp(it.second, arg.c_str()) == 0)
                 return it.first;
         }

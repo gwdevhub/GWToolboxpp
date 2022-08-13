@@ -54,7 +54,7 @@
 
 InfoWindow::~InfoWindow()
 {
-    for (auto a : target_achievements) {
+    for (const auto& a : target_achievements) {
         delete a.second;
     }
     target_achievements.clear();

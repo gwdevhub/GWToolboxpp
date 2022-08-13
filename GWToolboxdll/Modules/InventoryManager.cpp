@@ -655,7 +655,7 @@ void InventoryManager::Initialize() {
         GW::UI::UIMessage::kMoveItem,
         GW::UI::UIMessage::kSendUseItem
     };
-    for (auto message_id : message_id_hooks) {
+    for (const auto message_id : message_id_hooks) {
         GW::UI::RegisterUIMessageCallback(&ItemClick_Entry, message_id, OnUIMessage);
     }
 

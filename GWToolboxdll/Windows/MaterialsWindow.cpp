@@ -171,7 +171,7 @@ void MaterialsWindow::Initialize() {
         GW::MerchItemArray* items = GW::Merchant::GetMerchantItemsArray();
         merch_items.clear();
         if (items) {
-            for (auto item_id : *items)
+            for (const auto item_id : *items)
                 merch_items.push_back(item_id);
         }
 

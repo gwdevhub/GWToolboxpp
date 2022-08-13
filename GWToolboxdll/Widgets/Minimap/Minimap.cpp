@@ -212,7 +212,7 @@ void Minimap::Initialize()
         GW::UI::UIMessage::kChangeTarget,
         GW::UI::UIMessage::kSkillActivated
     };
-    for (auto message_id : hook_messages) {
+    for (const auto message_id : hook_messages) {
         GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
     }
 

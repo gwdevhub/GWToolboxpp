@@ -209,7 +209,7 @@ void ItemFilter::SaveSettings(CSimpleIniA* ini) {
 }
 
 void ItemFilter::SpawnSuppressedItems() {
-    for (auto const& packet : suppressed_packets)
+    for (const auto& packet : suppressed_packets)
         EmulatePacket(packet);
 
     suppressed_packets.clear();
