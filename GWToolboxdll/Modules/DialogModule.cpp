@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <Utils/GuiUtils.h>
-
 #include <GWCA/Constants/QuestIDs.h>
 
 #include <GWCA/GameEntities/Agent.h>
@@ -12,9 +10,9 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
-#include <Logger.h>
+#include <Utils/GuiUtils.h>
 #include <Modules/DialogModule.h>
-
+#include <Logger.h>
 #include <Timer.h>
 
 namespace {
@@ -33,22 +31,22 @@ namespace {
     std::map<uint32_t, clock_t> queued_dialogs_to_send;
 
     void OnDialogButtonAdded(GW::UI::DialogButtonInfo* wparam) {
-        GW::UI::DialogButtonInfo* button_info = new GW::UI::DialogButtonInfo();
+        const auto button_info = new GW::UI::DialogButtonInfo();
         memcpy(button_info, wparam, sizeof(*button_info));
 
-        GuiUtils::EncString* button_message = new GuiUtils::EncString(button_info->message);
-        button_info->message = (wchar_t*)button_message->encoded().data();
+        const auto button_message = new GuiUtils::EncString(button_info->message);
+        button_info->message = const_cast<wchar_t*>(button_message->encoded().data());
 
         dialog_button_messages.push_back(button_message);
         dialog_buttons.push_back(button_info);
     }
     // Parse any buttons held within the dialog body
     void OnDialogBodyDecoded(void*, wchar_t* decoded) {
-        std::wregex button_regex(L"<a=([0-9]+)>([^<]+)<");
+        const std::wregex button_regex(L"<a=([0-9]+)>([^<]+)<");
         std::wsmatch m;
         std::wstring subject(decoded);
         std::wstring msg;
-        GW::UI::DialogButtonInfo embedded_button;
+        GW::UI::DialogButtonInfo embedded_button{};
         embedded_button.dialog_id = 0;
         embedded_button.skill_id = 0xFFFFFFF;
         while (std::regex_search(subject, m, button_regex)) {
@@ -104,7 +102,7 @@ namespace {
         switch (message_id) {
         case GW::UI::UIMessage::kDialogBody: {
             ResetDialog();
-            GW::UI::DialogBodyInfo* new_dialog_info = (GW::UI::DialogBodyInfo*)wparam;
+            const auto new_dialog_info = static_cast<GW::UI::DialogBodyInfo*>(wparam);
             if (!new_dialog_info->message_enc) {
                 return; // Dialog closed.
             }
@@ -113,7 +111,7 @@ namespace {
             GW::UI::AsyncDecodeStr(dialog_info.message_enc, OnDialogBodyDecoded);
         } break;
         case GW::UI::UIMessage::kDialogButton: {
-            OnDialogButtonAdded((GW::UI::DialogButtonInfo*)wparam);
+            OnDialogButtonAdded(static_cast<GW::UI::DialogButtonInfo*>(wparam));
         } break;
         }
     }
@@ -125,13 +123,13 @@ namespace {
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
         case GW::UI::UIMessage::kDialogBody: {
-            GW::UI::DialogBodyInfo* new_dialog_info = (GW::UI::DialogBodyInfo*)wparam;
+            const auto new_dialog_info = static_cast<GW::UI::DialogBodyInfo*>(wparam);
             if (!new_dialog_info->message_enc) {
                 OnDialogClosedByServer();
             }
         } break;
         case GW::UI::UIMessage::kSendDialog: {
-            uint32_t dialog_id = (uint32_t)wparam;
+            const auto dialog_id = reinterpret_cast<uint32_t>(wparam);
             if ((dialog_id & 0xff000000) != 0)
                 break; // Don't handle merchant interaction dialogs.
             if (!IsDialogButtonAvailable(dialog_id)) {
@@ -147,7 +145,7 @@ namespace {
 
 void DialogModule::Initialize() {
     ToolboxModule::Initialize();
-    const GW::UI::UIMessage dialog_ui_messages[] = {
+    constexpr GW::UI::UIMessage dialog_ui_messages[] = {
         GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kDialogButton
@@ -158,9 +156,9 @@ void DialogModule::Initialize() {
     }
     // NB: Can also be found via floating dialogs array in memory. We're not using hooks for any of the other floating dialogs, but would be good to document later.
     NPCDialogUICallback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(GW::Scanner::FindAssertion(
-        "p:\\code\\gw\\ui\\game\\gmnpc.cpp", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb));
+        R"(p:\code\gw\ui\game\gmnpc.cpp)", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb));
     if (NPCDialogUICallback_Func) {
-        GW::HookBase::CreateHook(NPCDialogUICallback_Func, OnNPCDialogUICallback, (void**)&NPCDialogUICallback_Ret);
+        GW::HookBase::CreateHook(NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
     }
 }
@@ -175,7 +173,7 @@ void DialogModule::SendDialog(uint32_t dialog_id) {
         const uint32_t quest_id = (dialog_id ^ 0x800000) >> 8;
         switch ((dialog_id & 0xf)) {
         case 1: // Dialog is for taking a quest
-            SendDialog((quest_id << 8) | 0x800003);
+            SendDialog(quest_id << 8 | 0x800003);
             break;
         case 7: // Dialog is for accepting a quest reward
             SendDialog(quest_id << 8 | 0x800006);
@@ -198,9 +196,9 @@ void DialogModule::SendDialog(uint32_t dialog_id) {
     case GW::Constants::DialogID::UwTelePlanes:
     case GW::Constants::DialogID::UwTeleWastes:
     case GW::Constants::DialogID::UwTeleMnt: {
-        GW::Agent* dialog_agent = GW::Agents::GetAgentByID(GetDialogAgent());
+        const auto dialog_agent = GW::Agents::GetAgentByID(GetDialogAgent());
         if (dialog_agent 
-            && dialog_agent->type == (uint32_t)GW::Constants::AgentType::Living
+            && dialog_agent->type == static_cast<uint32_t>(GW::Constants::AgentType::Living)
             && dialog_agent->GetAsAgentLiving()->player_number == GW::Constants::ModelID::UW::Reapers) {
             // Reaper teleport dialog; queue up prerequisites.
             SendDialog(0x7f);
