@@ -3,13 +3,10 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <Color.h>
-#include <Defines.h>
-#include <Timer.h>
 #include <ToolboxWidget.h>
 
 class PartyDamage : public ToolboxWidget {
-    static const size_t MAX_PLAYERS = 12;
+    static constexpr size_t MAX_PLAYERS = 12;
 
     struct PlayerDamage {
         uint32_t damage = 0;
@@ -65,9 +62,8 @@ private:
 
     void CreatePartyIndexMap();
 
-    float GetPartOfTotal(const uint32_t dmg) const;
-    inline float GetPercentageOfTotal(const uint32_t dmg) const
-    { return GetPartOfTotal(dmg) * 100.0f; };
+    float GetPartOfTotal(uint32_t dmg) const;
+    float GetPercentageOfTotal(const uint32_t dmg) const { return GetPartOfTotal(dmg) * 100.0f; }
 
     // damage values
     uint32_t total = 0;

@@ -106,7 +106,7 @@ void AprilFools::SetInfected(GW::Agent* agent,bool is_infected) {
         GW::GameThread::Enqueue([agent_id]() {
             GW::Packet::StoC::GenericValue packet;
             packet.agent_id = agent_id;
-            packet.Value_id = 7; // Remove effect
+            packet.value_id = 7; // Remove effect
             packet.value = 26; // Disease
             GW::StoC::EmulatePacket(&packet);
             });
@@ -121,7 +121,7 @@ void AprilFools::SetInfected(GW::Agent* agent,bool is_infected) {
     GW::GameThread::Enqueue([agent_id]() {
         GW::Packet::StoC::GenericValue packet;
         packet.agent_id = agent_id;
-        packet.Value_id = 6; // Add effect
+        packet.value_id = 6; // Add effect
         packet.value = 26; // Disease
         GW::StoC::EmulatePacket(&packet);
         GW::Packet::StoC::SpeechBubble packet2;

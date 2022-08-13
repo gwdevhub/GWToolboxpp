@@ -42,7 +42,7 @@ void SkillMonitorWidget::Initialize() {
         &GenericValueSelf_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) -> void {
             UNREFERENCED_PARAMETER(status);
 
-            const uint32_t value_id = packet->Value_id;
+            const uint32_t value_id = packet->value_id;
             const uint32_t caster_id = packet->agent_id;
             const uint32_t value = packet->value;
 
@@ -78,8 +78,11 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
     if (!FetchPartyInfo()) return;
 
     const float img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
-    const float height = (party_map.size() + (allies_start < 255 ? 1 : 0)) * img_size;
-    const float width = history_length * img_size;
+    const auto num_rows = show_non_party_members ?
+                                                   party_map.size() + (allies_start < 255 ? 1 : 0)
+                                                 : GW::PartyMgr::GetPartySize();
+    const float height = num_rows * img_size;
+    const float width = static_cast<float>(history_length) * img_size;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -87,7 +90,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
 
     if (snap_to_party_window && party_window_position) {
-        float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
+        const float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
         // NB: Use case to define GW::Vec4f ?
         GW::Vec2f x = party_window_position->xAxis();
         GW::Vec2f y = party_window_position->yAxis();
@@ -118,8 +121,8 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
 
     ImGui::SetNextWindowSize(ImVec2(width, height));
     if (ImGui::Begin(Name(), &visible, GetWinFlags(0))) {
-        float win_x = ImGui::GetWindowPos().x;
-        float win_y = ImGui::GetWindowPos().y;
+        const float win_x = ImGui::GetWindowPos().x;
+        const float win_y = ImGui::GetWindowPos().y;
         auto GetGridPos = [&](const size_t _x, const size_t _y, bool topleft) -> ImVec2 {
             size_t x = _x;
             size_t y = _y;
@@ -128,18 +131,21 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
                 ++x;
                 ++y;
             }
-            return ImVec2(win_x + x * img_size, win_y + y * img_size);
+            return {win_x + x * img_size, win_y + y * img_size};
         };
 
+        const auto party_size = GW::PartyMgr::GetPartySize();
+        auto party_index = 0u;
         for (auto& [agent_id, party_slot] : party_map) {
+            if (++party_index > num_rows) continue;
             auto& skill_history = history[agent_id];
             size_t y = party_slot;
 
             for (size_t i = 0; i < skill_history.size(); i++) {
                 const auto& skill_activation = skill_history.at(i);
-                size_t xIndex = history_flip_direction ? history_length - skill_history.size() + i : skill_history.size() - 1 - i;
+                const auto xIndex = history_flip_direction ? history_length - skill_history.size() + i : skill_history.size() - 1 - i;
 
-                auto texture = *Resources::GetSkillImage(skill_activation.id);
+                const auto texture = *Resources::GetSkillImage(skill_activation.id);
                 ImVec2 tl = GetGridPos(xIndex, y, true);
                 ImVec2 br = GetGridPos(xIndex, y, false);
 
@@ -156,9 +162,9 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
                 
                 if (ImGui::ColorConvertU32ToFloat4(cast_indicator_color).w != 0) {
                     if (skill_activation.status == CASTING && skill_activation.cast_time * 1000 >= cast_indicator_threshold) {
-                        auto remainingCast = TIMER_DIFF(skill_activation.cast_start);
-                        auto percentageCast = std::min(remainingCast / (skill_activation.cast_time * 1000), 1.0f);
-                        float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
+                        const auto remainingCast = TIMER_DIFF(skill_activation.cast_start);
+                        const auto percentageCast = std::min(remainingCast / (skill_activation.cast_time * 1000), 1.0f);
+                        const auto uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
                         GW::Vec2f xPartyWindow = party_window_position->xAxis() * uiscale_multiply;
                         xPartyWindow.x += PARTY_OFFSET_LEFT_BASE * uiscale_multiply;
                         xPartyWindow.y -= PARTY_OFFSET_RIGHT_BASE * uiscale_multiply;
@@ -189,14 +195,12 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(3);
-
-
 }
 
 void SkillMonitorWidget::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     for (auto& [agent_id, skill_history] : history) {
-        if (skill_history.size() > (size_t)history_length) {
+        if (skill_history.size() > static_cast<size_t>(history_length)) {
             skill_history.erase(skill_history.begin(), skill_history.begin() + (skill_history.size() - history_length));
         }
 
@@ -205,7 +209,7 @@ void SkillMonitorWidget::Update(float delta) {
                 std::remove_if(
                     skill_history.begin(),
                     skill_history.end(),
-                    [&](SkillActivation skill_activation) -> bool {
+                    [&](const SkillActivation& skill_activation) -> bool {
                         return TIMER_DIFF(skill_activation.last_update) > history_timeout;
                     }),
                 skill_history.end()
@@ -217,6 +221,7 @@ void SkillMonitorWidget::Update(float delta) {
 void SkillMonitorWidget::LoadSettings(CSimpleIni* ini) {
     ToolboxWidget::LoadSettings(ini);
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    show_non_party_members = ini->GetBoolValue(Name(), VAR_NAME(show_non_party_members), show_non_party_members);
 
     snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
     user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
@@ -240,6 +245,7 @@ void SkillMonitorWidget::LoadSettings(CSimpleIni* ini) {
 void SkillMonitorWidget::SaveSettings(CSimpleIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(show_non_party_members), show_non_party_members);
 
     ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
     ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
@@ -263,6 +269,7 @@ void SkillMonitorWidget::SaveSettings(CSimpleIni* ini) {
 void SkillMonitorWidget::DrawSettingInternal() {
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::Checkbox("Show non party-members (allies)", &show_non_party_members);
     ImGui::Checkbox("Attach to party window", &snap_to_party_window);
     if (snap_to_party_window) {
         ImGui::InputInt("Party window offset", &user_offset);
@@ -317,7 +324,7 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
     }
     using namespace GW::Packet::StoC;
 
-    auto skill_history = &history[caster_id];
+    const auto skill_history = &history[caster_id];
     if (!skill_history) return;
 
     switch (value_id) {
@@ -325,17 +332,16 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
         case GenericValueID::attack_skill_activated:
         case GenericValueID::skill_activated: {
             float casttime = casttime_map[caster_id];
-            const bool isInstant = value_id == GenericValueID::instant_skill_activated;
-            if (!isInstant && !casttime) {
-                GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)value);
-                if (skill) {
+            const bool is_instant = value_id == GenericValueID::instant_skill_activated;
+            if (!is_instant && !casttime) {
+                if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(value))) {
                     casttime = skill->activation;
                 }
             }
 
             skill_history->push_back({
                 static_cast<GW::Constants::SkillID>(value),
-                isInstant ? COMPLETED : CASTING,
+                is_instant ? COMPLETED : CASTING,
                 TIMER_INIT(),
                 TIMER_INIT(),
                 casttime,
@@ -348,8 +354,8 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
         case GenericValueID::skill_finished:
         case GenericValueID::attack_skill_finished:
         {
-            auto casting = find_if(skill_history->begin(), skill_history->end(),
-                [&](SkillActivation skill_activation) { return skill_activation.status == CASTING; });
+            const auto casting = find_if(skill_history->begin(), skill_history->end(),
+                                         [&](const SkillActivation& skill_activation) { return skill_activation.status == CASTING; });
             if (casting == skill_history->end()) {
                 break;
             }
@@ -361,8 +367,8 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
             break;
         }
         case GenericValueID::interrupted: {
-            auto cancelled = find_if(skill_history->begin(), skill_history->end(),
-                [&](SkillActivation skill_activation) { return skill_activation.status == CANCELLED; });
+            const auto cancelled = find_if(skill_history->begin(), skill_history->end(),
+                                           [&](const SkillActivation& skill_activation) { return skill_activation.status == CANCELLED; });
             if (cancelled == skill_history->end()) {
                 break;
             }
@@ -389,7 +395,7 @@ bool SkillMonitorWidget::FetchPartyInfo() {
     party_map_indent.clear();
     allies_start = 255;
     for (const GW::PlayerPartyMember& player : info->players) {
-        DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
+        const auto id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
         if (!id) continue;
         party_map[id] = party_map.size();
 

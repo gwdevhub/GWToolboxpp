@@ -143,15 +143,15 @@ void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
 
 void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
     if (!initialized) return;
-    if (pak->Value_id != 21) // Effect on agent
+    if (pak->value_id != 21) // Effect on agent
         return;
     auto it = aoe_effect_settings.find(pak->value);
     if (it == aoe_effect_settings.end())
         return;
-    auto settings = it->second;
+    const auto settings = it->second;
     if (settings->stoc_header && settings->stoc_header != pak->header)
         return;
-    GW::AgentLiving* caster = static_cast<GW::AgentLiving * >(GW::Agents::GetAgentByID(pak->agent_id));
+    const auto* caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
     if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy) return;
     aoe_effects.push_back(new Effect(pak->value, caster->pos.x, caster->pos.y, settings->duration, settings->range, &settings->color));
 }

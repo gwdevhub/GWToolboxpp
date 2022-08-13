@@ -187,7 +187,7 @@ void PconsWindow::OnPostProcessEffect(GW::HookStatus *status,
 void PconsWindow::OnGenericValue(GW::HookStatus *, GW::Packet::StoC::GenericValue *pak) {
     if (PconAlcohol::suppress_drunk_emotes
         && pak->agent_id == GW::Agents::GetPlayerId()
-        && pak->Value_id == 22) {
+        && pak->value_id == 22) {
 
         if (pak->value == 0x33E807E5) pak->value = 0; // kneel
         if (pak->value == 0x313AC9D1) pak->value = 0; // bored

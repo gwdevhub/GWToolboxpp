@@ -42,6 +42,7 @@ private:
 
     // duration -> string settings
     int decimal_threshold = 600; // when to start displaying decimals
+    int only_under_seconds = 600;
     bool round_up = true;        // round up or down?
     bool show_vanquish_counter = true;
     uint32_t minion_count = 0;

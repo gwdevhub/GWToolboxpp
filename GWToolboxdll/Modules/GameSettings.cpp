@@ -5,6 +5,7 @@
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/Constants/AgentIDs.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
@@ -22,8 +23,6 @@
 
 #include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
-
-#include <GWCA/Constants/AgentIDs.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -45,16 +44,17 @@
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 
+#ifdef _DEBUG
+#include <Windows/StringDecoderWindow.h>
+#endif
+
+#include <Modules/GameSettings.h>
+#include <Modules/DialogModule.h>
+
 #include <Logger.h>
 #include <GWToolbox.h>
 #include <Timer.h>
 #include <Color.h>
-
-#include <Modules/GameSettings.h>
-#include <Modules/DialogModule.h>
-#ifdef _DEBUG
-#include <Windows/StringDecoderWindow.h>
-#endif
 
 #pragma warning(disable : 6011)
 
@@ -64,7 +64,6 @@ using namespace ToolboxUtils;
 namespace {
 
     GameSettings& Instance() {
-
         return GameSettings::Instance();
     }
 
@@ -106,9 +105,9 @@ namespace {
 
     void WhisperCallback(GW::HookStatus *, const wchar_t *from, const wchar_t *msg) {
         UNREFERENCED_PARAMETER(msg);
-        GameSettings&  game_setting = GameSettings::Instance();
+        const GameSettings& game_setting = GameSettings::Instance();
         if (game_setting.flash_window_on_pm) FlashWindow();
-        auto const status = static_cast<GW::FriendStatus>(GW::FriendListMgr::GetMyStatus());
+        auto const status = GW::FriendListMgr::GetMyStatus();
         if (status == GW::FriendStatus::Away && !game_setting.afk_message.empty()) {
             wchar_t buffer[120];
             const auto diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
@@ -140,27 +139,27 @@ namespace {
         GW::Chat::Color sender, message;
         GW::Chat::GetDefaultColors(chan, &sender, &message);
         snprintf(key, 128, "%s_color_sender", chanstr);
-        sender = (GW::Chat::Color)Colors::Load(ini, section, key, (Color)sender);
+        sender = Colors::Load(ini, section, key, (Color)sender);
         GW::Chat::SetSenderColor(chan, sender);
         snprintf(key, 128, "%s_color_message", chanstr);
-        message = (GW::Chat::Color)Colors::Load(ini, section, key, (Color)message);
+        message = Colors::Load(ini, section, key, (Color)message);
         GW::Chat::SetMessageColor(chan, message);
     }
 
     struct PendingSendChatMessage {};
 
-    static clock_t last_send = 0;
-    static uint32_t last_dialog_npc_id = 0;
+    clock_t last_send = 0;
+    uint32_t last_dialog_npc_id = 0;
 
-    static clock_t instance_entered_at = 0;
+    clock_t instance_entered_at = 0;
 
-    static bool ctrl_enter_whisper = false;
+    bool ctrl_enter_whisper = false;
 
-    static bool IsInfused(GW::Item* item) {
+    bool IsInfused(GW::Item* item) {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
     }
 
-    const enum PING_PARTS {
+    enum PING_PARTS {
         NAME=1,
         DESC=2
     };
@@ -176,11 +175,12 @@ namespace {
             call_target = _call_target;
             cast_next_frame = false;
         }
-        const GW::AgentLiving* GetTarget() {
+        const GW::AgentLiving* GetTarget() const {
             const GW::AgentLiving* target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(target_id));
             return target && target->GetIsLivingType() ? target : nullptr;
         }
-        const GW::Constants::SkillID GetSkill() {
+
+        GW::Constants::SkillID GetSkill() const {
             const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
             return skillbar && skillbar->IsValid() ? skillbar->skills[slot].skill_id : GW::Constants::SkillID::No_Skill;
         }
@@ -840,7 +840,7 @@ void GameSettings::Initialize() {
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &OnPartyDefeated);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
-        switch (packet->Value_id) {
+        switch (packet->value_id) {
         case 11:
             OnAgentMarker(status, packet);
         case 21:
@@ -1960,7 +1960,7 @@ void GameSettings::OnPartyPlayerJoined(GW::HookStatus* status, GW::Packet::StoC:
 void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) {
     const GW::Agent* a = GW::Agents::GetAgentByID(pak->agent_id);
     if (a && wcscmp(GW::Agents::GetAgentEncName(a),L"\x8102\x6ED9\xD94E\xBF68\x4409") == 0) {
-        pak->Value_id = 12;
+        pak->value_id = 12;
     }
 }
 
@@ -2045,7 +2045,7 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::Ge
         return;
     static GW::Packet::StoC::GenericValue pak2;
     pak2.agent_id = pak->agent_id;
-    pak2.Value_id = 23;
+    pak2.value_id = 23;
     pak2.value = pak->value; // Glowing hands, any profession
     if (pak->value == 0x43394f1d) { // 0x31939cbb = /dance, 0x43394f1d = /dancenew
         switch ((GW::Constants::Profession)GW::Agents::GetPlayerAsAgentLiving()->primary) {

@@ -2073,7 +2073,7 @@ void ChatCommands::CmdAnimation(const wchar_t*, int argc, LPWSTR* argv) {
 
     GW::GameThread::Enqueue([animationid, agentid]() {
         GW::Packet::StoC::GenericValue packet;
-        packet.Value_id = 20;
+        packet.value_id = 20;
         packet.agent_id = agentid;
         packet.value = animationid;
         GW::StoC::EmulatePacket(&packet);

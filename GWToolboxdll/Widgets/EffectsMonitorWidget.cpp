@@ -299,7 +299,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             GW::UI::UIMessage::kPreferenceChanged,
             GW::UI::UIMessage::kUIPositionChanged
         };
-        for (auto message_id : hook_messages) {
+        for (const auto& message_id : hook_messages) {
             GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, message_id, OnEffectUIMessage, 0x8000);
         }
         
@@ -412,6 +412,7 @@ void EffectsMonitorWidget::LoadSettings(CSimpleIni* ini)
     ToolboxWidget::LoadSettings(ini);
 
     decimal_threshold = ini->GetLongValue(Name(), VAR_NAME(decimal_threshold), decimal_threshold);
+    only_under_seconds = ini->GetLongValue(Name(), VAR_NAME(only_under_seconds), only_under_seconds);
     round_up = ini->GetBoolValue(Name(), VAR_NAME(round_up), round_up);
     show_vanquish_counter = ini->GetBoolValue(Name(), VAR_NAME(show_vanquish_counter), show_vanquish_counter);
     font_effects = static_cast<GuiUtils::FontSize>(
@@ -426,6 +427,7 @@ void EffectsMonitorWidget::SaveSettings(CSimpleIni* ini)
 
 
     ini->SetLongValue(Name(), VAR_NAME(decimal_threshold), decimal_threshold);
+    ini->SetLongValue(Name(), VAR_NAME(only_under_seconds), only_under_seconds);
     ini->SetBoolValue(Name(), VAR_NAME(round_up), round_up);
     ini->SetBoolValue(Name(), VAR_NAME(show_vanquish_counter), show_vanquish_counter);
 
@@ -445,6 +447,8 @@ void EffectsMonitorWidget::DrawSettingInternal()
     Colors::DrawSettingHueWheel("Text color", &color_text_effects);
     Colors::DrawSettingHueWheel("Text shadow", &color_text_shadow);
     Colors::DrawSettingHueWheel("Effect duration background", &color_background);
+    ImGui::InputInt("Duration show treshold", &only_under_seconds);
+    ImGui::ShowHelp("When should effect durations start to show (in seconds)");
     ImGui::InputInt("Text decimal threshold", &decimal_threshold);
     ImGui::ShowHelp("When should decimal numbers start to show (in milliseconds)");
     ImGui::Checkbox("Round up integers", &round_up);
@@ -455,9 +459,12 @@ void EffectsMonitorWidget::DrawSettingInternal()
 int EffectsMonitorWidget::UptimeToString(char arr[8], int cd) const
 {
     cd = std::abs(cd);
+    if (cd > only_under_seconds * 1000) {
+        return snprintf(arr, 8, "");
+    }
     if (cd >= decimal_threshold) {
         if (round_up) cd += 1000;
         return snprintf(arr, 8, "%d", cd / 1000);
     }
-    return snprintf(arr, 8, "%.1f", cd / 1000.f);
+    return snprintf(arr, 8, "%.1f", static_cast<double>(cd) / 1000.0);
 }
