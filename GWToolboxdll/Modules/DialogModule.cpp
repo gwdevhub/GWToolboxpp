@@ -165,27 +165,28 @@ void DialogModule::Initialize() {
     }
 }
 void DialogModule::SendDialog(uint32_t dialog_id) {
-    bool already_queued = queued_dialogs_to_send.find(dialog_id) != queued_dialogs_to_send.end();
+    const bool already_queued = queued_dialogs_to_send.contains(dialog_id);
     queued_dialogs_to_send[dialog_id] = TIMER_INIT();
     if (already_queued)
         return; // Don't redo any logic.
 
     if ((dialog_id & 0x800000) != 0) {
         // Quest related dialog
-        uint32_t quest_id = (dialog_id ^ 0x800000) >> 8;
+        const uint32_t quest_id = (dialog_id ^ 0x800000) >> 8;
         switch ((dialog_id & 0xf)) {
-        case 1:// Dialog is for taking a quest
-        case 7:// Dialog is for accepting a quest reward
-            uint32_t enquire_dialog_id = (quest_id << 8) | 0x800003;
-            SendDialog(enquire_dialog_id);
+        case 1: // Dialog is for taking a quest
+            SendDialog((quest_id << 8) | 0x800003);
+            break;
+        case 7: // Dialog is for accepting a quest reward
+            SendDialog(quest_id << 8 | 0x800006);
             break;
         }
         return;
     }
     if ((dialog_id & 0xf84) == dialog_id && ((dialog_id & 0xfff) >> 8) != 0) {
         // Dialog is for changing profession; queue up the enquire dialog option aswell
-        uint32_t profession_id = (dialog_id & 0xfff) >> 8;
-        uint32_t enquire_dialog_id = (profession_id << 8) | 0x85;
+        const uint32_t profession_id = (dialog_id & 0xfff) >> 8;
+        const uint32_t enquire_dialog_id = (profession_id << 8) | 0x85;
         SendDialog(enquire_dialog_id);
         return;
     }
@@ -254,7 +255,7 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
     if (dialog_buttons.empty()) return 0;
     std::vector<uint32_t> available_quests;
     for (const auto dialog_button : dialog_buttons) {
-        uint32_t dialog_id = dialog_button->dialog_id;
+        const uint32_t dialog_id = dialog_button->dialog_id;
         if ((dialog_id & 0x800000) == 0)
             continue;
         // Quest related dialog
@@ -262,6 +263,7 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
         switch ((dialog_id & 0xff)) {
         case 1: // Dialog is for taking a quest
         case 3: // Dialog is for quest enquiry
+        case 6: // Dialog is for enquiring about a quest reward
         case 7: // Dialog is for accepting a quest reward
             available_quests.push_back(quest_id);
             break;
@@ -270,7 +272,7 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
         }
     }
     for (const auto quest_id : available_quests) {
-        if (quest_id == (uint32_t)GW::Constants::QuestID::UW_UWG 
+        if (quest_id == static_cast<uint32_t>(GW::Constants::QuestID::UW_UWG) 
             && available_quests.size() > 1) {
             // skip unless it's the only available dialog - certain quests almost always want to be taken last
             continue;
