@@ -1093,7 +1093,7 @@ ObserverModule::ObservableGuild* ObserverModule::CreateObservableGuild(const GW:
     // cache
     observable_guilds.insert({ observable_guild->guild_id, observable_guild });
     observable_guild_ids.push_back(observable_guild->guild_id);
-    std::sort(observable_guild_ids.begin(), observable_guild_ids.end());
+    std::ranges::sort(observable_guild_ids);
     return observable_guild;
 }
 
@@ -1133,7 +1133,7 @@ ObserverModule::ObservableAgent* ObserverModule::CreateObservableAgent(const GW:
     // cache
     observable_agents.insert({ observable_agent->agent_id, observable_agent });
     observable_agent_ids.push_back(observable_agent->agent_id);
-    std::sort(observable_agent_ids.begin(), observable_agent_ids.end());
+    std::ranges::sort(observable_agent_ids);
     return observable_agent;
 }
 
@@ -1167,7 +1167,7 @@ ObserverModule::ObservableSkill* ObserverModule::CreateObservableSkill(const GW:
     // cache
     observable_skills.insert({ gw_skill.skill_id, observable_skill });
     observable_skill_ids.push_back(observable_skill->skill_id);
-    std::sort(observable_skill_ids.begin(), observable_skill_ids.end());
+    std::ranges::sort(observable_skill_ids);
     return observable_skill;
 }
 
@@ -1226,7 +1226,7 @@ ObserverModule::ObservableParty* ObserverModule::CreateObservableParty(const GW:
     // cache
     observable_parties.insert({ observable_party->party_id, observable_party });
     observable_party_ids.push_back(observable_party->party_id);
-    std::sort(observable_party_ids.begin(), observable_party_ids.end());
+    std::ranges::sort(observable_party_ids);
     return observable_party;
 }
 
@@ -1377,7 +1377,7 @@ ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSki
         // skill not registered
         skill_ids_used.push_back(skill_id);
         // re-sort skills
-        std::sort(skill_ids_used.begin(), skill_ids_used.end());
+        std::ranges::sort(skill_ids_used);
         ObservedSkill* observed_skill = new ObservedSkill(skill_id);
         skills_used.insert({skill_id, observed_skill});
         return *observed_skill;
@@ -1396,7 +1396,7 @@ ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSki
         // skill not registered
         skill_ids_received.push_back(skill_id);
         // re-sort skills
-        std::sort(skill_ids_received.begin(), skill_ids_received.end());
+        std::ranges::sort(skill_ids_received);
         ObservedSkill* observed_skill = new ObservedSkill(skill_id);
         skills_received.insert({skill_id, observed_skill});
         return *observed_skill;
@@ -1431,7 +1431,7 @@ ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkil
             std::vector<GW::Constants::SkillID>& skills_ids_received_by_agent_vec = skill_ids_received_from_agents.find(caster_agent_id)->second;
             skills_ids_received_by_agent_vec.push_back(skill_id);
             // re-sort
-            std::sort(skills_ids_received_by_agent_vec.begin(), skills_ids_received_by_agent_vec.end());
+            std::ranges::sort(skills_ids_received_by_agent_vec);
             // add the observed skill for the caster
             ObservedSkill* observed_skill = new ObservedSkill(skill_id);
             used_by_caster.insert({skill_id, observed_skill});
@@ -1467,7 +1467,7 @@ ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkil
             std::vector<GW::Constants::SkillID>& skills_ids_used_on_agent_vec = skill_ids_used_on_agents.find(target_agent_id)->second;
             skills_ids_used_on_agent_vec.push_back(skill_id);
             // re-sort
-            std::sort(skills_ids_used_on_agent_vec.begin(), skills_ids_used_on_agent_vec.end());
+            std::ranges::sort(skills_ids_used_on_agent_vec);
             // add the observed skill for the caster
             ObservedSkill* observed_skill = new ObservedSkill(skill_id);
             used_on_target.insert({skill_id, observed_skill});

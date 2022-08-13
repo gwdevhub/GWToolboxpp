@@ -118,8 +118,7 @@ namespace {
         }
     }
     bool IsDialogButtonAvailable(uint32_t dialog_id) {
-        return std::any_of(
-            dialog_buttons.begin(), dialog_buttons.end(), [dialog_id](const GW::UI::DialogButtonInfo* d) -> bool {
+        return std::ranges::any_of(dialog_buttons, [dialog_id](const GW::UI::DialogButtonInfo* d) {
                 return d->dialog_id == dialog_id;
             });
     }

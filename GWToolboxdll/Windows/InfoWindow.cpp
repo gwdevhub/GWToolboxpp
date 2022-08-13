@@ -400,7 +400,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     continue;
                 widgets.push_back(widget);
             }
-            std::sort(widgets.begin(), widgets.end(), [](auto *a, auto *b) { return std::strcmp(a->Name(), b->Name()) < 0; });
+            std::ranges::sort(widgets, [](auto *a, auto *b) { return std::strcmp(a->Name(), b->Name()) < 0; });
             const unsigned cols = static_cast<unsigned>(ceil(ImGui::GetWindowSize().x / 200.f));
             ImGui::PushID("info_enable_widget_items");
             ImGui::Columns(static_cast<int>(cols), "info_enable_widgets", false);

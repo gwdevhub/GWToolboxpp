@@ -1613,9 +1613,8 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 		}
 		if (!can_sort)
 			return false;
-		std::sort(
-			camp_missions.begin(),
-			camp_missions.end(),
+		std::ranges::sort(
+			camp_missions,
 			[](Missions::Mission* lhs, Missions::Mission* rhs) {
 				return strcmp(lhs->Name(), rhs->Name()) < 0;
 			});

@@ -774,8 +774,8 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         if (lfp->alias.empty()) continue;
         friends_online.push_back(lfp);
     }
-    std::sort(friends_online.begin(), friends_online.end(), [](const Friend* lhs, const Friend* rhs) {
-        return std::wstring(lhs->alias).compare(rhs->alias) < 0;
+    std::ranges::sort(friends_online, [](const Friend* lhs, const Friend* rhs) {
+            return std::wstring(lhs->alias).compare(rhs->alias) < 0;
         });
     char tmpbuf[32];
     for (Friend* lfp : friends_online) {

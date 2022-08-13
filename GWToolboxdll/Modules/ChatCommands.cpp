@@ -612,8 +612,8 @@ void ChatCommands::Update(float delta) {
             }
         }
         if (can_sort) {
-            std::sort(title_names.begin(), title_names.end(), [](DecodedTitleName* first, DecodedTitleName* second) {
-                return first->name.string() < second->name.string();
+            std::ranges::sort(title_names, [](DecodedTitleName* first, DecodedTitleName* second) {
+                    return first->name.string() < second->name.string();
                 });
             title_names_sorted = true;
         }

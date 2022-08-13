@@ -1276,8 +1276,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(EventType type, uint32_t id1, uin
 }
 void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
 {
-    if (!std::any_of(
-            objectives.begin(), objectives.end(), [](const Objective* obj) { return obj->done == TIME_UNKNOWN; })) {
+    if (!std::ranges::any_of(objectives, [](const Objective* obj) { return obj->done == TIME_UNKNOWN; })) {
         duration = GetDuration();
         // make sure there isn't an objective finishing later
         const auto max = std::max_element(objectives.begin(), objectives.end(),

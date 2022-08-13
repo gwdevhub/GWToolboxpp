@@ -187,7 +187,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
     }
 
     // Sort by name
-    std::sort(inject_processes.begin(), inject_processes.end(),
+    std::ranges::sort(inject_processes,
         [](InjectProcess &proc1, InjectProcess &proc2) {
             return proc1.m_Charname < proc2.m_Charname;
         });

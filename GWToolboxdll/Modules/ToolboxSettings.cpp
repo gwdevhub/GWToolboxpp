@@ -267,7 +267,7 @@ void ToolboxSettings::DrawSettingInternal() {
                 valid_elements.push_back(window);
             }
         }
-        std::sort(valid_elements.begin(), valid_elements.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+        std::ranges::sort(valid_elements, [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
             return std::string(lhs->Name()).compare(rhs->Name()) < 0;
         });
         items_per_col = (size_t)ceil(valid_elements.size() / static_cast<float>(cols));

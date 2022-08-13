@@ -175,11 +175,11 @@ void GWPreferences::Draw() {
             }
         }
         if (ok) {
-            std::sort(current_preferences.window_positions.begin(), current_preferences.window_positions.end(), [](WindowPreference* a, WindowPreference* b) {
+            std::ranges::sort(current_preferences.window_positions, [](WindowPreference* a, WindowPreference* b) {
                     return a->name.string() > b->name.string();
                 });
-            std::sort(current_preferences.preferences.begin(), current_preferences.preferences.end(), [](InGamePreference* a, InGamePreference* b) {
-                return a->name.string() > b->name.string();
+            std::ranges::sort(current_preferences.preferences, [](InGamePreference* a, InGamePreference* b) {
+                    return a->name.string() > b->name.string();
                 });
             current_preferences.reordered = true;
         }
