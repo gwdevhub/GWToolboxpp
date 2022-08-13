@@ -1516,7 +1516,7 @@ void CompletionWindow::Terminate()
 	clear_vec(elite_skills);
 	clear_vec(heros);
 
-	for (auto camp : character_completion)
+	for (const auto& camp : character_completion)
 		delete camp.second;
 	character_completion.clear();
 }

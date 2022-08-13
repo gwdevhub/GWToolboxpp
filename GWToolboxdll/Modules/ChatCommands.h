@@ -125,7 +125,7 @@ private:
         void Init(const wchar_t* search, TargetType type = Npc);
         void Update();
         ~SearchAgent() {
-            for (auto it : npc_names)
+            for (const auto& it : npc_names)
                 delete it.second;
             npc_names.clear();
         }

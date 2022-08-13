@@ -84,15 +84,15 @@ Resources::Resources() {
 Resources::~Resources() {
     Cleanup();
     ShutdownCurl();
-    for (auto it : skill_images) {
+    for (const auto& it : skill_images) {
         delete it.second;
     }
     skill_images.clear();
-    for (auto it : item_images) {
+    for (const auto& it : item_images) {
         delete it.second;
     }
     item_images.clear();
-    for (auto it : map_names) {
+    for (const auto& it : map_names) {
         delete it.second;
     }
     map_names.clear();

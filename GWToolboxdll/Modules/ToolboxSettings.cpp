@@ -243,7 +243,7 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
     size_t items_per_col = (size_t)ceil(features.size() / static_cast<float>(cols));
     size_t col_count = 0;
-    for (auto feature : features) {
+    for (const auto& feature : features) {
         ImGui::Checkbox(feature.first, feature.second);
         col_count++;
         if (col_count == items_per_col) {

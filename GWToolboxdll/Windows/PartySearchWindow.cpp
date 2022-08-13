@@ -500,7 +500,7 @@ bool PartySearchWindow::IsLfpAlert(std::string &message)
     std::regex word_regex;
     std::smatch m;
     static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
-    for (auto &word : alert_words) {
+    for (const auto& word : alert_words) {
         if (std::regex_search(word, m, regex_check)) {
             try {
                 word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
@@ -604,7 +604,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
         int32_t district = GW::Map::GetDistrict();
         uint32_t map = static_cast<uint32_t>(GW::Map::GetMapID());
         //auto& parties = party_ctx->party_search;
-        for (auto it : party_advertisements) {
+        for (const auto& it : party_advertisements) {
             auto* party = it.second;
             if (!party) continue;
             if (!display_party_types[party->search_type])

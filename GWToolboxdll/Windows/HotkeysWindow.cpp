@@ -223,7 +223,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
         };
         switch (group_by) {
             case Profession:
-                for (auto it : by_profession) {
+                for (auto& it : by_profession) {
                     if (ImGui::CollapsingHeader(TBHotkey::professions[it.first])) {
                         ImGui::Indent();
                         if (draw_hotkeys_vec(it.second)) {
@@ -237,7 +237,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                 break;
             case Map: {
                 char* map_name = 0;
-                for (auto it : by_map) {
+                for (auto& it : by_map) {
                     if (it.first == 0)
                         map_name = "Any";
                     else if (it.first >= 0 && it.first < _countof(GW::Constants::NAME_FROM_ID))
@@ -257,7 +257,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
             } break;
             case PlayerName: {
                 char* player_name = "";
-                for (auto it : by_player_name) {
+                for (auto& it : by_player_name) {
                     if (it.first.empty())
                         player_name = "Any";
                     else
