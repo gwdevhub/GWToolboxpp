@@ -1,9 +1,5 @@
 #pragma once
-
-#include <imgui.h>
-#include <d3d9.h>
 #include <Windows.h>
-#include <SimpleIni.h>
 
 #ifdef BUILD_DLL
 #define DLLAPI extern "C" __declspec(dllexport)
@@ -12,6 +8,15 @@
 #endif
 
 class TBModule; // Full declaration below. 
+
+struct ImGuiContext;
+typedef CSimpleIniTempl<char,
+	SI_NoCase<char>, SI_ConvertA<char> >                 CSimpleIniA;
+struct IDirect3DDevice9;
+
+namespace ImGui {
+	void SetCurrentContext(ImGuiContext*);
+}
 
 //
 // Dll interface. You must implement those functions
@@ -49,10 +54,10 @@ public:
 	virtual bool WndProc(UINT /*message*/, WPARAM, LPARAM) { return false; }
 
 	// Load settings from ini
-	virtual void LoadSettings(CSimpleIni*) {};
+	virtual void LoadSettings(CSimpleIniA*) {};
 
 	// Save settings to ini
-	virtual void SaveSettings(CSimpleIni*) {};
+	virtual void SaveSettings(CSimpleIniA*) {};
 
 	// Draw settings. 
 	virtual void DrawSettings() {};

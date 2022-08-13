@@ -809,7 +809,7 @@ void GameSettings::Initialize() {
     // you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
     // when they added anniversary page so we do it ourself.
     DWORD page_max = 14;
-    ctrl_click_patch.SetPatch(address, &page_max, 1);
+    ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
     ctrl_click_patch.TogglePatch(true);
 
     address = GW::Scanner::Find("\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
