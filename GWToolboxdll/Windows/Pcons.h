@@ -26,7 +26,7 @@ public:
     static bool suppress_drunk_emotes;
     static bool suppress_lunar_skills;
 
-    static std::vector<std::vector<clock_t>> reserved_bag_slots;
+    static std::array<std::array<clock_t, 25>, 22> reserved_bag_slots;
     static bool hide_city_pcons_in_explorable_areas;
 
 protected:
