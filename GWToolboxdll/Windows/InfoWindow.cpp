@@ -492,8 +492,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             InfoField("Last Dialog", "0x%X", GW::Agents::GetLastDialogId());
             ImGui::Text("Available NPC Dialogs:");
             ImGui::ShowHelp("Talk to an NPC to see available dialogs");
-            auto messages = DialogModule::Instance().GetDialogButtonMessages();
-            auto buttons = DialogModule::Instance().GetDialogButtons();
+            const auto& messages = DialogModule::Instance().GetDialogButtonMessages();
+            const auto& buttons = DialogModule::Instance().GetDialogButtons();
             char bbuf[48];
             for (size_t i = 0; i < buttons.size();i++) {
                 snprintf(bbuf, _countof(bbuf), "Send###send_dialog_%d", i);
