@@ -20,7 +20,7 @@ public:
     }
 
     const char* Name() const override { return "Dialogs"; }
-    const char* Icon() const override { return ICON_FA_COMMENT_DOTS; }
+    const char8_t* Icon() const override { return ICON_FA_COMMENT_DOTS; }
 
     void Draw(IDirect3DDevice9* pDevice) override;
 

@@ -257,7 +257,7 @@ public:
 	}
 
 	const char* Name() const override { return "Completion"; }
-    const char* Icon() const override { return ICON_FA_BOOK; }
+    const char8_t* Icon() const override { return ICON_FA_BOOK; }
 
     const bool IsHardMode() { return hard_mode; }
 

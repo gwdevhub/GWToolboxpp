@@ -31,7 +31,7 @@ public:
     virtual bool IsWidget() const { return false; }
     virtual bool ShowOnWorldMap() const { return false; }
 
-    virtual char* TypeName() const { return "ui element"; }
+    virtual const char* TypeName() const { return "ui element"; }
 
     virtual void RegisterSettingsContent() override;
 

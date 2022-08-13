@@ -15,7 +15,7 @@ public:
     }
 
     const char* Name() const override { return "Guild Wars Preferences"; }
-    const char* Icon() const override { return ICON_FA_COGS; }
+    const char8_t* Icon() const override { return ICON_FA_COGS; }
 
     void Initialize() override;
 

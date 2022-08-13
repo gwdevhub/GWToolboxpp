@@ -13,7 +13,7 @@ public:
     }
 
     const char* Name() const override { return "Reroll"; }
-    const char* Icon() const override { return ICON_FA_USERS; }
+    const char8_t* Icon() const override { return ICON_FA_USERS; }
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -77,7 +77,7 @@ private:
     wchar_t party_leader[20] = { 0 };
     bool same_map = false;
     bool same_party = false;
-    wchar_t* failed_message = 0;
+    const wchar_t* failed_message = 0;
     bool return_on_fail = false;
     bool reverting_reroll = false;
     enum RerollStage {
@@ -96,7 +96,7 @@ private:
     } reroll_stage = None;
     uint32_t reroll_scroll_from_map_id = 0;
 
-    void RerollFailed(wchar_t* reason);
+    void RerollFailed(const wchar_t* reason);
 
     void RerollSuccess();
 

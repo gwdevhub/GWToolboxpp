@@ -25,8 +25,8 @@ public:
         Op_BlockInput,
     };
 
-    static char* professions[];
-    static char* instance_types[];
+    static const char* professions[];
+    static const char* instance_types[];
 
     static bool show_active_in_header;
     static bool show_run_in_header;
@@ -149,7 +149,7 @@ private:
     GW::Item* item = nullptr;
     std::chrono::time_point<std::chrono::steady_clock> start_time;
     std::chrono::time_point<std::chrono::steady_clock> last_try;
-    wchar_t* item_name = L"";
+    const wchar_t* item_name = L"";
 public:
     HotkeyEquipItemAttributes item_attributes;
     static const char* IniSection() { return "EquipItem"; }

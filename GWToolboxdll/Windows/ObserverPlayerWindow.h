@@ -19,10 +19,8 @@
 
 class ObserverPlayerWindow : public ToolboxWindow {
 public:
-    ObserverPlayerWindow() {};
-    ~ObserverPlayerWindow() {
-        //
-    };
+    ObserverPlayerWindow() = default;
+    ~ObserverPlayerWindow() override = default;
 
     static ObserverPlayerWindow& Instance() {
         static ObserverPlayerWindow instance;
@@ -31,9 +29,9 @@ public:
 
 
 
-    virtual void ObserverPlayerWindow::Prepare(){};
-    virtual uint32_t ObserverPlayerWindow::GetTracking();
-    virtual uint32_t ObserverPlayerWindow::GetComparison();
+    virtual void Prepare(){};
+    virtual uint32_t GetTracking();
+    virtual uint32_t GetComparison();
 
     void DrawHeaders();
     void DrawAction(const std::string& name, const ObserverModule::ObservedAction* action);
@@ -42,7 +40,7 @@ public:
         const std::vector<GW::Constants::SkillID>& skill_ids);
 
     const char* Name() const override { return "Observer Player"; };
-    const char* Icon() const override { return ICON_FA_EYE; }
+    const char8_t* Icon() const override { return ICON_FA_EYE; }
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
 

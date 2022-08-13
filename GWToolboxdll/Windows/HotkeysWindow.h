@@ -21,7 +21,7 @@ public:
     }
 
     const char* Name() const override { return "Hotkeys"; }
-    const char* Icon() const override { return ICON_FA_KEYBOARD; }
+    const char8_t* Icon() const override { return ICON_FA_KEYBOARD; }
 
     void Initialize() override;
     void Terminate() override;

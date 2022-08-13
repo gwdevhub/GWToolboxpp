@@ -50,7 +50,7 @@ public:
     }
 
     const char* Name() const override { return "Faction Leaderboard"; }
-    const char* Icon() const override { return ICON_FA_GLOBE; }
+    const char8_t* Icon() const override { return ICON_FA_GLOBE; }
 
     void Initialize() override;
 

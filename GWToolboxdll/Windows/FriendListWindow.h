@@ -114,7 +114,7 @@ public:
     static void AddFriendAliasToMessage(wchar_t** message_ptr);
 
     const char* Name() const override { return "Friend List"; }
-    const char* Icon() const override { return ICON_FA_USER_FRIENDS; }
+    const char8_t* Icon() const override { return ICON_FA_USER_FRIENDS; }
 
     bool IsWidget() const override;
     bool IsWindow() const override;
@@ -149,7 +149,7 @@ public:
 
 private:
     CSimpleIni* inifile = nullptr;
-    wchar_t* ini_filename = L"friends.ini";
+    const wchar_t* ini_filename = L"friends.ini";
     bool loading = false; // Loading from disk?
     bool polling = false; // Polling in progress?
     bool poll_queued = false; // Used to avoid overloading the thread queue.
