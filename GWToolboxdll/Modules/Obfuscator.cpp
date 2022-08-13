@@ -246,17 +246,19 @@ namespace {
     GetCharacterSummary_pt RetGetCharacterSummary = 0;
     GW::MemoryPatcher GetCharacterSummary_AssertionPatch;
 
-    static void __fastcall OnGetCharacterSummary(void* ctx, uint32_t edx, wchar_t* character_name) {
+    void __fastcall OnGetCharacterSummary(void* ctx, uint32_t edx, wchar_t* character_name) {
         GW::HookBase::EnterHook();
-        if (edx != 2 && edx != 3)
-            goto leave;
+        if (edx != 2 && edx != 3) {
+            RetGetCharacterSummary(ctx, edx, character_name);
+            GW::HookBase::LeaveHook();
+            return;
+        }
         static wchar_t new_character_name[20];
         auto& instance = Obfuscator::Instance();
         if (instance.status != Obfuscator::Disabled) {
             instance.ObfuscateName(character_name, new_character_name, 20, true);
             character_name = new_character_name;
         }
-    leave:
         RetGetCharacterSummary(ctx, edx, character_name);
         GW::HookBase::LeaveHook();
     }

@@ -288,8 +288,11 @@ bool PartyWindowModule::CanTerminate() {
     return allies_added_to_party.empty();
 }
 void PartyWindowModule::RemoveAllyActual(uint32_t agent_id) {
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
-        goto leave;
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+        const auto it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), agent_id);
+        if (it != allies_added_to_party.end()) allies_added_to_party.erase(it);
+        return;
+    }
     GW::Packet::StoC::PartyRemoveAlly packet;
     packet.header = GW::Packet::StoC::PartyRemoveAlly::STATIC_HEADER;
     packet.agent_id = agent_id;
@@ -304,10 +307,8 @@ void PartyWindowModule::RemoveAllyActual(uint32_t agent_id) {
     // 1. Remove NPC from window.
     GW::StoC::EmulatePacket(&packet);
     SetAgentName(agent_id, prev_name);
-leave:
     const auto it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), agent_id);
-    if (it != allies_added_to_party.end())
-        allies_added_to_party.erase(it);
+    if (it != allies_added_to_party.end()) allies_added_to_party.erase(it);
 }
 void PartyWindowModule::AddAllyActual(PendingAddToParty &p) {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)

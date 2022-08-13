@@ -289,10 +289,10 @@ void ChatLog::Load(const std::wstring& _account) {
     delete inifile;
 }
 void ChatLog::Inject() {
-    if (injecting || !enabled || !ClearChatLog_Func || !InitChatLog_Func)
-        goto done_injecting;
-    if(!pending_inject)
-        goto done_injecting;
+    if (injecting || !enabled || !ClearChatLog_Func || !InitChatLog_Func || !pending_inject) {
+        injecting = false;
+        return;
+    }
     TBChatMessage* recv = recv_first;
     if (recv) {
         ClearChatLog_Func();
@@ -317,18 +317,16 @@ void ChatLog::Inject() {
         }
     }
     InjectSent();
-
-done_injecting:
     injecting = false;
 }
 void ChatLog::InjectSent() {
     injecting = true;
     // Sent
     auto out_log = GetSentLog();
-    if (!AddToSentLog_Func)
-        goto done_injecting;
-    if (out_log && out_log->count)
-        goto done_injecting; // Has log already; becuase we have no way of knowing the order, we cant inject
+    if (!AddToSentLog_Func || out_log && out_log->count) {
+        injecting = false;
+        return;
+    }
     // Fill chat log
     TBSentMessage* sent = sent_first;
     while (sent) {
@@ -343,7 +341,6 @@ void ChatLog::InjectSent() {
             break;
         sent = sent->next;
     }
-done_injecting:
     injecting = false;
 }
 void ChatLog::SetEnabled(bool _enabled) {

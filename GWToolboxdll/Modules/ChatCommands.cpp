@@ -1594,43 +1594,40 @@ void ChatCommands::CmdTransmoTarget(const wchar_t*, int argc, LPWSTR* argv) {
     TransmoAgent(target->agent_id, transmo);
 }
 
-void ChatCommands::CmdHom(const wchar_t* message, int argc, LPWSTR* ) {
-    wchar_t* player_name = 0;
+void GetAchievements(const wchar_t* player_name) {
+    if (player_name && player_name[0]) {
+        memset(&hom_achievements, 0, sizeof(hom_achievements));
+        HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(
+            player_name, &hom_achievements, &hom_achievements_result);
+    } else {
+        Log::Error("Invalid player name for hall of monuments command");
+    }
+}
+
+void ChatCommands::CmdHom(const wchar_t* message, int argc, LPWSTR*) {
+    wchar_t player_name[20]{};
     if (argc > 1) {
         std::wstring args = GetRemainingArgsWstr(message, 1);
         
         if (args == L"me") {
-            player_name = new wchar_t[20];
             wcscpy(player_name, GW::PlayerMgr::GetPlayerName(0));
-            goto get_achievements;
+            return GetAchievements(player_name);
         }
         if (args.find(L" ") != std::wstring::npos && args.size() < 20) {
-            player_name = new wchar_t[20];
             wcscpy(player_name, args.c_str());
-            goto get_achievements;
+            return GetAchievements(player_name);
         }
         if (!args.empty()) {
-            goto get_achievements;
+            return GetAchievements(player_name);
         }
     }
 
     auto target = GW::Agents::GetTargetAsAgentLiving();
-    auto player = target && target->IsPlayer()  ? GW::PlayerMgr::GetPlayerByID(target->player_number) : nullptr;
+    auto player = target && target->IsPlayer() ? GW::PlayerMgr::GetPlayerByID(target->player_number) : nullptr;
     if (player) {
-        player_name = new wchar_t[20];
         wcscpy(player_name, player->name);
-        goto get_achievements;
+        return GetAchievements(player_name);
     }
-get_achievements:
-    if (player_name && player_name[0]) {
-        memset(&hom_achievements, 0, sizeof(hom_achievements));
-        HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(player_name, &hom_achievements,&hom_achievements_result);
-    }
-    else {
-        Log::Error("Invalid player name for hall of monuments command");
-    }
-    if(player_name)
-        delete[] player_name;
 }
 
 void ChatCommands::CmdTransmo(const wchar_t *, int argc, LPWSTR *argv) {
