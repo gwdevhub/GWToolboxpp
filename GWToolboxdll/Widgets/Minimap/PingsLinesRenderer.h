@@ -137,8 +137,8 @@ private:
     std::vector<GW::UI::CompassPoint> queue;
 
     Color color_drawings = 0;
-    Color color_shadowstep_line = 0;
-    Color color_shadowstep_line_maxrange = 0;
+    Color color_shadowstep_line = Colors::ARGB(155, 128, 0, 128);
+    Color color_shadowstep_line_maxrange = Colors::ARGB(255, 255, 0, 128);
     float maxrange_interp_begin = 0.85f;
     float maxrange_interp_end = 0.95f;
     bool reduce_ping_spam = false;

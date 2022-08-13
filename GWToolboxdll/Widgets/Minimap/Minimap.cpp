@@ -134,7 +134,7 @@ namespace {
             return nullptr;
         return gamectx->party->player_party;
     }
-
+    GW::UI::WindowPosition* compass_frame = 0;
 }
 
 void Minimap::Terminate()
@@ -458,6 +458,8 @@ void Minimap::DrawSettingInternal()
     ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
     ImGui::NextSpacedElement(); ImGui::Checkbox("Circular", &circular_map);
     ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Snap to compass", &snap_to_compass);
+    ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
 }
 
 void Minimap::LoadSettings(CSimpleIni *ini)
@@ -484,11 +486,13 @@ void Minimap::LoadSettings(CSimpleIni *ini)
     flip_on_reverse = ini->GetBoolValue(Name(), VAR_NAME(flip_on_reverse), flip_on_reverse);
     smooth_rotation = ini->GetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
     circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
+    snap_to_compass = ini->GetBoolValue(Name(), VAR_NAME(snap_to_compass), snap_to_compass);
+
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
     key_ctrl_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_ctrl_behavior), 2));
     key_shift_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_shift_behavior), 3));
     key_alt_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_alt_behavior), 4));
-    pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
+
     range_renderer.LoadSettings(ini, Name());
     pmap_renderer.LoadSettings(ini, Name());
     agent_renderer.LoadSettings(ini, Name());
@@ -511,11 +515,13 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     ini->SetLongValue(Name(), VAR_NAME(key_ctrl_behavior), static_cast<long>(key_ctrl_behavior));
     ini->SetLongValue(Name(), VAR_NAME(key_shift_behavior), static_cast<long>(key_shift_behavior));
     ini->SetLongValue(Name(), VAR_NAME(key_alt_behavior), static_cast<long>(key_alt_behavior));
-    ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
+    
     ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
     ini->SetBoolValue(Name(), VAR_NAME(flip_on_reverse), flip_on_reverse);
     ini->SetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
     ini->SetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
+    ini->SetBoolValue(Name(), VAR_NAME(snap_to_compass), snap_to_compass);
+
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
     agent_renderer.SaveSettings(ini, Name());
@@ -622,10 +628,28 @@ void Minimap::Draw(IDirect3DDevice9 *)
     ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus))) {
         // window pos are already rounded by imgui, so casting is no big deal
-        location.x = static_cast<int>(ImGui::GetWindowPos().x);
-        location.y = static_cast<int>(ImGui::GetWindowPos().y);
-        size.x = static_cast<int>(ImGui::GetWindowSize().x);
-        size.y = static_cast<int>(ImGui::GetWindowSize().y);
+        if (!snap_to_compass) {
+            location.x = static_cast<int>(ImGui::GetWindowPos().x);
+            location.y = static_cast<int>(ImGui::GetWindowPos().y);
+            size.x = static_cast<int>(ImGui::GetWindowSize().x);
+            size.y = static_cast<int>(ImGui::GetWindowSize().y);
+        }
+        else {
+            // @Cleanup: Don't do this every frame, only when compass is relocated.
+            if (!compass_frame) {
+                compass_frame = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_Compass);
+            }
+            else {
+                const float multiplier = GuiUtils::GetGWScaleMultiplier();
+                float compass_width = compass_frame->width(multiplier);
+                float compass_padding = compass_width * .05f;
+                location = { (int)(compass_frame->left(multiplier) + compass_padding),(int)(compass_frame->top(multiplier) + compass_padding) };
+                size = { (int)(compass_width - (compass_padding * 2.f)) , (int)(compass_frame->height(multiplier) - (compass_padding * 2.f)) };
+                ImGui::SetWindowPos({ (float)location.x,(float)location.y });
+                ImGui::SetWindowSize({ (float)size.x,(float)size.y });
+            }
+        }
+
         //auto& style = ImGui::GetStyle();
         clipping.left = location.x;
         clipping.right = location.x + size.x;
@@ -744,28 +768,28 @@ void Minimap::Render(IDirect3DDevice9* device) {
     device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 
     auto FillRect = [&device](const Color color, const float x, const float y, const float w, const float h) {
-        D3DVertex vertices[6] = {{x,y, 0.0f, color},
+        D3DVertex vertices[6] = { {x,y, 0.0f, color},
             {x + w, y, 0.0f, color},
             {x, y + h, 0.0f, color},
-            {x + w, y + h, 0.0f, color}};
+            {x + w, y + h, 0.0f, color} };
         device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(D3DVertex));
     };
 
     auto FillCircle = [&device](
-                          const float x, const float y, const float radius, const Color clr, float resolution = 199.f) {
-        resolution = std::min(resolution, 199.f);
-        D3DVertex vertices[200];
-        for (auto i = 0; i <= resolution; ++i) {
-            vertices[i] = {radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x,
-                y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0.0f, clr};
-        }
-        device->DrawPrimitiveUP(
-            D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
+        const float x, const float y, const float radius, const Color clr, float resolution = 199.f) {
+            resolution = std::min(resolution, 199.f);
+            D3DVertex vertices[200];
+            for (auto i = 0; i <= resolution; ++i) {
+                vertices[i] = { radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x,
+                    y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0.0f, clr };
+            }
+            device->DrawPrimitiveUP(
+                D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
     };
-    
+
     Instance().RenderSetupProjection(device);
 
-    
+
     D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
     device->SetScissorRect(&instance.clipping); // always clip to rect as a fallback if the stenciling fails
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
@@ -784,7 +808,8 @@ void Minimap::Render(IDirect3DDevice9* device) {
         device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
         device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-    } else {
+    }
+    else {
         FillRect(background, -5000.0f, -5000.0f, 10000.f, 10000.f); // fill rect with chosen background color
     }
 
@@ -792,50 +817,50 @@ void Minimap::Render(IDirect3DDevice9* device) {
     D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
 
     D3DXMATRIX rotate_char;
-    D3DXMatrixRotationZ(&rotate_char, -Instance().GetMapRotation() + static_cast<float>(M_PI_2));
+    D3DXMatrixRotationZ(&rotate_char, -instance.GetMapRotation() + static_cast<float>(M_PI_2));
 
     D3DXMATRIX scaleM, translationM;
-    D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
-    D3DXMatrixTranslation(&translationM, Instance().translation.x, Instance().translation.y, 0);
+    D3DXMatrixScaling(&scaleM, instance.scale, instance.scale, 1.0f);
+    D3DXMatrixTranslation(&translationM, instance.translation.x, instance.translation.y, 0);
 
-    float gwinch_scale = static_cast<float>(Instance().size.x) / 5000.0f / 2.f * Instance().scale;
-    if (gwinch_scale != Instance().gwinch_scale.x) {
-        Instance().range_renderer.Invalidate();
-        Instance().gwinch_scale = {gwinch_scale, gwinch_scale};
+    float gwinch_scale = static_cast<float>(instance.size.x) / 5000.0f / 2.f * instance.scale;
+    if (gwinch_scale != instance.gwinch_scale.x) {
+        instance.range_renderer.Invalidate();
+        instance.gwinch_scale = { gwinch_scale, gwinch_scale };
     }
 
     D3DXMATRIX view = translate_char * rotate_char * scaleM * translationM;
     device->SetTransform(D3DTS_VIEW, &view);
 
-    Instance().pmap_renderer.Render(device);
+    instance.pmap_renderer.Render(device);
 
-    Instance().custom_renderer.Render(device);
+    instance.custom_renderer.Render(device);
 
     // move the rings to the char position
     D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
     device->SetTransform(D3DTS_WORLD, &translate_char);
-    Instance().range_renderer.Render(device);
+    instance.range_renderer.Render(device);
     device->SetTransform(D3DTS_WORLD, &reset_world);
 
-    if (Instance().translation.x != 0 || Instance().translation.y != 0) {
+    if (instance.translation.x != 0 || instance.translation.y != 0) {
         D3DXMATRIX view2 = scaleM;
         device->SetTransform(D3DTS_VIEW, &view2);
-        Instance().range_renderer.SetDrawCenter(true);
-        Instance().range_renderer.Render(device);
-        Instance().range_renderer.SetDrawCenter(false);
+        instance.range_renderer.SetDrawCenter(true);
+        instance.range_renderer.Render(device);
+        instance.range_renderer.SetDrawCenter(false);
         device->SetTransform(D3DTS_VIEW, &view);
     }
 
-    Instance().symbols_renderer.Render(device);
+    instance.symbols_renderer.Render(device);
 
     device->SetTransform(D3DTS_WORLD, &reset_world);
-    Instance().agent_renderer.Render(device);
+    instance.agent_renderer.Render(device);
 
-    Instance().effect_renderer.Render(device);
+    instance.effect_renderer.Render(device);
 
-    Instance().pingslines_renderer.Render(device);
+    instance.pingslines_renderer.Render(device);
 
-    if (Instance().circular_map) {
+    if (instance.circular_map) {
         device->SetRenderState(D3DRS_STENCILREF, 0);
         device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
         device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
@@ -1166,6 +1191,15 @@ bool Minimap::IsInside(int x, int y) const
 }
 bool Minimap::IsActive() const
 {
+    if (snap_to_compass) {
+        if (!compass_frame) {
+            compass_frame = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_Compass);
+        }
+        if (compass_frame && !compass_frame->visible()) {
+            return false;
+        }
+    }
+
     return visible 
         && !loading 
         && GW::Map::GetIsMapLoaded() 

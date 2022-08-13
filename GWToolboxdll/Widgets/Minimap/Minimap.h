@@ -114,6 +114,8 @@ private:
 
     Vec2i location;
     Vec2i size;
+    bool snap_to_compass = false;
+
     D3DXVECTOR2 gwinch_scale;
     GW::Vec2f shadowstep_location = {0.f, 0.f};
     RECT clipping = { 0 };

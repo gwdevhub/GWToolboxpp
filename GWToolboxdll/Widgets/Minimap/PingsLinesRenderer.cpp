@@ -24,10 +24,11 @@ void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(128, 255, 0, 0));
     if ((ping_circle.color & IM_COL32_A_MASK) == 0) ping_circle.color |= Colors::ARGB(128, 0, 0, 0);
     marker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
-    color_shadowstep_line = Colors::Load(ini, section, "color_shadowstep_line", Colors::ARGB(155, 128, 0, 128));
-    color_shadowstep_line_maxrange = Colors::Load(ini, section, "color_shadowstep_line_maxrange", Colors::ARGB(255, 255, 0, 128));
-    maxrange_interp_begin = (float)ini->GetDoubleValue(section, "maxrange_interp_begin", 0.85);
-    maxrange_interp_end = (float)ini->GetDoubleValue(section, "maxrange_interp_end", 0.95);
+    color_shadowstep_line = Colors::Load(ini, section, VAR_NAME(color_shadowstep_line), color_shadowstep_line);
+    color_shadowstep_line_maxrange = Colors::Load(ini, section, VAR_NAME(color_shadowstep_line_maxrange), color_shadowstep_line_maxrange);
+    maxrange_interp_begin = (float)ini->GetDoubleValue(section, VAR_NAME(maxrange_interp_begin), maxrange_interp_begin);
+    maxrange_interp_end = (float)ini->GetDoubleValue(section, VAR_NAME(maxrange_interp_end), maxrange_interp_end);
+    reduce_ping_spam = ini->GetBoolValue(section, VAR_NAME(reduce_ping_spam), reduce_ping_spam);
     Invalidate();
 }
 void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
@@ -38,6 +39,7 @@ void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) cons
     Colors::Save(ini, section, "color_shadowstep_line_maxrange", color_shadowstep_line_maxrange);
     ini->SetDoubleValue(section, "maxrange_interp_begin", maxrange_interp_begin);
     ini->SetDoubleValue(section, "maxrange_interp_end", maxrange_interp_end);
+    ini->SetBoolValue(section, VAR_NAME(reduce_ping_spam), reduce_ping_spam);
 }
 void PingsLinesRenderer::DrawSettings() {
     bool changed = false;
