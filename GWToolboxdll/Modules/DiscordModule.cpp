@@ -216,7 +216,7 @@ static void OnDiscordLog(void* data, EDiscordLogLevel level, const char* message
     Log::Log("Discord Log Level %d: %s\n", level, message);
 }
 // Get pid from executable name (i.e. DiscordCanary.exe)
-DWORD GetProcId(char* ProcName) {
+DWORD GetProcId(const char* ProcName) {
     PROCESSENTRY32   pe32;
     HANDLE         hSnapshot = NULL;
     uint32_t pid = 0;

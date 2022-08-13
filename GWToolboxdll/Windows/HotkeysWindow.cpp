@@ -236,12 +236,12 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 break;
             case Map: {
-                char* map_name = 0;
+                const char* map_name;
                 for (auto& it : by_map) {
                     if (it.first == 0)
                         map_name = "Any";
                     else if (it.first >= 0 && it.first < _countof(GW::Constants::NAME_FROM_ID))
-                        map_name = (char*)GW::Constants::NAME_FROM_ID[it.first];
+                        map_name = GW::Constants::NAME_FROM_ID[it.first];
                     else
                         map_name = "Unknown";
                     if (ImGui::CollapsingHeader(map_name)) {
@@ -256,12 +256,12 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
             } break;
             case PlayerName: {
-                char* player_name = "";
+                const char* player_name;
                 for (auto& it : by_player_name) {
                     if (it.first.empty())
                         player_name = "Any";
                     else
-                        player_name = (char*)it.first.c_str();
+                        player_name = it.first.c_str();
                     if (ImGui::CollapsingHeader(player_name)) {
                         ImGui::Indent();
                         if (draw_hotkeys_vec(it.second)) {

@@ -445,7 +445,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         if (show_map && ImGui::CollapsingHeader("Map")) {
             ImGui::PushID("map_info");
-            char* type = "";
+            const char* type = "";
             switch (GW::Map::GetInstanceType()) {
             case GW::Constants::InstanceType::Outpost: type = "Outpost\0\0\0"; break;
             case GW::Constants::InstanceType::Explorable: type = "Explorable"; break;

@@ -42,7 +42,7 @@ namespace {
         return out;
     }
 
-    char* profession_icon_urls[] = {
+    const char* profession_icon_urls[] = {
         "",
         "8/87/Warrior-tango-icon-48",
         "e/e8/Ranger-tango-icon-48",
@@ -135,8 +135,10 @@ HRESULT Resources::ResolveShortcut(std::filesystem::path& in_shortcut_path, std:
         CLSCTX_INPROC_SERVER,
         IID_IShellLink,
         (void**)&psl);
-    if (!SUCCEEDED(hRes))
-        goto finished;
+    if (!SUCCEEDED(hRes)) {
+        CoUninitialize();
+        return hRes;
+    }
     // Get a pointer to the IPersistFile interface
     IPersistFile* ppf = NULL;
     psl->QueryInterface(IID_IPersistFile, (void**)&ppf);
@@ -144,24 +146,31 @@ HRESULT Resources::ResolveShortcut(std::filesystem::path& in_shortcut_path, std:
     // IPersistFile is using LPCOLESTR,
     // Open the shortcut file and initialize it from its contents
     hRes = ppf->Load(in_shortcut_path.wstring().c_str(), STGM_READ);
-    if (!SUCCEEDED(hRes))
-        goto finished;
+    if (!SUCCEEDED(hRes)) {
+        CoUninitialize();
+        return hRes;
+    }
     // Try to find the target of a shortcut,
     // even if it has been moved or renamed
     hRes = psl->Resolve(NULL, SLR_UPDATE);
-    if (!SUCCEEDED(hRes))
-        goto finished;
+    if (!SUCCEEDED(hRes)) {
+        CoUninitialize();
+        return hRes;
+    }
     // Get the path to the shortcut target
     hRes = psl->GetPath(szPath, MAX_PATH, &wfd, SLGP_RAWPATH);
-    if (!SUCCEEDED(hRes))
-        goto finished;
+    if (!SUCCEEDED(hRes)) {
+        CoUninitialize();
+        return hRes;
+    }
 
     // Get the description of the target
     hRes = psl->GetDescription(szDesc, MAX_PATH);
-    if (!SUCCEEDED(hRes))
-        goto finished;
+    if (!SUCCEEDED(hRes)) {
+        CoUninitialize();
+        return hRes;
+    }
     out_actual_path = szPath;
-finished:
     CoUninitialize();
     return hRes;
 }

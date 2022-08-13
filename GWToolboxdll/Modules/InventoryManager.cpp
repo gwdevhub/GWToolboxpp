@@ -1876,7 +1876,7 @@ void InventoryManager::OnUseItem(GW::HookStatus* status, void* packet) {
 void InventoryManager::DrawPendingTomeUsage() {
     if (tome_pending_stage == PendingTomeUseStage::None)
         return;
-    constexpr char* popup_label = "Change secondary profession?###change-secondary";
+    constexpr const char* popup_label = "Change secondary profession?###change-secondary";
     if (tome_pending_timeout && TIMER_INIT() > tome_pending_timeout) {
         Log::Error("Timeout reached trying to change profession for tome use");
         goto cancel;

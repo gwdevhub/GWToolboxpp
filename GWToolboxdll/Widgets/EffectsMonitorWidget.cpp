@@ -440,7 +440,7 @@ void EffectsMonitorWidget::DrawSettingInternal()
 {
     ToolboxWidget::DrawSettingInternal();
 
-    constexpr char* font_sizes[] = { "16", "18", "20", "24", "42", "48" };
+    constexpr const char* font_sizes[] = { "16", "18", "20", "24", "42", "48" };
 
     ImGui::PushID("effects_monitor_overlay_settings");
     ImGui::Combo("Text size", reinterpret_cast<int*>(&font_effects), font_sizes, 6);

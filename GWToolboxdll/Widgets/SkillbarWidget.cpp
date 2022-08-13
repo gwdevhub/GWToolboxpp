@@ -514,7 +514,7 @@ void SkillbarWidget::DrawSettingInternal()
         }
     }
 
-    static constexpr char* font_sizes[] = {"16", "18", "20", "24", "42", "48"};
+    static constexpr const char* font_sizes[] = {"16", "18", "20", "24", "42", "48"};
 
     bool is_vertical = (layout == Layout::Column || layout == Layout::Columns);
 

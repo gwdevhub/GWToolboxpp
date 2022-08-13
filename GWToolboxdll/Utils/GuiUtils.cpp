@@ -25,7 +25,7 @@ namespace {
     bool fonts_loading = false;
     bool fonts_loaded = false;
 
-    char* GetWikiPrefix() {
+    const char* GetWikiPrefix() {
         /*uint32_t language = GW::UI::GetPreference(GW::UI::Preference_TextLanguage);
         char* wiki_prefix = "https://wiki.guildwars.com/wiki/";
         switch (static_cast<GW::Constants::MapLanguage>(language)) {
@@ -545,7 +545,7 @@ namespace GuiUtils {
         out.resize(64);
         int written = 0;
         if (timeinfo->tm_yday != nowinfo->tm_yday || timeinfo->tm_year != nowinfo->tm_year) {
-            char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+            const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
             written += snprintf(&out[written], out.capacity() - written,
                 "%s %02d", months[timeinfo->tm_mon], timeinfo->tm_mday);
         }

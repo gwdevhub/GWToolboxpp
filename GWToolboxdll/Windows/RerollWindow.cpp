@@ -243,7 +243,7 @@ void RerollWindow::CmdReroll(const wchar_t* message, int argc, LPWSTR*) {
         return;
     }
     std::wstring character_or_profession = GuiUtils::ToLower(GetRemainingArgsWstr(message,1));
-    wchar_t* to_find[] = {
+    const wchar_t* to_find[] = {
         L"",
         L"warrior",
         L"ranger",
@@ -521,7 +521,7 @@ bool RerollWindow::IsCharSelectReady() {
     GW::UI::SendUIMessage(GW::UI::UIMessage::kCheckUIState, 0, &ui_state);
     return ui_state == 2;
 }
-void RerollWindow::RerollFailed(wchar_t* reason) {
+void RerollWindow::RerollFailed(const wchar_t* reason) {
     if (reroll_stage == PromptPendingLogout) {
         reroll_stage = None;
         return;
@@ -554,7 +554,7 @@ bool RerollWindow::Reroll(wchar_t* character_name, GW::Constants::MapID _map_id)
 bool RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_party) {
     reroll_stage = None;
     reverting_reroll = false;
-    failed_message = 0;
+    failed_message = nullptr;
     if (!character_name)
         return false;
     bool found = false;

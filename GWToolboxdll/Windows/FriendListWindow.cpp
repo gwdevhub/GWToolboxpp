@@ -40,17 +40,17 @@ namespace
         L"Unknown",     L"Warrior", L"Ranger",       L"Monk",
         L"Necromancer", L"Mesmer",  L"Elementalist", L"Assassin",
         L"Ritualist",   L"Paragon", L"Dervish"};
-    static const ImColor StatusColors[5] = {
+    const ImColor StatusColors[5] = {
         IM_COL32(0x99, 0x99, 0x99, 255), // offline
         IM_COL32(0x0, 0xc8, 0x0, 255),   // online
         IM_COL32(0xc8, 0x0, 0x0, 255),   // busy
         IM_COL32(0xc8, 0xc8, 0x0, 255),   // away
         IM_COL32(0x99, 0x99, 0x99, 255) // offline
     };
-    static char* statuses[] = { "Offline", "Online", "Busy", "Away", "Disconnected" };
-    static std::wstring current_map;
-    static GW::Constants::MapID current_map_id = GW::Constants::MapID::None;
-    static std::wstring *GetCurrentMapName()
+    const char* statuses[] = { "Offline", "Online", "Busy", "Away", "Disconnected" };
+    std::wstring current_map;
+    GW::Constants::MapID current_map_id = GW::Constants::MapID::None;
+    std::wstring *GetCurrentMapName()
     {
         GW::Constants::MapID map_id = GW::Map::GetMapID();
         if (current_map_id != map_id) {
@@ -66,7 +66,7 @@ namespace
         }
         return &current_map;
     }
-    static char *GetStatusText(GW::FriendStatus status)
+    const char* GetStatusText(GW::FriendStatus status)
     {
         switch (status) {
             case GW::FriendStatus::Offline:
@@ -80,8 +80,9 @@ namespace
         }
         return "Unknown";
     }
-    static std::map<uint32_t, wchar_t *> map_names;
-    static GUID StringToGuid(const std::string &str)
+    
+    std::map<uint32_t, wchar_t *> map_names;
+    GUID StringToGuid(const std::string &str)
     {
         GUID guid;
         sscanf(str.c_str(),
@@ -93,7 +94,7 @@ namespace
         return guid;
     }
 
-    static void GuidToString(GUID guid, char *guid_cstr)
+    void GuidToString(GUID guid, char *guid_cstr)
     {
         snprintf(guid_cstr, 128,
                  "%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
@@ -101,8 +102,8 @@ namespace
                  guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4],
                  guid.Data4[5], guid.Data4[6], guid.Data4[7]);
     }
-    static std::wstring last_whisper;
-    static std::wstring ParsePlayerName(int argc, LPWSTR* argv) {
+    std::wstring last_whisper;
+    std::wstring ParsePlayerName(int argc, LPWSTR* argv) {
         std::wstring player_name;
         for (int i = 0; i < argc; i++) {
             std::wstring s(argv[i]);
@@ -182,7 +183,7 @@ GW::Friend* FriendListWindow::Friend::GetFriend() {
 // Start whisper to this player via their current char name.
 void FriendListWindow::Friend::StartWhisper() {
     const wchar_t* alias_c = alias.c_str();
-    const wchar_t* charname = current_char ? current_char->name.c_str() : '\0';
+    const wchar_t* charname = current_char ? current_char->name.c_str() : nullptr;
     
     GW::GameThread::Enqueue([charname, alias_c]() {
         if(!charname[0])
@@ -420,7 +421,7 @@ void FriendListWindow::Initialize() {
     GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_REQUEST, OnTradePacket, 0x8000);
 }
 void FriendListWindow::OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int) {
-    switch (*message_ptr[0]) {
+    switch (static_cast<MessageType>(*message_ptr[0])) {
     case MessageType::INCOMING_WHISPER:
     case MessageType::OUTGOING_WHISPER:
         AddFriendAliasToMessage(message_ptr);

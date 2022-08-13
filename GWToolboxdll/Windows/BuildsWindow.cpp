@@ -176,7 +176,7 @@ void BuildsWindow::DrawSettingInternal() {
         order_by_changed = true;
         order_by_index = !order_by_name;
     }
-    if (ImGui::Button(ICON_FA_USER_COG " View Preferred Skill Orders")) {
+    if (ImGui::Button(reinterpret_cast<const char*>(ICON_FA_USER_COG " View Preferred Skill Orders"))) {
         preferred_skill_orders_visible = !preferred_skill_orders_visible;
     }
 }
@@ -254,13 +254,13 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
         SendPcons(tbuild, j);
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send this build's Pcons to team chat");
-    auto pcons = PconsWindow::Instance().pcons;
+    const auto& pcons = PconsWindow::Instance().pcons;
         
     float pos_x = 0;
     float third_w = ImGui::GetContentRegionAvail().x / 3;
     unsigned int offset = 0;
     for (size_t i = 0; i < pcons.size(); i++) {
-        auto pcon = pcons[i];
+        const auto pcon = pcons[i];
         bool active = build.pcons.find(pcon->ini) != build.pcons.end();
         ImGui::SameLine(indent, pos_x += third_w);
         offset++;
@@ -429,7 +429,7 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*) {
         }
         ImGui::SameLine();
         char btn_label[48];
-        snprintf(btn_label, sizeof(btn_label), "%s Remove###remove_preferred_skill_order_%d", ICON_FA_TRASH, j);
+        snprintf(btn_label, sizeof(btn_label), "%s Remove###remove_preferred_skill_order_%d", reinterpret_cast<const char*>(ICON_FA_TRASH), j);
         if (ImGui::Button(btn_label, ImVec2(0, skill_height))) {
             preferred_skill_order_builds.erase(preferred_skill_order_builds.begin() + j);
             Log::Info("Preferred skill order removed");
@@ -440,7 +440,7 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*) {
     ImGui::Separator();
     ImGui::InputText("Build code###preferred_skill_order_code", preferred_skill_order_code,sizeof(preferred_skill_order_code));
     ImGui::SameLine();
-    bool add_current = ImGui::Button(ICON_FA_COPY "###use_current_build_code");
+    bool add_current = ImGui::Button(reinterpret_cast<const char*>(ICON_FA_COPY "###use_current_build_code"));
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Copy current build");
     }

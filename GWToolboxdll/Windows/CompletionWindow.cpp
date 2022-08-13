@@ -267,8 +267,9 @@ bool Mission::Draw(IDirect3DDevice9* )
 
 		ImGui::SetCursorPos(cursor_pos);
 
-		const ImVec2 check_size = ImGui::CalcTextSize(ICON_FA_CHECK);
-		ImGui::GetWindowDrawList()->AddText({ screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2) }, completed_text, ICON_FA_CHECK);
+		const ImVec2 check_size = ImGui::CalcTextSize(reinterpret_cast<const char*>(ICON_FA_CHECK));
+        ImGui::GetWindowDrawList()->AddText({ screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2) },
+			completed_text, reinterpret_cast<const char*>(ICON_FA_CHECK));
 		ImGui::SetCursorPos(cursor_pos2);
 	}
 	return true;
@@ -438,8 +439,10 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
 
 		ImGui::SetCursorPos(cursor_pos);
 
-		const ImVec2 check_size = ImGui::CalcTextSize(ICON_FA_CHECK);
-		ImGui::GetWindowDrawList()->AddText({ screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2.f), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2.f) }, completed_text, ICON_FA_CHECK);
+		const ImVec2 check_size = ImGui::CalcTextSize(reinterpret_cast<const char*>(ICON_FA_CHECK));
+        ImGui::GetWindowDrawList()->AddText({screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2.f),
+                                                screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2.f)},
+            completed_text, reinterpret_cast<const char*>(ICON_FA_CHECK));
 		ImGui::SetCursorPos(cursor_pos2);
 	}
 	return true;

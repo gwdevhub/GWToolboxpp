@@ -105,7 +105,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
     if (*texture == nullptr) return;
     ImVec2 pos = ImGui::GetCursorPos();
     ImVec2 s(size, size);
-    ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color) : ImVec4(0, 0, 0, 0);
+    ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color).Value : ImVec4(0, 0, 0, 0);
     ImVec4 tint(1, 1, 1, 1);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     if (ImGui::ImageButton((ImTextureID)*texture, s, uv0, uv1, 0, bg, tint)) {
@@ -321,10 +321,11 @@ void Pcon::Refill(bool do_refill) {
 void Pcon::UpdateRefill() {
     if (!refilling)
         return;
-    if (!IsVisible())
-        goto refill_done;
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
-        goto refill_done;
+    if (!IsVisible() || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+        Refill(false);
+        pcon_quantity_checked = false;
+        return;
+    }
     if (pending_move_to_quantity) {
         GW::Item* item = GW::Items::GetItemBySlot(pending_move_to_bag, pending_move_to_slot + 1);
         if (!item || !QuantityForEach(item) || item->quantity != pending_move_to_quantity)
@@ -332,16 +333,20 @@ void Pcon::UpdateRefill() {
         UnreserveSlotForMove(item->bag->index, item->slot);
     }
     quantity = CheckInventory();
-    if (quantity >= threshold)
-        goto refill_done;
+    if (quantity >= threshold) {
+        Refill(false);
+        pcon_quantity_checked = false;
+        return;
+    }
     quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
     int points_needed = threshold - quantity; // quantity is actually points e.g. 20 grog = 60 quantity
     size_t quantity_to_move = 0;
-    if (points_needed < 1)
-        goto refill_done;
     GW::Bag** bags = GW::Items::GetBagArray();
-    if (bags == nullptr)
-        goto refill_done;
+    if (points_needed < 1 || bags == nullptr) {
+        Refill(false);
+        pcon_quantity_checked = false;
+        return;
+    }
     for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
         GW::Bag* storageBag = bags[bagIndex];
         if (storageBag == nullptr) continue;    // No bag, skip
@@ -355,7 +360,9 @@ void Pcon::UpdateRefill() {
             GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(storageItem); // Now find a slot in inventory to move them to.
             if (inventoryItem == nullptr) {
                 printf("No more space for %s", chat.c_str());
-                goto refill_done; // No space for more pcons in inventory.
+                Refill(false);
+                pcon_quantity_checked = false;
+                return;
             }
             quantity_to_move = static_cast<size_t>(ceil((float)points_needed / (float)points_per_item));
             if (quantity_to_move > storageItem->quantity)       quantity_to_move = storageItem->quantity;
@@ -369,9 +376,6 @@ void Pcon::UpdateRefill() {
             return;
         }
     }
-    refill_done:
-    Refill(false);
-    pcon_quantity_checked = false;
 }
 
 int Pcon::CheckInventory(bool *used, size_t *used_qty_ptr, size_t from_bag,

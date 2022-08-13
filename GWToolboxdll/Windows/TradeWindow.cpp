@@ -29,7 +29,7 @@
 // After that, you can try every 30 seconds.
 static const uint32_t COST_PER_CONNECTION_MS     = 30 * 1000;
 static const uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
-static char* months[] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
+static const char* months[] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
 using easywsclient::WebSocket;
 using nlohmann::json;
 using json_vec = std::vector<json>;
@@ -340,27 +340,26 @@ void TradeWindow::search(std::string query, bool print_results_in_chat)
 
 void TradeWindow::FindPlayerPartySearch(GW::HookStatus*, void*) {
     GW::PartyContext* ctx = GW::GameContext::instance()->party;
-    if (!ctx)
-        goto clear_party_search;
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
-        goto clear_party_search;
-    auto& party_searches = ctx->party_search;
-    if (!party_searches.valid() || !party_searches.size())
-        goto clear_party_search;
-    wchar_t* me = GW::PlayerMgr::GetPlayerName(GW::PlayerMgr::GetPlayerNumber());
-    for (GW::PartySearch* party_search : party_searches) {
-        if (party_search && wcscmp(me, party_search->party_leader) == 0) {
-            GW::PartySearch* existing = &Instance().player_party_search;
-            bool message_changed = wcscmp(existing->message, party_search->message) != 0;
-            *existing = *party_search;
-            if (message_changed) {
-                std::string pps_str = GuiUtils::WStringToString(party_search->message);
-                strcpy(Instance().player_party_search_text, pps_str.c_str());
-            }
+    if (ctx && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+        auto& party_searches = ctx->party_search;
+        if (!party_searches.valid() || !party_searches.size()) {
+            Instance().player_party_search = {0};
             return;
         }
+        wchar_t* me = GW::PlayerMgr::GetPlayerName(GW::PlayerMgr::GetPlayerNumber());
+        for (GW::PartySearch* party_search : party_searches) {
+            if (party_search && wcscmp(me, party_search->party_leader) == 0) {
+                GW::PartySearch* existing = &Instance().player_party_search;
+                bool message_changed = wcscmp(existing->message, party_search->message) != 0;
+                *existing = *party_search;
+                if (message_changed) {
+                    std::string pps_str = GuiUtils::WStringToString(party_search->message);
+                    strcpy(Instance().player_party_search_text, pps_str.c_str());
+                }
+                return;
+            }
+        }
     }
-clear_party_search:
     Instance().player_party_search = { 0 };
 }
 
