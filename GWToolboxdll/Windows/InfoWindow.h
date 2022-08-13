@@ -13,7 +13,7 @@
 
 class InfoWindow : public ToolboxWindow {
     InfoWindow() {};
-    ~InfoWindow();
+    ~InfoWindow() override;
 public:
     static InfoWindow& Instance() {
         static InfoWindow instance;

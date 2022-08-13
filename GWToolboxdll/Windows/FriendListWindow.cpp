@@ -84,7 +84,7 @@ namespace
     std::map<uint32_t, wchar_t *> map_names;
     GUID StringToGuid(const std::string &str)
     {
-        GUID guid;
+        GUID guid{};
         sscanf(str.c_str(),
                "%8lx-%4hx-%4hx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
                &guid.Data1, &guid.Data2, &guid.Data3, &guid.Data4[0],
