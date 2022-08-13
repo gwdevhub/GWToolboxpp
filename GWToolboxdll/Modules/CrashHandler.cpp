@@ -60,13 +60,11 @@ void CrashHandler::OnGWCrash(GWDebugInfo* details, uint32_t param_2, EXCEPTION_P
     GW::HookBase::LeaveHook();
     abort();
 }
+
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
     std::wstring crash_folder = Resources::GetPath(L"crashes");
-    char* failure_message = 0;
-    if (!Resources::EnsureFolderExists(crash_folder.c_str())) {
-        failure_message = "Failed to create crash directory";
-        goto failed;
-    }
+    const char* failure_message = nullptr;
+    wchar_t error_info[512];
 
     DWORD ProcessId = GetCurrentProcessId();
     DWORD ThreadId = GetCurrentThreadId();
@@ -76,23 +74,31 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
     GetLocalTime(&stLocalTime);
     wchar_t szFileName[MAX_PATH];
     int fn_print = swprintf(szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
-        crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA,
-        stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
-        stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
-        ProcessId, ThreadId);
+        crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth,
+        stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond, ProcessId, ThreadId);
+
+    HANDLE hFile = CreateFileW(
+        szFileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
+
+    MINIDUMP_USER_STREAM_INFORMATION* UserStreamParam = 0;
+    char* extra_info = nullptr;
+
+    BOOL success;
+    MINIDUMP_EXCEPTION_INFORMATION* ExpParam = 0;
+
+    if (!Resources::EnsureFolderExists(crash_folder.c_str())) {
+        failure_message = "Failed to create crash directory";
+        goto failed;
+    }
+
     if(fn_print < 0) {
         failure_message = "Failed to swprintf crash file name";
         goto failed;
     }
-    HANDLE hFile = CreateFileW(szFileName, GENERIC_READ | GENERIC_WRITE,
-        FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
     if (hFile == INVALID_HANDLE_VALUE) {
         failure_message = "Failed to CreateFileW crash file";
         goto failed;
     }
-
-    MINIDUMP_USER_STREAM_INFORMATION* UserStreamParam = 0;
-    char* extra_info = nullptr;
     if (Instance().gw_debug_info) {
         extra_info = Instance().gw_debug_info->buffer;
     }
@@ -101,14 +107,13 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
     }
     if (extra_info) {
         UserStreamParam = new MINIDUMP_USER_STREAM_INFORMATION();
-        MINIDUMP_USER_STREAM* s = new MINIDUMP_USER_STREAM();
+        auto s = new MINIDUMP_USER_STREAM();
         s->Type = MINIDUMP_STREAM_TYPE::CommentStreamA;
         s->Buffer = extra_info;
         s->BufferSize = (strlen(extra_info) + 1) * sizeof(extra_info[0]);
         UserStreamParam->UserStreamCount = 1;
         UserStreamParam->UserStreamArray = s;
     }
-    MINIDUMP_EXCEPTION_INFORMATION* ExpParam = 0;
     if (pExceptionPointers) {
         ExpParam = new MINIDUMP_EXCEPTION_INFORMATION;
         ExpParam->ThreadId = ThreadId;
@@ -116,27 +121,26 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
         ExpParam->ClientPointers = false;
     }
 
-    BOOL success = MiniDumpWriteDump(GetCurrentProcess(), ProcessId, hFile, (MINIDUMP_TYPE)(MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs), ExpParam, UserStreamParam, 0);
+    success = MiniDumpWriteDump(GetCurrentProcess(), ProcessId, hFile, (MINIDUMP_TYPE)(MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs), ExpParam, UserStreamParam, 0);
     CloseHandle(hFile);
-    if (Instance().tb_exception_message) {
-        delete[] Instance().tb_exception_message;
-    }
+
+    delete[] Instance().tb_exception_message;
+
     if (UserStreamParam) {
         delete UserStreamParam->UserStreamArray;
         delete UserStreamParam;
     }
-    if (ExpParam) {
-        delete ExpParam;
-    }
-    wchar_t error_info[512];
+    delete ExpParam;
     if (!success) {
         failure_message = "Failed to create MiniDumpWriteDump";
     failed:
-        swprintf(error_info, _countof(error_info), L"Guild Wars crashed!\n\n"
+        swprintf(error_info, _countof(error_info),
+            L"Guild Wars crashed!\n\n"
             "GWToolbox tried to create a crash dump, but failed\n\n"
             "%S\n"
             "GetLastError code: %d\n\n"
-            "I don't really know what to do, sorry, contact the developers.\n", failure_message, GetLastError());
+            "I don't really know what to do, sorry, contact the developers.\n",
+            failure_message, GetLastError());
 
         MessageBoxW(0, error_info, L"GWToolbox++ crash dump error", 0);
         return 1;
