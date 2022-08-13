@@ -23,6 +23,9 @@ target_compile_options(GWToolboxdll PRIVATE /W4 /WX)
 set(CMAKE_CXX_FLAGS_DEBUG "/ZI")
 set_target_properties(GWToolboxdll PROPERTIES LINK_FLAGS -SAFESEH:NO)
 
+target_link_options(GWToolboxdll PRIVATE /IGNORE:4098)
+target_link_options(GWToolboxdll PRIVATE /IGNORE:4099)
+
 target_include_directories(GWToolboxdll PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}"
     )
