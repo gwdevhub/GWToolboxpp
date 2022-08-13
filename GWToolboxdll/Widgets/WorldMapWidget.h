@@ -21,7 +21,7 @@ public:
 
     const char* Name() const override { return "World Map"; }
 
-    const char* Icon() const override { return ICON_FA_GLOBE;  }
+    const char8_t* Icon() const override { return ICON_FA_GLOBE;  }
 
     void Draw(IDirect3DDevice9* pDevice) override;
 

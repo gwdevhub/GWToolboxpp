@@ -82,7 +82,7 @@ public:
     }
 
     const char* Name() const override { return "Guild Wars Skill List"; }
-    const char* Icon() const override { return ICON_FA_LIST; }
+    const char8_t* Icon() const override { return ICON_FA_LIST; }
 
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;

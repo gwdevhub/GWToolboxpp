@@ -322,11 +322,11 @@ void TBHotkey::Save(CSimpleIni *ini, const char *section) const
     ini->SetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance);
     ini->SetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
 }
-char* TBHotkey::professions[] = {"Any",          "Warrior",     "Ranger",
+const char* TBHotkey::professions[] = {"Any",          "Warrior",     "Ranger",
                                     "Monk",         "Necromancer", "Mesmer",
                                     "Elementalist", "Assassin",    "Ritualist",
                                     "Paragon",      "Dervish"};
-char* TBHotkey::instance_types[] = {"Any", "Outpost", "Explorable"};
+const char* TBHotkey::instance_types[] = {"Any", "Outpost", "Explorable"};
 void TBHotkey::HotkeySelector(WORD* key, DWORD* modifier) {
     key_out = key;
     mod_out = modifier;
@@ -387,7 +387,7 @@ bool TBHotkey::Draw(Op *op)
         for (size_t i = 1; i < _countof(prof_ids); i++) {
             if (!prof_ids[i])
                 continue;
-            char* format = ", %s";
+            const char* format = ", %s";
             if (!prof_ids_written)
                 format = "%s";
             prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, GW::Constants::GetProfessionAcronym((GW::Constants::Profession)i).c_str());
@@ -884,7 +884,7 @@ int HotkeyEquipItem::Description(char *buf, size_t bufsz)
 bool HotkeyEquipItem::Draw()
 {
     bool hotkey_changed = false;
-    constexpr char* bags[6] = { "None", "Backpack","Belt Pouch","Bag 1", "Bag 2","Equipment Pack" };
+    constexpr const char* bags[6] = { "None", "Backpack", "Belt Pouch", "Bag 1", "Bag 2", "Equipment Pack" };
     ImGui::Text("Equip By: "); ImGui::SameLine();
     hotkey_changed |= ImGui::RadioButton("Item", (int*)&equip_by, EquipBy::ITEM);
     ImGui::ShowHelp("Find and equip an item by its attributes, regardless of location in inventory.");

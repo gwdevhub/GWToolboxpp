@@ -489,12 +489,12 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
         }
         return found_custom_agent;
     };
-    auto SortCustomAgentsToDraw = []() -> void {
-        std::sort(custom_agents_to_draw.begin(), custom_agents_to_draw.end(), 
-            [&](const std::pair<const GW::Agent*, const CustomAgent*>& pA,
-            const std::pair<const GW::Agent*, const CustomAgent*>& pB) -> bool {
-            return pA.second->index > pB.second->index;
-        });
+    auto sort_custom_agents_to_draw = []() -> void {
+        std::ranges::sort(custom_agents_to_draw, 
+          [&](const std::pair<const GW::Agent*, const CustomAgent*>& pA,
+              const std::pair<const GW::Agent*, const CustomAgent*>& pB) -> bool {
+              return pA.second->index > pB.second->index;
+          });
     };
 
     for (GW::Agent* agent_ptr : *agents) {
@@ -520,7 +520,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
         if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
     }
     // 3. custom colored models
-    SortCustomAgentsToDraw();
+    sort_custom_agents_to_draw();
     for (const auto& [fst, snd] : custom_agents_to_draw) {
         Enqueue(fst, snd);
         if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
@@ -530,7 +530,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     // 4. target if it's a non-player
     if (target && target->player_number > 12) {
         if (AddCustomAgentsToDraw(target)) {
-            SortCustomAgentsToDraw();
+            sort_custom_agents_to_draw();
             for (const auto& [fst, snd] : custom_agents_to_draw) {
                 Enqueue(fst, snd);
                 if (vertices_count >= vertices_max - 16 * max_shape_verts) break;

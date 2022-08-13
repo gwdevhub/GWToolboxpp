@@ -8,7 +8,7 @@
 const char* ToolboxUIElement::UIName() const { 
     if (Icon()) {
         static char buf[128]; 
-        sprintf(buf, "%s  %s", Icon(), Name());
+        sprintf(buf, "%s  %s", reinterpret_cast<const char*>(Icon()), Name());
         return buf;
     }
     return Name();
@@ -134,7 +134,7 @@ bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
                 (ImTextureID)button_texture, pos, ImVec2(pos.x + img_size, pos.y + img_size));
         } else if (Icon()) {
             ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2), 
-                ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Icon());
+                ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), reinterpret_cast<const char*>(Icon()));
         }
     }
     if (show_text) {

@@ -90,20 +90,20 @@ namespace {
     } last_quote;
     clock_t last_quoted_item_timestamp = 0;
 
-    constexpr wchar_t* embark_beach_campaign_npcs[] = {
+    constexpr const wchar_t* embark_beach_campaign_npcs[] = {
         L"",
         L"\x8102\x6F1E\xE846\xFFBF\x57E0", // Kenai [Tyrian Travel]
         L"\x8102\x6F05\xE3C3\xBF66\x234C", // Shirayuki [Canthan Travel]
         L"\x8102\x6F1E\xE846\xFFBF\x57E0" // Zinshao [Elonian Travel]
     };
-    constexpr wchar_t* endgame_reward_npcs[] = {
+    constexpr const wchar_t* endgame_reward_npcs[] = {
     L"",
     L"\x399E\x8A19\xC3B6\x2FE4", // King Jalis (Droks Explorable)
     L"\x108\x107" "Suun\x1", // Suun (Divine Path) TODO: Encoded version of this name!
     L"\x108\x107" "Keeper of Secrets\x1", // Keeper of Secrets (Throne of secrets) TODO: Encoded version of this name!
     L"\x108\x107" "Droknar\x1",
     };
-    constexpr wchar_t* endgame_reward_trophies[] = {
+    constexpr const wchar_t* endgame_reward_trophies[] = {
         L"",
         L"\x108\x107" "Deldrimor Talisman" "\x1", // King Jalis (Droks Explorable)
         L"\x108\x107" "Amulet of the Mists" "\x1", // Suun (Divine Path) TODO: Encoded version of this name!

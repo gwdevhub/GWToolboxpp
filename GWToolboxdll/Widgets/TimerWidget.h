@@ -24,7 +24,7 @@ public:
         return instance;
     }
     const char* Name() const override { return "Timer"; }
-    const char* Icon() const override { return ICON_FA_STOPWATCH; }
+    const char8_t* Icon() const override { return ICON_FA_STOPWATCH; }
 
     void Initialize() override;
     void LoadSettings(CSimpleIni *ini) override;
@@ -62,7 +62,7 @@ private:
     bool GetDoATimer();
     bool GetSpiritTimer();
     
-    std::map<GW::Constants::SkillID, char*> spirit_effects{
+    std::map<GW::Constants::SkillID, const char*> spirit_effects{
         {GW::Constants::SkillID::Edge_of_Extinction,"EoE"},
         {GW::Constants::SkillID::Quickening_Zephyr,"QZ"},
         {GW::Constants::SkillID::Famine,"Famine"},

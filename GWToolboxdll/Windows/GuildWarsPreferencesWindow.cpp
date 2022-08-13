@@ -175,11 +175,11 @@ void GWPreferences::Draw() {
             }
         }
         if (ok) {
-            std::sort(current_preferences.window_positions.begin(), current_preferences.window_positions.end(), [](WindowPreference* a, WindowPreference* b) {
+            std::ranges::sort(current_preferences.window_positions, [](WindowPreference* a, WindowPreference* b) {
                     return a->name.string() > b->name.string();
                 });
-            std::sort(current_preferences.preferences.begin(), current_preferences.preferences.end(), [](InGamePreference* a, InGamePreference* b) {
-                return a->name.string() > b->name.string();
+            std::ranges::sort(current_preferences.preferences, [](InGamePreference* a, InGamePreference* b) {
+                    return a->name.string() > b->name.string();
                 });
             current_preferences.reordered = true;
         }
@@ -215,7 +215,7 @@ void GWPreferences::Draw() {
         for (auto* pref : current_preferences.window_positions) {
             offset = 0.f;
             ImGui::Text(pref->name.string().c_str());
-            ImGui::SameLine(offset += name_width); ImGui::Text(pref->position.visible() ? ICON_FA_CHECK : ICON_FA_TIMES);
+            ImGui::SameLine(offset += name_width); ImGui::Text(reinterpret_cast<const char*>(pref->position.visible() ? ICON_FA_CHECK : ICON_FA_TIMES));
             ImGui::SameLine(offset += atts_width); ImGui::Text("%.f / %.f", pref->position.left(gw_scale), pref->position.top(gw_scale));
             ImGui::SameLine(offset += atts_width); ImGui::Text("%.f / %.f", pref->position.width(gw_scale), pref->position.height(gw_scale));
         }

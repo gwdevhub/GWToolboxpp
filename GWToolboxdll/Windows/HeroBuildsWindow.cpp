@@ -295,22 +295,23 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                     }
                     ImGui::PopItemWidth();
                     ImGui::SameLine(offset += text_item_width + item_spacing);
-                    if (ImGui::Button(build.show_panel ? ICON_FA_EYE : ICON_FA_EYE_SLASH, ImVec2(icon_btn_width, 0))) {
+                    const auto* icon = reinterpret_cast<const char*>(build.show_panel ? ICON_FA_EYE : ICON_FA_EYE_SLASH);
+                    if (ImGui::Button(icon, ImVec2(icon_btn_width, 0))) {
                         build.show_panel = !build.show_panel;
                         builds_changed = true;
                     }
                     if (ImGui::IsItemHovered())
                         ImGui::SetTooltip(build.show_panel ? "Hero panel: Show" : "Hero panel: Hide");
                     ImGui::SameLine(offset += icon_btn_width + item_spacing);
-                    char* hero_stance_icon = ICON_FA_SHIELD_ALT;
-                    char* hero_stance_tooltip = "Hero behaviour: Guard";
+                    const char* hero_stance_icon = reinterpret_cast<const char*>(ICON_FA_SHIELD_ALT);
+                    const char* hero_stance_tooltip = "Hero behaviour: Guard";
                     switch (build.behavior) {
                     case 2:
-                        hero_stance_icon = ICON_FA_DOVE;
+                            hero_stance_icon = reinterpret_cast<const char*>(ICON_FA_DOVE);
                         hero_stance_tooltip = "Hero behaviour: Avoid Combat";
                         break;
                     case 0:
-                        hero_stance_icon = ICON_FA_FIST_RAISED;
+                        hero_stance_icon = reinterpret_cast<const char*>(ICON_FA_FIST_RAISED);
                         hero_stance_tooltip = "Hero behaviour: Fight";
                         break;
                     }

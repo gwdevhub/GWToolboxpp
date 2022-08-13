@@ -1283,7 +1283,7 @@ void GameSettings::DrawInventorySettings() {
     ImGui::Checkbox("Move items to current open storage pane on click", &move_item_to_current_storage_pane);
     ImGui::ShowHelp("Materials follow different logic, see below");
     ImGui::Indent();
-    char* logic = "Storage logic: Any available stack/slot";
+    const char* logic = "Storage logic: Any available stack/slot";
     if (move_item_to_current_storage_pane) {
         logic = "Storage logic: Current storage pane > Any available stack/slot";
     }

@@ -22,8 +22,8 @@ private:
         char name[128];
         char code[128];
         const GW::Constants::SkillID* skills();
-        const GW::SkillbarMgr::SkillTemplate* BuildsWindow::Build::decode();
-        inline bool decoded() { return !(skill_template.primary == GW::Constants::Profession::None && skill_template.secondary == GW::Constants::Profession::None); }
+        const GW::SkillbarMgr::SkillTemplate* decode();
+        bool decoded() { return !(skill_template.primary == GW::Constants::Profession::None && skill_template.secondary == GW::Constants::Profession::None); }
         GW::SkillbarMgr::SkillTemplate skill_template;
         // Vector of pcons to use for this build, listed by ini name e.g. "cupcake"
         std::set<std::string> pcons;
@@ -53,7 +53,7 @@ public:
     static void CmdLoad(const wchar_t* message, int argc, LPWSTR* argv);
 
     const char* Name() const override { return "Builds"; }
-    const char* Icon() const override { return ICON_FA_LIST; }
+    const char8_t* Icon() const override { return ICON_FA_LIST; }
 
     void Initialize() override;
     void Terminate() override;

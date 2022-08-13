@@ -441,7 +441,7 @@ public:
     bool is_enabled = false;
 
     const char* Name() const override { return "Observer Module"; }
-    const char* Icon() const override { return ICON_FA_EYE; }
+    const char8_t* Icon() const override { return ICON_FA_EYE; }
 
     void Initialize() override;
     void Terminate() override;
@@ -523,10 +523,10 @@ private:
     void HandleSkillStopped(const uint32_t agent_id);
     void HandleSkillActivated(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id);
 
-    void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
+    void HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
         const uint32_t target_id, const float value, const bool no_target);
 
-    void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
+    void HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
             const uint32_t target_id, const uint32_t value, const bool no_target);
 
     // Update the state of the module based on an Action & Stage

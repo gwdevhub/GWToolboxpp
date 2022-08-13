@@ -108,8 +108,8 @@ void SkillbarWidget::Update(float)
                 && skill_data->type == GW::Constants::SkillType::Enchantment) {
 
                 m_skills[it].effects = get_effects(skill_id);
-                std::sort(m_skills[it].effects.begin(), m_skills[it].effects.end(),
-                    [](const Effect& a, const Effect& b) { return a.remaining > b.remaining; });
+                std::ranges::sort(m_skills[it].effects,
+                                  [](const Effect& a, const Effect& b) { return a.remaining > b.remaining; });
 
             } else if (effect.remaining > 0) {
                 m_skills[it].effects.push_back(effect);
@@ -514,7 +514,7 @@ void SkillbarWidget::DrawSettingInternal()
         }
     }
 
-    static constexpr char* font_sizes[] = {"16", "18", "20", "24", "42", "48"};
+    static constexpr const char* font_sizes[] = {"16", "18", "20", "24", "42", "48"};
 
     bool is_vertical = (layout == Layout::Column || layout == Layout::Columns);
 

@@ -20,7 +20,7 @@ public:
 
     const char* Name() const override { return "GW File Requester"; }
     bool HasSettings() override { return false; }
-    const char* Icon() const override { return ICON_FA_FILE_DOWNLOAD; }
+    const char8_t* Icon() const override { return ICON_FA_FILE_DOWNLOAD; }
 
     struct GWResource {
         uint32_t file_id = 0;

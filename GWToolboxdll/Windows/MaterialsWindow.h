@@ -43,7 +43,7 @@ public:
     }
 
     const char* Name() const override { return "Materials"; }
-    const char* Icon() const override { return ICON_FA_FEATHER_ALT; }
+    const char8_t* Icon() const override { return ICON_FA_FEATHER_ALT; }
 
     void Initialize() override;
     void Terminate() override;

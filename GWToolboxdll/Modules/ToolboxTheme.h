@@ -15,7 +15,7 @@ public:
     }
 
     const char* Name() const override { return "Theme"; }
-    const char* Icon() const override { return ICON_FA_PALETTE; }
+    const char8_t* Icon() const override { return ICON_FA_PALETTE; }
 
     void Terminate() override;
     void LoadSettings(CSimpleIni* ini) override;

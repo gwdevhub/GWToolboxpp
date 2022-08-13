@@ -58,7 +58,7 @@ public:
     const float max_speed = 15.0f; // game units per frame
 
     const char* Name() const override { return "Minimap"; }
-    const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
+    const char8_t* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
 
     float Scale() const { return scale; }
 
@@ -146,7 +146,7 @@ private:
     Color hero_flag_window_background = 0;
     std::vector<GW::AgentID> player_heroes;
 
-    size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
+    size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 
     GW::HookEntry AgentPinged_Entry;
     GW::HookEntry CompassEvent_Entry;

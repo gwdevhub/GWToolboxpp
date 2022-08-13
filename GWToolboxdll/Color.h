@@ -169,7 +169,7 @@ namespace Colors {
     static Color Add(const Color& c1, const Color& c2) {
         int i1[4]; 
         int i2[4];
-        int i3[4];
+        int i3[4]{};
         ConvertU32ToInt4(c1, i1);
         ConvertU32ToInt4(c2, i2);
         for (int i = 0; i < 4; ++i) {
@@ -181,7 +181,7 @@ namespace Colors {
     static Color Sub(const Color& c1, const Color& c2) {
         int i1[4]; 
         int i2[4];
-        int i3[4];
+        int i3[4]{};
         ConvertU32ToInt4(c1, i1);
         ConvertU32ToInt4(c2, i2);
         for (int i = 0; i < 4; ++i) {
@@ -194,7 +194,7 @@ namespace Colors {
     static Color Slerp(const Color& c1, const Color& c2, float t) {
         int i1[4];
         int i2[4];
-        int i3[4];
+        int i3[4]{};
         ConvertU32ToInt4(c1, i1);
         ConvertU32ToInt4(c2, i2);
         for (int i = 0; i < 4; ++i) {

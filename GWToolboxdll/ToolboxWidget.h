@@ -5,7 +5,7 @@
 class ToolboxWidget : public ToolboxUIElement {
 public:
     bool IsWidget() const override { return true; }
-    char* TypeName() const override { return "widget"; }
+    const char* TypeName() const override { return "widget"; }
 
     virtual void LoadSettings(CSimpleIni* ini) override {
         ToolboxUIElement::LoadSettings(ini);

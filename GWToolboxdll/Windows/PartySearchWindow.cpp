@@ -88,7 +88,7 @@ namespace {
         return nullptr;
     }
 
-    static char* party_types[] {
+    const char* party_types[] {
         "Hunting",
         "Mission",
         "Quest",
@@ -488,7 +488,7 @@ void PartySearchWindow::fetch() {
             wchar_t buffer[512];
             std::wstring name_ws = GuiUtils::ToWstr(msg.name);
             std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
-            swprintf(buffer, sizeof(buffer), L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
+            swprintf(buffer, 512, L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
         }
     });

@@ -23,8 +23,8 @@
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/PartyDamage.h>
 
-constexpr wchar_t* INI_FILENAME = L"healthlog.ini";
-constexpr char* IniSection = "health";
+constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
+constexpr const char* IniSection = "health";
 
 void PartyDamage::Initialize() {
 	ToolboxWidget::Initialize();

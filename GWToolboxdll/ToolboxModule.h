@@ -12,13 +12,13 @@ public:
     virtual const char* Name() const = 0;
 
     // Icon for this module (if any).
-    virtual const char* Icon() const { return nullptr; }
+    virtual const char8_t* Icon() const { return nullptr; }
 
     // name of the setting section
     virtual const char* SettingsName() const { return Name(); };
 
     // Type of module
-    virtual char* TypeName() const { return "module"; }
+    virtual const char* TypeName() const { return "module"; }
 
     // register settings callbacks. Override this to add your settings into different sections.
     virtual void RegisterSettingsContent();
@@ -66,7 +66,7 @@ public:
 
     // Register settings content
     static void RegisterSettingsContent(
-        const char* section, const char* icon, const SectionDrawCallback& callback, float weighting);
+        const char* section, const char8_t* icon, const SectionDrawCallback& callback, float weighting);
 
 protected:
     // Weighting used to decide where to position the DrawSettingInternal() for this module. Useful when more than 1 module has the same SettingsName().

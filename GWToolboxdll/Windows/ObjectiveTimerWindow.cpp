@@ -1276,8 +1276,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(EventType type, uint32_t id1, uin
 }
 void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
 {
-    if (!std::any_of(
-            objectives.begin(), objectives.end(), [](const Objective* obj) { return obj->done == TIME_UNKNOWN; })) {
+    if (!std::ranges::any_of(objectives, [](const Objective* obj) { return obj->done == TIME_UNKNOWN; })) {
         duration = GetDuration();
         // make sure there isn't an objective finishing later
         const auto max = std::max_element(objectives.begin(), objectives.end(),
@@ -1370,7 +1369,7 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetStartTimeStr() {
         struct tm* nowinfo = localtime(&now);
         int cached_str_offset = 0;
         if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year) {
-            char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+            const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
             cached_str_offset += snprintf(&cached_start[cached_str_offset], sizeof(cached_start) - cached_str_offset,
                 "%s %02d, ", months[timeinfo.tm_mon], timeinfo.tm_mday);
         }

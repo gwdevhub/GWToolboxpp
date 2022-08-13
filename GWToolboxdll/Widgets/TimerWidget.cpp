@@ -230,7 +230,7 @@ void TimerWidget::DrawSettingInternal() {
     ImGui::Text("Show extra timers:");
     ImGui::Indent();
     
-    std::vector<std::pair<char*, bool*>> timers = {
+    std::vector<std::pair<const char*, bool*>> timers = {
         { "Deep aspects",&show_deep_timer},
         { "DoA cave",&show_doa_timer},
         { "Dhuum",&show_dhuum_timer},
