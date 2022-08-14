@@ -20,4 +20,5 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <ranges>
 #include <filesystem>

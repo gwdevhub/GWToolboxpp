@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <algorithm>
-
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameEntities/Party.h>
@@ -18,7 +16,6 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <Modules/Resources.h>
-#include <Modules/ToolboxSettings.h>
 #include <Widgets/SkillMonitorWidget.h>
 
 void SkillMonitorWidget::Initialize() {
