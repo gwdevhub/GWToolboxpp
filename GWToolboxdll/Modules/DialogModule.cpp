@@ -168,10 +168,10 @@ void DialogModule::SendDialog(uint32_t dialog_id) {
     if (already_queued)
         return; // Don't redo any logic.
 
-    if ((dialog_id & 0x800000) != 0) {
+    if (IsQuest(dialog_id)) {
         // Quest related dialog
-        const uint32_t quest_id = (dialog_id ^ 0x800000) >> 8;
-        switch ((dialog_id & 0xf)) {
+        const uint32_t quest_id = GetQuestID(dialog_id);
+        switch (dialog_id & 0xf) {
         case 1: // Dialog is for taking a quest
             SendDialog(quest_id << 8 | 0x800003);
             break;
@@ -181,31 +181,23 @@ void DialogModule::SendDialog(uint32_t dialog_id) {
         }
         return;
     }
-    if ((dialog_id & 0xf84) == dialog_id && ((dialog_id & 0xfff) >> 8) != 0) {
+    if ((dialog_id & 0xf84) == dialog_id && (dialog_id & 0xfff) >> 8 != 0) {
         // Dialog is for changing profession; queue up the enquire dialog option aswell
         const uint32_t profession_id = (dialog_id & 0xfff) >> 8;
         const uint32_t enquire_dialog_id = (profession_id << 8) | 0x85;
         SendDialog(enquire_dialog_id);
         return;
     }
-    switch (dialog_id) {
-    case GW::Constants::DialogID::UwTeleLab:
-    case GW::Constants::DialogID::UwTeleVale:
-    case GW::Constants::DialogID::UwTelePits:
-    case GW::Constants::DialogID::UwTelePools:
-    case GW::Constants::DialogID::UwTelePlanes:
-    case GW::Constants::DialogID::UwTeleWastes:
-    case GW::Constants::DialogID::UwTeleMnt: {
+    
+    if (IsUWTele(dialog_id)) {
         const auto dialog_agent = GW::Agents::GetAgentByID(GetDialogAgent());
         if (dialog_agent 
             && dialog_agent->type == static_cast<uint32_t>(GW::Constants::AgentType::Living)
             && dialog_agent->GetAsAgentLiving()->player_number == GW::Constants::ModelID::UW::Reapers) {
             // Reaper teleport dialog; queue up prerequisites.
-            SendDialog(0x7f);
+            SendDialog(GW::Constants::DialogID::UwTeleEnquire);
             SendDialog(dialog_id - 0x7);
         }
-    } break;
-        
     }
 }
 
@@ -232,8 +224,7 @@ void DialogModule::Update(float) {
         }
         if (IsDialogButtonAvailable(it->first)) {
             GW::Agents::SendDialog(it->first);
-            queued_dialogs_to_send.erase(it);
-            break;
+            return OnDialogSent(it->first);
         }
     }
 }
@@ -254,11 +245,11 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
     std::vector<uint32_t> available_quests;
     for (const auto dialog_button : dialog_buttons) {
         const uint32_t dialog_id = dialog_button->dialog_id;
-        if ((dialog_id & 0x800000) == 0)
+        if (!IsQuest(dialog_id))
             continue;
         // Quest related dialog
-        uint32_t quest_id = (dialog_id ^ 0x800000) >> 8;
-        switch ((dialog_id & 0xff)) {
+        uint32_t quest_id = GetQuestID(dialog_id);
+        switch (dialog_id & 0xff) {
         case 1: // Dialog is for taking a quest
         case 3: // Dialog is for quest enquiry
         case 6: // Dialog is for enquiring about a quest reward
@@ -286,7 +277,33 @@ uint32_t DialogModule::GetDialogAgent()
 {
     return dialog_info.agent_id;
 }
+
 const std::vector<GW::UI::DialogButtonInfo*>& DialogModule::GetDialogButtons()
 {
     return dialog_buttons;
+}
+
+void DialogModule::OnDialogSent(const uint32_t dialog_id) {
+    queued_dialogs_to_send.erase(dialog_id);
+    if (IsQuest(dialog_id)) {
+        const auto quest_id = GetQuestID(dialog_id);
+        switch (dialog_id & 0xff) {
+            case 1: // accepted a quest
+            case 7: // accepted a quest reward
+                break;
+            default: return;
+        }
+        for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end();) {
+            const auto other_dialog_id = it->first;
+            if (GetQuestID(other_dialog_id) == quest_id) {
+                it = queued_dialogs_to_send.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
+    if (IsUWTele(dialog_id)) {
+        queued_dialogs_to_send.erase(dialog_id - 0x7);
+        queued_dialogs_to_send.erase(GW::Constants::DialogID::UwTeleEnquire);
+    }
 }

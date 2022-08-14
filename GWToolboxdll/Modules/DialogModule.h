@@ -34,4 +34,21 @@ public:
     static const std::vector<GuiUtils::EncString*>& GetDialogButtonMessages();
     // Find and take the first available quest from the current dialog. Returns quest_id requested.
     static uint32_t AcceptFirstAvailableQuest();
+
+private:
+    static void OnDialogSent(uint32_t dialog_id);
+    static bool IsQuest(const uint32_t dialog_id) { return (dialog_id & 0x800000) != 0; }
+    static bool GetQuestID(const uint32_t dialog_id) { return (dialog_id ^ 0x800000) >> 8; }
+    static bool IsUWTele(const uint32_t dialog_id) {
+        switch (dialog_id) {
+            case GW::Constants::DialogID::UwTeleLab:
+            case GW::Constants::DialogID::UwTeleVale:
+            case GW::Constants::DialogID::UwTelePits:
+            case GW::Constants::DialogID::UwTelePools:
+            case GW::Constants::DialogID::UwTelePlanes:
+            case GW::Constants::DialogID::UwTeleWastes:
+            case GW::Constants::DialogID::UwTeleMnt: return true;
+            default: return false;
+        }
+    }
 };
