@@ -380,21 +380,6 @@ namespace {
             ShowAgentExperienceGain_Ret(agent_id, amount_gained);
         GW::Hook::LeaveHook();
     }
-    
-    // This function checks whether a given type bitmap is valid for this agent. Checks stuff like if its a player/npc, dead/effects etc
-    typedef uint32_t(__fastcall* DoesLivingAgentMatchBitmap_pt)(GW::AgentLiving* ctx, void* edx, uint32_t type, uint32_t* out_val);
-    DoesLivingAgentMatchBitmap_pt DoesLivingAgentMatchBitmap_Func = nullptr;
-    DoesLivingAgentMatchBitmap_pt DoesLivingAgentMatchBitmap_Ret = nullptr;
-    uint32_t __fastcall DoesLivingAgentMatchBitmap(GW::AgentLiving* ctx, void* edx, uint32_t type, uint32_t* out_val) {
-        uint32_t is_valid = DoesLivingAgentMatchBitmap_Ret(ctx,edx,type,out_val);
-        GW::Hook::EnterHook();
-        if (type == 0x0A000093 && is_valid) {
-            // Bitmap for targetting closest ally in explorable area.
-            is_valid = !ctx->GetIsDead() && !ctx->GetIsDeadByTypeMap();
-        } 
-        GW::Hook::LeaveHook();
-        return is_valid;
-    }
 
 }
 
@@ -837,9 +822,6 @@ void GameSettings::Initialize() {
     if (address) {
         gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
     }
-    DoesLivingAgentMatchBitmap_Func = (DoesLivingAgentMatchBitmap_pt)GW::Scanner::Find("\xa8\x20\x74\x0c\xf6\xc3\x10", "xxxxxxx", -0x40);
-    GW::HookBase::CreateHook(DoesLivingAgentMatchBitmap_Func, DoesLivingAgentMatchBitmap, (void**)&DoesLivingAgentMatchBitmap_Ret);
-    GW::HookBase::EnableHooks(DoesLivingAgentMatchBitmap_Func);
 
     address = GW::Scanner::Find("\x8b\x7d\x08\x8b\x70\x2c\x83\xff\x0f","xxxxxxxxx");
     ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);

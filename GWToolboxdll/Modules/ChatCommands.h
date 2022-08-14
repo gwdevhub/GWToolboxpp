@@ -43,7 +43,9 @@ public:
         Player,
         Npc,
         Item,
-        Living
+        Living,
+        Enemy,
+        Ally
     };
 
     const char* Name() const override { return "Chat Commands"; }

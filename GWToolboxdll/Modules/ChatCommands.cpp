@@ -1252,14 +1252,39 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
     if (argc < 2)
         return Log::ErrorW(L"Missing argument for /%s", argv[0]);
 
+    const wchar_t* zero_w = L"0";
+
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-    if (arg1 == L"ee")
+    if (arg1 == L"ee") // /target ee
         return TargetEE();
-    if (arg1 == L"vipers" || arg1 == L"hos")
+    if (arg1 == L"vipers" || arg1 == L"hos") // /target vipers or /target hos
         return TargetVipers();
-    if (IsNearestStr(arg1.c_str()))
-        return TargetNearest(L"0", Living);
-    if (arg1 == L"getid") {
+    if (IsNearestStr(arg1.c_str())) {
+        if(argc < 3)  // /target nearest
+            return TargetNearest(zero_w, Living);
+        const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+        if (arg2 == L"item") { // /target nearest item [model_id|name]
+            return TargetNearest(argc > 3 ? GetRemainingArgsWstr(message, 3) : zero_w, Item);
+        }
+        if (arg2 == L"npc") { // /target nearest npc [model_id|name]
+            return TargetNearest(argc > 3 ? GetRemainingArgsWstr(message, 3) : zero_w, Npc);
+        }
+        if (arg2 == L"gadget") { // /target nearest gadget [model_id|name]
+            return TargetNearest(argc > 3 ? GetRemainingArgsWstr(message, 3) : zero_w, Gadget);
+        }
+        if (arg2 == L"player") { // /target nearest player [model_id|name]
+            return TargetNearest(argc > 3 ? GetRemainingArgsWstr(message, 3) : zero_w, Player);
+        }
+        if (arg2 == L"ally") { // /target nearest ally [model_id|name]
+            return TargetNearest(argc > 3 ? GetRemainingArgsWstr(message, 3) : zero_w, Ally);
+        }
+        if (arg2 == L"enemy") { // /target nearest ally [model_id|name]
+            return TargetNearest(argc > 3 ? GetRemainingArgsWstr(message, 3) : zero_w, Enemy);
+        }
+        // /target nearest 1234
+        return TargetNearest(arg2.c_str(), Living);
+    }
+    if (arg1 == L"getid") { // /target getid
         const GW::AgentLiving* const target = GW::Agents::GetTargetAsAgentLiving();
         if (target == nullptr) {
             Log::Error("No target selected!");
@@ -1268,7 +1293,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
         }
         return;
     }
-    if (arg1 == L"getpos") {
+    if (arg1 == L"getpos") { // /target getpos
         const GW::AgentLiving* const target = GW::Agents::GetTargetAsAgentLiving();
         if (target == nullptr) {
             Log::Error("No target selected!");
@@ -1277,12 +1302,25 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
         }
         return;
     }
-    if (arg1 == L"item") {
-        if (argc < 3)
-            return Log::ErrorW(L"Syntax: /%s item [model_id|name]",argv[0]);
-        return TargetNearest(GetRemainingArgsWstr(message, 2),Item);
+    if (arg1 == L"item") { // /target item [model_id|name]
+        return TargetNearest(argc > 2 ? GetRemainingArgsWstr(message, 2) : zero_w, Item);
     }
-    if (arg1 == L"priority") {
+    if (arg1 == L"npc") { // /target npc [model_id|name]
+        return TargetNearest(argc > 2 ? GetRemainingArgsWstr(message, 2) : zero_w, Npc);
+    }
+    if (arg1 == L"gadget") { // /target gadget [model_id|name]
+        return TargetNearest(argc > 2 ? GetRemainingArgsWstr(message, 2) : zero_w, Gadget);
+    }
+    if (arg1 == L"player") { // /target player [model_id|name]
+        return TargetNearest(argc > 2 ? GetRemainingArgsWstr(message, 2) : zero_w, Player);
+    }
+    if (arg1 == L"ally") { // /target ally [model_id|name]
+        return TargetNearest(argc > 2 ? GetRemainingArgsWstr(message, 2) : zero_w, Ally);
+    }
+    if (arg1 == L"enemy") { // /target nearest ally [model_id|name]
+        return TargetNearest(argc > 2 ? GetRemainingArgsWstr(message, 2) : zero_w, Enemy);
+    }
+    if (arg1 == L"priority") { // /target priority [party_member_target]
         const GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
         if (!party || !party->players.valid()) return;
 
@@ -1330,21 +1368,6 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
         GW::Agent* agent = GW::Agents::GetAgentByID(calledTargetId);
         if (!agent) return;
         GW::Agents::ChangeTarget(agent);
-    }
-    if (arg1 == L"npc") {
-        if (argc < 3)
-            return Log::ErrorW(L"Syntax: /%s npc [npc_id|name]", argv[0]);
-        return TargetNearest(GetRemainingArgsWstr(message, 2), Npc);
-    }
-    if (arg1 == L"gadget") {
-        if (argc < 3)
-            return Log::ErrorW(L"Syntax: /%s gadget [gadget_id|name]", argv[0]);
-        return TargetNearest(GetRemainingArgsWstr(message, 2), Gadget);
-    }
-    if (arg1 == L"player") {
-        if (argc < 3)
-            return Log::ErrorW(L"Syntax: /%s player [player_number|name]", argv[0]);
-        return TargetNearest(GetRemainingArgsWstr(message, 2), Player);
     }
     return TargetNearest(GetRemainingArgsWstr(message, 1), Npc);
 }
@@ -1698,8 +1721,17 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
     size_t closest = 0;
     size_t count = 0;
 
+    auto is_npc_targettable = [](const GW::AgentLiving* agent) {
+        if (!(agent && agent->IsNPC()))
+            return true;
+        const GW::NPC* npc = GW::Agents::GetNPCByID(agent->player_number);
+        return npc && (npc->npc_flags & 0x10000) == 0;
+    };
+
     for (const GW::Agent * agent : *agents) {
         if (!agent || agent == me)
+            continue;
+        if (!is_npc_targettable(agent->GetAsAgentLiving()))
             continue;
         switch (type) {
             case Gadget: {
@@ -1727,6 +1759,24 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
                 // Target player by player number
                 const GW::AgentLiving* const living_agent = agent->GetAsAgentLiving();
                 if (!living_agent || !living_agent->IsPlayer() || (model_id && living_agent->player_number != model_id))
+                    continue;
+            } break;
+            case Ally: {
+                // Target any living ally
+                // NB: Not quite the same as the GW version; 
+                // GW targets nearest player if they're less than half the distance as the nearest agent.
+                // Could be a little confusing if this is used instead of 'V' in-game.
+                const GW::AgentLiving* const living_agent = agent->GetAsAgentLiving();
+                if (!living_agent 
+                    || living_agent->allegiance == GW::Constants::Allegiance::Enemy 
+                    || living_agent->allegiance == GW::Constants::Allegiance::Neutral
+                    || !living_agent->GetIsAlive() || (model_id && living_agent->player_number != model_id))
+                    continue;
+            } break;
+            case Enemy: {
+                // Target any living enemy
+                const GW::AgentLiving* const living_agent = agent->GetAsAgentLiving();
+                if (!living_agent || living_agent->allegiance != GW::Constants::Allegiance::Enemy || !living_agent->GetIsAlive() || (model_id && living_agent->player_number != model_id))
                     continue;
             } break;
             case Living: {
