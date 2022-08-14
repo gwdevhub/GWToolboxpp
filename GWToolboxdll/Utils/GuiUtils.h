@@ -91,7 +91,7 @@ namespace GuiUtils {
     public:
         // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
         EncString* language(GW::Constants::TextLanguage l = (GW::Constants::TextLanguage)-1);
-        inline bool IsDecoding() { return decoding && decoded_ws.empty(); };
+        bool IsDecoding() { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string
         void reset(const uint32_t _enc_string_id = 0, bool sanitise = true);
@@ -112,7 +112,7 @@ namespace GuiUtils {
         // Disable object copying; decoded_ws is passed to GW by reference and would be bad to do this. Pass by pointer instead.
         EncString(const EncString& temp_obj) = delete;
         EncString& operator=(const EncString& temp_obj) = delete;
-        ~EncString() {
+        virtual ~EncString() {
             ASSERT(!IsDecoding());
         }
     };
