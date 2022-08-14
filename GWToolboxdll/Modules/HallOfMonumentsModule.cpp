@@ -41,7 +41,6 @@ namespace {
     }
 
     int Base64ToBitString(const char* in, char* out, int out_len) {
-        const int bufSize = 1024; // @Cleanup: Confirm that the buffer is alway big enough.
         int in_len = (int)strlen(in);
         ASSERT((in_len * 6) < out_len);
 

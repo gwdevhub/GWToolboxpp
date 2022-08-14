@@ -44,7 +44,7 @@ bool Pcon::pcons_by_character = true;
 bool Pcon::hide_city_pcons_in_explorable_areas = false;
 
 // 22 is the highest bag index. 25 is the most slots in any single bag.
-std::vector<std::vector<clock_t>> Pcon::reserved_bag_slots(22, std::vector<clock_t>(25));
+std::array<std::array<clock_t, 25>, 22> Pcon::reserved_bag_slots{};
 
 // ================================================
 Pcon::Pcon(const char* chatname,
@@ -78,7 +78,7 @@ void Pcon::ResetCounts() {
     refill_attempted = false;
     pcon_quantity_checked = false;
     for (auto& i : reserved_bag_slots) {
-        i.clear();
+        std::ranges::fill(i, 0);
     }
 }
 void Pcon::SetEnabled(bool b) {
@@ -222,7 +222,7 @@ bool Pcon::UnreserveSlotForMove(size_t bagIndex, size_t slot)
 }
 bool Pcon::IsSlotReservedForMove(size_t bagIndex, size_t slot)
 {
-    clock_t slot_reserved_at = reserved_bag_slots.at(bagIndex).at(slot);
+    const clock_t slot_reserved_at = reserved_bag_slots.at(bagIndex).at(slot);
     return slot_reserved_at && TIMER_DIFF(slot_reserved_at) < 3000; // 1000ms is reasonable for CtoS then StoC
 }
 void Pcon::AfterUsed(bool used, int qty) {

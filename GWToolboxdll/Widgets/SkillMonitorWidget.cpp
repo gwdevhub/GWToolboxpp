@@ -133,8 +133,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
             }
             return {win_x + x * img_size, win_y + y * img_size};
         };
-
-        const auto party_size = GW::PartyMgr::GetPartySize();
+        
         auto party_index = 0u;
         for (auto& [agent_id, party_slot] : party_map) {
             if (++party_index > num_rows) continue;
