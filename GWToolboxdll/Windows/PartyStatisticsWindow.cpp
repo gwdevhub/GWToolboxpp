@@ -412,11 +412,13 @@ void PartyStatisticsWindow::CmdSkillStatistics(const wchar_t* message, int argc,
         /* command: /skllstats playerNum */
         else {
             uint32_t player_number = 0;
-            if (GuiUtils::ParseUInt(argv[1], &player_number) && player_number > 0) {
+            if (GuiUtils::ParseUInt(argv[1], &player_number) && player_number > 0 &&
+                player_number <= instance.party_members.size()) {
                 --player_number; // List will start at index zero
                 instance.WritePlayerStatistics(player_number);
             } else {
-                // @Cleanup: Add syntax error message
+            Log::Error("Invalid player number '%ls', please use an integer value of 1 to %u", argv[1],
+                instance.party_members.size());
             }
         }
 
@@ -426,17 +428,19 @@ void PartyStatisticsWindow::CmdSkillStatistics(const wchar_t* message, int argc,
     /* command: /skillstats playerNum skillNum */
     if (argc >= 3) {
         uint32_t player_number = 0;
-        if (GuiUtils::ParseUInt(argv[1], &player_number) && player_number > 0) {
+        if (GuiUtils::ParseUInt(argv[1], &player_number) && player_number > 0 &&
+            player_number <= instance.party_members.size()) {
             --player_number;
             uint32_t skill_number = 0;
-            if (GuiUtils::ParseUInt(argv[2], &skill_number) && skill_number > 0) {
+            if (GuiUtils::ParseUInt(argv[2], &skill_number) && skill_number > 0 && skill_number < 9) {
                 --skill_number;
                 instance.WritePlayerStatistics(player_number, skill_number);
             } else {
-                // @Cleanup: Add syntax error message
+                Log::Error("Invalid skill number '%ls', please use an integer value of 1 to 8", argv[2]);
             }
         } else {
-            // @Cleanup: Add syntax error message
+            Log::Error("Invalid player number '%ls', please use an integer value of 1 to %u", argv[1],
+                instance.party_members.size());
         }
     }
 }
