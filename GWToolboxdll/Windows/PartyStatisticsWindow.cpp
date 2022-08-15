@@ -23,8 +23,8 @@
 
 #include <GWCA/Packets/StoC.h>
 
-#include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
+#include <Utils/GuiUtils.h>
 #include <Windows/PartyStatisticsWindow.h>
 
 /*************************/
@@ -36,7 +36,7 @@ namespace {
     constexpr uint32_t NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
     constexpr wchar_t UNKNOWN_SKILL_NAME[] = L"Unknown Skill";
     constexpr wchar_t UNKNOWN_PLAYER_NAME[] = L"Unknown Player";
-}
+} // namespace
 
 IDirect3DTexture9* PartyStatisticsWindow::GetSkillImage(const GW::Constants::SkillID skill_id) {
     return *Resources::GetSkillImage(skill_id);
@@ -73,9 +73,10 @@ const GW::Skillbar* PartyStatisticsWindow::GetAgentSkillbar(const uint32_t agent
     return nullptr;
 }
 
-int PartyStatisticsWindow::GetSkillString(
-    const std::wstring& agent_name, const std::wstring& skill_name, const uint32_t skill_count, wchar_t* out, size_t len) {
-    int written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.", agent_name.c_str(), skill_name.c_str(), skill_count);
+int PartyStatisticsWindow::GetSkillString(const std::wstring& agent_name, const std::wstring& skill_name,
+    const uint32_t skill_count, wchar_t* out, size_t len) {
+    int written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.",
+        agent_name.c_str(), skill_name.c_str(), skill_count);
     ASSERT(written != -1);
     return written;
 }
@@ -191,14 +192,12 @@ void PartyStatisticsWindow::Terminate() {
 /***********************/
 
 void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
-
     const PartyMember& party_member = party_members[party_idx];
 
     char header_label[256];
     snprintf(header_label, _countof(header_label), "%s###%u", party_member.name->string().c_str(), party_idx);
 
     if (ImGui::CollapsingHeader(header_label)) {
-
         const float start_y = ImGui::GetCursorPosY();
 
         char table_name[16];
@@ -206,35 +205,43 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
 
         const float width = ImGui::GetContentRegionAvail().x;
         float percentage = 0.f;
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
-        ImGui::Columns(party_member.skills.size(), table_name, false);
-        const float column_width = width / party_member.skills.size();
-        const float scale = ImGui::GetIO().FontGlobalScale;
-        const ImVec2 icon_size = { 32.f * scale, 32.f * scale };
-        for (size_t i = 0; i < party_member.skills.size();i++) {
-            ImGui::SetColumnWidth(i, column_width);
-            const Skill& skill = party_member.skills[i];
-            percentage = skill.count ? static_cast<float>(skill.count) / static_cast<float>(party_member.total_skills_used) * 100.f : 0.f;
-            if (i) {
-                ImGui::NextColumn();
+        if (party_member.skills.size() == 0) return;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
+        if (ImGui::BeginTable(table_name, party_member.skills.size())) {
+            const float column_width = width / party_member.skills.size();
+            const float scale = ImGui::GetIO().FontGlobalScale;
+            const ImVec2 icon_size = {32.f * scale, 32.f * scale};
+            for (size_t i = 0; i < party_member.skills.size(); i++) {
+                char column_name[32];
+                snprintf(column_name, _countof(table_name), "###%sColumn%d", table_name, i);
+                ImGui::TableSetupColumn(column_name, ImGuiTableColumnFlags_WidthStretch, column_width);
             }
-            auto* texture = GetSkillImage(skill.id);
-            if (texture) {
-                
-                ImVec2 s(column_width, column_width);
-                ImGui::ImageCropped((ImTextureID)texture, icon_size);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(skill.name->string().c_str());
+            ImGui::TableNextRow();
+            for (size_t i = 0; i < party_member.skills.size(); i++) {
+                const Skill& skill = party_member.skills[i];
+                if (skill.id == GW::Constants::SkillID::No_Skill)
+                    continue; // Skip empty skill slots (for heroes and yourself)
+                ImGui::TableNextColumn();
+                percentage = skill.count ? static_cast<float>(skill.count) /
+                                            static_cast<float>(party_member.total_skills_used) * 100.f
+                                        : 0.f;
+                auto* texture = GetSkillImage(skill.id);
+                if (texture) {
+                    ImVec2 s(column_width, column_width);
+                    ImGui::ImageCropped((ImTextureID)texture, icon_size);
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip(skill.name->string().c_str());
+                    }
+                }
+                if (show_abs_values) {
+                    ImGui::Text("%u", skill.count);
+                }
+                if (show_perc_values) {
+                    ImGui::Text("%.2f%%", percentage);
                 }
             }
-            if (show_abs_values) {
-                ImGui::Text("%u", skill.count);
-            }
-            if (show_perc_values) {
-                ImGui::Text("%.2f%%", percentage);
-            }
+            ImGui::EndTable();
         }
-        ImGui::EndColumns();
         ImGui::PopStyleVar();
         if (print_by_click) {
             ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0F);
@@ -247,48 +254,6 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
             }
             ImGui::PopStyleVar();
         }
-
-#if 0
-        if (show_perc_values && show_abs_values) {
-            ImGui::Columns(3, table_name, false);
-            ImGui::SetColumnWidth(0, width * 0.6F);
-            ImGui::SetColumnWidth(1, width * 0.2F);
-            ImGui::SetColumnWidth(2, width * 0.2F);
-        } else if (show_perc_values || show_abs_values) {
-            ImGui::Columns(2, table_name, false);
-            ImGui::SetColumnWidth(0, width * 0.7F);
-            ImGui::SetColumnWidth(1, width * 0.3F);
-        }
-        float percentage = 0.f;
-        for (const Skill& skill : party_member.skills) {
-            percentage = skill.count ? static_cast<float>(skill.count) / static_cast<float>(party_member.total_skills_used) * 100.f : 0.f;
-
-            ImGui::Text("%s", skill.name->string().c_str());
-
-            if (show_perc_values && show_abs_values) {
-                ImGui::NextColumn();
-                ImGui::Text("%u", skill.count);
-                ImGui::NextColumn();
-                ImGui::Text("%.2f%%", percentage);
-                ImGui::NextColumn();
-                ImGui::Separator();
-            } else if (show_perc_values && !show_abs_values) {
-                ImGui::NextColumn();
-                ImGui::Text("%.2f%%", percentage);
-                ImGui::NextColumn();
-                ImGui::Separator();
-            } else if (!show_perc_values && show_abs_values) {
-                ImGui::NextColumn();
-                ImGui::Text("%u", skill.count);
-                ImGui::NextColumn();
-                ImGui::Separator();
-            }
-        }
-
-        if (show_perc_values || show_abs_values) {
-            ImGui::EndColumns();
-        }
-#endif
     }
 }
 
@@ -310,7 +275,7 @@ void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC:
 void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
     const uint32_t value, const bool no_target) {
     uint32_t agent_id = caster_id;
-    const GW::Constants::SkillID activated_skill_id = (GW::Constants::SkillID)value;
+    const auto activated_skill_id = static_cast<GW::Constants::SkillID>(value);
 
     switch (value_id) {
         case GW::Packet::StoC::GenericValueID::instant_skill_activated:
@@ -332,8 +297,7 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
 
     Skill* found_skill = 0;
     for (PartyMember& party_member : party_members) {
-        if (party_member.agent_id != agent_id)
-            continue;
+        if (party_member.agent_id != agent_id) continue;
         for (Skill& skill : party_member.skills) {
             if (skill.id == activated_skill_id) {
                 found_skill = &skill;
@@ -346,7 +310,7 @@ void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_
         }
         party_member.total_skills_used++;
         found_skill->count++;
-        
+
         break;
     }
 }
@@ -397,15 +361,12 @@ bool PartyStatisticsWindow::SetPartyMembers() {
         if (id == my_player_id) {
             player_party_idx = party_members.size() - 1;
         }
-        if (!info->heroes.valid())
-            continue;
+        if (!info->heroes.valid()) continue;
         for (GW::HeroPartyMember& hero : info->heroes) {
-            if (hero.owner_player_id != player.login_number)
-                continue;
+            if (hero.owner_player_id != player.login_number) continue;
             party_members.push_back(hero.agent_id);
             const GW::Skillbar* skillbar = GetAgentSkillbar(hero.agent_id);
-            if (!skillbar) 
-                continue;
+            if (!skillbar) continue;
             PartyMember& party_member = party_members.back();
             /* Skillbar for other players and henchmen is unknown in outpost init with No_Skill */
             for (const GW::SkillbarSkill& skill : skillbar->skills) {
@@ -451,12 +412,13 @@ void PartyStatisticsWindow::CmdSkillStatistics(const wchar_t* message, int argc,
         /* command: /skllstats playerNum */
         else {
             uint32_t player_number = 0;
-            if (GuiUtils::ParseUInt(argv[1], &player_number) && player_number > 0) {
+            if (GuiUtils::ParseUInt(argv[1], &player_number) && player_number > 0 &&
+                player_number <= instance.party_members.size()) {
                 --player_number; // List will start at index zero
                 instance.WritePlayerStatistics(player_number);
-            }
-            else {
-                // @Cleanup: Add syntax error message
+            } else {
+            Log::Error("Invalid player number '%ls', please use an integer value of 1 to %u", argv[1],
+                instance.party_members.size());
             }
         }
 
@@ -466,19 +428,19 @@ void PartyStatisticsWindow::CmdSkillStatistics(const wchar_t* message, int argc,
     /* command: /skillstats playerNum skillNum */
     if (argc >= 3) {
         uint32_t player_number = 0;
-        if (GuiUtils::ParseUInt(argv[1], &player_number) && player_number > 0) {
+        if (GuiUtils::ParseUInt(argv[1], &player_number) && player_number > 0 &&
+            player_number <= instance.party_members.size()) {
             --player_number;
             uint32_t skill_number = 0;
-            if (GuiUtils::ParseUInt(argv[2], &skill_number) && skill_number > 0) {
+            if (GuiUtils::ParseUInt(argv[2], &skill_number) && skill_number > 0 && skill_number < 9) {
                 --skill_number;
                 instance.WritePlayerStatistics(player_number, skill_number);
+            } else {
+                Log::Error("Invalid skill number '%ls', please use an integer value of 1 to 8", argv[2]);
             }
-            else {
-                // @Cleanup: Add syntax error message
-            }
-        }
-        else {
-            // @Cleanup: Add syntax error message
+        } else {
+            Log::Error("Invalid player number '%ls', please use an integer value of 1 to %u", argv[1],
+                instance.party_members.size());
         }
     }
 }
@@ -489,15 +451,14 @@ void PartyStatisticsWindow::WritePlayerStatistics(const uint32_t player_idx, con
     /* all skills for self player */
     if (static_cast<size_t>(-1) == player_idx) {
         WritePlayerStatisticsAllSkills(player_party_idx);
-        /* single skill for some player */
+    /* single skill for some player */
     } else if (static_cast<uint32_t>(-1) != skill_idx) {
         WritePlayerStatisticsSingleSkill(player_idx, skill_idx);
-        /* all skills for some player */
+    /* all skills for some player */
     } else {
         WritePlayerStatisticsAllSkills(player_idx);
     }
 }
-
 
 void PartyStatisticsWindow::WritePlayerStatisticsAllSkills(const uint32_t player_idx) {
     if (player_idx >= party_members.size()) return;
