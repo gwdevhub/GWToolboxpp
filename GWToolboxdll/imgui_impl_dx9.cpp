@@ -218,6 +218,7 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_dx9";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard; // we do not want keyboard navigation between imgui windows
 
     g_pd3dDevice = device;
     g_pd3dDevice->AddRef();
