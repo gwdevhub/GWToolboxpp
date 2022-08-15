@@ -218,8 +218,10 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
             }
             ImGui::TableNextRow();
             for (size_t i = 0; i < party_member.skills.size(); i++) {
-                ImGui::TableNextColumn();
                 const Skill& skill = party_member.skills[i];
+                if (skill.id == GW::Constants::SkillID::No_Skill)
+                    continue; // Skip empty skill slots
+                ImGui::TableNextColumn();
                 percentage = skill.count ? static_cast<float>(skill.count) /
                                             static_cast<float>(party_member.total_skills_used) * 100.f
                                         : 0.f;
