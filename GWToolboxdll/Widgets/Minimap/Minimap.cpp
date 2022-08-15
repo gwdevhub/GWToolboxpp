@@ -952,13 +952,7 @@ void Minimap::SelectTarget(const GW::Vec2f pos) const
             continue;
         if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id != 8141)
             continue; // allow locked chests
-        if (living && agent->GetIsLivingType()) {
-            if (const auto npcs = GW::Agents::GetNPCArray();
-                !agent_renderer.show_hidden_npcs && living->IsNPC() && living->player_number < npcs->size() &&
-                (npcs->at(living->player_number).npc_flags & 0x10000) > 0)
-                continue;
-        }
-        if (living && (living->player_number >= 230 && living->player_number <= 346))
+        if (living && living->IsNPC() && (GW::Agents::GetNPCByID(living->player_number)->npc_flags & 0x10000) != 0)
             continue; // block all useless minis
         const float newDistance = GW::GetSquareDistance(pos, agent->pos);
         if (distance > newDistance) {
