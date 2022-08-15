@@ -275,7 +275,7 @@ void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC:
 void PartyStatisticsWindow::SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t target_id,
     const uint32_t value, const bool no_target) {
     uint32_t agent_id = caster_id;
-    const GW::Constants::SkillID activated_skill_id = (GW::Constants::SkillID)value;
+    const auto activated_skill_id = static_cast<GW::Constants::SkillID>(value);
 
     switch (value_id) {
         case GW::Packet::StoC::GenericValueID::instant_skill_activated:
