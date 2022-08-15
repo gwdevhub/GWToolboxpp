@@ -447,10 +447,10 @@ void PartyStatisticsWindow::WritePlayerStatistics(const uint32_t player_idx, con
     /* all skills for self player */
     if (static_cast<size_t>(-1) == player_idx) {
         WritePlayerStatisticsAllSkills(player_party_idx);
-        /* single skill for some player */
+    /* single skill for some player */
     } else if (static_cast<uint32_t>(-1) != skill_idx) {
         WritePlayerStatisticsSingleSkill(player_idx, skill_idx);
-        /* all skills for some player */
+    /* all skills for some player */
     } else {
         WritePlayerStatisticsAllSkills(player_idx);
     }
