@@ -207,35 +207,39 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
         float percentage = 0.f;
         if (party_member.skills.size() == 0) return;
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
-        ImGui::Columns(party_member.skills.size(), table_name, false);
-        const float column_width = width / party_member.skills.size();
-        const float scale = ImGui::GetIO().FontGlobalScale;
-        const ImVec2 icon_size = {32.f * scale, 32.f * scale};
-        for (size_t i = 0; i < party_member.skills.size(); i++) {
-            ImGui::SetColumnWidth(i, column_width);
-            const Skill& skill = party_member.skills[i];
-            percentage = skill.count ? static_cast<float>(skill.count) /
-                                           static_cast<float>(party_member.total_skills_used) * 100.f
-                                     : 0.f;
-            if (i) {
-                ImGui::NextColumn();
+        if (ImGui::BeginTable(table_name, party_member.skills.size())) {
+            const float column_width = width / party_member.skills.size();
+            const float scale = ImGui::GetIO().FontGlobalScale;
+            const ImVec2 icon_size = {32.f * scale, 32.f * scale};
+            for (size_t i = 0; i < party_member.skills.size(); i++) {
+                char column_name[32];
+                snprintf(column_name, _countof(table_name), "###%sColumn%d", table_name, i);
+                ImGui::TableSetupColumn(column_name, ImGuiTableColumnFlags_WidthFixed, column_width);
             }
-            auto* texture = GetSkillImage(skill.id);
-            if (texture) {
-                ImVec2 s(column_width, column_width);
-                ImGui::ImageCropped((ImTextureID)texture, icon_size);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(skill.name->string().c_str());
+            ImGui::TableNextRow();
+            for (size_t i = 0; i < party_member.skills.size(); i++) {
+                ImGui::TableNextColumn();
+                const Skill& skill = party_member.skills[i];
+                percentage = skill.count ? static_cast<float>(skill.count) /
+                                            static_cast<float>(party_member.total_skills_used) * 100.f
+                                        : 0.f;
+                auto* texture = GetSkillImage(skill.id);
+                if (texture) {
+                    ImVec2 s(column_width, column_width);
+                    ImGui::ImageCropped((ImTextureID)texture, icon_size);
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip(skill.name->string().c_str());
+                    }
+                }
+                if (show_abs_values) {
+                    ImGui::Text("%u", skill.count);
+                }
+                if (show_perc_values) {
+                    ImGui::Text("%.2f%%", percentage);
                 }
             }
-            if (show_abs_values) {
-                ImGui::Text("%u", skill.count);
-            }
-            if (show_perc_values) {
-                ImGui::Text("%.2f%%", percentage);
-            }
+            ImGui::EndTable();
         }
-        ImGui::EndColumns();
         ImGui::PopStyleVar();
         if (print_by_click) {
             ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0F);
