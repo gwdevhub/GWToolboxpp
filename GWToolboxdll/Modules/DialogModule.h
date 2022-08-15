@@ -1,4 +1,7 @@
 #pragma once
+
+#include <GWCA/Managers/UIMgr.h>
+
 #include <ToolboxModule.h>
 
 namespace GuiUtils {
@@ -36,9 +39,22 @@ public:
     static uint32_t AcceptFirstAvailableQuest();
 
 private:
-    static void OnDialogSent(uint32_t dialog_id);
-    static bool IsQuest(const uint32_t dialog_id) { return (dialog_id & 0x800000) != 0; }
-    static bool GetQuestID(const uint32_t dialog_id) { return (dialog_id ^ 0x800000) >> 8; }
+
+    enum class QuestDialogType {
+        TAKE = 1,
+        ENQUIRE = 3,
+        ENQUIRE_REWARD = 6,
+        REWARD = 7
+    };
+    static bool IsQuest(const uint32_t dialog_id) {
+        return (dialog_id & 0x800000) != 0;
+    }
+    static uint32_t GetQuestID(const uint32_t dialog_id) {
+        return (dialog_id ^ 0x800000) >> 8;
+    }
+    static QuestDialogType GetQuestDialogType(const uint32_t dialog_id) {
+        return static_cast<QuestDialogType>(dialog_id & 0xf);
+    }
     static bool IsUWTele(const uint32_t dialog_id) {
         switch (dialog_id) {
             case GW::Constants::DialogID::UwTeleLab:
@@ -51,4 +67,7 @@ private:
             default: return false;
         }
     }
+    static void OnDialogSent(uint32_t dialog_id);
+    static void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*);
+    static void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*);
 };

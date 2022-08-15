@@ -89,17 +89,24 @@ namespace {
     void OnDialogClosedByServer() {
         if (queued_dialogs_to_send.empty())
             return;
-        GW::Agent* npc = GW::Agents::GetAgentByID(last_agent_id);
-        GW::Agent* me = GW::Agents::GetPlayer();
+        const GW::Agent* npc = GW::Agents::GetAgentByID(last_agent_id);
+        const GW::Agent* me = GW::Agents::GetPlayer();
         if (npc && me && GW::GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area)
             GW::Agents::GoNPC(npc);
     }
-    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
-        if (status->blocked) {
-            // Blocked elsewhere.
-            return;
-        }
-        switch (message_id) {
+    bool IsDialogButtonAvailable(uint32_t dialog_id) {
+        return std::ranges::any_of(dialog_buttons, [dialog_id](const GW::UI::DialogButtonInfo* d) {
+                return d->dialog_id == dialog_id;
+            });
+    }
+}
+
+void DialogModule::OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+    if (status->blocked) {
+        // Blocked elsewhere.
+        return;
+    }
+    switch (message_id) {
         case GW::UI::UIMessage::kDialogBody: {
             ResetDialog();
             const auto new_dialog_info = static_cast<GW::UI::DialogBodyInfo*>(wparam);
@@ -113,15 +120,15 @@ namespace {
         case GW::UI::UIMessage::kDialogButton: {
             OnDialogButtonAdded(static_cast<GW::UI::DialogButtonInfo*>(wparam));
         } break;
-        }
+        case GW::UI::UIMessage::kSendDialog: {
+            OnDialogSent(reinterpret_cast<uint32_t>(wparam));
+        } break;
     }
-    bool IsDialogButtonAvailable(uint32_t dialog_id) {
-        return std::ranges::any_of(dialog_buttons, [dialog_id](const GW::UI::DialogButtonInfo* d) {
-                return d->dialog_id == dialog_id;
-            });
-    }
-    void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
-        switch (message_id) {
+}
+
+void DialogModule::OnPreUIMessage(
+    GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+    switch (message_id) {
         case GW::UI::UIMessage::kDialogBody: {
             const auto new_dialog_info = static_cast<GW::UI::DialogBodyInfo*>(wparam);
             if (!new_dialog_info->message_enc) {
@@ -139,7 +146,6 @@ namespace {
                 ResetDialog();
             }
         } break;
-        }
     }
 }
 
@@ -162,6 +168,13 @@ void DialogModule::Initialize() {
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
     }
 }
+
+void DialogModule::Terminate() {
+    ToolboxModule::Terminate();
+    GW::UI::RemoveUIMessageCallback(&dialog_hook);
+    GW::HookBase::RemoveHook(NPCDialogUICallback_Func);
+}
+
 void DialogModule::SendDialog(uint32_t dialog_id) {
     const bool already_queued = queued_dialogs_to_send.contains(dialog_id);
     queued_dialogs_to_send[dialog_id] = TIMER_INIT();
@@ -171,16 +184,17 @@ void DialogModule::SendDialog(uint32_t dialog_id) {
     if (IsQuest(dialog_id)) {
         // Quest related dialog
         const uint32_t quest_id = GetQuestID(dialog_id);
-        switch (dialog_id & 0xf) {
-        case 1: // Dialog is for taking a quest
+        switch (GetQuestDialogType(dialog_id)) {
+        case QuestDialogType::TAKE: // Dialog is for taking a quest
             SendDialog(quest_id << 8 | 0x800003);
             break;
-        case 7: // Dialog is for accepting a quest reward
+            case QuestDialogType::REWARD: // Dialog is for accepting a quest reward
             SendDialog(quest_id << 8 | 0x800006);
             break;
         }
         return;
     }
+
     if ((dialog_id & 0xf84) == dialog_id && (dialog_id & 0xfff) >> 8 != 0) {
         // Dialog is for changing profession; queue up the enquire dialog option aswell
         const uint32_t profession_id = (dialog_id & 0xfff) >> 8;
@@ -224,17 +238,16 @@ void DialogModule::Update(float) {
         }
         if (IsDialogButtonAvailable(it->first)) {
             GW::Agents::SendDialog(it->first);
-            return OnDialogSent(it->first);
+            break;
         }
     }
 }
-void DialogModule::Terminate() {
-    GW::HookBase::RemoveHook(NPCDialogUICallback_Func);
-}
+
 const wchar_t* DialogModule::GetDialogBody()
 {
     return dialog_body.encoded().c_str();
 }
+
 const std::vector<GuiUtils::EncString*>& DialogModule::GetDialogButtonMessages()
 {
     return dialog_button_messages;
@@ -249,11 +262,11 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
             continue;
         // Quest related dialog
         uint32_t quest_id = GetQuestID(dialog_id);
-        switch (dialog_id & 0xff) {
-        case 1: // Dialog is for taking a quest
-        case 3: // Dialog is for quest enquiry
-        case 6: // Dialog is for enquiring about a quest reward
-        case 7: // Dialog is for accepting a quest reward
+        switch (GetQuestDialogType(dialog_id)) {
+        case QuestDialogType::TAKE:
+        case QuestDialogType::ENQUIRE:
+        case QuestDialogType::ENQUIRE_REWARD:
+        case QuestDialogType::REWARD:
             available_quests.push_back(quest_id);
             break;
         default:
@@ -287,9 +300,9 @@ void DialogModule::OnDialogSent(const uint32_t dialog_id) {
     queued_dialogs_to_send.erase(dialog_id);
     if (IsQuest(dialog_id)) {
         const auto quest_id = GetQuestID(dialog_id);
-        switch (dialog_id & 0xff) {
-            case 1: // accepted a quest
-            case 7: // accepted a quest reward
+        switch (GetQuestDialogType(dialog_id)) {
+            case QuestDialogType::TAKE:
+            case QuestDialogType::REWARD :
                 break;
             default: return;
         }
@@ -303,7 +316,7 @@ void DialogModule::OnDialogSent(const uint32_t dialog_id) {
         }
     }
     if (IsUWTele(dialog_id)) {
-        queued_dialogs_to_send.erase(dialog_id - 0x7);
         queued_dialogs_to_send.erase(GW::Constants::DialogID::UwTeleEnquire);
+        queued_dialogs_to_send.erase(dialog_id - 0x7);
     }
 }
