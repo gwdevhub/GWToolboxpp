@@ -39,6 +39,8 @@ public:
     static uint32_t AcceptFirstAvailableQuest();
 
 private:
+    // private method to queue multiple dialogs with the same timestamp
+    static void SendDialog(uint32_t dialog_id, clock_t time);
 
     enum class QuestDialogType {
         TAKE = 1,
