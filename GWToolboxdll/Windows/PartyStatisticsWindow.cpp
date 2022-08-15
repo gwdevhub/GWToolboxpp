@@ -214,13 +214,13 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
             for (size_t i = 0; i < party_member.skills.size(); i++) {
                 char column_name[32];
                 snprintf(column_name, _countof(table_name), "###%sColumn%d", table_name, i);
-                ImGui::TableSetupColumn(column_name, ImGuiTableColumnFlags_WidthFixed, column_width);
+                ImGui::TableSetupColumn(column_name, ImGuiTableColumnFlags_WidthStretch, column_width);
             }
             ImGui::TableNextRow();
             for (size_t i = 0; i < party_member.skills.size(); i++) {
                 const Skill& skill = party_member.skills[i];
                 if (skill.id == GW::Constants::SkillID::No_Skill)
-                    continue; // Skip empty skill slots
+                    continue; // Skip empty skill slots (for heroes and yourself)
                 ImGui::TableNextColumn();
                 percentage = skill.count ? static_cast<float>(skill.count) /
                                             static_cast<float>(party_member.total_skills_used) * 100.f
