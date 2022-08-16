@@ -91,6 +91,19 @@ namespace {
 
 	std::wstring chosen_player_name;
 	std::string chosen_player_name_s;
+
+	void LoadTextures(std::vector<MissionImage>& mission_images) {
+		Resources::EnsureFolderExists(Resources::GetPath(L"img", L"missions"));
+		for (auto& mission_image : mission_images) {
+			if (mission_image.texture)
+				continue;
+			Resources::Instance().LoadTexture(
+				&mission_image.texture,
+				Resources::GetPath(L"img/missions", mission_image.file_name),
+				(WORD)mission_image.resource_id
+			);
+		}
+	}
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -696,18 +709,7 @@ void CompletionWindow::Initialize()
 }
 
 
-void LoadTextures(std::vector<MissionImage>& mission_images) {
-	Resources::EnsureFolderExists(Resources::GetPath(L"img", L"missions"));
-	for (auto& mission_image : mission_images) {
-		if (mission_image.texture)
-			continue;
-		Resources::Instance().LoadTexture(
-			&mission_image.texture,
-			Resources::GetPath(L"img/missions", mission_image.file_name),
-			(WORD)mission_image.resource_id
-		);
-	}
-}
+
 
 void CompletionWindow::Initialize_Prophecies()
 {
@@ -1525,6 +1527,10 @@ void CompletionWindow::Terminate()
 }
 void CompletionWindow::Draw(IDirect3DDevice9* device)
 {
+	if (hom_achievements_status == 0) {
+		character_completion[hom_achievements.character_name]->hom_code = hom_achievements.hom_code;
+		hom_achievements_status = 0xf;
+	}
 	if (!visible) return;
 
 	// TODO Button at the top to go to current daily
@@ -1755,10 +1761,36 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 			draw_missions(camp_missions);
 		}
 	}
+	ImGui::Text("Hall of Monuments");
+	auto hom = character_completion[chosen_player_name]->hom_achievements;
+	// Devotion
+	uint32_t completed = 0;
+	if (hom) {
+		for (size_t i = 0; i < _countof(hom->devotion_points); i++) {
+			completed += hom->devotion_points[i];
+		}
+	}
+	char label[128];
+	snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###devotion_points", "Devotion", completed, DevotionPoints::TotalAvailable, ((float)completed / (float)DevotionPoints::TotalAvailable) * 100.f);
+	if (ImGui::CollapsingHeader(label)) {
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
+		size_t items_per_col = (size_t)ceil(_countof(hom->devotion_points) / static_cast<float>(missions_per_row));
+		size_t col_count = 0;
+		for (size_t i = 0; i < _countof(hom->devotion_points); i++) {
+			// TODO: Get encoded name for hom points.
+			col_count++;
+			if (col_count == items_per_col) {
+				ImGui::NextColumn();
+				col_count = 0;
+			}
+		}
+		ImGui::Columns(1);
+		ImGui::PopStyleVar();
+	}
 	ImGui::EndChild();
 	ImGui::End();
 }
-
 void CompletionWindow::DrawSettingInternal()
 {
 	ToolboxWindow::DrawSettingInternal();
@@ -1839,6 +1871,13 @@ CompletionWindow* CompletionWindow::CheckProgress() {
 			skill->CheckProgress(chosen_player_name);
 		}
 	}
+	hom_achievements_status = 0xf;
+	auto& cc = CompletionWindow::Instance().character_completion;
+	if (cc.contains(chosen_player_name)) {
+		if (!cc[chosen_player_name]->hom_achievements)
+			cc[chosen_player_name]->hom_achievements = new HallOfMonumentsAchievements();
+		HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(chosen_player_name.c_str(), cc[chosen_player_name]->hom_achievements);
+	}
 	return this;
 }
 void CompletionWindow::SaveSettings(CSimpleIni* ini)
@@ -1876,6 +1915,7 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
 		write_buf_to_ini("vanquishes", &char_comp->vanquishes, ini_str, name);
 		write_buf_to_ini("heros", &char_comp->heroes, ini_str, name);
 		write_buf_to_ini("maps_unlocked", &char_comp->maps_unlocked, ini_str, name);
+		completion_ini->SetValue(name->c_str(), "hom_code", char_comp->hom_code.c_str());
 	}
 	completion_ini->SaveFile(Resources::GetPath(completion_ini_filename).c_str());
 	delete completion_ini;

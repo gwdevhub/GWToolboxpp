@@ -14,6 +14,8 @@
 #include <Modules/Resources.h>
 #include <Color.h>
 
+#include <Modules/HallOfMonumentsModule.h>
+
 namespace Missions {
 
 
@@ -248,6 +250,8 @@ protected:
         std::vector<uint32_t> vanquishes;
         std::vector<uint32_t> heroes;
         std::vector<uint32_t> maps_unlocked;
+        std::string hom_code;
+        HallOfMonumentsAchievements* hom_achievements = 0;
     };
 
 public:
@@ -269,6 +273,7 @@ public:
 	void Initialize_Dungeons();
 	void Terminate() override;
 	void Draw(IDirect3DDevice9* pDevice) override;
+    void DrawHallOfMonuments();
     
     std::unordered_map<std::wstring, Completion*> character_completion;
 
@@ -291,4 +296,6 @@ public:
     std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
     std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
     std::map<GW::Constants::Campaign, std::vector<Missions::HeroUnlock*>> heros;
+    HallOfMonumentsAchievements hom_achievements;
+    int hom_achievements_status = 0xf;
 };

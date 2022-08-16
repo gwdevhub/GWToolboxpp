@@ -7,7 +7,9 @@
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
-enum class ResiliencePoints {
+typedef uint32_t HomPoints;
+
+enum class ResiliencePoints : HomPoints {
     AnyArmorStatue,
     ThreeArmorStatues,
     FiveArmorStatues,
@@ -15,7 +17,8 @@ enum class ResiliencePoints {
     KurzickOrLuxonArmorStatue,
     VabbianArmorStatue,
     ObsidianArmorStatue,
-    Count
+    Count,
+    TotalAvailable = 8
 };
 enum class ResilienceDetail {
     EliteCanthanArmor,
@@ -40,7 +43,7 @@ enum class ResilienceDetail {
     MarhansGrottoAscendedArmor,
     Count
 };
-enum class FellowshipPoints {
+enum class FellowshipPoints : HomPoints {
     AnyHeroStatue,
     AnyPetStatue,
     AnyRarePetStatue,
@@ -48,7 +51,8 @@ enum class FellowshipPoints {
     TenCompanionStatues,
     TwentyCompanionStatues,
     ThirtyCompanionStatues,
-    Count
+    Count,
+    TotalAvailable = 8
 };
 enum class FellowshipDetail {
     Zenmai,
@@ -83,7 +87,7 @@ enum class FellowshipDetail {
     MOX,
     Count
 };
-enum class HonorPoints {
+enum class HonorPoints : HomPoints {
     AccountsLinked,
     AnyStatue,
     OnePvpStatue,
@@ -95,7 +99,8 @@ enum class HonorPoints {
     ThirtyStatues,
     ThirtyFiveStatues,
     FourtyStatues,
-    Count
+    Count,
+    TotalAvailable = 18
 };
 enum class HonorDetail {
     EternalChampion,
@@ -154,7 +159,7 @@ enum class HonorDetail {
     EternalCodexDisciple,
     Count
 };
-enum class ValorPoints {
+enum class ValorPoints : HomPoints {
     AnyWeaponStatue,
     DestroyerWeaponStatue,
     TormentedWeaponStatue,
@@ -162,7 +167,8 @@ enum class ValorPoints {
     FiveWeaponStatues,
     ElevenWeaponStatues,
     FifteenWeaponStatues,
-    Count
+    Count,
+    TotalAvailable = 8
 };
 enum class ValorDetail {
     DestroyerAxe,
@@ -200,7 +206,7 @@ enum class ValorDetail {
     OppressorSword,
     Count
 };
-enum class DevotionPoints {
+enum class DevotionPoints : HomPoints {
     AnyMiniatureStatue,
     RareMiniatureStatue,
     UniqueMiniatureStatue,
@@ -208,7 +214,8 @@ enum class DevotionPoints {
     ThirtyMiniatureStatues,
     FourtyMiniatureStatues,
     FiftyMiniatureStatues,
-    Count
+    Count,
+    TotalAvailable = 8
 };
 enum class DevotionDetail {
     Common,
@@ -221,6 +228,7 @@ struct HallOfMonumentsAchievements {
     wchar_t character_name[20] = { 0 };
     char hom_code[128] = { 0 };
     void OpenInBrowser();
+    bool Ready() { return honor_points_total > 0; }
     // Details of which armors have or haven't been dedicated, indexed by ResilienceDetail
     bool resilience_detail[(size_t)ResilienceDetail::Count] = { 0 };
     // Details of which points have or haven't been earnt, indexed by ResiliencePoints
@@ -279,6 +287,17 @@ public:
     const char* Name() const override { return "Hall of Monuments"; }
 
     bool HasSettings() override { return false; }
+
+    const char* GetDevotionPointsDescription(DevotionPoints id) {
+        switch (id) {
+        case DevotionPoints::AnyMiniatureStatue: return "Any Miniature Statue";
+        case DevotionPoints::RareMiniatureStatue: return "Rare Miniature Statue";
+        case DevotionPoints::TwentyMiniatureStatues: return "20 Miniature Statues";
+        case DevotionPoints::ThirtyMiniatureStatues: return "30 Miniature Statues";
+        case DevotionPoints::FourtyMiniatureStatues: return "40 Miniature Statues";
+        }
+        return "";
+    }
 
     // Decode a zero terminated base64 encoded hom code
     bool DecodeHomCode(const char* in, HallOfMonumentsAchievements* out);
