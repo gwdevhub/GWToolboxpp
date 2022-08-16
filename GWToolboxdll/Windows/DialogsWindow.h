@@ -29,9 +29,6 @@ public:
     void DrawSettingInternal() override;
 
 private:
-    static constexpr uint32_t QuestEnquireDialog(GW::Constants::QuestID quest) {
-        return static_cast<int>(quest) << 8 | 0x800003;
-    }
     static constexpr uint32_t QuestAcceptDialog(GW::Constants::QuestID quest) {
         return static_cast<int>(quest) << 8 | 0x800001;
     }

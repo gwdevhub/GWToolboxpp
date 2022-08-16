@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <algorithm>
-
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Player.h>

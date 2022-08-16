@@ -1,17 +1,11 @@
 #include "stdafx.h"
 
-#include <algorithm>
-
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Party.h>
-#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Skill.h>
-
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -19,7 +13,6 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Packets/StoC.h>
 

@@ -15,6 +15,7 @@
 #include <ctime>
 
 // c++ headers
+#include <array>
 #include <algorithm>
 #include <bitset>
 #include <chrono>
@@ -31,6 +32,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <ranges>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -39,7 +41,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <array>
 
 // windows headers
 #include <Windows.h>

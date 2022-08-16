@@ -13,7 +13,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 
 namespace {
-    static const char* const questnames[] = {
+    constexpr const char* const questnames[] = {
     "UW - Chamber",
     "UW - Wastes",
     "UW - UWG",
@@ -45,7 +45,7 @@ namespace {
     "DoA - Foundry 2: Foundry Breakout"
     };
 
-    static std::map<const char*, std::vector<int>> dialogs_by_name = {
+    std::map<const char*, std::vector<int>> dialogs_by_name = {
         {"Craft fow armor",{GW::Constants::DialogID::FowCraftArmor}},
         {"Prof Change - Warrior",{GW::Constants::DialogID::ProfChangeWarrior + 1, GW::Constants::DialogID::ProfChangeWarrior}},
         {"Prof Change - Ranger",{GW::Constants::DialogID::ProfChangeRanger + 1, GW::Constants::DialogID::ProfChangeRanger}},
@@ -65,13 +65,13 @@ namespace {
         {"Nightfall mission outpost",{GW::Constants::DialogID::NightfallMissionOutpost}}
     };
 
-    void GoNPCSendDialog(uint32_t dialog_id) {
+    void GoNPCSendDialogs(std::initializer_list<uint32_t> dialog_ids) {
         if (!DialogModule::GetDialogAgent()) {
             if (const auto target = GW::Agents::GetTarget()) {
                 GW::Agents::GoNPC(target);
             }
         }
-        DialogModule::SendDialog(dialog_id);
+        DialogModule::SendDialogs(dialog_ids);
     }
 }
 
@@ -84,7 +84,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
         float w = (ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x
                    - ImGui::GetStyle().ItemInnerSpacing.x * (x_qty - 1)) / x_qty;
         if (ImGui::Button(text, ImVec2(w, 0))) {
-            GoNPCSendDialog(dialog_id);
+            GoNPCSendDialogs({dialog_id});
 
         }
         if (text != nullptr && ImGui::IsItemHovered()) {
@@ -119,16 +119,15 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
         if (show_favorites) {
             for (auto i = 0; i < fav_count; ++i) {
                 ImGui::PushID(i);
-                ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemInnerSpacing.x * 2);
+                ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
                 ImGui::Combo("", &fav_index[i], questnames, n_quests);
                 ImGui::PopItemWidth();
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-                if (ImGui::Button("Take", ImVec2(40.0f, 0))) {
-                    GoNPCSendDialog(QuestAcceptDialog(IndexToQuestID(fav_index[i])));
-                }
-                ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-                if (ImGui::Button("Reward", ImVec2(60.0f, 0))) {
-                    GoNPCSendDialog(QuestRewardDialog(IndexToQuestID(fav_index[i])));
+                if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
+                    GoNPCSendDialogs({
+                        QuestAcceptDialog(IndexToQuestID(fav_index[i])),
+                        QuestRewardDialog(IndexToQuestID(fav_index[i]))
+                    });
                 }
                 ImGui::PopID();
             }

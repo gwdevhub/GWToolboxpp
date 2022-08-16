@@ -39,6 +39,8 @@
 #include <atomic>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <ranges>
 
 #include <nlohmann/json.hpp>
 

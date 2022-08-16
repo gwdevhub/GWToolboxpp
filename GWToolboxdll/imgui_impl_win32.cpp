@@ -158,6 +158,11 @@ void    ImGui_ImplWin32_NewFrame()
     io.KeySuper = false;
     // io.KeysDown[], io.MousePos, io.MouseDown[], io.MouseWheel: filled by the WndProc handler below.
 
+    // dirty hack to disable imgui keyboard navigation
+    // TODO: remove once imgui lets us disable keyboard navigation entirely
+    // see: https://github.com/ocornut/imgui/issues/4828
+    io.KeyCtrl &= (::GetKeyState(VK_TAB) & 0x8000) == 0;
+
     // Update OS mouse position
     ImGui_ImplWin32_UpdateMousePos();
 
