@@ -138,15 +138,14 @@ void InfoWindow::InfoField(const char* label, const char* fmt, ...) {
     ImGui::InputTextEx(label, NULL, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
 }
 void InfoWindow::EncInfoField(const char* label, const wchar_t* enc_string) {
-    static char info_string[1024];
+    static std::string info_string;
+    size_t size_reqd = (wcslen(enc_string) * 7) + 1;
+    info_string.resize(size_reqd,0); // 7 chars = 0xFFFF plus a space
     size_t offset = 0;
-    for (size_t i = 0; enc_string && enc_string[i] && offset < _countof(info_string) - 1; i++) {
-        offset += sprintf(info_string + offset, "0x%X ", enc_string[i]);
+    for (size_t i = 0; enc_string && enc_string[i] && offset < size_reqd - 1; i++) {
+        offset += sprintf(&info_string[offset], "0x%X ", enc_string[i]);
     }
-    if (offset >= _countof(info_string))
-        offset = _countof(info_string) - 1;
-    info_string[offset] = 0;
-    ImGui::InputTextEx(label, NULL, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputTextEx(label, NULL, info_string.data(), info_string.size(), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
 }
 
 void InfoWindow::DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, bool force_advanced) {
