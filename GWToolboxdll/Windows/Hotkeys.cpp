@@ -1497,7 +1497,7 @@ void HotkeyTarget::Execute()
         return;
 
     constexpr size_t len = 122;
-    wchar_t* message = new wchar_t[len];
+    wchar_t message[len];
     message[0] = 0;
     switch (type) {
     case HotkeyTargetType::Item:
@@ -1511,12 +1511,10 @@ void HotkeyTarget::Execute()
         break;
     default:
         Log::ErrorW(L"Unknown target type %d", type);
-        delete[] message;
         return;
     }
     GW::GameThread::Enqueue([message]() {
         GW::Chat::SendChat('/', message);
-        delete[] message;
         });
     
     if (show_message_in_emote_channel) {
