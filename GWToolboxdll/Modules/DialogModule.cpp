@@ -214,8 +214,8 @@ void DialogModule::SendDialog(const uint32_t dialog_id, clock_t time) {
         case QuestDialogType::REWARD: // Dialog is for accepting a quest reward
             queued_dialogs_to_send[quest_id << 8 | 0x800006] = time;
             break;
+        default: return;
         }
-        return;
     }
 
     if ((dialog_id & 0xf84) == dialog_id && (dialog_id & 0xfff) >> 8 != 0) {
@@ -227,14 +227,9 @@ void DialogModule::SendDialog(const uint32_t dialog_id, clock_t time) {
     }
     
     if (IsUWTele(dialog_id)) {
-        const auto dialog_agent = GW::Agents::GetAgentByID(GetDialogAgent());
-        if (dialog_agent 
-            && dialog_agent->type == static_cast<uint32_t>(GW::Constants::AgentType::Living)
-            && dialog_agent->GetAsAgentLiving()->player_number == GW::Constants::ModelID::UW::Reapers) {
-            // Reaper teleport dialog; queue up prerequisites.
-            queued_dialogs_to_send[GW::Constants::DialogID::UwTeleEnquire] = time;
-            queued_dialogs_to_send[dialog_id - 0x7] = time;
-        }
+        // Reaper teleport dialog; queue up prerequisites.
+        queued_dialogs_to_send[GW::Constants::DialogID::UwTeleEnquire] = time;
+        queued_dialogs_to_send[dialog_id - 0x7] = time;
     }
 }
 
