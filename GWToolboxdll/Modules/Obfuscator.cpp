@@ -456,6 +456,11 @@ void Obfuscator::OnPreUIMessage(GW::HookStatus*, GW::UI::UIMessage msg_id, void*
     if (Instance().status != Enabled)
         return;
     switch (msg_id) {
+    case GW::UI::UIMessage::kShowMapEntryMessage: {
+        GW::UI::MapEntryMessage* packet_actual = (GW::UI::MapEntryMessage*)wParam;
+        if(packet_actual->subtitle)
+            packet_actual->subtitle = Instance().ObfuscateMessage(GW::Chat::Channel::CHANNEL_GWCA2, packet_actual->subtitle);
+    } break;
     case GW::UI::UIMessage::kDialogBody: { // Dialog body
         GW::UI::DialogBodyInfo* packet_actual = (GW::UI::DialogBodyInfo*)wParam;
         if(packet_actual->message_enc)
@@ -760,6 +765,7 @@ void Obfuscator::Initialize() {
     // Post resignlog hook
     GW::StoC::RegisterPacketCallback(&stoc_hook2, GAME_SMSG_CHAT_MESSAGE_CORE, OnStoCPacket, post_hook_altitude);
 
+    GW::UI::RegisterUIMessageCallback(&stoc_hook, GW::UI::UIMessage::kShowMapEntryMessage, OnPreUIMessage, pre_hook_altitude);
     GW::UI::RegisterUIMessageCallback(&stoc_hook, GW::UI::UIMessage::kDialogBody, OnPreUIMessage, pre_hook_altitude);
     GW::UI::RegisterUIMessageCallback(&stoc_hook, GW::UI::UIMessage::kWriteToChatLog, OnPreUIMessage, pre_hook_altitude);
     GW::Chat::RegisterSendChatCallback(&ctos_hook, OnSendChat);
