@@ -1364,7 +1364,7 @@ void InventoryManager::DrawSettingInternal() {
     submitted |= ImGui::Button("Add");
     if (submitted) {
         AddItemID(new_item_id);
-        Log::Info("Added Iten ID (%d)", new_item_id);
+        Log::Info("Added Item ID (%d)", new_item_id);
     }
 }
 void InventoryManager::Update(float) {
