@@ -672,8 +672,8 @@ void InventoryManager::Initialize() {
 // Hide unsellable items from merchant
 void InventoryManager::OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
     GW::Hook::EnterHook();
-    GW::Item* item = Instance().hide_unsellable_items ? GW::Items::GetItemById(item_id) : 0;
-    if (!item || item->value)
+    GW::Item* item = (Instance().hide_unsellable_items || Instance().hide_items.size()) ? GW::Items::GetItemById(item_id) : 0;
+    if (!item || (item->value && std::find(Instance().hide_items.begin(), Instance().hide_items.end(), item->model_id) == Instance().hide_items.end()))
         RetAddItemRowToWindow(ecx, edx, frame, item_id);
     GW::Hook::LeaveHook();
 }
@@ -744,6 +744,11 @@ void InventoryManager::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
     ini->SetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
     ini->SetBoolValue(Name(), VAR_NAME(change_secondary_for_tome), change_secondary_for_tome);
+
+    const char* const section = "hide_items";
+    std::string out;
+    GuiUtils::ArrayToIni(hide_items.data(), hide_items.size(), &out);
+    ini->SetValue(section, VAR_NAME(hide_items), out.c_str());
 }
 void InventoryManager::LoadSettings(CSimpleIni* ini) {
     ToolboxUIElement::LoadSettings(ini);
@@ -757,8 +762,13 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
     wiki_link_on_context_menu = ini->GetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
     hide_unsellable_items = ini->GetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
     change_secondary_for_tome = ini->GetBoolValue(Name(), VAR_NAME(change_secondary_for_tome), change_secondary_for_tome);
-    
-    
+
+    const char* const section = "hide_items";
+    hide_items.clear();
+    std::string ini_str = ini->GetValue(section, VAR_NAME(hide_items), "");
+    std::vector<uint32_t> hide_items_tmp;
+    GuiUtils::IniToArray(ini_str, hide_items_tmp);
+    hide_items = hide_items_tmp;
 }
 void InventoryManager::ClearSalvageSession(GW::HookStatus *status, void *)
 {
@@ -1322,6 +1332,31 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::SameLine();
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 
+    ImGui::Separator();
+    ImGui::Text("Hide items from merchant window:");
+    ImGui::BeginChild("hide_items", ImVec2(0.0F, hide_items.size() * 25.0F));
+    for (const auto& item_id : hide_items) {
+        ImGui::PushID(static_cast<int>(item_id));
+        ImGui::Text("%d", item_id);
+        ImGui::SameLine();
+        bool clicked = ImGui::Button(" X ");
+        ImGui::PopID();
+        if (clicked) {
+            Log::Info("Removed Item ID (%d)", item_id);
+            RemoveItemID(item_id);
+            break;
+        }
+    }
+    ImGui::EndChild();
+    ImGui::Separator();
+    bool submitted = false;
+    ImGui::Text("Add new item from merchant window:");
+    ImGui::InputInt("Item ID", &new_item_id);
+    submitted |= ImGui::Button("Add");
+    if (submitted) {
+        AddItemID(new_item_id);
+        Log::Info("Added Iten ID (%d)", new_item_id);
+    }
 }
 void InventoryManager::Update(float) {
     if (check_context_menu_position) {

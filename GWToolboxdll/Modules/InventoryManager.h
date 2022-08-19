@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <GWCA/Utilities/Hook.h>
 
 #include <GWCA/GameEntities/Item.h>
@@ -94,7 +96,16 @@ private:
     bool salvage_rare_mats = false;
     bool show_transact_quantity_popup = false;
     bool transaction_listeners_attached = false;
+
     bool hide_unsellable_items = true;
+    std::vector<uint32_t> hide_items = {};
+    int new_item_id = 0;
+    void AddItemID(const uint32_t item_id) {
+        hide_items.push_back(item_id);
+    }
+    void RemoveItemID(const uint32_t item_id) {
+        std::erase(hide_items, item_id);
+    }
 
     bool change_secondary_for_tome = true;
 
