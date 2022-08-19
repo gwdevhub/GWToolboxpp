@@ -580,10 +580,10 @@ namespace {
 
 static std::vector<uint32_t> hide_items = {};
 static int new_item_id = 0;
-void AddItemID(const uint32_t item_id) {
+void AddMerchantHiddenItemID (const uint32_t item_id) {
     hide_items.push_back(item_id);
 }
-void RemoveItemID(const uint32_t item_id) {
+void RemoveMerchantHiddenItemID(const uint32_t item_id) {
     std::erase(hide_items, item_id);
 }
 
@@ -1352,7 +1352,7 @@ void InventoryManager::DrawSettingInternal() {
         ImGui::PopID();
         if (clicked) {
             Log::Info("Removed Item ID (%d)", item_id);
-            RemoveItemID(item_id);
+            RemoveMerchantHiddenItemID(item_id);
             break;
         }
     }
@@ -1363,7 +1363,7 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::InputInt("Item ID", &new_item_id);
     submitted |= ImGui::Button("Add");
     if (submitted) {
-        AddItemID(new_item_id);
+        AddMerchantHiddenItemID (new_item_id);
         Log::Info("Added Item ID (%d)", new_item_id);
     }
 }
