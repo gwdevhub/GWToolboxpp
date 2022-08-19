@@ -94,7 +94,7 @@ std::wstring StringDecoderWindow::GetEncodedString()
         wchar_t c;
         unsigned int lval = 0;
         int base = results[i].rfind("0x", 0) == 0 ? 0 : 16;
-        if (!GuiUtils::ParseUInt(results[i].c_str(), &lval, base)) {
+        if (!(GuiUtils::ParseUInt(results[i].c_str(), &lval, base) && lval < 0xffff)) {
             Log::Error("Failed to ParseUInt %s", results[i].c_str());
             return L"";
         }

@@ -942,6 +942,8 @@ void Minimap::SelectTarget(const GW::Vec2f pos) const
     auto distance = 600.0f * 600.0f;
     const GW::Agent* closest = nullptr;
 
+    bool target_untargettable_npcs = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
+
     for (const auto* agent : *agents) {
         if (agent == nullptr)
             continue;
@@ -952,7 +954,7 @@ void Minimap::SelectTarget(const GW::Vec2f pos) const
             continue;
         if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id != 8141)
             continue; // allow locked chests
-        if (living && living->IsNPC() && (GW::Agents::GetNPCByID(living->player_number)->npc_flags & 0x10000) != 0)
+        if (!(target_untargettable_npcs || GW::Agents::GetIsAgentTargettable(agent)))
             continue; // block all useless minis
         const float newDistance = GW::GetSquareDistance(pos, agent->pos);
         if (distance > newDistance) {

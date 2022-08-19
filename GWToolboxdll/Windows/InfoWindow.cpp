@@ -139,7 +139,7 @@ void InfoWindow::InfoField(const char* label, const char* fmt, ...) {
 }
 void InfoWindow::EncInfoField(const char* label, const wchar_t* enc_string) {
     static std::string info_string;
-    size_t size_reqd = (wcslen(enc_string) * 7) + 1;
+    size_t size_reqd = enc_string ? (wcslen(enc_string) * 7) + 1 : 0;
     info_string.resize(size_reqd,0); // 7 chars = 0xFFFF plus a space
     size_t offset = 0;
     for (size_t i = 0; enc_string && enc_string[i] && offset < size_reqd - 1; i++) {
@@ -213,9 +213,6 @@ void InfoWindow::DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool fo
     if (item->bag) {
         snprintf(slot, _countof(slot), "%d/%d", item->bag->index + 1, item->slot + 1);
     }
-    static char info_id[16];
-    snprintf(info_id, _countof(info_id), "item_info_%d", item->item_id);
-    ImGui::PushID(info_id);
     InfoField("Bag/Slot", "%s",slot);
     InfoField("ModelID", "%d", item->model_id);
     InfoField("Name", "%s", name->string().c_str());
@@ -243,7 +240,6 @@ void InfoWindow::DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool fo
         draw_advanced();
         ImGui::TreePop();
     }
-    ImGui::PopID();
 }
 void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
     if (!agent) return;
@@ -513,7 +509,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         if (show_item && ImGui::CollapsingHeader("Hovered Item")) {
             static GuiUtils::EncString item_name;
+            ImGui::PushID("hovered_item");
             DrawItemInfo(GW::Items::GetHoveredItem(), &item_name, true);
+            ImGui::PopID();
         }
         if (show_item && ImGui::CollapsingHeader("Item")) {
             ImGui::Text("First item in inventory");

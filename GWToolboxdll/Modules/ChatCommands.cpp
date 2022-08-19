@@ -141,7 +141,8 @@ namespace {
             const GW::AgentLiving* const agent = static_cast<GW::AgentLiving*>(agents->at(i));
             if (agent == nullptr || agent == me
                 || !agent->GetIsLivingType() || agent->GetIsDead()
-                || agent->allegiance == GW::Constants::Allegiance::Enemy)
+                || agent->allegiance == GW::Constants::Allegiance::Enemy
+                || !GW::Agents::GetIsAgentTargettable(agent))
                 continue;
             const float this_distance = GW::GetSquareDistance(me->pos, agent->pos);
             if (this_distance > max_distance || distance > this_distance)
@@ -710,8 +711,11 @@ void ChatCommands::SearchAgent::Init(const wchar_t* _search, TargetType type) {
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
     if (!agents)
         return;
+    bool target_untargettable_npcs = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
     for (const GW::Agent* agent : *agents) {
         if (!agent) continue;
+        if (!(target_untargettable_npcs || GW::Agents::GetIsAgentTargettable(agent)))
+            continue;
         switch (type) {
         case Item:
             if (!agent->GetIsItemType())
@@ -1721,17 +1725,12 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
     size_t closest = 0;
     size_t count = 0;
 
-    auto is_npc_targettable = [](const GW::AgentLiving* agent) {
-        if (!(agent && agent->IsNPC()))
-            return true;
-        const GW::NPC* npc = GW::Agents::GetNPCByID(agent->player_number);
-        return npc && (npc->npc_flags & 0x10000) == 0;
-    };
+    bool target_untargettable_npcs = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
 
     for (const GW::Agent * agent : *agents) {
         if (!agent || agent == me)
             continue;
-        if (!is_npc_targettable(agent->GetAsAgentLiving()))
+        if (!(target_untargettable_npcs || GW::Agents::GetIsAgentTargettable(agent)))
             continue;
         switch (type) {
             case Gadget: {
