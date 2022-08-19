@@ -578,6 +578,15 @@ namespace {
     }
 #endif
 
+static std::vector<uint32_t> hide_items = {};
+static int new_item_id = 0;
+void AddItemID(const uint32_t item_id) {
+    hide_items.push_back(item_id);
+}
+void RemoveItemID(const uint32_t item_id) {
+    std::erase(hide_items, item_id);
+}
+
 } // namespace
 InventoryManager::InventoryManager()
 {
@@ -672,8 +681,8 @@ void InventoryManager::Initialize() {
 // Hide unsellable items from merchant
 void InventoryManager::OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
     GW::Hook::EnterHook();
-    GW::Item* item = (Instance().hide_unsellable_items || Instance().hide_items.size()) ? GW::Items::GetItemById(item_id) : 0;
-    if (!item || (item->value && std::find(Instance().hide_items.begin(), Instance().hide_items.end(), item->model_id) == Instance().hide_items.end()))
+    GW::Item* item = (Instance().hide_unsellable_items || hide_items.size()) ? GW::Items::GetItemById(item_id) : 0;
+    if (!item || (item->value && std::find(hide_items.begin(), hide_items.end(), item->model_id) == hide_items.end()))
         RetAddItemRowToWindow(ecx, edx, frame, item_id);
     GW::Hook::LeaveHook();
 }
