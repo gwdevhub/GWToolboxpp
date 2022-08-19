@@ -754,10 +754,9 @@ void InventoryManager::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
     ini->SetBoolValue(Name(), VAR_NAME(change_secondary_for_tome), change_secondary_for_tome);
 
-    const char* const section = "hide_items";
     std::string out;
     GuiUtils::ArrayToIni(hide_items.data(), hide_items.size(), &out);
-    ini->SetValue(section, VAR_NAME(hide_items), out.c_str());
+    ini->SetValue(Name(), VAR_NAME(hide_items), out.c_str());
 }
 void InventoryManager::LoadSettings(CSimpleIni* ini) {
     ToolboxUIElement::LoadSettings(ini);
@@ -772,9 +771,8 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
     hide_unsellable_items = ini->GetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
     change_secondary_for_tome = ini->GetBoolValue(Name(), VAR_NAME(change_secondary_for_tome), change_secondary_for_tome);
 
-    const char* const section = "hide_items";
     hide_items.clear();
-    std::string ini_str = ini->GetValue(section, VAR_NAME(hide_items), "");
+    std::string ini_str = ini->GetValue(Name(), VAR_NAME(hide_items), "");
     std::vector<uint32_t> hide_items_tmp;
     GuiUtils::IniToArray(ini_str, hide_items_tmp);
     hide_items = hide_items_tmp;
