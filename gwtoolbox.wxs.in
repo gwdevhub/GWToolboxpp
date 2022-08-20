@@ -36,7 +36,7 @@
                         <File Id="dxdllreg_x86.cab" Source="$(var.DIRECTX_SDK_DIR)\Redist\dxdllreg_x86.cab"/>
                         <File Id="dsetup32.dll" Source="$(var.DIRECTX_SDK_DIR)\Redist\dsetup32.dll"/>
                         <File Id="dsetup.dll" Source="$(var.DIRECTX_SDK_DIR)\Redist\dsetup.dll"/>
-                        <File Id="Jun2010_d3dx10_43_x86.cab" Source="$(var.DIRECTX_SDK_DIR)\Redist\Jun2010_d3dx10_43_x86.cab"/>
+                        <File Id="Jun2010_d3dx9_43_x86.cab" Source="$(var.DIRECTX_SDK_DIR)\Redist\Jun2010_d3dx9_43_x86.cab"/>
                     </Component>
                   </Directory>
                 </Directory>
