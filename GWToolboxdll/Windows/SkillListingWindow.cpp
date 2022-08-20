@@ -120,6 +120,14 @@ void SkillListingWindow::Initialize() {
         skills[i] = new Skill(s);
     }
 }
+void SkillListingWindow::Terminate()
+{
+    ToolboxWindow::Terminate();
+    for (const auto skill : skills) {
+        if (skill) delete skill;
+    }
+    skills.clear();
+}
 void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible)

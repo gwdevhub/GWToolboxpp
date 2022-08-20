@@ -67,14 +67,7 @@ public:
     };
 private:
     SkillListingWindow() = default;
-    ~SkillListingWindow() {
-        for (const auto skill : skills) {
-            if (skill) delete skill;
-        }
-        skills.clear();
-    };
-
-    std::vector<Skill*> skills{};
+    std::vector<Skill*> skills;
 public:
     static SkillListingWindow& Instance() {
         static SkillListingWindow instance;
@@ -86,6 +79,7 @@ public:
 
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
+    void Terminate() override;
 
     void ExportToJSON();
 };
