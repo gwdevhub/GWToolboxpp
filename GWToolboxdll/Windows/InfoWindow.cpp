@@ -491,8 +491,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             const auto& buttons = DialogModule::Instance().GetDialogButtons();
             char bbuf[48];
             for (size_t i = 0; i < buttons.size();i++) {
-                snprintf(bbuf, _countof(bbuf), "Send###send_dialog_%d", i);
-                if (ImGui::Button(bbuf)) {
+                snprintf(bbuf, _countof(bbuf), "send_dialog_%d", i);
+                ImGui::PushID(bbuf);
+                if (ImGui::Button("Send")) {
                     uint32_t dialog_id = buttons[i]->dialog_id;
                     GW::GameThread::Enqueue([dialog_id]() {
                         GW::Agents::SendDialog(dialog_id);
@@ -500,7 +501,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 ImGui::SameLine();
                 InfoField("Icon", "0x%X", buttons[i]->button_icon);
+                EncInfoField("Encoded",messages[i]->encoded().c_str());
                 InfoField(messages[i]->string().c_str(), "0x%X", buttons[i]->dialog_id);
+                ImGui::PopID();
             }
         }
         if (ImGui::CollapsingHeader("Hovered Skill")) {
