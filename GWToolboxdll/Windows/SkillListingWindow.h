@@ -67,7 +67,7 @@ public:
     };
 private:
     SkillListingWindow() = default;
-    ~SkillListingWindow() override {
+    ~SkillListingWindow() {
         for (const auto skill : skills) {
             if (skill) delete skill;
         }
