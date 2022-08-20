@@ -216,7 +216,11 @@ static bool DeleteInstallationDirectory(void)
 
     int iRet = SHFileOperationW(&FileOp);
     if (iRet != 0) {
-        fprintf(stderr, "SHFileOperationW failed: 0x%Xd\n", iRet);
+        fprintf(stderr, "SHFileOperationW failed: 0x%X, GetLastError 0x%X\n", iRet, GetLastError());
+        return false;
+    }
+    if (FileOp.fAnyOperationsAborted) {
+        fprintf(stderr, "SHFileOperationW failed: fAnyOperationsAborted\n");
         return false;
     }
 
