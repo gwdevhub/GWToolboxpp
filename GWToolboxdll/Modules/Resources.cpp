@@ -674,19 +674,20 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
     }
     
     // No local file found; download from wiki via searching by the item name; the wiki will usually return a 302 redirect if its an exact item match
-    char url[128];
-    std::string search_str = GuiUtils::UrlEncode(GuiUtils::WStringToString(GuiUtils::RemoveDiacritics(item_name)));
-    snprintf(url, _countof(url), "https://wiki.guildwars.com/index.php?search=%s", search_str.c_str());
-    Instance().Download(url, [texture, item_name, callback](bool ok, const std::string& response) {
+    std::string search_str = GuiUtils::WikiUrl(item_name);
+    Instance().Download(search_str, [texture, item_name, callback](bool ok, const std::string& response) {
         if (!ok) {
             callback(ok, GuiUtils::StringToWString(response));
             return;
         }
         std::string item_name_str = GuiUtils::WStringToString(item_name);
+        // matches any characters that need to be escaped in RegEx
+        std::regex specialChars{ R"([-[\]{}()*+?.,\^$|#\s])" };
+        std::string sanitized = std::regex_replace(item_name_str, specialChars, R"(\$&)");
         std::smatch m;
         // Find first png image that has an alt tag matching the html encoded title of the page
         char regex_str[255];
-        snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"][^>]*%s[^>]*['\"][^>]+src=['\"]([^\"']+)([.](png))", item_name_str.c_str());
+        snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"][^>]*%s[^>]*['\"][^>]+src=['\"]([^\"']+)([.](png))", sanitized.c_str());
         if (!std::regex_search(response, m, std::regex(regex_str))) {
             // Failed to find via item name; try via page title
             const std::regex title_finder("<title>(.*) - Guild Wars Wiki.*</title>");

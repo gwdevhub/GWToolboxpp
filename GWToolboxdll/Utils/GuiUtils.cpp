@@ -70,7 +70,7 @@ namespace GuiUtils {
         if (!url_path.size())
             return GetWikiPrefix();
         char cmd[256];
-        std::string encoded = UrlEncode(WStringToString(url_path));
+        std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(url_path)),'_');
         snprintf(cmd, _countof(cmd), "%s%s", GetWikiPrefix(), encoded.c_str());
         return cmd;
     }
@@ -334,7 +334,7 @@ namespace GuiUtils {
         out[len] = 0;
         return out;
     }
-    std::string UrlEncode(const std::string s) {
+    std::string UrlEncode(const std::string s, const char space_token) {
         if (s.empty())
             return "";
         static char html5[256] = { 0 };
@@ -343,7 +343,7 @@ namespace GuiUtils {
             for (uint8_t i = 0; ; i++) {
                 html5[i] = (isalnum(i) || i == '*' || i == '-' || i == '.' || i == '_') ? i : 0;
                 if (i == ' ') {
-                    html5[i] = '+';
+                    html5[i] = space_token;
                 }
                 if (i == 255) break;
             }

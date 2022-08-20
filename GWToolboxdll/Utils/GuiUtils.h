@@ -34,7 +34,7 @@ namespace GuiUtils {
     std::wstring ToSlug(std::wstring s);
     std::string ToLower(std::string s);
     std::wstring ToLower(std::wstring s);
-    std::string UrlEncode(std::string str);
+    std::string UrlEncode(std::string str, const char space_token = '_');
     std::string HtmlEncode(std::string str);
     std::wstring RemovePunctuation(std::wstring s);
     std::string RemovePunctuation(std::string s);
