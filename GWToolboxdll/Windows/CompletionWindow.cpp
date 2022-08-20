@@ -30,6 +30,9 @@
 #include <Windows/CompletionWindow.h>
 #include <Windows/TravelWindow.h>
 
+#include <Color.h>
+#include <Modules/DialogModule.h>
+
 using namespace GW::Constants;
 using namespace Missions;
 
@@ -81,6 +84,142 @@ namespace {
 		"Zei Ri"
 	};
 
+	// NOTE: Do NOT try to reorder this list; the keys are used to identify which minipet is which in the tracker across saves.
+	const wchar_t* encoded_minipet_names[] = {
+
+		L"\x8101\x730C", // Aatxe
+		L"\x8102\x4509", // Abyssal
+		L"\x8101\x682F", // Asura
+		L"\x8102\x450A", // Black Beast of Aaaaarrrrrrggghhh
+		L"\x8102\x2176\xA5D1\x8A87\x6C96", // Black Moa Chick
+		L"\x8101\x3E8\xB1EC\xA471\xA12", // Bone Dragon
+		L"\x8102\x5387\x8E7B\xC70D\x6A66", // Brown Rabbit
+		L"\x8101\x3F2\xA392\x9F0A\x2FD5", // Burning Titan
+		L"\x8102\x4515", // Cave Spider
+		L"\x8102\x3F68\xB9DD\x9EEE\x73A7", // Celestial Dog
+		L"\x8102\x3F62\xF4D2\xB3A7\x50D9", // Celestial Dragon
+		L"\x8102\x3F64\x91D1\xFF08\x1406", // Celestial Horse
+		L"\x8102\x3F66\xC842\x9CB3\xF11", // Celestial Monkey
+		L"\x8102\x3F5F\xEAB3\x9E25\x22C9", // Celestial Ox
+		L"\x8102\x3F5D\x82A5\xCB19\x49F7", // Celestial Pig
+		L"\x8102\x3F61\xD886\xC8C6\x70BD", // Celestial Rabbit
+		L"\x8102\x3F5E\xA749\x8783\x5EE0", // Celestial Rat
+		L"\x8102\x3F67\xA65A\xEF3A\x7E4F", // Celestial Rooster
+		L"\x8102\x3F65\xF85B\xEFA1\x5929", // Celestial Sheep
+		L"\x8102\x3F63\xBF56\xE485\x37B7", // Celestial Snake
+		L"\x8102\x3F60\xB396\xABEF\x3CA6", // Celestial Tiger
+		L"\x8102\x3272", // Ceratadon
+		L"\x8101\x3E9\xDD98\xBEEE\x5ABA", // Charr Shaman
+		L"\x8102\x4514", // Cloudtouched Simian
+		L"\x8101\x76DD", // Destroyer of Flesh
+		L"\x8102\x5945", // Dredge Brute
+		L"\x8103\x6F9", // Ecclesiate Xun Rao
+		L"\x8101\x7303", // Elf
+		L"\x8101\x730B", // Fire Imp
+		L"\x8102\x450E", // Forest Minotaur
+		L"\x8102\x450B", // Freezie
+		L"\x8101\x3E7\xFB88\xF384\x7D78", // Fungal Wallow
+		L"\x8102\x122E", // Grawl
+		L"\x8101\x2EA1\xAECB\x8321\x55B2", // Gray Giant
+		L"\x8101\x66FD\xB774\x8AC7\x4878", // Greased Lightning
+		L"\x8102\x7446", // Guild Lord
+		L"\x8101\x7300", // Gwen	
+		L"\x8102\x5385\xB5F4\xDD41\x6DE", // Gwen Doll
+		L"\x8101\x7308", // Harpy Ranger
+		L"\x8101\x7307", // Heket Warrior
+		L"\x8101\x3EC\xC067\xCE23\x645C", // Hydra
+		L"\x8102\x450C", // Irukandji
+		L"\x108\x107" "Miniature Island Guardian\x1", // Island Guardian (need)
+		L"\x8101\x3ED\xF9DD\xCFE6\x144F", // Jade Armor
+		L"\x8101\x7309", // Juggernaught
+		L"\x8101\x3F3\x870C\xA10D\xB74", // Jungle Troll
+		L"\x108\x107" "Miniature Kanaxai\x1", // Kanaxai (need)
+		L"\x8101\x3EE\xFEE1\x8908\xA80", // Kirin
+		L"\x8101\x7305", // Koss
+		L"\x8101\x9Bc", // Kuunavang
+		L"\x8103\xAF7\xCFC2\x99A2\x3DDC", // Legionnaire
+		L"\x8101\x7302", // Lich
+		L"\x8101\xF81\x9D3D\xF28A\x2F4E", // Longhair Yeti
+		L"\x8101\xF7D\xBCAD\xF3B9\xC22", // Naga Raincaller
+		L"\x8101\x3EB\xFBB9\xF538\x2C8", // Necrid Horseman
+		L"\x8102\x4510", // Nornbear
+		L"\x8102\x450D", // Mad King Thorn
+		L"\x8102\x5CC5", // Mad King's Guard
+		L"\x8101\x39EF\xC406\xC4C7\x7D88", // Mallyx
+		L"\x8101\x7306", // Mandragor Imp
+		L"\x8103\x6F8", // Minister Reiko
+		L"\x8102\x450F", // Mursaat
+		L"\x8101\xF7E\x95BD\xB2B4\x51E7", // Oni
+		L"\x8102\x4511", // Ooze
+		L"\x8101\x7304", // Palawa Joko
+		L"\x108\x107" "Miniature Panda\x1", // Panda (need)
+		L"\x8101\x66FC\xC207\xBD26\x40CB", // Pig
+		L"\x8101\x3C78", // Polar Bear
+		L"\x8101\x3EF\xE477\xD632\x3AC", // Prince Rurik
+		L"\x8102\x4512", // Raptor
+		L"\x8102\x4513", // Roaring Ether
+		L"\x8101\x3F0\x98B5\xB78C\x1EBD", // Shiro
+		L"\x8101\x6BB6", // Shiro'ken Assassin
+		L"\x8101\x3F4\x9D9B\xEDB3\x3EA7", // Siege Turtle
+		L"\x8101\x3F1\xCAA4\xC7B1\x77B8", // Temple Guardian
+		L"\x8101\x730D", // Thorn Wolf
+		L"\x8101\x5EE0", // Varesh
+		L"\x8101\x6BB7", // Vizu
+		L"\x8101\x7301", // Water Djinn
+		L"\x8101\x3EA\xB3F6\xFFBA\x1293", // Whiptail Devourer
+		L"\x8102\x4516", // White Rabbit
+		L"\x8101\x730A", // Wind Rider
+		L"\x8102\x5944", // Word of Madness
+		L"\x8102\x5389\xD54E\xE94E\x5120", // Yakkington
+		L"\x8101\x6BB8", // Zhed Shadowhoof
+		
+		L"\x8102\x5946", // Terrorweb Dryder
+		L"\x8102\x5947", // Abomination
+		L"\x8102\x5948", // Krait Neoss
+		L"\x8102\x5949", // Desert Griffon
+		L"\x8102\x594A", // Kveldulf
+		L"\x8102\x594B", // Quetzal Sly
+		L"\x8102\x594C", // Jora
+		L"\x8102\x594D", // Flowstone Elemental
+		L"\x8102\x594E", // Nian
+		L"\x8102\x594F", // Dagnar Stoneplate
+		L"\x8102\x5950", // Flame Djinn
+		L"\x8102\x5952", // Eye of Janthir
+
+		
+		L"\x8102\x5CC6", // Smite Crawler
+		L"\x8102\x5E49", // Dhuum
+
+		L"\x8102\x6505", // Seer
+		L"\x8102\x6506", // Siege Devourer
+		L"\x8102\x6507", // Shard Wolf
+		L"\x8102\x6508", // Fire Drake
+		L"\x8102\x6509", // Summit Giant Herder
+		L"\x8102\x650A", // Ophil Nahualli
+		L"\x8102\x650B", // Cobalt Scabara
+		L"\x8102\x650C", // Scourge Manta
+		L"\x8102\x650D", // Ventari
+		L"\x8102\x650E", // Oola
+		L"\x8102\x650F", // Candysmith Marley
+		L"\x8102\x6510", // Zhu Hanuku
+		L"\x8102\x6511", // King Adelbern
+		L"\x8102\x6512", // M.O.X
+
+		L"\x8102\x6799", // Salma
+		L"\x8102\x679A", // Livia
+		L"\x8102\x679B", // Evennia
+		L"\x8102\x679C", // Confessor Isaiah
+		L"\x8102\x679D", // Confessor Dorian
+		L"\x8102\x679E", // Peacekeeper Enforcer
+
+		L"\x8102\x7526", // High Priest Zhang
+		L"\x8102\x7527", // Ghostly Priest
+		L"\x8102\x7528", // Rift Warden
+
+		L"\x8103\xA3B\xEEC0\xD3AD\x6648", // World-Famous Racing Beetle
+		L"\x8101\x6730", // Ghostly Hero (need)
+	};
+
 	const wchar_t* GetPlayerName() {
 		return GW::GameContext::instance()->character->player_name;
 	}
@@ -91,6 +230,96 @@ namespace {
 
 	std::wstring chosen_player_name;
 	std::string chosen_player_name_s;
+
+	CompletionWindow& Instance() {
+		return CompletionWindow::Instance();
+	}
+
+	// Check for "Cycle displayed minipets" button - if present, this is our hom dialog!
+	void OnDialogButton(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+		ASSERT(message_id == GW::UI::UIMessage::kDialogButton);
+		GW::UI::DialogButtonInfo* button = (GW::UI::DialogButtonInfo*)wparam;
+		if (wcsncmp(button->message, L"\x8102\x2B96\xA802\xD212\x380C",5) != 0)
+			return; // Not "Cycle displayed minipets"
+		const wchar_t* dialog_body = DialogModule::Instance().GetDialogBody();
+		if (!(dialog_body && wcsncmp(dialog_body, L"\x8102\x2B9D\xDE1D\xB19F\x52DD", 5) == 0))
+			return; // Not devotion dialog "Miniatures on display"
+		std::wregex displayed_miniatures(L"\x2\x102\x2([^\x102\x2]+)");
+		std::wsmatch m;
+		std::wstring subject(dialog_body);
+		std::wstring msg;
+		auto cc = Instance().character_completion[GetPlayerName()];
+		auto& minipets_unlocked = cc->minipets_unlocked;
+		minipets_unlocked.clear();
+		while (std::regex_search(subject, m, displayed_miniatures)) {
+			std::wstring miniature_encoded_name(m[1].str());
+			for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
+				if (encoded_minipet_names[i] == miniature_encoded_name) {
+					uint32_t real_index = (uint32_t)i / 32;
+					if (real_index >= minipets_unlocked.size()) {
+						minipets_unlocked.resize(real_index + 1, 0);
+					}
+					uint32_t shift = (uint32_t)i % 32;
+					uint32_t flag = 1u << shift;
+					minipets_unlocked[real_index] |= flag;
+					break;
+				}
+			}
+			subject = m.suffix().str();
+		}
+		std::wregex available_miniatures(L"\x2\x109\x2([^\x109\x2]+)");
+		while (std::regex_search(subject, m, available_miniatures)) {
+			std::wstring miniature_encoded_name(m[1].str());
+			for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
+				if (encoded_minipet_names[i] == miniature_encoded_name) {
+					uint32_t real_index = (uint32_t)i / 32;
+					if (real_index >= minipets_unlocked.size()) {
+						minipets_unlocked.resize(real_index + 1, 0);
+					}
+					uint32_t shift = (uint32_t)i % 32;
+					uint32_t flag = 1u << shift;
+					minipets_unlocked[real_index] |= flag;
+					break;
+				}
+			}
+			subject = m.suffix().str();
+		}
+		Instance().CheckProgress();
+	}
+	
+	// Flag miniature as unlocked for current character when dedicated
+	void OnSendDialog(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+		ASSERT(message_id == GW::UI::UIMessage::kSendDialog);
+		if (GW::Map::GetMapID() != GW::Constants::MapID::Hall_of_Monuments)
+			return;
+		uint32_t dialog_id = (uint32_t)wparam;
+		auto available_dialogs = DialogModule::Instance().GetDialogButtons();
+		auto this_dialog_button = std::find_if(available_dialogs.begin(), available_dialogs.end(), [dialog_id](auto d) { return d->dialog_id == dialog_id; });
+		if (this_dialog_button == available_dialogs.end())
+			return;
+		std::wregex miniature_displayed_regex(L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A([^\x1]+)");
+		std::wsmatch m;
+		std::wstring subject((*this_dialog_button)->message);
+		std::wstring msg;
+		auto cc = Instance().character_completion[GetPlayerName()];
+		auto& minipets_unlocked = cc->minipets_unlocked;
+		if (!std::regex_search(subject, m, miniature_displayed_regex))
+			return;
+		std::wstring miniature_encoded_name(m[1].str());
+		for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
+			if (encoded_minipet_names[i] == miniature_encoded_name) {
+				uint32_t real_index = (uint32_t)i / 32;
+				if (real_index >= minipets_unlocked.size()) {
+					minipets_unlocked.resize(real_index + 1, 0);
+				}
+				uint32_t shift = (uint32_t)i % 32;
+				uint32_t flag = 1u << shift;
+				minipets_unlocked[real_index] |= flag;
+				Instance().CheckProgress();
+				break;
+			}
+		}
+	}
 
 	void LoadTextures(std::vector<MissionImage>& mission_images) {
 		Resources::EnsureFolderExists(Resources::GetPath(L"img", L"missions"));
@@ -409,6 +638,37 @@ void HeroUnlock::OnClick() {
 		});
 }
 
+MinipetUnlock::MinipetUnlock(size_t _minipet_id, const wchar_t* encoded_name)
+	: PvESkill(GW::Constants::SkillID::No_Skill, nullptr) {
+	minipet_id = _minipet_id;
+	name.reset(encoded_name);
+}
+void MinipetUnlock::CheckProgress(const std::wstring& player_name) {
+	is_completed = false;
+	auto& cc = CompletionWindow::Instance().character_completion;
+	auto found = cc.find(player_name);
+	if (found == cc.end())
+		return;
+	std::vector<uint32_t>& minipets_unlocked = found->second->minipets_unlocked;
+	is_completed = bonus = ArrayBoolAt(minipets_unlocked, minipet_id);
+}
+const char* MinipetUnlock::Name() {
+	return name.string().c_str();
+}
+IDirect3DTexture9* MinipetUnlock::GetMissionImage()
+{
+	if (name.wstring().size()) {
+		if (name.wstring() == L"Brown Rabbit") {
+			return *Resources::GetItemImage(L"Brown Rabbit (miniature)");
+		}
+		return *Resources::GetItemImage(name.wstring());
+	}
+	return nullptr;
+}
+void MinipetUnlock::OnClick() {
+	GuiUtils::OpenWiki(name.wstring());
+}
+
 IDirect3DTexture9* PvESkill::GetMissionImage()
 {
 	return *Resources::GetSkillImage(skill_id);
@@ -570,6 +830,9 @@ void CompletionWindow::Initialize()
 		{ GW::Constants::Campaign::Nightfall, {} },
 		{ GW::Constants::Campaign::EyeOfTheNorth, {} }
 	 };
+	 for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
+		 minipets.push_back(new MinipetUnlock(i,encoded_minipet_names[i]));
+	 }
 
 	Initialize_Prophecies();
 	Initialize_Factions();
@@ -696,6 +959,10 @@ void CompletionWindow::Initialize()
 		ParseCompletionBuffer(CompletionType::MapsUnlocked);
 		CheckProgress();
 		});
+
+	GW::UI::RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kDialogButton, OnDialogButton);
+	GW::UI::RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kSendDialog, OnSendDialog);
+
 	ParseCompletionBuffer(CompletionType::Mission);
 	ParseCompletionBuffer(CompletionType::MissionBonus);
 	ParseCompletionBuffer(CompletionType::MissionBonusHM);
@@ -707,10 +974,6 @@ void CompletionWindow::Initialize()
 	CheckProgress();
 	wcscpy(last_player_name,GetPlayerName());
 }
-
-
-
-
 void CompletionWindow::Initialize_Prophecies()
 {
 	LoadTextures(PropheciesMission::normal_mode_images);
@@ -1520,6 +1783,9 @@ void CompletionWindow::Terminate()
 	clear_vec(pve_skills);
 	clear_vec(elite_skills);
 	clear_vec(heros);
+	for (auto c : minipets)
+		delete c;
+	minipets.clear();
 
 	for (const auto& camp : character_completion)
 		delete camp.second;
@@ -1761,7 +2027,22 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 			draw_missions(camp_missions);
 		}
 	}
+	DrawHallOfMonuments(device);
+	ImGui::EndChild();
+	ImGui::End();
+}
+void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
+	float single_item_width = Mission::icon_size.x;
+	if (show_as_list)
+		single_item_width *= 5.f;
+	int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x)));
+	const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
 	ImGui::Text("Hall of Monuments");
+	ImGui::ShowHelp("To update this list, talk to the \"Devotion\" pedestal in Eye of the North,\n then press \"Examine the Monument to Devotion.\"");
+	ImGui::SameLine(checkbox_offset);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
+	ImGui::Checkbox("Hide dedicated minipets", &hide_unlocked_minipets);
+	ImGui::PopStyleVar();
 	auto hom = character_completion[chosen_player_name]->hom_achievements;
 	// Devotion
 	uint32_t completed = 0;
@@ -1770,15 +2051,48 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 			completed += hom->devotion_points[i];
 		}
 	}
+	uint32_t minipets_dedicated = 0;
+	uint32_t drawn = 0;
+	for (auto m : minipets) {
+		if (m->is_completed) {
+			minipets_dedicated++;
+			if (hide_unlocked_minipets)
+				continue;
+		}
+		drawn++;
+	}
+
 	char label[128];
-	snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###devotion_points", "Devotion", completed, DevotionPoints::TotalAvailable, ((float)completed / (float)DevotionPoints::TotalAvailable) * 100.f);
+	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d minipets dedicated) - %.0f%%###devotion_points", "Devotion", 
+		completed, DevotionPoints::TotalAvailable, 
+		minipets_dedicated, minipets.size(),
+		((float)minipets_dedicated / (float)minipets.size()) * 100.f);
+
 	if (ImGui::CollapsingHeader(label)) {
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
-		size_t items_per_col = (size_t)ceil(_countof(hom->devotion_points) / static_cast<float>(missions_per_row));
+		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
 		size_t col_count = 0;
-		for (size_t i = 0; i < _countof(hom->devotion_points); i++) {
-			// TODO: Get encoded name for hom points.
+
+		if (!minipets_sorted) {
+			bool ready = true;
+			for (auto m : minipets) {
+				if (!m->Name()[0]) {
+					ready = false;
+					break;
+				}
+			}
+			if (ready) {
+				std::sort(minipets.begin(), minipets.end(), [](MinipetUnlock* a, MinipetUnlock* b) { return strcmp(a->Name(), b->Name()) < 0;  });
+				minipets_sorted = true;
+			}
+		}
+
+		for (auto m : minipets) {
+			if (m->is_completed && hide_unlocked_minipets)
+				continue;
+			if (!m->Draw(device))
+				continue;
 			col_count++;
 			if (col_count == items_per_col) {
 				ImGui::NextColumn();
@@ -1788,8 +2102,6 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 		ImGui::Columns(1);
 		ImGui::PopStyleVar();
 	}
-	ImGui::EndChild();
-	ImGui::End();
 }
 void CompletionWindow::DrawSettingInternal()
 {
@@ -1838,6 +2150,7 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
 		read_ini_to_buf(CompletionType::Vanquishes, "vanquishes");
 		read_ini_to_buf(CompletionType::Heroes, "heros");
 		read_ini_to_buf(CompletionType::MapsUnlocked, "maps_unlocked");
+		read_ini_to_buf(CompletionType::MinipetsUnlocked, "minipets_unlocked");
 
 		Completion* c = GetCharacterCompletion(name_ws.data());
 		if(c)
@@ -1870,6 +2183,9 @@ CompletionWindow* CompletionWindow::CheckProgress() {
 		for (auto& skill : camp.second) {
 			skill->CheckProgress(chosen_player_name);
 		}
+	}
+	for (auto minipet : minipets) {
+		minipet->CheckProgress(chosen_player_name);
 	}
 	hom_achievements_status = 0xf;
 	auto& cc = CompletionWindow::Instance().character_completion;
@@ -1915,6 +2231,7 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
 		write_buf_to_ini("vanquishes", &char_comp->vanquishes, ini_str, name);
 		write_buf_to_ini("heros", &char_comp->heroes, ini_str, name);
 		write_buf_to_ini("maps_unlocked", &char_comp->maps_unlocked, ini_str, name);
+		write_buf_to_ini("minipets_unlocked", &char_comp->minipets_unlocked, ini_str, name);
 		completion_ini->SetValue(name->c_str(), "hom_code", char_comp->hom_code.c_str());
 	}
 	completion_ini->SaveFile(Resources::GetPath(completion_ini_filename).c_str());
@@ -2023,6 +2340,9 @@ CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, w
 	} break;
 	case CompletionType::MapsUnlocked:
 		write_buf = &this_character_completion->maps_unlocked;
+		break;
+	case CompletionType::MinipetsUnlocked:
+		write_buf = &this_character_completion->minipets_unlocked;
 		break;
 	default:
 		ASSERT("Invalid CompletionType" && false);

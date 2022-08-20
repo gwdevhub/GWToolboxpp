@@ -97,6 +97,20 @@ namespace Missions {
         const char* Name() override;
     };
 
+    class MinipetUnlock : public PvESkill {
+    private:
+        GuiUtils::EncString name;
+        size_t minipet_id;
+    public:
+        MinipetUnlock(size_t _minipet_id, const wchar_t* encoded_name);
+        IDirect3DTexture9* GetMissionImage() override;
+
+        void OnClick() override;
+
+        virtual void CheckProgress(const std::wstring& player_name) override;
+        const char* Name() override;
+    };
+
     class FactionsPvESkill : public PvESkill {
     public:
         FactionsPvESkill(GW::Constants::SkillID skill_id);
@@ -221,6 +235,7 @@ namespace Missions {
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class CompletionWindow : public ToolboxWindow {
 protected:
+    bool hide_unlocked_minipets = false;
     bool hide_unlocked_skills = false;
     bool hide_completed_vanquishes = false;
     bool hide_completed_missions = false;
@@ -237,7 +252,8 @@ protected:
         MissionBonusHM,
         Vanquishes,
         Heroes,
-        MapsUnlocked
+        MapsUnlocked,
+        MinipetsUnlocked
     };
     struct Completion {
         GW::Constants::Profession profession;
@@ -252,6 +268,7 @@ protected:
         std::vector<uint32_t> maps_unlocked;
         std::string hom_code;
         HallOfMonumentsAchievements* hom_achievements = 0;
+        std::vector<uint32_t> minipets_unlocked;
     };
 
 public:
@@ -273,7 +290,7 @@ public:
 	void Initialize_Dungeons();
 	void Terminate() override;
 	void Draw(IDirect3DDevice9* pDevice) override;
-    void DrawHallOfMonuments();
+    void DrawHallOfMonuments(IDirect3DDevice9* device);
     
     std::unordered_map<std::wstring, Completion*> character_completion;
 
@@ -296,6 +313,8 @@ public:
     std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
     std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
     std::map<GW::Constants::Campaign, std::vector<Missions::HeroUnlock*>> heros;
+    std::vector<Missions::MinipetUnlock*> minipets;
+    bool minipets_sorted = false;
     HallOfMonumentsAchievements hom_achievements;
     int hom_achievements_status = 0xf;
 };
