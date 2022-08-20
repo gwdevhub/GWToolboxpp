@@ -19,6 +19,13 @@ static void printchar(wchar_t c)
         printf("0x%X ", c);
     }
 }
+StringDecoderWindow::~StringDecoderWindow()
+{
+    if (encoded) {
+        free(encoded);
+        encoded = 0;
+    }
+}
 void StringDecoderWindow::Draw(IDirect3DDevice9 *pDevice)
 {
     UNREFERENCED_PARAMETER(pDevice);
@@ -26,10 +33,19 @@ void StringDecoderWindow::Draw(IDirect3DDevice9 *pDevice)
         return;
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+        if (encoded) {
+            free(encoded);
+            encoded = 0;
+        }
         return ImGui::End();
+    }
+    if (!encoded) {
+        encoded = (char*)malloc(encoded_size);
+        encoded[0] = 0;
+    }
     bool decodeIt = ImGui::InputInt("Encoded string id:", &encoded_id, 1, 1, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal);
-    decodeIt |= ImGui::InputText("Encoded string:", encoded, 2048, ImGuiInputTextFlags_EnterReturnsTrue);
+    decodeIt |= ImGui::InputText("Encoded string:", encoded, encoded_size, ImGuiInputTextFlags_EnterReturnsTrue);
     decodeIt |= ImGui::Button("Decode");
     if(decodeIt)
     {
@@ -87,7 +103,7 @@ std::wstring StringDecoderWindow::GetEncodedString()
     std::vector<std::string> results((std::istream_iterator<std::string>(iss)),
                                      std::istream_iterator<std::string>());
 
-    wchar_t encodedW[100];
+    std::wstring encodedW(results.size() + 1, 0);
     size_t i = 0;
     for (i=0; i < results.size(); i++) {
         Log::Log("%s\n", results[i].c_str());

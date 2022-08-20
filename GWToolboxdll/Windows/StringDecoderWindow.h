@@ -4,7 +4,7 @@
 
 class StringDecoderWindow : public ToolboxWindow {
     StringDecoderWindow() {};
-    ~StringDecoderWindow() {};
+    ~StringDecoderWindow();
 public:
     static StringDecoderWindow& Instance() {
         static StringDecoderWindow instance;
@@ -26,7 +26,8 @@ public:
 
 private:
     int encoded_id = 0;
-    char encoded[2048] = { 0 };
+    char* encoded = 0;
+    const size_t encoded_size = 8192;
     std::wstring decoded;
     int map_id = 0;
 };
