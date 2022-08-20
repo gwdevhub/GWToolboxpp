@@ -924,7 +924,7 @@ void GameSettings::Initialize() {
         GW::UI::UIMessage::kDialogButton
     };
     for (const auto message_id : dialog_ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, message_id, OnDialogUIMessage);
+        GW::UI::RegisterUIMessageCallback(&OnPostSendDialog_Entry, message_id, OnDialogUIMessage,0x8000);
     }
     
 
@@ -941,7 +941,7 @@ void GameSettings::OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
             // 8101 7f88 010a 8101 730e 0001
             if (Instance().auto_open_locked_chest && wcscmp(info->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
                 // Auto use lockpick
-                GW::Items::OpenLockedChest(false);
+                GW::Agents::SendDialog(info->dialog_id);
             }
         } break;
     }
