@@ -41,133 +41,133 @@ WORD* TBHotkey::key_out = nullptr;
 DWORD* TBHotkey::mod_out = nullptr;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
 std::vector<const char*> HotkeyGWKey::labels = {};
-std::vector < std::pair< GW::UI::ControlAction, GuiUtils::EncString* > > HotkeyGWKey::control_labels = {
-    {GW::UI::ControlAction::ControlAction_Interact,0 },
-    {GW::UI::ControlAction::ControlAction_CancelAction,0 },
-    {GW::UI::ControlAction::ControlAction_ClearPartyCommands,0 },
-    {GW::UI::ControlAction::ControlAction_CommandHero1,0 },
-    {GW::UI::ControlAction::ControlAction_CommandHero2,0 },
-    {GW::UI::ControlAction::ControlAction_CommandHero3,0 },
-    {GW::UI::ControlAction::ControlAction_CommandHero4,0 },
-    {GW::UI::ControlAction::ControlAction_CommandHero5,0 },
-    {GW::UI::ControlAction::ControlAction_CommandHero6,0 },
-    {GW::UI::ControlAction::ControlAction_CommandHero7,0 },
-    {GW::UI::ControlAction::ControlAction_CommandParty,0 },
-
-    {GW::UI::ControlAction::ControlAction_DropItem,0 },
-    {GW::UI::ControlAction::ControlAction_Follow,0 },
-
-    {GW::UI::ControlAction::ControlAction_OpenHero1PetCommander,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHero2PetCommander,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHero3PetCommander,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHero4PetCommander,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHero5PetCommander,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHero6PetCommander,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHero7PetCommander,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander1,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander2,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander3,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander4,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander5,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander6,0 },
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander7,0 },
-
-    {GW::UI::ControlAction::ControlAction_Hero1Skill1,0 },
-    {GW::UI::ControlAction::ControlAction_Hero1Skill2,0 },
-    {GW::UI::ControlAction::ControlAction_Hero1Skill3,0 },
-    {GW::UI::ControlAction::ControlAction_Hero1Skill4,0 },
-    {GW::UI::ControlAction::ControlAction_Hero1Skill5,0 },
-    {GW::UI::ControlAction::ControlAction_Hero1Skill6,0 },
-    {GW::UI::ControlAction::ControlAction_Hero1Skill7,0 },
-    {GW::UI::ControlAction::ControlAction_Hero1Skill8,0 },
-    {GW::UI::ControlAction::ControlAction_Hero2Skill1,0 },
-    {GW::UI::ControlAction::ControlAction_Hero2Skill2,0 },
-    {GW::UI::ControlAction::ControlAction_Hero2Skill3,0 },
-    {GW::UI::ControlAction::ControlAction_Hero2Skill4,0 },
-    {GW::UI::ControlAction::ControlAction_Hero2Skill5,0 },
-    {GW::UI::ControlAction::ControlAction_Hero2Skill6,0 },
-    {GW::UI::ControlAction::ControlAction_Hero2Skill7,0 },
-    {GW::UI::ControlAction::ControlAction_Hero2Skill8,0 },
-    {GW::UI::ControlAction::ControlAction_Hero3Skill1,0 },
-    {GW::UI::ControlAction::ControlAction_Hero3Skill2,0 },
-    {GW::UI::ControlAction::ControlAction_Hero3Skill3,0 },
-    {GW::UI::ControlAction::ControlAction_Hero3Skill4,0 },
-    {GW::UI::ControlAction::ControlAction_Hero3Skill5,0 },
-    {GW::UI::ControlAction::ControlAction_Hero3Skill6,0 },
-    {GW::UI::ControlAction::ControlAction_Hero3Skill7,0 },
-    {GW::UI::ControlAction::ControlAction_Hero3Skill8,0 },
-    {GW::UI::ControlAction::ControlAction_Hero4Skill1,0 },
-    {GW::UI::ControlAction::ControlAction_Hero4Skill2,0 },
-    {GW::UI::ControlAction::ControlAction_Hero4Skill3,0 },
-    {GW::UI::ControlAction::ControlAction_Hero4Skill4,0 },
-    {GW::UI::ControlAction::ControlAction_Hero4Skill5,0 },
-    {GW::UI::ControlAction::ControlAction_Hero4Skill6,0 },
-    {GW::UI::ControlAction::ControlAction_Hero4Skill7,0 },
-    {GW::UI::ControlAction::ControlAction_Hero4Skill8,0 },
-    {GW::UI::ControlAction::ControlAction_Hero5Skill1,0 },
-    {GW::UI::ControlAction::ControlAction_Hero5Skill2,0 },
-    {GW::UI::ControlAction::ControlAction_Hero5Skill3,0 },
-    {GW::UI::ControlAction::ControlAction_Hero5Skill4,0 },
-    {GW::UI::ControlAction::ControlAction_Hero5Skill5,0 },
-    {GW::UI::ControlAction::ControlAction_Hero5Skill6,0 },
-    {GW::UI::ControlAction::ControlAction_Hero5Skill7,0 },
-    {GW::UI::ControlAction::ControlAction_Hero5Skill8,0 },
-    {GW::UI::ControlAction::ControlAction_Hero6Skill1,0 },
-    {GW::UI::ControlAction::ControlAction_Hero6Skill2,0 },
-    {GW::UI::ControlAction::ControlAction_Hero6Skill3,0 },
-    {GW::UI::ControlAction::ControlAction_Hero6Skill4,0 },
-    {GW::UI::ControlAction::ControlAction_Hero6Skill5,0 },
-    {GW::UI::ControlAction::ControlAction_Hero6Skill6,0 },
-    {GW::UI::ControlAction::ControlAction_Hero6Skill7,0 },
-    {GW::UI::ControlAction::ControlAction_Hero6Skill8,0 },
-    {GW::UI::ControlAction::ControlAction_Hero7Skill1,0 },
-    {GW::UI::ControlAction::ControlAction_Hero7Skill2,0 },
-    {GW::UI::ControlAction::ControlAction_Hero7Skill3,0 },
-    {GW::UI::ControlAction::ControlAction_Hero7Skill4,0 },
-    {GW::UI::ControlAction::ControlAction_Hero7Skill5,0 },
-    {GW::UI::ControlAction::ControlAction_Hero7Skill6,0 },
-    {GW::UI::ControlAction::ControlAction_Hero7Skill7,0 },
-    {GW::UI::ControlAction::ControlAction_Hero7Skill8,0 },
-
-    {GW::UI::ControlAction::ControlAction_UseSkill1,0 },
-    {GW::UI::ControlAction::ControlAction_UseSkill2,0 },
-    {GW::UI::ControlAction::ControlAction_UseSkill3,0 },
-    {GW::UI::ControlAction::ControlAction_UseSkill4,0 },
-    {GW::UI::ControlAction::ControlAction_UseSkill5,0 },
-    {GW::UI::ControlAction::ControlAction_UseSkill6,0 },
-    {GW::UI::ControlAction::ControlAction_UseSkill7,0 },
-    {GW::UI::ControlAction::ControlAction_UseSkill8,0 },
-
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet1,0 },
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet2,0 },
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet3,0 },
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet4,0 },
-
-    {GW::UI::ControlAction::ControlAction_TargetAllyNearest,0 },
-    {GW::UI::ControlAction::ControlAction_ClearTarget,0 },
-    {GW::UI::ControlAction::ControlAction_TargetNearestEnemy,0 },
-    {GW::UI::ControlAction::ControlAction_TargetNextEnemy,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPreviousEnemy,0 },
-    {GW::UI::ControlAction::ControlAction_TargetNearestItem,0 },
-    {GW::UI::ControlAction::ControlAction_TargetNextItem,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPreviousItem,0 },
-
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember1,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember2,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember3,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember4,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember5,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember6,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember7,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember8,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember9,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember10,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember11,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember12,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMemberNext,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPartyMemberPrevious,0 },
-    {GW::UI::ControlAction::ControlAction_TargetPriorityTarget,0 },
-    {GW::UI::ControlAction::ControlAction_TargetSelf,0 }
+std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey::control_labels = {
+    { GW::UI::ControlAction::ControlAction_Interact, nullptr },
+    { GW::UI::ControlAction::ControlAction_CancelAction, nullptr },
+    { GW::UI::ControlAction::ControlAction_ClearPartyCommands, nullptr },
+    { GW::UI::ControlAction::ControlAction_CommandHero1, nullptr },
+    { GW::UI::ControlAction::ControlAction_CommandHero2, nullptr },
+    { GW::UI::ControlAction::ControlAction_CommandHero3, nullptr },
+    { GW::UI::ControlAction::ControlAction_CommandHero4, nullptr },
+    { GW::UI::ControlAction::ControlAction_CommandHero5, nullptr },
+    { GW::UI::ControlAction::ControlAction_CommandHero6, nullptr },
+    { GW::UI::ControlAction::ControlAction_CommandHero7, nullptr },
+    { GW::UI::ControlAction::ControlAction_CommandParty, nullptr },
+      
+    { GW::UI::ControlAction::ControlAction_DropItem, nullptr },
+    { GW::UI::ControlAction::ControlAction_Follow, nullptr },
+      
+    { GW::UI::ControlAction::ControlAction_OpenHero1PetCommander, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHero2PetCommander, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHero3PetCommander, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHero4PetCommander, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHero5PetCommander, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHero6PetCommander, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHero7PetCommander, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHeroCommander1, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHeroCommander2, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHeroCommander3, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHeroCommander4, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHeroCommander5, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHeroCommander6, nullptr },
+    { GW::UI::ControlAction::ControlAction_OpenHeroCommander7, nullptr },
+      
+    { GW::UI::ControlAction::ControlAction_Hero1Skill1, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero1Skill2, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero1Skill3, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero1Skill4, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero1Skill5, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero1Skill6, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero1Skill7, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero1Skill8, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero2Skill1, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero2Skill2, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero2Skill3, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero2Skill4, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero2Skill5, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero2Skill6, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero2Skill7, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero2Skill8, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero3Skill1, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero3Skill2, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero3Skill3, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero3Skill4, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero3Skill5, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero3Skill6, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero3Skill7, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero3Skill8, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero4Skill1, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero4Skill2, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero4Skill3, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero4Skill4, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero4Skill5, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero4Skill6, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero4Skill7, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero4Skill8, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero5Skill1, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero5Skill2, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero5Skill3, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero5Skill4, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero5Skill5, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero5Skill6, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero5Skill7, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero5Skill8, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero6Skill1, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero6Skill2, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero6Skill3, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero6Skill4, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero6Skill5, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero6Skill6, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero6Skill7, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero6Skill8, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero7Skill1, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero7Skill2, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero7Skill3, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero7Skill4, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero7Skill5, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero7Skill6, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero7Skill7, nullptr },
+    { GW::UI::ControlAction::ControlAction_Hero7Skill8, nullptr },
+      
+    { GW::UI::ControlAction::ControlAction_UseSkill1, nullptr },
+    { GW::UI::ControlAction::ControlAction_UseSkill2, nullptr },
+    { GW::UI::ControlAction::ControlAction_UseSkill3, nullptr },
+    { GW::UI::ControlAction::ControlAction_UseSkill4, nullptr },
+    { GW::UI::ControlAction::ControlAction_UseSkill5, nullptr },
+    { GW::UI::ControlAction::ControlAction_UseSkill6, nullptr },
+    { GW::UI::ControlAction::ControlAction_UseSkill7, nullptr },
+    { GW::UI::ControlAction::ControlAction_UseSkill8, nullptr },
+      
+    { GW::UI::ControlAction::ControlAction_ActivateWeaponSet1, nullptr },
+    { GW::UI::ControlAction::ControlAction_ActivateWeaponSet2, nullptr },
+    { GW::UI::ControlAction::ControlAction_ActivateWeaponSet3, nullptr },
+    { GW::UI::ControlAction::ControlAction_ActivateWeaponSet4, nullptr },
+      
+    { GW::UI::ControlAction::ControlAction_TargetAllyNearest, nullptr },
+    { GW::UI::ControlAction::ControlAction_ClearTarget, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetNearestEnemy, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetNextEnemy, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPreviousEnemy, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetNearestItem, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetNextItem, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPreviousItem, nullptr },
+      
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember1, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember2, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember3, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember4, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember5, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember6, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember7, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember8, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember9, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember10, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember11, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMember12, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMemberNext, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPartyMemberPrevious, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetPriorityTarget, nullptr },
+    { GW::UI::ControlAction::ControlAction_TargetSelf, nullptr }
 };
 
 TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
@@ -180,36 +180,47 @@ TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
     std::string id = str.substr(first_sep + 1, second_sep - first_sep - 1);
     std::string type = str.substr(second_sep + 1);
 
-    if (type.compare(HotkeySendChat::IniSection()) == 0) {
+    if (type == HotkeySendChat::IniSection()) {
         return new HotkeySendChat(ini, section);
-    } else if (type.compare(HotkeyUseItem::IniSection()) == 0) {
-        return new HotkeyUseItem(ini, section);
-    } else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
-        return new HotkeyDropUseBuff(ini, section);
-    } else if (type.compare(HotkeyToggle::IniSection()) == 0 &&
-               HotkeyToggle::IsValid(ini, section)) {
-        return new HotkeyToggle(ini, section);
-    } else if (type.compare(HotkeyAction::IniSection()) == 0) {
-        return new HotkeyAction(ini, section);
-    } else if (type.compare(HotkeyTarget::IniSection()) == 0) {
-        return new HotkeyTarget(ini, section);
-    } else if (type.compare(HotkeyMove::IniSection()) == 0) {
-        return new HotkeyMove(ini, section);
-    } else if (type.compare(HotkeyDialog::IniSection()) == 0) {
-        return new HotkeyDialog(ini, section);
-    } else if (type.compare(HotkeyPingBuild::IniSection()) == 0) {
-        return new HotkeyPingBuild(ini, section);
-    } else if (type.compare(HotkeyHeroTeamBuild::IniSection()) == 0) {
-        return new HotkeyHeroTeamBuild(ini, section);
-    } else if (type.compare(HotkeyEquipItem::IniSection()) == 0) {
-        return new HotkeyEquipItem(ini, section);
-    } else if (type.compare(HotkeyFlagHero::IniSection()) == 0) {
-        return new HotkeyFlagHero(ini, section);
-    } else if (type.compare(HotkeyGWKey::IniSection()) == 0) {
-        return new HotkeyGWKey(ini, section);
-    } else {
-        return nullptr;
     }
+    if (type == HotkeyUseItem::IniSection()) {
+        return new HotkeyUseItem(ini, section);
+    }
+    if (type == HotkeyDropUseBuff::IniSection()) {
+        return new HotkeyDropUseBuff(ini, section);
+    }
+    if (type == HotkeyToggle::IniSection() &&
+        HotkeyToggle::IsValid(ini, section)) {
+        return new HotkeyToggle(ini, section);
+    }
+    if (type == HotkeyAction::IniSection()) {
+        return new HotkeyAction(ini, section);
+    }
+    if (type == HotkeyTarget::IniSection()) {
+        return new HotkeyTarget(ini, section);
+    }
+    if (type == HotkeyMove::IniSection()) {
+        return new HotkeyMove(ini, section);
+    }
+    if (type == HotkeyDialog::IniSection()) {
+        return new HotkeyDialog(ini, section);
+    }
+    if (type == HotkeyPingBuild::IniSection()) {
+        return new HotkeyPingBuild(ini, section);
+    }
+    if (type == HotkeyHeroTeamBuild::IniSection()) {
+        return new HotkeyHeroTeamBuild(ini, section);
+    }
+    if (type == HotkeyEquipItem::IniSection()) {
+        return new HotkeyEquipItem(ini, section);
+    }
+    if (type == HotkeyFlagHero::IniSection()) {
+        return new HotkeyFlagHero(ini, section);
+    }
+    if (type == HotkeyGWKey::IniSection()) {
+        return new HotkeyGWKey(ini, section);
+    }
+    return nullptr;
 }
 
 TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
@@ -1497,7 +1508,7 @@ void HotkeyTarget::Execute()
         return;
 
     constexpr size_t len = 122;
-    wchar_t* message = new wchar_t[len];
+    wchar_t message[len];
     message[0] = 0;
     switch (type) {
     case HotkeyTargetType::Item:
@@ -1511,13 +1522,11 @@ void HotkeyTarget::Execute()
         break;
     default:
         Log::ErrorW(L"Unknown target type %d", type);
-        delete[] message;
         return;
     }
     GW::GameThread::Enqueue([message]() {
         GW::Chat::SendChat('/', message);
-        delete[] message;
-        });
+    });
     
     if (show_message_in_emote_channel) {
         char buf[256];
