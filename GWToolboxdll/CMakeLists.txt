@@ -40,7 +40,6 @@ target_link_libraries(GWToolboxdll PRIVATE
     RestClient
     imgui
     gwca
-    directx
 	earcut
     utf8proc
     easywsclient

@@ -26,8 +26,43 @@ D3DXMatrixMultiply_pt D3DXMatrixMultiplyPtr = nullptr;
 typedef HRESULT(WINAPI* D3DXCreateTextureFromFileW_pt)(LPDIRECT3DDEVICE9 pDevice,LPCWSTR pSrcFile,LPDIRECT3DTEXTURE9* ppTexture);
 D3DXCreateTextureFromFileW_pt D3DXCreateTextureFromFileWPtr = nullptr;
 
+typedef HRESULT(WINAPI* D3DXCreateTextureFromFileExW_pt)(
+    LPDIRECT3DDEVICE9         pDevice,
+    LPCWSTR                   pSrcFile,
+    UINT                      Width,
+    UINT                      Height,
+    UINT                      MipLevels,
+    DWORD                     Usage,
+    D3DFORMAT                 Format,
+    D3DPOOL                   Pool,
+    DWORD                     Filter,
+    DWORD                     MipFilter,
+    D3DCOLOR                  ColorKey,
+    D3DXIMAGE_INFO* pSrcInfo,
+    PALETTEENTRY* pPalette,
+    LPDIRECT3DTEXTURE9* ppTexture);
+D3DXCreateTextureFromFileExW_pt D3DXCreateTextureFromFileExWPtr = nullptr;
+
 typedef HRESULT(WINAPI* D3DXCreateTextureFromResourceA_pt)(LPDIRECT3DDEVICE9 pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, LPDIRECT3DTEXTURE9* ppTexture);
 D3DXCreateTextureFromResourceA_pt D3DXCreateTextureFromResourceAPtr = nullptr;
+
+typedef HRESULT(WINAPI* D3DXCreateTextureFromResourceExA_pt)(
+    LPDIRECT3DDEVICE9         pDevice,
+    HMODULE                   hSrcModule,
+    LPCSTR                    pSrcResource,
+    UINT                      Width,
+    UINT                      Height,
+    UINT                      MipLevels,
+    DWORD                     Usage,
+    D3DFORMAT                 Format,
+    D3DPOOL                   Pool,
+    DWORD                     Filter,
+    DWORD                     MipFilter,
+    D3DCOLOR                  ColorKey,
+    D3DXIMAGE_INFO* pSrcInfo,
+    PALETTEENTRY* pPalette,
+    LPDIRECT3DTEXTURE9* ppTexture);
+D3DXCreateTextureFromResourceExA_pt D3DXCreateTextureFromResourceExAPtr = nullptr;
 
 #define return_on_false( expr ) if ( !(expr) ) { return false; }
 
@@ -52,7 +87,7 @@ bool Loadd3dx9(){
     }
     IsLoaded = true;
     char d3dx9name[MAX_PATH];
-    for (int x = 99; x > 9 && !d3dx9Module; x--) {
+    for (int x = 43; x > 9 && !d3dx9Module; x--) {
         sprintf(d3dx9name, "d3dx9_%d.dll", x);
         d3dx9Module = LoadLibrary(d3dx9name);
     }
@@ -68,8 +103,9 @@ bool Loadd3dx9(){
     return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixScaling", &D3DXMatrixScalingPtr));
     return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixMultiply", &D3DXMatrixMultiplyPtr));
     return_on_false(MyGetProcAddress(d3dx9Module, "D3DXCreateTextureFromFileW", &D3DXCreateTextureFromFileWPtr));
+    return_on_false(MyGetProcAddress(d3dx9Module, "D3DXCreateTextureFromFileExW", &D3DXCreateTextureFromFileExWPtr));
     return_on_false(MyGetProcAddress(d3dx9Module, "D3DXCreateTextureFromResourceA", &D3DXCreateTextureFromResourceAPtr));
-
+    return_on_false(MyGetProcAddress(d3dx9Module, "D3DXCreateTextureFromResourceExA", &D3DXCreateTextureFromResourceExAPtr));
     return true;
 }
 D3DXMATRIX* WINAPI D3DXMatrixTranslation(D3DXMATRIX* pOut, FLOAT x, FLOAT y, FLOAT z) {
@@ -92,8 +128,48 @@ HRESULT WINAPI D3DXCreateTextureFromFileW(LPDIRECT3DDEVICE9 pDevice,LPCWSTR pSrc
     Loadd3dx9();
     return D3DXCreateTextureFromFileWPtr(pDevice, pSrcFile, ppTexture);
 }
+HRESULT WINAPI D3DXCreateTextureFromFileExW(
+    LPDIRECT3DDEVICE9         pDevice,
+    LPCWSTR                   pSrcFile,
+    UINT                      Width,
+    UINT                      Height,
+    UINT                      MipLevels,
+    DWORD                     Usage,
+    D3DFORMAT                 Format,
+    D3DPOOL                   Pool,
+    DWORD                     Filter,
+    DWORD                     MipFilter,
+    D3DCOLOR                  ColorKey,
+    D3DXIMAGE_INFO* pSrcInfo,
+    PALETTEENTRY* pPalette,
+    LPDIRECT3DTEXTURE9* ppTexture) {
+    Loadd3dx9();
+    return D3DXCreateTextureFromFileExWPtr(pDevice, pSrcFile, Width, Height, MipLevels, Usage, Format, Pool, Filter, MipFilter, ColorKey, pSrcInfo, pPalette, ppTexture);
+}
+
+
 
 HRESULT WINAPI D3DXCreateTextureFromResourceA(LPDIRECT3DDEVICE9 pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, LPDIRECT3DTEXTURE9* ppTexture) {
     Loadd3dx9();
     return D3DXCreateTextureFromResourceAPtr(pDevice, hSrcModule, pSrcResource, ppTexture);
+}
+HRESULT WINAPI
+D3DXCreateTextureFromResourceExA(
+    LPDIRECT3DDEVICE9         pDevice,
+    HMODULE                   hSrcModule,
+    LPCSTR                    pSrcResource,
+    UINT                      Width,
+    UINT                      Height,
+    UINT                      MipLevels,
+    DWORD                     Usage,
+    D3DFORMAT                 Format,
+    D3DPOOL                   Pool,
+    DWORD                     Filter,
+    DWORD                     MipFilter,
+    D3DCOLOR                  ColorKey,
+    D3DXIMAGE_INFO* pSrcInfo,
+    PALETTEENTRY* pPalette,
+    LPDIRECT3DTEXTURE9* ppTexture) {
+    Loadd3dx9();
+    return D3DXCreateTextureFromResourceExAPtr(pDevice, hSrcModule, pSrcResource, Width, Height, MipLevels, Usage, Format, Pool, Filter, MipFilter, ColorKey, pSrcInfo, pPalette, ppTexture);
 }

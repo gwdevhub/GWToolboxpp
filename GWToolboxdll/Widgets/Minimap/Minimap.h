@@ -14,6 +14,8 @@
 #include <Widgets/Minimap/SymbolsRenderer.h>
 #include <Widgets/Minimap/VBuffer.h>
 
+struct D3DXVECTOR2;
+
 class Minimap final : public ToolboxWidget
 {
     struct Vec2i
@@ -116,7 +118,6 @@ private:
     Vec2i size;
     bool snap_to_compass = false;
 
-    D3DXVECTOR2 gwinch_scale;
     GW::Vec2f shadowstep_location = {0.f, 0.f};
     RECT clipping = { 0 };
 

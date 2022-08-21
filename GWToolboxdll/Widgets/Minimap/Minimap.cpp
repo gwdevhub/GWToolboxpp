@@ -40,6 +40,8 @@
 #endif
 
 namespace {
+    D3DXVECTOR2 gwinch_scale;
+
     enum FlaggingState : uint32_t {
         FlagState_All = 0,
         FlagState_Hero1,
@@ -823,10 +825,10 @@ void Minimap::Render(IDirect3DDevice9* device) {
     D3DXMatrixScaling(&scaleM, instance.scale, instance.scale, 1.0f);
     D3DXMatrixTranslation(&translationM, instance.translation.x, instance.translation.y, 0);
 
-    float gwinch_scale = static_cast<float>(instance.size.x) / 5000.0f / 2.f * instance.scale;
-    if (gwinch_scale != instance.gwinch_scale.x) {
+    float current_gwinch_scale = static_cast<float>(instance.size.x) / 5000.0f / 2.f * instance.scale;
+    if (current_gwinch_scale != gwinch_scale.x) {
         instance.range_renderer.Invalidate();
-        instance.gwinch_scale = { gwinch_scale, gwinch_scale };
+        gwinch_scale = { current_gwinch_scale, current_gwinch_scale };
     }
 
     D3DXMATRIX view = translate_char * rotate_char * scaleM * translationM;
