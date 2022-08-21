@@ -16,7 +16,6 @@ struct DialogButton;
 
 class DialogModule : public ToolboxModule {
     DialogModule() = default;
-    ~DialogModule() override = default;
 
 public:
     static DialogModule& Instance() {

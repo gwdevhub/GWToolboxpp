@@ -6,10 +6,8 @@
 
 
 class GWFileRequester : public ToolboxModule {
-    GWFileRequester() = default;
-    ~GWFileRequester() override = default;
-
 public:
+    GWFileRequester() = default;
     GWFileRequester(const GWFileRequester&) = delete;
     static GWFileRequester& Instance() {
         static GWFileRequester instance;

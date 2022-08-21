@@ -6,7 +6,6 @@ typedef std::vector<std::pair<float,SectionDrawCallback>> SectionDrawCallbackLis
 class ToolboxModule {
 public:
     ToolboxModule() = default;
-    virtual ~ToolboxModule() = default;
 public:
     // name of the window and the ini section
     virtual const char* Name() const = 0;

@@ -10,9 +10,6 @@ using ItemModelID = decltype(GW::Item::model_id);
 enum class Rarity : uint8_t { White, Blue, Purple, Gold, Green, Unknown };
 
 class ItemFilter : public ToolboxModule {
-    ItemFilter() = default;
-    ~ItemFilter() override = default;
-
 public:
     static ItemFilter& Instance() {
         static ItemFilter instance;

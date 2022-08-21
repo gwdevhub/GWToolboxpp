@@ -13,7 +13,6 @@
 
 class InfoWindow : public ToolboxWindow {
     InfoWindow() {};
-    ~InfoWindow() override;
 public:
     static InfoWindow& Instance() {
         static InfoWindow instance;
@@ -24,6 +23,7 @@ public:
     const char8_t* Icon() const override { return ICON_FA_INFO_CIRCLE; }
 
     void Initialize() override;
+    void Terminate() override;
 
     void Draw(IDirect3DDevice9* pDevice) override;
     void Update(float delta) override;

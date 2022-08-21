@@ -12,7 +12,6 @@
 
 class SkillMonitorWidget : public ToolboxWidget {
     SkillMonitorWidget() = default;
-    ~SkillMonitorWidget() override = default;
 
 public:
     static SkillMonitorWidget& Instance() {

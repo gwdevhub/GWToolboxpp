@@ -277,7 +277,6 @@ struct HallOfMonumentsAchievements {
 
 class HallOfMonumentsModule : public ToolboxModule {
     HallOfMonumentsModule() = default;
-    ~HallOfMonumentsModule() override = default;
 public:
     static HallOfMonumentsModule& Instance() {
         static HallOfMonumentsModule instance;

@@ -20,7 +20,6 @@
 class ObserverPlayerWindow : public ToolboxWindow {
 public:
     ObserverPlayerWindow() = default;
-    ~ObserverPlayerWindow() override = default;
 
     static ObserverPlayerWindow& Instance() {
         static ObserverPlayerWindow instance;

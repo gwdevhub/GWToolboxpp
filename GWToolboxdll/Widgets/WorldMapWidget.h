@@ -3,9 +3,6 @@
 #include <ToolboxWidget.h>
 
 class WorldMapWidget : public ToolboxWidget {
-    WorldMapWidget();
-    ~WorldMapWidget();
-
 public:
     static WorldMapWidget& Instance() {
         static WorldMapWidget w;
@@ -13,7 +10,6 @@ public:
     }
 
     void Initialize() override;
-
 
     virtual void RegisterSettingsContent() override { };
 

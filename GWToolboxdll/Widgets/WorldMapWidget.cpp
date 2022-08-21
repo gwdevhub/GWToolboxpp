@@ -30,12 +30,6 @@ namespace {
 
     bool drawn = false;
 }
-
-WorldMapWidget::WorldMapWidget() {
-
-}
-WorldMapWidget::~WorldMapWidget() {
-}
 void WorldMapWidget::InitializeMapsUnlockedArrays() {
     const GW::GameContext* g = GW::GameContext::instance();
     if (!g)

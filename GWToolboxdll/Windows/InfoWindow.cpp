@@ -52,8 +52,7 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/DialogModule.h>
 
-InfoWindow::~InfoWindow()
-{
+void InfoWindow::Terminate() {
     for (const auto& a : target_achievements) {
         delete a.second;
     }

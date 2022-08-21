@@ -15,9 +15,6 @@
 class ChatCommands : public ToolboxModule {
     const float DEFAULT_CAM_SPEED = 1000.f; // 600 units per sec
     const float ROTATION_SPEED = static_cast<float>(M_PI) / 3.f; // 6 seconds for full rotation
-
-    ChatCommands();
-    ~ChatCommands();
 public:
     static ChatCommands& Instance() {
         static ChatCommands instance;
@@ -52,6 +49,7 @@ public:
     const char* SettingsName() const override { return "Game Settings"; }
 
     void Initialize() override;
+    void Terminate() override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
@@ -126,7 +124,7 @@ private:
         std::wstring search;
         void Init(const wchar_t* search, TargetType type = Npc);
         void Update();
-        ~SearchAgent() {
+        void Terminate() {
             for (const auto& it : npc_names)
                 delete it.second;
             npc_names.clear();

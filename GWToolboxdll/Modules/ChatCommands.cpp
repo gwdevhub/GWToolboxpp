@@ -387,17 +387,6 @@ void ChatCommands::DrawHelp() {
     ImGui::TreePop();
 }
 
-ChatCommands::ChatCommands() {
-    default_title_id = (uint32_t)GW::Constants::TitleID::Lightbringer;
-}
-
-ChatCommands::~ChatCommands() {
-    for (auto* it : title_names) {
-        delete it;
-    }
-    title_names.clear();
-}
-
 void ChatCommands::DrawSettingInternal() {
     ImGui::Text("'/cam unlock' options");
     ImGui::Indent();
@@ -461,6 +450,9 @@ void ChatCommands::CmdPingQuest(const wchar_t* , int , LPWSTR* ) {
 
 void ChatCommands::Initialize() {
     ToolboxModule::Initialize();
+
+    default_title_id = (uint32_t)GW::Constants::TitleID::Lightbringer;
+
     const DWORD def_scale = 0x64000000;
     // Available Transmo NPCs
     // @Enhancement: Ability to target an NPC in-game and add it to this list via a GUI
@@ -556,6 +548,14 @@ void ChatCommands::Initialize() {
 #endif
     
         
+}
+
+void ChatCommands::Terminate()
+{
+    for (auto* it : title_names) {
+        delete it;
+    }
+    title_names.clear();
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
