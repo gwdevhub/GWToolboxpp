@@ -46,6 +46,21 @@ void Log::FatalAssert(const char* expr, const char* file, unsigned line) {
     return CrashHandler::FatalAssert(expr, file, line);
 }
 
+BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
+    switch (dwCtrlType) {
+        case CTRL_CLOSE_EVENT:
+        case CTRL_LOGOFF_EVENT:
+        case CTRL_SHUTDOWN_EVENT:
+            // Returning would make the process exit!
+            // Give GWToolbox WndProc time to handle the close message
+            // If the application is still running after 10 seconds, windows forcefully terminates it
+            Sleep(10000);
+
+            return TRUE;
+        default: break;
+    }
+    return FALSE;
+}
 
 // === Setup and cleanup ====
 bool Log::InitializeLog() {
@@ -55,8 +70,9 @@ bool Log::InitializeLog() {
     freopen_s(&stdout_file, "CONOUT$", "w", stdout);
     freopen_s(&stderr_file, "CONOUT$", "w", stderr);
     SetConsoleTitle("GWTB++ Debug Console");
+    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 #else
-    Resources::Instance().EnsureFolderExists(Resources::GetSettingsFolderPath());
+    Resources::EnsureFolderExists(Resources::GetSettingsFolderPath());
     logfile = _wfreopen(Resources::GetPath(L"log.txt").c_str(), L"w", stdout);
     if (!logfile)
         return false;
