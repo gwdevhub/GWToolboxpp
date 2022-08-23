@@ -52,6 +52,10 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/DialogModule.h>
 
+namespace {
+    uint32_t last_hovered_item_id = 0;
+}
+
 void InfoWindow::Terminate() {
     for (const auto& a : target_achievements) {
         delete a.second;
@@ -512,7 +516,11 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         if (show_item && ImGui::CollapsingHeader("Hovered Item")) {
             static GuiUtils::EncString item_name;
             ImGui::PushID("hovered_item");
-            DrawItemInfo(GW::Items::GetHoveredItem(), &item_name, true);
+            GW::Item* current = GW::Items::GetHoveredItem();
+            if (current) {
+                last_hovered_item_id = current->item_id;
+            }
+            DrawItemInfo(GW::Items::GetItemById(last_hovered_item_id), &item_name, true);
             ImGui::PopID();
         }
         if (show_item && ImGui::CollapsingHeader("Item")) {
