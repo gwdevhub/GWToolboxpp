@@ -302,15 +302,13 @@ void AgentRenderer::DrawSettings() {
     }
 }
 
-AgentRenderer::~AgentRenderer() {
+void AgentRenderer::Invalidate() {
     for (CustomAgent* ca : custom_agents) {
         if (ca) delete ca;
     }
     custom_agents.clear();
     custom_agents_map.clear();
     VBuffer::Invalidate();
-
-    GW::UI::RemoveUIMessageCallback(&UIMsg_Entry);
 }
 AgentRenderer& AgentRenderer::Instance() { return *instance; }
 AgentRenderer::AgentRenderer() {

@@ -27,10 +27,6 @@ public:
     {
     }
 
-    virtual ~VBuffer() {
-        Invalidate();
-    }
-
     virtual void Invalidate() { 
         if (buffer)
             buffer->Release();
