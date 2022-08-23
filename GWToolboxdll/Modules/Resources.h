@@ -73,6 +73,10 @@ public:
     // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
+    // Fetches armor page from GWW, parses out the image for the profession/gender given
+    // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
+    // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
+    static IDirect3DTexture9** GetArmorArt(const char* armor_name, GW::Constants::Profession p = (GW::Constants::Profession)1, char gender = 'm');
 
     // Guaranteed to return a pointer, but may not yet be decoded.
     GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);

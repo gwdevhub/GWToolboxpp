@@ -84,6 +84,73 @@ namespace {
 		"Zei Ri"
 	};
 
+	// This array is keyed in the order of armors listed in HallOfMonumentsModule::Detail enum
+// i.e. index 0 is Elite Canthan Armor.
+	const wchar_t* encoded_armor_names[] = {
+		L"\x108\x107" "Elite Canthan Armor\x1", // Elite Canthan Armor
+		L"\x108\x107" "Elite Exotic Armor\x1", // Elite Exotic Armor
+		L"\x108\x107" "Elite Kurzick Armor\x1", // Elite Kurzick Armor
+		L"\x108\x107" "Elite Luxon Armor\x1", // Elite Luxon Armor
+		L"\x108\x107" "Imperial Ascended Armor\x1", // Imperial Ascended Armor
+		L"\x108\x107" "Ancient Armor\x1", // Ancient Armor
+		L"\x108\x107" "Elite Sunspear Armor\x1", // Elite Sunspear Armor
+		L"\x108\x107" "Vabbian Armor\x1", // Vabbian Armor
+		L"\x108\x107" "Primeval Armor\x1", // Primeval Armor
+		L"\x108\x107" "Asuran Armor\x1", // Asuran Armor
+		L"\x108\x107" "Norn Armor\x1", // Norn Armor
+		L"\x108\x107" "Silver Eagle Armor\x1", // Silver Eagle Armor
+		L"\x108\x107" "Monument Armor\x1", // Monument Armor
+		L"\x108\x107" "Obsidian Armor\x1", // Obsidian Armor
+		L"\x108\x107" "Granite Citadel Elite Armor\x1", // Granite Citadel Elite Armor
+		L"\x108\x107" "Granite Citadel Exclusive Armor\x1", // Granite Citadel Exclusive Armor
+		L"\x108\x107" "Granite Citadel Ascended Armor\x1", // Granite Citadel Ascended Armor
+		L"\x108\x107" "Marhans Grotto Elite Armor\x1", // Marhans Grottol Ascended Armor
+		L"\x108\x107" "Marhans Grotto Exclusive Armor\x1", // Marhans Grotto Ascended Armor
+		L"\x108\x107" "Marhans Grotto Ascended Armor\x1", // Marhans Grotto Ascended Armor
+	};
+	static_assert(_countof(encoded_armor_names) == (size_t)ResilienceDetail::Count);
+
+	// This array is keyed in the order of weapons listed in HallOfMonumentsModule::Detail enum
+	// i.e. index 0 is Destroyer Axe.
+	const wchar_t* encoded_weapon_names[] = {
+		L"\x8101\x7776\xCCA9\xBAA8\x10E0", // Destroyer Axe
+		L"\x8101\x7777\xA0D7\x9027\x2458", // Destroyer Bow
+		L"\x8101\x7778\xB879\xDFF6\x3310", // Destroyer Daggers
+		L"\x8101\x7779\x83CC\xCECC\x5CA4", // Destroyer Focus
+		L"\x8101\x777A\xDC41\x9DBE\x663A", // Destroyer Hammer
+		L"\x8101\x777B\xB050\xBB40\x245B", // Destroyer Wandz
+		L"\x8101\x777C\xFFD7\xE16E\x4BEE", // Destroyer Scythe
+		L"\x8101\x777D\xCA7A\xB9E2\x3BDD", // Destroyer Shield
+		L"\x8101\x777E\xB3DD\x830E\x4CA1", // Destroyer Spear
+		L"\x8101\x777F\xCCF0\xA1E7\x2A5E", // Destroyer Staff
+		L"\x8101\x7780\x8DAB\xA3C4\x48B1", // Destroyer Sword	
+
+		L"\x108\x107" "Tormented Axe\x1", // Tormented Axe
+		L"\x108\x107" "Tormented Bow\x1", // Tormented Bow
+		L"\x108\x107" "Tormented Daggers\x1", // Tormented Daggers
+		L"\x108\x107" "Tormented Focus\x1", // Tormented Focus
+		L"\x108\x107" "Tormented Hammer\x1", // Tormented Hammer
+		L"\x108\x107" "Tormented Scepter\x1", // Tormented Scepter
+		L"\x108\x107" "Tormented Scythe\x1", // Tormented Scythe
+		L"\x8102\x45E0\xDC95\xF3B4\x404", // Tormented Shield
+		L"\x108\x107" "Tormented Spear\x1", // Tormented Spear
+		L"\x8102\x45E2\xA1E4\xBB9E\x2A8", // Tormented Staff
+		L"\x108\x107" "Tormented Sword\x1", // Tormented Sword
+
+		L"\x8102\xEDD\xD560\xED5C\x2578", // Oppressor's Axe
+		L"\x8102\xEDE\x945E\x98D8\x4698", // Oppressor's Bow
+		L"\x8102\x2C72\xCC78\xA2B4\x5F85", // Oppressor's Daggers
+		L"\x8102\x6B5C\x9773\xD778\x3567", // Oppressor's Focus
+		L"\x108\x107" "Oppressor's Hammer\x1", // Oppressor's Hammer
+		L"\x8102\x6B5E\x9964\xCAF9\x700D", // Oppressor's Scepter
+		L"\x8102\x6B5F\x8E3F\x8145\x1956", // Oppressor's Scythe
+		L"\x8102\x6B60\xFC25\xD943\x329F", // Oppressor's Shield
+		L"\x8102\x6B61\xC1EA\xD1AF\x4F8", // Oppressor's Spear
+		L"\x8102\x6B62\xB5BE\xA6EE\x2937", // Oppressor's Staff
+		L"\x8102\x6B63\x9222\xF8D1\x5715", // Oppressor's Sword
+	};
+	static_assert(_countof(encoded_weapon_names) == (size_t)ValorDetail::Count);
+
 	// NOTE: Do NOT try to reorder this list; the keys are used to identify which minipet is which in the tracker across saves.
 	const wchar_t* encoded_minipet_names[] = {
 
@@ -638,34 +705,37 @@ void HeroUnlock::OnClick() {
 		});
 }
 
-MinipetUnlock::MinipetUnlock(size_t _minipet_id, const wchar_t* encoded_name)
+ItemAchievement::ItemAchievement(size_t _encoded_name_index, const wchar_t* encoded_name)
 	: PvESkill(GW::Constants::SkillID::No_Skill, nullptr) {
-	minipet_id = _minipet_id;
+	encoded_name_index = _encoded_name_index;
 	name.reset(encoded_name);
 }
-void MinipetUnlock::CheckProgress(const std::wstring& player_name) {
-	is_completed = false;
-	auto& cc = CompletionWindow::Instance().character_completion;
-	auto found = cc.find(player_name);
-	if (found == cc.end())
-		return;
-	std::vector<uint32_t>& minipets_unlocked = found->second->minipets_unlocked;
-	is_completed = bonus = ArrayBoolAt(minipets_unlocked, minipet_id);
+void ItemAchievement::CheckProgress(const std::wstring& player_name) {
+	(player_name);
 }
-const char* MinipetUnlock::Name() {
+const char* ItemAchievement::Name() {
 	return name.string().c_str();
 }
-IDirect3DTexture9* MinipetUnlock::GetMissionImage()
+IDirect3DTexture9* ItemAchievement::GetMissionImage()
 {
 	if (name.wstring().size()) {
 		if (name.wstring() == L"Brown Rabbit") {
 			return *Resources::GetItemImage(L"Brown Rabbit (miniature)");
 		}
+		if (name.wstring() == L"Oppressor's Bow") {
+			return *Resources::GetItemImage(L"Oppressor's Longbow");
+		}
+		if (name.wstring() == L"Tormented Bow") {
+			return *Resources::GetItemImage(L"Tormented Longbow");
+		}
+		if (name.wstring() == L"Destroyer Bow") {
+			return *Resources::GetItemImage(L"Destroyer Longbow");
+		}
 		return *Resources::GetItemImage(name.wstring());
 	}
 	return nullptr;
 }
-void MinipetUnlock::OnClick() {
+void ItemAchievement::OnClick() {
 	GuiUtils::OpenWiki(name.wstring());
 }
 
@@ -831,8 +901,16 @@ void CompletionWindow::Initialize()
 		{ GW::Constants::Campaign::EyeOfTheNorth, {} }
 	 };
 	 for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
-		 minipets.push_back(new MinipetUnlock(i,encoded_minipet_names[i]));
+		 minipets.push_back(new MinipetAchievement(i,encoded_minipet_names[i]));
 	 }
+	 for (size_t i = 0; i < _countof(encoded_weapon_names); i++) {
+		 hom_weapons.push_back(new WeaponAchievement(i, encoded_weapon_names[i]));
+	 }
+	 hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Canthan Armor\x1","Elite Canthan Armor"));
+	 hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Exotic Armor\x1", "Elite Exotic Armor", GW::Constants::Profession::Assassin));
+	 hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Kurzick Armor\x1", "Elite Kurzick Armor"));
+	 hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Imperial Ascended Armor\x1", "Elite Imperial Armor", GW::Constants::Profession::Assassin));
+	 hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Ancient Armor\x1", "Ancient Armor"));
 
 	Initialize_Prophecies();
 	Initialize_Factions();
@@ -1795,7 +1873,11 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 {
 	if (hom_achievements_status == 0) {
 		character_completion[hom_achievements.character_name]->hom_code = hom_achievements.hom_code;
+
 		hom_achievements_status = 0xf;
+		for (auto achievement : hom_weapons) {
+			achievement->CheckProgress(chosen_player_name);
+		}
 	}
 	if (!visible) return;
 
@@ -2041,7 +2123,7 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 	ImGui::ShowHelp("To update this list, talk to the \"Devotion\" pedestal in Eye of the North,\n then press \"Examine the Monument to Devotion.\"");
 	ImGui::SameLine(checkbox_offset);
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
-	ImGui::Checkbox("Hide dedicated minipets", &hide_unlocked_minipets);
+	ImGui::Checkbox("Hide unlocked achievements", &hide_unlocked_achievements);
 	ImGui::PopStyleVar();
 	auto hom = character_completion[chosen_player_name]->hom_achievements;
 	// Devotion
@@ -2051,12 +2133,12 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 			completed += hom->devotion_points[i];
 		}
 	}
-	uint32_t minipets_dedicated = 0;
+	uint32_t dedicated = 0;
 	uint32_t drawn = 0;
 	for (auto m : minipets) {
 		if (m->is_completed) {
-			minipets_dedicated++;
-			if (hide_unlocked_minipets)
+			dedicated++;
+			if (hide_unlocked_achievements)
 				continue;
 		}
 		drawn++;
@@ -2065,8 +2147,8 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 	char label[128];
 	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d minipets dedicated) - %.0f%%###devotion_points", "Devotion", 
 		completed, DevotionPoints::TotalAvailable, 
-		minipets_dedicated, minipets.size(),
-		((float)minipets_dedicated / (float)minipets.size()) * 100.f);
+		dedicated, minipets.size(),
+		((float)dedicated / (float)minipets.size()) * 100.f);
 
 	if (ImGui::CollapsingHeader(label)) {
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -2083,13 +2165,98 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 				}
 			}
 			if (ready) {
-				std::sort(minipets.begin(), minipets.end(), [](MinipetUnlock* a, MinipetUnlock* b) { return strcmp(a->Name(), b->Name()) < 0;  });
+				std::sort(minipets.begin(), minipets.end(), [](MinipetAchievement* a, MinipetAchievement* b) { return strcmp(a->Name(), b->Name()) < 0;  });
 				minipets_sorted = true;
 			}
 		}
 
 		for (auto m : minipets) {
-			if (m->is_completed && hide_unlocked_minipets)
+			if (m->is_completed && hide_unlocked_achievements)
+				continue;
+			if (!m->Draw(device))
+				continue;
+			col_count++;
+			if (col_count == items_per_col) {
+				ImGui::NextColumn();
+				col_count = 0;
+			}
+		}
+		ImGui::Columns(1);
+		ImGui::PopStyleVar();
+	}
+	// Valor
+	completed = 0;
+	if (hom) {
+		for (size_t i = 0; i < _countof(hom->valor_points); i++) {
+			completed += hom->valor_points[i];
+		}
+	}
+	dedicated = 0;
+	drawn = 0;
+	for (auto m : hom_weapons) {
+		if (m->is_completed) {
+			dedicated++;
+			if (hide_unlocked_achievements)
+				continue;
+		}
+		drawn++;
+	}
+	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d weapons displayed) - %.0f%%###valor_points", "Valor",
+		completed, ValorPoints::TotalAvailable,
+		dedicated, hom_weapons.size(),
+		((float)dedicated / (float)hom_weapons.size()) * 100.f);
+
+	if (ImGui::CollapsingHeader(label)) {
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
+		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
+		size_t col_count = 0;
+
+		for (auto m : hom_weapons) {
+			if (m->is_completed && hide_unlocked_achievements)
+				continue;
+			if (!m->Draw(device))
+				continue;
+			col_count++;
+			if (col_count == items_per_col) {
+				ImGui::NextColumn();
+				col_count = 0;
+			}
+		}
+		ImGui::Columns(1);
+		ImGui::PopStyleVar();
+	}
+
+	// Resilience
+	completed = 0;
+	if (hom) {
+		for (size_t i = 0; i < _countof(hom->resilience_points); i++) {
+			completed += hom->resilience_points[i];
+		}
+	}
+	dedicated = 0;
+	drawn = 0;
+	for (auto m : hom_armor) {
+		if (m->is_completed) {
+			dedicated++;
+			if (hide_unlocked_achievements)
+				continue;
+		}
+		drawn++;
+	}
+	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d armor sets displayed) - %.0f%%###resilience_points", "Resilience",
+		completed, ResiliencePoints::TotalAvailable,
+		dedicated, hom_armor.size(),
+		((float)dedicated / (float)hom_armor.size()) * 100.f);
+
+	if (ImGui::CollapsingHeader(label)) {
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
+		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
+		size_t col_count = 0;
+
+		for (auto m : hom_armor) {
+			if (m->is_completed && hide_unlocked_achievements)
 				continue;
 			if (!m->Draw(device))
 				continue;
@@ -2120,6 +2287,7 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
 	hide_unlocked_skills = ini->GetBoolValue(Name(), VAR_NAME(hide_unlocked_skills), hide_unlocked_skills);
 	hide_completed_vanquishes = ini->GetBoolValue(Name(), VAR_NAME(hide_completed_vanquishes), hide_completed_vanquishes);
 	hide_completed_missions = ini->GetBoolValue(Name(), VAR_NAME(hide_completed_missions), hide_completed_missions);
+	hide_unlocked_achievements = ini->GetBoolValue(Name(), VAR_NAME(hide_unlocked_achievements), hide_unlocked_achievements);
 
 	auto read_ini_to_buf = [&](CompletionType type, const char* section) {
 		char ini_key_buf[64];
@@ -2184,15 +2352,20 @@ CompletionWindow* CompletionWindow::CheckProgress() {
 			skill->CheckProgress(chosen_player_name);
 		}
 	}
-	for (auto minipet : minipets) {
-		minipet->CheckProgress(chosen_player_name);
+	for (auto achievement : minipets) {
+		achievement->CheckProgress(chosen_player_name);
 	}
-	hom_achievements_status = 0xf;
+	for (auto achievement : hom_weapons) {
+		achievement->CheckProgress(chosen_player_name);
+	}
+	
 	auto& cc = CompletionWindow::Instance().character_completion;
 	if (cc.contains(chosen_player_name)) {
-		if (!cc[chosen_player_name]->hom_achievements)
+		if (!cc[chosen_player_name]->hom_achievements) {
 			cc[chosen_player_name]->hom_achievements = new HallOfMonumentsAchievements();
-		HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(chosen_player_name.c_str(), cc[chosen_player_name]->hom_achievements);
+			hom_achievements_status = 0xf;
+			HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(chosen_player_name.c_str(), cc[chosen_player_name]->hom_achievements);
+		}
 	}
 	return this;
 }
@@ -2208,6 +2381,7 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
 	ini->SetBoolValue(Name(), VAR_NAME(hide_unlocked_skills), hide_unlocked_skills);
 	ini->SetBoolValue(Name(), VAR_NAME(hide_completed_vanquishes), hide_completed_vanquishes);
 	ini->SetBoolValue(Name(), VAR_NAME(hide_completed_missions), hide_completed_missions);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_unlocked_achievements), hide_unlocked_achievements);
 
 	auto write_buf_to_ini = [completion_ini](const char* section, std::vector<uint32_t>* read, std::string& ini_str,std::string* name) {
 		char ini_key_buf[64];
@@ -2357,3 +2531,51 @@ CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, w
 	return this;
 }
 
+void Missions::MinipetAchievement::CheckProgress(const std::wstring& player_name)
+{
+	is_completed = false;
+	auto& cc = CompletionWindow::Instance().character_completion;
+	auto found = cc.find(player_name);
+	if (found == cc.end())
+		return;
+	std::vector<uint32_t>& minipets_unlocked = found->second->minipets_unlocked;
+	is_completed = bonus = ArrayBoolAt(minipets_unlocked, encoded_name_index);
+}
+void Missions::WeaponAchievement::CheckProgress(const std::wstring& player_name)
+{
+	is_completed = false;
+	auto& cc = CompletionWindow::Instance().character_completion;
+	auto found = cc.find(player_name);
+	if (found == cc.end())
+		return;
+	auto hom = found->second->hom_achievements;
+	if (!hom)
+		return;
+	auto& unlocked = hom->valor_detail;
+	is_completed = bonus = unlocked[encoded_name_index] != 0;
+}
+
+IDirect3DTexture9* Missions::ArmorAchievement::GetMissionImage()
+{
+	return *Resources::GetArmorArt(armor_art_name, armor_profession);
+}
+bool Missions::ArmorAchievement::Draw(IDirect3DDevice9* device)
+{
+	icon_size.y *= 2.f;
+	bool ret = ItemAchievement::Draw(device);
+	icon_size.y /= 2.f;
+	return ret;
+}
+void Missions::ArmorAchievement::CheckProgress(const std::wstring& player_name)
+{
+	is_completed = false;
+	auto& cc = CompletionWindow::Instance().character_completion;
+	auto found = cc.find(player_name);
+	if (found == cc.end())
+		return;
+	auto hom = found->second->hom_achievements;
+	if (!hom)
+		return;
+	auto& unlocked = hom->resilience_detail;
+	is_completed = bonus = unlocked[encoded_name_index] != 0;
+}

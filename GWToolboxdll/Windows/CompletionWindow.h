@@ -97,18 +97,43 @@ namespace Missions {
         const char* Name() override;
     };
 
-    class MinipetUnlock : public PvESkill {
-    private:
+    class ItemAchievement : public PvESkill {
+    protected:
         GuiUtils::EncString name;
-        size_t minipet_id;
+        size_t encoded_name_index;
     public:
-        MinipetUnlock(size_t _minipet_id, const wchar_t* encoded_name);
+        ItemAchievement(size_t _encoded_name_index, const wchar_t* encoded_name);
         IDirect3DTexture9* GetMissionImage() override;
 
-        void OnClick() override;
-
         virtual void CheckProgress(const std::wstring& player_name) override;
+        void OnClick() override;
         const char* Name() override;
+    };
+    class MinipetAchievement : public ItemAchievement {
+    public:
+        MinipetAchievement(size_t _encoded_name_index, const wchar_t* encoded_name) :
+            ItemAchievement(_encoded_name_index, encoded_name) {}
+        virtual void CheckProgress(const std::wstring& player_name) override;
+    };
+    class WeaponAchievement : public ItemAchievement {
+    public:
+        WeaponAchievement(size_t _encoded_name_index, const wchar_t* encoded_name) :
+            ItemAchievement(_encoded_name_index, encoded_name) {}
+        virtual void CheckProgress(const std::wstring& player_name) override;
+    };
+    class ArmorAchievement : public ItemAchievement {
+    protected:
+        const char* armor_art_name;
+        GW::Constants::Profession armor_profession;
+    public:
+        ArmorAchievement(size_t _encoded_name_index, const wchar_t* encoded_name, const char* _armor_art_name, GW::Constants::Profession _armor_profession = (GW::Constants::Profession)1) :
+            ItemAchievement(_encoded_name_index, encoded_name) {
+            armor_art_name = _armor_art_name;
+            armor_profession = _armor_profession;
+        }
+        virtual void CheckProgress(const std::wstring& player_name) override;
+        IDirect3DTexture9* GetMissionImage() override;
+        virtual bool Draw(IDirect3DDevice9*) override;
     };
 
     class FactionsPvESkill : public PvESkill {
@@ -235,7 +260,7 @@ namespace Missions {
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class CompletionWindow : public ToolboxWindow {
 protected:
-    bool hide_unlocked_minipets = false;
+    bool hide_unlocked_achievements = false;
     bool hide_unlocked_skills = false;
     bool hide_completed_vanquishes = false;
     bool hide_completed_missions = false;
@@ -313,7 +338,9 @@ public:
     std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
     std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
     std::map<GW::Constants::Campaign, std::vector<Missions::HeroUnlock*>> heros;
-    std::vector<Missions::MinipetUnlock*> minipets;
+    std::vector<Missions::MinipetAchievement*> minipets;
+    std::vector<Missions::WeaponAchievement*> hom_weapons;
+    std::vector<Missions::ArmorAchievement*> hom_armor;
     bool minipets_sorted = false;
     HallOfMonumentsAchievements hom_achievements;
     int hom_achievements_status = 0xf;
