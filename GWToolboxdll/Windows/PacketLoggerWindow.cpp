@@ -130,6 +130,7 @@ struct NPCDialog {
 } npc_dialog;
 bool logger_enabled = false;
 bool log_packet_content = false;
+bool auto_ignore_packets = false;
 bool debug = false;
 uint32_t log_message_callback_identifier = 0;
 static volatile bool running;
@@ -466,6 +467,8 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
     //if (packet->header == 95) return true;
     if (packet->header >= game_server_handler->size())
         return;
+    if (auto_ignore_packets)
+        ignored_packets[packet->header] = true;
     if (ignored_packets[packet->header])
         return;
 
@@ -617,7 +620,9 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::ShowHelp("Log outgoing and incoming packet contents in debug console");
     ImGui::SameLine();
     ImGui::Checkbox("Log Packet Content", &log_packet_content);
-    
+    ImGui::SameLine();
+    ImGui::Checkbox("Auto ignore incoming packets", &auto_ignore_packets);
+    ImGui::ShowHelp("While ticked, any StoC packets received will be added to the ignore list.");
     /*if ( ImGui::Button("Export Map Info")) {
         if (maps.empty()) {
             FetchMapInfo();
