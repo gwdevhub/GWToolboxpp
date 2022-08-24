@@ -303,11 +303,6 @@ void AgentRenderer::DrawSettings() {
 }
 
 void AgentRenderer::Invalidate() {
-    for (CustomAgent* ca : custom_agents) {
-        if (ca) delete ca;
-    }
-    custom_agents.clear();
-    custom_agents_map.clear();
     VBuffer::Invalidate();
 }
 AgentRenderer& AgentRenderer::Instance() { return *instance; }
@@ -852,8 +847,7 @@ void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, C
 void AgentRenderer::BuildCustomAgentsMap() {
     custom_agents_map.clear();
     for (const CustomAgent* ca : custom_agents) {
-        const auto it = custom_agents_map.find(ca->modelId);
-        if (it == custom_agents_map.end()) {
+        if (!custom_agents_map.contains(ca->modelId)) {
             custom_agents_map[ca->modelId] = std::vector<const CustomAgent*>();
         }
         custom_agents_map[ca->modelId].push_back(ca);
