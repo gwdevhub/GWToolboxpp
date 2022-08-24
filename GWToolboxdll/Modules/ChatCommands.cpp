@@ -591,7 +591,7 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 void ChatCommands::Update(float delta) {
     if (title_names.empty()) {
-        auto* titles = GetTitles();
+        const auto* titles = GetTitles();
         for (size_t i = 0; titles && i < titles->size(); i++) {
             switch ((GW::Constants::TitleID)i) {
             case GW::Constants::TitleID::Deprecated_SkillHunter:
@@ -605,13 +605,9 @@ void ChatCommands::Update(float delta) {
         }
     }
     else if (!title_names_sorted) {
-        bool can_sort = true;
-        for (auto* title_name : title_names) {
-            if (title_name->name.IsDecoding()) {
-                can_sort = false;
-                break;
-            }
-        }
+        const bool can_sort = std::ranges::all_of(title_names, [](const auto& title_name) {
+                return !title_name->name.IsDecoding();
+            });
         if (can_sort) {
             std::ranges::sort(title_names, [](DecodedTitleName* first, DecodedTitleName* second) {
                     return first->name.string() < second->name.string();
@@ -620,13 +616,13 @@ void ChatCommands::Update(float delta) {
         }
 
     }
-    static bool keep_forward; // No init. should it be false as default
 
     if (delta == 0.f) return;
 
     if (GW::CameraMgr::GetCameraUnlock()
         && !GW::Chat::GetIsTyping()
         && !ImGui::GetIO().WantTextInput) {
+        static bool keep_forward;
 
         float forward = 0;
         float vertical = 0;
