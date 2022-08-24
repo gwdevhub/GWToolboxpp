@@ -1508,26 +1508,24 @@ void HotkeyTarget::Execute()
         return;
 
     constexpr size_t len = 122;
-    wchar_t* message = new wchar_t[len];
+    auto message = std::array<wchar_t, len>{};
     message[0] = 0;
     switch (type) {
     case HotkeyTargetType::Item:
-        swprintf(message, len, L"target item %S", id);
+        swprintf(message.data(), len, L"target item %S", id);
         break;
     case HotkeyTargetType::NPC:
-        swprintf(message, len, L"target npc %S", id);
+        swprintf(message.data(), len, L"target npc %S", id);
         break;
     case HotkeyTargetType::Signpost:
-        swprintf(message, len, L"target gadget %S", id);
+        swprintf(message.data(), len, L"target gadget %S", id);
         break;
     default:
         Log::ErrorW(L"Unknown target type %d", type);
-        delete[] message;
         return;
     }
-    GW::GameThread::Enqueue([message]() {
-        GW::Chat::SendChat('/', message);
-        delete[] message;
+    GW::GameThread::Enqueue([message] {
+        GW::Chat::SendChat('/', message.data());
     });
     
     if (show_message_in_emote_channel) {
