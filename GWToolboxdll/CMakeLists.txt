@@ -20,7 +20,7 @@ target_sources(GWToolboxdll PRIVATE ${SOURCES})
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX)
-set(CMAKE_CXX_FLAGS_DEBUG "/ZI")
+set(CMAKE_CXX_FLAGS_DEBUG "/ZI /Od")
 set_target_properties(GWToolboxdll PROPERTIES LINK_FLAGS -SAFESEH:NO)
 
 target_link_options(GWToolboxdll PRIVATE "LINKER:/WX")
