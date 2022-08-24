@@ -826,6 +826,8 @@ void GameSettings::Initialize() {
     address = GW::Scanner::Find("\x8b\x7d\x08\x8b\x70\x2c\x83\xff\x0f","xxxxxxxxx");
     ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);
     ShowAgentExperienceGain_Func = (ShowAgentExperienceGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x4f);
+    printf("[SCAN] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
+    printf("[SCAN] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
 
     GW::HookBase::CreateHook(ShowAgentFactionGain_Func, OnShowAgentFactionGain, (void**)&ShowAgentFactionGain_Ret);
     GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
