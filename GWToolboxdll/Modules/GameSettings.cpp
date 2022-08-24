@@ -419,7 +419,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
     std::wregex regexp_req(L".\x10A\x0AA8\x10A\xAA9\x10A.\x1\x101.\x1\x1");
     while (std::regex_search(original, m, regexp_req)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[128];
             wsprintfW(buffer, L"\x108\x107, q%d \x1\x2%c", found.at(9) - 0x100, found.at(6));
@@ -429,7 +429,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace "Requires 9 Scythe Mastery" > "q9 Scythe Mastery"
     std::wregex regexp_req2(L".\x10A\xAA8\x10A\xAA9\x10A\x8101.\x1\x101.\x1\x1");
     while (std::regex_search(original, m, regexp_req2)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[128];
             wsprintfW(buffer, L"\x108\x107, q%d \x1\x2\x8101%c", found.at(10) - 0x100, found.at(7));
@@ -441,7 +441,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // "vs. Demons" > "Demons"
     std::wregex vs_damage(L"[\xAAC\xAAF]\x10A.\x1");
     while (std::regex_search(original, m, vs_damage)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[4];
             wsprintfW(buffer, L"%c", found.at(2));
@@ -452,7 +452,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace "Lengthens ??? duration on foes by 33%" > "??? duration +33%"
     std::wregex regexp_lengthens_duration(L"\xAA4\x10A.\x1");
     while (std::regex_search(original, m, regexp_lengthens_duration)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"%c\x2\x108\x107 +33%%\x1", found.at(2));
@@ -463,7 +463,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace "Reduces ??? duration on you by 20%" > "??? duration -20%"
     std::wregex regexp_reduces_duration(L"\xAA7\x10A.\x1");
     while (std::regex_search(original, m, regexp_reduces_duration)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"%c\x2\x108\x107 -20%%\x1", found.at(2));
@@ -476,7 +476,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change " (while Health is above n)" to "^n";
     std::wregex n_over_n(L"\xAA8\x10A\xABC\x10A\xA52\x1\x101.\x1");
     while (std::regex_search(original, m, n_over_n)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107^%d\x1", found.at(7) - 0x100);
@@ -487,7 +487,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Enchantments last 20% longer" to "Ench +20%"
     std::wregex enchantments(L"\xAA2\x101.");
     while (std::regex_search(original, m, enchantments)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107" L"Enchantments +%d%%\x1", found.at(2) - 0x100);
@@ -498,7 +498,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // "(Chance: 18%)" > "(18%)"
     std::wregex chance_regex(L"\xA87\x10A\xA48\x1\x101.");
     while (std::regex_search(original, m, chance_regex)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107%d%%\x1", found.at(5) - 0x100);
@@ -508,7 +508,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Halves skill recharge of <attribute> spells" > "HSR <attribute>"
     std::wregex hsr_attribute(L"\xA81\x10A\xA58\x1\x10B.\x1");
     while (std::regex_search(original, m, hsr_attribute)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107" L"HSR \x1\x2%c", found.at(5));
@@ -518,7 +518,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Inscription: "Blah Blah"" to just "Blah Blah"
     std::wregex inscription(L"\x8101\x5DC5\x10A..\x1");
     while (std::regex_search(original, m, inscription)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"%c%c", found.at(3), found.at(4));
@@ -529,7 +529,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Halves casting time of <attribute> spells" > "HCT <attribute>"
     std::wregex hct_attribute(L"\xA81\x10A\xA47\x1\x10B.\x1");
     while (std::regex_search(original, m, hct_attribute)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107" L"HCT \x1\x2%c", found.at(5));
@@ -540,7 +540,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Piercing Dmg: 11-22" > "Piercing: 11-22"
     std::wregex weapon_dmg(L"\xA89\x10A\xA4E\x1\x10B.\x1\x101.\x102.");
     while (std::regex_search(original, m, weapon_dmg)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"%c\x2\x108\x107: %d-%d\x1", found.at(5),found.at(8) - 0x100, found.at(10) - 0x100);
@@ -581,7 +581,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace (while affected by a(n) to just (n)
     std::wregex while_affected_by(L"\x8101\x4D9C\x10A.\x1");
     while (std::regex_search(original, m, while_affected_by)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[2] = { 0 };
             buffer[0] = found.at(3);
@@ -599,7 +599,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Combine Attribute + 3, Attribute + 1 to Attribute +3 +1 (e.g. headpiece)
     std::wregex attribute_stacks(L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1");
     if (std::regex_search(original, m, attribute_stacks)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             if (found[4] != found[16]) continue; // Different attributes.
             wchar_t buffer[64];
