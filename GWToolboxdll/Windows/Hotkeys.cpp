@@ -271,7 +271,10 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
             section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
         trigger_on_pvp_character = ini->GetBoolValue(
             section, VAR_NAME(trigger_on_pvp_character), trigger_on_pvp_character);
-        std::string player_name_s = ini->GetValue(section, VAR_NAME(player_name), "");
+
+        in_range_of_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance));
+        in_range_of_npc_id = ini->GetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
+        const std::string player_name_s = ini->GetValue(section, VAR_NAME(player_name), "");
         memset(player_name, 0, sizeof(player_name));
         if (!player_name_s.empty()) {
             strncpy(player_name, player_name_s.c_str(), _countof(player_name));
@@ -667,7 +670,7 @@ bool TBHotkey::IsInRangeOfNPC() {
         if (!(agent && agent->type == 0xDB)) 
             continue;
         auto* living = agent->GetAsAgentLiving();
-        if (living->login_number || living->player_number != (uint16_t)in_range_of_npc_id)
+        if (living->login_number || living->player_number != static_cast<uint16_t>(in_range_of_npc_id))
             continue;
         if (GW::GetDistance(agent->pos, me->pos) < in_range_of_distance)
             return true;
@@ -1621,10 +1624,10 @@ void HotkeyDialog::Execute()
         return;
     char buf[32];
     if (id == 0) {
-        snprintf(buf, _countof(buf), "dialog take");
+        snprintf(buf, _countof(buf), "dialog take %d", in_range_of_npc_id);
     }
     else {
-        snprintf(buf, _countof(buf), "dialog 0x%X", id);
+        snprintf(buf, _countof(buf), "dialog 0x%X %d", id, in_range_of_npc_id);
     }
     
     GW::Chat::SendChat('/', buf);
