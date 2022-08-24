@@ -527,9 +527,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         if (GW::PreGameContext::instance())
             return; // Login screen
-
+#ifndef _DEBUG
         if (GW::Map::GetIsInCinematic())
             return;
+#endif
 
         if (IsIconic(GW::MemoryMgr::GetGWWindowHandle()))
             return;
