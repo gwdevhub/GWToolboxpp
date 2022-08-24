@@ -177,7 +177,7 @@ LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
     static bool right_mouse_down = false;
 
-    if (Message == WM_CLOSE || Message == WM_SYSCOMMAND && wParam == SC_CLOSE) {
+    if ((Message == WM_CLOSE || Message == WM_SYSCOMMAND) && wParam == SC_CLOSE) {
         // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
         // we can't sleep here, because toolbox modules will probably be using the render loop to close off things
         // like hooks
@@ -208,50 +208,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     switch (Message) {
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK:
-        if (!skip_mouse_capture) io.MouseDown[0] = true;
+        if (!skip_mouse_capture) 
+            io.AddMouseButtonEvent(0, true);
         break;
     case WM_LBUTTONUP:
-        io.MouseDown[0] = false; 
+        io.AddMouseButtonEvent(0, false);
         break;
     case WM_MBUTTONDOWN:
     case WM_MBUTTONDBLCLK:
         if (!skip_mouse_capture) {
-            io.KeysDown[VK_MBUTTON] = true;
-            io.MouseDown[2] = true;
-        }
+            io.AddKeyEvent(VK_MBUTTON, true);
+            io.AddMouseButtonEvent(2, true);
+        } 
         break;
-    case WM_MBUTTONUP:
-        io.KeysDown[VK_MBUTTON] = false;
-        io.MouseDown[2] = false;
-        break;
+    case WM_MBUTTONUP: {
+        io.AddKeyEvent(VK_MBUTTON, false);
+        io.AddMouseButtonEvent(2, false);
+    } break;
     case WM_MOUSEWHEEL: 
-        if (!skip_mouse_capture) io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
+        if (!skip_mouse_capture)
+            io.AddMouseWheelEvent(0.f, GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f);
         break;
     case WM_MOUSEMOVE:
-        if (!skip_mouse_capture) {
-            io.MousePos.x = (float)GET_X_LPARAM(lParam);
-            io.MousePos.y = (float)GET_Y_LPARAM(lParam);
-        }
+        if (!skip_mouse_capture)
+            io.AddMousePosEvent((float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam));
         break;
     case WM_XBUTTONDOWN:
         if (!skip_mouse_capture) {
-            if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) io.KeysDown[VK_XBUTTON1] = true;
-            if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2) io.KeysDown[VK_XBUTTON2] = true;
+            if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1)
+                io.AddKeyEvent(VK_XBUTTON1, true);
+            if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2)
+                io.AddKeyEvent(VK_XBUTTON2, true);
         }
         break;
     case WM_XBUTTONUP:
-        if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) io.KeysDown[VK_XBUTTON1] = false;
-        if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2) io.KeysDown[VK_XBUTTON2] = false;
+        if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) 
+            io.AddKeyEvent(VK_XBUTTON1, false);
+        if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2)
+            io.AddKeyEvent(VK_XBUTTON2, false);
         break;
     case WM_SYSKEYDOWN:
     case WM_KEYDOWN:
         if (wParam < 256)
-            io.KeysDown[wParam] = true;
+            io.AddKeyEvent(wParam, true);
         break;
     case WM_SYSKEYUP:
     case WM_KEYUP:
         if (wParam < 256)
-            io.KeysDown[wParam] = false;
+            io.AddKeyEvent(wParam, false);
         break;
     case WM_CHAR: // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
         if (wParam > 0 && wParam < 0x10000)
