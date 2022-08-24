@@ -10,8 +10,6 @@
 #include <random>
 
 class Obfuscator : public ToolboxModule {
-    Obfuscator() {};
-    ~Obfuscator();
 public:
     static Obfuscator& Instance() {
         static Obfuscator instance;
@@ -30,7 +28,6 @@ public:
     void Obfuscate(bool obfuscate);
 
 private:
-    static void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);
     static void OnSendChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t* message);
     static void OnPrintChat(GW::HookStatus* status, GW::Chat::Channel, wchar_t** message, FILETIME, int);
 
