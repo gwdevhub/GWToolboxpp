@@ -410,7 +410,7 @@ bool Pcon::CanUseByInstanceType() const {
     return maptype == GW::Constants::InstanceType::Explorable;
 }
 bool* Pcon::GetSettingsByName(const wchar_t* name) {
-    if (settings_by_charname.find(name) == settings_by_charname.end()) {
+    if (!settings_by_charname.contains(name)) {
         bool* def = settings_by_charname[L"default"];
         settings_by_charname[name] = new bool(*def);
     }

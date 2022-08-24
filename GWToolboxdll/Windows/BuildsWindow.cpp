@@ -261,7 +261,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     unsigned int offset = 0;
     for (size_t i = 0; i < pcons.size(); i++) {
         const auto pcon = pcons[i];
-        bool active = build.pcons.find(pcon->ini) != build.pcons.end();
+        bool active = build.pcons.contains(pcon->ini);
         ImGui::SameLine(indent, pos_x += third_w);
         offset++;
         if (i % 3 == 0) {
@@ -630,7 +630,7 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     std::vector<Pcon*> pcons_not_visible;
     PconsWindow* pcw = &PconsWindow::Instance();
     for (auto pcon : pcw->pcons) {
-        bool enable = build.pcons.find(pcon->ini) != build.pcons.end();
+        bool enable = build.pcons.contains(pcon->ini);
         if (enable) {
             if (!pcon->IsVisible()) {
                 // Don't enable pcons that the user cant see!
@@ -682,7 +682,7 @@ void BuildsWindow::SendPcons(const TeamBuild& tbuild, unsigned int idx, bool inc
     }
     size_t cnt = 0;
     for (const auto pcon : PconsWindow::Instance().pcons) {
-        if (build.pcons.find(pcon->ini) == build.pcons.end())
+        if (!build.pcons.contains(pcon->ini))
             continue;
         if (cnt) pconsStr += ", ";
         cnt = 1;

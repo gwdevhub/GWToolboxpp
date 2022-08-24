@@ -315,7 +315,7 @@ void SkillMonitorWidget::DrawSettingInternal() {
 }
 
 void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t value) {
-    if (!party_map.count(caster_id)) {
+    if (!party_map.contains(caster_id)) {
         return;
     }
     using namespace GW::Packet::StoC;

@@ -121,9 +121,9 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             for (const auto& buff : *buffs) {
                 const auto agent = buff.target_agent_id;
                 const auto skill = static_cast<SkillID>(buff.skill_id);
-                if (party_map.find(agent) == party_map.end())
+                if (!party_map.contains(agent))
                     continue; // bond target not in party
-                if (bond_map.find(skill) == bond_map.end())
+                if (!bond_map.contains(skill))
                     continue; // bond with a skill not in skillbar
                 size_t y = party_map[agent];
                 size_t x = bond_map[skill];
@@ -149,7 +149,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 const auto agent_id = agent_effects_it.agent_id;
                 for (const GW::Effect& effect : agent_effects) {
                     const auto skill_id = static_cast<SkillID>(effect.skill_id);
-                    if (bond_map.find(skill_id) == bond_map.end()) continue;
+                    if (!bond_map.contains(skill_id)) continue;
 
                     bool overlay = false;
                     const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);

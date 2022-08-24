@@ -943,7 +943,7 @@ void ObjectiveTimerWindow::LoadRuns()
                     for (nlohmann::json::iterator json_it = os_json_arr.begin(); json_it != os_json_arr.end();
                          ++json_it) {
                         ObjectiveSet* os = ObjectiveSet::FromJson(json_it.value());
-                        if (instance.objective_sets.find(os->system_time) != instance.objective_sets.end()) {
+                        if (instance.objective_sets.contains(os->system_time)) {
                             delete os;
                             continue; // Don't load in a run that already exists
                         }

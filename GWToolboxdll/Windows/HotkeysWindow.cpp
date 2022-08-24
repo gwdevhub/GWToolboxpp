@@ -84,20 +84,20 @@ bool HotkeysWindow::CheckSetValidHotkeys() {
         for (size_t i = 0; i < _countof(hotkey->prof_ids);i++) {
             if (!hotkey->prof_ids[i])
                 continue;
-            if (by_profession.find(i) == by_profession.end())
+            if (!by_profession.contains(i))
                 by_profession[i] = std::vector<TBHotkey*>();
             by_profession[i].push_back(hotkey);
         }
         for (auto h_map_id : hotkey->map_ids) {
-            if (by_map.find(h_map_id) == by_map.end())
+            if (!by_map.contains(h_map_id))
                 by_map[h_map_id] = std::vector<TBHotkey*>();
             by_map[h_map_id].push_back(hotkey);
         }
 
-        if (by_instance_type.find(hotkey->instance_type) == by_instance_type.end())
+        if (!by_instance_type.contains(hotkey->instance_type))
             by_instance_type[hotkey->instance_type] = std::vector<TBHotkey*>();
         by_instance_type[hotkey->instance_type].push_back(hotkey);
-        if (by_player_name.find(hotkey->player_name) == by_player_name.end())
+        if (!by_player_name.contains(hotkey->player_name))
             by_player_name[hotkey->player_name] = std::vector<TBHotkey*>();
         by_player_name[hotkey->player_name].push_back(hotkey);
     }

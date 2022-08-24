@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/GameContext.h>
@@ -21,8 +20,6 @@
 #include <GWCA/Managers/MemoryMgr.h>
 
 #include "EffectsMonitorWidget.h"
-
-#include "Timer.h"
 
 void EffectsMonitorWidget::RefreshEffects() {
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
@@ -123,7 +120,7 @@ bool EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
         return false; // Game hasn't removed the effect yet.
     for (auto& by_type : cached_effects) {
         auto& effects = by_type.second;
-        for (size_t i = 0; i < effects.size();i++) {
+        for (size_t i = 0; i < effects.size(); i++) {
             if (effects[i].effect_id != effect_id)
                 continue;
             const GW::Effect* existing = GetLongestEffectBySkillId(effects[i].skill_id);
@@ -132,7 +129,7 @@ bool EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
                 return false; // Game hasn't removed the effect yet (copy the effect over)
             }
             by_type.second.erase(effects.begin() + i);
-            if (effects.size() == 0)
+            if (effects.empty())
                 cached_effects.erase(by_type.first);
             return true;
         }
@@ -194,7 +191,7 @@ uint32_t EffectsMonitorWidget::GetEffectSortOrder(GW::Constants::SkillID skill_i
 }
 void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
     uint32_t type = GetEffectSortOrder(effect->skill_id);
-    if (cached_effects.find(type) == cached_effects.end())
+    if (!cached_effects.contains(type))
         cached_effects[type] = std::vector<GW::Effect>();
 
     // Player can stand in range of more than 1 spirit; use the longest effect duration for the effect monitor

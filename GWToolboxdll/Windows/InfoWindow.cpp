@@ -191,7 +191,7 @@ void InfoWindow::DrawGuildInfo(GW::Guild* guild) {
 }
 void InfoWindow::DrawHomAchievements(const GW::Player* player) {
     if (ImGui::TreeNodeEx("Hall of Monuments Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        if (target_achievements.find(player->name) == target_achievements.end()) {
+        if (!target_achievements.contains(player->name)) {
             auto* achievements = new HallOfMonumentsAchievements();
             wcscpy(achievements->character_name, player->name);
             target_achievements[achievements->character_name] = achievements;
