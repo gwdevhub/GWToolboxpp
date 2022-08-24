@@ -527,7 +527,7 @@ bool TBHotkey::Draw(Op *op)
         }
         
         ImGui::PushItemWidth(60.0f * scale);
-        ImGui::Text("Trigger within ");
+        ImGui::Text("Only use this within ");
         ImGui::SameLine(0, 0);
         hotkey_changed |= ImGui::InputFloat("##in_range_of_distance", &in_range_of_distance, 0.f,0.f, "%.0f");
         ImGui::SameLine(0, 0);
@@ -1624,10 +1624,10 @@ void HotkeyDialog::Execute()
         return;
     char buf[32];
     if (id == 0) {
-        snprintf(buf, _countof(buf), "dialog take %d", in_range_of_npc_id);
+        snprintf(buf, _countof(buf), "dialog take");
     }
     else {
-        snprintf(buf, _countof(buf), "dialog 0x%X %d", id, in_range_of_npc_id);
+        snprintf(buf, _countof(buf), "dialog 0x%X", id);
     }
     
     GW::Chat::SendChat('/', buf);

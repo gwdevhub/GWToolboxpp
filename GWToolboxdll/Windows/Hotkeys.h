@@ -11,8 +11,6 @@
 
 #include <Utils/GuiUtils.h>
 
-#include <Defines.h>
-
 // abstract class Toolbox Hotkey
 // has the key code and pressed status
 class TBHotkey {
@@ -74,7 +72,7 @@ public:
 
     bool Draw(Op* op);
 
-    virtual const char* Name() const = 0;
+    [[nodiscard]] virtual const char* Name() const = 0;
     virtual bool Draw() = 0;
     virtual int Description(char *buf, size_t bufsz) = 0;
     virtual void Execute() = 0;

@@ -889,7 +889,7 @@ void ChatCommands::CmdAge2(const wchar_t* , int, LPWSTR* ) {
 void ChatCommands::CmdDialog(const wchar_t*, int argc, LPWSTR* argv) {
     if (!IsMapReady())
         return;
-    const char* syntax = "Syntax: '/dialog [dialog_id] [npc_model_id=0]' (e.g. '/dialog 0x184')\nSyntax: '/dialog take' (to take first available quest)";
+    const char* syntax = "Syntax: '/dialog [dialog_id]' (e.g. '/dialog 0x184')\nSyntax: '/dialog take' (to take first available quest)";
     if (argc <= 1) {
         Log::Error(syntax);
         return;
@@ -902,31 +902,10 @@ void ChatCommands::CmdDialog(const wchar_t*, int argc, LPWSTR* argv) {
         Log::Error(syntax);
         return;
     }
-    int target_npc = 0;
-    if (argc > 1) {
-        if (!GuiUtils::ParseInt(argv[2], &target_npc)) {
-            Log::Error("%s is not a valid npc_model_id", argv[2]);
-        }
-    }
-    if (!DialogModule::GetDialogAgent() || target_npc) {
-        auto* target = GW::Agents::GetTarget();
+    if (!DialogModule::GetDialogAgent()) {
+        const auto* target = GW::Agents::GetTargetAsAgentLiving();
         const auto* me = GW::Agents::GetPlayer();
-        if (target_npc) {
-            if (const auto agents = GW::Agents::GetAgentArray()) {
-                GW::Agent* closest = nullptr;
-                for (const auto agent : *agents) {
-                    if (agent && agent->GetAsAgentLiving() && agent->GetAsAgentLiving()->player_number == target_npc &&
-                        (!closest || GW::GetDistance(closest->pos, me->pos) > GW::GetDistance(agent->pos, me->pos))) {
-                        closest = agent;
-                    }
-                }
-                if (closest) {
-                    target = closest;
-                }
-            }
-        }
-        const auto* living = target ? target->GetAsAgentLiving() : nullptr;
-        if (living && living->allegiance == GW::Constants::Allegiance::Npc_Minipet
+        if (target && target->allegiance == GW::Constants::Allegiance::Npc_Minipet
             && GW::GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
             GW::Agents::GoNPC(target);
         }
