@@ -201,6 +201,9 @@ void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
     if (effect->duration) {
         effect = GetLongestEffectBySkillId(effect->skill_id);
     }
+    if (!effect) {
+        return;
+    }
 
     size_t current = GetEffectIndex(cached_effects[type], effect->skill_id);
     if (current != 0xFF) {
