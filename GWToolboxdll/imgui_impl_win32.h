@@ -46,12 +46,3 @@ IMGUI_IMPL_API float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor); // HM
 // - Use to enable alpha compositing transparency with the desktop.
 // - Use together with e.g. clearing your framebuffer with zero-alpha.
 IMGUI_IMPL_API void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd); // HWND hwnd
-
-IMGUI_IMPL_API ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM vkey);
-
-// Identify a mouse button.
-// Those values are guaranteed to be stable and we frequently use 0/1 directly. Named enums provided for convenience.
-enum ImGuiMouseButton__ {
-    ImGuiMouseButton_X1 = 3,
-    ImGuiMouseButton_X2 = 4,
-};

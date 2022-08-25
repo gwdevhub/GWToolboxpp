@@ -354,13 +354,13 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     case WM_SYSKEYDOWN:
     case WM_KEYUP:
     case WM_SYSKEYUP:
-        keyData = ImGui_ImplWin32_VirtualKeyToImGuiKey(wParam);
+        keyData = static_cast<int>(wParam);
         break;
     case WM_XBUTTONDOWN:
     case WM_MBUTTONDOWN:
-        if (LOWORD(wParam) & MK_MBUTTON) keyData = ImGuiMouseButton_Middle;
-        if (LOWORD(wParam) & MK_XBUTTON1) keyData = ImGuiMouseButton_X1;
-        if (LOWORD(wParam) & MK_XBUTTON2) keyData = ImGuiMouseButton_X2;
+        if (LOWORD(wParam) & MK_MBUTTON) keyData = VK_MBUTTON;
+        if (LOWORD(wParam) & MK_XBUTTON1) keyData = VK_XBUTTON1;
+        if (LOWORD(wParam) & MK_XBUTTON2) keyData = VK_XBUTTON2;
         break;
     case WM_XBUTTONUP:
     case WM_MBUTTONUP:
@@ -414,14 +414,14 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 
     case WM_XBUTTONUP:
         for (TBHotkey* hk : hotkeys) {
-            if (hk->pressed && (hk->hotkey == ImGuiMouseButton_X1 || hk->hotkey == ImGuiMouseButton_X2)) {
+            if (hk->pressed && (hk->hotkey == VK_XBUTTON1 || hk->hotkey == VK_XBUTTON2)) {
                 hk->pressed = false;
             }
         }
         return false;
     case WM_MBUTTONUP:
         for (TBHotkey* hk : hotkeys) {
-            if (hk->pressed && hk->hotkey == ImGuiMouseButton_Middle) {
+            if (hk->pressed && hk->hotkey == VK_MBUTTON) {
                 hk->pressed = false;
             }
         }
