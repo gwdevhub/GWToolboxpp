@@ -242,7 +242,7 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
             snprintf(button_name, _countof(button_name), "###WriteStatistics%d", party_idx);
             const float height = ImGui::GetCursorPosY() - start_y;
             ImGui::SetCursorPosY(start_y);
-            if (ImGui::Button(button_name, ImVec2(width, height)) && ImGui::IsKeyDown(VK_CONTROL)) {
+            if (ImGui::Button(button_name, ImVec2(width, height)) && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) {
                 WritePlayerStatisticsAllSkills(party_idx);
             }
             ImGui::PopStyleVar();
@@ -255,7 +255,7 @@ void PartyStatisticsWindow::DrawPartyMember(const size_t party_idx) {
 /********************/
 
 void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
-    bool in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
+    const bool in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     auto& instance = Instance();
     if (in_explorable && !instance.in_explorable) {
         // Reset party stats; just entered explorable area.

@@ -147,12 +147,12 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
         return;
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
-    const bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
+    const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_ModCtrl);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
         constexpr size_t buffer_size = 32;
         static char health_perc[buffer_size];
         static char health_abs[buffer_size];
-        GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+        const GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
         if (target) {
             if (show_perc_value) {
                 if (target->hp >= 0) {

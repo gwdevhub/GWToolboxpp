@@ -603,7 +603,7 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage mes
         // About to request a quote for an item
     case GW::UI::UIMessage::kSendMerchantRequestQuote: { 
         requesting_quote_type = 0;
-        if (instance.pending_transaction.in_progress() || !ImGui::IsKeyDown(VK_CONTROL) || MaterialsWindow::Instance().GetIsInProgress()) {
+        if (instance.pending_transaction.in_progress() || !ImGui::IsKeyDown(ImGuiKey_ModCtrl) || MaterialsWindow::Instance().GetIsInProgress()) {
             return;
         }
         requesting_quote_type = *(uint32_t*)wparam;
@@ -687,7 +687,7 @@ void InventoryManager::OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, u
     GW::Hook::LeaveHook();
 }
 void InventoryManager::OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity) {
-    if (ImGui::IsKeyDown(VK_SHIFT) || !Instance().trade_whole_stacks)
+    if (ImGui::IsKeyDown(ImGuiKey_ModShift) || !Instance().trade_whole_stacks)
         return; // Default behaviour; prompt user for amount
     if (quantity == 0) {
         const GW::Item* item = GW::Items::GetItemById(item_id);
@@ -1794,7 +1794,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
     Item* item = nullptr;
     switch (type) {
     case 7:   // Left click + ctrl
-        if (!ImGui::IsKeyDown(VK_CONTROL))
+        if (!ImGui::IsKeyDown(ImGuiKey_ModCtrl))
             return;
         break;
     case 8: // Double click - add to trade window if available
@@ -1846,9 +1846,9 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
         im.show_item_context_menu = true;
         status->blocked = true;
         return;
-    } else if (type == 7 && ImGui::IsKeyDown(VK_CONTROL) && GameSettings::Instance().move_item_on_ctrl_click) {
+    } else if (type == 7 && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && GameSettings::Instance().move_item_on_ctrl_click) {
         // Move item on ctrl click
-        if (ImGui::IsKeyDown(VK_SHIFT) && item->quantity > 1)
+        if (ImGui::IsKeyDown(ImGuiKey_ModShift) && item->quantity > 1)
             prompt_split_stack(item);
         else
             move_item(item);
@@ -1856,7 +1856,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
 }
 void InventoryManager::ClearPotentialItems()
 {
-    for (PotentialItem* item : potential_salvage_all_items) {
+    for (const PotentialItem* item : potential_salvage_all_items) {
         delete item;
     }
     potential_salvage_all_items.clear();

@@ -324,7 +324,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0f);
                 char button_name[buffer_size] = {'\0'};
                 snprintf(button_name, buffer_size, "button_%d", i);
-                if (ImGui::Button(button_name, ImVec2(_width, 0)) && ImGui::IsKeyDown(VK_CONTROL)) {
+                if (ImGui::Button(button_name, ImVec2(_width, 0)) && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) {
                     WriteDamageOf(i, i + 1);
                 }
                 ImGui::PopStyleVar();

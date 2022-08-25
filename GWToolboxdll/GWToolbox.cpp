@@ -1,11 +1,7 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Hooker.h>
-#include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
-#include <GWCA/GameEntities/Party.h>
-
 #include <GWCA/GWCA.h>
+#include <GWCA/Utilities/Hooker.h>
 
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
@@ -13,14 +9,10 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 
-#include <GWCA/Utilities/Scanner.h>
-
 #include <CursorFix.h>
-#include <d3dx9_dynamic.h>
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
@@ -28,7 +20,6 @@
 
 #include <Modules/Resources.h>
 #include <Modules/ChatCommands.h>
-#include <Modules/GameSettings.h>
 #include <Modules/ToolboxTheme.h>
 #include <Modules/ToolboxSettings.h>
 #include <Modules/CrashHandler.h>
@@ -37,10 +28,13 @@
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
 
-namespace {
-    HMODULE dllmodule = 0;
+// declare method here as recommended by imgui
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-    long OldWndProc = 0;
+namespace {
+    HMODULE dllmodule = nullptr;
+
+    WNDPROC OldWndProc = nullptr;
     bool tb_destroyed = false;
     bool imgui_initialized = false;
 
@@ -50,7 +44,7 @@ namespace {
 
     bool defer_close = false;
 
-    static HWND gw_window_handle = 0;
+    HWND gw_window_handle = nullptr;
     bool SaveIniToFile(CSimpleIni* ini, std::filesystem::path location) {
         std::filesystem::path tmpFile = location;
         tmpFile += ".tmp";
@@ -170,7 +164,7 @@ LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lPar
     __try {
         return WndProc(hWnd, Message, wParam, lParam);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
+        return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 }
 
@@ -187,7 +181,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     }
 
     if (!(!GW::PreGameContext::instance() && imgui_initialized && GWToolbox::Instance().IsInitialized() && !tb_destroyed)) {
-        return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
+        return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
 
@@ -198,77 +192,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
     GWToolbox::Instance().right_mouse_down = right_mouse_down;
 
-    bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing();
-
-
-
     // === Send events to ImGui ===
     ImGuiIO& io = ImGui::GetIO();
+    const bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing();
+    if (!skip_mouse_capture && ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam))
+        return TRUE;
 
-    switch (Message) {
-    case WM_LBUTTONDOWN:
-    case WM_LBUTTONDBLCLK:
-        if (!skip_mouse_capture) 
-            io.AddMouseButtonEvent(0, true);
-        break;
-    case WM_LBUTTONUP:
-        io.AddMouseButtonEvent(0, false);
-        break;
-    case WM_MBUTTONDOWN:
-    case WM_MBUTTONDBLCLK:
-        if (!skip_mouse_capture) {
-            io.AddKeyEvent(VK_MBUTTON, true);
-            io.AddMouseButtonEvent(2, true);
-        } 
-        break;
-    case WM_MBUTTONUP: {
-        io.AddKeyEvent(VK_MBUTTON, false);
-        io.AddMouseButtonEvent(2, false);
-    } break;
-    case WM_MOUSEWHEEL: 
-        if (!skip_mouse_capture)
-            io.AddMouseWheelEvent(0.f, GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f);
-        break;
-    case WM_MOUSEMOVE:
-        if (!skip_mouse_capture)
-            io.AddMousePosEvent((float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam));
-        break;
-    case WM_XBUTTONDOWN:
-        if (!skip_mouse_capture) {
-            if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1)
-                io.AddKeyEvent(VK_XBUTTON1, true);
-            if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2)
-                io.AddKeyEvent(VK_XBUTTON2, true);
-        }
-        break;
-    case WM_XBUTTONUP:
-        if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) 
-            io.AddKeyEvent(VK_XBUTTON1, false);
-        if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2)
-            io.AddKeyEvent(VK_XBUTTON2, false);
-        break;
-    case WM_SYSKEYDOWN:
-    case WM_KEYDOWN:
-        if (wParam < 256)
-            io.AddKeyEvent(wParam, true);
-        break;
-    case WM_SYSKEYUP:
-    case WM_KEYUP:
-        if (wParam < 256)
-            io.AddKeyEvent(wParam, false);
-        break;
-    case WM_CHAR: // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-        if (wParam > 0 && wParam < 0x10000)
-            io.AddInputCharacter((unsigned short)wParam);
-        break;
-    default:
-        break;
-    }
-
-    
 
     // === Send events to toolbox ===
-    GWToolbox& tb = GWToolbox::Instance();
+    const GWToolbox& tb = GWToolbox::Instance();
     switch (Message) {
     // Send button up mouse events to everything, to avoid being stuck on mouse-down
     case WM_LBUTTONUP:
@@ -352,7 +284,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         break;
     }
     
-    return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
+    return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
 }
 
 void GWToolbox::Initialize() {
@@ -360,7 +292,7 @@ void GWToolbox::Initialize() {
         return;
     Log::Log("installing event handler\n");
     gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
-    OldWndProc = SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
+    OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
     Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
     imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
@@ -488,7 +420,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 
         Log::Log("Restoring input hook\n");
-        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
+        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
 
         GW::DisableHooks();
         instance.initialized = false;
@@ -504,7 +436,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
             ImGui::CreateContext();
             //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
             ImGui_ImplDX9_Init(device);
-            ImGui_ImplWin32_Init(GW::MemoryMgr().GetGWWindowHandle());
+            ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
 
             ImGuiIO& io = ImGui::GetIO();
             io.MouseDrawCursor = false;
@@ -554,9 +486,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct, 
         // or things like alt-tab make imgui think that alt is still down.
-        ImGui::GetIO().KeysDown[VK_CONTROL] = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
-        ImGui::GetIO().KeysDown[VK_SHIFT] = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-        ImGui::GetIO().KeysDown[VK_MENU] = (GetKeyState(VK_MENU) & 0x8000) != 0;
+        auto& io = ImGui::GetIO();
+        io.AddKeyEvent(ImGuiKey_ModCtrl, (GetKeyState(VK_CONTROL) & 0x8000) != 0);
+        io.AddKeyEvent(ImGuiKey_ModShift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
+        io.AddKeyEvent(ImGuiKey_Menu, (GetKeyState(VK_MENU) & 0x8000) != 0);
         
         for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {
             if (world_map_showing && !uielement->ShowOnWorldMap())

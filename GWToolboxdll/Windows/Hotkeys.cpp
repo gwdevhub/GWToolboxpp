@@ -556,33 +556,32 @@ bool TBHotkey::Draw(Op *op)
             *op = Op_BlockInput;
             ImGui::Text("Press key");
             DWORD newmod = 0;
-            bool* keysdown = ImGui::GetIO().KeysDown;
             if (mod_out) {
-                if (keysdown[VK_CONTROL])
+                if (ImGui::IsKeyDown(ImGuiKey_ModCtrl))
                     newmod |= ModKey_Control;
-                if (keysdown[VK_MENU])
-                    newmod |= ModKey_Alt;
-                if (keysdown[VK_SHIFT])
+                if (ImGui::IsKeyDown(ImGuiKey_ModShift))
                     newmod |= ModKey_Shift;
+                if (ImGui::IsKeyDown(ImGuiKey_Menu))
+                    newmod |= ModKey_Alt;
             }
 
 
             if (newkey == 0) { // we are looking for the key
-                for (WORD i = 0; i < 512; ++i) {
-                    if (i == VK_CONTROL)
-                        continue;
-                    if (i == VK_SHIFT)
-                        continue;
-                    if (i == VK_MENU)
-                        continue;
-                    if (keysdown[i]) {
-                        newkey = i;
+                for (WORD i = ImGuiKey_NamedKey_BEGIN; i < ImGuiKey_NamedKey_END; ++i) {
+                    switch (i) {
+                        case ImGuiKey_ModCtrl:
+                        case ImGuiKey_ModShift:
+                        case ImGuiKey_Menu:
+                            continue;
+                        default: {
+                            if (ImGui::IsKeyDown(i)) newkey = i;
+                        }
                     }
                 }
             } else { // key was pressed, close if it's released
-                if (!keysdown[newkey]) {
+                if (!ImGui::IsKeyDown(newkey)) {
                     *key_out = newkey;
-                    if(mod_out)
+                    if (mod_out)
                         *mod_out = newmod;
                     newkey = 0;
                     ImGui::CloseCurrentPopup();
@@ -1230,7 +1229,7 @@ void HotkeyDropUseBuff::Execute()
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
                 GW::GameThread::Enqueue([slot] () -> void {
                     GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(),
-                        static_cast<uint32_t>(ImGui::IsKeyDown(VK_CONTROL)));
+                        static_cast<uint32_t>(ImGui::IsKeyDown(ImGuiKey_ModCtrl)));
                 });
             }
         }

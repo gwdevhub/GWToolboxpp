@@ -628,19 +628,19 @@ void ChatCommands::Update(float delta) {
         float vertical = 0;
         float rotate = 0;
         float side = 0;
-        if (ImGui::IsKeyDown(VK_W) || ImGui::IsKeyDown(VK_UP) || keep_forward) forward += 1.0f;
-        if (ImGui::IsKeyDown(VK_S) || ImGui::IsKeyDown(VK_DOWN)) forward -= 1.0f;
-        if (ImGui::IsKeyDown(VK_Q)) side += 1.0f;
-        if (ImGui::IsKeyDown(VK_E)) side -= 1.0f;
-        if (ImGui::IsKeyDown(VK_Z)) vertical -= 1.0f;
-        if (ImGui::IsKeyDown(VK_X)) vertical += 1.0f;
-        if (ImGui::IsKeyDown(VK_A) || ImGui::IsKeyDown(VK_LEFT)) rotate += 1.0f;
-        if (ImGui::IsKeyDown(VK_D) || ImGui::IsKeyDown(VK_RIGHT)) rotate -= 1.0f;
-        if (ImGui::IsKeyDown(VK_R)) keep_forward = true;
+        if (ImGui::IsKeyDown(ImGuiKey_W) || ImGui::IsKeyDown(ImGuiKey_UpArrow) || keep_forward) forward += 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_S) || ImGui::IsKeyDown(ImGuiKey_DownArrow)) forward -= 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_Q)) side += 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_E)) side -= 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_Z)) vertical -= 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_X)) vertical += 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_A) || ImGui::IsKeyDown(ImGuiKey_LeftArrow)) rotate += 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_D) || ImGui::IsKeyDown(ImGuiKey_RightArrow)) rotate -= 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_R)) keep_forward = true;
 
-        if (ImGui::IsKeyDown(VK_W) || ImGui::IsKeyDown(VK_UP) ||
-            ImGui::IsKeyDown(VK_S) || ImGui::IsKeyDown(VK_DOWN) ||
-            ImGui::IsKeyDown(VK_ESCAPE))
+        if (ImGui::IsKeyDown(ImGuiKey_W) || ImGui::IsKeyDown(ImGuiKey_UpArrow) ||
+            ImGui::IsKeyDown(ImGuiKey_S) || ImGui::IsKeyDown(ImGuiKey_DownArrow) ||
+            ImGui::IsKeyDown(ImGuiKey_Escape))
         {
             keep_forward = false;
         }
