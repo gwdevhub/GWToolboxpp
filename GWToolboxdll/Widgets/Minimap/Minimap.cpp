@@ -1232,9 +1232,9 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9 *device) const
 
 bool Minimap::IsKeyDown(const MinimapModifierBehaviour mmb) const
 {
-    return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiKey_ModCtrl) && !ImGui::IsKeyDown(ImGuiKey_ModShift) &&
-               !ImGui::IsKeyDown(ImGuiKey_Menu)) ||
+    return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiKey_ModCtrl) &&
+        !ImGui::IsKeyDown(ImGuiKey_ModShift) &&!ImGui::IsKeyDown(ImGuiKey_ModAlt)) ||
            (key_ctrl_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) ||
            (key_shift_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModShift)) ||
-           (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_Menu));
+           (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModAlt));
 }

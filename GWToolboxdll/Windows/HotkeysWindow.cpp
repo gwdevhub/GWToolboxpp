@@ -354,13 +354,13 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     case WM_SYSKEYDOWN:
     case WM_KEYUP:
     case WM_SYSKEYUP:
-        keyData = static_cast<long>(wParam);
+        keyData = ImGui_ImplWin32_VirtualKeyToImGuiKey(wParam);
         break;
     case WM_XBUTTONDOWN:
     case WM_MBUTTONDOWN:
-        if (LOWORD(wParam) & MK_MBUTTON) keyData = VK_MBUTTON;
-        if (LOWORD(wParam) & MK_XBUTTON1) keyData = VK_XBUTTON1;
-        if (LOWORD(wParam) & MK_XBUTTON2) keyData = VK_XBUTTON2;
+        if (LOWORD(wParam) & MK_MBUTTON) keyData = ImGuiMouseButton_Middle;
+        if (LOWORD(wParam) & MK_XBUTTON1) keyData = ImGuiMouseButton_X1;
+        if (LOWORD(wParam) & MK_XBUTTON2) keyData = ImGuiMouseButton_X2;
         break;
     case WM_XBUTTONUP:
     case WM_MBUTTONUP:

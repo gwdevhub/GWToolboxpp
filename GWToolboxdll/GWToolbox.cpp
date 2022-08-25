@@ -489,7 +489,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         auto& io = ImGui::GetIO();
         io.AddKeyEvent(ImGuiKey_ModCtrl, (GetKeyState(VK_CONTROL) & 0x8000) != 0);
         io.AddKeyEvent(ImGuiKey_ModShift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
-        io.AddKeyEvent(ImGuiKey_Menu, (GetKeyState(VK_MENU) & 0x8000) != 0);
+        io.AddKeyEvent(ImGuiKey_ModAlt, (GetKeyState(VK_MENU) & 0x8000) != 0);
         
         for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {
             if (world_map_showing && !uielement->ShowOnWorldMap())

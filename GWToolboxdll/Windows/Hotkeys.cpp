@@ -561,25 +561,43 @@ bool TBHotkey::Draw(Op *op)
                     newmod |= ModKey_Control;
                 if (ImGui::IsKeyDown(ImGuiKey_ModShift))
                     newmod |= ModKey_Shift;
-                if (ImGui::IsKeyDown(ImGuiKey_Menu))
+                if (ImGui::IsKeyDown(ImGuiKey_ModAlt))
                     newmod |= ModKey_Alt;
             }
 
 
             if (newkey == 0) { // we are looking for the key
-                for (WORD i = ImGuiKey_NamedKey_BEGIN; i < ImGuiKey_NamedKey_END; ++i) {
+                for (WORD i = ImGuiKey_NamedKey_BEGIN; i < ImGuiKey_NamedKey_END; i++) {
                     switch (i) {
                         case ImGuiKey_ModCtrl:
                         case ImGuiKey_ModShift:
-                        case ImGuiKey_Menu:
+                        case ImGuiKey_ModAlt:
+                        case ImGuiKey_LeftCtrl:
+                        case ImGuiKey_RightCtrl:
+                        case ImGuiKey_LeftShift:
+                        case ImGuiKey_RightShift:
+                        case ImGuiKey_LeftAlt:
+                        case ImGuiKey_RightAlt:
                             continue;
                         default: {
                             if (ImGui::IsKeyDown(i)) newkey = i;
                         }
                     }
                 }
+                for (WORD i = ImGuiMouseButton_Middle; i < ImGuiMouseButton_COUNT; i++) {
+                    if (ImGui::IsMouseDown(i)) newkey = i;
+                }
             } else { // key was pressed, close if it's released
-                if (!ImGui::IsKeyDown(newkey)) {
+                if (newkey >= ImGuiMouseButton_Middle && newkey < ImGuiMouseButton_COUNT) {
+                    if (!ImGui::IsMouseDown(newkey)) {
+                        *key_out = newkey;
+                        if (mod_out) *mod_out = newmod;
+                        newkey = 0;
+                        ImGui::CloseCurrentPopup();
+                        hotkey_changed = true;
+                    }
+                }
+                else if (!ImGui::IsKeyDown(newkey)) {
                     *key_out = newkey;
                     if (mod_out)
                         *mod_out = newmod;

@@ -363,7 +363,7 @@ void ImGui_ImplWin32_NewFrame() {
 #define IM_VK_KEYPAD_ENTER (VK_RETURN + 256)
 
 // Map VK_xxx to ImGuiKey_xxx.
-static ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam) {
+ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam) {
     switch (wParam) {
         case VK_TAB: return ImGuiKey_Tab;
         case VK_LEFT: return ImGuiKey_LeftArrow;
