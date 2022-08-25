@@ -119,6 +119,7 @@ protected:
 
     virtual bool CanUseByInstanceType() const;
     virtual bool CanUseByEffect() const = 0;
+    virtual void OnButtonClick() { Toggle(); }
     virtual size_t QuantityForEach(const GW::Item* item) const = 0;
 
 private:
@@ -141,7 +142,7 @@ public:
         ImVec2 uv0, ImVec2 uv1,
         DWORD item, GW::Constants::SkillID effect, 
         int threshold,
-            const char* desc = nullptr)
+        const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc),
         itemID(item), effectID(effect) {}
     PconGeneric(const PconGeneric&) = delete;
@@ -149,6 +150,7 @@ public:
 protected:
     bool CanUseByEffect() const override;
     size_t QuantityForEach(const GW::Item* item) const override;
+    void OnButtonClick() override;
 
 private:
     const DWORD itemID;

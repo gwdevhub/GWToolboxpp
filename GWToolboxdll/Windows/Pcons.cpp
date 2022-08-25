@@ -109,7 +109,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
     ImVec4 tint(1, 1, 1, 1);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     if (ImGui::ImageButton((ImTextureID)*texture, s, uv0, uv1, 0, bg, tint)) {
-        Toggle();
+        OnButtonClick();
     }
     ImGui::PopStyleColor();
     if (ImGui::IsItemHovered()) {
@@ -475,6 +475,40 @@ size_t PconGeneric::QuantityForEach(const GW::Item* item) const {
     if (item->model_id == (DWORD)itemID) return 1;
     return 0;
 }
+
+void PconGeneric::OnButtonClick() {
+    Pcon::OnButtonClick();
+
+    if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
+        std::vector<DWORD> item_ids{};
+        switch (itemID) {
+            case ItemID::ConsEssence:
+            case ItemID::ConsGrail:
+            case ItemID::ConsArmor:
+                item_ids.insert(item_ids.end(), {ItemID::ConsEssence, ItemID::ConsGrail, ItemID::ConsArmor});
+                break;
+            case ItemID::GRC:
+            case ItemID::BRC:
+            case ItemID::RRC: item_ids.insert(item_ids.end(), {ItemID::GRC, ItemID::BRC, ItemID::RRC}); break;
+            case ItemID::Kabobs:
+            case ItemID::PahnaiSalad:
+            case ItemID::SkalefinSoup:
+                item_ids.insert(item_ids.end(), {ItemID::Kabobs, ItemID::PahnaiSalad, ItemID::SkalefinSoup});
+                break;
+            default: break;
+        }
+        const bool is_enabled = IsEnabled();
+        auto enable_if_same_category = [is_enabled, &item_ids](Pcon* other) {
+            auto* generic = dynamic_cast<PconGeneric*>(other);
+            if (generic == nullptr) return;
+            if (std::ranges::find(item_ids, generic->itemID) != item_ids.end()) {
+                generic->SetEnabled(is_enabled);
+            }
+        };
+        if (!item_ids.empty()) std::ranges::for_each(PconsWindow::Instance().pcons, enable_if_same_category);
+    }
+}
+
 bool PconGeneric::CanUseByEffect() const {
     GW::Agent* _player = GW::Agents::GetPlayer();
     if (!_player)

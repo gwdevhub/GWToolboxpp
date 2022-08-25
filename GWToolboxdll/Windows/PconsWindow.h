@@ -53,7 +53,7 @@ public:
     static void OnGenericValue(GW::HookStatus *, GW::Packet::StoC::GenericValue *pak);
     static void OnPostProcessEffect(GW::HookStatus *status, GW::Packet::StoC::PostProcess *pak);
     static void OnAddExternalBond(GW::HookStatus *status, GW::Packet::StoC::AddExternalBond *pak);
-    static void CmdPcons(const wchar_t *, int argc,LPWSTR *argv);
+    static void CmdPcons(const wchar_t *, int argc, LPWSTR *argv);
 
     std::vector<Pcon*> pcons;
 
