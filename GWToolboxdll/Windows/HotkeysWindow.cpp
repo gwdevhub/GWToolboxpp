@@ -414,14 +414,14 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 
     case WM_XBUTTONUP:
         for (TBHotkey* hk : hotkeys) {
-            if (hk->pressed && (hk->hotkey == VK_XBUTTON1 || hk->hotkey == VK_XBUTTON2)) {
+            if (hk->pressed && (hk->hotkey == ImGuiMouseButton_X1 || hk->hotkey == ImGuiMouseButton_X2)) {
                 hk->pressed = false;
             }
         }
         return false;
     case WM_MBUTTONUP:
         for (TBHotkey* hk : hotkeys) {
-            if (hk->pressed && hk->hotkey == VK_MBUTTON) {
+            if (hk->pressed && hk->hotkey == ImGuiMouseButton_Middle) {
                 hk->pressed = false;
             }
         }
