@@ -183,9 +183,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     if (!(!GW::PreGameContext::instance() && imgui_initialized && GWToolbox::Instance().IsInitialized() && !tb_destroyed)) {
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
-
-
-
+    
     if (Message == WM_RBUTTONUP) right_mouse_down = false;
     if (Message == WM_RBUTTONDOWN) right_mouse_down = true;
     if (Message == WM_RBUTTONDBLCLK) right_mouse_down = true;
@@ -193,10 +191,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     GWToolbox::Instance().right_mouse_down = right_mouse_down;
 
     // === Send events to ImGui ===
-    ImGuiIO& io = ImGui::GetIO();
+    const ImGuiIO& io = ImGui::GetIO();
     const bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing();
-    if (!skip_mouse_capture && ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam))
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture) {
         return TRUE;
+    }
 
 
     // === Send events to toolbox ===
@@ -221,7 +220,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     case WM_RBUTTONDBLCLK:
     case WM_MOUSEMOVE:
     case WM_MOUSEWHEEL: {
-        if (io.WantCaptureMouse && !skip_mouse_capture) return true;
+        if (io.WantCaptureMouse && !skip_mouse_capture)
+            return true;
         bool captured = false;
         for (ToolboxModule* m : tb.GetModules()) {
             if (m->WndProc(Message, wParam, lParam)) captured = true;
@@ -459,7 +459,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         if (!GW::UI::GetIsUIDrawn())
             return;
 
-        bool world_map_showing = GW::UI::GetIsWorldMapShowing();
+        const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
         if (GW::PreGameContext::instance())
             return; // Login screen
@@ -512,7 +512,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
     }
 
 
-    if(tb_destroyed && defer_close) {
+    if (tb_destroyed && defer_close) {
         // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
         SendMessageW(gw_window_handle, WM_CLOSE, NULL, NULL);
     }

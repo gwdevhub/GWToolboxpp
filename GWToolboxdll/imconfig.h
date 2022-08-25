@@ -107,3 +107,6 @@ namespace ImGui
     void MyFunction(const char* name, const MyMatrix44& v);
 }
 */
+
+#define IMGUI_DISABLE_OBSOLETE_KEYIO 1 // disable old IO api
+#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD 1 // no gamepad
