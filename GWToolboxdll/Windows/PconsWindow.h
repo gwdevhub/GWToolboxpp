@@ -30,8 +30,9 @@ public:
     bool SetEnabled(bool b);
     bool GetEnabled();
     bool show_storage_quantity = false;
+    bool shift_click_toggles_category = true;
 
-    inline void ToggleEnable() { SetEnabled(!enabled); }
+    void ToggleEnable() { SetEnabled(!enabled); }
 
     void Refill(bool do_refill = true);
 

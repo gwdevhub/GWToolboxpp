@@ -479,7 +479,7 @@ size_t PconGeneric::QuantityForEach(const GW::Item* item) const {
 void PconGeneric::OnButtonClick() {
     Pcon::OnButtonClick();
 
-    if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
+    if (PconsWindow::Instance().shift_click_toggles_category && ImGui::IsKeyDown(ImGuiKey_ModShift)) {
         std::vector<DWORD> item_ids{};
         switch (itemID) {
             case ItemID::ConsEssence:
