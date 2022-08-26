@@ -139,7 +139,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
             ImGui::TextColored(ImVec4(0.75f, 0.75f, 0.75f, 1), "%d", quantity_storage);
         }
     }
-    
+
     ImGui::SetCursorPos(pos);
     ImGui::Dummy(ImVec2(size, size));
 }
@@ -254,7 +254,7 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem) { // Scan b
     if (bags == nullptr) return nullptr;
     size_t emptySlotIdx = (size_t)-1;
     GW::Bag* emptyBag = nullptr;
-    
+
     for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) { // Work from last bag to first; pcons at bottom of inventory
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr) continue;   // No bag, skip
@@ -316,7 +316,7 @@ void Pcon::Refill(bool do_refill) {
         pending_move_to_quantity = 0;
         return;
     }
-    ResetCounts(); 
+    ResetCounts();
 }
 void Pcon::UpdateRefill() {
     if (!refilling)
@@ -480,32 +480,25 @@ void PconGeneric::OnButtonClick() {
     Pcon::OnButtonClick();
 
     if (PconsWindow::Instance().shift_click_toggles_category && ImGui::IsKeyDown(ImGuiKey_ModShift)) {
-        std::vector<DWORD> item_ids{};
-        switch (itemID) {
-            case ItemID::ConsEssence:
-            case ItemID::ConsGrail:
-            case ItemID::ConsArmor:
-                item_ids.insert(item_ids.end(), {ItemID::ConsEssence, ItemID::ConsGrail, ItemID::ConsArmor});
-                break;
-            case ItemID::GRC:
-            case ItemID::BRC:
-            case ItemID::RRC: item_ids.insert(item_ids.end(), {ItemID::GRC, ItemID::BRC, ItemID::RRC}); break;
-            case ItemID::Kabobs:
-            case ItemID::PahnaiSalad:
-            case ItemID::SkalefinSoup:
-                item_ids.insert(item_ids.end(), {ItemID::Kabobs, ItemID::PahnaiSalad, ItemID::SkalefinSoup});
-                break;
-            default: break;
-        }
-        const bool is_enabled = IsEnabled();
-        auto enable_if_same_category = [is_enabled, &item_ids](Pcon* other) {
+        namespace r = std::ranges;
+        const std::vector<std::vector<DWORD>> categories{
+            {ItemID::ConsEssence, ItemID::ConsGrail, ItemID::ConsArmor},
+            {ItemID::GRC, ItemID::BRC, ItemID::RRC},
+            {ItemID::Kabobs, ItemID::PahnaiSalad, ItemID::SkalefinSoup}
+        };
+        const auto found = r::find_if(categories, [this](const auto& category) {
+            return r::find(category, itemID) != r::end(category);
+        });
+        if (found == r::end(categories)) return;
+        const auto& category = *found;
+        auto enable_if_same_category = [this, &category](Pcon* other) {
             auto* generic = dynamic_cast<PconGeneric*>(other);
             if (generic == nullptr) return;
-            if (std::ranges::find(item_ids, generic->itemID) != item_ids.end()) {
-                generic->SetEnabled(is_enabled);
+            if (r::find(category, generic->itemID) != r::end(category)) {
+                generic->SetEnabled(IsEnabled());
             }
         };
-        if (!item_ids.empty()) std::ranges::for_each(PconsWindow::Instance().pcons, enable_if_same_category);
+        r::for_each(PconsWindow::Instance().pcons, enable_if_same_category);
     }
 }
 
