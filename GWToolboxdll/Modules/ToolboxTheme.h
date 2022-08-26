@@ -4,7 +4,7 @@
 
 class ToolboxTheme : public ToolboxUIElement {
     ToolboxTheme();
-    ~ToolboxTheme() { 
+    ~ToolboxTheme() {
         if (windows_ini) delete windows_ini;
         if (inifile) delete inifile;
     }
@@ -21,7 +21,8 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void Draw(IDirect3DDevice9* device) override;
-    void ShowVisibleRadio() override { };
+    void ShowVisibleRadio() override {}
+    void DrawSizeAndPositionSettings() override {}
 
     void SaveUILayout();
     void LoadUILayout();

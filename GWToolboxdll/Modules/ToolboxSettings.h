@@ -21,7 +21,7 @@ public:
     const char8_t* Icon() const override { return ICON_FA_TOOLBOX;  }
 
     void LoadModules(CSimpleIni* ini);
-    
+
     void Update(float delta) override;
 
     void LoadSettings(CSimpleIni* ini) override;
@@ -31,6 +31,7 @@ public:
     void ShowVisibleRadio() override { };
 
     void DrawFreezeSetting();
+    void DrawSizeAndPositionSettings() override {}
 
     const std::vector<ToolboxModule*>& GetOptionalModules() const { return optional_modules; }
 
