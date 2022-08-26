@@ -707,10 +707,9 @@ void ChatCommands::SearchAgent::Init(const wchar_t* _search, TargetType type) {
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
     if (!agents)
         return;
-    bool target_untargettable_npcs = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
     for (const GW::Agent* agent : *agents) {
         if (!agent) continue;
-        if (!(target_untargettable_npcs || GW::Agents::GetIsAgentTargettable(agent)))
+        if (!GW::Agents::GetIsAgentTargettable(agent))
             continue;
         switch (type) {
         case Item:
@@ -1720,13 +1719,11 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
     float distance = GW::Constants::SqrRange::Compass;
     size_t closest = 0;
     size_t count = 0;
-
-    bool target_untargettable_npcs = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
-
+    
     for (const GW::Agent * agent : *agents) {
         if (!agent || agent == me)
             continue;
-        if (!(target_untargettable_npcs || GW::Agents::GetIsAgentTargettable(agent)))
+        if (!GW::Agents::GetIsAgentTargettable(agent))
             continue;
         switch (type) {
             case Gadget: {
