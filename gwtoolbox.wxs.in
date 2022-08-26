@@ -8,7 +8,7 @@
         <!-- Step 1: Define the directory structure -->
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="DesktopFolder" Name="Desktop" />
-            <Directory Id="AppDataFolder">
+            <Directory Id="PersonalFolder">
                 <Directory Id="APPLICATIONROOTDIRECTORY" Name="GWToolboxpp">
                   <Directory Id="LOGSDIRECTORY" Name="logs" />
                   <Directory Id="CRASHESDIRECTORY" Name="crashes" />
