@@ -208,7 +208,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
         return 0;
     }
-    
+
     // If we can't open with appropriate rights, we can then ask to re-open
     // as admin.
     InjectReply reply = InjectWindow::AskInjectProcess(&proc);
