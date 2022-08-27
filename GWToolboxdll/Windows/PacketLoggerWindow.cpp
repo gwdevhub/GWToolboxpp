@@ -596,8 +596,7 @@ void PacketLoggerWindow::SaveMessageLog() {
 
 void PacketLoggerWindow::ClearMessageLog() {
     for (const auto& it : message_log) {
-        if (it.second)
-            delete it.second;
+        delete it.second;
     }
     message_log.clear();
 }

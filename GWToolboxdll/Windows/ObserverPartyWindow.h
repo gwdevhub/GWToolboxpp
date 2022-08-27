@@ -15,14 +15,8 @@
 #define NO_AGENT 0
 
 class ObserverPartyWindow : public ToolboxWindow {
-public:
-    //
-
-private:
-    ObserverPartyWindow() {};
-    ~ObserverPartyWindow() {
-        //
-    };
+    ObserverPartyWindow() = default;
+    ~ObserverPartyWindow() = default;
 
 public:
     static ObserverPartyWindow& Instance() {

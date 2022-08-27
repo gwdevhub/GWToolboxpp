@@ -79,19 +79,19 @@ DWORD __stdcall ThreadEntry(LPVOID) {
         // Handle this now before we go any further - removing this check will cause a crash when modules try to use D3DX9 funcs in Draw() later and will close GW
         char title[128];
         sprintf(title, "GWToolbox++ API Error (LastError: %lu)", GetLastError());
-        if (MessageBoxA(0, 
-            "Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed.\nGWToolbox++ needs this installed to continue.\n\nVisit DirectX Redistributable download page?", 
+        if (MessageBoxA(0,
+            "Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed.\nGWToolbox++ needs this installed to continue.\n\nVisit DirectX Redistributable download page?",
             title, MB_YESNO) == IDYES) {
             ShellExecute(0, 0, DIRECTX_REDIST_WEBSITE, 0, 0, SW_SHOW);
         }
-    
+
         goto leave;
     }
 
     GW::HookBase::Initialize();
     if (!GW::Initialize()){
         if (MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) {
-            
+
         }
         goto leave;
     }
@@ -130,7 +130,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     while (!tb_destroyed) { // wait until destruction
         Sleep(100);
 
-        // Feel free to uncomment to get this behavior for testing, but don't commit. 
+        // Feel free to uncomment to get this behavior for testing, but don't commit.
 //#ifdef _DEBUG
 //        if (GetAsyncKeyState(VK_END) & 1) {
 //            GWToolbox::Instance().StartSelfDestruct();
@@ -183,7 +183,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     if (!(!GW::PreGameContext::instance() && imgui_initialized && GWToolbox::Instance().IsInitialized() && !tb_destroyed)) {
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
-    
+
     if (Message == WM_RBUTTONUP) right_mouse_down = false;
     if (Message == WM_RBUTTONDOWN) right_mouse_down = true;
     if (Message == WM_RBUTTONDBLCLK) right_mouse_down = true;
@@ -208,7 +208,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             m->WndProc(Message, wParam, lParam);
         }
         break;
-        
+
     // Other mouse events:
     // - If right mouse down, leave it to gw
     // - ImGui first (above), if WantCaptureMouse that's it
@@ -226,7 +226,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         for (ToolboxModule* m : tb.GetModules()) {
             if (m->WndProc(Message, wParam, lParam)) captured = true;
         }
-        if (captured) 
+        if (captured)
             return true;
     }
         //if (!skip_mouse_capture) {
@@ -265,9 +265,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             }
             if (captured) return true;
         }
-        // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters. 
+        // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
         // We may want to not send events to toolbox if the player is typing in-game
-        // Otherwise, we may want to capture events. 
+        // Otherwise, we may want to capture events.
         // For that, we may want to only capture *successfull* hotkey activations.
         break;
 
@@ -283,7 +283,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         }
         break;
     }
-    
+
     return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
 }
 
@@ -484,13 +484,13 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         ImGui::NewFrame();
 
-        // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct, 
+        // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct,
         // or things like alt-tab make imgui think that alt is still down.
         auto& io = ImGui::GetIO();
         io.AddKeyEvent(ImGuiKey_ModCtrl, (GetKeyState(VK_CONTROL) & 0x8000) != 0);
         io.AddKeyEvent(ImGuiKey_ModShift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
         io.AddKeyEvent(ImGuiKey_ModAlt, (GetKeyState(VK_MENU) & 0x8000) != 0);
-        
+
         for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {
             if (world_map_showing && !uielement->ShowOnWorldMap())
                 continue;

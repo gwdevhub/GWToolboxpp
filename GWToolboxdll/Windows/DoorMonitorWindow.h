@@ -6,8 +6,8 @@
 #include <ToolboxWindow.h>
 
 class DoorMonitorWindow : public ToolboxWindow {
-    DoorMonitorWindow() {};
-    ~DoorMonitorWindow() {};
+    DoorMonitorWindow() = default;
+    ~DoorMonitorWindow() = default;
 public:
     class DoorObject {
     public:
@@ -83,7 +83,7 @@ private:
 
     GW::HookEntry InstanceLoadInfo_Callback;
     GW::HookEntry ManipulateMapObject_Callback;
- 
+
 public:
     std::map<uint32_t, DoorObject*> doors;
 };

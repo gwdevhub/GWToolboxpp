@@ -1,12 +1,13 @@
 #pragma once
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/GameEntities/Item.h>
-#include <GWCA/Managers/MerchantMgr.h>
 
 #include <ToolboxWindow.h>
 
 class MaterialsWindow : public ToolboxWindow {
+    MaterialsWindow() = default;
+    ~MaterialsWindow() = default;
+
     enum Item {
         Essence,
         Grail,
@@ -30,12 +31,10 @@ class MaterialsWindow : public ToolboxWindow {
         RollofParchment, RollofVellum, Ruby,
         Sapphire, SpiritwoodPlank, SteelIngot,
         TemperedGlassVial, VialofInk,
-        
+
         N_MATS
     };
 
-    MaterialsWindow() {};
-    ~MaterialsWindow(){};
 public:
     static MaterialsWindow& Instance() {
         static MaterialsWindow instance;
@@ -53,7 +52,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
 
     bool GetIsInProgress();
-    
+
     // Update. Will always be called every frame.
     void Update(float delta) override;
 

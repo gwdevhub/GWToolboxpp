@@ -14,8 +14,9 @@ LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
 class GWToolbox {
-    GWToolbox() {};
-    ~GWToolbox() { free(imgui_inifile); };
+    GWToolbox() = default;
+    ~GWToolbox() { free(imgui_inifile); }
+
 public:
     static GWToolbox& Instance() {
         static GWToolbox instance;
@@ -45,7 +46,7 @@ public:
     }
     bool must_self_destruct = false;    // is true when toolbox should quit
 
-    bool RegisterModule(ToolboxModule* m) { 
+    bool RegisterModule(ToolboxModule* m) {
         if (std::find(modules.begin(), modules.end(), m) == modules.end())
             return modules.push_back(m), true;
         return false;

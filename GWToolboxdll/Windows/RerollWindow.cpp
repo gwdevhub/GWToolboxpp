@@ -141,21 +141,7 @@ namespace {
         }
         return out;
     };
-    
 
-}
-
-RerollWindow::~RerollWindow() {
-    for (const auto& it : account_characters) {
-        delete it.second;
-    }
-    account_characters.clear();
-    if (guild_hall_uuid) {
-        delete guild_hall_uuid;
-        guild_hall_uuid = 0;
-    }
-}
-RerollWindow::RerollWindow() {
 }
 void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
@@ -256,7 +242,7 @@ void RerollWindow::CmdReroll(const wchar_t* message, int argc, LPWSTR*) {
         L"paragon",
         L"dervish"
     };
-    
+
     // Search by profession
     for (size_t i = 0; i < _countof(to_find); i++) {
         if (!to_find[0])
@@ -416,7 +402,7 @@ void RerollWindow::Update(float) {
                             if (GW::Map::GetMapID() != (GW::Constants::MapID)reroll_scroll_from_map_id) {
                                 GW::Map::Travel((GW::Constants::MapID)reroll_scroll_from_map_id, 0, region_id, language_id);
                             }
-                           
+
                             reroll_stage = WaitForScrollableOutpost;
                             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                             return;
@@ -433,7 +419,7 @@ void RerollWindow::Update(float) {
             }
             RerollSuccess();
             return;
-        }        
+        }
         case WaitForScrollableOutpost: {
             if (!GetIsMapReady() || GW::Map::GetMapID() != (GW::Constants::MapID)reroll_scroll_from_map_id)
                 return;
@@ -465,7 +451,7 @@ void RerollWindow::Update(float) {
                 return;
             if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
                 return;
-            
+
             if (same_party && party_leader[0]) {
                 GW::PartyInfo* player_party = GetPlayerParty();
                 if (player_party && player_party->GetPartySize() > 1) {

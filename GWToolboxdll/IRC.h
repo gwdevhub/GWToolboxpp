@@ -71,7 +71,7 @@ public:
     int privmsg(const char* fmt, ...);
     int notice(const char* target, const char* message);
     int notice(const char* fmt, ...);
-    
+
     int part(const char* channel);
     int kick(const char* channel, const char* nick, const char* message);
     int mode(const char* modes);
@@ -90,7 +90,7 @@ public:
     int is_voice(const char* channel, const char* nick);
     char* current_nick();
     bool is_connected();
-    
+
 private:
     void error(int err);
     void call_hook(const char* irc_command, const char* params, irc_reply_data* hostd);

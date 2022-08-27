@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <GWCA/Managers/UIMgr.h>
 
@@ -12,8 +12,9 @@
 
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class HotkeysWindow : public ToolboxWindow {
-    HotkeysWindow() {};
-    ~HotkeysWindow() {};
+    HotkeysWindow() = default;
+    ~HotkeysWindow() = default;
+
 public:
     static HotkeysWindow& Instance() {
         static HotkeysWindow instance;
@@ -25,7 +26,7 @@ public:
 
     void Initialize() override;
     void Terminate() override;
-    
+
     inline bool ToggleClicker() { return clickerActive = !clickerActive; }
     inline bool ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
 

@@ -1,23 +1,16 @@
-#pragma once 
+#pragma once
 
 #include "ToolboxWindow.h"
 
-#pragma once
-
-#include <Windows.h>
 #include <d3d9.h>
 
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Utilities/Hook.h>
-#include <Modules/Resources.h>
 #include <Color.h>
 
 #include <Modules/HallOfMonumentsModule.h>
 
 namespace Missions {
-
 
     struct MissionImage {
         const wchar_t* file_name;
@@ -32,7 +25,7 @@ namespace Missions {
         using MissionImageList = std::vector<MissionImage>;
         static Color is_daily_bg_color;
         static Color has_quest_bg_color;
-        
+
         GuiUtils::EncString name;
 
         GW::Constants::MapID outpost;
@@ -61,13 +54,13 @@ namespace Missions {
         virtual bool IsDaily(); // True if this mission is ZM or ZB today
         virtual bool HasQuest(); // True if the ZM or ZB is in quest log
         virtual void CheckProgress(const std::wstring& player_name);
-        
+
     };
 
 
     class PvESkill : public Mission {
     protected:
-        
+
         GW::Constants::SkillID skill_id;
         bool img_loaded = false;
         const wchar_t* image_url = 0;
@@ -79,7 +72,7 @@ namespace Missions {
         virtual IDirect3DTexture9* GetMissionImage() override;
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }
-        
+
         virtual bool Draw(IDirect3DDevice9*) override;
         virtual void OnClick() override;
 
@@ -140,7 +133,7 @@ namespace Missions {
     public:
         FactionsPvESkill(GW::Constants::SkillID skill_id);
         bool Draw(IDirect3DDevice9*) override;
-        
+
     };
 
     class PropheciesMission : public Mission
@@ -207,7 +200,7 @@ namespace Missions {
             : Mission(_outpost, hard_mode_images, hard_mode_images, _zm_quest) {
         }
 
-        
+
         IDirect3DTexture9* GetMissionImage();
         virtual void CheckProgress(const std::wstring& player_name) override;
     };
@@ -231,7 +224,7 @@ namespace Missions {
         EotNMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = (GW::Constants::QuestID)0)
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) {}
 
-        
+
         IDirect3DTexture9* GetMissionImage();
         virtual void CheckProgress(const std::wstring& player_name) override;
     };
@@ -316,7 +309,7 @@ public:
 	void Terminate() override;
 	void Draw(IDirect3DDevice9* pDevice) override;
     void DrawHallOfMonuments(IDirect3DDevice9* device);
-    
+
     std::unordered_map<std::wstring, Completion*> character_completion;
 
     Completion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);

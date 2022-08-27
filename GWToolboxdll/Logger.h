@@ -21,7 +21,7 @@ namespace Log {
     // === File/console logging ===
     // printf-style log
     void Log(const char* msg, ...);
-    
+
     // printf-style wide-string log
     void LogW(const wchar_t* msg, ...);
 

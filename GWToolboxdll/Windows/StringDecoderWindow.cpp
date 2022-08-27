@@ -19,13 +19,6 @@ static void printchar(wchar_t c)
         printf("0x%X ", c);
     }
 }
-StringDecoderWindow::~StringDecoderWindow()
-{
-    if (encoded) {
-        free(encoded);
-        encoded = 0;
-    }
-}
 void StringDecoderWindow::Draw(IDirect3DDevice9 *pDevice)
 {
     UNREFERENCED_PARAMETER(pDevice);

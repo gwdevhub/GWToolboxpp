@@ -5,11 +5,10 @@
 
 class SkillbarWidget final : public ToolboxWidget
 {
-    SkillbarWidget()
-    {
+    SkillbarWidget() {
         is_resizable = false;
-    };
-    ~SkillbarWidget(){};
+    }
+    ~SkillbarWidget() = default;
 
 public:
     static SkillbarWidget &Instance()

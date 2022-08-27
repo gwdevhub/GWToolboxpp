@@ -20,10 +20,6 @@
 
 constexpr const wchar_t* HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
-HealthWidget::~HealthWidget() {
-    ClearThresholds();
-}
-
 void HealthWidget::LoadSettings(CSimpleIni *ini) {
     ToolboxWidget::LoadSettings(ini);
     click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
@@ -36,8 +32,6 @@ void HealthWidget::LoadSettings(CSimpleIni *ini) {
 
     CSimpleIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
-
-    ClearThresholds();
 
     for (const CSimpleIni::Entry& entry : entries) {
         Threshold* threshold = new Threshold(inifile, entry.pItem);
@@ -343,11 +337,4 @@ void HealthWidget::Threshold::SaveSettings(CSimpleIni* ini, const char* section)
 
     ini->SetLongValue(section, VAR_NAME(value), value);
     Colors::Save(ini, section, VAR_NAME(color), color);
-}
-
-void HealthWidget::ClearThresholds() {
-    for (Threshold* threshold : thresholds) {
-        if (threshold) delete threshold;
-    }
-    thresholds.clear();
 }

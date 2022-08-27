@@ -1,18 +1,13 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
-#include <GWCA/Context/MapContext.h>
-#include <GWCA/Context/WorldContext.h>
-
-#include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Title.h>
 
-#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
 #include <Utils/GuiUtils.h>
@@ -141,7 +136,7 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*) {
     ImGui::SetCursorPos(cur);
     ImGui::Text(server_ip);
     ImGui::PopFont();
-    
+
     if (server_location) {
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));

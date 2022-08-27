@@ -4,7 +4,7 @@ typedef std::function<void(const std::string* section, bool is_showing)> Section
 typedef std::vector<std::pair<float,SectionDrawCallback>> SectionDrawCallbackList;
 
 class ToolboxModule {
-public:
+protected:
     ToolboxModule() = default;
 public:
     // name of the window and the ini section
@@ -14,7 +14,7 @@ public:
     virtual const char8_t* Icon() const { return nullptr; }
 
     // name of the setting section
-    virtual const char* SettingsName() const { return Name(); };
+    virtual const char* SettingsName() const { return Name(); }
 
     // Type of module
     virtual const char* TypeName() const { return "module"; }
@@ -27,7 +27,7 @@ public:
     static const std::unordered_map<std::string, const char*>& GetSettingsIcons();
 
     // Readable array of modules currently loaded
-    static const std::unordered_map<std::string, ToolboxModule*>* GetModulesLoaded();
+    static const std::unordered_map<std::string, ToolboxModule*>& GetModulesLoaded();
 
     // Initialize module
     virtual void Initialize();

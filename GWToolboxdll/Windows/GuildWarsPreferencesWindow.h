@@ -6,8 +6,8 @@
 #include <ToolboxUIElement.h>
 
 class GuildWarsPreferencesWindow : public ToolboxWindow {
-    GuildWarsPreferencesWindow() {};
-    ~GuildWarsPreferencesWindow() {};
+    GuildWarsPreferencesWindow() = default;
+    ~GuildWarsPreferencesWindow() = default;
 public:
     static GuildWarsPreferencesWindow& Instance() {
         static GuildWarsPreferencesWindow instance;

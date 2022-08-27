@@ -3,8 +3,14 @@
 #include <ToolboxWindow.h>
 
 class StringDecoderWindow : public ToolboxWindow {
-    StringDecoderWindow() {};
-    ~StringDecoderWindow();
+    StringDecoderWindow() = default;
+    ~StringDecoderWindow() {
+        if (encoded) {
+            free(encoded);
+            encoded = nullptr;
+        }
+    }
+
 public:
     static StringDecoderWindow& Instance() {
         static StringDecoderWindow instance;

@@ -2,18 +2,15 @@
 
 #include <GWCA/Utilities/Hook.h>
 
-#include <GWCA/Constants/Maps.h>
-#include <GWCA/Packets/StoC.h>
-
 #include <ToolboxWidget.h>
 
 class ServerInfoWidget : public ToolboxWidget {
-    ServerInfoWidget() {}
+    ServerInfoWidget() = default;
     ServerInfoWidget(const ServerInfoWidget&) = delete;
     ~ServerInfoWidget() {
         if (server_info_fetcher.joinable())
             server_info_fetcher.join();
-    };
+    }
 public:
     struct ServerInfo {
         ServerInfo(std::string _ip) : ip(_ip) {};
@@ -39,7 +36,7 @@ public:
     void Update(float delta) override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
-    
+
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingInternal() override;
 };

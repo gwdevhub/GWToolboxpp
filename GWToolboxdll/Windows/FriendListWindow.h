@@ -15,9 +15,15 @@
 #include <ToolboxWindow.h>
 
 class FriendListWindow : public ToolboxWindow {
-private:
-    FriendListWindow();
-    ~FriendListWindow();
+    FriendListWindow() {
+        inifile = new CSimpleIni(false, false, false);
+    }
+    ~FriendListWindow() {
+        if (settings_thread.joinable())
+            settings_thread.join();
+        delete inifile;
+    }
+
     std::thread settings_thread;
     // Structs because we don't case about public or private; this whole struct is private to this module anyway.
     struct Character {
@@ -72,7 +78,7 @@ private:
     bool RemoveFriend(Friend* f);
     void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out);
 
-    std::unordered_map<uint32_t,bool> ignored_parties;
+    std::unordered_map<uint32_t,bool> ignored_parties{};
     bool ignore_trade = false;
 public:
     static FriendListWindow& Instance() {
@@ -128,7 +134,7 @@ public:
     void Terminate() override;
     void DrawHelp() override;
     void RegisterSettingsContent() override;
-    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags=0) const;
+    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags=0) const override;
 
     // Update. Will always be called every frame.
     void Update(float delta) override;
@@ -195,10 +201,10 @@ private:
     uint8_t poll_interval_seconds = 10;
 
     // Mapping of Name > UUID
-    std::unordered_map<std::wstring, std::string> uuid_by_name;
+    std::unordered_map<std::wstring, std::string> uuid_by_name{};
 
     // Main store of Friend info
-    std::unordered_map<std::string, Friend*> friends;
+    std::unordered_map<std::string, Friend*> friends{};
 
     bool show_location = true;
 

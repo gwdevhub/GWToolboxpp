@@ -9,9 +9,10 @@
 #include <Utils/RateLimiter.h>
 
 class TradeWindow : public ToolboxWindow {
-    TradeWindow() {};
+    TradeWindow() = default;
     TradeWindow(const TradeWindow&) = delete;
-    ~TradeWindow();
+    ~TradeWindow() = default;
+
 public:
     static TradeWindow& Instance() {
         static TradeWindow instance;

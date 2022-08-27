@@ -17,11 +17,8 @@
 #define NO_AGENT 0
 
 class ObserverTargetWindow : public ObserverPlayerWindow {
-public:
-    ObserverTargetWindow() {};
-    ~ObserverTargetWindow() {
-        //
-    };
+    ObserverTargetWindow() = default;
+    ~ObserverTargetWindow() = default;
 
 public:
     static ObserverTargetWindow& Instance() {

@@ -1,13 +1,10 @@
 #pragma once
 
-#include <GWCA/GameContainers/GamePos.h>
-
-#include <Color.h>
 #include <Widgets/Minimap/VBuffer.h>
 
 class SymbolsRenderer : public VBuffer {
 public:
-    SymbolsRenderer() {}
+    SymbolsRenderer() = default;
 
     void Render(IDirect3DDevice9* device) override;
 
@@ -28,7 +25,7 @@ private:
 
     const DWORD arrow_ntriangles = 2;
     DWORD arrow_offset = 0;
-    
+
     const DWORD north_ntriangles = 2;
     DWORD north_offset = 0;
 };

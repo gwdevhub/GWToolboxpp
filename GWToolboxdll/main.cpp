@@ -25,14 +25,14 @@ DWORD WINAPI init(HMODULE hModule) noexcept {
             MessageBoxA(0, "We can't determine if the character is ingame.\nContact the developers.", "GWToolbox++ - Clientside Error Detected", 0);
             FreeLibraryAndExitThread(hModule, EXIT_SUCCESS);
         }
-        
+
         printf("[SCAN] is_ingame = %p\n", found);
 
         DWORD *is_ingame = *found;
         while (*is_ingame == 0) {
             Sleep(100);
         }
-        
+
         Log::Log("Creating toolbox thread\n");
         SafeThreadEntry(hModule);
     } __except ( EXCEPT_EXPRESSION_ENTRY ) {

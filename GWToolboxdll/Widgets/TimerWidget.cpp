@@ -40,7 +40,7 @@ namespace
                 break;
             case 2: snprintf(buf, bufsize, "%d:%02d:%02lld.%02lld", hrs, mins, secs, time.count() / 10 % 100);
                 break;
-            case 3: snprintf(buf, bufsize, "%d:%02d:%02lld.%03lld", hrs, mins, secs, time.count() % 1000); 
+            case 3: snprintf(buf, bufsize, "%d:%02d:%02lld.%03lld", hrs, mins, secs, time.count() % 1000);
                 break;
             default: // and 0
                 snprintf(buf, bufsize, "%d:%02d:%02lld", hrs, mins, secs);
@@ -92,7 +92,7 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
     }
     if(!is_valid(run_started))
         run_started = now_tp;
-            
+
     in_explorable = pak->is_explorable;
 }
 void TimerWidget::Initialize() {
@@ -104,12 +104,12 @@ void TimerWidget::Initialize() {
             if (packet->message[1] != 0x5765) return;
             cave_start = GW::Map::GetInstanceTime();
         });
-    
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&PreGameSrvTransfer_Entry, 
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&PreGameSrvTransfer_Entry,
         [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
         Instance().OnPreGameSrvTransfer(status, pak);
         }, -0x10);
-    
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&PostGameSrvTransfer_Entry,
         [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
             Instance().OnPostGameSrvTransfer(status, pak);
@@ -119,12 +119,12 @@ void TimerWidget::Initialize() {
             instance_timer_valid = true;
         },5);
     in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
-    GW::Chat::CreateCommand(L"resettimer", [this](const wchar_t*, int, LPWSTR*) { 
+    GW::Chat::CreateCommand(L"resettimer", [this](const wchar_t*, int, LPWSTR*) {
         reset_next_loading_screen = true;
         Log::Info("Resetting timer at the next loading screen.");
     });
-    GW::Chat::CreateCommand(L"timerreset", [this](const wchar_t*, int, LPWSTR*) { 
-        reset_next_loading_screen = true; 
+    GW::Chat::CreateCommand(L"timerreset", [this](const wchar_t*, int, LPWSTR*) {
+        reset_next_loading_screen = true;
     });
     if (!is_valid(run_started))
         run_started = now() - milliseconds(GW::Map::GetInstanceTime());
@@ -229,7 +229,7 @@ void TimerWidget::DrawSettingInternal() {
 
     ImGui::Text("Show extra timers:");
     ImGui::Indent();
-    
+
     std::vector<std::pair<const char*, bool*>> timers = {
         { "Deep aspects",&show_deep_timer},
         { "DoA cave",&show_doa_timer},
@@ -270,7 +270,7 @@ std::chrono::milliseconds TimerWidget::GetTimer() {
     return GetRunTimeElapsed();
 }
 std::chrono::milliseconds TimerWidget::GetRunTimeElapsed()
-{   
+{
     if (!is_valid(run_started)) {
         return milliseconds(0);
     } else if (is_valid(run_completed)) {
@@ -285,7 +285,7 @@ unsigned long TimerWidget::GetStartPoint() const
     const auto time_point = use_instance_timer ? instance_started : run_started;
     if (!is_valid(time_point)) {
         return static_cast<unsigned long>(-1);
-    } 
+    }
     return static_cast<unsigned long>(duration_cast<milliseconds>(time_point.time_since_epoch()).count());
 }
 
@@ -415,7 +415,7 @@ bool TimerWidget::GetSpiritTimer() {
             continue;
         offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effect.GetTimeRemaining() / 1000);
     }
-    if (!offset) 
+    if (!offset)
         return false;
     spirits_buffer[offset] = 0;
     return true;
@@ -426,7 +426,7 @@ bool TimerWidget::GetDeepTimer() {
 
     if (GW::Map::GetMapID() != MapID::The_Deep) return false;
     if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
-    
+
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects) return false;
 
@@ -437,8 +437,8 @@ bool TimerWidget::GetDeepTimer() {
         switch (effect_id) {
         case SkillID::Aspect_of_Exhaustion:
         case SkillID::Aspect_of_Depletion_energy_loss:
-        case SkillID::Scorpion_Aspect: 
-            skill = effect_id; 
+        case SkillID::Scorpion_Aspect:
+            skill = effect_id;
             break;
         default:
             break;
@@ -465,13 +465,13 @@ bool TimerWidget::GetDeepTimer() {
     if (diff > 100) timer = std::min(timer, 30 - ((diff - 100) % 30));
     if (diff > 200) timer = std::min(timer, 30 - ((diff - 200) % 30));
     switch (skill) {
-    case SkillID::Aspect_of_Exhaustion: 
+    case SkillID::Aspect_of_Exhaustion:
         snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
         break;
-    case SkillID::Aspect_of_Depletion_energy_loss: 
+    case SkillID::Aspect_of_Depletion_energy_loss:
         snprintf(extra_buffer, 32, "Depletion: %lu", timer);
         break;
-    case SkillID::Scorpion_Aspect: 
+    case SkillID::Scorpion_Aspect:
         snprintf(extra_buffer, 32, "Scorpion: %lu", timer);
         break;
     default:
@@ -563,7 +563,7 @@ bool TimerWidget::GetDoATimer() {
         time_since_previous_wave -= CAVE_SPAWN_INTERVALS[i];
         ++currentWave;
     }
-    
+
     if (currentWave >= _countof(CAVE_SPAWN_INTERVALS))
         return false;
 

@@ -69,7 +69,7 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 
 
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
-    
+
     LoadCustomAgents();
 
     Invalidate();
@@ -181,7 +181,7 @@ void AgentRenderer::LoadDefaultColors() {
     agent_border_thickness = 0;
 }
 void AgentRenderer::DrawSettings() {
-    
+
     if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         bool confirmed = false;
         if (ImGui::SmallConfirmButton("Restore Defaults", &confirmed, "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n")) {
@@ -213,8 +213,8 @@ void AgentRenderer::DrawSettings() {
 
         ImGui::TreePop();
     }
-    
-    
+
+
     if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         bool confirmed = false;
         if (ImGui::SmallConfirmButton("Restore Defaults", &confirmed, "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n")) {
@@ -232,7 +232,7 @@ void AgentRenderer::DrawSettings() {
 
         ImGui::TreePop();
     }
-    
+
 
     if (ImGui::TreeNodeEx("Custom Agents", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         bool changed = false;
@@ -281,7 +281,7 @@ void AgentRenderer::DrawSettings() {
             switch (op) {
             case AgentRenderer::CustomAgent::Operation::MoveUp:
             case AgentRenderer::CustomAgent::Operation::MoveDown:
-            case AgentRenderer::CustomAgent::Operation::Delete: 
+            case AgentRenderer::CustomAgent::Operation::Delete:
                 for (size_t j = 0; j < custom_agents.size(); ++j) {
                     custom_agents[j]->index = j;
                 }
@@ -483,7 +483,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
         return found_custom_agent;
     };
     auto sort_custom_agents_to_draw = []() -> void {
-        std::ranges::sort(custom_agents_to_draw, 
+        std::ranges::sort(custom_agents_to_draw,
           [&](const std::pair<const GW::Agent*, const CustomAgent*>& pA,
               const std::pair<const GW::Agent*, const CustomAgent*>& pB) -> bool {
               return pA.second->index > pB.second->index;
@@ -651,7 +651,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             }
             return b;
         };
-        
+
         auto is_inside_circle = [](const GW::Vec2f pos, const GW::Vec2f circle, const float radius) -> bool {
             return GW::GetSquareDistance(pos, circle) <= radius * radius;
         };
@@ -721,7 +721,7 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
         case GW::Constants::ModelID::DoA::BlackBeastOfArgh:
         case GW::Constants::ModelID::DoA::SmotheringTendril:
         case GW::Constants::ModelID::DoA::LordJadoth:
-        
+
         case GW::Constants::ModelID::UW::KeeperOfSouls:
         case GW::Constants::ModelID::UW::FourHorseman:
         case GW::Constants::ModelID::UW::Slayer:
@@ -917,7 +917,7 @@ bool AgentRenderer::CustomAgent::DrawHeader() {
             const ImVec4 col = ImGui::ColorConvertU32ToFloat4(color);
             ImGui::ColorTooltip("Minimap Color##color_tooltip", &col.x, 0);
         }
-            
+
         ImGui::SameLine();
     }
     ImGui::SetCursorPosX(cursor_pos += button_width);

@@ -12,6 +12,8 @@ namespace GW {
 
 class DialogsWindow : public ToolboxWindow {
     DialogsWindow() = default;
+    ~DialogsWindow() = default;
+
 public:
     static DialogsWindow& Instance() {
         static DialogsWindow instance;

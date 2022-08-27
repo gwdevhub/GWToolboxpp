@@ -6,6 +6,9 @@
 #include <ToolboxWidget.h>
 
 class PartyDamage : public ToolboxWidget {
+    PartyDamage() = default;
+    ~PartyDamage() = default;
+
     static constexpr size_t MAX_PLAYERS = 12;
 
     struct PlayerDamage {
@@ -27,9 +30,6 @@ class PartyDamage : public ToolboxWidget {
         }
     };
 
-    PartyDamage() {
-        is_resizable = false;
-    };
 public:
     static PartyDamage& Instance() {
         static PartyDamage instance;

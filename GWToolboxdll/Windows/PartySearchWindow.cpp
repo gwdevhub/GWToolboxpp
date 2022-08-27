@@ -49,7 +49,7 @@ namespace {
     }
     GW::PartySearch* GetRegionParty(uint32_t party_id) {
         GW::GameContext* g = GW::GameContext::instance();
-        if (!g || !g->party) 
+        if (!g || !g->party)
             return nullptr;
         auto& parties = g->party->party_search;
         if (!parties.valid() || !(party_id < parties.size()))
@@ -66,7 +66,7 @@ namespace {
         return parties[party_id];
     }
     GW::Player* GetPartyLeader(GW::PartyInfo* party) {
-        if (!(party && party->players.valid() && party->players.size())) 
+        if (!(party && party->players.valid() && party->players.size()))
             return nullptr;
         return GW::PlayerMgr::GetPlayerByID(party->players[0].login_number);
     }
@@ -166,7 +166,7 @@ bool PartySearchWindow::TBParty::FromRegionParty(GW::PartySearch* party) {
 bool PartySearchWindow::TBParty::FromPlayerInMap(GW::Player* player) {
 #pragma warning (push)
 #pragma warning (disable: 4244)
-    if (!player || player->party_size < 2) 
+    if (!player || player->party_size < 2)
         return false;
     GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(player->agent_id));
     if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
@@ -248,9 +248,8 @@ void PartySearchWindow::Initialize() {
     refresh_parties = clock();
 }
 void PartySearchWindow::ClearParties() {
-    for (auto& it : party_advertisements) {
-        if (it.second)
-            delete it.second;
+    for (const auto& it : party_advertisements) {
+        delete it.second;
     }
     party_advertisements.clear();
 }
@@ -310,7 +309,7 @@ void PartySearchWindow::OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::
     // Unless pigs fly and district/party numbers go over 16 byte length, storing party_ids as uint16_t is fine.
     wchar_t* party_name = 0;
     uint32_t party_id;
-    TBParty* party = nullptr;  
+    TBParty* party = nullptr;
     switch (packet->header) {
         case GAME_SMSG_PARTY_SEARCH_TYPE:
         case GAME_SMSG_PARTY_SEARCH_REMOVE:
@@ -396,23 +395,17 @@ void PartySearchWindow::OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::
         if (!party) {
             instance.party_advertisements.erase(party_name);
         }
-    }     
+    }
 }
-void PartySearchWindow::SignalTerminate()
-{
+void PartySearchWindow::SignalTerminate() {
     ToolboxWindow::SignalTerminate();
     should_stop = true;
     if (worker.joinable())
         worker.join();
     DeleteWebSocket(ws_window);
     ws_window = nullptr;
-}
-
-PartySearchWindow::~PartySearchWindow() {
-    SignalTerminate();
     if (wsaData.wVersion)
         WSACleanup();
-    ClearParties();
 }
 
 void PartySearchWindow::Update(float delta) {
@@ -439,7 +432,7 @@ void PartySearchWindow::Update(float delta) {
         Instance().FillParties();
         refresh_parties = 0;
         max_party_size = 0;
-        
+
     }
     if (!max_party_size) {
         GW::AreaInfo* this_map = GW::Map::GetCurrentMapInfo();
@@ -453,8 +446,8 @@ void PartySearchWindow::Update(float delta) {
 bool PartySearchWindow::parse_json_message(const json& js, Message* msg) {
     if (js == json::value_t::discarded)
         return false;
-    if (!(js.contains("s") && js["s"].is_string()) 
-        || !(js.contains("m") && js["m"].is_string()) 
+    if (!(js.contains("s") && js["s"].is_string())
+        || !(js.contains("m") && js["m"].is_string())
         || !(js.contains("t") && js["t"].is_number_unsigned()))
         return false;
     msg->name = js["s"].get<std::string>();
@@ -465,9 +458,9 @@ bool PartySearchWindow::parse_json_message(const json& js, Message* msg) {
 }
 
 void PartySearchWindow::fetch() {
-    if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) 
+    if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN)
         return;
-    
+
     ws_window->dispatch([this](const std::string& data) {
         const json& res = json::parse(data.c_str(), nullptr, false);
         if (res == json::value_t::discarded) {
@@ -544,7 +537,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
     const float btn_width = 100.0f * font_scale;
     bool display_messages = true;
     /* Main trade chat area */
-    
+
     /* Connection checks */
     /*if (!ws_window && !ws_window_connecting) {
         char buf[255];
@@ -612,7 +605,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
             if (ignore_party_types[party->search_type])
                 continue;
             ImGui::PushID(static_cast<int>(party->concat_party_id));
-            
+
             char label[64];
             if (party->secondary) {
                 snprintf(label, 64, "%s/%s %s",
@@ -655,7 +648,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
         }
         ImGui::EndChild();
     }
-    
+
 
     /* Link to website footer */
     static char buf[128];
@@ -675,7 +668,7 @@ void PartySearchWindow::DrawAlertsWindowContent(bool) {
     ImGui::ShowHelp("Only when trade chat channel is visible in-game");
     ImGui::Checkbox("Only show messages containing:", &filter_alerts);
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
-    if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, 
+    if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
         ImVec2(-1.0f, 0.0f))) {
 
         ParseBuffer(alert_buf, alert_words);

@@ -3,8 +3,8 @@
 #include <ToolboxWidget.h>
 
 class VanquishWidget : public ToolboxWidget {
-    VanquishWidget() {};
-    ~VanquishWidget() {};
+    VanquishWidget() = default;
+    ~VanquishWidget() = default;
 
 public:
     static VanquishWidget& Instance() {

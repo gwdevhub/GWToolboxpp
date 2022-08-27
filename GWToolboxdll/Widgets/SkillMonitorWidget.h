@@ -6,12 +6,12 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Color.h>
-#include <Defines.h>
 #include <Timer.h>
 #include <ToolboxWidget.h>
 
 class SkillMonitorWidget : public ToolboxWidget {
     SkillMonitorWidget() = default;
+    ~SkillMonitorWidget() = default;
 
 public:
     static SkillMonitorWidget& Instance() {
@@ -24,7 +24,7 @@ public:
 
     void Initialize() override;
     void Terminate() override;
-    
+
     void Draw(IDirect3DDevice9* device) override;
     void Update(float delta) override;
 

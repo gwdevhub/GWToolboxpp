@@ -35,12 +35,12 @@ void EffectsMonitorWidget::RefreshEffects() {
         uint32_t attribute_level;
         uint32_t effect_id;
         float duration;
-    } add;
+    } add{};
     add.header = GAME_SMSG_EFFECT_APPLIED;
     struct Packet2 : GW::Packet::StoC::PacketBase {
         uint32_t agent_id;
         uint32_t effect_id;
-    } remove;
+    } remove{};
     remove.header = GAME_SMSG_EFFECT_REMOVED;
     add.agent_id = remove.agent_id = GW::Agents::GetPlayerId();
 
@@ -67,7 +67,7 @@ void EffectsMonitorWidget::CheckSetMinionCount() {
     }
 }
 void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void* ) {
-    
+
     switch (message_id) {
     case GW::UI::UIMessage::kMinionCountUpdated: { // Minion count updated on effects monitor
         Instance().CheckSetMinionCount();
@@ -227,7 +227,7 @@ bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
         return &effect;
     // Effect expired
     return RemoveEffect(effect.effect_id);
-    
+
 }
 size_t EffectsMonitorWidget::GetEffectIndex(const std::vector<GW::Effect>& arr, GW::Constants::SkillID skill_id) {
     for (size_t i = 0; i < arr.size(); i++) {
@@ -272,7 +272,7 @@ void EffectsMonitorWidget::RefreshPosition() {
             imgui_pos.x = 0.f;
             imgui_size.x = window_pos.x + window_size.x;
         }
-            
+
         y_translate = 1.f;
         if (mid_point.y > screen_size.y / 2.f) {
             // Bottom aligned effects
@@ -302,7 +302,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         for (const auto& message_id : hook_messages) {
             GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, message_id, OnEffectUIMessage, 0x8000);
         }
-        
+
         GW::GameThread::Enqueue([]() {
             Instance().RefreshEffects();
             });
@@ -310,13 +310,13 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     }
 
     const auto window_flags = GetWinFlags(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
-    
+
     ImGui::SetNextWindowSize(imgui_size);
     ImGui::SetNextWindowPos(imgui_pos);
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f,0.0f));
-    
+
     ImGui::Begin(Name(), nullptr, window_flags);
 
     ImVec2 skill_top_left({ imgui_pos.x, imgui_pos.y });

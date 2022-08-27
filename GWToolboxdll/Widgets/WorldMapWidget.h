@@ -3,6 +3,9 @@
 #include <ToolboxWidget.h>
 
 class WorldMapWidget : public ToolboxWidget {
+    WorldMapWidget() = default;
+    ~WorldMapWidget() = default;
+
 public:
     static WorldMapWidget& Instance() {
         static WorldMapWidget w;
@@ -11,7 +14,7 @@ public:
 
     void Initialize() override;
 
-    virtual void RegisterSettingsContent() override { };
+    virtual void RegisterSettingsContent() override {};
 
     bool ShowOnWorldMap() const { return true; }
 
@@ -26,6 +29,7 @@ public:
     void DrawSettingInternal() override;
 
     bool WndProc(UINT, WPARAM, LPARAM);
+
 private:
     void InitializeMapsUnlockedArrays();
 };

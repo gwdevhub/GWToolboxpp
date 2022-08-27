@@ -13,6 +13,7 @@
 class PconsWindow : public ToolboxWindow {
     PconsWindow();
     ~PconsWindow() = default;
+
 public:
     static PconsWindow& Instance() {
         static PconsWindow instance;

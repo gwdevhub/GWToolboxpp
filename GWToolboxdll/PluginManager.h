@@ -10,8 +10,8 @@ class PluginManager {
 
 public:
 	PluginManager() = default;
-	virtual ~PluginManager() = default;
-	PluginManager(const PluginManager&) = delete;
+    PluginManager(const PluginManager&) = delete;
+    ~PluginManager() = default;
 
 	void Draw();
 	void RefreshDlls();

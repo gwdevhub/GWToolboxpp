@@ -14,8 +14,8 @@ class HeroBuildsWindow : public ToolboxWindow {
 private:
     // hero_index is:
     // -2 for player (although it doesn't really matter),
-    // -1 for 'choose hero', 
-    // 0 for 'no hero', 
+    // -1 for 'choose hero',
+    // 0 for 'no hero',
     // and 1+ for heroes, order is in HeroIndexToID array
     struct HeroBuild {
         HeroBuild(const char* n, const char* c, int index = -1, int panel = 0, uint32_t _behavior = 1)
@@ -45,8 +45,12 @@ private:
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };
 
-    HeroBuildsWindow() {};
-    ~HeroBuildsWindow();
+    HeroBuildsWindow() {
+        inifile = new CSimpleIni(false, false, false);
+    }
+    ~HeroBuildsWindow() {
+        delete inifile;
+    }
 
     GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
 

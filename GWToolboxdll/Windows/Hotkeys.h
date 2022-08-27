@@ -78,7 +78,7 @@ public:
     virtual void Execute() = 0;
     virtual void Toggle() { return Execute(); };
 protected:
-    
+
     static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
     static bool isExplorable() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
     static bool isOutpost() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }

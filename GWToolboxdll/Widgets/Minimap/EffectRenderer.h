@@ -5,12 +5,9 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/Packets/StoC.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/GameContainers/GamePos.h>
 
 #include <Color.h>
-#include <Defines.h>
 #include <Timer.h>
 
 #include <Widgets/Minimap/VBuffer.h>
@@ -19,7 +16,7 @@ class EffectRenderer : public VBuffer {
     friend class Minimap;
 
     const float drawing_scale = 96.0f;
-    
+
     class EffectCircle : public VBuffer {
         void Initialize(IDirect3DDevice9* device) override;
     public:
@@ -107,6 +104,6 @@ private:
     std::unordered_map<uint32_t, EffectTrigger*> aoe_effect_triggers;
 
     GW::HookEntry StoC_Hook;
-    
+
     unsigned int vertices_max = 0x1000; // max number of vertices to draw in one call
 };

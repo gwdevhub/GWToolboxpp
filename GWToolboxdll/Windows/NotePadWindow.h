@@ -3,8 +3,9 @@
 #include "ToolboxWindow.h"
 
 class NotePadWindow : public ToolboxWindow {
-    NotePadWindow() { strcpy_s(text, ""); };
-    ~NotePadWindow() {};
+    NotePadWindow() = default;
+    ~NotePadWindow() = default;
+
 public:
     static NotePadWindow& Instance() {
         static NotePadWindow instance;
@@ -21,6 +22,6 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
 
 private:
-    char text[2024 * 16] = ""; // 2024 characters max
+    char text[2024 * 16]{}; // 2024 characters max
     bool filedirty = false;
 };

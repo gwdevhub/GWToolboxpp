@@ -17,10 +17,8 @@
 
 class ObserverExportWindow : public ToolboxWindow {
 public:
-    ObserverExportWindow() {};
-    ~ObserverExportWindow() {
-        //
-    };
+    ObserverExportWindow() = default;
+    ~ObserverExportWindow() = default;
 
     static ObserverExportWindow& Instance() {
         static ObserverExportWindow instance;

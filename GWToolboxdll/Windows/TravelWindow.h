@@ -3,12 +3,12 @@
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Constants\Maps.h>
 
-#include <Logger.h>
 #include <ToolboxWindow.h>
 
 class TravelWindow : public ToolboxWindow {
-    TravelWindow() {};
-    ~TravelWindow() {};
+    TravelWindow() = default;
+    ~TravelWindow() = default;
+
 public:
     static TravelWindow& Instance() {
         static TravelWindow instance;
@@ -23,8 +23,6 @@ public:
     void Terminate() override;
 
     bool TravelFavorite(unsigned int idx);
-
-    
 
     // Travel with checks, returns false if already in outpost or outpost not unlocked
     bool Travel(GW::Constants::MapID MapID, GW::Constants::District district, uint32_t district_number = 0);
@@ -149,7 +147,7 @@ private:
         {"jq", {GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost}}
     };
     // List of shorthand district names. This is checked for an exact match.
-    const std::map<const std::string, const DistrictAlias> shorthand_district_names = 
+    const std::map<const std::string, const DistrictAlias> shorthand_district_names =
     {
         {"ae", {GW::Constants::District::American}},
         {"int", {GW::Constants::District::International}},
@@ -157,13 +155,13 @@ private:
         {"eg", {GW::Constants::District::EuropeGerman}},
         {"de", {GW::Constants::District::EuropeGerman}},
         {"dd", {GW::Constants::District::EuropeGerman}},
-        {"fr", {GW::Constants::District::EuropeFrench}},   
-        {"it", {GW::Constants::District::EuropeItalian}}, 
-        {"es", {GW::Constants::District::EuropeSpanish}},   
-        {"pl", {GW::Constants::District::EuropePolish}}, 
-        {"ru", {GW::Constants::District::EuropeRussian}},  
+        {"fr", {GW::Constants::District::EuropeFrench}},
+        {"it", {GW::Constants::District::EuropeItalian}},
+        {"es", {GW::Constants::District::EuropeSpanish}},
+        {"pl", {GW::Constants::District::EuropePolish}},
+        {"ru", {GW::Constants::District::EuropeRussian}},
         {"kr", {GW::Constants::District::AsiaKorean}},
-        {"cn", {GW::Constants::District::AsiaChinese}}, 
+        {"cn", {GW::Constants::District::AsiaChinese}},
         {"jp", {GW::Constants::District::AsiaJapanese}},
     };
 

@@ -9,11 +9,9 @@
 
 class TimerWidget : public ToolboxWidget {
     TimerWidget() {
-        for (const auto& it : spirit_effects) {
-            auto e = spirit_effects_enabled.find(it.first);
-            if (e != spirit_effects_enabled.end())
-                continue;
-            spirit_effects_enabled[it.first] = false;
+        for (const auto& [skill_id, name] : spirit_effects) {
+            if (!spirit_effects_enabled.contains(skill_id))
+                spirit_effects_enabled[skill_id] = false;
         }
     };
     ~TimerWidget() = default;
@@ -41,7 +39,7 @@ public:
     // Time in ms since the current run was started. May be different to when the current instance was created.
     std::chrono::milliseconds GetRunTimeElapsed();
     // See GetRunTimeElapsed
-    std::chrono::milliseconds GetTimer(); 
+    std::chrono::milliseconds GetTimer();
     unsigned long GetTimerMs(); // time in milliseconds
     unsigned long GetMapTimeElapsedMs();
     unsigned long GetRunTimeElapsedMs();
@@ -61,7 +59,7 @@ private:
     bool GetTrapTimer();
     bool GetDoATimer();
     bool GetSpiritTimer();
-    
+
     std::map<GW::Constants::SkillID, const char*> spirit_effects{
         {GW::Constants::SkillID::Edge_of_Extinction,"EoE"},
         {GW::Constants::SkillID::Quickening_Zephyr,"QZ"},

@@ -96,7 +96,7 @@ private:
     };
 
     struct Shape_Vertex : public GW::Vec2f {
-        Shape_Vertex(float x, float y, Color_Modifier mod) 
+        Shape_Vertex(float x, float y, Color_Modifier mod)
             : GW::Vec2f(x, y), modifier(mod) {}
         Color_Modifier modifier;
     };
