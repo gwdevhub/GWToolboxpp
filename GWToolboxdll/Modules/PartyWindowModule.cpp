@@ -157,10 +157,10 @@ namespace {
 
     bool SetAgentName(const uint32_t agent_id, const wchar_t* name) {
         auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-        if (!a || !name) 
+        if (!a || !name)
             return false;
         const wchar_t* current_name = GW::Agents::GetAgentEncName(a);
-        if (!current_name) 
+        if (!current_name)
             return false;
         if (wcscmp(name, current_name) == 0)
             return true;
@@ -452,7 +452,7 @@ void PartyWindowModule::Initialize() {
             pending_add.erase(pending_add.begin() + static_cast<int>(i));
             break; // Continue next frame
         }
-        });
+    });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(
         &Summon_AgentAdd_Entry,
@@ -520,7 +520,7 @@ void PartyWindowModule::LoadDefaults() {
     AddSpecialNPC({ "Pits friendly spirit 4", GW::Constants::ModelID::UW::PitsSoul4, GW::Constants::MapID::The_Underworld });
 
     AddSpecialNPC({ "Gyala Hatchery siege turtle", 3582, GW::Constants::MapID::Gyala_Hatchery_outpost_mission });
-    
+
     AddSpecialNPC({ "FoW Griffs", GW::Constants::ModelID::FoW::Griffons, GW::Constants::MapID::The_Fissure_of_Woe });
     AddSpecialNPC({ "FoW Forgemaster", GW::Constants::ModelID::FoW::Forgemaster, GW::Constants::MapID::The_Fissure_of_Woe });
 
@@ -559,7 +559,7 @@ void PartyWindowModule::DrawSettingInternal() {
     ImGui::Separator();
     ImGui::BeginChild("user_defined_npcs_to_add_scroll",ImVec2(0,200.0f));
     for (const auto& npc : user_defined_npcs) {
-        if (!npc) 
+        if (!npc)
             continue;
         if (!npc->model_id)
             continue;
@@ -611,7 +611,7 @@ void PartyWindowModule::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
     ini->SetBoolValue(Name(), VAR_NAME(add_elite_skill_to_summons), add_elite_skill_to_summons);
     ini->SetBoolValue(Name(), VAR_NAME(remove_dead_imperials), remove_dead_imperials);
-    
+
     // - Re-fill settings.
     ini->SetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window), add_npcs_to_party_window);
     for (const auto& user_defined_npc : user_defined_npcs) {
@@ -640,7 +640,7 @@ void PartyWindowModule::LoadSettings(CSimpleIni* ini) {
     for (const auto& key : keys) {
         char* p;
         long model_id = strtol(key.pItem, &p, 10);
-        if (!p || model_id < 1) 
+        if (!p || model_id < 1)
             continue; // Not a model_id
         std::string value(ini->GetValue(Name(), key.pItem, ""));
         if (value.empty())
