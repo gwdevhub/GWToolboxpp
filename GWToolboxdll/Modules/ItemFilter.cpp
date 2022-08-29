@@ -13,15 +13,6 @@
 #define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
 
 namespace {
-
-    template <typename T>
-    void EmulatePacket(T const& packet) {
-        GW::GameThread::Enqueue([cpy = packet]() mutable {
-            cpy.header = T::STATIC_HEADER;
-            GW::StoC::EmulatePacket(reinterpret_cast<GW::Packet::StoC::PacketBase*>(&cpy));
-        });
-    }
-
     Rarity GetRarity(GW::Item const& item) {
         if (item.complete_name_enc == nullptr) return Rarity::Unknown;
 
@@ -35,7 +26,7 @@ namespace {
         }
     }
 
-    const GW::Item* IsItem(const GW::Packet::StoC::AgentAdd& packet) {
+    const GW::Item* GetItemFromPacket(const GW::Packet::StoC::AgentAdd& packet) {
         // filter non-item-agents
         if (packet.type != 4 || packet.unk3 != 0) return nullptr;
 
@@ -160,13 +151,11 @@ namespace {
 void ItemFilter::Initialize() {
     ToolboxModule::Initialize();
 
-    GW::StoC::RegisterPacketCallback(&OnAgentAdd_Entry, GW::Packet::StoC::AgentAdd::STATIC_HEADER, OnAgentAdd);
-    GW::StoC::RegisterPacketCallback(&OnAgentRemove_Entry, GW::Packet::StoC::AgentRemove::STATIC_HEADER, OnAgentRemove);
-    GW::StoC::RegisterPacketCallback(&OnMapLoad_Entry, GW::Packet::StoC::MapLoaded::STATIC_HEADER, OnMapLoad);
-    GW::StoC::RegisterPacketCallback(
-        &OnItemReuseId_Entry, GW::Packet::StoC::ItemGeneral_ReuseID::STATIC_HEADER, OnItemReuseId);
-    GW::StoC::RegisterPacketCallback(
-        &OnItemUpdateOwner_Entry, GW::Packet::StoC::ItemUpdateOwner::STATIC_HEADER, OnItemUpdateOwner);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdd_Entry, OnAgentAdd);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry, OnAgentRemove);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry, OnMapLoad);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry, OnItemReuseId);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry, OnItemUpdateOwner);
 }
 
 void ItemFilter::SignalTerminate() {
@@ -209,14 +198,16 @@ void ItemFilter::SaveSettings(CSimpleIniA* ini) {
 }
 
 void ItemFilter::SpawnSuppressedItems() {
-    for (const auto& packet : suppressed_packets)
-        EmulatePacket(packet);
+    for (const auto& packet : suppressed_packets) {
+        GW::GameThread::Enqueue([cpy = packet]() mutable {
+            GW::StoC::EmulatePacket(reinterpret_cast<GW::Packet::StoC::PacketBase*>(&cpy));
+        });
+    }
 
     suppressed_packets.clear();
 }
-void ItemFilter::OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::PacketBase* basepacket) {
-    const auto packet = reinterpret_cast<GW::Packet::StoC::AgentAdd*>(basepacket);
-    const auto* item = IsItem(*packet);
+void ItemFilter::OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) {
+    const auto* item = GetItemFromPacket(*packet);
     if (!item) return;
 
     const auto* player = GW::Agents::GetCharacter();
@@ -242,11 +233,9 @@ void ItemFilter::OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::PacketBase
     }
 }
 
-void ItemFilter::OnAgentRemove(GW::HookStatus* status, GW::Packet::StoC::PacketBase* basepacket) {
+void ItemFilter::OnAgentRemove(GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet) {
     // Block despawning the agent if the client never spawned it.
-    const auto packet = reinterpret_cast<GW::Packet::StoC::AgentRemove*>(basepacket);
-
-    auto const found = std::find_if(Instance().suppressed_packets.begin(), Instance().suppressed_packets.end(),
+    auto const found = std::ranges::find_if(Instance().suppressed_packets,
         [&packet](auto const& suppressed_packet) { return suppressed_packet.agent_id == packet->agent_id; });
 
     if (found == Instance().suppressed_packets.end()) return;
@@ -255,28 +244,21 @@ void ItemFilter::OnAgentRemove(GW::HookStatus* status, GW::Packet::StoC::PacketB
     status->blocked = true;
 }
 
-void ItemFilter::OnMapLoad(GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
+void ItemFilter::OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
     Instance().suppressed_packets.clear();
     Instance().item_owners.clear();
 }
 
-void ItemFilter::OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::PacketBase* basepacket) {
-    const auto packet = reinterpret_cast<GW::Packet::StoC::ItemGeneral_ReuseID*>(basepacket);
-    const auto it = std::find(Instance().item_owners.begin(), Instance().item_owners.end(), packet->item_id);
+void ItemFilter::OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID* packet) {
+    const auto it =
+        std::ranges::find_if(Instance().item_owners, [packet](auto owner) { return owner.item == packet->item_id; });
 
     if (it != Instance().item_owners.end()) Instance().item_owners.erase(it);
 }
 
-GW::AgentID ItemFilter::GetItemOwner(const GW::ItemID id) const {
-    const auto it = std::find(item_owners.begin(), item_owners.end(), id);
-    if (it == item_owners.end()) return 0;
-
-    return it->owner;
-}
-
-void ItemFilter::OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::PacketBase* basepacket) {
-    const auto packet = reinterpret_cast<GW::Packet::StoC::ItemUpdateOwner*>(basepacket);
-    auto const it = std::find(Instance().item_owners.begin(), Instance().item_owners.end(), packet->item_id);
+void ItemFilter::OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner* packet) {
+    auto it =
+        std::ranges::find_if(Instance().item_owners, [packet](auto owner) { return owner.item == packet->item_id; });
 
     if (it == Instance().item_owners.end()) {
         Instance().item_owners.push_back({packet->item_id, packet->owner_agent_id});
@@ -285,11 +267,17 @@ void ItemFilter::OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::PacketBase
     }
 }
 
+GW::AgentID ItemFilter::GetItemOwner(const GW::ItemID item_id) const {
+    const auto it = std::ranges::find_if(item_owners, [item_id](auto owner) { return owner.item == item_id; });
+    if (it == item_owners.end()) return 0;
+
+    return it->owner;
+}
+
 bool ItemFilter::WantToHide(const GW::Item& item, const bool can_pick_up) const {
     const auto rarity = GetRarity(item);
     if (can_pick_up) {
-        if (std::find(never_hide_for_user.begin(), never_hide_for_user.end(), item.model_id) !=
-            never_hide_for_user.end())
+        if (std::ranges::find(never_hide_for_user, item.model_id) != never_hide_for_user.end())
             return false;
 
         switch (rarity) {
@@ -302,8 +290,7 @@ bool ItemFilter::WantToHide(const GW::Item& item, const bool can_pick_up) const 
         }
     }
 
-    if (std::find(never_hide_for_party.begin(), never_hide_for_party.end(), item.model_id) !=
-        never_hide_for_party.end())
+    if (std::ranges::find(never_hide_for_party, item.model_id) != never_hide_for_party.end())
         return false;
 
     switch (rarity) {
