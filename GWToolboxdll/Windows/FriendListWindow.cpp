@@ -402,15 +402,13 @@ void FriendListWindow::Initialize() {
         GW::UI::UIMessage::kShowAgentNameTag,
         GW::UI::UIMessage::kWriteToChatLog
     };
-    for (auto message_id : hook_messages) {
+    for (const auto message_id : hook_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
     }
 
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_JOIN_REQUEST, OnPartyInvite, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_REQUEST_CANCEL, OnPartyInvite, -0x8010);
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_PARTY_REQUEST_RESPONSE, OnPartyInvite, -0x8010);
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PlayerJoinInstance_Entry, OnPostPartyInvite);
 
-    GW::StoC::RegisterPacketCallback(&PlayerJoinInstance_Entry, GAME_SMSG_TRADE_REQUEST, OnTradePacket, 0x8000);
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::TradeStart>(&PlayerJoinInstance_Entry, OnPostTradePacket);
 }
 void FriendListWindow::OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int) {
     switch (static_cast<MessageType>(*message_ptr[0])) {
@@ -480,17 +478,17 @@ bool FriendListWindow::WriteError(MessageType message_type, const wchar_t* chara
     GW::Chat::WriteChatEnc(channel, buffer);
     return true;
 }
-void FriendListWindow::OnPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak) {
+void FriendListWindow::OnPostPartyInvite(GW::HookStatus*, GW::Packet::StoC::PartyInviteReceived_Create* pak) {
     if (GetIsPlayerIgnored(pak))
-        status->blocked = true;
+        GW::PartyMgr::RespondToPartyRequest(pak->target_party_id, false);
 }
-void FriendListWindow::OnTradePacket(GW::HookStatus* , GW::Packet::StoC::PacketBase* pak) {
+void FriendListWindow::OnPostTradePacket(GW::HookStatus*, GW::Packet::StoC::TradeStart* pak) {
     if (GetIsPlayerIgnored(pak))
         GW::Trade::CancelTrade();
 }
 void FriendListWindow::OnAddFriendError(GW::HookStatus* status, wchar_t*) {
     FriendListWindow& instance = Instance();
-    if (instance.pending_whisper.charname.size()) {
+    if (!instance.pending_whisper.charname.empty()) {
         ASSERT(instance.WriteError(MessageType::PLAYER_X_NOT_ONLINE, instance.pending_whisper.charname.c_str()));
         instance.pending_whisper.reset();
         status->blocked = true;
@@ -505,10 +503,10 @@ void FriendListWindow::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::
     if (!a || !a->primary)
         return;
     uint8_t profession = static_cast<uint8_t>(a->primary);
-    Friend* f = Instance().GetFriend(&player_name[0]);
+    Friend* f = Instance().GetFriend(player_name.data());
     if (!f)
         return;
-    Character* fc = f->GetCharacter(&player_name[0]);
+    Character* fc = f->GetCharacter(player_name.data());
     if (!fc)
         return;
     if (profession > 0 && profession < 11)
