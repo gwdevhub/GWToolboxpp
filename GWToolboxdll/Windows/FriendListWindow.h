@@ -2,6 +2,7 @@
 
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Map.h>

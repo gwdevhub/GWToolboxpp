@@ -356,8 +356,8 @@ namespace {
 		if (GW::Map::GetMapID() != GW::Constants::MapID::Hall_of_Monuments)
 			return;
 		uint32_t dialog_id = (uint32_t)wparam;
-		auto available_dialogs = DialogModule::Instance().GetDialogButtons();
-		auto this_dialog_button = std::find_if(available_dialogs.begin(), available_dialogs.end(), [dialog_id](auto d) { return d->dialog_id == dialog_id; });
+		const auto& available_dialogs = DialogModule::Instance().GetDialogButtons();
+		const auto this_dialog_button = std::ranges::find_if(available_dialogs, [dialog_id](auto d) { return d->dialog_id == dialog_id; });
 		if (this_dialog_button == available_dialogs.end())
 			return;
 		std::wregex miniature_displayed_regex(L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A([^\x1]+)");
