@@ -82,7 +82,7 @@ void TradeWindow::CmdPricecheck(const wchar_t *, int argc, LPWSTR *argv)
 {
     if (argc < 2)
         return Log::Error("Try '/pc <item>'");
-    
+
     std::string item_to_search;
     for (int i = 1; i < argc; i++) {
         if (i > 1)
@@ -134,10 +134,6 @@ void TradeWindow::SignalTerminate()
         worker.join();
     DeleteWebSocket(ws_window);
     ws_window = nullptr;
-}
-
-TradeWindow::~TradeWindow() {
-    SignalTerminate();
     if (wsaData.wVersion)
         WSACleanup();
 }
@@ -189,8 +185,8 @@ void TradeWindow::Update(float delta) {
 bool TradeWindow::parse_json_message(const json& js, Message* msg) {
     if (js == json::value_t::discarded)
         return false;
-    if (!(js.contains("s") && js["s"].is_string()) 
-        || !(js.contains("m") && js["m"].is_string()) 
+    if (!(js.contains("s") && js["s"].is_string())
+        || !(js.contains("m") && js["m"].is_string())
         || !(js.contains("t") && js["t"].is_number_unsigned()))
         return false;
     msg->name = js["s"].get<std::string>();
@@ -201,7 +197,7 @@ bool TradeWindow::parse_json_message(const json& js, Message* msg) {
 }
 
 void TradeWindow::fetch() {
-    if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) 
+    if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN)
         return;
     bool search_pending = !pending_query_sent && !pending_query_string.empty();
     if (search_pending) {
@@ -215,7 +211,7 @@ void TradeWindow::fetch() {
         pending_query_sent = clock();
         ws_window->send(request.dump());
     }
-    
+
     ws_window->dispatch([this](const std::string& data) {
         const json& res = json::parse(data.c_str(), nullptr, false);
         if (res == json::value_t::discarded) {
@@ -586,7 +582,7 @@ void TradeWindow::DrawAlertsWindowContent(bool) {
     ImGui::Checkbox("Only show messages containing:", &filter_alerts);
     ImGui::ShowHelp("Only shows messages from the currently active trade channel (Kamadan OR Ascalon)");
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
-    if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, 
+    if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
         ImVec2(-1.0f, 0.0f))) {
 
         ParseBuffer(alert_buf, alert_words);

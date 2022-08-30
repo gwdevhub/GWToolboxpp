@@ -80,7 +80,7 @@ namespace
         }
         return "Unknown";
     }
-    
+
     std::map<uint32_t, wchar_t *> map_names;
     GUID StringToGuid(const std::string &str)
     {
@@ -184,7 +184,7 @@ GW::Friend* FriendListWindow::Friend::GetFriend() {
 void FriendListWindow::Friend::StartWhisper() {
     const wchar_t* alias_c = alias.c_str();
     const wchar_t* charname = current_char ? current_char->name.c_str() : nullptr;
-    
+
     GW::GameThread::Enqueue([charname, alias_c]() {
         if(!charname[0])
             return Log::Error("Player %S is not logged in", alias_c);
@@ -276,7 +276,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendT
         GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
         if (info)
             lf->current_map_name.reset(info->name_id);
-    }       
+    }
 
     // Check and copy charnames, only if player is NOT offline
     if (!charname || status == GW::FriendStatus::Offline)
@@ -357,7 +357,7 @@ FriendListWindow::Friend* FriendListWindow::GetFriendByUUID(const char* uuid) {
     return it->second; // Found in cache
 }
 bool FriendListWindow::RemoveFriend(Friend* f) {
-    if (!f) 
+    if (!f)
         return false;
     std::unordered_map<std::string, Friend*>::iterator it1 = friends.find(f->uuid);
     if (it1 != friends.end()) {
@@ -376,14 +376,6 @@ bool FriendListWindow::RemoveFriend(Friend* f) {
     return true;
 }
 /* FriendListWindow basic functions etc */
-FriendListWindow::FriendListWindow() {
-    inifile = new CSimpleIni(false, false, false);
-}
-FriendListWindow::~FriendListWindow() {
-    if(settings_thread.joinable())
-        settings_thread.join();
-    delete inifile;
-}
 void FriendListWindow::Initialize() {
     ToolboxWindow::Initialize();
 
@@ -612,7 +604,7 @@ void FriendListWindow::Update(float delta) {
         return;
     GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
     friend_list_ready = fl && fl->friends.valid();
-    if (!friend_list_ready) 
+    if (!friend_list_ready)
         return;
     if (!poll_queued) {
         int interval_check = poll_interval_seconds * CLOCKS_PER_SEC;
@@ -706,7 +698,7 @@ bool FriendListWindow::IsWidget() const
 }
 bool FriendListWindow::IsWindow() const
 {
-    return (explorable_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
+    return (explorable_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
            || (outpost_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
            || (loading_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading);
 }
@@ -827,7 +819,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
                 snprintf(tmpbuf, sizeof(tmpbuf), " (+%d)", lfp->characters.size() - 1);
                 if (is_widget)
                     ImGui::TextShadowed(tmpbuf);
-                else 
+                else
                     ImGui::Text(tmpbuf);
                 hovered |= ImGui::IsItemHovered();
                 if (hovered) {
@@ -835,7 +827,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
             }
             if (show_location) {
-                
+
                 if (lfp->current_map_name.string().size()) {
                     ImGui::SameLine(cols[++colIdx]);
                     if (is_widget)
@@ -863,7 +855,7 @@ void FriendListWindow::DrawSettingInternal() {
     edited |= ImGui::Checkbox("Lock move as widget", &lock_move_as_widget);
     const float dropdown_width = 160.0f * ImGui::GetIO().FontGlobalScale;
     ImGui::Text("Show as");
-    ImGui::SameLine(); 
+    ImGui::SameLine();
     ImGui::PushItemWidth(dropdown_width);
     edited |= ImGui::Combo("###show_as_outpost", &outpost_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
@@ -871,8 +863,8 @@ void FriendListWindow::DrawSettingInternal() {
     ImGui::Text("in outpost");
 
     ImGui::Text("Show as");
-    ImGui::SameLine(); 
-    ImGui::PushItemWidth(dropdown_width); 
+    ImGui::SameLine();
+    ImGui::PushItemWidth(dropdown_width);
     edited |= ImGui::Combo("###show_as_explorable", &explorable_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
     ImGui::SameLine();
@@ -932,7 +924,7 @@ void FriendListWindow::LoadSettings(CSimpleIni* ini) {
     loading_show_as = ini->GetLongValue(Name(), VAR_NAME(loading_show_as), loading_show_as);
     explorable_show_as = ini->GetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
     show_my_status = ini->GetBoolValue(Name(), VAR_NAME(show_my_status), show_my_status);
-    
+
     hover_background_color = Colors::Load(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
     friend_name_tag_enabled = ini->GetBoolValue(Name(), VAR_NAME(friend_name_tag_enabled), friend_name_tag_enabled);
     friend_name_tag_color = Colors::Load(ini, Name(), VAR_NAME(friend_name_tag_color), friend_name_tag_color);

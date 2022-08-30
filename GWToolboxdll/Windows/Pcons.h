@@ -82,7 +82,7 @@ public:
     bool pcon_quantity_checked = false;
     bool refilling = false; // Set when a refill is in progress. Dont touch.
     bool refill_attempted = false; // Set to true when refill thread has run for this map
-    int threshold = 0; 
+    int threshold = 0;
     bool visible = true;
     int quantity = 0;
     // Icon vars
@@ -119,6 +119,7 @@ protected:
 
     virtual bool CanUseByInstanceType() const;
     virtual bool CanUseByEffect() const = 0;
+    virtual void OnButtonClick() { Toggle(); }
     virtual size_t QuantityForEach(const GW::Item* item) const = 0;
 
 private:
@@ -139,9 +140,9 @@ public:
         const wchar_t* file,
         WORD res_id,
         ImVec2 uv0, ImVec2 uv1,
-        DWORD item, GW::Constants::SkillID effect, 
+        DWORD item, GW::Constants::SkillID effect,
         int threshold,
-            const char* desc = nullptr)
+        const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc),
         itemID(item), effectID(effect) {}
     PconGeneric(const PconGeneric&) = delete;
@@ -149,6 +150,7 @@ public:
 protected:
     bool CanUseByEffect() const override;
     size_t QuantityForEach(const GW::Item* item) const override;
+    void OnButtonClick() override;
 
 private:
     const DWORD itemID;
@@ -164,7 +166,7 @@ public:
         const wchar_t* file,
         WORD res_id,
         ImVec2 uv0, ImVec2 uv1,
-        DWORD item, GW::Constants::SkillID effect, 
+        DWORD item, GW::Constants::SkillID effect,
         int threshold,
             const char* desc = nullptr)
         : PconGeneric(chat, abbrev, ini, file, res_id, uv0, uv1, item, effect, threshold, desc) {}
@@ -180,7 +182,7 @@ public:
         const char* ini,
         const wchar_t* file,
         WORD res_id,
-        ImVec2 uv0, ImVec2 uv1, 
+        ImVec2 uv0, ImVec2 uv1,
         int threshold,
             const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
@@ -250,7 +252,7 @@ public:
         const char* ini,
         const wchar_t* file,
         WORD res_id,
-        ImVec2 uv0, ImVec2 uv1, 
+        ImVec2 uv0, ImVec2 uv1,
         int threshold,
             const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}

@@ -95,8 +95,7 @@ static bool SetProcessForeground(Process *process)
 #ifdef _DEBUG
 int main()
 #else
-INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-    PSTR lpCmdLine, INT nCmdShow)
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 #endif
 {
     std::filesystem::path log_file_path;
@@ -107,7 +106,9 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     log_file_path = log_file_path.parent_path() / L"GWToolbox.error.log";
     if (!freopen(log_file_path.string().c_str(), "w", stderr)) {
         wchar_t buf[MAX_PATH + 128];
-        swprintf(buf, sizeof(buf), L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.", log_file_path.wstring().c_str());
+        swprintf(buf, MAX_PATH + 128,
+            L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.",
+            log_file_path.wstring().c_str());
         MessageBoxW(0, buf, L"GWToolbox", MB_OK | MB_TOPMOST);
         return 0;
     }
@@ -208,7 +209,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
         return 0;
     }
-    
+
     // If we can't open with appropriate rights, we can then ask to re-open
     // as admin.
     InjectReply reply = InjectWindow::AskInjectProcess(&proc);

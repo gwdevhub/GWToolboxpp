@@ -7,8 +7,8 @@
 #include <ToolboxWidget.h>
 
 class AlcoholWidget : public ToolboxWidget {
-    AlcoholWidget() {};
-    ~AlcoholWidget() {};
+    AlcoholWidget() = default;
+    ~AlcoholWidget() = default;
 private:
     DWORD alcohol_level = 0;
     time_t last_alcohol = 0;
@@ -24,7 +24,7 @@ public:
         static AlcoholWidget instance;
         return instance;
     }
-    
+
     const char* Name() const override { return "Alcohol"; }
     const char8_t* Icon() const override { return ICON_FA_BEER; }
 

@@ -1,15 +1,10 @@
 #include "stdafx.h"
 
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/CharContext.h>
-
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
-
-#include <Utils/GuiUtils.h>
 
 #include <Modules/CrashHandler.h>
 #include <Modules/Resources.h>
@@ -50,13 +45,13 @@ void CrashHandler::OnGWCrash(GWDebugInfo* details, uint32_t param_2, EXCEPTION_P
         __debugbreak();
     }
     __except (EXCEPTION_CONTINUE_EXECUTION) {}
-        
+
     // Assertion here will throw a GWToolbox exception if pExceptionPointers isn't found; this will give us the correct call stack for a GW Assertion failure in the subsequent crash dump.
     if (CrashHandler::Crash(pExceptionPointers))
         abort();
     Instance().gw_debug_info = 0;
     Instance().RetHandleCrash(details, param_2, pExceptionPointers, exception_message, exception_file, exception_line);
-    
+
     GW::HookBase::LeaveHook();
     abort();
 }

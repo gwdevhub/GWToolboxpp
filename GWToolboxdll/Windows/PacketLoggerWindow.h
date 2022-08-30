@@ -8,7 +8,7 @@
 
 
 class PacketLoggerWindow : public ToolboxWindow {
-    PacketLoggerWindow() {};
+    PacketLoggerWindow() = default;
     ~PacketLoggerWindow() { ClearMessageLog(); };
 public:
     static PacketLoggerWindow& Instance() {
@@ -36,7 +36,7 @@ public:
     void CtoSHandler(GW::HookStatus* status, void* packet);
     std::string PadLeft(std::string input, uint8_t count, char c);
     std::string PrefixTimestamp(std::string message);
-    
+
 private:
     enum TimestampType : int {
         TimestampType_None,

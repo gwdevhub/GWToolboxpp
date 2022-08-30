@@ -2,13 +2,20 @@
 <?define var.DIRECTX_SDK_DIR = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)" ?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
     <Product Id="*" Version="@GWTOOLBOXDLL_VERSION@" Language="1033" Name="GWToolboxpp" Manufacturer="GWToolbox">
-        <Package InstallerVersion="300" Compressed="yes"/>
+        <Package InstallerVersion="301" Compressed="yes"/>
+        <!-- Define icons (ID should not be longer than 18 chars and must end with ".exe") -->
+        <Icon Id="Icon.exe" SourceFile="resources\gwtoolbox.ico" />
+
+        <!-- Set properties for add/remove programs -->
+        <Property Id="ARPPRODUCTICON" Value="Icon.exe" />
+        <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />      <!-- Remove repair -->
+        <Property Id="ARPNOMODIFY" Value="yes" Secure="yes" />      <!-- Remove modify -->
         <Media Id="1" Cabinet="gwtoolboxpp.cab" EmbedCab="yes" />
 
         <!-- Step 1: Define the directory structure -->
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="DesktopFolder" Name="Desktop" />
-            <Directory Id="AppDataFolder">
+            <Directory Id="PersonalFolder">
                 <Directory Id="APPLICATIONROOTDIRECTORY" Name="GWToolboxpp">
                   <Directory Id="LOGSDIRECTORY" Name="logs" />
                   <Directory Id="CRASHESDIRECTORY" Name="crashes" />
@@ -20,6 +27,11 @@
                     <File Id="GWToolbox.exe" Source="bin\RelWithDebInfo\GWToolbox.exe" KeyPath="yes" Checksum="yes">
                       <Shortcut Id="desktopGWToolboxpp" Directory="DesktopFolder" Name="GWToolbox++" WorkingDirectory='INSTALLDIR' Arguments="/localdll" Icon="GWToolbox.exe" IconIndex="0" />
                     </File>
+                    
+                    <RegistryKey Root="HKCU"
+                                 Key="Software\GWToolbox">
+                        <RegistryValue Type="string" Name="release" Value="@GWTOOLBOXDLL_VERSION@_Release"/>
+                    </RegistryKey>
                   </Component>
                   <Component Id="GWToolboxdll.dll">
                       <File Id="GWToolboxdll.dll" Source="bin\RelWithDebInfo\GWToolboxdll.dll" KeyPath="yes" Checksum="yes"/>

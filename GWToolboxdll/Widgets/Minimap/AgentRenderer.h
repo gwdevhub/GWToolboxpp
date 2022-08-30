@@ -16,8 +16,15 @@ typedef uint32_t Color;
 class AgentRenderer : public VBuffer {
 public:
     AgentRenderer();
-    
-    virtual void Invalidate() override;
+    virtual ~AgentRenderer() {
+        for (const CustomAgent* ca : custom_agents) {
+            delete ca;
+        }
+        custom_agents.clear();
+        custom_agents_map.clear();
+    }
+
+    void Invalidate() override;
     static AgentRenderer& Instance();
 
     void Render(IDirect3DDevice9* device) override;
@@ -50,7 +57,6 @@ private:
     };
 
     class CustomAgent {
-    private:
         static unsigned int cur_ui_id;
     public:
         enum class Operation {
@@ -90,7 +96,7 @@ private:
     };
 
     struct Shape_Vertex : public GW::Vec2f {
-        Shape_Vertex(float x, float y, Color_Modifier mod) 
+        Shape_Vertex(float x, float y, Color_Modifier mod)
             : GW::Vec2f(x, y), modifier(mod) {}
         Color_Modifier modifier;
     };

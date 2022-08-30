@@ -4,8 +4,8 @@
 #include <ToolboxWidget.h>
 
 class ClockWidget : public ToolboxWidget {
-    ClockWidget() {};
-    ~ClockWidget() {};
+    ClockWidget() = default;
+    ~ClockWidget() = default;
 public:
     static ClockWidget& Instance() {
         static ClockWidget instance;

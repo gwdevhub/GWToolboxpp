@@ -53,10 +53,10 @@ std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey:
     { GW::UI::ControlAction::ControlAction_CommandHero6, nullptr },
     { GW::UI::ControlAction::ControlAction_CommandHero7, nullptr },
     { GW::UI::ControlAction::ControlAction_CommandParty, nullptr },
-      
+
     { GW::UI::ControlAction::ControlAction_DropItem, nullptr },
     { GW::UI::ControlAction::ControlAction_Follow, nullptr },
-      
+
     { GW::UI::ControlAction::ControlAction_OpenHero1PetCommander, nullptr },
     { GW::UI::ControlAction::ControlAction_OpenHero2PetCommander, nullptr },
     { GW::UI::ControlAction::ControlAction_OpenHero3PetCommander, nullptr },
@@ -71,7 +71,7 @@ std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey:
     { GW::UI::ControlAction::ControlAction_OpenHeroCommander5, nullptr },
     { GW::UI::ControlAction::ControlAction_OpenHeroCommander6, nullptr },
     { GW::UI::ControlAction::ControlAction_OpenHeroCommander7, nullptr },
-      
+
     { GW::UI::ControlAction::ControlAction_Hero1Skill1, nullptr },
     { GW::UI::ControlAction::ControlAction_Hero1Skill2, nullptr },
     { GW::UI::ControlAction::ControlAction_Hero1Skill3, nullptr },
@@ -128,7 +128,7 @@ std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey:
     { GW::UI::ControlAction::ControlAction_Hero7Skill6, nullptr },
     { GW::UI::ControlAction::ControlAction_Hero7Skill7, nullptr },
     { GW::UI::ControlAction::ControlAction_Hero7Skill8, nullptr },
-      
+
     { GW::UI::ControlAction::ControlAction_UseSkill1, nullptr },
     { GW::UI::ControlAction::ControlAction_UseSkill2, nullptr },
     { GW::UI::ControlAction::ControlAction_UseSkill3, nullptr },
@@ -137,12 +137,12 @@ std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey:
     { GW::UI::ControlAction::ControlAction_UseSkill6, nullptr },
     { GW::UI::ControlAction::ControlAction_UseSkill7, nullptr },
     { GW::UI::ControlAction::ControlAction_UseSkill8, nullptr },
-      
+
     { GW::UI::ControlAction::ControlAction_ActivateWeaponSet1, nullptr },
     { GW::UI::ControlAction::ControlAction_ActivateWeaponSet2, nullptr },
     { GW::UI::ControlAction::ControlAction_ActivateWeaponSet3, nullptr },
     { GW::UI::ControlAction::ControlAction_ActivateWeaponSet4, nullptr },
-      
+
     { GW::UI::ControlAction::ControlAction_TargetAllyNearest, nullptr },
     { GW::UI::ControlAction::ControlAction_ClearTarget, nullptr },
     { GW::UI::ControlAction::ControlAction_TargetNearestEnemy, nullptr },
@@ -151,7 +151,7 @@ std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey:
     { GW::UI::ControlAction::ControlAction_TargetNearestItem, nullptr },
     { GW::UI::ControlAction::ControlAction_TargetNextItem, nullptr },
     { GW::UI::ControlAction::ControlAction_TargetPreviousItem, nullptr },
-      
+
     { GW::UI::ControlAction::ControlAction_TargetPartyMember1, nullptr },
     { GW::UI::ControlAction::ControlAction_TargetPartyMember2, nullptr },
     { GW::UI::ControlAction::ControlAction_TargetPartyMember3, nullptr },
@@ -243,7 +243,7 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
 
         ini_str = ini->GetValue(section, VAR_NAME(prof_ids), "");
         std::vector<uint32_t> prof_ids_tmp;
-        
+
         GuiUtils::IniToArray(ini_str, prof_ids_tmp);
         if (!prof_ids_tmp.empty()) {
             for (const auto prof_id : prof_ids_tmp) {
@@ -271,7 +271,10 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
             section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
         trigger_on_pvp_character = ini->GetBoolValue(
             section, VAR_NAME(trigger_on_pvp_character), trigger_on_pvp_character);
-        std::string player_name_s = ini->GetValue(section, VAR_NAME(player_name), "");
+
+        in_range_of_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance));
+        in_range_of_npc_id = ini->GetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
+        const std::string player_name_s = ini->GetValue(section, VAR_NAME(player_name), "");
         memset(player_name, 0, sizeof(player_name));
         if (!player_name_s.empty()) {
             strncpy(player_name, player_name_s.c_str(), _countof(player_name));
@@ -405,7 +408,7 @@ bool TBHotkey::Draw(Op *op)
         }
         written += snprintf(&header[written], _countof(header) - written, " [%s]", prof_ids_buf);
     } break;
-        
+
     }
     switch (map_ids.size()) {
     case 1:
@@ -420,7 +423,7 @@ bool TBHotkey::Draw(Op *op)
         written += snprintf(&header[written], _countof(header) - written, " [%d Maps]", map_ids.size());
         break;
     }
-    
+
     ASSERT(ModKeyName(keybuf, _countof(keybuf), modifier, hotkey, "<None>") != -1);
     ASSERT(snprintf(&header[written], _countof(header) - written, " [%s]###header%u", keybuf, ui_id) != -1);
     ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header)
@@ -468,7 +471,7 @@ bool TBHotkey::Draw(Op *op)
         }
         if (ImGui::CollapsingHeader("Map IDs")) {
             ImGui::Indent();
-            
+
             ImGui::TextDisabled("Only trigger in selected maps:");
             float map_id_w = (140.f * scale);
             if (map_ids.empty()) {
@@ -497,7 +500,7 @@ bool TBHotkey::Draw(Op *op)
             add_map_id |= ImGui::Button("Add##add_map_id_for_hotkey", { 64.f * scale,0.f });
             if (add_map_id) {
                 int map_id_out = 0;
-                if (strlen(map_id_input_buf) 
+                if (strlen(map_id_input_buf)
                     && GuiUtils::ParseInt(map_id_input_buf, &map_id_out)
                     && map_id_out > 0
                     && std::find(map_ids.begin(), map_ids.end(), (uint32_t)map_id_input_buf) == map_ids.end()) {
@@ -508,7 +511,7 @@ bool TBHotkey::Draw(Op *op)
             }
             ImGui::Unindent();
         }
-        
+
         if (ImGui::CollapsingHeader("Professions")) {
             ImGui::Indent();
             float prof_w = 140.f * scale;
@@ -522,9 +525,9 @@ bool TBHotkey::Draw(Op *op)
             }
             ImGui::Unindent();
         }
-        
+
         ImGui::PushItemWidth(60.0f * scale);
-        ImGui::Text("Trigger within ");
+        ImGui::Text("Only use this within ");
         ImGui::SameLine(0, 0);
         hotkey_changed |= ImGui::InputFloat("##in_range_of_distance", &in_range_of_distance, 0.f,0.f, "%.0f");
         ImGui::SameLine(0, 0);
@@ -553,33 +556,39 @@ bool TBHotkey::Draw(Op *op)
             *op = Op_BlockInput;
             ImGui::Text("Press key");
             DWORD newmod = 0;
-            bool* keysdown = ImGui::GetIO().KeysDown;
             if (mod_out) {
-                if (keysdown[VK_CONTROL])
+                if (ImGui::IsKeyDown(ImGuiKey_ModCtrl))
                     newmod |= ModKey_Control;
-                if (keysdown[VK_MENU])
-                    newmod |= ModKey_Alt;
-                if (keysdown[VK_SHIFT])
+                if (ImGui::IsKeyDown(ImGuiKey_ModShift))
                     newmod |= ModKey_Shift;
+                if (ImGui::IsKeyDown(ImGuiKey_ModAlt))
+                    newmod |= ModKey_Alt;
             }
 
 
             if (newkey == 0) { // we are looking for the key
-                for (WORD i = 0; i < 512; ++i) {
-                    if (i == VK_CONTROL)
-                        continue;
-                    if (i == VK_SHIFT)
-                        continue;
-                    if (i == VK_MENU)
-                        continue;
-                    if (keysdown[i]) {
-                        newkey = i;
+                for (WORD i = 0; i < 512; i++) {
+                    switch (i) {
+                        case VK_CONTROL:
+                        case VK_LCONTROL:
+                        case VK_RCONTROL:
+                        case VK_SHIFT:
+                        case VK_LSHIFT:
+                        case VK_RSHIFT:
+                        case VK_MENU:
+                        case VK_LMENU:
+                        case VK_RMENU:
+                            continue;
+                        default: {
+                            if (::GetKeyState(i) & 0x8000)
+                                newkey = i;
+                        }
                     }
                 }
             } else { // key was pressed, close if it's released
-                if (!keysdown[newkey]) {
+                if (!(::GetKeyState(newkey) & 0x8000)) {
                     *key_out = newkey;
-                    if(mod_out)
+                    if (mod_out)
                         *mod_out = newmod;
                     newkey = 0;
                     ImGui::CloseCurrentPopup();
@@ -664,10 +673,10 @@ bool TBHotkey::IsInRangeOfNPC() {
         return false;
     auto* me = GW::Agents::GetPlayer();
     for (const auto agent : *agents) {
-        if (!(agent && agent->type == 0xDB)) 
+        if (!(agent && agent->type == 0xDB))
             continue;
         auto* living = agent->GetAsAgentLiving();
-        if (living->login_number || living->player_number != (uint16_t)in_range_of_npc_id)
+        if (living->login_number || living->player_number != static_cast<uint16_t>(in_range_of_npc_id))
             continue;
         if (GW::GetDistance(agent->pos, me->pos) < in_range_of_distance)
             return true;
@@ -1128,7 +1137,7 @@ void HotkeyEquipItem::Execute()
         GW::Items::EquipItem(item);
     } else {
         // Move to clear model state e.g. attacking, aftercast
-        GW::Agents::Move(p->pos); 
+        GW::Agents::Move(p->pos);
     }
 }
 
@@ -1227,7 +1236,7 @@ void HotkeyDropUseBuff::Execute()
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
                 GW::GameThread::Enqueue([slot] () -> void {
                     GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(),
-                        static_cast<uint32_t>(ImGui::IsKeyDown(VK_CONTROL)));
+                        static_cast<uint32_t>(ImGui::IsKeyDown(ImGuiKey_ModCtrl)));
                 });
             }
         }
@@ -1423,7 +1432,7 @@ void HotkeyAction::Execute()
     switch (action) {
         case HotkeyAction::OpenXunlaiChest:
             if (isOutpost()) {
-                GW::GameThread::Enqueue([]() { 
+                GW::GameThread::Enqueue([]() {
                     GW::Items::OpenXunlaiWindow();
                     });
             }
@@ -1470,7 +1479,7 @@ HotkeyTarget::HotkeyTarget(CSimpleIni *ini, const char *section)
     ini_name = ini->GetValue(section, "TargetName", "");
     strcpy_s(name, ini_name.substr(0, sizeof(name)-1).c_str());
     name[sizeof(name)-1] = 0;
-    
+
     ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
                         show_message_in_emote_channel);
 }
@@ -1529,7 +1538,7 @@ void HotkeyTarget::Execute()
         GW::Chat::SendChat('/', message);
         delete[] message;
     });
-    
+
     if (show_message_in_emote_channel) {
         char buf[256];
         Description(buf, 256);
@@ -1626,7 +1635,7 @@ void HotkeyDialog::Execute()
     else {
         snprintf(buf, _countof(buf), "dialog 0x%X", id);
     }
-    
+
     GW::Chat::SendChat('/', buf);
     if (show_message_in_emote_channel)
         Log::Info("Sent dialog %s (%d)", name, id);
@@ -1781,7 +1790,7 @@ void HotkeyFlagHero::Execute()
         const GW::HeroFlag &flag = flags[hero - 1];
         if (!std::isinf(flag.flag.x) || !std::isinf(flag.flag.y)) {
             GW::PartyMgr::UnflagHero(hero);
-            return; 
+            return;
         }
     }
 

@@ -61,7 +61,6 @@ private:
     // Should this channel be blocked altogether?
     bool ShouldBlockByChannel(uint32_t channel);
 
-    
 
     bool guild_announcement = false;
     bool self_drop_rare = false;
@@ -85,7 +84,6 @@ private:
     bool player_has_achieved_title = false;
     bool faction_gain = false;
     bool challenge_mission_messages = false;
-
     bool block_messages_from_inactive_channels = false;
 
 

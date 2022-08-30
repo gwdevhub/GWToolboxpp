@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/GameContext.h>
@@ -22,8 +21,6 @@
 
 #include "EffectsMonitorWidget.h"
 
-#include "Timer.h"
-
 void EffectsMonitorWidget::RefreshEffects() {
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
     if (!effects)
@@ -38,12 +35,12 @@ void EffectsMonitorWidget::RefreshEffects() {
         uint32_t attribute_level;
         uint32_t effect_id;
         float duration;
-    } add;
+    } add{};
     add.header = GAME_SMSG_EFFECT_APPLIED;
     struct Packet2 : GW::Packet::StoC::PacketBase {
         uint32_t agent_id;
         uint32_t effect_id;
-    } remove;
+    } remove{};
     remove.header = GAME_SMSG_EFFECT_REMOVED;
     add.agent_id = remove.agent_id = GW::Agents::GetPlayerId();
 
@@ -70,7 +67,7 @@ void EffectsMonitorWidget::CheckSetMinionCount() {
     }
 }
 void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void* ) {
-    
+
     switch (message_id) {
     case GW::UI::UIMessage::kMinionCountUpdated: { // Minion count updated on effects monitor
         Instance().CheckSetMinionCount();
@@ -123,7 +120,7 @@ bool EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
         return false; // Game hasn't removed the effect yet.
     for (auto& by_type : cached_effects) {
         auto& effects = by_type.second;
-        for (size_t i = 0; i < effects.size();i++) {
+        for (size_t i = 0; i < effects.size(); i++) {
             if (effects[i].effect_id != effect_id)
                 continue;
             const GW::Effect* existing = GetLongestEffectBySkillId(effects[i].skill_id);
@@ -132,7 +129,7 @@ bool EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
                 return false; // Game hasn't removed the effect yet (copy the effect over)
             }
             by_type.second.erase(effects.begin() + i);
-            if (effects.size() == 0)
+            if (effects.empty())
                 cached_effects.erase(by_type.first);
             return true;
         }
@@ -194,7 +191,7 @@ uint32_t EffectsMonitorWidget::GetEffectSortOrder(GW::Constants::SkillID skill_i
 }
 void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
     uint32_t type = GetEffectSortOrder(effect->skill_id);
-    if (cached_effects.find(type) == cached_effects.end())
+    if (!cached_effects.contains(type))
         cached_effects[type] = std::vector<GW::Effect>();
 
     // Player can stand in range of more than 1 spirit; use the longest effect duration for the effect monitor
@@ -230,7 +227,7 @@ bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
         return &effect;
     // Effect expired
     return RemoveEffect(effect.effect_id);
-    
+
 }
 size_t EffectsMonitorWidget::GetEffectIndex(const std::vector<GW::Effect>& arr, GW::Constants::SkillID skill_id) {
     for (size_t i = 0; i < arr.size(); i++) {
@@ -275,7 +272,7 @@ void EffectsMonitorWidget::RefreshPosition() {
             imgui_pos.x = 0.f;
             imgui_size.x = window_pos.x + window_size.x;
         }
-            
+
         y_translate = 1.f;
         if (mid_point.y > screen_size.y / 2.f) {
             // Bottom aligned effects
@@ -305,7 +302,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         for (const auto& message_id : hook_messages) {
             GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, message_id, OnEffectUIMessage, 0x8000);
         }
-        
+
         GW::GameThread::Enqueue([]() {
             Instance().RefreshEffects();
             });
@@ -313,13 +310,13 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     }
 
     const auto window_flags = GetWinFlags(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
-    
+
     ImGui::SetNextWindowSize(imgui_size);
     ImGui::SetNextWindowPos(imgui_pos);
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f,0.0f));
-    
+
     ImGui::Begin(Name(), nullptr, window_flags);
 
     ImVec2 skill_top_left({ imgui_pos.x, imgui_pos.y });

@@ -3,22 +3,22 @@
 #include <GWToolbox.h>
 #include <ToolboxModule.h>
 
-#include <Windows/SettingsWindow.h>
-
 namespace {
     // static function to register content
-    static std::unordered_map<std::string, SectionDrawCallbackList> settings_draw_callbacks{};
-    static std::unordered_map<std::string, const char*> settings_icons{};
-    static std::unordered_map<std::string, ToolboxModule*> modules_loaded{};
+    std::unordered_map<std::string, SectionDrawCallbackList> settings_draw_callbacks{};
+    std::unordered_map<std::string, const char*> settings_icons{};
+    std::unordered_map<std::string, ToolboxModule*> modules_loaded{};
 }
 
 const std::unordered_map<std::string, SectionDrawCallbackList>& ToolboxModule::GetSettingsCallbacks() {
     return settings_draw_callbacks;
 }
-const std::unordered_map<std::string, const char*>& ToolboxModule::GetSettingsIcons() { return settings_icons; }
+const std::unordered_map<std::string, const char*>& ToolboxModule::GetSettingsIcons() {
+    return settings_icons;
+}
 
-const std::unordered_map<std::string, ToolboxModule*>* ToolboxModule::GetModulesLoaded() {
-    return &modules_loaded;
+const std::unordered_map<std::string, ToolboxModule*>& ToolboxModule::GetModulesLoaded() {
+    return modules_loaded;
 }
 
 void ToolboxModule::Initialize() {
@@ -41,7 +41,7 @@ void ToolboxModule::RegisterSettingsContent() {
 void ToolboxModule::RegisterSettingsContent(
     const char* section, const char8_t* icon, const SectionDrawCallback& callback, float weighting)
 {
-    if (settings_draw_callbacks.find(section) == settings_draw_callbacks.end()) {
+    if (!settings_draw_callbacks.contains(section)) {
         settings_draw_callbacks.emplace(section, SectionDrawCallbackList());
     }
     if (icon) {

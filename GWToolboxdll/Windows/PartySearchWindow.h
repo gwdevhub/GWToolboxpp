@@ -7,9 +7,12 @@
 #include <Utils/RateLimiter.h>
 
 class PartySearchWindow : public ToolboxWindow {
-    PartySearchWindow() {};
+    PartySearchWindow() = default;
     PartySearchWindow(const PartySearchWindow&) = delete;
-    ~PartySearchWindow();
+    ~PartySearchWindow() {
+        ClearParties();
+    }
+
 public:
     static PartySearchWindow& Instance() {
         static PartySearchWindow instance;
@@ -95,12 +98,12 @@ private:
 
     easywsclient::WebSocket* ws_window = NULL;
     RateLimiter window_rate_limiter;
-    
+
     CircularBuffer<Message> messages;
 
     TBParty* GetParty(uint32_t party_id, wchar_t** leader_out = nullptr);
     TBParty* GetPartyByName(std::wstring leader);
-    
+
     void ClearParties();
     void FillParties();
     void DrawAlertsWindowContent(bool ownwindow);

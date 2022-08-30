@@ -109,7 +109,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
     ImVec4 tint(1, 1, 1, 1);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     if (ImGui::ImageButton((ImTextureID)*texture, s, uv0, uv1, 0, bg, tint)) {
-        Toggle();
+        OnButtonClick();
     }
     ImGui::PopStyleColor();
     if (ImGui::IsItemHovered()) {
@@ -139,7 +139,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
             ImGui::TextColored(ImVec4(0.75f, 0.75f, 0.75f, 1), "%d", quantity_storage);
         }
     }
-    
+
     ImGui::SetCursorPos(pos);
     ImGui::Dummy(ImVec2(size, size));
 }
@@ -254,7 +254,7 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem) { // Scan b
     if (bags == nullptr) return nullptr;
     size_t emptySlotIdx = (size_t)-1;
     GW::Bag* emptyBag = nullptr;
-    
+
     for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) { // Work from last bag to first; pcons at bottom of inventory
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr) continue;   // No bag, skip
@@ -316,7 +316,7 @@ void Pcon::Refill(bool do_refill) {
         pending_move_to_quantity = 0;
         return;
     }
-    ResetCounts(); 
+    ResetCounts();
 }
 void Pcon::UpdateRefill() {
     if (!refilling)
@@ -410,7 +410,7 @@ bool Pcon::CanUseByInstanceType() const {
     return maptype == GW::Constants::InstanceType::Explorable;
 }
 bool* Pcon::GetSettingsByName(const wchar_t* name) {
-    if (settings_by_charname.find(name) == settings_by_charname.end()) {
+    if (!settings_by_charname.contains(name)) {
         bool* def = settings_by_charname[L"default"];
         settings_by_charname[name] = new bool(*def);
     }
@@ -475,6 +475,33 @@ size_t PconGeneric::QuantityForEach(const GW::Item* item) const {
     if (item->model_id == (DWORD)itemID) return 1;
     return 0;
 }
+
+void PconGeneric::OnButtonClick() {
+    Pcon::OnButtonClick();
+
+    if (PconsWindow::Instance().shift_click_toggles_category && ImGui::IsKeyDown(ImGuiKey_ModShift)) {
+        namespace r = std::ranges;
+        const std::vector<std::vector<DWORD>> categories{
+            {ItemID::ConsEssence, ItemID::ConsGrail, ItemID::ConsArmor},
+            {ItemID::GRC, ItemID::BRC, ItemID::RRC},
+            {ItemID::Kabobs, ItemID::PahnaiSalad, ItemID::SkalefinSoup}
+        };
+        const auto found = r::find_if(categories, [this](const auto& category) {
+            return r::find(category, itemID) != r::end(category);
+        });
+        if (found == r::end(categories)) return;
+        const auto& category = *found;
+        auto enable_if_same_category = [this, &category](Pcon* other) {
+            auto* generic = dynamic_cast<PconGeneric*>(other);
+            if (generic == nullptr) return;
+            if (r::find(category, generic->itemID) != r::end(category)) {
+                generic->SetEnabled(IsEnabled());
+            }
+        };
+        r::for_each(PconsWindow::Instance().pcons, enable_if_same_category);
+    }
+}
+
 bool PconGeneric::CanUseByEffect() const {
     GW::Agent* _player = GW::Agents::GetPlayer();
     if (!_player)

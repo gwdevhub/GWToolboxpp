@@ -4,8 +4,8 @@
 #include <ToolboxWidget.h>
 
 class DistanceWidget : public ToolboxWidget {
-    DistanceWidget() {};
-    ~DistanceWidget() {};
+    DistanceWidget() = default;
+    ~DistanceWidget() = default;
 public:
     static DistanceWidget& Instance() {
         static DistanceWidget instance;

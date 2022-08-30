@@ -2,20 +2,15 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Item.h>
-
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MerchantMgr.h>
 
 #include <Utils/GuiUtils.h>
-#include <Logger.h>
 
 #include <Modules/Resources.h>
 #include <Windows/MaterialsWindow.h>
@@ -56,7 +51,7 @@ GW::Item *MaterialsWindow::GetBagItem(Material mat) const {
 void MaterialsWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     if (cancelled) return;
-    DWORD tickcount = GetTickCount();
+    const auto tickcount = GetTickCount();
     if (quote_pending && (tickcount < quote_pending_time)) return;
     if (trans_pending && (tickcount < trans_pending_time)) return;
     if (transactions.empty()) return;

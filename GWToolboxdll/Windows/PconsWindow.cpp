@@ -164,7 +164,7 @@ void PconsWindow::Terminate()
         pcon->Terminate();
     }
 }
-void PconsWindow::OnAddExternalBond(GW::HookStatus *status, GW::Packet::StoC::AddExternalBond *pak) 
+void PconsWindow::OnAddExternalBond(GW::HookStatus *status, GW::Packet::StoC::AddExternalBond *pak)
 {
     if (PconAlcohol::suppress_lunar_skills &&
         pak->caster_id == GW::Agents::GetPlayerId() && pak->receiver_id == 0 &&
@@ -208,7 +208,7 @@ void PconsWindow::OnSpeechBubble(GW::HookStatus *status, GW::Packet::StoC::Speec
     if (!PconAlcohol::suppress_drunk_text) return;
     bool blocked = status->blocked;
     status->blocked = true;
-        
+
     wchar_t* m = pak->message;
     if (m[0] == 0x8CA && m[1] == 0xA4F7 && m[2] == 0xF552 && m[3] == 0xA32) return; // i love you man!
     if (m[0] == 0x8CB && m[1] == 0xE20B && m[2] == 0x9835 && m[3] == 0x4C75) return; // I'm the king of the world!
@@ -371,7 +371,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
             pcons[i]->Draw(device);
         }
     }
-    
+
     if(instance_type == GW::Constants::InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
         if (j && j % items_per_row > 0)
             ImGui::NewLine();
@@ -389,7 +389,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
         }
     }
     ImGui::End();
-    
+
 }
 void PconsWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
@@ -416,7 +416,7 @@ void PconsWindow::MapChanged() {
     // If we've just come from an explorable area then disable pcons.
     if (disable_pcons_on_map_change && previous_instance_type == GW::Constants::InstanceType::Explorable)
         SetEnabled(false);
-    
+
     player = nullptr;
     elite_area_disable_triggered = false;
     // Find out which objectives we need to complete for this map.
@@ -437,7 +437,7 @@ void PconsWindow::MapChanged() {
         current_final_room_location = GW::Vec2f(0, 0);
     }
 
-    
+
 }
 void PconsWindow::Refill(bool do_refill) {
     for (Pcon* pcon : pcons) {
@@ -545,7 +545,7 @@ void PconsWindow::CheckBossRangeAutoDisable() { // Trigger Elite area auto disab
 void PconsWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
-    
+
     for (Pcon* pcon : pcons) {
         pcon->LoadSettings(ini, Name());
     }
@@ -568,6 +568,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
     show_auto_disable_pcons_tickbox = ini->GetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
 
     show_storage_quantity = ini->GetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
+    shift_click_toggles_category = ini->GetBoolValue(Name(), VAR_NAME(shift_click_toggles_category), shift_click_toggles_category);
 
     disable_pcons_on_map_change = ini->GetBoolValue(Name(), VAR_NAME(disable_pcons_on_map_change), disable_pcons_on_map_change);
     disable_cons_on_vanquish_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_vanquish_completion), disable_cons_on_vanquish_completion);
@@ -601,6 +602,7 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
     ini->SetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
     ini->SetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
+    ini->SetBoolValue(Name(), VAR_NAME(shift_click_toggles_category), shift_click_toggles_category);
     ini->SetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
 
     ini->SetBoolValue(Name(), VAR_NAME(disable_pcons_on_map_change), disable_pcons_on_map_change);
@@ -624,6 +626,10 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::NextSpacedElement(); ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
     ImGui::ShowHelp("Display a number on the bottom of each pcon icon, showing total quantity in storage.\n"
                     "This only displays when in an outpost.");
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Shift + Click toggles category", &shift_click_toggles_category);
+    ImGui::ShowHelp("If this is ticked, clicking on a pcon while holding shift will enable/disable all of the same category\n"
+                    "Categories: Conset, Rock Candies, Kabob+Soup+Salad");
     ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%d milliseconds");
     ImGui::ShowHelp(
         "After using a pcon, toolbox will not use it again for this amount of time.\n"

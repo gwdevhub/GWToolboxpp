@@ -591,7 +591,7 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 void ChatCommands::Update(float delta) {
     if (title_names.empty()) {
-        auto* titles = GetTitles();
+        const auto* titles = GetTitles();
         for (size_t i = 0; titles && i < titles->size(); i++) {
             switch ((GW::Constants::TitleID)i) {
             case GW::Constants::TitleID::Deprecated_SkillHunter:
@@ -605,13 +605,9 @@ void ChatCommands::Update(float delta) {
         }
     }
     else if (!title_names_sorted) {
-        bool can_sort = true;
-        for (auto* title_name : title_names) {
-            if (title_name->name.IsDecoding()) {
-                can_sort = false;
-                break;
-            }
-        }
+        const bool can_sort = std::ranges::all_of(title_names, [](const auto& title_name) {
+                return !title_name->name.IsDecoding();
+            });
         if (can_sort) {
             std::ranges::sort(title_names, [](DecodedTitleName* first, DecodedTitleName* second) {
                     return first->name.string() < second->name.string();
@@ -620,31 +616,31 @@ void ChatCommands::Update(float delta) {
         }
 
     }
-    static bool keep_forward; // No init. should it be false as default
 
     if (delta == 0.f) return;
 
     if (GW::CameraMgr::GetCameraUnlock()
         && !GW::Chat::GetIsTyping()
         && !ImGui::GetIO().WantTextInput) {
+        static bool keep_forward;
 
         float forward = 0;
         float vertical = 0;
         float rotate = 0;
         float side = 0;
-        if (ImGui::IsKeyDown(VK_W) || ImGui::IsKeyDown(VK_UP) || keep_forward) forward += 1.0f;
-        if (ImGui::IsKeyDown(VK_S) || ImGui::IsKeyDown(VK_DOWN)) forward -= 1.0f;
-        if (ImGui::IsKeyDown(VK_Q)) side += 1.0f;
-        if (ImGui::IsKeyDown(VK_E)) side -= 1.0f;
-        if (ImGui::IsKeyDown(VK_Z)) vertical -= 1.0f;
-        if (ImGui::IsKeyDown(VK_X)) vertical += 1.0f;
-        if (ImGui::IsKeyDown(VK_A) || ImGui::IsKeyDown(VK_LEFT)) rotate += 1.0f;
-        if (ImGui::IsKeyDown(VK_D) || ImGui::IsKeyDown(VK_RIGHT)) rotate -= 1.0f;
-        if (ImGui::IsKeyDown(VK_R)) keep_forward = true;
+        if (ImGui::IsKeyDown(ImGuiKey_W) || ImGui::IsKeyDown(ImGuiKey_UpArrow) || keep_forward) forward += 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_S) || ImGui::IsKeyDown(ImGuiKey_DownArrow)) forward -= 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_Q)) side += 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_E)) side -= 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_Z)) vertical -= 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_X)) vertical += 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_A) || ImGui::IsKeyDown(ImGuiKey_LeftArrow)) rotate += 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_D) || ImGui::IsKeyDown(ImGuiKey_RightArrow)) rotate -= 1.0f;
+        if (ImGui::IsKeyDown(ImGuiKey_R)) keep_forward = true;
 
-        if (ImGui::IsKeyDown(VK_W) || ImGui::IsKeyDown(VK_UP) ||
-            ImGui::IsKeyDown(VK_S) || ImGui::IsKeyDown(VK_DOWN) ||
-            ImGui::IsKeyDown(VK_ESCAPE))
+        if (ImGui::IsKeyDown(ImGuiKey_W) || ImGui::IsKeyDown(ImGuiKey_UpArrow) ||
+            ImGui::IsKeyDown(ImGuiKey_S) || ImGui::IsKeyDown(ImGuiKey_DownArrow) ||
+            ImGui::IsKeyDown(ImGuiKey_Escape))
         {
             keep_forward = false;
         }
@@ -711,10 +707,9 @@ void ChatCommands::SearchAgent::Init(const wchar_t* _search, TargetType type) {
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
     if (!agents)
         return;
-    bool target_untargettable_npcs = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
     for (const GW::Agent* agent : *agents) {
         if (!agent) continue;
-        if (!(target_untargettable_npcs || GW::Agents::GetIsAgentTargettable(agent)))
+        if (!GW::Agents::GetIsAgentTargettable(agent))
             continue;
         switch (type) {
         case Item:
@@ -1724,13 +1719,11 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
     float distance = GW::Constants::SqrRange::Compass;
     size_t closest = 0;
     size_t count = 0;
-
-    bool target_untargettable_npcs = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
-
+    
     for (const GW::Agent * agent : *agents) {
         if (!agent || agent == me)
             continue;
-        if (!(target_untargettable_npcs || GW::Agents::GetIsAgentTargettable(agent)))
+        if (!GW::Agents::GetIsAgentTargettable(agent))
             continue;
         switch (type) {
             case Gadget: {

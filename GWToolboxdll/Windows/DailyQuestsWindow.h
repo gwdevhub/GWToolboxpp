@@ -12,8 +12,9 @@ namespace GW {
 }
 
 class DailyQuests : public ToolboxWindow {
-    DailyQuests() {};
-    ~DailyQuests() {};
+    DailyQuests() = default;
+    ~DailyQuests() = default;
+
 public:
     static DailyQuests& Instance() {
         static DailyQuests instance;

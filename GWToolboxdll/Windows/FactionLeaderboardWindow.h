@@ -10,6 +10,9 @@
 #include <ToolboxWindow.h>
 
 class FactionLeaderboardWindow : public ToolboxWindow {
+    FactionLeaderboardWindow() = default;
+    ~FactionLeaderboardWindow() = default;
+
 private:
     struct LeaderboardEntry {
         LeaderboardEntry() {};
@@ -41,8 +44,6 @@ private:
         bool initialised = false;
     };
 
-    FactionLeaderboardWindow() {};
-    ~FactionLeaderboardWindow() {};
 public:
     static FactionLeaderboardWindow& Instance() {
         static FactionLeaderboardWindow instance;

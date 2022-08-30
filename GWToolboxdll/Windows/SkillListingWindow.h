@@ -1,14 +1,7 @@
 #pragma once
 
 #include <GWCA\Constants\Constants.h>
-
-#include <GWCA\GameContainers\Array.h>
-
 #include <GWCA\GameEntities\Skill.h>
-#include "GWCA\Managers\UIMgr.h"
-
-#include <Utils/GuiUtils.h>
-#include <Timer.h>
 #include <ToolboxWindow.h>
 
 /*namespace {
@@ -67,7 +60,7 @@ public:
     };
 private:
     SkillListingWindow() = default;
-    std::vector<Skill*> skills;
+    std::vector<Skill*> skills{};
 public:
     static SkillListingWindow& Instance() {
         static SkillListingWindow instance;

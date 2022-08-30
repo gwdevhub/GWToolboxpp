@@ -13,8 +13,8 @@
 using namespace GW::Constants;
 
 class BondsWidget : public ToolboxWidget {
-    BondsWidget() {};
-    ~BondsWidget() {};
+    BondsWidget() = default;
+    ~BondsWidget() = default;
 public:
     static BondsWidget& Instance() {
         static BondsWidget instance;

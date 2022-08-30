@@ -29,5 +29,5 @@ public:
         ini->SetBoolValue(Name(), VAR_NAME(show_closebutton), show_closebutton);
     }
 
-    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const;
+    virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const;
 };

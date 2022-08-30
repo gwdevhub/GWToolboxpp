@@ -18,15 +18,15 @@
 #define NO_AGENT 0
 
 class ObserverPlayerWindow : public ToolboxWindow {
-public:
+protected:
     ObserverPlayerWindow() = default;
+    ~ObserverPlayerWindow() = default;
 
+public:
     static ObserverPlayerWindow& Instance() {
         static ObserverPlayerWindow instance;
         return instance;
     }
-
-
 
     virtual void Prepare(){};
     virtual uint32_t GetTracking();

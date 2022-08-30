@@ -28,7 +28,7 @@ public:
     void DrawSettingInternal() override;
     void Update([[maybe_unused]] float delta) override {}
 
-    [[nodiscard]] GW::AgentID GetItemOwner(GW::ItemID id) const;
+    [[nodiscard]] GW::AgentID GetItemOwner(GW::ItemID item_id) const;
     void SpawnSuppressedItems();
 
 private:
@@ -54,11 +54,11 @@ private:
     bool hide_party_gold = false;
     bool hide_party_green = false;
 
-    static void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
-    static void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
-    static void OnMapLoad(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
-    static void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
-    static void OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
+    static void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd*);
+    static void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove*);
+    static void OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
+    static void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID*);
+    static void OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner*);
 
     GW::HookEntry OnAgentAdd_Entry;
     GW::HookEntry OnAgentRemove_Entry;

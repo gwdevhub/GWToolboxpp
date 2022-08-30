@@ -6,12 +6,12 @@
 
 RateLimiter::RateLimiter()
 {
-    m_time = GetTickCount64();
+    m_time = GetTickCount();
 }
 
 bool RateLimiter::AddTime(uint32_t cost_ms, uint32_t max_cost_ms)
 {
-    uint64_t current_time = GetTickCount64();
+    uint64_t current_time = GetTickCount();
     if (current_time > m_time)
         m_time = current_time;
 

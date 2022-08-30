@@ -4,8 +4,18 @@
 #include <GWCA/GameEntities/Friendslist.h>
 
 class RerollWindow : public ToolboxWindow {
-    RerollWindow();
-    ~RerollWindow();
+    RerollWindow() = default;
+    ~RerollWindow() {
+        for (const auto& it : account_characters) {
+            delete it.second;
+        }
+        account_characters.clear();
+        if (guild_hall_uuid) {
+            delete guild_hall_uuid;
+            guild_hall_uuid = nullptr;
+        }
+    }
+
 public:
     static RerollWindow& Instance() {
         static RerollWindow instance;
@@ -100,7 +110,7 @@ private:
 
     void RerollSuccess();
 
-    std::map<std::wstring, std::vector<std::wstring>*> account_characters;
+    std::map<std::wstring, std::vector<std::wstring>*> account_characters{};
 
     bool IsInMap(bool include_district = true);
     bool IsCharSelectReady();

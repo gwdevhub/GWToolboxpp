@@ -20,8 +20,14 @@ each list of objectives can be either sequential or independent
 */
 
 class ObjectiveTimerWindow : public ToolboxWindow {
-    ObjectiveTimerWindow() {};
-    ~ObjectiveTimerWindow();
+    ObjectiveTimerWindow() = default;
+    ~ObjectiveTimerWindow() {
+        if (run_loader.joinable()) {
+            run_loader.join();
+        }
+        ClearObjectiveSets();
+    }
+
 public:
     static ObjectiveTimerWindow& Instance() {
         static ObjectiveTimerWindow instance;
@@ -97,7 +103,7 @@ private:
         DWORD    done = 0;
         DWORD start_time_point = 0;
         DWORD done_time_point = 0;
-        
+
         enum class Status {
             NotStarted,
             Started,
@@ -108,7 +114,7 @@ private:
         const char* GetEndTimeStr();
         const char* GetDurationStr();
         DWORD GetDuration();
-       
+
         Objective(const char* name);
 
         Objective* AddStartEvent(EventType et, uint32_t id1 = 0, uint32_t id2 = 0);
@@ -153,10 +159,10 @@ private:
 
         std::vector<Objective*> objectives;
 
-        Objective* AddObjective(Objective* obj, int starting_completes_num_previous = 0) { 
+        Objective* AddObjective(Objective* obj, int starting_completes_num_previous = 0) {
             obj->starting_completes_n_previous_objectives = starting_completes_num_previous;
             obj->parent = this;
-            objectives.push_back(obj); 
+            objectives.push_back(obj);
             return objectives.back();
         }
         Objective* AddObjectiveAfter(Objective* obj) {
@@ -180,14 +186,14 @@ private:
         nlohmann::json ToJson();
         void Update();
         void GetStartTime(struct tm* timeinfo);
-        
+
         const unsigned int ui_id = 0; // an internal id to ensure interface consistency
 
     private:
         static unsigned int cur_ui_id;
         char cached_start[16] = { 0 };
         char cached_time[16] = { 0 };
-        
+
     };
 
     std::map<DWORD, ObjectiveSet*> objective_sets;

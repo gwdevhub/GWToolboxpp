@@ -374,7 +374,7 @@ namespace {
     ShowAgentExperienceGain_pt ShowAgentExperienceGain_Ret = nullptr;
     void OnShowAgentExperienceGain(uint32_t agent_id, uint32_t amount_gained) {
         GW::Hook::EnterHook();
-        const bool blocked = agent_id == GW::Agents::GetPlayerId() 
+        const bool blocked = agent_id == GW::Agents::GetPlayerId()
                              && (Instance().block_experience_gain || Instance().block_zero_experience_gain && amount_gained == 0);
         if (!blocked)
             ShowAgentExperienceGain_Ret(agent_id, amount_gained);
@@ -419,7 +419,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
     std::wregex regexp_req(L".\x10A\x0AA8\x10A\xAA9\x10A.\x1\x101.\x1\x1");
     while (std::regex_search(original, m, regexp_req)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[128];
             wsprintfW(buffer, L"\x108\x107, q%d \x1\x2%c", found.at(9) - 0x100, found.at(6));
@@ -429,7 +429,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace "Requires 9 Scythe Mastery" > "q9 Scythe Mastery"
     std::wregex regexp_req2(L".\x10A\xAA8\x10A\xAA9\x10A\x8101.\x1\x101.\x1\x1");
     while (std::regex_search(original, m, regexp_req2)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[128];
             wsprintfW(buffer, L"\x108\x107, q%d \x1\x2\x8101%c", found.at(10) - 0x100, found.at(7));
@@ -441,7 +441,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // "vs. Demons" > "Demons"
     std::wregex vs_damage(L"[\xAAC\xAAF]\x10A.\x1");
     while (std::regex_search(original, m, vs_damage)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[4];
             wsprintfW(buffer, L"%c", found.at(2));
@@ -452,7 +452,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace "Lengthens ??? duration on foes by 33%" > "??? duration +33%"
     std::wregex regexp_lengthens_duration(L"\xAA4\x10A.\x1");
     while (std::regex_search(original, m, regexp_lengthens_duration)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"%c\x2\x108\x107 +33%%\x1", found.at(2));
@@ -463,7 +463,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace "Reduces ??? duration on you by 20%" > "??? duration -20%"
     std::wregex regexp_reduces_duration(L"\xAA7\x10A.\x1");
     while (std::regex_search(original, m, regexp_reduces_duration)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"%c\x2\x108\x107 -20%%\x1", found.at(2));
@@ -476,7 +476,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change " (while Health is above n)" to "^n";
     std::wregex n_over_n(L"\xAA8\x10A\xABC\x10A\xA52\x1\x101.\x1");
     while (std::regex_search(original, m, n_over_n)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107^%d\x1", found.at(7) - 0x100);
@@ -487,7 +487,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Enchantments last 20% longer" to "Ench +20%"
     std::wregex enchantments(L"\xAA2\x101.");
     while (std::regex_search(original, m, enchantments)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107" L"Enchantments +%d%%\x1", found.at(2) - 0x100);
@@ -498,7 +498,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // "(Chance: 18%)" > "(18%)"
     std::wregex chance_regex(L"\xA87\x10A\xA48\x1\x101.");
     while (std::regex_search(original, m, chance_regex)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107%d%%\x1", found.at(5) - 0x100);
@@ -508,7 +508,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Halves skill recharge of <attribute> spells" > "HSR <attribute>"
     std::wregex hsr_attribute(L"\xA81\x10A\xA58\x1\x10B.\x1");
     while (std::regex_search(original, m, hsr_attribute)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107" L"HSR \x1\x2%c", found.at(5));
@@ -518,7 +518,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Inscription: "Blah Blah"" to just "Blah Blah"
     std::wregex inscription(L"\x8101\x5DC5\x10A..\x1");
     while (std::regex_search(original, m, inscription)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"%c%c", found.at(3), found.at(4));
@@ -529,7 +529,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Halves casting time of <attribute> spells" > "HCT <attribute>"
     std::wregex hct_attribute(L"\xA81\x10A\xA47\x1\x10B.\x1");
     while (std::regex_search(original, m, hct_attribute)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"\x108\x107" L"HCT \x1\x2%c", found.at(5));
@@ -540,7 +540,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Change "Piercing Dmg: 11-22" > "Piercing: 11-22"
     std::wregex weapon_dmg(L"\xA89\x10A\xA4E\x1\x10B.\x1\x101.\x102.");
     while (std::regex_search(original, m, weapon_dmg)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[64];
             wsprintfW(buffer, L"%c\x2\x108\x107: %d-%d\x1", found.at(5),found.at(8) - 0x100, found.at(10) - 0x100);
@@ -581,7 +581,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Replace (while affected by a(n) to just (n)
     std::wregex while_affected_by(L"\x8101\x4D9C\x10A.\x1");
     while (std::regex_search(original, m, while_affected_by)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             wchar_t buffer[2] = { 0 };
             buffer[0] = found.at(3);
@@ -599,11 +599,11 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     // Combine Attribute + 3, Attribute + 1 to Attribute +3 +1 (e.g. headpiece)
     std::wregex attribute_stacks(L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1");
     if (std::regex_search(original, m, attribute_stacks)) {
-        for (auto match : m) {
+        for (auto& match : m) {
             std::wstring found = match.str();
             if (found[4] != found[16]) continue; // Different attributes.
             wchar_t buffer[64];
-            wsprintfW(buffer, L"%c\x10A\xA84\x10A%c\x1\x101%c\x2\xA84\x101%c\x1", 
+            wsprintfW(buffer, L"%c\x10A\xA84\x10A%c\x1\x101%c\x2\xA84\x101%c\x1",
                 found[0], found[4],found[7], found[19]);
             original = std::regex_replace(original, std::wregex(found), buffer);
         }
@@ -612,11 +612,11 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 }
 static std::wstring ParseItemDescription(GW::Item* item) {
     std::wstring original = ShorthandItemDescription(item);
-    
+
     // Remove "Value: 122 gold"
     original = std::regex_replace(original, std::wregex(L"\x2\x102\x2\xA3E\x10A\xA8A\x10A\xA59\x1\x10B.\x101.(\x102.)?\x1\x1"), L"");
 
-    // Remove other "greyed" generic terms e.g. "Two-Handed", "Unidentified"    
+    // Remove other "greyed" generic terms e.g. "Two-Handed", "Unidentified"
     original = std::regex_replace(original, std::wregex(L"\x2\x102\x2\xA3E\x10A.\x1"), L"");
 
     // Remove "Necromancer Munne sometimes gives these to me in trade" etc
@@ -794,7 +794,7 @@ const bool PendingChatMessage::PrintMessage() {
 
 void GameSettings::Initialize() {
     ToolboxModule::Initialize();
-    
+
     uintptr_t address;
 
     // Patch that allow storage page (and Anniversary page) to work.
@@ -826,6 +826,8 @@ void GameSettings::Initialize() {
     address = GW::Scanner::Find("\x8b\x7d\x08\x8b\x70\x2c\x83\xff\x0f","xxxxxxxxx");
     ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);
     ShowAgentExperienceGain_Func = (ShowAgentExperienceGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x4f);
+    printf("[SCAN] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
+    printf("[SCAN] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
 
     GW::HookBase::CreateHook(ShowAgentFactionGain_Func, OnShowAgentFactionGain, (void**)&ShowAgentFactionGain_Ret);
     GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
@@ -926,7 +928,7 @@ void GameSettings::Initialize() {
     for (const auto message_id : dialog_ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnPostSendDialog_Entry, message_id, OnDialogUIMessage,0x8000);
     }
-    
+
 
     GW::Chat::CreateCommand(L"reinvite", GameSettings::CmdReinvite);
 #ifdef APRIL_FOOLS
@@ -1020,7 +1022,7 @@ void GameSettings::MessageOnPartyChange() {
                 GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
             }
         }
-    } 
+    }
     was_leading = is_leading;
     previous_party_names = current_party_names;
     check_message_on_party_change = false;
@@ -1190,7 +1192,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
     ini->SetBoolValue(Name(), VAR_NAME(auto_return_on_defeat), auto_return_on_defeat);
     ini->SetBoolValue(Name(), VAR_NAME(shorthand_item_ping), shorthand_item_ping);
-    
+
     ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
     ini->SetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
     ini->SetBoolValue(Name(), VAR_NAME(move_materials_to_current_storage_pane), move_materials_to_current_storage_pane);
@@ -1215,7 +1217,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
     ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
-    
+
     ini->SetBoolValue(Name(), VAR_NAME(hide_player_speech_bubbles), hide_player_speech_bubbles);
     ini->SetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
     ini->SetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
@@ -1530,7 +1532,7 @@ void GameSettings::FactionEarnedCheckAndWarn() {
     float percent;
     // Avoid invalid user input values.
     if (faction_warn_percent_amount < 0)
-        faction_warn_percent_amount = 0; 
+        faction_warn_percent_amount = 0;
     if (faction_warn_percent_amount > 100)
         faction_warn_percent_amount = 100;
     // Warn user to dump faction if we're in a luxon/kurzick mission outpost
@@ -1572,7 +1574,7 @@ void GameSettings::FactionEarnedCheckAndWarn() {
     }
 }
 void GameSettings::SetAfkMessage(std::wstring&& message) {
-    
+
     static size_t MAX_AFK_MSG_LEN = 80;
     if (message.size() <= MAX_AFK_MSG_LEN) {
         afk_message = message;
@@ -1594,7 +1596,7 @@ void GameSettings::Update(float) {
     // Try to print any pending messages.
     for (auto it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage *m = *it;
-        if (m->IsSend() && PendingChatMessage::Cooldown()) 
+        if (m->IsSend() && PendingChatMessage::Cooldown())
             continue;
         if (m->Consume()) {
             it = pending_messages.erase(it);
@@ -1796,7 +1798,7 @@ void GameSettings::FriendStatusCallback(
     GW::FriendStatus status,
     const wchar_t *alias,
     const wchar_t *charname) {
-    
+
     if (!f || !charname || *charname == L'\0')
         return;
 
@@ -1910,30 +1912,31 @@ void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
         GW::Agents::ChangeTarget(player->agent_id);
         status->blocked = true;
     }
-    
+
 }
 
 // Auto accept invitations, flash window on received party invite
 void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* packet) {
     UNREFERENCED_PARAMETER(status);
-    GameSettings *instance = &Instance();
+    const auto& instance = Instance();
     if (status->blocked)
         return;
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GW::PartyMgr::GetIsLeader())
         return;
+
     if (GW::PartyMgr::GetIsPlayerTicked()) {
         GW::PartyInfo* other_party = GW::PartyMgr::GetPartyInfo(packet->target_party_id);
         GW::PartyInfo* my_party = GW::PartyMgr::GetPartyInfo();
-        if (instance->auto_accept_invites && other_party && my_party && my_party->GetPartySize() <= other_party->GetPartySize()) {
+        if (instance.auto_accept_invites && other_party && my_party && my_party->GetPartySize() <= other_party->GetPartySize()) {
             // Auto accept if I'm joining a bigger party
             GW::PartyMgr::RespondToPartyRequest(packet->target_party_id, true);
         }
-        if (instance->auto_accept_join_requests && other_party && my_party && my_party->GetPartySize() > other_party->GetPartySize()) {
+        if (instance.auto_accept_join_requests && other_party && my_party && my_party->GetPartySize() > other_party->GetPartySize()) {
             // Auto accept join requests if I'm the bigger party
             GW::PartyMgr::RespondToPartyRequest(packet->target_party_id, true);
         }
     }
-    if (instance->flash_window_on_party_invite)
+    if (instance.flash_window_on_party_invite)
         FlashWindow();
 }
 
@@ -2039,7 +2042,7 @@ void GameSettings::OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::
     }
 }
 
-// Apply Collector's Edition animations on player dancing, 
+// Apply Collector's Edition animations on player dancing,
 void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) {
     if (pak->agent_id != GW::Agents::GetPlayerId() || !Instance().collectors_edition_emotes)
         return;
@@ -2083,7 +2086,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
     if (!npc)
         return;
     auto instance = &Instance();
-    if (!instance->skip_entering_name_for_faction_donate) 
+    if (!instance->skip_entering_name_for_faction_donate)
         return;
     uint32_t* current_faction = nullptr;
     uint32_t allegiance = 0;
@@ -2489,7 +2492,7 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
         new_message[new_message_len++] = msg->message[i];
         if (msg->message[i] == '\\' && msg->message[i - 1] == '\\')
             continue; // Skip double escaped directory separators when getting the actual file name
-        file_path[file_path_len++] = msg->message[i]; 
+        file_path[file_path_len++] = msg->message[i];
     }
     file_path[file_path_len] = 0;
     wcscpy(&new_message[new_message_len], L"</a>\x1");
@@ -2645,7 +2648,7 @@ void GameSettings::OnChangeTarget(GW::HookStatus* status, GW::UI::UIMessage, voi
             }
         }
     }
-    
+
     // If we're targeting a gadget (presume its the chest), try to find adjacent items that belong to me instead.
     if (chosen_target->GetIsGadgetType()) {
         float closest_item_dist = GW::Constants::Range::Compass;

@@ -4,8 +4,14 @@
 #include <ToolboxWidget.h>
 
 class HealthWidget : public ToolboxWidget {
-    HealthWidget() {};
-    ~HealthWidget();
+    HealthWidget() = default;
+    ~HealthWidget() {
+        for (const auto* threshold : thresholds) {
+            delete threshold;
+        }
+        thresholds.clear();
+    }
+
 public:
     static HealthWidget& Instance() {
         static HealthWidget instance;
@@ -21,8 +27,6 @@ public:
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
-
-    void ClearThresholds();
 
     bool click_to_print_health = false;
 
@@ -64,6 +68,6 @@ private:
             Color color = 0xFFFFFFFF;
     };
 
-    std::vector<Threshold*> thresholds;
+    std::vector<Threshold*> thresholds{};
     CSimpleIni* inifile = nullptr;
 };

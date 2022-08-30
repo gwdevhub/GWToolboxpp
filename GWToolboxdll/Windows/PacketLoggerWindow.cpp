@@ -568,7 +568,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) {
 
 void PacketLoggerWindow::AddMessageLog(const wchar_t* encoded) {
     std::wstring encoded_ws(encoded);
-    if (!encoded || message_log.find(encoded_ws) != message_log.end())
+    if (!encoded || message_log.contains(encoded_ws))
         return;
     ForTranslation* t = new ForTranslation();
     t->in = encoded;
@@ -596,8 +596,7 @@ void PacketLoggerWindow::SaveMessageLog() {
 
 void PacketLoggerWindow::ClearMessageLog() {
     for (const auto& it : message_log) {
-        if (it.second)
-            delete it.second;
+        delete it.second;
     }
     message_log.clear();
 }

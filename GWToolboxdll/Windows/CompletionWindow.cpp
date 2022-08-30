@@ -5,21 +5,17 @@
 
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/Context/GameContext.h>
 
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Hero.h>
 
-#include <GWCA/GameContainers/GamePos.h>
-
-#include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -123,7 +119,7 @@ namespace {
 		L"\x8101\x777D\xCA7A\xB9E2\x3BDD", // Destroyer Shield
 		L"\x8101\x777E\xB3DD\x830E\x4CA1", // Destroyer Spear
 		L"\x8101\x777F\xCCF0\xA1E7\x2A5E", // Destroyer Staff
-		L"\x8101\x7780\x8DAB\xA3C4\x48B1", // Destroyer Sword	
+		L"\x8101\x7780\x8DAB\xA3C4\x48B1", // Destroyer Sword
 
 		L"\x108\x107" "Tormented Axe\x1", // Tormented Axe
 		L"\x108\x107" "Tormented Bow\x1", // Tormented Bow
@@ -190,7 +186,7 @@ namespace {
 		L"\x8101\x2EA1\xAECB\x8321\x55B2", // Gray Giant
 		L"\x8101\x66FD\xB774\x8AC7\x4878", // Greased Lightning
 		L"\x8102\x7446", // Guild Lord
-		L"\x8101\x7300", // Gwen	
+		L"\x8101\x7300", // Gwen
 		L"\x8102\x5385\xB5F4\xDD41\x6DE", // Gwen Doll
 		L"\x8101\x7308", // Harpy Ranger
 		L"\x8101\x7307", // Heket Warrior
@@ -239,7 +235,7 @@ namespace {
 		L"\x8102\x5944", // Word of Madness
 		L"\x8102\x5389\xD54E\xE94E\x5120", // Yakkington
 		L"\x8101\x6BB8", // Zhed Shadowhoof
-		
+
 		L"\x8102\x5946", // Terrorweb Dryder
 		L"\x8102\x5947", // Abomination
 		L"\x8102\x5948", // Krait Neoss
@@ -253,7 +249,7 @@ namespace {
 		L"\x8102\x5950", // Flame Djinn
 		L"\x8102\x5952", // Eye of Janthir
 
-		
+
 		L"\x8102\x5CC6", // Smite Crawler
 		L"\x8102\x5E49", // Dhuum
 
@@ -353,15 +349,15 @@ namespace {
 		}
 		Instance().CheckProgress();
 	}
-	
+
 	// Flag miniature as unlocked for current character when dedicated
 	void OnSendDialog(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
 		ASSERT(message_id == GW::UI::UIMessage::kSendDialog);
 		if (GW::Map::GetMapID() != GW::Constants::MapID::Hall_of_Monuments)
 			return;
 		uint32_t dialog_id = (uint32_t)wparam;
-		auto available_dialogs = DialogModule::Instance().GetDialogButtons();
-		auto this_dialog_button = std::find_if(available_dialogs.begin(), available_dialogs.end(), [dialog_id](auto d) { return d->dialog_id == dialog_id; });
+		const auto& available_dialogs = DialogModule::Instance().GetDialogButtons();
+		const auto this_dialog_button = std::ranges::find_if(available_dialogs, [dialog_id](auto d) { return d->dialog_id == dialog_id; });
 		if (this_dialog_button == available_dialogs.end())
 			return;
 		std::wregex miniature_displayed_regex(L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A([^\x1]+)");
@@ -635,7 +631,7 @@ bool Mission::HasQuest()
 	if (zm_quest == GW::Constants::QuestID::None)
 		return false;
 	auto* quests = GW::PlayerMgr::GetQuestLog();
-	if (!quests) 
+	if (!quests)
 		return false;
 	for (auto& quest : *quests) {
 		if (quest.quest_id == zm_quest)
@@ -1311,7 +1307,7 @@ void CompletionWindow::Initialize_Factions()
 	auto& skills = pve_skills.at(Campaign::Factions);
 	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Save_Yourselves_kurzick));
 	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Save_Yourselves_luxon));
-	
+
 	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Aura_of_Holy_Might_kurzick));
 	skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Aura_of_Holy_Might_luxon));
 
@@ -1827,10 +1823,10 @@ dungeons.push_back(new Dungeon(
 	MapID::Arachnis_Haunt_Level_1, GW::Constants::QuestID::ZaishenBounty_Arachni));
 dungeons.push_back(new Dungeon(
 	MapID::Slavers_Exile_Level_1, {
-		GW::Constants::QuestID::ZaishenBounty_Forgewight, 
+		GW::Constants::QuestID::ZaishenBounty_Forgewight,
 		GW::Constants::QuestID::ZaishenBounty_Selvetarm,
-		GW::Constants::QuestID::ZaishenBounty_Justiciar_Thommis, 
-		GW::Constants::QuestID::ZaishenBounty_Rand_Stormweaver, 
+		GW::Constants::QuestID::ZaishenBounty_Justiciar_Thommis,
+		GW::Constants::QuestID::ZaishenBounty_Rand_Stormweaver,
 		GW::Constants::QuestID::ZaishenBounty_Duncan_the_Black }));
 dungeons.push_back(new Dungeon(
 	MapID::Fronis_Irontoes_Lair_mission, { GW::Constants::QuestID::ZaishenBounty_Fronis_Irontoe }));
@@ -2145,8 +2141,8 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 	}
 
 	char label[128];
-	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d minipets dedicated) - %.0f%%###devotion_points", "Devotion", 
-		completed, DevotionPoints::TotalAvailable, 
+	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d minipets dedicated) - %.0f%%###devotion_points", "Devotion",
+		completed, DevotionPoints::TotalAvailable,
 		dedicated, minipets.size(),
 		((float)dedicated / (float)minipets.size()) * 100.f);
 
@@ -2309,7 +2305,7 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
 	for (CSimpleIni::Entry& entry : entries) {
 		ini_section = entry.pItem;
 		name_ws = GuiUtils::StringToWString(ini_section);
-		
+
 		read_ini_to_buf(CompletionType::Mission, "mission");
 		read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus");
 		read_ini_to_buf(CompletionType::MissionHM, "mission_hm");
@@ -2358,7 +2354,7 @@ CompletionWindow* CompletionWindow::CheckProgress() {
 	for (auto achievement : hom_weapons) {
 		achievement->CheckProgress(chosen_player_name);
 	}
-	
+
 	auto& cc = CompletionWindow::Instance().character_completion;
 	if (cc.contains(chosen_player_name)) {
 		if (!cc[chosen_player_name]->hom_achievements) {
@@ -2393,7 +2389,7 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
 	};
 
 	for (auto& char_unlocks : character_completion) {
-		
+
 		char_comp = char_unlocks.second;
 		name = &char_comp->name_str;
 		completion_ini->SetLongValue(name->c_str(), "profession", (uint32_t)char_comp->profession);

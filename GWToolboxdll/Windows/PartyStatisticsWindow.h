@@ -17,6 +17,9 @@
 #include <ToolboxWindow.h>
 
 class PartyStatisticsWindow : public ToolboxWindow {
+    PartyStatisticsWindow() = default;
+    ~PartyStatisticsWindow();
+
 protected:
     struct Skill {
         Skill(GW::Constants::SkillID _id) : id(_id) {
@@ -47,7 +50,6 @@ protected:
         const std::wstring& agent_name, const std::wstring& skill_name, const uint32_t skill_count, wchar_t* out, size_t len);
 
 public:
-    ~PartyStatisticsWindow();
 
     static PartyStatisticsWindow& Instance() {
         static PartyStatisticsWindow instance;

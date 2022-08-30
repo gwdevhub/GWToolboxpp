@@ -55,7 +55,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         } else {
             const std::string server_version = Updater::Instance().GetServerVersion();
             if (!server_version.empty()) {
-                if (server_version.compare(GWTOOLBOXDLL_VERSION) == 0) {
+                if (server_version == GWTOOLBOXDLL_VERSION) {
                     ImGui::SameLine();
                     ImGui::Text("(Up to date)");
                 } else {
@@ -161,7 +161,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
 
     const auto& settings_section = callbacks.find(section);
     if (settings_section == callbacks.end()) return false;
-    if (drawn_settings.find(section) != drawn_settings.end()) return true; // Already drawn
+    if (drawn_settings.contains(section)) return true; // Already drawn
     drawn_settings[section] = true;
     
     static char buf[128];

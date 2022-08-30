@@ -164,7 +164,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_latency_widget) optional_modules.push_back(&LatencyWidget::Instance());
     if (use_skill_monitor) optional_modules.push_back(&SkillMonitorWidget::Instance());
 #if _DEBUG
-    
+
 #endif
 
     std::sort(
@@ -184,13 +184,14 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 }
 
 void ToolboxSettings::DrawSettingInternal() {
-    Updater::Instance().DrawSettingInternal();
-
-    ImGui::Separator();
     DrawFreezeSetting();
+    ImGui::Separator();
+
+    Updater::Instance().DrawSettingInternal();
+    ImGui::Separator();
+
     ImGui::Checkbox("Save Location Data", &save_location_data);
     ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
-    
     const size_t cols = (size_t)floor(ImGui::GetWindowWidth() / (170.0f * ImGui::GetIO().FontGlobalScale));
 
     ImGui::Separator();
@@ -253,37 +254,6 @@ void ToolboxSettings::DrawSettingInternal() {
     }
     ImGui::Columns(1);
     ImGui::PopID();
-    
-    ImGui::Separator();
-    if (ImGui::TreeNodeEx("Show the following in the main window:", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-
-        const std::vector<ToolboxUIElement*>& ui = GWToolbox::Instance().GetUIElements();
-        ImGui::Columns(static_cast<int>(cols), "menubuttons_cols", false);
-        col_count = 0;
-        std::vector<ToolboxUIElement*> valid_elements;
-        for (size_t i = 0; i < ui.size(); i++) {
-            auto& window = ui[i];
-            if ((window->IsWidget() || window->IsWindow()) && window->can_show_in_main_window) {
-                valid_elements.push_back(window);
-            }
-        }
-        std::ranges::sort(valid_elements, [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-            return std::string(lhs->Name()).compare(rhs->Name()) < 0;
-        });
-        items_per_col = (size_t)ceil(valid_elements.size() / static_cast<float>(cols));
-        for (size_t i = 0; i < valid_elements.size(); i++) {
-            const auto window = valid_elements[i];
-            if (ImGui::Checkbox(window->Name(), &window->show_menubutton))
-                MainWindow::Instance().pending_refresh_buttons = true;
-            col_count++;
-            if (col_count == items_per_col) {
-                ImGui::NextColumn();
-                col_count = 0;
-            }
-        }
-        ImGui::Columns(1);
-        ImGui::TreePop();
-    }
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
@@ -401,7 +371,7 @@ void ToolboxSettings::Draw(IDirect3DDevice9*) {
 
 void ToolboxSettings::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
-    
+
 
     // save location data
     if (save_location_data && TIMER_DIFF(location_timer) > 1000) {

@@ -944,8 +944,6 @@ void Minimap::SelectTarget(const GW::Vec2f pos) const
     auto distance = 600.0f * 600.0f;
     const GW::Agent* closest = nullptr;
 
-    bool target_untargettable_npcs = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
-
     for (const auto* agent : *agents) {
         if (agent == nullptr)
             continue;
@@ -956,7 +954,7 @@ void Minimap::SelectTarget(const GW::Vec2f pos) const
             continue;
         if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id != 8141)
             continue; // allow locked chests
-        if (!(target_untargettable_npcs || GW::Agents::GetIsAgentTargettable(agent)))
+        if (!GW::Agents::GetIsAgentTargettable(agent))
             continue; // block all useless minis
         const float newDistance = GW::GetSquareDistance(pos, agent->pos);
         if (distance > newDistance) {
@@ -1232,9 +1230,9 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9 *device) const
 
 bool Minimap::IsKeyDown(const MinimapModifierBehaviour mmb) const
 {
-    return (key_none_behavior == mmb && !ImGui::IsKeyDown(VK_CONTROL) && !ImGui::IsKeyDown(VK_SHIFT) &&
-               !ImGui::IsKeyDown(VK_MENU)) ||
-           (key_ctrl_behavior == mmb && ImGui::IsKeyDown(VK_CONTROL)) ||
-           (key_shift_behavior == mmb && ImGui::IsKeyDown(VK_SHIFT)) ||
-           (key_alt_behavior == mmb && ImGui::IsKeyDown(VK_MENU));
+    return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiKey_ModCtrl) &&
+        !ImGui::IsKeyDown(ImGuiKey_ModShift) &&!ImGui::IsKeyDown(ImGuiKey_ModAlt)) ||
+           (key_ctrl_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) ||
+           (key_shift_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModShift)) ||
+           (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModAlt));
 }

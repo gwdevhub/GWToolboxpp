@@ -7,8 +7,8 @@
 #include <ToolboxWidget.h>
 
 class LatencyWidget : public ToolboxWidget {
-    LatencyWidget(){};
-    ~LatencyWidget(){};
+    LatencyWidget() = default;
+    ~LatencyWidget() = default;
 
 private:
     GW::HookEntry Ping_Entry;

@@ -6,7 +6,7 @@ class SettingsWindow : public ToolboxWindow {
     SettingsWindow() {
         show_menubutton = true;
     };
-    ~SettingsWindow() {};
+    ~SettingsWindow() = default;
 public:
     static SettingsWindow& Instance() {
         static SettingsWindow instance;

@@ -16,7 +16,9 @@ namespace GW {
 }
 
 class BuildsWindow : public ToolboxWindow {
-private:
+    BuildsWindow() = default;
+    ~BuildsWindow() = default;
+
     struct Build {
         Build(const char* n, const char* c);
         char name[128];
@@ -41,9 +43,6 @@ private:
         std::vector<Build> builds;
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };
-
-    BuildsWindow() {};
-    ~BuildsWindow() {};
 
 public:
     static BuildsWindow& Instance() {

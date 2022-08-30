@@ -4,9 +4,9 @@
 
 /*
 This class is essentially a glorified vertex buffer, containing everything
-that is necessary to render the vertex buffer. 
+that is necessary to render the vertex buffer.
 
-classes implementing this class only need to implement Initialize which 
+classes implementing this class only need to implement Initialize which
 should contain code that:
 - populates the vertex buffer "buffer_"
 - sets the primitive type "type_"
@@ -19,19 +19,12 @@ you can call Invalidate() to have the initialize be called again on render
 
 class VBuffer {
 public:
-    VBuffer()
-        : buffer(nullptr)
-        , type(D3DPT_TRIANGLELIST)
-        , count(0)
-        , initialized(false)
-    {
-    }
 
-    virtual void Invalidate() { 
+    virtual void Invalidate() {
         if (buffer)
             buffer->Release();
         buffer = nullptr;
-        initialized = false; 
+        initialized = false;
     }
     virtual void Render(IDirect3DDevice9* device) {
         if (!initialized) {
@@ -45,10 +38,10 @@ public:
     }
 
 protected:
-    IDirect3DVertexBuffer9* buffer;
-    D3DPRIMITIVETYPE type;
-    unsigned long count;
-    bool initialized;
+    IDirect3DVertexBuffer9* buffer = nullptr;
+    D3DPRIMITIVETYPE type = D3DPT_TRIANGLELIST;
+    unsigned long count = 0;
+    bool initialized = false;
 
 private:
     virtual void Initialize(IDirect3DDevice9* device) = 0;

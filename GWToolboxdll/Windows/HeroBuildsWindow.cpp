@@ -33,9 +33,9 @@ namespace {
 
     using GW::Constants::HeroID;
 
-    // hero index is an arbitrary index. 
-    // We aim to have the same order as in the gw client. 
-    // Razah is after the mesmers because all players that don't have mercs have it set as mesmer. 
+    // hero index is an arbitrary index.
+    // We aim to have the same order as in the gw client.
+    // Razah is after the mesmers because all players that don't have mercs have it set as mesmer.
     const HeroID HeroIndexToID[] = {
         HeroID::NoHero,
         HeroID::Goren,
@@ -143,11 +143,6 @@ GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(HeroID hero_id, size_t* 
     return nullptr;
 }
 
-HeroBuildsWindow::~HeroBuildsWindow() {
-    if (inifile)
-        delete inifile;
-}
-
 void HeroBuildsWindow::Initialize() {
     ToolboxWindow::Initialize();
     send_timer = TIMER_INIT();
@@ -228,7 +223,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
     for (size_t i = 0; i < teambuilds.size(); ++i) {
         if (!teambuilds[i].edit_open) continue;
         TeamHeroBuild& tbuild = teambuilds[i];
-        constexpr size_t winname_buffer_size = 256; 
+        constexpr size_t winname_buffer_size = 256;
         char winname[winname_buffer_size];
         snprintf(winname, winname_buffer_size, "%s###herobuild%d", tbuild.name, tbuild.ui_id);
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -325,7 +320,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                         ImGui::SetTooltip(hero_stance_tooltip);
                     ImGui::SameLine(offset += icon_btn_width + item_spacing);
                 }
-                
+
                 if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {
                     if (ImGui::GetIO().KeyCtrl)
                         Send(tbuild, j);
@@ -513,7 +508,7 @@ void HeroBuildsWindow::Load(const HeroBuildsWindow::TeamHeroBuild& tbuild) {
     for (size_t i = 0; i < tbuild.builds.size(); ++i) {
         Load(tbuild, i);
     }
-    send_timer = TIMER_INIT(); // give GW time to update the hero structs after adding them. 
+    send_timer = TIMER_INIT(); // give GW time to update the hero structs after adding them.
 }
 
 void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, size_t idx) {
@@ -522,7 +517,7 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, size_t idx) {
     const HeroBuild& build = tbuild.builds[idx];
     const std::string code(build.code);
 
-    if (idx == 0) { // Player 
+    if (idx == 0) { // Player
         // note: build.hero_index should be -1
         if (!code.empty()) GW::SkillbarMgr::LoadSkillTemplate(build.code);
     } else if (build.hero_index > 0) {
@@ -577,7 +572,7 @@ void HeroBuildsWindow::Update(float) {
         }
     }
 
-    // if we open the window, load from file. If we close the window, save to file. 
+    // if we open the window, load from file. If we close the window, save to file.
     static bool old_visible = false;
     bool cur_visible = false;
     cur_visible |= visible;
@@ -640,7 +635,6 @@ void HeroBuildsWindow::LoadFromFile() {
     // clear builds from toolbox
     teambuilds.clear();
 
-    if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
     inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
 
     // then load
@@ -689,8 +683,6 @@ void HeroBuildsWindow::LoadFromFile() {
 void HeroBuildsWindow::SaveToFile() {
     constexpr size_t buffer_size = 16;
     if (builds_changed) {
-        if (inifile == nullptr) inifile = new CSimpleIni();
-
         // clear builds from ini
         inifile->Reset();
 
@@ -703,7 +695,7 @@ void HeroBuildsWindow::SaveToFile() {
             inifile->SetLongValue(section, "mode", tbuild.mode);
             for (size_t j = 0; j < tbuild.builds.size(); ++j) {
                 const HeroBuild& build = tbuild.builds[j];
-                
+
                 char namekey[buffer_size];
                 char templatekey[buffer_size];
                 char heroindexkey[buffer_size];

@@ -244,7 +244,7 @@ bool Install(bool quiet)
 
     if (!CopyInstaller()) {
         fprintf(stderr, "CopyInstaller failed\n");
-        return false;        
+        return false;
     }
 
     if (!DownloadWindow::DownloadAllFiles()) {
@@ -309,7 +309,21 @@ bool IsInstalled()
 {
     HKEY UninstallKey;
     if (!OpenUninstallKey(&UninstallKey)) {
-        return false;
+        HKEY phkResult;
+
+        LPCWSTR lpSubKey = L"Software\\GWToolbox";
+        LSTATUS status = RegOpenKeyExW(HKEY_CURRENT_USER, lpSubKey, 0, KEY_READ, &phkResult);
+
+        if (status != ERROR_SUCCESS) {
+            fprintf(stderr, "RegOpenKeyExW failed: {status:0x%lX, lpSubKey:'%ls'}\n", status, lpSubKey);
+            phkResult = nullptr;
+            return false;
+        }
+        fs::path dllpath;
+        if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp\\GWToolboxdll.dll")) {
+            return false;
+        }
+        return fs::exists(dllpath);
     }
 
     RegCloseKey(UninstallKey);

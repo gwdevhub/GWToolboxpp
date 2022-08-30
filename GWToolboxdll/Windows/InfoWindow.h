@@ -12,7 +12,9 @@
 #include <Modules/HallOfMonumentsModule.h>
 
 class InfoWindow : public ToolboxWindow {
-    InfoWindow() {};
+    InfoWindow() = default;
+    ~InfoWindow() = default;
+
 public:
     static InfoWindow& Instance() {
         static InfoWindow instance;

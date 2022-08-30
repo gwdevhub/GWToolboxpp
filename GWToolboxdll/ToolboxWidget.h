@@ -12,8 +12,8 @@ public:
         lock_move = true;
         lock_size = true;
     }
-    
 
-    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, 
+
+    virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0,
         bool noinput_if_frozen = true) const;
 };

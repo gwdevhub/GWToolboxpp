@@ -11,8 +11,6 @@
 
 #include <Utils/GuiUtils.h>
 
-#include <Defines.h>
-
 // abstract class Toolbox Hotkey
 // has the key code and pressed status
 class TBHotkey {
@@ -60,7 +58,7 @@ public:
 
     // Create hotkey, load from file if 'ini' is not null
     TBHotkey(CSimpleIni* ini, const char* section);
-    virtual ~TBHotkey(){};
+    virtual ~TBHotkey() = default;
 
     virtual bool CanUse();
 
@@ -74,13 +72,13 @@ public:
 
     bool Draw(Op* op);
 
-    virtual const char* Name() const = 0;
+    [[nodiscard]] virtual const char* Name() const = 0;
     virtual bool Draw() = 0;
     virtual int Description(char *buf, size_t bufsz) = 0;
     virtual void Execute() = 0;
     virtual void Toggle() { return Execute(); };
 protected:
-    
+
     static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
     static bool isExplorable() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
     static bool isOutpost() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
