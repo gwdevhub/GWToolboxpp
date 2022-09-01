@@ -63,6 +63,12 @@ using namespace ToolboxUtils;
 
 namespace {
 
+    GW::MemoryPatcher ctrl_click_patch;
+    GW::MemoryPatcher tome_patch;
+    GW::MemoryPatcher gold_confirm_patch;
+    GW::MemoryPatcher item_description_patch;
+    GW::MemoryPatcher item_description_patch2;
+
     GameSettings& Instance() {
         return GameSettings::Instance();
     }
@@ -155,10 +161,21 @@ namespace {
 
     bool ctrl_enter_whisper = false;
 
+    bool disable_item_descriptions_in_outpost = false;
+    bool disable_item_descriptions_in_explorable = false;
+
+
     bool IsInfused(GW::Item* item) {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
     }
 
+
+    const bool IsOutpost() {
+        return  GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
+    }
+    const bool IsExplorable() {
+        return  GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
+    }
     enum PING_PARTS {
         NAME=1,
         DESC=2
@@ -369,6 +386,7 @@ namespace {
             ShowAgentFactionGain_Ret(agent_id, stat_type, amount_gained);
         GW::Hook::LeaveHook();
     }
+    
     typedef void(__cdecl* ShowAgentExperienceGain_pt)(uint32_t agent_id, uint32_t amount_gained);
     ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = nullptr;
     ShowAgentExperienceGain_pt ShowAgentExperienceGain_Ret = nullptr;
@@ -378,6 +396,18 @@ namespace {
                              && (Instance().block_experience_gain || Instance().block_zero_experience_gain && amount_gained == 0);
         if (!blocked)
             ShowAgentExperienceGain_Ret(agent_id, amount_gained);
+        GW::Hook::LeaveHook();
+    }
+
+    typedef void(__cdecl* GetItemDescription_pt)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
+    GetItemDescription_pt GetItemDescription_Func = nullptr;
+    GetItemDescription_pt GetItemDescription_Ret = nullptr;
+    void OnGetItemDescription(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** name_out, wchar_t** description_out) {
+        GW::Hook::EnterHook();
+        bool block_description = (disable_item_descriptions_in_outpost && IsOutpost()) || (disable_item_descriptions_in_explorable && IsExplorable());
+        if (block_description && GetKeyState(VK_CONTROL) < 0)
+            block_description = false;
+        GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
         GW::Hook::LeaveHook();
     }
 
@@ -822,6 +852,12 @@ void GameSettings::Initialize() {
     if (address) {
         gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
     }
+    // This could be done with patches if we wanted to still show description for weapon sets and merchants etc, but its more signatures to log.
+    GetItemDescription_Func = (GetItemDescription_pt)GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f);
+    if (GetItemDescription_Func) {
+        GW::HookBase::CreateHook(GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
+        GW::HookBase::EnableHooks(GetItemDescription_Func);
+    }
 
     address = GW::Scanner::Find("\x8b\x7d\x08\x8b\x70\x2c\x83\xff\x0f","xxxxxxxxx");
     ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);
@@ -1112,6 +1148,10 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     block_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(block_experience_gain), block_experience_gain);
     block_zero_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(block_zero_experience_gain), block_zero_experience_gain);
 
+    disable_item_descriptions_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_outpost), disable_item_descriptions_in_outpost);
+    disable_item_descriptions_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_explorable), disable_item_descriptions_in_explorable);
+
+
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     ::LoadChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -1260,6 +1300,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(block_faction_gain), block_faction_gain);
     ini->SetBoolValue(Name(), VAR_NAME(block_experience_gain), block_experience_gain);
     ini->SetBoolValue(Name(), VAR_NAME(block_zero_experience_gain), block_zero_experience_gain);
+    ini->SetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_outpost), disable_item_descriptions_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_explorable), disable_item_descriptions_in_explorable);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1308,6 +1350,18 @@ void GameSettings::DrawInventorySettings() {
 
     ImGui::Checkbox("Lazy chest looting", &lazy_chest_looting);
     ImGui::ShowHelp("Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
+    ImGui::Text("Only show item names when hovering in:");
+    ImGui::ShowHelp("When hovering an item in inventory or weapon sets,\nonly show the item name in the tooltip that appears.");
+    ImGui::Indent();
+    ImGui::Checkbox("Explorable Area###disable_item_descriptions_in_explorable", &disable_item_descriptions_in_explorable);
+    ImGui::SameLine();
+    ImGui::Checkbox("Outpost###disable_item_descriptions_in_outpost", &disable_item_descriptions_in_outpost);
+    if (disable_item_descriptions_in_explorable || disable_item_descriptions_in_outpost) {
+        ImGui::Indent();
+        ImGui::TextDisabled("Hold Ctrl when hovering an item to show full description");
+        ImGui::Unindent();
+    }
+    ImGui::Unindent();
 }
 
 void GameSettings::DrawPartySettings() {
@@ -1771,6 +1825,41 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
                 ctrl_enter_whisper = false;
                 });
             return true;
+        }
+    }
+    if (wParam == VK_CONTROL && (Message == WM_KEYDOWN || Message == WM_KEYUP)) {
+        // Trigger an item update ui message; this will allow the ctrl descriptions to update without having to re-hover.
+        GW::Item* hovered = GW::Items::GetHoveredItem();
+        if (hovered) {
+            uint32_t* items_triggered = new uint32_t[2];
+            auto i = GW::Items::GetInventory();
+            if (hovered == i->weapon_set0 || hovered == i->offhand_set0) {
+                items_triggered[0] = i->weapon_set0 ? i->weapon_set0->item_id : 0;
+                items_triggered[1] = i->offhand_set0 ? i->offhand_set0->item_id : 0;
+            }
+            else if (hovered == i->weapon_set1 || hovered == i->offhand_set1) {
+                items_triggered[0] = i->weapon_set1 ? i->weapon_set1->item_id : 0;
+                items_triggered[1] = i->offhand_set1 ? i->offhand_set1->item_id : 0;
+            }
+            else if (hovered == i->weapon_set2 || hovered == i->offhand_set2) {
+                items_triggered[0] = i->weapon_set2 ? i->weapon_set2->item_id : 0;
+                items_triggered[1] = i->offhand_set2 ? i->offhand_set2->item_id : 0;
+            }
+            else if (hovered == i->weapon_set3 || hovered == i->offhand_set3) {
+                items_triggered[0] = i->weapon_set3 ? i->weapon_set3->item_id : 0;
+                items_triggered[1] = i->offhand_set3 ? i->offhand_set3->item_id : 0;
+            }
+            else {
+                items_triggered[0] = hovered->item_id;
+                items_triggered[1] = 0;
+            }
+            GW::GameThread::Enqueue([items_triggered]() {
+                if(items_triggered[0])
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[0]);
+                if(items_triggered[1])
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[1]);
+                delete[] items_triggered;
+                });
         }
     }
 

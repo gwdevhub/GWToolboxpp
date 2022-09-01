@@ -1874,6 +1874,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 		for (auto achievement : hom_weapons) {
 			achievement->CheckProgress(chosen_player_name);
 		}
+		for (auto achievement : hom_armor) {
+			achievement->CheckProgress(chosen_player_name);
+		}
 	}
 	if (!visible) return;
 
