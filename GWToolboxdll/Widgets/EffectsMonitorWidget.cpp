@@ -21,224 +21,142 @@
 
 #include "EffectsMonitorWidget.h"
 
-void EffectsMonitorWidget::RefreshEffects() {
-    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects)
-        return;
-    std::vector<GW::Effect> readd_effects;
-    for (GW::Effect& effect : *effects) {
-        readd_effects.push_back(effect);
-    }
-    struct Packet : GW::Packet::StoC::PacketBase {
-        uint32_t agent_id;
-        uint32_t skill_id;
-        uint32_t attribute_level;
-        uint32_t effect_id;
-        float duration;
-    } add{};
-    add.header = GAME_SMSG_EFFECT_APPLIED;
-    struct Packet2 : GW::Packet::StoC::PacketBase {
-        uint32_t agent_id;
-        uint32_t effect_id;
-    } remove{};
-    remove.header = GAME_SMSG_EFFECT_REMOVED;
-    add.agent_id = remove.agent_id = GW::Agents::GetPlayerId();
+namespace {
 
-    for (GW::Effect& effect : readd_effects) {
-        remove.effect_id = effect.effect_id;
-        GW::StoC::EmulatePacket(&remove);
-        add.skill_id = (uint32_t)effect.skill_id;
-        add.effect_id = effect.effect_id;
-        add.duration = effect.duration;
-        add.attribute_level = effect.attribute_level;
-        GW::StoC::EmulatePacket(&add);
-    }
-    Instance().SetMoralePercent(GW::GameContext::instance()->world->morale);
-}
-void EffectsMonitorWidget::CheckSetMinionCount() {
-    auto& minions_arr = GW::GameContext::instance()->world->controlled_minion_count;
-    uint32_t me = GW::Agents::GetPlayerId();
-    minion_count = 0;
-    for (size_t i = minions_arr.size() - 1; i < minions_arr.size(); i--) {
-        if (minions_arr[i].agent_id == me) {
-            minion_count = minions_arr[i].minion_count;
-            return;
-        }
-    }
-}
-void EffectsMonitorWidget::OnEffectUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void* ) {
 
-    switch (message_id) {
-    case GW::UI::UIMessage::kMinionCountUpdated: { // Minion count updated on effects monitor
-        Instance().CheckSetMinionCount();
-    } break;
-    case GW::UI::UIMessage::kEffectAdd: {
-        struct Payload {
-            uint32_t agent_id;
-            GW::Effect* e;
-        } *details = (Payload*)wParam;
-        uint32_t player_id = GW::Agents::GetPlayerId();
-        if (player_id && player_id != details->agent_id)
-            break;
-        Instance().SetEffect(details->e);
-    }break;
-    case GW::UI::UIMessage::kEffectRenew: {
-        const GW::Effect* e = Instance().GetEffect(*(uint32_t*)wParam);
-        if (e)
-            Instance().SetEffect(e);
-    }break;
-    case GW::UI::UIMessage::kMoraleChange: { // Morale boost/DP change
-        struct Payload {
-            uint32_t agent_id;
-            uint32_t percent;
-        } *details = (Payload*)wParam;
-        uint32_t player_id = GW::Agents::GetPlayerId();
-        if (player_id && player_id != details->agent_id)
-            break;
-        Instance().SetMoralePercent(details->percent);
-    } break;
-    case GW::UI::UIMessage::kEffectRemove: {// Remove effect
-        Instance().RemoveEffect((uint32_t)wParam);
-    }break;
-    case GW::UI::UIMessage::kMapChange: { // Map change
-        Instance().cached_effects.clear();
-        Instance().hard_mode = false;
-    } break;
-    case GW::UI::UIMessage::kPreferenceChanged: // Refresh preference e.g. window X/Y position
-    case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
-        Instance().RefreshPosition();
-        break;
-    }
-}
-void EffectsMonitorWidget::SetMoralePercent(uint32_t _morale_percent) {
-    // The in-game effect monitor does something stupid to "inject" the morale boost because its not really a skill
-    // We're going to spoof it as a skill with effect id 0 to put it in the right place.
-    morale_percent = _morale_percent;
-}
-bool EffectsMonitorWidget::RemoveEffect(uint32_t effect_id) {
-    if (GetEffect(effect_id))
-        return false; // Game hasn't removed the effect yet.
-    for (auto& by_type : cached_effects) {
-        auto& effects = by_type.second;
-        for (size_t i = 0; i < effects.size(); i++) {
-            if (effects[i].effect_id != effect_id)
-                continue;
-            const GW::Effect* existing = GetLongestEffectBySkillId(effects[i].skill_id);
-            if (existing) {
-                memcpy(&effects[i], existing, sizeof(*existing));
-                return false; // Game hasn't removed the effect yet (copy the effect over)
+    GuiUtils::FontSize font_effects = GuiUtils::FontSize::header2;
+    Color color_text_effects = Colors::White();
+    Color color_background = Colors::ARGB(128, 0, 0, 0);
+    Color color_text_shadow = Colors::Black();
+
+    // duration -> string settings
+    int decimal_threshold = 600; // when to start displaying decimals
+    int only_under_seconds = 600;
+    bool round_up = true;        // round up or down?
+    bool show_vanquish_counter = true;
+    // Adds or removes the minion count "effect" depending on percent
+    uint32_t minion_count = 0;
+    uint32_t morale_percent = 100;
+    // Overall settings
+    enum Layout
+    {
+        Rows,
+        Columns
+    };
+    Layout layout = Layout::Rows;
+    const float default_skill_width = 52.f;
+    // Runtime params
+    float m_skill_width = 52.f;
+    float row_count = 1.f;
+    float skills_per_row = 99.f;
+    ImVec2 window_pos = { 0.f, 0.f };
+    ImVec2 window_size = { 0.f, 0.f };
+    float x_translate = 1.f; // Multiplier for traversing effects on the x axis
+    float y_translate = -1.f; // Multiplier for traversing effects on the y axis
+    bool hard_mode = false;
+    ImVec2 imgui_pos = { 0.f, 0.f };
+    ImVec2 imgui_size = { 0.f, 0.f };
+    bool map_ready = false;
+    bool initialised = false;
+
+    // Emulated effects in order of addition
+    std::map<uint32_t, std::vector<GW::Effect>> cached_effects;
+
+    struct MoraleChangeUIMessage {
+        uint32_t agent_id;
+        uint32_t percent;
+    };
+
+    const GW::UI::UIMessage hook_messages[] = {
+        GW::UI::UIMessage::kMinionCountUpdated,
+        GW::UI::UIMessage::kEffectAdd,
+        GW::UI::UIMessage::kEffectRenew,
+        GW::UI::UIMessage::kMoraleChange,
+        GW::UI::UIMessage::kEffectRemove,
+        GW::UI::UIMessage::kMapChange,
+        GW::UI::UIMessage::kPreferenceChanged,
+        GW::UI::UIMessage::kUIPositionChanged
+    };
+    GW::HookEntry OnEffect_Entry;
+
+    uint32_t GetMinionCount() {
+        auto w = GW::WorldContext::instance();
+        if (!w) return 0;
+        auto& minions_arr = w->controlled_minion_count;
+        uint32_t me = GW::Agents::GetPlayerId();
+        for (size_t i = minions_arr.size() - 1; i < minions_arr.size(); i--) {
+            if (minions_arr[i].agent_id == me) {
+                return minions_arr[i].minion_count;
             }
-            by_type.second.erase(effects.begin() + i);
-            if (effects.empty())
-                cached_effects.erase(by_type.first);
-            return true;
         }
-    }
-    return false;
-}
-const GW::Effect* EffectsMonitorWidget::GetEffect(uint32_t effect_id) {
-    const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects)
-        return nullptr;
-    for (const GW::Effect& effect : *effects) {
-        if (effect.effect_id == effect_id)
-            return &effect;
-    }
-    return nullptr;
-}
-const GW::Effect* EffectsMonitorWidget::GetLongestEffectBySkillId(GW::Constants::SkillID skill_id) {
-    const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects)
-        return nullptr;
-    const GW::Effect* found = nullptr;
-    for (const GW::Effect& effect : *effects) {
-        if (effect.skill_id == skill_id && (!found || effect.GetTimeRemaining() > found->GetTimeRemaining())) {
-            found = &effect;
-        }
-    }
-    return found;
-}
-uint32_t EffectsMonitorWidget::GetEffectSortOrder(GW::Constants::SkillID skill_id) {
-    switch (skill_id) {
-    case GW::Constants::SkillID::Hard_mode:
         return 0;
-    case GW::Constants::SkillID::No_Skill:
-        return 1; // Morale boost from ui message 0x10000047
     }
-    const GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    // Lifted from GmEffect::ActivateEffect(), removed assertion and instead whack everything else into 0xd
-    switch (skill->type) {
-    case GW::Constants::SkillType::Stance:
-        return 9;
-    case GW::Constants::SkillType::Hex:
-        return 5;
-    case GW::Constants::SkillType::Spell:
-        return 7;
-    case GW::Constants::SkillType::Enchantment:
-        return 0xc;
-    case GW::Constants::SkillType::Condition:
-        return 4;
-    case GW::Constants::SkillType::Skill:
-        return 8;
-    case GW::Constants::SkillType::Glyph:
-        return 0xb;
-    case GW::Constants::SkillType::Preparation:
-        return 10;
-    case GW::Constants::SkillType::Ritual:
-        return 6;
+    uint32_t GetMorale() {
+        auto w = GW::WorldContext::instance();
+        return w ? w->morale : 0;
     }
-    return 0xd;
-}
-void EffectsMonitorWidget::SetEffect(const GW::Effect* effect) {
-    uint32_t type = GetEffectSortOrder(effect->skill_id);
-    if (!cached_effects.contains(type))
-        cached_effects[type] = std::vector<GW::Effect>();
-
-    // Player can stand in range of more than 1 spirit; use the longest effect duration for the effect monitor
-    if (effect->duration) {
-        effect = GetLongestEffectBySkillId(effect->skill_id);
+    
+    // Get matching effect from gwtoolbox overlay
+    const GW::Effect* GetEffect(uint32_t effect_id) {
+        const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+        if (!effects)
+            return nullptr;
+        for (const GW::Effect& effect : *effects) {
+            if (effect.effect_id == effect_id)
+                return &effect;
+        }
+        return nullptr;
     }
-    if (!effect) {
-        return;
+    // Get matching effect from gwtoolbox overlay
+    const GW::Effect* GetLongestEffectBySkillId(GW::Constants::SkillID skill_id) {
+        const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+        if (!effects)
+            return nullptr;
+        const GW::Effect* found = nullptr;
+        for (const GW::Effect& effect : *effects) {
+            if (effect.skill_id == skill_id && (!found || effect.GetTimeRemaining() > found->GetTimeRemaining())) {
+                found = &effect;
+            }
+        }
+        return found;
     }
-
-    size_t current = GetEffectIndex(cached_effects[type], effect->skill_id);
-    if (current != 0xFF) {
-        cached_effects[type].erase(cached_effects[type].begin() + current);
-        current = 0xFF;
+    // Find the drawing order of the skill based on the gw effect monitor
+    uint32_t GetEffectSortOrder(GW::Constants::SkillID skill_id) {
+        switch (skill_id) {
+        case GW::Constants::SkillID::Hard_mode:
+            return 0;
+        case GW::Constants::SkillID::No_Skill:
+            return 1; // Morale boost from ui message 0x10000047
+        }
+        const GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+        // Lifted from GmEffect::ActivateEffect(), removed assertion and instead whack everything else into 0xd
+        switch (skill->type) {
+        case GW::Constants::SkillType::Stance:
+            return 9;
+        case GW::Constants::SkillType::Hex:
+            return 5;
+        case GW::Constants::SkillType::Spell:
+            return 7;
+        case GW::Constants::SkillType::Enchantment:
+            return 0xc;
+        case GW::Constants::SkillType::Condition:
+            return 4;
+        case GW::Constants::SkillType::Skill:
+            return 8;
+        case GW::Constants::SkillType::Glyph:
+            return 0xb;
+        case GW::Constants::SkillType::Preparation:
+            return 10;
+        case GW::Constants::SkillType::Ritual:
+            return 6;
+        }
+        return 0xd;
     }
-    cached_effects[type].push_back(*effect);
-    // Trigger durations for aspects etc
-    if (!effect->duration)
-        DurationExpired(cached_effects[type].back());
-    hard_mode |= effect->skill_id == GW::Constants::SkillID::Hard_mode;
-}
-bool EffectsMonitorWidget::DurationExpired(GW::Effect& effect) {
-    uint32_t timer = GW::MemoryMgr::GetSkillTimer();
-    switch (effect.skill_id) {
-        case GW::Constants::SkillID::Aspect_of_Exhaustion:
-        case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
-        case GW::Constants::SkillID::Scorpion_Aspect:
-            effect.duration = 30.f;
-            effect.timestamp = timer;
-            return false;
-    }
-    if (!effect.duration)
-        return &effect;
-    // Effect expired
-    return RemoveEffect(effect.effect_id);
-
-}
-size_t EffectsMonitorWidget::GetEffectIndex(const std::vector<GW::Effect>& arr, GW::Constants::SkillID skill_id) {
-    for (size_t i = 0; i < arr.size(); i++) {
-        if (arr[i].skill_id == skill_id)
-            return i;
-    }
-    return 0xFF;
-}
-void EffectsMonitorWidget::RefreshPosition() {
-    GW::UI::WindowPosition* pos = GW::UI::GetWindowPosition(GW::UI::WindowID_EffectsMonitor);
-    if (pos) {
+    // Recalculate position of widget based on gw effect monitor position
+    void RefreshPosition() {
+        GW::UI::WindowPosition* pos = GW::UI::GetWindowPosition(GW::UI::WindowID_EffectsMonitor);
+        if (!pos)
+            return;
         if (pos->state & 0x2) {
             // Default layout
             pos->state = 0xd;
@@ -281,33 +199,196 @@ void EffectsMonitorWidget::RefreshPosition() {
             imgui_size.y = window_pos.y + window_size.y;
         }
     }
-}
+    int UptimeToString(char arr[8], int cd)
+    {
+        cd = std::abs(cd);
+        if (cd > only_under_seconds * 1000) {
+            return snprintf(arr, 8, "");
+        }
+        if (cd >= decimal_threshold) {
+            if (round_up) cd += 1000;
+            return snprintf(arr, 8, "%d", cd / 1000);
+        }
+        return snprintf(arr, 8, "%.1f", static_cast<double>(cd) / 1000.0);
+    }
+    // Find index of active effect from gwtoolbox overlay
+    size_t GetEffectIndex(const std::vector<GW::Effect>& arr, GW::Constants::SkillID skill_id) {
+        for (size_t i = 0; i < arr.size(); i++) {
+            if (arr[i].skill_id == skill_id)
+                return i;
+        }
+        return 0xFF;
+    }
+    // Forcefully removes then re-adds the current effects; used for initialising
+    bool RefreshEffects() {
+        GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+        if (!effects)
+            return false;
+        std::vector<GW::Effect> readd_effects;
+        for (GW::Effect& effect : *effects) {
+            readd_effects.push_back(effect);
+        }
+        struct Packet : GW::Packet::StoC::PacketBase {
+            uint32_t agent_id;
+            uint32_t skill_id;
+            uint32_t attribute_level;
+            uint32_t effect_id;
+            float duration;
+        } add{};
+        add.header = GAME_SMSG_EFFECT_APPLIED;
+        struct Packet2 : GW::Packet::StoC::PacketBase {
+            uint32_t agent_id;
+            uint32_t effect_id;
+        } remove{};
+        remove.header = GAME_SMSG_EFFECT_REMOVED;
+        add.agent_id = remove.agent_id = GW::Agents::GetPlayerId();
 
+        for (GW::Effect& effect : readd_effects) {
+            remove.effect_id = effect.effect_id;
+            GW::StoC::EmulatePacket(&remove);
+            add.skill_id = (uint32_t)effect.skill_id;
+            add.effect_id = effect.effect_id;
+            add.duration = effect.duration;
+            add.attribute_level = effect.attribute_level;
+            GW::StoC::EmulatePacket(&add);
+        }
+        minion_count = GetMinionCount();
+        morale_percent = GetMorale();
+        return true;
+    }
+    // Remove effect from gwtoolbox overlay. Will only remove if the game has also removed it, otherwise false.
+    bool RemoveEffect(uint32_t effect_id) {
+        if (GetEffect(effect_id))
+            return false; // Game hasn't removed the effect yet.
+        for (auto& by_type : cached_effects) {
+            auto& effects = by_type.second;
+            for (size_t i = 0; i < effects.size(); i++) {
+                if (effects[i].effect_id != effect_id)
+                    continue;
+                const GW::Effect* existing = GetLongestEffectBySkillId(effects[i].skill_id);
+                if (existing) {
+                    memcpy(&effects[i], existing, sizeof(*existing));
+                    return false; // Game hasn't removed the effect yet (copy the effect over)
+                }
+                by_type.second.erase(effects.begin() + i);
+                if (effects.empty())
+                    cached_effects.erase(by_type.first);
+                return true;
+            }
+        }
+        return false;
+    }
+    // Triggered when an effect has reached < 0 duration. Returns true if effect has been removed.
+    bool DurationExpired(GW::Effect& effect) {
+        uint32_t timer = GW::MemoryMgr::GetSkillTimer();
+        switch (effect.skill_id) {
+        case GW::Constants::SkillID::Aspect_of_Exhaustion:
+        case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
+        case GW::Constants::SkillID::Scorpion_Aspect:
+            effect.duration = 30.f;
+            effect.timestamp = timer;
+            return false;
+        }
+        if (!effect.duration)
+            return &effect;
+        // Effect expired
+        return RemoveEffect(effect.effect_id);
+
+    }
+    // Update effect on the gwtoolbox overlay
+    bool SetEffect(const GW::Effect* effect) {
+        uint32_t type = GetEffectSortOrder(effect->skill_id);
+        if (!cached_effects.contains(type))
+            cached_effects[type] = std::vector<GW::Effect>();
+
+        // Player can stand in range of more than 1 spirit; use the longest effect duration for the effect monitor
+        if (effect->duration) {
+            effect = GetLongestEffectBySkillId(effect->skill_id);
+        }
+        if (!effect) {
+            return false;
+        }
+
+        size_t current = GetEffectIndex(cached_effects[type], effect->skill_id);
+        if (current != 0xFF) {
+            cached_effects[type].erase(cached_effects[type].begin() + current);
+            current = 0xFF;
+        }
+        cached_effects[type].push_back(*effect);
+        // Trigger durations for aspects etc
+        if (!effect->duration)
+            DurationExpired(cached_effects[type].back());
+        hard_mode |= effect->skill_id == GW::Constants::SkillID::Hard_mode;
+        return true;
+    }
+    // Static handler for GW UI Message events. Updates ongoing effects and refreshes UI position.
+    void OnEffectUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+
+        switch (message_id) {
+        case GW::UI::UIMessage::kMinionCountUpdated: { // Minion count updated on effects monitor
+            minion_count = GetMinionCount();
+        } break;
+        case GW::UI::UIMessage::kMoraleChange: { // Morale boost/DP change
+            morale_percent = GetMorale();
+        } break;
+        case GW::UI::UIMessage::kEffectAdd: {
+            struct Payload {
+                uint32_t agent_id;
+                GW::Effect* e;
+            } *details = (Payload*)wParam;
+            if (GW::Agents::GetPlayerId() != details->agent_id)
+                break;
+            SetEffect(details->e);
+        }break;
+        case GW::UI::UIMessage::kEffectRenew: {
+            const GW::Effect* e = GetEffect(*(uint32_t*)wParam);
+            if (e)
+                SetEffect(e);
+        }break;
+
+        case GW::UI::UIMessage::kEffectRemove: {// Remove effect
+            RemoveEffect((uint32_t)wParam);
+        }break;
+        case GW::UI::UIMessage::kMapChange: { // Map change
+            cached_effects.clear();
+            hard_mode = false;
+        } break;
+        case GW::UI::UIMessage::kPreferenceChanged: // Refresh preference e.g. window X/Y position
+        case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
+            RefreshPosition();
+            break;
+        }
+    }
+}
+EffectsMonitorWidget::EffectsMonitorWidget() {
+    is_movable = is_resizable = false;
+};
+EffectsMonitorWidget& EffectsMonitorWidget::Instance() {
+    static EffectsMonitorWidget instance;
+    return instance;
+}
+void EffectsMonitorWidget::Initialize() {
+    ToolboxWidget::Initialize();
+
+    for (const auto& message_id : hook_messages) {
+        GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, message_id, OnEffectUIMessage, 0x8000);
+    }
+
+    GW::GameThread::Enqueue([]() {
+        RefreshEffects();
+        });
+    RefreshPosition();
+}
+void EffectsMonitorWidget::Terminate() {
+    ToolboxWidget::Terminate();
+    for (size_t i = 0; i < _countof(hook_messages); i++) {
+        GW::UI::RemoveUIMessageCallback(&OnEffect_Entry);
+    }
+    cached_effects.clear();
+}
 void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 {
     if (!visible) return;
-
-    if (!initialised) {
-        initialised = true;
-        const GW::UI::UIMessage hook_messages[] = {
-            GW::UI::UIMessage::kMinionCountUpdated,
-            GW::UI::UIMessage::kEffectAdd,
-            GW::UI::UIMessage::kEffectRenew,
-            GW::UI::UIMessage::kMoraleChange,
-            GW::UI::UIMessage::kEffectRemove,
-            GW::UI::UIMessage::kMapChange,
-            GW::UI::UIMessage::kPreferenceChanged,
-            GW::UI::UIMessage::kUIPositionChanged
-        };
-        for (const auto& message_id : hook_messages) {
-            GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, message_id, OnEffectUIMessage, 0x8000);
-        }
-
-        GW::GameThread::Enqueue([]() {
-            Instance().RefreshEffects();
-            });
-        RefreshPosition();
-    }
 
     const auto window_flags = GetWinFlags(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
 
@@ -455,16 +536,4 @@ void EffectsMonitorWidget::DrawSettingInternal()
     ImGui::SameLine();
     ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &show_vanquish_counter);
     ImGui::PopID();
-}
-int EffectsMonitorWidget::UptimeToString(char arr[8], int cd) const
-{
-    cd = std::abs(cd);
-    if (cd > only_under_seconds * 1000) {
-        return snprintf(arr, 8, "");
-    }
-    if (cd >= decimal_threshold) {
-        if (round_up) cd += 1000;
-        return snprintf(arr, 8, "%d", cd / 1000);
-    }
-    return snprintf(arr, 8, "%.1f", static_cast<double>(cd) / 1000.0);
 }
