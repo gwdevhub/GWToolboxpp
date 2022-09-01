@@ -269,7 +269,7 @@ namespace {
             GW::Constants::SkillID skill_ids[8];
         } *packet = (Pack*)wparam;
         // @Enhancement: may cause weird stuff if we load loads of builds at once; heros could get mixed up with player. Use a map.
-        memcpy(skillbar_packet.skill_ids, wparam, sizeof(skillbar_packet.skill_ids));
+        memcpy(skillbar_packet.skill_ids, packet->skill_ids, sizeof(skillbar_packet.skill_ids));
         skillbar_packet.agent_id = packet->agent_id;
     }
 
