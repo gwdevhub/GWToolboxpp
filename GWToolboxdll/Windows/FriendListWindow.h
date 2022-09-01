@@ -116,8 +116,8 @@ public:
     static bool GetIsPlayerIgnored(uint32_t player_id);
     static bool GetIsPlayerIgnored(const std::wstring& player_name);
 
-    static void OnPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak);
-    static void OnTradePacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak);
+    static void OnPostPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* pak);
+    static void OnPostTradePacket(GW::HookStatus* status, GW::Packet::StoC::TradeStart* pak);
     static void AddFriendAliasToMessage(wchar_t** message_ptr);
 
     const char* Name() const override { return "Friend List"; }
