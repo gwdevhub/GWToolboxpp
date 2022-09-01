@@ -2157,38 +2157,32 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::Ge
 // Skip char name entry dialog when donating faction
 void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
     uint32_t dialog_id = (uint32_t)wparam;
-    if (dialog_id != 0x87)
+    if (!(dialog_id == 0x87 && Instance().skip_entering_name_for_faction_donate))
         return;
-    GW::UI::DialogButtonInfo* found = 0;
+    uint32_t allegiance = 2;
+    const wchar_t* raising_luxon_faction_cap = L"\x8102\x4A32\xAF32\xBDB5\x21AE";
+    const wchar_t* raising_kurzick_faction_cap = L"\x8102\x4A26\x814C\x89CC\x5B0";
+    // Look for "Raising Luxon/Kurzick faction cap" dialog option to check allegiance
     for (const auto dialog : DialogModule::Instance().GetDialogButtons()) {
-        if (dialog->dialog_id != dialog_id)
-            continue;
-        found = dialog;
-        break;
-
+        if (wcscmp(dialog->message, raising_luxon_faction_cap) == 0)
+            allegiance = 1; // Luxon
+        if (wcscmp(dialog->message, raising_kurzick_faction_cap) == 0)
+            allegiance = 0; // Kurzick
+        if (dialog->dialog_id == dialog_id
+            && wcscmp(dialog->message, L"\x8102\x0444\xa441\xc28e\x0193") != 0) {
+            return; // Not faction donation message
+        }
     }
-    if (wcscmp(found->message, L"\x8102\x0444\xa441\xc28e\x0193") != 0)
-        return; // Not faction donation message
-    GW::Agent* npc = GW::Agents::GetAgentByID(DialogModule::GetDialogAgent());
-    const int LuxonFactionNPC = GW::Constants::ModelID::Urgoz::HoppingVampire - 102;
-    const int KurzickFactionNPC = LuxonFactionNPC - 229;
-    if (!npc)
-        return;
-    auto instance = &Instance();
-    if (!instance->skip_entering_name_for_faction_donate)
-        return;
     uint32_t* current_faction = nullptr;
-    uint32_t allegiance = 0;
-    switch (npc->GetAsAgentLiving()->player_number) {
-    case LuxonFactionNPC:
-        current_faction = &GW::WorldContext::instance()->current_luxon;
-        allegiance = 1;
-        break;
-    case KurzickFactionNPC:
+    switch (allegiance) {
+    case 0: // Kurzick
         current_faction = &GW::WorldContext::instance()->current_kurzick;
-        allegiance = 0;
         break;
-    default:
+    case 1: // Luxon
+        current_faction = &GW::WorldContext::instance()->current_luxon;
+        break;
+    default: // Didn't find an allegiance?
+        Log::Error("Failed to find allegiance from NPC");
         return;
     }
     GW::GuildContext* c = GW::GuildContext::instance();
@@ -2198,7 +2192,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
         return; // Not enough to donate. Return here and the NPC will reply.
     status->blocked = true;
     GW::PlayerMgr::DepositFaction(allegiance);
-    GW::Agents::GoNPC(npc);
+    GW::Agents::GoNPC(GW::Agents::GetAgentByID(DialogModule::GetDialogAgent()));
 }
 
 // Show a message when player leaves the outpost
