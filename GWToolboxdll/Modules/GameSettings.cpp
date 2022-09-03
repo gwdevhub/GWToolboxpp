@@ -399,17 +399,23 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
+    // Key held to show/hide item descriptions
+    const int modifier_key_item_descriptions = VK_MENU;
+    int modifier_key_item_descriptions_key_state = 0;
+
     typedef void(__cdecl* GetItemDescription_pt)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
     GetItemDescription_pt GetItemDescription_Func = nullptr;
     GetItemDescription_pt GetItemDescription_Ret = nullptr;
     void OnGetItemDescription(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** name_out, wchar_t** description_out) {
         GW::Hook::EnterHook();
         bool block_description = (disable_item_descriptions_in_outpost && IsOutpost()) || (disable_item_descriptions_in_explorable && IsExplorable());
-        if (block_description && GetKeyState(VK_CONTROL) < 0)
+        if (block_description && GetKeyState(modifier_key_item_descriptions) < 0)
             block_description = false;
         GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
         GW::Hook::LeaveHook();
     }
+
+
 
 }
 
@@ -1358,7 +1364,7 @@ void GameSettings::DrawInventorySettings() {
     ImGui::Checkbox("Outpost###disable_item_descriptions_in_outpost", &disable_item_descriptions_in_outpost);
     if (disable_item_descriptions_in_explorable || disable_item_descriptions_in_outpost) {
         ImGui::Indent();
-        ImGui::TextDisabled("Hold Ctrl when hovering an item to show full description");
+        ImGui::TextDisabled("Hold Alt when hovering an item to show full description");
         ImGui::Unindent();
     }
     ImGui::Unindent();
@@ -1640,6 +1646,44 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float) {
+    if (GetKeyState(modifier_key_item_descriptions) != modifier_key_item_descriptions_key_state) {
+        modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
+        // Trigger re-render of item tooltip
+        GW::Item* hovered = GW::Items::GetHoveredItem();
+        if (hovered) {
+            uint32_t* items_triggered = new uint32_t[2];
+            auto i = GW::Items::GetInventory();
+            if (hovered == i->weapon_set0 || hovered == i->offhand_set0) {
+                items_triggered[0] = i->weapon_set0 ? i->weapon_set0->item_id : 0;
+                items_triggered[1] = i->offhand_set0 ? i->offhand_set0->item_id : 0;
+            }
+            else if (hovered == i->weapon_set1 || hovered == i->offhand_set1) {
+                items_triggered[0] = i->weapon_set1 ? i->weapon_set1->item_id : 0;
+                items_triggered[1] = i->offhand_set1 ? i->offhand_set1->item_id : 0;
+            }
+            else if (hovered == i->weapon_set2 || hovered == i->offhand_set2) {
+                items_triggered[0] = i->weapon_set2 ? i->weapon_set2->item_id : 0;
+                items_triggered[1] = i->offhand_set2 ? i->offhand_set2->item_id : 0;
+            }
+            else if (hovered == i->weapon_set3 || hovered == i->offhand_set3) {
+                items_triggered[0] = i->weapon_set3 ? i->weapon_set3->item_id : 0;
+                items_triggered[1] = i->offhand_set3 ? i->offhand_set3->item_id : 0;
+            }
+            else {
+                items_triggered[0] = hovered->item_id;
+                items_triggered[1] = 0;
+            }
+            GW::GameThread::Enqueue([items_triggered]() {
+                if (items_triggered[0])
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[0]);
+                if (items_triggered[1])
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[1]);
+                delete[] items_triggered;
+                });
+        }
+    }
+
+
     // See OnSendChat
     if (pending_wiki_search_term && pending_wiki_search_term->wstring().length()) {
         GuiUtils::SearchWiki(pending_wiki_search_term->wstring());
@@ -1825,41 +1869,6 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
                 ctrl_enter_whisper = false;
                 });
             return true;
-        }
-    }
-    if (wParam == VK_CONTROL && (Message == WM_KEYDOWN || Message == WM_KEYUP)) {
-        // Trigger an item update ui message; this will allow the ctrl descriptions to update without having to re-hover.
-        GW::Item* hovered = GW::Items::GetHoveredItem();
-        if (hovered) {
-            uint32_t* items_triggered = new uint32_t[2];
-            auto i = GW::Items::GetInventory();
-            if (hovered == i->weapon_set0 || hovered == i->offhand_set0) {
-                items_triggered[0] = i->weapon_set0 ? i->weapon_set0->item_id : 0;
-                items_triggered[1] = i->offhand_set0 ? i->offhand_set0->item_id : 0;
-            }
-            else if (hovered == i->weapon_set1 || hovered == i->offhand_set1) {
-                items_triggered[0] = i->weapon_set1 ? i->weapon_set1->item_id : 0;
-                items_triggered[1] = i->offhand_set1 ? i->offhand_set1->item_id : 0;
-            }
-            else if (hovered == i->weapon_set2 || hovered == i->offhand_set2) {
-                items_triggered[0] = i->weapon_set2 ? i->weapon_set2->item_id : 0;
-                items_triggered[1] = i->offhand_set2 ? i->offhand_set2->item_id : 0;
-            }
-            else if (hovered == i->weapon_set3 || hovered == i->offhand_set3) {
-                items_triggered[0] = i->weapon_set3 ? i->weapon_set3->item_id : 0;
-                items_triggered[1] = i->offhand_set3 ? i->offhand_set3->item_id : 0;
-            }
-            else {
-                items_triggered[0] = hovered->item_id;
-                items_triggered[1] = 0;
-            }
-            GW::GameThread::Enqueue([items_triggered]() {
-                if(items_triggered[0])
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[0]);
-                if(items_triggered[1])
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[1]);
-                delete[] items_triggered;
-                });
         }
     }
 
