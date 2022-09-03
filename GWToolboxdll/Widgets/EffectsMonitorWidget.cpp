@@ -93,7 +93,7 @@ namespace {
     }
     uint32_t GetMorale() {
         auto w = GW::WorldContext::instance();
-        return w ? w->morale : 0;
+        return w && w->player_morale_info ? w->player_morale_info->morale : 100;
     }
     
     // Get matching effect from gwtoolbox overlay
