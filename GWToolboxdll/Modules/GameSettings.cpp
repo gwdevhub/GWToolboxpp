@@ -416,6 +416,16 @@ namespace {
     }
 
 
+    typedef void(__fastcall* UpdateAgentNameTag_pt)(const GW::Agent* agent, uint32_t edx, uint32_t new_name_properties, bool add_or_remove);
+    UpdateAgentNameTag_pt UpdateAgentNameTag_Func = nullptr;
+    // Refresh agent name tag when allegiance changes
+    void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance* packet) {
+        const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
+        if (agent && (agent->name_properties & 0x400) != 0 && UpdateAgentNameTag_Func) {
+            UpdateAgentNameTag_Func(agent, 0, 0x400, 0);
+            UpdateAgentNameTag_Func(agent, 0, 0x400, 1);
+        }
+    }
 
 }
 
@@ -864,7 +874,11 @@ void GameSettings::Initialize() {
         GW::HookBase::CreateHook(GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
-
+    // NB: SendUIMessage 0x1000001a = remove name tag
+    UpdateAgentNameTag_Func = (UpdateAgentNameTag_pt)GW::Scanner::Find("\xff\x73\x2c\x68\x1a\x00\x00\x10", "xxxxxxxx", -0x59);
+    if (UpdateAgentNameTag_Func) {
+        GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&PartyDefeated_Entry, &OnAgentAllegianceChanged);
+    }
     address = GW::Scanner::Find("\x8b\x7d\x08\x8b\x70\x2c\x83\xff\x0f","xxxxxxxxx");
     ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);
     ShowAgentExperienceGain_Func = (ShowAgentExperienceGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x4f);
