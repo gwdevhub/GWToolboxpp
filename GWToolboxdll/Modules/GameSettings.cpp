@@ -415,18 +415,18 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
+    typedef void(__cdecl* SetGlobalNameTagVisibility_pt)(uint32_t flags);
+    SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = 0;
+    uint32_t* GlobalNameTagVisibilityFlags = 0;
 
-    typedef void(__fastcall* UpdateAgentNameTag_pt)(const GW::Agent* agent, uint32_t edx, uint32_t new_name_properties, bool add_or_remove);
-    UpdateAgentNameTag_pt UpdateAgentNameTag_Func = nullptr;
-    // Refresh agent name tag when allegiance changes
-    void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance* packet) {
-        const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
-        if (agent && (agent->name_properties & 0x400) != 0 && UpdateAgentNameTag_Func) {
-            UpdateAgentNameTag_Func(agent, 0, 0x400, 0);
-            UpdateAgentNameTag_Func(agent, 0, 0x400, 1);
-        }
+    // Refresh agent name tags when allegiance changes
+    void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*) {
+        // Backup the current name tag flag state, then "flash" nametags to update.
+        uint32_t prev_flags = *GlobalNameTagVisibilityFlags;
+        SetGlobalNameTagVisibility_Func(0);
+        SetGlobalNameTagVisibility_Func(prev_flags);
+        ASSERT(*GlobalNameTagVisibilityFlags == prev_flags);
     }
-
 }
 
 static std::wstring ShorthandItemDescription(GW::Item* item) {
@@ -874,11 +874,16 @@ void GameSettings::Initialize() {
         GW::HookBase::CreateHook(GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
-    // NB: SendUIMessage 0x1000001a = remove name tag
-    UpdateAgentNameTag_Func = (UpdateAgentNameTag_pt)GW::Scanner::Find("\xff\x73\x2c\x68\x1a\x00\x00\x10", "xxxxxxxx", -0x59);
-    if (UpdateAgentNameTag_Func) {
+    // See OnAgentAllegianceChanged
+    address = GW::Scanner::Find("\x75\x18\x81\xce\x00\x00\x00\x02\x56", "xxxxxxxxx", 0x9);
+    SetGlobalNameTagVisibility_Func = (SetGlobalNameTagVisibility_pt)GW::Scanner::FunctionFromNearCall(address);
+    if (SetGlobalNameTagVisibility_Func) {
+        GlobalNameTagVisibilityFlags = *(uint32_t**)(((uintptr_t)SetGlobalNameTagVisibility_Func) + 0xb);
         GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&PartyDefeated_Entry, &OnAgentAllegianceChanged);
     }
+    printf("[SCAN] SetGlobalNameTagVisibility_Func = %p", (void*)SetGlobalNameTagVisibility_Func);
+    printf("[SCAN] GlobalNameTagVisibilityFlags = %p", (void*)GlobalNameTagVisibilityFlags);
+
     address = GW::Scanner::Find("\x8b\x7d\x08\x8b\x70\x2c\x83\xff\x0f","xxxxxxxxx");
     ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);
     ShowAgentExperienceGain_Func = (ShowAgentExperienceGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x4f);
