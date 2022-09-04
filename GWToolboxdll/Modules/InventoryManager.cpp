@@ -2047,6 +2047,8 @@ bool InventoryManager::Item::CanOfferToTrade() {
 
 bool InventoryManager::Item::IsSalvagable()
 {
+    if (item_formula == 0x5da)
+        return false;
     if (IsUsable() || IsGreen())
         return false; // Non-salvagable flag set
     if (!bag)
@@ -2062,24 +2064,7 @@ bool InventoryManager::Item::IsSalvagable()
         case GW::Constants::ItemType::CC_Shards:
             return true;
         case GW::Constants::ItemType::Materials_Zcoins:
-            switch (model_id) {
-                case GW::Constants::ItemID::BoltofDamask:
-                case GW::Constants::ItemID::BoltofLinen:
-                case GW::Constants::ItemID::BoltofSilk:
-                case GW::Constants::ItemID::DeldrimorSteelIngot:
-                case GW::Constants::ItemID::ElonianLeatherSquare:
-                case GW::Constants::ItemID::LeatherSquare:
-                case GW::Constants::ItemID::LumpofCharcoal:
-                case GW::Constants::ItemID::RollofParchment:
-                case GW::Constants::ItemID::RollofVellum:
-                case GW::Constants::ItemID::SpiritwoodPlank:
-                case GW::Constants::ItemID::SteelIngot:
-                case GW::Constants::ItemID::TemperedGlassVial:
-                case GW::Constants::ItemID::VialofInk:
-                    return true;
-                default:
-                    break;
-            }
+            return is_material_salvageable != 0;
         default:
             break;
     }
