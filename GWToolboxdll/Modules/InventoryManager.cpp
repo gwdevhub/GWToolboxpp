@@ -1532,7 +1532,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
                 ImGui::SetFocusID(id, ImGui::GetCurrentWindow());
             }
             show_transact_quantity_popup = false;
-            bool begin_transaction = (ImGui::GetFocusID() == id && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)));
+            bool begin_transaction = (ImGui::GetFocusID() == id && ImGui::IsKeyPressed(ImGuiKey_Enter));
             begin_transaction |= ImGui::Button("Continue");
             if (begin_transaction) {
                 pending_cancel_transaction = false;
@@ -1936,7 +1936,7 @@ void InventoryManager::DrawPendingTomeUsage() {
     }
     if (ImGui::BeginPopupModal(popup_label, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Changing your secondary profession will change your skills and attributes.\nDo you want to continue?");
-        if (ImGui::Button("OK", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter))) {
+        if (ImGui::Button("OK", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
             tome_pending_stage = PendingTomeUseStage::ChangeProfession;
             tome_pending_timeout = TIMER_INIT() + 3000;
             ImGui::CloseCurrentPopup();

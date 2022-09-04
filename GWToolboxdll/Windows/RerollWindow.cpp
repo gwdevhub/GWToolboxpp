@@ -154,12 +154,12 @@ void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
             if (ImGui::BeginPopupModal("##reroll_confirm_popup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("You're currently in an explorable area.\nAre you sure you want to change character?");
                 bool check_key = TIMER_DIFF(reroll_stage_set) > 500; // Avoid enter key being read from last press
-                if (ImGui::Button("Yes", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(VK_RETURN))) {
+                if (ImGui::Button("Yes", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(ImGuiKey_Enter))) {
                     reroll_stage = PendingLogout;
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("No", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(VK_ESCAPE))) {
+                if (ImGui::Button("No", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(ImGuiKey_Escape))) {
                     reroll_stage = None;
                     ImGui::CloseCurrentPopup();
                 }

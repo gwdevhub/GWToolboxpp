@@ -214,18 +214,18 @@ namespace ImGui {
 			}
 		}
 
-		if (IsKeyPressed(VK_RETURN) && keyboard_selected >= 0) {
+		if (IsKeyPressed(ImGuiKey_Enter) && keyboard_selected >= 0) {
 			*current_item = keyboard_selected;
 			keyboard_selected = -1;
 			CloseCurrentPopup();
 			EndCombo();
 			return true;
 		}
-		if (IsKeyPressed(VK_UP) && keyboard_selected > 0) {
+		if (IsKeyPressed(ImGuiKey_UpArrow) && keyboard_selected > 0) {
 			--keyboard_selected;
 			keyboard_selected_now = true;
 		}
-		if (IsKeyPressed(VK_DOWN) && keyboard_selected < items_count - 1) {
+		if (IsKeyPressed(ImGuiKey_DownArrow) && keyboard_selected < items_count - 1) {
 			++keyboard_selected;
 			keyboard_selected_now = true;
 		}
