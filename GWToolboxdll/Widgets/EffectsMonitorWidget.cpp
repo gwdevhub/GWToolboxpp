@@ -91,9 +91,15 @@ namespace {
         }
         return 0;
     }
-    uint32_t GetMorale() {
+    uint32_t GetMorale(uint32_t agent_id) {
         auto w = GW::WorldContext::instance();
-        return w && w->player_morale_info ? w->player_morale_info->morale : 100;
+        if (!(w && w->party_morale_related.size())) 
+            return 100;
+        for (const auto& m : w->party_morale_related) {
+            if (m.party_member_info->agent_id == agent_id)
+                return m.party_member_info->morale;
+        }
+        return 100;
     }
     
     // Get matching effect from gwtoolbox overlay
@@ -253,7 +259,7 @@ namespace {
             GW::StoC::EmulatePacket(&add);
         }
         minion_count = GetMinionCount();
-        morale_percent = GetMorale();
+        morale_percent = GetMorale(GW::Agents::GetPlayerId());
         return true;
     }
     // Remove effect from gwtoolbox overlay. Will only remove if the game has also removed it, otherwise false.
@@ -329,14 +335,15 @@ namespace {
             minion_count = GetMinionCount();
         } break;
         case GW::UI::UIMessage::kMoraleChange: { // Morale boost/DP change
-            morale_percent = GetMorale();
+            morale_percent = GetMorale(GW::Agents::GetPlayerId());
         } break;
         case GW::UI::UIMessage::kEffectAdd: {
             struct Payload {
                 uint32_t agent_id;
                 GW::Effect* e;
             } *details = (Payload*)wParam;
-            if (GW::Agents::GetPlayerId() != details->agent_id)
+            const uint32_t agent_id = GW::Agents::GetPlayerId();
+            if (agent_id && agent_id != details->agent_id)
                 break;
             SetEffect(details->e);
         }break;
