@@ -170,11 +170,11 @@ namespace {
     }
 
 
-    const bool IsOutpost() {
-        return  GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
+    bool IsOutpost() {
+        return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
     }
-    const bool IsExplorable() {
-        return  GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
+    bool IsExplorable() {
+        return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     }
     enum PING_PARTS {
         NAME=1,
@@ -386,7 +386,7 @@ namespace {
             ShowAgentFactionGain_Ret(agent_id, stat_type, amount_gained);
         GW::Hook::LeaveHook();
     }
-    
+
     typedef void(__cdecl* ShowAgentExperienceGain_pt)(uint32_t agent_id, uint32_t amount_gained);
     ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = nullptr;
     ShowAgentExperienceGain_pt ShowAgentExperienceGain_Ret = nullptr;
@@ -1665,40 +1665,36 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float) {
-    if (GetKeyState(modifier_key_item_descriptions) != modifier_key_item_descriptions_key_state) {
-        modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
-        // Trigger re-render of item tooltip
-        GW::Item* hovered = GW::Items::GetHoveredItem();
-        if (hovered) {
-            uint32_t* items_triggered = new uint32_t[2];
-            auto i = GW::Items::GetInventory();
-            if (hovered == i->weapon_set0 || hovered == i->offhand_set0) {
-                items_triggered[0] = i->weapon_set0 ? i->weapon_set0->item_id : 0;
-                items_triggered[1] = i->offhand_set0 ? i->offhand_set0->item_id : 0;
-            }
-            else if (hovered == i->weapon_set1 || hovered == i->offhand_set1) {
-                items_triggered[0] = i->weapon_set1 ? i->weapon_set1->item_id : 0;
-                items_triggered[1] = i->offhand_set1 ? i->offhand_set1->item_id : 0;
-            }
-            else if (hovered == i->weapon_set2 || hovered == i->offhand_set2) {
-                items_triggered[0] = i->weapon_set2 ? i->weapon_set2->item_id : 0;
-                items_triggered[1] = i->offhand_set2 ? i->offhand_set2->item_id : 0;
-            }
-            else if (hovered == i->weapon_set3 || hovered == i->offhand_set3) {
-                items_triggered[0] = i->weapon_set3 ? i->weapon_set3->item_id : 0;
-                items_triggered[1] = i->offhand_set3 ? i->offhand_set3->item_id : 0;
-            }
-            else {
-                items_triggered[0] = hovered->item_id;
-                items_triggered[1] = 0;
-            }
-            GW::GameThread::Enqueue([items_triggered]() {
-                if (items_triggered[0])
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[0]);
-                if (items_triggered[1])
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[1]);
-                delete[] items_triggered;
+    if (disable_item_descriptions_in_explorable && IsExplorable() ||
+        disable_item_descriptions_in_outpost && IsOutpost()) {
+        if (GetKeyState(modifier_key_item_descriptions) != modifier_key_item_descriptions_key_state) {
+            modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
+            // Trigger re-render of item tooltip
+            const GW::Item* hovered = GW::Items::GetHoveredItem();
+            if (hovered) {
+                uint32_t items_triggered[2];
+                const auto inv = GW::Items::GetInventory();
+                if (hovered == inv->weapon_set0 || hovered == inv->offhand_set0) {
+                    items_triggered[0] = inv->weapon_set0 ? inv->weapon_set0->item_id : 0;
+                    items_triggered[1] = inv->offhand_set0 ? inv->offhand_set0->item_id : 0;
+                } else if (hovered == inv->weapon_set1 || hovered == inv->offhand_set1) {
+                    items_triggered[0] = inv->weapon_set1 ? inv->weapon_set1->item_id : 0;
+                    items_triggered[1] = inv->offhand_set1 ? inv->offhand_set1->item_id : 0;
+                } else if (hovered == inv->weapon_set2 || hovered == inv->offhand_set2) {
+                    items_triggered[0] = inv->weapon_set2 ? inv->weapon_set2->item_id : 0;
+                    items_triggered[1] = inv->offhand_set2 ? inv->offhand_set2->item_id : 0;
+                } else if (hovered == inv->weapon_set3 || hovered == inv->offhand_set3) {
+                    items_triggered[0] = inv->weapon_set3 ? inv->weapon_set3->item_id : 0;
+                    items_triggered[1] = inv->offhand_set3 ? inv->offhand_set3->item_id : 0;
+                } else {
+                    items_triggered[0] = hovered->item_id;
+                    items_triggered[1] = 0;
+                }
+                GW::GameThread::Enqueue([items = items_triggered] {
+                    if (items[0]) GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[0]);
+                    if (items[1]) GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[1]);
                 });
+            }
         }
     }
 

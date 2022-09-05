@@ -44,11 +44,11 @@ namespace {
         Columns
     };
     Layout layout = Layout::Rows;
-    const float default_skill_width = 52.f;
+    constexpr float default_skill_width = 52.f;
     // Runtime params
     float m_skill_width = 52.f;
-    float row_count = 1.f;
-    float skills_per_row = 99.f;
+    int row_count = 1;
+    int skills_per_row = 99;
     ImVec2 window_pos = { 0.f, 0.f };
     ImVec2 window_size = { 0.f, 0.f };
     float x_translate = 1.f; // Multiplier for traversing effects on the x axis
@@ -101,7 +101,7 @@ namespace {
         }
         return 100;
     }
-    
+
     // Get matching effect from gwtoolbox overlay
     const GW::Effect* GetEffect(uint32_t effect_id) {
         const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
@@ -169,24 +169,24 @@ namespace {
             pos->p1 = { 0.f,0.f };
             pos->p2 = { 312.f, 104.f };
         }
-        float uiscale = GuiUtils::GetGWScaleMultiplier();
-        GW::Vec2f xAxis = pos->xAxis(uiscale);
-        GW::Vec2f yAxis = pos->yAxis(uiscale);
+        const float uiscale = GuiUtils::GetGWScaleMultiplier();
+        const GW::Vec2f xAxis = pos->xAxis(uiscale);
+        const GW::Vec2f yAxis = pos->yAxis(uiscale);
         window_size = { std::roundf(xAxis.y - xAxis.x), std::roundf(yAxis.y - yAxis.x) };
         window_pos = { std::roundf(xAxis.x),std::roundf(yAxis.x) };
         layout = window_size.y > window_size.x ? Layout::Columns : Layout::Rows;
         m_skill_width = std::roundf(std::min<float>(default_skill_width * uiscale, std::min<float>(window_size.x, window_size.y)));
         if (layout == Layout::Rows) {
-            row_count = std::floorf(window_size.y / m_skill_width);
-            skills_per_row = std::floorf(window_size.x / m_skill_width);
+            row_count = static_cast<int>(std::floor(window_size.y / m_skill_width));
+            skills_per_row = static_cast<int>(std::floor(window_size.x / m_skill_width));
         }
         else {
-            row_count = std::floorf(window_size.x / m_skill_width);
-            skills_per_row = std::floorf(window_size.y / m_skill_width);
+            row_count = static_cast<int>(std::floor(window_size.x / m_skill_width));
+            skills_per_row = static_cast<int>(std::floor(window_size.y / m_skill_width));
         }
 
-        GW::Vec2f mid_point(window_pos.x + window_size.x / 2.f, window_pos.y + window_size.y / 2.f);
-        GW::Vec2f screen_size = { static_cast<float>(GW::Render::GetViewportWidth()) , static_cast<float>(GW::Render::GetViewportHeight()) };
+        const GW::Vec2f mid_point(window_pos.x + window_size.x / 2.f, window_pos.y + window_size.y / 2.f);
+        const GW::Vec2f screen_size = { static_cast<float>(GW::Render::GetViewportWidth()) , static_cast<float>(GW::Render::GetViewportHeight()) };
         imgui_pos = window_pos;
         imgui_size = { screen_size.x - window_pos.x, screen_size.y - window_pos.y };
         x_translate = 1.f;
@@ -417,10 +417,10 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     char remaining_str[16];
     ImGui::PushFont(GuiUtils::GetFont(font_effects));
 
-    float row_skills_drawn = 0.f;
-    float row_idx = 1.f;
+    int row_skills_drawn = 0;
+    constexpr int row_idx = 1;
     int draw = 0;
-    auto next_effect = [&]() {
+    auto next_effect = [&] {
         row_skills_drawn++;
         if (layout == Layout::Rows) {
             skill_top_left.x += (m_skill_width * x_translate);
@@ -441,7 +441,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         }
     };
     bool skipped_effects = false;
-    auto skip_effects = [&]() {
+    auto skip_effects = [&] {
         if (skipped_effects) return;
         if (morale_percent != 100)
             next_effect();
@@ -453,20 +453,19 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         skip_effects();
     }
 
-    for (auto& it : cached_effects) {
-        for (size_t i = 0; i < it.second.size();i++) {
-            GW::Effect& effect = it.second[i];
-            if (effect.duration) {
-                DWORD remaining = effect.GetTimeRemaining();
-                draw = remaining < (DWORD)(effect.duration * 1000.f);
+    for (auto& effects : cached_effects | std::views::values) {
+        for (auto& effect : effects) {
+            if (effect.duration > 0) {
+                const auto remaining = effect.GetTimeRemaining();
+                draw = remaining < static_cast<DWORD>(effect.duration * 1000.f);
                 if (draw) {
-                    draw = UptimeToString(remaining_str, remaining);
+                    draw = UptimeToString(remaining_str, static_cast<int>(remaining));
                 }
                 else if (DurationExpired(effect)) {
                     goto enddraw; // cached_effects is now invalidated; skip to end and redraw next frame
                 }
             }
-            else if(effect.skill_id == GW::Constants::SkillID::Hard_mode) {
+            else if (effect.skill_id == GW::Constants::SkillID::Hard_mode) {
                 if (show_vanquish_counter) {
                     size_t left = GW::Map::GetFoesToKill();
                     size_t killed = GW::Map::GetFoesKilled();
