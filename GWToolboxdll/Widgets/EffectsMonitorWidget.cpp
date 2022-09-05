@@ -31,7 +31,7 @@ namespace {
 
     // duration -> string settings
     int decimal_threshold = 600; // when to start displaying decimals
-    int only_under_seconds = 600;
+    int only_under_seconds = 3600; // hide effect durations over n seconds
     bool round_up = true;        // round up or down?
     bool show_vanquish_counter = true;
     // Adds or removes the minion count "effect" depending on percent
@@ -209,7 +209,7 @@ namespace {
     {
         cd = std::abs(cd);
         if (cd > only_under_seconds * 1000) {
-            return snprintf(arr, 8, "");
+            return 0;
         }
         if (cd >= decimal_threshold) {
             if (round_up) cd += 1000;
@@ -535,10 +535,20 @@ void EffectsMonitorWidget::DrawSettingInternal()
     Colors::DrawSettingHueWheel("Text color", &color_text_effects);
     Colors::DrawSettingHueWheel("Text shadow", &color_text_shadow);
     Colors::DrawSettingHueWheel("Effect duration background", &color_background);
-    ImGui::InputInt("Duration show treshold", &only_under_seconds);
-    ImGui::ShowHelp("When should effect durations start to show (in seconds)");
-    ImGui::InputInt("Text decimal threshold", &decimal_threshold);
-    ImGui::ShowHelp("When should decimal numbers start to show (in milliseconds)");
+    ImGui::Text("Don't show effect durations longer than");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(64.f * ImGui::FontScale());
+    ImGui::InputInt("###only_under_seconds", &only_under_seconds,0);
+    ImGui::PopItemWidth();
+    ImGui::SameLine();
+    ImGui::Text("seconds");
+    ImGui::Text("Show decimal places when duration is less than");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(64.f * ImGui::FontScale());
+    ImGui::InputInt("###decimal_threshold", &decimal_threshold, 0);
+    ImGui::PopItemWidth();
+    ImGui::SameLine();
+    ImGui::Text("milliseconds");
     ImGui::Checkbox("Round up integers", &round_up);
     ImGui::SameLine();
     ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &show_vanquish_counter);
