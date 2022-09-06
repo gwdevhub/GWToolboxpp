@@ -453,8 +453,8 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         skip_effects();
     }
 
-    for (auto& effects : cached_effects | std::views::values) {
-        for (auto& effect : effects) {
+    for (auto& effects : cached_effects ) {
+        for (auto& effect : effects.second) {
             if (effect.duration > 0) {
                 const auto remaining = effect.GetTimeRemaining();
                 draw = remaining < static_cast<DWORD>(effect.duration * 1000.f);

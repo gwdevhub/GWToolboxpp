@@ -603,6 +603,10 @@ namespace {
             Log::Error("Failed to find party leader");
             return pending_reinvite.reset();
         }
+        if (next_player && next_player->player_number == me->login_number) {
+            // Swap next player to first player for reinviting myself
+            next_player = first_player;
+        }
         bool is_leader = me->login_number == first_player->player_number;
 
         switch (pending_reinvite.stage) {
