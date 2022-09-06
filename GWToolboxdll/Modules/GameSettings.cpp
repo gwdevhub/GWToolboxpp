@@ -431,7 +431,7 @@ namespace {
                 if (info_out)
                     *info_out = &p;
                 return true;
-            }   
+            }
         }
         return false;
     }
@@ -449,7 +449,7 @@ namespace {
     }
     bool IsPlayerInParty(uint32_t login_number, GW::PlayerPartyMember** info_out = nullptr) {
         auto* party = GW::PartyMgr::GetPartyInfo();
-        if (!party) 
+        if (!party)
             return false;
         for (auto& p : party->players) {
             if (p.login_number == login_number) {
@@ -478,7 +478,7 @@ namespace {
         SetGlobalNameTagVisibility_Func(prev_flags);
         ASSERT(*GlobalNameTagVisibilityFlags == prev_flags);
     }
-    
+
     GW::HeroInfo* GetHeroInfo(uint32_t hero_id) {
         auto w = GW::WorldContext::instance();
         if (!(w && w->hero_info.size()))
@@ -1997,7 +1997,7 @@ void GameSettings::Update(float) {
 
     UpdateReinvite();
     UpdateItemTooltip();
-   
+
     // See OnSendChat
     if (pending_wiki_search_term && pending_wiki_search_term->wstring().length()) {
         GuiUtils::SearchWiki(pending_wiki_search_term->wstring());
@@ -2079,7 +2079,7 @@ void GameSettings::Update(float) {
         if (check_message_on_party_change)
             GameSettings::MessageOnPartyChange();
     }
-    
+
 }
 
 void GameSettings::DrawFOVSetting() {
@@ -2655,7 +2655,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
         return;
     }
     pending_reinvite.reset(current_party_target_id);
-    
+
 }
 
 // Turn screenshots into clickable links

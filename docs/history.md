@@ -8,18 +8,18 @@ Previous releases are provided as dll files. If you are looking for the latest v
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
 ## Version 5.17
-* [New] Added option in game settings to suppress overhead info for experience/faction gained
 * [New] `/target ally` and `/target enemy` added
-* [New] Added option to hide merchant items in Item Filter module
-* [New] Added option to disable item descriptions on hover
+* [New] Added option to hide merchant items in Inventory Settings module
+* [New] Added option to disable item descriptions on hover (hold ALT to reveal them)
 * [New] Added option to hide/show ally skills in the Skill Monitor Widget
 * [New] Added option to only show effects lasting less than N seconds in Effect Monitor Widget
 * [New] Added option to snap minimap to in-game compass position
+* [New] Added option to hide allies from Skill Monitor Widget
 * [Minor] Obfuscate player name in Hall of Monuments
 * [Minor] Obfuscate account name in Hero > Account window
 * [Minor] Obfuscate player name in cinematics
 * [Minor] Hovered item in Info Window stays available after mouse is moved away from item
-* [Minor] Toolbox will now show a message about mission DX9 redistributable instead of not starting at all
+* [Minor] Toolbox will now show a message about missing DX9 redistributable instead of not starting at all
 * [Minor] Added option to hold shift when toggling pcons to turn pcons off/on by group
 * [Fix] Fixed bugs with wrong Effect Monitor offset when loading toolbox with minions
 * [Fix] Fixed crash dialog sometimes showing when GW is closed whilst toolbox is running
