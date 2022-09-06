@@ -9,7 +9,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 
 ## Version 5.17
 * [New] `/target ally` and `/target enemy` added
-* [New] Added option to hide merchant items in Inventory Settings module
+* [New] Added option to hide merchant items (selling only) in Inventory Settings module
 * [New] Added option to disable item descriptions on hover (hold ALT to reveal them)
 * [New] Added option to hide/show ally skills in the Skill Monitor Widget
 * [New] Added option to only show effects lasting less than N seconds in Effect Monitor Widget

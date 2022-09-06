@@ -1341,7 +1341,7 @@ void InventoryManager::DrawSettingInternal() {
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 
     ImGui::Separator();
-    ImGui::Text("Hide items from merchant window:");
+    ImGui::Text("Hide items from merchant sell window:");
     ImGui::BeginChild("hide_from_merchant_items", ImVec2(0.0F, hide_from_merchant_items.size() * 25.0F));
     for (const auto& [item_id, item_name] : hide_from_merchant_items) {
         ImGui::PushID(static_cast<int>(item_id));
@@ -1360,8 +1360,8 @@ void InventoryManager::DrawSettingInternal() {
     bool submitted = false;
     ImGui::Text("Add new item from merchant window:");
     static int new_item_id;
-    static char buf[30];
-    ImGui::InputText("Item Name", buf, 30);
+    static char buf[50];
+    ImGui::InputText("Item Name", buf, 50);
     ImGui::InputInt("Item Model ID", &new_item_id);
     submitted |= ImGui::Button("Add");
     if (submitted && new_item_id > 0) {
