@@ -35,8 +35,6 @@ private:
     struct ItemOwner {
         GW::ItemID item;
         GW::AgentID owner;
-
-        bool operator==(GW::ItemID const id) const { return item == id; }
     };
 
     std::vector<GW::Packet::StoC::AgentAdd> suppressed_packets{};

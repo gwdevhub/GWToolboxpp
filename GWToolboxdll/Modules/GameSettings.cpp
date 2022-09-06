@@ -171,11 +171,11 @@ namespace {
     }
 
 
-    const bool IsOutpost() {
-        return  GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
+    bool IsOutpost() {
+        return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
     }
-    const bool IsExplorable() {
-        return  GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
+    bool IsExplorable() {
+        return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     }
     enum PING_PARTS {
         NAME=1,
@@ -381,7 +381,7 @@ namespace {
             ShowAgentFactionGain_Ret(agent_id, stat_type, amount_gained);
         GW::Hook::LeaveHook();
     }
-    
+
     typedef void(__cdecl* ShowAgentExperienceGain_pt)(uint32_t agent_id, uint32_t amount_gained);
     ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = nullptr;
     ShowAgentExperienceGain_pt ShowAgentExperienceGain_Ret = nullptr;
@@ -699,6 +699,18 @@ namespace {
     void UpdateItemTooltip() {
         if (GetKeyState(modifier_key_item_descriptions) == modifier_key_item_descriptions_key_state)
             return;
+        modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
+        if (IsExplorable()) {
+            if (!disable_item_descriptions_in_explorable)
+                return;
+        }
+        else if (IsOutpost()) {
+            if (!disable_item_descriptions_in_outpost)
+                return;
+        }
+        else {
+            return; // Loading
+        }
         modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
         // Trigger re-render of item tooltip
         GW::Item* hovered = GW::Items::GetHoveredItem();
