@@ -142,7 +142,6 @@ public:
     static void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     static void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
     static void OnPlayerChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void*, void*);
-    static void OnPartyTargetChange(GW::HookStatus* status, uint32_t event_id, uint32_t type, void* wParam, void* lParam);
     static void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet);
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
     static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
@@ -266,14 +265,6 @@ private:
     std::vector<std::wstring> previous_party_names;
 
     std::vector<uint32_t> available_dialog_ids;
-
-    enum ReinviteType : uint8_t {
-        None,
-        Player,
-        Hero,
-        Henchman
-    } pending_reinvite_type = None;
-    uint32_t pending_reinvite_id = 0;
 
     bool was_leading = true;
     bool check_message_on_party_change = true;

@@ -20,6 +20,7 @@
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Title.h>
+#include <GWCA/GameEntities/Hero.h>
 
 #include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -209,12 +210,6 @@ namespace {
         uint32_t player_number;
     };
 
-    struct PartyTargetInfo {
-        uint32_t target_type = 0;
-        uint32_t is_party_member; // 1 or 0
-        uint32_t target_identifier;
-    } party_target_info;
-
     struct SkillData {
         GW::Constants::Profession primary;
         GW::Constants::Profession secondary;
@@ -381,7 +376,7 @@ namespace {
     ShowAgentFactionGain_pt ShowAgentFactionGain_Ret = nullptr;
     void OnShowAgentFactionGain(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained) {
         GW::Hook::EnterHook();
-        const bool blocked = Instance().block_faction_gain && agent_id == GW::Agents::GetPlayerId();
+        const bool blocked = Instance().block_faction_gain;
         if (!blocked)
             ShowAgentFactionGain_Ret(agent_id, stat_type, amount_gained);
         GW::Hook::LeaveHook();
@@ -392,8 +387,7 @@ namespace {
     ShowAgentExperienceGain_pt ShowAgentExperienceGain_Ret = nullptr;
     void OnShowAgentExperienceGain(uint32_t agent_id, uint32_t amount_gained) {
         GW::Hook::EnterHook();
-        const bool blocked = agent_id == GW::Agents::GetPlayerId()
-                             && (Instance().block_experience_gain || Instance().block_zero_experience_gain && amount_gained == 0);
+        const bool blocked = (Instance().block_experience_gain || (Instance().block_zero_experience_gain && amount_gained == 0));
         if (!blocked)
             ShowAgentExperienceGain_Ret(agent_id, amount_gained);
         GW::Hook::LeaveHook();
@@ -419,6 +413,63 @@ namespace {
     SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = 0;
     uint32_t* GlobalNameTagVisibilityFlags = 0;
 
+    GW::Player* GetPlayerByAgentId(uint32_t agent_id, GW::AgentLiving** info_out = nullptr) {
+        GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        if (!(a && a->GetIsLivingType() && a->IsPlayer()))
+            return nullptr;
+        if (info_out)
+            *info_out = a;
+        return GW::PlayerMgr::GetPlayerByID(a->login_number);
+
+    }
+
+    bool IsHenchmanInParty(uint32_t agent_id, GW::HenchmanPartyMember** info_out = nullptr) {
+        auto* party = GW::PartyMgr::GetPartyInfo();
+        if (!party) return false;
+        for (auto p : party->henchmen) {
+            if (p.agent_id == agent_id) {
+                if (info_out)
+                    *info_out = &p;
+                return true;
+            }   
+        }
+        return false;
+    }
+    bool IsHeroInParty(uint32_t agent_id, GW::HeroPartyMember** info_out = nullptr) {
+        auto* party = GW::PartyMgr::GetPartyInfo();
+        if (!party) return false;
+        for (auto& p : party->heroes) {
+            if (p.agent_id == agent_id) {
+                if (info_out)
+                    *info_out = &p;
+                return true;
+            }
+        }
+        return false;
+    }
+    bool IsPlayerInParty(uint32_t login_number, GW::PlayerPartyMember** info_out = nullptr) {
+        auto* party = GW::PartyMgr::GetPartyInfo();
+        if (!party) 
+            return false;
+        for (auto& p : party->players) {
+            if (p.login_number == login_number) {
+                if (info_out)
+                    *info_out = &p;
+                return true;
+            }
+        }
+        return false;
+    }
+    bool IsAgentInParty(uint32_t agent_id) {
+        auto* party = GW::PartyMgr::GetPartyInfo();
+        if (!party)
+            return false;
+        if (IsHenchmanInParty(agent_id) || IsHeroInParty(agent_id))
+            return true;
+        auto player = GetPlayerByAgentId(agent_id);
+        return player && IsPlayerInParty(player->player_number);
+    }
+
     // Refresh agent name tags when allegiance changes
     void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*) {
         // Backup the current name tag flag state, then "flash" nametags to update.
@@ -426,6 +477,262 @@ namespace {
         SetGlobalNameTagVisibility_Func(0);
         SetGlobalNameTagVisibility_Func(prev_flags);
         ASSERT(*GlobalNameTagVisibilityFlags == prev_flags);
+    }
+    
+    GW::HeroInfo* GetHeroInfo(uint32_t hero_id) {
+        auto w = GW::WorldContext::instance();
+        if (!(w && w->hero_info.size()))
+            return nullptr;
+        for (auto& a : w->hero_info) {
+            if (a.hero_id == hero_id)
+                return &a;
+        }
+        return nullptr;
+    }
+    bool IsHenchman(uint32_t agent_id) {
+        if (!IsOutpost()) {
+            return IsHenchmanInParty(agent_id);
+        }
+        auto w = GW::WorldContext::instance();
+        if (!(w && w->henchmen_agent_ids.size()))
+            return false;
+        for (auto a : w->henchmen_agent_ids) {
+            if (a == agent_id)
+                return true;
+        }
+        return false;
+    }
+    bool IsHero(uint32_t agent_id, GW::HeroInfo** info_out = nullptr) {
+        if (!IsOutpost()) {
+            return IsHeroInParty(agent_id);
+        }
+        auto w = GW::WorldContext::instance();
+        if (!(w && w->hero_info.size()))
+            return false;
+        for (auto& a : w->hero_info) {
+            if (a.agent_id == agent_id) {
+                if (info_out)
+                    *info_out = &a;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    uint32_t current_party_target_id = 0;
+    // Record current party target - this isn't always the same as the compass target.
+    void OnPartyTargetChanged(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+        struct Packet {
+            uint32_t source;
+            uint32_t identifier;
+        } *party_target_info = (Packet*)wparam;
+        current_party_target_id = 0;
+        switch (message_id) {
+        case GW::UI::UIMessage::kTargetPlayerPartyMember: {
+            if (!IsPlayerInParty(party_target_info->identifier))
+                break;
+            const GW::Player* p = GW::PlayerMgr::GetPlayerByID(party_target_info->identifier);
+            if (p && p->agent_id) {
+                current_party_target_id = p->agent_id;
+            }
+        } break;
+        case GW::UI::UIMessage::kTargetNPCPartyMember: {
+            if (IsAgentInParty(party_target_info->identifier)) {
+                current_party_target_id = party_target_info->identifier;
+            }
+        } break;
+        }
+    }
+
+    struct PendingReinvite {
+        uint32_t identifier = 0;
+        enum class Stage {
+            None,
+            Kick,
+            InvitePlayer,
+            InviteHenchman,
+            InviteHero
+        } stage = Stage::None;
+        time_t start_ts = 0;
+        void reset(uint32_t _agent_id = 0) {
+            identifier = _agent_id;
+            stage = identifier ? Stage::Kick : Stage::None;
+            start_ts = TIMER_INIT();
+        }
+    } pending_reinvite;
+
+    // Handle processing from CmdReinvite command
+    void UpdateReinvite() {
+        if (pending_reinvite.stage == PendingReinvite::Stage::None)
+            return; // Nothing to do
+        if (!IsOutpost()) {
+            return pending_reinvite.reset();
+        }
+        if (TIMER_DIFF(pending_reinvite.start_ts) > 2000) {
+            // Timeout (map change etc)
+            return pending_reinvite.reset();
+        }
+        GW::Player* first_player = nullptr;
+        GW::Player* next_player = nullptr;
+        GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+        if (!me) {
+            // Can't find myself
+            Log::Error("Failed to find me");
+            return pending_reinvite.reset();
+        }
+        GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+        if (!party || !party->players.valid()) {
+            // Can't find party
+            Log::Error("Failed to find party");
+            return pending_reinvite.reset();
+        }
+        // Find leader and next valid player
+        for (size_t i = 0; party->players.valid() && i < party->players.size(); i++) {
+            auto& member = party->players[i];
+            if (!member.connected())
+                continue;
+            if (!first_player) {
+                first_player = GW::PlayerMgr::GetPlayerByID(member.login_number);
+            }
+            else if (!next_player) {
+                next_player = GW::PlayerMgr::GetPlayerByID(member.login_number);
+                break;
+            }
+        }
+        if (!first_player) {
+            Log::Error("Failed to find party leader");
+            return pending_reinvite.reset();
+        }
+        bool is_leader = me->login_number == first_player->player_number;
+
+        switch (pending_reinvite.stage) {
+        case PendingReinvite::Stage::Kick: {
+            if (!IsAgentInParty(pending_reinvite.identifier)) {
+                Log::Error("Choose target party member to reinvite");
+                return pending_reinvite.reset();
+            }
+            // Player kick
+            GW::AgentLiving* target_living = 0;
+            if (GetPlayerByAgentId(pending_reinvite.identifier, &target_living)) {
+                if (target_living == me) {
+                    if (!next_player) {
+                        Log::Error("Couldn't find next player in party to re-join");
+                        return pending_reinvite.reset();
+                    }
+                    pending_reinvite.identifier = next_player->player_number;
+                    pending_reinvite.stage = PendingReinvite::Stage::InvitePlayer;
+                    GW::PartyMgr::LeaveParty();
+                    return;
+                }
+                if (!is_leader) {
+                    Log::Error("Only party leader can reinvite players");
+                    return pending_reinvite.reset();
+                }
+                pending_reinvite.identifier = target_living->player_number;
+                pending_reinvite.stage = PendingReinvite::Stage::InvitePlayer;
+                GW::PartyMgr::KickPlayer(target_living->login_number);
+                return;
+            }
+
+            // Hero kick
+            GW::HeroPartyMember* hero_info = 0;
+            if (IsHeroInParty(pending_reinvite.identifier, &hero_info)) {
+                if (hero_info->owner_player_id != me->login_number) {
+                    Log::Error("The targetted hero doesn't belong to you");
+                    return pending_reinvite.reset();
+                }
+                pending_reinvite.identifier = hero_info->hero_id;
+                GW::PartyMgr::KickHero(pending_reinvite.identifier);
+                pending_reinvite.stage = PendingReinvite::Stage::InviteHero;
+                return;
+            }
+            // Henchman kick
+            GW::HenchmanPartyMember* henchman_info = 0;
+            if (IsHenchmanInParty(pending_reinvite.identifier, &henchman_info)) {
+                if (!is_leader) {
+                    Log::Error("Only party leader can reinvite henchmen");
+                    return pending_reinvite.reset();
+                }
+                GW::PartyMgr::KickHenchman(pending_reinvite.identifier);
+                pending_reinvite.stage = PendingReinvite::Stage::InviteHenchman;
+                return;
+            }
+            Log::Error("Failed to determine agent type for %d", pending_reinvite.identifier);
+            return pending_reinvite.reset();
+        } break;
+        case PendingReinvite::Stage::InviteHero: {
+            GW::HeroInfo* hero_info = GetHeroInfo(pending_reinvite.identifier);
+            if (!hero_info) {
+                Log::Error("Failed to get hero info for %d", pending_reinvite.identifier);
+                return pending_reinvite.reset();
+            }
+            if (hero_info->agent_id && IsHeroInParty(hero_info->agent_id))
+                return;
+            GW::PartyMgr::AddHero(pending_reinvite.identifier);
+            return pending_reinvite.reset();
+        } break;
+        case PendingReinvite::Stage::InvitePlayer: {
+            GW::Player* player = GW::PlayerMgr::GetPlayerByID(pending_reinvite.identifier);
+            if (!player) {
+                Log::Error("Failed to get player info for %d", pending_reinvite.identifier);
+                return pending_reinvite.reset();
+            }
+            if (IsPlayerInParty(pending_reinvite.identifier))
+                return;
+            GW::PartyMgr::InvitePlayer(pending_reinvite.identifier);
+            return pending_reinvite.reset();
+        } break;
+        case PendingReinvite::Stage::InviteHenchman: {
+            if (!IsHenchman(pending_reinvite.identifier)) {
+                Log::Error("Failed to get henchman info for %d", pending_reinvite.identifier);
+                return pending_reinvite.reset();
+            }
+            if (IsHenchmanInParty(pending_reinvite.identifier))
+                return;
+            GW::PartyMgr::AddHenchman(pending_reinvite.identifier);
+            return pending_reinvite.reset();
+        } break;
+        }
+        pending_reinvite.reset();
+    }
+    // Check and re-render item tooltips if modifier key held
+    void UpdateItemTooltip() {
+        if (GetKeyState(modifier_key_item_descriptions) == modifier_key_item_descriptions_key_state)
+            return;
+        modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
+        // Trigger re-render of item tooltip
+        GW::Item* hovered = GW::Items::GetHoveredItem();
+        if (!hovered)
+            return;
+        uint32_t* items_triggered = new uint32_t[2];
+        auto i = GW::Items::GetInventory();
+        if (hovered == i->weapon_set0 || hovered == i->offhand_set0) {
+            items_triggered[0] = i->weapon_set0 ? i->weapon_set0->item_id : 0;
+            items_triggered[1] = i->offhand_set0 ? i->offhand_set0->item_id : 0;
+        }
+        else if (hovered == i->weapon_set1 || hovered == i->offhand_set1) {
+            items_triggered[0] = i->weapon_set1 ? i->weapon_set1->item_id : 0;
+            items_triggered[1] = i->offhand_set1 ? i->offhand_set1->item_id : 0;
+        }
+        else if (hovered == i->weapon_set2 || hovered == i->offhand_set2) {
+            items_triggered[0] = i->weapon_set2 ? i->weapon_set2->item_id : 0;
+            items_triggered[1] = i->offhand_set2 ? i->offhand_set2->item_id : 0;
+        }
+        else if (hovered == i->weapon_set3 || hovered == i->offhand_set3) {
+            items_triggered[0] = i->weapon_set3 ? i->weapon_set3->item_id : 0;
+            items_triggered[1] = i->offhand_set3 ? i->offhand_set3->item_id : 0;
+        }
+        else {
+            items_triggered[0] = hovered->item_id;
+            items_triggered[1] = 0;
+        }
+        GW::GameThread::Enqueue([items_triggered]() {
+            if (items_triggered[0])
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[0]);
+            if (items_triggered[1])
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[1]);
+            delete[] items_triggered;
+            });
     }
 }
 
@@ -979,7 +1286,6 @@ void GameSettings::Initialize() {
     GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, &OnCast);
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &OnSendChat);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
-    GW::Chat::RegisterChatEventCallback(&OnPartyTargetChange_Entry, OnPartyTargetChange);
 
     const GW::UI::UIMessage dialog_ui_messages[] = {
         GW::UI::UIMessage::kSendDialog,
@@ -990,6 +1296,13 @@ void GameSettings::Initialize() {
         GW::UI::RegisterUIMessageCallback(&OnPostSendDialog_Entry, message_id, OnDialogUIMessage,0x8000);
     }
 
+    const GW::UI::UIMessage party_target_ui_messages[] = {
+        GW::UI::UIMessage::kTargetPlayerPartyMember,
+        GW::UI::UIMessage::kTargetNPCPartyMember
+    };
+    for (const auto message_id : party_target_ui_messages) {
+        GW::UI::RegisterUIMessageCallback(&OnPostSendDialog_Entry, message_id, OnPartyTargetChanged, 0x8000);
+    }
 
     GW::Chat::CreateCommand(L"reinvite", GameSettings::CmdReinvite);
 #ifdef APRIL_FOOLS
@@ -1665,44 +1978,10 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float) {
-    if (GetKeyState(modifier_key_item_descriptions) != modifier_key_item_descriptions_key_state) {
-        modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
-        // Trigger re-render of item tooltip
-        GW::Item* hovered = GW::Items::GetHoveredItem();
-        if (hovered) {
-            uint32_t* items_triggered = new uint32_t[2];
-            auto i = GW::Items::GetInventory();
-            if (hovered == i->weapon_set0 || hovered == i->offhand_set0) {
-                items_triggered[0] = i->weapon_set0 ? i->weapon_set0->item_id : 0;
-                items_triggered[1] = i->offhand_set0 ? i->offhand_set0->item_id : 0;
-            }
-            else if (hovered == i->weapon_set1 || hovered == i->offhand_set1) {
-                items_triggered[0] = i->weapon_set1 ? i->weapon_set1->item_id : 0;
-                items_triggered[1] = i->offhand_set1 ? i->offhand_set1->item_id : 0;
-            }
-            else if (hovered == i->weapon_set2 || hovered == i->offhand_set2) {
-                items_triggered[0] = i->weapon_set2 ? i->weapon_set2->item_id : 0;
-                items_triggered[1] = i->offhand_set2 ? i->offhand_set2->item_id : 0;
-            }
-            else if (hovered == i->weapon_set3 || hovered == i->offhand_set3) {
-                items_triggered[0] = i->weapon_set3 ? i->weapon_set3->item_id : 0;
-                items_triggered[1] = i->offhand_set3 ? i->offhand_set3->item_id : 0;
-            }
-            else {
-                items_triggered[0] = hovered->item_id;
-                items_triggered[1] = 0;
-            }
-            GW::GameThread::Enqueue([items_triggered]() {
-                if (items_triggered[0])
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[0]);
-                if (items_triggered[1])
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[1]);
-                delete[] items_triggered;
-                });
-        }
-    }
 
-
+    UpdateReinvite();
+    UpdateItemTooltip();
+   
     // See OnSendChat
     if (pending_wiki_search_term && pending_wiki_search_term->wstring().length()) {
         GuiUtils::SearchWiki(pending_wiki_search_term->wstring());
@@ -1784,80 +2063,7 @@ void GameSettings::Update(float) {
         if (check_message_on_party_change)
             GameSettings::MessageOnPartyChange();
     }
-    // Re-invite logic
-    if (pending_reinvite_type != None) {
-        if (!pending_reinvite_id || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-            pending_reinvite_type = None;
-        }
-    }
-    switch (pending_reinvite_type) {
-    case Player: {
-        GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
-        bool still_in_party = false;
-        for (size_t i = 0; party && party->players.valid() && i < party->players.size(); i++) {
-            auto& member = party->players[i];
-            if (member.login_number == pending_reinvite_id) {
-                still_in_party = true;
-                break;
-            }
-        }
-        GW::Player* player = GW::PlayerMgr::GetPlayerByID(pending_reinvite_id);
-        if (!player) {
-            pending_reinvite_type = None;
-            break;
-        }
-        if (!still_in_party) {
-            wchar_t message[64];
-            swprintf(message, _countof(message), L"invite %s", player->name);
-            GW::Chat::SendChat('/', message);
-            pending_reinvite_type = None;
-        }
-    } break;
-    case Hero: {
-        GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
-        bool still_in_party = false;
-        uint32_t my_id = GW::PlayerMgr::GetPlayerNumber();
-        for (size_t i = 0; party && party->heroes.valid() && i < party->heroes.size(); i++) {
-            auto& member = party->heroes[i];
-            if (member.hero_id == pending_reinvite_id && member.owner_player_id == my_id) {
-                still_in_party = true;
-                break;
-            }
-        }
-        if (!still_in_party) {
-            GW::PartyMgr::AddHero(pending_reinvite_id);
-            pending_reinvite_type = None;
-        }
-    } break;
-    case Henchman: {
-        GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
-        bool still_in_party = false;
-        bool is_leading = false;
-        uint32_t my_id = GW::PlayerMgr::GetPlayerNumber();
-        for (size_t i = 0; party && party->players.valid() && i < party->players.size(); i++) {
-            auto& member = party->players[i];
-            if (!member.connected())
-                continue;
-            is_leading = member.login_number == my_id;
-            break;
-        }
-        if (!is_leading) {
-            pending_reinvite_type = None;
-            break;
-        }
-        for (size_t i = 0; party && party->henchmen.valid() && i < party->henchmen.size(); i++) {
-            auto& member = party->henchmen[i];
-            if (member.agent_id == pending_reinvite_id) {
-                still_in_party = true;
-                break;
-            }
-        }
-        if (!still_in_party) {
-            GW::PartyMgr::AddHenchman(pending_reinvite_id);
-            pending_reinvite_type = None;
-        }
-    } break;
-    }
+    
 }
 
 void GameSettings::DrawFOVSetting() {
@@ -2427,157 +2633,13 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, GW::UI::U
     }
 }
 
-// Record current party target - this isn't always the same as the compass target.
-void GameSettings::OnPartyTargetChange(GW::HookStatus* , uint32_t event_id, uint32_t type, void* wParam, void* lParam) {
-    UNREFERENCED_PARAMETER(event_id);
-    UNREFERENCED_PARAMETER(lParam);
-    // type 0x6 == "Highlight control in frame"
-    if (!(type == 0x6 && (uint32_t)wParam > 0xffffff && !lParam))
-        return;
-    // NB: Trade and quest log (maybe some others) get through here, but wParam is always a pointer to something.
-    PartyTargetInfo* pti = (PartyTargetInfo*)wParam;
-    // Test 1: Check target_type, make sure its something we're interested in
-    switch (pti->target_type) {
-    case 0x0:
-    case 0x1:
-    case 0x2:
-    case 0x3:
-    case 0x5:
-    case 0x9:
-        break;
-    default:
-        return;
-    }
-    // Test 2: Check has_target, make sure its a valid bool value
-    if (pti->is_party_member != 0x1 && pti->is_party_member != 0x0)
-        return;
-    // Copy
-    party_target_info = *pti;
-}
-
 void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
-    ReinviteType& target_type = Instance().pending_reinvite_type;
-    uint32_t& target_identifier = Instance().pending_reinvite_id;
-    target_type = None;
-    target_identifier = 0;
-    GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
-    if (!party || !party->players.valid())
-        return;
-    GW::Player* first_player = nullptr;
-    GW::Player* next_player = nullptr;
-    GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-    if (!me)
-        return;
-    switch (party_target_info.target_type) {
-    case 0x9: // Targetting player, identifer = player_number
-        target_type = Player;
-        target_identifier = party_target_info.target_identifier;
-        break;
-    case 0x2:// Targetting henchman, identifier = agent_id
-        target_type = Henchman;
-        target_identifier = party_target_info.target_identifier;
-        break;
-    case 0x3: // Targetting hero, identifier = player_number & agent_id
-        target_type = Hero;
-        // NOTE: Although this seems to be a valid agent_id, its not a valid agent so GetAgentByID() won't work here.
-        target_identifier = (uint32_t)party_target_info.target_identifier & 0x0000ffff;
-        break;
-    case 0x1: // Hero in Party Search window, identifier = hero_id
-    case 0x5: // Targetting pending player, identifier = player_number
-    default:
+    if (!current_party_target_id) {
         Log::ErrorW(L"Target a party member to re-invite");
         return;
     }
-
-    // Build some references
-    bool target_in_party = false;
-    for (size_t i = 0; party->players.valid() && i < party->players.size(); i++) {
-        auto& member = party->players[i];
-        if (!member.connected())
-            continue;
-        if (!first_player) {
-            first_player = GW::PlayerMgr::GetPlayerByID(member.login_number);
-        }
-        else if (!next_player) {
-            next_player = GW::PlayerMgr::GetPlayerByID(member.login_number);
-        }
-        if (target_type == Player && member.login_number == target_identifier) {
-            target_in_party = true;
-        }
-    }
-    if (!first_player) {
-        Log::ErrorW(L"Failed to find party leader");
-        return;
-    }
-    bool leading = first_player->agent_id == me->agent_id;
-
-    switch (target_type) {
-    case Player:
-        if (target_identifier == me->login_number) {
-            // If I'm targeting myself, or I'm not leading; leave and re-join.
-            if (!leading) {
-                next_player = first_player;
-            }
-            GW::AgentLiving* next_player_agent = next_player ? static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(next_player->agent_id)) : nullptr;
-            if (!next_player_agent || !next_player_agent->GetIsLivingType() || !next_player_agent->IsPlayer()) {
-                Log::ErrorW(L"No-one is around to re-join");
-                target_type = None;
-                return;
-            }
-            target_identifier = next_player_agent->login_number;
-            GW::PartyMgr::LeaveParty();
-            return;
-        }
-        else if (!leading) {
-            Log::ErrorW(L"Only party leader can re-invite players");
-            target_type = None;
-            return;
-        }
-        else if (target_in_party) {
-            // Kick this player and re-invite
-            GW::PartyMgr::KickPlayer(target_identifier);
-        }
-        else {
-            // We want to re-invite a player that isn't in the party already; do nothing and we'll invite the player on next frame.
-        }
-        break;
-    case Hero:
-        // Check that this is my hero
-        target_type = None;
-        for (size_t i = 0; target_type == None && party->heroes.valid() && i < party->heroes.size(); i++) {
-            auto& member = party->heroes[i];
-            if (member.agent_id == target_identifier) {
-                if (member.owner_player_id != me->login_number) {
-                    Log::ErrorW(L"The targetted hero doesn't belong to you");
-                    target_type = None;
-                    return;
-                }
-                target_type = Hero;
-                target_identifier = member.hero_id;
-                break;
-            }
-        }
-        if (target_type == None) {
-            Log::ErrorW(L"Failed to find Hero for agent_id %d", target_identifier);
-            return;
-        }
-        // Kick this hero
-        GW::PartyMgr::KickHero(target_identifier);
-        break;
-    case Henchman:
-        if (!leading) {
-            Log::ErrorW(L"Only party leader can re-invite henchmen");
-            target_type = None;
-            return;
-        }
-        // Kick this henchman
-        GW::PartyMgr::KickHenchman(target_identifier);
-        break;
-    default:
-        Log::ErrorW(L"Target a party member to re-invite");
-        target_type = None;
-        return;
-    }
+    pending_reinvite.reset(current_party_target_id);
+    
 }
 
 // Turn screenshots into clickable links
@@ -2717,20 +2779,6 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage, void* w
 // Don't target chest as nearest item, Target green items from chest last
 void GameSettings::OnChangeTarget(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) {
     GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
-    // Logic for re-inviting players
-    if (msg->manual_target_id) {
-        // Target changed
-        GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(msg->manual_target_id));
-        if (agent && agent->GetIsLivingType() && agent->IsPlayer()) {
-            party_target_info.target_type = 0x9;
-            party_target_info.target_identifier = agent->player_number;
-        }
-    }
-    else {
-        // Target cleared.
-        party_target_info.target_type = 0;
-        party_target_info.target_identifier = 0;
-    }
     // Logic for targetting nearest item.
     if (!Instance().targeting_nearest_item)
         return;
