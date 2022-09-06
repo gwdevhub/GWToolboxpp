@@ -9,6 +9,12 @@ namespace GW {
 }
 
 namespace GuiUtils {
+    template <typename T>
+    concept map_type = std::same_as<T,
+        std::map<typename T::key_type, typename T::mapped_type, typename T::key_compare, typename T::allocator_type>> ||
+        std::same_as<T, std::unordered_map<typename T::key_type, typename T::mapped_type, typename T::hasher,
+                            typename T::key_equal, typename T::allocator_type>>;
+
     enum class FontSize {
         text,
         header2,
@@ -61,6 +67,24 @@ namespace GuiUtils {
     size_t TimeToString(uint32_t utc_timestamp, std::string& out);
     size_t TimeToString(time_t utc_timestamp, std::string& out);
     size_t TimeToString(FILETIME utc_timestamp, std::string& out);
+
+    template <map_type T>
+    void MapToIni(CSimpleIni* ini, const char* section, const char* name, const T& map) {
+        const auto items_json = nlohmann::json(map);
+        const auto items_str = items_json.dump();
+        ini->SetValue(section, name, items_str.c_str());
+    }
+
+    template <map_type T>
+    T IniToMap(CSimpleIni* ini, const char* section, const char* name) {
+        std::string items_str = ini->GetValue(section, name, "");
+        try {
+            const auto map_json = nlohmann::json::parse(items_str);
+            return map_json.get<T>();
+        } catch (nlohmann::json::exception e) {
+            return {};
+        }
+    }
 
     // Takes a wstring and translates into a string of hex values, separated by spaces
     bool ArrayToIni(const std::wstring& in, std::string* out);
