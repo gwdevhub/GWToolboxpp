@@ -15,6 +15,7 @@ file(GLOB SOURCES
     "Widgets/Minimap/*.cpp"
     "Windows/*.h"
     "Windows/*.cpp")
+
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
@@ -28,6 +29,7 @@ target_link_options(GWToolboxdll PRIVATE /IGNORE:4098)
 target_link_options(GWToolboxdll PRIVATE /IGNORE:4099)
 
 target_include_directories(GWToolboxdll PRIVATE
+    "${PROJECT_SOURCE_DIR}/Dependencies"
     "${CMAKE_CURRENT_SOURCE_DIR}"
     )
 
