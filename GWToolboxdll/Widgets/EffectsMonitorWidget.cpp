@@ -93,7 +93,7 @@ namespace {
     }
     uint32_t GetMorale(uint32_t agent_id) {
         auto w = GW::WorldContext::instance();
-        if (!(w && w->party_morale_related.size())) 
+        if (!(w && w->party_morale_related.size()))
             return 100;
         for (const auto& m : w->party_morale_related) {
             if (m.party_member_info->agent_id == agent_id)

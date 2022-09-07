@@ -38,8 +38,9 @@ public:
         static InventoryManager instance;
         return instance;
     }
-    const char* Name() const override { return "Inventory Management"; }
-    const char* SettingsName() const override { return "Inventory Settings"; }
+
+    [[nodiscard]] const char* Name() const override { return "Inventory Management"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Inventory Settings"; }
 
     void Draw(IDirect3DDevice9* device) override;
     bool DrawItemContextMenu(bool open = false);
@@ -48,21 +49,21 @@ public:
     void SalvageAll(SalvageAllType type);
     bool IsPendingIdentify();
     bool IsPendingSalvage();
-    bool HasSettings() { return true; };
+    bool HasSettings() override { return true; }
     void Initialize() override;
     void Update(float delta) override;
     void DrawSettingInternal() override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
 
-    bool WndProc(UINT, WPARAM, LPARAM);
+    bool WndProc(UINT, WPARAM, LPARAM) override;
 
     // Find an empty (or partially empty) inventory slot that this item can go into
     std::pair<GW::Bag*, uint32_t> GetAvailableInventorySlot(GW::Item* like_item = nullptr);
     // Find an empty (or partially empty) inventory slot that this item can go into. !entire_stack = Returns slots that are the same item, but won't hold all of them.
-    GW::Item* GetAvailableInventoryStack(GW::Item* like_item, bool entire_stack = false);
+    static GW::Item* GetAvailableInventoryStack(GW::Item* like_item, bool entire_stack = false);
     // Checks model info and struct info to make sure item is the same.
-    static bool IsSameItem(GW::Item* item1, GW::Item* item2);
+    static bool IsSameItem(const GW::Item* item1, const GW::Item* item2);
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
     static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
@@ -95,7 +96,6 @@ private:
     bool show_transact_quantity_popup = false;
     bool transaction_listeners_attached = false;
     bool hide_unsellable_items = true;
-
     bool change_secondary_for_tome = true;
 
     bool wiki_link_on_context_menu = false;
@@ -109,10 +109,12 @@ private:
         { GW::Constants::Bag::Bag_2,true }
     };
 
+    std::map<uint32_t, std::string> hide_from_merchant_items{};
+
     size_t identified_count = 0;
     size_t salvaged_count = 0;
 
-    GW::Packet::StoC::SalvageSession current_salvage_session;
+    GW::Packet::StoC::SalvageSession current_salvage_session{};
 
     void ContinueIdentify();
     void ContinueSalvage();
@@ -121,7 +123,7 @@ private:
     GW::HookEntry salvage_hook_entry;
     GW::HookEntry transaction_hook_entry;
     GW::HookEntry ItemClick_Entry;
-    
+
 
     void FetchPotentialItems();
     void AttachSalvageListeners();
@@ -145,14 +147,14 @@ private:
         AwaitProfession,
         UseItem
     } tome_pending_stage;
-    uint32_t tome_pending_profession;
+    uint32_t tome_pending_profession{};
     time_t tome_pending_timeout = 0;
     uint32_t tome_pending_item_id = 0;
     void DrawPendingTomeUsage();
 
 public:
     struct Item : GW::Item {
-        GW::ItemModifier *GetModifier(uint32_t identifier);
+        GW::ItemModifier* GetModifier(uint32_t identifier);
         GW::Constants::Rarity GetRarity();
         uint32_t GetUses();
         bool IsIdentificationKit();
@@ -164,43 +166,52 @@ public:
         bool IsWeapon();
         bool IsArmor();
         bool IsSalvagable();
-        
+
         bool IsRareMaterial();
         bool IsWeaponSetItem();
         bool IsOfferedInTrade();
         bool CanOfferToTrade();
-        inline bool IsSparkly() {
+
+        [[nodiscard]] bool IsSparkly() const {
             return (interaction & 0x2000) == 0;
         }
-        inline bool GetIsIdentified() {
+
+        [[nodiscard]] bool GetIsIdentified() const {
             return (interaction & 1) != 0;
         }
-        inline bool IsStackable() {
+
+        [[nodiscard]] bool IsStackable() const {
             return (interaction & 0x80000) != 0;
         }
-        inline bool IsUsable() {
+
+        [[nodiscard]] bool IsUsable() const {
             return (interaction & 0x1000000) != 0;
         }
-        inline bool IsTradable() {
+
+        [[nodiscard]] bool IsTradable() const {
             return (interaction & 0x100) == 0;
         }
-        inline bool IsInscription() {
+
+        [[nodiscard]] bool IsInscription() const {
             return (interaction & 0x25000000) == 0x25000000;
         }
-        inline bool IsBlue() {
+
+        [[nodiscard]] bool IsBlue() const {
             return single_item_name && single_item_name[0] == 0xA3F;
         }
-        inline bool IsPurple() {
+
+        [[nodiscard]] bool IsPurple() const {
             return (interaction & 0x400000) != 0;
         }
-        inline bool IsGreen() {
+
+        [[nodiscard]] bool IsGreen() const {
             return (interaction & 0x10) != 0;
         }
-        inline bool IsGold() {
+
+        [[nodiscard]] bool IsGold() const {
             return (interaction & 0x20000) != 0;
         }
     };
-public:
 
     Item* GetNextUnsalvagedItem(Item* salvage_kit = nullptr, Item* start_after_item = nullptr);
     Item* GetNextUnidentifiedItem(Item* start_after_item = nullptr);
@@ -256,7 +267,7 @@ private:
         bool in_progress() { return state > State::Prompt; }
         bool selling();
     };
-    
+
 
     struct PendingItem {
 

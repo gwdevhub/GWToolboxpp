@@ -1,16 +1,13 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
-
 #include <Utf8.h>
 #include <fonts/fontawesome5.h>
 #include <Modules/Resources.h>
-#include <imgui_impl_dx9.h>
 
 #include "GuiUtils.h"
 

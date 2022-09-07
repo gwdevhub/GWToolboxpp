@@ -39,7 +39,7 @@ protected:
     bool printed = false;
     bool print = true;
     bool send = false;
-    
+
     wchar_t encoded_message[256] = { '\0' };
     wchar_t encoded_sender[32] = { '\0' };
     std::wstring output_message;
@@ -49,19 +49,19 @@ public:
     PendingChatMessage(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
     static PendingChatMessage* queueSend(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
     static PendingChatMessage* queuePrint(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
-    inline void SendIt() {  print = false; send = true;}
-    inline static bool IsStringEncoded(const wchar_t* str) {
+    void SendIt() {  print = false; send = true;}
+    static bool IsStringEncoded(const wchar_t* str) {
         return str && (str[0] < L' ' || str[0] > L'~');
     }
-    const bool IsDecoded() {
+    bool IsDecoded() const {
         return !output_message.empty() && !output_sender.empty();
     }
-    const bool Consume() {
+    bool Consume() {
         if (print) return PrintMessage();
         if (send) return Send();
         return false;
     }
-    const bool IsSend() {
+    bool IsSend() const {
         return send;
     }
     static bool Cooldown();
@@ -76,9 +76,9 @@ protected:
 
 
 class GameSettings : public ToolboxModule {
-    GameSettings() {};
+    GameSettings() = default;
     GameSettings(const GameSettings&) = delete;
-    ~GameSettings() {};
+    ~GameSettings() = default;
 
 public:
     static GameSettings& Instance() {
@@ -101,7 +101,7 @@ public:
     void DrawPartySettings();
 
     void Update(float delta) override;
-    bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
+    bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     void DrawFOVSetting();
     bool maintain_fov = false;
@@ -261,7 +261,7 @@ private:
     void MessageOnPartyChange();
 
 
-    
+
     std::vector<std::wstring> previous_party_names;
 
     std::vector<uint32_t> available_dialog_ids;
@@ -275,7 +275,7 @@ private:
     bool stop_screen_shake = false;
     bool disable_camera_smoothing = false;
     bool targeting_nearest_item = false;
-    
+
     bool hide_player_speech_bubbles = false;
     bool improve_move_to_cast = false;
 

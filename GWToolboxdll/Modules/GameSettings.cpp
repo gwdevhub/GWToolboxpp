@@ -431,7 +431,7 @@ namespace {
                 if (info_out)
                     *info_out = &p;
                 return true;
-            }   
+            }
         }
         return false;
     }
@@ -449,7 +449,7 @@ namespace {
     }
     bool IsPlayerInParty(uint32_t login_number, GW::PlayerPartyMember** info_out = nullptr) {
         auto* party = GW::PartyMgr::GetPartyInfo();
-        if (!party) 
+        if (!party)
             return false;
         for (auto& p : party->players) {
             if (p.login_number == login_number) {
@@ -478,7 +478,7 @@ namespace {
         SetGlobalNameTagVisibility_Func(prev_flags);
         ASSERT(*GlobalNameTagVisibilityFlags == prev_flags);
     }
-    
+
     GW::HeroInfo* GetHeroInfo(uint32_t hero_id) {
         auto w = GW::WorldContext::instance();
         if (!(w && w->hero_info.size()))
@@ -717,37 +717,36 @@ namespace {
         }
         modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
         // Trigger re-render of item tooltip
-        GW::Item* hovered = GW::Items::GetHoveredItem();
-        if (!hovered)
+        const auto hovered_item = GW::Items::GetHoveredItem();
+        if (!hovered_item)
             return;
-        uint32_t* items_triggered = new uint32_t[2];
-        auto i = GW::Items::GetInventory();
-        if (hovered == i->weapon_set0 || hovered == i->offhand_set0) {
-            items_triggered[0] = i->weapon_set0 ? i->weapon_set0->item_id : 0;
-            items_triggered[1] = i->offhand_set0 ? i->offhand_set0->item_id : 0;
+        uint32_t items_triggered[2]{};
+        const auto inv = GW::Items::GetInventory();
+        if (hovered_item == inv->weapon_set0 || hovered_item == inv->offhand_set0) {
+            items_triggered[0] = inv->weapon_set0 ? inv->weapon_set0->item_id : 0;
+            items_triggered[1] = inv->offhand_set0 ? inv->offhand_set0->item_id : 0;
         }
-        else if (hovered == i->weapon_set1 || hovered == i->offhand_set1) {
-            items_triggered[0] = i->weapon_set1 ? i->weapon_set1->item_id : 0;
-            items_triggered[1] = i->offhand_set1 ? i->offhand_set1->item_id : 0;
+        else if (hovered_item == inv->weapon_set1 || hovered_item == inv->offhand_set1) {
+            items_triggered[0] = inv->weapon_set1 ? inv->weapon_set1->item_id : 0;
+            items_triggered[1] = inv->offhand_set1 ? inv->offhand_set1->item_id : 0;
         }
-        else if (hovered == i->weapon_set2 || hovered == i->offhand_set2) {
-            items_triggered[0] = i->weapon_set2 ? i->weapon_set2->item_id : 0;
-            items_triggered[1] = i->offhand_set2 ? i->offhand_set2->item_id : 0;
+        else if (hovered_item == inv->weapon_set2 || hovered_item == inv->offhand_set2) {
+            items_triggered[0] = inv->weapon_set2 ? inv->weapon_set2->item_id : 0;
+            items_triggered[1] = inv->offhand_set2 ? inv->offhand_set2->item_id : 0;
         }
-        else if (hovered == i->weapon_set3 || hovered == i->offhand_set3) {
-            items_triggered[0] = i->weapon_set3 ? i->weapon_set3->item_id : 0;
-            items_triggered[1] = i->offhand_set3 ? i->offhand_set3->item_id : 0;
+        else if (hovered_item == inv->weapon_set3 || hovered_item == inv->offhand_set3) {
+            items_triggered[0] = inv->weapon_set3 ? inv->weapon_set3->item_id : 0;
+            items_triggered[1] = inv->offhand_set3 ? inv->offhand_set3->item_id : 0;
         }
         else {
-            items_triggered[0] = hovered->item_id;
+            items_triggered[0] = hovered_item->item_id;
             items_triggered[1] = 0;
         }
-        GW::GameThread::Enqueue([items_triggered]() {
-            if (items_triggered[0])
-                GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[0]);
-            if (items_triggered[1])
-                GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items_triggered[1]);
-            delete[] items_triggered;
+        GW::GameThread::Enqueue([items = items_triggered]() {
+            if (items[0])
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[0]);
+            if (items[1])
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[1]);
             });
     }
 }
@@ -757,7 +756,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     std::wsmatch m;
 
     // For armor items, include full item name and a few description bits.
-    switch ((GW::Constants::ItemType)item->type) {
+    switch (static_cast<GW::Constants::ItemType>(item->type)) {
     case GW::Constants::ItemType::Headpiece:
     case GW::Constants::ItemType::Boots:
     case GW::Constants::ItemType::Chestpiece:
@@ -1997,7 +1996,7 @@ void GameSettings::Update(float) {
 
     UpdateReinvite();
     UpdateItemTooltip();
-   
+
     // See OnSendChat
     if (pending_wiki_search_term && pending_wiki_search_term->wstring().length()) {
         GuiUtils::SearchWiki(pending_wiki_search_term->wstring());
@@ -2079,7 +2078,7 @@ void GameSettings::Update(float) {
         if (check_message_on_party_change)
             GameSettings::MessageOnPartyChange();
     }
-    
+
 }
 
 void GameSettings::DrawFOVSetting() {
@@ -2655,7 +2654,7 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
         return;
     }
     pending_reinvite.reset(current_party_target_id);
-    
+
 }
 
 // Turn screenshots into clickable links
