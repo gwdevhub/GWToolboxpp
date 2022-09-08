@@ -7,8 +7,8 @@ If you are here to check toolbox features and for a download link to go [https:/
 ## How to download, build, and run
 ### Requirements
 * CMake 3.14 or higher. Download the latest version from [https://cmake.org/download/](https://cmake.org/download/). 
-* Visual Studio. You can download Visual Studio Community for free here: [https://visualstudio.microsoft.com/vs/community/](https://visualstudio.microsoft.com/vs/community/). You will also need the "Desktop development with C++" package. 
-* MSVC v142 C++ Build tools - install via Visual Studio:  Tools > Get Tools and features > Individual components
+* Visual Studio 2019 or 2022. You can download Visual Studio Community for free here: [https://visualstudio.microsoft.com/vs/community/](https://visualstudio.microsoft.com/vs/community/). You will also need the "Desktop development with C++" package. 
+* C++20 compatible MSVC Platform Toolset, either v142 or v143
 * Git. [https://git-scm.com/](https://git-scm.com/)
 
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
@@ -19,8 +19,9 @@ If you are here to check toolbox features and for a download link to go [https:/
 3. Navigate to the GWToolboxpp folder: 
 `cd GWToolboxpp`
 
-4. Build: `cmake .. -T v142 -A Win32 -B build`
+4. Build: `cmake -B build`
 
+5. Open: `cmake --open build`
 5. Open: `cmake --open build`
 
 6. Set the configuration to **Debug**
@@ -53,7 +54,7 @@ A `gwtoolbox.msi` file should have been created in the repository directory.
 
 
 ## Notes
-* GWToolbox compiles as a DLL (`GWToolbox.dll`). `GWToolbox.exe`, aka Launcher, selects a GW clients and injects the dll, but you can also use different launchers, such as the ones in the `AutoItLauncher/` folder.
+* GWToolbox compiles as a DLL (`GWToolboxdll.dll`). `GWToolbox.exe`, aka Launcher, selects a GW clients and injects the dll, but you can also use different launchers, such as the ones in the `AutoItLauncher/` folder.
 * By default, the launcher (`GWToolbox.exe`) will run the `GWToolboxdll.dll` as specified by your installation, **not** the one you compile. To run the dll in the same folder, run the launcher with command-line argument `/localdll`.
 * You can use the Visual Studio debugger directly to be able to break and step through toolbox code. First launch toolbox in debug mode as normal, then go to Debug -> Attach to process, then select the gw.exe process and click Attach. You can also attach the debugger *before* running toolbox, to debug issues during launch, but then you will have to manually launch toolbox from outside visual studio, either with `GWToolbox.exe` or `AutoItLauncher/inject.au3`. 
 
