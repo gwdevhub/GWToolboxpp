@@ -62,9 +62,6 @@
                 </Component>
               </Directory>
             </Directory>
-            
-            <!-- Visual studio redist -->
-            <Merge Id="VC142Redist" SourceFile="resources\Microsoft_VC142_CRT_x86.msm" DiskId="1" Language="0"/>
         </Directory>
         
         <!-- Step 2: Add the shortcut to your installer package -->
@@ -79,11 +76,6 @@
           <ComponentRef Id="Font.ttf" />
           <!-- Step 3: Tell WiX to install the shortcut -->
           <ComponentRef Id="ApplicationShortcut" />  
-        </Feature>
-        
-        <!-- Visual studio redist v142 -->
-        <Feature Id="VC142Redist" Title="Visual C++ 2019 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
-          <MergeRef Id="VC142Redist"/>
         </Feature>
         
         <!-- DirectX -->
