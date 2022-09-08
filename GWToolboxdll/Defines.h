@@ -3,7 +3,7 @@
 #define GWTOOLBOX_WEBSITE "https://www.gwtoolbox.com"
 #define RESOURCES_DOWNLOAD_URL "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/"
 
-#define DIRECTX_REDIST_WEBSITE "https://www.microsoft.com/en-us/download/details.aspx?id=8109"
+#define DIRECTX_REDIST_WEBSITE "https://www.microsoft.com/en-us/download/details.aspx?id=35"
 
 #define VAR_NAME(v) (#v)
 
