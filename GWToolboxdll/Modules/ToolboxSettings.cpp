@@ -26,7 +26,7 @@
 #include <Modules/Obfuscator.h>
 #include <Modules/ChatLog.h>
 #include <Modules/HintsModule.h>
-#ifdef _DEBUG
+#if 0
 #include <Modules/GWFileRequester.h>
 #endif
 #include <Modules/HallOfMonumentsModule.h>
@@ -87,7 +87,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     SettingsWindow::Instance().sep_modules = optional_modules.size();
     optional_modules.push_back(&Updater::Instance());
 
-#ifdef _DEBUG
+#if 0
     optional_modules.push_back(&GWFileRequester::Instance());
 #endif
 

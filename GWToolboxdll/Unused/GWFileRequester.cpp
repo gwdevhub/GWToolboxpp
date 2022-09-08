@@ -23,7 +23,6 @@
 
 #include <Utils/GuiUtils.h>
 
-#include <gdiplus.h>
 #include <Timer.h>
 
 namespace {
@@ -42,29 +41,6 @@ namespace {
                 return p;
         }
         return NULL;
-    }
-    int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
-    {
-        unsigned int  num = 0;    // number of image encoders
-        unsigned int  size = 0;   // size of the image encoder array in bytes
-
-        Gdiplus::GetImageEncodersSize(&num, &size);
-        if (size == 0)return -1;
-
-        Gdiplus::ImageCodecInfo* imageCodecInfo = new Gdiplus::ImageCodecInfo[size];
-        Gdiplus::GetImageEncoders(num, size, imageCodecInfo);
-
-        for (unsigned int i = 0; i < num; ++i)
-        {
-            if (wcscmp(imageCodecInfo[i].MimeType, format) == 0)
-            {
-                *pClsid = imageCodecInfo[i].Clsid;
-                delete[] imageCodecInfo;
-                return i;
-            }
-        }
-        delete[] imageCodecInfo;
-        return -1;
     }
 
     void CmdDownloadMapFile(const wchar_t*, int, wchar_t**) {
@@ -405,42 +381,7 @@ bool GWFileRequester::load_texture_from_resource(GWResource& in, IDirect3DTextur
         log(L"Failed to find image file within GWResource %d", in.file_id);
         return false;
     }
-    Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-    ULONG_PTR           gdiplusToken;
-    int ret;
-    if ((ret = GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL)) != 0) {
-        log(L"Failed to GdiplusStartup, %d", ret);
-        return false;
-    }
-    Gdiplus::Bitmap* bitmap = 0;
-    if (!ProcessImageFile(image.data, image.data_len, &bitmap)) {
-        log(L"Failed to process image for GWResource %d into a bitmap", image.file_id);
-        return false;
-    }
-    if (!bitmap) {
-        log(L"Failed to process image for GWResource %d into a bitmap (2)", image.file_id);
-        return false;
-    }
-    log(L"Image for file id %d processed into a bitmap!");
-
-    wchar_t filename[128];
-    swprintf(filename, _countof(filename), L"%d.png", image.file_id);
-    // Check if we've already downloaded it
-    auto gwfiles = Resources::GetPath(L"data", L"gwfilepngs");
-    Resources::EnsureFolderExists(gwfiles);
-    auto path = Resources::GetPath(gwfiles, filename);
-
-    //save bitmap for comparison
-
-    CLSID pngClsid;
-    GetEncoderClsid(L"image/png", &pngClsid);
-    if (bitmap) {
-        bitmap->Save(path.wstring().c_str(), &pngClsid, NULL);
-        delete bitmap;
-    }
-    
-    Gdiplus::GdiplusShutdown(gdiplusToken);
-    return true;
+    return false;
 }
 char* GWFileRequester::recv(uint32_t recv_len) {
     ASSERT(recv_len < sizeof(message_buffer));
