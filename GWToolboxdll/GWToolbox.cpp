@@ -79,10 +79,10 @@ DWORD __stdcall ThreadEntry(LPVOID) {
         // Handle this now before we go any further - removing this check will cause a crash when modules try to use D3DX9 funcs in Draw() later and will close GW
         char title[128];
         sprintf(title, "GWToolbox++ API Error (LastError: %lu)", GetLastError());
-        if (MessageBoxA(0,
+        if (MessageBoxA(nullptr,
             "Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed.\nGWToolbox++ needs this installed to continue.\n\nVisit DirectX Redistributable download page?",
             title, MB_YESNO) == IDYES) {
-            ShellExecute(0, 0, DIRECTX_REDIST_WEBSITE, 0, 0, SW_SHOW);
+            ShellExecute(nullptr, nullptr, DIRECTX_REDIST_WEBSITE, nullptr, nullptr, SW_SHOW);
         }
 
         goto leave;
@@ -90,7 +90,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 
     GW::HookBase::Initialize();
     if (!GW::Initialize()){
-        if (MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) {
+        if (MessageBoxA(nullptr, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) {
 
         }
         goto leave;
@@ -299,7 +299,7 @@ void GWToolbox::Initialize() {
 
     Log::Log("Creating Toolbox\n");
 
-    GW::GameThread::RegisterGameThreadCallback(&Update_Entry, GWToolbox::Update);
+    GW::GameThread::RegisterGameThreadCallback(&Update_Entry, [](GW::HookStatus* a) { GWToolbox::Instance().Update(a); });
 
     Resources::Instance().EnsureFolderExists(Resources::GetSettingsFolderPath());
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img"));
@@ -401,8 +401,7 @@ void GWToolbox::Terminate() {
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {
     // === destruction ===
-    auto& instance = GWToolbox::Instance();
-    if (instance.initialized && instance.must_self_destruct) {
+    if (initialized && must_self_destruct) {
         if (!GuiUtils::FontsLoaded())
             return;
         for (ToolboxModule* module : GWToolbox::Instance().modules) {
@@ -423,12 +422,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
 
         GW::DisableHooks();
-        instance.initialized = false;
+        initialized = false;
         tb_destroyed = true;
     }
     // === runtime ===
-    if (instance.initialized
-        && !instance.must_self_destruct
+    if (initialized
+        && !must_self_destruct
         && GW::Render::GetViewportWidth() > 0
         && GW::Render::GetViewportHeight() > 0) {
 
@@ -524,12 +523,11 @@ void GWToolbox::Update(GW::HookStatus *)
     if (last_tick_count == 0)
         last_tick_count = GetTickCount();
 
-    GWToolbox& tb = GWToolbox::Instance();
-    if (!tb.initialized)
-        tb.Initialize();
-    if (tb.initialized
+    if (!initialized)
+        Initialize();
+    if (initialized
         && imgui_initialized
-        && !GWToolbox::Instance().must_self_destruct) {
+        && must_self_destruct) {
 
         // @Enhancement:
         // Improve precision with QueryPerformanceCounter
@@ -537,7 +535,7 @@ void GWToolbox::Update(GW::HookStatus *)
         DWORD delta = tick - last_tick_count;
         float delta_f = delta / 1000.f;
 
-        for (ToolboxModule* module : tb.modules) {
+        for (ToolboxModule* module : modules) {
             module->Update(delta_f);
         }
         //for (TBModule* module : tb.plugins) {

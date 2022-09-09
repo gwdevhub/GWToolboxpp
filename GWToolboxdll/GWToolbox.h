@@ -24,8 +24,8 @@ public:
     }
 
     static HMODULE GetDLLModule();
-    static void Draw(IDirect3DDevice9* device);
-    static void Update(GW::HookStatus *);
+    void Draw(IDirect3DDevice9* device);
+    void Update(GW::HookStatus *);
 
     void Initialize();
     void Terminate();

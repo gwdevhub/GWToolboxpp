@@ -94,7 +94,7 @@ bool Loadd3dx9(){
     if (!d3dx9Module) {
         return false; // Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed
     }
-    
+
     Log::Log("Loaded DirectX module successfully: %s\n", d3dx9name);
 
     // Add function definitions as applicable
