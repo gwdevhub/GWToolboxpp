@@ -3,15 +3,7 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameContainers/GamePos.h>
-
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/CharContext.h>
-
-#include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
-
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -168,8 +160,8 @@ void PconsWindow::OnAddExternalBond(GW::HookStatus *status, GW::Packet::StoC::Ad
 {
     if (PconAlcohol::suppress_lunar_skills &&
         pak->caster_id == GW::Agents::GetPlayerId() && pak->receiver_id == 0 &&
-        (pak->skill_id == (DWORD)GW::Constants::SkillID::Spiritual_Possession ||
-         pak->skill_id == (DWORD)GW::Constants::SkillID::Lucky_Aura)) {
+        (pak->skill_id == (DWORD)SkillID::Spiritual_Possession ||
+         pak->skill_id == (DWORD)SkillID::Lucky_Aura)) {
         // printf("blocked skill %d\n", pak->skill_id);
         status->blocked = true;
     }
@@ -299,7 +291,7 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv) {
                 argPcon.append(L" ");
                 argPcon.append(GuiUtils::ToLower(argv[i]));
             }
-            std::vector<Pcon*> pcons = PconsWindow::Instance().pcons;
+            std::vector<Pcon*> pcons = Instance().pcons;
             std::string compare = GuiUtils::WStringToString(argPcon);
             unsigned int compareLength = compare.length();
             Pcon* bestMatch = nullptr;
@@ -372,7 +364,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
         }
     }
 
-    if (instance_type == GW::Constants::InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
+    if (instance_type == InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
         if (j && j % items_per_row > 0)
             ImGui::NewLine();
         if (!current_objectives_to_check.empty()) {
@@ -395,7 +387,7 @@ void PconsWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID())
         MapChanged(); // Map changed.
-    if (!player && instance_type == GW::Constants::InstanceType::Explorable)
+    if (!player && instance_type == InstanceType::Explorable)
         player = GW::Agents::GetPlayer(); // Won't be immediately able to get player ptr on map load, so put here.
     if (!Pcon::map_has_effects_array) {
         Pcon::map_has_effects_array = GW::Effects::GetPlayerEffectsArray() != nullptr;
@@ -410,11 +402,11 @@ void PconsWindow::MapChanged() {
     elite_area_check_timer = TIMER_INIT();
     map_id = GW::Map::GetMapID();
     Pcon::map_has_effects_array = false;
-    if(instance_type != GW::Constants::InstanceType::Loading)
+    if(instance_type != InstanceType::Loading)
         previous_instance_type = instance_type;
     instance_type = GW::Map::GetInstanceType();
     // If we've just come from an explorable area then disable pcons.
-    if (disable_pcons_on_map_change && previous_instance_type == GW::Constants::InstanceType::Explorable)
+    if (disable_pcons_on_map_change && previous_instance_type == InstanceType::Explorable)
         SetEnabled(false);
 
     player = nullptr;
@@ -452,10 +444,10 @@ bool PconsWindow::SetEnabled(bool b) {
     enabled = b;
     Refill(enabled);
     switch (GW::Map::GetInstanceType()) {
-    case GW::Constants::InstanceType::Outpost:
+    case InstanceType::Outpost:
         if(tick_with_pcons)
             GW::PartyMgr::Tick(enabled);
-    case GW::Constants::InstanceType::Explorable: {
+    case InstanceType::Explorable: {
         if (HotkeysWindow::Instance().current_hotkey &&
             !HotkeysWindow::Instance()
                  .current_hotkey->show_message_in_emote_channel)
@@ -505,7 +497,7 @@ void PconsWindow::DrawLunarsAndAlcoholSettings() {
 }
 
 void PconsWindow::CheckObjectivesCompleteAutoDisable() {
-    if (!enabled || elite_area_disable_triggered || instance_type != GW::Constants::InstanceType::Explorable) {
+    if (!enabled || elite_area_disable_triggered || instance_type != InstanceType::Explorable) {
         return;     // Pcons disabled, auto disable already triggered, or not in explorable area.
     }
     if (!disable_cons_on_objective_completion || objectives_complete.empty() || current_objectives_to_check.empty()) {
@@ -527,7 +519,7 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable() {
 }
 
 void PconsWindow::CheckBossRangeAutoDisable() { // Trigger Elite area auto disable if applicable
-    if (!enabled || elite_area_disable_triggered || instance_type != GW::Constants::InstanceType::Explorable) {
+    if (!enabled || elite_area_disable_triggered || instance_type != InstanceType::Explorable) {
         return;     // Pcons disabled, auto disable already triggered, or not in explorable area.
     }
     if (!disable_cons_in_final_room || current_final_room_location == GW::Vec2f(0, 0) || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
@@ -535,7 +527,7 @@ void PconsWindow::CheckBossRangeAutoDisable() { // Trigger Elite area auto disab
     }
     elite_area_check_timer = TIMER_INIT();
     float d = GetDistance(GW::Vec2f(player->pos), current_final_room_location);
-    if (d > 0 && d <= GW::Constants::Range::Spirit) {
+    if (d > 0 && d <= Range::Spirit) {
         elite_area_disable_triggered = true;
         SetEnabled(false);
         Log::Info("Cons auto-disabled in range of boss");

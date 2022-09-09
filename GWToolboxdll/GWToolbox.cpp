@@ -527,7 +527,7 @@ void GWToolbox::Update(GW::HookStatus *)
         Initialize();
     if (initialized
         && imgui_initialized
-        && must_self_destruct) {
+        && !must_self_destruct) {
 
         // @Enhancement:
         // Improve precision with QueryPerformanceCounter
