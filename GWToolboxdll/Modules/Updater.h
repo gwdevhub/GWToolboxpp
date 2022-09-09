@@ -31,7 +31,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void Initialize() override;
     void DrawSettingInternal() override;
-    void GetLatestRelease(GWToolboxRelease*);
+    void GetLatestRelease(GWToolboxRelease*) const;
     std::string GetServerVersion() const { return latest_release.version; }
 
 private:

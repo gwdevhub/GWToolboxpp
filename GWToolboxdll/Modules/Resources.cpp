@@ -266,29 +266,26 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
     if (!fp) {
         return StrSwprintf(*response,L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
-    int written = fwrite(content.data(), content.size() + 1, 1, fp);
+    const int written = fwrite(content.data(), content.size() + 1, 1, fp);
     fclose(fp);
     if(written != 1) {
         return StrSwprintf(*response,L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     return true;
 }
-void Resources::Download(
-    const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
+void Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
-    EnqueueWorkerTask([this,path_to_file,url,callback]() {
-        std::wstring* error_message = new std::wstring();
-        bool success = Download(path_to_file, url, error_message);
+    EnqueueWorkerTask([this, path_to_file, url, callback] {
+        std::wstring error_message{};
+        bool success = Download(path_to_file, url, &error_message);
         // and call the callback in the main thread
         if (callback) {
-            EnqueueMainTask([callback, success, error_message]() {
-                callback(success, *error_message);
-                delete error_message;
+            EnqueueMainTask([callback, success, error_message] {
+                callback(success, error_message);
                 });
         }
         else if (!success) {
-            Log::LogW(L"Failed to download %s from %S\n%S", path_to_file.wstring().c_str(), url.c_str(), error_message->c_str());
-            delete error_message;
+            Log::LogW(L"Failed to download %s from %S\n%S", path_to_file.wstring().c_str(), url.c_str(), error_message.c_str());
         }
 
         });

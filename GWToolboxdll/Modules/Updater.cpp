@@ -1,8 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/Managers/GameThreadMgr.h>
-
-#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 #include <Logger.h>
@@ -54,7 +51,7 @@ void Updater::DrawSettingInternal() {
     ImGui::RadioButton("Check and automatically update", (int*)&mode, (int)Mode::CheckAndAutoUpdate);
 }
 
-void Updater::GetLatestRelease(GWToolboxRelease* release) {
+void Updater::GetLatestRelease(GWToolboxRelease* release) const {
     // Get list of releases
     std::string response;
     unsigned int tries = 0;
@@ -70,21 +67,21 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
     }
     using Json = nlohmann::json;
     Json json = Json::parse(response.c_str(), nullptr, false);
-    if (json == Json::value_t::discarded || !json.is_array() || !json.size())
+    if (json == Json::value_t::discarded || json.empty() || !json.is_array())
         return;
-    for (unsigned int i = 0; i < json.size(); i++) {
-        if (!(json[i].contains("tag_name") && json[i]["tag_name"].is_string()))
+    for (const auto& js : json) {
+        if (!(js.contains("tag_name") && js["tag_name"].is_string()))
             continue;
-        std::string tag_name = json[i]["tag_name"].get<std::string>();
-        size_t version_number_len = tag_name.find("_Release", 0);
+        std::string tag_name = js["tag_name"].get<std::string>();
+        const size_t version_number_len = tag_name.find("_Release", 0);
         if (version_number_len == std::string::npos)
             continue;
-        if (!(json[i].contains("assets") && json[i]["assets"].is_array() && json[i]["assets"].size() > 0))
+        if (!(js.contains("assets") && js["assets"].is_array() && js["assets"].size() > 0))
             continue;
-        if (!(json[i].contains("body") && json[i]["body"].is_string()))
+        if (!(js.contains("body") && js["body"].is_string()))
             continue;
-        for (unsigned int j = 0; j < json[i]["assets"].size(); j++) {
-            const Json& asset = json[i]["assets"][j];
+        for (unsigned int j = 0; j < js["assets"].size(); j++) {
+            const Json& asset = js["assets"][j];
             if (!(asset.contains("name") && asset["name"].is_string())
                 || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string()))
                 continue;
@@ -93,7 +90,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
                 continue; // This release doesn't have a dll download.
             release->download_url = asset["browser_download_url"].get<std::string>();
             release->version = tag_name.substr(0, version_number_len);
-            release->body = json[i]["body"].get<std::string>();
+            release->body = js["body"].get<std::string>();
             return;
         }
     }
@@ -107,9 +104,10 @@ void Updater::CheckForUpdate(const bool forced) {
         return;
     }
 
-    Resources::Instance().EnqueueWorkerTask([this,forced]() {
+    Resources::Instance().EnqueueWorkerTask([this, forced] {
         if (!forced && mode == Mode::DontCheckForUpdates)
             return; // Do not check for updates
+
         // Here we are in the worker thread and can do blocking operations
         // Reminder: do not send stuff to gw chat from this thread!
         GWToolboxRelease release;
@@ -120,7 +118,7 @@ void Updater::CheckForUpdate(const bool forced) {
             step = Done;
             return;
         }
-        if (release.version.compare(GWTOOLBOXDLL_VERSION) == 0) {
+        if (release.version == GWTOOLBOXDLL_VERSION) {
             // server and client versions match
             step = Done;
             if (forced) {
@@ -129,21 +127,25 @@ void Updater::CheckForUpdate(const bool forced) {
             return;
         }
         // we have a new version!
-        if (latest_release.version.compare(release.version) != 0 || forced) {
+        if (latest_release.version != release.version || forced) {
             notified = false;
             visible = true;
         }
         latest_release = release;
         forced_ask = forced;
         step = NewVersionAvailable;
+
+        if (!std::string(GWTOOLBOXDLL_VERSION_BETA).empty()) {
+            forced_ask = true;
+        }
     });
 }
 
 void Updater::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
     if (step == NewVersionAvailable && !latest_release.version.empty()) {
-        Mode iMode = forced_ask ? Mode::CheckAndAsk : mode;
-        
+        const Mode iMode = forced_ask ? Mode::CheckAndAsk : mode;
+
         // NB: Mode::DontCheckForUpdates shouldn't get this far, but we don't do anything anyway
         switch (iMode) {
 
