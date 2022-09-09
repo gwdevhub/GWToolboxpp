@@ -134,6 +134,33 @@ static bool DeleteInstallationDirectory(void)
     return true;
 }
 
+bool DumpFont()
+{
+    fs::path docpath;
+    if (!PathGetDocumentsPath(docpath, L"GWToolboxpp")) {
+        return false;
+    }
+    fs::path computername;
+    if (!PathGetComputerName(computername)) {
+        return false;
+    }
+    const fs::path target = docpath / computername / "Font.ttf";
+    if (fs::exists(target)) {
+        return true;
+    }
+
+    const auto font = EmbeddedResource(IDR_BINARY2, L"Binary");
+    if (!font.GetResourceData()) {
+        return false;
+    }
+
+    std::ofstream f(target.c_str(), std::ios::out | std::ios::binary);
+    f.write(static_cast<char*>(font.GetResourceData()), font.GetResourceSize());
+    f.close();
+
+    return true;
+}
+
 bool DumpD3dx9()
 {
     fs::path docpath;
@@ -167,6 +194,11 @@ bool Install(bool quiet)
 
     if (!EnsureInstallationDirectoryExist()) {
         fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
+        return false;
+    }
+
+    if (!DumpFont()) {
+        fprintf(stderr, "Couldn't unpack Font.ttf\n");
         return false;
     }
 
