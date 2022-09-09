@@ -41,11 +41,15 @@ static bool InjectInstalledDllInProcess(Process *process)
 
     std::filesystem::path dllpath;
     if (!PathGetProgramDirectory(dllpath)) {
-        return false;
+        if (settings.localdll) {
+            return false;
+        }
     }
     const std::filesystem::path localdll = dllpath / L"GWToolboxdll.dll";
     if (std::filesystem::exists(dllpath)) {
         dllpath = localdll;
+    } else if (settings.localdll) {
+        return false;
     }
     else if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp\\GWToolboxdll.dll")) {
         fprintf(stderr, "Couldn't find installation path\n");
