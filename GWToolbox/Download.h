@@ -13,7 +13,7 @@ public:
 public:
     DownloadWindow();
     DownloadWindow(const DownloadWindow&) = delete;
-    ~DownloadWindow();
+    ~DownloadWindow() override;
 
     DownloadWindow& operator=(const DownloadWindow&) = delete;
 

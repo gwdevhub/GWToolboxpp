@@ -21,4 +21,6 @@ target_link_libraries(GWToolbox PRIVATE
     Core
     RestClient
     nlohmann_json::nlohmann_json
+
+    version.lib # for GetFileVersionInfo
     )

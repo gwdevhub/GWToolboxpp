@@ -24,7 +24,7 @@
 
 namespace {
     const char* d3dErrorMessage(HRESULT code) {
-        
+
         switch (code) {
         case D3DERR_NOTAVAILABLE:
             return  "D3DERR_NOTAVAILABLE";
@@ -200,15 +200,13 @@ void Resources::Terminate() {
     ToolboxModule::Terminate();
     Cleanup();
 }
+
 void Resources::EndLoading() {
     EnqueueWorkerTask([this]() { should_stop = true; });
 }
 
 std::filesystem::path Resources::GetSettingsFolderPath()
 {
-    std::filesystem::path apppath;
-    ASSERT(PathGetAppDataPath(apppath, L"GWToolboxpp"));
-
     std::filesystem::path computer_name;
     ASSERT(PathGetComputerName(computer_name));
 
@@ -222,27 +220,11 @@ std::filesystem::path Resources::GetSettingsFolderPath()
         return docpath;
     }
 
-    if (!Instance().migration_attempted) {
-        // Don't do this every time.
-        Instance().migration_attempted = true;
-        if (!PathMigrateDataAndCreateSymlink(false)) {
-            Log::Warning("Failed to migrate GWToolbox data");
-        }
-        else {
-            Log::InfoW(L"GWToolbox settings folder moved from %s to %s", apppath.wstring().c_str(), docpath.wstring().c_str());
-        }
-    }
-
-    ASSERT(PathExistsSafe(apppath / "GWToolbox.ini", &result));
-    if (result) {
-        return apppath;
-    }
-
     if (PathCreateDirectorySafe(docpath)) {
         return docpath;
     }
 
-    return apppath;
+    return docpath;
 }
 std::filesystem::path Resources::GetPath(const std::filesystem::path& file)
 {
@@ -299,7 +281,7 @@ void Resources::Download(
         bool success = Download(path_to_file, url, error_message);
         // and call the callback in the main thread
         if (callback) {
-            EnqueueMainTask([callback, success, error_message]() { 
+            EnqueueMainTask([callback, success, error_message]() {
                 callback(success, *error_message);
                 delete error_message;
                 });
@@ -308,7 +290,7 @@ void Resources::Download(
             Log::LogW(L"Failed to download %s from %S\n%S", path_to_file.wstring().c_str(), url.c_str(), error_message->c_str());
             delete error_message;
         }
-        
+
         });
 }
 
@@ -542,7 +524,7 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
 
 
 IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
-    
+
     auto found = skill_images.find(skill_id);
     if (found != skill_images.end()) {
         return found->second;
@@ -675,7 +657,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
         Instance().LoadTexture(texture, path_to_file, callback);
         return texture;
     }
-    
+
     // No local file found; download from wiki via searching by the item name; the wiki will usually return a 302 redirect if its an exact item match
     std::string search_str = GuiUtils::WikiUrl(item_name);
     Instance().Download(search_str, [texture, item_name, callback](bool ok, const std::string& response) {

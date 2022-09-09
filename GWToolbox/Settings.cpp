@@ -30,8 +30,7 @@ void PrintUsage(bool terminate)
         exit(0);
 }
 
-void ParseRegSettings()
-{
+void ParseRegSettings() {
     HKEY SettingsKey;
     if (!OpenSettingsKey(&SettingsKey)) {
         fprintf(stderr, "OpenUninstallKey failed\n");
@@ -51,8 +50,7 @@ void ParseRegSettings()
     RegCloseKey(SettingsKey);
 }
 
-static void WriteRegSettings()
-{
+static void WriteRegSettings() {
     HKEY SettingsKey;
     if (!OpenSettingsKey(&SettingsKey)) {
         fprintf(stderr, "OpenUninstallKey failed\n");
@@ -148,18 +146,18 @@ bool IsRunningAsAdmin()
     PSID AdministratorsGroup = NULL;
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
     if (!AllocateAndInitializeSid(
-        &NtAuthority, 
-        2, 
-        SECURITY_BUILTIN_DOMAIN_RID, 
-        DOMAIN_ALIAS_RID_ADMINS, 
-        0, 0, 0, 0, 0, 0, 
+        &NtAuthority,
+        2,
+        SECURITY_BUILTIN_DOMAIN_RID,
+        DOMAIN_ALIAS_RID_ADMINS,
+        0, 0, 0, 0, 0, 0,
         &AdministratorsGroup))
     {
         fprintf(stderr, "AllocateAndInitializeSid failed: %lu\n", GetLastError());
         return false;
     }
 
-    // Determine whether the SID of administrators group is enabled in 
+    // Determine whether the SID of administrators group is enabled in
     // the primary access token of the process.
     BOOL IsRunAsAdmin = FALSE;
     if (!CheckTokenMembership(NULL, AdministratorsGroup, &IsRunAsAdmin))
@@ -291,7 +289,7 @@ bool EnableDebugPrivilege()
     if (!AdjustTokenPrivileges(token, FALSE, &tp, sizeof(tp), nullptr, nullptr)) {
         CloseHandle(token);
         fprintf(stderr, "AdjustTokenPrivileges failed: %lu\n", GetLastError());
-        return false;   
+        return false;
     }
 
     return true;

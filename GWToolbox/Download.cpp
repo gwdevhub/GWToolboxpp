@@ -4,12 +4,10 @@ using Json = nlohmann::json;
 
 #include <File.h>
 #include <Path.h>
-#include <Str.h>
 
 #include <RestClient.h>
 
 #include "Download.h"
-#include "Registry.h"
 
 class AsyncFileDownloader : public AsyncRestClient
 {
@@ -78,7 +76,7 @@ struct Release
     std::vector<Asset> assets;
 };
 
-static bool ParseRelease(std::string& json_text, Release *release)
+static bool ParseRelease(const std::string& json_text, Release *release)
 {
     Json json;
     try {
@@ -144,6 +142,43 @@ static bool ParseRelease(std::string& json_text, Release *release)
     return true;
 }
 
+std::string GetDllRelease() {
+    using namespace std::filesystem;
+
+    path dllpath;
+    if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp\\GWToolboxdll.dll")) {
+        return {};
+    }
+    if (!exists(dllpath)) {
+        return {};
+    }
+
+    const std::wstring dllpathstr = dllpath.wstring();
+    const LPCWSTR filename = dllpathstr.c_str();
+    char buffer[MAX_PATH];
+
+    DWORD dwHandle, sz = GetFileVersionInfoSizeW(filename, &dwHandle);
+    if (sz == 0) {
+        return {};
+    }
+    char* buf = new char[sz];
+    if (!GetFileVersionInfoW(filename, dwHandle, sz, &buf[0])) {
+        delete[] buf;
+        return {};
+    }
+    VS_FIXEDFILEINFO* pvi;
+    sz = sizeof(VS_FIXEDFILEINFO);
+    if (!VerQueryValueW(&buf[0], L"\\", reinterpret_cast<LPVOID*>(&pvi), reinterpret_cast<unsigned int*>(&sz))) {
+        delete[] buf;
+        return {};
+    }
+    sprintf(buffer, "%d.%d.%d.%d", pvi->dwProductVersionMS >> 16, pvi->dwFileVersionMS & 0xFFFF,
+        pvi->dwFileVersionLS >> 16, pvi->dwFileVersionLS & 0xFFFF);
+    delete[] buf;
+    return {buffer};
+
+}
+
 bool DownloadWindow::DownloadAllFiles()
 {
     std::string content;
@@ -160,16 +195,13 @@ bool DownloadWindow::DownloadAllFiles()
         return false;
     }
 
-    char release_string[256];
-    if (RegReadRelease(release_string, ARRAYSIZE(release_string))) {
-        if (_stricmp(release.tag_name.c_str(), release_string) == 0)
+    const auto release_string = GetDllRelease();
+    if (!release_string.empty()) {
+        std::string release_tag = release.tag_name;
+        const auto current_version  = std::regex_replace(release_tag, std::regex(R"([^0-9.])"), "");
+        if (release_string.starts_with(current_version))
             return true;
     }
-
-    // @Remark:
-    // release_string could be uninitialize if "RegReadRelease" failed, so
-    // don't used it!
-    release_string[0] = 0;
 
     std::filesystem::path dll_path;
     if (!PathGetDocumentsPath(dll_path, L"GWToolboxpp\\GWToolboxdll.dll")) {
@@ -178,17 +210,16 @@ bool DownloadWindow::DownloadAllFiles()
 
     char buffer[64];
     snprintf(buffer, 64, "Downloading version '%s'", release.tag_name.c_str());
-    MessageBoxA(0, buffer, "Downloading...", 0);
+    MessageBoxA(nullptr, buffer, "Downloading...", 0);
 
     std::string url;
     size_t file_size = 0;
-    for (size_t i = 0; i < release.assets.size(); i++) {
-        Asset *asset = &release.assets[i];
-        if (asset->name == "GWToolbox.dll" || asset->name == "GWToolboxdll.dll") {
-            fprintf(stderr, "browser_download_url: '%s'\n", asset->browser_download_url.c_str());
-            const char *purl = asset->browser_download_url.c_str();
-            file_size = asset->size;
-            url = std::string(purl, purl + asset->browser_download_url.size());
+    for (auto& asset : release.assets) {
+        if (asset.name == "GWToolbox.dll" || asset.name == "GWToolboxdll.dll") {
+            fprintf(stderr, "browser_download_url: '%s'\n", asset.browser_download_url.c_str());
+            const char* purl = asset.browser_download_url.c_str();
+            file_size = asset.size;
+            url = std::string(purl, purl + asset.browser_download_url.size());
             break;
         }
     }
@@ -239,7 +270,6 @@ bool DownloadWindow::DownloadAllFiles()
         return false;
     }
 
-    RegWriteRelease(release.tag_name.c_str(), release.tag_name.size());
     return true;
 }
 

@@ -41,6 +41,7 @@
 #include <vector>
 #include <algorithm>
 #include <ranges>
+#include <regex>
 
 #include <nlohmann/json.hpp>
 

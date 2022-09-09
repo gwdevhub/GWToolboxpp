@@ -1,8 +1,7 @@
 #include "stdafx.h"
 
-#include <stdio.h>
+#include <cstdio>
 
-#include <Str.h>
 #include <Path.h>
 #include <RestClient.h>
 
@@ -43,16 +42,22 @@ static bool InjectInstalledDllInProcess(Process *process)
     }
 
     std::filesystem::path dllpath;
-    if (settings.localdll) {
-        if (!PathGetProgramDirectory(dllpath)) {
-            return false;
-        }
-    } else if (!GetInstallationLocation(dllpath)) {
+    if (!PathGetProgramDirectory(dllpath)) {
+        return false;
+    }
+    const std::filesystem::path localdll = dllpath / L"GWToolboxdll.dll";
+    if (std::filesystem::exists(dllpath)) {
+        dllpath = localdll;
+    }
+    else if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp\\GWToolboxdll.dll")) {
         fprintf(stderr, "Couldn't find installation path\n");
         return false;
     }
 
-    dllpath = dllpath / L"GWToolboxdll.dll";
+    if (!std::filesystem::exists(dllpath)) {
+        fprintf(stderr, "No GWToolboxdll.dll file exists.\n");
+        return false;
+    }
 
     DWORD ExitCode;
     if (!InjectRemoteThread(process, dllpath.wstring().c_str(), &ExitCode)) {
@@ -71,7 +76,7 @@ static bool SetProcessForeground(Process *process)
         return false;
     }
 
-    DWORD ProcessId = process->GetProcessId();
+    const DWORD ProcessId = process->GetProcessId();
 
     while (hWndIt != nullptr) {
         DWORD WindowPid;
@@ -118,28 +123,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     assert(settings.help == false);
     if (settings.version) {
-        printf("GWToolbox version 3.0\n");
+        printf("GWToolbox version %s\n", GWTOOLBOXEXE_VERSION);
         return 0;
     }
 
     if (settings.asadmin && !IsRunningAsAdmin()) {
         RestartWithSameArgs(true);
-    }
-
-    if (IsInstalled()) {
-        if (!PathMigrateDataAndCreateSymlink(true)) {
-            if (IsRunningAsAdmin()) {
-                MessageBoxW(0, L"Failed to migrate settings folder for GWToolbox\n", L"GWToolbox", MB_OK | MB_TOPMOST);
-                return 0;
-            }
-            int iRet = MessageBoxW(
-                0, L"In order to update, the application will have to be restarted with administrative rights once.\nDo you wish to restart now?", L"GWToolbox", MB_YESNO | MB_TOPMOST);
-
-            if (iRet == IDYES) {
-                RestartWithSameArgs(true);
-            }
-            return 0;
-        }
     }
 
     AsyncRestScopeInit RestInitializer;
@@ -148,10 +137,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     if (settings.install) {
         Install(settings.quiet);
         return 0;
-    } else if (settings.uninstall) {
+    }
+    if (settings.uninstall) {
         Uninstall(settings.quiet);
         return 0;
-    } else if (settings.reinstall) {
+    }
+    if (settings.reinstall) {
         // @Enhancement:
         // Uninstall shouldn't remove the existing data, that would instead be a
         // "repair" or something along those lines.

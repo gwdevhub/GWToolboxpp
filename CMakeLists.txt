@@ -4,9 +4,10 @@ set(CMAKE_GENERATOR_PLATFORM win32)
 
 project(gwtoolbox)
 
-set(GWTOOLBOXDLL_VERSION "5.17")
-set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
-set(GWTOOBOX_MODULE_VERSION "5,17,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+set(GWTOOLBOXDLL_VERSION "5.18")
+set(GWTOOLBOXEXE_VERSION "4.0")
+set(GWTOOLBOXDLL_VERSION_BETA "beta1") # can be anything. Marks beta version if not empty.
+set(GWTOOBOX_MODULE_VERSION "5,18,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 # Updates toolboxversion.txt after changes in the above version (make sure to run cmake .. or build the project)
 file(WRITE "resources/toolboxversion.txt" ${GWTOOLBOXDLL_VERSION})
@@ -26,6 +27,7 @@ add_compile_definitions(
     "WIN32_LEAN_AND_MEAN"
 
     "GWTOOLBOXDLL_VERSION=\"${GWTOOLBOXDLL_VERSION}\""
+    "GWTOOLBOXEXE_VERSION=\"${GWTOOLBOXEXE_VERSION}\""
     "GWTOOLBOXDLL_VERSION_BETA=\"${GWTOOLBOXDLL_VERSION_BETA}\""
     "GWTOOLBOX_MODULE_VERSION=${GWTOOBOX_MODULE_VERSION}"
     )
