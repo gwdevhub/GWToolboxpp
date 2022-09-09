@@ -142,13 +142,9 @@ static bool ParseRelease(const std::string& json_text, Release *release)
     return true;
 }
 
-std::string GetDllRelease() {
+std::string GetDllRelease(const std::filesystem::path dllpath) {
     using namespace std::filesystem;
 
-    path dllpath;
-    if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp\\GWToolboxdll.dll")) {
-        return {};
-    }
     if (!exists(dllpath)) {
         return {};
     }
@@ -195,7 +191,9 @@ bool DownloadWindow::DownloadAllFiles()
         return false;
     }
 
-    const auto release_string = GetDllRelease();
+    std::filesystem::path dllpath;
+    PathGetDocumentsPath(dllpath, L"GWToolboxpp\\GWToolboxdll.dll");
+    const auto release_string = GetDllRelease(dllpath);
     if (!release_string.empty()) {
         std::string release_tag = release.tag_name;
         const auto current_version  = std::regex_replace(release_tag, std::regex(R"([^0-9.])"), "");

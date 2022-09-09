@@ -11,8 +11,6 @@
 #include "Process.h"
 #include "Settings.h"
 
-static int logfile = 0;
-
 static void ShowError(const wchar_t* message) {
     MessageBoxW(
         0,

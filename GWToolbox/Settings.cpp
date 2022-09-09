@@ -94,6 +94,7 @@ void ParseCommandLine()
             settings.version = true;
         } else if (wcscmp(arg, L"/install") == 0) {
             settings.install = true;
+            settings.noupdate = false;
         } else if (wcscmp(arg, L"/uninstall") == 0) {
             settings.uninstall = true;
         } else if (wcscmp(arg, L"/reinstall") == 0) {
@@ -135,7 +136,7 @@ void ParseCommandLine()
         PrintUsage(true);
 
     if (!IsOneOrZeroOf3(settings.install, settings.uninstall, settings.reinstall)) {
-        printf("You can only use one of '/install', '/uinstall' and '/reinstall'\n");
+        printf("You can only use one of '/install', '/uninstall' and '/reinstall'\n");
         PrintUsage(true);
     }
 }
