@@ -313,16 +313,6 @@ static bool ToggleCheckbox(HWND hWnd)
     return !Checked;
 }
 
-SettingsWindow::SettingsWindow()
-    : m_hNoUpdate(nullptr)
-    , m_hStartAsAdmin(nullptr)
-{
-}
-
-SettingsWindow::~SettingsWindow()
-{
-}
-
 bool SettingsWindow::Create()
 {
     SetWindowName(L"GWToolbox - Settings");

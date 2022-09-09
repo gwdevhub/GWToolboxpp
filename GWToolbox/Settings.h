@@ -34,10 +34,10 @@ bool EnableDebugPrivilege();
 class SettingsWindow : public Window
 {
 public:
-    SettingsWindow();
+    SettingsWindow() = default;
     SettingsWindow(const SettingsWindow&) = delete;
     SettingsWindow(SettingsWindow&&) = delete;
-    ~SettingsWindow();
+    ~SettingsWindow() override = default;
 
     SettingsWindow& operator=(const SettingsWindow&) = delete;
 
@@ -50,6 +50,6 @@ private:
     void OnCommand(HWND hwnd, LONG ControlId, LONG NotificateCode);
 
 private:
-    HWND m_hNoUpdate;
-    HWND m_hStartAsAdmin;
+    HWND m_hNoUpdate = nullptr;
+    HWND m_hStartAsAdmin = nullptr;
 };
