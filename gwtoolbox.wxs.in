@@ -1,101 +1,88 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?define var.DIRECTX_SDK_DIR = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)" ?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Product Id="*" Version="@GWTOOLBOXDLL_VERSION@" Language="1033" Name="GWToolboxpp" Manufacturer="GWToolbox">
-        <Package InstallerVersion="301" Compressed="yes"/>
-        <!-- Define icons (ID should not be longer than 18 chars and must end with ".exe") -->
-        <Icon Id="Icon.exe" SourceFile="resources\gwtoolbox.ico" />
+	<Product Id="*" Version="@GWTOOLBOXDLL_VERSION@" Language="1033" UpgradeCode="3ee55186-b586-449e-b6ad-6c1fef4cedd7" Name="GWToolboxpp" Manufacturer="GWToolbox">
+		<Package InstallerVersion="301" InstallScope="perUser" Compressed="yes"/>
 
-        <!-- Set properties for add/remove programs -->
-        <Property Id="ARPPRODUCTICON" Value="Icon.exe" />
-        <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />      <!-- Remove repair -->
-        <Property Id="ARPNOMODIFY" Value="yes" Secure="yes" />      <!-- Remove modify -->
-        <Media Id="1" Cabinet="gwtoolboxpp.cab" EmbedCab="yes" />
+		<MajorUpgrade
+			AllowDowngrades="no" DowngradeErrorMessage="A newer version is installed, downgrades are not possible. Uninstall and reinstall manually."
+			AllowSameVersionUpgrades="no"
+		/>
 
-        <!-- Step 1: Define the directory structure -->
-        <Directory Id="TARGETDIR" Name="SourceDir">
-            <Directory Id="DesktopFolder" Name="Desktop" />
-            <Directory Id="PersonalFolder">
-                <Directory Id="APPLICATIONROOTDIRECTORY" Name="GWToolboxpp">
-                  <Directory Id="LOGSDIRECTORY" Name="logs" />
-                  <Directory Id="CRASHESDIRECTORY" Name="crashes" />
-                  <Directory Id="PLUGINSDIRECTORY" Name="plugins" />
-                  <Directory Id="DATADIRECTORY" Name="data" />
-                  <Directory Id="BONDSDIRECTORY" Name="bonds" />
-                  <!-- MVP files -->
-                  <Component Id="GWToolbox.exe">
-                    <File Id="GWToolbox.exe" Source="bin\RelWithDebInfo\GWToolbox.exe" KeyPath="yes" Checksum="yes">
-                      <Shortcut Id="desktopGWToolboxpp" Directory="DesktopFolder" Name="GWToolbox++" WorkingDirectory='INSTALLDIR' Arguments="/localdll" Icon="GWToolbox.exe" IconIndex="0" />
-                    </File>
-                    
-                    <RegistryKey Root="HKCU"
-                                 Key="Software\GWToolbox">
-                        <RegistryValue Type="string" Name="release" Value="@GWTOOLBOXDLL_VERSION@_Release"/>
-                    </RegistryKey>
-                  </Component>
-                  <Component Id="GWToolboxdll.dll">
-                      <File Id="GWToolboxdll.dll" Source="bin\RelWithDebInfo\GWToolboxdll.dll" KeyPath="yes" Checksum="yes"/>
-                  </Component>
-                  <Component Id="Font.ttf">
-                      <File Id="Font.ttf" Source="resources\Font.ttf" KeyPath="yes" Checksum="yes"/>
-                  </Component>
-                  
-                  <!-- DirectX -->
-                  <Directory Id="DirectXRedistDirectory" Name="DirectX9.0c">
-                    <Component Id="DirectXRedist" Guid="0BFCDDAB-5C65-47F5-9AC3-765A5A4ABCA6">
-                        <File Id="DXSETUPEXE" Source="$(var.DIRECTX_SDK_DIR)\Redist\dxsetup.exe" KeyPath="yes" Checksum="yes"/>
-                        <File Id="dxupdate.cab" Source="$(var.DIRECTX_SDK_DIR)\Redist\dxupdate.cab"/>
-                        <File Id="dxdllreg_x86.cab" Source="$(var.DIRECTX_SDK_DIR)\Redist\dxdllreg_x86.cab"/>
-                        <File Id="dsetup32.dll" Source="$(var.DIRECTX_SDK_DIR)\Redist\dsetup32.dll"/>
-                        <File Id="dsetup.dll" Source="$(var.DIRECTX_SDK_DIR)\Redist\dsetup.dll"/>
-                        <File Id="Jun2010_d3dx9_43_x86.cab" Source="$(var.DIRECTX_SDK_DIR)\Redist\Jun2010_d3dx9_43_x86.cab"/>
-                    </Component>
-                  </Directory>
-                </Directory>
-            </Directory>
-            
-            <!-- Start menu shortcut -->
-            <Directory Id="ProgramMenuFolder">
-              <Directory Id="ApplicationProgramsFolder" Name="GWToolboxpp">
-                <Component Id="ApplicationShortcut" Guid="0BFCDDAB-5C65-47F5-9AC3-765A5A4ABCA7">
-                  <Shortcut Id="ApplicationStartMenuShortcut" Name="GWToolbox++" Description="GWToolbox++" Target="[#GWToolbox.exe]" WorkingDirectory="APPLICATIONROOTDIRECTORY"/>
-                </Component>
-              </Directory>
-            </Directory>
-        </Directory>
-        
-        <!-- Step 2: Add the shortcut to your installer package -->
-        <DirectoryRef Id="ApplicationProgramsFolder">
+		<!-- Define icons (ID should not be longer than 18 chars and must end with ".exe") -->
+		<Icon Id="Icon.exe" SourceFile="resources\gwtoolbox.ico" />
 
-        </DirectoryRef>
+		<!-- Set properties for add/remove programs -->
+		<Property Id="ARPPRODUCTICON" Value="Icon.exe" />
+		<Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
+		<!-- Remove repair -->
+		<Property Id="ARPNOMODIFY" Value="yes" Secure="yes" />
+		<!-- Remove modify -->
 
-        <!-- Step 3: Tell WiX to install the files -->
-        <Feature Id="MainApplication" Title="GWToolboxpp" Level="1">
-          <ComponentRef Id="GWToolbox.exe" />
-          <ComponentRef Id="GWToolboxdll.dll" />
-          <ComponentRef Id="Font.ttf" />
-          <!-- Step 3: Tell WiX to install the shortcut -->
-          <ComponentRef Id="ApplicationShortcut" />  
-        </Feature>
-        
-        <!-- DirectX -->
-        <Feature Id="DirectXRedist" AllowAdvertise="no" Display="hidden" Level="1">
-            <ComponentRef Id="DirectXRedist"/>
-        </Feature>
-        <CustomAction Id="InstallDirectX" FileKey="DXSETUPEXE" ExeCommand="/silent" Execute="deferred" Impersonate="no" Return="check"/>
-        <CustomAction Id="InstallViaExe" FileKey="GWToolbox.exe" ExeCommand="/install" Execute="deferred" Impersonate="no" Return="check"/>
-        <InstallExecuteSequence>
-            <Custom Action="InstallDirectX" Before="InstallFinalize">
-                <![CDATA[NOT REMOVE]]>
-            </Custom>
-            <Custom Action="InstallViaExe" Before="InstallFinalize">
-                <![CDATA[NOT REMOVE]]>
-            </Custom>
-        </InstallExecuteSequence>
-        <UI>
-            <ProgressText Action="InstallDirectX">Installing DirectX 9.0c</ProgressText>
-            <ProgressText Action="InstallViaExe">Installing GWToolbox</ProgressText>
-        </UI>
-        <Icon Id="GWToolbox.exe" SourceFile="bin\RelWithDebInfo\GWToolbox.exe" />
-    </Product>
+		<SetProperty Id="DirComputerName" Value="[APPLICATIONROOTDIRECTORY]\[%ComputerName]" Before="CostFinalize" Sequence="execute" />
+
+		<Media Id="1" Cabinet="gwtoolboxpp.cab" EmbedCab="yes" />
+
+		<!-- Step 1: Define the directory structure -->
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="DesktopFolder" Name="Desktop" />
+			<Directory Id="PersonalFolder">
+				<Directory Id="APPLICATIONROOTDIRECTORY" Name="GWToolboxpp">
+					<Directory Id="DirComputerName">
+						<Component Id="Font.ttf">
+							<File Id="Font.ttf" Source="resources\Font.ttf" KeyPath="yes" Checksum="yes"/>
+						</Component>
+					</Directory>
+					<!-- MVP files -->
+					<Component Id="GWToolbox.exe">
+						<File Id="GWToolbox.exe" Source="bin\RelWithDebInfo\GWToolbox.exe" KeyPath="yes" Checksum="yes">
+							<Shortcut Id="desktopGWToolboxpp" Directory="DesktopFolder" Name="GWToolbox++" WorkingDirectory='INSTALLDIR' Arguments="/localdll" Icon="GWToolbox.exe" IconIndex="0" />
+						</File>
+					</Component>
+					<Component Id="GWToolboxdll.dll">
+						<File Id="GWToolboxdll.dll" Source="bin\RelWithDebInfo\GWToolboxdll.dll" KeyPath="yes" Checksum="yes" />
+					</Component>
+					<Component Id="d3dx9_43.dll">
+						<File Id="d3dx9_43.dll" Source="Dependencies\DirectX\build\native\release\bin\x86\d3dx9_43.dll" KeyPath="yes" Checksum="yes" />
+					</Component>
+				</Directory>
+			</Directory>
+
+			<!-- Start menu shortcut -->
+			<Directory Id="ProgramMenuFolder">
+				<Directory Id="ApplicationProgramsFolder" Name="GWToolboxpp">
+					<Component Id="ApplicationShortcut" Guid="0BFCDDAB-5C65-47F5-9AC3-765A5A4ABCA7">
+						<Shortcut Id="ApplicationStartMenuShortcut" Name="GWToolbox++" Description="GWToolbox++" Target="[#GWToolbox.exe]" WorkingDirectory="APPLICATIONROOTDIRECTORY"/>
+					</Component>
+				</Directory>
+			</Directory>
+		</Directory>
+
+		<!-- Step 2: Add the shortcut to your installer package -->
+		<DirectoryRef Id="ApplicationProgramsFolder">
+		</DirectoryRef>
+		<DirectoryRef Id="DirComputerName">
+		</DirectoryRef>
+
+		<!-- Step 3: Tell WiX to install the files -->
+		<Feature Id="MainApplication" Title="GWToolboxpp" Level="1">
+			<ComponentRef Id="GWToolbox.exe" />
+			<ComponentRef Id="GWToolboxdll.dll" />
+			<ComponentRef Id="d3dx9_43.dll" />
+			<ComponentRef Id="Font.ttf" />
+			<!-- Step 3: Tell WiX to install the shortcut -->
+			<ComponentRef Id="ApplicationShortcut" />
+		</Feature>
+
+		<!-- Install -->
+		<CustomAction Id="InstallViaExe" FileKey="GWToolbox.exe" ExeCommand="/install" Execute="deferred" Impersonate="no" Return="check"/>
+		<InstallExecuteSequence>
+			<Custom Action="InstallViaExe" Before="InstallFinalize">
+				<![CDATA[NOT REMOVE]]>
+			</Custom>
+		</InstallExecuteSequence>
+		<UI>
+			<ProgressText Action="InstallViaExe">Installing GWToolbox</ProgressText>
+		</UI>
+		<Icon Id="GWToolbox.exe" SourceFile="bin\RelWithDebInfo\GWToolbox.exe" />
+	</Product>
 </Wix>
