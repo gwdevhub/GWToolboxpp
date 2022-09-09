@@ -273,6 +273,7 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
     }
     return true;
 }
+
 void Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
     EnqueueWorkerTask([this, path_to_file, url, callback] {

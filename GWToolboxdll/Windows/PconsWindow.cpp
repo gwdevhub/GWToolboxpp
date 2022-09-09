@@ -372,7 +372,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
         }
     }
 
-    if(instance_type == GW::Constants::InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
+    if (instance_type == GW::Constants::InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
         if (j && j % items_per_row > 0)
             ImGui::NewLine();
         if (!current_objectives_to_check.empty()) {
