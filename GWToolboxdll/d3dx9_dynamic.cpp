@@ -7,6 +7,7 @@
 
 #include <d3dx9_dynamic.h>
 #include <Logger.h>
+#include <Path.h>
 
 HMODULE d3dx9Module = nullptr;
 
@@ -87,9 +88,15 @@ bool Loadd3dx9(){
     }
     IsLoaded = true;
     char d3dx9name[MAX_PATH];
-    d3dx9Module = LoadLibrary("d3dx9_43.dll");
+
+    std::filesystem::path dllpath;
+    if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp\\d3dx9_43.dll") || !std::filesystem::exists(dllpath)) {
+        d3dx9Module = LoadLibrary("d3dx9_43.dll");
+    } else {
+        d3dx9Module = LoadLibraryW(dllpath.wstring().c_str());
+    }
     if (!d3dx9Module) {
-        return false; // Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed
+        return false;
     }
 
     Log::Log("Loaded DirectX module successfully: %s\n", d3dx9name);
