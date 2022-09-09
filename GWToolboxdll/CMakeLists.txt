@@ -41,6 +41,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     RestClient
     imgui
+	directx
     gwca
 	earcut
     utf8proc

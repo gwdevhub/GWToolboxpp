@@ -87,10 +87,7 @@ bool Loadd3dx9(){
     }
     IsLoaded = true;
     char d3dx9name[MAX_PATH];
-    for (int x = 43; x > 9 && !d3dx9Module; x--) {
-        sprintf(d3dx9name, "d3dx9_%d.dll", x);
-        d3dx9Module = LoadLibrary(d3dx9name);
-    }
+    d3dx9Module = LoadLibrary("d3dx9_43.dll");
     if (!d3dx9Module) {
         return false; // Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed
     }
