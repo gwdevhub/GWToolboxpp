@@ -201,9 +201,12 @@ namespace {
             delete s;
             });
     }
-
     HallOfMonumentsAchievements hom_achievements;
-    int hom_achievements_result = 1;
+    bool hom_loading = false;
+    void OnAchievementsLoaded(HallOfMonumentsAchievements* result) {
+        hom_loading = false;
+        result->OpenInBrowser();
+    }
 
 } // namespace
 
@@ -659,12 +662,6 @@ void ChatCommands::Update(float delta) {
     skill_to_use.Update();
     npc_to_find.Update();
     quest_ping.Update();
-
-    if (hom_achievements_result == 0) {
-        hom_achievements_result = 1;
-        hom_achievements.OpenInBrowser();
-        
-    }
 
 }
 void ChatCommands::QuestPing::Init() {
@@ -1616,11 +1613,12 @@ void ChatCommands::CmdTransmoTarget(const wchar_t*, int argc, LPWSTR* argv) {
     TransmoAgent(target->agent_id, transmo);
 }
 
+
 void GetAchievements(const wchar_t* player_name) {
     if (player_name && player_name[0]) {
         memset(&hom_achievements, 0, sizeof(hom_achievements));
         HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(
-            player_name, &hom_achievements, &hom_achievements_result);
+            player_name, &hom_achievements, OnAchievementsLoaded);
     } else {
         Log::Error("Invalid player name for hall of monuments command");
     }

@@ -396,6 +396,29 @@ namespace {
 			);
 		}
 	}
+
+	void OnHomLoaded(HallOfMonumentsAchievements* result) {
+		if (result->state != HallOfMonumentsAchievements::State::Done) {
+            Log::ErrorW(L"Failed to load Hall of Monuments achievements for %s", result->character_name);
+            return;
+		}
+        Log::Info("Loaded Hom");
+        CompletionWindow::Instance().CheckProgress();
+	}
+	
+	void FetchHom(HallOfMonumentsAchievements* out = nullptr) {
+        if (!out)
+        {
+            auto player_name = GetPlayerName();
+            auto cc = CompletionWindow::Instance().GetCharacterCompletion(player_name, true);
+            out = &cc->hom_achievements;
+		}
+        if (!out->isLoading())
+        {
+            HallOfMonumentsModule::AsyncGetAccountAchievements(out->character_name, out, OnHomLoaded);
+		}
+        
+	}
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -907,6 +930,7 @@ void CompletionWindow::Initialize()
 	 hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Kurzick Armor\x1", "Elite Kurzick Armor"));
 	 hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Imperial Ascended Armor\x1", "Elite Imperial Armor", GW::Constants::Profession::Assassin));
 	 hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Ancient Armor\x1", "Ancient Armor"));
+     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Elite Armor\x1", "Elite Platemail armor"));
 
 	Initialize_Prophecies();
 	Initialize_Factions();
@@ -1024,6 +1048,7 @@ void CompletionWindow::Initialize()
 			wcscpy(last_player_name, GetPlayerName());
 			chosen_player_name_s.clear();
 			chosen_player_name.clear();
+            FetchHom();
 		}
 		ParseCompletionBuffer(CompletionType::Skills);
 		ParseCompletionBuffer(CompletionType::Mission);
@@ -2127,9 +2152,9 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 	auto hom = character_completion[chosen_player_name]->hom_achievements;
 	// Devotion
 	uint32_t completed = 0;
-	if (hom) {
-		for (size_t i = 0; i < _countof(hom->devotion_points); i++) {
-			completed += hom->devotion_points[i];
+	if (hom.isReady()) {
+		for (size_t i = 0; i < _countof(hom.devotion_points); i++) {
+			completed += hom.devotion_points[i];
 		}
 	}
 	uint32_t dedicated = 0;
@@ -2185,9 +2210,9 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 	}
 	// Valor
 	completed = 0;
-	if (hom) {
-		for (size_t i = 0; i < _countof(hom->valor_points); i++) {
-			completed += hom->valor_points[i];
+	if (hom.isReady()) {
+		for (size_t i = 0; i < _countof(hom.valor_points); i++) {
+			completed += hom.valor_points[i];
 		}
 	}
 	dedicated = 0;
@@ -2228,9 +2253,9 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 
 	// Resilience
 	completed = 0;
-	if (hom) {
-		for (size_t i = 0; i < _countof(hom->resilience_points); i++) {
-			completed += hom->resilience_points[i];
+	if (hom.isReady()) {
+		for (size_t i = 0; i < _countof(hom.resilience_points); i++) {
+			completed += hom.resilience_points[i];
 		}
 	}
 	dedicated = 0;
@@ -2325,7 +2350,7 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
 	}
 	CheckProgress();
 }
-CompletionWindow* CompletionWindow::CheckProgress() {
+CompletionWindow* CompletionWindow::CheckProgress(bool fetch_hom) {
 	for (auto& camp : pve_skills) {
 		for (auto& skill : camp.second) {
 			skill->CheckProgress(chosen_player_name);
@@ -2357,14 +2382,13 @@ CompletionWindow* CompletionWindow::CheckProgress() {
 	for (auto achievement : hom_weapons) {
 		achievement->CheckProgress(chosen_player_name);
 	}
-
-	auto& cc = CompletionWindow::Instance().character_completion;
-	if (cc.contains(chosen_player_name)) {
-		if (!cc[chosen_player_name]->hom_achievements) {
-			cc[chosen_player_name]->hom_achievements = new HallOfMonumentsAchievements();
-			hom_achievements_status = 0xf;
-			HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(chosen_player_name.c_str(), cc[chosen_player_name]->hom_achievements);
-		}
+    for (auto achievement : hom_armor)
+    {
+        achievement->CheckProgress(chosen_player_name);
+    }
+    if (fetch_hom)
+    {
+        FetchHom();
 	}
 	return this;
 }
@@ -2418,7 +2442,9 @@ CompletionWindow::Completion* CompletionWindow::GetCharacterCompletion(const wch
 		if (create_if_not_found) {
 			this_character_completion = new Completion();
 			this_character_completion->name_str = GuiUtils::WStringToString(character_name);
+            wcscpy(this_character_completion->hom_achievements.character_name, character_name);
 			character_completion[character_name] = this_character_completion;
+            FetchHom(&this_character_completion->hom_achievements);
 		}
 	}
 	else {
@@ -2547,10 +2573,10 @@ void Missions::WeaponAchievement::CheckProgress(const std::wstring& player_name)
 	auto found = cc.find(player_name);
 	if (found == cc.end())
 		return;
-	auto hom = found->second->hom_achievements;
-	if (!hom)
+	auto& hom = found->second->hom_achievements;
+	if (hom.state != HallOfMonumentsAchievements::State::Done)
 		return;
-	auto& unlocked = hom->valor_detail;
+	auto& unlocked = hom.valor_detail;
 	is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
 
@@ -2572,9 +2598,8 @@ void Missions::ArmorAchievement::CheckProgress(const std::wstring& player_name)
 	auto found = cc.find(player_name);
 	if (found == cc.end())
 		return;
-	auto hom = found->second->hom_achievements;
-	if (!hom)
-		return;
-	auto& unlocked = hom->resilience_detail;
+    auto& hom = found->second->hom_achievements;
+    if (hom.state != HallOfMonumentsAchievements::State::Done) return;
+    auto& unlocked = hom.resilience_detail;
 	is_completed = bonus = unlocked[encoded_name_index] != 0;
 }

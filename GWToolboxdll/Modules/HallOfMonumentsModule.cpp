@@ -248,7 +248,9 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out) {
     }
     return true;
 }
-void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character_name, HallOfMonumentsAchievements* out, int* result) {
+void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback callback)
+{
+    out->state = HallOfMonumentsAchievements::State::Loading;
     std::string character_name_s = GuiUtils::WStringToString(character_name);
     for (size_t x = 0; x < character_name_s.length(); x++) {
         if (x == 0)
@@ -260,26 +262,31 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character
     char url[64];
     snprintf(url, _countof(url), "https://hom.guildwars2.com/character/%s", character_name_s.c_str());
 
-    Resources::Instance().Download(url, [out, result](bool success, const std::string& response) {
+    Resources::Instance().Download(url, [out, callback](bool success, const std::string& response) {
         if (!success) {
-            if(result) *result = 1;
             Log::Error("Failed to load account hom code %s\n%s", out->character_name, response.c_str());
+            out->state = HallOfMonumentsAchievements::State::Error;
+            if (callback) callback(out);
             return;
         }
         std::regex json_regex("legacy_bits\":\"([^\"]+)");
         std::smatch m;
         if (!std::regex_search(response, m, json_regex)) {
-            if(result) *result = 1;
             Log::Error("Failed to find regex code from %s", response.c_str());
+            out->state = HallOfMonumentsAchievements::State::Error;
+            if (callback) callback(out);
             return;
         }
         std::string hom_code = m[1].str();
         if (!Instance().DecodeHomCode(hom_code.c_str(), out)) {
-            if(result) *result = 1;
             Log::Error("Failed to DecodeHomCode from %s", m[1].str().c_str());
+            out->state = HallOfMonumentsAchievements::State::Error;
+            if (callback) callback(out);
             return;
         }
-        if(result) *result = 0;
+        out->state = HallOfMonumentsAchievements::State::Done;
+        if (callback) callback(out);
+        return;
         });
 }
 void HallOfMonumentsAchievements::OpenInBrowser() {

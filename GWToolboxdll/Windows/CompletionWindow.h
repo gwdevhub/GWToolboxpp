@@ -285,7 +285,7 @@ protected:
         std::vector<uint32_t> heroes;
         std::vector<uint32_t> maps_unlocked;
         std::string hom_code;
-        HallOfMonumentsAchievements* hom_achievements = 0;
+        HallOfMonumentsAchievements hom_achievements;
         std::vector<uint32_t> minipets_unlocked;
     };
 
@@ -321,7 +321,7 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
     // Check explicitly rather than every frame
-    CompletionWindow* CheckProgress();
+    CompletionWindow* CheckProgress(bool fetch_hom = false);
 
 
     GW::HookEntry skills_unlocked_stoc_entry;

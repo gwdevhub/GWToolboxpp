@@ -226,9 +226,17 @@ enum class DevotionDetail {
 };
 struct HallOfMonumentsAchievements {
     wchar_t character_name[20] = { 0 };
+    enum class State {
+        Pending,
+        Loading,
+        Error,
+        Done
+    } state = State::Pending;
+    bool isReady() { return state == State::Done;  }
+    bool isPending() { return state == State::Pending; }
+    bool isLoading() { return state == State::Loading; }
     char hom_code[128] = { 0 };
     void OpenInBrowser();
-    bool Ready() { return honor_points_total > 0; }
     // Details of which armors have or haven't been dedicated, indexed by ResilienceDetail
     bool resilience_detail[(size_t)ResilienceDetail::Count] = { 0 };
     // Details of which points have or haven't been earnt, indexed by ResiliencePoints
@@ -275,6 +283,8 @@ struct HallOfMonumentsAchievements {
     uint32_t devotion_points_total = 0; 
 };
 
+typedef void(OnAchievementsLoadedCallback)(HallOfMonumentsAchievements* result);
+
 class HallOfMonumentsModule : public ToolboxModule {
     HallOfMonumentsModule() = default;
 public:
@@ -303,9 +313,5 @@ public:
     // Decode a zero terminated base64 encoded hom code
     bool DecodeHomCode(HallOfMonumentsAchievements* out);
     // Get the account achiemenets for the current player
-    void AsyncGetAccountAchievements(const wchar_t* character_name, HallOfMonumentsAchievements* out, int* result = nullptr);
-private:
-    GW::HookEntry stoc_hook;
-
-    std::map<uint32_t, GW::Agent*> player_agents{};
+    static void AsyncGetAccountAchievements(const wchar_t* character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback = nullptr);
 };
