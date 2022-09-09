@@ -111,7 +111,7 @@ void Log::Terminate() {
 static void PrintTimestamp() {
     time_t rawtime;
     time(&rawtime);
-    
+
     struct tm timeinfo;
     localtime_s(&timeinfo, &rawtime);
 
@@ -136,7 +136,7 @@ void Log::Log(const char* msg, ...) {
 void Log::LogW(const wchar_t* msg, ...) {
     if (!logfile) return;
     PrintTimestamp();
-    
+
 
     va_list args;
     va_start(args, msg);

@@ -239,7 +239,7 @@ bool DownloadWindow::DownloadAllFiles()
 
         if (!downloader.IsCompleted()) {
             size_t BytesDownloaded = downloader.GetDownloadCount();
-            ULONG Progress = static_cast<ULONG>((BytesDownloaded * 100) / file_size);
+            auto Progress = BytesDownloaded * 100 / file_size;
             SendMessageW(window.m_hProgressBar, PBM_SETPOS, Progress, 0);
         } else {
             if (!downloader.IsSuccessful()) {
@@ -257,6 +257,7 @@ bool DownloadWindow::DownloadAllFiles()
 
             downloader.Clear();
             SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
+            SendMessageW(window.m_hWnd, WM_CLOSE, 0, 0);
         }
     }
 
@@ -271,17 +272,6 @@ bool DownloadWindow::DownloadAllFiles()
     return true;
 }
 
-DownloadWindow::DownloadWindow()
-    : m_hProgressBar(nullptr)
-    , m_hCloseButton(nullptr)
-    , m_hChangelog(nullptr)
-{
-}
-
-DownloadWindow::~DownloadWindow()
-{
-}
-
 bool DownloadWindow::Create()
 {
     // WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
@@ -290,7 +280,7 @@ bool DownloadWindow::Create()
     return Window::Create();
 }
 
-void DownloadWindow::SetChangelog(const char *str, size_t length)
+void DownloadWindow::SetChangelog(const char *str, size_t length) const
 {
     std::wstring content(str, str + length);
     SendMessageW(m_hChangelog, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(content.c_str()));
