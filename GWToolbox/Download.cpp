@@ -239,8 +239,8 @@ bool DownloadWindow::DownloadAllFiles()
 
         if (!downloader.IsCompleted()) {
             size_t BytesDownloaded = downloader.GetDownloadCount();
-            auto Progress = BytesDownloaded * 100 / file_size;
-            SendMessageW(window.m_hProgressBar, PBM_SETPOS, Progress, 0);
+            const auto progress = BytesDownloaded * 100 / file_size;
+            SendMessageW(window.m_hProgressBar, PBM_SETPOS, progress, 0);
         } else {
             if (!downloader.IsSuccessful()) {
                 fprintf(stderr, "Failed to download '%s'. (Status: %s, StatusCode: %d)\n",
@@ -280,7 +280,7 @@ bool DownloadWindow::Create()
     return Window::Create();
 }
 
-void DownloadWindow::SetChangelog(const char *str, size_t length) const
+void DownloadWindow::SetChangelog(const char* str, size_t length) const
 {
     std::wstring content(str, str + length);
     SendMessageW(m_hChangelog, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(content.c_str()));

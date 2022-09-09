@@ -3,6 +3,7 @@
 // Used by GWToolbox.rc
 //
 #define IDI_ICON1                       101
+#define IDR_BINARY1						102
 
 // Next default values for new objects
 //

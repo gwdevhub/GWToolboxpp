@@ -1,9 +1,9 @@
 #include "stdafx.h"
 
 #include <Path.h>
-
 #include "Download.h"
 #include "Install.h"
+#include "EmbeddedResource.h"
 
 namespace fs = std::filesystem;
 
@@ -134,6 +134,32 @@ static bool DeleteInstallationDirectory(void)
     return true;
 }
 
+bool DumpD3dx9()
+{
+    fs::path docpath;
+    if (!PathGetDocumentsPath(docpath, L"GWToolboxpp")) {
+        return false;
+    }
+    const fs::path target = docpath / "d3dx9_43.dll";
+    if (fs::exists(target)) {
+        if (fs::file_size(target) == 2001304u) {
+            return true;
+        }
+        fs::remove(target);
+    }
+
+    const auto dll = EmbeddedResource(IDR_BINARY1, L"Binary");
+    if (!dll.GetResourceData() || dll.GetResourceSize() != 2001304u) {
+        return false;
+    }
+
+    std::ofstream f(target.c_str(), std::ios::out | std::ios::binary);
+    f.write(static_cast<char*>(dll.GetResourceData()), dll.GetResourceSize());
+    f.close();
+
+    return true;
+}
+
 bool Install(bool quiet)
 {
     if (IsInstalled())
@@ -141,6 +167,11 @@ bool Install(bool quiet)
 
     if (!EnsureInstallationDirectoryExist()) {
         fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
+        return false;
+    }
+
+    if (!DumpD3dx9()) {
+        fprintf(stderr, "Couldn't unpack d3dx9_43.dll\n");
         return false;
     }
 

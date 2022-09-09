@@ -30,10 +30,11 @@
 #include <psapi.h>
 
 #include <assert.h>
-#include <stdint.h>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <string.h>
+#include <fstream>
+#include <string>
 #include <time.h>
 
 #include <atomic>

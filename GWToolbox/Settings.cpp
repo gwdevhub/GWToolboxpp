@@ -33,7 +33,7 @@ void PrintUsage(bool terminate)
 void ParseRegSettings() {
     HKEY SettingsKey;
     if (!OpenSettingsKey(&SettingsKey)) {
-        fprintf(stderr, "OpenUninstallKey failed\n");
+        fprintf(stderr, "OpenSettingsKey failed\n");
         return;
     }
 
