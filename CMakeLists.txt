@@ -58,6 +58,8 @@ add_subdirectory(Core)
 add_subdirectory(RestClient)
 add_subdirectory(GWToolbox)
 
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GWToolbox)
+
 # Below is for toolbox plugins (WIP):
 add_library(module_base INTERFACE)
 target_sources(module_base INTERFACE
