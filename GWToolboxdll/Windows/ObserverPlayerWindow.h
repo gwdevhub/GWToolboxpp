@@ -3,16 +3,6 @@
 
 #include <GWCA\Constants\Constants.h>
 
-#include <GWCA\GameContainers\Array.h>
-
-#include <GWCA\GameEntities\Skill.h>
-#include <GWCA\GameEntities\Agent.h>
-
-#include <GWCA/Managers/AgentMgr.h>
-#include "GWCA\Managers\UIMgr.h"
-
-#include <Utils/GuiUtils.h>
-#include <Timer.h>
 #include <ToolboxWindow.h>
 
 #define NO_AGENT 0
@@ -32,7 +22,7 @@ public:
     virtual uint32_t GetTracking();
     virtual uint32_t GetComparison();
 
-    void DrawHeaders();
+    void DrawHeaders() const;
     void DrawAction(const std::string& name, const ObserverModule::ObservedAction* action);
 
     void DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,

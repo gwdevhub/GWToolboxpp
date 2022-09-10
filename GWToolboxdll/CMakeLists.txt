@@ -41,9 +41,9 @@ target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     RestClient
     imgui
-	directx
+    directx
     gwca
-	earcut
+    earcut
     utf8proc
     easywsclient
     discord_game_sdk
