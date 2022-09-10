@@ -1,7 +1,6 @@
-
 #pragma once
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/Constants/Constants.h>
 
 #include <ToolboxWindow.h>
 
@@ -18,7 +17,7 @@ public:
         return instance;
     }
 
-    virtual void Prepare(){};
+    virtual void Prepare() {}
     virtual uint32_t GetTracking();
     virtual uint32_t GetComparison();
 

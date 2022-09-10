@@ -81,7 +81,7 @@ public:
     GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);
 
     // Ensure file exists on disk, download from remote location if not found. If an error occurs, details are held in error string
-    void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
+    static void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
 
     // download to file, blocking. If an error occurs, details are held in response string
     bool Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring* response = 0);

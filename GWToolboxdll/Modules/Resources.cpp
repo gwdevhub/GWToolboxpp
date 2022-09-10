@@ -325,7 +325,7 @@ void Resources::EnsureFileExists(
         callback(true, L"");
     } else {
         // otherwise try to download it in the worker
-        Download(path_to_file, url, callback);
+        Instance().Download(path_to_file, url, callback);
     }
 }
 

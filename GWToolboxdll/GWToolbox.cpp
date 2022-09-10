@@ -74,8 +74,8 @@ DWORD __stdcall SafeThreadEntry(LPVOID module) {
 DWORD __stdcall ThreadEntry(LPVOID) {
     Log::Log("Initializing API\n");
 
-    // Try to load DirectX runtime dll. Installer should have sorted this, but may not have.
-    if (!Loadd3dx9()) {
+    // Try to load DirectX dll. Installer should have sorted this, but may not have.
+    if (!LoadD3dx9()) {
         // Handle this now before we go any further - removing this check will cause a crash when modules try to use D3DX9 funcs in Draw() later and will close GW
         char title[128];
         sprintf(title, "GWToolbox++ API Error (LastError: %lu)", GetLastError());
@@ -153,6 +153,11 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 leave:
     Log::Log("Destroying API\n");
     GW::Terminate();
+
+    Log::Log("Unloading d3dx9_43.dll\n");
+    if (!FreeD3dx9()) {
+        Log::Warning("Couldn't unload d3dx9_43.dll, file might stay in use until you close Guild Wars\n");
+    }
 
     Log::Log("Closing log/console, bye!\n");
     Log::Terminate();
@@ -301,19 +306,19 @@ void GWToolbox::Initialize() {
 
     GW::GameThread::RegisterGameThreadCallback(&Update_Entry, [](GW::HookStatus* a) { GWToolbox::Instance().Update(a); });
 
-    Resources::Instance().EnsureFolderExists(Resources::GetSettingsFolderPath());
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\bonds"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\icons"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\materials"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"location logs"));
-    Resources::Instance().EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
+    Resources::EnsureFolderExists(Resources::GetSettingsFolderPath());
+    Resources::EnsureFolderExists(Resources::GetPath(L"img"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"img\\bonds"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"img\\icons"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"img\\materials"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));
+    Resources::EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
         "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
-        [](bool success, const std::wstring& error) {
+        [this](bool success, const std::wstring& error) {
         if (success) {
-            GWToolbox::Instance().OpenSettingsFile();
-            GWToolbox::Instance().LoadModuleSettings();
+            OpenSettingsFile();
+            LoadModuleSettings();
         }
         else {
             Log::ErrorW(L"Failed to download GWToolbox ini\n%s", error.c_str());
@@ -378,15 +383,12 @@ void GWToolbox::SaveSettings() {
     }
 }
 
-
 void GWToolbox::Terminate() {
     if (!initialized)
         return;
     SaveSettings();
     inifile->Reset();
     delete inifile;
-
-
 
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
 
@@ -409,7 +411,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
                 return;
         }
 
-        GWToolbox::Instance().Terminate();
+        Instance().Terminate();
         if (imgui_initialized) {
             ImGui_ImplDX9_Shutdown();
             ImGui_ImplWin32_Shutdown();
@@ -538,9 +540,6 @@ void GWToolbox::Update(GW::HookStatus *)
         for (ToolboxModule* module : modules) {
             module->Update(delta_f);
         }
-        //for (TBModule* module : tb.plugins) {
-        //    module->Update(delta_f);
-        //}
 
         last_tick_count = tick;
     }
