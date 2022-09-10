@@ -45,7 +45,7 @@ public:
     static std::filesystem::path GetPath(const std::filesystem::path& folder, const std::filesystem::path& file);
     static HRESULT ResolveShortcut(std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path);
 
-    static utf8::string GetPathUtf8(std::wstring file);
+    static utf8::string GetPathUtf8(const std::wstring& file);
     static bool EnsureFolderExists(const std::filesystem::path& path);
 
     // Generic callback used when loading async functions. If success is false, any error details are held in response.
@@ -120,5 +120,5 @@ private:
     // Assign IDirect3DTexture9* from resource
     static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring* error);
     // Copy from compiled resource binary to file on local disk.
-    bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring* error);
+    bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
 };
