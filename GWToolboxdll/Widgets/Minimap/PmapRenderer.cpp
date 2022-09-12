@@ -1,13 +1,9 @@
 #include "stdafx.h"
 
-#include <d3dx9_dynamic.h>
-
 #include <GWCA/GameContainers/Array.h>
-
 #include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/CameraMgr.h>
 
 #include <Widgets/Minimap/D3DVertex.h>
 #include <Widgets/Minimap/PmapRenderer.h>

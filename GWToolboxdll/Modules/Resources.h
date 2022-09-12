@@ -116,9 +116,9 @@ private:
 
     void Cleanup();
     // Assign IDirect3DTexture9* from file
-    static HRESULT TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring* error);
+    static HRESULT TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring& error);
     // Assign IDirect3DTexture9* from resource
-    static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring* error);
+    static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring& error);
     // Copy from compiled resource binary to file on local disk.
     bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
 };

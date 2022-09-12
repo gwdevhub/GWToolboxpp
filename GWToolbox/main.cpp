@@ -205,7 +205,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     // If we can't open with appropriate rights, we can then ask to re-open
     // as admin.
-    InjectReply reply = InjectWindow::AskInjectProcess(&proc);
+    const InjectReply reply = InjectWindow::AskInjectProcess(&proc);
 
     if (reply == InjectReply_Cancel) {
         fprintf(stderr, "InjectReply_Cancel\n");

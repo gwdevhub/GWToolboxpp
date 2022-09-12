@@ -149,39 +149,13 @@ bool DumpFont()
         return true;
     }
 
-    const auto font = EmbeddedResource(IDR_BINARY2, L"Binary");
-    if (!font.GetResourceData()) {
+    const auto font = EmbeddedResource(IDR_BINARY1, L"Binary");
+    if (!font.data()) {
         return false;
     }
 
     std::ofstream f(target.c_str(), std::ios::out | std::ios::binary);
-    f.write(static_cast<char*>(font.GetResourceData()), font.GetResourceSize());
-    f.close();
-
-    return true;
-}
-
-bool DumpD3dx9()
-{
-    fs::path docpath;
-    if (!PathGetDocumentsPath(docpath, L"GWToolboxpp")) {
-        return false;
-    }
-    const fs::path target = docpath / "d3dx9_43.dll";
-    if (fs::exists(target)) {
-        if (fs::file_size(target) == 2001304u) {
-            return true;
-        }
-        fs::remove(target);
-    }
-
-    const auto dll = EmbeddedResource(IDR_BINARY1, L"Binary");
-    if (!dll.GetResourceData() || dll.GetResourceSize() != 2001304u) {
-        return false;
-    }
-
-    std::ofstream f(target.c_str(), std::ios::out | std::ios::binary);
-    f.write(static_cast<char*>(dll.GetResourceData()), dll.GetResourceSize());
+    f.write(static_cast<char*>(font.data()), font.size());
     f.close();
 
     return true;
@@ -199,11 +173,6 @@ bool Install(bool quiet)
 
     if (!DumpFont()) {
         fprintf(stderr, "Couldn't unpack Font.ttf\n");
-        return false;
-    }
-
-    if (!DumpD3dx9()) {
-        fprintf(stderr, "Couldn't unpack d3dx9_43.dll\n");
         return false;
     }
 
@@ -264,7 +233,6 @@ bool IsInstalled()
 
     if (!fs::exists(dllpath / L"GWToolboxdll.dll")) return false;
     if (!fs::exists(dllpath / L"GWToolbox.exe")) return false;
-    if (!fs::exists(dllpath / L"d3dx9_43.dll")) return false;
     if (!fs::exists(computerpath / L"Font.ttf")) return false;
 
     return true;

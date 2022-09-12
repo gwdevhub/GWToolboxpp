@@ -1,30 +1,24 @@
 #include "stdafx.h"
 
-#include <d3dx9_dynamic.h>
+#include <DDSTextureLoader/DDSTextureLoader9.h>
+#include <WICTextureLoader/WICTextureLoader9.h>
 
-#include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Map.h>
-
 #include <GWCA/Managers/MapMgr.h>
 
-
+#include <EmbeddedResource.h>
 #include <Defines.h>
 #include <GWToolbox.h>
-#include <Logger.h>
-
-#include <Utils/GuiUtils.h>
-
 #include <RestClient.h>
-
-#include <Modules/Resources.h>
-
-#include <Timer.h>
+#include <Logger.h>
 #include <Path.h>
 #include <Str.h>
 
+#include <Utils/GuiUtils.h>
+#include <Modules/Resources.h>
+
 namespace {
     const char* d3dErrorMessage(HRESULT code) {
-
         switch (code) {
         case D3DERR_NOTAVAILABLE:
             return  "D3DERR_NOTAVAILABLE";
@@ -36,10 +30,11 @@ namespace {
             return  "E_OUTOFMEMORY";
         case D3D_OK:
             return "D3D_OK";
+        default:
+            static std::string str;
+            str = std::format("Unknown D3D error {:#08x}", code);
+            return str.c_str();
         }
-        static char out[32];
-        snprintf(out, 32, "Unknown D3D error %#08x", code);
-        return out;
     }
 
     const char* profession_icon_urls[] = {
@@ -61,7 +56,7 @@ namespace {
     std::map<uint32_t, IDirect3DTexture9**> profession_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::string ns;
-    const size_t MAX_WORKERS = 5;
+    constexpr size_t MAX_WORKERS = 5;
     const wchar_t* ARMOR_GALLERY_PATH = L"img\\armor_gallery";
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
     const wchar_t* ITEM_IMAGES_PATH = L"img\\items";
@@ -129,7 +124,7 @@ HRESULT Resources::ResolveShortcut(std::filesystem::path& in_shortcut_path, std:
     // string for the description
     TCHAR szDesc[MAX_PATH];
     // structure that receives the information about the shortcut
-    WIN32_FIND_DATA wfd;
+    WIN32_FIND_DATA wfd{};
 
     // Get a pointer to the IShellLink interface
     hRes = CoCreateInstance(CLSID_ShellLink,
@@ -143,7 +138,7 @@ HRESULT Resources::ResolveShortcut(std::filesystem::path& in_shortcut_path, std:
     }
     // Get a pointer to the IPersistFile interface
     IPersistFile* ppf = NULL;
-    psl->QueryInterface(IID_IPersistFile, (void**)&ppf);
+    psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&ppf));
 
     // IPersistFile is using LPCOLESTR,
     // Open the shortcut file and initialize it from its contents
@@ -328,35 +323,41 @@ void Resources::EnsureFileExists(
     }
 }
 
-HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring* error) {
+HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring& error) {
     // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
-        res = D3DXCreateTextureFromFileExW(device, path_to_file.c_str(), D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, NULL, NULL, texture);
+        if (path_to_file.extension() == ".dds") {
+            res = DirectX::CreateDDSTextureFromFileEx(device, path_to_file.c_str(), 0, D3DPOOL_MANAGED, true, texture);
+        } else if (auto ext = path_to_file.extension(); ext == ".png" || ext == ".bmp" || ext == ".jpg" || ext == ".JPEG") {
+            res = DirectX::CreateWICTextureFromFileEx(device, path_to_file.c_str(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_FLAGS::WIC_LOADER_DEFAULT, texture);
+        }
     }
     if (res != D3D_OK) {
-        StrSwprintf(*error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
+        StrSwprintf(error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
     }
     else if (!*texture) {
         res = D3DERR_NOTFOUND;
-        StrSwprintf(*error, L"Error loading resource from file %s - texture loaded is null", path_to_file.filename().wstring().c_str());
+        StrSwprintf(error, L"Error loading resource from file %s - texture loaded is null", path_to_file.filename().wstring().c_str());
     }
     return res;
 }
-HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule, LPCSTR id, IDirect3DTexture9** texture, std::wstring* error) {
+HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule, LPCSTR id, IDirect3DTexture9** texture, std::wstring& error) {
     // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
+    using namespace std::string_literals;
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
-        res = D3DXCreateTextureFromResourceExA(device, hSrcModule, id, D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, NULL, NULL, texture);
+        EmbeddedResource resource(id, "RCDATA"s, GWToolbox::GetDLLModule());
+        res = DirectX::CreateWICTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()), resource.size(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
     }
     if (res != D3D_OK) {
-        StrSwprintf(*error, L"Error loading resource for id %p, module %p - Error is %S", id, hSrcModule, d3dErrorMessage(res));
+        StrSwprintf(error, L"Error loading resource for id %p, module %p - Error is %S", id, hSrcModule, d3dErrorMessage(res));
     }
     else if (!*texture) {
         res = D3DERR_NOTFOUND;
-        StrSwprintf(*error, L"Error loading resource for id %p, module %p - texture loaded is null", id, hSrcModule);
+        StrSwprintf(error, L"Error loading resource for id %p, module %p - texture loaded is null", id, hSrcModule);
     }
     return res;
 }
@@ -364,7 +365,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
 {
     EnqueueDxTask([path_to_file, texture, callback](IDirect3DDevice9* device) {
         std::wstring error{};
-        const bool success = TryCreateTexture(device, path_to_file.c_str(), texture, &error) == D3D_OK;
+        const bool success = TryCreateTexture(device, path_to_file.c_str(), texture, error) == D3D_OK;
         if (callback) {
             callback(success, error);
         }
@@ -377,7 +378,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallb
 {
     EnqueueDxTask([id, texture, callback](IDirect3DDevice9* device) {
         std::wstring error{};
-        const bool success = TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture, &error) == D3D_OK;
+        const bool success = TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture, error) == D3D_OK;
         if (callback) {
             callback(success, error);
         }

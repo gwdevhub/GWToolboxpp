@@ -40,7 +40,7 @@
 #endif
 
 namespace {
-    D3DXVECTOR2 gwinch_scale;
+    DirectX::XMFLOAT2 gwinch_scale;
 
     enum FlaggingState : uint32_t {
         FlagState_All = 0,
@@ -582,7 +582,7 @@ float Minimap::GetMapRotation() const
     return yaw;
 }
 
-D3DXVECTOR2 Minimap::GetGwinchScale() const
+DirectX::XMFLOAT2 Minimap::GetGwinchScale() const
 {
     return gwinch_scale;
 }
@@ -782,8 +782,8 @@ void Minimap::Render(IDirect3DDevice9* device) {
             resolution = std::min(resolution, 199.f);
             D3DVertex vertices[200];
             for (auto i = 0; i <= resolution; ++i) {
-                vertices[i] = { radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x,
-                    y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0.0f, clr };
+                vertices[i] = { radius * cos(DirectX::XM_PI * (i / (resolution / 2.f))) + x,
+                    y + radius * sin(DirectX::XM_PI * (i / (resolution / 2.f))), 0.0f, clr};
             }
             device->DrawPrimitiveUP(
                 D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));

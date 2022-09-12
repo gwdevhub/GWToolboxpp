@@ -37,17 +37,11 @@ namespace {
     WNDPROC OldWndProc = nullptr;
     bool tb_destroyed = false;
     bool imgui_initialized = false;
-
-    bool drawing_world = 0;
-    int drawing_passes = 0;
-    int last_drawing_passes = 0;
-
     bool defer_close = false;
 
     HWND gw_window_handle = nullptr;
     bool SaveIniToFile(CSimpleIni* ini, std::filesystem::path location) {
-        std::filesystem::path tmpFile = location;
-        tmpFile += ".tmp";
+        const auto tmpFile = location.append(".tmp");
         SI_Error res = ini->SaveFile(tmpFile.c_str());
         if (res < 0) {
             return false;
@@ -62,7 +56,7 @@ HMODULE GWToolbox::GetDLLModule() {
 }
 
 DWORD __stdcall SafeThreadEntry(LPVOID module) {
-    dllmodule = (HMODULE)module;
+    dllmodule = static_cast<HMODULE>(module);
     __try {
         ThreadEntry(nullptr);
     } __except ( EXCEPT_EXPRESSION_ENTRY ) {
@@ -73,20 +67,6 @@ DWORD __stdcall SafeThreadEntry(LPVOID module) {
 
 DWORD __stdcall ThreadEntry(LPVOID) {
     Log::Log("Initializing API\n");
-
-    // Try to load DirectX dll. Installer should have sorted this, but may not have.
-    if (!LoadD3dx9()) {
-        // Handle this now before we go any further - removing this check will cause a crash when modules try to use D3DX9 funcs in Draw() later and will close GW
-        char title[128];
-        sprintf(title, "GWToolbox++ API Error (LastError: %lu)", GetLastError());
-        if (MessageBoxA(nullptr,
-            "Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed.\nGWToolbox++ needs this installed to continue.\n\nVisit DirectX Redistributable download page?",
-            title, MB_YESNO) == IDYES) {
-            ShellExecute(nullptr, nullptr, DIRECTX_REDIST_WEBSITE, nullptr, nullptr, SW_SHOW);
-        }
-
-        goto leave;
-    }
 
     GW::HookBase::Initialize();
     if (!GW::Initialize()){
@@ -153,11 +133,6 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 leave:
     Log::Log("Destroying API\n");
     GW::Terminate();
-
-    Log::Log("Unloading d3dx9_43.dll\n");
-    if (!FreeD3dx9()) {
-        Log::Warning("Couldn't unload d3dx9_43.dll, file might stay in use until you close Guild Wars\n");
-    }
 
     Log::Log("Closing log/console, bye!\n");
     Log::Terminate();
