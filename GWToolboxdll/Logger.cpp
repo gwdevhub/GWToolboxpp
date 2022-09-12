@@ -64,7 +64,7 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
 
 // === Setup and cleanup ====
 bool Log::InitializeLog() {
-#ifdef GWTOOLBOX_DEBUG
+#ifdef _DEBUG
     logfile = stdout;
     AllocConsole();
     freopen_s(&stdout_file, "CONOUT$", "w", stdout);
@@ -91,7 +91,7 @@ void Log::Terminate() {
     GW::RegisterLogHandler(nullptr, nullptr);
     GW::RegisterPanicHandler(nullptr, nullptr);
 
-#ifdef GWTOOLBOX_DEBUG
+#ifdef _DEBUG
     if (stdout_file)
         fclose(stdout_file);
     if (stderr_file)
