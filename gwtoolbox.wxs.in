@@ -41,9 +41,6 @@
 					<Component Id="GWToolboxdll.dll">
 						<File Id="GWToolboxdll.dll" Source="bin\RelWithDebInfo\GWToolboxdll.dll" KeyPath="yes" Checksum="yes" />
 					</Component>
-					<Component Id="d3dx9_43.dll">
-						<File Id="d3dx9_43.dll" Source="Dependencies\DirectX\build\native\release\bin\x86\d3dx9_43.dll" KeyPath="yes" Checksum="yes" />
-					</Component>
 				</Directory>
 			</Directory>
 
@@ -67,7 +64,6 @@
 		<Feature Id="MainApplication" Title="GWToolboxpp" Level="1">
 			<ComponentRef Id="GWToolbox.exe" />
 			<ComponentRef Id="GWToolboxdll.dll" />
-			<ComponentRef Id="d3dx9_43.dll" />
 			<ComponentRef Id="Font.ttf" />
 			<!-- Step 3: Tell WiX to install the shortcut -->
 			<ComponentRef Id="ApplicationShortcut" />

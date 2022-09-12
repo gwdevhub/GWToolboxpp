@@ -27,10 +27,6 @@ If you are here to check toolbox features and for a download link to go [https:/
 
 7. Run.
 
-## How to create a GWToolbox installer
-
-** Obsolete, all dependencies have been bundled into the exe **
-
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolboxdll.dll`) and EXE (`GWToolbox.exe`). The exe lets you select a Guild Wars Client and injects the dll, but you can also use other dll injectors of your choice.
 * By default, the launcher (`GWToolbox.exe`) will run the `GWToolboxdll.dll` in the same folder, if there is none, it will inject the one in your installation folder.

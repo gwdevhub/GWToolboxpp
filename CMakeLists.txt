@@ -12,7 +12,8 @@ set(GWTOOBOX_MODULE_VERSION "6,0,0,0") # used for Dll module info. See GWToolbox
 # Updates toolboxversion.txt after changes in the above version (make sure to run cmake .. or build the project)
 file(WRITE "resources/toolboxversion.txt" ${GWTOOLBOXDLL_VERSION})
 
-configure_file(${PROJECT_SOURCE_DIR}/gwtoolbox.wxs.in ${PROJECT_SOURCE_DIR}/gwtoolbox.wxs @ONLY)
+# this is no longer required, but in case we have to add an installer again some day
+# configure_file(${PROJECT_SOURCE_DIR}/gwtoolbox.wxs.in ${PROJECT_SOURCE_DIR}/gwtoolbox.wxs @ONLY)
 
 if(MSVC_TOOLSET_VERSION LESS 142)
     message(FATAL_ERROR "Build using Visual Studio 2019 toolset (v142) or higher.")
