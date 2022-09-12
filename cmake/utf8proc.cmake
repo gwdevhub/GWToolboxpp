@@ -19,8 +19,7 @@ set(SOURCES
 
 add_library(utf8proc)
 target_sources(utf8proc PRIVATE ${SOURCES})
-target_include_directories(utf8proc PUBLIC "${utf8proc__SOURCE_DIR}")
+target_include_directories(utf8proc PUBLIC "${utf8proc_SOURCE_DIR}")
 target_compile_definitions(utf8proc PUBLIC UTF8PROC_STATIC)
-
 
 set_target_properties(utf8proc PROPERTIES FOLDER "Dependencies/")
