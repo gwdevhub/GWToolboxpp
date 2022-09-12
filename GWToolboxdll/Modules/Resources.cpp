@@ -351,6 +351,11 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
         EmbeddedResource resource(id, "RCDATA"s, GWToolbox::GetDLLModule());
         res = DirectX::CreateWICTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()), resource.size(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
+        if (res != S_OK) {
+            res = DirectX::CreateDDSTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()),
+                resource.size(), 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
+
+        }
     }
     if (res != D3D_OK) {
         StrSwprintf(error, L"Error loading resource for id %p, module %p - Error is %S", id, hSrcModule, d3dErrorMessage(res));

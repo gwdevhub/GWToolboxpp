@@ -5,8 +5,6 @@ struct CircularBuffer {
 
     CircularBuffer(size_t size)
         : buffer(new T[size])
-        , cursor(0)
-        , count(0)
         , allocated(size)
     {
     }
@@ -48,7 +46,7 @@ struct CircularBuffer {
         return buffer[i];
     }
 
-    inline CircularBuffer& operator=(CircularBuffer&& other) {
+    CircularBuffer& operator=(CircularBuffer&& other) {
         this->~CircularBuffer();
         buffer = other.buffer;
         cursor = other.cursor;
