@@ -58,6 +58,7 @@
 #include <WinInet.h>
 
 #include <d3d9.h>
+#include <DirectXMath.h>
 #include <d3dx9_dynamic.h>
 
 // libraries

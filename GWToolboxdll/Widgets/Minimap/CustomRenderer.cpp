@@ -504,7 +504,7 @@ void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
         if (points.size() < 3) return;      // can't draw a triangle with less than 3 vertices
         type = D3DPT_TRIANGLELIST;
 
-        
+
         const auto poly = std::vector<std::vector<GW::Vec2f>>{{points}};
         point_indices.clear();
         point_indices = mapbox::earcut<unsigned>(poly);
@@ -555,7 +555,7 @@ void CustomRenderer::CustomPolygon::Render(IDirect3DDevice9* device)
         Initialize(device);
     }
     if (filled && points.size() < 3 || !filled && points.size() < 2) return;
-    
+
     if (visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
         const auto primitive_count = filled ? point_indices.size() / 3 : points.size() - 1;
         device->SetFVF(D3DFVF_CUSTOMVERTEX);
@@ -624,11 +624,10 @@ void CustomRenderer::CustomMarker::Render(IDirect3DDevice9* device) {
 
     if (!(visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID()))) return;
 
-    D3DXMATRIX translate, scale, world;
-    D3DXMatrixTranslation(&translate, pos.x, pos.y, 0.0f);
-    D3DXMatrixScaling(&scale, size, size, 1.0f);
-    world = scale * translate;
-    device->SetTransform(D3DTS_WORLD, &world);
+    const auto translate = DirectX::XMMatrixTranslation(pos.x, pos.y, 0.0f);
+    const auto scale = DirectX::XMMatrixScaling(size, size, 1.0f);
+    const auto world = scale * translate;
+    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
 
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
@@ -639,7 +638,7 @@ void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device)
 {
     type = D3DPT_LINESTRIP;
     count = 48; // polycount
-    unsigned int vertex_count = count + 1;
+    const auto vertex_count = count + 1;
     D3DVertex* _vertices = nullptr;
 
     if (buffer) buffer->Release();
@@ -674,9 +673,8 @@ void CustomRenderer::Render(IDirect3DDevice9* device)
 
     DrawCustomLines(device);
 
-    D3DXMATRIX i;
-    D3DXMatrixIdentity(&i);
-    device->SetTransform(D3DTS_WORLD, &i);
+    const auto xmi = DirectX::XMMatrixIdentity();
+    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&xmi));
 
     buffer->Unlock();
     if (vertices_count != 0) {
@@ -699,20 +697,18 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
 
         if (GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags; flags.valid()) {
             for (const auto& flag : flags) {
-                D3DXMATRIX translate, scale, world;
-                D3DXMatrixTranslation(&translate, flag.flag.x, flag.flag.y, 0.0f);
-                D3DXMatrixScaling(&scale, 200.0f, 200.0f, 1.0f);
-                world = scale * translate;
-                device->SetTransform(D3DTS_WORLD, &world);
+                const auto translate = DirectX::XMMatrixTranslation(flag.flag.x, flag.flag.y, 0.0f);
+                const auto scale = DirectX::XMMatrixScaling(200.0f, 200.0f, 1.0f);
+                const auto world = scale * translate;
+                device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
                 linecircle.Render(device);
             }
         }
-        GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
-        D3DXMATRIX translate, scale, world;
-        D3DXMatrixTranslation(&translate, allflag.x, allflag.y, 0.0f);
-        D3DXMatrixScaling(&scale, 300.0f, 300.0f, 1.0f);
-        world = scale * translate;
-        device->SetTransform(D3DTS_WORLD, &world);
+        const GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
+        const auto translate = DirectX::XMMatrixTranslation(allflag.x, allflag.y, 0.0f);
+        const auto scale = DirectX::XMMatrixScaling(300.0f, 300.0f, 1.0f);
+        const auto world = scale * translate;
+        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
         linecircle.Render(device);
     }
 }

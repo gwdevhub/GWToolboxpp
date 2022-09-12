@@ -224,12 +224,12 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
         } else if (target->allegiance == GW::Constants::Allegiance::Enemy) {
             color = &color_range_chain_aggro;
         }
-        
+
         if (color != nullptr && (*color & IM_COL32_A_MASK) != 0) {
-            D3DXMATRIX translate, oldworld;
+            D3DMATRIX oldworld;
             device->GetTransform(D3DTS_WORLD, &oldworld);
-            D3DXMatrixTranslation(&translate, target->x, target->y, 0.0f);
-            device->SetTransform(D3DTS_WORLD, &translate);
+            const auto translate = DirectX::XMMatrixTranslation(target->x, target->y, 0.0f);
+            device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate));
             device->DrawPrimitive(type, circle_points * (render_index + target_circle_render_index), circle_triangles);
             device->SetTransform(D3DTS_WORLD, &oldworld);
         }
@@ -240,10 +240,10 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
     // Draw shadowstep range i.e. shadowwalk aggro
     const GW::Vec2f &shadowstep_location = Minimap::Instance().ShadowstepLocation();
     if ((color_range_shadowstep_aggro & IM_COL32_A_MASK) != 0 && (shadowstep_location.x != 0.f || shadowstep_location.y != 0.f)) {
-        D3DXMATRIX translate, oldworld;
+        D3DMATRIX oldworld;
         device->GetTransform(D3DTS_WORLD, &oldworld);
-        D3DXMatrixTranslation(&translate, shadowstep_location.x, shadowstep_location.y, 0.0f);
-        device->SetTransform(D3DTS_WORLD, &translate);
+        const auto translate = DirectX::XMMatrixTranslation(shadowstep_location.x, shadowstep_location.y, 0.0f);
+        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate));
         device->DrawPrimitive(type, circle_points * render_index, circle_triangles);
         device->SetTransform(D3DTS_WORLD, &oldworld);
     }
@@ -251,18 +251,18 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
 
     // Draw hos line
     if (havehos_) {
-        GW::AgentLiving *me = GW::Agents::GetPlayerAsAgentLiving();
-        GW::AgentLiving *tgt = GW::Agents::GetTargetAsAgentLiving();
+        const auto me = GW::Agents::GetPlayerAsAgentLiving();
+        const auto tgt = GW::Agents::GetTargetAsAgentLiving();
 
         if (!draw_center_ && me != nullptr && tgt != nullptr && me != tgt && !me->GetIsDead() && !tgt->GetIsDead() && GW::GetSquareDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
             GW::Vec2f v = me->pos - tgt->pos;
             const float angle = std::atan2(v.y, v.x);
 
-            D3DXMATRIX oldworld, rotate, newworld;
+            D3DMATRIX oldworld;
             device->GetTransform(D3DTS_WORLD, &oldworld);
-            D3DXMatrixRotationZ(&rotate, angle);
-            newworld = rotate * oldworld;
-            device->SetTransform(D3DTS_WORLD, &newworld);
+            const auto rotate = DirectX::XMMatrixRotationZ(angle);
+            const auto newworld = rotate * XMLoadFloat4x4(reinterpret_cast<const DirectX::XMFLOAT4X4*>(&oldworld));
+            device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&newworld));
             device->DrawPrimitive(D3DPT_LINESTRIP, circle_points * num_circles, 1);
             device->SetTransform(D3DTS_WORLD, &oldworld);
         }

@@ -188,9 +188,8 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 
     DrawDrawings(device);
 
-    D3DXMATRIX i;
-    D3DXMatrixIdentity(&i);
-    device->SetTransform(D3DTS_WORLD, &i);
+    const auto i = DirectX::XMMatrixIdentity();
+    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&i));
 
     buffer->Unlock();
     if (vertices_count != 0) {
@@ -205,13 +204,13 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
         if (ping->GetScale() == 0) continue;
         if (TIMER_DIFF(ping->start) > ping->duration) continue;
 
-        D3DXMATRIX translate, scale, world;
-        D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);
+        DirectX::XMMATRIX scale, world;
+        const auto translate = DirectX::XMMatrixTranslation(ping->GetX(), ping->GetY(), 0.0f);
 
         if (ping->ShowInner()) {
-            D3DXMatrixScaling(&scale, drawing_scale, drawing_scale, 1.0f);
+            scale = DirectX::XMMatrixScaling(drawing_scale, drawing_scale, 1.0f);
             world = scale * translate;
-            device->SetTransform(D3DTS_WORLD, &world);
+            device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
             ping_circle.Render(device);
         }
 
@@ -220,13 +219,13 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
         diff = diff % 1000;
         diff *= first_loop ? 2 : 1;
 
-        D3DXMatrixScaling(&scale, diff * ping->GetScale(), diff * ping->GetScale(), 1.0f);
+        scale = DirectX::XMMatrixScaling(diff * ping->GetScale(), diff * ping->GetScale(), 1.0f);
         world = scale * translate;
-        device->SetTransform(D3DTS_WORLD, &world);
+        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
         ping_circle.Render(device);
     }
     if (!pings.empty()) {
-        Ping* last = pings.back(); 
+        const Ping* last = pings.back();
         if (TIMER_DIFF(last->start) > last->duration) {
             delete last;
             pings.pop_back();
@@ -279,11 +278,10 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
     const GW::Vec2f &shadowstep_location = Minimap::Instance().ShadowstepLocation();
     if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f)
         return;
-    D3DXMATRIX translate, scale, world;
-    D3DXMatrixTranslation(&translate, shadowstep_location.x, shadowstep_location.y, 0.0f);
-    D3DXMatrixScaling(&scale, 100.0f, 100.0f, 1.0f);
-    world = scale * translate;
-    device->SetTransform(D3DTS_WORLD, &world);
+    const auto translate = DirectX::XMMatrixTranslation(shadowstep_location.x, shadowstep_location.y, 0.0f);
+    const auto scale = DirectX::XMMatrixScaling(100.0f, 100.0f, 1.0f);
+    const auto world = scale * translate;
+    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
     marker.Render(device);
 }
 
@@ -343,7 +341,7 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
         D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID **)&_vertices,
                  D3DLOCK_DISCARD);
-    
+
     const float PI = 3.1415927f;
     for (size_t i = 0; i < count; ++i) {
         float angle = i * (2 * PI / count);
@@ -457,7 +455,7 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
             }
         }
     }
-    
+
     return true;
 }
 

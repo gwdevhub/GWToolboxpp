@@ -11,16 +11,6 @@
 
 HMODULE d3dx9Module = nullptr;
 
-// Function addresses used within this project
-typedef D3DXMATRIX* (WINAPI* D3DXMatrixTranslation_pt)(D3DXMATRIX* pOut, FLOAT x, FLOAT y, FLOAT z);
-D3DXMatrixTranslation_pt D3DXMatrixTranslationPtr = nullptr;
-
-typedef D3DXMATRIX* (WINAPI* D3DXMatrixRotationZ_pt)(D3DXMATRIX* pOut, FLOAT Angle);
-D3DXMatrixRotationZ_pt D3DXMatrixRotationZPtr = nullptr;
-
-typedef D3DXMATRIX* (WINAPI* D3DXMatrixScaling_pt)(D3DXMATRIX* pOut, FLOAT sx, FLOAT sy, FLOAT sz);
-D3DXMatrixScaling_pt D3DXMatrixScalingPtr = nullptr;
-
 typedef HRESULT(WINAPI* D3DXCreateTextureFromFileExW_pt)(
     LPDIRECT3DDEVICE9         pDevice,
     LPCWSTR                   pSrcFile,
@@ -93,9 +83,6 @@ bool LoadD3dx9(){
     Log::Log("Loaded DirectX module successfully: %s\n", d3dx9name);
 
     // Add function definitions as applicable
-    return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixTranslation", &D3DXMatrixTranslationPtr));
-    return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixRotationZ", &D3DXMatrixRotationZPtr));
-    return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixScaling", &D3DXMatrixScalingPtr));
     return_on_false(MyGetProcAddress(d3dx9Module, "D3DXCreateTextureFromFileExW", &D3DXCreateTextureFromFileExWPtr));
     return_on_false(MyGetProcAddress(d3dx9Module, "D3DXCreateTextureFromResourceExA", &D3DXCreateTextureFromResourceExAPtr));
     return true;
@@ -107,24 +94,6 @@ bool FreeD3dx9() {
         }
     }
     return d3dx9Module == nullptr;
-}
-
-D3DXMATRIX* WINAPI D3DXMatrixTranslation(D3DXMATRIX* pOut, FLOAT x, FLOAT y, FLOAT z) {
-    LoadD3dx9();
-    if (!d3dx9Module) return nullptr;
-    return D3DXMatrixTranslationPtr(pOut, x, y, z);
-}
-
-D3DXMATRIX* WINAPI D3DXMatrixRotationZ(D3DXMATRIX* pOut, FLOAT Angle) {
-    LoadD3dx9();
-    if (!d3dx9Module) return nullptr;
-    return D3DXMatrixRotationZPtr(pOut,Angle);
-}
-
-D3DXMATRIX* WINAPI D3DXMatrixScaling(D3DXMATRIX* pOut, FLOAT sx, FLOAT sy, FLOAT sz) {
-    LoadD3dx9();
-    if (!d3dx9Module) return nullptr;
-    return D3DXMatrixScalingPtr(pOut, sx, sy, sz);
 }
 
 HRESULT WINAPI D3DXCreateTextureFromFileExW(

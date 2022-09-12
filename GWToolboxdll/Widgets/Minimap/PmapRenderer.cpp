@@ -79,7 +79,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
     total_vert_count_ = total_tri_count_ * 3;
 
 #endif
-    
+
     D3DVertex* vertices = nullptr;
 
     // allocate new vertex buffer
@@ -160,11 +160,12 @@ void PmapRenderer::Render(IDirect3DDevice9* device) {
     }
 
     if ((color_mapshadow & IM_COL32_A_MASK) > 0) {
-        D3DXMATRIX oldview, translate, newview;
-        D3DXMatrixTranslation(&translate, 0, -100, 0.0f);
+        D3DMATRIX oldview;
         device->GetTransform(D3DTS_VIEW, &oldview);
-        newview = oldview * translate;
-        device->SetTransform(D3DTS_VIEW, &newview);
+        const auto oldMatrix = XMLoadFloat4x4(reinterpret_cast<const DirectX::XMFLOAT4X4*>(&oldview));
+        const auto translate = DirectX::XMMatrixTranslation(0, -100, 0.0f);
+        const auto newview = oldMatrix * translate;
+        device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&newview));
 
         device->SetFVF(D3DFVF_CUSTOMVERTEX);
         device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));

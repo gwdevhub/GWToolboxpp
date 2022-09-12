@@ -213,7 +213,6 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
     }
     if (aoe_effects.empty())
         return;
-    D3DXMATRIX translate, scale, world;
     std::lock_guard<std::recursive_mutex> lock(effects_mutex);
     size_t effect_size = aoe_effects.size();
     for (size_t i = 0; i < effect_size; i++) {
@@ -227,10 +226,10 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
             effect_size--;
             continue;
         }
-        D3DXMatrixScaling(&scale, effect->circle.range, effect->circle.range, 1.0f);
-        D3DXMatrixTranslation(&translate, effect->pos.x, effect->pos.y, 0.0f);
-        world = scale * translate;
-        device->SetTransform(D3DTS_WORLD, &world);
+        const auto translate = DirectX::XMMatrixTranslation(effect->pos.x, effect->pos.y, 0.0f);
+        const auto scale = DirectX::XMMatrixScaling(effect->circle.range, effect->circle.range, 1.0f);
+        auto world = scale * translate;
+        device->SetTransform(D3DTS_WORLD, reinterpret_cast<D3DMATRIX*>(&world));
         effect->circle.Render(device);
     }
 }
@@ -238,7 +237,7 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
 void EffectRenderer::EffectCircle::Initialize(IDirect3DDevice9* device) {
     type = D3DPT_LINESTRIP;
     count = 16; // polycount
-    unsigned int vertex_count = count + 1;
+    const auto vertex_count = count + 1;
     D3DVertex* vertices = nullptr;
 
     if (buffer) buffer->Release();
