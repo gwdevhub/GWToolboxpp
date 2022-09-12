@@ -42,6 +42,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     RestClient
     imgui
     directx
+    directxtex
     gwca
     earcut
     utf8proc
