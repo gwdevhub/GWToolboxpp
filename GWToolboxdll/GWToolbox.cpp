@@ -40,13 +40,14 @@ namespace {
     bool defer_close = false;
 
     HWND gw_window_handle = nullptr;
-    bool SaveIniToFile(CSimpleIni* ini, std::filesystem::path location) {
-        const auto tmpFile = location.append(".tmp");
-        SI_Error res = ini->SaveFile(tmpFile.c_str());
+    bool SaveIniToFile(const CSimpleIni* ini, const std::filesystem::path& location) {
+        auto tmp_file = location;
+        tmp_file += ".tmp";
+        const SI_Error res = ini->SaveFile(tmp_file.c_str());
         if (res < 0) {
             return false;
         }
-        std::filesystem::rename(tmpFile, location);
+        std::filesystem::rename(tmp_file, location);
         return true;
     }
 }
