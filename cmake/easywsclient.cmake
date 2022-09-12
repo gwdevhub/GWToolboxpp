@@ -2,7 +2,7 @@ include_guard()
 
 set(EASYWSCLIENT_FOLDER "${PROJECT_SOURCE_DIR}/Dependencies/easywsclient/")
 
-set(SOURCES 
+set(SOURCES
     "${EASYWSCLIENT_FOLDER}/easywsclient.hpp"
     "${EASYWSCLIENT_FOLDER}/easywsclient.cpp")
 
