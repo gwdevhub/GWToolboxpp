@@ -197,61 +197,81 @@ void PconsWindow::OnAgentState(GW::HookStatus *, GW::Packet::StoC::AgentState *p
     }
 }
 void PconsWindow::OnSpeechBubble(GW::HookStatus *status, GW::Packet::StoC::SpeechBubble *pak) {
-    if (!PconAlcohol::suppress_drunk_text) return;
-    bool blocked = status->blocked;
-    status->blocked = true;
+    if (!PconAlcohol::suppress_drunk_text || status->blocked) return;
 
-    wchar_t* m = pak->message;
-    if (m[0] == 0x8CA && m[1] == 0xA4F7 && m[2] == 0xF552 && m[3] == 0xA32) return; // i love you man!
-    if (m[0] == 0x8CB && m[1] == 0xE20B && m[2] == 0x9835 && m[3] == 0x4C75) return; // I'm the king of the world!
-    if (m[0] == 0x8CC && m[1] == 0xFA4D && m[2] == 0xF068 && m[3] == 0x393) return; // I think I need to sit down
-    if (m[0] == 0x8CD && m[1] == 0xF2C2 && m[2] == 0xBBAD && m[3] == 0x1EAD) return; // I think I'm gonna be sick
-    if (m[0] == 0x8CE && m[1] == 0x85E5 && m[2] == 0xF726 && m[3] == 0x68B1) return; // Oh no, not again
-    if (m[0] == 0x8CF && m[1] == 0xEDD3 && m[2] == 0xF2B9 && m[3] == 0x3F34) return; // It's spinning...
-    if (m[0] == 0x8D0 && m[1] == 0xF056 && m[2] == 0xE7AD && m[3] == 0x7EE6) return; // Everyone stop shouting!
-    if (m[0] == 0x8101 && m[1] == 0x6671 && m[2] == 0xCBF8 && m[3] == 0xE717) return; // "BE GONE!"
-    if (m[0] == 0x8101 && m[1] == 0x6672 && m[2] == 0xB0D6 && m[3] == 0xCE2F) return; // "Soon you will all be crushed."
-    if (m[0] == 0x8101 && m[1] == 0x6673 && m[2] == 0xDAA5 && m[3] == 0xD0A1) return; // "You are no match for my almighty power."
-    if (m[0] == 0x8101 && m[1] == 0x6674 && m[2] == 0x8BF9 && m[3] == 0x8C19) return; // "Such fools to think you can attack me here. Come closer so you can see the face of your doom!"
-    if (m[0] == 0x8101 && m[1] == 0x6675 && m[2] == 0x996D && m[3] == 0x87BA) return; // "No one can stop me, let alone you puny mortals!"
-    if (m[0] == 0x8101 && m[1] == 0x6676 && m[2] == 0xBAFA && m[3] == 0x8E15) return; // "You are messing with affairs that are beyond your comprehension. Leave now and I may let you live!"
-    if (m[0] == 0x8101 && m[1] == 0x6677 && m[2] == 0xA186 && m[3] == 0xF84C) return; // "His blood has returned me to my mortal body."
-    if (m[0] == 0x8101 && m[1] == 0x6678 && m[2] == 0xD2ED && m[3] == 0xE693) return; // "I have returned!"
-    if (m[0] == 0x8101 && m[1] == 0x6679 && m[2] == 0xA546 && m[3] == 0xF24A) return; // "Abaddon will feast on your eyes!"
-    if (m[0] == 0x8101 && m[1] == 0x667A && m[2] == 0xB477 && m[3] == 0xA79A) return; // "Abaddon's sword has been drawn. He sends me back to you with tokens of renewed power!"
-    if (m[0] == 0x8101 && m[1] == 0x667B && m[2] == 0x8FBB && m[3] == 0xC739) return; // "Are you the Keymaster?"
-    if (m[0] == 0x8101 && m[1] == 0x667C && m[2] == 0xFE50 && m[3] == 0xC173) return; // "Human sacrifice. Dogs and cats living together. Mass hysteria!"
-    if (m[0] == 0x8101 && m[1] == 0x667D && m[2] == 0xBBC6 && m[3] == 0xAC9E) return; // "Take me now, subcreature."'
-    if (m[0] == 0x8101 && m[1] == 0x667E && m[2] == 0xCD71 && m[3] == 0xDEE3) return; // "We must prepare for the coming of Banjo the Clown, God of Puppets."
-    if (m[0] == 0x8101 && m[1] == 0x667F && m[2] == 0xE823 && m[3] == 0x9435) return; // "This house is clean."
-    if (m[0] == 0x8101 && m[1] == 0x6680 && m[2] == 0x82FC && m[3] == 0xDCEC) return;
-    if (m[0] == 0x8101 && m[1] == 0x6681 && m[2] == 0xC86C && m[3] == 0xB975) return; // "Mommy? Where are you? I can't find you. I can't. I'm afraid of the light, mommy. I'm afraid of the light."
-    if (m[0] == 0x8101 && m[1] == 0x6682 && m[2] == 0xE586 && m[3] == 0x9311) return; // "Get away from my baby!"
-    if (m[0] == 0x8101 && m[1] == 0x6683 && m[2] == 0xA949 && m[3] == 0xE643) return; // "This house has many hearts."'
-    if (m[0] == 0x8101 && m[1] == 0x6684 && m[2] == 0xB765 && m[3] == 0x93F1) return; // "As a boy I spent much time in these lands."
-    if (m[0] == 0x8101 && m[1] == 0x6685 && m[2] == 0xEDE0 && m[3] == 0xAF1D) return; // "I see dead people."
-    if (m[0] == 0x8101 && m[1] == 0x6686 && m[2] == 0xD356 && m[3] == 0xDC69) return; // "Do you like my fish balloon? Can you hear it singing to you...?"
-    if (m[0] == 0x8101 && m[1] == 0x6687 && m[2] == 0xEA3C && m[3] == 0x96F0) return; // "4...Itchy...Tasty..."
-    if (m[0] == 0x8101 && m[1] == 0x6688 && m[2] == 0xCBDD && m[3] == 0xB1CF) return; // "Gracious me, was I raving? Please forgive me. I'm mad."
-    if (m[0] == 0x8101 && m[1] == 0x6689 && m[2] == 0xE770 && m[3] == 0xEEA4) return; // "Keep away. The sow is mine."
-    if (m[0] == 0x8101 && m[1] == 0x668A && m[2] == 0x885F && m[3] == 0xE61D) return; // "All is well. I'm not insane."
-    if (m[0] == 0x8101 && m[1] == 0x668B && m[2] == 0xCCDD && m[3] == 0x88AA) return; // "I like how they've decorated this place. The talking lights are a nice touch."
-    if (m[0] == 0x8101 && m[1] == 0x668C && m[2] == 0x8873 && m[3] == 0x9A16) return; // "There's a reason there's a festival ticket in my ear. I'm trying to lure the evil spirits out of my head."
-    if (m[0] == 0x8101 && m[1] == 0x668D && m[2] == 0xAF68 && m[3] == 0xF84A) return; // "And this is where I met the Lich. He told me to burn things."
-    if (m[0] == 0x8101 && m[1] == 0x668E && m[2] == 0xFE43 && m[3] == 0x9CB3) return; // "When I grow up, I want to be a principal or a caterpillar."
-    if (m[0] == 0x8101 && m[1] == 0x668F && m[2] == 0xDAFF && m[3] == 0x903E) return; // "Oh boy, sleep! That's where I'm a Luxon."
-    if (m[0] == 0x8101 && m[1] == 0x6690 && m[2] == 0xA1F5 && m[3] == 0xD15F) return; // "My cat's breath smells like cat food."
-    if (m[0] == 0x8101 && m[1] == 0x6691 && m[2] == 0xAE54 && m[3] == 0x8EC6) return; // "My cat's name is Mittens."
-    if (m[0] == 0x8101 && m[1] == 0x6692 && m[2] == 0xDFBB && m[3] == 0xD674) return; // "Then the healer told me that BOTH my eyes were lazy. And that's why it was the best summer ever!"
-    if (m[0] == 0x8101 && m[1] == 0x6693 && m[2] == 0xAC9F && m[3] == 0xDCBE) return; // "Go, banana!"
-    if (m[0] == 0x8101 && m[1] == 0x6694 && m[2] == 0x9ACA && m[3] == 0xC746) return; // "It's a trick. Get an axe."
-    if (m[0] == 0x8101 && m[1] == 0x6695 && m[2] == 0x8ED8 && m[3] == 0xD572) return; // "Klaatu...barada...necktie?"
-    if (m[0] == 0x8101 && m[1] == 0x6696 && m[2] == 0xE883 && m[3] == 0xFED7) return; // "You're disgusting, but I love you!"
-    if (m[0] == 0x8101 && m[1] == 0x68BA && m[2] == 0xA875 && m[3] == 0xA785) return; // "Cross over, children. All are welcome. All welcome. Go into the light. There is peace and serenity in the light."
-    //printf("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
+    const wchar_t* m = pak->message;
+    const std::wstring_view msg{m, 4};
+    const std::initializer_list<std::wstring_view> msgs = {
+        L"\x8CA\xA4F7\xF552\xA32",       // i love you man!
+        L"\x8CB\xE20B\x9835\x4C75",      // I'm the king of the world!
+        L"\x8CC\xFA4D\xF068\x393",       // I think I need to sit down
+        L"\x8CD\xF2C2\xBBAD\x1EAD",      // I think I'm gonna be sick
+        L"\x8CE\x85E5\xF726\x68B1",      // Oh no, not again
+        L"\x8CF\xEDD3\xF2B9\x3F34",      // It's spinning...
+        L"\x8D0\xF056\xE7AD\x7EE6",      // Everyone stop shouting!
+        L"\x8101\x6671\xCBF8\xE717",     // "BE GONE!"
+        L"\x8101\x6672\xB0D6\xCE2F",     // "Soon you will all be crushed."
+        L"\x8101\x6673\xDAA5\xD0A1",     // "You are no match for my almighty power."
+        L"\x8101\x6674\x8BF9\x8C19",     // "Such fools to think you can attack me here. Come closer so you can see the face of your doom!"
+        L"\x8101\x6675\x996D\x87BA",     // "No one can stop me, let alone you puny mortals!"
+        L"\x8101\x6676\xBAFA\x8E15",     // "You are messing with affairs that are beyond your comprehension. Leave now and I may let you live!"
+        L"\x8101\x6677\xA186\xF84C",     // "His blood has blocked = trueed me to my mortal body."
+        L"\x8101\x6678\xD2ED\xE693",     // "I have blocked = trueed!"
+        L"\x8101\x6679\xA546\xF24A",     // "Abaddon will feast on your eyes!"
+        L"\x8101\x667A\xB477\xA79A",     // "Abaddon's sword has been drawn. He sends me back to you with tokens of renewed power!"
+        L"\x8101\x667B\x8FBB\xC739",     // "Are you the Keymaster?"
+        L"\x8101\x667C\xFE50\xC173",     // "Human sacrifice. Dogs and cats living together. Mass hysteria!"
+        L"\x8101\x667D\xBBC6\xAC9E",     // "Take me now, subcreature."'
+        L"\x8101\x667E\xCD71\xDEE3",     // "We must prepare for the coming of Banjo the Clown, God of Puppets."
+        L"\x8101\x667F\xE823\x9435",     // "This house is clean."
+        L"\x8101\x6680\x82FC\xDCEC",
+        L"\x8101\x6681\xC86C\xB975",     // "Mommy? Where are you? I can't find you. I can't. I'm afraid of the light, mommy. I'm afraid of the light."
+        L"\x8101\x6682\xE586\x9311",     // "Get away from my baby!"
+        L"\x8101\x6683\xA949\xE643",     // "This house has many hearts."'
+        L"\x8101\x6684\xB765\x93F1",     // "As a boy I spent much time in these lands."
+        L"\x8101\x6685\xEDE0\xAF1D",     // "I see dead people."
+        L"\x8101\x6686\xD356\xDC69",     // "Do you like my fish balloon? Can you hear it singing to you...?"
+        L"\x8101\x6687\xEA3C\x96F0",     // "4...Itchy...Tasty..."
+        L"\x8101\x6688\xCBDD\xB1CF",     // "Gracious me, was I raving? Please forgive me. I'm mad."
+        L"\x8101\x6689\xE770\xEEA4",     // "Keep away. The sow is mine."
+        L"\x8101\x668A\x885F\xE61D",     // "All is well. I'm not insane."
+        L"\x8101\x668B\xCCDD\x88AA",     // "I like how they've decorated this place. The talking lights are a nice touch."
+        L"\x8101\x668C\x8873\x9A16",     // "There's a reason there's a festival ticket in my ear. I'm trying to lure the evil spirits out of my head."
+        L"\x8101\x668D\xAF68\xF84A",     // "And this is where I met the Lich. He told me to burn things."
+        L"\x8101\x668E\xFE43\x9CB3",     // "When I grow up, I want to be a principal or a caterpillar."
+        L"\x8101\x668F\xDAFF\x903E",     // "Oh boy, sleep! That's where I'm a Luxon."
+        L"\x8101\x6690\xA1F5\xD15F",     // "My cat's breath smells like cat food."
+        L"\x8101\x6691\xAE54\x8EC6",     // "My cat's name is Mittens."
+        L"\x8101\x6692\xDFBB\xD674",     // "Then the healer told me that BOTH my eyes were lazy. And that's why it was the best summer ever!"
+        L"\x8101\x6693\xAC9F\xDCBE",     // "Go, banana!"
+        L"\x8101\x6694\x9ACA\xC746",     // "It's a trick. Get an axe."
+        L"\x8101\x6695\x8ED8\xD572",     // "Klaatu...barada...necktie?"
+        L"\x8101\x6696\xE883\xFED7",     // "You're disgusting, but I love you!"
+        L"\x8101\x68BA\xA875\xA785",     // "Cross over, children. All are welcome. All welcome. Go into the light. There is peace and serenity in the light."
+        L"\x8102\x4939\xD402\x99F3",     // start grog messages
+        L"\x1FAA\xD6B1\x8599\x7B2D",
+        L"\x1FB2\xD54E\x9029\x151A",
+        L"\x1FAB\xFCDD\xA466\x3243",
+        L"\x1FB3\xB822\xF276\x2B0C",
+        L"\x1FAC\xBC27\xAC6B\x32C2",
+        L"\x1FAD\xA6B8\xC903\x5EAE",
+        L"\x8102\x4918\xCA53\xE82F",
+        L"\x1FB4\xFF89\xC048\x17A6",
+        L"\x1FB5\xE225\x97D1\x122C",
+        L"\x1FAE\xD24E\x9E99\x6D3 ",
+        L"\x8102\x491A\x9B62\xF12C",
+        L"\x1FAF\x8265\xD9B0\x300D",
+        L"\x1FB6\xBD6A\x88D1\x4F59",
+        L"\x8102\x493B\x96C7\x8B03",
+        L"\x8102\x4929\xA216\xC64B",
+        L"\x8102\x4923\xAA60\x9F98",    // end grog messages
+    };
+    if (std::ranges::find(msgs, msg) != std::ranges::end(msgs)) {
+        status->blocked = true;
+        return;
+    }
 
-    status->blocked = blocked;
-    return;
+    printf("\\x%X\\x%X\\x%X\\x%X\n", m[0], m[1], m[2], m[3]);
 }
 void PconsWindow::OnObjectiveDone(GW::HookStatus *,GW::Packet::StoC::ObjectiveDone *packet)
 {
