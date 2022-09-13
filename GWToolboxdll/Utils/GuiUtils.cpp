@@ -380,6 +380,22 @@ namespace GuiUtils {
         ASSERT(WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL));
         return strTo;
     }
+    // Makes sure the file name doesn't have chars that won't be allowed on disk
+    // https://docs.microsoft.com/en-gb/windows/win32/fileio/naming-a-file
+    std::string SanitiseFilename(const std::string& str) {
+        const char* invalid_chars = "<>:\"/\\|?*";
+        size_t len = 0;
+        std::string out;
+        out.resize(str.length());
+        for (size_t i = 0; i < str.length(); i++) {
+            if (strchr(invalid_chars, str[i]))
+                continue;
+            out[len] = str[i];
+            len++;
+        }
+        out.resize(len);
+        return out;
+    }
 
     std::wstring RemoveDiacritics(const std::wstring& in) {
         static std::map<wchar_t, wchar_t> charmap;

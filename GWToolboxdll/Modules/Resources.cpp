@@ -57,11 +57,12 @@ namespace {
     };
     std::map<GW::Constants::SkillID, IDirect3DTexture9**> skill_images;
     std::map<std::wstring, IDirect3DTexture9**> item_images;
-    std::map<std::string, IDirect3DTexture9**> armor_images;
+    std::map<std::string, IDirect3DTexture9**> guild_wars_wiki_images;
     std::map<uint32_t, IDirect3DTexture9**> profession_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::string ns;
     const size_t MAX_WORKERS = 5;
+    const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
     const wchar_t* ARMOR_GALLERY_PATH = L"img\\armor_gallery";
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
     const wchar_t* ITEM_IMAGES_PATH = L"img\\items";
@@ -86,18 +87,7 @@ Resources::Resources() {
 Resources::~Resources() {
     Cleanup();
     ShutdownCurl();
-    for (const auto& it : skill_images) {
-        delete it.second;
-    }
-    skill_images.clear();
-    for (const auto& it : item_images) {
-        delete it.second;
-    }
-    item_images.clear();
-    for (const auto& it : map_names) {
-        delete it.second;
-    }
-    map_names.clear();
+
 };
 
 void Resources::InitRestClient(RestClient* r) {
@@ -195,6 +185,22 @@ void Resources::Cleanup() {
         delete worker;
     }
     workers.clear();
+    for (const auto& it : skill_images) {
+        delete it.second;
+    }
+    skill_images.clear();
+    for (const auto& it : item_images) {
+        delete it.second;
+    }
+    item_images.clear();
+    for (const auto& it : map_names) {
+        delete it.second;
+    }
+    map_names.clear();
+    for (const auto& it : guild_wars_wiki_images) {
+        delete it.second;
+    }
+    guild_wars_wiki_images.clear();
 }
 void Resources::Terminate() {
     ToolboxModule::Terminate();
@@ -540,6 +546,88 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
     return texture;
 }
 
+IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_t width) {
+    ASSERT(filename && filename[0]);
+    std::string filename_on_disk;
+    if (width > 0) {
+        StrSprintf(filename_on_disk, "%dpx_%s", width, filename);
+    }
+    else {
+        filename_on_disk = filename;
+    }
+    std::string* filename_sanitised = new std::string();
+    filename_sanitised->assign(GuiUtils::SanitiseFilename(filename_on_disk));
+    
+    auto found = guild_wars_wiki_images.find(*filename_sanitised);
+    if (found != guild_wars_wiki_images.end()) {
+        return found->second;
+    }
+    const auto callback = [filename_sanitised](bool success, const std::wstring& error) {
+        if (!success) {
+            Log::ErrorW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised->c_str(), error.c_str());
+        }
+        else {
+            Log::LogW(L"Loaded Guild Wars Wiki file %S", filename_sanitised->c_str());
+        }
+        delete filename_sanitised;
+    };
+    IDirect3DTexture9** texture = (IDirect3DTexture9**)malloc(sizeof(IDirect3DTexture9*));
+    *texture = 0;
+    guild_wars_wiki_images[filename] = texture;
+    static std::filesystem::path path = Resources::GetPath(GUILD_WARS_WIKI_FILES_PATH);
+    if (!Resources::EnsureFolderExists(path)) {
+        trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
+        return texture;
+    }
+    std::wstring path_to_file;
+    // Check for local file
+    StrSwprintf(path_to_file, L"%s\\%S", path.wstring().c_str(), filename_sanitised->c_str());
+    if (std::filesystem::exists(path_to_file)) {
+        Instance().LoadTexture(texture, path_to_file, callback);
+        return texture;
+    }
+    // No local file found; download from wiki via skill link URL
+    std::string wiki_url = "https://wiki.guildwars.com/wiki/File:";
+    wiki_url.append(GuiUtils::UrlEncode(filename, '_'));
+    Instance().Download(wiki_url.c_str(), [texture, filename_sanitised, callback, width](bool ok, const std::string& response) {
+        if (!ok) {
+            callback(ok, GuiUtils::StringToWString(response));
+            return; // Already logged whatever errors
+        }
+
+        std::string tmp_str;
+        // Find a valid png or jpg image inside the HTML response, <img alt="<skill_id>" src="<location_of_image>"
+        StrSprintf(tmp_str, "class=\"fullMedia\"[\\s\\S]*?href=['\"]([^\"']+)");
+        std::regex image_finder(tmp_str);
+        std::smatch m;
+        std::regex_search(response, m, image_finder);
+        if (!m.size()) {
+            trigger_failure_callback(callback, L"Regex failed loading file %S",filename_sanitised->c_str());
+            return;
+        }
+        std::string image_url = m[1].str();
+        std::wstring path_to_file;
+        StrSwprintf(path_to_file, L"%s\\%S", path.c_str(), filename_sanitised->c_str());
+        if (width) {
+            // Divert to resized version using mediawiki's method
+            image_finder = "/images/(.*)/([^/]+)$";
+            std::regex_search(image_url, m, image_finder);
+            if (!m.size()) {
+                trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S",image_url.c_str());
+                return;
+            }
+            StrSprintf(tmp_str, "/images/thumb/%s/%s/%dpx-%s", m[1].str().c_str(), m[2].str().c_str(), width, m[2].str().c_str());
+            image_url = tmp_str;
+        }
+        // https://wiki.guildwars.com/images/thumb/5/5c/Eternal_Protector_of_Tyria.jpg/150px-Eternal_Protector_of_Tyria.jpg
+        if (strncmp(image_url.c_str(), "http", 4) != 0) {
+            StrSprintf(tmp_str, "https://wiki.guildwars.com%s", image_url.c_str());
+            image_url = tmp_str;
+        }
+        Instance().LoadTexture(texture, path_to_file, image_url, callback);
+        });
+    return texture;
+}
 
 IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
     
@@ -722,110 +810,3 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
         });
     return texture;
 }
-
-IDirect3DTexture9** Resources::GetArmorArt(const char* armor_name, GW::Constants::Profession p, char gender) {
-    uint32_t profession_uint = static_cast<uint32_t>(p);
-    const char* profession_names[] = {
-        "None",
-        "Warrior",
-        "Ranger",
-        "Monk",
-        "Necromancer",
-        "Mesmer",
-        "Elementalist",
-        "Assassin",
-        "Ritualist",
-        "Paragon",
-        "Dervish"
-    };
-    const char* profession_name = profession_names[profession_uint];
-    size_t armor_name_len = strlen(armor_name) + strlen(profession_name) + 8;
-    char* armor_name_full = new char[armor_name_len];
-    snprintf(armor_name_full, armor_name_len, "%s %s %c", profession_name, armor_name, gender);
-
-    auto found = armor_images.find(armor_name_full);
-    if (found != armor_images.end()) {
-        delete[] armor_name_full;
-        return found->second;
-    }
-    IDirect3DTexture9** texture = (IDirect3DTexture9**)malloc(sizeof(IDirect3DTexture9*));
-    *texture = 0;
-    armor_images[armor_name_full] = texture;
-    if (profession_uint == 0) {
-        delete[] armor_name_full;
-        return texture;
-    }
-    const auto callback = [armor_name_full](bool success, const std::wstring& error) {
-        if (!success) {
-            Log::ErrorW(L"Failed to load armor image %S\n%s", armor_name_full, error.c_str());
-        }
-        else {
-            Log::LogW(L"Loaded armor image %s", armor_name_full);
-        }
-        delete[] armor_name_full;
-    };
-
-
-    static std::filesystem::path path = Resources::GetPath(ARMOR_GALLERY_PATH);
-    if (!Resources::EnsureFolderExists(path)) {
-        trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
-        return texture;
-    }
-    wchar_t path_to_file[MAX_PATH];
-    // Check for local jpg file
-    swprintf(path_to_file, _countof(path_to_file), L"%s\\%S.jpg", path.wstring().c_str(), armor_name_full);
-    if (std::filesystem::exists(path_to_file)) {
-        Instance().LoadTexture(texture, path_to_file, callback);
-        return texture;
-    }
-    // Check for local png file
-    swprintf(path_to_file, _countof(path_to_file), L"%s\\%S.png", path.wstring().c_str(), armor_name_full);
-    if (std::filesystem::exists(path_to_file)) {
-        Instance().LoadTexture(texture, path_to_file, callback);
-        return texture;
-    }
-    // No local file found; download from wiki via skill link URL
-    std::string armor_name_wiki_term = GuiUtils::UrlEncode(armor_name, '_');
-    char url[128];
-    snprintf(url, _countof(url), "https://wiki.guildwars.com/wiki/%s", armor_name_wiki_term.c_str());
-    Instance().Download(url, [texture, armor_name_full, callback](bool ok, const std::string& response) {
-        if (!ok) {
-            callback(ok, GuiUtils::StringToWString(response));
-            return; // Already logged whatever errors
-        }
-
-        char regex_str[255];
-        // Find a valid png or jpg image inside the HTML response, <img alt="<skill_id>" src="<location_of_image>"
-        ASSERT(snprintf(regex_str, sizeof(regex_str), "alt=\"%s\\.(?:jpg|png)\" src=['\"]([^\"']+)([.](png|jpg))", armor_name_full) != -1);
-        std::regex image_finder(regex_str, std::regex_constants::icase);
-        std::smatch m;
-        std::regex_search(response, m, image_finder);
-        if (!m.size()) {
-            trigger_failure_callback(callback, L"Regex failed loading armor art for %S", armor_name_full);
-            return;
-        }
-        const std::string& image_path = m[1].str();
-        const std::string& image_extension = m[2].str();
-        wchar_t path_to_file[MAX_PATH];
-        ASSERT(swprintf(path_to_file, _countof(path_to_file), L"%s\\%S%S", path.wstring().c_str(), armor_name_full, image_extension.c_str()) != -1);
-        char url[128];
-
-        if (strncmp(image_path.c_str(), "http", 4) == 0) {
-            // Image URL is absolute
-            if (snprintf(url, _countof(url), "%s%s", image_path.c_str(), image_extension.c_str()) == -1) {
-                trigger_failure_callback(callback, L"Failed to snprintf url");
-                return;
-            }
-        }
-        else {
-            // Image URL is relative to domain
-            if (snprintf(url, _countof(url), "https://wiki.guildwars.com%s%s", image_path.c_str(), image_extension.c_str()) == -1) {
-                trigger_failure_callback(callback, L"Failed to snprintf url");
-                return;
-            }
-        }
-        Instance().LoadTexture(texture, path_to_file, url, callback);
-        });
-    return texture;
-}
-

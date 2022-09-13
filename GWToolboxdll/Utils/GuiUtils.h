@@ -49,6 +49,7 @@ namespace GuiUtils {
 
     std::string WStringToString(const std::wstring& s);
     std::wstring StringToWString(const std::string& s);
+    std::string SanitiseFilename(const std::string& str);
 
     std::wstring SanitizePlayerName(std::wstring in);
 
