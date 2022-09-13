@@ -62,7 +62,11 @@ namespace GuiUtils {
         SetForegroundWindow(hwnd);
         ShowWindow(hwnd, SW_RESTORE);
     }
+    std::string WikiUrl(std::string url_path) {
+        return WikiUrl(StringToWString(url_path));
+    }
     std::string WikiUrl(std::wstring url_path) {
+        
         // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
         if (!url_path.size())
             return GetWikiPrefix();

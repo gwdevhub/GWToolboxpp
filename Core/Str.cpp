@@ -14,7 +14,11 @@ int StrVsprintf(std::string& out, const char* fmt, va_list args) {
     if (written < 0)
         return written;
     out.resize(written + 1);
-    return vsnprintf(out.data(), out.capacity(), fmt, args);
+    written = vsnprintf(out.data(), out.capacity(), fmt, args);
+    if (written < 0)
+        return written;
+    out.resize(written);
+    return written;
 }
 
 int StrSwprintf(std::wstring& out, const wchar_t* fmt, ...) {
@@ -29,7 +33,11 @@ int StrVswprintf(std::wstring& out, const wchar_t* fmt, va_list args) {
     if (written < 0)
         return written;
     out.resize(written + 1);
-    return vswprintf(out.data(), out.capacity(), fmt, args);
+    written = vswprintf(out.data(), out.capacity(), fmt, args);
+    if (written < 0)
+        return written;
+    out.resize(written);
+    return written;
 }
 
 void StrCopyA(char *dest, size_t size, const char *src)
