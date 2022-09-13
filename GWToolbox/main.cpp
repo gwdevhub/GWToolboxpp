@@ -46,7 +46,7 @@ static bool InjectInstalledDllInProcess(Process *process)
         }
     }
     const std::filesystem::path localdll = dllpath / L"GWToolboxdll.dll";
-    if (std::filesystem::exists(dllpath)) {
+    if (std::filesystem::exists(localdll)) {
         dllpath = localdll;
     } else if (settings.localdll) {
         return false;
