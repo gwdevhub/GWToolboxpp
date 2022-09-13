@@ -60,15 +60,12 @@ namespace Missions {
 
     class PvESkill : public Mission {
     protected:
-
+        IDirect3DTexture9** image = 0;
         GW::Constants::SkillID skill_id;
-        bool img_loaded = false;
-        const wchar_t* image_url = 0;
-        IDirect3DTexture9* skill_image = 0;
     public:
         uint32_t profession = 0;
         inline static MissionImageList dummy_var = {};
-        PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url = 0);
+        PvESkill(GW::Constants::SkillID _skill_id);
         IDirect3DTexture9* GetMissionImage() override;
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }
@@ -82,6 +79,7 @@ namespace Missions {
     class HeroUnlock : public PvESkill {
     public:
         HeroUnlock(GW::Constants::HeroID _hero_id);
+        ~HeroUnlock() { delete image; }
         IDirect3DTexture9* GetMissionImage() override;
 
         void OnClick() override;
@@ -92,44 +90,59 @@ namespace Missions {
 
     class ItemAchievement : public PvESkill {
     protected:
+        std::string wiki_file_name;
         GuiUtils::EncString name;
         size_t encoded_name_index;
     public:
-        ItemAchievement(size_t _encoded_name_index, const wchar_t* encoded_name);
+        ItemAchievement(size_t hom_achievement_index, const wchar_t* encoded_name);
         IDirect3DTexture9* GetMissionImage() override;
 
-        void CheckProgress(const std::wstring& player_name) override;
         void OnClick() override;
         const char* Name() override;
     };
     class MinipetAchievement : public ItemAchievement {
     public:
-        MinipetAchievement(size_t _encoded_name_index, const wchar_t* encoded_name) :
-            ItemAchievement(_encoded_name_index, encoded_name) {}
-
+        MinipetAchievement(size_t hom_achievement_index, const wchar_t* encoded_name) :
+            ItemAchievement(hom_achievement_index, encoded_name) {}
         void CheckProgress(const std::wstring& player_name) override;
     };
     class WeaponAchievement : public ItemAchievement {
     public:
         WeaponAchievement(size_t _encoded_name_index, const wchar_t* encoded_name) :
             ItemAchievement(_encoded_name_index, encoded_name) {}
-
         void CheckProgress(const std::wstring& player_name) override;
     };
-    class ArmorAchievement : public ItemAchievement {
+    class AchieventWithWikiFile : public ItemAchievement {
     protected:
-        const char* armor_art_name;
-        GW::Constants::Profession armor_profession;
+        std::string wiki_file_name;
+        IDirect3DTexture9** img = 0;
     public:
-        ArmorAchievement(size_t _encoded_name_index, const wchar_t* encoded_name, const char* _armor_art_name, GW::Constants::Profession _armor_profession = (GW::Constants::Profession)1) :
-            ItemAchievement(_encoded_name_index, encoded_name) {
-            armor_art_name = _armor_art_name;
-            armor_profession = _armor_profession;
+        AchieventWithWikiFile(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr) :
+            ItemAchievement(hom_achievement_index, encoded_name) {
+            if (_wiki_file_name) {
+                wiki_file_name = _wiki_file_name;
+            }
         }
-
-        void CheckProgress(const std::wstring& player_name) override;
         IDirect3DTexture9* GetMissionImage() override;
-        bool Draw(IDirect3DDevice9*) override;
+    };
+
+    class ArmorAchievement : public AchieventWithWikiFile {
+    public:
+        ArmorAchievement(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr) :
+            AchieventWithWikiFile( hom_achievement_index, encoded_name, _wiki_file_name) {};
+         void CheckProgress(const std::wstring& player_name) override;
+    };
+    class CompanionAchievement : public AchieventWithWikiFile {
+    public:
+        CompanionAchievement(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr) :
+            AchieventWithWikiFile( hom_achievement_index, encoded_name, _wiki_file_name) {};
+        void CheckProgress(const std::wstring& player_name) override;
+    };
+    class HonorAchievement : public AchieventWithWikiFile {
+    public:
+        HonorAchievement(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr) :
+            AchieventWithWikiFile( hom_achievement_index, encoded_name, _wiki_file_name) {};
+        void CheckProgress(const std::wstring& player_name) override;
     };
 
     class FactionsPvESkill : public PvESkill {
@@ -288,7 +301,7 @@ protected:
         std::vector<uint32_t> heroes;
         std::vector<uint32_t> maps_unlocked;
         std::string hom_code;
-        HallOfMonumentsAchievements* hom_achievements = 0;
+        HallOfMonumentsAchievements hom_achievements;
         std::vector<uint32_t> minipets_unlocked;
     };
 
@@ -324,7 +337,7 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     // Check explicitly rather than every frame
-    CompletionWindow* CheckProgress();
+    CompletionWindow* CheckProgress(bool fetch_hom = false);
 
 
     GW::HookEntry skills_unlocked_stoc_entry;
@@ -337,6 +350,8 @@ public:
     std::vector<Missions::MinipetAchievement*> minipets;
     std::vector<Missions::WeaponAchievement*> hom_weapons;
     std::vector<Missions::ArmorAchievement*> hom_armor;
+    std::vector<Missions::CompanionAchievement*> hom_companions;
+    std::vector<Missions::HonorAchievement*> hom_titles;
     bool minipets_sorted = false;
     HallOfMonumentsAchievements hom_achievements;
     int hom_achievements_status = 0xf;

@@ -25,6 +25,7 @@ namespace GuiUtils {
     };
     void LoadFonts();
     std::string WikiUrl(std::wstring term);
+    std::string WikiUrl(std::string term);
     void OpenWiki(std::wstring term);
     void SearchWiki(std::wstring term);
     bool FontsLoaded();
@@ -48,6 +49,7 @@ namespace GuiUtils {
 
     std::string WStringToString(const std::wstring& s);
     std::wstring StringToWString(const std::string& s);
+    std::string SanitiseFilename(const std::string& str);
 
     std::wstring SanitizePlayerName(std::wstring in);
 

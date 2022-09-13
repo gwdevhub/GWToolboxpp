@@ -384,18 +384,41 @@ namespace {
         }
     }
 
-    void LoadTextures(std::vector<MissionImage>& mission_images) {
-        Resources::EnsureFolderExists(Resources::GetPath(L"img", L"missions"));
-        for (auto& mission_image : mission_images) {
-            if (mission_image.texture)
-                continue;
-            Resources::Instance().LoadTexture(
-                &mission_image.texture,
-                Resources::GetPath(L"img/missions", mission_image.file_name),
-                (WORD)mission_image.resource_id
-            );
-        }
-    }
+	void LoadTextures(std::vector<MissionImage>& mission_images) {
+		Resources::EnsureFolderExists(Resources::GetPath(L"img", L"missions"));
+		for (auto& mission_image : mission_images) {
+			if (mission_image.texture)
+				continue;
+			Resources::Instance().LoadTexture(
+				&mission_image.texture,
+				Resources::GetPath(L"img/missions", mission_image.file_name),
+				(WORD)mission_image.resource_id
+			);
+		}
+	}
+
+	void OnHomLoaded(HallOfMonumentsAchievements* result) {
+		if (result->state != HallOfMonumentsAchievements::State::Done) {
+            Log::ErrorW(L"Failed to load Hall of Monuments achievements for %s", result->character_name);
+            return;
+		}
+        Log::Info("Loaded Hom");
+        CompletionWindow::Instance().CheckProgress();
+	}
+
+	void FetchHom(HallOfMonumentsAchievements* out = nullptr) {
+        if (!out)
+        {
+            auto player_name = GetPlayerName();
+            auto cc = CompletionWindow::Instance().GetCharacterCompletion(player_name, true);
+            out = &cc->hom_achievements;
+		}
+        if (!out->isLoading())
+        {
+            HallOfMonumentsModule::AsyncGetAccountAchievements(out->character_name, out, OnHomLoaded);
+		}
+
+	}
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -663,8 +686,8 @@ bool Dungeon::HasQuest()
 
 
 HeroUnlock::HeroUnlock(GW::Constants::HeroID _hero_id)
-    : PvESkill(GW::Constants::SkillID::No_Skill, nullptr) {
-    skill_id = (GW::Constants::SkillID)_hero_id;
+	: PvESkill(GW::Constants::SkillID::No_Skill) {
+	skill_id = (GW::Constants::SkillID)_hero_id;
 }
 void HeroUnlock::CheckProgress(const std::wstring& player_name) {
     is_completed = false;
@@ -680,34 +703,31 @@ const char* HeroUnlock::Name() {
 }
 IDirect3DTexture9* HeroUnlock::GetMissionImage()
 {
-    if (!img_loaded) {
-        img_loaded = true;
-        auto path = Resources::GetPath(L"img/heros");
-        Resources::EnsureFolderExists(path);
-        wchar_t local_image[MAX_PATH];
-        swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
-        char remote_image[128];
-        snprintf(remote_image, _countof(remote_image), "https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
-        Resources::Instance().LoadTexture(&skill_image, local_image, remote_image);
-    }
-    return skill_image;
+	if (!image) {
+		image = (IDirect3DTexture9**)malloc(sizeof(*image));
+		*image = nullptr;
+		auto path = Resources::GetPath(L"img/heros");
+		Resources::EnsureFolderExists(path);
+		wchar_t local_image[MAX_PATH];
+		swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
+		char remote_image[128];
+		snprintf(remote_image, _countof(remote_image), "https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
+		Resources::Instance().LoadTexture(image, local_image, remote_image);
+	}
+	return *image;
 }
 void HeroUnlock::OnClick() {
-    wchar_t* buf = new wchar_t[128];
+    wchar_t buf[128];
     swprintf(buf, 128, L"Game_link:Hero_%d", skill_id);
     GW::GameThread::Enqueue([buf]() {
         GuiUtils::OpenWiki(buf);
-        delete[] buf;
         });
 }
 
 ItemAchievement::ItemAchievement(size_t _encoded_name_index, const wchar_t* encoded_name)
-    : PvESkill(GW::Constants::SkillID::No_Skill, nullptr) {
-    encoded_name_index = _encoded_name_index;
-    name.reset(encoded_name);
-}
-void ItemAchievement::CheckProgress(const std::wstring& player_name) {
-    (player_name);
+	: PvESkill(GW::Constants::SkillID::No_Skill) {
+	encoded_name_index = _encoded_name_index;
+	name.reset(encoded_name);
 }
 const char* ItemAchievement::Name() {
     return name.string().c_str();
@@ -737,25 +757,26 @@ void ItemAchievement::OnClick() {
 
 IDirect3DTexture9* PvESkill::GetMissionImage()
 {
-    return *Resources::GetSkillImage(skill_id);
+	if (!image)
+		image = Resources::GetSkillImage(skill_id);
+	return *image;
 }
-PvESkill::PvESkill(GW::Constants::SkillID _skill_id, const wchar_t* _image_url)
-    : Mission(GW::Constants::MapID::None, dummy_var, dummy_var), skill_id(_skill_id), image_url(_image_url) {
-    if (_skill_id != GW::Constants::SkillID::No_Skill) {
-        GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-        if (s) {
-            name.reset(s->name);
-            profession = s->profession;
-        }
+PvESkill::PvESkill(GW::Constants::SkillID _skill_id)
+	: Mission(GW::Constants::MapID::None, dummy_var, dummy_var), skill_id(_skill_id) {
+	if (_skill_id != GW::Constants::SkillID::No_Skill) {
+		GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+		if (s) {
+			name.reset(s->name);
+			profession = s->profession;
+		}
 
     }
 }
 void PvESkill::OnClick() {
-    wchar_t* buf = new wchar_t[128];
+    wchar_t buf[128];
     swprintf(buf, 128, L"Game_link:Skill_%d", skill_id);
     GW::GameThread::Enqueue([buf]() {
         GuiUtils::OpenWiki(buf);
-        delete[] buf;
         });
 }
 bool PvESkill::Draw(IDirect3DDevice9* device) {
@@ -865,48 +886,152 @@ void CompletionWindow::Initialize()
 
     //Resources::Instance().LoadTexture(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
 
-    missions = {
-        { GW::Constants::Campaign::Prophecies, {} },
+	missions = {
+		{ GW::Constants::Campaign::Prophecies, {} },
+		{ GW::Constants::Campaign::Factions, {} },
+		{ GW::Constants::Campaign::Nightfall, {} },
+		{ GW::Constants::Campaign::EyeOfTheNorth, {} },
+		{ GW::Constants::Campaign::BonusMissionPack, {} },
+	};
+	vanquishes = {
+		{ GW::Constants::Campaign::Prophecies, {} },
+		{ GW::Constants::Campaign::Factions, {} },
+		{ GW::Constants::Campaign::Nightfall, {} },
+		{ GW::Constants::Campaign::EyeOfTheNorth, {} },
+		{ GW::Constants::Campaign::BonusMissionPack, {} },
+	};
+	elite_skills = {
+		{ GW::Constants::Campaign::Prophecies, {} },
+		{ GW::Constants::Campaign::Factions, {} },
+		{ GW::Constants::Campaign::Nightfall, {} },
+		{ GW::Constants::Campaign::Core, {} },
+	};
+    pve_skills = {
         { GW::Constants::Campaign::Factions, {} },
         { GW::Constants::Campaign::Nightfall, {} },
         { GW::Constants::Campaign::EyeOfTheNorth, {} },
-        { GW::Constants::Campaign::BonusMissionPack, {} },
-    };
-    vanquishes = {
-        { GW::Constants::Campaign::Prophecies, {} },
-        { GW::Constants::Campaign::Factions, {} },
-        { GW::Constants::Campaign::Nightfall, {} },
-        { GW::Constants::Campaign::EyeOfTheNorth, {} },
-        { GW::Constants::Campaign::BonusMissionPack, {} },
-    };
-    elite_skills = {
-        { GW::Constants::Campaign::Prophecies, {} },
-        { GW::Constants::Campaign::Factions, {} },
-        { GW::Constants::Campaign::Nightfall, {} },
         { GW::Constants::Campaign::Core, {} },
-    };
-     pve_skills = {
-        { GW::Constants::Campaign::Factions, {} },
-        { GW::Constants::Campaign::Nightfall, {} },
-        { GW::Constants::Campaign::EyeOfTheNorth, {} },
-        { GW::Constants::Campaign::Core, {} },
-    };
-     heros = {
+	};
+    heros = {
         { GW::Constants::Campaign::Factions, {} },
         { GW::Constants::Campaign::Nightfall, {} },
         { GW::Constants::Campaign::EyeOfTheNorth, {} }
-     };
-     for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
-         minipets.push_back(new MinipetAchievement(i,encoded_minipet_names[i]));
-     }
-     for (size_t i = 0; i < _countof(encoded_weapon_names); i++) {
-         hom_weapons.push_back(new WeaponAchievement(i, encoded_weapon_names[i]));
-     }
-     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Canthan Armor\x1","Elite Canthan Armor"));
-     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Exotic Armor\x1", "Elite Exotic Armor", GW::Constants::Profession::Assassin));
-     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Kurzick Armor\x1", "Elite Kurzick Armor"));
-     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Imperial Ascended Armor\x1", "Elite Imperial Armor", GW::Constants::Profession::Assassin));
-     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Ancient Armor\x1", "Ancient Armor"));
+    };
+    for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
+        minipets.push_back(new MinipetAchievement(i,encoded_minipet_names[i]));
+    }
+    for (size_t i = 0; i < _countof(encoded_weapon_names); i++) {
+        hom_weapons.push_back(new WeaponAchievement(i, encoded_weapon_names[i]));
+    }
+
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Canthan Armor\x1","Elementalist_Elite_Canthan_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Exotic Armor\x1", "Assassin_Exotic_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Kurzick Armor\x1", "Warrior_Elite_Kurzick_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Luxon Armor\x1", "Monk_Elite_Luxon_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Imperial Ascended Armor\x1", "Ritualist_Elite_Imperial_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Ancient Armor\x1", "Assassin_Ancient_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Sunspear Armor\x1", "Dervish_Elite_Sunspear_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Vabbian Armor\x1", "Mesmer_Vabbian_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Primeval Armor\x1", "Necromancer_Primeval_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Asuran Armor\x1", "Paragon_Asuran_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Norn Armor\x1", "Ritualist_Norn_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Silver Eagle Armor\x1", "Warrior_Silver_Eagle_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Monument Armor\x1", "Monk_Monument_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Obsidian Armor\x1", "Elementalist_Obsidian_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Elite Armor\x1", "Ranger_Elite_Fur-Lined_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Exclusive Armor\x1", "Elementalist_Elite_Iceforged_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Ascended Armor\x1", "Warrior_Elite_Platemail_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhans Grotto Elite Armor\x1", "Ranger_Elite_Druid_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhans Grotto Exclusive Armor\x1", "Elementalist_Elite_Stormforged_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhans Grotto Ascended Armor\x1", "Warrior_Elite_Templar_armor_m.jpg"));
+
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zenmai\x1","Zenmai_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Norgu\x1","Norgu_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Goren\x1","Goren_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zhed Shadowhoof\x1","Zhed_Shadowhoof_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "General Morgahn\x1","General_Morgahn_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Margrid The Sly\x1","Margrid_the_Sly_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Tahlkora\x1","Tahlkora_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Razah\x1","Razah_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Master Of Whispers\x1","Master_of_Whispers_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Koss\x1","Koss_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Dunkoro\x1","Dunkoro_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Melonni\x1","Melonni_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Acolyte Jin\x1","Acolyte_Jin_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Acolyte Sousuke\x1","Acolyte_Sousuke_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Vekk\x1","Vekk_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Livia\x1", "Livia_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Hayda\x1", "Hayda_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Ogden Stonehealer\x1", "Ogden_Stonehealer_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Pyre Fierceshot\x1", "Pyre_Fierceshot_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Jora\x1", "Jora_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Kahmu\x1", "Kahmu_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Xandra\x1", "Xandra_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Anton\x1", "Anton_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Gwen\x1", "Gwen_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Animal Companion\x1", "Animal_Companion_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Black Moa\x1", "Black_Moa_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Imperial Phoenix\x1", "Phoenix_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Black Widow Spider\x1", "Black_Widow_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Olias\x1", "Olias_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "MOX\x1", "M.O.X._statue.jpg"));
+
+    size_t hom_titles_index = 0;
+    hom_titles.push_back(new HonorAchievement(hom_titles_index, L"\x108\x107" "Eternal Champion\x1","Eternal_Champion.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Commander\x1","Eternal_Commander.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Skillz\x1","Eternal_Skillz.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Gladiator\x1","Eternal_Gladiator.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero\x1","Eternal_Hero.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Lightbringer\x1","Eternal_Lightbringer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Bookah\x1","Eternal_Bookah.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Delver\x1","Eternal_Delver.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Slayer\x1","Eternal_Slayer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Ebon Vanguard Agent\x1","Eternal_Ebon_Vanguard_Agent.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Defender of Ascalon\x1","Eternal_Defender_of_Ascalon.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Cartographer\x1","Eternal_Tyrian_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Tyria\x1","Eternal_Guardian_of_Tyria.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Tyria\x1","Eternal_Protector_of_Tyria.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Skill Hunter\x1","Eternal_Tyrian_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Vanquisher\x1","Eternal_Tyrian_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Cartographer\x1","Eternal_Canthan_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Vanquisher\x1","Eternal_Tyrian_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Cantha\x1","Eternal_Guardian_of_Cantha.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Cantha\x1","Eternal_Protector_of_Cantha.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Skill Hunter\x1","Eternal_Canthan_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Vanquisher\x1","Eternal_Canthan_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Savior of the Kurzicks\x1","Eternal_Savior_of_the_Kurzicks.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Savior of the Luxons\x1","Eternal_Savior_of_the_Luxons.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Cartographer\x1","Eternal_Elonian_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Elona\x1","Eternal_Guardian_of_Elona.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Elona\x1","Eternal_Protector_of_Elona.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Skill Hunter\x1","Eternal_Elonian_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Vanquisher\x1","Eternal_Elonian_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Ale Hound\x1","Eternal_Ale_Hound.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Party Animal\x1","Eternal_Party_Animal.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Master of the North\x1","Eternal_Master_of_the_North.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Cartographer\x1","Eternal_Legendary_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Guardian\x1","Eternal_Legendary_Guardian.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Skill Hunter\x1","Eternal_Legendary_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Vanquisher\x1","Eternal_Legendary_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Fortune\x1","Eternal_Fortune.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Sweet Tooth\x1","Eternal_Sweet_Tooth.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Spearmarshal\x1","Eternal_Spearmarshal.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Survivor\x1","Eternal_Survivor.jpg"));
+    hom_titles_index++;
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Treasure Hunter\x1","Eternal_Treasure_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Misfortune\x1","Eternal_Misfortune.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Source of Wisdom\x1","Eternal_Source_of_Wisdom.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Tyria\x1","Eternal_Hero_of_Tyria.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Cantha\x1","Eternal_Hero_of_Cantha.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Elona\x1","Eternal_Hero_of_Elona.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of Sorrow's Furnace\x1","Eternal_Conqueror_of_Sorrow's_Furnace.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Deep\x1","Eternal_Conqueror_of_the_Deep.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of Urgoz's Warren\x1","Eternal_Conqueror_of_Urgoz's_Warren.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Fissure of Woe\x1","Eternal_Conqueror_of_the Fissure of Woe.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Underworld\x1","Eternal_Conqueror_of_the Underworld.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Domain of Anguish\x1","Eternal_Conqueror_of_the_Domain_of_Anguish.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Zaishen Supporter\x1","Eternal_Zaishen_Supporter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Codex Disciple\x1","Eternal_Codex_Disciple.png"));
 
     Initialize_Prophecies();
     Initialize_Factions();
@@ -916,67 +1041,67 @@ void CompletionWindow::Initialize()
 
     auto& eskills = elite_skills.at(Campaign::Core);
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Charge, L"3/32/%22Charge%21%22"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Battle_Rage, L"d/dd/Battle_Rage"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Cleave, L"f/f9/Cleave"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Devastating_Hammer, L"3/3a/Devastating_Hammer"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Hundred_Blades, L"6/63/Hundred_Blades"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Seven_Weapon_Stance, L"d/d7/Seven_Weapons_Stance"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Charge));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Battle_Rage));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Cleave));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Devastating_Hammer));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Hundred_Blades));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Seven_Weapon_Stance));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Together_as_one, L"f/ff/%22Together_as_One%21%22"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Barrage, L"9/93/Barrage"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Escape, L"a/a2/Escape"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ferocious_Strike, L"5/5e/Ferocious_Strike"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Quick_Shot, L"9/9a/Quick_Shot"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Spike_Trap, L"1/1a/Spike_Trap"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Together_as_one));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Barrage));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Escape));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ferocious_Strike));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Quick_Shot));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Spike_Trap));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Blood_is_Power, L"2/28/Blood_is_Power"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Grenths_Balance, L"5/5e/Grenth%27s_Balance"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Lingering_Curse, L"a/a6/Lingering_Curse"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Plague_Signet, L"b/b1/Plague_Signet"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Taker, L"4/4e/Soul_Taker"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Tainted_Flesh, L"2/26/Tainted_Flesh"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Blood_is_Power));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Grenths_Balance));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Lingering_Curse));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Plague_Signet));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Taker));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Tainted_Flesh));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Judgement_Strike, L"6/63/Judgment_Strike"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Martyr, L"a/a9/Martyr"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shield_of_Regeneration, L"e/eb/Shield_of_Regeneration"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Judgment, L"a/aa/Signet_of_Judgment"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Spell_Breaker, L"0/08/Spell_Breaker"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Word_of_Healing, L"1/17/Word_of_Healing"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Judgement_Strike));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Martyr));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shield_of_Regeneration));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Judgment));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Spell_Breaker));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Word_of_Healing));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Crippling_Anguish, L"e/e4/Crippling_Anguish"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Echo, L"a/a0/Echo"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Energy_Drain, L"8/8c/Energy_Drain"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Energy_Surge, L"f/f6/Energy_Surge"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mantra_of_Recovery, L"0/00/Mantra_of_Recovery"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Time_Ward, L"9/90/Time_Ward"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Crippling_Anguish));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Echo));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Energy_Drain));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Energy_Surge));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mantra_of_Recovery));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Time_Ward));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Elemental_Attunement, L"3/34/Elemental_Attunement"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Lightning_Surge, L"a/a1/Lightning_Surge"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mind_Burn, L"4/4f/Mind_Burn"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mind_Freeze, L"b/be/Mind_Freeze"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Obsidian_Flesh, L"c/c2/Obsidian_Flesh"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Over_the_Limit, L"5/5a/Over_the_Limit"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Elemental_Attunement));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Lightning_Surge));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mind_Burn));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mind_Freeze));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Obsidian_Flesh));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Over_the_Limit));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Theft, L"9/91/Shadow_Theft"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Theft));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Weapons_of_Three_Forges, L"0/08/Weapons_of_Three_Forges"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Weapons_of_Three_Forges));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Revolution, L"4/48/Vow_of_Revolution"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Revolution));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Heroic_Refrain, L"6/6e/Heroic_Refrain"));
+    eskills.push_back(new PvESkill(GW::Constants::SkillID::Heroic_Refrain));
 
     auto& skills = pve_skills.at(Campaign::Core);
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Seven_Weapon_Stance, L"d/d7/Seven_Weapons_Stance"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Together_as_one, L"f/ff/%22Together_as_One%21%22"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Taker, L"4/4e/Soul_Taker"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Judgement_Strike, L"6/63/Judgment_Strike"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Time_Ward, L"9/90/Time_Ward"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Over_the_Limit, L"5/5a/Over_the_Limit"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Theft, L"9/91/Shadow_Theft"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Weapons_of_Three_Forges, L"0/08/Weapons_of_Three_Forges"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Revolution, L"4/48/Vow_of_Revolution"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Heroic_Refrain, L"6/6e/Heroic_Refrain"));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Seven_Weapon_Stance));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Together_as_one));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Taker));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Judgement_Strike));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Time_Ward));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Over_the_Limit));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Theft));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Weapons_of_Three_Forges));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Revolution));
+    skills.push_back(new PvESkill(GW::Constants::SkillID::Heroic_Refrain));
 
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_MAPS_UNLOCKED, [](GW::HookStatus*, void*) {
         Instance().ParseCompletionBuffer(CompletionType::Mission);
@@ -997,42 +1122,43 @@ void CompletionWindow::Initialize()
 
 
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILLS_UNLOCKED, [](GW::HookStatus*, void*) {
-        Instance().ParseCompletionBuffer(CompletionType::Skills);
-        Instance().CheckProgress();
-        });
+	    Instance().ParseCompletionBuffer(CompletionType::Skills);
+	    Instance().CheckProgress();
+	    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
-        uint32_t player_number = ((uint32_t*)pak)[1];
-        GW::CharContext* c = GW::GameContext::instance()->character;
-        if (player_number == c->player_number) {
-            GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
-            if (me) {
-                auto comp = Instance().GetCharacterCompletion(c->player_name);
-                if (comp)
-                    comp->profession = (GW::Constants::Profession)me->primary;
-                Instance().ParseCompletionBuffer(CompletionType::Heroes);
-            }
-            Instance().CheckProgress();
-        }
-        });
+	    uint32_t player_number = ((uint32_t*)pak)[1];
+	    GW::CharContext* c = GW::GameContext::instance()->character;
+	    if (player_number == c->player_number) {
+		    GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
+		    if (me) {
+			    auto comp = Instance().GetCharacterCompletion(c->player_name);
+			    if (comp)
+				    comp->profession = (GW::Constants::Profession)me->primary;
+			    Instance().ParseCompletionBuffer(CompletionType::Heroes);
+		    }
+		    Instance().CheckProgress();
+	    }
+	    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, [](GW::HookStatus*, void*) {
-        Instance().ParseCompletionBuffer(CompletionType::Skills);
-        Instance().CheckProgress();
-        });
+	    Instance().ParseCompletionBuffer(CompletionType::Skills);
+	    Instance().CheckProgress();
+	    });
     // Reset chosen player name to be current character on login
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_INSTANCE_LOADED, [&](GW::HookStatus*, void*) {
-        if (wcscmp(GetPlayerName(), last_player_name) != 0) {
-            wcscpy(last_player_name, GetPlayerName());
-            chosen_player_name_s.clear();
-            chosen_player_name.clear();
-        }
-        ParseCompletionBuffer(CompletionType::Skills);
-        ParseCompletionBuffer(CompletionType::Mission);
-        ParseCompletionBuffer(CompletionType::MissionBonus);
-        ParseCompletionBuffer(CompletionType::MissionBonusHM);
-        ParseCompletionBuffer(CompletionType::MissionHM);
-        ParseCompletionBuffer(CompletionType::MapsUnlocked);
-        CheckProgress();
-        });
+	    if (wcscmp(GetPlayerName(), last_player_name) != 0) {
+		    wcscpy(last_player_name, GetPlayerName());
+		    chosen_player_name_s.clear();
+		    chosen_player_name.clear();
+            FetchHom();
+	    }
+	    ParseCompletionBuffer(CompletionType::Skills);
+	    ParseCompletionBuffer(CompletionType::Mission);
+	    ParseCompletionBuffer(CompletionType::MissionBonus);
+	    ParseCompletionBuffer(CompletionType::MissionBonusHM);
+	    ParseCompletionBuffer(CompletionType::MissionHM);
+	    ParseCompletionBuffer(CompletionType::MapsUnlocked);
+	    CheckProgress();
+	    });
 
     GW::UI::RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kDialogButton, OnDialogButton);
     GW::UI::RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kSendDialog, OnSendDialog);
@@ -1163,72 +1289,72 @@ void CompletionWindow::Initialize_Prophecies()
     prophecies_vanquishes.push_back(new Vanquish(MapID::Witmans_Folly));
     prophecies_vanquishes.push_back(new Vanquish(MapID::Perdition_Rock));
 
-    auto& eskills = elite_skills.at(Campaign::Prophecies);
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Victory_Is_Mine, L"0/0b/%22Victory_Is_Mine%21%22"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Backbreaker, L"c/c1/Backbreaker"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Bulls_Charge, L"f/fb/Bull%27s_Charge"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Defy_Pain, L"1/16/Defy_Pain"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Dwarven_Battle_Stance, L"b/b9/Dwarven_Battle_Stance"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Earth_Shaker, L"a/ac/Earth_Shaker"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Eviscerate, L"3/30/Eviscerate"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Flourish, L"9/97/Flourish"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Gladiators_Defense, L"8/8e/Gladiator%27s_Defense"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Skull_Crack, L"c/c2/Skull_Crack"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Warriors_Endurance, L"c/c2/Warrior%27s_Endurance"));
+	auto& eskills = elite_skills.at(Campaign::Prophecies);
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Victory_Is_Mine));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Backbreaker));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Bulls_Charge));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Defy_Pain));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Dwarven_Battle_Stance));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Earth_Shaker));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Eviscerate));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Flourish));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Gladiators_Defense));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Skull_Crack));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Warriors_Endurance));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Crippling_Shot, L"d/da/Crippling_Shot"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Greater_Conflagration, L"5/50/Greater_Conflagration"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Incendiary_Arrows, L"9/90/Incendiary_Arrows"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Marksmans_Wager, L"5/50/Marksman%27s_Wager"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Melandrus_Arrows, L"4/45/Melandru%27s_Arrows"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Melandrus_Resilience, L"b/b0/Melandru%27s_Resilience"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Oath_Shot, L"b/b6/Oath_Shot"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Poison_Arrow, L"f/fd/Poison_Arrow"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Practiced_Stance, L"a/ae/Practiced_Stance"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Punishing_Shot, L"9/96/Punishing_Shot"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Crippling_Shot));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Greater_Conflagration));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Incendiary_Arrows));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Marksmans_Wager));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Melandrus_Arrows));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Melandrus_Resilience));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Oath_Shot));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Poison_Arrow));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Practiced_Stance));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Punishing_Shot));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Aura_of_the_Lich, L"5/5e/Aura_of_the_Lich"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Feast_of_Corruption, L"4/47/Feast_of_Corruption"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Life_Transfer, L"4/49/Life_Transfer"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Offering_of_Blood, L"e/e6/Offering_of_Blood"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Order_of_the_Vampire, L"3/39/Order_of_the_Vampire"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Leech, L"0/0b/Soul_Leech"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Spiteful_Spirit, L"0/00/Spiteful_Spirit"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Virulence, L"4/4a/Virulence"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Well_of_Power, L"7/74/Well_of_Power"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Wither, L"a/a0/Wither"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Aura_of_the_Lich));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Feast_of_Corruption));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Life_Transfer));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Offering_of_Blood));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Order_of_the_Vampire));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Leech));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Spiteful_Spirit));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Virulence));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Well_of_Power));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Wither));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Amity, L"e/ee/Amity"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Aura_of_Faith, L"f/f7/Aura_of_Faith"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Healing_Hands, L"0/0b/Healing_Hands"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Life_Barrier, L"c/ca/Life_Barrier"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mark_of_Protection, L"1/1b/Mark_of_Protection"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Peace_and_Harmony, L"f/f7/Peace_and_Harmony"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Restore_Condition, L"a/ac/Restore_Condition"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shield_of_Deflection, L"1/1a/Shield_of_Deflection"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shield_of_Judgment, L"e/e8/Shield_of_Judgment"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Unyielding_Aura, L"e/e6/Unyielding_Aura"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Amity));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Aura_of_Faith));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Healing_Hands));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Life_Barrier));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Mark_of_Protection));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Peace_and_Harmony));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Restore_Condition));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shield_of_Deflection));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shield_of_Judgment));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Unyielding_Aura));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Fevered_Dreams, L"7/72/Fevered_Dreams"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Illusionary_Weaponry, L"a/ab/Illusionary_Weaponry"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ineptitude, L"6/6d/Ineptitude"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Keystone_Signet, L"3/31/Keystone_Signet"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mantra_of_Recall, L"a/a0/Mantra_of_Recall"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Migraine, L"a/ad/Migraine"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Panic, L"f/f7/Panic"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Power_Block, L"5/5e/Power_Block"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Midnight, L"e/eb/Signet_of_Midnight"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Fevered_Dreams));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Illusionary_Weaponry));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ineptitude));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Keystone_Signet));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Mantra_of_Recall));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Migraine));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Panic));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Power_Block));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Midnight));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ether_Prodigy, L"3/30/Ether_Prodigy"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ether_Renewal, L"9/97/Ether_Renewal"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Glimmering_Mark, L"8/82/Glimmering_Mark"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Glyph_of_Energy, L"c/c1/Glyph_of_Energy"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Glyph_of_Renewal, L"8/8a/Glyph_of_Renewal"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mind_Shock, L"2/29/Mind_Shock"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mist_Form, L"f/f3/Mist_Form"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Thunderclap, L"b/bc/Thunderclap"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ward_Against_Harm, L"3/3f/Ward_Against_Harm"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Water_Trident, L"e/ee/Water_Trident"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ether_Prodigy));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ether_Renewal));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Glimmering_Mark));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Glyph_of_Energy));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Glyph_of_Renewal));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Mind_Shock));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Mist_Form));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Thunderclap));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ward_Against_Harm));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Water_Trident));
 }
 void CompletionWindow::Initialize_Factions()
 {
@@ -1335,104 +1461,104 @@ void CompletionWindow::Initialize_Factions()
     skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Triple_Shot_kurzick));
     skills.push_back(new FactionsPvESkill(GW::Constants::SkillID::Triple_Shot_luxon));
 
-    auto& eskills = elite_skills.at(Campaign::Factions);
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Coward, L"9/9c/%22Coward%21%22"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Auspicious_Parry, L"0/09/Auspicious_Parry"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Dragon_Slash, L"6/6a/Dragon_Slash"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Enraged_Smash, L"a/a6/Enraged_Smash"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Forceful_Blow, L"b/b0/Forceful_Blow"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Primal_Rage, L"d/d8/Primal_Rage"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Quivering_Blade, L"8/8f/Quivering_Blade"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shove, L"b/bb/Shove"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Triple_Chop, L"a/a5/Triple_Chop"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Whirling_Axe, L"1/1b/Whirling_Axe"));
+	auto& eskills = elite_skills.at(Campaign::Factions);
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Coward));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Auspicious_Parry));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Dragon_Slash));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Enraged_Smash));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Forceful_Blow));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Primal_Rage));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Quivering_Blade));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shove));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Triple_Chop));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Whirling_Axe));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Archers_Signet, L"b/b2/Archer%27s_Signet"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Broad_Head_Arrow, L"5/51/Broad_Head_Arrow"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Enraged_Lunge, L"4/43/Enraged_Lunge"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Equinox, L"d/db/Equinox"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Famine, L"d/d4/Famine"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Glass_Arrows, L"3/3a/Glass_Arrows"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Heal_as_One, L"9/97/Heal_as_One"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Lacerate, L"f/fa/Lacerate"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Melandrus_Shot, L"a/ac/Melandru%27s_Shot"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Trappers_Focus, L"7/7c/Trapper%27s_Focus"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Archers_Signet));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Broad_Head_Arrow));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Enraged_Lunge));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Equinox));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Famine));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Glass_Arrows));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Heal_as_One));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Lacerate));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Melandrus_Shot));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Trappers_Focus));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Animate_Flesh_Golem, L"7/71/Animate_Flesh_Golem"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Cultists_Fervor, L"b/bc/Cultist%27s_Fervor"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Discord, L"6/64/Discord"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Icy_Veins, L"8/89/Icy_Veins"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Order_of_Apostasy, L"9/91/Order_of_Apostasy"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Bind, L"6/6c/Soul_Bind"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Spoil_Victor, L"7/76/Spoil_Victor"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Vampiric_Spirit, L"5/51/Vampiric_Spirit"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Wail_of_Doom, L"d/d8/Wail_of_Doom"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Weaken_Knees, L"6/6b/Weaken_Knees"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Animate_Flesh_Golem));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Cultists_Fervor));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Discord));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Icy_Veins));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Order_of_Apostasy));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Bind));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Spoil_Victor));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Vampiric_Spirit));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Wail_of_Doom));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Weaken_Knees));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Air_of_Enchantment, L"b/bb/Air_of_Enchantment"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Blessed_Light, L"4/40/Blessed_Light"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Boon_Signet, L"a/a7/Boon_Signet"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Empathic_Removal, L"2/20/Empathic_Removal"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Healing_Burst, L"6/6d/Healing_Burst"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Healing_Light, L"4/45/Healing_Light"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Life_Sheath, L"d/de/Life_Sheath"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ray_of_Judgment, L"e/e4/Ray_of_Judgment"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Withdraw_Hexes, L"8/85/Withdraw_Hexes"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Word_of_Censure, L"6/6b/Word_of_Censure"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Air_of_Enchantment));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Blessed_Light));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Boon_Signet));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Empathic_Removal));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Healing_Burst));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Healing_Light));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Life_Sheath));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ray_of_Judgment));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Withdraw_Hexes));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Word_of_Censure));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Arcane_Languor, L"d/d5/Arcane_Languor"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Expel_Hexes, L"4/44/Expel_Hexes"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Lyssas_Aura, L"c/c1/Lyssa%27s_Aura"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Power_Leech, L"b/b8/Power_Leech"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Psychic_Distraction, L"7/70/Psychic_Distraction"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Psychic_Instability, L"d/db/Psychic_Instability"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Recurring_Insecurity, L"4/42/Recurring_Insecurity"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shared_Burden, L"7/72/Shared_Burden"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shatter_Storm, L"5/5e/Shatter_Storm"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Stolen_Speed, L"f/f0/Stolen_Speed"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Arcane_Languor));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Expel_Hexes));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Lyssas_Aura));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Power_Leech));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Psychic_Distraction));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Psychic_Instability));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Recurring_Insecurity));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shared_Burden));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shatter_Storm));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Stolen_Speed));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Double_Dragon, L"7/7a/Double_Dragon"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Energy_Boon, L"0/00/Energy_Boon"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Gust, L"a/a1/Gust"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mirror_of_Ice, L"3/33/Mirror_of_Ice"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ride_the_Lightning, L"f/fc/Ride_the_Lightning"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Second_Wind, L"f/f9/Second_Wind"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shatterstone, L"3/36/Shatterstone"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shockwave, L"1/18/Shockwave"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Star_Burst, L"5/5a/Star_Burst"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Unsteady_Ground, L"b/bf/Unsteady_Ground"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Double_Dragon));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Energy_Boon));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Gust));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Mirror_of_Ice));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ride_the_Lightning));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Second_Wind));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shatterstone));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shockwave));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Star_Burst));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Unsteady_Ground));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Assassins_Promise, L"8/80/Assassin%27s_Promise"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Aura_of_Displacement, L"b/b9/Aura_of_Displacement"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Beguiling_Haze, L"9/9b/Beguiling_Haze"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Dark_Apostasy, L"a/ad/Dark_Apostasy"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Flashing_Blades, L"3/38/Flashing_Blades"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Locusts_Fury, L"5/5d/Locust%27s_Fury"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Moebius_Strike, L"4/49/Moebius_Strike"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Palm_Strike, L"c/c5/Palm_Strike"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Seeping_Wound, L"9/96/Seeping_Wound"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Form, L"e/e4/Shadow_Form"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Shroud, L"c/cf/Shadow_Shroud"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shroud_of_Silence, L"d/d0/Shroud_of_Silence"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Siphon_Strength, L"6/64/Siphon_Strength"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Temple_Strike, L"9/9b/Temple_Strike"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Way_of_the_Empty_Palm, L"9/98/Way_of_the_Empty_Palm"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Assassins_Promise));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Aura_of_Displacement));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Beguiling_Haze));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Dark_Apostasy));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Flashing_Blades));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Locusts_Fury));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Moebius_Strike));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Palm_Strike));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Seeping_Wound));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Form));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Shroud));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shroud_of_Silence));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Siphon_Strength));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Temple_Strike));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Way_of_the_Empty_Palm));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Attuned_Was_Songkai, L"2/24/Attuned_Was_Songkai"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Clamor_of_Souls, L"4/4d/Clamor_of_Souls"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Consume_Soul, L"7/70/Consume_Soul"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Defiant_Was_Xinrae, L"3/3c/Defiant_Was_Xinrae"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Grasping_Was_Kuurong, L"f/f2/Grasping_Was_Kuurong"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Preservation, L"b/b9/Preservation"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ritual_Lord, L"1/15/Ritual_Lord"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Spirits, L"f/f7/Signet_of_Spirits"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Twisting, L"2/24/Soul_Twisting"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Spirit_Channeling, L"0/0b/Spirit_Channeling"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Spirit_Light_Weapon, L"a/a3/Spirit_Light_Weapon"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Tranquil_Was_Tanasen, L"3/34/Tranquil_Was_Tanasen"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Vengeful_Was_Khanhei, L"3/36/Vengeful_Was_Khanhei"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Wanderlust, L"c/cb/Wanderlust"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Weapon_of_Quickening, L"7/78/Weapon_of_Quickening"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Attuned_Was_Songkai));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Clamor_of_Souls));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Consume_Soul));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Defiant_Was_Xinrae));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Grasping_Was_Kuurong));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Preservation));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ritual_Lord));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Spirits));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Soul_Twisting));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Spirit_Channeling));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Spirit_Light_Weapon));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Tranquil_Was_Tanasen));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Vengeful_Was_Khanhei));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Wanderlust));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Weapon_of_Quickening));
 
     auto& h = heros.at(Campaign::Factions);
     h.push_back(new HeroUnlock(GW::Constants::HeroID::Miku));
@@ -1525,141 +1651,141 @@ void CompletionWindow::Initialize_Nightfall()
     this_vanquishes.push_back(new Vanquish(MapID::The_Shattered_Ravines));
     this_vanquishes.push_back(new Vanquish(MapID::The_Sulfurous_Wastes));
 
-    auto& skills = pve_skills.at(Campaign::Nightfall);
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Theres_Nothing_to_Fear));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Lightbringer_Signet, L"4/43/Lightbringer_Signet"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Lightbringers_Gaze,  L"c/c6/Lightbringer%27s_Gaze"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Critical_Agility,  L"e/e8/Critical_Agility"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Cry_of_Pain,  L"9/93/Cry_of_Pain"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Eternal_Aura, L"a/ab/Eternal_Aura"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Intensity, L"d/dc/Intensity"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Necrosis, L"9/99/Necrosis"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Never_Rampage_Alone,  L"d/d1/Never_Rampage_Alone"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Seed_of_Life,  L"7/74/Seed_of_Life"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Sunspear_Rebirth_Signet, L"e/e0/Sunspear_Rebirth_Signet"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Vampirism, L"5/59/Vampirism"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Whirlwind_Attack, L"2/2c/Whirlwind_Attack"));
+	auto& skills = pve_skills.at(Campaign::Nightfall);
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Theres_Nothing_to_Fear));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Lightbringer_Signet));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Lightbringers_Gaze));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Critical_Agility));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Cry_of_Pain));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Eternal_Aura));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Intensity));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Necrosis));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Never_Rampage_Alone));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Seed_of_Life));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Sunspear_Rebirth_Signet));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Vampirism));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Whirlwind_Attack));
 
-    auto& eskills = elite_skills.at(Campaign::Nightfall);
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Youre_All_Alone, L"f/f1/%22You%27re_All_Alone%21%22"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Charging_Strike, L"a/ad/Charging_Strike"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Crippling_Slash, L"9/93/Crippling_Slash"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Decapitate, L"9/98/Decapitate"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Headbutt, L"6/64/Headbutt"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Magehunter_Strike, L"6/69/Magehunter_Strike"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Magehunters_Smash, L"1/11/Magehunter%27s_Smash"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Rage_of_the_Ntouka, L"1/11/Rage_of_the_Ntouka"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Soldiers_Stance, L"1/1b/Soldier%27s_Stance"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Steady_Stance, L"4/47/Steady_Stance"));
+	auto& eskills = elite_skills.at(Campaign::Nightfall);
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Youre_All_Alone));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Charging_Strike));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Crippling_Slash));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Decapitate));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Headbutt));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Magehunter_Strike));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Magehunters_Smash));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Rage_of_the_Ntouka));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Soldiers_Stance));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Steady_Stance));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Burning_Arrow, L"d/da/Burning_Arrow"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Experts_Dexterity, L"5/58/Expert%27s_Dexterity"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Infuriating_Heat, L"b/bb/Infuriating_Heat"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Magebane_Shot, L"7/70/Magebane_Shot"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Prepared_Shot, L"3/3d/Prepared_Shot"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Quicksand, L"9/9a/Quicksand"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Rampage_as_One, L"2/25/Rampage_as_One"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Scavengers_Focus, L"c/c2/Scavenger%27s_Focus"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Smoke_Trap, L"f/f5/Smoke_Trap"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Strike_as_One, L"4/43/Strike_as_One"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Burning_Arrow));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Experts_Dexterity));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Infuriating_Heat));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Magebane_Shot));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Prepared_Shot));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Quicksand));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Rampage_as_One));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Scavengers_Focus));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Smoke_Trap));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Strike_as_One));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Contagion, L"1/14/Contagion"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Corrupt_Enchantment, L"b/bd/Corrupt_Enchantment"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Depravity, L"a/ae/Depravity"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Jagged_Bones, L"8/85/Jagged_Bones"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Order_of_Undeath, L"6/6e/Order_of_Undeath"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Pain_of_Disenchantment, L"1/11/Pain_of_Disenchantment"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ravenous_Gaze, L"4/40/Ravenous_Gaze"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Reapers_Mark, L"c/c8/Reaper%27s_Mark"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Suffering, L"e/e8/Signet_of_Suffering"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Toxic_Chill, L"d/d4/Toxic_Chill"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Contagion));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Corrupt_Enchantment));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Depravity));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Jagged_Bones));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Order_of_Undeath));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Pain_of_Disenchantment));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ravenous_Gaze));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Reapers_Mark));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Suffering));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Toxic_Chill));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Balthazars_Pendulum, L"e/ec/Balthazar%27s_Pendulum"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Defenders_Zeal, L"b/b8/Defender%27s_Zeal"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Divert_Hexes, L"e/e7/Divert_Hexes"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Glimmer_of_Light, L"e/e8/Glimmer_of_Light"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Healers_Boon, L"f/f6/Healer%27s_Boon"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Healers_Covenant, L"9/9c/Healer%27s_Covenant"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Light_of_Deliverance, L"1/1f/Light_of_Deliverance"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Scribes_Insight, L"c/c6/Scribe%27s_Insight"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Removal, L"a/af/Signet_of_Removal"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Zealous_Benediction, L"e/ea/Zealous_Benediction"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Balthazars_Pendulum));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Defenders_Zeal));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Divert_Hexes));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Glimmer_of_Light));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Healers_Boon));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Healers_Covenant));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Light_of_Deliverance));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Scribes_Insight));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Removal));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Zealous_Benediction));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Air_of_Disenchantment, L"8/89/Air_of_Disenchantment"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Enchanters_Conundrum, L"d/d1/Enchanter%27s_Conundrum"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Extend_Conditions, L"5/59/Extend_Conditions"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Hex_Eater_Vortex, L"7/7e/Hex_Eater_Vortex"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Power_Flux, L"0/03/Power_Flux"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Illusions, L"1/1f/Signet_of_Illusions"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Simple_Thievery, L"1/11/Simple_Thievery"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Symbols_of_Inspiration, L"a/a4/Symbols_of_Inspiration"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Tease, L"5/5d/Tease"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Visions_of_Regret, L"9/93/Visions_of_Regret"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Air_of_Disenchantment));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Enchanters_Conundrum));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Extend_Conditions));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Hex_Eater_Vortex));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Power_Flux));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Illusions));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Simple_Thievery));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Symbols_of_Inspiration));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Tease));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Visions_of_Regret));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Blinding_Surge, L"a/a4/Blinding_Surge"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ether_Prism, L"3/39/Ether_Prism"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Icy_Shackles, L"d/d1/Icy_Shackles"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Invoke_Lightning, L"9/93/Invoke_Lightning"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Master_of_Magic, L"3/35/Master_of_Magic"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mind_Blast, L"3/3d/Mind_Blast"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Sandstorm, L"7/75/Sandstorm"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Savannah_Heat, L"5/50/Savannah_Heat"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Searing_Flames, L"3/39/Searing_Flames"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Stone_Sheath, L"9/9e/Stone_Sheath"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Blinding_Surge));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ether_Prism));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Icy_Shackles));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Invoke_Lightning));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Master_of_Magic));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Mind_Blast));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Sandstorm));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Savannah_Heat));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Searing_Flames));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Stone_Sheath));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Assault_Enchantments, L"d/d7/Assault_Enchantments"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Foxs_Promise, L"e/ed/Fox%27s_Promise"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Golden_Skull_Strike, L"0/05/Golden_Skull_Strike"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Hidden_Caltrops, L"c/c2/Hidden_Caltrops"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Mark_of_Insecurity, L"2/24/Mark_of_Insecurity"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Meld, L"1/10/Shadow_Meld"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Prison, L"7/7f/Shadow_Prison"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Shattering_Assault, L"d/d4/Shattering_Assault"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Wastrels_Collapse, L"5/5e/Wastrel%27s_Collapse"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Way_of_the_Assassin, L"7/74/Way_of_the_Assassin"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Assault_Enchantments));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Foxs_Promise));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Golden_Skull_Strike));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Hidden_Caltrops));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Mark_of_Insecurity));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Meld));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shadow_Prison));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Shattering_Assault));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Wastrels_Collapse));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Way_of_the_Assassin));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Caretakers_Charge, L"a/ad/Caretaker%27s_Charge"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Destructive_Was_Glaive, L"4/41/Destructive_Was_Glaive"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Offering_of_Spirit, L"1/14/Offering_of_Spirit"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Reclaim_Essence, L"b/bb/Reclaim_Essence"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Ghostly_Might, L"b/bf/Signet_of_Ghostly_Might"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Spirits_Strength, L"f/f9/Spirit%27s_Strength"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Weapon_of_Fury, L"2/2d/Weapon_of_Fury"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Weapon_of_Remedy, L"1/18/Weapon_of_Remedy"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Wielders_Zeal, L"4/47/Wielder%27s_Zeal"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Xinraes_Weapon, L"3/33/Xinrae%27s_Weapon"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Caretakers_Charge));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Destructive_Was_Glaive));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Offering_of_Spirit));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Reclaim_Essence));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Ghostly_Might));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Spirits_Strength));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Weapon_of_Fury));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Weapon_of_Remedy));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Wielders_Zeal));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Xinraes_Weapon));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Arcane_Zeal, L"a/ad/Arcane_Zeal"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Balthazar, L"9/93/Avatar_of_Balthazar"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Dwayna, L"e/e0/Avatar_of_Dwayna"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Grenth, L"1/13/Avatar_of_Grenth"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Lyssa, L"e/e5/Avatar_of_Lyssa"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Melandru , L"f/ff/Avatar_of_Melandru"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Dust_Aura, L"3/39/Ebon_Dust_Aura"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Grenths_Grasp, L"4/4a/Grenth%27s_Grasp"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Onslaught, L"d/d8/Onslaught"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Pious_Renewal, L"3/36/Pious_Renewal"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Reapers_Sweep, L"e/e6/Reaper%27s_Sweep"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Silence, L"f/f6/Vow_of_Silence"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Strength, L"b/b9/Vow_of_Strength"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Wounding_Strike, L"3/35/Wounding_Strike"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Zealous_Vow, L"0/03/Zealous_Vow"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Arcane_Zeal));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Balthazar));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Dwayna));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Grenth));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Lyssa));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Avatar_of_Melandru ));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Dust_Aura));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Grenths_Grasp));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Onslaught));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Pious_Renewal));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Reapers_Sweep));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Silence));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Vow_of_Strength));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Wounding_Strike));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Zealous_Vow));
 
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Incoming, L"d/d5/%22Incoming%21%22"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Its_Just_a_Flesh_Wound, L"6/69/%22It%27s_Just_a_Flesh_Wound.%22"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::The_Power_Is_Yours, L"0/05/%22The_Power_Is_Yours%21%22"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Angelic_Bond, L"6/6e/Angelic_Bond"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Anthem_of_Fury, L"4/49/Anthem_of_Fury"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Anthem_of_Guidance, L"4/4e/Anthem_of_Guidance"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Cautery_Signet, L"1/17/Cautery_Signet"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Crippling_Anthem, L"2/23/Crippling_Anthem"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Cruel_Spear, L"9/9b/Cruel_Spear"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Defensive_Anthem, L"5/58/Defensive_Anthem"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Focused_Anger, L"c/c0/Focused_Anger"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Soldiers_Fury, L"c/ca/Soldier%27s_Fury"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Song_of_Purification, L"5/57/Song_of_Purification"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Song_of_Restoration, L"9/9b/Song_of_Restoration"));
-    eskills.push_back(new PvESkill(GW::Constants::SkillID::Stunning_Strike, L"a/a6/Stunning_Strike"));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Incoming));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Its_Just_a_Flesh_Wound));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::The_Power_Is_Yours));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Angelic_Bond));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Anthem_of_Fury));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Anthem_of_Guidance));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Cautery_Signet));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Crippling_Anthem));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Cruel_Spear));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Defensive_Anthem));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Focused_Anger));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Soldiers_Fury));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Song_of_Purification));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Song_of_Restoration));
+	eskills.push_back(new PvESkill(GW::Constants::SkillID::Stunning_Strike));
 
     auto& h = heros.at(Campaign::Nightfall);
     h.push_back(new HeroUnlock(GW::Constants::HeroID::AcolyteJin));
@@ -1719,60 +1845,60 @@ void CompletionWindow::Initialize_EotN()
     this_vanquishes.push_back(new Vanquish(MapID::Sparkfly_Swamp, QuestID::ZaishenVanquish_Sparkfly_Swamp));
     this_vanquishes.push_back(new Vanquish(MapID::Verdant_Cascades, QuestID::ZaishenVanquish_Verdant_Cascades));
 
-    auto& skills = pve_skills.at(Campaign::EyeOfTheNorth);
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Air_of_Superiority, L"9/9f/Air_of_Superiority"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Asuran_Scan, L"a/a0/Asuran_Scan"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Mental_Block,  L"e/ed/Mental_Block"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Mindbender, L"c/c0/Mindbender"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Pain_Inverter, L"9/91/Pain_Inverter"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Radiation_Field,  L"3/31/Radiation_Field"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Smooth_Criminal, L"3/33/Smooth_Criminal"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Ice_Imp, L"2/2a/Summon_Ice_Imp"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Mursaat, L"6/61/Summon_Mursaat"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Naga_Shaman, L"f/f0/Summon_Naga_Shaman"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Ruby_Djinn, L"a/a0/Summon_Ruby_Djinn"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Technobabble, L"0/0a/Technobabble"));
+	auto& skills = pve_skills.at(Campaign::EyeOfTheNorth);
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Air_of_Superiority));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Asuran_Scan));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Mental_Block));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Mindbender));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Pain_Inverter));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Radiation_Field));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Smooth_Criminal));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Ice_Imp));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Mursaat));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Naga_Shaman));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Summon_Ruby_Djinn));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Technobabble));
 
-    skills.push_back(new PvESkill(GW::Constants::SkillID::By_Urals_Hammer, L"d/df/%22By_Ural%27s_Hammer%21%22"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Dont_Trip, L"c/c1/%22Don%27t_Trip%21%22"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Alkars_Alchemical_Acid, L"4/43/Alkar%27s_Alchemical_Acid"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Black_Powder_Mine, L"5/50/Black_Powder_Mine"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Brawling_Headbutt , L"b/be/Brawling_Headbutt"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Breath_of_the_Great_Dwarf, L"0/0e/Breath_of_the_Great_Dwarf"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Drunken_Master, L"b/b3/Drunken_Master"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Dwarven_Stability, L"4/4c/Dwarven_Stability"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Ear_Bite, L"c/c6/Ear_Bite"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Great_Dwarf_Armor, L"e/e5/Great_Dwarf_Armor"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Great_Dwarf_Weapon, L"a/ab/Great_Dwarf_Weapon"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Light_of_Deldrimor, L"1/11/Light_of_Deldrimor"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Low_Blow, L"8/86/Low_Blow"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Snow_Storm, L"a/a0/Snow_Storm"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::By_Urals_Hammer));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Dont_Trip));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Alkars_Alchemical_Acid));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Black_Powder_Mine));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Brawling_Headbutt ));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Breath_of_the_Great_Dwarf));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Drunken_Master));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Dwarven_Stability));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ear_Bite));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Great_Dwarf_Armor));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Great_Dwarf_Weapon));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Light_of_Deldrimor));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Low_Blow));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Snow_Storm));
 
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Deft_Strike, L"6/62/Deft_Strike"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Battle_Standard_of_Courage, L"5/53/Ebon_Battle_Standard_of_Courage"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Battle_Standard_of_Honor, L"5/51/Ebon_Battle_Standard_of_Honor"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Battle_Standard_of_Wisdom, L"e/eb/Ebon_Battle_Standard_of_Wisdom"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Escape, L"b/bb/Ebon_Escape"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Vanguard_Assassin_Support, L"0/03/Ebon_Vanguard_Assassin_Support"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Vanguard_Sniper_Support, L"1/16/Ebon_Vanguard_Sniper_Support"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Infection, L"6/66/Signet_of_Infection"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Sneak_Attack, L"8/87/Sneak_Attack"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Tryptophan_Signet, L"7/70/Tryptophan_Signet"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Weakness_Trap, L"0/0d/Weakness_Trap"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Winds, L"0/0e/Winds"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Deft_Strike));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Battle_Standard_of_Courage));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Battle_Standard_of_Honor));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Battle_Standard_of_Wisdom));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Escape));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Vanguard_Assassin_Support));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ebon_Vanguard_Sniper_Support));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Signet_of_Infection));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Sneak_Attack));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Tryptophan_Signet));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Weakness_Trap));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Winds));
 
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Dodge_This, L"4/4b/%22Dodge_This%21%22"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Finish_Him, L"6/61/%22Finish_Him%21%22"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::I_Am_Unstoppable, L"e/ed/%22I_Am_Unstoppable%21%22"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::I_Am_the_Strongest, L"e/ec/%22I_Am_the_Strongest%21%22"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::You_Are_All_Weaklings, L"a/a4/%22You_Are_All_Weaklings%21%22"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::You_Move_Like_a_Dwarf, L"6/6a/%22You_Move_Like_a_Dwarf%21%22"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::A_Touch_of_Guile, L"2/2d/A_Touch_of_Guile"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Club_of_a_Thousand_Bears, L"d/dc/Club_of_a_Thousand_Bears"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Feel_No_Pain, L"f/fe/Feel_No_Pain"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Raven_Blessing, L"0/0a/Raven_Blessing"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Ursan_Blessing, L"7/7b/Ursan_Blessing"));
-    skills.push_back(new PvESkill(GW::Constants::SkillID::Volfen_Blessing, L"b/b2/Volfen_Blessing"));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Dodge_This));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Finish_Him));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::I_Am_Unstoppable));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::I_Am_the_Strongest));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::You_Are_All_Weaklings));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::You_Move_Like_a_Dwarf));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::A_Touch_of_Guile));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Club_of_a_Thousand_Bears));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Feel_No_Pain));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Raven_Blessing));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Ursan_Blessing));
+	skills.push_back(new PvESkill(GW::Constants::SkillID::Volfen_Blessing));
 
     auto& h = heros.at(Campaign::EyeOfTheNorth);
     h.push_back(new HeroUnlock(GW::Constants::HeroID::Anton));
@@ -1867,18 +1993,7 @@ void CompletionWindow::Terminate()
 }
 void CompletionWindow::Draw(IDirect3DDevice9* device)
 {
-    if (hom_achievements_status == 0) {
-        character_completion[hom_achievements.character_name]->hom_code = hom_achievements.hom_code;
-
-        hom_achievements_status = 0xf;
-        for (auto achievement : hom_weapons) {
-            achievement->CheckProgress(chosen_player_name);
-        }
-        for (auto achievement : hom_armor) {
-            achievement->CheckProgress(chosen_player_name);
-        }
-    }
-    if (!visible) return;
+	if (!visible) return;
 
     // TODO Button at the top to go to current daily
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -1913,16 +2028,16 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 sel = &it.first;
             }
 
-            if (ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
-                chosen_player_name = it.first;
-                chosen_player_name_s = it.second->name_str;
-                CheckProgress();
-            }
-        }
-        ImGui::PopStyleVar();
-        ImGui::EndCombo();
-    }
-    ImGui::PopItemWidth();
+			if (ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
+				chosen_player_name = it.first;
+				chosen_player_name_s = it.second->name_str;
+				CheckProgress(true);
+			}
+		}
+		ImGui::PopStyleVar();
+		ImGui::EndCombo();
+	}
+	ImGui::PopItemWidth();
 #if 1
     ImGui::SameLine();
     if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0)
@@ -2113,35 +2228,34 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::End();
 }
 void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
-    float single_item_width = Mission::icon_size.x;
-    if (show_as_list)
-        single_item_width *= 5.f;
-    int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x)));
-    const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
-    ImGui::Text("Hall of Monuments");
-    ImGui::ShowHelp("To update this list, talk to the \"Devotion\" pedestal in Eye of the North,\n then press \"Examine the Monument to Devotion.\"");
-    ImGui::SameLine(checkbox_offset);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
-    ImGui::Checkbox("Hide unlocked achievements", &hide_unlocked_achievements);
-    ImGui::PopStyleVar();
-    auto hom = character_completion[chosen_player_name]->hom_achievements;
-    // Devotion
-    uint32_t completed = 0;
-    if (hom) {
-        for (size_t i = 0; i < _countof(hom->devotion_points); i++) {
-            completed += hom->devotion_points[i];
-        }
-    }
-    uint32_t dedicated = 0;
-    uint32_t drawn = 0;
-    for (auto m : minipets) {
-        if (m->is_completed) {
-            dedicated++;
-            if (hide_unlocked_achievements)
-                continue;
-        }
-        drawn++;
-    }
+	float single_item_width = Mission::icon_size.x;
+	if (show_as_list)
+		single_item_width *= 5.f;
+	int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x)));
+	const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
+	ImGui::Text("Hall of Monuments");
+	ImGui::SameLine(checkbox_offset);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
+	ImGui::Checkbox("Hide unlocked achievements", &hide_unlocked_achievements);
+	ImGui::PopStyleVar();
+	auto hom = character_completion[chosen_player_name]->hom_achievements;
+	// Devotion
+	uint32_t completed = 0;
+	if (hom.isReady()) {
+		for (size_t i = 0; i < _countof(hom.devotion_points); i++) {
+			completed += hom.devotion_points[i];
+		}
+	}
+	uint32_t dedicated = 0;
+	uint32_t drawn = 0;
+	for (auto m : minipets) {
+		if (m->is_completed) {
+			dedicated++;
+			if (hide_unlocked_achievements)
+				continue;
+		}
+		drawn++;
+	}
 
     char label[128];
     snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d minipets dedicated) - %.0f%%###devotion_points", "Devotion",
@@ -2149,11 +2263,12 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
         dedicated, minipets.size(),
         ((float)dedicated / (float)minipets.size()) * 100.f);
 
-    if (ImGui::CollapsingHeader(label)) {
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
-        size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
-        size_t col_count = 0;
+	if (ImGui::CollapsingHeader(label)) {
+		ImGui::TextDisabled("To update this list, talk to the \"Devotion\" pedestal in Eye of the North, then press \"Examine the Monument to Devotion.\"");
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
+		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
+		size_t col_count = 0;
 
         if (!minipets_sorted) {
             bool ready = true;
@@ -2169,47 +2284,48 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
             }
         }
 
-        for (auto m : minipets) {
-            if (m->is_completed && hide_unlocked_achievements)
-                continue;
-            if (!m->Draw(device))
-                continue;
-            col_count++;
-            if (col_count == items_per_col) {
-                ImGui::NextColumn();
-                col_count = 0;
-            }
-        }
-        ImGui::Columns(1);
-        ImGui::PopStyleVar();
-    }
-    // Valor
-    completed = 0;
-    if (hom) {
-        for (size_t i = 0; i < _countof(hom->valor_points); i++) {
-            completed += hom->valor_points[i];
-        }
-    }
-    dedicated = 0;
-    drawn = 0;
-    for (auto m : hom_weapons) {
-        if (m->is_completed) {
-            dedicated++;
-            if (hide_unlocked_achievements)
-                continue;
-        }
-        drawn++;
-    }
-    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d weapons displayed) - %.0f%%###valor_points", "Valor",
-        completed, ValorPoints::TotalAvailable,
-        dedicated, hom_weapons.size(),
-        ((float)dedicated / (float)hom_weapons.size()) * 100.f);
+		for (auto m : minipets) {
+			if (m->is_completed && hide_unlocked_achievements)
+				continue;
+			if (!m->Draw(device))
+				continue;
+			col_count++;
+			if (col_count == items_per_col) {
+				ImGui::NextColumn();
+				col_count = 0;
+			}
+		}
+		ImGui::Columns(1);
+		ImGui::PopStyleVar();
+	}
+	// Valor
+	completed = 0;
+	if (hom.isReady()) {
+		for (size_t i = 0; i < _countof(hom.valor_points); i++) {
+			completed += hom.valor_points[i];
+		}
+	}
+	dedicated = 0;
+	drawn = 0;
+	for (auto m : hom_weapons) {
+		if (m->is_completed) {
+			dedicated++;
+			if (hide_unlocked_achievements)
+				continue;
+		}
+		drawn++;
+	}
+	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d weapons displayed) - %.0f%%###valor_points", "Valor",
+		completed, ValorPoints::TotalAvailable,
+		dedicated, hom_weapons.size(),
+		((float)dedicated / (float)hom_weapons.size()) * 100.f);
 
-    if (ImGui::CollapsingHeader(label)) {
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
-        size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
-        size_t col_count = 0;
+	if (ImGui::CollapsingHeader(label)) {
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
+		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
+		size_t col_count = 0;
 
         for (auto m : hom_weapons) {
             if (m->is_completed && hide_unlocked_achievements)
@@ -2226,27 +2342,27 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
         ImGui::PopStyleVar();
     }
 
-    // Resilience
-    completed = 0;
-    if (hom) {
-        for (size_t i = 0; i < _countof(hom->resilience_points); i++) {
-            completed += hom->resilience_points[i];
-        }
-    }
-    dedicated = 0;
-    drawn = 0;
-    for (auto m : hom_armor) {
-        if (m->is_completed) {
-            dedicated++;
-            if (hide_unlocked_achievements)
-                continue;
-        }
-        drawn++;
-    }
-    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d armor sets displayed) - %.0f%%###resilience_points", "Resilience",
-        completed, ResiliencePoints::TotalAvailable,
-        dedicated, hom_armor.size(),
-        ((float)dedicated / (float)hom_armor.size()) * 100.f);
+	// Resilience
+	completed = 0;
+	if (hom.isReady()) {
+		for (size_t i = 0; i < _countof(hom.resilience_points); i++) {
+			completed += hom.resilience_points[i];
+		}
+	}
+	dedicated = 0;
+	drawn = 0;
+	for (auto m : hom_armor) {
+		if (m->is_completed) {
+			dedicated++;
+			if (hide_unlocked_achievements)
+				continue;
+		}
+		drawn++;
+	}
+	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d armor sets displayed) - %.0f%%###resilience_points", "Resilience",
+		completed, ResiliencePoints::TotalAvailable,
+		dedicated, hom_armor.size(),
+		((float)dedicated / (float)hom_armor.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -2254,20 +2370,106 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
         size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
         size_t col_count = 0;
 
-        for (auto m : hom_armor) {
-            if (m->is_completed && hide_unlocked_achievements)
-                continue;
-            if (!m->Draw(device))
-                continue;
-            col_count++;
-            if (col_count == items_per_col) {
-                ImGui::NextColumn();
-                col_count = 0;
-            }
-        }
-        ImGui::Columns(1);
-        ImGui::PopStyleVar();
-    }
+		for (auto m : hom_armor) {
+			if (m->is_completed && hide_unlocked_achievements)
+				continue;
+			if (!m->Draw(device))
+				continue;
+			col_count++;
+			if (col_count == items_per_col) {
+				ImGui::NextColumn();
+				col_count = 0;
+			}
+		}
+		ImGui::Columns(1);
+		ImGui::PopStyleVar();
+	}
+
+	// Fellowship
+	completed = 0;
+	if (hom.isReady()) {
+		for (size_t i = 0; i < _countof(hom.fellowship_points); i++) {
+			completed += hom.fellowship_points[i];
+		}
+	}
+	dedicated = 0;
+	drawn = 0;
+	for (auto m : hom_companions) {
+		if (m->is_completed) {
+			dedicated++;
+			if (hide_unlocked_achievements)
+				continue;
+		}
+		drawn++;
+	}
+	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d companions displayed) - %.0f%%###fellowship_points", "Fellowship",
+		completed, FellowshipPoints::TotalAvailable,
+		dedicated, hom_companions.size(),
+		((float)dedicated / (float)hom_companions.size()) * 100.f);
+
+	if (ImGui::CollapsingHeader(label)) {
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
+		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
+		size_t col_count = 0;
+
+		for (auto m : hom_companions) {
+			if (m->is_completed && hide_unlocked_achievements)
+				continue;
+			if (!m->Draw(device))
+				continue;
+			col_count++;
+			if (col_count == items_per_col) {
+				ImGui::NextColumn();
+				col_count = 0;
+			}
+		}
+		ImGui::Columns(1);
+		ImGui::PopStyleVar();
+	}
+
+	// Honor
+	completed = 0;
+	if (hom.isReady()) {
+		for (size_t i = 0; i < _countof(hom.honor_points); i++) {
+			completed += hom.honor_points[i];
+		}
+	}
+	dedicated = 0;
+	drawn = 0;
+	for (auto m : hom_titles) {
+		if (m->is_completed) {
+			dedicated++;
+			if (hide_unlocked_achievements)
+				continue;
+		}
+		drawn++;
+	}
+	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d titles achieved) - %.0f%%###honor_points", "Honor",
+		completed, HonorPoints::TotalAvailable,
+		dedicated, hom_titles.size(),
+		((float)dedicated / (float)hom_titles.size()) * 100.f);
+
+	if (ImGui::CollapsingHeader(label)) {
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
+		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
+		size_t col_count = 0;
+
+		for (auto m : hom_titles) {
+			if (m->is_completed && hide_unlocked_achievements)
+				continue;
+			if (!m->Draw(device))
+				continue;
+			col_count++;
+			if (col_count == items_per_col) {
+				ImGui::NextColumn();
+				col_count = 0;
+			}
+		}
+		ImGui::Columns(1);
+		ImGui::PopStyleVar();
+	}
 }
 void CompletionWindow::DrawSettingInternal()
 {
@@ -2325,48 +2527,55 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
     }
     CheckProgress();
 }
-CompletionWindow* CompletionWindow::CheckProgress() {
-    for (auto& camp : pve_skills) {
-        for (auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
-        }
-    }
-    for (auto& camp : elite_skills) {
-        for (auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
-        }
-    }
-    for (auto& camp : missions) {
-        for (auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
-        }
-    }
-    for (auto& camp : vanquishes) {
-        for (auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
-        }
-    }
-    for (auto& camp : heros) {
-        for (auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
-        }
-    }
-    for (auto achievement : minipets) {
+CompletionWindow* CompletionWindow::CheckProgress(bool fetch_hom) {
+	for (auto& camp : pve_skills) {
+		for (auto& skill : camp.second) {
+			skill->CheckProgress(chosen_player_name);
+		}
+	}
+	for (auto& camp : elite_skills) {
+		for (auto& skill : camp.second) {
+			skill->CheckProgress(chosen_player_name);
+		}
+	}
+	for (auto& camp : missions) {
+		for (auto& skill : camp.second) {
+			skill->CheckProgress(chosen_player_name);
+		}
+	}
+	for (auto& camp : vanquishes) {
+		for (auto& skill : camp.second) {
+			skill->CheckProgress(chosen_player_name);
+		}
+	}
+	for (auto& camp : heros) {
+		for (auto& skill : camp.second) {
+			skill->CheckProgress(chosen_player_name);
+		}
+	}
+	for (auto achievement : minipets) {
+		achievement->CheckProgress(chosen_player_name);
+	}
+	for (auto achievement : hom_weapons) {
+		achievement->CheckProgress(chosen_player_name);
+	}
+    for (auto achievement : hom_armor)
+    {
         achievement->CheckProgress(chosen_player_name);
     }
-    for (auto achievement : hom_weapons) {
-        achievement->CheckProgress(chosen_player_name);
-    }
-
-    auto& cc = CompletionWindow::Instance().character_completion;
-    if (cc.contains(chosen_player_name)) {
-        if (!cc[chosen_player_name]->hom_achievements) {
-            cc[chosen_player_name]->hom_achievements = new HallOfMonumentsAchievements();
-            hom_achievements_status = 0xf;
-            HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(chosen_player_name.c_str(), cc[chosen_player_name]->hom_achievements);
-        }
-    }
-    return this;
+	for (auto achievement : hom_companions)
+	{
+		achievement->CheckProgress(chosen_player_name);
+	}
+	for (auto achievement : hom_titles)
+	{
+		achievement->CheckProgress(chosen_player_name);
+	}
+    if (fetch_hom)
+    {
+        FetchHom();
+	}
+	return this;
 }
 void CompletionWindow::SaveSettings(CSimpleIni* ini)
 {
@@ -2412,19 +2621,21 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
 }
 
 CompletionWindow::Completion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, bool create_if_not_found) {
-    Completion* this_character_completion = 0;
-    auto found = character_completion.find(character_name);
-    if (found == character_completion.end()) {
-        if (create_if_not_found) {
-            this_character_completion = new Completion();
-            this_character_completion->name_str = GuiUtils::WStringToString(character_name);
-            character_completion[character_name] = this_character_completion;
-        }
-    }
-    else {
-        this_character_completion = found->second;
-    }
-    return this_character_completion;
+	Completion* this_character_completion = nullptr;
+	auto found = character_completion.find(character_name);
+	if (found == character_completion.end()) {
+		if (create_if_not_found) {
+			this_character_completion = new Completion();
+			this_character_completion->name_str = GuiUtils::WStringToString(character_name);
+            wcscpy(this_character_completion->hom_achievements.character_name, character_name);
+			character_completion[character_name] = this_character_completion;
+            FetchHom(&this_character_completion->hom_achievements);
+		}
+	}
+	else {
+		this_character_completion = found->second;
+	}
+	return this_character_completion;
 }
 
 CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, wchar_t* character_name, uint32_t* buffer, size_t len) {
@@ -2542,39 +2753,58 @@ void Missions::MinipetAchievement::CheckProgress(const std::wstring& player_name
 }
 void Missions::WeaponAchievement::CheckProgress(const std::wstring& player_name)
 {
-    is_completed = false;
-    auto& cc = CompletionWindow::Instance().character_completion;
-    auto found = cc.find(player_name);
-    if (found == cc.end())
-        return;
-    auto hom = found->second->hom_achievements;
-    if (!hom)
-        return;
-    auto& unlocked = hom->valor_detail;
-    is_completed = bonus = unlocked[encoded_name_index] != 0;
+	is_completed = false;
+	auto& cc = CompletionWindow::Instance().character_completion;
+	auto found = cc.find(player_name);
+	if (found == cc.end())
+		return;
+	auto& hom = found->second->hom_achievements;
+	if (hom.state != HallOfMonumentsAchievements::State::Done)
+		return;
+	auto& unlocked = hom.valor_detail;
+	is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
 
-IDirect3DTexture9* Missions::ArmorAchievement::GetMissionImage()
+IDirect3DTexture9* Missions::AchieventWithWikiFile::GetMissionImage()
 {
-    return *Resources::GetArmorArt(armor_art_name, armor_profession);
-}
-bool Missions::ArmorAchievement::Draw(IDirect3DDevice9* device)
-{
-    icon_size.y *= 2.f;
-    bool ret = ItemAchievement::Draw(device);
-    icon_size.y /= 2.f;
-    return ret;
+	if (!img && wiki_file_name.size()) {
+		img = Resources::GetGuildWarsWikiImage(wiki_file_name.c_str(),64);
+	}
+	return img ? *img : nullptr;
 }
 void Missions::ArmorAchievement::CheckProgress(const std::wstring& player_name)
 {
-    is_completed = false;
-    auto& cc = CompletionWindow::Instance().character_completion;
-    auto found = cc.find(player_name);
-    if (found == cc.end())
-        return;
-    auto hom = found->second->hom_achievements;
-    if (!hom)
-        return;
-    auto& unlocked = hom->resilience_detail;
-    is_completed = bonus = unlocked[encoded_name_index] != 0;
+	is_completed = false;
+	auto& cc = CompletionWindow::Instance().character_completion;
+	auto found = cc.find(player_name);
+	if (found == cc.end())
+		return;
+    auto& hom = found->second->hom_achievements;
+    if (hom.state != HallOfMonumentsAchievements::State::Done) return;
+    auto& unlocked = hom.resilience_detail;
+	is_completed = bonus = unlocked[encoded_name_index] != 0;
+}
+void Missions::CompanionAchievement::CheckProgress(const std::wstring& player_name)
+{
+	is_completed = false;
+	auto& cc = CompletionWindow::Instance().character_completion;
+	auto found = cc.find(player_name);
+	if (found == cc.end())
+		return;
+	auto& hom = found->second->hom_achievements;
+	if (hom.state != HallOfMonumentsAchievements::State::Done) return;
+	auto& unlocked = hom.fellowship_detail;
+	is_completed = bonus = unlocked[encoded_name_index] != 0;
+}
+void Missions::HonorAchievement::CheckProgress(const std::wstring& player_name)
+{
+	is_completed = false;
+	auto& cc = CompletionWindow::Instance().character_completion;
+	auto found = cc.find(player_name);
+	if (found == cc.end())
+		return;
+	auto& hom = found->second->hom_achievements;
+	if (hom.state != HallOfMonumentsAchievements::State::Done) return;
+	auto& unlocked = hom.honor_detail;
+	is_completed = bonus = unlocked[encoded_name_index] != 0;
 }

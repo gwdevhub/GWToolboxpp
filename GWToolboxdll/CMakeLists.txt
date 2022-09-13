@@ -54,6 +54,5 @@ target_link_libraries(GWToolboxdll PRIVATE
 
     # libs:
     Dbghelp.lib # for MiniDump
-    gdiplus.lib # For GWFileRequester module
     xinput9_1_0.lib # for Win7 legacy support
     )
