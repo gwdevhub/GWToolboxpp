@@ -2,7 +2,7 @@ UseTab: Never
 TabWidth: 4
 IndentWidth: 4
 ContinuationIndentWidth: 4
-ColumnLimit: 120
+ColumnLimit: 256
 
 Language: Cpp
 
@@ -77,9 +77,9 @@ BinPackParameters: true
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass:            false
-  AfterControlStatement: false
-  AfterEnum:             false
-  AfterFunction:         false
+  AfterControlStatement: true
+  AfterEnum:             true
+  AfterFunction:         true
   AfterStruct:           false
   AfterUnion:            false
   AfterCaseLabel:        false
