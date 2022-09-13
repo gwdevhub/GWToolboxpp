@@ -89,7 +89,7 @@ void ServerInfoWidget::Update(float) {
             std::string response;
             bool success = false;
             do {
-                success = Resources::Instance().Download(url, &response);
+                success = Resources::Instance().Download(url, response);
                 tries++;
             } while (!success && tries < 5);
             if (!success) {

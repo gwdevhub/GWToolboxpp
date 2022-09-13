@@ -258,31 +258,31 @@ utf8::string Resources::GetPathUtf8(const std::wstring& file) {
     return Unicode16ToUtf8(path.c_str());
 }
 
-bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring* response) {
+bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response) {
     if (std::filesystem::exists(path_to_file)) {
         if (!std::filesystem::remove(path_to_file)) {
-            return StrSwprintf(*response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+            return StrSwprintf(response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
         }
     }
     if (std::filesystem::exists(path_to_file)) {
-        return StrSwprintf(*response, L"File already exists @ %s", path_to_file.wstring().c_str()), false;
+        return StrSwprintf(response, L"File already exists @ %s", path_to_file.wstring().c_str()), false;
     }
 
     std::string content;
-    if (!Download(url, &content)) {
-        return StrSwprintf(*response,L"%S", content.c_str()), false;
+    if (!Download(url, content)) {
+        return StrSwprintf(response,L"%S", content.c_str()), false;
     }
     if (!content.length()) {
-        return StrSwprintf(*response,L"Failed to download %S, no content length", url.c_str()), false;
+        return StrSwprintf(response,L"Failed to download %S, no content length", url.c_str()), false;
     }
     FILE* fp = fopen(path_to_file.string().c_str(), "wb");
     if (!fp) {
-        return StrSwprintf(*response,L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+        return StrSwprintf(response,L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     const int written = fwrite(content.data(), content.size() + 1, 1, fp);
     fclose(fp);
     if(written != 1) {
-        return StrSwprintf(*response,L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+        return StrSwprintf(response,L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     return true;
 }
@@ -290,8 +290,8 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
 void Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
     EnqueueWorkerTask([this, path_to_file, url, callback] {
-        std::wstring error_message{};
-        bool success = Download(path_to_file, url, &error_message);
+        std::wstring error_message;
+        bool success = Download(path_to_file, url, error_message);
         // and call the callback in the main thread
         if (callback) {
             EnqueueMainTask([callback, success, error_message] {
@@ -305,17 +305,17 @@ void Resources::Download(const std::filesystem::path& path_to_file, const std::s
         });
 }
 
-bool Resources::Download(const std::string& url, std::string* response)
+bool Resources::Download(const std::string& url, std::string& response)
 {
     RestClient r;
     InitRestClient(&r);
     r.SetUrl(url.c_str());
     r.Execute();
     if (!r.IsSuccessful()) {
-        StrSprintf(*response, "Failed to download %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
+        StrSprintf(response, "Failed to download %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
         return false;
     }
-    *response = std::move(r.GetContent());
+    response = std::move(r.GetContent());
     return true;
 }
 void Resources::Download(const std::string& url, AsyncLoadMbCallback callback)

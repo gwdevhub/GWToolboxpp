@@ -58,7 +58,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) const {
     const char* url = "https://api.github.com/repos/HasKha/GWToolboxpp/releases";
     bool success = false;
     do {
-        success = Resources::Instance().Download(url, &response);
+        success = Resources::Instance().Download(url, response);
         tries++;
     } while (!success && tries < 5);
     if (!success) {

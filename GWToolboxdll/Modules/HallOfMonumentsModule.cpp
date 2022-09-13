@@ -7,6 +7,7 @@
 
 #include <Modules/Resources.h>
 #include <Modules/HallOfMonumentsModule.h>
+#include <curl/curl.h>
 
 
 
@@ -61,7 +62,7 @@ bool HallOfMonumentsModule::DecodeHomCode(const char* in, HallOfMonumentsAchieve
     ASSERT(strlen(in) < _countof(out->hom_code));
     strcpy(out->hom_code, in);
     return DecodeHomCode(out);
-   
+
 }
 bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out) {
     const int bufSize = 1024;
@@ -259,10 +260,11 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character
             character_name_s[x] = (char)toupper(character_name_s[x]);
     }
     wcscpy(out->character_name, character_name);
-    char url[64];
-    snprintf(url, _countof(url), "https://hom.guildwars2.com/character/%s", character_name_s.c_str());
 
-    Resources::Instance().Download(url, [out, callback](bool success, const std::string& response) {
+    auto url_str = std::format("https://hom.guildwars2.com/character/{}", character_name_s);
+    url_str = std::regex_replace(url_str, std::regex(" "), "%20");
+
+    Resources::Instance().Download(url_str, [out, callback](bool success, const std::string& response) {
         if (!success) {
             Log::Error("Failed to load account hom code %s\n%s", out->character_name, response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
@@ -290,10 +292,8 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character
         });
 }
 void HallOfMonumentsAchievements::OpenInBrowser() {
-    char* url = new char[255];
-    snprintf(url, 255, "https://hom.guildwars2.com/en/#details=%s&page=main", hom_code);
-    GW::GameThread::Enqueue([url]() {
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)url);
-        delete[] url;
+    const auto url = std::format("https://hom.guildwars2.com/en/#details={}&page=main", hom_code);
+    GW::GameThread::Enqueue([url] {
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)url.c_str());
         });
 }
