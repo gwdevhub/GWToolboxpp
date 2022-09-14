@@ -409,8 +409,8 @@ namespace {
 	void FetchHom(HallOfMonumentsAchievements* out = nullptr) {
         if (!out)
         {
-            auto player_name = GetPlayerName();
-            auto cc = CompletionWindow::Instance().GetCharacterCompletion(player_name, true);
+            const auto player_name = GetPlayerName();
+            const auto cc = CompletionWindow::Instance().GetCharacterCompletion(player_name, true);
             out = &cc->hom_achievements;
 		}
         if (!out->isLoading())

@@ -8,7 +8,7 @@ namespace utf8 {
     };
 }
 
-static inline void free(utf8::string& s) {
+static void free(utf8::string& s) {
     if (s.bytes) delete s.bytes;
 }
 

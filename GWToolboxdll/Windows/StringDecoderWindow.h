@@ -5,10 +5,8 @@
 class StringDecoderWindow : public ToolboxWindow {
     StringDecoderWindow() = default;
     ~StringDecoderWindow() {
-        if (encoded) {
-            free(encoded);
-            encoded = nullptr;
-        }
+        delete[] encoded;
+        encoded = nullptr;
     }
 
 public:
@@ -32,7 +30,7 @@ public:
 
 private:
     int encoded_id = 0;
-    char* encoded = 0;
+    char* encoded = nullptr;
     const size_t encoded_size = 8192;
     std::wstring decoded;
     int map_id = 0;
