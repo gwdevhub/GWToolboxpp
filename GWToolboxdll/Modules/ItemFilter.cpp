@@ -49,8 +49,11 @@ namespace {
     }
 
     std::map<ItemModelID, std::string> default_dont_hide_for_player = {
+        // Weapons
+        MAP_ENTRY(DSR), MAP_ENTRY(EternalBlade), MAP_ENTRY(VoltaicSpear), MAP_ENTRY(CrystallineSword), MAP_ENTRY(ObsidianEdge),
+
         // Rare and Valuable Items
-        MAP_ENTRY(DSR), MAP_ENTRY(EternalBlade), MAP_ENTRY(MiniDhuum), MAP_ENTRY(VoltaicSpear), MAP_ENTRY(CrystallineSword), MAP_ENTRY(ArmbraceOfTruth), MAP_ENTRY(MargoniteGem), MAP_ENTRY(StygianGem), MAP_ENTRY(TitanGem), MAP_ENTRY(TormentGem),
+        MAP_ENTRY(MiniDhuum), MAP_ENTRY(ArmbraceOfTruth), MAP_ENTRY(MargoniteGem), MAP_ENTRY(StygianGem), MAP_ENTRY(TitanGem), MAP_ENTRY(TormentGem),
 
         // Crafting Items
         MAP_ENTRY(Diamond), MAP_ENTRY(Ruby), MAP_ENTRY(Sapphire), MAP_ENTRY(GlobofEctoplasm), MAP_ENTRY(ObsidianShard),
@@ -90,6 +93,7 @@ namespace {
         MAP_ENTRY(MiniDhuum),
         MAP_ENTRY(CrystallineSword),
         MAP_ENTRY(DSR),
+        MAP_ENTRY(ObsidianEdge),
     };
 
 } // namespace
