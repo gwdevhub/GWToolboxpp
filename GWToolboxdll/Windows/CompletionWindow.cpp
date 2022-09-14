@@ -411,6 +411,7 @@ namespace {
         {
             const auto player_name = GetPlayerName();
             const auto cc = CompletionWindow::Instance().GetCharacterCompletion(player_name, true);
+            if (!cc) return;
             out = &cc->hom_achievements;
 		}
         if (!out->isLoading())
@@ -620,17 +621,17 @@ void Mission::OnClick() {
 }
 void Mission::CheckProgress(const std::wstring& player_name) {
     is_completed = bonus = false;
-    auto& completion = CompletionWindow::Instance().character_completion;
-    const auto found = completion.find(player_name);
-    if (found == completion.end())
+    const auto& completion = CompletionWindow::Instance().character_completion;
+    if (!completion.contains(player_name))
         return;
-    std::vector<uint32_t>* missions_complete = &found->second->mission;
-    std::vector<uint32_t>* missions_bonus = &found->second->mission_bonus;
+    const auto& player_completion = completion.at(player_name);
+    std::vector<uint32_t>* missions_complete = &player_completion->mission;
+    std::vector<uint32_t>* missions_bonus = &player_completion->mission_bonus;
     if (CompletionWindow::Instance().IsHardMode()) {
-        missions_complete = &found->second->mission_hm;
-        missions_bonus = &found->second->mission_bonus_hm;
+        missions_complete = &player_completion->mission_hm;
+        missions_bonus = &player_completion->mission_bonus_hm;
     }
-    map_unlocked = found->second->maps_unlocked.empty() || ArrayBoolAt(found->second->maps_unlocked, static_cast<uint32_t>(outpost));
+    map_unlocked = player_completion->maps_unlocked.empty() || ArrayBoolAt(player_completion->maps_unlocked, static_cast<uint32_t>(outpost));
     is_completed = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost));
     bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
 }
@@ -691,12 +692,11 @@ HeroUnlock::HeroUnlock(GW::Constants::HeroID _hero_id)
 }
 void HeroUnlock::CheckProgress(const std::wstring& player_name) {
     is_completed = false;
-    auto& skills = CompletionWindow::Instance().character_completion;
-    auto found = skills.find(player_name);
-    if (found == skills.end())
+    const auto& skills = CompletionWindow::Instance().character_completion;
+    if (!skills.contains(player_name))
         return;
-    auto& heroes = found->second->heroes;
-    is_completed = bonus = std::find(heroes.begin(), heroes.end(), (uint32_t)skill_id) != heroes.end();
+    auto& heroes = skills.at(player_name)->heroes;
+    is_completed = bonus = std::ranges::find(heroes, static_cast<uint32_t>(skill_id)) != heroes.end();
 }
 const char* HeroUnlock::Name() {
     return hero_names[(uint32_t)skill_id];
@@ -734,7 +734,7 @@ const char* ItemAchievement::Name() {
 }
 IDirect3DTexture9* ItemAchievement::GetMissionImage()
 {
-    if (name.wstring().size()) {
+    if (!name.wstring().empty()) {
         if (name.wstring() == L"Brown Rabbit") {
             return *Resources::GetItemImage(L"Brown Rabbit (miniature)");
         }
@@ -809,11 +809,10 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
 }
 void PvESkill::CheckProgress(const std::wstring& player_name) {
     is_completed = false;
-    auto& skills = CompletionWindow::Instance().character_completion;
-    auto found = skills.find(player_name);
-    if (found == skills.end())
+    const auto& skills = CompletionWindow::Instance().character_completion;
+    if (!skills.contains(player_name))
         return;
-    auto& unlocked = found->second->skills;
+    auto& unlocked = skills.at(player_name)->skills;
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id));
 }
 
@@ -843,16 +842,14 @@ bool FactionsPvESkill::Draw(IDirect3DDevice9* device) {
     return drawn;
 }
 
-
 void EotNMission::CheckProgress(const std::wstring& player_name) {
     is_completed = false;
-    auto& completion = CompletionWindow::Instance().character_completion;
-    auto found = completion.find(player_name);
-    if (found == completion.end())
+    const auto& completion = CompletionWindow::Instance().character_completion;
+    if (!completion.contains(player_name))
         return;
-    std::vector<uint32_t>* missions_bonus = &found->second->mission_bonus;
+    std::vector<uint32_t>* missions_bonus = &completion.at(player_name)->mission_bonus;
     if (CompletionWindow::Instance().IsHardMode()) {
-        missions_bonus = &found->second->mission_bonus_hm;
+        missions_bonus = &completion.at(player_name)->mission_bonus_hm;
     }
     is_completed = bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
 }
@@ -867,11 +864,10 @@ IDirect3DTexture9* EotNMission::GetMissionImage()
 
 void Vanquish::CheckProgress(const std::wstring& player_name) {
     is_completed = false;
-    auto& completion = CompletionWindow::Instance().character_completion;
-    auto found = completion.find(player_name);
-    if (found == completion.end())
+    const auto& completion = CompletionWindow::Instance().character_completion;
+    if (!completion.contains(player_name))
         return;
-    auto& unlocked = found->second->vanquishes;
+    auto& unlocked = completion.at(player_name)->vanquishes;
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
 }
 IDirect3DTexture9* Vanquish::GetMissionImage()
@@ -1131,7 +1127,7 @@ void CompletionWindow::Initialize()
 	    if (player_number == c->player_number) {
 		    GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
 		    if (me) {
-			    auto comp = Instance().GetCharacterCompletion(c->player_name);
+                const auto comp = Instance().GetCharacterCompletion(c->player_name);
 			    if (comp)
 				    comp->profession = (GW::Constants::Profession)me->primary;
 			    Instance().ParseCompletionBuffer(CompletionType::Heroes);
@@ -2621,19 +2617,16 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
 }
 
 CompletionWindow::Completion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, bool create_if_not_found) {
-	Completion* this_character_completion = nullptr;
-	auto found = character_completion.find(character_name);
-	if (found == character_completion.end()) {
-		if (create_if_not_found) {
-			this_character_completion = new Completion();
-			this_character_completion->name_str = GuiUtils::WStringToString(character_name);
-            wcscpy(this_character_completion->hom_achievements.character_name, character_name);
-			character_completion[character_name] = this_character_completion;
-            FetchHom(&this_character_completion->hom_achievements);
-		}
-	}
-	else {
-		this_character_completion = found->second;
+    if (character_completion.contains(character_name)) {
+        return character_completion.at(character_name);
+    }
+    Completion* this_character_completion = nullptr;
+	if (create_if_not_found) {
+		this_character_completion = new Completion();
+		this_character_completion->name_str = GuiUtils::WStringToString(character_name);
+        wcscpy(this_character_completion->hom_achievements.character_name, character_name);
+		character_completion[character_name] = this_character_completion;
+        FetchHom(&this_character_completion->hom_achievements);
 	}
 	return this_character_completion;
 }
@@ -2745,20 +2738,18 @@ void Missions::MinipetAchievement::CheckProgress(const std::wstring& player_name
 {
     is_completed = false;
     auto& cc = CompletionWindow::Instance().character_completion;
-    auto found = cc.find(player_name);
-    if (found == cc.end())
+    if (!cc.contains(player_name))
         return;
-    std::vector<uint32_t>& minipets_unlocked = found->second->minipets_unlocked;
+    std::vector<uint32_t>& minipets_unlocked = cc.at(player_name)->minipets_unlocked;
     is_completed = bonus = ArrayBoolAt(minipets_unlocked, encoded_name_index);
 }
 void Missions::WeaponAchievement::CheckProgress(const std::wstring& player_name)
 {
 	is_completed = false;
-	auto& cc = CompletionWindow::Instance().character_completion;
-	auto found = cc.find(player_name);
-	if (found == cc.end())
+    const auto& cc = CompletionWindow::Instance().character_completion;
+	if (!cc.contains(player_name))
 		return;
-	auto& hom = found->second->hom_achievements;
+	const auto& hom = cc.at(player_name)->hom_achievements;
 	if (hom.state != HallOfMonumentsAchievements::State::Done)
 		return;
 	auto& unlocked = hom.valor_detail;
@@ -2775,36 +2766,33 @@ IDirect3DTexture9* Missions::AchieventWithWikiFile::GetMissionImage()
 void Missions::ArmorAchievement::CheckProgress(const std::wstring& player_name)
 {
 	is_completed = false;
-	auto& cc = CompletionWindow::Instance().character_completion;
-	auto found = cc.find(player_name);
-	if (found == cc.end())
-		return;
-    auto& hom = found->second->hom_achievements;
+    const auto& cc = CompletionWindow::Instance().character_completion;
+    if (!cc.contains(player_name))
+        return;
+    const auto& hom = cc.at(player_name)->hom_achievements;
     if (hom.state != HallOfMonumentsAchievements::State::Done) return;
-    auto& unlocked = hom.resilience_detail;
+    const auto& unlocked = hom.resilience_detail;
 	is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
 void Missions::CompanionAchievement::CheckProgress(const std::wstring& player_name)
 {
 	is_completed = false;
-	auto& cc = CompletionWindow::Instance().character_completion;
-	auto found = cc.find(player_name);
-	if (found == cc.end())
+    const auto& cc = CompletionWindow::Instance().character_completion;
+	if (!cc.contains(player_name))
 		return;
-	auto& hom = found->second->hom_achievements;
+	const auto& hom = cc.at(player_name)->hom_achievements;
 	if (hom.state != HallOfMonumentsAchievements::State::Done) return;
-	auto& unlocked = hom.fellowship_detail;
+	const auto& unlocked = hom.fellowship_detail;
 	is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
 void Missions::HonorAchievement::CheckProgress(const std::wstring& player_name)
 {
 	is_completed = false;
-	auto& cc = CompletionWindow::Instance().character_completion;
-	auto found = cc.find(player_name);
-	if (found == cc.end())
+    const auto& cc = CompletionWindow::Instance().character_completion;
+	if (!cc.contains(player_name))
 		return;
-	auto& hom = found->second->hom_achievements;
+    const auto& hom = cc.at(player_name)->hom_achievements;
 	if (hom.state != HallOfMonumentsAchievements::State::Done) return;
-	auto& unlocked = hom.honor_detail;
+	const auto& unlocked = hom.honor_detail;
 	is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
