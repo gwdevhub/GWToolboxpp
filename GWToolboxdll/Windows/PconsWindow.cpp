@@ -277,14 +277,20 @@ void PconsWindow::OnSpeechBubble(GW::HookStatus *status, GW::Packet::StoC::Speec
         L"\x8103\xA90\xD7A3\x9B78",
         L"\x8102\x4933\x82F9\xEE62",
         L"\x8102\x492D\xAE7F\x9205",
+        L"\x8102\x4924\x9EED\xED02",
+        L"\x8102\x4931\xEA9D\xD3D5",
+        L"\x8102\x4921\xA36D\xCE7A",
+        L"\x8102\x4937\xACEA\x8B90",
+        L"\x8102\x4928\xC8E9\x8953",    // the ship, it's spinning
+        L"\x8102\x4919\xBC36\xB446",
+        L"\x8102\x492B\xC39F\xD6FA",
         L"\x8102\x4923\xAA60\x9F98",    // end grog messages
     };
     if (std::ranges::find(msgs, msg) != std::ranges::end(msgs)) {
         status->blocked = true;
-        return;
     }
 
-    printf("\\x%X\\x%X\\x%X\\x%X\n", m[0], m[1], m[2], m[3]);
+    //printf("\\x%X\\x%X\\x%X\\x%X\n", m[0], m[1], m[2], m[3]);
 }
 void PconsWindow::OnObjectiveDone(GW::HookStatus *,GW::Packet::StoC::ObjectiveDone *packet)
 {
