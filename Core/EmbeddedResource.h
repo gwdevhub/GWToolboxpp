@@ -16,7 +16,9 @@ private:
 public:
     EmbeddedResource(int resource_id, const std::wstring& resource_class = L"RCDATA", HMODULE module = nullptr) {
         hResource = FindResourceW(module, MAKEINTRESOURCEW(resource_id), resource_class.c_str());
+        if (!hResource) return;
         hMemory = LoadResource(module, hResource);
+        if (!hMemory) return;
 
         p.size_bytes = SizeofResource(module, hResource);
         p.ptr = LockResource(hMemory);
@@ -24,7 +26,9 @@ public:
 
     EmbeddedResource(int resource_id, const std::string& resource_class = "RCDATA", HMODULE module = nullptr) {
         hResource = FindResourceA(module, MAKEINTRESOURCEA(resource_id), resource_class.c_str());
+        if (!hResource) return;
         hMemory = LoadResource(module, hResource);
+        if (!hMemory) return;
 
         p.size_bytes = SizeofResource(module, hResource);
         p.ptr = LockResource(hMemory);
@@ -32,7 +36,9 @@ public:
 
     EmbeddedResource(LPCWSTR resource_id, const std::wstring& resource_class = L"RCDATA", HMODULE module = nullptr) {
         hResource = FindResourceW(module, resource_id, resource_class.c_str());
+        if (!hResource) return;
         hMemory = LoadResource(module, hResource);
+        if (!hMemory) return;
 
         p.size_bytes = SizeofResource(module, hResource);
         p.ptr = LockResource(hMemory);
@@ -40,7 +46,9 @@ public:
 
     EmbeddedResource(LPCSTR resource_id, const std::string& resource_class = "RCDATA", HMODULE module = nullptr) {
         hResource = FindResourceA(module, resource_id, resource_class.c_str());
+        if (!hResource) return;
         hMemory = LoadResource(module, hResource);
+        if (!hMemory) return;
 
         p.size_bytes = ::SizeofResource(module, hResource);
         p.ptr = LockResource(hMemory);
