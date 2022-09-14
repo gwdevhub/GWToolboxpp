@@ -50,6 +50,26 @@ namespace {
         std::filesystem::rename(tmp_file, location);
         return true;
     }
+
+    bool StartGWToolbox_run = false;
+    void StartGWToolbox(IDirect3DDevice9*) {
+        if (StartGWToolbox_run) return;
+        StartGWToolbox_run = true;
+        GW::GameThread::Enqueue([]() {
+            GWToolbox::Instance().Initialize();
+            });
+        GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
+            __try {
+                GWToolbox::Instance().Draw(device);
+            }
+            __except (EXCEPT_EXPRESSION_ENTRY) {
+            }
+            });
+        GW::Render::SetResetCallback([](IDirect3DDevice9* device) {
+            UNREFERENCED_PARAMETER(device);
+            ImGui_ImplDX9_InvalidateDeviceObjects();
+            });
+    }
 }
 
 HMODULE GWToolbox::GetDLLModule() {
@@ -82,17 +102,10 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     InstallCursorFix();
 
     Log::Log("Installing dx hooks\n");
-    GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
-        __try {
-            GWToolbox::Instance().Draw(device);
-        } __except ( EXCEPT_EXPRESSION_ENTRY ) {
-        }
-    });
-    GW::Render::SetResetCallback([](IDirect3DDevice9* device) {
-        UNREFERENCED_PARAMETER(device);
-        ImGui_ImplDX9_InvalidateDeviceObjects();
-    });
 
+    // Some modules rely on the gwdx_ptr being present for stuff like getting viewport coords.
+    // Becuase this ptr isn't set until the Render loop runs at least once, let it run and then reassign SetRenderCallback.
+    GW::Render::SetRenderCallback(StartGWToolbox);
 
     Log::Log("Installed dx hooks\n");
 
@@ -104,9 +117,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 
     Log::Log("Hooks Enabled!\n");
 
-    GW::GameThread::Enqueue([]() {
-        GWToolbox::Instance().Initialize();
-        });
+
 
     while (!tb_destroyed) { // wait until destruction
         Sleep(100);
