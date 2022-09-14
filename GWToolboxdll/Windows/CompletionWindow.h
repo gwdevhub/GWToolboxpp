@@ -314,7 +314,7 @@ public:
     const char* Name() const override { return "Completion"; }
     const char8_t* Icon() const override { return ICON_FA_BOOK; }
 
-    const bool IsHardMode() { return hard_mode; }
+    bool IsHardMode() const { return hard_mode; }
 
     void Initialize() override;
     void Initialize_Prophecies();

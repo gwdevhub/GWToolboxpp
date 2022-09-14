@@ -88,6 +88,15 @@ namespace GuiUtils {
         }
     }
 
+    template <map_type T>
+    T IniToMap(CSimpleIni* ini, const char* section, const char* name, T default_map)
+    {
+        if (!ini->KeyExists(section, name)) {
+            return std::move(default_map);
+        }
+        return IniToMap<T>(ini, section, name);
+    }
+
     // Takes a wstring and translates into a string of hex values, separated by spaces
     bool ArrayToIni(const std::wstring& in, std::string* out);
     bool ArrayToIni(const uint32_t* in, size_t len, std::string* out);
