@@ -521,8 +521,8 @@ static bool ArrayBoolAt(std::vector<uint32_t>& array, uint32_t index)
 
 
 Mission::Mission(GW::Constants::MapID _outpost,
-    const Mission::MissionImageList& _normal_mode_images,
-    const Mission::MissionImageList& _hard_mode_images,
+    const MissionImageList& _normal_mode_images,
+    const MissionImageList& _hard_mode_images,
     GW::Constants::QuestID _zm_quest)
     : outpost(_outpost), zm_quest(_zm_quest), normal_mode_textures(_normal_mode_images), hard_mode_textures(_hard_mode_images) {
     map_to = outpost;
@@ -536,7 +536,7 @@ GW::Constants::MapID Mission::GetOutpost() {
 }
 bool Mission::Draw(IDirect3DDevice9* )
 {
-    auto texture = GetMissionImage();
+    const auto texture = GetMissionImage();
 
     const float scale = ImGui::GetIO().FontGlobalScale;
 
@@ -621,7 +621,7 @@ void Mission::OnClick() {
 void Mission::CheckProgress(const std::wstring& player_name) {
     is_completed = bonus = false;
     auto& completion = CompletionWindow::Instance().character_completion;
-    auto found = completion.find(player_name);
+    const auto found = completion.find(player_name);
     if (found == completion.end())
         return;
     std::vector<uint32_t>* missions_complete = &found->second->mission;
@@ -705,7 +705,8 @@ IDirect3DTexture9* HeroUnlock::GetMissionImage()
 {
 	if (!image) {
 		image = new IDirect3DTexture9*;
-		auto path = Resources::GetPath(L"img/heros");
+        *image = nullptr;
+		const auto path = Resources::GetPath(L"img/heros");
 		Resources::EnsureFolderExists(path);
 		wchar_t local_image[MAX_PATH];
 		swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
@@ -2263,7 +2264,7 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
         ((float)dedicated / (float)minipets.size()) * 100.f);
 
 	if (ImGui::CollapsingHeader(label)) {
-		ImGui::TextDisabled("To update this list, talk to the \"Devotion\" pedestal in Eye of the North, then press \"Examine the Monument to Devotion.\"");
+		ImGui::TextDisabled(R"(To update this list, talk to the "Devotion" pedestal in Eye of the North, then press "Examine the Monument to Devotion.")");
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
 		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
@@ -2365,8 +2366,8 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
-        size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
+        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
+        auto items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
         size_t col_count = 0;
 
 		for (auto m : hom_armor) {
@@ -2766,7 +2767,7 @@ void Missions::WeaponAchievement::CheckProgress(const std::wstring& player_name)
 
 IDirect3DTexture9* Missions::AchieventWithWikiFile::GetMissionImage()
 {
-	if (!img && wiki_file_name.size()) {
+	if (!img && !wiki_file_name.empty()) {
 		img = Resources::GetGuildWarsWikiImage(wiki_file_name.c_str(),64);
 	}
 	return img ? *img : nullptr;

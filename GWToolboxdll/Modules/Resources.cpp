@@ -250,7 +250,7 @@ std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, co
 
 bool Resources::EnsureFolderExists(const std::filesystem::path& path)
 {
-    return std::filesystem::exists(path) || std::filesystem::create_directory(path);
+    return exists(path) || create_directory(path);
 }
 
 utf8::string Resources::GetPathUtf8(const std::wstring& file) {
@@ -259,12 +259,12 @@ utf8::string Resources::GetPathUtf8(const std::wstring& file) {
 }
 
 bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response) {
-    if (std::filesystem::exists(path_to_file)) {
+    if (exists(path_to_file)) {
         if (!std::filesystem::remove(path_to_file)) {
             return StrSwprintf(response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
         }
     }
-    if (std::filesystem::exists(path_to_file)) {
+    if (exists(path_to_file)) {
         return StrSwprintf(response, L"File already exists @ %s", path_to_file.wstring().c_str()), false;
     }
 
@@ -332,7 +332,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback)
 void Resources::EnsureFileExists(
     const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
-    if (std::filesystem::exists(path_to_file)) {
+    if (exists(path_to_file)) {
         // if file exists, run the callback immediately in the same thread
         callback(true, L"");
     } else {
@@ -349,7 +349,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
         if (path_to_file.extension() == ".dds") {
             res = DirectX::CreateDDSTextureFromFileEx(device, path_to_file.c_str(), 0, D3DPOOL_MANAGED, true, texture);
         } else if (auto ext = path_to_file.extension(); ext == ".png" || ext == ".bmp" || ext == ".jpg" || ext == ".JPEG") {
-            res = DirectX::CreateWICTextureFromFileEx(device, path_to_file.c_str(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_FLAGS::WIC_LOADER_DEFAULT, texture);
+            res = CreateWICTextureFromFileEx(device, path_to_file.c_str(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_FLAGS::WIC_LOADER_DEFAULT, texture);
         }
     }
     if (res != D3D_OK) {
@@ -368,10 +368,10 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule
     size_t tries = 0;
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
         EmbeddedResource resource(id, "RCDATA"s, GWToolbox::GetDLLModule());
-        res = DirectX::CreateWICTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()), resource.size(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
+        res = CreateWICTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()), resource.size(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
         if (res != S_OK) {
-            res = DirectX::CreateDDSTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()),
-                resource.size(), 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
+            res = CreateDDSTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()),
+                                               resource.size(), 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
 
         }
     }
@@ -522,8 +522,8 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
     *texture = nullptr;
     profession_icons[prof_id] = texture;
     if (profession_icon_urls[prof_id][0]) {
-        const auto path = Resources::GetPath(PROF_ICONS_PATH);
-        Resources::EnsureFolderExists(path);
+        const auto path = GetPath(PROF_ICONS_PATH);
+        EnsureFolderExists(path);
         wchar_t local_image[MAX_PATH];
         swprintf(local_image, _countof(local_image), L"%s\\%d.png", path.c_str(), p);
         char remote_image[128];
@@ -546,32 +546,30 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     else {
         filename_on_disk = filename;
     }
-    std::string* filename_sanitised = new std::string();
-    filename_sanitised->assign(GuiUtils::SanitiseFilename(filename_on_disk));
-
-    auto found = guild_wars_wiki_images.find(*filename_sanitised);
-    if (found != guild_wars_wiki_images.end()) {
-        return found->second;
+    const auto filename_sanitised = GuiUtils::SanitiseFilename(filename_on_disk);
+    if (guild_wars_wiki_images.contains(filename_sanitised))
+    {
+        return guild_wars_wiki_images.at(filename_sanitised);
     }
     const auto callback = [filename_sanitised](bool success, const std::wstring& error) {
         if (!success) {
-            Log::ErrorW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised->c_str(), error.c_str());
+            Log::ErrorW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised.c_str(), error.c_str());
         }
         else {
-            Log::LogW(L"Loaded Guild Wars Wiki file %S", filename_sanitised->c_str());
+            Log::LogW(L"Loaded Guild Wars Wiki file %S", filename_sanitised.c_str());
         }
-        delete filename_sanitised;
     };
-    auto texture = new IDirect3DTexture9*;
+    const auto texture = new IDirect3DTexture9*;
+    *texture = nullptr;
     guild_wars_wiki_images[filename] = texture;
-    static std::filesystem::path path = Resources::GetPath(GUILD_WARS_WIKI_FILES_PATH);
-    if (!Resources::EnsureFolderExists(path)) {
+    static std::filesystem::path path = GetPath(GUILD_WARS_WIKI_FILES_PATH);
+    if (!EnsureFolderExists(path)) {
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
         return texture;
     }
     std::wstring path_to_file;
     // Check for local file
-    StrSwprintf(path_to_file, L"%s\\%S", path.wstring().c_str(), filename_sanitised->c_str());
+    StrSwprintf(path_to_file, L"%s\\%S", path.wstring().c_str(), filename_sanitised.c_str());
     if (std::filesystem::exists(path_to_file)) {
         Instance().LoadTexture(texture, path_to_file, callback);
         return texture;
@@ -587,17 +585,17 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
 
         std::string tmp_str;
         // Find a valid png or jpg image inside the HTML response, <img alt="<skill_id>" src="<location_of_image>"
-        StrSprintf(tmp_str, "class=\"fullMedia\"[\\s\\S]*?href=['\"]([^\"']+)");
+        StrSprintf(tmp_str, R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))");
         std::regex image_finder(tmp_str);
         std::smatch m;
         std::regex_search(response, m, image_finder);
         if (!m.size()) {
-            trigger_failure_callback(callback, L"Regex failed loading file %S",filename_sanitised->c_str());
+            trigger_failure_callback(callback, L"Regex failed loading file %S", filename_sanitised.c_str());
             return;
         }
         std::string image_url = m[1].str();
         std::wstring path_to_file;
-        StrSwprintf(path_to_file, L"%s\\%S", path.c_str(), filename_sanitised->c_str());
+        StrSwprintf(path_to_file, L"%s\\%S", path.c_str(), filename_sanitised.c_str());
         if (width) {
             // Divert to resized version using mediawiki's method
             image_finder = "/images/(.*)/([^/]+)$";
@@ -632,13 +630,13 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
             Log::LogW(L"Loaded skill image %d", skill_id);
         }
     };
-    auto** texture = new IDirect3DTexture9*;
+    const auto texture = new IDirect3DTexture9*;
     *texture = nullptr;
     skill_images[skill_id] = texture;
     if (skill_id == static_cast<GW::Constants::SkillID>(0))
         return texture;
-    static std::filesystem::path path = Resources::GetPath(SKILL_IMAGES_PATH);
-    if (!Resources::EnsureFolderExists(path)) {
+    static std::filesystem::path path = GetPath(SKILL_IMAGES_PATH);
+    if (!EnsureFolderExists(path)) {
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
         return texture;
     }
@@ -737,7 +735,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
             Log::LogW(L"Loaded item image %s", item_name.c_str());
         }
     };
-    auto texture = new IDirect3DTexture9*;
+    const auto texture = new IDirect3DTexture9*;
     *texture = nullptr;
     item_images[item_name] = texture;
     static std::filesystem::path path = GetPath(ITEM_IMAGES_PATH);
