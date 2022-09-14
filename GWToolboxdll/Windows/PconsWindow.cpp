@@ -264,6 +264,19 @@ void PconsWindow::OnSpeechBubble(GW::HookStatus *status, GW::Packet::StoC::Speec
         L"\x1FB6\xBD6A\x88D1\x4F59",
         L"\x8102\x493B\x96C7\x8B03",
         L"\x8102\x4929\xA216\xC64B",
+        L"\x8103\xAC8\xD5E7\x951E",
+        L"\x8103\xA6C\xDAFC\xDC30",
+        L"\x8102\x4916\x9FC6\x913A",
+        L"\x8102\x4930\xEB29\xA9A1",
+        L"\x8102\x4938\xC1E8\xC1E7",
+        L"\x8102\x4932\x8516\xBF4C",
+        L"\x8102\x4936\xB245\xCA89",
+        L"\x8102\x4942\xA195\xF718",
+        L"\x8102\x4927\x8AA7\xD5AB",
+        L"\x8102\x492F\xA315\x9062",
+        L"\x8103\xA90\xD7A3\x9B78",
+        L"\x8102\x4933\x82F9\xEE62",
+        L"\x8102\x492D\xAE7F\x9205",
         L"\x8102\x4923\xAA60\x9F98",    // end grog messages
     };
     if (std::ranges::find(msgs, msg) != std::ranges::end(msgs)) {

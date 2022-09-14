@@ -402,7 +402,7 @@ namespace {
             Log::ErrorW(L"Failed to load Hall of Monuments achievements for %s", result->character_name);
             return;
 		}
-        Log::Info("Loaded Hom");
+        //Log::InfoW(L"Loaded Hom for %s", result->character_name);
         CompletionWindow::Instance().CheckProgress();
 	}
 
@@ -704,8 +704,7 @@ const char* HeroUnlock::Name() {
 IDirect3DTexture9* HeroUnlock::GetMissionImage()
 {
 	if (!image) {
-		image = (IDirect3DTexture9**)malloc(sizeof(*image));
-		*image = nullptr;
+		image = new IDirect3DTexture9*;
 		auto path = Resources::GetPath(L"img/heros");
 		Resources::EnsureFolderExists(path);
 		wchar_t local_image[MAX_PATH];
