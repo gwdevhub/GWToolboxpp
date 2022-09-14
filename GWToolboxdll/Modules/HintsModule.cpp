@@ -58,13 +58,13 @@ namespace {
         HintUIMessage(const wchar_t* message, uint32_t duration = 30000, uint32_t _message_id = 0) {
             size_t strlen = (wcslen(message) + 1) * sizeof(wchar_t);
             if (message[0] == 0x108) {
-                message_encoded = (wchar_t*)malloc(strlen);
+                message_encoded = new wchar_t[strlen];
                 // Already encoded
                 wcscpy(message_encoded, message);
             }
             else {
                 strlen += (3 * sizeof(wchar_t));
-                message_encoded = (wchar_t*)malloc(strlen);
+                message_encoded = new wchar_t[strlen];
                 swprintf(message_encoded, strlen, L"\x108\x107%s\x1", message);
             }
             if(!_message_id)
@@ -74,7 +74,7 @@ namespace {
         }
         HintUIMessage(const TBHint& hint) : HintUIMessage(hint.message, 30000, hint.message_id) {}
         ~HintUIMessage() {
-            free(message_encoded);
+            delete[] message_encoded;
         }
         void Show() {
 
@@ -110,7 +110,7 @@ namespace {
         L"\x108\x107" "Book of Secrets" "\x1", // Keeper of Secrets (Throne of secrets) TODO: Encoded version of this name!
         L"\x108\x107" "Droknar's Key" "\x1",
     };
-    
+
     constexpr TBHint HINT_Q9_STR_SHIELDS = { 0x20000001, L"PvP Strength shields give 9 armor when you don't meet the requirement, so unless you can meet the req on a different attribute, use a Strength shield." };
     constexpr TBHint HINT_HERO_EXP = { 0x20000002, L"Heroes in your party gain experience from quests, so remember to add your low level heroes when accepting quest rewards." };
     constexpr TBHint CHEST_CMD = { 0x20000003, L"Type '/chest' into chat to open your Xunlai Chest from anywhere in an outpost, so you won't have to run to the chest every time." };
@@ -234,7 +234,7 @@ void HintsModule::Initialize() {
     GW::UI::RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kPvPWindowContent, OnShowPvpWindowContent_UIMessage);
 }
 void HintsModule::Update(float) {
-    if (!delayed_hints.empty() 
+    if (!delayed_hints.empty()
         && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
         && GW::Agents::GetPlayer()) {
         clock_t _now = clock();

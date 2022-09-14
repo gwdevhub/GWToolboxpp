@@ -562,8 +562,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
         }
         delete filename_sanitised;
     };
-    IDirect3DTexture9** texture = (IDirect3DTexture9**)malloc(sizeof(IDirect3DTexture9*));
-    *texture = 0;
+    auto texture = new IDirect3DTexture9*;
     guild_wars_wiki_images[filename] = texture;
     static std::filesystem::path path = Resources::GetPath(GUILD_WARS_WIKI_FILES_PATH);
     if (!Resources::EnsureFolderExists(path)) {

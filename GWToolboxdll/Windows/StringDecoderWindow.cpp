@@ -27,15 +27,11 @@ void StringDecoderWindow::Draw(IDirect3DDevice9 *pDevice)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        if (encoded) {
-            free(encoded);
-            encoded = 0;
-        }
+        delete[] encoded;
         return ImGui::End();
     }
     if (!encoded) {
-        encoded = (char*)malloc(encoded_size);
-        encoded[0] = 0;
+        encoded = new char[encoded_size];
     }
     bool decodeIt = ImGui::InputInt("Encoded string id:", &encoded_id, 1, 1, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal);
     decodeIt |= ImGui::InputText("Encoded string:", encoded, encoded_size, ImGuiInputTextFlags_EnterReturnsTrue);
