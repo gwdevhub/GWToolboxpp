@@ -977,7 +977,7 @@ void CompletionWindow::Initialize()
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "MOX\x1", "M.O.X._statue.jpg"));
 
     size_t hom_titles_index = 0;
-    hom_titles.push_back(new HonorAchievement(hom_titles_index, L"\x108\x107" "Eternal Champion\x1","Eternal_Champion.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Champion\x1","Eternal_Champion.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Commander\x1","Eternal_Commander.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Skillz\x1","Eternal_Skillz.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Gladiator\x1","Eternal_Gladiator.jpg"));
