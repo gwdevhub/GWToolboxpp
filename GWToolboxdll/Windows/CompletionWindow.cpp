@@ -1013,7 +1013,6 @@ void CompletionWindow::Initialize()
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Sweet Tooth\x1","Eternal_Sweet_Tooth.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Spearmarshal\x1","Eternal_Spearmarshal.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Survivor\x1","Eternal_Survivor.jpg"));
-    hom_titles_index++;
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Treasure Hunter\x1","Eternal_Treasure_Hunter.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Misfortune\x1","Eternal_Misfortune.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Source of Wisdom\x1","Eternal_Source_of_Wisdom.jpg"));
