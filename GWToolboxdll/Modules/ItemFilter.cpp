@@ -48,7 +48,7 @@ namespace {
         return items[item_id];
     }
 
-    std::map<ItemModelID, std::string> default_dont_hide_for_player = {
+    const std::map<ItemModelID, std::string> default_dont_hide_for_player = {
         // Weapons
         MAP_ENTRY(DSR), MAP_ENTRY(EternalBlade), MAP_ENTRY(VoltaicSpear), MAP_ENTRY(CrystallineSword), MAP_ENTRY(ObsidianEdge),
 
@@ -87,7 +87,7 @@ namespace {
         // Quest Items
         MAP_ENTRY(UnholyText)};
 
-    std::map<ItemModelID, std::string> default_dont_hide_for_party = {
+    const std::map<ItemModelID, std::string> default_dont_hide_for_party = {
         MAP_ENTRY(EternalBlade),
         MAP_ENTRY(VoltaicSpear),
         MAP_ENTRY(MiniDhuum),
