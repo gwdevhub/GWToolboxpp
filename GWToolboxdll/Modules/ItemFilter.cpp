@@ -41,8 +41,8 @@ namespace {
         // filter non-item-agents
         if (packet.type != 4 || packet.unk3 != 0) return nullptr;
 
-        auto const& items = GW::GameContext::instance()->items->item_array;
-        auto const item_id = packet.agent_type;
+        const auto& items = GW::GameContext::instance()->items->item_array;
+        const auto item_id = packet.agent_type;
         if (item_id >= items.size()) return nullptr;
 
         return items[item_id];
@@ -196,7 +196,7 @@ void ItemFilter::OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* 
 void ItemFilter::OnAgentRemove(GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet)
 {
     // Block despawning the agent if the client never spawned it.
-    auto const found = std::ranges::find_if(Instance().suppressed_packets, [&packet](auto const& suppressed_packet) { return suppressed_packet.agent_id == packet->agent_id; });
+    const auto found = std::ranges::find_if(Instance().suppressed_packets, [&packet](const auto& suppressed_packet) { return suppressed_packet.agent_id == packet->agent_id; });
 
     if (found == Instance().suppressed_packets.end()) return;
 

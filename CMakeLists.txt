@@ -35,6 +35,8 @@ add_compile_definitions(
     "GWTOOLBOXDLL_VERSION_BETA=\"${GWTOOLBOXDLL_VERSION_BETA}\""
     "GWTOOLBOX_MODULE_VERSION=${GWTOOBOX_MODULE_VERSION}"
     )
+    
+add_compile_options(/MP /permissive-)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
