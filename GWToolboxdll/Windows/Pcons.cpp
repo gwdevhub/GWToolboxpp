@@ -645,7 +645,7 @@ void PconAlcohol::ForceUse() {
 // ================================================
 void PconLunar::Update(int delay) {
     UNREFERENCED_PARAMETER(delay);
-    Pcon::Update(Pcon::lunar_delay);
+    Pcon::Update(lunar_delay);
 }
 size_t PconLunar::QuantityForEach(const GW::Item* item) const {
     switch (item->model_id) {

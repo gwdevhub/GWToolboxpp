@@ -30,11 +30,10 @@ void PrintUsage(bool terminate)
         exit(0);
 }
 
-void ParseRegSettings()
-{
+void ParseRegSettings() {
     HKEY SettingsKey;
     if (!OpenSettingsKey(&SettingsKey)) {
-        fprintf(stderr, "OpenUninstallKey failed\n");
+        fprintf(stderr, "OpenSettingsKey failed\n");
         return;
     }
 
@@ -51,8 +50,7 @@ void ParseRegSettings()
     RegCloseKey(SettingsKey);
 }
 
-static void WriteRegSettings()
-{
+static void WriteRegSettings() {
     HKEY SettingsKey;
     if (!OpenSettingsKey(&SettingsKey)) {
         fprintf(stderr, "OpenUninstallKey failed\n");
@@ -96,6 +94,7 @@ void ParseCommandLine()
             settings.version = true;
         } else if (wcscmp(arg, L"/install") == 0) {
             settings.install = true;
+            settings.noupdate = false;
         } else if (wcscmp(arg, L"/uninstall") == 0) {
             settings.uninstall = true;
         } else if (wcscmp(arg, L"/reinstall") == 0) {
@@ -137,7 +136,7 @@ void ParseCommandLine()
         PrintUsage(true);
 
     if (!IsOneOrZeroOf3(settings.install, settings.uninstall, settings.reinstall)) {
-        printf("You can only use one of '/install', '/uinstall' and '/reinstall'\n");
+        printf("You can only use one of '/install', '/uninstall' and '/reinstall'\n");
         PrintUsage(true);
     }
 }
@@ -148,18 +147,18 @@ bool IsRunningAsAdmin()
     PSID AdministratorsGroup = NULL;
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
     if (!AllocateAndInitializeSid(
-        &NtAuthority, 
-        2, 
-        SECURITY_BUILTIN_DOMAIN_RID, 
-        DOMAIN_ALIAS_RID_ADMINS, 
-        0, 0, 0, 0, 0, 0, 
+        &NtAuthority,
+        2,
+        SECURITY_BUILTIN_DOMAIN_RID,
+        DOMAIN_ALIAS_RID_ADMINS,
+        0, 0, 0, 0, 0, 0,
         &AdministratorsGroup))
     {
         fprintf(stderr, "AllocateAndInitializeSid failed: %lu\n", GetLastError());
         return false;
     }
 
-    // Determine whether the SID of administrators group is enabled in 
+    // Determine whether the SID of administrators group is enabled in
     // the primary access token of the process.
     BOOL IsRunAsAdmin = FALSE;
     if (!CheckTokenMembership(NULL, AdministratorsGroup, &IsRunAsAdmin))
@@ -291,7 +290,7 @@ bool EnableDebugPrivilege()
     if (!AdjustTokenPrivileges(token, FALSE, &tp, sizeof(tp), nullptr, nullptr)) {
         CloseHandle(token);
         fprintf(stderr, "AdjustTokenPrivileges failed: %lu\n", GetLastError());
-        return false;   
+        return false;
     }
 
     return true;
@@ -312,16 +311,6 @@ static bool ToggleCheckbox(HWND hWnd)
     bool Checked = (State == BST_CHECKED);
     SetCheckbox(hWnd, !Checked);
     return !Checked;
-}
-
-SettingsWindow::SettingsWindow()
-    : m_hNoUpdate(nullptr)
-    , m_hStartAsAdmin(nullptr)
-{
-}
-
-SettingsWindow::~SettingsWindow()
-{
 }
 
 bool SettingsWindow::Create()

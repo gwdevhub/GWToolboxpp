@@ -1,30 +1,24 @@
 #include "stdafx.h"
 
-#include <d3dx9_dynamic.h>
+#include <DDSTextureLoader/DDSTextureLoader9.h>
+#include <WICTextureLoader/WICTextureLoader9.h>
 
-#include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Map.h>
-
 #include <GWCA/Managers/MapMgr.h>
 
-
+#include <EmbeddedResource.h>
 #include <Defines.h>
 #include <GWToolbox.h>
-#include <Logger.h>
-
-#include <Utils/GuiUtils.h>
-
 #include <RestClient.h>
-
-#include <Modules/Resources.h>
-
-#include <Timer.h>
+#include <Logger.h>
 #include <Path.h>
 #include <Str.h>
 
+#include <Utils/GuiUtils.h>
+#include <Modules/Resources.h>
+
 namespace {
     const char* d3dErrorMessage(HRESULT code) {
-        
         switch (code) {
         case D3DERR_NOTAVAILABLE:
             return  "D3DERR_NOTAVAILABLE";
@@ -36,10 +30,11 @@ namespace {
             return  "E_OUTOFMEMORY";
         case D3D_OK:
             return "D3D_OK";
+        default:
+            static std::string str;
+            str = std::format("Unknown D3D error {:#08x}", code);
+            return str.c_str();
         }
-        static char out[32];
-        snprintf(out, 32, "Unknown D3D error %#08x", code);
-        return out;
     }
 
     const char* profession_icon_urls[] = {
@@ -61,7 +56,7 @@ namespace {
     std::map<uint32_t, IDirect3DTexture9**> profession_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::string ns;
-    const size_t MAX_WORKERS = 5;
+    constexpr size_t MAX_WORKERS = 5;
     const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
     const wchar_t* ARMOR_GALLERY_PATH = L"img\\armor_gallery";
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
@@ -87,6 +82,18 @@ Resources::Resources() {
 Resources::~Resources() {
     Cleanup();
     ShutdownCurl();
+    for (const auto& tex : skill_images | std::views::values) {
+        delete tex;
+    }
+    skill_images.clear();
+    for (const auto& tex : item_images | std::views::values) {
+        delete tex;
+    }
+    item_images.clear();
+    for (const auto& tex : map_names | std::views::values) {
+        delete tex;
+    }
+    map_names.clear();
 
 };
 
@@ -119,7 +126,7 @@ HRESULT Resources::ResolveShortcut(std::filesystem::path& in_shortcut_path, std:
     // string for the description
     TCHAR szDesc[MAX_PATH];
     // structure that receives the information about the shortcut
-    WIN32_FIND_DATA wfd;
+    WIN32_FIND_DATA wfd{};
 
     // Get a pointer to the IShellLink interface
     hRes = CoCreateInstance(CLSID_ShellLink,
@@ -133,7 +140,7 @@ HRESULT Resources::ResolveShortcut(std::filesystem::path& in_shortcut_path, std:
     }
     // Get a pointer to the IPersistFile interface
     IPersistFile* ppf = NULL;
-    psl->QueryInterface(IID_IPersistFile, (void**)&ppf);
+    psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&ppf));
 
     // IPersistFile is using LPCOLESTR,
     // Open the shortcut file and initialize it from its contents
@@ -185,20 +192,20 @@ void Resources::Cleanup() {
         delete worker;
     }
     workers.clear();
-    for (const auto& it : skill_images) {
-        delete it.second;
+    for (const auto& tex : skill_images | std::views::values) {
+        delete tex;
     }
     skill_images.clear();
-    for (const auto& it : item_images) {
-        delete it.second;
+    for (const auto& tex : item_images | std::views::values) {
+        delete tex;
     }
     item_images.clear();
-    for (const auto& it : map_names) {
-        delete it.second;
+    for (const auto& tex : map_names | std::views::values) {
+        delete tex;
     }
     map_names.clear();
-    for (const auto& it : guild_wars_wiki_images) {
-        delete it.second;
+    for (const auto& img : guild_wars_wiki_images | std::views::values) {
+        delete img;
     }
     guild_wars_wiki_images.clear();
 }
@@ -206,15 +213,13 @@ void Resources::Terminate() {
     ToolboxModule::Terminate();
     Cleanup();
 }
+
 void Resources::EndLoading() {
     EnqueueWorkerTask([this]() { should_stop = true; });
 }
 
 std::filesystem::path Resources::GetSettingsFolderPath()
 {
-    std::filesystem::path apppath;
-    ASSERT(PathGetAppDataPath(apppath, L"GWToolboxpp"));
-
     std::filesystem::path computer_name;
     ASSERT(PathGetComputerName(computer_name));
 
@@ -228,27 +233,11 @@ std::filesystem::path Resources::GetSettingsFolderPath()
         return docpath;
     }
 
-    if (!Instance().migration_attempted) {
-        // Don't do this every time.
-        Instance().migration_attempted = true;
-        if (!PathMigrateDataAndCreateSymlink(false)) {
-            Log::Warning("Failed to migrate GWToolbox data");
-        }
-        else {
-            Log::InfoW(L"GWToolbox settings folder moved from %s to %s", apppath.wstring().c_str(), docpath.wstring().c_str());
-        }
-    }
-
-    ASSERT(PathExistsSafe(apppath / "GWToolbox.ini", &result));
-    if (result) {
-        return apppath;
-    }
-
     if (PathCreateDirectorySafe(docpath)) {
         return docpath;
     }
 
-    return apppath;
+    return docpath;
 }
 std::filesystem::path Resources::GetPath(const std::filesystem::path& file)
 {
@@ -261,162 +250,165 @@ std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, co
 
 bool Resources::EnsureFolderExists(const std::filesystem::path& path)
 {
-    return std::filesystem::exists(path) || std::filesystem::create_directory(path);
+    return exists(path) || create_directory(path);
 }
 
-utf8::string Resources::GetPathUtf8(std::wstring file) {
-    std::wstring path = GetPath(file);
+utf8::string Resources::GetPathUtf8(const std::wstring& file) {
+    const std::wstring path = GetPath(file);
     return Unicode16ToUtf8(path.c_str());
 }
 
-bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring* response) {
-    if (std::filesystem::exists(path_to_file)) {
+bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response) {
+    if (exists(path_to_file)) {
         if (!std::filesystem::remove(path_to_file)) {
-            return StrSwprintf(*response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+            return StrSwprintf(response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
         }
     }
-    if (std::filesystem::exists(path_to_file)) {
-        return StrSwprintf(*response, L"File already exists @ %s", path_to_file.wstring().c_str()), false;
+    if (exists(path_to_file)) {
+        return StrSwprintf(response, L"File already exists @ %s", path_to_file.wstring().c_str()), false;
     }
 
     std::string content;
-    if (!Download(url, &content)) {
-        return StrSwprintf(*response,L"%S", content.c_str()), false;
+    if (!Download(url, content)) {
+        return StrSwprintf(response,L"%S", content.c_str()), false;
     }
     if (!content.length()) {
-        return StrSwprintf(*response,L"Failed to download %S, no content length", url.c_str()), false;
+        return StrSwprintf(response,L"Failed to download %S, no content length", url.c_str()), false;
     }
     FILE* fp = fopen(path_to_file.string().c_str(), "wb");
     if (!fp) {
-        return StrSwprintf(*response,L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+        return StrSwprintf(response,L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
-    int written = fwrite(content.data(), content.size() + 1, 1, fp);
+    const int written = fwrite(content.data(), content.size() + 1, 1, fp);
     fclose(fp);
     if(written != 1) {
-        return StrSwprintf(*response,L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+        return StrSwprintf(response,L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     return true;
 }
-void Resources::Download(
-    const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
+
+void Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
-    EnqueueWorkerTask([this,path_to_file,url,callback]() {
-        std::wstring* error_message = new std::wstring();
+    EnqueueWorkerTask([this, path_to_file, url, callback] {
+        std::wstring error_message;
         bool success = Download(path_to_file, url, error_message);
         // and call the callback in the main thread
         if (callback) {
-            EnqueueMainTask([callback, success, error_message]() { 
-                callback(success, *error_message);
-                delete error_message;
+            EnqueueMainTask([callback, success, error_message] {
+                callback(success, error_message);
                 });
         }
         else if (!success) {
-            Log::LogW(L"Failed to download %s from %S\n%S", path_to_file.wstring().c_str(), url.c_str(), error_message->c_str());
-            delete error_message;
+            Log::LogW(L"Failed to download %s from %S\n%S", path_to_file.wstring().c_str(), url.c_str(), error_message.c_str());
         }
-        
+
         });
 }
 
-bool Resources::Download(const std::string& url, std::string* response)
+bool Resources::Download(const std::string& url, std::string& response)
 {
     RestClient r;
     InitRestClient(&r);
     r.SetUrl(url.c_str());
     r.Execute();
     if (!r.IsSuccessful()) {
-        StrSprintf(*response, "Failed to download %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
+        StrSprintf(response, "Failed to download %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
         return false;
     }
-    *response = std::move(r.GetContent());
+    response = std::move(r.GetContent());
     return true;
 }
 void Resources::Download(const std::string& url, AsyncLoadMbCallback callback)
 {
-    EnqueueWorkerTask([this,url,callback]() {
-        std::string* response = new std::string();
+    EnqueueWorkerTask([this, url, callback] {
+        std::string response;
         bool ok = Download(url, response);
         EnqueueMainTask([callback, ok, response]() {
-            callback(ok, *response);
-            delete response;
-            });
+            callback(ok, response);
+        });
     });
 }
 
 void Resources::EnsureFileExists(
     const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
-    if (std::filesystem::exists(path_to_file)) {
+    if (exists(path_to_file)) {
         // if file exists, run the callback immediately in the same thread
         callback(true, L"");
     } else {
         // otherwise try to download it in the worker
-        Download(path_to_file, url, callback);
+        Instance().Download(path_to_file, url, callback);
     }
 }
 
-HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring* error) {
+HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring& error) {
     // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
-
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
-    do {
-        tries++;
-        res = D3DXCreateTextureFromFileExW(device, path_to_file.c_str(), D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, NULL, NULL, texture);
-    } while (res == D3DERR_NOTAVAILABLE && tries < 3);
+    while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
+        if (path_to_file.extension() == ".dds") {
+            res = DirectX::CreateDDSTextureFromFileEx(device, path_to_file.c_str(), 0, D3DPOOL_MANAGED, true, texture);
+        } else if (auto ext = path_to_file.extension(); ext == ".png" || ext == ".bmp" || ext == ".jpg" || ext == ".JPEG") {
+            res = CreateWICTextureFromFileEx(device, path_to_file.c_str(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_FLAGS::WIC_LOADER_DEFAULT, texture);
+        }
+    }
     if (res != D3D_OK) {
-        StrSwprintf(*error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
+        StrSwprintf(error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
     }
     else if (!*texture) {
         res = D3DERR_NOTFOUND;
-        StrSwprintf(*error, L"Error loading resource from file %s - texture loaded is null", path_to_file.filename().wstring().c_str());
+        StrSwprintf(error, L"Error loading resource from file %s - texture loaded is null", path_to_file.filename().wstring().c_str());
     }
     return res;
 }
-HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule, LPCSTR id, IDirect3DTexture9** texture, std::wstring* error) {
+HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule, LPCSTR id, IDirect3DTexture9** texture, std::wstring& error) {
     // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
+    using namespace std::string_literals;
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
-    do {
-        tries++;
-        res = D3DXCreateTextureFromResourceExA(device, hSrcModule, id, D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, NULL, NULL, texture);
-    } while (res == D3DERR_NOTAVAILABLE && tries < 3);
+    while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
+        EmbeddedResource resource(id, "RCDATA"s, GWToolbox::GetDLLModule());
+        res = CreateWICTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()), resource.size(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
+        if (res != S_OK) {
+            res = CreateDDSTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()),
+                                               resource.size(), 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
+
+        }
+    }
     if (res != D3D_OK) {
-        StrSwprintf(*error, L"Error loading resource for id %p, module %p - Error is %S", id, hSrcModule, d3dErrorMessage(res));
+        StrSwprintf(error, L"Error loading resource for id %p, module %p - Error is %S", id, hSrcModule, d3dErrorMessage(res));
     }
     else if (!*texture) {
         res = D3DERR_NOTFOUND;
-        StrSwprintf(*error, L"Error loading resource for id %p, module %p - texture loaded is null", id, hSrcModule);
+        StrSwprintf(error, L"Error loading resource for id %p, module %p - texture loaded is null", id, hSrcModule);
     }
     return res;
 }
 void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback)
 {
     EnqueueDxTask([path_to_file, texture, callback](IDirect3DDevice9* device) {
-        std::wstring* error = new std::wstring();
-        bool success = TryCreateTexture(device, path_to_file.c_str(), texture, error) == D3D_OK;
+        std::wstring error{};
+        const bool success = TryCreateTexture(device, path_to_file.c_str(), texture, error) == D3D_OK;
         if (callback) {
-            callback(success, *error);
+            callback(success, error);
         }
         else if (!success) {
-            Log::LogW(L"Failed to load texture from file %s\n%s", path_to_file.wstring().c_str(), error->c_str());
+            Log::LogW(L"Failed to load texture from file %s\n%s", path_to_file.wstring().c_str(), error.c_str());
         }
-        delete error;
-        });
+    });
 }
 void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback)
 {
     EnqueueDxTask([id, texture, callback](IDirect3DDevice9* device) {
-        std::wstring* error = new std::wstring();
-        bool success = TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture, error) == D3D_OK;
+        std::wstring error{};
+        const bool success = TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture, error) == D3D_OK;
         if (callback) {
-            callback(success, *error);
+            callback(success, error);
         }
         else if (!success) {
-            Log::LogW(L"Failed to load texture from id %d\n%s", id, error->c_str());
+            Log::LogW(L"Failed to load texture from id %d\n%s", id, error.c_str());
         }
-        delete error;
-        });
+    });
 }
 void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
@@ -445,21 +437,21 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
         }
         });
 }
-bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring* error) {
+bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error) {
     // otherwise try to install it from resource
     HRSRC hResInfo = FindResourceA(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
     if (!hResInfo) {
-        StrSwprintf(*error, L"Error calling FindResourceA on resource id %u - Error is %lu", id, GetLastError());
+        StrSwprintf(error, L"Error calling FindResourceA on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
     HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
     if (!hRes) {
-        StrSwprintf(*error, L"Error calling LoadResource on resource id %u - Error is %lu", id, GetLastError());
+        StrSwprintf(error, L"Error calling LoadResource on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
     DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
     if (!size) {
-        StrSwprintf(*error, L"Error calling SizeofResource on resource id %u - Error is %lu", id, GetLastError());
+        StrSwprintf(error, L"Error calling SizeofResource on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
     // write to file so the user can customize his icons
@@ -467,11 +459,11 @@ bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_fil
     DWORD bytesWritten;
     BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
     if (wfRes != TRUE) {
-        StrSwprintf(*error, L"Error writing file %s - Error is %lu", path_to_file.filename().wstring().c_str(), GetLastError());
+        StrSwprintf(error, L"Error writing file %s - Error is %lu", path_to_file.filename().wstring().c_str(), GetLastError());
         return false;
     }
     else if (bytesWritten != size) {
-        StrSwprintf(*error, L"Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.filename().wstring().c_str());
+        StrSwprintf(error, L"Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.filename().wstring().c_str());
         return false;
     }
 
@@ -487,7 +479,7 @@ void Resources::DxUpdate(IDirect3DDevice9* device) {
             dx_mutex.unlock();
             return;
         }
-        std::function<void(IDirect3DDevice9*)> func = dx_jobs.front();
+        const std::function<void(IDirect3DDevice9*)> func = std::move(dx_jobs.front());
         dx_jobs.pop();
         dx_mutex.unlock();
         func(device);
@@ -500,7 +492,7 @@ void Resources::Update(float) {
         main_mutex.unlock();
         return;
     }
-    std::function<void()> func = main_jobs.front();
+    const std::function<void()> func = std::move(main_jobs.front());
     main_jobs.pop();
     main_mutex.unlock();
     func();
@@ -522,17 +514,16 @@ void Resources::WorkerUpdate() {
 }
 
 IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
-    uint32_t prof_id = (uint32_t)p;
-    auto found = profession_icons.find(prof_id);
-    if (found != profession_icons.end()) {
-        return found->second;
+    auto prof_id = static_cast<uint32_t>(p);
+    if (profession_icons.contains(prof_id)) {
+        return profession_icons.at(prof_id);
     }
-    IDirect3DTexture9** texture = (IDirect3DTexture9**)malloc(sizeof(IDirect3DTexture9*));
-    *texture = 0;
+    const auto texture = new IDirect3DTexture9*;
+    *texture = nullptr;
     profession_icons[prof_id] = texture;
     if (profession_icon_urls[prof_id][0]) {
-        auto path = Resources::GetPath(PROF_ICONS_PATH);
-        Resources::EnsureFolderExists(path);
+        const auto path = GetPath(PROF_ICONS_PATH);
+        EnsureFolderExists(path);
         wchar_t local_image[MAX_PATH];
         swprintf(local_image, _countof(local_image), L"%s\\%d.png", path.c_str(), p);
         char remote_image[128];
@@ -555,33 +546,30 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     else {
         filename_on_disk = filename;
     }
-    std::string* filename_sanitised = new std::string();
-    filename_sanitised->assign(GuiUtils::SanitiseFilename(filename_on_disk));
-    
-    auto found = guild_wars_wiki_images.find(*filename_sanitised);
-    if (found != guild_wars_wiki_images.end()) {
-        return found->second;
+    const auto filename_sanitised = GuiUtils::SanitiseFilename(filename_on_disk);
+    if (guild_wars_wiki_images.contains(filename_sanitised))
+    {
+        return guild_wars_wiki_images.at(filename_sanitised);
     }
     const auto callback = [filename_sanitised](bool success, const std::wstring& error) {
         if (!success) {
-            Log::ErrorW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised->c_str(), error.c_str());
+            Log::ErrorW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised.c_str(), error.c_str());
         }
         else {
-            Log::LogW(L"Loaded Guild Wars Wiki file %S", filename_sanitised->c_str());
+            Log::LogW(L"Loaded Guild Wars Wiki file %S", filename_sanitised.c_str());
         }
-        delete filename_sanitised;
     };
-    IDirect3DTexture9** texture = (IDirect3DTexture9**)malloc(sizeof(IDirect3DTexture9*));
-    *texture = 0;
+    const auto texture = new IDirect3DTexture9*;
+    *texture = nullptr;
     guild_wars_wiki_images[filename] = texture;
-    static std::filesystem::path path = Resources::GetPath(GUILD_WARS_WIKI_FILES_PATH);
-    if (!Resources::EnsureFolderExists(path)) {
+    static std::filesystem::path path = GetPath(GUILD_WARS_WIKI_FILES_PATH);
+    if (!EnsureFolderExists(path)) {
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
         return texture;
     }
     std::wstring path_to_file;
     // Check for local file
-    StrSwprintf(path_to_file, L"%s\\%S", path.wstring().c_str(), filename_sanitised->c_str());
+    StrSwprintf(path_to_file, L"%s\\%S", path.wstring().c_str(), filename_sanitised.c_str());
     if (std::filesystem::exists(path_to_file)) {
         Instance().LoadTexture(texture, path_to_file, callback);
         return texture;
@@ -597,17 +585,17 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
 
         std::string tmp_str;
         // Find a valid png or jpg image inside the HTML response, <img alt="<skill_id>" src="<location_of_image>"
-        StrSprintf(tmp_str, "class=\"fullMedia\"[\\s\\S]*?href=['\"]([^\"']+)");
+        StrSprintf(tmp_str, R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))");
         std::regex image_finder(tmp_str);
         std::smatch m;
         std::regex_search(response, m, image_finder);
         if (!m.size()) {
-            trigger_failure_callback(callback, L"Regex failed loading file %S",filename_sanitised->c_str());
+            trigger_failure_callback(callback, L"Regex failed loading file %S", filename_sanitised.c_str());
             return;
         }
         std::string image_url = m[1].str();
         std::wstring path_to_file;
-        StrSwprintf(path_to_file, L"%s\\%S", path.c_str(), filename_sanitised->c_str());
+        StrSwprintf(path_to_file, L"%s\\%S", path.c_str(), filename_sanitised.c_str());
         if (width) {
             // Divert to resized version using mediawiki's method
             image_finder = "/images/(.*)/([^/]+)$";
@@ -630,10 +618,9 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
 }
 
 IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
-    
-    auto found = skill_images.find(skill_id);
-    if (found != skill_images.end()) {
-        return found->second;
+
+    if (skill_images.contains(skill_id)) {
+        return skill_images.at(skill_id);
     }
     const auto callback = [skill_id](bool success, const std::wstring& error) {
         if (!success) {
@@ -643,13 +630,13 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
             Log::LogW(L"Loaded skill image %d", skill_id);
         }
     };
-    IDirect3DTexture9** texture = (IDirect3DTexture9**)malloc(sizeof(IDirect3DTexture9*));
-    *texture = 0;
+    const auto texture = new IDirect3DTexture9*;
+    *texture = nullptr;
     skill_images[skill_id] = texture;
-    if (skill_id == (GW::Constants::SkillID)0)
+    if (skill_id == static_cast<GW::Constants::SkillID>(0))
         return texture;
-    static std::filesystem::path path = Resources::GetPath(SKILL_IMAGES_PATH);
-    if (!Resources::EnsureFolderExists(path)) {
+    static std::filesystem::path path = GetPath(SKILL_IMAGES_PATH);
+    if (!EnsureFolderExists(path)) {
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
         return texture;
     }
@@ -723,13 +710,12 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
 }
 
 GuiUtils::EncString* Resources::GetMapName(GW::Constants::MapID map_id) {
-    auto found = map_names.find(map_id);
-    if (found != map_names.end()) {
-        return found->second;
+    if (map_names.contains(map_id)) {
+        return map_names.at(map_id);
     }
-    GW::AreaInfo* area = GW::Map::GetMapInfo(map_id);
+    const auto area = GW::Map::GetMapInfo(map_id);
     ASSERT(area);
-    GuiUtils::EncString* enc_string = new GuiUtils::EncString(area->name_id, false);
+    const auto enc_string = new GuiUtils::EncString(area->name_id, false);
     map_names[map_id] = enc_string;
     return enc_string;
 }
@@ -738,9 +724,8 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
     if (item_name.empty()) {
         return nullptr;
     }
-    auto found = item_images.find(item_name);
-    if (found != item_images.end()) {
-        return found->second;
+    if (item_images.contains(item_name)) {
+        return item_images.at(item_name);
     }
     const auto callback = [item_name](bool success, const std::wstring& error) {
         if (!success) {
@@ -750,8 +735,8 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
             Log::LogW(L"Loaded item image %s", item_name.c_str());
         }
     };
-    IDirect3DTexture9** texture = (IDirect3DTexture9**)malloc(sizeof(IDirect3DTexture9*));
-    *texture = 0;
+    const auto texture = new IDirect3DTexture9*;
+    *texture = nullptr;
     item_images[item_name] = texture;
     static std::filesystem::path path = GetPath(ITEM_IMAGES_PATH);
     ASSERT(EnsureFolderExists(path));
@@ -763,22 +748,22 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
         Instance().LoadTexture(texture, path_to_file, callback);
         return texture;
     }
-    
+
     // No local file found; download from wiki via searching by the item name; the wiki will usually return a 302 redirect if its an exact item match
-    std::string search_str = GuiUtils::WikiUrl(item_name);
+    const std::string search_str = GuiUtils::WikiUrl(item_name);
     Instance().Download(search_str, [texture, item_name, callback](bool ok, const std::string& response) {
         if (!ok) {
             callback(ok, GuiUtils::StringToWString(response));
             return;
         }
-        std::string item_name_str = GuiUtils::WStringToString(item_name);
+        const std::string item_name_str = GuiUtils::WStringToString(item_name);
         // matches any characters that need to be escaped in RegEx
-        std::regex specialChars{ R"([-[\]{}()*+?.,\^$|#\s])" };
-        std::string sanitized = std::regex_replace(item_name_str, specialChars, R"(\$&)");
+        const std::regex specialChars{ R"([-[\]{}()*+?.,\^$|#\s])" };
+        const std::string sanitized = std::regex_replace(item_name_str, specialChars, R"(\$&)");
         std::smatch m;
         // Find first png image that has an alt tag matching the html encoded title of the page
         char regex_str[255];
-        snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"][^>]*%s[^>]*['\"][^>]+src=['\"]([^\"']+)([.](png))", sanitized.c_str());
+        snprintf(regex_str, sizeof(regex_str), R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", sanitized.c_str());
         if (!std::regex_search(response, m, std::regex(regex_str))) {
             // Failed to find via item name; try via page title
             const std::regex title_finder("<title>(.*) - Guild Wars Wiki.*</title>");
@@ -787,7 +772,8 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
                 return;
             }
             std::string html_item_name = GuiUtils::HtmlEncode(m[1].str());
-            snprintf(regex_str, sizeof(regex_str), "<img[^>]+alt=['\"][^>]*%s[^>]*['\"][^>]+src=['\"]([^\"']+)([.](png))", html_item_name.c_str());
+            snprintf(regex_str, sizeof(regex_str),
+                     R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", html_item_name.c_str());
             if (!std::regex_search(response, m, std::regex(regex_str))) {
                 trigger_failure_callback(callback, L"Failed to find image HTML for %s from wiki", item_name.c_str());
                 return;

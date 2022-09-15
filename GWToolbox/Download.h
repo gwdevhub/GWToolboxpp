@@ -8,18 +8,15 @@ bool Download(const wchar_t *path_to_file, const wchar_t *url);
 class DownloadWindow : public Window
 {
 public:
-    static bool DownloadAllFiles();
-
-public:
-    DownloadWindow();
+    DownloadWindow() = default;
     DownloadWindow(const DownloadWindow&) = delete;
-    ~DownloadWindow();
+    ~DownloadWindow() override = default;
 
     DownloadWindow& operator=(const DownloadWindow&) = delete;
 
     bool Create();
-
-    void SetChangelog(const char *str, size_t length);
+    static bool DownloadAllFiles();
+    void SetChangelog(const char *str, size_t length) const;
 
 private:
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
@@ -27,7 +24,7 @@ private:
     void OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 private:
-    HWND m_hProgressBar;
-    HWND m_hCloseButton;
-    HWND m_hChangelog;
+    HWND m_hProgressBar = nullptr;
+    HWND m_hCloseButton = nullptr;
+    HWND m_hChangelog = nullptr;
 };

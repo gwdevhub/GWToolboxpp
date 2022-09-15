@@ -37,22 +37,17 @@ namespace {
     WNDPROC OldWndProc = nullptr;
     bool tb_destroyed = false;
     bool imgui_initialized = false;
-
-    bool drawing_world = 0;
-    int drawing_passes = 0;
-    int last_drawing_passes = 0;
-
     bool defer_close = false;
 
     HWND gw_window_handle = nullptr;
-    bool SaveIniToFile(CSimpleIni* ini, std::filesystem::path location) {
-        std::filesystem::path tmpFile = location;
-        tmpFile += ".tmp";
-        SI_Error res = ini->SaveFile(tmpFile.c_str());
+    bool SaveIniToFile(const CSimpleIni* ini, const std::filesystem::path& location) {
+        auto tmp_file = location;
+        tmp_file += ".tmp";
+        const SI_Error res = ini->SaveFile(tmp_file.c_str());
         if (res < 0) {
             return false;
         }
-        std::filesystem::rename(tmpFile, location);
+        std::filesystem::rename(tmp_file, location);
         return true;
     }
 
@@ -82,7 +77,7 @@ HMODULE GWToolbox::GetDLLModule() {
 }
 
 DWORD __stdcall SafeThreadEntry(LPVOID module) {
-    dllmodule = (HMODULE)module;
+    dllmodule = static_cast<HMODULE>(module);
     __try {
         ThreadEntry(nullptr);
     } __except ( EXCEPT_EXPRESSION_ENTRY ) {
@@ -94,23 +89,9 @@ DWORD __stdcall SafeThreadEntry(LPVOID module) {
 DWORD __stdcall ThreadEntry(LPVOID) {
     Log::Log("Initializing API\n");
 
-    // Try to load DirectX runtime dll. Installer should have sorted this, but may not have.
-    if (!Loadd3dx9()) {
-        // Handle this now before we go any further - removing this check will cause a crash when modules try to use D3DX9 funcs in Draw() later and will close GW
-        char title[128];
-        sprintf(title, "GWToolbox++ API Error (LastError: %lu)", GetLastError());
-        if (MessageBoxA(0,
-            "Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed.\nGWToolbox++ needs this installed to continue.\n\nVisit DirectX Redistributable download page?",
-            title, MB_YESNO) == IDYES) {
-            ShellExecute(0, 0, DIRECTX_REDIST_WEBSITE, 0, 0, SW_SHOW);
-        }
-
-        goto leave;
-    }
-
     GW::HookBase::Initialize();
     if (!GW::Initialize()){
-        if (MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) {
+        if (MessageBoxA(nullptr, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) {
 
         }
         goto leave;
@@ -310,21 +291,21 @@ void GWToolbox::Initialize() {
 
     Log::Log("Creating Toolbox\n");
 
-    GW::GameThread::RegisterGameThreadCallback(&Update_Entry, GWToolbox::Update);
+    GW::GameThread::RegisterGameThreadCallback(&Update_Entry, [](GW::HookStatus* a) { GWToolbox::Instance().Update(a); });
 
-    Resources::Instance().EnsureFolderExists(Resources::GetSettingsFolderPath());
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\bonds"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\icons"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\materials"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"location logs"));
-    Resources::Instance().EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
+    Resources::EnsureFolderExists(Resources::GetSettingsFolderPath());
+    Resources::EnsureFolderExists(Resources::GetPath(L"img"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"img\\bonds"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"img\\icons"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"img\\materials"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));
+    Resources::EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
         "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
-        [](bool success, const std::wstring& error) {
+        [this](bool success, const std::wstring& error) {
         if (success) {
-            GWToolbox::Instance().OpenSettingsFile();
-            GWToolbox::Instance().LoadModuleSettings();
+            OpenSettingsFile();
+            LoadModuleSettings();
         }
         else {
             Log::ErrorW(L"Failed to download GWToolbox ini\n%s", error.c_str());
@@ -389,15 +370,12 @@ void GWToolbox::SaveSettings() {
     }
 }
 
-
 void GWToolbox::Terminate() {
     if (!initialized)
         return;
     SaveSettings();
     inifile->Reset();
     delete inifile;
-
-
 
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
 
@@ -412,8 +390,7 @@ void GWToolbox::Terminate() {
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {
     // === destruction ===
-    auto& instance = GWToolbox::Instance();
-    if (instance.initialized && instance.must_self_destruct) {
+    if (initialized && must_self_destruct) {
         if (!GuiUtils::FontsLoaded())
             return;
         for (ToolboxModule* module : GWToolbox::Instance().modules) {
@@ -421,7 +398,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
                 return;
         }
 
-        GWToolbox::Instance().Terminate();
+        Instance().Terminate();
         if (imgui_initialized) {
             ImGui_ImplDX9_Shutdown();
             ImGui_ImplWin32_Shutdown();
@@ -434,12 +411,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
 
         GW::DisableHooks();
-        instance.initialized = false;
+        initialized = false;
         tb_destroyed = true;
     }
     // === runtime ===
-    if (instance.initialized
-        && !instance.must_self_destruct
+    if (initialized
+        && !must_self_destruct
         && GW::Render::GetViewportWidth() > 0
         && GW::Render::GetViewportHeight() > 0) {
 
@@ -535,12 +512,11 @@ void GWToolbox::Update(GW::HookStatus *)
     if (last_tick_count == 0)
         last_tick_count = GetTickCount();
 
-    GWToolbox& tb = GWToolbox::Instance();
-    if (!tb.initialized)
-        tb.Initialize();
-    if (tb.initialized
+    if (!initialized)
+        Initialize();
+    if (initialized
         && imgui_initialized
-        && !GWToolbox::Instance().must_self_destruct) {
+        && !must_self_destruct) {
 
         // @Enhancement:
         // Improve precision with QueryPerformanceCounter
@@ -548,12 +524,9 @@ void GWToolbox::Update(GW::HookStatus *)
         DWORD delta = tick - last_tick_count;
         float delta_f = delta / 1000.f;
 
-        for (ToolboxModule* module : tb.modules) {
+        for (ToolboxModule* module : modules) {
             module->Update(delta_f);
         }
-        //for (TBModule* module : tb.plugins) {
-        //    module->Update(delta_f);
-        //}
 
         last_tick_count = tick;
     }

@@ -2,7 +2,6 @@
 
 #include <GWCA/GameEntities/Party.h>
 
-#include <Defines.h>
 #include <ToolboxWidget.h>
 
 #include <Widgets/Minimap/AgentRenderer.h>
@@ -12,9 +11,6 @@
 #include <Widgets/Minimap/PmapRenderer.h>
 #include <Widgets/Minimap/RangeRenderer.h>
 #include <Widgets/Minimap/SymbolsRenderer.h>
-#include <Widgets/Minimap/VBuffer.h>
-
-struct D3DXVECTOR2;
 
 class Minimap final : public ToolboxWidget
 {
@@ -84,7 +80,7 @@ public:
     void DrawSettingInternal() override;
 
     float GetMapRotation() const;
-    D3DXVECTOR2 GetGwinchScale() const;
+    DirectX::XMFLOAT2 GetGwinchScale() const;
     GW::Vec2f ShadowstepLocation() const;
 
     // 0 is 'all' flag, 1 to 7 is each hero

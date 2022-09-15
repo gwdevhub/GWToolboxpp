@@ -2,7 +2,7 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/Context/GameContext.h>
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameContainers/GamePos.h>
@@ -10,7 +10,6 @@
 #include <GWCA/GameEntities/Attribute.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Player.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -37,7 +36,7 @@ void BondsWidget::Terminate() {
 
 void BondsWidget::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
-    if (!visible) 
+    if (!visible)
         return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
@@ -120,14 +119,14 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         if (GW::BuffArray* buffs = GW::Effects::GetPlayerBuffs()) {
             for (const auto& buff : *buffs) {
                 const auto agent = buff.target_agent_id;
-                const auto skill = static_cast<SkillID>(buff.skill_id);
+                const auto skill = static_cast<GW::Constants::SkillID>(buff.skill_id);
                 if (!party_map.contains(agent))
                     continue; // bond target not in party
                 if (!bond_map.contains(skill))
                     continue; // bond with a skill not in skillbar
                 size_t y = party_map[agent];
                 size_t x = bond_map[skill];
-                auto texture = *Resources::GetSkillImage(buff.skill_id);
+                const auto texture = *Resources::GetSkillImage(buff.skill_id);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
                 if (texture) {
@@ -139,7 +138,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 }
             }
         }
-        
+
         // Player and hero effects that aren't bonds
         if (const GW::AgentEffectsArray* agent_effects_array = GW::Effects::GetPartyEffectsArray();
             agent_effects_array != nullptr) {
@@ -148,7 +147,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 if (!agent_effects.valid()) continue;
                 const auto agent_id = agent_effects_it.agent_id;
                 for (const GW::Effect& effect : agent_effects) {
-                    const auto skill_id = static_cast<SkillID>(effect.skill_id);
+                    const auto skill_id = static_cast<GW::Constants::SkillID>(effect.skill_id);
                     if (!bond_map.contains(skill_id)) continue;
 
                     bool overlay = false;
@@ -162,7 +161,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                     size_t y = party_map[agent_id];
                     size_t x = bond_map[skill_id];
 
-                    auto texture = *Resources::GetSkillImage( skill_id);
+                    const auto texture = *Resources::GetSkillImage( skill_id);
                     ImVec2 tl = GetGridPos(x, y, true);
                     ImVec2 br = GetGridPos(x, y, false);
                     if (texture) {
@@ -283,7 +282,7 @@ bool BondsWidget::FetchBondSkills()
     bond_list.clear();
     bond_map.clear();
     for (const auto& skill : bar->skills) {
-        auto skill_id = static_cast<SkillID>(skill.skill_id);
+        auto skill_id = static_cast<GW::Constants::SkillID>(skill.skill_id);
         if (std::find(skills.begin(), skills.end(), skill_id) != skills.end()) {
             bond_map[skill_id] = bond_list.size();
             bond_list.push_back(skill_id);
@@ -322,7 +321,7 @@ bool BondsWidget::FetchPartyInfo()
     if (show_allies && info->others.valid()) {
         for (const DWORD ally_id : info->others) {
             GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
-            GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
+            const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
             if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
                 if (allies_start == 255)
                     allies_start = party_map.size();

@@ -1,7 +1,7 @@
 
 
-FILE(GLOB SOURCES 
-    "*.h" 
+FILE(GLOB SOURCES
+    "*.h"
     "*.cpp"
     "GWToolbox.rc")
 
@@ -15,25 +15,13 @@ set_target_properties(GWToolbox PROPERTIES LINK_FLAGS_MINRELSIZE "/SUBSYSTEM:WIN
 
 include(json)
 
-target_link_libraries(GWToolbox PRIVATE 
+target_link_libraries(GWToolbox PRIVATE
     # cmake dependencies:
     GWToolboxdll
     Core
     RestClient
+    directxtex
     nlohmann_json::nlohmann_json
-    # libs:
-    Ws2_32.lib
-    Shlwapi.lib
-    kernel32.lib
-    user32.lib
-    gdi32.lib
-    winspool.lib
-    comdlg32.lib
-    advapi32.lib
-    shell32.lib
-    ole32.lib
-    oleaut32.lib
-    uuid.lib
-    odbc32.lib
-    odbccp32.lib
+
+    version.lib # for GetFileVersionInfo
     )

@@ -7,8 +7,8 @@
 
 #define VAR_NAME(v) (#v)
 
-/* 
-Notes: 
+/*
+Notes:
 - EXCEPT_EXPRESSION_ENTRY is for the initialization
 - EXCEPT_EXPRESSION_LOOP is in every loop (main, render, input)
 

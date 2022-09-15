@@ -54,7 +54,7 @@ uint32_t ObserverPlayerWindow::GetComparison() {
 }
 
 // Draw the headers for player skills
-void ObserverPlayerWindow::DrawHeaders() {
+void ObserverPlayerWindow::DrawHeaders() const {
     float offset = 0;
     ImGui::Text("Name");
     float offset_d = text_long;
@@ -169,7 +169,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice) {
         text_long   = 220.0f * global;
         text_medium = 150.0f * global;
         text_short  = 80.0f  * global;
-        text_tiny	= 40.0f  * global;
+        text_tiny    = 40.0f  * global;
 
         if (show_tracking) {
             // skills

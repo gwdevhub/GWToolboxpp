@@ -4,8 +4,6 @@
 
 // is_directory without catch; returns false on failure
 bool PathIsDirectorySafe(const std::filesystem::path& path, bool* out);
-// is_symlink without catch; returns false on failure
-bool PathIsSymlinkSafe(const std::filesystem::path& path, bool* out);
 // directory_iterator without catch; returns false on failure
 bool PathDirectoryIteratorSafe(const std::filesystem::path& path, std::filesystem::directory_iterator* out);
 // exists without catch; returns false on failure
@@ -19,7 +17,6 @@ bool PathGetExeFileName(std::wstring& out);
 bool PathGetProgramDirectory(std::filesystem::path& out);
 
 bool PathGetDocumentsPath(std::filesystem::path& out, const wchar_t* suffix);
-bool PathGetAppDataPath(std::filesystem::path& out, const wchar_t* suffix);
 
 // create_directories without catch; returns false on failure
 bool PathCreateDirectorySafe(const std::filesystem::path& path);
@@ -32,6 +29,3 @@ bool PathSafeCopy(const std::filesystem::path& from, const std::filesystem::path
 bool PathRecursiveRemove(const std::filesystem::path& from);
 
 bool PathGetComputerName(std::filesystem::path& out);
-bool PathMigrateDataAndCreateSymlink(bool create_symlink = false);
-
-

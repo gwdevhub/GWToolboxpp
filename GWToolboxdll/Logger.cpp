@@ -64,7 +64,7 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
 
 // === Setup and cleanup ====
 bool Log::InitializeLog() {
-#ifdef GWTOOLBOX_DEBUG
+#ifdef _DEBUG
     logfile = stdout;
     AllocConsole();
     freopen_s(&stdout_file, "CONOUT$", "w", stdout);
@@ -91,7 +91,7 @@ void Log::Terminate() {
     GW::RegisterLogHandler(nullptr, nullptr);
     GW::RegisterPanicHandler(nullptr, nullptr);
 
-#ifdef GWTOOLBOX_DEBUG
+#ifdef _DEBUG
     if (stdout_file)
         fclose(stdout_file);
     if (stderr_file)
@@ -111,7 +111,7 @@ void Log::Terminate() {
 static void PrintTimestamp() {
     time_t rawtime;
     time(&rawtime);
-    
+
     struct tm timeinfo;
     localtime_s(&timeinfo, &rawtime);
 
@@ -136,7 +136,7 @@ void Log::Log(const char* msg, ...) {
 void Log::LogW(const wchar_t* msg, ...) {
     if (!logfile) return;
     PrintTimestamp();
-    
+
 
     va_list args;
     va_start(args, msg);
@@ -187,10 +187,10 @@ static void _vchatlogW(LogType log_type, const wchar_t* format, va_list argv) {
 
 static void _vchatlog(LogType log_type, const char* format, va_list argv) {
     size_t len = vsnprintf(NULL, 0, format, argv);
-    char* buf = (char*)malloc(len + 1);
+    auto buf = new char[len + 1];
     vsnprintf(buf, len+1, format, argv);
-    std::wstring sbuf2 = GuiUtils::StringToWString(buf);
-    delete buf;
+    const std::wstring sbuf2 = GuiUtils::StringToWString(buf);
+    delete[] buf;
     _chatlog(log_type, sbuf2.c_str());
 }
 

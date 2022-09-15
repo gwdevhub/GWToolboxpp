@@ -62,11 +62,11 @@ void SkillMonitorWidget::Initialize() {
 }
 
 void SkillMonitorWidget::Terminate() {
-	ToolboxWidget::Terminate();
+    ToolboxWidget::Terminate();
 }
 
 void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
-	UNREFERENCED_PARAMETER(device);
+    UNREFERENCED_PARAMETER(device);
     if (!visible)
         return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
@@ -130,7 +130,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
             }
             return {win_x + x * img_size, win_y + y * img_size};
         };
-        
+
         auto party_index = 0u;
         for (auto& [agent_id, party_slot] : party_map) {
             if (++party_index > num_rows) continue;
@@ -155,7 +155,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
                         ImDrawFlags_RoundCornersNone, static_cast<float>(status_border_thickness));
                     ImGui::PopClipRect();
                 }
-                
+
                 if (ImGui::ColorConvertU32ToFloat4(cast_indicator_color).w != 0) {
                     if (skill_activation.status == CASTING && skill_activation.cast_time * 1000 >= cast_indicator_threshold) {
                         const auto remainingCast = TIMER_DIFF(skill_activation.cast_start);
@@ -301,7 +301,7 @@ void SkillMonitorWidget::DrawSettingInternal() {
         }
     }
 
-    
+
     ImGui::Text("History");
     ImGui::InputInt("Length", &history_length, 0, 25);
     if (history_length < 0) {

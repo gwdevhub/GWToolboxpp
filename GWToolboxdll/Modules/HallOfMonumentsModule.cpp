@@ -7,11 +7,11 @@
 
 #include <Modules/Resources.h>
 #include <Modules/HallOfMonumentsModule.h>
-
+#include <CurlWrapper.h>
 
 
 namespace {
-    static const char _Base64ToValue[128] = {
+    constexpr char _Base64ToValue[128] = {
            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // [0,   16)
            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // [16,  32)
            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63, // [32,  48)
@@ -21,17 +21,17 @@ namespace {
            -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // [96,  112)
            41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1, // [112, 128)
     };
-    static const unsigned char _Base64Table[65] =
+    const unsigned char _Base64Table[65] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    static int _WriteBits(int val, char* buff, int count = 6) {
+    int _WriteBits(int val, char* buff, int count = 6) {
         for (int i = 0; i < count; i++) {
             buff[i] = ((val >> i) & 1);
         }
         return count;
     }
 
-    static int _ReadBits(char** str, int n) {
+    int _ReadBits(char** str, int n) {
         int val = 0;
         char* s = *str;
         for (int i = 0; i < n; i++)
@@ -61,7 +61,7 @@ bool HallOfMonumentsModule::DecodeHomCode(const char* in, HallOfMonumentsAchieve
     ASSERT(strlen(in) < _countof(out->hom_code));
     strcpy(out->hom_code, in);
     return DecodeHomCode(out);
-   
+
 }
 bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out) {
     const int bufSize = 1024;
@@ -259,10 +259,12 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character
             character_name_s[x] = (char)toupper(character_name_s[x]);
     }
     wcscpy(out->character_name, character_name);
-    char url[64];
-    snprintf(url, _countof(url), "https://hom.guildwars2.com/character/%s", character_name_s.c_str());
 
-    Resources::Instance().Download(url, [out, callback](bool success, const std::string& response) {
+    std::string char_name_escaped;
+    EscapeUrl(char_name_escaped, character_name_s.c_str());
+    const auto url_str = std::format("https://hom.guildwars2.com/character/{}", char_name_escaped);
+
+    Resources::Instance().Download(url_str, [out, callback](bool success, const std::string& response) {
         if (!success) {
             Log::Error("Failed to load account hom code %s\n%s", out->character_name, response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
@@ -286,14 +288,11 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character
         }
         out->state = HallOfMonumentsAchievements::State::Done;
         if (callback) callback(out);
-        return;
         });
 }
 void HallOfMonumentsAchievements::OpenInBrowser() {
-    char* url = new char[255];
-    snprintf(url, 255, "https://hom.guildwars2.com/en/#details=%s&page=main", hom_code);
-    GW::GameThread::Enqueue([url]() {
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)url);
-        delete[] url;
+    const auto url = std::format("https://hom.guildwars2.com/en/#details={}&page=main", hom_code);
+    GW::GameThread::Enqueue([url] {
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)url.c_str());
         });
 }

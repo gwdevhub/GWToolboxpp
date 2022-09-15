@@ -1,17 +1,15 @@
 #include "stdafx.h"
 
 #include <Path.h>
-
 #include "Download.h"
 #include "Install.h"
-#include "Registry.h"
-#include "Settings.h"
+#include "EmbeddedResource.h"
 
 namespace fs = std::filesystem;
 
 static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
 {
-    HANDLE hFile = CreateFileW(
+    const HANDLE hFile = CreateFileW(
         path,
         FILE_READ_ATTRIBUTES,
         FILE_SHARE_READ,
@@ -39,97 +37,6 @@ static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
     return true;
 }
 
-#define DWORD_MAX ((DWORD)-1)
-static bool GetFileSizeAsDword(const wchar_t *path, DWORD *file_size)
-{
-    uint64_t FileSize;
-    if (!GetFileSize(path, &FileSize)) {
-        return false;
-    }
-
-    if (FileSize >= DWORD_MAX) {
-        fprintf(stderr, "File '%ls' size (%llu) is too big for a DWORD (%lu)\n",
-            path, FileSize, DWORD_MAX);
-        return false;
-    }
-
-    *file_size = static_cast<DWORD>(FileSize);
-    return true;
-}
-
-static bool InstallUninstallKey()
-{
-    wchar_t time_buf[32];
-    struct tm local_time;
-    time_t raw_time = time(nullptr);
-    localtime_s(&local_time , &raw_time);
-    wcsftime(time_buf, ARRAYSIZE(time_buf), L"%Y%m%d", &local_time);
-
-    fs::path install_location;
-    if (!PathGetDocumentsPath(install_location, L"GWToolboxpp")) {
-        return false;
-    }
-    fs::path dll_path = install_location / L"GWToolboxdll.dll";
-    fs::path installer_path = install_location / L"GWToolbox.exe";
-
-    DWORD dll_size;
-    if (!GetFileSizeAsDword(dll_path.wstring().c_str(), &dll_size)) {
-        return false;
-    }
-
-    wchar_t uninstall[MAX_PATH + 64];
-    wchar_t uninstall_quiet[MAX_PATH + 64];
-    _snwprintf_s(uninstall, ARRAYSIZE(uninstall), L"%s /uninstall", installer_path.wstring().c_str());
-    _snwprintf_s(uninstall_quiet, ARRAYSIZE(uninstall_quiet), L"%s /uninstall /quiet", installer_path.wstring().c_str());
-
-    HKEY UninstallKey;
-    if (!CreateUninstallKey(&UninstallKey)) {
-        fprintf(stderr, "OpenUninstallKey failed\n");
-        return false;
-    }
-
-    // current date as YYYYMMDD
-    if (!RegWriteStr(UninstallKey, L"DisplayName", L"GWToolbox") ||
-        !RegWriteStr(UninstallKey, L"DisplayIcon", installer_path.wstring().c_str()) ||
-        !RegWriteStr(UninstallKey, L"DisplayVersion", L"3.0") ||
-        !RegWriteDWORD(UninstallKey, L"EstimatedSize", dll_size / 1000) ||
-        !RegWriteStr(UninstallKey, L"InstallDate", time_buf) ||
-        !RegWriteStr(UninstallKey, L"InstallLocation", install_location.wstring().c_str()) ||
-        !RegWriteDWORD(UninstallKey, L"NoModify", 1) ||
-        !RegWriteDWORD(UninstallKey, L"NoRepair", 1) ||
-        !RegWriteStr(UninstallKey, L"UninstallString", uninstall) ||
-        !RegWriteStr(UninstallKey, L"QuietUninstallString", uninstall_quiet) ||
-        !RegWriteStr(UninstallKey, L"URLInfoAbout", L"http://www.gwtoolbox.com/") ||
-        !RegWriteStr(UninstallKey, L"URLUpdateInfo", L"http://www.gwtoolbox.com/history"))
-    {
-        RegCloseKey(UninstallKey);
-        return false;
-    }
-
-    RegCloseKey(UninstallKey);
-    return true;
-}
-
-static bool InstallSettingsKey()
-{
-    HKEY SettingsKey;
-    if (!OpenSettingsKey(&SettingsKey)) {
-        fprintf(stderr, "OpenUninstallKey failed\n");
-        return false;
-    }
-
-    if (!RegWriteDWORD(SettingsKey, L"noupdate", 0) ||
-        !RegWriteDWORD(SettingsKey, L"asadmin", 0))
-        // Add the key to get crash dump
-    {
-        RegCloseKey(SettingsKey);
-        return false;
-    }
-
-    RegCloseKey(SettingsKey);
-    return true;
-}
-
 static bool EnsureInstallationDirectoryExist(void)
 {
     wchar_t temp[MAX_PATH];
@@ -145,22 +52,22 @@ static bool EnsureInstallationDirectoryExist(void)
     docpath = docpath / computer_name; // %USERPROFILE%\Documents\GWToolboxpp\<Computername>
 
     // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\crashes
-    fs::path crashes = docpath / L"crashes";
+    const fs::path crashes = docpath / L"crashes";
     if (!PathCreateDirectorySafe(crashes)) {
         return false;
     }
     // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\logs
-    fs::path logs = docpath / L"logs";
+    const fs::path logs = docpath / L"logs";
     if (!PathCreateDirectorySafe(logs)) {
         return false;
     }
     // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\plugins
-    fs::path plugins = docpath / L"plugins";
+    const fs::path plugins = docpath / L"plugins";
     if (!PathCreateDirectorySafe(plugins)) {
         return false;
     }
     // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\data
-    fs::path data = docpath / L"data";
+    const fs::path data = docpath / L"data";
     if (!PathCreateDirectorySafe(data)) {
         return false;
     }
@@ -204,7 +111,7 @@ static bool DeleteInstallationDirectory(void)
     }
     wcscpy(path, fspath.wstring().c_str());
 
-    size_t n_path = wcslen(path);
+    const size_t n_path = wcslen(path);
     path[n_path + 1] = 0;
 
     SHFILEOPSTRUCTW FileOp = {0};
@@ -214,7 +121,7 @@ static bool DeleteInstallationDirectory(void)
     FileOp.fAnyOperationsAborted = FALSE;
     FileOp.lpszProgressTitle = L"GWToolbox uninstallation";
 
-    int iRet = SHFileOperationW(&FileOp);
+    const int iRet = SHFileOperationW(&FileOp);
     if (iRet != 0) {
         fprintf(stderr, "SHFileOperationW failed: 0x%X, GetLastError 0x%X\n", iRet, GetLastError());
         return false;
@@ -227,18 +134,45 @@ static bool DeleteInstallationDirectory(void)
     return true;
 }
 
+bool DumpFont()
+{
+    fs::path docpath;
+    if (!PathGetDocumentsPath(docpath, L"GWToolboxpp")) {
+        return false;
+    }
+    fs::path computername;
+    if (!PathGetComputerName(computername)) {
+        return false;
+    }
+    const fs::path target = docpath / computername / "Font.ttf";
+    if (fs::exists(target)) {
+        return true;
+    }
+
+    const auto font = EmbeddedResource(IDR_BINARY1, L"Binary");
+    if (!font.data()) {
+        return false;
+    }
+
+    std::ofstream f(target.c_str(), std::ios::out | std::ios::binary);
+    f.write(static_cast<char*>(font.data()), font.size());
+    f.close();
+
+    return true;
+}
+
 bool Install(bool quiet)
 {
     if (IsInstalled())
         return true;
 
-    if (!PathMigrateDataAndCreateSymlink(false)) {
-        fwprintf(stderr, L"PathMigrateDataAndCreateSymlink failed\n");
+    if (!EnsureInstallationDirectoryExist()) {
+        fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
         return false;
     }
 
-    if (!EnsureInstallationDirectoryExist()) {
-        fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
+    if (!DumpFont()) {
+        fprintf(stderr, "Couldn't unpack Font.ttf\n");
         return false;
     }
 
@@ -252,16 +186,6 @@ bool Install(bool quiet)
         return false;
     }
 
-    if (!InstallUninstallKey()) {
-        fprintf(stderr, "InstallUninstallKey failed\n");
-        return false;
-    }
-
-    if (!InstallSettingsKey()) {
-        fprintf(stderr, "InstallSettingKeys failed\n");
-        return false;
-    }
-
     if (!quiet) {
         MessageBoxW(0, L"Installation successful", L"Installation", 0);
     }
@@ -271,25 +195,15 @@ bool Install(bool quiet)
 
 bool Uninstall(bool quiet)
 {
-    if (!DeleteSettingsKey()) {
-        fprintf(stderr, "DeleteSettingsKey failed\n");
-        return false;
-    }
-
-    if (!DeleteUninstallKey()) {
-        fprintf(stderr, "DeleteUninstallKey failed\n");
-        return false;
-    }
-
     bool DeleteAllFiles = true;
     if (quiet == false) {
-        int iRet = MessageBoxW(
-            0,
-            L"Do you want to delete *all* possible files from installation folder? (Default: yes)\n",
+        const int iRet = MessageBoxW(
+            nullptr,
+            L"Do you want to delete *all* possible files from installation folder? (Default: no)\n",
             L"Uninstallation",
             MB_YESNO);
 
-        if (iRet == IDNO)
+        if (iRet != IDYES)
             DeleteAllFiles = false;
     }
 
@@ -299,7 +213,7 @@ bool Uninstall(bool quiet)
     }
 
     if (quiet == false) {
-        MessageBoxW(0, L"Uninstallation successful", L"Uninstallation", 0);
+        MessageBoxW(nullptr, L"Uninstallation successful", L"Uninstallation", 0);
     }
 
     return true;
@@ -307,42 +221,19 @@ bool Uninstall(bool quiet)
 
 bool IsInstalled()
 {
-    HKEY UninstallKey;
-    if (!OpenUninstallKey(&UninstallKey)) {
-        HKEY phkResult;
-
-        LPCWSTR lpSubKey = L"Software\\GWToolbox";
-        LSTATUS status = RegOpenKeyExW(HKEY_CURRENT_USER, lpSubKey, 0, KEY_READ, &phkResult);
-
-        if (status != ERROR_SUCCESS) {
-            fprintf(stderr, "RegOpenKeyExW failed: {status:0x%lX, lpSubKey:'%ls'}\n", status, lpSubKey);
-            phkResult = nullptr;
-            return false;
-        }
-        fs::path dllpath;
-        if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp\\GWToolboxdll.dll")) {
-            return false;
-        }
-        return fs::exists(dllpath);
-    }
-
-    RegCloseKey(UninstallKey);
-    return true;
-}
-
-bool GetInstallationLocation(fs::path& out)
-{
-    HKEY UninstallKey;
-    if (!OpenUninstallKey(&UninstallKey)) {
+    fs::path dllpath;
+    fs::path computername;
+    if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp")) {
         return false;
     }
-    wchar_t temp[MAX_PATH];
-    if (!RegReadStr(UninstallKey, L"InstallLocation", temp, sizeof(temp))) {
-        RegCloseKey(UninstallKey);
+    if (!PathGetComputerName(computername)) {
         return false;
     }
+    const fs::path computerpath = dllpath / computername;
 
-    RegCloseKey(UninstallKey);
-    out.assign(temp);
+    if (!fs::exists(dllpath / L"GWToolboxdll.dll")) return false;
+    if (!fs::exists(dllpath / L"GWToolbox.exe")) return false;
+    if (!fs::exists(computerpath / L"Font.ttf")) return false;
+
     return true;
 }

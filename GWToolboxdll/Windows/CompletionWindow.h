@@ -66,25 +66,25 @@ namespace Missions {
         uint32_t profession = 0;
         inline static MissionImageList dummy_var = {};
         PvESkill(GW::Constants::SkillID _skill_id);
-        virtual IDirect3DTexture9* GetMissionImage() override;
+        IDirect3DTexture9* GetMissionImage() override;
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }
 
-        virtual bool Draw(IDirect3DDevice9*) override;
-        virtual void OnClick() override;
+        bool Draw(IDirect3DDevice9*) override;
+        void OnClick() override;
 
-        virtual void CheckProgress(const std::wstring& player_name) override;
+        void CheckProgress(const std::wstring& player_name) override;
     };
 
     class HeroUnlock : public PvESkill {
     public:
         HeroUnlock(GW::Constants::HeroID _hero_id);
-        ~HeroUnlock() { if (image) delete image; }
+        ~HeroUnlock() { delete image; }
         IDirect3DTexture9* GetMissionImage() override;
 
         void OnClick() override;
 
-        virtual void CheckProgress(const std::wstring& player_name) override;
+        void CheckProgress(const std::wstring& player_name) override;
         const char* Name() override;
     };
 
@@ -102,15 +102,15 @@ namespace Missions {
     };
     class MinipetAchievement : public ItemAchievement {
     public:
-        MinipetAchievement(size_t hom_achievement_index, const wchar_t* encoded_name) : 
-            ItemAchievement(hom_achievement_index, encoded_name) {};
-        virtual void CheckProgress(const std::wstring& player_name) override;
+        MinipetAchievement(size_t hom_achievement_index, const wchar_t* encoded_name) :
+            ItemAchievement(hom_achievement_index, encoded_name) {}
+        void CheckProgress(const std::wstring& player_name) override;
     };
     class WeaponAchievement : public ItemAchievement {
     public:
-        WeaponAchievement(size_t hom_achievement_index, const wchar_t* encoded_name) : 
-            ItemAchievement(hom_achievement_index, encoded_name) {};
-        virtual void CheckProgress(const std::wstring& player_name) override;
+        WeaponAchievement(size_t _encoded_name_index, const wchar_t* encoded_name) :
+            ItemAchievement(_encoded_name_index, encoded_name) {}
+        void CheckProgress(const std::wstring& player_name) override;
     };
     class AchieventWithWikiFile : public ItemAchievement {
     protected:
@@ -136,13 +136,13 @@ namespace Missions {
     public:
         CompanionAchievement(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr) :
             AchieventWithWikiFile( hom_achievement_index, encoded_name, _wiki_file_name) {};
-        virtual void CheckProgress(const std::wstring& player_name) override;
+        void CheckProgress(const std::wstring& player_name) override;
     };
     class HonorAchievement : public AchieventWithWikiFile {
     public:
         HonorAchievement(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr) :
             AchieventWithWikiFile( hom_achievement_index, encoded_name, _wiki_file_name) {};
-        virtual void CheckProgress(const std::wstring& player_name) override;
+        void CheckProgress(const std::wstring& player_name) override;
     };
 
     class FactionsPvESkill : public PvESkill {
@@ -217,8 +217,8 @@ namespace Missions {
         }
 
 
-        IDirect3DTexture9* GetMissionImage();
-        virtual void CheckProgress(const std::wstring& player_name) override;
+        IDirect3DTexture9* GetMissionImage() override;
+        void CheckProgress(const std::wstring& player_name) override;
     };
 
 
@@ -241,8 +241,8 @@ namespace Missions {
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) {}
 
 
-        IDirect3DTexture9* GetMissionImage();
-        virtual void CheckProgress(const std::wstring& player_name) override;
+        IDirect3DTexture9* GetMissionImage() override;
+        void CheckProgress(const std::wstring& player_name) override;
     };
 
 
@@ -306,24 +306,24 @@ protected:
     };
 
 public:
-	static CompletionWindow& Instance() {
-		static CompletionWindow instance;
-		return instance;
-	}
+    static CompletionWindow& Instance() {
+        static CompletionWindow instance;
+        return instance;
+    }
 
-	const char* Name() const override { return "Completion"; }
+    const char* Name() const override { return "Completion"; }
     const char8_t* Icon() const override { return ICON_FA_BOOK; }
 
-    const bool IsHardMode() { return hard_mode; }
+    bool IsHardMode() const { return hard_mode; }
 
-	void Initialize() override;
-	void Initialize_Prophecies();
-	void Initialize_Factions();
-	void Initialize_Nightfall();
-	void Initialize_EotN();
-	void Initialize_Dungeons();
-	void Terminate() override;
-	void Draw(IDirect3DDevice9* pDevice) override;
+    void Initialize() override;
+    void Initialize_Prophecies();
+    void Initialize_Factions();
+    void Initialize_Nightfall();
+    void Initialize_EotN();
+    void Initialize_Dungeons();
+    void Terminate() override;
+    void Draw(IDirect3DDevice9* pDevice) override;
     void DrawHallOfMonuments(IDirect3DDevice9* device);
 
     std::unordered_map<std::wstring, Completion*> character_completion;
@@ -333,9 +333,9 @@ public:
     // IF character_name is null, parse current logged in char.
     CompletionWindow* ParseCompletionBuffer(CompletionType type, wchar_t* character_name = 0, uint32_t* buffer = 0, size_t len = 0);
 
-	void DrawSettingInternal() override;
-	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
+    void DrawSettingInternal() override;
+    void LoadSettings(CSimpleIni* ini) override;
+    void SaveSettings(CSimpleIni* ini) override;
     // Check explicitly rather than every frame
     CompletionWindow* CheckProgress(bool fetch_hom = false);
 

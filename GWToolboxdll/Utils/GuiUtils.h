@@ -72,20 +72,29 @@ namespace GuiUtils {
 
     template <map_type T>
     void MapToIni(CSimpleIni* ini, const char* section, const char* name, const T& map) {
-        const auto items_json = nlohmann::json(map);
-        const auto items_str = items_json.dump();
-        ini->SetValue(section, name, items_str.c_str());
+        const auto map_json = nlohmann::json(map);
+        const auto map_str = map_json.dump();
+        ini->SetValue(section, name, map_str.c_str());
     }
 
     template <map_type T>
     T IniToMap(CSimpleIni* ini, const char* section, const char* name) {
-        std::string items_str = ini->GetValue(section, name, "");
+        std::string map_str = ini->GetValue(section, name, "");
         try {
-            const auto map_json = nlohmann::json::parse(items_str);
+            const auto map_json = nlohmann::json::parse(map_str);
             return map_json.get<T>();
         } catch (nlohmann::json::exception e) {
             return {};
         }
+    }
+
+    template <map_type T>
+    T IniToMap(CSimpleIni* ini, const char* section, const char* name, T default_map)
+    {
+        if (!ini->KeyExists(section, name)) {
+            return std::move(default_map);
+        }
+        return IniToMap<T>(ini, section, name);
     }
 
     // Takes a wstring and translates into a string of hex values, separated by spaces

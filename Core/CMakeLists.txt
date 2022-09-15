@@ -1,6 +1,6 @@
 
-FILE(GLOB SOURCES 
-    "*.h" 
+FILE(GLOB SOURCES
+    "*.h"
     "*.cpp")
 
 add_library(Core)

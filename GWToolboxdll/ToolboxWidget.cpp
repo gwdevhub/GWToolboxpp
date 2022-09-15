@@ -1,10 +1,8 @@
 #include "stdafx.h"
 
-#include <ImGuiAddons.h>
 #include <ToolboxWidget.h>
 
 #include <Modules/ToolboxSettings.h>
-#include <Windows/SettingsWindow.h>
 
 ImGuiWindowFlags ToolboxWidget::GetWinFlags(
     ImGuiWindowFlags flags, bool noinput_if_frozen) const {

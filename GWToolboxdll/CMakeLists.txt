@@ -15,19 +15,21 @@ file(GLOB SOURCES
     "Widgets/Minimap/*.cpp"
     "Windows/*.h"
     "Windows/*.cpp")
+
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX)
-set(CMAKE_CXX_FLAGS_DEBUG "/ZI /Od")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /ZI /Od")
 set_target_properties(GWToolboxdll PROPERTIES LINK_FLAGS -SAFESEH:NO)
 
 target_link_options(GWToolboxdll PRIVATE "LINKER:/WX")
 target_link_options(GWToolboxdll PRIVATE /IGNORE:4098)
 target_link_options(GWToolboxdll PRIVATE /IGNORE:4099)
 
-target_include_directories(GWToolboxdll PRIVATE 
+target_include_directories(GWToolboxdll PRIVATE
+    "${PROJECT_SOURCE_DIR}/Dependencies"
     "${CMAKE_CURRENT_SOURCE_DIR}"
     )
 
@@ -39,8 +41,9 @@ target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     RestClient
     imgui
+    directxtex
     gwca
-	earcut
+    earcut
     utf8proc
     easywsclient
     discord_game_sdk

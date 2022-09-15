@@ -1369,7 +1369,7 @@ void InventoryManager::DrawSettingInternal() {
         if (!hide_from_merchant_items.contains(new_id)) {
             hide_from_merchant_items[new_id] = std::string(buf);
             Log::Info("Added Item %s with ID (%d)", buf, new_id);
-            std::memset(buf, '\0', 30);
+            std::ranges::fill(buf, '\0');
             new_item_id = 0;
         }
     }

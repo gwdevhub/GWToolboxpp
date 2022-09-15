@@ -11,4 +11,4 @@
 #include <utility>
 
 #define CURL_STATICLIB
-#include <curl.h>
+#include <curl/curl.h>

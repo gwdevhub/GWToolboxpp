@@ -20,12 +20,11 @@ class Resources : public ToolboxModule {
     Resources();
     Resources(const Resources&) = delete;
     ~Resources();
-private:
+
     std::recursive_mutex worker_mutex;
     std::recursive_mutex main_mutex;
     std::recursive_mutex dx_mutex;
     void InitRestClient(RestClient* r);
-    bool migration_attempted = false;
 public:
     static Resources& Instance() {
         static Resources instance;
@@ -46,7 +45,7 @@ public:
     static std::filesystem::path GetPath(const std::filesystem::path& folder, const std::filesystem::path& file);
     static HRESULT ResolveShortcut(std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path);
 
-    static utf8::string GetPathUtf8(std::wstring file);
+    static utf8::string GetPathUtf8(const std::wstring& file);
     static bool EnsureFolderExists(const std::filesystem::path& path);
 
     // Generic callback used when loading async functions. If success is false, any error details are held in response.
@@ -82,14 +81,14 @@ public:
     GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);
 
     // Ensure file exists on disk, download from remote location if not found. If an error occurs, details are held in error string
-    void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
+    static void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
 
     // download to file, blocking. If an error occurs, details are held in response string
-    bool Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring* response = 0);
+    bool Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response);
     // download to file, async, calls callback on completion. If an error occurs, details are held in response string
     void Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
     // download to memory, blocking. If an error occurs, details are held in response string
-    bool Download(const std::string& url, std::string* response);
+    bool Download(const std::string& url, std::string& response);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
     void Download(const std::string& url, AsyncLoadMbCallback callback);
 
@@ -117,9 +116,9 @@ private:
 
     void Cleanup();
     // Assign IDirect3DTexture9* from file
-    static HRESULT TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring* error);
+    static HRESULT TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring& error);
     // Assign IDirect3DTexture9* from resource
-    static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring* error);
+    static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring& error);
     // Copy from compiled resource binary to file on local disk.
-    bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring* error);
+    bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
 };

@@ -1,7 +1,7 @@
-/*   
+/*
     Module to keep track of current Teamspeak 3 status
 
-    Created it initially because I was pissed off with having to bind 
+    Created it initially because I was pissed off with having to bind
     different hotkeys to send different TS3 servers to chat.
 
     Enhancements:
@@ -112,7 +112,7 @@ bool TeamspeakModule::Connect(bool user_invoked) {
     }
     std::filesystem::path settings_folder = GetTeamspeakSettingsFolderPath() / "plugins";
     if (!std::filesystem::exists(settings_folder)) {
-        if(user_invoked) 
+        if(user_invoked)
             Log::Error("Failed to find TS3Client setting folder; is Teamspeak 3 installed?");
         step = Idle;
         return false;
@@ -160,7 +160,7 @@ bool TeamspeakModule::Connect(bool user_invoked) {
                 Log::Info("Teamspeak 3 plugin connected");
         }
         step = Idle;
-        pending_connect = false;        
+        pending_connect = false;
         });
     return true;
 }
@@ -196,7 +196,7 @@ void TeamspeakModule::Update(float) {
         }
         websocket->dispatch(OnWebsocketMessage);
     }
-    
+
 }
 std::filesystem::path TeamspeakModule::GetTeamspeakSettingsFolderPath()
 {
@@ -322,7 +322,7 @@ bool TeamspeakModule::GetLatestRelease(PluginRelease* release, bool is_x64) {
     const char* url = "https://api.github.com/repos/3vcloud/Teamspeak3_WinAPI/releases";
     bool success = false;
     do {
-        success = Resources::Instance().Download(url, &response);
+        success = Resources::Instance().Download(url, response);
         tries++;
     } while (!success && tries < 5);
     if (!success) {
@@ -388,7 +388,7 @@ void TeamspeakModule::DownloadPlugin(bool user_invoked, bool is_x64, const std::
                     else {
                         Log::LogW(L"Updated error - cannot download teamspeak plugin dll\n%s", error.c_str());
                     }
-                        
+
                     instance.step = Idle;
                 }
             });

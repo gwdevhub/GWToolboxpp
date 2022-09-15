@@ -51,6 +51,8 @@ private:
     bool hide_party_purple = false;
     bool hide_party_gold = false;
     bool hide_party_green = false;
+    std::map<ItemModelID, std::string> dont_hide_for_player{};
+    std::map<ItemModelID, std::string> dont_hide_for_party{};
 
     static void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd*);
     static void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove*);

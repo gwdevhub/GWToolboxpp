@@ -40,7 +40,7 @@
 #endif
 
 namespace {
-    D3DXVECTOR2 gwinch_scale;
+    DirectX::XMFLOAT2 gwinch_scale;
 
     enum FlaggingState : uint32_t {
         FlagState_All = 0,
@@ -326,7 +326,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
         return;
     }
     const auto& heroarray = GW::GameContext::instance()->party->player_party->heroes;
-    
+
     if (heroarray.valid())
         n_heros = heroarray.size();
     if (n_heros < 1) {
@@ -355,7 +355,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
     if (arg2 == L"toggle") { // "/flag 5 toggle"
         if (is_flagged(f_hero))
             GW::PartyMgr::UnflagHero(f_hero);
-        else 
+        else
             Instance().FlagHero(f_hero);
         return;
     }
@@ -443,7 +443,7 @@ void Minimap::DrawSettingInternal()
     ImGui::Combo("Control", reinterpret_cast<int *>(&key_ctrl_behavior), minimap_modifier_behavior_combo_str);
     ImGui::Combo("Shift", reinterpret_cast<int *>(&key_shift_behavior), minimap_modifier_behavior_combo_str);
     ImGui::Combo("Alt", reinterpret_cast<int *>(&key_alt_behavior), minimap_modifier_behavior_combo_str);
-    
+
     if (!click_modifiers_editable) {
         ImGui::PopItemFlag();
         ImGui::PopStyleVar();
@@ -476,7 +476,7 @@ void Minimap::LoadSettings(CSimpleIni *ini)
             else {
                 Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
             }
-            
+
         });
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
     hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
@@ -517,7 +517,7 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     ini->SetLongValue(Name(), VAR_NAME(key_ctrl_behavior), static_cast<long>(key_ctrl_behavior));
     ini->SetLongValue(Name(), VAR_NAME(key_shift_behavior), static_cast<long>(key_shift_behavior));
     ini->SetLongValue(Name(), VAR_NAME(key_alt_behavior), static_cast<long>(key_alt_behavior));
-    
+
     ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
     ini->SetBoolValue(Name(), VAR_NAME(flip_on_reverse), flip_on_reverse);
     ini->SetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
@@ -542,7 +542,7 @@ size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::Agen
     if (!player_id)
         return 0;
     const GW::HeroPartyMemberArray& heroes = party->heroes;
-    
+
     bool player_is_leader = GetPlayerIsLeader();
     std::map<uint32_t, const GW::PlayerPartyMember*> party_players_by_id;
     if (player_is_leader) {
@@ -550,7 +550,7 @@ size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::Agen
             party_players_by_id.emplace(pplayer.login_number, &pplayer);
         }
     }
-    
+
     _player_heroes.reserve(heroes.size());
     for (const GW::HeroPartyMember &hero : heroes) {
         if (hero.owner_player_id == player_id)
@@ -582,7 +582,7 @@ float Minimap::GetMapRotation() const
     return yaw;
 }
 
-D3DXVECTOR2 Minimap::GetGwinchScale() const
+DirectX::XMFLOAT2 Minimap::GetGwinchScale() const
 {
     return gwinch_scale;
 }
@@ -782,8 +782,8 @@ void Minimap::Render(IDirect3DDevice9* device) {
             resolution = std::min(resolution, 199.f);
             D3DVertex vertices[200];
             for (auto i = 0; i <= resolution; ++i) {
-                vertices[i] = { radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x,
-                    y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0.0f, clr };
+                vertices[i] = { radius * cos(DirectX::XM_PI * (i / (resolution / 2.f))) + x,
+                    y + radius * sin(DirectX::XM_PI * (i / (resolution / 2.f))), 0.0f, clr};
             }
             device->DrawPrimitiveUP(
                 D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
@@ -791,8 +791,7 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
     Instance().RenderSetupProjection(device);
 
-
-    D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
+    const D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
     device->SetScissorRect(&instance.clipping); // always clip to rect as a fallback if the stenciling fails
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
     if (Instance().circular_map) {
@@ -815,15 +814,12 @@ void Minimap::Render(IDirect3DDevice9* device) {
         FillRect(background, -5000.0f, -5000.0f, 10000.f, 10000.f); // fill rect with chosen background color
     }
 
-    D3DXMATRIX translate_char;
-    D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
+    auto translate_char = DirectX::XMMatrixTranslation(-me->pos.x, -me->pos.y, 0);
 
-    D3DXMATRIX rotate_char;
-    D3DXMatrixRotationZ(&rotate_char, -instance.GetMapRotation() + static_cast<float>(M_PI_2));
+    const auto rotate_char = DirectX::XMMatrixRotationZ(-instance.GetMapRotation() + static_cast<float>(M_PI_2));
 
-    D3DXMATRIX scaleM, translationM;
-    D3DXMatrixScaling(&scaleM, instance.scale, instance.scale, 1.0f);
-    D3DXMatrixTranslation(&translationM, instance.translation.x, instance.translation.y, 0);
+    const auto scaleM = DirectX::XMMatrixScaling(instance.scale, instance.scale, 1.0f);
+    const auto translationM = DirectX::XMMatrixTranslation(instance.translation.x, instance.translation.y, 0);
 
     float current_gwinch_scale = static_cast<float>(instance.size.x) / 5000.0f / 2.f * instance.scale;
     if (current_gwinch_scale != gwinch_scale.x) {
@@ -831,26 +827,26 @@ void Minimap::Render(IDirect3DDevice9* device) {
         gwinch_scale = { current_gwinch_scale, current_gwinch_scale };
     }
 
-    D3DXMATRIX view = translate_char * rotate_char * scaleM * translationM;
-    device->SetTransform(D3DTS_VIEW, &view);
+    const auto view = translate_char * rotate_char * scaleM * translationM;
+    device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
 
     instance.pmap_renderer.Render(device);
 
     instance.custom_renderer.Render(device);
 
     // move the rings to the char position
-    D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
-    device->SetTransform(D3DTS_WORLD, &translate_char);
+    translate_char = DirectX::XMMatrixTranslation(me->pos.x, me->pos.y, 0);
+    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate_char));
     instance.range_renderer.Render(device);
     device->SetTransform(D3DTS_WORLD, &reset_world);
 
     if (instance.translation.x != 0 || instance.translation.y != 0) {
-        D3DXMATRIX view2 = scaleM;
-        device->SetTransform(D3DTS_VIEW, &view2);
+        const auto view2 = scaleM;
+        device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view2));
         instance.range_renderer.SetDrawCenter(true);
         instance.range_renderer.Render(device);
         instance.range_renderer.SetDrawCenter(false);
-        device->SetTransform(D3DTS_VIEW, &view);
+        device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
     }
 
     instance.symbols_renderer.Render(device);
@@ -1196,11 +1192,11 @@ bool Minimap::IsActive() const
         }
     }
 
-    return visible 
-        && !loading 
-        && GW::Map::GetIsMapLoaded() 
+    return visible
+        && !loading
+        && GW::Map::GetIsMapLoaded()
         && !GW::UI::GetIsWorldMapShowing()
-        && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading 
+        && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
         && GW::Agents::GetPlayerId() != 0;
 }
 
@@ -1211,7 +1207,7 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9 *device) const
 
     const float w = 5000.0f * 2;
     // IMPORTANT: we are setting z-near to 0.0f and z-far to 1.0f
-    const D3DXMATRIX ortho_matrix(2 / w, 0, 0, 0, 0, 2 / w, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    const DirectX::XMMATRIX ortho_matrix(2 / w, 0, 0, 0, 0, 2 / w, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
     //// note: manually craft the projection to viewport instead of using
     //// SetViewport to allow target regions outside the viewport
@@ -1221,11 +1217,11 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9 *device) const
     const float xtrans = static_cast<float>(location.x * 2 + size.x) / viewport.Width - 1.0f;
     const float ytrans = -static_cast<float>(location.y * 2 + size.x) / viewport.Height + 1.0f;
     ////IMPORTANT: we are basically setting z-near to 0 and z-far to 1
-    const D3DXMATRIX viewport_matrix(xscale, 0, 0, 0, 0, yscale, 0, 0, 0, 0, 1, 0, xtrans, ytrans, 0, 1);
+    const DirectX::XMMATRIX viewport_matrix(xscale, 0, 0, 0, 0, yscale, 0, 0, 0, 0, 1, 0, xtrans, ytrans, 0, 1);
 
-    D3DXMATRIX proj = ortho_matrix * viewport_matrix;
+    const auto proj = ortho_matrix * viewport_matrix;
 
-    device->SetTransform(D3DTS_PROJECTION, &proj);
+    device->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&proj));
 }
 
 bool Minimap::IsKeyDown(const MinimapModifierBehaviour mmb) const

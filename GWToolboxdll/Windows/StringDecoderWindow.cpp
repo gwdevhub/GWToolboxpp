@@ -27,20 +27,17 @@ void StringDecoderWindow::Draw(IDirect3DDevice9 *pDevice)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        if (encoded) {
-            free(encoded);
-            encoded = 0;
-        }
+        delete[] encoded;
+        encoded = nullptr;
         return ImGui::End();
     }
     if (!encoded) {
-        encoded = (char*)malloc(encoded_size);
-        encoded[0] = 0;
+        encoded = new char[encoded_size];
     }
     bool decodeIt = ImGui::InputInt("Encoded string id:", &encoded_id, 1, 1, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal);
     decodeIt |= ImGui::InputText("Encoded string:", encoded, encoded_size, ImGuiInputTextFlags_EnterReturnsTrue);
     decodeIt |= ImGui::Button("Decode");
-    if(decodeIt)
+    if (decodeIt)
     {
         wchar_t buf[8];
         if (encoded_id >= 0 && GW::UI::UInt32ToEncStr(encoded_id, buf, _countof(buf))) {
