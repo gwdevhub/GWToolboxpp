@@ -516,8 +516,8 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
       // Register the available ciphers and digests
       SSL_library_init ();
 
-      // New context saying we are a client, and using SSL 2 or 3
-      ptConnCtx->sslContext = SSL_CTX_new (SSLv23_client_method ());
+      // New context saying we are a client using TLS 1.2
+      ptConnCtx->sslContext = SSL_CTX_new(TLSv1_2_client_method());
       if (ptConnCtx->sslContext == NULL)
           ERR_print_errors_cb(print_error_callback,0);
 
