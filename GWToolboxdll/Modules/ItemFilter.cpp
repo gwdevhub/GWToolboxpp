@@ -196,11 +196,11 @@ void ItemFilter::OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* 
 void ItemFilter::OnAgentRemove(GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet)
 {
     // Block despawning the agent if the client never spawned it.
-    const auto found = std::ranges::find_if(Instance().suppressed_packets, [&packet](const auto& suppressed_packet) { return suppressed_packet.agent_id == packet->agent_id; });
+    const auto it = std::ranges::find_if(Instance().suppressed_packets, [&packet](const auto& suppressed_packet) { return suppressed_packet.agent_id == packet->agent_id; });
 
-    if (found == Instance().suppressed_packets.end()) return;
+    if (it == Instance().suppressed_packets.end()) return;
 
-    Instance().suppressed_packets.erase(found);
+    Instance().suppressed_packets.erase(it);
     status->blocked = true;
 }
 
@@ -219,7 +219,7 @@ void ItemFilter::OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_Re
 
 void ItemFilter::OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner* packet)
 {
-    auto it = std::ranges::find_if(Instance().item_owners, [packet](auto owner) { return owner.item == packet->item_id; });
+    const auto it = std::ranges::find_if(Instance().item_owners, [packet](auto owner) { return owner.item == packet->item_id; });
 
     if (it == Instance().item_owners.end()) {
         Instance().item_owners.push_back({packet->item_id, packet->owner_agent_id});
@@ -291,7 +291,7 @@ void ItemFilter::DrawSettingInternal()
 
     ImGui::EndColumns();
 
-    const std::string itembtn = "Spawn all blocked items (" + std::to_string(suppressed_packets.size()) + ")";
+    const auto itembtn = std::format("Spawn all blocked items ({})", suppressed_packets.size());
 
     if (ImGui::Button(itembtn.c_str())) {
         SpawnSuppressedItems();

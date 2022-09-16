@@ -473,15 +473,13 @@ void RerollWindow::Update(float) {
             ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %s", party_leader) != -1);
             GW::Chat::SendChat('/', msg_buf);
             RerollSuccess();
-            return;
         }
     }
 }
 void RerollWindow::AddAvailableCharacter(const wchar_t* email, const wchar_t* charname) {
     if (!charname || !charname[0])
         return;
-    auto found = account_characters.find(email);
-    if (found == account_characters.end() || !found->second) {
+    if (!account_characters.contains(email) || account_characters.at(email) == nullptr) {
         account_characters[email] = new std::vector<std::wstring>();
     }
     account_characters[email]->push_back(charname);
