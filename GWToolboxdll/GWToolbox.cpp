@@ -41,7 +41,7 @@ namespace {
 
     HWND gw_window_handle = nullptr;
     bool SaveIniToFile(const CSimpleIni* ini, const std::filesystem::path& location) {
-        auto tmp_file = location;
+        auto tmp_file = std::filesystem::path(location);
         tmp_file += ".tmp";
         const SI_Error res = ini->SaveFile(tmp_file.c_str());
         if (res < 0) {
