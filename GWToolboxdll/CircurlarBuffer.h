@@ -13,7 +13,7 @@ struct CircularBuffer {
 
     CircularBuffer(const CircularBuffer&) = delete;
 
-    CircularBuffer(CircularBuffer&& other)
+    CircularBuffer(CircularBuffer&& other) noexcept
         : buffer(other.buffer)
         , cursor(other.cursor)
         , count(other.count)
@@ -22,7 +22,7 @@ struct CircularBuffer {
         other.buffer = nullptr;
     }
 
-    ~CircularBuffer() {
+    ~CircularBuffer() noexcept {
         delete[] buffer;
     }
 
@@ -46,7 +46,7 @@ struct CircularBuffer {
         return buffer[i];
     }
 
-    CircularBuffer& operator=(CircularBuffer&& other) {
+    CircularBuffer& operator=(CircularBuffer&& other) noexcept {
         this->~CircularBuffer();
         buffer = other.buffer;
         cursor = other.cursor;
