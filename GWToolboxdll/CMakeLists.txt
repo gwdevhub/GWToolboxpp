@@ -29,7 +29,7 @@ target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
 set_target_properties(GWToolboxdll PROPERTIES
     VS_GLOBAL_RunCodeAnalysis false
     VS_GLOBAL_EnableMicrosoftCodeAnalysis true
-    VS_GLOBAL_EnableClangTidyCodeAnalysis true
+    VS_GLOBAL_EnableClangTidyCodeAnalysis false
 )
 
 target_link_options(GWToolboxdll PRIVATE /WX /OPT:REF /OPT:ICF /SAFESEH:NO)
