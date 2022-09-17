@@ -23,7 +23,7 @@ target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
 
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy)
-target_compile_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GS- /GL>)
+target_compile_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GL>)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
 
 set_target_properties(GWToolboxdll PROPERTIES
