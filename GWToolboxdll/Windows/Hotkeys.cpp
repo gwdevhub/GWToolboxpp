@@ -381,8 +381,8 @@ bool TBHotkey::Draw(Op *op)
     };
 
     // === Header ===
-    char header[256];
-    char keybuf[64];
+    char header[256]{};
+    char keybuf[64]{};
 
     int written = 0;
     written += Description(&header[written], _countof(header) - written);
@@ -1292,7 +1292,7 @@ void HotkeyToggle::Save(CSimpleIni *ini, const char *section) const
 }
 int HotkeyToggle::Description(char *buf, size_t bufsz)
 {
-    const char* name;
+    const char* name{};
     GetText(nullptr, (int)target, &name);
     return snprintf(buf, bufsz, "Toggle %s", name);
 }
@@ -1416,7 +1416,7 @@ void HotkeyAction::Save(CSimpleIni *ini, const char *section) const
 }
 int HotkeyAction::Description(char *buf, size_t bufsz)
 {
-    const char *name;
+    const char* name{};
     GetText(nullptr, (int)action, &name);
     return snprintf(buf, bufsz, "%s", name);
 }
