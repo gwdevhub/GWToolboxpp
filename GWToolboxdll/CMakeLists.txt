@@ -26,6 +26,12 @@ target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy)
 target_compile_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GS- /GL>)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
 
+set_target_properties(GWToolboxdll PROPERTIES
+    VS_GLOBAL_RunCodeAnalysis false
+    VS_GLOBAL_EnableMicrosoftCodeAnalysis true
+    VS_GLOBAL_EnableClangTidyCodeAnalysis true
+)
+
 target_link_options(GWToolboxdll PRIVATE /WX /OPT:REF /OPT:ICF /SAFESEH:NO)
 target_link_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>)
 target_link_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>)
