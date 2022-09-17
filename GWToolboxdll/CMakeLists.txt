@@ -20,14 +20,15 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
-target_compile_options(GWToolboxdll PRIVATE /W4 /WX)
+target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy)
 target_compile_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GS- /GL>)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /ZI /Od")
+target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
 set_target_properties(GWToolboxdll PROPERTIES LINK_FLAGS -SAFESEH:NO)
 
-target_link_options(GWToolboxdll PRIVATE /WX)
+target_link_options(GWToolboxdll PRIVATE /WX /OPT:REF /OPT:ICF)
 target_link_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>)
-target_link_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/IGNORE:4098>)
+target_link_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>)
+target_link_options(GWToolboxdll PRIVATE $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>)
 target_link_options(GWToolboxdll PRIVATE /IGNORE:4099) # pdb not found for github action
 
 target_include_directories(GWToolboxdll PRIVATE
