@@ -7,7 +7,7 @@
 
 namespace fs = std::filesystem;
 
-static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
+bool GetFileSize(const wchar_t *path, uint64_t *file_size)
 {
     const HANDLE hFile = CreateFileW(
         path,
@@ -37,10 +37,8 @@ static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
     return true;
 }
 
-static bool EnsureInstallationDirectoryExist(void)
+bool EnsureInstallationDirectoryExist()
 {
-    wchar_t temp[MAX_PATH];
-
     fs::path docpath;
     if (!PathGetDocumentsPath(docpath, L"GWToolboxpp")) {
         return false;
@@ -74,7 +72,7 @@ static bool EnsureInstallationDirectoryExist(void)
     return true;
 }
 
-static bool CopyInstaller(void)
+bool CopyInstaller(void)
 {
     std::filesystem::path dest_path;
 
@@ -96,7 +94,7 @@ static bool CopyInstaller(void)
     return true;
 }
 
-static bool DeleteInstallationDirectory(void)
+bool DeleteInstallationDirectory()
 {
     // @Remark:
     // "SHFileOperationW" expect the path to be double-null terminated.
@@ -104,19 +102,15 @@ static bool DeleteInstallationDirectory(void)
     // Moreover, the path should be a full path otherwise, the folder won't be
     // moved to the recycle bin regardless of "FOF_ALLOWUNDO".
 
-    wchar_t path[MAX_PATH + 2];
     std::filesystem::path fspath;
     if (!PathGetDocumentsPath(fspath, L"GWToolboxpp\\*")) {
         return false;
     }
-    wcscpy(path, fspath.wstring().c_str());
 
-    const size_t n_path = wcslen(path);
-    path[n_path + 1] = 0;
-
-    SHFILEOPSTRUCTW FileOp = {0};
+    const auto str = fspath.wstring();
+    SHFILEOPSTRUCTW FileOp = {nullptr};
     FileOp.wFunc = FO_DELETE;
-    FileOp.pFrom = path;
+    FileOp.pFrom = fspath.c_str();
     FileOp.fFlags = FOF_NO_UI | FOF_ALLOWUNDO;
     FileOp.fAnyOperationsAborted = FALSE;
     FileOp.lpszProgressTitle = L"GWToolbox uninstallation";

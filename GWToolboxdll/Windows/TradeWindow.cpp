@@ -255,11 +255,11 @@ void TradeWindow::fetch() {
                 if (print_search_results && i < 5) {
                     std::wstring name_ws = GuiUtils::ToWstr(msg.name);
                     std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
-                    time_t ts = (time_t)msg.timestamp;
-                    struct tm* local_tm = localtime(&ts);
+                    time_t ts = msg.timestamp;
+                    tm* local_tm = localtime(&ts);
                     if (local_tm) {
                         wchar_t buf[512];
-                        swprintf(buf, sizeof(buf), L"<a=1>%s</a> @ %S %d, %02d:%02d: <c=#f96677><quote>%s", name_ws.c_str(), months[local_tm->tm_mon], local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, msg_ws.c_str());
+                        swprintf(buf, 512, L"<a=1>%s</a> @ %S %d, %02d:%02d: <c=#f96677><quote>%s", name_ws.c_str(), months[local_tm->tm_mon], local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, msg_ws.c_str());
                         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buf);
                     }
                 }
@@ -276,10 +276,10 @@ void TradeWindow::fetch() {
             // Currently showing a search term in-window. Only add if it matches all words.
             add_to_window = true;
             std::string input(msg.message);
-            std::transform(input.begin(), input.end(), input.begin(),
-                           [](char c) -> char {
-                               return static_cast<char>(::tolower(c));
-                           });
+            std::ranges::transform(input, input.begin(),
+                                   [](char c) -> char {
+                                       return static_cast<char>(::tolower(c));
+                                   });
             for (auto& term : searched_words) {
                 if (input.find(term) != std::string::npos)
                     continue; // Searched word no found; drop out
@@ -298,7 +298,7 @@ void TradeWindow::fetch() {
             wchar_t buffer[512];
             std::wstring name_ws = GuiUtils::ToWstr(msg.name);
             std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
-            swprintf(buffer, sizeof(buffer), L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
+            swprintf(buffer, 512, L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
         }
     });
@@ -386,7 +386,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
     const float search_bar_width = (ImGui::GetContentRegionAvail().x - (btn_width * 4) - ImGui::GetStyle().ItemInnerSpacing.x * 7);
     if (GetInKamadanAE1(false) || GetInAscalonAE1(false)) {
         bool advertise_dirty = false;
-        static int search_type = static_cast<int>(GW::PartySearchType::PartySearchType_Trade);
+        static int search_type = GW::PartySearchType::PartySearchType_Trade;
         bool is_seeking = player_party_search.message[0] != 0;
         if (is_seeking) {
             search_type = static_cast<int>(player_party_search.party_search_type);
@@ -411,11 +411,10 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
             else {
                 struct {
                     uint32_t header = GAME_CMSG_PARTY_SEARCH_SEEK;
-                    uint32_t search_type;
-                    wchar_t advert[32];
+                    uint32_t search_type = 0;
+                    wchar_t advert[32]{};
                     uint32_t hard_mode = 0;
                 } packet;
-                packet.search_type = search_type;
                 std::wstring out = GuiUtils::StringToWString(player_party_search_text);
                 swprintf(packet.advert, _countof(packet.advert), L"%s", out.c_str());
 
@@ -484,7 +483,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
         ImGui::Text("Connecting...");
     } else {
         /* Display trade messages */
-        bool show_time = ImGui::GetWindowWidth() > 600.0f;
+        const bool show_time = ImGui::GetWindowWidth() > 600.0f;
 
         char timetext[128];
         time_t now = time(nullptr);
@@ -495,27 +494,27 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
         const float playernamewidth = 160.0f * font_scale;
         const float message_left = playername_left + playernamewidth + innerspacing;
 
-        size_t n_messages = messages.size();
-        for (size_t i = n_messages - 1; i < n_messages; i--) {
+        const size_t n_messages = messages.size();
+        for (int i = static_cast<int>(n_messages - 1); i >= 0; i--) {
             Message &msg = messages[i];
-            ImGui::PushID(static_cast<int>(i));
+            ImGui::PushID(i);
 
             // ==== time elapsed column ====
             if (show_time) {
                 // negative numbers have came from this before, it is probably just server client desync
-                int time_since_message = static_cast<int>(now) - static_cast<int>(msg.timestamp);
+                const int time_since_message = static_cast<int>(now) - static_cast<int>(msg.timestamp);
 
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
 
                 // decide if days, hours, minutes, seconds...
-                if ((int)(time_since_message / (60 * 60 * 24))) {
-                    int days = (int)(time_since_message / (60 * 60 * 24));
+                if (time_since_message / (60 * 60 * 24)) {
+                    int days = time_since_message / (60 * 60 * 24);
                     _snprintf(timetext, 128, "%d %s ago", days, days > 1 ? "days" : "day");
-                } else if ((int)(time_since_message / (60 * 60))) {
-                    int hours = (int)(time_since_message / (60 * 60));
+                } else if (time_since_message / (60 * 60)) {
+                    int hours = time_since_message / (60 * 60);
                     _snprintf(timetext, 128, "%d %s ago", hours, hours > 1 ? "hours" : "hour");
-                } else if ((int)(time_since_message / (60))) {
-                    int minutes = (int)(time_since_message / 60);
+                } else if (time_since_message / 60) {
+                    int minutes = time_since_message / 60;
                     _snprintf(timetext, 128, "%d %s ago", minutes, minutes > 1 ? "minutes" : "minute");
                 } else {
                     _snprintf(timetext, 128, "%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
@@ -533,7 +532,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
                 // open whisper to player
                 GW::GameThread::Enqueue([&msg]() {
                     std::wstring name_ws = GuiUtils::ToWstr(msg.name);
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (void *)name_ws.data());
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, name_ws.data());
                 });
             }
 

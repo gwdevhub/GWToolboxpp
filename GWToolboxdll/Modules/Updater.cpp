@@ -268,27 +268,21 @@ void Updater::DoUpdate() {
 
 
     // 1. rename toolbox dll
-    WCHAR dllold[MAX_PATH];
-    wcsncpy(dllold, dllfile, MAX_PATH);
-    wcsncat(dllold, L".old", MAX_PATH);
-    Log::Log("moving to %s\n", dllold);
-    DeleteFileW(dllold);
-    MoveFileW(dllfile, dllold);
-
-    // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
-    std::wstring wdllfile(dllfile);
-    std::wstring wdllold(dllold);
+    const auto dllold = std::wstring(dllfile) + L".old";
+    Log::Log("moving to %s\n", dllold.c_str());
+    DeleteFileW(dllold.c_str());
+    MoveFileW(dllfile, dllold.c_str());
 
     // 2. download new dll
     Resources::Instance().Download(
         dllfile, latest_release.download_url,
-        [this, wdllfile, wdllold](bool success, const std::wstring& error) -> void {
+        [this, wdll = std::wstring(dllfile), dllold](bool success, const std::wstring& error) -> void {
         if (success) {
             step = Success;
             Log::WarningW(L"Update successful, please restart toolbox.");
         } else {
             Log::ErrorW(L"Updated error - cannot download GWToolbox.dll\n%s",error.c_str());
-            MoveFileW(wdllold.c_str(), wdllfile.c_str());
+            MoveFileW(dllold.c_str(), wdll.c_str());
             step = Done;
         }
     });
