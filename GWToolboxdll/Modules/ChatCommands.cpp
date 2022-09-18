@@ -2031,31 +2031,31 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
 void ChatCommands::CmdVolume(const wchar_t*, int argc, LPWSTR* argv) {
     const char* const syntax = "Syntax: '/volume [master|music|background|effects|dialog|ui] [amount (0-100)]'";
     wchar_t* value;
-    GW::UI::Preference pref;
+    GW::UI::NumberPreference pref;
     switch (argc) {
     case 2:
-        pref = GW::UI::Preference::Preference_MasterVolume;
+        pref = GW::UI::NumberPreference::MasterVolume;
         value = argv[1];
         break;
     case 3: {
         wchar_t* pref_str = argv[1];
         if (wcscmp(pref_str, L"master") == 0) {
-            pref = GW::UI::Preference::Preference_MasterVolume;
+            pref = GW::UI::NumberPreference::MasterVolume;
         }
         else if (wcscmp(pref_str, L"music") == 0) {
-            pref = GW::UI::Preference::Preference_MusicVolume;
+            pref = GW::UI::NumberPreference::MusicVolume;
         }
         else if (wcscmp(pref_str, L"background") == 0) {
-            pref = GW::UI::Preference::Preference_BackgroundVolume;
+            pref = GW::UI::NumberPreference::BackgroundVolume;
         }
         else if (wcscmp(pref_str, L"effects") == 0) {
-            pref = GW::UI::Preference::Preference_EffectsVolume;
+            pref = GW::UI::NumberPreference::EffectsVolume;
         }
         else if (wcscmp(pref_str, L"dialog") == 0) {
-            pref = GW::UI::Preference::Preference_DialogVolume;
+            pref = GW::UI::NumberPreference::DialogVolume;
         }
         else if (wcscmp(pref_str, L"ui") == 0) {
-            pref = GW::UI::Preference::Preference_UIVolume;
+            pref = GW::UI::NumberPreference::UIVolume;
         }
         else {
             return Log::Error(syntax);

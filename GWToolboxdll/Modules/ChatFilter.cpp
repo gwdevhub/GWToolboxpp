@@ -558,29 +558,29 @@ bool ChatFilter::ShouldFilterByChannel(uint32_t channel) {
 bool ChatFilter::ShouldBlockByChannel(uint32_t channel) {
     if (Instance().block_messages_from_inactive_channels) {
         // Don't log chat messages if the channel is turned off - avoids hitting the chat log limit
-        GW::UI::Preference prefCheck = (GW::UI::Preference)0xffff;
+        GW::UI::FlagPreference prefCheck = (GW::UI::FlagPreference)0xffff;
         switch (static_cast<GW::Chat::Channel>(channel)) {
         case GW::Chat::Channel::CHANNEL_ALL:
-            prefCheck = GW::UI::Preference_ChannelLocal;
+            prefCheck = GW::UI::FlagPreference::ChannelLocal;
             break;
         case GW::Chat::Channel::CHANNEL_GROUP:
         case GW::Chat::Channel::CHANNEL_ALLIES:
-            prefCheck = GW::UI::Preference_ChannelGroup;
+            prefCheck = GW::UI::FlagPreference::ChannelGroup;
             break;
         case GW::Chat::Channel::CHANNEL_EMOTE:
-            prefCheck = GW::UI::Preference_ChannelEmotes;
+            prefCheck = GW::UI::FlagPreference::ChannelEmotes;
             break;
         case GW::Chat::Channel::CHANNEL_GUILD:
-            prefCheck = GW::UI::Preference_ChannelGuild;
+            prefCheck = GW::UI::FlagPreference::ChannelGuild;
             break;
         case GW::Chat::Channel::CHANNEL_ALLIANCE:
-            prefCheck = GW::UI::Preference_ChannelAlliance;
+            prefCheck = GW::UI::FlagPreference::ChannelAlliance;
             break;
         case GW::Chat::Channel::CHANNEL_TRADE:
-            prefCheck = GW::UI::Preference_ChannelTrade;
+            prefCheck = GW::UI::FlagPreference::ChannelTrade;
             break;
         }
-        if(prefCheck != (GW::UI::Preference)0xffff
+        if(prefCheck != (GW::UI::FlagPreference)0xffff
             && GW::UI::GetPreference(prefCheck) == 1) {
             return true;
         }

@@ -220,7 +220,7 @@ namespace GuiUtils {
     }
     float GetGWScaleMultiplier() {
         GW::Constants::InterfaceSize interfacesize =
-            static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::Preference_InterfaceSize));
+            static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::EnumPreference::InterfaceSize));
 
         switch (interfacesize) {
         case GW::Constants::InterfaceSize::SMALL: return .9f;
@@ -257,7 +257,7 @@ namespace GuiUtils {
     }
     float GetPartyHealthbarHeight() {
         GW::Constants::InterfaceSize interfacesize =
-            static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::Preference_InterfaceSize));
+            static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::EnumPreference::InterfaceSize));
         switch (interfacesize) {
         case GW::Constants::InterfaceSize::SMALL: return GW::Constants::HealthbarHeight::Small;
         case GW::Constants::InterfaceSize::NORMAL: return GW::Constants::HealthbarHeight::Normal;

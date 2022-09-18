@@ -60,7 +60,7 @@ namespace {
             return 0;
         }
     }
-    uint32_t GetPreferenceNameID(GW::UI::Preference pref_id) {
+    /*uint32_t GetPreferenceNameID(GW::UI::Preference pref_id) {
         using namespace GW::UI;
         switch (pref_id) {
         case Preference_TextLanguage: return 0x561;
@@ -93,7 +93,7 @@ namespace {
         default:
             return 0;
         }
-    }
+    }*/
 
     struct WindowPreference {
         GW::UI::WindowID window_id;
@@ -104,15 +104,11 @@ namespace {
             name.reset(GetWindowNameID(window_id));
         }
     };
-    struct InGamePreference {
-        GW::UI::Preference pref_id;
-        uint32_t value;
-        GuiUtils::EncString name;
-        inline bool IsBool() { return (pref_id & 0x8000) != 0; }
-        InGamePreference(GW::UI::Preference _pref_id, uint32_t _value)
-            : pref_id(_pref_id), value(_value) {
-            name.reset(GetPreferenceNameID(pref_id));
-        }
+    struct StringPreference {
+        GW::UI::StringPreference pref_id;
+        std::wstring value;
+        StringPreference(GW::UI::StringPreference _pref_id, wchar_t* _value)
+            : pref_id(_pref_id), value(_value) {};
     };
 
     struct GWPreferences {
@@ -120,7 +116,7 @@ namespace {
         RECT window_rect;
         bool reordered = false;
         std::vector<WindowPreference*> window_positions;
-        std::vector<InGamePreference*> preferences;
+        std::vector<StringPreference*> preferences;
         void Draw();
     };
 
@@ -138,11 +134,7 @@ namespace {
             delete it;
         }
         out->preferences.clear();
-        for (GW::UI::Preference i = GW::UI::Preference_CharSortOrder; i <= GW::UI::Preference_LockCompassRotation; i = (GW::UI::Preference)(i + 1)) {
-            if (!GetPreferenceNameID(i))
-                continue;
-            out->preferences.push_back(new InGamePreference(i, GW::UI::GetPreference(i)));
-        }
+        // TODO: Read preferences of all types...
         out->reordered = false;
         ASSERT(GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(),&out->window_rect));
     }
@@ -168,17 +160,8 @@ void GWPreferences::Draw() {
                 break;
             } 
         }
-        for (auto* it : current_preferences.preferences) {
-            if (!it->name.string().length()) {
-                ok = false;
-                break;
-            }
-        }
         if (ok) {
             std::ranges::sort(current_preferences.window_positions, [](WindowPreference* a, WindowPreference* b) {
-                    return a->name.string() > b->name.string();
-                });
-            std::ranges::sort(current_preferences.preferences, [](InGamePreference* a, InGamePreference* b) {
                     return a->name.string() > b->name.string();
                 });
             current_preferences.reordered = true;
@@ -194,9 +177,9 @@ void GWPreferences::Draw() {
         ImGui::SameLine(name_width); ImGui::Text("Value");
         for (auto* pref : current_preferences.preferences) {
             offset = 0.f;
-            ImGui::Text(pref->name.string().c_str());
+            ImGui::Text("find the name for this!");
             ImGui::SameLine(name_width);
-            ImGui::Text("%d", pref->value);
+            ImGui::Text("%ls", pref->value.c_str());
         }
         ImGui::TreePop();
     }
