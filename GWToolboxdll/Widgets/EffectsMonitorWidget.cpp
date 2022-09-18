@@ -89,6 +89,10 @@ namespace {
         });
         return mine != minions_arr.end() ? mine->minion_count : 0;
     }
+    uint32_t GetMorale() {
+        auto w = GW::WorldContext::instance();
+        return w ? w->morale : 100;
+    }
     uint32_t GetMorale(uint32_t agent_id) {
         auto w = GW::WorldContext::instance();
         if (!(w && w->party_morale_related.size()))
@@ -257,7 +261,7 @@ namespace {
             GW::StoC::EmulatePacket(&add);
         }
         minion_count = GetMinionCount();
-        morale_percent = GetMorale(GW::Agents::GetPlayerId());
+        morale_percent = GetMorale();
         return true;
     }
     // Remove effect from gwtoolbox overlay. Will only remove if the game has also removed it, otherwise false.
@@ -333,7 +337,12 @@ namespace {
             minion_count = GetMinionCount();
         } break;
         case GW::UI::UIMessage::kMoraleChange: { // Morale boost/DP change
-            morale_percent = GetMorale(GW::Agents::GetPlayerId());
+            struct Packet {
+                uint32_t agent_id;
+                uint32_t percent;
+            } *packet = (Packet*)wParam;
+            if (packet->agent_id == GW::Agents::GetPlayerId())
+                morale_percent = packet->percent;
         } break;
         case GW::UI::UIMessage::kEffectAdd: {
             struct Payload {
