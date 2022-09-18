@@ -164,6 +164,7 @@ namespace {
 
     bool disable_item_descriptions_in_outpost = false;
     bool disable_item_descriptions_in_explorable = false;
+    bool hide_email_address = false;
 
 
     bool IsInfused(GW::Item* item) {
@@ -749,6 +750,12 @@ namespace {
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[1]);
             });
     }
+    GW::HookEntry OnCreateUIComponent_Entry;
+    void OnCreateUIComponent(GW::UI::CreateUIComponentPacket* msg) {
+        if (hide_email_address && msg->component_label && wcscmp(msg->component_label, L"EditAccount") == 0) {
+            msg->component_flags |= 0x01000000;
+        }
+    }
 }
 
 static std::wstring ShorthandItemDescription(GW::Item* item) {
@@ -1320,6 +1327,8 @@ void GameSettings::Initialize() {
     }
 
     GW::Chat::CreateCommand(L"reinvite", GameSettings::CmdReinvite);
+
+    GW::UI::RegisterCreateUIComponentCallback(&OnCreateUIComponent_Entry, OnCreateUIComponent);
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
 #endif
@@ -1503,7 +1512,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     disable_item_descriptions_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_outpost), disable_item_descriptions_in_outpost);
     disable_item_descriptions_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_explorable), disable_item_descriptions_in_explorable);
-
+    hide_email_address = ini->GetBoolValue(Name(), VAR_NAME(hide_email_address), hide_email_address);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1656,6 +1665,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_outpost), disable_item_descriptions_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_explorable), disable_item_descriptions_in_explorable);
 
+    ini->SetBoolValue(Name(), VAR_NAME(hide_email_address), hide_email_address);
+
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     ::SaveChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -1784,6 +1795,7 @@ void GameSettings::DrawChatSettings() {
 
 void GameSettings::DrawSettingInternal() {
     constexpr float checkbox_w = 270.f;
+    ImGui::Checkbox("Hide email address on login screen", &hide_email_address);
     ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
     ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
     ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
