@@ -409,7 +409,7 @@ bool TimerWidget::GetSpiritTimer() {
     for (auto& effect : *effects) {
         if (!effect.duration)
             continue;
-        SkillID effect_id = (SkillID)effect.skill_id;
+        SkillID effect_id = effect.skill_id;
         auto spirit_effect_enabled = spirit_effects_enabled.find(effect_id);
         if (spirit_effect_enabled == spirit_effects_enabled.end() || !(spirit_effect_enabled->second))
             continue;

@@ -19,16 +19,20 @@ BOOL WINAPI fnGetClipCursor(LPRECT lpRect)
 
 void InstallCursorFix()
 {
-    HMODULE hUser32 = GetModuleHandleA("user32.dll");
+    const HMODULE hUser32 = GetModuleHandleA("user32.dll");
+    if (!hUser32) {
+        Log::Warning("Cursor Fix not installed, message devs about this!");
+        return;
+    }
     // @Cleanup:
     // We could have a GetProcAddress that does that:
     // > bool GetProcAddress(HMODULE hModule, LPCSTR lpProcName, LPVOID lpProc);
-    GetClipCursor_Func = (GetClipCursor_pt)((uintptr_t)GetProcAddress(hUser32, "GetClipCursor"));
+    GetClipCursor_Func = (GetClipCursor_pt)reinterpret_cast<uintptr_t>(GetProcAddress(hUser32, "GetClipCursor"));
     if (!GetClipCursor_Func) {
         Log::Warning("Cursor Fix not installed, message devs about this!");
         return;
     }
-    GW::HookBase::CreateHook(GetClipCursor_Func, fnGetClipCursor, (void **)&RetGetClipCursor);
+    GW::HookBase::CreateHook(GetClipCursor_Func, fnGetClipCursor, reinterpret_cast<void**>(&RetGetClipCursor));
     GW::HookBase::EnableHooks(GetClipCursor_Func);
 }
 

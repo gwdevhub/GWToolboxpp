@@ -2,26 +2,12 @@
 
 #include "Process.h"
 
-ProcessModule::ProcessModule(ProcessModule&& other)
-    : base(other.base)
-    , size(other.size)
-    , name(std::move(other.name))
-{
-}
-
-Process::Process()
-    : m_hProcess(nullptr)
-    , m_Rights(0)
-{
-}
-
-Process::Process(uint32_t pid, DWORD rights)
-    : Process()
+Process::Process(uint32_t pid, DWORD rights) noexcept
 {
     Open(pid, rights);
 }
 
-Process::Process(Process&& other)
+Process::Process(Process&& other) noexcept
     : m_hProcess(other.m_hProcess)
     , m_Rights(other.m_Rights)
 {
@@ -33,7 +19,7 @@ Process::~Process()
     Close();
 }
 
-Process& Process::operator=(Process&& other)
+Process& Process::operator=(Process&& other) noexcept
 {
     Close();
     m_hProcess = other.m_hProcess;
@@ -93,7 +79,7 @@ bool Process::Read(uintptr_t address, void *buffer, size_t size)
 bool Process::Write(uintptr_t address, void *buffer, size_t size)
 {
     assert(m_Rights & PROCESS_VM_WRITE);
-    
+
     SIZE_T NumberOfBytesWritten;
     LPVOID BaseAddress = reinterpret_cast<LPVOID>(address);
     BOOL success = WriteProcessMemory(
@@ -213,7 +199,7 @@ bool Process::GetModules(std::vector<ProcessModule>& modules)
 
     for (HMODULE hModule : handles) {
         wchar_t name[512];
-        if (!GetModuleBaseNameW(m_hProcess, hModule, name, sizeof(name))) {
+        if (!GetModuleBaseNameW(m_hProcess, hModule, name, 512)) {
             fprintf(stderr, "GetModuleBaseNameW failed: %lu\n", GetLastError());
             return false;
         }
@@ -234,7 +220,7 @@ bool Process::GetModules(std::vector<ProcessModule>& modules)
     return true;
 }
 
-uint32_t Process::GetProcessId()
+DWORD Process::GetProcessId() const
 {
     assert(m_Rights & (PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_QUERY_INFORMATION));
     return ::GetProcessId(m_hProcess);
@@ -276,9 +262,9 @@ bool GetProcesses(std::vector<Process>& processes, const wchar_t *name, DWORD ri
 }
 
 struct EnumWindowUserParam {
-    DWORD rights;
-    const wchar_t *classname;
-    std::vector<Process> *processes;
+    DWORD rights = 0;
+    const wchar_t* classname = nullptr;
+    std::vector<Process>* processes{};
 };
 
 static BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)

@@ -80,16 +80,14 @@ namespace {
     GW::HookEntry OnEffect_Entry;
 
     uint32_t GetMinionCount() {
-        auto w = GW::WorldContext::instance();
+        const auto w = GW::WorldContext::instance();
         if (!w) return 0;
-        auto& minions_arr = w->controlled_minion_count;
-        uint32_t me = GW::Agents::GetPlayerId();
-        for (size_t i = minions_arr.size() - 1; i < minions_arr.size(); i--) {
-            if (minions_arr[i].agent_id == me) {
-                return minions_arr[i].minion_count;
-            }
-        }
-        return 0;
+        const auto& minions_arr = w->controlled_minion_count;
+        const auto me = GW::Agents::GetPlayerId();
+        const auto mine = std::ranges::find_if(minions_arr, [me](const auto& cur) {
+            return cur.agent_id == me;
+        });
+        return mine != minions_arr.end() ? mine->minion_count : 0;
     }
     uint32_t GetMorale(uint32_t agent_id) {
         auto w = GW::WorldContext::instance();

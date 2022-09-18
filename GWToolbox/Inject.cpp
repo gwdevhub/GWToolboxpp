@@ -385,16 +385,16 @@ void InjectWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificationCode)
     }
 }
 
-static LPVOID GetLoadLibrary()
+static FARPROC GetLoadLibrary()
 {
-    HMODULE Kernel32 = GetModuleHandleW(L"Kernel32.dll");
+    const auto Kernel32 = GetModuleHandleW(L"Kernel32.dll");
     if (Kernel32 == nullptr)
     {
         fprintf(stderr, "GetModuleHandleW failed (%lu)\n", GetLastError());
         return nullptr;
     }
 
-    LPVOID pLoadLibraryW = GetProcAddress(Kernel32, "LoadLibraryW");
+    const auto pLoadLibraryW = GetProcAddress(Kernel32, "LoadLibraryW");
     if (pLoadLibraryW == nullptr)
     {
         fprintf(stderr, "GetProcAddress failed (%lu)\n", GetLastError());
@@ -404,11 +404,11 @@ static LPVOID GetLoadLibrary()
     return pLoadLibraryW;
 }
 
-bool InjectRemoteThread(Process *process, LPCWSTR ImagePath, LPDWORD lpExitCode)
+bool InjectRemoteThread(Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode)
 {
     *lpExitCode = 0;
 
-    HANDLE ProcessHandle = process->GetHandle();
+    const auto ProcessHandle = process->GetHandle();
     if (ProcessHandle == nullptr)
     {
         fprintf(stderr, "Can't inject a dll in a process which is not open\n");

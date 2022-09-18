@@ -1,31 +1,23 @@
 #pragma once
 
-class ProcessModule
+struct ProcessModule
 {
-public:
-    ProcessModule() = default;
-    ProcessModule(const ProcessModule&) = default;
-    ProcessModule(ProcessModule&& other);
-
-    ProcessModule& operator=(const ProcessModule&) = default;
-
-public:
     uintptr_t base = 0;
     size_t size = 0;
-    std::wstring name;
+    std::wstring name{};
 };
 
 class Process
 {
 public:
-    Process();
-    Process(uint32_t pid, DWORD rights = PROCESS_ALL_ACCESS);
+    Process() = default;
+    Process(uint32_t pid, DWORD rights = PROCESS_ALL_ACCESS) noexcept;
     Process(const Process&) = delete;
-    Process(Process&& other);
+    Process(Process&& other) noexcept;
     ~Process();
 
     Process& operator=(const Process&) = delete;
-    Process& operator=(Process&&);
+    Process& operator=(Process&&) noexcept;
 
     bool IsOpen();
     bool Open(uint32_t pid, DWORD rights = PROCESS_ALL_ACCESS);
@@ -39,11 +31,11 @@ public:
     bool GetModule(ProcessModule *module, const wchar_t *module_name);
     bool GetModules(std::vector<ProcessModule>& modules);
 
-    HANDLE GetHandle() { return m_hProcess; }
-    uint32_t GetProcessId();
+    HANDLE GetHandle() const { return m_hProcess; }
+    DWORD GetProcessId() const;
 private:
-    HANDLE m_hProcess;
-    DWORD m_Rights;
+    HANDLE m_hProcess = nullptr;
+    DWORD m_Rights = 0;
 };
 
 bool GetProcesses(std::vector<Process>& processes, const wchar_t *name, DWORD rights = PROCESS_ALL_ACCESS);
@@ -60,7 +52,7 @@ public:
     bool FindPatternRva(const char *pattern, const char *mask, int offset, uintptr_t *rva);
 
 private:
-    uintptr_t m_base;
-    size_t m_size;
-    uint8_t *m_buffer;
+    uintptr_t m_base = 0;
+    size_t m_size = 0;
+    uint8_t *m_buffer = nullptr;
 };

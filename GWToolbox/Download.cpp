@@ -64,16 +64,16 @@ void AsyncDownload(const char *url, AsyncFileDownloader *downloader)
 
 struct Asset
 {
-    std::string name;
-    size_t size;
-    std::string browser_download_url;
+    std::string name{};
+    size_t size = 0;
+    std::string browser_download_url{};
 };
 
 struct Release
 {
-    std::string tag_name;
-    std::string body;
-    std::vector<Asset> assets;
+    std::string tag_name{};
+    std::string body{};
+    std::vector<Asset> assets{};
 };
 
 static bool ParseRelease(const std::string& json_text, Release *release)
@@ -162,7 +162,7 @@ std::string GetDllRelease(const std::filesystem::path dllpath) {
         delete[] buf;
         return {};
     }
-    VS_FIXEDFILEINFO* pvi;
+    VS_FIXEDFILEINFO* pvi{};
     sz = sizeof(VS_FIXEDFILEINFO);
     if (!VerQueryValueW(&buf[0], L"\\", reinterpret_cast<LPVOID*>(&pvi), reinterpret_cast<unsigned int*>(&sz))) {
         delete[] buf;
