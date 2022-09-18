@@ -26,7 +26,7 @@ namespace {
     InitChatLog_pt InitChatLog_Func = 0;
 
 
-    
+
 }
 namespace GW {
     namespace Chat {
@@ -161,16 +161,16 @@ void ChatLog::Fetch() {
     if (!enabled)
         return;
     GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    for (size_t i = 0;log &&  i < GW::Chat::CHAT_LOG_LENGTH; i++) {
+    for (size_t i = 0; log &&  i < GW::Chat::CHAT_LOG_LENGTH; i++) {
         if (log->messages[i])
             Add(log->messages[i]);
     }
 
     // Sent
-    auto out_log = GetSentLog();
+    const auto out_log = GetSentLog();
     if (out_log && out_log->count && out_log->prev) {
         GWSentMessage* oldest = out_log->prev;
-        for (size_t i = out_log->count - 1; i < out_log->count; i--) {
+        for (size_t i = 0; i < out_log->count; i++) {
             if (oldest->prev)
                 oldest = oldest->prev;
         }
@@ -231,7 +231,7 @@ void ChatLog::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
     Save();
     ini->SetBoolValue(Name(), VAR_NAME(enabled), enabled);
-    
+
 }
 void ChatLog::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
@@ -391,7 +391,7 @@ void ChatLog::Initialize() {
         printf("[SCAN] InitChatLog_Func = %p\n", (void*)InitChatLog_Func);
     }
 
-    
+
 
     GW::Chat::RegisterChatLogCallback(&PreAddToChatLog_entry, OnPreAddToChatLog, -0x4000);
     GW::Chat::RegisterChatLogCallback(&PostAddToChatLog_entry, OnPostAddToChatLog, 0x4000);

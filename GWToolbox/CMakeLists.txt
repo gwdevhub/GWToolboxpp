@@ -1,5 +1,4 @@
 
-
 FILE(GLOB SOURCES
     "*.h"
     "*.cpp"
@@ -9,9 +8,14 @@ add_executable(GWToolbox)
 target_sources(GWToolbox PRIVATE ${SOURCES})
 target_precompile_headers(GWToolbox PRIVATE "stdafx.h")
 
-set_target_properties(GWToolbox PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS")
-set_target_properties(GWToolbox PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:WINDOWS")
-set_target_properties(GWToolbox PROPERTIES LINK_FLAGS_MINRELSIZE "/SUBSYSTEM:WINDOWS")
+set_target_properties(GWToolbox PROPERTIES
+    LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS"
+    LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:WINDOWS"
+    LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS"
+    VS_GLOBAL_RunCodeAnalysis false
+    VS_GLOBAL_EnableMicrosoftCodeAnalysis true
+    VS_GLOBAL_EnableClangTidyCodeAnalysis true
+)
 
 include(json)
 

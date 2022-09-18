@@ -76,9 +76,9 @@
     #define SOCKET_EWOULDBLOCK EWOULDBLOCK
 #endif
 
-#include <openssl/rand.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include <wolfssl/openssl/rand.h>
+#include <wolfssl/openssl/ssl.h>
+#include <wolfssl/openssl/err.h>
 #include <vector>
 #include <string>
 
@@ -102,7 +102,7 @@ namespace { // private module-only namespace
     int print_error_callback(const char* err, size_t len, void* userdata) {
         return log_error("ssl error: %s", err);
     }
-	
+
 socket_t hostname_connect(const std::string& hostname, int port) {
     struct addrinfo hints;
     struct addrinfo *result;
@@ -171,7 +171,7 @@ class _DummyWebSocket : public easywsclient::WebSocket
     void poll(int timeout) { }
     void send(const std::string& message) { }
     void sendPing() { }
-    void close() { } 
+    void close() { }
     void _dispatch(Callback & callable) { }
     readyStateValues getReadyState() const { return CLOSED; }
 };
@@ -495,9 +495,9 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
     }
     is_ssl = sc[1]=='s';
     log_error(
-    	"easywsclient: connecting: ssl=%s, host=%s port=%d path=/%s\n", 
+    	"easywsclient: connecting: ssl=%s, host=%s port=%d path=/%s\n",
     	is_ssl?"true":"false", host, port, path);
-    
+
     ConnectionContext* ptConnCtx;
     ptConnCtx = (ConnectionContext*)malloc(sizeof(ConnectionContext));
     ptConnCtx->sslContext = nullptr;
@@ -508,7 +508,7 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
         free(ptConnCtx);
         return NULL;
     }
-    
+
     if (is_ssl) {
     	// ssl handshake
     	// Register the error strings for libcrypto & libssl
@@ -516,12 +516,13 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
       // Register the available ciphers and digests
       SSL_library_init ();
 
-      // New context saying we are a client, and using SSL 2 or 3
-      ptConnCtx->sslContext = SSL_CTX_new (SSLv23_client_method ());
+      // New context saying we are a client using TLS 1.2
+      ptConnCtx->sslContext = SSL_CTX_new(TLSv1_2_client_method());
       if (ptConnCtx->sslContext == NULL)
           ERR_print_errors_cb(print_error_callback,0);
 
       // Create an SSL struct for the connection
+      SSL_CTX_set_verify(ptConnCtx->sslContext, SSL_VERIFY_NONE, NULL);
       ptConnCtx->sslHandle = SSL_new (ptConnCtx->sslContext);
       if (ptConnCtx->sslHandle == NULL)
           ERR_print_errors_cb(print_error_callback, 0);
