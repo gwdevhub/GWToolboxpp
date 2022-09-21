@@ -102,7 +102,7 @@ private:
     static void CmdMute(const wchar_t*, int argc, LPWSTR* argv);
     // Trigger hall of monuments info for current target or given player name
     static void CmdHom(const wchar_t*, int argc, LPWSTR* argv);
-    
+
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string name, PendingTransmo &transmo);
     static bool GetNPCInfoByName(const std::wstring name, PendingTransmo &transmo);
@@ -116,7 +116,7 @@ private:
 
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;
-    uint32_t default_title_id;
+    uint32_t default_title_id = static_cast<uint32_t>(GW::Constants::TitleID::Lightbringer);
 
     struct SearchAgent {
         clock_t started = 0;
