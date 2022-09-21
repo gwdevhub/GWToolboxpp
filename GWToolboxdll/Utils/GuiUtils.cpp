@@ -423,7 +423,7 @@ namespace GuiUtils {
             }
         }
         std::wstring out(s.length(), L'\0');
-        std::transform(s.begin(), s.end(), out.begin(), [&](wchar_t wc) ->wchar_t {
+        std::ranges::transform(s, out.begin(), [&](wchar_t wc) ->wchar_t {
             auto it = charmap.find(wc);
             return it == charmap.end() ? wc : it->second; });
         return out;
@@ -482,11 +482,11 @@ namespace GuiUtils {
         return SanitizePlayerName(name);
     }
     std::string RemovePunctuation(std::string s) {
-        s.erase(std::remove_if(s.begin(), s.end(), &safe_ispunct), s.end());
+        std::erase_if(s, &safe_ispunct);
         return s;
     }
     std::wstring RemovePunctuation(std::wstring s) {
-        s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
+        std::erase_if(s, &ispunct);
         return s;
     }
     bool ParseInt(const char* str, int* val, int base) {
@@ -494,16 +494,16 @@ namespace GuiUtils {
         *val = strtol(str, &end, base);
         if (*end != 0 || errno == ERANGE)
             return false;
-        else
-            return true;
+
+        return true;
     }
     bool ParseInt(const wchar_t* str, int* val, int base) {
         wchar_t* end;
         *val = wcstol(str, &end, base);
         if (*end != 0 || errno == ERANGE)
             return false;
-        else
-            return true;
+
+        return true;
     }
     bool ParseFloat(const char* str, float* val) {
         char* end;

@@ -50,7 +50,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1() {
 
     for (const uint32_t party_id : party_ids) {
         // parties
-        const ObserverModule::ObservableParty* party = observer_module.GetObservablePartyById(party_id); 
+        const ObserverModule::ObservableParty* party = observer_module.GetObservablePartyById(party_id);
         if (!party) {
             json["parties"].push_back(nlohmann::json::value_t::null);
             continue;
@@ -448,9 +448,9 @@ void ObserverExportWindow::ExportToJSON(Version version) {
             json["exported_at_local"] = export_time;
             std::string name = json["name"].dump();
             // remove quotation marks (come in from json.dump())
-            name.erase(std::remove(name.begin(), name.end(), '"'), name.end());
+            std::erase(name, '"');
             // replace spaces with _
-            std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c){
+            std::ranges::transform(name, name.begin(), [](unsigned char c){
                 return static_cast<unsigned char>(c == ' ' ? '_' : c);
             });
             // replace non-alphanumeric with "x" to make simply FS safe, but also show something is missing
@@ -478,7 +478,7 @@ void ObserverExportWindow::ExportToJSON(Version version) {
     const std::wstring message = file_location.wstring();
 
     size_t max_len = _countof(file_location_wc) - 1;
-    
+
     for (size_t i = 0; i < message.length(); i++) {
         // Break on the end of the message
         if (!message[i])

@@ -113,7 +113,7 @@ namespace
                 player_name += L" ";
             std::transform(s.begin() + 1, s.end(), s.begin() + 1, towlower);
             std::transform(s.begin(), s.begin() + 1, s.begin(), towupper);
-            player_name += s.c_str();
+            player_name += s;
         }
         return player_name;
     }

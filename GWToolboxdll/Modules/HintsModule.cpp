@@ -142,7 +142,7 @@ namespace {
     }
     static void OnShowHint_UIMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
         HintUIMessage* msg = (HintUIMessage*)wparam;
-        if (std::find(hints_shown.begin(), hints_shown.end(), msg->message_id) != hints_shown.end()) {
+        if (std::ranges::find(hints_shown, msg->message_id) != hints_shown.end()) {
             if (only_show_hints_once)
                 status->blocked = true;
         }

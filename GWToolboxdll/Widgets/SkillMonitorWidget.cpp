@@ -201,15 +201,11 @@ void SkillMonitorWidget::Update(float delta) {
         }
 
         if (history_timeout != 0) {
-            skill_history.erase(
-                std::remove_if(
-                    skill_history.begin(),
-                    skill_history.end(),
-                    [&](const SkillActivation& skill_activation) -> bool {
-                        return TIMER_DIFF(skill_activation.last_update) > history_timeout;
-                    }),
-                skill_history.end()
-            );
+            std::erase_if(
+                skill_history,
+                [&](const SkillActivation& skill_activation) -> bool {
+                    return TIMER_DIFF(skill_activation.last_update) > history_timeout;
+                });
         }
     }
 }

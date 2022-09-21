@@ -503,7 +503,7 @@ bool PartySearchWindow::IsLfpAlert(std::string &message)
             if (std::regex_search(message, word_regex))
                 return true;
         } else {
-            auto found = std::search(message.begin(), message.end(), word.begin(), word.end(), [](char c1, char c2) -> bool { return tolower(c1) == c2; });
+            auto found = std::ranges::search(message, word, [](char c1, char c2) -> bool { return tolower(c1) == c2; }).begin();
             if (found != message.end())
                 return true;
         }

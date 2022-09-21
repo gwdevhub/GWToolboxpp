@@ -240,7 +240,7 @@ namespace {
             return false;
         if (a->GetIsDead() || a->GetIsDeadByTypeMap() || a->allegiance == GW::Constants::Allegiance::Enemy)
             return false; // Dont add dead NPCs.
-        const auto it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), a->agent_id);
+        const auto it = std::ranges::find(allies_added_to_party, a->agent_id);
         if (it != allies_added_to_party.end())
             return false;
         return ShouldAddAgentToPartyWindow(0x20000000u | a->player_number);
@@ -292,7 +292,7 @@ namespace {
     }
     void RemoveAllyActual(uint32_t agent_id) {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
-            const auto it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), agent_id);
+            const auto it = std::ranges::find(allies_added_to_party, agent_id);
             if (it != allies_added_to_party.end()) allies_added_to_party.erase(it);
             return;
         }
@@ -310,7 +310,7 @@ namespace {
         // 1. Remove NPC from window.
         GW::StoC::EmulatePacket(&packet);
         SetAgentName(agent_id, prev_name);
-        const auto it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), agent_id);
+        const auto it = std::ranges::find(allies_added_to_party, agent_id);
         if (it != allies_added_to_party.end()) allies_added_to_party.erase(it);
     }
     void AddAllyActual(PendingAddToParty& p) {
@@ -378,7 +378,7 @@ void PartyWindowModule::Initialize() {
             UNREFERENCED_PARAMETER(status);
             if (!add_npcs_to_party_window || pak->state != 16)
                 return; // Not dead.
-            if (std::find(allies_added_to_party.begin(), allies_added_to_party.end(), pak->agent_id) == allies_added_to_party.end())
+            if (std::ranges::find(allies_added_to_party, pak->agent_id) == allies_added_to_party.end())
                 return; // Not added via toolbox
             pending_remove.push(pak->agent_id);
         });
@@ -394,7 +394,7 @@ void PartyWindowModule::Initialize() {
                         player_number == GW::Constants::ModelID::SummoningStone::ImperialQuiveringBlade ||
                         player_number == GW::Constants::ModelID::SummoningStone::ImperialTripleChop ||
                         player_number == GW::Constants::ModelID::SummoningStone::ImperialBarrage) {
-                        if (std::find(removed_canthans.begin(), removed_canthans.end(), pak->agent_id) ==
+                        if (std::ranges::find(removed_canthans, pak->agent_id) ==
                             removed_canthans.end()) {
                             pending_remove.push(pak->agent_id);
                             removed_canthans.push_back(pak->agent_id);
@@ -403,7 +403,7 @@ void PartyWindowModule::Initialize() {
                     return;
                 }
             }
-            if (std::find(allies_added_to_party.begin(), allies_added_to_party.end(), pak->agent_id) == allies_added_to_party.end())
+            if (std::ranges::find(allies_added_to_party, pak->agent_id) == allies_added_to_party.end())
                 return; // Not added via toolbox
             pending_remove.push(pak->agent_id);
         });
