@@ -335,7 +335,7 @@ void TradeWindow::search(std::string query, bool print_results_in_chat)
 }
 
 void TradeWindow::FindPlayerPartySearch(GW::HookStatus*, void*) {
-    GW::PartyContext* ctx = GW::GameContext::instance()->party;
+    GW::PartyContext* ctx = GW::PartyContext::instance();
     if (ctx && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         auto& party_searches = ctx->party_search;
         if (!party_searches.valid() || !party_searches.size()) {

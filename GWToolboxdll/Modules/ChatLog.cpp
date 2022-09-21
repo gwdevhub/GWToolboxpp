@@ -354,7 +354,10 @@ void ChatLog::SetEnabled(bool _enabled) {
 bool ChatLog::Init() {
     if (!enabled)
         return false;
-    std::wstring this_account = GW::GameContext::instance()->character->player_email;
+    auto c = GW::CharContext::instance();
+    if (!c)
+        return false;
+    std::wstring this_account = c->player_email;
     if (this_account == account)
         return false;
     // GW Account changed, save this log and start fresh.

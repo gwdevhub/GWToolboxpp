@@ -284,7 +284,8 @@ namespace {
     };
 
     const wchar_t* GetPlayerName() {
-        return GW::GameContext::instance()->character->player_name;
+        auto c = GW::CharContext::instance();
+        return c ? c->player_name : nullptr;
     }
 
     wchar_t last_player_name[20];
@@ -1167,7 +1168,9 @@ void CompletionWindow::Initialize()
     ParseCompletionBuffer(Heroes);
     ParseCompletionBuffer(MapsUnlocked);
     CheckProgress();
-    wcscpy(last_player_name,GetPlayerName());
+    const wchar_t* player_name = GetPlayerName();
+    if(player_name)
+        wcscpy(last_player_name,player_name);
 }
 void CompletionWindow::Initialize_Prophecies()
 {

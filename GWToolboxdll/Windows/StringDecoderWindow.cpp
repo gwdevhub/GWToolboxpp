@@ -33,6 +33,7 @@ void StringDecoderWindow::Draw(IDirect3DDevice9 *pDevice)
     }
     if (!encoded) {
         encoded = new char[encoded_size];
+        encoded[0] = 0;
     }
     bool decodeIt = ImGui::InputInt("Encoded string id:", &encoded_id, 1, 1, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal);
     decodeIt |= ImGui::InputText("Encoded string:", encoded, encoded_size, ImGuiInputTextFlags_EnterReturnsTrue);
