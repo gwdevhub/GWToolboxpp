@@ -49,7 +49,7 @@ class CustomRenderer : public VBuffer
     };
     struct CustomMarker final : VBuffer
     {
-        CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* n);
+        CustomMarker(float x, float y, float s, Shape sh, GW::Constants::MapID m, const char* n);
         explicit CustomMarker(const char* n);
         GW::Vec2f pos;
         float size;
@@ -105,9 +105,9 @@ private:
     void EnqueueVertex(float x, float y, Color color);
     void SetTooltipMapID(const GW::Constants::MapID& map_id);
     struct MapTooltip {
-        GW::Constants::MapID map_id = (GW::Constants::MapID)0;
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
         std::wstring map_name_ws;
-        char tooltip_str[128];
+        char tooltip_str[128]{};
     } map_id_tooltip;
 
     class LineCircle : public VBuffer
