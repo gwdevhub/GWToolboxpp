@@ -141,7 +141,6 @@ namespace GuiUtils {
             constexpr float size_widget_large = 48.0f;
             static constexpr ImWchar fontawesome5_glyph_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 
-
             ImFontConfig cfg = ImFontConfig();
             cfg.MergeMode = false;
             cfg.PixelSnapH = true;
@@ -211,15 +210,15 @@ namespace GuiUtils {
             default: return nullptr;
             }
         }(size);
+
         if (font && font->IsLoaded()) {
             return font;
         }
-        else {
-            return ImGui::GetIO().Fonts->Fonts[0];
-        }
+
+        return ImGui::GetIO().Fonts->Fonts[0];
     }
     float GetGWScaleMultiplier() {
-        GW::Constants::InterfaceSize interfacesize =
+        const auto interfacesize =
             static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::EnumPreference::InterfaceSize));
 
         switch (interfacesize) {
@@ -229,7 +228,7 @@ namespace GuiUtils {
         default: return 1.f;
         }
     }
-    ImVec4& ClampRect(ImVec4& rect, ImVec4& viewport) {
+    ImVec4& ClampRect(ImVec4& rect, const ImVec4& viewport) {
         float correct;
         // X axis
         if (rect.x < viewport.x) {
@@ -256,7 +255,7 @@ namespace GuiUtils {
         return rect;
     }
     float GetPartyHealthbarHeight() {
-        GW::Constants::InterfaceSize interfacesize =
+        const auto interfacesize =
             static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::EnumPreference::InterfaceSize));
         switch (interfacesize) {
         case GW::Constants::InterfaceSize::SMALL: return GW::Constants::HealthbarHeight::Small;
@@ -269,7 +268,7 @@ namespace GuiUtils {
     }
     std::string ToSlug(std::string s) {
         s = RemovePunctuation(s);
-        std::transform(s.begin(), s.end(), s.begin(), [](char c) -> char {
+        std::ranges::transform(s, s.begin(), [](char c) -> char {
             if (c == ' ')
                 return '_';
             return static_cast<char>(::tolower(c));
@@ -278,7 +277,7 @@ namespace GuiUtils {
     }
     std::wstring ToSlug(std::wstring s) {
         s = RemovePunctuation(s);
-        std::transform(s.begin(), s.end(), s.begin(), [](wchar_t c) -> wchar_t {
+        std::ranges::transform(s, s.begin(), [](wchar_t c) -> wchar_t {
             if (c == ' ')
                 return '_';
             return static_cast<wchar_t>(::tolower(c));
@@ -286,14 +285,14 @@ namespace GuiUtils {
         return s;
     }
     std::string ToLower(std::string s) {
-        std::transform(s.begin(), s.end(), s.begin(), [](char c) -> char {
+        std::ranges::transform(s, s.begin(), [](char c) -> char {
             return static_cast<char>(::tolower(c));
             });
         return s;
     }
 
     std::wstring ToLower(std::wstring s) {
-        std::transform(s.begin(), s.end(), s.begin(), [](wchar_t c) -> wchar_t {
+        std::ranges::transform(s, s.begin(), [](wchar_t c) -> wchar_t {
             return static_cast<wchar_t>(::tolower(c));
             });
         return s;
@@ -326,7 +325,7 @@ namespace GuiUtils {
                 out[len++] = entities[in[i]];
             }
             else {
-                int written = snprintf(&out[len], 255 - len, "&#%d;", in[i]);
+                const int written = snprintf(&out[len], 255 - len, "&#%d;", in[i]);
                 if (written < 0)
                     return ""; // @Cleanup; how to gracefully fail?
                 len += written;
@@ -358,7 +357,7 @@ namespace GuiUtils {
                 out[len++] = html5[in[i]];
             }
             else {
-                int written = snprintf(&out[len], 255 - len, "%%%02X", in[i]);
+                const int written = snprintf(&out[len], 255 - len, "%%%02X", in[i]);
                 if (written < 0)
                     return ""; // @Cleanup; how to gracefully fail?
                 len += written;
@@ -369,15 +368,15 @@ namespace GuiUtils {
     }
 
     // Convert a wide Unicode string to an UTF8 string
-    std::string WStringToString(const std::wstring& wstr)
+    std::string WStringToString(const std::wstring& s)
     {
         // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
-        if (wstr.empty()) return "";
+        if (s.empty()) return "";
         // NB: GW uses code page 0 (CP_ACP)
-        int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+        int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &s[0], (int)s.size(), NULL, 0, NULL, NULL);
         ASSERT(size_needed != 0);
-        std::string strTo(static_cast<size_t>(size_needed), 0);
-        ASSERT(WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL));
+        std::string strTo(size_needed, 0);
+        ASSERT(WideCharToMultiByte(CP_UTF8, 0, &s[0], (int)s.size(), &strTo[0], size_needed, NULL, NULL));
         return strTo;
     }
     // Makes sure the file name doesn't have chars that won't be allowed on disk
@@ -397,7 +396,7 @@ namespace GuiUtils {
         return out;
     }
 
-    std::wstring RemoveDiacritics(const std::wstring& in) {
+    std::wstring RemoveDiacritics(const std::wstring& s) {
         static std::map<wchar_t, wchar_t> charmap;
         if (charmap.empty()) {
             const wchar_t* diacritics[] =
@@ -423,8 +422,8 @@ namespace GuiUtils {
                 }
             }
         }
-        std::wstring out(in.length(), L'\0');
-        std::transform(in.begin(), in.end(), out.begin(), [&](wchar_t wc) ->wchar_t {
+        std::wstring out(s.length(), L'\0');
+        std::transform(s.begin(), s.end(), out.begin(), [&](wchar_t wc) ->wchar_t {
             auto it = charmap.find(wc);
             return it == charmap.end() ? wc : it->second; });
         return out;
