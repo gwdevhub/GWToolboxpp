@@ -14,12 +14,12 @@ public:
     virtual const char* UIName() const;
     //virtual const char* SettingsName() const override { return UIName(); }
 
-    virtual void Initialize() override;
-    virtual void Terminate() override;
+    void Initialize() override;
+    void Terminate() override;
 
-    virtual void LoadSettings(CSimpleIni* ini) override;
+    void LoadSettings(CSimpleIni* ini) override;
 
-    virtual void SaveSettings(CSimpleIni* ini) override;
+    void SaveSettings(CSimpleIni* ini) override;
 
     // returns true if clicked
     virtual bool DrawTabButton(IDirect3DDevice9* device,
@@ -31,9 +31,9 @@ public:
     virtual bool IsWidget() const { return false; }
     virtual bool ShowOnWorldMap() const { return false; }
 
-    virtual const char* TypeName() const { return "ui element"; }
+    const char* TypeName() const override { return "ui element"; }
 
-    virtual void RegisterSettingsContent() override;
+    void RegisterSettingsContent() override;
 
     virtual void DrawSizeAndPositionSettings();
 
