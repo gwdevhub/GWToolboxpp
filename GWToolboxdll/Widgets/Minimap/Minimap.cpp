@@ -761,7 +761,7 @@ void Minimap::Render(IDirect3DDevice9* device) {
     device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 
     auto FillRect = [&device](const Color color, const float x, const float y, const float w, const float h) {
-        D3DVertex vertices[6] = { {x,y, 0.0f, color},
+        const D3DVertex vertices[6] = { {x,y, 0.0f, color},
             {x + w, y, 0.0f, color},
             {x, y + h, 0.0f, color},
             {x + w, y + h, 0.0f, color} };
@@ -770,15 +770,15 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
     // we MUST draw this for the stencil test, even if alpha is 0
     auto FillCircle = [&device](
-        const float x, const float y, const float radius, const Color clr, int resolution = 199) {
-            resolution = std::min(resolution, 199);
-            D3DVertex vertices[200];
+        const float x, const float y, const float radius, const Color clr, const int resolution = 192) {
+            const auto res = static_cast<float>(std::min(resolution, 192));
+            D3DVertex vertices[194];
             for (auto i = 0; i <= resolution; ++i) {
-                vertices[i] = { radius * cos(DirectX::XM_PI * (i / (resolution / 2.f))) + x,
-                    y + radius * sin(DirectX::XM_PI * (i / (resolution / 2.f))), 0.0f, clr};
+                vertices[i] = { radius * cos(DirectX::XM_PI * (i / (res / 2.f))) + x,
+                    y + radius * sin(DirectX::XM_PI * (i / (res / 2.f))), 0.0f, clr};
             }
             device->DrawPrimitiveUP(
-                D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
+                D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(res)), vertices, sizeof(D3DVertex));
     };
 
     Instance().RenderSetupProjection(device);

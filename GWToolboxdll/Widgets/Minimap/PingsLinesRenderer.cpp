@@ -329,7 +329,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 
 void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
     type = D3DPT_TRIANGLESTRIP;
-    count = 98; // polycount
+    count = 96; // polycount
     const auto vertex_count = count + 2;
     D3DVertex* _vertices = nullptr;
 
