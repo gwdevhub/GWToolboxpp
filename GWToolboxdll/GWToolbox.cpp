@@ -118,7 +118,7 @@ HMODULE GWToolbox::GetDLLModule() {
     return dllmodule;
 }
 
-DWORD __stdcall SafeThreadEntry(LPVOID module) {
+DWORD __stdcall SafeThreadEntry(LPVOID module) noexcept {
     dllmodule = static_cast<HMODULE>(module);
     __try {
         ThreadEntry(nullptr);
@@ -321,7 +321,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
 }
 
-void GWToolbox::Initialize() {
+void GWToolbox::Initialize()
+{
     if (initialized || must_self_destruct)
         return;
 
@@ -386,28 +387,22 @@ void GWToolbox::Initialize() {
 
     initialized = true;
 }
-void GWToolbox::FlashWindow() {
-    FLASHWINFO flashInfo = { 0 };
-    flashInfo.cbSize = sizeof(FLASHWINFO);
-    flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
-    flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
-    flashInfo.uCount = 5;
-    flashInfo.dwTimeout = 0;
-    FlashWindowEx(&flashInfo);
-}
 
-void GWToolbox::OpenSettingsFile() {
+void GWToolbox::OpenSettingsFile() const
+{
     Log::Log("Opening ini file\n");
     if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
     inifile->Reset();
     inifile->LoadFile(Resources::GetPath(L"GWToolbox.ini").c_str());
 }
-void GWToolbox::LoadModuleSettings() {
+void GWToolbox::LoadModuleSettings() const
+{
     for (ToolboxModule* module : modules) {
         module->LoadSettings(inifile);
     }
 }
-void GWToolbox::SaveSettings() {
+void GWToolbox::SaveSettings() const
+{
     if (!inifile)
         return;
     for (ToolboxModule* module : modules) {
