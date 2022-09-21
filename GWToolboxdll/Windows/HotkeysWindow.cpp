@@ -24,6 +24,28 @@
 #include <Windows/HotkeysWindow.h>
 #include <GWCA/Utilities/Scanner.h>
 
+
+namespace {
+    bool loaded_action_labels = false;
+    // NB: GetActionLabel_Func() must be called when we're in-game, because it relies on other gw modules being loaded internally.
+    // Because we only draw this module when we're in-game, we just need to call this from the Draw() loop instead of on Initialise()
+    void LoadActionLabels() {
+        if (loaded_action_labels)
+            return;
+        loaded_action_labels = true;
+
+        typedef wchar_t*(__cdecl* GetActionLabel_pt)(GW::UI::ControlAction action);
+        GetActionLabel_pt GetActionLabel_Func = 0;
+        GetActionLabel_Func = (GetActionLabel_pt)GW::Scanner::Find("\x83\xfe\x5b\x74\x27\x83\xfe\x5c\x74\x22\x83\xfe\x5d\x74\x1d", "xxxxxxxxxxxxxxx", -0x7);
+        GWCA_INFO("[SCAN] GetActionLabel_Func = %p\n", (void*)GetActionLabel_Func);
+        if (!GetActionLabel_Func)
+            return;
+        for (auto& label : HotkeyGWKey::control_labels) {
+            label.second = new GuiUtils::EncString(GetActionLabel_Func(label.first));
+        }
+    }
+}
+
 // @Cleanup: Find the address for this without checking map garbage - how does inv window know to show "pvp equipment" button?
 bool HotkeysWindow::IsPvPCharacter() {
     // This is the 3rd module that uses this function, should really be part of GWCA but leave here for now.
@@ -37,16 +59,6 @@ void HotkeysWindow::Initialize() {
     ToolboxWindow::Initialize();
     clickerTimer = TIMER_INIT();
     dropCoinsTimer = TIMER_INIT();
-
-
-    GetActionLabel_Func = (GetActionLabel_pt)GW::Scanner::Find("\x83\xfe\x5b\x74\x27\x83\xfe\x5c\x74\x22\x83\xfe\x5d\x74\x1d", "xxxxxxxxxxxxxxx", -0x7);
-    GWCA_INFO("[SCAN] GetActionLabel_Func = %p\n", (void*)GetActionLabel_Func);
-    if (GetActionLabel_Func) {
-
-        for (auto& label : HotkeyGWKey::control_labels) {
-            label.second = new GuiUtils::EncString(GetActionLabel_Func(label.first));
-        }
-    }
 }
 void HotkeysWindow::Terminate() {
     ToolboxWindow::Terminate();
@@ -108,6 +120,7 @@ bool HotkeysWindow::CheckSetValidHotkeys() {
 void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
+    LoadActionLabels();
     bool hotkeys_changed = false;
     // === hotkey panel ===
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
