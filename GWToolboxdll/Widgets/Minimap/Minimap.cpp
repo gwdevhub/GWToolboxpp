@@ -958,6 +958,8 @@ void Minimap::SelectTarget(const GW::Vec2f pos) const
 
 bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
+    if (!GetKeyState(VK_LBUTTON) && mousedown) // fix left button being released outside of gw window
+        mousedown = false;
     if (is_observing)
         return false;
     if (mouse_clickthrough_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
