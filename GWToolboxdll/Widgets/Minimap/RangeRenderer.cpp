@@ -78,7 +78,7 @@ size_t RangeRenderer::CreateCircle(D3DVertex *vertices, float radius, DWORD colo
     const auto scale = Minimap::Instance().GetGwinchScale();
     const auto xdiff = static_cast<float>(line_thickness) / scale.x;
     const auto ydiff = static_cast<float>(line_thickness) / scale.y;
-    size_t circle_vertices = 0;
+    size_t circle_vertices;
     for (circle_vertices = 0; circle_vertices < circle_points - 1; circle_vertices += 2) {
         const auto angle = circle_vertices * (2 * static_cast<float>(M_PI) / circle_triangles);
         vertices[circle_vertices].x = radius * std::cosf(angle);

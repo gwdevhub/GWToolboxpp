@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/Packets/StoC.h>
@@ -10,8 +9,6 @@
 #include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 
@@ -26,8 +23,8 @@ void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     marker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
     color_shadowstep_line = Colors::Load(ini, section, VAR_NAME(color_shadowstep_line), color_shadowstep_line);
     color_shadowstep_line_maxrange = Colors::Load(ini, section, VAR_NAME(color_shadowstep_line_maxrange), color_shadowstep_line_maxrange);
-    maxrange_interp_begin = (float)ini->GetDoubleValue(section, VAR_NAME(maxrange_interp_begin), maxrange_interp_begin);
-    maxrange_interp_end = (float)ini->GetDoubleValue(section, VAR_NAME(maxrange_interp_end), maxrange_interp_end);
+    maxrange_interp_begin = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(maxrange_interp_begin), maxrange_interp_begin));
+    maxrange_interp_end = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(maxrange_interp_end), maxrange_interp_end));
     reduce_ping_spam = ini->GetBoolValue(section, VAR_NAME(reduce_ping_spam), reduce_ping_spam);
     Invalidate();
 }
@@ -162,7 +159,7 @@ void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
     vertices = nullptr;
 
     HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     if (FAILED(hr)) {
         printf("Error setting up PingsLinesRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
     }
@@ -332,14 +329,14 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 
 void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
     type = D3DPT_TRIANGLESTRIP;
-    count = 48; // polycount
-    unsigned int vertex_count = count + 2;
+    count = 98; // polycount
+    const auto vertex_count = count + 2;
     D3DVertex* _vertices = nullptr;
 
     if (buffer) buffer->Release();
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID **)&_vertices,
+        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices),
                  D3DLOCK_DISCARD);
 
     const float PI = 3.1415927f;
@@ -365,8 +362,8 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
 
     if (buffer) buffer->Release();
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID **)&_vertices,
+        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices),
                  D3DLOCK_DISCARD);
 
     const float PI = 3.1415927f;

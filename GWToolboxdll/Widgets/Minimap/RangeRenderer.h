@@ -4,9 +4,8 @@
 #include <Widgets/Minimap/VBuffer.h>
 
 class RangeRenderer : public VBuffer {
-private:
     static constexpr size_t num_circles = 8;
-    static constexpr size_t circle_points = 96;
+    static constexpr size_t circle_points = 199;
     static constexpr size_t circle_triangles = circle_points - 2;
 
 public:

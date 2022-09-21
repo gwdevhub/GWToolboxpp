@@ -14,6 +14,8 @@ namespace GW {
 }
 typedef uint32_t Color;
 class AgentRenderer : public VBuffer {
+    const int num_triangles = 32;
+
 public:
     AgentRenderer();
     virtual ~AgentRenderer() {

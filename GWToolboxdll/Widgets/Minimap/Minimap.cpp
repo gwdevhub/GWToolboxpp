@@ -768,9 +768,10 @@ void Minimap::Render(IDirect3DDevice9* device) {
         device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(D3DVertex));
     };
 
+    // we MUST draw this for the stencil test, even if alpha is 0
     auto FillCircle = [&device](
-        const float x, const float y, const float radius, const Color clr, float resolution = 199.f) {
-            resolution = std::min(resolution, 199.f);
+        const float x, const float y, const float radius, const Color clr, int resolution = 199) {
+            resolution = std::min(resolution, 199);
             D3DVertex vertices[200];
             for (auto i = 0; i <= resolution; ++i) {
                 vertices[i] = { radius * cos(DirectX::XM_PI * (i / (resolution / 2.f))) + x,

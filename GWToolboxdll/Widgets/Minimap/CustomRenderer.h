@@ -17,12 +17,12 @@ namespace mapbox // enable mapbox::earcut to work with GW::Vec2f as Point
         template <>
         struct nth<0, GW::Vec2f>
         {
-            inline static auto get(const GW::Vec2f& t) { return t.x; };
+            static auto get(const GW::Vec2f& t) { return t.x; };
         };
         template <>
         struct nth<1, GW::Vec2f>
         {
-            inline static auto get(const GW::Vec2f& t) { return t.y; };
+            static auto get(const GW::Vec2f& t) { return t.y; };
         };
     }
 }
@@ -34,7 +34,7 @@ class CustomRenderer : public VBuffer
     {
         CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n);
         CustomLine(const char* n)
-            : CustomLine(0, 0, 0, 0, (GW::Constants::MapID)0, n){};
+            : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n){};
         GW::Vec2f p1;
         GW::Vec2f p2;
         GW::Constants::MapID map;
@@ -105,7 +105,7 @@ private:
     void EnqueueVertex(float x, float y, Color color);
     void SetTooltipMapID(const GW::Constants::MapID& map_id);
     struct MapTooltip {
-        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
         std::wstring map_name_ws;
         char tooltip_str[128]{};
     } map_id_tooltip;

@@ -20,14 +20,15 @@
 #define AGENTCOLOR_INIFILENAME L"AgentColors.ini"
 
 namespace {
-    static unsigned int GetAgentProfession(const GW::AgentLiving* agent) {
+    unsigned int GetAgentProfession(const GW::AgentLiving* agent) {
         if (!agent) return 0;
         if (agent->primary) return agent->primary;
-        GW::NPC* npc = GW::Agents::GetNPCByID(agent->player_number);
+        const GW::NPC* npc = GW::Agents::GetNPCByID(agent->player_number);
         if (!npc) return 0;
         return npc->primary;
     }
-    static uint32_t auto_target_id = 0;
+
+    uint32_t auto_target_id = 0;
 }
 
 AgentRenderer* AgentRenderer::instance = 0;
@@ -333,20 +334,18 @@ AgentRenderer::AgentRenderer() {
     shapes[Tear].AddVertex(1.8f, 0.0f, Dark);   // A
     shapes[Tear].AddVertex(0.0f, 0.0f, Light);  // O
 
-    int num_triangles = 8;
-    float PI = static_cast<float>(M_PI);
+    constexpr auto pi = static_cast<float>(M_PI);
     for (int i = 0; i < num_triangles; ++i) {
-        float angle1 = 2 * (i + 0) * PI / num_triangles;
-        float angle2 = 2 * (i + 1) * PI / num_triangles;
+        const float angle1 = 2 * (i + 0) * pi / num_triangles;
+        const float angle2 = 2 * (i + 1) * pi / num_triangles;
         shapes[Circle].AddVertex(std::cos(angle1), std::sin(angle1), Dark);
         shapes[Circle].AddVertex(std::cos(angle2), std::sin(angle2), Dark);
         shapes[Circle].AddVertex(0.0f, 0.0f, Light);
     }
 
-    num_triangles = 32;
     for (int i = 0; i < num_triangles; ++i) {
-        float angle1 = 2 * (i + 0) * PI / num_triangles;
-        float angle2 = 2 * (i + 1) * PI / num_triangles;
+        const float angle1 = 2 * (i + 0) * pi / num_triangles;
+        const float angle2 = 2 * (i + 1) * pi / num_triangles;
         shapes[BigCircle].AddVertex(std::cos(angle1), std::sin(angle1), None);
         shapes[BigCircle].AddVertex(std::cos(angle2), std::sin(angle2), None);
         shapes[BigCircle].AddVertex(0.0f, 0.0f, CircleCenter);
@@ -371,11 +370,11 @@ AgentRenderer::AgentRenderer() {
             max_shape_verts = shapes[shape].vertices.size();
         }
     }
-    const GW::UI::UIMessage hook_messages[] = {
+    constexpr GW::UI::UIMessage hook_messages[] = {
         GW::UI::UIMessage::kShowAgentNameTag,
         GW::UI::UIMessage::kSetAgentNameTagAttribs
     };
-    for (auto message_id : hook_messages) {
+    for (const auto message_id : hook_messages) {
         GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
     }
 }
@@ -383,7 +382,7 @@ void AgentRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* 
     switch (msgid) {
     case GW::UI::UIMessage::kShowAgentNameTag:
     case GW::UI::UIMessage::kSetAgentNameTagAttribs: {
-        GW::UI::AgentNameTagInfo* msg = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
+        const auto msg = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
 
         GW::Agent* agent = GW::Agents::GetAgentByID(msg->agent_id);
         if (!agent) return;
@@ -432,8 +431,8 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     GW::NPCArray* npcs = agents ? GW::Agents::GetNPCArray() : nullptr;
     if (!npcs) return;
 
-    GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
-    GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+    const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
     if (target) {
         auto_target_id = 0;
     }
