@@ -7,27 +7,38 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
-## Version 5.17
+## Version 6.0
 * [New] `/target ally` and `/target enemy` added
 * [New] Added option to hide merchant items (selling only) in Inventory Settings module
 * [New] Added option to disable item descriptions on hover (hold ALT to reveal them)
 * [New] Added option to hide/show ally skills in the Skill Monitor Widget
 * [New] Added option to only show effects lasting less than N seconds in Effect Monitor Widget
 * [New] Added option to snap minimap to in-game compass position
-* [New] Added option to hide allies from Skill Monitor Widget
+* [New] Added option to hide e-mail on login screen
+* [New] Added custom block rules for the Item Filter
+* [New] Added option to hide items from the sell window at merchants
+* [New] Hall of Monuments integrated into Completion Window
 * [Minor] Obfuscate player name in Hall of Monuments
 * [Minor] Obfuscate account name in Hero > Account window
 * [Minor] Obfuscate player name in cinematics
 * [Minor] Hovered item in Info Window stays available after mouse is moved away from item
 * [Minor] Toolbox will now show a message about missing DX9 redistributable instead of not starting at all
 * [Minor] Added option to hold shift when toggling pcons to turn pcons off/on by group
+* [Minor] Minimap circles are more circle-shaped now
+* [Minor] Dialog module Take and Reward combined into one button
+* [Minor] Disable ImGui keyboard navigation
+* [Minor] Added grog messages to alcohol speech bubble filter list
+* [Minor] Can change Minimap modifiers now when both clickthrough options are selected
 * [Fix] Fixed bugs with wrong Effect Monitor offset when loading toolbox with minions
 * [Fix] Fixed crash dialog sometimes showing when GW is closed whilst toolbox is running
 * [Fix] Fixed bugs causing wrong or missing skills to be loaded when trying to load a skill bar with toolbox running
 * [Fix] Fixed some non-salvagable items being shown as salvagable when using Salvage All function
 * [Fix] Fixed re-invite not working on current player
+* [Fix] Fixed rare loading screen freeze
+* [Fix] Fixed Skillbar and Minimap potentially being off by 1 pixel when pinned to ingame window
+* [Fix] Reapply title defaults to Lightbringer again
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.17_Release/GWToolboxdll.dll)
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.0_Release/GWToolboxdll.dll)
 
 ## Version 5.16
 * [New] Added option in game settings to suppress overhead info for experience/faction gained
