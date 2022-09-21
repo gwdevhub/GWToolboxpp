@@ -51,7 +51,7 @@ private:
     std::array<Skill, 8> m_skills{};
 
     // Overall settings
-    enum Layout
+    enum class Layout
     {
         Row,
         Rows,
