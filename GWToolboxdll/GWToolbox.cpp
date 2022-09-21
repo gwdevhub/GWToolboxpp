@@ -27,19 +27,20 @@
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <GWCA/Context/GameContext.h>
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace {
     HMODULE dllmodule = nullptr;
-
     WNDPROC OldWndProc = nullptr;
     bool tb_destroyed = false;
-    bool imgui_initialized = false;
     bool defer_close = false;
-
     HWND gw_window_handle = nullptr;
+
+    utf8::string imgui_inifile;
+    CSimpleIni* inifile = nullptr;
     bool SaveIniToFile(const CSimpleIni* ini, const std::filesystem::path& location) {
         auto tmp_file = std::filesystem::path(location);
         tmp_file += ".tmp";
@@ -51,24 +52,65 @@ namespace {
         return true;
     }
 
-    bool StartGWToolbox_run = false;
-    void StartGWToolbox(IDirect3DDevice9*) {
-        if (StartGWToolbox_run) return;
-        StartGWToolbox_run = true;
-        GW::GameThread::Enqueue([]() {
-            GWToolbox::Instance().Initialize();
-            });
-        GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
-            __try {
-                GWToolbox::Instance().Draw(device);
-            }
-            __except (EXCEPT_EXPRESSION_ENTRY) {
-            }
-            });
+    bool event_handler_attached = false;
+    bool AttachWndProcHandler() {
+        if (event_handler_attached)
+            return true;
+        Log::Log("installing event handler\n");
+        gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
+        OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
+        Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
+        event_handler_attached = true;
+        return true;
+    }
+    bool DetachWndProcHandler() {
+        if (!event_handler_attached)
+            return true;
+        Log::Log("Restoring input hook\n");
+        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
+        event_handler_attached = false;
+        return true;
+    }
+
+    bool imgui_initialized = false;
+    bool AttachImgui(IDirect3DDevice9* device) {
+        if (imgui_initialized)
+            return true;
+        ImGui::CreateContext();
+        //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
+        ImGui_ImplDX9_Init(device);
+        ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
+
         GW::Render::SetResetCallback([](IDirect3DDevice9* device) {
             UNREFERENCED_PARAMETER(device);
             ImGui_ImplDX9_InvalidateDeviceObjects();
             });
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.MouseDrawCursor = false;
+        io.IniFilename = imgui_inifile.bytes;
+
+        Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
+            "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
+            [](bool success, const std::wstring& error) {
+                if (success) {
+                    GuiUtils::LoadFonts();
+                }
+                else {
+                    Log::ErrorW(L"Cannot load font!\n%s",error.c_str());
+                }
+            });
+        imgui_initialized = true;
+        return true;
+    }
+    bool DetachImgui() {
+        if (!imgui_initialized)
+            return true;
+        ImGui_ImplDX9_Shutdown();
+        ImGui_ImplWin32_Shutdown();
+        ImGui::DestroyContext();
+        imgui_initialized = false;
+        return true;
     }
 }
 
@@ -105,7 +147,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 
     // Some modules rely on the gwdx_ptr being present for stuff like getting viewport coords.
     // Becuase this ptr isn't set until the Render loop runs at least once, let it run and then reassign SetRenderCallback.
-    GW::Render::SetRenderCallback(StartGWToolbox);
+    GWToolbox::Instance().Initialize();
 
     Log::Log("Installed dx hooks\n");
 
@@ -282,10 +324,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 void GWToolbox::Initialize() {
     if (initialized || must_self_destruct)
         return;
-    Log::Log("installing event handler\n");
-    gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
-    OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
-    Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
     imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
 
@@ -338,6 +376,14 @@ void GWToolbox::Initialize() {
         if(c && c->player_name)
             Log::InfoW(L"Hello!");
     }
+    GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
+        __try {
+            GWToolbox::Instance().Draw(device);
+        }
+        __except (EXCEPT_EXPRESSION_ENTRY) {
+        }
+        });
+
     initialized = true;
 }
 void GWToolbox::FlashWindow() {
@@ -362,20 +408,24 @@ void GWToolbox::LoadModuleSettings() {
     }
 }
 void GWToolbox::SaveSettings() {
+    if (!inifile)
+        return;
     for (ToolboxModule* module : modules) {
         module->SaveSettings(inifile);
     }
-    if (inifile) {
-        ASSERT(SaveIniToFile(inifile, Resources::GetPath(L"GWToolbox.ini")));
-    }
+    ASSERT(SaveIniToFile(inifile, Resources::GetPath(L"GWToolbox.ini")));
 }
 
 void GWToolbox::Terminate() {
     if (!initialized)
         return;
-    SaveSettings();
-    inifile->Reset();
-    delete inifile;
+    if (inifile) {
+        SaveSettings();
+        inifile->Reset();
+        delete inifile;
+        inifile = nullptr;
+    }
+
 
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
 
@@ -399,16 +449,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         }
 
         Instance().Terminate();
-        if (imgui_initialized) {
-            ImGui_ImplDX9_Shutdown();
-            ImGui_ImplWin32_Shutdown();
-            ImGui::DestroyContext();
-            imgui_initialized = false;
-        }
-
-
-        Log::Log("Restoring input hook\n");
-        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
+        ASSERT(DetachImgui());
+        ASSERT(DetachWndProcHandler());
 
         GW::DisableHooks();
         initialized = false;
@@ -419,30 +461,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         && !must_self_destruct
         && GW::Render::GetViewportWidth() > 0
         && GW::Render::GetViewportHeight() > 0) {
-
-        if (!imgui_initialized) {
-            ImGui::CreateContext();
-            //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
-            ImGui_ImplDX9_Init(device);
-            ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
-
-            ImGuiIO& io = ImGui::GetIO();
-            io.MouseDrawCursor = false;
-            io.IniFilename = GWToolbox::Instance().imgui_inifile.bytes;
-
-            Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
-                "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
-                [](bool success, const std::wstring& error) {
-                    if (success) {
-                        GuiUtils::LoadFonts();
-                    }
-                    else {
-                        Log::ErrorW(L"Cannot load font!\n%s",error.c_str());
-                    }
-                });
-
-            imgui_initialized = true;
-        }
+        // Attach WndProc in the render loop to make sure the window is loaded and ready
+        ASSERT(AttachWndProcHandler());
+        // Attach imgui if not already done so
+        ASSERT(AttachImgui(device));
 
         if (!GW::UI::GetIsUIDrawn())
             return;
@@ -512,8 +534,6 @@ void GWToolbox::Update(GW::HookStatus *)
     if (last_tick_count == 0)
         last_tick_count = GetTickCount();
 
-    if (!initialized)
-        Initialize();
     if (initialized
         && imgui_initialized
         && !must_self_destruct) {

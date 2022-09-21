@@ -14,9 +14,6 @@ LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
 class GWToolbox {
-    GWToolbox() = default;
-    ~GWToolbox() { free(imgui_inifile); }
-
 public:
     static GWToolbox& Instance() {
         static GWToolbox instance;
@@ -81,8 +78,7 @@ private:
     // Plugins
     std::vector<TBModule*> plugins;
 
-    utf8::string imgui_inifile;
-    CSimpleIni* inifile = nullptr;
+
 
     GW::HookEntry Update_Entry;
 
