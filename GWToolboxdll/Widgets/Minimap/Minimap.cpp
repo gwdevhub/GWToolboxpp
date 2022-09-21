@@ -11,7 +11,6 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/NPC.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -371,7 +370,7 @@ void Minimap::DrawSettingInternal()
     static char const *minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
 
     ImVec2 winsize(100.0f, 100.0f);
-    ImGuiWindow *window = ImGui::FindWindowByName(Name());
+    const ImGuiWindow* window = ImGui::FindWindowByName(Name());
     if (window) {
         winsize = window->Size;
     }
@@ -427,11 +426,7 @@ void Minimap::DrawSettingInternal()
     ImGui::StartSpacedElements(200.f);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Explorable areas", &mouse_clickthrough_in_explorable);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Outposts", &mouse_clickthrough_in_outpost);
-    bool click_modifiers_editable = !(mouse_clickthrough_in_explorable && mouse_clickthrough_in_outpost);
-    if (!click_modifiers_editable) {
-        ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-    }
+
     ImGui::Unindent();
     ImGui::Text("Hold + Click modifiers");
     ImGui::ShowHelp("Define behaviour of holding keyboard keys and clicking the minimap.\n"
@@ -439,15 +434,11 @@ void Minimap::DrawSettingInternal()
                     "Target: click to target agent.\n"
                     "Move: move the minimap outside of compass range.\n"
                     "Walk: start walking character to selected location.\n");
-    ImGui::Combo("None", reinterpret_cast<int *>(&key_none_behavior), minimap_modifier_behavior_combo_str);
-    ImGui::Combo("Control", reinterpret_cast<int *>(&key_ctrl_behavior), minimap_modifier_behavior_combo_str);
-    ImGui::Combo("Shift", reinterpret_cast<int *>(&key_shift_behavior), minimap_modifier_behavior_combo_str);
-    ImGui::Combo("Alt", reinterpret_cast<int *>(&key_alt_behavior), minimap_modifier_behavior_combo_str);
+    ImGui::Combo("None", reinterpret_cast<int*>(&key_none_behavior), minimap_modifier_behavior_combo_str);
+    ImGui::Combo("Control", reinterpret_cast<int*>(&key_ctrl_behavior), minimap_modifier_behavior_combo_str);
+    ImGui::Combo("Shift", reinterpret_cast<int*>(&key_shift_behavior), minimap_modifier_behavior_combo_str);
+    ImGui::Combo("Alt", reinterpret_cast<int*>(&key_alt_behavior), minimap_modifier_behavior_combo_str);
 
-    if (!click_modifiers_editable) {
-        ImGui::PopItemFlag();
-        ImGui::PopStyleVar();
-    }
     ImGui::StartSpacedElements(256.f);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
@@ -467,7 +458,7 @@ void Minimap::DrawSettingInternal()
 void Minimap::LoadSettings(CSimpleIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
+    Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"),
         "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
         [](bool success, const std::wstring& error) {
             if (success) {
