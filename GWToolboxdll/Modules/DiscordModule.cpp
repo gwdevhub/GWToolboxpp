@@ -1,4 +1,4 @@
-/*   
+/*
 Thanks to KAOS for original version from https://github.com/GregLando113/gw-discord
 
 HOW TO TEST WITH 2 DISCORD INSTANCES IN DEBUG MODE:
@@ -18,7 +18,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/WorldContext.h>
-#include <GWCA/Context/PartyContext.h>
 
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Map.h>
@@ -33,7 +32,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
@@ -49,7 +47,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <Windows/TravelWindow.h>
 
 #define DISCORD_APP_ID 378706083788881961
-#define DISCORD_DLL_REMOTE_URL "https://raw.githubusercontent.com/3vcloud/GWToolboxpp/master/resources/discord_game_sdk.dll"
 
 typedef enum EDiscordResult(__cdecl* DiscordCreate_pt)(DiscordVersion version,struct DiscordCreateParams* params,struct IDiscordCore** result);
 
@@ -325,10 +322,11 @@ void DiscordModule::Initialize() {
     // Try to download and inject discord_game_sdk.dll for discord.
     dll_location = Resources::GetPath(L"discord_game_sdk.dll");
     // NOTE: We're using the one we know matches our API version, not checking for any other discord dll on the machine.
-    Resources::Instance().EnsureFileExists(dll_location, DISCORD_DLL_REMOTE_URL,
+    Resources::EnsureFileExists(dll_location,
+        "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/discord_game_sdk.dll",
         [&](bool success, const std::wstring& error) {
             if (!success || !LoadDll()) {
-                Log::LogW(L"Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%s",error.c_str());
+                Log::LogW(L"Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%s", error.c_str());
                 return;
             }
             pending_discord_connect = pending_activity_update = discord_enabled;
@@ -362,7 +360,7 @@ void DiscordModule::JoinParty() {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return; // Loading
     if (!join_party_started) // Started to join party
-        join_party_started = time(nullptr); 
+        join_party_started = time(nullptr);
     if (join_party_started < time(nullptr) - 10) // Join timeout (try again please!)
         return FailedJoin("Failed to join party after 10 seconds");
     if (join_party_next_action > time(nullptr))
@@ -404,13 +402,13 @@ bool DiscordModule::Connect() {
     if (discord_connected)
         return true; // Already connected
 #ifdef _DEBUG
-/* 
+/*
     HOW TO TEST WITH 2 DISCORD INSTANCES IN DEBUG MODE:
     1. Close DiscordCanary.exe, load first GW client and start toolbox
         Client 1 is now sending statuses to Discord.exe
     2. Open DiscordCanary.exe, load second GW client and start toolbox
         Client 2 is now sending statuses to DiscordCanary.exe
-    NOTE: Disconnecting/reconnecting will mess this up so repeat process. 
+    NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 */
     ConnectCanary(); // Sets env var to attach to canary if its open.
 #endif
@@ -584,7 +582,7 @@ void DiscordModule::UpdateActivity() {
     activity.party.size.max_size = 0;
     memset(activity.secrets.join, 0, 128);
     // Only update info if we're allowed
-    
+
     if (show_activity) {
         unsigned short map_id = static_cast<unsigned short>(GW::Map::GetMapID());
         short map_region = static_cast<short>(GW::Map::GetRegion());
