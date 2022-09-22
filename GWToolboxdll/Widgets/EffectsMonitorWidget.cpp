@@ -374,7 +374,7 @@ namespace {
             minion_count = 0;
         } break;
         case GW::UI::UIMessage::kMapLoaded: { // not ready yet at kMapChange
-            morale_percent = GW::WorldContext::instance()->morale;
+            morale_percent = GetMorale();
         } break;
         case GW::UI::UIMessage::kPreferenceChanged: // Refresh preference e.g. window X/Y position
         case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
