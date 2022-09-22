@@ -215,7 +215,7 @@ void Resources::Terminate() {
 }
 
 void Resources::EndLoading() {
-    EnqueueWorkerTask([this]() { should_stop = true; });
+    EnqueueWorkerTask([this] { should_stop = true; });
 }
 
 std::filesystem::path Resources::GetSettingsFolderPath()
@@ -227,15 +227,7 @@ std::filesystem::path Resources::GetSettingsFolderPath()
     ASSERT(PathGetDocumentsPath(docpath, L"GWToolboxpp"));
     docpath = docpath / computer_name;
 
-    bool result;
-    ASSERT(PathExistsSafe(docpath / "GWToolbox.ini", &result));
-    if (result) {
-        return docpath;
-    }
-
-    if (PathCreateDirectorySafe(docpath)) {
-        return docpath;
-    }
+    ASSERT(PathCreateDirectorySafe(docpath));
 
     return docpath;
 }
@@ -462,7 +454,7 @@ bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_fil
         StrSwprintf(error, L"Error writing file %s - Error is %lu", path_to_file.filename().wstring().c_str(), GetLastError());
         return false;
     }
-    else if (bytesWritten != size) {
+    if (bytesWritten != size) {
         StrSwprintf(error, L"Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.filename().wstring().c_str());
         return false;
     }

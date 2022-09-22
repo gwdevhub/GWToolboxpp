@@ -90,16 +90,16 @@ namespace {
         io.MouseDrawCursor = false;
         io.IniFilename = imgui_inifile.bytes;
 
-        Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
+        Resources::EnsureFileExists(Resources::GetPath(L"Font.ttf"),
             "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
             [](bool success, const std::wstring& error) {
-                if (success) {
-                    GuiUtils::LoadFonts();
-                }
-                else {
-                    Log::ErrorW(L"Cannot load font!\n%s",error.c_str());
-                }
-            });
+            if (success) {
+                GuiUtils::LoadFonts();
+            }
+            else {
+                Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
+            }
+        });
         imgui_initialized = true;
         return true;
     }
@@ -373,13 +373,13 @@ void GWToolbox::Initialize()
     ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        auto* c = GW::CharContext::instance();
+        const auto* c = GW::CharContext::instance();
         if(c && c->player_name)
             Log::InfoW(L"Hello!");
     }
     GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
         __try {
-            GWToolbox::Instance().Draw(device);
+            Instance().Draw(device);
         }
         __except (EXCEPT_EXPRESSION_ENTRY) {
         }
