@@ -369,14 +369,27 @@ void Minimap::DrawSettingInternal()
 {
     static char const *minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
 
-    ImVec2 winsize(100.0f, 100.0f);
-    const ImGuiWindow* window = ImGui::FindWindowByName(Name());
-    if (window) {
-        winsize = window->Size;
+    if (snap_to_compass) {
+        ImGui::NextSpacedElement();
     }
-    if (ImGui::DragFloat("Size", &winsize.x, 1.0f, 0.0f, 0.0f, "%.0f")) {
-        winsize.y = winsize.x;
-        ImGui::SetWindowSize(Name(), winsize);
+    ImGui::Checkbox("Snap to compass", &snap_to_compass);
+    ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
+
+    if (snap_to_compass)
+        is_movable = is_resizable = false;
+    else
+        is_movable = is_resizable = true;
+
+    if (is_resizable) {
+        ImVec2 winsize(100.0f, 100.0f);
+        const ImGuiWindow* window = ImGui::FindWindowByName(Name());
+        if (window) {
+            winsize = window->Size;
+        }
+        if (ImGui::DragFloat("Size", &winsize.x, 1.0f, 0.0f, 0.0f, "%.0f")) {
+            winsize.y = winsize.x;
+            ImGui::SetWindowSize(Name(), winsize);
+        }
     }
 
     ImGui::Text("General");
@@ -451,8 +464,6 @@ void Minimap::DrawSettingInternal()
     ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
     ImGui::NextSpacedElement(); ImGui::Checkbox("Circular", &circular_map);
     ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Snap to compass", &snap_to_compass);
-    ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
 }
 
 void Minimap::LoadSettings(CSimpleIni *ini)
