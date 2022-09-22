@@ -18,6 +18,8 @@
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
+#include <Utils/GuiUtils.h>
+#include <Color.h>
 #include "EffectsMonitorWidget.h"
 
 namespace {
@@ -66,7 +68,7 @@ namespace {
         uint32_t percent;
     };
 
-    const GW::UI::UIMessage hook_messages[] = {
+    constexpr GW::UI::UIMessage hook_messages[] = {
         GW::UI::UIMessage::kMinionCountUpdated,
         GW::UI::UIMessage::kEffectAdd,
         GW::UI::UIMessage::kEffectRenew,
@@ -156,8 +158,9 @@ namespace {
             return 10;
         case GW::Constants::SkillType::Ritual:
             return 6;
+        default:
+            return 0xd;
         }
-        return 0xd;
     }
     // Recalculate position of widget based on gw effect monitor position
     void RefreshPosition() {
@@ -287,7 +290,7 @@ namespace {
     }
     // Triggered when an effect has reached < 0 duration. Returns true if effect has been removed.
     bool DurationExpired(GW::Effect& effect) {
-        uint32_t timer = GW::MemoryMgr::GetSkillTimer();
+        const auto timer = GW::MemoryMgr::GetSkillTimer();
         switch (effect.skill_id) {
         case GW::Constants::SkillID::Aspect_of_Exhaustion:
         case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
@@ -295,31 +298,31 @@ namespace {
             effect.duration = 30.f;
             effect.timestamp = timer;
             return false;
+        default: break;
         }
-        if (!effect.duration)
-            return &effect;
+        if (effect.duration == 0.f)
+            return true;
         // Effect expired
         return RemoveEffect(effect.effect_id);
 
     }
     // Update effect on the gwtoolbox overlay
     bool SetEffect(const GW::Effect* effect) {
-        uint32_t type = GetEffectSortOrder(effect->skill_id);
+        const uint32_t type = GetEffectSortOrder(effect->skill_id);
         if (!cached_effects.contains(type))
             cached_effects[type] = std::vector<GW::Effect>();
 
         // Player can stand in range of more than 1 spirit; use the longest effect duration for the effect monitor
-        if (effect->duration) {
+        if (effect->duration > 0) {
             effect = GetLongestEffectBySkillId(effect->skill_id);
         }
         if (!effect) {
             return false;
         }
 
-        size_t current = GetEffectIndex(cached_effects[type], effect->skill_id);
+        const size_t current = GetEffectIndex(cached_effects[type], effect->skill_id);
         if (current != 0xFF) {
             cached_effects[type].erase(cached_effects[type].begin() + current);
-            current = 0xFF;
         }
         cached_effects[type].push_back(*effect);
         // Trigger durations for aspects etc
@@ -336,31 +339,31 @@ namespace {
             minion_count = GetMinionCount();
         } break;
         case GW::UI::UIMessage::kMoraleChange: { // Morale boost/DP change
-            struct Packet {
+            const struct Packet {
                 uint32_t agent_id;
                 uint32_t percent;
-            } *packet = (Packet*)wParam;
+            } *packet = static_cast<Packet*>(wParam);
             if (packet->agent_id == GW::Agents::GetPlayerId())
                 morale_percent = packet->percent;
         } break;
         case GW::UI::UIMessage::kEffectAdd: {
-            struct Payload {
+            const struct Payload {
                 uint32_t agent_id;
                 GW::Effect* e;
-            } *details = (Payload*)wParam;
+            } *details = static_cast<Payload*>(wParam);
             const uint32_t agent_id = GW::Agents::GetPlayerId();
             if (agent_id && agent_id != details->agent_id)
                 break;
             SetEffect(details->e);
         } break;
         case GW::UI::UIMessage::kEffectRenew: {
-            const GW::Effect* e = GetEffect(*(uint32_t*)wParam);
+            const GW::Effect* e = GetEffect(*static_cast<uint32_t*>(wParam));
             if (e)
                 SetEffect(e);
         } break;
 
         case GW::UI::UIMessage::kEffectRemove: {// Remove effect
-            RemoveEffect((uint32_t)wParam);
+            RemoveEffect(reinterpret_cast<uint32_t>(wParam));
         } break;
         case GW::UI::UIMessage::kMapChange: { // Map change
             cached_effects.clear();
@@ -371,17 +374,13 @@ namespace {
         case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
             RefreshPosition();
             break;
+        default: break;
         }
     }
 }
-EffectsMonitorWidget::EffectsMonitorWidget() {
-    is_movable = is_resizable = false;
-};
-EffectsMonitorWidget& EffectsMonitorWidget::Instance() {
-    static EffectsMonitorWidget instance;
-    return instance;
-}
-void EffectsMonitorWidget::Initialize() {
+
+void EffectsMonitorWidget::Initialize()
+{
     ToolboxWidget::Initialize();
 
     for (const auto& message_id : hook_messages) {
@@ -393,13 +392,16 @@ void EffectsMonitorWidget::Initialize() {
         });
     RefreshPosition();
 }
-void EffectsMonitorWidget::Terminate() {
+
+void EffectsMonitorWidget::Terminate()
+{
     ToolboxWidget::Terminate();
     for (size_t i = 0; i < _countof(hook_messages); i++) {
         GW::UI::RemoveUIMessageCallback(&OnEffect_Entry);
     }
     cached_effects.clear();
 }
+
 void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 {
     if (!visible) return;
@@ -505,6 +507,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     ImGui::End();
     ImGui::PopStyleVar(2);
 }
+
 void EffectsMonitorWidget::LoadSettings(CSimpleIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
@@ -519,6 +522,7 @@ void EffectsMonitorWidget::LoadSettings(CSimpleIni* ini)
     color_text_shadow = Colors::Load(ini, Name(), VAR_NAME(color_text_shadow), color_text_shadow);
     color_background = Colors::Load(ini, Name(), VAR_NAME(color_background), color_background);
 }
+
 void EffectsMonitorWidget::SaveSettings(CSimpleIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
@@ -534,6 +538,7 @@ void EffectsMonitorWidget::SaveSettings(CSimpleIni* ini)
     Colors::Save(ini, Name(), VAR_NAME(color_text_shadow), color_text_shadow);
     Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
 }
+
 void EffectsMonitorWidget::DrawSettingInternal()
 {
     ToolboxWidget::DrawSettingInternal();
