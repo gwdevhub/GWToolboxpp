@@ -364,8 +364,8 @@ namespace {
         } break;
         case GW::UI::UIMessage::kMapChange: { // Map change
             cached_effects.clear();
-            morale_percent = 100;
-            hard_mode = false;
+            hard_mode = false; // will be reapplied in OnEffect callback
+            GW::GameThread::Enqueue([] { RefreshEffects(); });
         } break;
         case GW::UI::UIMessage::kPreferenceChanged: // Refresh preference e.g. window X/Y position
         case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
