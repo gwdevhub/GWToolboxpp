@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/WorldContext.h>
@@ -21,6 +22,7 @@
 #include <Utils/GuiUtils.h>
 #include <Color.h>
 #include "EffectsMonitorWidget.h"
+
 
 namespace {
 
@@ -75,6 +77,7 @@ namespace {
         GW::UI::UIMessage::kMoraleChange,
         GW::UI::UIMessage::kEffectRemove,
         GW::UI::UIMessage::kMapChange,
+        GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kPreferenceChanged,
         GW::UI::UIMessage::kUIPositionChanged
     };
@@ -91,11 +94,11 @@ namespace {
         return mine != minions_arr.end() ? mine->minion_count : 0;
     }
     uint32_t GetMorale() {
-        auto w = GW::WorldContext::instance();
+        const auto w = GW::WorldContext::instance();
         return w ? w->morale : 100;
     }
     uint32_t GetMorale(uint32_t agent_id) {
-        auto w = GW::WorldContext::instance();
+        const auto w = GW::WorldContext::instance();
         if (!(w && w->party_morale_related.size()))
             return 100;
         for (const auto& m : w->party_morale_related) {
@@ -256,7 +259,7 @@ namespace {
         for (GW::Effect& effect : readd_effects) {
             remove.effect_id = effect.effect_id;
             GW::StoC::EmulatePacket(&remove);
-            add.skill_id = (uint32_t)effect.skill_id;
+            add.skill_id = static_cast<uint32_t>(effect.skill_id);
             add.effect_id = effect.effect_id;
             add.duration = effect.duration;
             add.attribute_level = effect.attribute_level;
@@ -362,13 +365,20 @@ namespace {
                 SetEffect(e);
         } break;
 
-        case GW::UI::UIMessage::kEffectRemove: {// Remove effect
+        case GW::UI::UIMessage::kEffectRemove: {
             RemoveEffect(reinterpret_cast<uint32_t>(wParam));
         } break;
-        case GW::UI::UIMessage::kMapChange: { // Map change
+        case GW::UI::UIMessage::kMapChange: {
             cached_effects.clear();
-            hard_mode = false; // will be reapplied in OnEffect callback
-            GW::GameThread::Enqueue([] { RefreshEffects(); });
+        } break;
+        case GW::UI::UIMessage::kMapLoaded: {
+            GW::GameThread::Enqueue([] {
+                if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+                    morale_percent = 100;
+                    hard_mode = false; // will be reapplied in OnEffect callback
+                }
+                RefreshEffects();
+            });
         } break;
         case GW::UI::UIMessage::kPreferenceChanged: // Refresh preference e.g. window X/Y position
         case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
@@ -429,12 +439,12 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     int row_skills_drawn = 0;
     constexpr int row_idx = 1;
     int draw = 0;
-    auto next_effect = [&](std::string_view str = "") {
+    const auto next_effect = [&](std::string_view str = "") {
         row_skills_drawn++;
         if (!str.empty()) {
             const ImVec2 label_size = ImGui::CalcTextSize(str.data());
             const ImVec2 label_pos(skill_top_left.x + m_skill_width - label_size.x - 1.f, skill_top_left.y + m_skill_width - label_size.y - 1.f);
-            ImGui::GetWindowDrawList()->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_effects, str.data());
+            ImGui::GetWindowDrawList()->AddText({label_pos.x + 1, label_pos.y + 1}, 0xFFFF0000, str.data());
         }
         if (layout == Layout::Rows) {
             skill_top_left.x += (m_skill_width * x_translate);
@@ -455,7 +465,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         }
     };
     bool skipped_effects = false;
-    auto skip_effects = [&] {
+    const auto skip_effects = [&] {
         if (skipped_effects) return;
         if (morale_percent != 100) next_effect();
         if (minion_count) next_effect();
