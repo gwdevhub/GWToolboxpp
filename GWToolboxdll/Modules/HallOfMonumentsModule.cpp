@@ -266,7 +266,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character
 
     Resources::Instance().Download(url_str, [out, callback](bool success, const std::string& response) {
         if (!success) {
-            Log::Error("Failed to load account hom code %s\n%s", out->character_name, response.c_str());
+            Log::Log("Failed to load account hom code %s\n%s", out->character_name, response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
             if (callback) callback(out);
             return;
@@ -274,14 +274,14 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character
         std::regex json_regex("legacy_bits\":\"([^\"]+)");
         std::smatch m;
         if (!std::regex_search(response, m, json_regex)) {
-            Log::Error("Failed to find regex code from %s", response.c_str());
+            Log::Log("Failed to find regex code from %s", response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
             if (callback) callback(out);
             return;
         }
         std::string hom_code = m[1].str();
         if (!Instance().DecodeHomCode(hom_code.c_str(), out)) {
-            Log::Error("Failed to DecodeHomCode from %s", m[1].str().c_str());
+            Log::Log("Failed to DecodeHomCode from %s", m[1].str().c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
             if (callback) callback(out);
             return;

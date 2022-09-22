@@ -400,7 +400,7 @@ namespace {
 
 	void OnHomLoaded(HallOfMonumentsAchievements* result) {
 		if (result->state != HallOfMonumentsAchievements::State::Done) {
-            Log::ErrorW(L"Failed to load Hall of Monuments achievements for %s", result->character_name);
+            Log::LogW(L"Failed to load Hall of Monuments achievements for %s", result->character_name);
             return;
 		}
         //Log::InfoW(L"Loaded Hom for %s", result->character_name);
