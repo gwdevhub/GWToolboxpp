@@ -645,8 +645,8 @@ void Minimap::Draw(IDirect3DDevice9 *)
             }
             else {
                 const float multiplier = GuiUtils::GetGWScaleMultiplier();
-                float compass_width = compass_frame->width(multiplier);
-                float compass_padding = compass_width * .05f;
+                const float compass_width = compass_frame->width(multiplier);
+                const float compass_padding = compass_width * .05f;
                 location = { (int)(compass_frame->left(multiplier) + compass_padding),(int)(compass_frame->top(multiplier) + compass_padding) };
                 size = { (int)(compass_width - (compass_padding * 2.f)) , (int)(compass_frame->height(multiplier) - (compass_padding * 2.f)) };
                 ImGui::SetWindowPos({ (float)location.x,(float)location.y });
@@ -654,15 +654,12 @@ void Minimap::Draw(IDirect3DDevice9 *)
             }
         }
 
-        //auto& style = ImGui::GetStyle();
-        clipping.left = location.x;
-        clipping.right = location.x + size.x;
-        clipping.top = location.y;
-        clipping.bottom = location.y + size.y;
-        // @Broken: Updating ImGui from 1.77 to 1.78 broke AddCallback for Minimap - didn't draw at all for me. - Jon
-        // Instead, record the clipping location of the window and have GWToolbox.cpp call Minimap::Render before ImGui is loaded.
-
-        //ImGui::GetWindowDrawList()->AddCallback(render_callback, static_cast<void *>(device));
+        clipping = {
+            static_cast<LONG>(ImGui::GetWindowPos().x),
+            static_cast<LONG>(ImGui::GetWindowPos().y),
+            static_cast<LONG>(std::ceil(ImGui::GetWindowPos().x + ImGui::GetWindowSize().x)),
+            static_cast<LONG>(std::ceil(ImGui::GetWindowPos().y + ImGui::GetWindowSize().y)),
+        };
     }
     ImGui::End();
     ImGui::PopStyleColor();
@@ -772,31 +769,38 @@ void Minimap::Render(IDirect3DDevice9* device) {
     device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 
     const auto FillRect = [&device](const Color color, const float x, const float y, const float w, const float h) {
-        const D3DVertex vertices[6] = { {x,y, 0.0f, color},
+        const D3DVertex vertices[6] = {
+            {x, y, 0.0f, color},
             {x + w, y, 0.0f, color},
             {x, y + h, 0.0f, color},
-            {x + w, y + h, 0.0f, color} };
+            {x + w, y + h, 0.0f, color}
+        };
         device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(D3DVertex));
     };
 
     // we MUST draw this for the stencil test, even if alpha is 0
     const auto FillCircle = [&device](
         const float x, const float y, const float radius, const Color clr, const int resolution = 192) {
-            const auto res = std::min(resolution, 192);
-            D3DVertex vertices[194];
-            for (auto i = 0; i <= res; ++i) {
-                vertices[i] = { radius * cos(DirectX::XM_PI * (i / (static_cast<float>(res) / 2.f))) + x,
-                    y + radius * sin(DirectX::XM_PI * (i / (static_cast<float>(res) / 2.f))), 0.0f, clr};
+        const auto res = std::min(resolution, 192);
+            D3DVertex vertices[193];
+            for (auto i = 0; i <= res; i++) {
+                const auto angle = i / static_cast<float>(res) * DirectX::XM_2PI;
+                vertices[i] = {
+                    x + radius * cos(angle),
+                    y + radius * sin(angle),
+                    0.0f,
+                    clr
+                };
             }
             device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, res, vertices, sizeof(D3DVertex));
     };
 
-    Instance().RenderSetupProjection(device);
+    instance.RenderSetupProjection(device);
 
-    const D3DCOLOR background = Instance().pmap_renderer.GetBackgroundColor();
+    const D3DCOLOR background = instance.pmap_renderer.GetBackgroundColor();
     device->SetScissorRect(&instance.clipping); // always clip to rect as a fallback if the stenciling fails
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-    if (Instance().circular_map) {
+    if (instance.circular_map) {
         device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
         device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
         device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
@@ -807,7 +811,7 @@ void Minimap::Render(IDirect3DDevice9* device) {
         device->SetRenderState(D3DRS_STENCILREF, 1);
         device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer
-        FillCircle(0, 0, 5000.0f, background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
+        FillCircle(0, 0, 5000.f, background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
         device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
         device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);

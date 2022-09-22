@@ -73,22 +73,21 @@ void RangeRenderer::DrawSettings()
         Invalidate();
 }
 
-size_t RangeRenderer::CreateCircle(D3DVertex *vertices, float radius, DWORD color) const
+size_t RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD color) const
 {
     const auto scale = Minimap::Instance().GetGwinchScale();
     const auto xdiff = static_cast<float>(line_thickness) / scale.x;
     const auto ydiff = static_cast<float>(line_thickness) / scale.y;
-    size_t circle_vertices;
-    for (circle_vertices = 0; circle_vertices < circle_points - 1; circle_vertices += 2) {
-        const auto angle = circle_vertices * (2 * static_cast<float>(M_PI) / circle_triangles);
-        vertices[circle_vertices].x = radius * std::cosf(angle);
-        vertices[circle_vertices].y = radius * std::sinf(angle);
-        vertices[circle_vertices + 1].x = (radius - xdiff) * std::cosf(angle);
-        vertices[circle_vertices + 1].y = (radius - ydiff) * std::sinf(angle);
-        vertices[circle_vertices].z = vertices[circle_vertices + 1].z = 0.0f;
-        vertices[circle_vertices].color = vertices[circle_vertices + 1].color = color;
+    for (auto i = 0; i <= circle_triangles; i += 2) {
+        const auto angle = i / static_cast<float>(circle_triangles) * DirectX::XM_2PI;
+        vertices[i].x = radius * cos(angle);
+        vertices[i].y = radius * sin(angle);
+        vertices[i + 1].x = (radius - xdiff) * cos(angle);
+        vertices[i + 1].y = (radius - ydiff) * sin(angle);
+        vertices[i].z = vertices[i + 1].z = 0.0f;
+        vertices[i].color = vertices[i + 1].color = color;
     }
-    return circle_vertices;
+    return circle_points;
 }
 
 void RangeRenderer::Initialize(IDirect3DDevice9 *device)
@@ -99,14 +98,14 @@ void RangeRenderer::Initialize(IDirect3DDevice9 *device)
     checkforhos_ = true;
     havehos_ = false;
 
-    D3DVertex *vertices = nullptr;
-    size_t vertex_count = count + 6;
+    D3DVertex* vertices = nullptr;
+    const size_t vertex_count = count + 6;
 
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void **>(&vertices), D3DLOCK_DISCARD);
     ASSERT(vertices != nullptr);
 
-    const D3DVertex *vertices_max = vertices + vertex_count;
+    const D3DVertex* vertices_max = vertices + vertex_count;
 
     // Compass range
     float radius = GW::Constants::Range::Compass;
@@ -150,23 +149,12 @@ void RangeRenderer::Initialize(IDirect3DDevice9 *device)
 
     // HoS line
     ASSERT(vertices + 5 < vertices_max);
-    for (size_t i = 0; i < 6; ++i) {
-        vertices[i].z = 0.0f;
-        vertices[i].color = color_range_hos;
-    }
-    vertices[0].x = 260.0f;
-    vertices[0].y = 0.0f;
-    vertices[1].x = 460.0f;
-    vertices[1].y = 0.0f;
-
-    vertices[2].x = -150.0f;
-    vertices[2].y = 0.0f;
-    vertices[3].x = 150.0f;
-    vertices[3].y = 0.0f;
-    vertices[4].x = 0.0f;
-    vertices[4].y = -150.0f;
-    vertices[5].x = 0.0f;
-    vertices[5].y = 150.0f;
+    vertices[0] = {260.f, 0.f, 0.f, color_range_hos};
+    vertices[1] = {460.f, 0.f, 0.f, color_range_hos};
+    vertices[2] = {-150.f, 0.f, 0.f, color_range_hos};
+    vertices[3] = {150, 0.f, 0.f, color_range_hos};
+    vertices[4] = {0, -150.f, 0.f, color_range_hos};
+    vertices[5] = {0.f, 150.f, 0.f, color_range_hos};
 
     buffer->Unlock();
 }
@@ -216,7 +204,7 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
     // Draw either aggro range or res range
     const GW::AgentLiving *target = GW::Agents::GetTargetAsAgentLiving();
     if (target && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        Color *color = nullptr;
+        const Color* color = nullptr;
         size_t target_circle_render_index = 0;
         if (target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable && target->GetIsDead()) {
             color = &color_range_res_aggro;
@@ -230,12 +218,10 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
             device->GetTransform(D3DTS_WORLD, &oldworld);
             const auto translate = DirectX::XMMatrixTranslation(target->x, target->y, 0.0f);
             device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate));
-            device->DrawPrimitive(type, circle_points * (render_index + target_circle_render_index), circle_triangles);
+            device->DrawPrimitive(type, circle_points * (render_index++ + target_circle_render_index), circle_triangles);
             device->SetTransform(D3DTS_WORLD, &oldworld);
         }
     }
-    render_index++;
-    render_index++;
 
     // Draw shadowstep range i.e. shadowwalk aggro
     const GW::Vec2f &shadowstep_location = Minimap::Instance().ShadowstepLocation();
@@ -244,10 +230,9 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
         device->GetTransform(D3DTS_WORLD, &oldworld);
         const auto translate = DirectX::XMMatrixTranslation(shadowstep_location.x, shadowstep_location.y, 0.0f);
         device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate));
-        device->DrawPrimitive(type, circle_points * render_index, circle_triangles);
+        device->DrawPrimitive(type, circle_points * render_index++, circle_triangles);
         device->SetTransform(D3DTS_WORLD, &oldworld);
     }
-    render_index++;
 
     // Draw hos line
     if (havehos_) {
