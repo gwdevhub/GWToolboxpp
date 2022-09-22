@@ -370,15 +370,11 @@ namespace {
         } break;
         case GW::UI::UIMessage::kMapChange: {
             cached_effects.clear();
+            hard_mode = false; // will be reapplied in OnEffect callback
+            minion_count = 0;
         } break;
-        case GW::UI::UIMessage::kMapLoaded: {
-            GW::GameThread::Enqueue([] {
-                if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-                    morale_percent = 100;
-                    hard_mode = false; // will be reapplied in OnEffect callback
-                }
-                RefreshEffects();
-            });
+        case GW::UI::UIMessage::kMapLoaded: { // not ready yet at kMapChange
+            morale_percent = GW::WorldContext::instance()->morale;
         } break;
         case GW::UI::UIMessage::kPreferenceChanged: // Refresh preference e.g. window X/Y position
         case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
