@@ -255,7 +255,7 @@ bool TeamspeakModule::GetTeamspeakProcess(std::filesystem::path* filename, PBOOL
             }
             else {
                 // 32 bit process on 64 bit OS. Sorry for confusing var name.
-                *is_x64 = ~*is_x64;
+                *is_x64 = *is_x64 ? 0 : 1;
             }
         }
         // NB: We COULD now traverse the modules for the process to see if the TS3 DLL is loaded.
