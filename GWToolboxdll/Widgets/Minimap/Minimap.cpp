@@ -367,7 +367,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
 
 void Minimap::DrawSettingInternal()
 {
-    static char const *minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
+    constexpr const char* minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
 
     if (snap_to_compass) {
         ImGui::NextSpacedElement();

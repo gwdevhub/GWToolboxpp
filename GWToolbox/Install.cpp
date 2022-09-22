@@ -48,30 +48,14 @@ bool EnsureInstallationDirectoryExist()
     }
     docpath = docpath / computer_name; // %USERPROFILE%\Documents\GWToolboxpp\<Computername>
 
-    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\crashes
-    const fs::path crashes = docpath / L"crashes";
-    if (!PathCreateDirectorySafe(crashes)) {
+    if (!PathCreateDirectorySafe(docpath)) {
         return false;
     }
-    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\logs
-    const fs::path logs = docpath / L"logs";
-    if (!PathCreateDirectorySafe(logs)) {
-        return false;
-    }
-    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\plugins
-    const fs::path plugins = docpath / L"plugins";
-    if (!PathCreateDirectorySafe(plugins)) {
-        return false;
-    }
-    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\data
-    const fs::path data = docpath / L"data";
-    if (!PathCreateDirectorySafe(data)) {
-        return false;
-    }
+
     return true;
 }
 
-bool CopyInstaller(void)
+bool CopyInstaller()
 {
     std::filesystem::path dest_path;
 

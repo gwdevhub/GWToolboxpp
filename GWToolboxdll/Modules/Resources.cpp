@@ -107,7 +107,7 @@ void Resources::InitRestClient(RestClient* r) {
     r->SetVerifyPeer(false);
 }
 
-HRESULT Resources::ResolveShortcut(std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path)
+HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path)
 {
     HRESULT hRes = E_FAIL;
     if (in_shortcut_path.extension() != ".lnk") {

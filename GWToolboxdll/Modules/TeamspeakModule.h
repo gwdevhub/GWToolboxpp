@@ -64,7 +64,7 @@ private:
         static bool fromJson(nlohmann::json& json, TS3User* user);
     };
     struct TS3Server {
-        uint32_t my_client_id;
+        uint32_t my_client_id = 0;
         std::string name;
         //char welcome_message[512];
         std::string host;
