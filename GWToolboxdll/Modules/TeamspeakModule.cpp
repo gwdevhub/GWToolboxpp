@@ -34,7 +34,7 @@
 namespace {
     const char* ws_host = "ws://localhost:27032";
     std::thread connector;
-    static UINT WM_TEAMSPEAK3_JSON_API_STARTED = 0;
+    UINT WM_TEAMSPEAK3_JSON_API_STARTED = 0;
 }
 using easywsclient::WebSocket;
 using nlohmann::json;
@@ -255,7 +255,7 @@ bool TeamspeakModule::GetTeamspeakProcess(std::filesystem::path* filename, PBOOL
             }
             else {
                 // 32 bit process on 64 bit OS. Sorry for confusing var name.
-                *is_x64 = !*is_x64;
+                *is_x64 = *is_x64 ? 0 : 1;
             }
         }
         // NB: We COULD now traverse the modules for the process to see if the TS3 DLL is loaded.

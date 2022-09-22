@@ -1,19 +1,25 @@
 #pragma once
 
-#include <Color.h>
 #include <ToolboxWidget.h>
 
 class EffectsMonitorWidget : public ToolboxWidget
 {
-    EffectsMonitorWidget();
+    EffectsMonitorWidget() { is_movable = is_resizable = false; }
+    ~EffectsMonitorWidget() = default;
+
 public:
-    static EffectsMonitorWidget& Instance();
+    static EffectsMonitorWidget& Instance()
+    {
+        static EffectsMonitorWidget instance;
+        return instance;
+    }
 
     [[nodiscard]] const char* Name() const override
     {
         return "Effect Durations";
     }
     [[nodiscard]] const char8_t* Icon() const override { return ICON_FA_HISTORY; }
+
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;

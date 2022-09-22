@@ -57,7 +57,7 @@ void CrashHandler::OnGWCrash(GWDebugInfo* details, uint32_t param_2, EXCEPTION_P
 }
 
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
-    std::wstring crash_folder = Resources::GetPath(L"crashes");
+    const std::wstring crash_folder = Resources::GetPath(L"crashes");
     const char* failure_message = nullptr;
     wchar_t error_info[512];
 

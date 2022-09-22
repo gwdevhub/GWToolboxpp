@@ -3,7 +3,6 @@
 #include <Path.h>
 #include "Download.h"
 #include "Install.h"
-#include "EmbeddedResource.h"
 
 namespace fs = std::filesystem;
 
@@ -49,30 +48,14 @@ bool EnsureInstallationDirectoryExist()
     }
     docpath = docpath / computer_name; // %USERPROFILE%\Documents\GWToolboxpp\<Computername>
 
-    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\crashes
-    const fs::path crashes = docpath / L"crashes";
-    if (!PathCreateDirectorySafe(crashes)) {
+    if (!PathCreateDirectorySafe(docpath)) {
         return false;
     }
-    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\logs
-    const fs::path logs = docpath / L"logs";
-    if (!PathCreateDirectorySafe(logs)) {
-        return false;
-    }
-    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\plugins
-    const fs::path plugins = docpath / L"plugins";
-    if (!PathCreateDirectorySafe(plugins)) {
-        return false;
-    }
-    // Create %USERPROFILE%\Documents\GWToolboxpp\<Computername>\data
-    const fs::path data = docpath / L"data";
-    if (!PathCreateDirectorySafe(data)) {
-        return false;
-    }
+
     return true;
 }
 
-bool CopyInstaller(void)
+bool CopyInstaller()
 {
     std::filesystem::path dest_path;
 
@@ -128,33 +111,6 @@ bool DeleteInstallationDirectory()
     return true;
 }
 
-bool DumpFont()
-{
-    fs::path docpath;
-    if (!PathGetDocumentsPath(docpath, L"GWToolboxpp")) {
-        return false;
-    }
-    fs::path computername;
-    if (!PathGetComputerName(computername)) {
-        return false;
-    }
-    const fs::path target = docpath / computername / "Font.ttf";
-    if (fs::exists(target)) {
-        return true;
-    }
-
-    const auto font = EmbeddedResource(IDR_BINARY1, L"Binary");
-    if (!font.data()) {
-        return false;
-    }
-
-    std::ofstream f(target.c_str(), std::ios::out | std::ios::binary);
-    f.write(static_cast<char*>(font.data()), font.size());
-    f.close();
-
-    return true;
-}
-
 bool Install(bool quiet)
 {
     if (IsInstalled())
@@ -162,11 +118,6 @@ bool Install(bool quiet)
 
     if (!EnsureInstallationDirectoryExist()) {
         fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
-        return false;
-    }
-
-    if (!DumpFont()) {
-        fprintf(stderr, "Couldn't unpack Font.ttf\n");
         return false;
     }
 
@@ -227,7 +178,6 @@ bool IsInstalled()
 
     if (!fs::exists(dllpath / L"GWToolboxdll.dll")) return false;
     if (!fs::exists(dllpath / L"GWToolbox.exe")) return false;
-    if (!fs::exists(computerpath / L"Font.ttf")) return false;
 
     return true;
 }

@@ -8,6 +8,7 @@ Previous releases are provided as dll files. If you are looking for the latest v
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
 ## Version 6.0
+* [New] GWToolbox no longer requires installation, you can immediately execute the exe or inject the dll manually
 * [New] `/target ally` and `/target enemy` added
 * [New] Added option to hide merchant items (selling only) in Inventory Settings module
 * [New] Added option to disable item descriptions on hover (hold ALT to reveal them)
@@ -22,7 +23,6 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Minor] Obfuscate account name in Hero > Account window
 * [Minor] Obfuscate player name in cinematics
 * [Minor] Hovered item in Info Window stays available after mouse is moved away from item
-* [Minor] Toolbox will now show a message about missing DX9 redistributable instead of not starting at all
 * [Minor] Added option to hold shift when toggling pcons to turn pcons off/on by group
 * [Minor] Minimap circles are more circle-shaped now
 * [Minor] Dialog module Take and Reward combined into one button

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/WorldContext.h>
@@ -18,7 +19,10 @@
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
+#include <Utils/GuiUtils.h>
+#include <Color.h>
 #include "EffectsMonitorWidget.h"
+
 
 namespace {
 
@@ -66,13 +70,14 @@ namespace {
         uint32_t percent;
     };
 
-    const GW::UI::UIMessage hook_messages[] = {
+    constexpr GW::UI::UIMessage hook_messages[] = {
         GW::UI::UIMessage::kMinionCountUpdated,
         GW::UI::UIMessage::kEffectAdd,
         GW::UI::UIMessage::kEffectRenew,
         GW::UI::UIMessage::kMoraleChange,
         GW::UI::UIMessage::kEffectRemove,
         GW::UI::UIMessage::kMapChange,
+        GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kPreferenceChanged,
         GW::UI::UIMessage::kUIPositionChanged
     };
@@ -89,11 +94,11 @@ namespace {
         return mine != minions_arr.end() ? mine->minion_count : 0;
     }
     uint32_t GetMorale() {
-        auto w = GW::WorldContext::instance();
+        const auto w = GW::WorldContext::instance();
         return w ? w->morale : 100;
     }
     uint32_t GetMorale(uint32_t agent_id) {
-        auto w = GW::WorldContext::instance();
+        const auto w = GW::WorldContext::instance();
         if (!(w && w->party_morale_related.size()))
             return 100;
         for (const auto& m : w->party_morale_related) {
@@ -156,8 +161,9 @@ namespace {
             return 10;
         case GW::Constants::SkillType::Ritual:
             return 6;
+        default:
+            return 0xd;
         }
-        return 0xd;
     }
     // Recalculate position of widget based on gw effect monitor position
     void RefreshPosition() {
@@ -253,7 +259,7 @@ namespace {
         for (GW::Effect& effect : readd_effects) {
             remove.effect_id = effect.effect_id;
             GW::StoC::EmulatePacket(&remove);
-            add.skill_id = (uint32_t)effect.skill_id;
+            add.skill_id = static_cast<uint32_t>(effect.skill_id);
             add.effect_id = effect.effect_id;
             add.duration = effect.duration;
             add.attribute_level = effect.attribute_level;
@@ -287,7 +293,7 @@ namespace {
     }
     // Triggered when an effect has reached < 0 duration. Returns true if effect has been removed.
     bool DurationExpired(GW::Effect& effect) {
-        uint32_t timer = GW::MemoryMgr::GetSkillTimer();
+        const auto timer = GW::MemoryMgr::GetSkillTimer();
         switch (effect.skill_id) {
         case GW::Constants::SkillID::Aspect_of_Exhaustion:
         case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
@@ -295,31 +301,31 @@ namespace {
             effect.duration = 30.f;
             effect.timestamp = timer;
             return false;
+        default: break;
         }
-        if (!effect.duration)
-            return &effect;
+        if (effect.duration == 0.f)
+            return true;
         // Effect expired
         return RemoveEffect(effect.effect_id);
 
     }
     // Update effect on the gwtoolbox overlay
     bool SetEffect(const GW::Effect* effect) {
-        uint32_t type = GetEffectSortOrder(effect->skill_id);
+        const uint32_t type = GetEffectSortOrder(effect->skill_id);
         if (!cached_effects.contains(type))
             cached_effects[type] = std::vector<GW::Effect>();
 
         // Player can stand in range of more than 1 spirit; use the longest effect duration for the effect monitor
-        if (effect->duration) {
+        if (effect->duration > 0) {
             effect = GetLongestEffectBySkillId(effect->skill_id);
         }
         if (!effect) {
             return false;
         }
 
-        size_t current = GetEffectIndex(cached_effects[type], effect->skill_id);
+        const size_t current = GetEffectIndex(cached_effects[type], effect->skill_id);
         if (current != 0xFF) {
             cached_effects[type].erase(cached_effects[type].begin() + current);
-            current = 0xFF;
         }
         cached_effects[type].push_back(*effect);
         // Trigger durations for aspects etc
@@ -336,52 +342,51 @@ namespace {
             minion_count = GetMinionCount();
         } break;
         case GW::UI::UIMessage::kMoraleChange: { // Morale boost/DP change
-            struct Packet {
+            const struct Packet {
                 uint32_t agent_id;
                 uint32_t percent;
-            } *packet = (Packet*)wParam;
+            } *packet = static_cast<Packet*>(wParam);
             if (packet->agent_id == GW::Agents::GetPlayerId())
                 morale_percent = packet->percent;
         } break;
         case GW::UI::UIMessage::kEffectAdd: {
-            struct Payload {
+            const struct Payload {
                 uint32_t agent_id;
                 GW::Effect* e;
-            } *details = (Payload*)wParam;
+            } *details = static_cast<Payload*>(wParam);
             const uint32_t agent_id = GW::Agents::GetPlayerId();
             if (agent_id && agent_id != details->agent_id)
                 break;
             SetEffect(details->e);
         } break;
         case GW::UI::UIMessage::kEffectRenew: {
-            const GW::Effect* e = GetEffect(*(uint32_t*)wParam);
+            const GW::Effect* e = GetEffect(*static_cast<uint32_t*>(wParam));
             if (e)
                 SetEffect(e);
         } break;
 
-        case GW::UI::UIMessage::kEffectRemove: {// Remove effect
-            RemoveEffect((uint32_t)wParam);
+        case GW::UI::UIMessage::kEffectRemove: {
+            RemoveEffect(reinterpret_cast<uint32_t>(wParam));
         } break;
-        case GW::UI::UIMessage::kMapChange: { // Map change
+        case GW::UI::UIMessage::kMapChange: {
             cached_effects.clear();
-            morale_percent = 100;
-            hard_mode = false;
+            hard_mode = false; // will be reapplied in OnEffect callback
+            minion_count = 0;
+        } break;
+        case GW::UI::UIMessage::kMapLoaded: { // not ready yet at kMapChange
+            morale_percent = GW::WorldContext::instance()->morale;
         } break;
         case GW::UI::UIMessage::kPreferenceChanged: // Refresh preference e.g. window X/Y position
         case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
             RefreshPosition();
             break;
+        default: break;
         }
     }
 }
-EffectsMonitorWidget::EffectsMonitorWidget() {
-    is_movable = is_resizable = false;
-};
-EffectsMonitorWidget& EffectsMonitorWidget::Instance() {
-    static EffectsMonitorWidget instance;
-    return instance;
-}
-void EffectsMonitorWidget::Initialize() {
+
+void EffectsMonitorWidget::Initialize()
+{
     ToolboxWidget::Initialize();
 
     for (const auto& message_id : hook_messages) {
@@ -393,13 +398,16 @@ void EffectsMonitorWidget::Initialize() {
         });
     RefreshPosition();
 }
-void EffectsMonitorWidget::Terminate() {
+
+void EffectsMonitorWidget::Terminate()
+{
     ToolboxWidget::Terminate();
     for (size_t i = 0; i < _countof(hook_messages); i++) {
         GW::UI::RemoveUIMessageCallback(&OnEffect_Entry);
     }
     cached_effects.clear();
 }
+
 void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 {
     if (!visible) return;
@@ -427,12 +435,12 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     int row_skills_drawn = 0;
     constexpr int row_idx = 1;
     int draw = 0;
-    auto next_effect = [&](std::string_view str = "") {
+    const auto next_effect = [&](std::string_view str = "") {
         row_skills_drawn++;
         if (!str.empty()) {
             const ImVec2 label_size = ImGui::CalcTextSize(str.data());
             const ImVec2 label_pos(skill_top_left.x + m_skill_width - label_size.x - 1.f, skill_top_left.y + m_skill_width - label_size.y - 1.f);
-            ImGui::GetWindowDrawList()->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_effects, str.data());
+            ImGui::GetWindowDrawList()->AddText({label_pos.x + 1, label_pos.y + 1}, 0xFFFF0000, str.data());
         }
         if (layout == Layout::Rows) {
             skill_top_left.x += (m_skill_width * x_translate);
@@ -453,7 +461,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         }
     };
     bool skipped_effects = false;
-    auto skip_effects = [&] {
+    const auto skip_effects = [&] {
         if (skipped_effects) return;
         if (morale_percent != 100) next_effect();
         if (minion_count) next_effect();
@@ -505,6 +513,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     ImGui::End();
     ImGui::PopStyleVar(2);
 }
+
 void EffectsMonitorWidget::LoadSettings(CSimpleIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
@@ -519,6 +528,7 @@ void EffectsMonitorWidget::LoadSettings(CSimpleIni* ini)
     color_text_shadow = Colors::Load(ini, Name(), VAR_NAME(color_text_shadow), color_text_shadow);
     color_background = Colors::Load(ini, Name(), VAR_NAME(color_background), color_background);
 }
+
 void EffectsMonitorWidget::SaveSettings(CSimpleIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
@@ -534,6 +544,7 @@ void EffectsMonitorWidget::SaveSettings(CSimpleIni* ini)
     Colors::Save(ini, Name(), VAR_NAME(color_text_shadow), color_text_shadow);
     Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
 }
+
 void EffectsMonitorWidget::DrawSettingInternal()
 {
     ToolboxWidget::DrawSettingInternal();

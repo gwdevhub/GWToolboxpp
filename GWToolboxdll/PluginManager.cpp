@@ -13,11 +13,7 @@ void PluginManager::RefreshDlls() {
     const fs::path settings_folder = Resources::GetSettingsFolderPath();
     const fs::path module_folder = settings_folder / "plugins";
 
-    if (!fs::exists(module_folder)) {
-        fs::create_directory(module_folder);
-    }
-
-    if (fs::exists(module_folder) && fs::is_directory(module_folder)) {
+    if (Resources::EnsureFolderExists(module_folder)) {
         for (auto& p : fs::directory_iterator(module_folder)) {
             fs::path file_path = p.path();
             fs::path ext = file_path.extension();
