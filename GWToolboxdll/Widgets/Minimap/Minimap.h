@@ -21,19 +21,16 @@ class Minimap final : public ToolboxWidget
             , y(_y)
         {
         }
-        Vec2i()
-            : x(0)
-            , y(0)
-        {
-        }
-        int x, y;
+        Vec2i() = default;
+        int x = 0;
+        int y = 0;
     };
     Minimap()
     {
         is_resizable = false;
     };
     Minimap(const Minimap &) = delete;
-    ~Minimap(){};
+    ~Minimap() = default;
 
 public:
     static Minimap &Instance()
@@ -141,7 +138,7 @@ private:
     bool hero_flag_controls_show = false;
     bool hero_flag_window_attach = true;
     Color hero_flag_window_background = 0;
-    std::vector<GW::AgentID> player_heroes;
+    std::vector<GW::AgentID> player_heroes{};
 
     size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 

@@ -5,9 +5,9 @@
 #include <ToolboxUIElement.h>
 #include <Windows/MainWindow.h>
 
-const char* ToolboxUIElement::UIName() const { 
+const char* ToolboxUIElement::UIName() const {
     if (Icon()) {
-        static char buf[128]; 
+        static char buf[128];
         sprintf(buf, "%s  %s", reinterpret_cast<const char*>(Icon()), Name());
         return buf;
     }
@@ -108,7 +108,7 @@ void ToolboxUIElement::ShowVisibleRadio() {
     ImGui::PopID();
 }
 
-bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*, 
+bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
     bool show_icon, bool show_text, bool center_align_text) {
 
     ImGui::PushStyleColor(ImGuiCol_Button, visible ?
@@ -116,7 +116,7 @@ bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
     const ImVec2 pos = ImGui::GetCursorScreenPos();
     const ImVec2 textsize = ImGui::CalcTextSize(Name());
     const float width = ImGui::GetContentRegionAvail().x;
-    
+
     float img_size = 0;
     if (show_icon) {
         img_size = ImGui::GetTextLineHeightWithSpacing();
@@ -133,7 +133,7 @@ bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
             ImGui::GetWindowDrawList()->AddImage(
                 (ImTextureID)button_texture, pos, ImVec2(pos.x + img_size, pos.y + img_size));
         } else if (Icon()) {
-            ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2), 
+            ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),
                 ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), reinterpret_cast<const char*>(Icon()));
         }
     }
@@ -141,7 +141,7 @@ bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
         ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),
             ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Name());
     }
-    
+
     if (clicked) visible = !visible;
     ImGui::PopStyleColor();
     return clicked;

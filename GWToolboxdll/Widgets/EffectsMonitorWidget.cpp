@@ -2,7 +2,6 @@
 
 #include <GWCA/Constants/Skills.h>
 
-#include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Packets/StoC.h>
@@ -38,7 +37,7 @@ namespace {
     uint32_t minion_count = 0;
     uint32_t morale_percent = 100;
     // Overall settings
-    enum Layout
+    enum class Layout
     {
         Rows,
         Columns
@@ -179,12 +178,12 @@ namespace {
         layout = window_size.y > window_size.x ? Layout::Columns : Layout::Rows;
         m_skill_width = std::roundf(std::min<float>(default_skill_width * uiscale, std::min<float>(window_size.x, window_size.y)));
         if (layout == Layout::Rows) {
-            row_count = static_cast<int>(std::floor(window_size.y / m_skill_width));
-            skills_per_row = static_cast<int>(std::floor(window_size.x / m_skill_width));
+            row_count = static_cast<int>(std::round(window_size.y / m_skill_width));
+            skills_per_row = static_cast<int>(std::round(window_size.x / m_skill_width));
         }
         else {
-            row_count = static_cast<int>(std::floor(window_size.x / m_skill_width));
-            skills_per_row = static_cast<int>(std::floor(window_size.y / m_skill_width));
+            row_count = static_cast<int>(std::round(window_size.x / m_skill_width));
+            skills_per_row = static_cast<int>(std::round(window_size.y / m_skill_width));
         }
 
         const GW::Vec2f mid_point(window_pos.x + window_size.x / 2.f, window_pos.y + window_size.y / 2.f);
@@ -353,18 +352,19 @@ namespace {
             if (agent_id && agent_id != details->agent_id)
                 break;
             SetEffect(details->e);
-        }break;
+        } break;
         case GW::UI::UIMessage::kEffectRenew: {
             const GW::Effect* e = GetEffect(*(uint32_t*)wParam);
             if (e)
                 SetEffect(e);
-        }break;
+        } break;
 
         case GW::UI::UIMessage::kEffectRemove: {// Remove effect
             RemoveEffect((uint32_t)wParam);
-        }break;
+        } break;
         case GW::UI::UIMessage::kMapChange: { // Map change
             cached_effects.clear();
+            morale_percent = 100;
             hard_mode = false;
         } break;
         case GW::UI::UIMessage::kPreferenceChanged: // Refresh preference e.g. window X/Y position
@@ -388,7 +388,7 @@ void EffectsMonitorWidget::Initialize() {
         GW::UI::RegisterUIMessageCallback(&OnEffect_Entry, message_id, OnEffectUIMessage, 0x8000);
     }
 
-    GW::GameThread::Enqueue([]() {
+    GW::GameThread::Enqueue([] {
         RefreshEffects();
         });
     RefreshPosition();
@@ -427,8 +427,13 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     int row_skills_drawn = 0;
     constexpr int row_idx = 1;
     int draw = 0;
-    auto next_effect = [&] {
+    auto next_effect = [&](std::string_view str = "") {
         row_skills_drawn++;
+        if (!str.empty()) {
+            const ImVec2 label_size = ImGui::CalcTextSize(str.data());
+            const ImVec2 label_pos(skill_top_left.x + m_skill_width - label_size.x - 1.f, skill_top_left.y + m_skill_width - label_size.y - 1.f);
+            ImGui::GetWindowDrawList()->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_effects, str.data());
+        }
         if (layout == Layout::Rows) {
             skill_top_left.x += (m_skill_width * x_translate);
             if (row_skills_drawn == skills_per_row && row_idx < row_count) {
@@ -450,18 +455,17 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     bool skipped_effects = false;
     auto skip_effects = [&] {
         if (skipped_effects) return;
-        if (morale_percent != 100)
-            next_effect();
-        if (minion_count)
-            next_effect();
+        if (morale_percent != 100) next_effect();
+        if (minion_count) next_effect();
         skipped_effects = true;
     };
-    if (!hard_mode) {
+
+    if (!hard_mode) { // if hard mode, only skip effects after hard mode icon
         skip_effects();
     }
 
-    for (auto& effects : cached_effects ) {
-        for (auto& effect : effects.second) {
+    for (auto& effects : cached_effects | std::views::values) {
+        for (auto& effect : effects) {
             if (effect.duration > 0) {
                 const auto remaining = effect.GetTimeRemaining();
                 draw = remaining < static_cast<DWORD>(effect.duration * 1000.f);
@@ -474,8 +478,8 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             }
             else if (effect.skill_id == GW::Constants::SkillID::Hard_mode) {
                 if (show_vanquish_counter) {
-                    size_t left = GW::Map::GetFoesToKill();
-                    size_t killed = GW::Map::GetFoesKilled();
+                    const auto left = GW::Map::GetFoesToKill();
+                    const auto killed = GW::Map::GetFoesKilled();
                     draw = left ? snprintf(remaining_str, 16, "%d/%d", killed, killed + left) : 0;
                 }
             }
@@ -484,15 +488,15 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             }
             if (draw > 0) {
                 const ImVec2 label_size = ImGui::CalcTextSize(remaining_str);
-                ImVec2 label_pos(skill_top_left.x + m_skill_width - label_size.x - 1.f, skill_top_left.y + m_skill_width - label_size.y - 1.f);
+                const ImVec2 label_pos(skill_top_left.x + m_skill_width - label_size.x - 1.f, skill_top_left.y + m_skill_width - label_size.y - 1.f);
                 if ((color_background & IM_COL32_A_MASK) != 0)
                     ImGui::GetWindowDrawList()->AddRectFilled({ skill_top_left.x + m_skill_width - label_size.x - 2.f, skill_top_left.y + m_skill_width - label_size.y }, { skill_top_left.x + m_skill_width, skill_top_left.y + m_skill_width }, color_background);
                 if ((color_text_shadow & IM_COL32_A_MASK) != 0)
                     ImGui::GetWindowDrawList()->AddText({ label_pos.x + 1, label_pos.y + 1 }, color_text_shadow, remaining_str);
                 ImGui::GetWindowDrawList()->AddText(label_pos, color_text_effects, remaining_str);
             }
-            skip_effects();
             next_effect();
+            skip_effects();
 
         }
     }

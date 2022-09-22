@@ -146,7 +146,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
     LOAD_BOOL(filter_channel_emotes);
 
     LOAD_BOOL(block_messages_from_inactive_channels);
-    
+
     strcpy_s(bycontent_word_buf, "");
     strcpy_s(bycontent_regex_buf, "");
 
@@ -300,7 +300,7 @@ bool ChatFilter::ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) co
 bool ChatFilter::IsRare(const wchar_t* item_segment) const {
     if (item_segment == nullptr) return false;      // something went wrong, don't ignore
     if (item_segment[0] == 0xA40) return true;      // don't ignore gold items
-    if (FullMatch(item_segment, { 0x108, 0x10A, 0x22D9, 0xE7B8, 0xE9DD, 0x2322 })) 
+    if (FullMatch(item_segment, { 0x108, 0x10A, 0x22D9, 0xE7B8, 0xE9DD, 0x2322 }))
         return true;    // don't ignore ectos
     if (FullMatch(item_segment, { 0x108, 0x10A, 0x22EA, 0xFDA9, 0xDE53, 0x2D16 } ))
         return true; // don't ignore obby shards
@@ -435,7 +435,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
         case 0x186C: // you win 15 festival tickets
         case 0x186D: // did not win 9rings
             // rings of fortune
-        case 0x1526: // The rings of fortune did not favor you this time. Stay in the area to try again. 
+        case 0x1526: // The rings of fortune did not favor you this time. Stay in the area to try again.
         case 0x1529: // Pan takes 2 festival tickets
         case 0x152A: // stay right were you are! rings of fortune is about to begin!
         case 0x152B: // you win 12 festival tickets
@@ -467,7 +467,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
         case 0x4650: return pvp_messages; // skill has been updated for pvp
         case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
         case 0x223F: return false; // "x minutes of favor of the gods remaining" as a result of /favor command
-        case 0x223B: return hoh_messages; // a party won hall of heroes  
+        case 0x223B: return hoh_messages; // a party won hall of heroes
         case 0x23E2: return player_has_achieved_title; // Player has achieved... The gods have blessed the world with their favor.
         case 0x23E3: return favor; // The gods have blessed the world
         case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
@@ -679,8 +679,8 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::Checkbox("Alliance", &filter_channel_alliance);
     ImGui::SameLine(0.0f, -1.0f);
     ImGui::Checkbox("Emotes", &filter_channel_emotes);
-    
-    if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf, 
+
+    if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf,
         FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
         timer_parse_filters = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
     }
@@ -754,7 +754,7 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) c
     std::string word;
     while (std::getline(stream, word)) {
         if (!word.empty()) {
-            // std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+            // std::ranges::transform(word, word.begin(), ::tolower);
             try {
                 regex.push_back(std::regex(word));
             } catch (const std::regex_error&) {

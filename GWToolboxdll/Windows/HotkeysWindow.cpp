@@ -113,7 +113,7 @@ bool HotkeysWindow::CheckSetValidHotkeys() {
             by_player_name[hotkey->player_name] = std::vector<TBHotkey*>();
         by_player_name[hotkey->player_name].push_back(hotkey);
     }
-    
+
     return true;
 }
 
@@ -204,7 +204,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                 switch (op) {
                 case TBHotkey::Op_None: break;
                 case TBHotkey::Op_MoveUp: {
-                    auto it = std::find(hotkeys.begin(), hotkeys.end(), in[i]);
+                    auto it = std::ranges::find(hotkeys, in[i]);
                     if (it != hotkeys.end() && it != hotkeys.begin()) {
                         std::swap(*it, *(it - 1));
                         these_hotkeys_changed = true;
@@ -212,7 +212,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                     }
                 } break;
                 case TBHotkey::Op_MoveDown: {
-                    auto it = std::find(hotkeys.begin(), hotkeys.end(), in[i]);
+                    auto it = std::ranges::find(hotkeys, in[i]);
                     if (it != hotkeys.end() && it != hotkeys.end() - 1) {
                         std::swap(*it, *(it + 1));
                         these_hotkeys_changed = true;
@@ -292,7 +292,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 
 
         }
-        
+
     }
     if (hotkeys_changed) {
         CheckSetValidHotkeys();
@@ -401,7 +401,7 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
         bool triggered = false;
         for (TBHotkey* hk : valid_hotkeys) {
             if (!block_hotkeys
-                && !hk->pressed 
+                && !hk->pressed
                 && keyData == hk->hotkey
                 && modifier == hk->modifier) {
 

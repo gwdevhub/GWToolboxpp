@@ -405,7 +405,7 @@ void ChatCommands::DrawSettingInternal() {
         preview = "Remove title";
         break;
     default:
-        const auto selected = std::find_if(title_names.begin(), title_names.end(), [&](auto* it) { return (uint32_t)it->title == default_title_id; });
+        const auto selected = std::ranges::find_if(title_names, [&](auto* it) { return (uint32_t)it->title == default_title_id; });
 
         if (selected != title_names.end()) {
             preview = (*selected)->name.string();
@@ -549,8 +549,8 @@ void ChatCommands::Initialize() {
     }
     GW::Chat::CreateCommand(L"mute", CmdMute); // Doesn't unmute!
 #endif
-    
-        
+
+
 }
 
 void ChatCommands::Terminate()
@@ -1628,7 +1628,7 @@ void ChatCommands::CmdHom(const wchar_t* message, int argc, LPWSTR*) {
     wchar_t player_name[20]{};
     if (argc > 1) {
         std::wstring args = GetRemainingArgsWstr(message, 1);
-        
+
         if (args == L"me") {
             wcscpy(player_name, GW::PlayerMgr::GetPlayerName(0));
             return GetAchievements(player_name);
@@ -1717,7 +1717,7 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
     float distance = GW::Constants::SqrRange::Compass;
     size_t closest = 0;
     size_t count = 0;
-    
+
     for (const GW::Agent * agent : *agents) {
         if (!agent || agent == me)
             continue;
@@ -1753,12 +1753,12 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
             } break;
             case Ally: {
                 // Target any living ally
-                // NB: Not quite the same as the GW version; 
+                // NB: Not quite the same as the GW version;
                 // GW targets nearest player if they're less than half the distance as the nearest agent.
                 // Could be a little confusing if this is used instead of 'V' in-game.
                 const GW::AgentLiving* const living_agent = agent->GetAsAgentLiving();
-                if (!living_agent 
-                    || living_agent->allegiance == GW::Constants::Allegiance::Enemy 
+                if (!living_agent
+                    || living_agent->allegiance == GW::Constants::Allegiance::Enemy
                     || living_agent->allegiance == GW::Constants::Allegiance::Neutral
                     || !living_agent->GetIsAlive() || (model_id && living_agent->player_number != model_id))
                     continue;

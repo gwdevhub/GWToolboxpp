@@ -64,13 +64,6 @@ namespace Colors {
         i[3] = static_cast<int>((color >> IM_COL32_B_SHIFT) & 0xFF);
     }
 
-    static void ConvertU32ToFloat4(Color color, float* f) {
-        f[0] = static_cast<float>((color >> IM_COL32_A_SHIFT) & 0xFF) / 255.f;
-        f[1] = static_cast<int>((color >> IM_COL32_R_SHIFT) & 0xFF) / 255.f;
-        f[2] = static_cast<int>((color >> IM_COL32_G_SHIFT) & 0xFF) / 255.f;
-        f[3] = static_cast<int>((color >> IM_COL32_B_SHIFT) & 0xFF) / 255.f;
-    }
-
     static Color ConvertInt4ToU32(const int* i) {
         return static_cast<Color>((i[0] & 0xFF) << IM_COL32_A_SHIFT) |
                static_cast<Color>((i[1] & 0xFF) << IM_COL32_R_SHIFT) |
@@ -86,16 +79,6 @@ namespace Colors {
         }
         return false;
     }
-#if 0
-    static bool DrawSettingHueWheel(const char* text, GW::Chat::Color* color) {
-        ImVec4 col = ImGui::ColorConvertU32ToFloat4(*color);
-        if (ImGui::ColorEdit4(text, &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
-            *color = ImGui::ColorConvertFloat4ToU32(col);
-            return true;
-        }
-        return false;
-    }
-#endif
 
     static bool DrawSetting(const char* text, Color* color, bool alpha = true) {
         int i[4];
@@ -113,13 +96,13 @@ namespace Colors {
         const float w_items_all = w_full - (square_sz + style.ItemInnerSpacing.x);
         const float w_item_one = std::round((w_items_all - style.ItemInnerSpacing.x * (n_components - 1)) / (float)n_components);
         const float w_item_last = std::round(w_items_all - (w_item_one + style.ItemInnerSpacing.x) * (n_components - 1));
-        
+
         const char* ids[4] = { "##X", "##Y", "##Z", "##W" };
         const char* fmt[4] = { "A:%3.0f", "R:%3.0f", "G:%3.0f", "B:%3.0f" };
 
         ImGui::BeginGroup();
         ImGui::PushID(text);
-        
+
         ImGui::PushItemWidth(w_item_one);
         if (alpha) {
             value_changed |= ImGui::DragInt("##A", &i[0], 1.0f, 0, 255, "A:%d");
@@ -167,7 +150,7 @@ namespace Colors {
         }
     }
     static Color Add(const Color& c1, const Color& c2) {
-        int i1[4]; 
+        int i1[4];
         int i2[4];
         int i3[4]{};
         ConvertU32ToInt4(c1, i1);
@@ -179,7 +162,7 @@ namespace Colors {
         return ConvertInt4ToU32(i3);
     }
     static Color Sub(const Color& c1, const Color& c2) {
-        int i1[4]; 
+        int i1[4];
         int i2[4];
         int i3[4]{};
         ConvertU32ToInt4(c1, i1);

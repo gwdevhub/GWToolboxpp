@@ -133,7 +133,7 @@ namespace {
             ((IRC*)conn)->disconnect();
             return 0;
         }
-        
+
         return 0;
     }
 }
@@ -229,21 +229,21 @@ bool TwitchModule::Connect() {
         return false;
     }*/
     // Sanitise strings to lower case
-    std::transform(irc_server.begin(), irc_server.end(), irc_server.begin(),
-        [](char c) -> char {
-            return static_cast<char>(::tolower(c));
-        });
+    std::ranges::transform(irc_server, irc_server.begin(),
+                           [](char c) -> char {
+                               return static_cast<char>(::tolower(c));
+                           });
     /*std::transform(irc_username.begin(), irc_username.end(), irc_username.begin(),
         [](unsigned char c) { return std::tolower(c); });*/
-    std::transform(irc_channel.begin(), irc_channel.end(), irc_channel.begin(),
-        [](char c) -> char {
-            return static_cast<char>(::tolower(c));
-        });
+    std::ranges::transform(irc_channel, irc_channel.begin(),
+                           [](char c) -> char {
+                               return static_cast<char>(::tolower(c));
+                           });
 
     if (conn.start(
         const_cast<char*>(irc_server.c_str()),
-        irc_port, 
-        "unused", 
+        irc_port,
+        "unused",
         "unused",
         "unused",
         const_cast<char*>(irc_password.c_str())) != 0) {

@@ -35,23 +35,23 @@ namespace GuiUtils {
     float GetGWScaleMultiplier();
 
     // Reposition a rect within its container to make sure it isn't overflowing it.
-    ImVec4& ClampRect(ImVec4& rect, ImVec4& viewport);
+    ImVec4& ClampRect(ImVec4& rect, const ImVec4& viewport);
 
     std::string ToSlug(std::string s);
     std::wstring ToSlug(std::wstring s);
     std::string ToLower(std::string s);
     std::wstring ToLower(std::wstring s);
-    std::string UrlEncode(std::string str, const char space_token = '_');
-    std::string HtmlEncode(std::string str);
+    std::string UrlEncode(std::string s, char space_token = '_');
+    std::string HtmlEncode(std::string s);
     std::wstring RemovePunctuation(std::wstring s);
     std::string RemovePunctuation(std::string s);
-    std::wstring RemoveDiacritics(const std::wstring& in);
+    std::wstring RemoveDiacritics(const std::wstring& s);
 
     std::string WStringToString(const std::wstring& s);
     std::wstring StringToWString(const std::string& s);
     std::string SanitiseFilename(const std::string& str);
 
-    std::wstring SanitizePlayerName(std::wstring in);
+    std::wstring SanitizePlayerName(std::wstring s);
 
     // Extract first unencoded substring from gw encoded string. Pass second and third args to know where the player name was found in the original string.
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** out_pos_out = nullptr);

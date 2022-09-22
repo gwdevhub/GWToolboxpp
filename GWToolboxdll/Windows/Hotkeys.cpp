@@ -294,7 +294,7 @@ bool TBHotkey::IsValid(const char* _player_name, GW::Constants::InstanceType _in
         && (!is_pvp_character || trigger_on_pvp_character)
         && (instance_type == -1 || (GW::Constants::InstanceType)instance_type == _instance_type)
         && (prof_ids[(size_t)_profession] || !HasProfession())
-        && (map_ids.empty() || std::find(map_ids.begin(), map_ids.end(), (uint32_t)_map_id) != map_ids.end())
+        && (map_ids.empty() || std::ranges::find(map_ids, (uint32_t)_map_id) != map_ids.end())
         && (!player_name[0] || strcmp(_player_name, player_name) == 0)
         && IsInRangeOfNPC();
 }
@@ -503,8 +503,8 @@ bool TBHotkey::Draw(Op *op)
                 if (strlen(map_id_input_buf)
                     && GuiUtils::ParseInt(map_id_input_buf, &map_id_out)
                     && map_id_out > 0
-                    && std::find(map_ids.begin(), map_ids.end(), (uint32_t)map_id_input_buf) == map_ids.end()) {
-                    map_ids.push_back((uint32_t)map_id_out);
+                    && std::ranges::find(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf)) == map_ids.end()) {
+                    map_ids.push_back(static_cast<uint32_t>(map_id_out));
                     memset(map_id_input_buf, 0, sizeof(map_id_input_buf));
                     hotkey_changed = true;
                 }
@@ -1831,7 +1831,7 @@ HotkeyGWKey::HotkeyGWKey(CSimpleIni* ini, const char* section)
 {
     can_trigger_on_map_change = trigger_on_explorable = trigger_on_outpost = false;
     action = (GW::UI::ControlAction)ini->GetLongValue(section, "ActionID", (long)action);
-    auto found = std::find_if(control_labels.begin(), control_labels.end(), [&](std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
+    const auto found = std::ranges::find_if(control_labels, [&](std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
         return action == in.first;
         });
     if (found != control_labels.end()) {

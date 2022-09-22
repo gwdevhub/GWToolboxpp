@@ -197,12 +197,11 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
             }
             /* Code for copying a teambuild */
             std::vector<const char*> names(teambuilds.size(), "\0");
-            std::transform(
-                teambuilds.begin(),
-                teambuilds.end(),
-                names.begin(),
-                [](const TeamHeroBuild& tb) { return tb.name; }
-           );
+            std::ranges::transform(teambuilds
+                                   ,
+                                   names.begin(),
+                                   [](const TeamHeroBuild& tb) { return tb.name; }
+            );
             const int num_elements = static_cast<int>(names.size());
             static int selectedTeambuild = 0;
             ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);

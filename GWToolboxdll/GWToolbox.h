@@ -4,10 +4,9 @@
 
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
-#include <Utf8.h>
 #include <PluginManager.h>
 
-DWORD __stdcall SafeThreadEntry(LPVOID mod);
+DWORD __stdcall SafeThreadEntry(LPVOID mod) noexcept;
 DWORD __stdcall ThreadEntry(LPVOID);
 
 LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) noexcept;
@@ -27,10 +26,9 @@ public:
     void Initialize();
     void Terminate();
 
-    void OpenSettingsFile();
-    void LoadModuleSettings();
-    void SaveSettings();
-    static void FlashWindow();
+    void OpenSettingsFile() const;
+    void LoadModuleSettings() const;
+    void SaveSettings() const;
 
     void StartSelfDestruct() {
         if (initialized) {
@@ -44,12 +42,12 @@ public:
     bool must_self_destruct = false;    // is true when toolbox should quit
 
     bool RegisterModule(ToolboxModule* m) {
-        if (std::find(modules.begin(), modules.end(), m) == modules.end())
+        if (std::ranges::find(modules, m) == modules.end())
             return modules.push_back(m), true;
         return false;
     }
     bool RegisterUIElement(ToolboxUIElement* e) {
-        if (std::find(uielements.begin(), uielements.end(), e) == uielements.end())
+        if (std::ranges::find(uielements, e) == uielements.end())
             return uielements.push_back(e), true;
         return false;
     }
@@ -60,9 +58,7 @@ public:
 
     bool right_mouse_down = false;
 
-    static void OnHandleCrash(char* description, uint32_t param_2, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6);
-
-    bool IsInitialized() { return initialized; };
+    bool IsInitialized() const { return initialized; }
 
     void AddPlugin(TBModule* mod) { plugins.push_back(mod); }
     PluginManager& GetPluginManger() { return plugin_manager; };
