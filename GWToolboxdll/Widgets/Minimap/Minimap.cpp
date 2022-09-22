@@ -375,11 +375,7 @@ void Minimap::DrawSettingInternal()
     ImGui::Checkbox("Snap to compass", &snap_to_compass);
     ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
 
-    if (snap_to_compass)
-        is_movable = is_resizable = false;
-    else
-        is_movable = is_resizable = true;
-
+    is_movable = is_resizable = !snap_to_compass;
     if (is_resizable) {
         ImVec2 winsize(100.0f, 100.0f);
         const ImGuiWindow* window = ImGui::FindWindowByName(Name());
