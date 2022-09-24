@@ -2026,7 +2026,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 sel = &it.first;
             }
 
-			if (ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
+			if (it.second->name_str.size() > 0 && ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
 				chosen_player_name = it.first;
 				chosen_player_name_s = it.second->name_str;
 				CheckProgress(true);
