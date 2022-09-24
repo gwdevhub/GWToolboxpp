@@ -54,11 +54,11 @@ private:
     std::map<ItemModelID, std::string> dont_hide_for_player{};
     std::map<ItemModelID, std::string> dont_hide_for_party{};
 
-    static void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd*);
-    static void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove*);
-    static void OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
-    static void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID*);
-    static void OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner*);
+    void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd*);
+    void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove*);
+    void OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
+    void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID*);
+    void OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner*);
 
     GW::HookEntry OnAgentAdd_Entry;
     GW::HookEntry OnAgentRemove_Entry;

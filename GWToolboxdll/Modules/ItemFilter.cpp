@@ -41,6 +41,9 @@ namespace {
         // filter non-item-agents
         if (packet.type != 4 || packet.unk3 != 0) return nullptr;
 
+        if (!GW::GameContext::instance()) return nullptr;
+        if (!GW::GameContext::instance()->items) return nullptr;
+
         const auto& items = GW::GameContext::instance()->items->item_array;
         const auto item_id = packet.agent_type;
         if (item_id >= items.size()) return nullptr;
@@ -102,11 +105,13 @@ void ItemFilter::Initialize()
 {
     ToolboxModule::Initialize();
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdd_Entry, OnAgentAdd);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry, OnAgentRemove);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry, OnMapLoad);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry, OnItemReuseId);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry, OnItemUpdateOwner);
+#define BIND2(x) std::bind(x, this, std::placeholders::_1, std::placeholders::_2)
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdd_Entry, BIND2(&ItemFilter::OnAgentAdd));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry, BIND2(&ItemFilter::OnAgentRemove));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry, BIND2(&ItemFilter::OnMapLoad));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry, BIND2(&ItemFilter::OnItemReuseId));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry, BIND2(&ItemFilter::OnItemUpdateOwner));
+#undef BIND2
 }
 
 void ItemFilter::SignalTerminate()
@@ -175,54 +180,54 @@ void ItemFilter::OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* 
 
     if (player->max_energy == 0 || player->login_number == 0) {
         // we're spectating, not sure what our own player is
-        if (Instance().WantToHide(*item, false) && Instance().WantToHide(*item, true)) {
+        if (WantToHide(*item, false) && WantToHide(*item, true)) {
             // only block items that we want to block for player and party
             status->blocked = true;
-            Instance().suppressed_packets.push_back(*packet);
+            suppressed_packets.push_back(*packet);
         }
         return;
     }
 
-    const auto owner_id = Instance().GetItemOwner(item->item_id);
+    const auto owner_id = GetItemOwner(item->item_id);
     const auto can_pick_up = owner_id == 0                    // not reserved
                              || owner_id == player->agent_id; // reserved for user
 
-    if (Instance().WantToHide(*item, can_pick_up)) {
+    if (WantToHide(*item, can_pick_up)) {
         status->blocked = true;
-        Instance().suppressed_packets.push_back(*packet);
+        suppressed_packets.push_back(*packet);
     }
 }
 
 void ItemFilter::OnAgentRemove(GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet)
 {
     // Block despawning the agent if the client never spawned it.
-    const auto it = std::ranges::find_if(Instance().suppressed_packets, [&packet](const auto& suppressed_packet) { return suppressed_packet.agent_id == packet->agent_id; });
+    const auto it = std::ranges::find_if(suppressed_packets, [&packet](const auto& suppressed_packet) { return suppressed_packet.agent_id == packet->agent_id; });
 
-    if (it == Instance().suppressed_packets.end()) return;
+    if (it == suppressed_packets.end()) return;
 
-    Instance().suppressed_packets.erase(it);
+    suppressed_packets.erase(it);
     status->blocked = true;
 }
 
 void ItemFilter::OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
 {
-    Instance().suppressed_packets.clear();
-    Instance().item_owners.clear();
+    suppressed_packets.clear();
+    item_owners.clear();
 }
 
 void ItemFilter::OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID* packet)
 {
-    const auto it = std::ranges::find_if(Instance().item_owners, [packet](auto owner) { return owner.item == packet->item_id; });
+    const auto it = std::ranges::find_if(item_owners, [packet](auto owner) { return owner.item == packet->item_id; });
 
-    if (it != Instance().item_owners.end()) Instance().item_owners.erase(it);
+    if (it != item_owners.end()) item_owners.erase(it);
 }
 
 void ItemFilter::OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner* packet)
 {
-    const auto it = std::ranges::find_if(Instance().item_owners, [packet](auto owner) { return owner.item == packet->item_id; });
+    const auto it = std::ranges::find_if(item_owners, [packet](auto owner) { return owner.item == packet->item_id; });
 
-    if (it == Instance().item_owners.end()) {
-        Instance().item_owners.push_back({packet->item_id, packet->owner_agent_id});
+    if (it == item_owners.end()) {
+        item_owners.push_back({packet->item_id, packet->owner_agent_id});
     }
     else {
         it->owner = packet->owner_agent_id;
