@@ -792,7 +792,7 @@ namespace {
         gwmm->center_x = (rect.left + rect.right) / 2;
         gwmm->center_y = (rect.bottom + rect.top) / 2;
         rawInputRelativePosX = rawInputRelativePosY = 0;
-        SetPhysicalCursorPos(gwmm->center_x, gwmm->center_y);
+        SetPhysicalCursorPos(gwmm->captured_x, gwmm->captured_y);
     leave:
         GW::Hook::LeaveHook();
     }
@@ -830,12 +830,8 @@ namespace {
         if (!gw_mouse_move)
             return; // No gw mouse move ptr; this shouldn't happen
 
-        HRAWINPUT raw_input_handle = (HRAWINPUT)lParam;
-        UINT dwSize = 0;
-        GetRawInputData(raw_input_handle, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
-        // A good candidate for not using new as this is called shitload, but its naughty to presume the size!
-        LPBYTE lpb = new BYTE[dwSize];
-        ASSERT(lpb != NULL);
+        UINT dwSize = sizeof(RAWINPUT);
+        BYTE lpb[sizeof(RAWINPUT)];
         ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
 
         RAWINPUT *raw = (RAWINPUT *)lpb;
@@ -849,11 +845,13 @@ namespace {
                 rawInputRelativePosX = rawInputRelativePosY = 0;
             }
         }
-
-        delete[] lpb;
     }
-
-    void CursorFixInitialise() {
+    bool CursorFixInitialise() {
+        if (gw_mouse_move)
+            return true;
+        auto hwnd = GW::MemoryMgr::GetGWWindowHandle();
+        if (!hwnd)
+            return false;
         uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\base\\os\\win32\\osinput.cpp", "osMsg", 0x32);
         address = GW::Scanner::FunctionFromNearCall(address);
         if (address) {
@@ -884,8 +882,9 @@ namespace {
         Rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
         Rid.usUsage = HID_USAGE_GENERIC_MOUSE;
         Rid.dwFlags = RIDEV_INPUTSINK;
-        Rid.hwndTarget = GW::MemoryMgr::GetGWWindowHandle();
+        Rid.hwndTarget = hwnd;
         ASSERT(RegisterRawInputDevices(&Rid, 1, sizeof(Rid)));
+        return true;
 
     }
     void CursorFixTerminate() {
@@ -1305,7 +1304,6 @@ const bool PendingChatMessage::PrintMessage() {
 
 void GameSettings::Initialize() {
     ToolboxModule::Initialize();
-    CursorFixInitialise();
     uintptr_t address;
 
     // Patch that allow storage page (and Anniversary page) to work.
@@ -1711,7 +1709,7 @@ void GameSettings::Terminate() {
     ctrl_click_patch.Reset();
     tome_patch.Reset();
     gold_confirm_patch.Reset();
-    CursorFixInitialise();
+    CursorFixTerminate();
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -2142,7 +2140,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float) {
-
+    CursorFixInitialise();
     UpdateReinvite();
     UpdateItemTooltip();
 
