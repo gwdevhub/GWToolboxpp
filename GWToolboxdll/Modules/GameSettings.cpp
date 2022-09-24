@@ -816,7 +816,7 @@ namespace {
         // NB: Original function uses ClientToScreen here; we've already grabbed the correct value via CursorFixWndProc
         lParam[1] = rawInputRelativePosX;
         lParam[2] = rawInputRelativePosY;
-        
+
         // Reset the cursor position to the middle of the viewport
         OnSetCursorPosCenter(gw_mouse_move);
         GW::Hook::LeaveHook();
@@ -836,9 +836,10 @@ namespace {
 
         UINT dwSize = sizeof(RAWINPUT);
         BYTE lpb[sizeof(RAWINPUT)];
+        ASSERT(lpb != NULL);
         ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
 
-        RAWINPUT *raw = (RAWINPUT *)lpb;
+        RAWINPUT* raw = (RAWINPUT*) lpb;
         if ((raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0) {
             // If its a relative mouse move, process the action
             if (gw_mouse_move->move_camera) {
@@ -849,13 +850,13 @@ namespace {
                 rawInputRelativePosX = rawInputRelativePosY = 0;
             }
         }
-    }
     bool CursorFixInitialise() {
         if (gw_mouse_move)
             return true;
         auto hwnd = GW::MemoryMgr::GetGWWindowHandle();
         if (!hwnd)
             return false;
+        uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\base\\os\\win32\\osinput.cpp", "osMsg", 0x32);
         uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\base\\os\\win32\\osinput.cpp", "osMsg", 0x32);
         address = GW::Scanner::FunctionFromNearCall(address);
         if (address) {

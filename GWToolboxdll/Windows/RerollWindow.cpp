@@ -36,8 +36,6 @@
 #include <Utils/GuiUtils.h>
 
 
-
-
 namespace {
     GW::CharContext* GetCharContext() {
         auto g = GW::GameContext::instance();
@@ -285,7 +283,7 @@ void RerollWindow::Initialize() {
     // Add an entry to check available characters at login screen
     GW::UI::RegisterUIMessageCallback(&OnGoToCharSelect_Entry, GW::UI::UIMessage::kCheckUIState, OnUIMessage, 0x4000);
     // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
-    SetOnlineStatus_Func = (SetOnlineStatus_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\friend\\friendapi.cpp", "status < FRIEND_STATUSES", -0x11);
+    SetOnlineStatus_Func = (SetOnlineStatus_pt)GW::Scanner::FindAssertion(R"(p:\code\gw\friend\friendapi.cpp)", "status < FRIEND_STATUSES", -0x11);
     if (SetOnlineStatus_Func) {
         GW::Hook::CreateHook(SetOnlineStatus_Func, OnSetStatus, (void**)&RetSetOnlineStatus);
         GW::Hook::EnableHooks(SetOnlineStatus_Func);
