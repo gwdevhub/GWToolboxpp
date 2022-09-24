@@ -56,6 +56,7 @@
 #include <GWToolbox.h>
 #include <Timer.h>
 #include <Color.h>
+#include <hidusage.h>
 
 #pragma warning(disable : 6011)
 
@@ -771,9 +772,9 @@ namespace {
         int captured_y;
     };
     GwMouseMove* gw_mouse_move = 0;
-
+    LONG rawInputRelativePosX = 0;
+    LONG rawInputRelativePosY = 0;
     bool* HasRegisteredTrackMouseEvent = 0;
-
     typedef void(__cdecl* SetCursorPosCenter_pt)(GwMouseMove* wParam);
     SetCursorPosCenter_pt SetCursorPosCenter_Func = nullptr;
     SetCursorPosCenter_pt SetCursorPosCenter_Ret = nullptr;
@@ -790,12 +791,69 @@ namespace {
             goto leave;
         gwmm->center_x = (rect.left + rect.right) / 2;
         gwmm->center_y = (rect.bottom + rect.top) / 2;
+        rawInputRelativePosX = rawInputRelativePosY = 0;
         SetPhysicalCursorPos(gwmm->center_x, gwmm->center_y);
     leave:
         GW::Hook::LeaveHook();
     }
 
-    void InitialiseCursorFix() {
+    // Override (and rewrite) GW's handling of mouse event 0x200 to stop camera glitching.
+    bool OnProcessInput(uint32_t* wParam, uint32_t* lParam) {
+        GW::Hook::EnterHook();
+        if(!(HasRegisteredTrackMouseEvent && gw_mouse_move))
+            goto forward_call; // Failed to find addresses for variables
+        if(!(wParam && wParam[1] == 0x200))
+            goto forward_call; // Not mouse movement
+        if (!(*HasRegisteredTrackMouseEvent && gw_mouse_move->move_camera))
+            goto forward_call; // Not moving the camera, or GW hasn't yet called TrackMouseEvent
+
+        lParam[0] = 0x12;
+        // Set the output parameters to be the relative position of the mouse to the center of the screen
+        // NB: Original function uses ClientToScreen here; we've already grabbed the correct value via CursorFixWndProc
+        lParam[1] = rawInputRelativePosX;
+        lParam[2] = rawInputRelativePosY;
+        
+        // Reset the cursor position to the middle of the viewport
+        OnSetCursorPosCenter(gw_mouse_move);
+        GW::Hook::LeaveHook();
+        return true;
+    forward_call:
+        GW::Hook::LeaveHook();
+        return ProcessInput_Ret(wParam, lParam);
+
+    }
+
+    // Collect the relative mouse position from raw input, instead of using the position passed into GW.
+    void CursorFixWndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+        if (!(Message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam))
+            return; // Not raw input
+        if (!gw_mouse_move)
+            return; // No gw mouse move ptr; this shouldn't happen
+
+        HRAWINPUT raw_input_handle = (HRAWINPUT)lParam;
+        UINT dwSize = 0;
+        GetRawInputData(raw_input_handle, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+        // A good candidate for not using new as this is called shitload, but its naughty to presume the size!
+        LPBYTE lpb = new BYTE[dwSize];
+        ASSERT(lpb != NULL);
+        ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
+
+        RAWINPUT *raw = (RAWINPUT *)lpb;
+        if ((raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0) {
+            // If its a relative mouse move, process the action
+            if (gw_mouse_move->move_camera) {
+                rawInputRelativePosX += raw->data.mouse.lLastX;
+                rawInputRelativePosY += raw->data.mouse.lLastY;
+            }
+            else {
+                rawInputRelativePosX = rawInputRelativePosY = 0;
+            }
+        }
+
+        delete[] lpb;
+    }
+
+    void CursorFixInitialise() {
         uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\base\\os\\win32\\osinput.cpp", "osMsg", 0x32);
         address = GW::Scanner::FunctionFromNearCall(address);
         if (address) {
@@ -806,6 +864,9 @@ namespace {
             gw_mouse_move = *(GwMouseMove**)address;
             address += 0x7;
             SetCursorPosCenter_Func = (SetCursorPosCenter_pt)GW::Scanner::FunctionFromNearCall(address);
+
+            GW::Hook::CreateHook(ProcessInput_Func, OnProcessInput, (void**)&ProcessInput_Ret);
+            GW::Hook::EnableHooks(ProcessInput_Func);
 
             GW::Hook::CreateHook(SetCursorPosCenter_Func, OnSetCursorPosCenter, (void**)&SetCursorPosCenter_Ret);
             GW::Hook::EnableHooks(SetCursorPosCenter_Func);
@@ -818,9 +879,18 @@ namespace {
 
         ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
 
+        // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
+        RAWINPUTDEVICE Rid;
+        Rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
+        Rid.usUsage = HID_USAGE_GENERIC_MOUSE;
+        Rid.dwFlags = RIDEV_INPUTSINK;
+        Rid.hwndTarget = GW::MemoryMgr::GetGWWindowHandle();
+        ASSERT(RegisterRawInputDevices(&Rid, 1, sizeof(Rid)));
+
     }
-    void TerminateCursorFix() {
+    void CursorFixTerminate() {
         GW::Hook::DisableHooks(SetCursorPosCenter_Func);
+        GW::Hook::DisableHooks(ProcessInput_Func);
     }
 }
 
@@ -1235,7 +1305,7 @@ const bool PendingChatMessage::PrintMessage() {
 
 void GameSettings::Initialize() {
     ToolboxModule::Initialize();
-    InitialiseCursorFix();
+    CursorFixInitialise();
     uintptr_t address;
 
     // Patch that allow storage page (and Anniversary page) to work.
@@ -1641,7 +1711,7 @@ void GameSettings::Terminate() {
     ctrl_click_patch.Reset();
     tome_patch.Reset();
     gold_confirm_patch.Reset();
-    TerminateCursorFix();
+    CursorFixInitialise();
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -2173,6 +2243,8 @@ void GameSettings::UpdateFOV() {
 
 bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
+
+    CursorFixWndProc(Message, wParam, lParam);
     // Open Whisper to targeted player with Ctrl + Enter
     if (Message == WM_KEYDOWN
         && wParam == VK_RETURN

@@ -238,6 +238,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     // Send button up mouse events to everything, to avoid being stuck on mouse-down
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
+    case WM_INPUT:
         for (ToolboxModule* m : tb.GetModules()) {
             m->WndProc(Message, wParam, lParam);
         }
