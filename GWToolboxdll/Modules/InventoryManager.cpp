@@ -428,7 +428,8 @@ namespace {
 
     GW::HookEntry on_offer_item_hook;
     bool check_context_menu_position = false;
-
+    DWORD is_right_clicking = 0;
+    DWORD right_click_mouse_move_count = 0;
 
     struct PreMoveItemStruct {
         uint32_t item_id;
@@ -704,33 +705,20 @@ void InventoryManager::OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id
     }
 }
 bool InventoryManager::WndProc(UINT message, WPARAM , LPARAM ) {
-    static DWORD is_right_clicking = 0;
-    static DWORD start_pos = 0;
-    static DWORD gw_cursor_moved_to = 0;
     // GW Deliberately makes a WM_MOUSEMOVE event right after right button is pressed.
     // Does this to "hide" the cursor when looking around.
     switch (message) {
     case WM_RBUTTONDOWN:
         is_right_clicking = 1;
-        start_pos = GetMessagePos();
         break;
-    case WM_MOUSEMOVE: {
-        if (!is_right_clicking)
-            break;
-        DWORD pos = GetMessagePos();
-        if (!gw_cursor_moved_to) {
-            // First move after right mouse clicked - GW moving cursor. Record the position.
-            gw_cursor_moved_to = pos;
-        }
-        // If the position is the same, its GW still messing with it.
-        if (gw_cursor_moved_to == pos) {
-            // Mouse not actually moved
-            break;
-        }
-        // This far, pos has changed. If it is the same pos as the starting position, then its a right click.
-        check_context_menu_position = pos == start_pos;
-        is_right_clicking = start_pos = gw_cursor_moved_to = 0;
-    } break;
+    case WM_RBUTTONUP:
+        check_context_menu_position = right_click_mouse_move_count < 5;
+        is_right_clicking = right_click_mouse_move_count = 0;
+        break;
+    case WM_MOUSEMOVE:
+        if (is_right_clicking)
+            right_click_mouse_move_count++;
+        break;
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK: {
             const Item* item = static_cast<Item*>(GW::Items::GetHoveredItem());
