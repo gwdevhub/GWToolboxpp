@@ -1,12 +1,7 @@
 #pragma once
 
-#include <GWCA/Managers/UIMgr.h>
-
-#include <Logger.h>
 #include <Timer.h>
 #include <ToolboxWindow.h>
-
-#include <Utils/GuiUtils.h>
 
 #include <Windows/Hotkeys.h>
 

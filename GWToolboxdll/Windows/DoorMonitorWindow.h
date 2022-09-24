@@ -2,7 +2,6 @@
 
 #include <GWCA/Utilities/Hook.h>
 
-#include <Defines.h>
 #include <ToolboxWindow.h>
 
 class DoorMonitorWindow : public ToolboxWindow {

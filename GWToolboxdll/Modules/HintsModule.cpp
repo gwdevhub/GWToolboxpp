@@ -2,10 +2,7 @@
 
 
 #include <GWCA/Constants/Maps.h>
-#include <GWCA/Constants/AgentIDs.h>
-
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
+#include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -17,7 +14,6 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Skill.h>
 
 #include <ImGuiAddons.h>

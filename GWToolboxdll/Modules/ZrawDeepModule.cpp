@@ -3,18 +3,14 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Guild.h>
 
-#include <GWCA/Constants/Constants.h>
-#include <GWCA/Constants/Maps.h>
+#include <GWCA/Constants/AgentIDs.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Defines.h>

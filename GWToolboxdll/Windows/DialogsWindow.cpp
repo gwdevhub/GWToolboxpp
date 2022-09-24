@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/QuestIDs.h>
 #include <GWCA/Managers/AgentMgr.h>
 
 #include <Logger.h>

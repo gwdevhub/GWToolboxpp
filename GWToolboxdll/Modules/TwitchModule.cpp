@@ -1,14 +1,7 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Scanner.h>
-#include <GWCA/Utilities/Hooker.h>
-
-#include <GWCA/Packets/StoC.h>
-
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 
 #include <Defines.h>
 #include <Logger.h>

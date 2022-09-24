@@ -3,7 +3,6 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <ToolboxWindow.h>
-#include <ToolboxUIElement.h>
 
 namespace GW {
     namespace Constants {

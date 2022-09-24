@@ -1,20 +1,16 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/Constants.h>
-
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/StoCMgr.h> 
-#include <GWCA/Managers/PartyMgr.h> 
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <GWCA/Packets/StoC.h>
 
-#include <Utils/GuiUtils.h>
 #include <Widgets/WorldMapWidget.h>
 namespace {
 

@@ -7,6 +7,7 @@
 
 #include <GWCA/Constants/AgentIDs.h>
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/GameEntities/Item.h>

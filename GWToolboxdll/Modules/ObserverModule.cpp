@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/GameContainers/GamePos.h>
-
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
 
@@ -10,10 +8,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/GuildMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/GameEntities/Map.h>
@@ -21,14 +16,12 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Npc.h>
 #include <GWCA/GameEntities/Skill.h>
 
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
-#include <Modules/ToolboxSettings.h>
 #include <Modules/ObserverModule.h>
 
 #include <Logger.h>
@@ -1037,7 +1030,7 @@ void ObserverModule::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(is_enabled), is_enabled);
     ini->SetBoolValue(Name(), VAR_NAME(trim_hench_names), trim_hench_names);
     ini->SetBoolValue(Name(), VAR_NAME(enable_in_explorable_areas), enable_in_explorable_areas);
-    
+
 }
 
 
@@ -1246,7 +1239,7 @@ void ObserverModule::ObservedAction::Reduce(const TargetAction* action, const Ac
             break;
         case ActionStage::Stopped:
             // nothing to do if the action was already finished
-            // we can get "cancelled" packet after a "finished" packet if for example; we're using 
+            // we can get "cancelled" packet after a "finished" packet if for example; we're using
             // an attack skill, the attack skill completes, we begin the afterswing, and the target dies
             // then the afterswing is cancelled, even though the action completed
             if (!action->was_finished) {

@@ -2,8 +2,6 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameContainers/Array.h>
-
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/PartyMgr.h>

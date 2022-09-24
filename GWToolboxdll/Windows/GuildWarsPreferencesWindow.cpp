@@ -1,10 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/Constants.h>
-#include <GWCA/GameContainers/Array.h>
-
-#include <GWCA/GameEntities/Map.h>
-
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>

@@ -1,18 +1,6 @@
 
 #pragma once
 
-#include <GWCA\Constants\Constants.h>
-
-#include <GWCA\GameContainers\Array.h>
-
-#include <GWCA\GameEntities\Skill.h>
-#include <GWCA\GameEntities\Agent.h>
-
-#include <GWCA/Managers/AgentMgr.h>
-#include "GWCA\Managers\UIMgr.h"
-
-#include <Utils/GuiUtils.h>
-#include <Timer.h>
 #include <ToolboxWindow.h>
 
 class ObserverExportWindow : public ToolboxWindow {

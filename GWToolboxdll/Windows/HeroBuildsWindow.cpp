@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Hero.h>
 
@@ -10,8 +9,6 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 
-#include <GWCA/Packets/Opcodes.h>
-
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -19,7 +16,6 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>

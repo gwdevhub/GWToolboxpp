@@ -27,7 +27,6 @@
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
-#include <GWCA/Context/GameContext.h>
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

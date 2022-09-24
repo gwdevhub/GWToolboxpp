@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
-#include <GWCA/GameContainers/GamePos.h>
-
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
+#include <GWCA/Constants/Skills.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>

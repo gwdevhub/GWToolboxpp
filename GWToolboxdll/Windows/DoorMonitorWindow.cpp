@@ -2,14 +2,11 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameEntities/Map.h>
-
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
-#include <Logger.h>
 #include <Windows/DoorMonitorWindow.h>
 #include <ImGuiAddons.h>
 

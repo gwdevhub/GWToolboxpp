@@ -1,24 +1,20 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
-#include <GWCA/Context/WorldContext.h>
-
-#include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <Keys.h>
-#include <Logger.h>
 
 #include <Modules/Resources.h>
 #include <Windows/HotkeysWindow.h>

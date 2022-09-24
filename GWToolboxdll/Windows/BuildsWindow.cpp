@@ -2,15 +2,14 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/Packets/Opcodes.h>
-
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Attribute.h>
+#include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -210,7 +209,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
         ImGui::SetTooltip(!build.pcons.empty() ? "Click to load build template and pcons" : "Click to load build template");
     ImGui::SameLine(0, spacing);
     bool pcons_editing = tbuild.edit_pcons == static_cast<int>(j);
-    if(pcons_editing) 
+    if(pcons_editing)
         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
     if (build.pcons.empty())
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
@@ -255,7 +254,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send this build's Pcons to team chat");
     const auto& pcons = PconsWindow::Instance().pcons;
-        
+
     float pos_x = 0;
     float third_w = ImGui::GetContentRegionAvail().x / 3;
     unsigned int offset = 0;
@@ -269,7 +268,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
             offset = 1;
             pos_x = 0;
         }
-                
+
         char pconlabel[128];
         snprintf(pconlabel, 128, "%s###pcon_%s", pcon->chat.c_str(), pcon->ini.c_str());
         if (ImGui::Checkbox(pconlabel, &active)) {
@@ -547,7 +546,7 @@ void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx) {
         delete[] t->code.m_buffer;
         delete[] t->name;
         });
-    
+
 }
 void BuildsWindow::Load(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
@@ -636,7 +635,7 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
                 // Don't enable pcons that the user cant see!
                 pcons_not_visible.push_back(pcon);
                 continue;
-            } 
+            }
             pcon->SetEnabled(false);
             pcons_loaded.push_back(pcon);
         }
@@ -715,7 +714,7 @@ void BuildsWindow::Update(float delta) {
         LoadFromFile();
         order_by_changed = false;
     }
-    // if we open the window, load from file. If we close the window, save to file. 
+    // if we open the window, load from file. If we close the window, save to file.
     static bool old_visible = false;
     bool cur_visible = false;
     cur_visible |= visible;
@@ -889,7 +888,7 @@ void BuildsWindow::SaveToFile() {
                 snprintf(templatekey, 16, "template%d", j);
                 inifile->SetValue(section, namekey, build.name);
                 inifile->SetValue(section, templatekey, build.code);
-                
+
                 if (!build.pcons.empty()) {
                     char pconskey[16];
                     std::string pconsval;

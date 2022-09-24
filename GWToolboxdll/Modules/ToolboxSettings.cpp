@@ -31,7 +31,6 @@
 #endif
 #include <Modules/HallOfMonumentsModule.h>
 
-#include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/BuildsWindow.h>
@@ -56,9 +55,6 @@
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
-#if 0
-#include <Windows/PartySearchWindow.h>
-#endif
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
 #endif

@@ -2,8 +2,6 @@
 
 #include <Color.h>
 
-#include <GWCA/Managers/RenderMgr.h>
-
 #include <Modules/Resources.h>
 #include <Modules/ToolboxTheme.h>
 
@@ -58,9 +56,9 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
 
     if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
     inifile->LoadFile(Resources::GetPath(IniFilename).c_str());
-    
+
     font_global_scale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", 1.0);
-    
+
     ini_style.Alpha = (float)inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha);
     ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f); // clamp to [0.2, 1.0]
     ini_style.WindowPadding.x = (float)inifile->GetDoubleValue(IniSection, "WindowPaddingX", ini_style.WindowPadding.x);

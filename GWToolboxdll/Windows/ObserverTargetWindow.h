@@ -1,17 +1,6 @@
 
 #pragma once
 
-#include <GWCA\Constants\Constants.h>
-
-#include <GWCA\GameContainers\Array.h>
-
-#include <GWCA\GameEntities\Skill.h>
-#include "GWCA\Managers\UIMgr.h"
-
-#include <Utils/GuiUtils.h>
-#include <Timer.h>
-#include <ToolboxWindow.h>
-
 #include <Windows/ObserverPlayerWindow.h>
 
 #define NO_AGENT 0

@@ -1,12 +1,12 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
 
 #include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>

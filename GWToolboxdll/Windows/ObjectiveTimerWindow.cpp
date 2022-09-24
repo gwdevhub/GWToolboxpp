@@ -6,6 +6,7 @@
 #include <Widgets/TimerWidget.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/AgentIDs.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>

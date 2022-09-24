@@ -1,15 +1,8 @@
 #include "stdafx.h"
-#include <cstdlib>
-
-#include <GWCA/Utilities/Macros.h>
-#include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Managers/AgentMgr.h>
-
-#include <Logger.h>
-#include <Utils/GuiUtils.h>
 
 #include <Modules/ObserverModule.h>
 #include <Windows/ObserverTargetWindow.h>

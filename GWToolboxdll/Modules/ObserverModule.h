@@ -3,15 +3,15 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <ToolboxWidget.h>
-
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Skill.h>
+#include <GWCA/Utilities/Hook.h>
 
-#include <chrono>
+#include <ToolboxModule.h>
+
 #include <Timer.h>
 
 #define NO_AGENT 0
@@ -103,7 +103,7 @@ public:
         // innacuracies in our modelling of the game engine
         int integrity = 0;
 
-        void Reduce(const TargetAction* action, const ActionStage stage);
+        void Reduce(const TargetAction* action, ActionStage stage);
     };
 
     // an agents statistics for an action (skill)
@@ -193,35 +193,35 @@ public:
 
         // map of agent_id -> ObservedAction
         std::unordered_map<uint32_t, ObservedAction*> attacks_dealt_to_agents = {};
-        ObservedAction& LazyGetAttacksDealedAgainst(const uint32_t target_agent_id);
+        ObservedAction& LazyGetAttacksDealedAgainst(uint32_t target_agent_id);
 
         // map of agent_id -> ObservedAction
         std::unordered_map<uint32_t, ObservedAction*> attacks_received_from_agents = {};
-        ObservedAction& LazyGetAttacksReceivedFrom(const uint32_t attacker_agent_id);
+        ObservedAction& LazyGetAttacksReceivedFrom(uint32_t attacker_agent_id);
 
         // skills
 
         // map of skill_id -> count of times received
         std::unordered_map<GW::Constants::SkillID, ObservedSkill*> skills_used = {};
         std::vector<GW::Constants::SkillID> skill_ids_used = {};
-        ObservedAction& LazyGetSkillUsed(const GW::Constants::SkillID skill_id);
+        ObservedAction& LazyGetSkillUsed(GW::Constants::SkillID skill_id);
 
         // map of skill_id -> count of times used
         std::unordered_map<GW::Constants::SkillID, ObservedSkill*> skills_received = {};
         std::vector<GW::Constants::SkillID> skill_ids_received = {};
-        ObservedAction& LazyGetSkillReceived(const GW::Constants::SkillID skill_id);
+        ObservedAction& LazyGetSkillReceived(GW::Constants::SkillID skill_id);
 
         // skills by agent
 
         // map of agent_id -> skill_id -> count of times received
         std::unordered_map<uint32_t, std::unordered_map<GW::Constants::SkillID, ObservedSkill*>> skills_received_from_agents = {};
         std::unordered_map<uint32_t, std::vector<GW::Constants::SkillID>> skill_ids_received_from_agents = {};
-        ObservedSkill& LazyGetSkillReceivedFrom(const uint32_t caster_agent_id, const GW::Constants::SkillID skill_id);
+        ObservedSkill& LazyGetSkillReceivedFrom(uint32_t caster_agent_id, GW::Constants::SkillID skill_id);
 
         // map of agent_id -> skill_id -> count of times used
         std::unordered_map<uint32_t, std::unordered_map<GW::Constants::SkillID, ObservedSkill*>> skills_used_on_agents = {};
         std::unordered_map<uint32_t, std::vector<GW::Constants::SkillID>> skill_ids_used_on_agents = {};
-        ObservedSkill& LazyGetSkillUsedOn(const uint32_t target_agent_id, const GW::Constants::SkillID skill_id);
+        ObservedSkill& LazyGetSkillUsedOn(uint32_t target_agent_id, GW::Constants::SkillID skill_id);
     };
 
     // Stats for Parties
@@ -405,8 +405,8 @@ public:
 
         std::string Name();
         std::string Description();
-        inline bool GetIsPvP()          const { return (flags & 0x1) != 0; }
-        inline bool GetIsGuildHall()    const { return (flags & 0x800000) != 0; }
+        bool GetIsPvP()          const { return (flags & 0x1) != 0; }
+        bool GetIsGuildHall()    const { return (flags & 0x800000) != 0; }
 
     private:
         std::string name = "";
@@ -453,10 +453,10 @@ public:
     bool InitializeObserverSession();
     void Reset();
 
-    ObservableGuild* GetObservableGuildById(const uint32_t guild_id);
-    ObservableAgent* GetObservableAgentById(const uint32_t agent_id);
-    ObservableSkill* GetObservableSkillById(const GW::Constants::SkillID skill_id);
-    ObservableParty* GetObservablePartyById(const uint32_t party_id);
+    ObservableGuild* GetObservableGuildById(uint32_t guild_id);
+    ObservableAgent* GetObservableAgentById(uint32_t agent_id);
+    ObservableSkill* GetObservableSkillById(GW::Constants::SkillID skill_id);
+    ObservableParty* GetObservablePartyById(uint32_t party_id);
 
     ObservableMap* GetMap() { return map; }
     const std::vector<uint32_t>& GetObservableGuildIds() { return observable_guild_ids; }
@@ -498,42 +498,42 @@ private:
     // packet handlers
 
     void HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet);
-    void HandleJumboMessage(const uint8_t type, const uint32_t value);
+    void HandleJumboMessage(uint8_t type, uint32_t value);
     void HandleAgentProjectileLaunched(const GW::Packet::StoC::AgentProjectileLaunched* packet);
 
     // generic handlers
 
-    void HandleInterrupted(const uint32_t agent_id);
-    void HandleKnockedDown(const uint32_t agent_id, const float duration);
-    void HandleAgentState(const uint32_t agent_id, const uint32_t state);
-    void HandleDamageDone(const uint32_t caster_id, const uint32_t target_id, const float amount_pc, const bool is_crit);
-    void HandleAgentAdd(const uint32_t agent_id);
+    void HandleInterrupted(uint32_t agent_id);
+    void HandleKnockedDown(uint32_t agent_id, float duration);
+    void HandleAgentState(uint32_t agent_id, uint32_t state);
+    void HandleDamageDone(uint32_t caster_id, uint32_t target_id, float amount_pc, bool is_crit);
+    void HandleAgentAdd(uint32_t agent_id);
 
-    void HandleAttackFinished(const uint32_t agent_id);
-    void HandleAttackStopped(const uint32_t agent_id);
-    void HandleAttackStarted(const uint32_t caster_id, const uint32_t target_id);
+    void HandleAttackFinished(uint32_t agent_id);
+    void HandleAttackStopped(uint32_t agent_id);
+    void HandleAttackStarted(uint32_t caster_id, uint32_t target_id);
 
-    void HandleInstantSkillActivated(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id);
+    void HandleInstantSkillActivated(uint32_t caster_id, uint32_t target_id, GW::Constants::SkillID skill_id);
 
-    void HandleAttackSkillFinished(const uint32_t agent_id);
-    void HandleAttackSkillStopped(const uint32_t agent_id);
-    void HandleAttackSkillStarted(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id);
+    void HandleAttackSkillFinished(uint32_t agent_id);
+    void HandleAttackSkillStopped(uint32_t agent_id);
+    void HandleAttackSkillStarted(uint32_t caster_id, uint32_t target_id, GW::Constants::SkillID skill_id);
 
-    void HandleSkillFinished(const uint32_t agent_id);
-    void HandleSkillStopped(const uint32_t agent_id);
-    void HandleSkillActivated(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id);
+    void HandleSkillFinished(uint32_t agent_id);
+    void HandleSkillStopped(uint32_t agent_id);
+    void HandleSkillActivated(uint32_t caster_id, uint32_t target_id, GW::Constants::SkillID skill_id);
 
-    void HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
-        const uint32_t target_id, const float value, const bool no_target);
+    void HandleGenericPacket(uint32_t value_id, uint32_t caster_id,
+                             uint32_t target_id, float value, bool no_target);
 
-    void HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
-            const uint32_t target_id, const uint32_t value, const bool no_target);
+    void HandleGenericPacket(uint32_t value_id, uint32_t caster_id,
+                             uint32_t target_id, uint32_t value, bool no_target);
 
     // Update the state of the module based on an Action & Stage
     // return false means action was not assigned and may need freeing by the caller
     bool ReduceAction(ObservableAgent* caster, ActionStage stage, TargetAction* new_action = nullptr);
 
-    uint32_t JumboMessageValueToPartyId(const uint32_t value);
+    uint32_t JumboMessageValueToPartyId(uint32_t value);
     void HandleMoraleBoost(ObservableParty* boosting_party);
     void HandleVictory(ObservableParty* winning_party);
 
