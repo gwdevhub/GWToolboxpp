@@ -756,6 +756,72 @@ namespace {
             msg->component_flags |= 0x01000000;
         }
     }
+
+    typedef bool(__cdecl* OnProcessInput_pt)(uint32_t* wParam, uint32_t* lParam);
+    OnProcessInput_pt ProcessInput_Func = nullptr;
+    OnProcessInput_pt ProcessInput_Ret = nullptr;
+
+    struct GwMouseMove {
+        int center_x;
+        int center_y;
+        uint32_t unk;
+        uint32_t mouse_button_state; // 0x1 - LMB, 0x2 - MMB, 0x4 - RMB
+        uint32_t move_camera; // 1 == control camera while right mouse button pressed
+        int captured_x;
+        int captured_y;
+    };
+    GwMouseMove* gw_mouse_move = 0;
+
+    bool* HasRegisteredTrackMouseEvent = 0;
+
+    typedef void(__cdecl* SetCursorPosCenter_pt)(GwMouseMove* wParam);
+    SetCursorPosCenter_pt SetCursorPosCenter_Func = nullptr;
+    SetCursorPosCenter_pt SetCursorPosCenter_Ret = nullptr;
+
+    // Override (and rewrite) GW's handling of setting the mouse cursor to the center of the screen (bypass GameMutex, may be the cause of camera glitch)
+    // This could be a patch really, but rewriting the function out is a bit more readable.
+    void OnSetCursorPosCenter(GwMouseMove* gwmm) {
+        GW::Hook::EnterHook();
+        // @Enhancement: Maybe assert that gwmm == gw_mouse_move?
+        HWND gw_window_handle = GetFocus();
+        // @Enhancement: Maybe check that the focussed window handle is the GW window handle?
+        RECT rect;
+        if (!(gw_window_handle && GetClientRect(gw_window_handle, &rect)))
+            goto leave;
+        gwmm->center_x = (rect.left + rect.right) / 2;
+        gwmm->center_y = (rect.bottom + rect.top) / 2;
+        SetPhysicalCursorPos(gwmm->center_x, gwmm->center_y);
+    leave:
+        GW::Hook::LeaveHook();
+    }
+
+    void InitialiseCursorFix() {
+        uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\base\\os\\win32\\osinput.cpp", "osMsg", 0x32);
+        address = GW::Scanner::FunctionFromNearCall(address);
+        if (address) {
+            ProcessInput_Func = (OnProcessInput_pt)address;
+            address += 0x2b3;
+            HasRegisteredTrackMouseEvent = *(bool**)address;
+            address += 0x85;
+            gw_mouse_move = *(GwMouseMove**)address;
+            address += 0x7;
+            SetCursorPosCenter_Func = (SetCursorPosCenter_pt)GW::Scanner::FunctionFromNearCall(address);
+
+            GW::Hook::CreateHook(SetCursorPosCenter_Func, OnSetCursorPosCenter, (void**)&SetCursorPosCenter_Ret);
+            GW::Hook::EnableHooks(SetCursorPosCenter_Func);
+        }
+
+        GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
+        GWCA_INFO("[SCAN] HasRegisteredTrackMouseEvent = %p", HasRegisteredTrackMouseEvent);
+        GWCA_INFO("[SCAN] gw_mouse_move = %p", gw_mouse_move);
+        GWCA_INFO("[SCAN] SetCursorPosCenter_Func = %p", SetCursorPosCenter_Func);
+
+        ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
+
+    }
+    void TerminateCursorFix() {
+        GW::Hook::DisableHooks(SetCursorPosCenter_Func);
+    }
 }
 
 static std::wstring ShorthandItemDescription(GW::Item* item) {
@@ -1169,7 +1235,7 @@ const bool PendingChatMessage::PrintMessage() {
 
 void GameSettings::Initialize() {
     ToolboxModule::Initialize();
-
+    InitialiseCursorFix();
     uintptr_t address;
 
     // Patch that allow storage page (and Anniversary page) to work.
@@ -1575,6 +1641,7 @@ void GameSettings::Terminate() {
     ctrl_click_patch.Reset();
     tome_patch.Reset();
     gold_confirm_patch.Reset();
+    TerminateCursorFix();
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
