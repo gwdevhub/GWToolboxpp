@@ -3,11 +3,8 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/Utilities/MemoryPatcher.h>
 
 #include <Color.h>
-#include <Defines.h>
-#include <Logger.h>
 #include <Timer.h>
 #include <ToolboxModule.h>
 
@@ -77,7 +74,6 @@ protected:
 
 class GameSettings : public ToolboxModule {
     GameSettings() = default;
-    GameSettings(const GameSettings&) = delete;
     ~GameSettings() = default;
 
 public:

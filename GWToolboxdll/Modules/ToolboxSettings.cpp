@@ -12,6 +12,7 @@
 #include <Modules/Updater.h>
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
+#include <Modules/MouseFix.h>
 #include <Modules/ItemFilter.h>
 #include <Modules/ChatCommands.h>
 #include <Modules/GameSettings.h>
@@ -77,101 +78,103 @@
 #include <Widgets/LatencyWidget.h>
 #include "ToolboxSettings.h"
 
+
 bool ToolboxSettings::move_all = false;
 
 void ToolboxSettings::LoadModules(CSimpleIni* ini) {
-    SettingsWindow::Instance().sep_modules = optional_modules.size();
-    optional_modules.push_back(&Updater::Instance());
+    SettingsWindow::Instance().sep_modules = modules.size();
+    modules.push_back(&Updater::Instance());
 
 #if 0
-    optional_modules.push_back(&GWFileRequester::Instance());
+    modules.push_back(&GWFileRequester::Instance());
 #endif
 
-    if (use_chatcommand) optional_modules.push_back(&ChatCommands::Instance());
-    if (use_chatfilter) optional_modules.push_back(&ChatFilter::Instance());
-    if (use_itemfilter) optional_modules.push_back(&ItemFilter::Instance());
-    optional_modules.push_back(&GameSettings::Instance());
-    optional_modules.push_back(&InventoryManager::Instance());
-    if (use_partywindowmodule) optional_modules.push_back(&PartyWindowModule::Instance());
-    optional_modules.push_back(&ZrawDeepModule::Instance());
+    if (use_chatcommand) modules.push_back(&ChatCommands::Instance());
+    if (use_chatfilter) modules.push_back(&ChatFilter::Instance());
+    if (use_itemfilter) modules.push_back(&ItemFilter::Instance());
+    modules.push_back(&MouseFix::Instance());
+    modules.push_back(&GameSettings::Instance());
+    modules.push_back(&InventoryManager::Instance());
+    if (use_partywindowmodule) modules.push_back(&PartyWindowModule::Instance());
+    modules.push_back(&ZrawDeepModule::Instance());
 
-    if (use_discord) optional_modules.push_back(&DiscordModule::Instance());
-    if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
-    if (use_teamspeak) optional_modules.push_back(&TeamspeakModule::Instance());
-    if (use_observer) optional_modules.push_back(&ObserverModule::Instance());
-    optional_modules.push_back(&ChatLog::Instance());
-    optional_modules.push_back(&HintsModule::Instance());
-    optional_modules.push_back(&HallOfMonumentsModule::Instance());
+    if (use_discord) modules.push_back(&DiscordModule::Instance());
+    if (use_twitch) modules.push_back(&TwitchModule::Instance());
+    if (use_teamspeak) modules.push_back(&TeamspeakModule::Instance());
+    if (use_observer) modules.push_back(&ObserverModule::Instance());
+    modules.push_back(&ChatLog::Instance());
+    modules.push_back(&HintsModule::Instance());
+    modules.push_back(&HallOfMonumentsModule::Instance());
 
-    SettingsWindow::Instance().sep_windows = optional_modules.size();
-    optional_modules.push_back(&SettingsWindow::Instance());
-    if (use_pcons) optional_modules.push_back(&PconsWindow::Instance());
-    if (use_hotkeys) optional_modules.push_back(&HotkeysWindow::Instance());
-    if (use_builds) optional_modules.push_back(&BuildsWindow::Instance());
-    if (use_herobuilds) optional_modules.push_back(&HeroBuildsWindow::Instance());
-    if (use_travel) optional_modules.push_back(&TravelWindow::Instance());
-    if (use_dialogs) optional_modules.push_back(&DialogsWindow::Instance());
-    if (use_info) optional_modules.push_back(&InfoWindow::Instance());
-    if (use_materials) optional_modules.push_back(&MaterialsWindow::Instance());
-    if (use_trade) optional_modules.push_back(&TradeWindow::Instance());
-    if (use_notepad) optional_modules.push_back(&NotePadWindow::Instance());
-    if (use_objectivetimer) optional_modules.push_back(&ObjectiveTimerWindow::Instance());
-    if (use_factionleaderboard) optional_modules.push_back(&FactionLeaderboardWindow::Instance());
-    if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
-    if (use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
-    if (use_observer_player_window) optional_modules.push_back(&ObserverPlayerWindow::Instance());
-    if (use_observer_target_window) optional_modules.push_back(&ObserverTargetWindow::Instance());
-    if (use_observer_party_window) optional_modules.push_back(&ObserverPartyWindow::Instance());
-    if (use_observer_export_window) optional_modules.push_back(&ObserverExportWindow::Instance());
-    if (use_obfuscator) optional_modules.push_back(&Obfuscator::Instance());
-    if (use_completion_window) optional_modules.push_back(&CompletionWindow::Instance());
-    if (use_reroll_window) optional_modules.push_back(&RerollWindow::Instance());
-    if (use_party_statistics) optional_modules.push_back(&PartyStatisticsWindow::Instance());
+    SettingsWindow::Instance().sep_windows = modules.size();
+    modules.push_back(&SettingsWindow::Instance());
+    if (use_pcons) modules.push_back(&PconsWindow::Instance());
+    if (use_hotkeys) modules.push_back(&HotkeysWindow::Instance());
+    if (use_builds) modules.push_back(&BuildsWindow::Instance());
+    if (use_herobuilds) modules.push_back(&HeroBuildsWindow::Instance());
+    if (use_travel) modules.push_back(&TravelWindow::Instance());
+    if (use_dialogs) modules.push_back(&DialogsWindow::Instance());
+    if (use_info) modules.push_back(&InfoWindow::Instance());
+    if (use_materials) modules.push_back(&MaterialsWindow::Instance());
+    if (use_trade) modules.push_back(&TradeWindow::Instance());
+    if (use_notepad) modules.push_back(&NotePadWindow::Instance());
+    if (use_objectivetimer) modules.push_back(&ObjectiveTimerWindow::Instance());
+    if (use_factionleaderboard) modules.push_back(&FactionLeaderboardWindow::Instance());
+    if (use_daily_quests) modules.push_back(&DailyQuests::Instance());
+    if (use_friendlist) modules.push_back(&FriendListWindow::Instance());
+    if (use_observer_player_window) modules.push_back(&ObserverPlayerWindow::Instance());
+    if (use_observer_target_window) modules.push_back(&ObserverTargetWindow::Instance());
+    if (use_observer_party_window) modules.push_back(&ObserverPartyWindow::Instance());
+    if (use_observer_export_window) modules.push_back(&ObserverExportWindow::Instance());
+    if (use_obfuscator) modules.push_back(&Obfuscator::Instance());
+    if (use_completion_window) modules.push_back(&CompletionWindow::Instance());
+    if (use_reroll_window) modules.push_back(&RerollWindow::Instance());
+    if (use_party_statistics) modules.push_back(&PartyStatisticsWindow::Instance());
 
 #ifdef _DEBUG
 #if 0
-    optional_modules.push_back(&PartySearchWindow::Instance());
+    modules.push_back(&PartySearchWindow::Instance());
 #endif
-    optional_modules.push_back(&PacketLoggerWindow::Instance());
-    optional_modules.push_back(&StringDecoderWindow::Instance());
-    optional_modules.push_back(&DoorMonitorWindow::Instance());
-    optional_modules.push_back(&SkillListingWindow::Instance());
+    modules.push_back(&PacketLoggerWindow::Instance());
+    modules.push_back(&StringDecoderWindow::Instance());
+    modules.push_back(&DoorMonitorWindow::Instance());
+    modules.push_back(&SkillListingWindow::Instance());
 #endif
     std::sort(
-        optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_windows),
-        optional_modules.end(),
+        modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_windows),
+        modules.end(),
         [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
             return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
         });
 
-    SettingsWindow::Instance().sep_widgets = optional_modules.size();
-    if (use_timer) optional_modules.push_back(&TimerWidget::Instance());
-    if (use_health) optional_modules.push_back(&HealthWidget::Instance());
-    if (use_skillbar) optional_modules.push_back(&SkillbarWidget::Instance());
-    if (use_distance) optional_modules.push_back(&DistanceWidget::Instance());
-    if (use_minimap) optional_modules.push_back(&Minimap::Instance());
-    if (use_damage) optional_modules.push_back(&PartyDamage::Instance());
-    if (use_bonds) optional_modules.push_back(&BondsWidget::Instance());
-    if (use_clock) optional_modules.push_back(&ClockWidget::Instance());
-    if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
-    if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
-    if (use_world_map) optional_modules.push_back(&WorldMapWidget::Instance());
-    if (use_effect_monitor) optional_modules.push_back(&EffectsMonitorWidget::Instance());
-    if (use_latency_widget) optional_modules.push_back(&LatencyWidget::Instance());
-    if (use_skill_monitor) optional_modules.push_back(&SkillMonitorWidget::Instance());
+    SettingsWindow::Instance().sep_widgets = modules.size();
+    if (use_timer) modules.push_back(&TimerWidget::Instance());
+    if (use_health) modules.push_back(&HealthWidget::Instance());
+    if (use_skillbar) modules.push_back(&SkillbarWidget::Instance());
+    if (use_distance) modules.push_back(&DistanceWidget::Instance());
+    if (use_minimap) modules.push_back(&Minimap::Instance());
+    if (use_damage) modules.push_back(&PartyDamage::Instance());
+    if (use_bonds) modules.push_back(&BondsWidget::Instance());
+    if (use_clock) modules.push_back(&ClockWidget::Instance());
+    if (use_vanquish) modules.push_back(&VanquishWidget::Instance());
+    if (use_alcohol) modules.push_back(&AlcoholWidget::Instance());
+    if (use_world_map) modules.push_back(&WorldMapWidget::Instance());
+    if (use_effect_monitor) modules.push_back(&EffectsMonitorWidget::Instance());
+    if (use_latency_widget) modules.push_back(&LatencyWidget::Instance());
+    if (use_skill_monitor) modules.push_back(&SkillMonitorWidget::Instance());
 #if _DEBUG
 
 #endif
 
     std::sort(
-        optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_widgets),
-        optional_modules.end(),
+        modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_widgets),
+        modules.end(),
         [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-            return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
+            return strcmp(lhs->SettingsName(), rhs->SettingsName());
         });
 
     // Only read settings of non-core modules
-    for (ToolboxModule* module : optional_modules) {
+    for (ToolboxModule* module : modules) {
         module->Initialize();
         module->LoadSettings(ini);
     }

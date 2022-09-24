@@ -12,7 +12,6 @@
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 
-#include <CursorFix.h>
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
@@ -138,10 +137,6 @@ DWORD __stdcall ThreadEntry(LPVOID) {
         goto leave;
     }
 
-    Log::Log("Installing Cursor Fix\n");
-
-    InstallCursorFix();
-
     Log::Log("Installing dx hooks\n");
 
     // Some modules rely on the gwdx_ptr being present for stuff like getting viewport coords.
@@ -170,9 +165,6 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 //        }
 //#endif
     }
-
-    Log::Log("Removing Cursor Fix\n");
-    UninstallCursorFix();
 
     // @Remark:
     // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks

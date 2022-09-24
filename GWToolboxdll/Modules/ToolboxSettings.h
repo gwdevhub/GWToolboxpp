@@ -8,9 +8,9 @@ namespace GW {
     }
 }
 class ToolboxSettings : public ToolboxUIElement {
-    ToolboxSettings() {};
-    ToolboxSettings(const ToolboxSettings&) = delete;
-    ~ToolboxSettings() {};
+    ToolboxSettings() = default;
+    ~ToolboxSettings() = default;
+
 public:
     static ToolboxSettings& Instance() {
         static ToolboxSettings instance;
@@ -33,18 +33,18 @@ public:
     void DrawFreezeSetting();
     void DrawSizeAndPositionSettings() override {}
 
-    const std::vector<ToolboxModule*>& GetOptionalModules() const { return optional_modules; }
+    const std::vector<ToolboxModule*>& GetModules() const { return modules; }
 
     static bool move_all;
 
 private:
     // === location stuff ===
     clock_t location_timer = 0;
-    GW::Constants::MapID location_current_map = (GW::Constants::MapID)0;
+    GW::Constants::MapID location_current_map = static_cast<GW::Constants::MapID>(0);
     std::wofstream location_file;
     bool save_location_data = false;
 
-    std::vector<ToolboxModule*> optional_modules;
+    std::vector<ToolboxModule*> modules{};
 
     bool use_pcons = true;
     bool use_hotkeys = true;
