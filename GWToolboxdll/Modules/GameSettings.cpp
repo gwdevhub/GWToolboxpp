@@ -99,6 +99,10 @@ namespace {
         }
     }
 
+    // For some reason no matter whether this call is wrapped in Draw or Update or main thread, it passes garbage to window title on first load.
+    // Even tried compiling in unicode, still no dice.
+    // I've given up trying, so here is a timer that triggers a 3s delay to do it in the Update loop, whatever
+    clock_t set_window_title_delay = 0;
     void SetWindowTitle(bool enabled) {
         if (!enabled)
             return;
@@ -1463,6 +1467,8 @@ void GameSettings::Initialize() {
     GW::Chat::CreateCommand(L"reinvite", GameSettings::CmdReinvite);
 
     GW::UI::RegisterCreateUIComponentCallback(&OnCreateUIComponent_Entry, OnCreateUIComponent);
+
+    set_window_title_delay = TIMER_INIT();
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
 #endif
@@ -1670,7 +1676,6 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
     GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
-    SetWindowTitle(set_window_title_as_charname);
 
     tome_patch.TogglePatch(show_unlearned_skill);
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
@@ -2143,6 +2148,10 @@ void GameSettings::Update(float) {
     CursorFixInitialise();
     UpdateReinvite();
     UpdateItemTooltip();
+    if (set_window_title_delay && TIMER_DIFF(set_window_title_delay) > 3000) {
+        SetWindowTitle(set_window_title_as_charname);
+        set_window_title_delay = 0;
+    }
 
     // See OnSendChat
     if (pending_wiki_search_term && pending_wiki_search_term->wstring().length()) {
