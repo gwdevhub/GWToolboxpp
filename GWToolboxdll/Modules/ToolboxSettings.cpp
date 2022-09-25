@@ -170,7 +170,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
         modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_widgets),
         modules.end(),
         [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-            return strcmp(lhs->SettingsName(), rhs->SettingsName());
+            return strcmp(lhs->SettingsName(), rhs->SettingsName()) < 0;
         });
 
     // Only read settings of non-core modules
