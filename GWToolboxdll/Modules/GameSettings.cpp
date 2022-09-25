@@ -251,8 +251,8 @@ namespace {
         {GW::Constants::SkillID::Triple_Shot_luxon, GW::Constants::SkillID::Triple_Shot_kurzick }
     };
     struct LoadSkillBarPacket {
-        uint32_t header;
-        uint32_t agent_id;
+        uint32_t header = 0;
+        uint32_t agent_id = 0;
         uint32_t skill_ids_size = 8;
         GW::Constants::SkillID skill_ids[8];
     } skillbar_packet;
@@ -261,7 +261,7 @@ namespace {
     void OnPreLoadSkillBar(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
         ASSERT(message_id == GW::UI::UIMessage::kSendLoadSkillbar && wparam);
         struct Pack {
-            uint32_t agent_id;
+            uint32_t agent_id = 0;
             GW::Constants::SkillID skill_ids[8];
         } *packet = (Pack*)wparam;
         // @Enhancement: may cause weird stuff if we load loads of builds at once; heros could get mixed up with player. Use a map.
@@ -1153,15 +1153,8 @@ const bool PendingChatMessage::PrintMessage() {
 void GameSettings::Initialize() {
     ToolboxModule::Initialize();
 
-#define BIND2(x) std ::bind(x, this, std::placeholders::_1, std::placeholders::_2)
-#define BIND3(x) std ::bind(x, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
-#define BIND4(x) std ::bind(x, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)
-#define BIND5(x) std ::bind(x, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5)
-
-    uintptr_t address;
-
     // Patch that allow storage page (and Anniversary page) to work.
-    address = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
+    uintptr_t address = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
     printf("[SCAN] StoragePatch = %p\n", (void *)address);
 
     // Xunlai Chest has a behavior where if you
@@ -1212,25 +1205,25 @@ void GameSettings::Initialize() {
     GW::HookBase::CreateHook(ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, (void**)&ShowAgentExperienceGain_Ret);
     GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
 
-    GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, BIND4(&GameSettings::OnFactionDonate));
+    GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, bind_member(this, &GameSettings::OnFactionDonate));
     GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILLBAR_UPDATE, OnPostLoadSkillBar, 0x8000);
-    GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, BIND2(&GameSettings::OnUpdateSkillCount), -0x3000);
-    GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_2, BIND2(&GameSettings::OnUpdateSkillCount), -0x3000);
+    GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, bind_member(this, &GameSettings::OnUpdateSkillCount), -0x3000);
+    GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_2, bind_member(this, &GameSettings::OnUpdateSkillCount), -0x3000);
 
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, BIND2(&GameSettings::OnPartyDefeated));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, bind_member(this, &GameSettings::OnPartyDefeated));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
         switch (packet->value_id) {
         case 11:
-            Instance().OnAgentMarker(status, packet);
+            OnAgentMarker(status, packet);
         case 21:
-            Instance().OnAgentEffect(status, packet);
+            OnAgentEffect(status, packet);
             break;
         case 22:
             //OnAgentAnimation(status, packet);
             break;
         case 28:
-            Instance().OnAgentLoopingAnimation(status, packet);
+            OnAgentLoopingAnimation(status, packet);
             break;
         }
     });
@@ -1240,25 +1233,25 @@ void GameSettings::Initialize() {
         if (false && !GW::Agents::GetAgentByID(packet->agent_id))
             status->blocked = true;
         });*/
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, BIND2(&GameSettings::OnTradeStarted));
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, BIND2(&GameSettings::OnPartyInviteReceived));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, BIND2(&GameSettings::OnPartyPlayerJoined));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, BIND2(&GameSettings::OnMapTravel));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, BIND2(&GameSettings::OnCinematic));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, BIND2(&GameSettings::OnSpeechBubble));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, BIND2(&GameSettings::OnSpeechDialogue));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, BIND2(&GameSettings::OnVanquishComplete));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&VanquishComplete_Entry, BIND2(&GameSettings::OnDungeonReward));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, BIND2(&GameSettings::OnServerMessage));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&MessageGlobal_Entry, BIND2(&GameSettings::OnGlobalMessage));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry, BIND2(&GameSettings::OnNPCChatMessage));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, BIND2(&GameSettings::OnLocalChatMessage));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, BIND2(&GameSettings::OnMapLoaded));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, BIND2(&GameSettings::OnPlayerJoinInstance));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerLeaveInstance>(&PlayerLeaveInstance_Entry, BIND2(&GameSettings::OnPlayerLeaveInstance));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, bind_member(this, &GameSettings::OnTradeStarted));
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyInviteReceived));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyPlayerJoined));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, bind_member(this, &GameSettings::OnMapTravel));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, bind_member(this, &GameSettings::OnCinematic));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, bind_member(this, &GameSettings::OnSpeechBubble));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, bind_member(this, &GameSettings::OnSpeechDialogue));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, bind_member(this, &GameSettings::OnVanquishComplete));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&VanquishComplete_Entry, bind_member(this, &GameSettings::OnDungeonReward));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, bind_member(this, &GameSettings::OnServerMessage));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&MessageGlobal_Entry, bind_member(this, &GameSettings::OnGlobalMessage));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry, bind_member(this, &GameSettings::OnNPCChatMessage));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, bind_member(this, &GameSettings::OnLocalChatMessage));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, bind_member(this, &GameSettings::OnMapLoaded));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, bind_member(this, &GameSettings::OnPlayerJoinInstance));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerLeaveInstance>(&PlayerLeaveInstance_Entry, bind_member(this, &GameSettings::OnPlayerLeaveInstance));
     //GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAfterAgentAdd_Entry, &OnAfterAgentAdd);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&PartyDefeated_Entry, BIND2(&GameSettings::OnAgentAdd));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&PartyDefeated_Entry, BIND2(&GameSettings::OnUpdateAgentState));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&PartyDefeated_Entry, bind_member(this, &GameSettings::OnAgentAdd));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&PartyDefeated_Entry, bind_member(this, &GameSettings::OnUpdateAgentState));
     // Trigger for message on party change
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(
         &PartyPlayerRemove_Entry,
@@ -1266,16 +1259,16 @@ void GameSettings::Initialize() {
             UNREFERENCED_PARAMETER(status);
             check_message_on_party_change = true;
         });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, BIND2(&GameSettings::OnScreenShake));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, bind_member(this, &GameSettings::OnScreenShake));
 
-    GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, GW::UI::UIMessage::kCheckboxPreference, BIND4(&GameSettings::OnCheckboxPreferenceChanged));
-    GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, GW::UI::UIMessage::kChangeTarget, BIND4(&GameSettings::OnChangeTarget));
-    GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, GW::UI::UIMessage::kPlayerChatMessage, BIND4(&GameSettings::OnPlayerChatMessage));
-    GW::UI::RegisterUIMessageCallback(&OnWriteChat_Entry, GW::UI::UIMessage::kWriteToChatLog, BIND4(&GameSettings::OnWriteChat));
-    GW::UI::RegisterUIMessageCallback(&OnAgentStartCast_Entry, GW::UI::UIMessage::kAgentStartCasting, BIND4(&GameSettings::OnAgentStartCast));
-    GW::UI::RegisterUIMessageCallback(&OnOpenWikiUrl_Entry, GW::UI::UIMessage::kOpenWikiUrl, BIND4(&GameSettings::OnOpenWiki));
-    GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kShowAgentNameTag, BIND4(&GameSettings::OnAgentNameTag));
-    GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kSetAgentNameTagAttribs, BIND4(&GameSettings::OnAgentNameTag));
+    GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, GW::UI::UIMessage::kCheckboxPreference, bind_member(this, &GameSettings::OnCheckboxPreferenceChanged));
+    GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, GW::UI::UIMessage::kChangeTarget, bind_member(this, &GameSettings::OnChangeTarget));
+    GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, GW::UI::UIMessage::kPlayerChatMessage, bind_member(this, &GameSettings::OnPlayerChatMessage));
+    GW::UI::RegisterUIMessageCallback(&OnWriteChat_Entry, GW::UI::UIMessage::kWriteToChatLog, bind_member(this, &GameSettings::OnWriteChat));
+    GW::UI::RegisterUIMessageCallback(&OnAgentStartCast_Entry, GW::UI::UIMessage::kAgentStartCasting, bind_member(this, &GameSettings::OnAgentStartCast));
+    GW::UI::RegisterUIMessageCallback(&OnOpenWikiUrl_Entry, GW::UI::UIMessage::kOpenWikiUrl, bind_member(this, &GameSettings::OnOpenWiki));
+    GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kShowAgentNameTag, bind_member(this, &GameSettings::OnAgentNameTag));
+    GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kSetAgentNameTagAttribs, bind_member(this, &GameSettings::OnAgentNameTag));
 
     GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
@@ -1290,12 +1283,12 @@ void GameSettings::Initialize() {
             return;
         targeting_nearest_item = false;
         });
-    GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, BIND2(&GameSettings::OnStartWhisper));
-    GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry, BIND5(&GameSettings::FriendStatusCallback));
-    GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendPingWeaponSet, BIND4(&GameSettings::OnPingWeaponSet));
-    GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, BIND5(&GameSettings::OnCast));
-    GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, BIND3(&GameSettings::OnSendChat));
-    GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, BIND3(&GameSettings::OnWhisper));
+    GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, bind_member(this, &GameSettings::OnStartWhisper));
+    GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry, bind_member(this, &GameSettings::FriendStatusCallback));
+    GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendPingWeaponSet, bind_member(this, &GameSettings::OnPingWeaponSet));
+    GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, bind_member(this, &GameSettings::OnCast));
+    GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, bind_member(this, &GameSettings::OnSendChat));
+    GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, bind_member(this, &GameSettings::OnWhisper));
 
     constexpr GW::UI::UIMessage dialog_ui_messages[] = {
         GW::UI::UIMessage::kSendDialog,
@@ -1319,7 +1312,7 @@ void GameSettings::Initialize() {
         GW::UI::RegisterUIMessageCallback(&OnPostSendDialog_Entry, message_id, OnPartyTargetChanged, 0x8000);
     }
 
-    GW::Chat::CreateCommand(L"reinvite", BIND3(&GameSettings::CmdReinvite));
+    GW::Chat::CreateCommand(L"reinvite", bind_member(this, &GameSettings::CmdReinvite));
 
     GW::UI::RegisterCreateUIComponentCallback(&OnCreateUIComponent_Entry, OnCreateUIComponent);
 
@@ -1327,14 +1320,8 @@ void GameSettings::Initialize() {
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
 #endif
-
-#undef BIND2
-#undef BIND3
-#undef BIND4
-#undef BIND5
-
 }
-void GameSettings::OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void* ) const
+void GameSettings::OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) const
 {
     switch (message_id) {
         case GW::UI::UIMessage::kDialogButton: {
@@ -2101,7 +2088,8 @@ void GameSettings::DrawFOVSetting() {
     ImGui::ShowHelp("GWToolbox will save and maintain the FOV setting used with /cam fov <value>");
 }
 
-void GameSettings::UpdateFOV() {
+void GameSettings::UpdateFOV() const
+{
     if (maintain_fov && GW::CameraMgr::GetFieldOfView() != fov) {
         GW::CameraMgr::SetFieldOfView(fov);
     }
@@ -2181,7 +2169,8 @@ void GameSettings::FriendStatusCallback(
 }
 
 // Show weapon description/mods when pinged
-void GameSettings::OnPingWeaponSet(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+void GameSettings::OnPingWeaponSet(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) const
+{
     ASSERT(message_id == GW::UI::UIMessage::kSendPingWeaponSet && wparam);
     if (!shorthand_item_ping)
         return;
@@ -2196,7 +2185,8 @@ void GameSettings::OnPingWeaponSet(GW::HookStatus* status, GW::UI::UIMessage mes
 }
 
 // Show a message when player joins the outpost
-void GameSettings::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) {
+void GameSettings::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) const
+{
     UNREFERENCED_PARAMETER(status);
     if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost)
         return; // Dont notify about player joining
@@ -2226,7 +2216,8 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC
 }
 
 // Open links on player name click, Ctrl + click name to target, Ctrl + Shift + click name to invite
-void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
+void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) const
+{
     if (!_name) return;
     switch (_name[0]) {
         case 0x200B: {
@@ -2311,7 +2302,8 @@ void GameSettings::OnPartyPlayerJoined(GW::HookStatus* status, GW::Packet::StoC:
 }
 
 // Block overhead arrow marker for zaishen scout
-void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) {
+void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) const
+{
     const GW::Agent* a = GW::Agents::GetAgentByID(pak->agent_id);
     if (a && wcscmp(GW::Agents::GetAgentEncName(a),L"\x8102\x6ED9\xD94E\xBF68\x4409") == 0) {
         pak->value_id = 12;
@@ -2319,7 +2311,8 @@ void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue
 }
 
 // Block annoying tonic sounds/effects from other players
-void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) {
+void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) const
+{
     if (pak->agent_id != GW::Agents::GetPlayerId()) {
         switch (pak->value) {
         case 905:
@@ -2369,7 +2362,8 @@ void GameSettings::OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packe
 }
 
 // Block ghost in the box death animation & sound
-void GameSettings::OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet ) {
+void GameSettings::OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet ) const
+{
     // @Cleanup: Not found an elegent way to do this; prematurely destroying the agent will crash the client when the id it recycled. Disable for now, here for reference.
     if (packet->state == 0x10 && false) {
         GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
@@ -2395,7 +2389,8 @@ void GameSettings::OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::
 }
 
 // Apply Collector's Edition animations on player dancing,
-void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) {
+void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) const
+{
     if (pak->agent_id != GW::Agents::GetPlayerId() || collectors_edition_emotes)
         return;
     static GW::Packet::StoC::GenericValue pak2;
@@ -2418,7 +2413,8 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::Ge
 }
 
 // Skip char name entry dialog when donating faction
-void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
+void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) const
+{
     uint32_t dialog_id = (uint32_t)wparam;
     if (!(dialog_id == 0x87 && skip_entering_name_for_faction_donate))
         return;
@@ -2528,7 +2524,8 @@ void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
 }
 
 // Flash window on guild chat message
-void GameSettings::OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak) {
+void GameSettings::OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak) const
+{
     if (status->blocked)
         return; // Sender blocked, packet handled.
     if (!flash_window_on_guild_chat ||   // Flash window on guild chat message
@@ -2551,7 +2548,7 @@ void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::
     size_t start_idx = message.find(L"\xba9\x107");
     if (start_idx == std::wstring::npos) return; // Not a player name.
     start_idx += 2;
-    size_t end_idx = message.find(L"\x1", start_idx);
+    size_t end_idx = message.find(L'\x1', start_idx);
     if (end_idx == std::wstring::npos) return; // Not a player name, this should never happen.
     std::wstring player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx));
     if (player_pinged.empty()) return; // No recipient
@@ -2586,7 +2583,8 @@ void GameSettings::OnSpeechBubble(GW::HookStatus* status, GW::Packet::StoC::Spee
 }
 
 // NPC dialog messages to emote chat
-void GameSettings::OnSpeechDialogue(GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* pak) {
+void GameSettings::OnSpeechDialogue(GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* pak) const
+{
     if (!redirect_npc_messages_to_emote_chat)
         return; // Disabled or message pending
     GW::Chat::WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, pak->name);
@@ -2594,20 +2592,23 @@ void GameSettings::OnSpeechDialogue(GW::HookStatus* status, GW::Packet::StoC::Di
 }
 
 // Automatic /age on vanquish
-void GameSettings::OnVanquishComplete(GW::HookStatus* status, GW::Packet::StoC::VanquishComplete*) {
+void GameSettings::OnVanquishComplete(GW::HookStatus* status, GW::Packet::StoC::VanquishComplete*) const
+{
     UNREFERENCED_PARAMETER(status);
     if (!auto_age_on_vanquish)
         return;
     GW::Chat::SendChat('/', "age");
 }
 
-void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::DungeonReward*) {
+void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::DungeonReward*) const
+{
     if (hide_dungeon_chest_popup)
         status->blocked = true;
 }
 
 // Flash/focus window on trade
-void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::TradeStart*) {
+void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::TradeStart*) const
+{
     if (status->blocked)
         return;
     if (flash_window_on_trade)
@@ -2617,7 +2618,8 @@ void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::Trad
 }
 
 // Stop screen shake from aftershock etc
-void GameSettings::OnScreenShake(GW::HookStatus* status, void* packet) {
+void GameSettings::OnScreenShake(GW::HookStatus* status, void* packet) const
+{
     UNREFERENCED_PARAMETER(packet);
     if (stop_screen_shake)
         status->blocked = true;
@@ -2645,7 +2647,8 @@ void GameSettings::OnMapTravel(GW::HookStatus* status, GW::Packet::StoC::GameSrv
 }
 
 // Disable native timestamps
-void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void* lParam) {
+void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void* lParam) const
+{
     UNREFERENCED_PARAMETER(lParam);
     if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam))
         return;
@@ -2659,7 +2662,8 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, GW::UI::U
     }
 }
 
-void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
+void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) const
+{
     if (!current_party_target_id) {
         Log::ErrorW(L"Target a party member to re-invite");
         return;
@@ -2669,7 +2673,8 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) {
 }
 
 // Turn screenshots into clickable links
-void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) {
+void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) const
+{
     static bool is_redirecting = false;
     if (is_redirecting) {
         is_redirecting = false;
@@ -2719,7 +2724,8 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
 }
 
 // Turn /wiki into /wiki <location>
-void GameSettings::OnSendChat(GW::HookStatus* , GW::Chat::Channel chan, wchar_t* msg) {
+void GameSettings::OnSendChat(GW::HookStatus* , GW::Chat::Channel chan, wchar_t* msg) const
+{
     if (!auto_url || !msg) return;
     size_t len = wcslen(msg);
     size_t max_len = 120;
@@ -2753,7 +2759,8 @@ void GameSettings::OnSendChat(GW::HookStatus* , GW::Chat::Channel chan, wchar_t*
 }
 
 // Auto-drop UA when recasting
-void GameSettings::OnAgentStartCast(GW::HookStatus* , GW::UI::UIMessage, void* wParam, void*) {
+void GameSettings::OnAgentStartCast(GW::HookStatus* , GW::UI::UIMessage, void* wParam, void*) const
+{
     if (!(wParam && drop_ua_on_cast))
         return;
     struct Casting {
@@ -2803,7 +2810,8 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage, void* w
 }
 
 // Don't target chest as nearest item, Target green items from chest last
-void GameSettings::OnChangeTarget(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) {
+void GameSettings::OnChangeTarget(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) const
+{
     GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
     // Logic for targetting nearest item.
     if (!targeting_nearest_item)
@@ -2860,7 +2868,7 @@ void GameSettings::OnChangeTarget(GW::HookStatus* status, GW::UI::UIMessage, voi
     }
 }
 
-void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t /* call_target */)
+void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t /* call_target */) const
 {
     if (!(target_id && agent_id == GW::Agents::GetPlayerId()))
         return;
@@ -2876,13 +2884,15 @@ void GameSettings::OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, ui
 }
 
 // Set window title to player name on map load
-void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
+void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) const
+{
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(set_window_title_as_charname);
 }
 
 // Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
-void GameSettings::OnPlayerChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) {
+void GameSettings::OnPlayerChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) const
+{
     if (hide_player_speech_bubbles) {
         status->blocked = true;
         PlayerChatMessage* msg = (PlayerChatMessage*)wParam;
@@ -2904,7 +2914,8 @@ void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet) {
 }
 
 // Default colour for agent name tags
-void GameSettings::OnAgentNameTag(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*) {
+void GameSettings::OnAgentNameTag(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*) const
+{
     if (msgid != GW::UI::UIMessage::kShowAgentNameTag && msgid != GW::UI::UIMessage::kSetAgentNameTagAttribs)
         return;
     GW::UI::AgentNameTagInfo* tag = (GW::UI::AgentNameTagInfo * )wParam;
@@ -2921,7 +2932,7 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, GW::UI::UIMessage msgid, void
 
 
 
-void GameSettings::OnWhisper(GW::HookStatus*, const wchar_t* from, const wchar_t* msg)
+void GameSettings::OnWhisper(GW::HookStatus*, const wchar_t* from, const wchar_t* msg) const
 {
     UNREFERENCED_PARAMETER(msg);
     if (flash_window_on_pm) FlashWindow();
@@ -3021,7 +3032,8 @@ float GameSettings::GetSkillRange(GW::Constants::SkillID skill_id)
     }
 }
 
-void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
+void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) const
+{
     ImGui::PushID(static_cast<int>(chan));
     ImGui::Text(name);
     ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;

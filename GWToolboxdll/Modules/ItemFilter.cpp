@@ -105,13 +105,11 @@ void ItemFilter::Initialize()
 {
     ToolboxModule::Initialize();
 
-#define BIND2(x) std::bind(x, this, std::placeholders::_1, std::placeholders::_2)
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdd_Entry, BIND2(&ItemFilter::OnAgentAdd));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry, BIND2(&ItemFilter::OnAgentRemove));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry, BIND2(&ItemFilter::OnMapLoad));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry, BIND2(&ItemFilter::OnItemReuseId));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry, BIND2(&ItemFilter::OnItemUpdateOwner));
-#undef BIND2
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdd_Entry, bind_member(this, &ItemFilter::OnAgentAdd));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry, bind_member(this, &ItemFilter::OnAgentRemove));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry, bind_member(this, &ItemFilter::OnMapLoad));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry, bind_member(this, &ItemFilter::OnItemReuseId));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry, bind_member(this, &ItemFilter::OnItemUpdateOwner));
 }
 
 void ItemFilter::SignalTerminate()
