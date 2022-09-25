@@ -107,7 +107,10 @@ namespace {
         GW::Chat::SetMessageColor(chan, message);
     }
 
-    struct PendingSendChatMessage {};
+    // For some reason no matter whether this call is wrapped in Draw or Update or main thread, it passes garbage to window title on first load.
+    // Even tried compiling in unicode, still no dice.
+    // I've given up trying, so here is a timer that triggers a 3s delay to do it in the Update loop, whatever
+    clock_t set_window_title_delay = 0;
 
     clock_t last_send = 0;
     uint32_t last_dialog_npc_id = 0;
