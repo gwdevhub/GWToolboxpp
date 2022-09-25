@@ -12,7 +12,7 @@
 #include <Modules/Updater.h>
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
-#include <Modules/MouseFix.h>
+#include <Modules/ChatSettings.h>
 #include <Modules/ItemFilter.h>
 #include <Modules/ChatCommands.h>
 #include <Modules/GameSettings.h>
@@ -92,8 +92,8 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     if (use_chatcommand) modules.push_back(&ChatCommands::Instance());
     if (use_chatfilter) modules.push_back(&ChatFilter::Instance());
     if (use_itemfilter) modules.push_back(&ItemFilter::Instance());
-    modules.push_back(&MouseFix::Instance());
     modules.push_back(&GameSettings::Instance());
+    modules.push_back(&ChatSettings::Instance());
     modules.push_back(&InventoryManager::Instance());
     if (use_partywindowmodule) modules.push_back(&PartyWindowModule::Instance());
     modules.push_back(&ZrawDeepModule::Instance());

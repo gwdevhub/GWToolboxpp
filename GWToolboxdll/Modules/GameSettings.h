@@ -17,9 +17,6 @@
 #define NAMETAG_COLOR_DEFAULT_ITEM 0x0
 
 namespace GW {
-    namespace Chat {
-        enum Channel : int;
-    }
     struct Item;
     struct Friend;
     enum class FriendStatus : uint32_t;
@@ -30,47 +27,6 @@ namespace GW {
         enum class UIMessage : uint32_t;
     }
 }
-
-class PendingChatMessage {
-protected:
-    bool printed = false;
-    bool print = true;
-    bool send = false;
-
-    wchar_t encoded_message[256] = { '\0' };
-    wchar_t encoded_sender[32] = { '\0' };
-    std::wstring output_message;
-    std::wstring output_sender;
-    GW::Chat::Channel channel;
-public:
-    PendingChatMessage(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
-    static PendingChatMessage* queueSend(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
-    static PendingChatMessage* queuePrint(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
-    void SendIt() {  print = false; send = true;}
-    static bool IsStringEncoded(const wchar_t* str) {
-        return str && (str[0] < L' ' || str[0] > L'~');
-    }
-    bool IsDecoded() const {
-        return !output_message.empty() && !output_sender.empty();
-    }
-    bool Consume() {
-        if (print) return PrintMessage();
-        if (send) return Send();
-        return false;
-    }
-    bool IsSend() const {
-        return send;
-    }
-    static bool Cooldown();
-    bool invalid = true; // Set when we can't find the agent name for some reason, or arguments passed are empty.
-protected:
-    std::vector<std::wstring> SanitiseForSend();
-    const bool PrintMessage();
-    const bool Send();
-    void Init();
-
-};
-
 
 class GameSettings : public ToolboxModule {
     GameSettings() = default;
@@ -93,7 +49,6 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
     void DrawInventorySettings();
-    void DrawChatSettings();
     void DrawPartySettings();
 
     void Update(float delta) override;
@@ -103,11 +58,8 @@ public:
     bool maintain_fov = false;
     float fov = 1.308997f; // default fov
 
-    void SetAfkMessage(std::wstring&& message);
-
     // callback functions
-    void OnPingWeaponSet(GW::HookStatus*, GW::UI::UIMessage , void*, void*) const;
-    void OnStartWhisper(GW::HookStatus*, wchar_t* _name) const;
+    void OnPingWeaponSet(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
     void OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*) const;
     void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) const;
     void OnAgentEffect(GW::HookStatus*, GW::Packet::StoC::GenericValue*) const;
@@ -124,20 +76,14 @@ public:
     void OnPartyInviteReceived(GW::HookStatus*, GW::Packet::StoC::PartyInviteReceived_Create*) const;
     void OnPartyPlayerJoined(GW::HookStatus*, GW::Packet::StoC::PartyPlayerAdd*);
     void OnLocalChatMessage(GW::HookStatus*, GW::Packet::StoC::MessageLocal*);
-    void OnNPCChatMessage(GW::HookStatus*, GW::Packet::StoC::MessageNPC*);
-    void OnSpeechBubble(GW::HookStatus*, GW::Packet::StoC::SpeechBubble*);
-    void OnSpeechDialogue(GW::HookStatus*, GW::Packet::StoC::DisplayDialogue*) const;
     void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*) const;
     void OnGlobalMessage(GW::HookStatus*, GW::Packet::StoC::MessageGlobal*) const;
     void OnScreenShake(GW::HookStatus*, void* packet) const;
-    void OnCheckboxPreferenceChanged(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void* lParam) const;
     void OnChangeTarget(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void* lParam) const;
     void OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*) const;
-    void OnSendChat(GW::HookStatus* status, GW::Chat::Channel , wchar_t*) const;
     void OnAgentStartCast(GW::HookStatus* status, GW::UI::UIMessage, void*, void*) const;
     void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target) const;
-    void OnPlayerChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void*, void*) const;
     void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) const;
     void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet) const;
     void OnUpdateSkillCount(GW::HookStatus*, void* packet);
@@ -155,8 +101,6 @@ public:
     uint32_t actual_signets_of_capture_amount = 1;
 
     bool shorthand_item_ping = true;
-    bool openlinks = false;
-    bool auto_url = false;
     // bool select_with_chat_doubleclick = false;
     bool move_item_on_ctrl_click = false;
     bool move_item_to_current_storage_pane = true;
@@ -189,15 +133,6 @@ public:
 
     bool faction_warn_percent = true;
     int faction_warn_percent_amount = 75;
-
-    std::wstring afk_message;
-    clock_t afk_message_time = 0;
-
-    bool show_timestamps = false;
-    bool enable_chat_log = true;
-    bool show_timestamp_seconds = false;
-    bool show_timestamp_24h = false;
-    Color timestamps_color = 0;
 
     bool notify_when_friends_online = true;
     bool notify_when_friends_offline = false;
@@ -244,8 +179,6 @@ public:
 
     static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
-    std::vector<PendingChatMessage*> pending_messages;
-
 private:
 
 
@@ -261,28 +194,19 @@ private:
     std::vector<uint32_t> available_dialog_ids;
 
     bool was_leading = true;
-    bool check_message_on_party_change = true;
-    bool npc_speech_bubbles_as_chat = false;
-    bool redirect_npc_messages_to_emote_chat = false;
     bool hide_dungeon_chest_popup = false;
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;
     bool disable_camera_smoothing = false;
     bool targeting_nearest_item = false;
-
-    bool hide_player_speech_bubbles = false;
     bool improve_move_to_cast = false;
+    bool check_message_on_party_change = true;
 
     bool is_prompting_hard_mode_mission = 0;
 
     static float GetSkillRange(GW::Constants::SkillID);
 
-    void DrawChannelColor(const char *name, GW::Chat::Channel chan) const;
-
     GW::HookEntry VanquishComplete_Entry;
-    GW::HookEntry StartWhisperCallback_Entry;
-    GW::HookEntry WhisperCallback_Entry;
-    GW::HookEntry SendChatCallback_Entry;
     GW::HookEntry ItemClickCallback_Entry;
     GW::HookEntry FriendStatusCallback_Entry;
     GW::HookEntry PartyDefeated_Entry;
@@ -295,18 +219,10 @@ private:
     GW::HookEntry PartyPlayerRemove_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry CinematicPlay_Entry;
-    GW::HookEntry SpeechBubble_Entry;
-    GW::HookEntry DisplayDialogue_Entry;
-    GW::HookEntry MessageNPC_Entry;
-    GW::HookEntry MessageLocal_Entry;
-    GW::HookEntry MessageGlobal_Entry;
-    GW::HookEntry MessageServer_Entry;
     GW::HookEntry PlayerJoinInstance_Entry;
     GW::HookEntry PlayerLeaveInstance_Entry;
     GW::HookEntry OnDialog_Entry;
-    GW::HookEntry OnCheckboxPreferenceChanged_Entry;
     GW::HookEntry OnChangeTarget_Entry;
-    GW::HookEntry OnPlayerChatMessage_Entry;
     GW::HookEntry OnWriteChat_Entry;
     GW::HookEntry OnAgentStartCast_Entry;
     GW::HookEntry OnOpenWikiUrl_Entry;

@@ -45,6 +45,7 @@
 #include <Modules/ChatCommands.h>
 #include <Modules/ObserverModule.h>
 #include <Modules/GameSettings.h>
+#include <Modules/ChatSettings.h>
 #include <Widgets/PartyDamage.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/Hotkeys.h>
@@ -450,8 +451,6 @@ void ChatCommands::CmdPingQuest(const wchar_t* , int , LPWSTR* ) {
 
 void ChatCommands::Initialize() {
     ToolboxModule::Initialize();
-
-    default_title_id = (uint32_t)GW::Constants::TitleID::Lightbringer;
 
     const DWORD def_scale = 0x64000000;
     // Available Transmo NPCs
@@ -1224,12 +1223,12 @@ void ChatCommands::CmdDamage(const wchar_t *message, int argc, LPWSTR *argv) {
 void ChatCommands::CmdAfk(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(argv);
     GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
-    GameSettings& settings = GameSettings::Instance();
     if (argc > 1) {
         const wchar_t *afk_msg = next_word(message);
-        settings.SetAfkMessage(afk_msg);
-    } else {
-        settings.afk_message.clear();
+        ChatSettings::SetAfkMessage(afk_msg);
+    }
+    else {
+        ChatSettings::SetAfkMessage(L"");
     }
 }
 
