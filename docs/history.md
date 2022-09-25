@@ -37,6 +37,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed rare loading screen freeze
 * [Fix] Fixed Skillbar and Minimap potentially being off by 1 pixel when pinned to ingame window
 * [Fix] Reapply title defaults to Lightbringer again
+* [Fix] Fixed camera sometimes jumping/glitching when looking around with RMB pressed
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.0_Release/GWToolboxdll.dll)
 
