@@ -3,8 +3,6 @@
 
 #include <module_base.h>
 
-
-
 DLLAPI BOOL WINAPI DllMain(HINSTANCE , DWORD reason, LPVOID) {
 	switch (reason) {
 	case DLL_PROCESS_ATTACH: break;

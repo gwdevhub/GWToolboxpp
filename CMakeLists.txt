@@ -89,5 +89,5 @@ macro(add_tb_module MODULE)
     set_target_properties(${MODULE} PROPERTIES FOLDER "Modules/")
 endmacro()
 
-# add_tb_module(InstanceTimer)
-# add_tb_module(clock)
+# add_tb_module(InstanceTimer) # still has errors
+add_tb_module(clock)

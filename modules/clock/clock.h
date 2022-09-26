@@ -2,8 +2,7 @@
 
 class Clock : public TBModule {
 public:
-	const char* Name() const override;
+    const char* Name() const override { return "Clock"; }
 
-	void Draw(IDirect3DDevice9* device);
+    void Draw(IDirect3DDevice9* device) override;
 };
-
