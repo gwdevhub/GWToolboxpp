@@ -75,6 +75,8 @@ void CustomRenderer::LoadMarkers()
     inifile->GetAllSections(entries);
     for (CSimpleIni::Entry& entry : entries) {
         const char* section = entry.pItem;
+        if (!section)
+            continue;
         if (strncmp(section, "customline", 10) == 0) {
             lines.push_back(CustomLine(inifile->GetValue(section, "name", "line")));
             lines.back().p1.x = static_cast<float>(inifile->GetDoubleValue(section, "x1", 0.0));
@@ -86,7 +88,7 @@ void CustomRenderer::LoadMarkers()
             lines.back().visible = inifile->GetBoolValue(section, "visible", true);
             inifile->Delete(section, nullptr);
         }
-        if (strncmp(section, "custommarker", 12) == 0) {
+        else if (strncmp(section, "custommarker", 12) == 0) {
             auto marker = CustomMarker(inifile->GetValue(section, "name", "marker"));
             marker.pos.x = static_cast<float>(inifile->GetDoubleValue(section, "x", 0.0));
             marker.pos.y = static_cast<float>(inifile->GetDoubleValue(section, "y", 0.0));
@@ -99,7 +101,7 @@ void CustomRenderer::LoadMarkers()
             markers.push_back(marker);
             inifile->Delete(section, nullptr);
         }
-        if (strncmp(section, "custompolygon", 13) == 0) {
+        else if (strncmp(section, "custompolygon", 13) == 0) {
             auto polygon = CustomPolygon(inifile->GetValue(section, "name", "polygon"));
             for (auto i = 0; i < CustomPolygon::max_points; i++) {
                 GW::Vec2f vec;
