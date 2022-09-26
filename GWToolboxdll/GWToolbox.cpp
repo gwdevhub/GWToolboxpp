@@ -427,9 +427,7 @@ void GWToolbox::Terminate() {
 
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
 
-    for (const auto plugin : plugin_manager.GetModules()) {
-        plugin->Terminate();
-    }
+    plugin_manager.UnloadDlls();
 
     for (ToolboxModule* module : modules) {
         module->Terminate();

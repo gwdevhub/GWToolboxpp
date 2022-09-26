@@ -1,11 +1,12 @@
 #include "stdafx.h"
 
-#include <string>
-#include <filesystem>
 #include "PluginManager.h"
 #include <Modules/Resources.h>
+#include <filesystem>
+#include <string>
 
-void PluginManager::RefreshDlls() {
+void PluginManager::RefreshDlls()
+{
     // when we refresh, how do we map the modules that were already loaded to the ones on disk?
     // the dll file may have changed
     namespace fs = std::filesystem;
@@ -18,8 +19,7 @@ void PluginManager::RefreshDlls() {
             fs::path file_path = p.path();
             fs::path ext = file_path.extension();
             if (ext == ".lnk") {
-                if (!SUCCEEDED(Resources::ResolveShortcut(file_path, file_path)))
-                    continue;
+                if (!SUCCEEDED(Resources::ResolveShortcut(file_path, file_path))) continue;
                 ext = file_path.extension();
             }
             if (ext == ".dll") {
@@ -31,7 +31,8 @@ void PluginManager::RefreshDlls() {
     }
 }
 
-void PluginManager::Draw() {
+void PluginManager::Draw()
+{
     if (ImGui::CollapsingHeader("Plugins")) {
         ImGui::PushID("Plugins");
 
@@ -48,20 +49,32 @@ void PluginManager::Draw() {
     }
 }
 
-TBModule* PluginManager::LoadDLL(const std::filesystem::path& path) {
+TBModule* PluginManager::LoadDLL(const std::filesystem::path& path)
+{
     for (auto& plugin : plugins) {
         if (plugin.path == path)
             return plugin.instance;
     }
-    HINSTANCE dll = LoadLibraryW(path.wstring().c_str());
-    typedef TBModule* (__cdecl* ObjProc)();
+    const auto dll = LoadLibraryW(path.wstring().c_str());
+    typedef TBModule*(__cdecl * ObjProc)();
     ObjProc objfunc = dll ? (ObjProc)GetProcAddress(dll, "TBModuleInstance") : nullptr;
-    if (!objfunc)
-        return nullptr;
+    if (!objfunc) return nullptr;
     Plugin p;
     p.instance = objfunc();
+    p.dll = dll;
     p.path = path;
     plugins.push_back(p);
     return p.instance;
 }
 
+void PluginManager::UnloadDlls()
+{
+    for (const auto plugin : plugins) {
+        plugin.instance->Terminate();
+        const auto success = FreeLibrary(plugin.dll);
+        if (!success) {
+            std::cout << "Failed to unload plugin " << plugin.path;
+        }
+    }
+    plugins.clear();
+}

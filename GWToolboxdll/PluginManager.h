@@ -5,6 +5,7 @@
 class PluginManager {
     struct Plugin {
         std::filesystem::path path;
+        HMODULE dll = nullptr;
         TBModule* instance = nullptr;
     };
 
@@ -15,6 +16,7 @@ public:
 
     void Draw();
     void RefreshDlls();
+    void UnloadDlls();
 
     [[nodiscard]] std::vector<TBModule*> GetModules() const
     {
