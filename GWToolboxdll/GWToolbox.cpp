@@ -292,9 +292,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             return true;
         }
 
-        // send to toolbox modules
+        // send to toolbox modules and plugins
         {
             bool captured = false;
+            for (const auto plugin : tb.Instance().GetPluginManger().GetModules()) {
+                if (plugin->WndProc(Message, wParam, lParam)) captured = true;
+            }
             for (ToolboxModule* m : tb.GetModules()) {
                 if (m->WndProc(Message, wParam, lParam)) captured = true;
             }
@@ -422,8 +425,11 @@ void GWToolbox::Terminate() {
         inifile = nullptr;
     }
 
-
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
+
+    for (const auto plugin : plugin_manager.GetModules()) {
+        plugin->Terminate();
+    }
 
     for (ToolboxModule* module : modules) {
         module->Terminate();
@@ -439,9 +445,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
     if (initialized && must_self_destruct) {
         if (!GuiUtils::FontsLoaded())
             return;
-        for (ToolboxModule* module : GWToolbox::Instance().modules) {
+        for (ToolboxModule* module : Instance().modules) {
             if (!module->CanTerminate())
                 return;
+        }
+        for (const auto plugin : Instance().plugin_manager.GetModules()) {
+            if (!plugin->CanTerminate()) return;
         }
 
         Instance().Terminate();
@@ -461,6 +470,15 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ASSERT(AttachWndProcHandler());
         // Attach imgui if not already done so
         ASSERT(AttachImgui(device));
+
+        static bool plugins_initialized = false;
+        if (!plugins_initialized) {
+            for (const auto plugin : plugin_manager.GetModules()) {
+                plugin->LoadSettings(inifile);
+                plugin->Initialize(ImGui::GetCurrentContext());
+            }
+            plugins_initialized = true;
+        }
 
         if (!GW::UI::GetIsUIDrawn())
             return;
@@ -485,7 +503,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ImGui_ImplDX9_NewFrame();
         ImGui_ImplWin32_NewFrame();
 
-        if(!world_map_showing)
+        if (!world_map_showing)
             Minimap::Render(device);
 
         ImGui::NewFrame();
@@ -497,12 +515,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         io.AddKeyEvent(ImGuiKey_ModShift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
         io.AddKeyEvent(ImGuiKey_ModAlt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
-        for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {
+        for (ToolboxUIElement* uielement : Instance().uielements) {
             if (world_map_showing && !uielement->ShowOnWorldMap())
                 continue;
             uielement->Draw(device);
         }
-        for (TBModule* mod : GWToolbox::Instance().plugins) {
+        for (TBModule* mod : Instance().plugin_manager.GetModules()) {
             mod->Draw(device);
         }
 
@@ -539,6 +557,10 @@ void GWToolbox::Update(GW::HookStatus *)
         DWORD tick = GetTickCount();
         DWORD delta = tick - last_tick_count;
         float delta_f = delta / 1000.f;
+
+        for (const auto plugin : plugin_manager.GetModules()) {
+            plugin->Update(delta_f);
+        }
 
         for (ToolboxModule* module : modules) {
             module->Update(delta_f);

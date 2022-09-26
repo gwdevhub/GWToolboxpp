@@ -15,6 +15,17 @@ public:
 
     void Draw();
     void RefreshDlls();
+
+    [[nodiscard]] std::vector<TBModule*> GetModules() const
+    {
+        std::vector<TBModule*> instances{};
+        instances.resize(plugins.size());
+        std::ranges::transform(plugins, instances.begin(), [](Plugin p) {
+            return p.instance;
+        });
+        return instances;
+    }
+
 private:
     TBModule* LoadDLL(const std::filesystem::path& path);
 
