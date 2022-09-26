@@ -68,13 +68,16 @@ add_library(module_base INTERFACE)
 target_sources(module_base INTERFACE
     "modules/base/dllmain.cpp"
     "modules/base/module_base.h")
-target_include_directories(module_base INTERFACE "modules/base")
-target_include_directories(module_base INTERFACE "GWToolboxdll/GWToolbox")
+target_include_directories(module_base INTERFACE
+    "modules/base"
+    "GWToolboxdll"
+    )
 target_link_libraries(module_base INTERFACE
     imgui
     earcut
     simpleini
     gwca
+    GWToolboxdll # for gwca imports
     )
 target_compile_definitions(module_base INTERFACE BUILD_DLL)
 
@@ -85,6 +88,8 @@ macro(add_tb_module MODULE)
         "${PROJECT_SOURCE_DIR}/modules/${MODULE}/*.cpp")
     target_sources(${MODULE} PRIVATE ${SOURCES})
     target_include_directories(${MODULE} PRIVATE "${PROJECT_SOURCE_DIR}/modules/${MODULE}")
+    target_compile_definitions(${MODULE} PRIVATE "GWCA_IMPORT")
+    target_compile_definitions(gwca PRIVATE "GWCA_IMPORT")
     target_link_libraries(${MODULE} PRIVATE module_base)
     set_target_properties(${MODULE} PROPERTIES FOLDER "Modules/")
 endmacro()
