@@ -34,8 +34,10 @@
 
 #define ONLY_CURRENT_PLAYER 1;
 // #define DETECT_STREAMING_APPLICATION 1;
-
+#ifdef DETECT_STREAMING_APPLICATION
 #include <Psapi.h>
+#endif
+
 
 
 namespace {

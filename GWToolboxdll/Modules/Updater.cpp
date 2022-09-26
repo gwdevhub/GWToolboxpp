@@ -91,6 +91,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) const {
             release->download_url = asset["browser_download_url"].get<std::string>();
             release->version = tag_name.substr(0, version_number_len);
             release->body = js["body"].get<std::string>();
+            release->size = asset["size"].get<uintmax_t>();
             return;
         }
     }
@@ -118,13 +119,20 @@ void Updater::CheckForUpdate(const bool forced) {
             step = Done;
             return;
         }
+
         if (release.version == GWTOOLBOXDLL_VERSION) {
             // server and client versions match
-            step = Done;
-            if (forced) {
-                Log::Info("GWToolbox++ is up-to-date");
+            char path[MAX_PATH];
+            if (GetModuleFileNameA(GWToolbox::GetDLLModule(), path, sizeof(path)) != 0) {
+                uintmax_t current_file_size = std::filesystem::file_size(path);
+                if (current_file_size == release.size) {
+                    step = Done;
+                    if (forced) {
+                        Log::Info("GWToolbox++ is up-to-date");
+                    }
+                    return;
+                }
             }
-            return;
         }
         // we have a new version!
         if (latest_release.version != release.version || forced) {
