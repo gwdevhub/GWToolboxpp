@@ -33,6 +33,9 @@ public:
     void StartSelfDestruct() {
         if (initialized) {
             SaveSettings();
+            for (const auto plugin : plugin_manager.GetModules()) {
+                plugin->SignalTerminate();
+            }
             for (ToolboxModule* module : modules) {
                 module->SignalTerminate();
             }
@@ -60,8 +63,7 @@ public:
 
     bool IsInitialized() const { return initialized; }
 
-    void AddPlugin(TBModule* mod) { plugins.push_back(mod); }
-    PluginManager& GetPluginManger() { return plugin_manager; };
+    PluginManager& GetPluginManger() { return plugin_manager; }
 private:
     std::vector<ToolboxModule*> modules;
 
@@ -71,10 +73,6 @@ private:
     std::vector<ToolboxModule*> optional_modules;
     // List of modules that are UI elements. They can be disable
     std::vector<ToolboxUIElement*> uielements;
-    // Plugins
-    std::vector<TBModule*> plugins;
-
-
 
     GW::HookEntry Update_Entry;
 
