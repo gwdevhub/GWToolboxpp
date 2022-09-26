@@ -45,12 +45,16 @@ namespace {
     MSG msg;
     HWND streaming_window_handle = 0;
     std::default_random_engine dre = std::default_random_engine((uint32_t)time(0));
+    GW::HookEntry stoc_hook;
+    GW::HookEntry stoc_hook2;
+    GW::HookEntry ctos_hook;
+    bool running = false;
 
 #ifdef DETECT_STREAMING_APPLICATION
     HWINEVENTHOOK hook = 0;
 #endif
 
-    bool running = false;
+
 
     // This value won't be obfuscated to is always safe to check against
     const wchar_t* getPlayerName() {
@@ -60,10 +64,6 @@ namespace {
     const wchar_t* getGuildPlayerName() {
         GW::GuildContext* g = GW::GuildContext::instance();
         return g ? g->player_name : nullptr;
-    }
-
-    Obfuscator& Instance() {
-        return Obfuscator::Instance();
     }
 
     std::vector<const wchar_t*> obfuscated_name_pool = {
@@ -512,7 +512,7 @@ namespace {
         return ObfuscateGuildRoster(false);
     }
     void CmdObfuscate(const wchar_t*, int, wchar_t**) {
-        Instance().Obfuscate(!IsObfuscatorEnabled());
+        Obfuscator::Obfuscate(!IsObfuscatorEnabled());
     }
     void Reset() {
         ObfuscateGuildRoster(false);
@@ -631,7 +631,7 @@ namespace {
                 uint32_t chaff[20];
                 wchar_t name[32];
             } *packet_actual = (Packet*)packet;
-            if (ObfuscateName(packet_actual->name, ui_message_temp_message)) {
+            if (ObfuscateName(packet_actual->name, ui_message_temp_message,true)) {
                 wcscpy(packet_actual->name, ui_message_temp_message.c_str());
             }
         } break;
@@ -645,7 +645,7 @@ namespace {
             } *packet_actual = (Packet*)packet;
             if (wcsncmp(L"\x108\x107", packet_actual->name, 2) != 0)
                 return; // Not a mercenary name
-            if (ObfuscateMessage(packet_actual->name, ui_message_temp_message)) {
+            if (ObfuscateMessage(packet_actual->name, ui_message_temp_message,true)) {
                 wcscpy(packet_actual->name, ui_message_temp_message.c_str());
             }
         } break;
@@ -682,77 +682,85 @@ namespace {
 
         }
     }
-}
+    void OnSendChat(GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* message) {
+        if (channel != GW::Chat::Channel::CHANNEL_WHISPER)
+            return;
+        if (!IsObfuscatorEnabled())
+            return;
+        // Static flag to avoid recursive callback
+        static bool processing = false;
+        if (processing)
+            return;
+        wchar_t* whisper_separator = wcschr(message, ',');
+        if (!whisper_separator)
+            return;
+        size_t len = (whisper_separator - message);
+        std::wstring recipient_obfuscated(message, len);
+        std::wstring recipient_unobfuscated;
+        if (UnobfuscateName(recipient_obfuscated.c_str(), recipient_unobfuscated)) {
+            // NB: Block and send a copy with the new message content; current wchar_t* may not have enough allocated memory to just replace the content.
+            status->blocked = true;
+            processing = true;
+            GW::Chat::SendChat(recipient_unobfuscated.c_str(), &whisper_separator[1]);
+            processing = false;
+        }
 
+    }
+    void OnPrintChat(GW::HookStatus* , GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int) {
+        if (!IsObfuscatorEnabled())
+            return;
+        // We unobfuscated the message in OnPreUIMessage - now we need to re-obfuscate it for display
+        if (ObfuscateMessage(*message_ptr, ui_message_temp_message)) {
+            // I think this is copied away later?
+            *message_ptr = ui_message_temp_message.data();
+        }
+    }
 #ifdef DETECT_STREAMING_APPLICATION
 
-void CALLBACK Obfuscator::OnWindowEvent(HWINEVENTHOOK _hook, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
-     if (!running)
-         return;
-     UNREFERENCED_PARAMETER(_hook);
-     UNREFERENCED_PARAMETER(dwEventThread);
-     UNREFERENCED_PARAMETER(dwmsEventTime);
-     switch (event) {
-     case EVENT_OBJECT_DESTROY:
-         if (hwnd != streaming_window_handle)
-             return;
-         streaming_window_handle = 0;
-         Log::Info("Streaming mode deactivated");
-         break;
-     case EVENT_SYSTEM_FOREGROUND: {
-         if (streaming_window_handle)
-             return;
-         TCHAR window_class_name[MAX_PATH] = { 0 };
-         DWORD dwProcId = 0;
+    void CALLBACK Obfuscator::OnWindowEvent(HWINEVENTHOOK _hook, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
+        if (!running)
+            return;
+        UNREFERENCED_PARAMETER(_hook);
+        UNREFERENCED_PARAMETER(dwEventThread);
+        UNREFERENCED_PARAMETER(dwmsEventTime);
+        switch (event) {
+        case EVENT_OBJECT_DESTROY:
+            if (hwnd != streaming_window_handle)
+                return;
+            streaming_window_handle = 0;
+            Log::Info("Streaming mode deactivated");
+            break;
+        case EVENT_SYSTEM_FOREGROUND: {
+            if (streaming_window_handle)
+                return;
+            TCHAR window_class_name[MAX_PATH] = { 0 };
+            DWORD dwProcId = 0;
 
-         GetWindowThreadProcessId(hwnd, &dwProcId);
+            GetWindowThreadProcessId(hwnd, &dwProcId);
 
-         HANDLE hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcId);
-         if (!hProc) {
-             Log::Log("Failed to OpenProcess, %d", GetLastError());
-             return;
-         }
-         DWORD res = GetModuleFileNameExA((HMODULE)hProc, NULL, window_class_name, MAX_PATH);
-         CloseHandle(hProc);
-         if (!res) {
-             Log::Log("Failed to GetModuleFileNameExA, %d", GetLastError());
-             return;
-         }
-         if (strstr(window_class_name, "obs64.exe")) {
-             streaming_window_handle = hwnd;
-             Log::Info("Streaming mode activated");
-         }
-         Log::Log("%p, %p, %p, %p - %s", event, hwnd, idObject, idChild, window_class_name);
-     } break;
-     }
-}
+            HANDLE hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcId);
+            if (!hProc) {
+                Log::Log("Failed to OpenProcess, %d", GetLastError());
+                return;
+            }
+            DWORD res = GetModuleFileNameExA((HMODULE)hProc, NULL, window_class_name, MAX_PATH);
+            CloseHandle(hProc);
+            if (!res) {
+                Log::Log("Failed to GetModuleFileNameExA, %d", GetLastError());
+                return;
+            }
+            if (strstr(window_class_name, "obs64.exe")) {
+                streaming_window_handle = hwnd;
+                Log::Info("Streaming mode activated");
+            }
+            Log::Log("%p, %p, %p, %p - %s", event, hwnd, idObject, idChild, window_class_name);
+        } break;
+        }
+    }
 
 #endif
-
-void Obfuscator::OnSendChat(GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* message) {
-    if (channel != GW::Chat::Channel::CHANNEL_WHISPER)
-        return;
-    if (!IsObfuscatorEnabled())
-        return;
-    // Static flag to avoid recursive callback
-    static bool processing = false;
-    if (processing)
-        return;
-    wchar_t* whisper_separator = wcschr(message, ',');
-    if (!whisper_separator)
-        return;
-    size_t len = (whisper_separator - message);
-    std::wstring recipient_obfuscated(message, len);
-    std::wstring recipient_unobfuscated;
-    if (UnobfuscateName(recipient_obfuscated.c_str(), recipient_unobfuscated)) {
-        // NB: Block and send a copy with the new message content; current wchar_t* may not have enough allocated memory to just replace the content.
-        status->blocked = true;
-        processing = true;
-        GW::Chat::SendChat(recipient_unobfuscated.c_str(), &whisper_separator[1]);
-        processing = false;
-    }
-    
 }
+
 void Obfuscator::Obfuscate(bool obfuscate) {
     if (obfuscate == IsObfuscatorEnabled())
         return;
@@ -763,15 +771,6 @@ void Obfuscator::Obfuscate(bool obfuscate) {
     else {
         pending_state = ObfuscatorState::Disabled;
         Log::Info("Player name will be visible on next map change");
-    }
-}
-void Obfuscator::OnPrintChat(GW::HookStatus* , GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int) {
-    if (!IsObfuscatorEnabled())
-        return;
-    // We unobfuscated the message in OnPreUIMessage - now we need to re-obfuscate it for display
-    if (ObfuscateMessage(*message_ptr, ui_message_temp_message)) {
-        // I think this is copied away later?
-        *message_ptr = ui_message_temp_message.data();
     }
 }
 void Obfuscator::Terminate() {

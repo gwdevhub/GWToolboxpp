@@ -25,18 +25,6 @@ public:
     void DrawSettingInternal() override;
     void SaveSettings(CSimpleIni* ini) override;
     void LoadSettings(CSimpleIni* ini) override;
-    void Obfuscate(bool obfuscate);
 
-private:
-    static void OnSendChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t* message);
-    static void OnPrintChat(GW::HookStatus* status, GW::Chat::Channel, wchar_t** message, FILETIME, int);
-
-    GW::HookEntry stoc_hook;
-    GW::HookEntry stoc_hook2;
-    GW::HookEntry ctos_hook;
-    
-
-    bool obfuscated_login_screen = false;
-    static void CALLBACK OnWindowEvent(HWINEVENTHOOK _hook, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime);
-
+    static void Obfuscate(bool obfuscate);
 };
