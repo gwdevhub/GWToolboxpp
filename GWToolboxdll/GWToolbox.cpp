@@ -23,6 +23,7 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/CrashHandler.h>
 #include <Modules/DialogModule.h>
+#include <Modules/MouseFix.h>
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -357,6 +358,7 @@ void GWToolbox::Initialize()
     core_modules.push_back(&ToolboxSettings::Instance());
     core_modules.push_back(&MainWindow::Instance());
     core_modules.push_back(&DialogModule::Instance());
+    core_modules.push_back(&MouseFix::Instance());
 
     plugin_manager.RefreshDlls();
 
