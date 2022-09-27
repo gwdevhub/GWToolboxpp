@@ -76,6 +76,18 @@ void InstanceTimer::DrawSettings()
     }
 }
 
+void InstanceTimer::Initialize(ImGuiContext* ctx, HMODULE toolbox_dll)
+{
+    ToolboxPlugin::Initialize(ctx, toolbox_dll);
+    LoadSettings();
+}
+
+void InstanceTimer::Terminate()
+{
+    ToolboxPlugin::Terminate();
+    SaveSettings();
+}
+
 void InstanceTimer::Draw(IDirect3DDevice9* pDevice)
 {
     if (!visible) return;
