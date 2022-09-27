@@ -75,7 +75,7 @@ void InstanceTimer::Draw(IDirect3DDevice9* pDevice)
 
     const auto time = GW::Map::GetInstanceTime() / 1000;
 
-    const bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
+    const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_ModCtrl);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;

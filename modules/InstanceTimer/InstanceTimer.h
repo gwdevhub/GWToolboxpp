@@ -28,7 +28,7 @@ private:
     bool GetDhuumTimer();
     bool GetTrapTimer();
 
-	bool click_to_print_time = false;
+	bool click_to_print_time = true;
     bool show_extra_timers = false;
     bool visible = true;
 

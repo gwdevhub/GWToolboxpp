@@ -58,7 +58,7 @@ ToolboxPlugin* PluginManager::LoadDll(const std::filesystem::path& path)
     const auto dll = LoadLibraryW(path.wstring().c_str());
     if (dll == nullptr) return nullptr;
     using ToolboxPluginInstanceFn = ToolboxPlugin* (*)();
-    const auto instance_fn = reinterpret_cast<ToolboxPluginInstanceFn>(GetProcAddress(dll, "TBModuleInstance"));
+    const auto instance_fn = reinterpret_cast<ToolboxPluginInstanceFn>(GetProcAddress(dll, "ToolboxPluginInstance"));
     if (!instance_fn) return nullptr;
     Plugin p;
     p.instance = instance_fn();
