@@ -14,7 +14,7 @@ public:
     PluginManager(const PluginManager&) = delete;
     ~PluginManager() = default;
 
-    void Draw();
+    void DrawSettingsInternal();
     void RefreshDlls();
     void UnloadDlls();
 

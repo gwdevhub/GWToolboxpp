@@ -31,13 +31,20 @@ void PluginManager::RefreshDlls()
     }
 }
 
-void PluginManager::Draw()
+void PluginManager::DrawSettingsInternal()
 {
     if (ImGui::CollapsingHeader("Plugins")) {
         ImGui::PushID("Plugins");
 
         for (auto& plugin : plugins) {
-            ImGui::Text("%s", plugin.path.string().c_str());
+            auto& style = ImGui::GetStyle();
+            const auto origin_header_col = style.Colors[ImGuiCol_Header];
+            style.Colors[ImGuiCol_Header] = {0, 0, 0, 0};
+            if (ImGui::CollapsingHeader(plugin.path.filename().string().c_str())) {
+                plugin.instance->DrawSettings();
+            }
+            style.Colors[ImGuiCol_Header] = origin_header_col;
+            ImGui::Separator();
         }
 
         ImGui::Separator();

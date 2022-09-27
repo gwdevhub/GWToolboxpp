@@ -397,6 +397,9 @@ void GWToolbox::LoadModuleSettings() const
     for (ToolboxModule* module : modules) {
         module->LoadSettings(inifile);
     }
+    for (const auto plugin : plugin_manager.GetPlugins()) {
+        plugin->LoadSettings();
+    }
 }
 void GWToolbox::SaveSettings() const
 {
@@ -404,6 +407,9 @@ void GWToolbox::SaveSettings() const
         return;
     for (ToolboxModule* module : modules) {
         module->SaveSettings(inifile);
+    }
+    for (const auto plugin : plugin_manager.GetPlugins()) {
+        plugin->SaveSettings();
     }
     ASSERT(SaveIniToFile(inifile, Resources::GetPath(L"GWToolbox.ini")));
 }

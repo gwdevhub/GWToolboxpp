@@ -84,7 +84,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 
         ImGui::Text("General:");
 
-        GWToolbox::Instance().GetPluginManger().Draw();
+        GWToolbox::Instance().GetPluginManger().DrawSettingsInternal();
 
         if (ImGui::CollapsingHeader("Help")) {
             if (ImGui::TreeNodeEx("General Interface", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
