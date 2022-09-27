@@ -77,6 +77,7 @@ target_link_libraries(module_base INTERFACE
     earcut
     simpleini
     gwca
+    nlohmann_json::nlohmann_json
     GWToolboxdll # for gwca imports
     )
 target_compile_definitions(module_base INTERFACE BUILD_DLL)
@@ -94,5 +95,5 @@ macro(add_tb_module MODULE)
     set_target_properties(${MODULE} PROPERTIES FOLDER "Modules/")
 endmacro()
 
-# add_tb_module(InstanceTimer) # still has errors
+add_tb_module(InstanceTimer)
 add_tb_module(clock)
