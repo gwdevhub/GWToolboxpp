@@ -15,6 +15,10 @@
 #include <fstream>
 #include <iostream>
 
+namespace  {
+    const char* ini_location = nullptr;
+}
+
 HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
@@ -33,32 +37,36 @@ InstanceTimer::InstanceTimer()
     else {
         const auto path = std::filesystem::path(buf).parent_path() / filename;
         const auto pathstr = path.string();
+        ini_location = pathstr.c_str();
         if (!exists(path)) {
             auto ofs = std::ofstream{pathstr};
             ofs << "";
             ofs.close();
         }
-        ini.LoadFile(pathstr.c_str());
     }
 }
 
 void InstanceTimer::LoadSettings()
 {
     ToolboxPlugin::LoadSettings();
-    click_to_print_time = ini.GetBoolValue(Name(), VAR_NAME(click_to_print_time), false);
-    show_extra_timers = ini.GetBoolValue(Name(), VAR_NAME(show_extra_timers), false);
+    if (!ini_location) return;
+    ini.LoadFile(ini_location);
+    click_to_print_time = ini.GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
+    show_extra_timers = ini.GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
 }
 
 void InstanceTimer::SaveSettings()
 {
     ToolboxPlugin::SaveSettings();
+    if (!ini_location) return;
     ini.SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini.SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
+    const auto _ = ini.SaveFile(ini_location);
 }
 
 void InstanceTimer::DrawSettings()
 {
-    ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
+    ImGui::Checkbox("Ctrl + Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
 
     ImGui::SameLine();
@@ -103,7 +111,7 @@ void InstanceTimer::Draw(IDirect3DDevice9* pDevice)
             const ImVec2 size = ImGui::GetWindowSize();
             const ImVec2 min = ImGui::GetWindowPos();
             const ImVec2 max(min.x + size.x, min.y + size.y);
-            if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
+            if (ctrl_pressed && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsMouseHoveringRect(min, max)) {
                 GW::Chat::SendChat('/', "age");
             }
         }
@@ -189,9 +197,8 @@ bool InstanceTimer::GetTrapTimer()
 {
     using namespace GW::Constants;
     if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
-
-    unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    int temp = time % 20;
+    const auto time = GW::Map::GetInstanceTime() / 1000;
+    const auto temp = time % 20;
     int timer;
     if (temp < 10) {
         timer = 10 - temp;

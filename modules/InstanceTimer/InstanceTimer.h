@@ -11,7 +11,7 @@ public:
     InstanceTimer();
     ~InstanceTimer() override = default;
 
-	const char* Name() const override { return "Timer"; }
+	const char* Name() const override { return "Plugin Timer"; }
 
 	void LoadSettings() override;
 	void SaveSettings() override;
