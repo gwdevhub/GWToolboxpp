@@ -1,5 +1,5 @@
 #pragma once
-#include <SimpleIni.h>
+
 #include <Windows.h>
 
 #ifdef BUILD_DLL
@@ -18,20 +18,23 @@ namespace ImGui {
 //
 // Dll interface. You must implement those functions
 //
-class TBModule; // Full declaration below.
-DLLAPI TBModule* TBModuleInstance();
+class ToolboxPlugin; // Full declaration below.
+DLLAPI ToolboxPlugin* ToolboxPluginInstance();
 
-class TBModule {
+class ToolboxPlugin {
 public:
-    TBModule() = default;
-    virtual ~TBModule() = default;
-    TBModule(const TBModule&) = delete;
+    ToolboxPlugin() = default;
+    virtual ~ToolboxPlugin() = default;
+    ToolboxPlugin(ToolboxPlugin&&) = delete;
+    ToolboxPlugin(const ToolboxPlugin&) = delete;
+    ToolboxPlugin& operator=(ToolboxPlugin&&) = delete;
+    ToolboxPlugin& operator=(const ToolboxPlugin&) = delete;
 
     // name of the window and the ini section
     virtual const char* Name() const = 0;
 
     // Initialize module
-    virtual void Initialize(ImGuiContext* ctx)
+    virtual void Initialize(ImGuiContext* ctx, HMODULE toolbox_dll = nullptr)
     {
         if (ctx) ImGui::SetCurrentContext(ctx);
     }
@@ -55,10 +58,10 @@ public:
     virtual bool WndProc(UINT /*message*/, WPARAM, LPARAM) { return false; }
 
     // Load settings from ini
-    virtual void LoadSettings(CSimpleIniA*) {}
+    virtual void LoadSettings() {}
 
     // Save settings to ini
-    virtual void SaveSettings(CSimpleIniA*) {}
+    virtual void SaveSettings() {}
 
     // Draw settings.
     virtual void DrawSettings() {}

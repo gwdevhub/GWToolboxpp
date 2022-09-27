@@ -1,6 +1,6 @@
 #include <module_base.h>
 
-class Clock : public TBModule {
+class Clock : public ToolboxPlugin {
 public:
     const char* Name() const override { return "Clock"; }
 

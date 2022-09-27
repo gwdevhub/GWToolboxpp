@@ -6,7 +6,7 @@ class PluginManager {
     struct Plugin {
         std::filesystem::path path;
         HMODULE dll = nullptr;
-        TBModule* instance = nullptr;
+        ToolboxPlugin* instance = nullptr;
     };
 
 public:
@@ -18,9 +18,9 @@ public:
     void RefreshDlls();
     void UnloadDlls();
 
-    [[nodiscard]] std::vector<TBModule*> GetModules() const
+    [[nodiscard]] std::vector<ToolboxPlugin*> GetModules() const
     {
-        std::vector<TBModule*> instances{};
+        std::vector<ToolboxPlugin*> instances{};
         instances.resize(plugins.size());
         std::ranges::transform(plugins, instances.begin(), [](Plugin p) {
             return p.instance;
@@ -29,7 +29,7 @@ public:
     }
 
 private:
-    TBModule* LoadDLL(const std::filesystem::path& path);
+    ToolboxPlugin* LoadDLL(const std::filesystem::path& path);
 
     std::vector<Plugin> plugins{};
 };

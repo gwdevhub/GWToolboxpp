@@ -6,39 +6,45 @@
 #include <format>
 #include <imgui.h>
 
-DLLAPI TBModule* TBModuleInstance()
+DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
     static Clock instance;
     return &instance;
 }
 
+auto GetTime()
+{
+    const auto now = std::chrono::system_clock::now();
+    const auto time = std::chrono::system_clock::to_time_t(now);
+    char buf[100];
+    const auto _ = ctime_s(buf, sizeof buf, &time);
+    auto str = std::format("Current time is {}", buf);
+    str.pop_back();
+    return str;
+}
+
 void Clock::Draw(IDirect3DDevice9* device)
 {
-    ImGui::Begin("clock test");
-    ImGui::Text("hello, I am a plugin!");
+    ImGui::Begin("clock");
+    ImGui::Text("%s", GetTime().c_str());
     ImGui::End();
 }
 
 void CmdClock(const wchar_t*, int, wchar_t**)
 {
-    const auto now = std::chrono::system_clock::now();
-    std::time_t time = std::chrono::system_clock::to_time_t(now);
-    const auto print_time = std::ctime(&time);
-    auto str = std::format("Current time is {}", print_time);
-    str.pop_back();
-    GW::GameThread::Enqueue([str] {
-        GW::Chat::SendChat('#', str.c_str());
+    GW::GameThread::Enqueue([] {
+        GW::Chat::SendChat('#', GetTime().c_str());
     });
 }
 
 void Clock::Initialize(ImGuiContext* ctx)
 {
-    TBModule::Initialize(ctx);
+    ToolboxPlugin::Initialize(ctx);
     GW::Chat::CreateCommand(L"clock", CmdClock);
 }
 
 void Clock::Terminate()
 {
-    TBModule::Terminate();
+    ToolboxPlugin::Terminate();
     GW::Chat::DeleteCommand(L"clock");
 }

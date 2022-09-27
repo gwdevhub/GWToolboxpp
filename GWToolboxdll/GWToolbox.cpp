@@ -465,7 +465,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         static bool plugins_initialized = false;
         if (!plugins_initialized) {
             for (const auto plugin : plugin_manager.GetModules()) {
-                plugin->LoadSettings(inifile);
                 plugin->Initialize(ImGui::GetCurrentContext());
             }
             plugins_initialized = true;
@@ -511,7 +510,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
                 continue;
             uielement->Draw(device);
         }
-        for (TBModule* mod : Instance().plugin_manager.GetModules()) {
+        for (ToolboxPlugin* mod : Instance().plugin_manager.GetModules()) {
             mod->Draw(device);
         }
 

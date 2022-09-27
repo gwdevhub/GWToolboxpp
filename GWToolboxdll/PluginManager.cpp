@@ -49,14 +49,14 @@ void PluginManager::Draw()
     }
 }
 
-TBModule* PluginManager::LoadDLL(const std::filesystem::path& path)
+ToolboxPlugin* PluginManager::LoadDLL(const std::filesystem::path& path)
 {
     for (auto& plugin : plugins) {
         if (plugin.path == path)
             return plugin.instance;
     }
     const auto dll = LoadLibraryW(path.wstring().c_str());
-    typedef TBModule*(__cdecl * ObjProc)();
+    typedef ToolboxPlugin*(__cdecl * ObjProc)();
     ObjProc objfunc = dll ? (ObjProc)GetProcAddress(dll, "TBModuleInstance") : nullptr;
     if (!objfunc) return nullptr;
     Plugin p;
