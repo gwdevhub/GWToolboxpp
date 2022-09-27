@@ -3,7 +3,6 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Guild.h>
-
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -11,7 +10,6 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
@@ -22,6 +20,8 @@
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
 #include <ImGuiAddons.h>
+#include <Defines.h>
+#include <random>
 #include <Modules/Obfuscator.h>
 
 #define ONLY_CURRENT_PLAYER 1;
