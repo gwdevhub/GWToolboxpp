@@ -23,7 +23,7 @@ void PluginManager::RefreshDlls()
                 ext = file_path.extension();
             }
             if (ext == ".dll") {
-                if (!LoadDLL(file_path)) {
+                if (!LoadDll(file_path)) {
                     Log::Error("Failed to load plugin %s", file_path.filename().string().c_str());
                 }
             }
@@ -49,21 +49,23 @@ void PluginManager::Draw()
     }
 }
 
-ToolboxPlugin* PluginManager::LoadDLL(const std::filesystem::path& path)
+ToolboxPlugin* PluginManager::LoadDll(const std::filesystem::path& path)
 {
     for (auto& plugin : plugins) {
         if (plugin.path == path)
             return plugin.instance;
     }
     const auto dll = LoadLibraryW(path.wstring().c_str());
-    typedef ToolboxPlugin*(__cdecl * ObjProc)();
-    ObjProc objfunc = dll ? (ObjProc)GetProcAddress(dll, "TBModuleInstance") : nullptr;
-    if (!objfunc) return nullptr;
+    if (dll == nullptr) return nullptr;
+    using ToolboxPluginInstanceFn = ToolboxPlugin* (*)();
+    const auto instance_fn = reinterpret_cast<ToolboxPluginInstanceFn>(GetProcAddress(dll, "TBModuleInstance"));
+    if (!instance_fn) return nullptr;
     Plugin p;
-    p.instance = objfunc();
+    p.instance = instance_fn();
     p.dll = dll;
     p.path = path;
     plugins.push_back(p);
+    plugin_instances.push_back(p.instance);
     return p.instance;
 }
 
@@ -77,4 +79,5 @@ void PluginManager::UnloadDlls()
         }
     }
     plugins.clear();
+    plugin_instances.clear();
 }

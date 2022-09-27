@@ -287,7 +287,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         // send to toolbox modules and plugins
         {
             bool captured = false;
-            for (const auto plugin : tb.Instance().GetPluginManger().GetModules()) {
+            for (const auto plugin : tb.Instance().GetPluginManger().GetPlugins()) {
                 if (plugin->WndProc(Message, wParam, lParam)) captured = true;
             }
             for (ToolboxModule* m : tb.GetModules()) {
@@ -440,7 +440,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
             if (!module->CanTerminate())
                 return;
         }
-        for (const auto plugin : Instance().plugin_manager.GetModules()) {
+        for (const auto plugin : Instance().plugin_manager.GetPlugins()) {
             if (!plugin->CanTerminate()) return;
         }
 
@@ -464,8 +464,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         static bool plugins_initialized = false;
         if (!plugins_initialized) {
-            for (const auto plugin : plugin_manager.GetModules()) {
-                plugin->Initialize(ImGui::GetCurrentContext());
+            for (const auto plugin : plugin_manager.GetPlugins()) {
+                plugin->Initialize(ImGui::GetCurrentContext(), GetDLLModule());
             }
             plugins_initialized = true;
         }
@@ -510,8 +510,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
                 continue;
             uielement->Draw(device);
         }
-        for (ToolboxPlugin* mod : Instance().plugin_manager.GetModules()) {
-            mod->Draw(device);
+        for (const auto plugin : Instance().plugin_manager.GetPlugins()) {
+            plugin->Draw(device);
         }
 
 #ifdef _DEBUG
@@ -544,11 +544,11 @@ void GWToolbox::Update(GW::HookStatus *)
 
         // @Enhancement:
         // Improve precision with QueryPerformanceCounter
-        DWORD tick = GetTickCount();
-        DWORD delta = tick - last_tick_count;
-        float delta_f = delta / 1000.f;
+        const DWORD tick = GetTickCount();
+        const DWORD delta = tick - last_tick_count;
+        const float delta_f = delta / 1000.f;
 
-        for (const auto plugin : plugin_manager.GetModules()) {
+        for (const auto plugin : plugin_manager.GetPlugins()) {
             plugin->Update(delta_f);
         }
 

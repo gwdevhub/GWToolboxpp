@@ -18,19 +18,15 @@ public:
     void RefreshDlls();
     void UnloadDlls();
 
-    [[nodiscard]] std::vector<ToolboxPlugin*> GetModules() const
+    [[nodiscard]] const std::vector<ToolboxPlugin*>& GetPlugins() const
     {
-        std::vector<ToolboxPlugin*> instances{};
-        instances.resize(plugins.size());
-        std::ranges::transform(plugins, instances.begin(), [](Plugin p) {
-            return p.instance;
-        });
-        return instances;
+        return plugin_instances;
     }
 
 private:
-    ToolboxPlugin* LoadDLL(const std::filesystem::path& path);
+    ToolboxPlugin* LoadDll(const std::filesystem::path& path);
 
     std::vector<Plugin> plugins{};
+    std::vector<ToolboxPlugin*> plugin_instances{};
 };
 

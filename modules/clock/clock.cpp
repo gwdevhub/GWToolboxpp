@@ -6,6 +6,7 @@
 #include <format>
 #include <imgui.h>
 
+HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
     static Clock instance;
@@ -37,9 +38,9 @@ void CmdClock(const wchar_t*, int, wchar_t**)
     });
 }
 
-void Clock::Initialize(ImGuiContext* ctx)
+void Clock::Initialize(ImGuiContext* ctx, HMODULE toolbox_dll)
 {
-    ToolboxPlugin::Initialize(ctx);
+    ToolboxPlugin::Initialize(ctx, toolbox_dll);
     GW::Chat::CreateCommand(L"clock", CmdClock);
 }
 

@@ -3,9 +3,9 @@
 
 #include <module_base.h>
 
-DLLAPI BOOL WINAPI DllMain(HINSTANCE , DWORD reason, LPVOID) {
+DLLAPI BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID) {
 	switch (reason) {
-	case DLL_PROCESS_ATTACH: break;
+        case DLL_PROCESS_ATTACH: plugin_handle = hModule; break;
 	case DLL_PROCESS_DETACH: break;
 	case DLL_THREAD_ATTACH: break;
 	case DLL_THREAD_DETACH: break;

@@ -2,10 +2,12 @@
 
 #include <Windows.h>
 
+#ifndef DLLAPI
 #ifdef BUILD_DLL
 #define DLLAPI extern "C" __declspec(dllexport)
 #else
 #define DLLAPI
+#endif
 #endif
 
 struct ImGuiContext;
@@ -16,8 +18,9 @@ namespace ImGui {
 }
 
 //
-// Dll interface. You must implement those functions
+// Dll interface.
 //
+extern HMODULE plugin_handle; // set in dllmain
 class ToolboxPlugin; // Full declaration below.
 DLLAPI ToolboxPlugin* ToolboxPluginInstance();
 
@@ -34,9 +37,10 @@ public:
     virtual const char* Name() const = 0;
 
     // Initialize module
-    virtual void Initialize(ImGuiContext* ctx, HMODULE toolbox_dll = nullptr)
+    virtual void Initialize(ImGuiContext* ctx, HMODULE toolbox_dll)
     {
         if (ctx) ImGui::SetCurrentContext(ctx);
+        toolbox_handle = toolbox_dll;
     }
 
     // Send termination signal to module.
@@ -55,7 +59,7 @@ public:
     virtual void Draw(IDirect3DDevice9*) {}
 
     // Optional. Prefer using ImGui::GetIO() during update or render, if possible.
-    virtual bool WndProc(UINT /*message*/, WPARAM, LPARAM) { return false; }
+    virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
     // Load settings from ini
     virtual void LoadSettings() {}
@@ -65,4 +69,8 @@ public:
 
     // Draw settings.
     virtual void DrawSettings() {}
+
+protected:
+    HMODULE plugin_handle = nullptr;
+    HMODULE toolbox_handle = nullptr;
 };

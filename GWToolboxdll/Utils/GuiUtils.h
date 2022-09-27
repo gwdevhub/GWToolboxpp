@@ -1,6 +1,16 @@
 #pragma once
 
+// ReSharper disable once CppUnusedIncludeDirective
 #include <ImGuiAddons.h>
+#include <nlohmann/json.hpp>
+
+#ifndef DLLAPI
+#ifdef GWCA_BUILD_EXPORTS
+#define DLLAPI extern "C" __declspec(dllexport)
+#else
+#define DLLAPI __declspec(dllimport)
+#endif
+#endif
 
 namespace GW {
     namespace Constants {
@@ -29,7 +39,7 @@ namespace GuiUtils {
     void OpenWiki(std::wstring term);
     void SearchWiki(std::wstring term);
     bool FontsLoaded();
-    ImFont* GetFont(FontSize size);
+    DLLAPI ImFont* GetFont(FontSize size);
 
     float GetPartyHealthbarHeight();
     float GetGWScaleMultiplier();
@@ -129,7 +139,7 @@ namespace GuiUtils {
         bool IsDecoding() { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string
-        void reset(const uint32_t _enc_string_id = 0, bool sanitise = true);
+        void reset(uint32_t _enc_string_id = 0, bool sanitise = true);
         // Recycle this EncString by passing a new string to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string
         void reset(const wchar_t* _enc_string = nullptr, bool sanitise = true);
@@ -147,8 +157,6 @@ namespace GuiUtils {
         // Disable object copying; decoded_ws is passed to GW by reference and would be bad to do this. Pass by pointer instead.
         EncString(const EncString& temp_obj) = delete;
         EncString& operator=(const EncString& temp_obj) = delete;
-        virtual ~EncString() {
-            ASSERT(!IsDecoding());
-        }
+        virtual ~EncString() = default;
     };
 };

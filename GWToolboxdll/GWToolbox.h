@@ -33,7 +33,7 @@ public:
     void StartSelfDestruct() {
         if (initialized) {
             SaveSettings();
-            for (const auto plugin : plugin_manager.GetModules()) {
+            for (const auto plugin : plugin_manager.GetPlugins()) {
                 plugin->SignalTerminate();
             }
             for (ToolboxModule* module : modules) {
