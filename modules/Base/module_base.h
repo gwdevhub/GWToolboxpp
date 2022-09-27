@@ -71,6 +71,5 @@ public:
     virtual void DrawSettings() {}
 
 protected:
-    HMODULE plugin_handle = nullptr;
     HMODULE toolbox_handle = nullptr;
 };
