@@ -6,6 +6,16 @@
 #include <format>
 #include <imgui.h>
 
+using EnqueueFn = void (*)(std::function<void()>&&);
+using CreateCommandFn = void (*)(const wchar_t*, const GW::Chat::CmdCB&);
+using DeleteCommandFn = void (*)(const wchar_t*);
+using SendChatFn = void (*)(char, const char*);
+
+EnqueueFn enqueue = nullptr;
+CreateCommandFn create_command = nullptr;
+DeleteCommandFn delete_command = nullptr;
+SendChatFn send_chat = nullptr;
+
 HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
@@ -34,19 +44,26 @@ void Clock::Draw(IDirect3DDevice9* device)
 
 void CmdClock(const wchar_t*, int, wchar_t**)
 {
-    GW::GameThread::Enqueue([] {
-        GW::Chat::SendChat('#', GetTime().c_str());
+    enqueue([] {
+        send_chat('#', GetTime().c_str());
     });
 }
 
 void Clock::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
-    GW::Chat::CreateCommand(L"clock", CmdClock);
+
+    // we load our gwca methods dynamically
+    enqueue = reinterpret_cast<EnqueueFn>(GetProcAddress(toolbox_dll, "?Enqueue@GameThread@GW@@YAX$$QAV?$function@$$A6AXXZ@std@@@Z"));
+    create_command = reinterpret_cast<CreateCommandFn>(GetProcAddress(toolbox_dll, "?CreateCommand@Chat@GW@@YAXPB_WABV?$function@$$A6AXPB_WHPAPA_W@Z@std@@@Z"));
+    delete_command = reinterpret_cast<DeleteCommandFn>(GetProcAddress(toolbox_dll, "?DeleteCommand@Chat@GW@@YAXPB_W@Z"));
+    send_chat = reinterpret_cast<SendChatFn>(GetProcAddress(toolbox_dll, "?SendChat@Chat@GW@@YAXDPBD@Z"));
+
+    create_command(L"clock", CmdClock);
 }
 
 void Clock::Terminate()
 {
     ToolboxPlugin::Terminate();
-    GW::Chat::DeleteCommand(L"clock");
+    delete_command(L"clock");
 }
