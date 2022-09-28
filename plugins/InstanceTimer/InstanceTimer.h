@@ -13,8 +13,8 @@ public:
 
 	const char* Name() const override { return "Plugin Timer"; }
 
-	void LoadSettings(std::filesystem::path) override;
-    void SaveSettings(std::filesystem::path) override;
+	void LoadSettings(const wchar_t*) override;
+    void SaveSettings(const wchar_t*) override;
     void DrawSettings() override;
     void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     void Terminate() override;

@@ -1,5 +1,7 @@
 #include "InstanceTimer.h"
 
+#include <filesystem>
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Skill.h>
@@ -11,8 +13,6 @@
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
 
-#include <filesystem>
-
 HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
@@ -20,18 +20,17 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
     return &instance;
 }
 
-void InstanceTimer::LoadSettings(std::filesystem::path folder)
+void InstanceTimer::LoadSettings(const wchar_t* folder)
 {
-    if (folder.empty()) return;
-    const auto inifile = folder / "instancetimer.ini";
+    const auto inifile = std::filesystem::path(folder) / L"instancetimer.ini";
     ini.LoadFile(inifile.c_str());
     click_to_print_time = ini.GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     show_extra_timers = ini.GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
 }
 
-void InstanceTimer::SaveSettings(std::filesystem::path folder)
+void InstanceTimer::SaveSettings(const wchar_t* folder)
 {
-    const auto inifile = folder / "instancetimer.ini";
+    const auto inifile = std::filesystem::path(folder) / L"instancetimer.ini";
     ini.SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini.SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     const auto _ = ini.SaveFile(inifile.c_str());
