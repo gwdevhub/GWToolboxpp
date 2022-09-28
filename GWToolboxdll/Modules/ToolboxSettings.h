@@ -28,7 +28,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
     void Draw(IDirect3DDevice9*) override;
-    void ShowVisibleRadio() override { };
+    void ShowVisibleRadio() override {}
 
     void DrawFreezeSetting();
     void DrawSizeAndPositionSettings() override {}
