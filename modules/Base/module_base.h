@@ -10,12 +10,22 @@
 #endif
 #endif
 
-struct ImGuiContext;
 struct IDirect3DDevice9;
+
+struct ImGuiContext;
+typedef void* (*ImGuiMemAllocFunc)(size_t sz, void* user_data);
+typedef void (*ImGuiMemFreeFunc)(void* ptr, void* user_data);
 
 namespace ImGui {
     void SetCurrentContext(ImGuiContext*);
+    void SetAllocatorFunctions(ImGuiMemAllocFunc, ImGuiMemFreeFunc, void*);
 }
+
+struct ImGuiAllocFns {
+    ImGuiMemAllocFunc alloc_func = nullptr;
+    ImGuiMemFreeFunc free_func = nullptr;
+    void* user_data = nullptr;
+};
 
 //
 // Dll interface.
@@ -37,9 +47,10 @@ public:
     virtual const char* Name() const = 0;
 
     // Initialize module
-    virtual void Initialize(ImGuiContext* ctx, HMODULE toolbox_dll)
+    virtual void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll)
     {
-        if (ctx) ImGui::SetCurrentContext(ctx);
+        ImGui::SetCurrentContext(ctx);
+        ImGui::SetAllocatorFunctions(allocator_fns.alloc_func, allocator_fns.free_func, allocator_fns.user_data);
         toolbox_handle = toolbox_dll;
     }
 
@@ -61,10 +72,10 @@ public:
     // Optional. Prefer using ImGui::GetIO() during update or render, if possible.
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
-    // Load settings from ini
+    // Load settings
     virtual void LoadSettings() {}
 
-    // Save settings to ini
+    // Save settings
     virtual void SaveSettings() {}
 
     // Draw settings.

@@ -66,6 +66,7 @@ void InstanceTimer::SaveSettings()
 
 void InstanceTimer::DrawSettings()
 {
+    if (!toolbox_handle) return;
     ImGui::Checkbox("Ctrl + Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
 
@@ -76,9 +77,9 @@ void InstanceTimer::DrawSettings()
     }
 }
 
-void InstanceTimer::Initialize(ImGuiContext* ctx, HMODULE toolbox_dll)
+void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
-    ToolboxPlugin::Initialize(ctx, toolbox_dll);
+    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
     LoadSettings();
 }
 
@@ -90,6 +91,7 @@ void InstanceTimer::Terminate()
 
 void InstanceTimer::Draw(IDirect3DDevice9* pDevice)
 {
+    if (!toolbox_handle) return;
     if (!visible) return;
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 

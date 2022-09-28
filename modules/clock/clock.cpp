@@ -26,6 +26,7 @@ auto GetTime()
 
 void Clock::Draw(IDirect3DDevice9* device)
 {
+    if (!toolbox_handle) return;
     ImGui::Begin("clock");
     ImGui::Text("%s", GetTime().c_str());
     ImGui::End();
@@ -38,9 +39,9 @@ void CmdClock(const wchar_t*, int, wchar_t**)
     });
 }
 
-void Clock::Initialize(ImGuiContext* ctx, HMODULE toolbox_dll)
+void Clock::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
-    ToolboxPlugin::Initialize(ctx, toolbox_dll);
+    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
     GW::Chat::CreateCommand(L"clock", CmdClock);
 }
 
