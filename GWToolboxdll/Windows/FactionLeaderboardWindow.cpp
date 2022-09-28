@@ -2,9 +2,6 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
-
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Map.h>
@@ -12,11 +9,8 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
-#include <Logger.h>
 #include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>

@@ -2,16 +2,16 @@
 
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/Context/CharContext.h>
+#include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameEntities/Friendslist.h>
-#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Party.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -19,8 +19,8 @@
 #include <GWCA/Managers/TradeMgr.h>
 
 #include <Logger.h>
-#include <base64.h>
 #include <Timer.h>
+#include <Color.h>
 
 #include <Modules/Resources.h>
 #include <Windows/FriendListWindow.h>

@@ -28,7 +28,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>

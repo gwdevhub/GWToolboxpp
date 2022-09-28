@@ -3,7 +3,6 @@
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Managers/SkillbarMgr.h>
-#include <GWCA/GameEntities/Skill.h>
 
 #include <Utils/GuiUtils.h>
 #include <Timer.h>

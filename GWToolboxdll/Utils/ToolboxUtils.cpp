@@ -63,7 +63,7 @@ namespace ToolboxUtils {
             return p->sender_name;
         } break;
         case GAME_SMSG_CHAT_MESSAGE_LOCAL:
-        case GAME_SMSG_TRADE_REQUEST: 
+        case GAME_SMSG_TRADE_REQUEST:
             return GetPlayerName(((uint32_t*)packet)[1]);
         }
         return L"";

@@ -2,25 +2,15 @@
 
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Item.h>
-
-#include <GWCA/Context/PreGameContext.h>
-#include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Hook.h>
@@ -30,6 +20,8 @@
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
 #include <ImGuiAddons.h>
+#include <Defines.h>
+#include <random>
 #include <Modules/Obfuscator.h>
 
 #define ONLY_CURRENT_PLAYER 1;
@@ -471,15 +463,15 @@ namespace {
 #endif
             guild_member_updated = false;
             if (obfuscate) {
-                if (player->current_name 
-                    && player->current_name[0] 
+                if (player->current_name
+                    && player->current_name[0]
                     && ObfuscateName(player->current_name, tmp)
                     && tmp != player->current_name) {
                     wcscpy(player->current_name, tmp.c_str());
                     guild_member_updated = true;
                 }
-                if (player->invited_name 
-                    && player->invited_name[0] 
+                if (player->invited_name
+                    && player->invited_name[0]
                     && ObfuscateName(player->invited_name, tmp)
                     && tmp != player->invited_name) {
                     wcscpy(player->invited_name, tmp.c_str());
@@ -799,8 +791,8 @@ void Obfuscator::Terminate() {
 void Obfuscator::Initialize() {
     ToolboxModule::Initialize();
     Reset();
-    
-    uintptr_t GetCharacterSummary_Assertion = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\char\\uichinfo.cpp", "!StrCmp(m_characterName, characterInfo.characterName)");
+
+    uintptr_t GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)");
     if (GetCharacterSummary_Assertion) {
         // Hook to override character names on login screen
         GetCharacterSummary_Func = (GetCharacterSummary_pt)(GetCharacterSummary_Assertion - 0x4F);
@@ -810,7 +802,7 @@ void Obfuscator::Initialize() {
         GetCharacterSummary_AssertionPatch.SetPatch(GetCharacterSummary_Assertion - 0x7, "\xEB", 1);
         GetCharacterSummary_AssertionPatch.TogglePatch(true);
     }
-    uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\game\\vendor\\vnacctnameset.cpp", "charName", -0x30);
+    uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", -0x30);
     GetAccountData_Func = (GetAccountData_pt)GW::Scanner::FunctionFromNearCall(address);
     if (GetAccountData_Func) {
         GW::HookBase::CreateHook(GetAccountData_Func, OnGetAccountInfo, (void**)&GetAccountData_Ret);

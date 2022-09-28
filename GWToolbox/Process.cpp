@@ -311,8 +311,6 @@ bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t 
 }
 
 ProcessScanner::ProcessScanner(Process *process)
-    : m_size(0)
-    , m_buffer(nullptr)
 {
     ProcessModule module;
     process->GetModule(&module);

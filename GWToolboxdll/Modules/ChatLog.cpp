@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/ChatMgr.h>
@@ -372,7 +371,7 @@ void ChatLog::Initialize() {
     ToolboxModule::Initialize();
     {
         // Hook for logging outgoing (sent) messages
-        uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\gw\\chat\\ctchatedit.cpp", "length", -0x5A);
+        uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\gw\chat\ctchatedit.cpp)", "length", -0x5A);
         if (address) {
             AddToSentLog_Func = (AddToSentLog_pt)address;
             GW::Hook::CreateHook(AddToSentLog_Func, OnAddToSentLog, (void**)&RetAddToSentLog);

@@ -54,7 +54,6 @@ include(utf8proc)
 include(easywsclient)
 include(simpleini)
 include(discord_game_sdk)
-include(earcut)
 
 add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)
@@ -64,30 +63,36 @@ add_subdirectory(GWToolbox)
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GWToolbox)
 
 # Below is for toolbox plugins (WIP):
-add_library(module_base INTERFACE)
-target_sources(module_base INTERFACE
-    "modules/base/dllmain.cpp"
-    "modules/base/module_base.h")
-target_include_directories(module_base INTERFACE "modules/base")
-target_include_directories(module_base INTERFACE "GWToolboxdll/GWToolbox")
-target_link_libraries(module_base INTERFACE
-    imgui
-    earcut
-    simpleini
-    gwca
+add_library(plugin_base INTERFACE)
+target_sources(plugin_base INTERFACE
+    "plugins/base/dllmain.cpp"
+    "plugins/base/ToolboxPlugin.h")
+target_include_directories(plugin_base INTERFACE
+    "plugins/base"
+    "GWToolboxdll" # careful here, we only get access to exported and header functions!
     )
-target_compile_definitions(module_base INTERFACE BUILD_DLL)
+target_link_libraries(plugin_base INTERFACE
+    imgui
+    simpleini
+    nlohmann_json::nlohmann_json
+    gwca
+    GWToolboxdll # for gwca imports
+    )
+target_compile_definitions(plugin_base INTERFACE BUILD_DLL)
 
-macro(add_tb_module MODULE)
-    add_library(${MODULE} SHARED)
+macro(add_tb_plugin PLUGIN)
+    add_library(${PLUGIN} SHARED)
     file(GLOB SOURCES
-        "${PROJECT_SOURCE_DIR}/modules/${MODULE}/*.h"
-        "${PROJECT_SOURCE_DIR}/modules/${MODULE}/*.cpp")
-    target_sources(${MODULE} PRIVATE ${SOURCES})
-    target_include_directories(${MODULE} PRIVATE "${PROJECT_SOURCE_DIR}/modules/${MODULE}")
-    target_link_libraries(${MODULE} PRIVATE module_base)
-    set_target_properties(${MODULE} PROPERTIES FOLDER "Modules/")
+        "${PROJECT_SOURCE_DIR}/plugins/${PLUGIN}/*.h"
+        "${PROJECT_SOURCE_DIR}/plugins/${PLUGIN}/*.cpp")
+    target_sources(${PLUGIN} PRIVATE ${SOURCES})
+    target_include_directories(${PLUGIN} PRIVATE "${PROJECT_SOURCE_DIR}/plugins/${PLUGIN}")
+    target_compile_definitions(${PLUGIN} PRIVATE "GWCA_IMPORT")
+    target_compile_definitions(gwca PRIVATE "GWCA_IMPORT")
+    target_link_libraries(${PLUGIN} PRIVATE plugin_base)
+    set_target_properties(${PLUGIN} PROPERTIES FOLDER "plugins/")
 endmacro()
 
-# add_tb_module(InstanceTimer) # still has errors
-add_tb_module(clock)
+add_tb_plugin(InstanceTimer)
+add_tb_plugin(clock)
+add_tb_plugin(TargetOverride)

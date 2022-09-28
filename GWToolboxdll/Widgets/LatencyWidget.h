@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GWCA/Constants/Maps.h>
-#include <GWCA/Packets/StoC.h>
 #include <GWCA/Utilities/Hook.h>
 
 #include <ToolboxWidget.h>

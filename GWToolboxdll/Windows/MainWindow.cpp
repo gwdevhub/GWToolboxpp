@@ -2,7 +2,6 @@
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
-#include <Logger.h>
 
 #include <Windows/MainWindow.h>
 

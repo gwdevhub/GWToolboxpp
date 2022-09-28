@@ -145,7 +145,6 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
         "Crash file created @ %s\n\n", szFileName);
     MessageBoxW(0, error_info, L"GWToolbox++ crash dump created!", 0);
     abort();
-    return 0;
 }
 
 void CrashHandler::Cleanup() {

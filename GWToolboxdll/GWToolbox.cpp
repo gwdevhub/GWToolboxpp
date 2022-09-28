@@ -7,12 +7,9 @@
 #include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 
-#include <CursorFix.h>
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
@@ -24,10 +21,10 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/CrashHandler.h>
 #include <Modules/DialogModule.h>
+#include <Modules/MouseFix.h>
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
-#include <GWCA/Context/GameContext.h>
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -139,10 +136,6 @@ DWORD __stdcall ThreadEntry(LPVOID) {
         goto leave;
     }
 
-    Log::Log("Installing Cursor Fix\n");
-
-    InstallCursorFix();
-
     Log::Log("Installing dx hooks\n");
 
     // Some modules rely on the gwdx_ptr being present for stuff like getting viewport coords.
@@ -171,9 +164,6 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 //        }
 //#endif
     }
-
-    Log::Log("Removing Cursor Fix\n");
-    UninstallCursorFix();
 
     // @Remark:
     // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks
@@ -295,9 +285,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         // send to toolbox modules and plugins
         {
             bool captured = false;
-            for (const auto plugin : tb.Instance().GetPluginManger().GetModules()) {
-                if (plugin->WndProc(Message, wParam, lParam)) captured = true;
-            }
             for (ToolboxModule* m : tb.GetModules()) {
                 if (m->WndProc(Message, wParam, lParam)) captured = true;
             }
@@ -366,8 +353,7 @@ void GWToolbox::Initialize()
     core_modules.push_back(&ToolboxSettings::Instance());
     core_modules.push_back(&MainWindow::Instance());
     core_modules.push_back(&DialogModule::Instance());
-
-    plugin_manager.RefreshDlls();
+    core_modules.push_back(&MouseFix::Instance());
 
     for (ToolboxModule* module : core_modules) {
         module->LoadSettings(inifile);
@@ -427,8 +413,6 @@ void GWToolbox::Terminate() {
 
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
 
-    plugin_manager.UnloadDlls();
-
     for (ToolboxModule* module : modules) {
         module->Terminate();
     }
@@ -446,9 +430,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         for (ToolboxModule* module : Instance().modules) {
             if (!module->CanTerminate())
                 return;
-        }
-        for (const auto plugin : Instance().plugin_manager.GetModules()) {
-            if (!plugin->CanTerminate()) return;
         }
 
         Instance().Terminate();
@@ -468,15 +449,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ASSERT(AttachWndProcHandler());
         // Attach imgui if not already done so
         ASSERT(AttachImgui(device));
-
-        static bool plugins_initialized = false;
-        if (!plugins_initialized) {
-            for (const auto plugin : plugin_manager.GetModules()) {
-                plugin->LoadSettings(inifile);
-                plugin->Initialize(ImGui::GetCurrentContext());
-            }
-            plugins_initialized = true;
-        }
 
         if (!GW::UI::GetIsUIDrawn())
             return;
@@ -518,9 +490,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
                 continue;
             uielement->Draw(device);
         }
-        for (TBModule* mod : Instance().plugin_manager.GetModules()) {
-            mod->Draw(device);
-        }
 
 #ifdef _DEBUG
         // Feel free to uncomment to play with ImGui's features
@@ -552,13 +521,9 @@ void GWToolbox::Update(GW::HookStatus *)
 
         // @Enhancement:
         // Improve precision with QueryPerformanceCounter
-        DWORD tick = GetTickCount();
-        DWORD delta = tick - last_tick_count;
-        float delta_f = delta / 1000.f;
-
-        for (const auto plugin : plugin_manager.GetModules()) {
-            plugin->Update(delta_f);
-        }
+        const DWORD tick = GetTickCount();
+        const DWORD delta = tick - last_tick_count;
+        const float delta_f = delta / 1000.f;
 
         for (ToolboxModule* module : modules) {
             module->Update(delta_f);

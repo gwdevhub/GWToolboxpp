@@ -2,10 +2,6 @@
 
 #include <GWCA/Utilities/Hook.h>
 
-#include <GWCA/GameEntities/Map.h>
-#include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 

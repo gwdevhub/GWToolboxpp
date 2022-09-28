@@ -1,9 +1,10 @@
 #include "stdafx.h"
 
-#include <GWCA/GameContainers/Array.h>
-
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
+
 #include <GWCA/Packets/StoC.h>
+#include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Map.h>
 

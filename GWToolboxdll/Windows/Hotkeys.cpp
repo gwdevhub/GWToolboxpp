@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
@@ -29,8 +30,6 @@
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/Hotkeys.h>
 #include <Windows/PconsWindow.h>
-
-#include <string>
 
 
 bool TBHotkey::show_active_in_header = true;

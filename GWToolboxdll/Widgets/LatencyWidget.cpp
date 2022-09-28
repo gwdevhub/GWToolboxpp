@@ -3,7 +3,6 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Packets/Opcodes.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>

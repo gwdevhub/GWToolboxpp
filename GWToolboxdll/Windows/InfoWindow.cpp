@@ -9,10 +9,10 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Title.h>
 
@@ -33,21 +33,13 @@
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
-#include <GWToolbox.h>
 #include <Logger.h>
 
-#include <Modules/Resources.h>
 #include <Widgets/AlcoholWidget.h>
-#include <Widgets/BondsWidget.h>
-#include <Widgets/ClockWidget.h>
-#include <Widgets/DistanceWidget.h>
-#include <Widgets/HealthWidget.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/PartyDamage.h>
-#include <Widgets/TimerWidget.h>
 #include <Windows/InfoWindow.h>
 #include <Windows/NotepadWindow.h>
-#include <Windows/StringDecoderWindow.h>
 
 #include <Modules/ToolboxSettings.h>
 #include <Modules/DialogModule.h>
@@ -389,7 +381,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (show_widgets) {
-            const std::vector<ToolboxModule *> &optional_modules = ToolboxSettings::Instance().GetOptionalModules();
+            const std::vector<ToolboxModule *>& optional_modules = ToolboxSettings::Instance().GetModules();
             std::vector<ToolboxUIElement *> widgets;
             widgets.reserve(optional_modules.size());
             for (ToolboxModule *module : optional_modules) {

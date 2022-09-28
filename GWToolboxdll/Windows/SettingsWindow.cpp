@@ -6,7 +6,6 @@
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
-#include <PluginManager.h>
 
 #include <Modules/ChatCommands.h>
 #include <Modules/Resources.h>
@@ -45,11 +44,11 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Text("GWToolbox++");
         ImGui::SameLine(0, 0);
         ImGui::TextColored(sCol, " v%s ", GWTOOLBOXDLL_VERSION);
-        if (ImGui::IsItemHovered()) 
+        if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Go to %s", GWTOOLBOX_WEBSITE);
         if(ImGui::IsItemClicked())
             ShellExecute(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
-        if (GWTOOLBOXDLL_VERSION_BETA[0]) {
+        if constexpr (GWTOOLBOXDLL_VERSION_BETA[0]) {
             ImGui::SameLine();
             ImGui::Text("- %s", GWTOOLBOXDLL_VERSION_BETA);
         } else {
@@ -83,8 +82,6 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Checkbox("Hide Settings when entering explorable area", &hide_when_entering_explorable);
 
         ImGui::Text("General:");
-
-        GWToolbox::Instance().GetPluginManger().Draw();
 
         if (ImGui::CollapsingHeader("Help")) {
             if (ImGui::TreeNodeEx("General Interface", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -131,7 +128,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         DrawSettingsSection(ToolboxTheme::Instance().SettingsName());
         DrawSettingsSection(ToolboxSettings::Instance().SettingsName());
 
-        const std::vector<ToolboxModule*>& optional_modules = ToolboxSettings::Instance().GetOptionalModules();
+        const std::vector<ToolboxModule*>& optional_modules = ToolboxSettings::Instance().GetModules();
         for (unsigned i = 0; i < optional_modules.size(); ++i) {
             if (i == sep_windows) ImGui::Text("Windows:");
             if (i == sep_widgets) ImGui::Text("Widgets:");
@@ -163,7 +160,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     if (settings_section == callbacks.end()) return false;
     if (drawn_settings.contains(section)) return true; // Already drawn
     drawn_settings[section] = true;
-    
+
     static char buf[128];
     sprintf(buf, "      %s", section);
     const auto pos = ImGui::GetCursorScreenPos();
@@ -177,7 +174,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
         const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
         ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2), ImColor(style.Colors[ImGuiCol_Text]), icon);
     }
-    
+
     ImGui::PushID(section);
     size_t i = 0;
     for (const auto& [flt, setting_callback] : settings_section->second) {

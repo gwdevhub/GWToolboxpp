@@ -1,11 +1,9 @@
 #pragma once
 
 #include <GWCA/Constants/Maps.h>
-#include <GWCA/Utilities/Hook.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <Defines.h>
 #include <ToolboxWindow.h>
 #include <vector>
 

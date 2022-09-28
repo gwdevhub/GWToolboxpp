@@ -9,7 +9,7 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Item.h>
@@ -20,7 +20,6 @@
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
-#include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/PartyContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
@@ -28,7 +27,6 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
@@ -36,7 +34,6 @@
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/TradeMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
 
@@ -48,6 +45,7 @@
 #include <Modules/ChatCommands.h>
 #include <Modules/ObserverModule.h>
 #include <Modules/GameSettings.h>
+#include <Modules/ChatSettings.h>
 #include <Widgets/PartyDamage.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/Hotkeys.h>
@@ -453,8 +451,6 @@ void ChatCommands::CmdPingQuest(const wchar_t* , int , LPWSTR* ) {
 
 void ChatCommands::Initialize() {
     ToolboxModule::Initialize();
-
-    default_title_id = (uint32_t)GW::Constants::TitleID::Lightbringer;
 
     const DWORD def_scale = 0x64000000;
     // Available Transmo NPCs
@@ -1227,12 +1223,12 @@ void ChatCommands::CmdDamage(const wchar_t *message, int argc, LPWSTR *argv) {
 void ChatCommands::CmdAfk(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(argv);
     GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
-    GameSettings& settings = GameSettings::Instance();
     if (argc > 1) {
         const wchar_t *afk_msg = next_word(message);
-        settings.SetAfkMessage(afk_msg);
-    } else {
-        settings.afk_message.clear();
+        ChatSettings::SetAfkMessage(afk_msg);
+    }
+    else {
+        ChatSettings::SetAfkMessage(L"");
     }
 }
 

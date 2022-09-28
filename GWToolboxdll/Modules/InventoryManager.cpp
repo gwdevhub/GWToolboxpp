@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/Packets/Opcodes.h>
+#include <GWCA/Constants/Maps.h>
 
 #include <GWCA/GameEntities/Agent.h>
 
@@ -15,7 +16,6 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/MerchantMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/TradeMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
@@ -31,7 +31,6 @@
 #include <Modules/GameSettings.h>
 #include <Windows/MaterialsWindow.h>
 
-#include <Modules/Resources.h>
 
 namespace {
     ImVec4 ItemBlue = ImColor(153, 238, 255).Value;

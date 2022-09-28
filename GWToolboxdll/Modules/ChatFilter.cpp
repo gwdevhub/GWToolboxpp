@@ -2,14 +2,8 @@
 
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
-
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
-
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -18,7 +12,6 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include <Defines.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
@@ -580,7 +573,7 @@ bool ChatFilter::ShouldBlockByChannel(uint32_t channel) {
             prefCheck = GW::UI::FlagPreference::ChannelTrade;
             break;
         }
-        if(prefCheck != (GW::UI::FlagPreference)0xffff
+        if (prefCheck != (GW::UI::FlagPreference)0xffff
             && GW::UI::GetPreference(prefCheck) == 1) {
             return true;
         }

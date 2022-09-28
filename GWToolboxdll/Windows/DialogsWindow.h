@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Defines.h>
-
 #include <ToolboxWindow.h>
 
 namespace GW {

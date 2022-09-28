@@ -6,7 +6,6 @@
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Title.h>
 
@@ -63,7 +62,7 @@ void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess *pa
     if (packet->tint == 6) {
         // Tint 6, level 5 - the trouble zone for lunars!
         // Also used for krytan brandy (level 5 alcohol)
-        if (packet->level == 5 && 
+        if (packet->level == 5 &&
             (instance.prev_packet_tint_6_level < packet->level - 1
             || (instance.prev_packet_tint_6_level == 5 && pts_gained < 1))) {
             // If we've jumped a level, or the last packet was also level 5 and no points were gained, then its not alcohol.

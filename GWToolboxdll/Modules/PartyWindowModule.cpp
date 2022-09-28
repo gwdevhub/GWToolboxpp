@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/AgentIDs.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 

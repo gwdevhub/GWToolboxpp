@@ -1,11 +1,8 @@
 #include "stdafx.h"
 
-#include <GWCA/GWCA.h>
-#include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
 
 #include <GWCA/Context/GameContext.h>
@@ -16,12 +13,9 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/MapMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>

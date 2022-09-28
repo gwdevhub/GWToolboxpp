@@ -1,6 +1,5 @@
 #pragma once
 
-#include <GWCA\Constants\Constants.h>
 #include <GWCA\GameEntities\Skill.h>
 #include <ToolboxWindow.h>
 

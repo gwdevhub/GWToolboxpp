@@ -1,19 +1,14 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/EffectMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/EffectRenderer.h>

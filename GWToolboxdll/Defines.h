@@ -25,5 +25,9 @@ Notes:
 #define EXCEPT_EXPRESSION_LOOP EXCEPTION_EXECUTE_HANDLER
 #endif
 
+#ifndef ASSERT
 #define ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))
+#endif
+#ifndef IM_ASSERT
 #define IM_ASSERT(expr) ASSERT(expr)
+#endif

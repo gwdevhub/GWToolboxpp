@@ -1,11 +1,8 @@
 #pragma once
 
-#include <array>
 #include <map>
 #include <queue>
-#include <set>
 #include <string>
-#include <utility>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>

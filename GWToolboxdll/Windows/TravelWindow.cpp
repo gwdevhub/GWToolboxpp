@@ -2,17 +2,12 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/Packets/StoC.h>
-#include <GWCA/Managers/StoCMgr.h>
-
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Party.h>
 
 #include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/GuildContext.h>
 
@@ -599,10 +594,10 @@ namespace {
     }
     static bool IsAlreadyInOutpost(GW::Constants::MapID outpost_id, GW::Constants::District _district, uint32_t _district_number = 0)
     {
-        return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost 
+        return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
             && GW::Map::GetMapID() == outpost_id
-            && TravelWindow::RegionFromDistrict(_district) == GW::Map::GetRegion() 
-            && TravelWindow::LanguageFromDistrict(_district) == GW::Map::GetLanguage() 
+            && TravelWindow::RegionFromDistrict(_district) == GW::Map::GetRegion()
+            && TravelWindow::LanguageFromDistrict(_district) == GW::Map::GetLanguage()
             && (!_district_number || _district_number == static_cast<uint32_t>(GW::Map::GetDistrict()));
     }
 }

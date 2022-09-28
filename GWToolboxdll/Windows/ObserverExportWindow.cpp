@@ -1,16 +1,7 @@
 #include "stdafx.h"
 
-#include <cstdlib>
-
-#include <GWCA/Utilities/Macros.h>
-#include <GWCA/Utilities/Scanner.h>
-
-#include <GWCA/GameEntities/Agent.h>
-
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 
-#include <Logger.h>
 #include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>

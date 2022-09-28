@@ -1,17 +1,12 @@
 #include "stdafx.h"
-#include <cstdlib>
 
-#include <GWCA/Utilities/Macros.h>
-#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <Logger.h>
 #include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
@@ -94,7 +89,7 @@ void SkillListingWindow::ExportToJSON() {
     auto message = file_location.wstring();
 
     size_t max_len = _countof(file_location_wc) - 1;
-    
+
     for (size_t i = 0; i < message.length(); i++) {
         // Break on the end of the message
         if (!message[i])
@@ -164,7 +159,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         if (!ImGui::IsItemVisible())
             continue;
         ImGui::SameLine(offset += tiny_text_width);
-        ImGui::ImageCropped(*Resources::GetSkillImage(skills[i]->skill->skill_id), { 20.f,20.f });        
+        ImGui::ImageCropped(*Resources::GetSkillImage(skills[i]->skill->skill_id), { 20.f,20.f });
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%S",skills[i]->Name());
         if (ImGui::IsItemHovered())
@@ -184,7 +179,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
             GW::GameThread::Enqueue([url]() {
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, url);
                 delete[] url;
-                });            
+                });
         }
     }
     if (ImGui::Button("Export to JSON"))

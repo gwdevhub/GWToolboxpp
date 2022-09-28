@@ -2,7 +2,6 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Item.h>
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Color.h>

@@ -1,16 +1,10 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
-#include <GWCA/PAckets/StoC.h>
 
 #include <GWCA/GameEntities/Quest.h>
-#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Agent.h>
-
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>

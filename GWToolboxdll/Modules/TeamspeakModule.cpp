@@ -17,13 +17,7 @@
 #include <Psapi.h>
 #include <Defines.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
-
-#include <GWCA\Packets\StoC.h>
-
 #include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <ImGuiAddons.h>

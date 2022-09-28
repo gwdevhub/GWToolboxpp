@@ -1,17 +1,13 @@
 #pragma once
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Friendslist.h>
-#include <GWCA/GameEntities/Map.h>
 
-#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 
-#include <Color.h>
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 

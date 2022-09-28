@@ -3,10 +3,7 @@
 #include <GWCA\Utilities\Hook.h>
 
 #include <GWCA\Packets\StoC.h>
-#include <GWCA\GameEntities\Item.h>
-#include <GWCA\Managers\UIMgr.h>
 
-#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 #include <Modules/HallOfMonumentsModule.h>

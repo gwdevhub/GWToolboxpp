@@ -1,7 +1,9 @@
 #include "Minimap.h"
 #include "stdafx.h"
 
+#include <GWCA/Constants/AgentIDs.h>
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 

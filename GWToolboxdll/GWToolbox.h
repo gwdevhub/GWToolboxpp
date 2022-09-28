@@ -4,7 +4,6 @@
 
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
-#include <PluginManager.h>
 
 DWORD __stdcall SafeThreadEntry(LPVOID mod) noexcept;
 DWORD __stdcall ThreadEntry(LPVOID);
@@ -33,9 +32,6 @@ public:
     void StartSelfDestruct() {
         if (initialized) {
             SaveSettings();
-            for (const auto plugin : plugin_manager.GetModules()) {
-                plugin->SignalTerminate();
-            }
             for (ToolboxModule* module : modules) {
                 module->SignalTerminate();
             }
@@ -63,21 +59,15 @@ public:
 
     bool IsInitialized() const { return initialized; }
 
-    PluginManager& GetPluginManger() { return plugin_manager; }
 private:
     std::vector<ToolboxModule*> modules;
 
     // List of modules that can't be disabled
     std::vector<ToolboxModule*> core_modules;
-    // List of modules that can be disabled
-    std::vector<ToolboxModule*> optional_modules;
     // List of modules that are UI elements. They can be disable
     std::vector<ToolboxUIElement*> uielements;
 
     GW::HookEntry Update_Entry;
-
-    PluginManager plugin_manager;
-
     GW::HookEntry HandleCrash_Entry;
 
     bool initialized = false;
