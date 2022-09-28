@@ -74,10 +74,10 @@ public:
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
     // Load settings
-    virtual void LoadSettings(std::filesystem::path) {}
+    virtual void LoadSettings(const wchar_t*) {}
 
     // Save settings
-    virtual void SaveSettings(std::filesystem::path) {}
+    virtual void SaveSettings(const wchar_t*) {}
 
     // Draw settings.
     virtual void DrawSettings() {}
