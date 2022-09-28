@@ -19,6 +19,12 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 
 namespace {
     GW::Chat::CmdCB original_callback;
+    void call_original(const wchar_t* message, int argc, LPWSTR* argv)
+    {
+        if (!original_callback)
+            return;
+        original_callback(message, argc, argv);
+    }
 }
 
 bool IsNearestStr(const wchar_t* str)
@@ -63,6 +69,9 @@ bool TargetNearest(const wchar_t* model_id_)
             ParseUInt(rest, &index);
         }
     }
+    else {
+        return false; // can't handle named targeting, fallback to original
+    }
 
     // target nearest agent
     const GW::AgentArray* agents = GW::Agents::GetAgentArray();
@@ -106,17 +115,19 @@ void CmdTargetOverride(const wchar_t* message, int argc, LPWSTR* argv)
     if (IsNearestStr(arg1.c_str())) {
         if (argc < 3) { // target nearest
             if (!TargetNearest(zero_w)) {
-                return original_callback(message, argc, argv);
+                return call_original(message, argc, argv);
             }
+            return;
         }
         const std::wstring arg2 = ToLower(argv[2]);
         // /target nearest 1234
         if (!TargetNearest(arg2.c_str())) {
-            return original_callback(message, argc, argv);
+            return call_original(message, argc, argv);
         }
+        return;
     }
     if (!TargetNearest(GetRemainingArgsWstr(message, 1))) {
-        original_callback(message, argc, argv);
+        return call_original(message, argc, argv);
     }
 }
 
