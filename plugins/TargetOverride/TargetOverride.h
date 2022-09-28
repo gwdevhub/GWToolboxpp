@@ -1,6 +1,6 @@
 #pragma once
 
-#include <module_base.h>
+#include <ToolboxPlugin.h>
 
 class TargetOverride : public ToolboxPlugin {
 public:

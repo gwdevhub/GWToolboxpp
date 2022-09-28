@@ -1,8 +1,8 @@
 #pragma once
 
-#include "imgui.h"
+#include <ToolboxPlugin.h>
 
-#include <module_base.h>
+#include <imgui.h>
 #include <SimpleIni.h>
 
 class InstanceTimer : public ToolboxPlugin {

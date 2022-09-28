@@ -1,7 +1,7 @@
 #include <Windows.h>
 #include <iostream>
 
-#include <module_base.h>
+#include "ToolboxPlugin.h"
 
 DLLAPI BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID) {
 	switch (reason) {
