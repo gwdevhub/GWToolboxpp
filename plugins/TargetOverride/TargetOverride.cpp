@@ -1,14 +1,13 @@
 #include "TargetOverride.h"
 
-#include "GWCA/Managers/GameThreadMgr.h"
+#include <Windows.h>
+#include <format>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
-#include <Windows.h>
-
-#include <format>
 
 HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
@@ -84,6 +83,8 @@ bool TargetNearest(const wchar_t* model_id_)
 
     for (const GW::Agent* agent : *agents) {
         if (!agent || agent == me) continue;
+        if (model_id && (!agent->GetAsAgentLiving() || agent->GetAsAgentLiving()->player_number != model_id))
+            continue;
         if (index == 0) { // target closest
             const float newDistance = GW::GetSquareDistance(me->pos, agent->pos);
             if (newDistance < distance) {
@@ -140,7 +141,7 @@ void TargetOverride::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE to
 
     constexpr auto color = 0xffffff;
     const auto init_msg = L"Target Plugin Initialized!";
-    const auto msg = std::format(L"<a=1>GWToolbox</a><c=#{:6X}>: {}</c>", color, init_msg);
+    const auto msg = std::format(L"<a=1>GWToolbox++</a><c=#{:06X}>: {}</c>", color, init_msg);
 
     GW::GameThread::Enqueue([msg] {
         GW::Chat::WriteChat(GW::Chat::CHANNEL_GWCA1, msg.c_str());
