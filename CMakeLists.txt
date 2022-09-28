@@ -54,7 +54,6 @@ include(utf8proc)
 include(easywsclient)
 include(simpleini)
 include(discord_game_sdk)
-include(earcut)
 
 add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)
@@ -74,10 +73,9 @@ target_include_directories(plugin_base INTERFACE
     )
 target_link_libraries(plugin_base INTERFACE
     imgui
-    earcut
     simpleini
-    gwca
     nlohmann_json::nlohmann_json
+    gwca
     GWToolboxdll # for gwca imports
     )
 target_compile_definitions(plugin_base INTERFACE BUILD_DLL)
