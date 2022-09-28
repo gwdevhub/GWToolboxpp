@@ -8,13 +8,19 @@
 #include <filesystem>
 #include <string>
 
+PluginModule::PluginModule()
+{
+    const auto wpath = Resources::GetPath(L"plugins");
+    wcscpy_s(pluginsfoldername, wpath.c_str());
+}
+
 void PluginModule::RefreshDlls()
 {
     // when we refresh, how do we map the modules that were already loaded to the ones on disk?
     // the dll file may have changed
     namespace fs = std::filesystem;
 
-    const fs::path plugin_folder = Resources::GetPath("plugins");
+    const fs::path plugin_folder = pluginsfoldername;
 
     if (Resources::EnsureFolderExists(plugin_folder)) {
         for (auto& p : fs::directory_iterator(plugin_folder)) {
@@ -36,37 +42,35 @@ void PluginModule::RefreshDlls()
 
 void PluginModule::DrawSettingInternal()
 {
-    if (ImGui::CollapsingHeader("Plugins")) {
-        ImGui::PushID("Plugins");
+    ImGui::PushID("Plugins");
 
-        for (auto& plugin : plugins) {
-            auto& style = ImGui::GetStyle();
-            const auto origin_header_col = style.Colors[ImGuiCol_Header];
-            style.Colors[ImGuiCol_Header] = {0, 0, 0, 0};
-            if (ImGui::CollapsingHeader(plugin.path.filename().string().c_str())) {
-                plugin.instance->DrawSettings();
-            }
-            style.Colors[ImGuiCol_Header] = origin_header_col;
-            ImGui::Separator();
+    for (auto& plugin : plugins) {
+        auto& style = ImGui::GetStyle();
+        const auto origin_header_col = style.Colors[ImGuiCol_Header];
+        style.Colors[ImGuiCol_Header] = {0, 0, 0, 0};
+        if (ImGui::CollapsingHeader(plugin.path.filename().string().c_str())) {
+            plugin.instance->DrawSettings();
         }
-
+        style.Colors[ImGuiCol_Header] = origin_header_col;
         ImGui::Separator();
-        if (ImGui::Button("Refresh")) {
-            RefreshDlls();
-        }
-
-        static bool unloading = false;
-        ImGui::SameLine();
-        if (ImGui::Button("Unload")) {
-            unloading = true;
-        }
-        if (unloading) {
-            if (UnloadDlls())
-                unloading = false;
-        }
-
-        ImGui::PopID();
     }
+
+    ImGui::Separator();
+    if (ImGui::Button("Refresh")) {
+        RefreshDlls();
+    }
+
+    static bool unloading = false;
+    ImGui::SameLine();
+    if (ImGui::Button("Unload")) {
+        unloading = true;
+    }
+    if (unloading) {
+        if (UnloadDlls())
+            unloading = false;
+    }
+
+    ImGui::PopID();
 }
 
 ToolboxPlugin* PluginModule::LoadDll(const std::filesystem::path& path)
@@ -102,7 +106,9 @@ bool PluginModule::UnloadDlls()
         return false;
     }
     for (const auto plugin : plugins) {
-        plugin.instance->Terminate();
+        if (plugin.initialized) {
+            plugin.instance->Terminate();
+        }
         const auto success = FreeLibrary(plugin.dll);
         if (!success) {
             Log::ErrorW(L"Failed to unload plugin %s", plugin.path.wstring().c_str());
@@ -134,46 +140,39 @@ void PluginModule::Draw(IDirect3DDevice9* device)
             ImGui::GetAllocatorFunctions(&fns.alloc_func, &fns.free_func, &fns.user_data);
             const auto context = ImGui::GetCurrentContext();
             plugin.instance->Initialize(context, fns, GWToolbox::Instance().GetDLLModule());
-            plugin.instance->LoadSettings(Resources::GetPath("plugins"));
+            plugin.instance->LoadSettings(pluginsfoldername);
             plugin.initialized = true;
         }
-        else { // only draw the next frame
-            plugin.instance->Draw(device);
-        }
+        plugin.instance->Draw(device);
     }
 }
 
 void PluginModule::LoadSettings([[maybe_unused]] CSimpleIniA* ini)
 {
-    for (const auto& plugin : plugins) {
-        plugin.instance->LoadSettings(Resources::GetPath("plugins"));
+    for (const auto& plugin : GetInitializedPlugins()) {
+        plugin.instance->LoadSettings(pluginsfoldername);
     }
 }
 
 void PluginModule::SaveSettings([[maybe_unused]] CSimpleIniA* ini)
 {
-    for (const auto& plugin : plugins) {
-        plugin.instance->SaveSettings(Resources::GetPath("plugins"));
+    for (const auto& plugin : GetInitializedPlugins()) {
+        plugin.instance->SaveSettings(pluginsfoldername);
     }
 }
 
 void PluginModule::Update(float delta)
 {
-    for (const auto& plugin : plugins) {
+    for (const auto& plugin : GetInitializedPlugins()) {
         plugin.instance->Update(delta);
     }
 }
 
 void PluginModule::SignalTerminate()
 {
-    for (const auto& plugin : plugins) {
+    for (const auto& plugin : GetInitializedPlugins()) {
         plugin.instance->SignalTerminate();
     }
 }
 
-void PluginModule::Terminate()
-{
-    for (const auto& plugin : plugins) {
-        plugin.instance->Terminate();
-    }
-}
+void PluginModule::Terminate() { UnloadDlls(); }

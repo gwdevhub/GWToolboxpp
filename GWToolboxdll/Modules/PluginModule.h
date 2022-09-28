@@ -11,7 +11,7 @@ class PluginModule final : public ToolboxUIElement {
         bool initialized = false;
     };
 
-    PluginModule() = default;
+    PluginModule();
     ~PluginModule() = default;
 
 public:
@@ -22,9 +22,7 @@ public:
     }
 
     const char* Name() const override { return "Plugins"; }
-
-    void RefreshDlls();
-    bool UnloadDlls();
+    const char8_t* Icon() const override { return ICON_FA_PUZZLE_PIECE; }
 
     void Initialize() override;
 
@@ -37,8 +35,21 @@ public:
     void Terminate() override;
     bool CanTerminate() override;
 
+    void ShowVisibleRadio() override {}
+    void DrawSizeAndPositionSettings() override {}
+
+    auto GetInitializedPlugins()
+    {
+        return std::views::filter(plugins, [](const auto& plugin) {
+            return plugin.initialized;
+        });
+    }
+
 private:
+    void RefreshDlls();
+    bool UnloadDlls();
     ToolboxPlugin* LoadDll(const std::filesystem::path& path);
 
     std::vector<Plugin> plugins{};
+    wchar_t pluginsfoldername[MAX_PATH]{};
 };

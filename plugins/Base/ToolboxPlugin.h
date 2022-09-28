@@ -1,6 +1,5 @@
 #pragma once
 
-#include <filesystem>
 #include <Windows.h>
 
 #ifndef DLLAPI
