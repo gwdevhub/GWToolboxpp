@@ -242,7 +242,7 @@ void EffectRenderer::EffectCircle::Initialize(IDirect3DDevice9* device) {
         (VOID**)&vertices, D3DLOCK_DISCARD);
 
     for (size_t i = 0; i < count; ++i) {
-        float angle = i * (2 * (float)M_PI / count);
+        float angle = i * (DirectX::XM_2PI / count);
         vertices[i].x = std::cos(angle);
         vertices[i].y = std::sin(angle);
         vertices[i].z = 0.0f;

@@ -26,8 +26,7 @@ endif()
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_compile_definitions(
-    "NOMINMAX"
-    "_USE_MATH_DEFINES"
+    "NOMINMAX"    
     "WIN32_LEAN_AND_MEAN"
 
     "GWTOOLBOXEXE_VERSION=\"${GWTOOLBOXEXE_VERSION}\""

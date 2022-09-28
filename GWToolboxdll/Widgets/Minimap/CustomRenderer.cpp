@@ -585,7 +585,7 @@ void CustomRenderer::CustomMarker::Initialize(IDirect3DDevice9* device) {
         _vertices[0].z = 0.0f;
         _vertices[0].color = Colors::Sub(colour, Colors::ARGB(50, 0, 0, 0));
         for (auto i = 1u; i < vertex_count; ++i) {
-            constexpr auto pi = static_cast<float>(M_PI);
+            constexpr auto pi = DirectX::XM_PI;
             const float angle = (i - 1) * (2 * pi / static_cast<float>(count));
             _vertices[i].x = std::cos(angle);
             _vertices[i].y = std::sin(angle);
@@ -606,7 +606,7 @@ void CustomRenderer::CustomMarker::Initialize(IDirect3DDevice9* device) {
         buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
 
         for (auto i = 0u; i < count; ++i) {
-            constexpr auto pi = static_cast<float>(M_PI);
+            constexpr auto pi = DirectX::XM_PI;
             const float angle = i * (2 * pi / (count + 1));
             _vertices[i].x = std::cos(angle);
             _vertices[i].y = std::sin(angle);
@@ -650,7 +650,7 @@ void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device)
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
 
     for (size_t i = 0; i < count; ++i) {
-        float angle = i * (2 * static_cast<float>(M_PI) / (count + 1));
+        const float angle = i * (DirectX::XM_2PI / (count + 1));
         _vertices[i].x = std::cos(angle);
         _vertices[i].y = std::sin(angle);
         _vertices[i].z = 0.0f;

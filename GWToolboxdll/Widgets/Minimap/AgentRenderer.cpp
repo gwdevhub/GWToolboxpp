@@ -336,7 +336,7 @@ AgentRenderer::AgentRenderer() {
     shapes[Tear].AddVertex(1.8f, 0.0f, Dark);   // A
     shapes[Tear].AddVertex(0.0f, 0.0f, Light);  // O
 
-    constexpr auto pi = static_cast<float>(M_PI);
+    constexpr auto pi = DirectX::XM_PI;
     for (int i = 0; i < num_triangles; ++i) {
         const float angle1 = 2 * (i + 0) * pi / num_triangles;
         const float angle2 = 2 * (i + 1) * pi / num_triangles;

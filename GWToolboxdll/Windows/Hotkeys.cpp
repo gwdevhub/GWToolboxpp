@@ -1806,13 +1806,13 @@ void HotkeyFlagHero::Execute()
 
         reference_radiant = std::atan(dx == 0 ? dy : dy / dx);
         if (dx < 0) {
-            reference_radiant += static_cast<float>(M_PI);
+            reference_radiant += DirectX::XM_PI;
         } else if (dx > 0 && dy < 0) {
-            reference_radiant += 2 * static_cast<float>(M_PI);
+            reference_radiant += 2 * DirectX::XM_PI;
         }
     }
 
-    const float radiant = degree * static_cast<float>(M_PI) / 180.f;
+    const float radiant = degree * DirectX::XM_PI / 180.f;
     const float x = player->x + distance * std::cos(reference_radiant - radiant);
     const float y = player->y + distance * std::sin(reference_radiant - radiant);
 
