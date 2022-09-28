@@ -381,7 +381,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (show_widgets) {
-            const std::vector<ToolboxModule *> &optional_modules = ToolboxSettings::Instance().GetModules();
+            const std::vector<ToolboxModule *>& optional_modules = ToolboxSettings::Instance().GetModules();
             std::vector<ToolboxUIElement *> widgets;
             widgets.reserve(optional_modules.size());
             for (ToolboxModule *module : optional_modules) {

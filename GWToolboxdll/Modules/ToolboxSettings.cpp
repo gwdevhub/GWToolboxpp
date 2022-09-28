@@ -27,6 +27,7 @@
 #include <Modules/Obfuscator.h>
 #include <Modules/ChatLog.h>
 #include <Modules/HintsModule.h>
+#include <Modules/PluginModule.h>
 #if 0
 #include <Modules/GWFileRequester.h>
 #endif
@@ -61,7 +62,6 @@
 #endif
 #include <Windows/RerollWindow.h>
 
-
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
 #include <Widgets/DistanceWidget.h>
@@ -78,7 +78,6 @@
 #include <Widgets/LatencyWidget.h>
 #include "ToolboxSettings.h"
 
-
 bool ToolboxSettings::move_all = false;
 
 void ToolboxSettings::LoadModules(CSimpleIni* ini) {
@@ -88,7 +87,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 #if 0
     modules.push_back(&GWFileRequester::Instance());
 #endif
-
+    if (use_plugins) modules.push_back(&PluginModule::Instance());
     if (use_chatcommand) modules.push_back(&ChatCommands::Instance());
     if (use_chatfilter) modules.push_back(&ChatFilter::Instance());
     if (use_itemfilter) modules.push_back(&ItemFilter::Instance());
@@ -289,6 +288,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_chatfilter = ini->GetBoolValue(Name(), VAR_NAME(use_chatfilter), use_chatfilter);
     use_itemfilter = ini->GetBoolValue(Name(), VAR_NAME(use_itemfilter), use_itemfilter);
     use_chatcommand = ini->GetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
+    use_plugins = ini->GetBoolValue(Name(), VAR_NAME(use_plugins), use_plugins);
     use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
     use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
     use_teamspeak = ini->GetBoolValue(Name(), VAR_NAME(use_teamspeak), use_teamspeak);
@@ -351,6 +351,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_gamesettings), use_gamesettings);
     ini->SetBoolValue(Name(), VAR_NAME(use_updater), use_updater);
     ini->SetBoolValue(Name(), VAR_NAME(use_chatfilter), use_chatfilter);
+    ini->SetBoolValue(Name(), VAR_NAME(use_plugins), use_plugins);
     ini->SetBoolValue(Name(), VAR_NAME(use_itemfilter), use_itemfilter);
     ini->SetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
     ini->SetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);

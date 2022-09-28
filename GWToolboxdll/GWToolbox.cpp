@@ -7,8 +7,6 @@
 #include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 
@@ -287,9 +285,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         // send to toolbox modules and plugins
         {
             bool captured = false;
-            for (const auto plugin : tb.Instance().GetPluginManger().GetPlugins()) {
-                if (plugin->WndProc(Message, wParam, lParam)) captured = true;
-            }
             for (ToolboxModule* m : tb.GetModules()) {
                 if (m->WndProc(Message, wParam, lParam)) captured = true;
             }
@@ -360,8 +355,6 @@ void GWToolbox::Initialize()
     core_modules.push_back(&DialogModule::Instance());
     core_modules.push_back(&MouseFix::Instance());
 
-    plugin_manager.RefreshDlls();
-
     for (ToolboxModule* module : core_modules) {
         module->LoadSettings(inifile);
         module->Initialize();
@@ -397,9 +390,6 @@ void GWToolbox::LoadModuleSettings() const
     for (ToolboxModule* module : modules) {
         module->LoadSettings(inifile);
     }
-    for (const auto plugin : plugin_manager.GetPlugins()) {
-        plugin->LoadSettings();
-    }
 }
 void GWToolbox::SaveSettings() const
 {
@@ -407,9 +397,6 @@ void GWToolbox::SaveSettings() const
         return;
     for (ToolboxModule* module : modules) {
         module->SaveSettings(inifile);
-    }
-    for (const auto plugin : plugin_manager.GetPlugins()) {
-        plugin->SaveSettings();
     }
     ASSERT(SaveIniToFile(inifile, Resources::GetPath(L"GWToolbox.ini")));
 }
@@ -425,8 +412,6 @@ void GWToolbox::Terminate() {
     }
 
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
-
-    plugin_manager.UnloadDlls();
 
     for (ToolboxModule* module : modules) {
         module->Terminate();
@@ -446,9 +431,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
             if (!module->CanTerminate())
                 return;
         }
-        for (const auto plugin : Instance().plugin_manager.GetPlugins()) {
-            if (!plugin->CanTerminate()) return;
-        }
 
         Instance().Terminate();
         ASSERT(DetachImgui());
@@ -467,14 +449,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ASSERT(AttachWndProcHandler());
         // Attach imgui if not already done so
         ASSERT(AttachImgui(device));
-
-        static bool plugins_initialized = false;
-        if (!plugins_initialized) {
-            for (const auto plugin : plugin_manager.GetPlugins()) {
-                plugin->Initialize(ImGui::GetCurrentContext(), GetDLLModule());
-            }
-            plugins_initialized = true;
-        }
 
         if (!GW::UI::GetIsUIDrawn())
             return;
@@ -516,9 +490,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
                 continue;
             uielement->Draw(device);
         }
-        for (const auto plugin : Instance().plugin_manager.GetPlugins()) {
-            plugin->Draw(device);
-        }
 
 #ifdef _DEBUG
         // Feel free to uncomment to play with ImGui's features
@@ -553,10 +524,6 @@ void GWToolbox::Update(GW::HookStatus *)
         const DWORD tick = GetTickCount();
         const DWORD delta = tick - last_tick_count;
         const float delta_f = delta / 1000.f;
-
-        for (const auto plugin : plugin_manager.GetPlugins()) {
-            plugin->Update(delta_f);
-        }
 
         for (ToolboxModule* module : modules) {
             module->Update(delta_f);

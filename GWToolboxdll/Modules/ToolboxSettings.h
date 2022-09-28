@@ -94,4 +94,5 @@ private:
     bool use_party_statistics = true;
     bool use_latency_widget = true;
     bool use_skill_monitor = true;
+    bool use_plugins = true;
 };
