@@ -1,7 +1,9 @@
 #include "TargetOverride.h"
 
 #include <Windows.h>
+#include <algorithm>
 #include <format>
+#include <ranges>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>

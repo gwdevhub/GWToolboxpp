@@ -36,7 +36,8 @@ auto GetTime()
 
 void Clock::Draw(IDirect3DDevice9* device)
 {
-    if (!toolbox_handle) return;
+    if (!toolbox_handle)
+        return;
     ImGui::Begin("clock");
     ImGui::Text("%s", GetTime().c_str());
     ImGui::End();
