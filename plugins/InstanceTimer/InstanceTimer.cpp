@@ -12,12 +12,6 @@
 #include <Utils/GuiUtils.h>
 
 #include <filesystem>
-#include <fstream>
-#include <iostream>
-
-namespace  {
-    const char* ini_location = nullptr;
-}
 
 HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
@@ -26,42 +20,21 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
     return &instance;
 }
 
-InstanceTimer::InstanceTimer()
+void InstanceTimer::LoadSettings(std::filesystem::path folder)
 {
-    char buf[MAX_PATH];
-    const auto filename = "timer.ini";
-    if (GetModuleFileNameA(plugin_handle, buf, sizeof buf) == 0) {
-        const auto error_code = GetLastError();
-        std::cerr << "GetModuleFileName failed, error = " << error_code << '\n';
-    }
-    else {
-        const auto path = std::filesystem::path(buf).parent_path() / filename;
-        const auto pathstr = path.string();
-        ini_location = pathstr.c_str();
-        if (!exists(path)) {
-            auto ofs = std::ofstream{pathstr};
-            ofs << "";
-            ofs.close();
-        }
-    }
-}
-
-void InstanceTimer::LoadSettings()
-{
-    ToolboxPlugin::LoadSettings();
-    if (!ini_location) return;
-    ini.LoadFile(ini_location);
+    if (folder.empty()) return;
+    const auto inifile = folder / "instancetimer.ini";
+    ini.LoadFile(inifile.c_str());
     click_to_print_time = ini.GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     show_extra_timers = ini.GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
 }
 
-void InstanceTimer::SaveSettings()
+void InstanceTimer::SaveSettings(std::filesystem::path folder)
 {
-    ToolboxPlugin::SaveSettings();
-    if (!ini_location) return;
+    const auto inifile = folder / "instancetimer.ini";
     ini.SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini.SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
-    const auto _ = ini.SaveFile(ini_location);
+    const auto _ = ini.SaveFile(inifile.c_str());
 }
 
 void InstanceTimer::DrawSettings()
@@ -80,13 +53,11 @@ void InstanceTimer::DrawSettings()
 void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
-    LoadSettings();
 }
 
 void InstanceTimer::Terminate()
 {
     ToolboxPlugin::Terminate();
-    SaveSettings();
 }
 
 void InstanceTimer::Draw(IDirect3DDevice9* pDevice)

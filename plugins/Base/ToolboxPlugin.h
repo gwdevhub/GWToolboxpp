@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <Windows.h>
 
 #ifndef DLLAPI
@@ -73,10 +74,10 @@ public:
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
     // Load settings
-    virtual void LoadSettings() {}
+    virtual void LoadSettings(std::filesystem::path) {}
 
     // Save settings
-    virtual void SaveSettings() {}
+    virtual void SaveSettings(std::filesystem::path) {}
 
     // Draw settings.
     virtual void DrawSettings() {}

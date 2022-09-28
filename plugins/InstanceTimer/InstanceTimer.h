@@ -8,13 +8,13 @@
 class InstanceTimer : public ToolboxPlugin {
 
 public:
-    InstanceTimer();
+    InstanceTimer() = default;
     ~InstanceTimer() override = default;
 
 	const char* Name() const override { return "Plugin Timer"; }
 
-	void LoadSettings() override;
-	void SaveSettings() override;
+	void LoadSettings(std::filesystem::path) override;
+    void SaveSettings(std::filesystem::path) override;
     void DrawSettings() override;
     void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     void Terminate() override;
