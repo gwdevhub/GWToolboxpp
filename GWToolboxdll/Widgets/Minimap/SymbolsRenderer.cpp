@@ -140,7 +140,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
             v = GW::Normalize(v) * max_quest_range;
 
             float angle = std::atan2(v.y, v.x);
-            rotate = DirectX::XMMatrixRotationZ(angle - static_cast<float>(M_PI_2));
+            rotate = DirectX::XMMatrixRotationZ(angle - DirectX::XM_PIDIV2);
             scale = DirectX::XMMatrixScaling(marker_scale + std::sin(tau) * 0.3f * marker_scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, 1.0f);
             translate = DirectX::XMMatrixTranslation(me->pos.x + v.x, me->pos.y + v.y, 0);
             world = rotate * scale * translate;

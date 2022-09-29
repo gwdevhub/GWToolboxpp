@@ -69,14 +69,14 @@ namespace {
         return *str ? str : NULL;
     }
 
-    static bool IsMapReady()
+    bool IsMapReady()
     {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
     }
     bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
 
-    static const float GetAngle(GW::GamePos pos) {
-        const float pi = static_cast<float>(M_PI);
+    float GetAngle(GW::GamePos pos) {
+        constexpr float pi = DirectX::XM_PI;
         float tan_angle = 0.0f;
         if (pos.x == 0.0f) {
             if (pos.y >= 0.0f) tan_angle = F_PI / 2;
@@ -93,7 +93,7 @@ namespace {
         return tan_angle;
     };
 
-    static void TargetVipers() {
+    void TargetVipers() {
         // target best vipers target (closest)
         GW::AgentArray* agents = GW::Agents::GetAgentArray();
         GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
@@ -122,7 +122,8 @@ namespace {
             GW::Agents::ChangeTarget(agents->at(closest));
         }
     }
-    static void TargetEE() {
+
+    void TargetEE() {
         // target best ebon escape target
         GW::AgentArray* agents = GW::Agents::GetAgentArray();
         GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
@@ -157,11 +158,11 @@ namespace {
         }
     }
 
-    static bool IsNearestStr(const wchar_t* str) {
+    bool IsNearestStr(const wchar_t* str) {
         return wcscmp(str, L"nearest") == 0 || wcscmp(str, L"closest") == 0;
     }
 
-    static std::map<std::string, ChatCommands::PendingTransmo> npc_transmos;
+    std::map<std::string, ChatCommands::PendingTransmo> npc_transmos;
 
     struct DecodedTitleName {
         DecodedTitleName(GW::Constants::TitleID in) : title(in) {
@@ -170,8 +171,9 @@ namespace {
         GW::Constants::TitleID title;
         GuiUtils::EncString name;
     };
-    static std::vector< DecodedTitleName*> title_names;
-    static bool title_names_sorted = false;
+
+    std::vector< DecodedTitleName*> title_names;
+    bool title_names_sorted = false;
 
     GW::Array<GW::Title>* GetTitles() {
         GW::GameContext* g = GW::GameContext::instance();

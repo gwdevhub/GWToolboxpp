@@ -35,10 +35,6 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/Resources.h>
 
-#ifndef M_PI_F
-#define M_PI_F 3.141592741f
-#endif
-
 namespace {
     DirectX::XMFLOAT2 gwinch_scale;
 
@@ -576,7 +572,7 @@ float Minimap::GetMapRotation() const
         yaw = smooth_rotation ? GW::CameraMgr::GetCamera()->GetCurrentYaw() : GW::CameraMgr::GetYaw();
     }
     if (camera_currently_reversed && flip_on_reverse) {
-        yaw = M_PI_F + yaw;
+        yaw = DirectX::XM_PI + yaw;
     }
     return yaw;
 }
@@ -819,7 +815,7 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
     auto translate_char = DirectX::XMMatrixTranslation(-me->pos.x, -me->pos.y, 0);
 
-    const auto rotate_char = DirectX::XMMatrixRotationZ(-instance.GetMapRotation() + static_cast<float>(M_PI_2));
+    const auto rotate_char = DirectX::XMMatrixRotationZ(-instance.GetMapRotation() + DirectX::XM_PIDIV2);
 
     const auto scaleM = DirectX::XMMatrixScaling(instance.scale, instance.scale, 1.0f);
     const auto translationM = DirectX::XMMatrixTranslation(instance.translation.x, instance.translation.y, 0);
@@ -907,7 +903,7 @@ GW::Vec2f Minimap::InterfaceToWorldPoint(Vec2i pos) const
     v /= scale;
 
     // rotate by current camera rotation
-    const float angle = Instance().GetMapRotation() - static_cast<float>(M_PI_2);
+    const float angle = Instance().GetMapRotation() - DirectX::XM_PIDIV2;
     const float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
     const float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
     v = GW::Vec2f(x1, y1);

@@ -27,7 +27,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_compile_definitions(
     "NOMINMAX"
-    "_USE_MATH_DEFINES"
+    "_WIN32_WINNT=_WIN32_WINNT_WIN7"
     "WIN32_LEAN_AND_MEAN"
 
     "GWTOOLBOXEXE_VERSION=\"${GWTOOLBOXEXE_VERSION}\""
@@ -95,4 +95,3 @@ endmacro()
 
 add_tb_plugin(InstanceTimer)
 add_tb_plugin(clock)
-add_tb_plugin(TargetOverride)

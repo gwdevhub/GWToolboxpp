@@ -1,9 +1,6 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
 #include <GWCA/Constants/Constants.h>
-
-#include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/Managers/UIMgr.h>
 
@@ -14,7 +11,7 @@
 
 class ChatCommands : public ToolboxModule {
     const float DEFAULT_CAM_SPEED = 1000.f; // 600 units per sec
-    const float ROTATION_SPEED = static_cast<float>(M_PI) / 3.f; // 6 seconds for full rotation
+    const float ROTATION_SPEED = DirectX::XM_PI / 3.f; // 6 seconds for full rotation
 public:
     static ChatCommands& Instance() {
         static ChatCommands instance;
