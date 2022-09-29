@@ -218,7 +218,7 @@ public:
 
     bool CanUseByInstanceType() const override { return false; }
     bool CanUseByEffect() const override { return false; }
-    bool IsVisible() const { return visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
+    bool IsVisible() const override { return visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
     void Draw(IDirect3DDevice9* device) override;
     size_t QuantityForEach(const GW::Item* item) const override { return item->model_id == itemID ? 1u : 0u; }
 private:

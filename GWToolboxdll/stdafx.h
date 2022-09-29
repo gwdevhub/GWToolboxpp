@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <bitset>
 #include <chrono>
+#include <concepts>
 #include <deque>
 #include <filesystem>
 #include <format>

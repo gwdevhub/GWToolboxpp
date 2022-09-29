@@ -1258,6 +1258,108 @@ std::pair<GW::Bag*, uint32_t> InventoryManager::GetAvailableInventorySlot(GW::It
     }
     return { nullptr,0 };
 }
+
+bool InventoryManager::RefillUpToQuantity(unsigned wanted_quantity, std::vector<unsigned> model_ids)
+{
+    struct entry {
+        unsigned inventory = 0;
+        unsigned storage = 0;
+    };
+    std::unordered_map<unsigned, entry> model_id_quantities{};
+
+    for (const auto model_id : model_ids) {
+        model_id_quantities[model_id] = {};
+    }
+
+    const auto inventory = GW::Items::GetInventory();
+    if (!inventory)
+        return false;
+
+    std::map<unsigned, std::vector<std::pair<const GW::Item*, unsigned>>> in_inventory;
+    std::map<unsigned, std::vector<std::pair<const GW::Item*, unsigned>>> in_storage;
+
+    std::queue<std::pair<GW::Bag*, unsigned>> inventory_free_slots;
+
+    for (const auto& bag : inventory->bags) {
+        if (bag == nullptr || bag == inventory->unused_bag || bag == inventory->equipped_items || bag == inventory->equipment_pack)
+            continue;
+        const auto& items = bag->items;
+        for (auto i = 0u; i < bag->items.size(); i++) {
+            const auto item = items[i];
+            if (bag->IsInventoryBag() && (!item || !item->quantity)) {
+                inventory_free_slots.emplace(bag, i);
+            }
+            if (!item)
+                continue;
+            if (model_id_quantities.contains(item->model_id)) {
+                if (!item->GetIsStackable()) {
+                    Log::Warning("Incorrect usage - you can only refill items that are stackable.");
+                    return false;
+                }
+                if (bag->IsInventoryBag()) {
+                    if (item->quantity < 250) {
+                        if (!in_inventory.contains(item->model_id)) {
+                            in_inventory[item->model_id] = {};
+                        }
+                        in_inventory[item->model_id].push_back({item, item->quantity});
+                    }
+                    model_id_quantities[item->model_id].inventory += item->quantity;
+                }
+                else {
+                    if (!in_storage.contains(item->model_id)) {
+                        in_storage[item->model_id] = {};
+                    }
+                    in_storage[item->model_id].push_back({item, item->quantity});
+                    model_id_quantities[item->model_id].storage += item->quantity;
+                }
+            }
+        }
+    }
+
+    for (auto& [model_id, quantities] : model_id_quantities) {
+        if (quantities.inventory >= wanted_quantity)
+            continue;
+        // refill to existing items in inventory first
+        for (auto& [inv_item, inv_qty] : in_inventory[model_id]) {
+            auto needed_on_item = std::min(250u - inv_qty, wanted_quantity - quantities.inventory);
+            for (auto& [storage_item, storage_qty] : in_storage[model_id]) {
+                if (needed_on_item == 0)
+                    break;
+                const auto move_qty = std::min(needed_on_item, storage_qty);
+                if (GW::Items::MoveItem(storage_item, inv_item, move_qty)) {
+                    needed_on_item -= move_qty;
+                    quantities.storage -= move_qty;
+                    quantities.inventory += move_qty;
+                    inv_qty += move_qty;
+                    storage_qty -= move_qty;
+                }
+            }
+        }
+        auto max_tries = 3;
+        while (quantities.inventory < wanted_quantity && quantities.storage > 0 && --max_tries > 0) {
+            if (inventory_free_slots.empty()) {
+                Log::Warning("No more free inventory space to withdraw item with model id %d", model_id);
+                return false;
+            }
+            if (quantities.storage == 0)
+                continue;
+            const auto [bag, index] = inventory_free_slots.front();
+            inventory_free_slots.pop();
+            for (auto [storage_item, storage_qty] : in_storage[model_id]) {
+                const auto move_qty = std::min(wanted_quantity - quantities.inventory, storage_qty);
+                if (!move_qty)
+                    continue;
+                if (GW::Items::MoveItem(storage_item, bag, index, move_qty)) {
+                    quantities.storage -= move_qty;
+                    quantities.inventory += move_qty;
+                    storage_qty -= move_qty;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, bool entire_stack) {
     if (!like_item || static_cast<Item*>(like_item)->IsStackable())
         return nullptr;

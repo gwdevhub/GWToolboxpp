@@ -46,6 +46,7 @@
 #include <Modules/ObserverModule.h>
 #include <Modules/GameSettings.h>
 #include <Modules/ChatSettings.h>
+#include <Modules/InventoryManager.h>
 #include <Widgets/PartyDamage.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/Hotkeys.h>
@@ -488,52 +489,53 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"gh", [](const wchar_t*, int, LPWSTR*) {
         GW::Chat::SendChat('/', "tp gh");
     });
-    GW::Chat::CreateCommand(L"enter", ChatCommands::CmdEnterMission);
-    GW::Chat::CreateCommand(L"age2", ChatCommands::CmdAge2);
-    GW::Chat::CreateCommand(L"dialog", ChatCommands::CmdDialog);
-    GW::Chat::CreateCommand(L"show", ChatCommands::CmdShow);
-    GW::Chat::CreateCommand(L"hide", ChatCommands::CmdHide);
-    GW::Chat::CreateCommand(L"toggle", ChatCommands::CmdToggle);
-    GW::Chat::CreateCommand(L"tb", ChatCommands::CmdTB);
-    GW::Chat::CreateCommand(L"zoom", ChatCommands::CmdZoom);
-    GW::Chat::CreateCommand(L"camera", ChatCommands::CmdCamera);
-    GW::Chat::CreateCommand(L"cam", ChatCommands::CmdCamera);
-    GW::Chat::CreateCommand(L"damage", ChatCommands::CmdDamage);
-    GW::Chat::CreateCommand(L"dmg", ChatCommands::CmdDamage);
-    GW::Chat::CreateCommand(L"observer:reset", ChatCommands::CmdObserverReset);
-    GW::Chat::CreateCommand(L"chest", ChatCommands::CmdChest);
-    GW::Chat::CreateCommand(L"xunlai", ChatCommands::CmdChest);
-    GW::Chat::CreateCommand(L"afk", ChatCommands::CmdAfk);
-    GW::Chat::CreateCommand(L"target", ChatCommands::CmdTarget);
-    GW::Chat::CreateCommand(L"tgt", ChatCommands::CmdTarget);
-    GW::Chat::CreateCommand(L"useskill", ChatCommands::CmdUseSkill);
-    GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
-    GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
-    GW::Chat::CreateCommand(L"ping", ChatCommands::CmdPing);
-    GW::Chat::CreateCommand(L"quest", ChatCommands::CmdPingQuest);
-    GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
-    GW::Chat::CreateCommand(L"transmotarget", ChatCommands::CmdTransmoTarget);
-    GW::Chat::CreateCommand(L"transmoparty", ChatCommands::CmdTransmoParty);
-    GW::Chat::CreateCommand(L"transmoagent", ChatCommands::CmdTransmoAgent);
-    GW::Chat::CreateCommand(L"resize", ChatCommands::CmdResize);
-    GW::Chat::CreateCommand(L"settitle", ChatCommands::CmdReapplyTitle);
-    GW::Chat::CreateCommand(L"title", ChatCommands::CmdReapplyTitle);
-    GW::Chat::CreateCommand(L"pingitem", ChatCommands::CmdPingEquipment);
+    GW::Chat::CreateCommand(L"enter", CmdEnterMission);
+    GW::Chat::CreateCommand(L"age2", CmdAge2);
+    GW::Chat::CreateCommand(L"dialog", CmdDialog);
+    GW::Chat::CreateCommand(L"show", CmdShow);
+    GW::Chat::CreateCommand(L"hide", CmdHide);
+    GW::Chat::CreateCommand(L"toggle", CmdToggle);
+    GW::Chat::CreateCommand(L"tb", CmdTB);
+    GW::Chat::CreateCommand(L"zoom", CmdZoom);
+    GW::Chat::CreateCommand(L"camera", CmdCamera);
+    GW::Chat::CreateCommand(L"cam", CmdCamera);
+    GW::Chat::CreateCommand(L"damage", CmdDamage);
+    GW::Chat::CreateCommand(L"dmg", CmdDamage);
+    GW::Chat::CreateCommand(L"observer:reset", CmdObserverReset);
+    GW::Chat::CreateCommand(L"chest", CmdChest);
+    GW::Chat::CreateCommand(L"xunlai", CmdChest);
+    GW::Chat::CreateCommand(L"afk", CmdAfk);
+    GW::Chat::CreateCommand(L"target", CmdTarget);
+    GW::Chat::CreateCommand(L"tgt", CmdTarget);
+    GW::Chat::CreateCommand(L"useskill", CmdUseSkill);
+    GW::Chat::CreateCommand(L"scwiki", CmdSCWiki);
+    GW::Chat::CreateCommand(L"load", CmdLoad);
+    GW::Chat::CreateCommand(L"ping", CmdPing);
+    GW::Chat::CreateCommand(L"quest", CmdPingQuest);
+    GW::Chat::CreateCommand(L"transmo", CmdTransmo);
+    GW::Chat::CreateCommand(L"transmotarget", CmdTransmoTarget);
+    GW::Chat::CreateCommand(L"transmoparty", CmdTransmoParty);
+    GW::Chat::CreateCommand(L"transmoagent", CmdTransmoAgent);
+    GW::Chat::CreateCommand(L"resize", CmdResize);
+    GW::Chat::CreateCommand(L"settitle", CmdReapplyTitle);
+    GW::Chat::CreateCommand(L"title", CmdReapplyTitle);
+    GW::Chat::CreateCommand(L"withdraw", CmdWithdraw);
+    GW::Chat::CreateCommand(L"pingitem", CmdPingEquipment);
     GW::Chat::CreateCommand(L"tick", [](const wchar_t*, int, LPWSTR*) -> void {
         GW::PartyMgr::Tick(!GW::PartyMgr::GetIsPlayerTicked());
         });
     GW::Chat::CreateCommand(L"armor", [](const wchar_t*, int, LPWSTR*) -> void {
         GW::Chat::SendChat('/', "pingitem armor");
     });
-    GW::Chat::CreateCommand(L"hero", ChatCommands::CmdHeroBehaviour);
-    GW::Chat::CreateCommand(L"morale", ChatCommands::CmdMorale);
-    GW::Chat::CreateCommand(L"volume", ChatCommands::CmdVolume);
-    GW::Chat::CreateCommand(L"nm", ChatCommands::CmdSetNormalMode);
-    GW::Chat::CreateCommand(L"hm", ChatCommands::CmdSetHardMode);
-    GW::Chat::CreateCommand(L"normalmode", ChatCommands::CmdSetNormalMode);
-    GW::Chat::CreateCommand(L"hardmode", ChatCommands::CmdSetHardMode);
-    GW::Chat::CreateCommand(L"animation", ChatCommands::CmdAnimation);
-    GW::Chat::CreateCommand(L"hom", ChatCommands::CmdHom);
+    GW::Chat::CreateCommand(L"hero", CmdHeroBehaviour);
+    GW::Chat::CreateCommand(L"morale", CmdMorale);
+    GW::Chat::CreateCommand(L"volume", CmdVolume);
+    GW::Chat::CreateCommand(L"nm", CmdSetNormalMode);
+    GW::Chat::CreateCommand(L"hm", CmdSetHardMode);
+    GW::Chat::CreateCommand(L"normalmode", CmdSetNormalMode);
+    GW::Chat::CreateCommand(L"hardmode", CmdSetHardMode);
+    GW::Chat::CreateCommand(L"animation", CmdAnimation);
+    GW::Chat::CreateCommand(L"hom", CmdHom);
 
     // Experimental chat commands
 #if _DEBUG
@@ -660,7 +662,6 @@ void ChatCommands::Update(float delta) {
     skill_to_use.Update();
     npc_to_find.Update();
     quest_ping.Update();
-
 }
 void ChatCommands::QuestPing::Init() {
     auto* quest = GW::PlayerMgr::GetActiveQuest();
@@ -1387,7 +1388,9 @@ void ChatCommands::CmdUseSkill(const wchar_t *, int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
-    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    const auto res = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    if (res != S_OK)
+        return;
     if (argc == 1) {
         ShellExecuteW(NULL, L"open", L"http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
     } else {
@@ -1646,6 +1649,28 @@ void ChatCommands::CmdHom(const wchar_t* message, int argc, LPWSTR*) {
         wcscpy(player_name, player->name);
         return GetAchievements(player_name);
     }
+}
+
+// /withdraw quantity model_id1 [model_id2 ...]
+void ChatCommands::CmdWithdraw(const wchar_t*, int argc, LPWSTR* argv)
+{
+    if (argc < 3)
+        return Log::Warning("Incorrect usage. Format is /withdraw quantity model_id1 [model_id2 ...]");
+    unsigned wanted_quantity = 0;
+    std::vector<unsigned> model_ids;
+
+    if (!GuiUtils::ParseUInt(argv[1], &wanted_quantity)) {
+        return Log::Warning("Incorrect usage. Format is /withdraw quantity model_id1 [model_id2 ...]");
+    }
+    for (int i = 2; i < argc; i++) {
+        unsigned model_id;
+        if (!GuiUtils::ParseUInt(argv[i], &model_id)) {
+            return Log::Warning("Incorrect usage. Format is /withdraw quantity model_id1 [model_id2 ...]");
+        }
+        model_ids.push_back(model_id);
+    }
+
+    InventoryManager::Instance().RefillUpToQuantity(wanted_quantity, model_ids);
 }
 
 void ChatCommands::CmdTransmo(const wchar_t *, int argc, LPWSTR *argv) {
