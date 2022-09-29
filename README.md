@@ -44,32 +44,51 @@ There are three main kinds of Toolbox components: Modules, Widgets and Windows. 
 * Windows are visual elements with an explicit window.
 
 Both Widgets and Windows can also have a panel in Settings, and share common code in ToolboxUIElement, which handles saving of position, visibility, etc. If you wish to create a new window/widget, please take a look at how similar ones have already been implemented.
+
 **Important**: The destruction chain is as follows: SignalTerminate -> Terminate -> Destructor. Make sure to handle all destruction logic that uses other modules or interfaces with GWCA in SignalTerminate, only use the constructor for class scope clean up.
+
+## Plugins
+Toolbox supports plugins, meaning you can extend Toolboxes functionality.
+Please take note that plugins are currently a *beta* feature - plugins compiled for one version of toolbox should continue working, but may have to be recompiled
+
+For users: put the plugin into GWToolboxpp/\<Computername\>/plugins
+
+For developers: there are a few things you should take note of:
+* two examples (clock and InstanceTimer) will automatically be added to the solution (see CMakeLists.txt)
+* Toolbox is compiled with /MT - this means that memory allocation/deallocation must not happen across dll or library boundaries
+* Your Plugin::Initialize must call ToolboxPlugin::Initialize(ctx, fns, tbdll), otherwise you must take care of creating and destroying your own ImGui context.
+* we do not guarantee API stability between versions but try to not change existing exported method signatures
+* you must not call GW::Initialize in your plugin, it will use the instance created by Toolbox. Get access to functions either through GetProcAddress(toolbox_handle, mangled_name) or by linking with GWToolboxdll.lib
 
 ## Credits
 
- **HasKha**
+ **[HasKha](https://github.com/HasKha)**
  * Original creator of GWToolbox++.
  
- **KAOS**
+ **[KAOS](https://github.com/GregLando113)**
  * Original creator of the GW API used, reverse engineering work.
  * Several minor additions.
 
- **Ziox**   
+ **[Ziox](https://github.com/reduf)**   
  * Implementation of the vast majority of the chat-based features, such as custom chats and the chat timestamps.
  * Major contributor to the GW API used, reverse engineering work.
  
- **Jon**
- * Implemented many new features and improvements
- * Current maintainer of the project
+ **[Jon](https://github.com/3vcloud)**
+ * Implemented many new features and improvements.
+ * Major contributor to the GW API used, reverse engineering work.
+ * Current maintainer of the project.
+ 
+ **[Dub](https://github.com/DubbleClick)**
+ * Implemented many new features and improvements.
+ * Removed runtime dependencies.
 
- **Itecka** 
+ **Itecka ** 
  * Original creator of a damage monitor, which inspired the toolbox damage monitor.
  * Created original implementation of the Cursor Fix.
 
- **Everyone who [proposed a PR](https://github.com/HasKha/GWToolboxpp/pulls?q=is%3Apr+is%3Aclosed)**
+ **Everyone who [proposed a PR](https://github.com/HasKha/GWToolboxpp/pulls?q=is%3Apr+is%3Amerged)**
 
- **Misty/DarkManic**
+ **[Misty](https://github.com/Hour-of-the-Owl)/DarkManic**
  * Extensive work on the site and documentation.
 
  **and everyone suggesting ideas!**
