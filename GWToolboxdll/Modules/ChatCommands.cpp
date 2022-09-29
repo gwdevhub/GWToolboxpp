@@ -1389,7 +1389,7 @@ void ChatCommands::CmdUseSkill(const wchar_t *, int argc, LPWSTR *argv) {
 void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
     const auto res = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-    if (res != S_OK)
+    if (!SUCCEEDED(res))
         return;
     if (argc == 1) {
         ShellExecuteW(NULL, L"open", L"http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);

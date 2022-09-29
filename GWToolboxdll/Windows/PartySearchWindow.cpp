@@ -657,8 +657,8 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
         snprintf(buf, 128, "Powered by %s", https_host);
     }
     if (ImGui::Button(buf, ImVec2(ImGui::GetContentRegionAvail().x, 20.0f))) {
-        CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-        ShellExecuteA(NULL, "open", https_host, NULL, NULL, SW_SHOWNORMAL);
+        if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
+            ShellExecuteA(NULL, "open", https_host, NULL, NULL, SW_SHOWNORMAL);
     }
     ImGui::End();
 }
