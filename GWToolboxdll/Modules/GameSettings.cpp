@@ -476,11 +476,12 @@ namespace {
             uint32_t source;
             uint32_t identifier;
         } *party_target_info = (Packet*)wparam;
-        current_party_target_id = 0;
         switch (message_id) {
         case GW::UI::UIMessage::kTargetPlayerPartyMember: {
-            if (!IsPlayerInParty(party_target_info->identifier))
+            if (!IsPlayerInParty(party_target_info->identifier)) {
+                current_party_target_id = 0;
                 break;
+            }
             const GW::Player* p = GW::PlayerMgr::GetPlayerByID(party_target_info->identifier);
             if (p && p->agent_id) {
                 current_party_target_id = p->agent_id;
@@ -2388,8 +2389,12 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) const
         Log::ErrorW(L"Target a party member to re-invite");
         return;
     }
+    const auto agent = GW::Agents::GetAgentByID(current_party_target_id);
+    if (!agent || !agent->GetAsAgentLiving() || !IsPlayerInParty(agent->GetAsAgentLiving()->login_number)) {
+        current_party_target_id = 0;
+        return;
+    }
     pending_reinvite.reset(current_party_target_id);
-
 }
 
 // Turn screenshots into clickable links
