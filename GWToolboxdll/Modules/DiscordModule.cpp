@@ -553,7 +553,7 @@ void DiscordModule::UpdateActivity() {
     GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
     GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
     GW::AgentLiving* a = GW::Agents::GetCharacter();
-    GW::CharContext* c = GW::GameContext::instance()->character;
+    GW::CharContext* c = GW::GetGameContext()->character;
     GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (!p || !m || !a || !c)
         return;
@@ -611,7 +611,7 @@ void DiscordModule::UpdateActivity() {
             secret.language_id = map_language;
             secret.district_id = map_district;
             secret.ghkey[0] = 0;
-            swprintf(secret.player, 32, L"%s", GW::GameContext::instance()->character->player_name);
+            swprintf(secret.player, 32, L"%s", GW::GetGameContext()->character->player_name);
             if (is_guild_hall) {
                 for (size_t i = 0; i < 4; i++) {
                     secret.ghkey[i] = g->key.k[i];
@@ -627,7 +627,7 @@ void DiscordModule::UpdateActivity() {
 
         if (show_character_info) {
             sprintf(activity.assets.small_image, "profession_%d_512px", a->primary);
-            sprintf(activity.assets.small_text, "%S (%s)", GW::GameContext::instance()->character->player_name, profession_names[a->primary]);
+            sprintf(activity.assets.small_text, "%S (%s)", GW::GetGameContext()->character->player_name, profession_names[a->primary]);
         }
 
         if (show_location_info) {

@@ -269,7 +269,7 @@ namespace {
     const GW::Array<GW::TradeContext::Item>* GetPlayerTradeItems() {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
             return nullptr;
-        const GW::TradeContext* c = GW::GameContext::instance()->trade;
+        const GW::TradeContext* c = GW::GetGameContext()->trade;
         if (!c || !c->GetIsTradeInitiated())
             return nullptr;
         return &c->player.items;
@@ -421,7 +421,7 @@ namespace {
     bool IsTradeWindowOpen() {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
             return false;
-        const GW::TradeContext* c = GW::GameContext::instance()->trade;
+        const GW::TradeContext* c = GW::GetGameContext()->trade;
         return c && c->GetIsTradeInitiated();
     }
 
@@ -2072,7 +2072,7 @@ void InventoryManager::DrawPendingTomeUsage() {
                 tome_pending_stage = PendingTomeUseStage::UseItem;
                 return;
             }
-            auto* world = GW::WorldContext::instance();
+            auto* world = GW::GetWorldContext();
             if (!world) {
                 goto cancel;
             }
@@ -2124,7 +2124,7 @@ bool InventoryManager::Item::IsWeaponSetItem()
 {
     if (!IsWeapon())
         return false;
-    GW::ItemContext* c = GW::ItemContext::instance();
+    GW::ItemContext* c = GW::GetItemContext();
     if (c || !c->inventory)
         return false;
     GW::WeapondSet *weapon_sets = c->inventory->weapon_sets;

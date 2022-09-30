@@ -41,10 +41,10 @@ namespace {
         // filter non-item-agents
         if (packet.type != 4 || packet.unk3 != 0) return nullptr;
 
-        if (!GW::GameContext::instance()) return nullptr;
-        if (!GW::GameContext::instance()->items) return nullptr;
+        if (!GW::GetGameContext()) return nullptr;
+        if (!GW::GetGameContext()->items) return nullptr;
 
-        const auto& items = GW::GameContext::instance()->items->item_array;
+        const auto& items = GW::GetGameContext()->items->item_array;
         const auto item_id = packet.agent_type;
         if (item_id >= items.size()) return nullptr;
 

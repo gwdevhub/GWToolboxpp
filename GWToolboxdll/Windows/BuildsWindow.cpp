@@ -483,7 +483,7 @@ bool BuildsWindow::GetCurrentSkillBar(char* out, size_t out_len) {
         return false;
     templ.primary = (GW::Constants::Profession)player->primary;
     templ.secondary = (GW::Constants::Profession)player->secondary;
-    GW::PartyAttributeArray& party_attributes = GW::GameContext::instance()->world->attributes;
+    GW::PartyAttributeArray& party_attributes = GW::GetGameContext()->world->attributes;
     size_t attribute_idx = 0;
     for (const GW::PartyAttribute& agent_attributes : party_attributes) {
         if (agent_attributes.agent_id != agent->agent_id)

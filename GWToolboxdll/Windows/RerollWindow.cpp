@@ -38,12 +38,12 @@
 
 namespace {
     GW::CharContext* GetCharContext() {
-        auto g = GW::GameContext::instance();
+        auto g = GW::GetGameContext();
         return g ? g->character : 0;
     }
 
     GW::PartyInfo* GetPlayerParty() {
-        auto g = GW::GameContext::instance();
+        auto g = GW::GetGameContext();
         if (!g) return 0;
         auto c = g->party;
         if (!c) return 0;
@@ -88,7 +88,7 @@ namespace {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Map::GetIsMapLoaded() && GW::Agents::GetPlayer();
     }
     bool GetIsCharSelectReady() {
-        GW::PreGameContext* pgc = GW::PreGameContext::instance();
+        GW::PreGameContext* pgc = GW::GetPreGameContext();
         if (!pgc || !pgc->chars.valid())
             return false;
         uint32_t ui_state = 10;
@@ -299,7 +299,7 @@ void RerollWindow::Initialize() {
 
 void RerollWindow::Update(float) {
     if (check_available_chars && IsCharSelectReady()) {
-        auto& chars = GW::PreGameContext::instance()->chars;
+        auto& chars = GW::GetPreGameContext()->chars;
         const wchar_t* email = GetAccountEmail();
         if (email) {
             auto found = account_characters.find(email);
@@ -316,7 +316,7 @@ void RerollWindow::Update(float) {
         RerollFailed(L"Reroll timed out");
         return;
     }
-    GW::PreGameContext* pgc = GW::PreGameContext::instance();
+    GW::PreGameContext* pgc = GW::GetPreGameContext();
     switch (reroll_stage) {
         case PendingLogout: {
             uint32_t logout[] = {0, 0};
@@ -496,7 +496,7 @@ void RerollWindow::RerollSuccess() {
     }
 }
 bool RerollWindow::IsCharSelectReady() {
-    GW::PreGameContext* pgc = GW::PreGameContext::instance();
+    GW::PreGameContext* pgc = GW::GetPreGameContext();
     if (!pgc || !pgc->chars.valid())
         return false;
     uint32_t ui_state = 10;

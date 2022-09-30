@@ -284,7 +284,7 @@ namespace {
     };
 
     const wchar_t* GetPlayerName() {
-        auto c = GW::CharContext::instance();
+        auto c = GW::GetCharContext();
         return c ? c->player_name : nullptr;
     }
 
@@ -1123,7 +1123,7 @@ void CompletionWindow::Initialize()
 	    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
 	    uint32_t player_number = ((uint32_t*)pak)[1];
-	    GW::CharContext* c = GW::GameContext::instance()->character;
+	    GW::CharContext* c = GW::GetGameContext()->character;
 	    if (player_number == c->player_number) {
 		    GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
 		    if (me) {
@@ -2637,7 +2637,7 @@ CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, w
     bool from_game = false;
     if (!character_name) {
         from_game = true;
-        GW::GameContext* g = GW::GameContext::instance();
+        GW::GameContext* g = GW::GetGameContext();
         if (!g) return this;
         GW::CharContext* c = g->character;
         if (!c) return this;

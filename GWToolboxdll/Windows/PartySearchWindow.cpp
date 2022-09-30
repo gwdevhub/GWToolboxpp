@@ -45,11 +45,11 @@ static const char https_host[] = "https://lfg.gwtoolbox.com";
 namespace {
     static wchar_t* GetMessageCore()
     {
-        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+        GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
         return buff ? buff->begin() : nullptr;
     }
     GW::PartySearch* GetRegionParty(uint32_t party_id) {
-        GW::GameContext* g = GW::GameContext::instance();
+        GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->party)
             return nullptr;
         auto& parties = g->party->party_search;
@@ -58,7 +58,7 @@ namespace {
         return parties[party_id];
     }
     GW::PartyInfo* GetLocalParty(uint32_t party_id) {
-        GW::GameContext* g = GW::GameContext::instance();
+        GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->party)
             return nullptr;
         auto& parties = g->party->parties;
@@ -72,7 +72,7 @@ namespace {
         return GW::PlayerMgr::GetPlayerByID(party->players[0].login_number);
     }
     GW::PartyInfo* GetPartyFromPlayer(uint32_t player_number) {
-        GW::GameContext* g = GW::GameContext::instance();
+        GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->party)
             return nullptr;
         auto& parties = g->party->parties;
@@ -265,7 +265,7 @@ void PartySearchWindow::FillParties() {
         packet.id = i;
         OnRegionPartyUpdated(nullptr, &packet);
     }
-    GW::GameContext* g = GW::GameContext::instance();
+    GW::GameContext* g = GW::GetGameContext();
     if (!g || !g->party)
         return;
     packet.header = GAME_SMSG_PARTY_PLAYER_ADD;

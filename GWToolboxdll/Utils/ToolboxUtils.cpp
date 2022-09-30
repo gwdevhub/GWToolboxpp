@@ -32,7 +32,7 @@ namespace ToolboxUtils {
             player = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
             if (!player || !player->name) {
                 // Map not loaded; try to get from character context
-                auto c = GW::CharContext::instance();
+                auto c = GW::GetCharContext();
                 return c ? c->player_name : L"";
             }
         }
@@ -42,7 +42,7 @@ namespace ToolboxUtils {
         return player && player->name ? GuiUtils::SanitizePlayerName(player->name) : L"";
     }
     GW::Array<wchar_t>* GetMessageBuffer() {
-        auto* w = GW::WorldContext::instance();
+        auto* w = GW::GetWorldContext();
         return w && w->message_buff.valid() ? &w->message_buff : nullptr;
     }
     const wchar_t* GetMessageCore() {

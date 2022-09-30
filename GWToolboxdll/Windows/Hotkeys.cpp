@@ -1017,7 +1017,7 @@ bool HotkeyEquipItem::IsEquippable(const GW::Item *_item)
     /*
     if (!_item->customized)
         return true;
-    GW::GameContext *g = GW::GameContext::instance();
+    GW::GameContext *g = GW::GetGameContext();
     GW::CharContext *c = g ? g->character : nullptr;
     return c && c->player_name &&
            wcscmp(c->player_name, _item->customized) == 0;*/
@@ -1772,7 +1772,7 @@ void HotkeyFlagHero::Execute()
     if (!isExplorable())
         return;
 
-    const GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
+    const GW::Vec3f allflag = GW::GetGameContext()->world->all_flag;
 
     if (hero < 0)
         return;
@@ -1782,7 +1782,7 @@ void HotkeyFlagHero::Execute()
             return;
         }
     } else {
-        const GW::HeroFlagArray &flags = GW::GameContext::instance()->world->hero_flags;
+        const GW::HeroFlagArray &flags = GW::GetGameContext()->world->hero_flags;
         if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size())
             return;
 

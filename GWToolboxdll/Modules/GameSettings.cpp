@@ -430,7 +430,7 @@ namespace {
     }
 
     GW::HeroInfo* GetHeroInfo(uint32_t hero_id) {
-        auto w = GW::WorldContext::instance();
+        auto w = GW::GetWorldContext();
         if (!(w && w->hero_info.size()))
             return nullptr;
         for (auto& a : w->hero_info) {
@@ -443,7 +443,7 @@ namespace {
         if (!IsOutpost()) {
             return IsHenchmanInParty(agent_id);
         }
-        auto w = GW::WorldContext::instance();
+        auto w = GW::GetWorldContext();
         if (!(w && w->henchmen_agent_ids.size()))
             return false;
         for (auto a : w->henchmen_agent_ids) {
@@ -456,7 +456,7 @@ namespace {
         if (!IsOutpost()) {
             return IsHeroInParty(agent_id);
         }
-        auto w = GW::WorldContext::instance();
+        auto w = GW::GetWorldContext();
         if (!(w && w->hero_info.size()))
             return false;
         for (auto& a : w->hero_info) {
@@ -1800,7 +1800,7 @@ void GameSettings::FactionEarnedCheckAndWarn() {
     if (faction_checked)
         return; // Already checked.
     faction_checked = true;
-    GW::WorldContext * world_context = GW::WorldContext::instance();
+    GW::WorldContext * world_context = GW::GetWorldContext();
     if (!world_context || !world_context->max_luxon || !world_context->total_earned_kurzick) {
         faction_checked = false;
         return; // No world context yet.
@@ -2221,16 +2221,16 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
     uint32_t* current_faction = nullptr;
     switch (allegiance) {
     case 0: // Kurzick
-        current_faction = &GW::WorldContext::instance()->current_kurzick;
+        current_faction = &GW::GetWorldContext()->current_kurzick;
         break;
     case 1: // Luxon
-        current_faction = &GW::WorldContext::instance()->current_luxon;
+        current_faction = &GW::GetWorldContext()->current_luxon;
         break;
     default: // Didn't find an allegiance?
         Log::Error("Failed to find allegiance from NPC");
         return;
     }
-    GW::GuildContext* c = GW::GuildContext::instance();
+    GW::GuildContext* c = GW::GetGuildContext();
     if (!c || !c->player_guild_index || c->guilds[c->player_guild_index]->faction != allegiance)
         return; // Alliance isn't the right faction. Return here and the NPC will reply.
     if (*current_faction < 5000)

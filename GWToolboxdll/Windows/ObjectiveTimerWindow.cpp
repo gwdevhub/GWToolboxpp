@@ -253,7 +253,7 @@ void ObjectiveTimerWindow::Initialize()
     // packet hooks that trigger events:
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::MessageServer*) {
-            const GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+            const GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
             if (!buff || !buff->valid() || !buff->size()) return; // Message buffer empty!?
             const wchar_t* msg = buff->begin();
             // NB: buff->size() includes null terminating char. All GW strings are null terminated, use wcslen instead

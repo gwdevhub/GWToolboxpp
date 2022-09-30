@@ -284,7 +284,7 @@ void InfoWindow::DrawAgentInfo(GW::Agent* agent) {
             InfoField("Addr", "%p", player);
             InfoField("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
             if (player->active_title_tier) {
-                GW::TitleTier& tier = GW::GameContext::instance()->world->title_tiers[player->active_title_tier];
+                GW::TitleTier& tier = GW::GetGameContext()->world->title_tiers[player->active_title_tier];
                 static GuiUtils::EncString title_enc_string;
                 title_enc_string.reset(tier.tier_name_enc);
                 InfoField("Current Title", "%s", title_enc_string.string().c_str());
@@ -579,7 +579,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::End();
 #ifdef _DEBUG
     // For debugging changes to flags/arrays etc
-    GW::GameContext* g = GW::GameContext::instance();
+    GW::GameContext* g = GW::GetGameContext();
     GW::GuildContext* gu = g->guild;
     GW::CharContext* c = g->character;
     GW::WorldContext* w = g->world;

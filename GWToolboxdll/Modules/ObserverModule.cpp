@@ -994,7 +994,7 @@ bool ObserverModule::InitializeObserverSession() {
 
 // Synchronise known parties in the area
 bool ObserverModule::SynchroniseParties() {
-    GW::PartyContext* party_ctx = GW::GameContext::instance()->party;
+    GW::PartyContext* party_ctx = GW::GetGameContext()->party;
     if (!party_ctx) return false;
 
     GW::Array<GW::PartyInfo*>& parties = party_ctx->parties;
@@ -1192,7 +1192,7 @@ ObserverModule::ObservableParty* ObserverModule::GetObservablePartyById(const ui
 
     // create if active
     if (!IsActive()) return nullptr;
-    const GW::PartyContext* party_ctx = GW::GameContext::instance()->party;
+    const GW::PartyContext* party_ctx = GW::GetGameContext()->party;
     if (!party_ctx) return nullptr;
 
     // get all parties
@@ -1489,7 +1489,7 @@ ObserverModule::ObservableParty::~ObservableParty() {
 // Synchronise the ObservableParty with its agents/members
 // Does not load Party Allies (others) (Pets, Guild Lord, Bodyguard, ...)
 bool ObserverModule::ObservableParty::SynchroniseParty() {
-    GW::PartyContext* party_ctx = GW::PartyContext::instance();
+    GW::PartyContext* party_ctx = GW::GetPartyContext();
     GW::PlayerArray* players = party_ctx ? GW::Agents::GetPlayerArray() : nullptr;
     if (!players) return false;
 

@@ -177,7 +177,7 @@ namespace {
     bool title_names_sorted = false;
 
     GW::Array<GW::Title>* GetTitles() {
-        GW::GameContext* g = GW::GameContext::instance();
+        GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->world) return nullptr;
         return &g->world->titles;
     }
@@ -220,7 +220,7 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
         return;
     DWORD &npc_id = transmo.npc_id;
     DWORD &scale = transmo.scale;
-    const GW::NPCArray &npcs = GW::GameContext::instance()->world->npcs;
+    const GW::NPCArray &npcs = GW::GetGameContext()->world->npcs;
     if (npc_id == INT_MAX - 1) {
         // Scale only
         npc_id = a->player_number;
@@ -271,7 +271,7 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
     }
     GW::GameThread::Enqueue([npc_id, agent_id, scale]() {
         if (npc_id) {
-            const GW::NPCArray& npcs = GW::GameContext::instance()->world->npcs;
+            const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
             const GW::NPC npc = npcs[npc_id];
             if (!npc.model_file_id)
                 return;
@@ -862,7 +862,7 @@ void ChatCommands::CmdEnterMission(const wchar_t*, int argc, LPWSTR* argv) {
             return Log::Error(error_use_from_outpost);
         if (!GW::PartyMgr::GetIsLeader())
             return Log::Error(error_not_leading);
-        const GW::PartyContext* const p = GW::GameContext::instance()->party;
+        const GW::PartyContext* const p = GW::GetGameContext()->party;
         if (p && (p->flag & 0x8) != 0) {
             GW::Map::CancelEnterChallenge();
         }
@@ -872,7 +872,7 @@ void ChatCommands::CmdEnterMission(const wchar_t*, int argc, LPWSTR* argv) {
     }
 }
 void ChatCommands::CmdMorale(const wchar_t*, int , LPWSTR* ) {
-    if (GW::GameContext::instance()->world->morale == 100)
+    if (GW::GetGameContext()->world->morale == 100)
         GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
     else
         GW::Agents::CallTarget(GW::Agents::GetPlayer(), GW::CallTargetType::Morale);
@@ -2043,7 +2043,7 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
         return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
     }
 
-    GW::WorldContext* w = GW::WorldContext::instance();
+    GW::WorldContext* w = GW::GetWorldContext();
     GW::HeroFlagArray* f = w ? &w->hero_flags : nullptr;
     if (!(f && f->size()))
         return;

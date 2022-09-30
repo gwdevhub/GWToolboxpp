@@ -204,7 +204,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         return 0;
     }
 
-    if (!(!GW::PreGameContext::instance() && imgui_initialized && GWToolbox::Instance().IsInitialized() && !tb_destroyed)) {
+    if (!(!GW::GetPreGameContext() && imgui_initialized && GWToolbox::Instance().IsInitialized() && !tb_destroyed)) {
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
@@ -363,7 +363,7 @@ void GWToolbox::Initialize()
     ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        const auto* c = GW::CharContext::instance();
+        const auto* c = GW::GetCharContext();
         if(c && c->player_name)
             Log::InfoW(L"Hello!");
     }
@@ -455,7 +455,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
-        if (GW::PreGameContext::instance())
+        if (GW::GetPreGameContext())
             return; // Login screen
 #ifndef _DEBUG
         if (GW::Map::GetIsInCinematic())
