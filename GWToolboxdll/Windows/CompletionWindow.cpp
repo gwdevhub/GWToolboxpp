@@ -2262,9 +2262,10 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
         ((float)dedicated / (float)minipets.size()) * 100.f);
 
 	if (ImGui::CollapsingHeader(label)) {
-		ImGui::TextDisabled(R"(To update this list, talk to the "Devotion" pedestal in Eye of the North, then press "Examine the Monument to Devotion.")");
+		ImGui::TextDisabled(R"(To update this list, talk to the "Devotion" pedestal in Eye of the North,
+then press "Examine the Monument to Devotion.")");
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
+		ImGui::Columns(missions_per_row, "###completion_section_cols", false);
 		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
 		size_t col_count = 0;
 
