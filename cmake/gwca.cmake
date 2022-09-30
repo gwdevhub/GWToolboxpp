@@ -7,6 +7,7 @@ add_library(gwca)
 file(GLOB SOURCES
     "${GWCA_FOLDER}/source/stdafx.h"
     "${GWCA_FOLDER}/source/*.cpp"
+    "${GWCA_FOLDER}/include/gwca/*.h"
     "${GWCA_FOLDER}/include/gwca/constants/*.h"
     "${GWCA_FOLDER}/include/gwca/context/*.h"
     "${GWCA_FOLDER}/include/gwca/gamecontainers/*.h"
@@ -25,4 +26,3 @@ include(minhook)
 
 target_link_libraries(gwca PUBLIC
     minhook)
-    

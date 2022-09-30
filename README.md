@@ -80,9 +80,8 @@ For developers: there are a few things you should take note of:
  
  **[Dub](https://github.com/DubbleClick)**
  * Implemented many new features and improvements.
- * Removed runtime dependencies.
 
- **Itecka ** 
+ **Itecka** 
  * Original creator of a damage monitor, which inspired the toolbox damage monitor.
  * Created original implementation of the Cursor Fix.
 
