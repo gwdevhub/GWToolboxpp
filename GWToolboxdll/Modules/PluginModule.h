@@ -9,6 +9,7 @@ class PluginModule final : public ToolboxUIElement {
         HMODULE dll = nullptr;
         ToolboxPlugin* instance = nullptr;
         bool initialized = false;
+        bool active = true;
     };
 
     PluginModule();
@@ -41,7 +42,7 @@ public:
     auto GetInitializedPlugins()
     {
         return std::views::filter(plugins, [](const auto& plugin) {
-            return plugin.initialized;
+            return plugin.initialized && plugin.active;
         });
     }
 
