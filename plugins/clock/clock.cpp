@@ -1,4 +1,4 @@
-#include "clock.h"
+#include "Clock.h"
 
 #include "GWCA/Managers/ChatMgr.h"
 #include "GWCA/Managers/GameThreadMgr.h"

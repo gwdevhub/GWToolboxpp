@@ -164,7 +164,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     static char buf[128];
     sprintf(buf, "      %s", section);
     const auto pos = ImGui::GetCursorScreenPos();
-    const bool& is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
+    const bool is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
 
     const char* icon = nullptr;
     if (const auto it = icons.find(section); it != icons.end())
@@ -177,7 +177,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
 
     ImGui::PushID(section);
     size_t i = 0;
-    for (const auto& [flt, setting_callback] : settings_section->second) {
+    for (const auto& setting_callback : settings_section->second | std::views::values) {
         //if (i && is_showing) ImGui::Separator();
         ImGui::PushID(i);
         setting_callback(&settings_section->first, is_showing);

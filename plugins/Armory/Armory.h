@@ -2,11 +2,15 @@
 
 #include <ToolboxPlugin.h>
 
-class Clock : public ToolboxPlugin {
+class Armory : public ToolboxPlugin {
 public:
-    const char* Name() const override { return "Clock"; }
+    const char* Name() const override { return "Armory"; }
 
     void Draw(IDirect3DDevice9*) override;
+    void DrawSettings() override;
     void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     void Terminate() override;
+
+private:
+    bool visible = true;
 };
