@@ -51,6 +51,8 @@
 #include <Windows/StringDecoderWindow.h>
 #endif
 
+#include "GWCA/Context/PartyContext.h"
+
 #include <Modules/GameSettings.h>
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
@@ -410,13 +412,36 @@ namespace {
         }
         return false;
     }
+    bool IsPlayerInvitedBy(uint32_t login_number)
+    {
+        auto* party = GW::GetPartyContext();
+        if (!party)
+            return false;
+        if (!party->requests_count)
+            return false;
+        auto rlink = party->requests.Get();
+        auto request = rlink->Next();
+        while (request) {
+            rlink = rlink->NextLink();
+            const auto& players = request->players;
+            if (!players.size()) {
+                request = rlink->Next();
+                continue;
+            }
+            if (players[0].login_number == login_number) {
+                return true;
+            }
+            request = rlink->Next();
+        }
+        return false;
+    }
     bool IsAgentInParty(uint32_t agent_id) {
-        auto* party = GW::PartyMgr::GetPartyInfo();
+        const auto* party = GW::PartyMgr::GetPartyInfo();
         if (!party)
             return false;
         if (IsHenchmanInParty(agent_id) || IsHeroInParty(agent_id))
             return true;
-        auto player = GetPlayerByAgentId(agent_id);
+        const auto player = GetPlayerByAgentId(agent_id);
         return player && IsPlayerInParty(player->player_number);
     }
 
@@ -478,14 +503,14 @@ namespace {
         } *party_target_info = (Packet*)wparam;
         switch (message_id) {
         case GW::UI::UIMessage::kTargetPlayerPartyMember: {
-            if (!IsPlayerInParty(party_target_info->identifier)) {
-                current_party_target_id = 0;
+            if (IsPlayerInParty(party_target_info->identifier) || IsPlayerInvitedBy(party_target_info->identifier)) {
+                const GW::Player* p = GW::PlayerMgr::GetPlayerByID(party_target_info->identifier);
+                if (p && p->agent_id) {
+                    current_party_target_id = p->agent_id;
+                }
                 break;
             }
-            const GW::Player* p = GW::PlayerMgr::GetPlayerByID(party_target_info->identifier);
-            if (p && p->agent_id) {
-                current_party_target_id = p->agent_id;
-            }
+            current_party_target_id = 0;
         } break;
         case GW::UI::UIMessage::kTargetNPCPartyMember: {
             if (IsAgentInParty(party_target_info->identifier)) {
