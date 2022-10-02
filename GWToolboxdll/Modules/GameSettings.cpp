@@ -60,6 +60,7 @@
 #include <hidusage.h>
 #include <Logger.h>
 #include <Timer.h>
+#include <Defines.h>
 
 #pragma warning(disable : 6011)
 
