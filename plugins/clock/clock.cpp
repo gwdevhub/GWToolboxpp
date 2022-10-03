@@ -55,7 +55,7 @@ void Clock::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
 
     // we load our gwca methods dynamically
-    enqueue = reinterpret_cast<EnqueueFn>(GetProcAddress(toolbox_dll, "?Enqueue@GameThread@GW@@YAX$$QAV?$function@$$A6AXXZ@std@@@Z"));
+    enqueue = reinterpret_cast<EnqueueFn>(GetProcAddress(toolbox_dll, "?Enqueue@GameThread@GW@@YAXV?$function@$$A6AXXZ@std@@@Z"));
     create_command = reinterpret_cast<CreateCommandFn>(GetProcAddress(toolbox_dll, "?CreateCommand@Chat@GW@@YAXPB_WABV?$function@$$A6AXPB_WHPAPA_W@Z@std@@@Z"));
     delete_command = reinterpret_cast<DeleteCommandFn>(GetProcAddress(toolbox_dll, "?DeleteCommand@Chat@GW@@YAXPB_W@Z"));
     send_chat = reinterpret_cast<SendChatFn>(GetProcAddress(toolbox_dll, "?SendChat@Chat@GW@@YAXDPBD@Z"));
