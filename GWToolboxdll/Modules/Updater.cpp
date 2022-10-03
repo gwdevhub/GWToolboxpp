@@ -143,7 +143,7 @@ void Updater::CheckForUpdate(const bool forced) {
         forced_ask = forced;
         step = NewVersionAvailable;
 
-        if (!std::string(GWTOOLBOXDLL_VERSION_BETA).empty()) {
+        if constexpr (!std::string(GWTOOLBOXDLL_VERSION_BETA).empty()) {
             forced_ask = true;
         }
     });

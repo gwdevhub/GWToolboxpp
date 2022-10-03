@@ -48,7 +48,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::SetTooltip("Go to %s", GWTOOLBOX_WEBSITE);
         if(ImGui::IsItemClicked())
             ShellExecute(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
-        if constexpr (GWTOOLBOXDLL_VERSION_BETA[0]) {
+        if constexpr (!std::string(GWTOOLBOXDLL_VERSION_BETA).empty()) {
             ImGui::SameLine();
             ImGui::Text("- %s", GWTOOLBOXDLL_VERSION_BETA);
         } else {
