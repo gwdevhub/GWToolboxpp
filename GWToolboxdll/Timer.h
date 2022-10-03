@@ -2,7 +2,7 @@
 
 #include <ctime>
 
-/* 
+/*
 This class makes using timers easier
 
 clock type is clock_t

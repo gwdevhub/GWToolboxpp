@@ -221,7 +221,7 @@ namespace {
         uint32_t header = 0;
         uint32_t agent_id = 0;
         uint32_t skill_ids_size = 8;
-        GW::Constants::SkillID skill_ids[8];
+        GW::Constants::SkillID skill_ids[8]{};
     } skillbar_packet;
 
     // Before the game loads the skill bar you want, copy the data over for checking once the bar is loaded.

@@ -28,13 +28,13 @@ auto GetTime()
     const auto now = std::chrono::system_clock::now();
     const auto time = std::chrono::system_clock::to_time_t(now);
     char buf[100];
-    const auto _ = ctime_s(buf, sizeof buf, &time);
-    auto str = std::format("Current time is {}", buf);
+    ctime_s(buf, sizeof buf, &time);
+    auto str = std::format("{}", buf);
     str.pop_back();
     return str;
 }
 
-void Clock::Draw(IDirect3DDevice9* device)
+void Clock::Draw([[maybe_unused]] IDirect3DDevice9* device)
 {
     if (!toolbox_handle)
         return;

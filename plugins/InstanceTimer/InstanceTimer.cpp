@@ -33,7 +33,7 @@ void InstanceTimer::SaveSettings(const wchar_t* folder)
     const auto inifile = std::filesystem::path(folder) / L"instancetimer.ini";
     ini.SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini.SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
-    const auto _ = ini.SaveFile(inifile.c_str());
+    ini.SaveFile(inifile.c_str());
 }
 
 void InstanceTimer::DrawSettings()
@@ -59,7 +59,7 @@ void InstanceTimer::Terminate()
     ToolboxPlugin::Terminate();
 }
 
-void InstanceTimer::Draw(IDirect3DDevice9* pDevice)
+void InstanceTimer::Draw([[maybe_unused]] IDirect3DDevice9* pDevice)
 {
     if (!toolbox_handle) return;
     if (!visible) return;
