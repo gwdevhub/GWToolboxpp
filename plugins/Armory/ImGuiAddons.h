@@ -1,6 +1,5 @@
 #pragma once
 #include <imgui.h>
-typedef ImU32 Color;
 
 namespace ImGui {
     // Shows '(?)' and the helptext when hovered
@@ -19,7 +18,7 @@ namespace ImGui {
 
     IMGUI_API bool IconButton(const char *str_id, ImTextureID user_texture_id, const ImVec2 &size);
 
-    IMGUI_API bool ColorButtonPicker(const char*, Color*, ImGuiColorEditFlags = 0);
+    IMGUI_API bool ColorButtonPicker(const char*, ImU32*, ImGuiColorEditFlags = 0);
 
     IMGUI_API bool ColorPalette(const char* label, size_t* palette_index,
         ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags);

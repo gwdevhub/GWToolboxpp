@@ -85,7 +85,7 @@ bool ImGui::IconButton(const char* label, ImTextureID icon, const ImVec2& size)
         ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + style.ItemSpacing.y / 2), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), label);
     return clicked;
 }
-bool ImGui::ColorButtonPicker(const char* label, Color* imcol, const ImGuiColorEditFlags flags)
+bool ImGui::ColorButtonPicker(const char* label, ImU32* imcol, const ImGuiColorEditFlags flags)
 {
     ImVec4 col = ImGui::ColorConvertU32ToFloat4(*imcol);
     if (ImGui::ColorEdit4(label, &col.x, flags | ImGuiColorEditFlags_DisplayMask_ | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs)) {
