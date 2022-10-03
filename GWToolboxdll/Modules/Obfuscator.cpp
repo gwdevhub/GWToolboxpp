@@ -876,18 +876,18 @@ void Obfuscator::Update(float) {
 }
 void Obfuscator::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(obfuscate), IsObfuscatorEnabled());
+    ini->SetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled);
 }
 void Obfuscator::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
 
-    if (ini->GetBoolValue(Name(), VAR_NAME(obfuscate), IsObfuscatorEnabled())) {
+    if (ini->GetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled)) {
         Obfuscate(true);
     }
 }
 
 void Obfuscator::DrawSettingInternal() {
-    bool enabled = IsObfuscatorEnabled();
+    bool enabled = pending_state == ObfuscatorState::Enabled;
     if (ImGui::Checkbox("Hide my character names on-screen", &enabled)) {
         Obfuscate(enabled);
     }
