@@ -502,14 +502,10 @@ namespace {
         } *party_target_info = (Packet*)wparam;
         switch (message_id) {
         case GW::UI::UIMessage::kTargetPlayerPartyMember: {
-            if (IsPlayerInParty(party_target_info->identifier) || IsPlayerInvitedBy(party_target_info->identifier)) {
-                const GW::Player* p = GW::PlayerMgr::GetPlayerByID(party_target_info->identifier);
-                if (p && p->agent_id) {
-                    current_party_target_id = p->agent_id;
-                }
-                break;
+            const GW::Player* p = GW::PlayerMgr::GetPlayerByID(party_target_info->identifier);
+            if (p && p->agent_id) {
+                current_party_target_id = p->agent_id;
             }
-            current_party_target_id = 0;
         } break;
         case GW::UI::UIMessage::kTargetNPCPartyMember: {
             if (IsAgentInParty(party_target_info->identifier)) {
