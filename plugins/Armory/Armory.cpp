@@ -6,8 +6,11 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <Timer.h>
 #include <imgui.h>
 
 #include "ArmorsDatabase.h"
@@ -21,7 +24,51 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
     return &instance;
 }
 
-void Armory::Draw(IDirect3DDevice9* device)
+bool reset_helm_visibility = false;
+bool head_item_set = false;
+void Armory::Update(const float delta)
+{
+    ToolboxPlugin::Update(delta);
+    if (!head_item_set) {
+        reset_helm_visibility = false;
+        return;
+    }
+    static clock_t timer = 0;
+
+    const auto is_visible = GW::Items::GetEquipmentVisibility(GW::EquipmentType::Helm);
+    static auto wanted_visibility = is_visible;
+
+    const auto toggle_visibility = [is_visible] {
+        if (is_visible == GW::EquipmentStatus::AlwaysHide) {
+            GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
+        }
+        else if (is_visible == GW::EquipmentStatus::HideInCombatAreas) {
+            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+                GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
+            }
+        }
+        else if (is_visible == GW::EquipmentStatus::HideInTownsAndOutposts) {
+            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+                GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
+            }
+        }
+    };
+
+    if (reset_helm_visibility) {
+        timer = TIMER_INIT();
+        wanted_visibility = is_visible;
+        reset_helm_visibility = false;
+        toggle_visibility();
+    }
+
+    if (timer != 0 && TIMER_DIFF(timer) > 300) {
+        GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, wanted_visibility);
+        timer = 0;
+        head_item_set = false;
+    }
+}
+
+void Armory::Draw([[maybe_unused]] IDirect3DDevice9* device)
 {
     if (!toolbox_handle)
         return;
@@ -45,6 +92,8 @@ void Armory::Draw(IDirect3DDevice9* device)
         ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
 
         if (ImGui::Button("Refresh")) {
+            reset_helm_visibility = true;
+            head.current_piece = nullptr;
             if (player_agent->equip && player_agent->equip[0]) {
                 GW::Equipment* equip = player_agent->equip[0];
                 InitItemPiece(&player_armor.head, &equip->head);
@@ -59,11 +108,14 @@ void Armory::Draw(IDirect3DDevice9* device)
 
         if (ImGui::MyCombo("##filter", "All", &filter_index, armor_filter_array_getter, nullptr, 5))
             update_data = true;
-        if (update_data)
+        if (update_data) {
             UpdateArmorsFilter(prof, static_cast<Campaign>(filter_index));
+        }
 
-        if (DrawArmorPiece("##head", &player_armor.head, &head))
+        if (DrawArmorPiece("##head", &player_armor.head, &head)) {
             SetArmorItem(&player_armor.head);
+            head_item_set = true;
+        }
         if (DrawArmorPiece("##chest", &player_armor.chest, &chest))
             SetArmorItem(&player_armor.chest);
         if (DrawArmorPiece("##hands", &player_armor.hands, &hands))

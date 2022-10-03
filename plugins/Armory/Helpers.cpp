@@ -122,7 +122,7 @@ GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent)
     }
 }
 
-bool armor_filter_array_getter(void* data, int idx, const char** out_text)
+bool armor_filter_array_getter([[maybe_unused]] void* data, int idx, const char** out_text)
 {
     switch (idx) {
         case Campaign_All: *out_text = "All"; break;
@@ -232,7 +232,9 @@ void SetArmorItem(const PlayerArmorPiece* piece)
         return;
     const uint32_t color = CreateColor(piece->color1, piece->color2, piece->color3, piece->color4);
     // 0x60111109
-    SetItem_Func(*player->equip, nullptr, piece->model_file_id, color, 0x20110007, piece->unknow1);
+    if (piece->model_file_id) {
+        SetItem_Func(*player->equip, nullptr, piece->model_file_id, color, 0x20110007, piece->unknow1);
+    }
 }
 
 bool DyePicker(const char* label, DyeColor* color)
