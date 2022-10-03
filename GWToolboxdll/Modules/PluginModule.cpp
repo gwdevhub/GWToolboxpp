@@ -117,7 +117,7 @@ bool PluginModule::UnloadDlls()
         }
         return false;
     }
-    for (const auto plugin : plugins) {
+    for (const auto& plugin : plugins) {
         if (plugin.initialized) {
             plugin.instance->Terminate();
         }
