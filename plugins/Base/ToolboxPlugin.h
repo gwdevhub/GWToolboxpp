@@ -44,7 +44,11 @@ public:
     ToolboxPlugin& operator=(const ToolboxPlugin&) = delete;
 
     // name of the window and the ini section
-    virtual const char* Name() const = 0;
+    [[nodiscard]] virtual const char* Name() const = 0;
+
+    [[nodiscard]] virtual const char8_t* Icon() const { return nullptr; }
+
+    [[nodiscard]] virtual bool HasSettings() const { return true; }
 
     // Initialize module
     virtual void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll)

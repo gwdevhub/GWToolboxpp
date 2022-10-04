@@ -49,14 +49,24 @@ void PluginModule::DrawSettingInternal()
         auto& style = ImGui::GetStyle();
         const auto origin_header_col = style.Colors[ImGuiCol_Header];
         style.Colors[ImGuiCol_Header] = {0, 0, 0, 0};
+
         const bool is_showing = ImGui::CollapsingHeader(plugin.path.filename().string().c_str(), ImGuiTreeNodeFlags_AllowItemOverlap);
+
+        const auto icon = plugin.initialized ? plugin.instance->Icon() : nullptr;
+        if (icon) {
+            const auto pos = ImGui::GetCursorScreenPos();
+            const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
+            ImGui::GetWindowDrawList()->AddText(
+                ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2),
+                ImColor(style.Colors[ImGuiCol_Text]), reinterpret_cast<const char*>(icon));
+        }
+
         style.Colors[ImGuiCol_Header] = origin_header_col;
 
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::GetTextLineHeight() - ImGui::GetStyle().FramePadding.y * 2);
         ImGui::Checkbox("##check", &plugin.active);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Active");
-
 
         if (is_showing) {
             if (plugin.active && plugin.initialized) {
