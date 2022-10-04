@@ -91,7 +91,7 @@ bool Pcon::IsVisible() const {
     return visible;
 }
 wchar_t* Pcon::SetPlayerName() {
-    GW::GameContext* g = GW::GameContext::instance();
+    GW::GameContext* g = GW::GetGameContext();
     if (!g || !g->character || !g->character->player_name)
         return nullptr;
     enabled = GetSettingsByName(pcons_by_character ? g->character->player_name : L"default");

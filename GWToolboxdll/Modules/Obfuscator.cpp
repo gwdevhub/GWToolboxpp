@@ -52,11 +52,11 @@ namespace {
 
     // This value won't be obfuscated to is always safe to check against
     const wchar_t* getPlayerName() {
-        GW::CharContext* c = GW::CharContext::instance();
+        GW::CharContext* c = GW::GetCharContext();
         return c ? c->player_name : nullptr;
     }
     const wchar_t* getGuildPlayerName() {
-        GW::GuildContext* g = GW::GuildContext::instance();
+        GW::GuildContext* g = GW::GetGuildContext();
         return g ? g->player_name : nullptr;
     }
 
@@ -411,7 +411,7 @@ namespace {
     std::wstring& getPlayerInvitedName() {
         if (!player_guild_invited_name.empty())
             return player_guild_invited_name;
-        GW::GuildContext* g = GW::GuildContext::instance();
+        GW::GuildContext* g = GW::GetGuildContext();
         if (!g)
             return player_guild_invited_name;
         const wchar_t* player_guild_name = getGuildPlayerName();
@@ -434,7 +434,7 @@ namespace {
     bool ObfuscateGuildRoster(bool obfuscate = true) {
         if (obfuscate == guild_roster_obfuscated)
             return true;
-        GW::GuildContext* g = GW::GuildContext::instance();
+        GW::GuildContext* g = GW::GetGuildContext();
         if (!g) {
             Log::Log("Tried to obfuscate guild, but no guild context");
             return false;
@@ -510,7 +510,7 @@ namespace {
     }
     void Reset() {
         ObfuscateGuildRoster(false);
-        auto c = GW::CharContext::instance();
+        auto c = GW::GetCharContext();
         if (!c || c->player_email != player_email) {
             player_guild_invited_name.clear();
             if (c && c->player_email) {
@@ -876,18 +876,18 @@ void Obfuscator::Update(float) {
 }
 void Obfuscator::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(obfuscate), IsObfuscatorEnabled());
+    ini->SetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled);
 }
 void Obfuscator::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
 
-    if (ini->GetBoolValue(Name(), VAR_NAME(obfuscate), IsObfuscatorEnabled())) {
+    if (ini->GetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled)) {
         Obfuscate(true);
     }
 }
 
 void Obfuscator::DrawSettingInternal() {
-    bool enabled = IsObfuscatorEnabled();
+    bool enabled = pending_state == ObfuscatorState::Enabled;
     if (ImGui::Checkbox("Hide my character names on-screen", &enabled)) {
         Obfuscate(enabled);
     }

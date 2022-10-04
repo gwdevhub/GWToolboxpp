@@ -54,16 +54,16 @@ public:
         toolbox_handle = toolbox_dll;
     }
 
-    // Send termination signal to module.
+    // Send termination signal to module, make sure Terminate can be called.
     virtual void SignalTerminate() {}
 
     // Can we terminate this module?
     virtual bool CanTerminate() { return true; }
 
-    // Terminate module. Release any resources used.
+    // Terminate module. Release any resources used. Make sure to revert all callbacks
     virtual void Terminate() {}
 
-    // Update. Will always be called once every frame. Delta is in seconds.
+    // Update. Will always be called once every frame. Delta is in milliseconds.
     virtual void Update(float) {}
 
     // Draw. Will always be called once every frame.
@@ -72,13 +72,13 @@ public:
     // Optional. Prefer using ImGui::GetIO() during update or render, if possible.
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
-    // Load settings
+    // Load settings from folder
     virtual void LoadSettings(const wchar_t*) {}
 
-    // Save settings
+    // Save settings from folder
     virtual void SaveSettings(const wchar_t*) {}
 
-    // Draw settings.
+    // Will be drawn in the Settings/Plugins menu. Must use ImGui
     virtual void DrawSettings() {}
 
 protected:

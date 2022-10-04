@@ -26,7 +26,7 @@ void AlcoholWidget::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &AlcoholWidget::AlcUpdate);
 }
 uint32_t AlcoholWidget::GetAlcoholTitlePoints() {
-    GW::GameContext* gameContext = GW::GameContext::instance();
+    GW::GameContext* gameContext = GW::GetGameContext();
     if (!gameContext || !gameContext->world || !gameContext->world->titles.valid())
         return 0;   // Sanity checks; context not ready.
     if (gameContext->world->titles.size() < 8)

@@ -25,7 +25,7 @@
 
 namespace {
     static wchar_t* GetMessageCore() {
-        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+        GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
         return buff ? buff->begin() : nullptr;
     }
     struct MapInfo {

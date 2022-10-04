@@ -353,7 +353,7 @@ void ChatLog::SetEnabled(bool _enabled) {
 bool ChatLog::Init() {
     if (!enabled)
         return false;
-    auto c = GW::CharContext::instance();
+    auto c = GW::GetCharContext();
     if (!c)
         return false;
     std::wstring this_account = c->player_email;

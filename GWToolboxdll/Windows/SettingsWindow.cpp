@@ -48,7 +48,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::SetTooltip("Go to %s", GWTOOLBOX_WEBSITE);
         if(ImGui::IsItemClicked())
             ShellExecute(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
-        if constexpr (GWTOOLBOXDLL_VERSION_BETA[0]) {
+        if constexpr (!std::string(GWTOOLBOXDLL_VERSION_BETA).empty()) {
             ImGui::SameLine();
             ImGui::Text("- %s", GWTOOLBOXDLL_VERSION_BETA);
         } else {
@@ -68,13 +68,13 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 #endif
         float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2;
         if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
-            CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-            ShellExecuteW(NULL, L"open", Resources::GetSettingsFolderPath().c_str(), NULL, NULL, SW_SHOWNORMAL);
+            if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
+                ShellExecuteW(NULL, L"open", Resources::GetSettingsFolderPath().c_str(), NULL, NULL, SW_SHOWNORMAL);
         }
         ImGui::SameLine();
         if (ImGui::Button("Open GWToolbox++ Website", ImVec2(w, 0))) {
-            CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-            ShellExecute(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
+            if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
+                ShellExecuteA(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
         }
 
         ToolboxSettings::Instance().DrawFreezeSetting();
@@ -164,7 +164,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     static char buf[128];
     sprintf(buf, "      %s", section);
     const auto pos = ImGui::GetCursorScreenPos();
-    const bool& is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
+    const bool is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
 
     const char* icon = nullptr;
     if (const auto it = icons.find(section); it != icons.end())
@@ -177,7 +177,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
 
     ImGui::PushID(section);
     size_t i = 0;
-    for (const auto& [flt, setting_callback] : settings_section->second) {
+    for (const auto& setting_callback : settings_section->second | std::views::values) {
         //if (i && is_showing) ImGui::Separator();
         ImGui::PushID(i);
         setting_callback(&settings_section->first, is_showing);

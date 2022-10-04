@@ -143,7 +143,7 @@ namespace {
     PartyInfo* GetPartyInfo(uint32_t party_id = 0) {
         if (!party_id)
             return (PartyInfo*)GW::PartyMgr::GetPartyInfo();
-        GW::PartyContext* p = GW::GameContext::instance()->party;
+        GW::PartyContext* p = GW::GetGameContext()->party;
         if (!p || !p->parties.valid() || party_id >= p->parties.size())
             return nullptr;
         return (PartyInfo*)p->parties[party_id];

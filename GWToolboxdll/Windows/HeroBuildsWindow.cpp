@@ -106,7 +106,7 @@ namespace {
         return ret;
     }
     const GW::HeroFlag* GetHeroFlagInfo(uint32_t hero_id) {
-        const GW::GameContext* g = GW::GameContext::instance();
+        const GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->world) return nullptr;
         const GW::HeroFlagArray& flags = g->world->hero_flags;
         for (const GW::HeroFlag& flag : flags) {
@@ -266,7 +266,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                                 return true;
                             }
                             bool match = false;
-                            auto ctx = GW::GameContext::instance();
+                            auto ctx = GW::GetGameContext();
                             auto& hero_array = ctx->world->hero_info;
                             for (auto& hero : hero_array) {
                                 if (hero.hero_id == id) {
@@ -458,7 +458,7 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, size_t idx, st
     }
     else if(idx > 0) {
         bool match = false;
-        auto ctx = GW::GameContext::instance();
+        auto ctx = GW::GetGameContext();
         auto& hero_array = ctx->world->hero_info;
         for (auto& hero : hero_array) {
             if (hero.hero_id != id)

@@ -27,7 +27,7 @@ namespace {
     bool drawn = false;
 }
 void WorldMapWidget::InitializeMapsUnlockedArrays() {
-    const GW::GameContext* g = GW::GameContext::instance();
+    const GW::GameContext* g = GW::GetGameContext();
     if (!g)
         return;
     GW::WorldContext* w = g->world;
@@ -80,7 +80,7 @@ void WorldMapWidget::Initialize() {
 }
 void WorldMapWidget::ShowAllOutposts(bool show = showing_all_outposts) {
     static bool showing = false;
-    //GW::WorldContext* world = GW::GameContext::instance()->world;
+    //GW::WorldContext* world = GW::GetGameContext()->world;
     if (showing == show)
         return;
     ASSERT(actual_maps_unlocked_initialised);
@@ -109,7 +109,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9 *pDevice) {
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowPos(ImVec2(16.f, 16.f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
-        GW::WorldContext* world = GW::GameContext::instance()->world;
+        GW::WorldContext* world = GW::GetGameContext()->world;
         UNREFERENCED_PARAMETER(world);
         ImGui::Checkbox("Show all areas", &showing_all_outposts);
         show_all_rect = ImGui::GetCurrentContext()->LastItemData.Rect;

@@ -1,4 +1,4 @@
-#include "clock.h"
+#include "Clock.h"
 
 #include "GWCA/Managers/ChatMgr.h"
 #include "GWCA/Managers/GameThreadMgr.h"
@@ -28,13 +28,13 @@ auto GetTime()
     const auto now = std::chrono::system_clock::now();
     const auto time = std::chrono::system_clock::to_time_t(now);
     char buf[100];
-    const auto _ = ctime_s(buf, sizeof buf, &time);
-    auto str = std::format("Current time is {}", buf);
+    ctime_s(buf, sizeof buf, &time);
+    auto str = std::format("{}", buf);
     str.pop_back();
     return str;
 }
 
-void Clock::Draw(IDirect3DDevice9* device)
+void Clock::Draw([[maybe_unused]] IDirect3DDevice9* device)
 {
     if (!toolbox_handle)
         return;
@@ -55,7 +55,7 @@ void Clock::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
 
     // we load our gwca methods dynamically
-    enqueue = reinterpret_cast<EnqueueFn>(GetProcAddress(toolbox_dll, "?Enqueue@GameThread@GW@@YAX$$QAV?$function@$$A6AXXZ@std@@@Z"));
+    enqueue = reinterpret_cast<EnqueueFn>(GetProcAddress(toolbox_dll, "?Enqueue@GameThread@GW@@YAXV?$function@$$A6AXXZ@std@@@Z"));
     create_command = reinterpret_cast<CreateCommandFn>(GetProcAddress(toolbox_dll, "?CreateCommand@Chat@GW@@YAXPB_WABV?$function@$$A6AXPB_WHPAPA_W@Z@std@@@Z"));
     delete_command = reinterpret_cast<DeleteCommandFn>(GetProcAddress(toolbox_dll, "?DeleteCommand@Chat@GW@@YAXPB_W@Z"));
     send_chat = reinterpret_cast<SendChatFn>(GetProcAddress(toolbox_dll, "?SendChat@Chat@GW@@YAXDPBD@Z"));

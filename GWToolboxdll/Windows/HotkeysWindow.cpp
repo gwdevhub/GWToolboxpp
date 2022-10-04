@@ -72,7 +72,7 @@ bool HotkeysWindow::IsMapReady()
 }
 
 bool HotkeysWindow::CheckSetValidHotkeys() {
-    auto c = GW::GameContext::instance()->character;
+    auto c = GW::GetGameContext()->character;
     if (!c) return false;
     GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
     if (!me) return false;

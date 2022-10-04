@@ -1,46 +1,47 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
-
-#include <GWCA/GameContainers/Array.h>
-#include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/Constants/AgentIDs.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Skills.h>
 
-#include <GWCA/GameEntities/Item.h>
-#include <GWCA/GameEntities/Party.h>
-#include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Friendslist.h>
-#include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Quest.h>
-#include <GWCA/GameEntities/Camera.h>
-#include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Title.h>
-#include <GWCA/GameEntities/Hero.h>
-
 #include <GWCA/Context/GuildContext.h>
+#include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/WorldContext.h>
 
-#include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
+
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Camera.h>
+#include <GWCA/GameEntities/Friendslist.h>
+#include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Quest.h>
+#include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Title.h>
+
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
-#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/SkillbarMgr.h>
-#include <GWCA/Managers/EffectMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 
@@ -51,15 +52,15 @@
 #include <Windows/StringDecoderWindow.h>
 #endif
 
-#include <Modules/GameSettings.h>
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
+#include <Modules/GameSettings.h>
 
-#include <Logger.h>
-#include <GWToolbox.h>
-#include <Timer.h>
 #include <Color.h>
 #include <hidusage.h>
+#include <Logger.h>
+#include <Timer.h>
+#include <Defines.h>
 
 #pragma warning(disable : 6011)
 
@@ -220,7 +221,7 @@ namespace {
         uint32_t header = 0;
         uint32_t agent_id = 0;
         uint32_t skill_ids_size = 8;
-        GW::Constants::SkillID skill_ids[8];
+        GW::Constants::SkillID skill_ids[8]{};
     } skillbar_packet;
 
     // Before the game loads the skill bar you want, copy the data over for checking once the bar is loaded.
@@ -410,13 +411,36 @@ namespace {
         }
         return false;
     }
+    bool IsPlayerInvitedBy(uint32_t login_number)
+    {
+        auto* party = GW::GetPartyContext();
+        if (!party)
+            return false;
+        if (!party->requests_count)
+            return false;
+        auto rlink = party->requests.Get();
+        auto request = rlink->Next();
+        while (request) {
+            rlink = rlink->NextLink();
+            const auto& players = request->players;
+            if (!players.size()) {
+                request = rlink->Next();
+                continue;
+            }
+            if (players[0].login_number == login_number) {
+                return true;
+            }
+            request = rlink->Next();
+        }
+        return false;
+    }
     bool IsAgentInParty(uint32_t agent_id) {
-        auto* party = GW::PartyMgr::GetPartyInfo();
+        const auto* party = GW::PartyMgr::GetPartyInfo();
         if (!party)
             return false;
         if (IsHenchmanInParty(agent_id) || IsHeroInParty(agent_id))
             return true;
-        auto player = GetPlayerByAgentId(agent_id);
+        const auto player = GetPlayerByAgentId(agent_id);
         return player && IsPlayerInParty(player->player_number);
     }
 
@@ -430,7 +454,7 @@ namespace {
     }
 
     GW::HeroInfo* GetHeroInfo(uint32_t hero_id) {
-        auto w = GW::WorldContext::instance();
+        auto w = GW::GetWorldContext();
         if (!(w && w->hero_info.size()))
             return nullptr;
         for (auto& a : w->hero_info) {
@@ -443,7 +467,7 @@ namespace {
         if (!IsOutpost()) {
             return IsHenchmanInParty(agent_id);
         }
-        auto w = GW::WorldContext::instance();
+        auto w = GW::GetWorldContext();
         if (!(w && w->henchmen_agent_ids.size()))
             return false;
         for (auto a : w->henchmen_agent_ids) {
@@ -456,7 +480,7 @@ namespace {
         if (!IsOutpost()) {
             return IsHeroInParty(agent_id);
         }
-        auto w = GW::WorldContext::instance();
+        auto w = GW::GetWorldContext();
         if (!(w && w->hero_info.size()))
             return false;
         for (auto& a : w->hero_info) {
@@ -476,11 +500,8 @@ namespace {
             uint32_t source;
             uint32_t identifier;
         } *party_target_info = (Packet*)wparam;
-        current_party_target_id = 0;
         switch (message_id) {
         case GW::UI::UIMessage::kTargetPlayerPartyMember: {
-            if (!IsPlayerInParty(party_target_info->identifier))
-                break;
             const GW::Player* p = GW::PlayerMgr::GetPlayerByID(party_target_info->identifier);
             if (p && p->agent_id) {
                 current_party_target_id = p->agent_id;
@@ -1800,7 +1821,7 @@ void GameSettings::FactionEarnedCheckAndWarn() {
     if (faction_checked)
         return; // Already checked.
     faction_checked = true;
-    GW::WorldContext * world_context = GW::WorldContext::instance();
+    GW::WorldContext * world_context = GW::GetWorldContext();
     if (!world_context || !world_context->max_luxon || !world_context->total_earned_kurzick) {
         faction_checked = false;
         return; // No world context yet.
@@ -2221,16 +2242,16 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
     uint32_t* current_faction = nullptr;
     switch (allegiance) {
     case 0: // Kurzick
-        current_faction = &GW::WorldContext::instance()->current_kurzick;
+        current_faction = &GW::GetWorldContext()->current_kurzick;
         break;
     case 1: // Luxon
-        current_faction = &GW::WorldContext::instance()->current_luxon;
+        current_faction = &GW::GetWorldContext()->current_luxon;
         break;
     default: // Didn't find an allegiance?
         Log::Error("Failed to find allegiance from NPC");
         return;
     }
-    GW::GuildContext* c = GW::GuildContext::instance();
+    GW::GuildContext* c = GW::GetGuildContext();
     if (!c || !c->player_guild_index || c->guilds[c->player_guild_index]->faction != allegiance)
         return; // Alliance isn't the right faction. Return here and the NPC will reply.
     if (*current_faction < 5000)
@@ -2388,8 +2409,12 @@ void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) const
         Log::ErrorW(L"Target a party member to re-invite");
         return;
     }
+    const auto agent = GW::Agents::GetAgentByID(current_party_target_id);
+    if (!agent || !agent->GetAsAgentLiving() || !IsPlayerInParty(agent->GetAsAgentLiving()->login_number)) {
+        current_party_target_id = 0;
+        return;
+    }
     pending_reinvite.reset(current_party_target_id);
-
 }
 
 // Turn screenshots into clickable links

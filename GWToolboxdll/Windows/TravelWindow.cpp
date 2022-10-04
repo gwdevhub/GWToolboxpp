@@ -589,7 +589,7 @@ namespace {
     }
     static bool IsLuxon()
     {
-        GW::GuildContext* c = GW::GuildContext::instance();
+        GW::GuildContext* c = GW::GetGuildContext();
         return c && c->player_guild_index && c->guilds[c->player_guild_index]->faction;
     }
     static bool IsAlreadyInOutpost(GW::Constants::MapID outpost_id, GW::Constants::District _district, uint32_t _district_number = 0)
@@ -829,7 +829,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(GW::Constants::MapID map_to
 }
 
 bool TravelWindow::IsWaitingForMapTravel() {
-    return GW::GameContext::instance()->party != nullptr && (GW::GameContext::instance()->party->flag & 0x8) > 0;
+    return GW::GetGameContext()->party != nullptr && (GW::GetGameContext()->party->flag & 0x8) > 0;
 }
 
 void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District _district, uint32_t _district_number) {

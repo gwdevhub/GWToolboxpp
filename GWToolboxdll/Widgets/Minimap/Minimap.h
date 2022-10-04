@@ -29,10 +29,11 @@ class Minimap final : public ToolboxWidget
     {
         is_resizable = false;
     };
-    Minimap(const Minimap &) = delete;
     ~Minimap() = default;
 
 public:
+    Minimap(const Minimap&) = delete;
+
     static Minimap &Instance()
     {
         static Minimap instance;
@@ -97,7 +98,7 @@ private:
 
     bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
-    inline bool IsActive() const;
+    bool IsActive() const;
 
     GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
     GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;

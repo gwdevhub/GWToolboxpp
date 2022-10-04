@@ -127,7 +127,7 @@ namespace {
     }
 
     GW::PartyInfo* GetPlayerParty() {
-        const GW::GameContext * gamectx = GW::GameContext::instance();
+        const GW::GameContext * gamectx = GW::GetGameContext();
         if (!(gamectx && gamectx->party))
             return nullptr;
         return gamectx->party->player_party;
@@ -275,12 +275,12 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
     }
     const auto is_flagged = [](auto hero) -> bool {
         if (hero == 0) {
-            const GW::Vec3f &allflag = GW::GameContext::instance()->world->all_flag;
+            const GW::Vec3f &allflag = GW::GetGameContext()->world->all_flag;
             if (allflag.x != 0 && allflag.y != 0 && (!std::isinf(allflag.x) || !std::isinf(allflag.y))) {
                 return true;
             }
         } else {
-            const GW::HeroFlagArray &flags = GW::GameContext::instance()->world->hero_flags;
+            const GW::HeroFlagArray &flags = GW::GetGameContext()->world->hero_flags;
             if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size())
                 return false;
 
@@ -321,7 +321,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
         GW::PartyMgr::FlagAll(GW::GamePos(x, y, 0)); // "/flag all -2913.41 3004.78"
         return;
     }
-    const auto& heroarray = GW::GameContext::instance()->party->player_party->heroes;
+    const auto& heroarray = GW::GetGameContext()->party->player_party->heroes;
 
     if (heroarray.valid())
         n_heros = heroarray.size();
@@ -671,7 +671,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background).Value);
             if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
                 static const char *flag_txt[] = {"All", "1", "2", "3", "4", "5", "6", "7", "8"};
-                GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
+                GW::Vec3f allflag = GW::GetGameContext()->world->all_flag;
                 const unsigned int num_heroflags = player_heroes.size() + 1;
                 const float w_but = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * num_heroflags) /
                     (num_heroflags + 1);
@@ -967,6 +967,8 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
     if (!GetKeyState(VK_LBUTTON) && mousedown) // fix left button being released outside of gw window
         mousedown = false;
+    if (!IsActive())
+        return false;
     if (is_observing)
         return false;
     if (mouse_clickthrough_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {

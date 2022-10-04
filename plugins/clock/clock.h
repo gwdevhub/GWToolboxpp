@@ -1,3 +1,5 @@
+#pragma once
+
 #include <ToolboxPlugin.h>
 
 class Clock : public ToolboxPlugin {

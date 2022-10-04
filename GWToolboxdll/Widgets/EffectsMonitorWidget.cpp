@@ -83,7 +83,7 @@ namespace {
     GW::HookEntry OnEffect_Entry;
 
     uint32_t GetMinionCount() {
-        const auto w = GW::WorldContext::instance();
+        const auto w = GW::GetWorldContext();
         if (!w) return 0;
         const auto& minions_arr = w->controlled_minion_count;
         const auto me = GW::Agents::GetPlayerId();
@@ -93,11 +93,11 @@ namespace {
         return mine != minions_arr.end() ? mine->minion_count : 0;
     }
     uint32_t GetMorale() {
-        const auto w = GW::WorldContext::instance();
+        const auto w = GW::GetWorldContext();
         return w ? w->morale : 100;
     }
     uint32_t GetMorale(uint32_t agent_id) {
-        const auto w = GW::WorldContext::instance();
+        const auto w = GW::GetWorldContext();
         if (!(w && w->party_morale_related.size()))
             return 100;
         for (const auto& m : w->party_morale_related) {

@@ -40,7 +40,7 @@ static const char https_host_asc[] = "https://ascalon.gwtoolbox.com/";
 
 static wchar_t *GetMessageCore()
 {
-    GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
+    GW::Array<wchar_t> *buff = &GW::GetGameContext()->world->message_buff;
     return buff ? buff->begin() : nullptr;
 }
 void TradeWindow::OnMessageLocal(GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak)
@@ -334,7 +334,7 @@ void TradeWindow::search(std::string query, bool print_results_in_chat)
 }
 
 void TradeWindow::FindPlayerPartySearch(GW::HookStatus*, void*) {
-    GW::PartyContext* ctx = GW::PartyContext::instance();
+    GW::PartyContext* ctx = GW::GetPartyContext();
     if (ctx && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         auto& party_searches = ctx->party_search;
         if (!party_searches.valid() || !party_searches.size()) {
@@ -550,8 +550,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
     }
 
     if (ImGui::Button(buf, ImVec2(ImGui::GetContentRegionAvail().x, 20.0f))) {
-        CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-        ShellExecuteA(NULL, "open", is_kamadan_chat ? https_host_kmd : https_host_asc, NULL, NULL, SW_SHOWNORMAL);
+        if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
+            ShellExecuteA(NULL, "open", is_kamadan_chat ? https_host_kmd : https_host_asc, NULL, NULL, SW_SHOWNORMAL);
     }
     ImGui::End();
 }

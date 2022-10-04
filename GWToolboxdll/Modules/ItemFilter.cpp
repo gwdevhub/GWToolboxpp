@@ -41,10 +41,10 @@ namespace {
         // filter non-item-agents
         if (packet.type != 4 || packet.unk3 != 0) return nullptr;
 
-        if (!GW::GameContext::instance()) return nullptr;
-        if (!GW::GameContext::instance()->items) return nullptr;
+        if (!GW::GetGameContext()) return nullptr;
+        if (!GW::GetGameContext()->items) return nullptr;
 
-        const auto& items = GW::GameContext::instance()->items->item_array;
+        const auto& items = GW::GetGameContext()->items->item_array;
         const auto item_id = packet.agent_type;
         if (item_id >= items.size()) return nullptr;
 
@@ -53,42 +53,103 @@ namespace {
 
     const std::map<ItemModelID, std::string> default_dont_hide_for_player = {
         // Weapons
-        MAP_ENTRY(DSR), MAP_ENTRY(EternalBlade), MAP_ENTRY(VoltaicSpear), MAP_ENTRY(CrystallineSword), MAP_ENTRY(ObsidianEdge),
+        MAP_ENTRY(DSR),
+        MAP_ENTRY(EternalBlade),
+        MAP_ENTRY(VoltaicSpear),
+        MAP_ENTRY(CrystallineSword),
+        MAP_ENTRY(ObsidianEdge),
 
         // Rare and Valuable Items
-        MAP_ENTRY(MiniDhuum), MAP_ENTRY(ArmbraceOfTruth), MAP_ENTRY(MargoniteGem), MAP_ENTRY(StygianGem), MAP_ENTRY(TitanGem), MAP_ENTRY(TormentGem),
+        MAP_ENTRY(MiniDhuum),
+        MAP_ENTRY(ArmbraceOfTruth),
+        MAP_ENTRY(MargoniteGem),
+        MAP_ENTRY(StygianGem),
+        MAP_ENTRY(TitanGem),
+        MAP_ENTRY(TormentGem),
 
         // Crafting Items
-        MAP_ENTRY(Diamond), MAP_ENTRY(Ruby), MAP_ENTRY(Sapphire), MAP_ENTRY(GlobofEctoplasm), MAP_ENTRY(ObsidianShard),
+        MAP_ENTRY(Diamond),
+        MAP_ENTRY(Ruby),
+        MAP_ENTRY(Sapphire),
+        MAP_ENTRY(GlobofEctoplasm),
+        MAP_ENTRY(ObsidianShard),
 
         // Consumables
-        MAP_ENTRY(Cupcakes), MAP_ENTRY(Apples), MAP_ENTRY(Corns), MAP_ENTRY(Pies), MAP_ENTRY(Eggs), MAP_ENTRY(Warsupplies), MAP_ENTRY(SkalefinSoup), MAP_ENTRY(PahnaiSalad), MAP_ENTRY(Kabobs), MAP_ENTRY(PumpkinCookie),
+        MAP_ENTRY(Cupcakes),
+        MAP_ENTRY(Apples),
+        MAP_ENTRY(Corns),
+        MAP_ENTRY(Pies),
+        MAP_ENTRY(Eggs),
+        MAP_ENTRY(Warsupplies),
+        MAP_ENTRY(SkalefinSoup),
+        MAP_ENTRY(PahnaiSalad),
+        MAP_ENTRY(Kabobs),
+        MAP_ENTRY(PumpkinCookie),
 
         // Rock Candy
-        MAP_ENTRY(GRC), MAP_ENTRY(BRC), MAP_ENTRY(RRC),
+        MAP_ENTRY(GRC),
+        MAP_ENTRY(BRC),
+        MAP_ENTRY(RRC),
 
         // Conset
-        MAP_ENTRY(ConsEssence), MAP_ENTRY(ConsArmor), MAP_ENTRY(ConsGrail),
+        MAP_ENTRY(ConsEssence),
+        MAP_ENTRY(ConsArmor),
+        MAP_ENTRY(ConsGrail),
 
         // Lunars
-        MAP_ENTRY(LunarDragon), MAP_ENTRY(LunarHorse), MAP_ENTRY(LunarMonkey), MAP_ENTRY(LunarOx), MAP_ENTRY(LunarRabbit), MAP_ENTRY(LunarRat), MAP_ENTRY(LunarRooster), MAP_ENTRY(LunarSheep), MAP_ENTRY(LunarSnake), MAP_ENTRY(LunarTiger),
-        MAP_ENTRY(LunarDog), MAP_ENTRY(LunarPig), MAP_ENTRY(LunarMonkey),
+        MAP_ENTRY(LunarDragon),
+        MAP_ENTRY(LunarHorse),
+        MAP_ENTRY(LunarMonkey),
+        MAP_ENTRY(LunarOx),
+        MAP_ENTRY(LunarRabbit),
+        MAP_ENTRY(LunarRat),
+        MAP_ENTRY(LunarRooster),
+        MAP_ENTRY(LunarSheep),
+        MAP_ENTRY(LunarSnake),
+        MAP_ENTRY(LunarTiger),
+        MAP_ENTRY(LunarDog),
+        MAP_ENTRY(LunarPig),
+        MAP_ENTRY(LunarMonkey),
 
         // Alcohol
-        MAP_ENTRY(Absinthe), MAP_ENTRY(AgedDwarvenAle), MAP_ENTRY(AgedHuntersAle), MAP_ENTRY(BottleOfJuniberryGin), MAP_ENTRY(BottleOfVabbianWine), MAP_ENTRY(Cider), MAP_ENTRY(DwarvenAle), MAP_ENTRY(Eggnog), MAP_ENTRY(FlaskOfFirewater), MAP_ENTRY(Grog),
-        MAP_ENTRY(HuntersAle), MAP_ENTRY(Keg), MAP_ENTRY(KrytanBrandy), MAP_ENTRY(Ricewine), MAP_ENTRY(ShamrockAle), MAP_ENTRY(SpikedEggnog), MAP_ENTRY(WitchsBrew),
+        MAP_ENTRY(Absinthe),
+        MAP_ENTRY(AgedDwarvenAle),
+        MAP_ENTRY(AgedHuntersAle),
+        MAP_ENTRY(BottleOfJuniberryGin),
+        MAP_ENTRY(BottleOfVabbianWine),
+        MAP_ENTRY(Cider),
+        MAP_ENTRY(DwarvenAle),
+        MAP_ENTRY(Eggnog),
+        MAP_ENTRY(FlaskOfFirewater),
+        MAP_ENTRY(Grog),
+        MAP_ENTRY(HuntersAle),
+        MAP_ENTRY(Keg),
+        MAP_ENTRY(KrytanBrandy),
+        MAP_ENTRY(Ricewine),
+        MAP_ENTRY(ShamrockAle),
+        MAP_ENTRY(SpikedEggnog),
+        MAP_ENTRY(WitchsBrew),
 
         // Summons
-        MAP_ENTRY(GhastlyStone), MAP_ENTRY(GakiSummon), MAP_ENTRY(TurtleSummon),
+        MAP_ENTRY(GhastlyStone),
+        MAP_ENTRY(GakiSummon),
+        MAP_ENTRY(TurtleSummon),
 
         // Summons x3
-        MAP_ENTRY(TenguSummon), MAP_ENTRY(ImperialGuardSummon), MAP_ENTRY(WarhornSummon),
+        MAP_ENTRY(TenguSummon),
+        MAP_ENTRY(ImperialGuardSummon),
+        MAP_ENTRY(WarhornSummon),
 
         // Other
-        MAP_ENTRY(IdentificationKit), MAP_ENTRY(IdentificationKit_Superior), MAP_ENTRY(SalvageKit), MAP_ENTRY(SalvageKit_Expert), MAP_ENTRY(SalvageKit_Superior), MAP_ENTRY(Lockpick), MAP_ENTRY(ResScrolls), MAP_ENTRY(GoldCoin),
-
-        // Quest Items
-        MAP_ENTRY(UnholyText)};
+        MAP_ENTRY(IdentificationKit),
+        MAP_ENTRY(IdentificationKit_Superior),
+        MAP_ENTRY(SalvageKit),
+        MAP_ENTRY(SalvageKit_Expert),
+        MAP_ENTRY(SalvageKit_Superior),
+        MAP_ENTRY(Lockpick),
+        MAP_ENTRY(ResScrolls),
+        MAP_ENTRY(GoldCoin),
+    };
 
     const std::map<ItemModelID, std::string> default_dont_hide_for_party = {
         MAP_ENTRY(EternalBlade),
@@ -243,6 +304,7 @@ GW::AgentID ItemFilter::GetItemOwner(const GW::ItemID item_id) const
 bool ItemFilter::WantToHide(const GW::Item& item, const bool can_pick_up) const
 {
     const auto rarity = GetRarity(item);
+
     if (can_pick_up) {
         if (dont_hide_for_player.contains(item.model_id)) return false;
 
@@ -275,7 +337,6 @@ void ItemFilter::DrawSettingInternal()
     ImGui::Text("Block the following item drops:");
     ImGui::Separator();
     ImGui::TextDisabled("First column is for items you can pick up, second for items reserved for a party member");
-    ImGui::TextDisabled("Below, you can define items that should never be blocked for you or party members.");
     ImGui::Columns(2, "player_or_ally");
 
     ImGui::Checkbox("White##player", &hide_player_white);
@@ -301,6 +362,9 @@ void ItemFilter::DrawSettingInternal()
     }
 
     ImGui::Separator();
+
+    ImGui::TextDisabled("Below, you can define items that should never be blocked for you or party members.");
+
     auto& style = ImGui::GetStyle();
     const auto old_color = style.Colors[ImGuiCol_Header];
     style.Colors[ImGuiCol_Header] = ImColor{};

@@ -698,7 +698,7 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
             marker.Render(device);
         }
 
-        if (GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags; flags.valid()) {
+        if (GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags; flags.valid()) {
             for (const auto& flag : flags) {
                 const auto translate = DirectX::XMMatrixTranslation(flag.flag.x, flag.flag.y, 0.0f);
                 const auto scale = DirectX::XMMatrixScaling(200.0f, 200.0f, 1.0f);
@@ -707,7 +707,7 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
                 linecircle.Render(device);
             }
         }
-        const GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
+        const GW::Vec3f allflag = GW::GetGameContext()->world->all_flag;
         const auto translate = DirectX::XMMatrixTranslation(allflag.x, allflag.y, 0.0f);
         const auto scale = DirectX::XMMatrixScaling(300.0f, 300.0f, 1.0f);
         const auto world = scale * translate;

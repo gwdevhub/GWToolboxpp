@@ -5,12 +5,9 @@ set(CMAKE_GENERATOR_PLATFORM win32)
 project(gwtoolbox)
 
 set(GWTOOLBOXEXE_VERSION "4.0")
-set(GWTOOLBOXDLL_VERSION "6.0")
-set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
-set(GWTOOBOX_MODULE_VERSION "6,0,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
-
-# Updates toolboxversion.txt after changes in the above version (make sure to run cmake .. or build the project)
-file(WRITE "resources/toolboxversion.txt" ${GWTOOLBOXDLL_VERSION})
+set(GWTOOLBOXDLL_VERSION "6.1")
+set(GWTOOLBOXDLL_VERSION_BETA "beta1") # can be anything. Marks beta version if not empty.
+set(GWTOOBOX_MODULE_VERSION "6,1,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 # this is no longer required, but in case we have to add an installer again some day
 # configure_file(${PROJECT_SOURCE_DIR}/gwtoolbox.wxs.in ${PROJECT_SOURCE_DIR}/gwtoolbox.wxs @ONLY)
@@ -90,8 +87,17 @@ macro(add_tb_plugin PLUGIN)
     target_compile_definitions(${PLUGIN} PRIVATE "GWCA_IMPORT")
     target_compile_definitions(gwca PRIVATE "GWCA_IMPORT")
     target_link_libraries(${PLUGIN} PRIVATE plugin_base)
+    target_compile_options(${PLUGIN} PRIVATE /wd4201 /wd4505)
+    target_compile_options(${PLUGIN} PRIVATE /W4 /WX /Gy)
+    target_compile_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GL>)
+    target_compile_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+    target_link_options(${PLUGIN} PRIVATE /WX /OPT:REF /OPT:ICF /SAFESEH:NO)
+    target_link_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>)
+    target_link_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>)
+    target_link_options(${PLUGIN} PRIVATE $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>)
     set_target_properties(${PLUGIN} PROPERTIES FOLDER "plugins/")
 endmacro()
 
-add_tb_plugin(InstanceTimer)
 add_tb_plugin(clock)
+add_tb_plugin(InstanceTimer)
+add_tb_plugin(Armory)

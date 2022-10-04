@@ -45,13 +45,25 @@ void PluginModule::DrawSettingInternal()
     ImGui::PushID("Plugins");
 
     for (auto& plugin : plugins) {
+        ImGui::PushID(&plugin);
         auto& style = ImGui::GetStyle();
         const auto origin_header_col = style.Colors[ImGuiCol_Header];
         style.Colors[ImGuiCol_Header] = {0, 0, 0, 0};
-        if (ImGui::CollapsingHeader(plugin.path.filename().string().c_str())) {
-            plugin.instance->DrawSettings();
-        }
+        const bool is_showing = ImGui::CollapsingHeader(plugin.path.filename().string().c_str(), ImGuiTreeNodeFlags_AllowItemOverlap);
         style.Colors[ImGuiCol_Header] = origin_header_col;
+
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::GetTextLineHeight() - ImGui::GetStyle().FramePadding.y * 2);
+        ImGui::Checkbox("##check", &plugin.active);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Active");
+
+
+        if (is_showing) {
+            if (plugin.active && plugin.initialized) {
+                plugin.instance->DrawSettings();
+            }
+        }
+        ImGui::PopID();
         ImGui::Separator();
     }
 
@@ -105,7 +117,7 @@ bool PluginModule::UnloadDlls()
         }
         return false;
     }
-    for (const auto plugin : plugins) {
+    for (const auto& plugin : plugins) {
         if (plugin.initialized) {
             plugin.instance->Terminate();
         }
@@ -135,6 +147,8 @@ void PluginModule::Initialize()
 void PluginModule::Draw(IDirect3DDevice9* device)
 {
     for (auto& plugin : plugins) {
+        if (!plugin.active)
+            continue;
         if (!plugin.initialized) {
             ImGuiAllocFns fns;
             ImGui::GetAllocatorFunctions(&fns.alloc_func, &fns.free_func, &fns.user_data);
