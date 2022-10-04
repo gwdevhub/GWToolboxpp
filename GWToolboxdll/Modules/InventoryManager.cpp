@@ -2125,13 +2125,13 @@ bool InventoryManager::Item::IsWeaponSetItem()
     if (!IsWeapon())
         return false;
     GW::ItemContext* c = GW::GetItemContext();
-    if (c || !c->inventory)
+    if (!c || !c->inventory)
         return false;
-    GW::WeapondSet *weapon_sets = c->inventory->weapon_sets;
+    GW::WeaponSet *weapon_sets = c->inventory->weapon_sets;
     for (size_t i = 0; i < 4; i++) {
         if (weapon_sets[i].offhand == this)
             return true;
-        if (weapon_sets[i].weapond == this)
+        if (weapon_sets[i].weapon == this)
             return true;
     }
     return false;
