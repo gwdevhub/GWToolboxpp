@@ -55,7 +55,7 @@ struct GwMouseMove {
     int captured_x;
     int captured_y;
 };
-GwMouseMove* gw_mouse_move = 0;
+GwMouseMove* gw_mouse_move = nullptr;
 LONG rawInputRelativePosX = 0;
 LONG rawInputRelativePosY = 0;
 bool* HasRegisteredTrackMouseEvent = 0;
@@ -156,12 +156,12 @@ bool CursorFixInitialise()
     ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
 
     // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
-    RAWINPUTDEVICE Rid;
-    Rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
-    Rid.usUsage = HID_USAGE_GENERIC_MOUSE;
-    Rid.dwFlags = RIDEV_INPUTSINK;
-    Rid.hwndTarget = hwnd;
-    ASSERT(RegisterRawInputDevices(&Rid, 1, sizeof(Rid)));
+    static RAWINPUTDEVICE rid;
+    rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
+    rid.usUsage = HID_USAGE_GENERIC_MOUSE;
+    rid.dwFlags = RIDEV_INPUTSINK;
+    rid.hwndTarget = hwnd;
+    ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
     return true;
 }
 
@@ -176,7 +176,7 @@ void MouseFix::Initialize()
     ToolboxModule::Initialize();
 
     OldCursorFix::InstallCursorFix();
-    CursorFixInitialise();
+    ASSERT(CursorFixInitialise());
 }
 
 void MouseFix::Terminate()
