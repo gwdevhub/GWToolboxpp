@@ -506,7 +506,7 @@ namespace {
         return ObfuscateGuildRoster(false);
     }
     void CmdObfuscate(const wchar_t*, int, wchar_t**) {
-        Obfuscator::Obfuscate(!IsObfuscatorEnabled());
+        Obfuscator::Obfuscate(!(pending_state == ObfuscatorState::Enabled));
     }
     void Reset() {
         ObfuscateGuildRoster(false);
@@ -756,7 +756,7 @@ namespace {
 }
 
 void Obfuscator::Obfuscate(bool obfuscate) {
-    if (obfuscate == IsObfuscatorEnabled())
+    if (obfuscate == (pending_state == ObfuscatorState::Enabled))
         return;
     if (obfuscate) {
         pending_state = ObfuscatorState::Enabled;
