@@ -74,6 +74,7 @@ namespace {
     GW::MemoryPatcher gold_confirm_patch;
     GW::MemoryPatcher item_description_patch;
     GW::MemoryPatcher item_description_patch2;
+    GW::MemoryPatcher skill_description_patch;
 
     void SetWindowTitle(bool enabled) {
         if (!enabled)
@@ -121,6 +122,8 @@ namespace {
     bool disable_item_descriptions_in_outpost = false;
     bool disable_item_descriptions_in_explorable = false;
     bool hide_email_address = false;
+    bool disable_skill_descriptions_in_outpost = false;
+    bool disable_skill_descriptions_in_explorable = false;
 
 
     bool IsInfused(GW::Item* item) {
@@ -357,6 +360,24 @@ namespace {
         if (block_description && GetKeyState(modifier_key_item_descriptions) < 0)
             block_description = false;
         GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
+        GW::Hook::LeaveHook();
+    }
+
+    // Key held to show/hide skill descriptions
+    const int modifier_key_skill_descriptions = VK_MENU;
+    int modifier_key_skill_descriptions_key_state = 0;
+
+    // Function called by GW to add the description of the skill to a skill tooltip
+    typedef void(__cdecl* CreateCodedTextLabel_pt)(uint32_t frame_id,wchar_t* encoded_string);
+    CreateCodedTextLabel_pt CreateEncodedTextLabel_Func = nullptr;
+    void CreateCodedTextLabel_SkillDescription(uint32_t frame_id, wchar_t* encoded_string) {
+        GW::Hook::EnterHook();
+        bool block_description = (disable_skill_descriptions_in_outpost && IsOutpost()) || (disable_skill_descriptions_in_explorable && IsExplorable());
+        if (block_description && GetKeyState(modifier_key_skill_descriptions) < 0)
+            block_description = false;
+        if (block_description)
+            encoded_string = (wchar_t*)L"\x101";
+        CreateEncodedTextLabel_Func(frame_id, encoded_string);
         GW::Hook::LeaveHook();
     }
 
@@ -686,7 +707,6 @@ namespace {
         else {
             return; // Loading
         }
-        modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
         // Trigger re-render of item tooltip
         const auto hovered_item = GW::Items::GetHoveredItem();
         if (!hovered_item)
@@ -719,6 +739,32 @@ namespace {
             if (items[1])
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[1]);
             });
+    }
+    // Check and re-render item tooltips if modifier key held
+    void UpdateSkillTooltip() {
+        if (GetKeyState(modifier_key_skill_descriptions) == modifier_key_skill_descriptions_key_state)
+            return;
+        modifier_key_skill_descriptions_key_state = GetKeyState(modifier_key_skill_descriptions);
+        if (IsExplorable()) {
+            if (!disable_skill_descriptions_in_explorable)
+                return;
+        }
+        else if (IsOutpost()) {
+            if (!disable_skill_descriptions_in_outpost)
+                return;
+        }
+        else {
+            return; // Loading
+        }
+        // Trigger re-render of the tooltip by triggering a fake change of concise skill descriptions ui message
+        auto skill = GW::SkillbarMgr::GetHoveredSkill();
+        if (!skill)
+            return;
+        if (GW::SkillbarMgr::GetHoveredSkill()) {
+            GW::GameThread::Enqueue([skill]() {
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kTitleProgressUpdated, (void*)skill->title);
+                });
+        }
     }
     GW::HookEntry OnCreateUIComponent_Entry;
     void OnCreateUIComponent(GW::UI::CreateUIComponentPacket* msg) {
@@ -1171,6 +1217,13 @@ void GameSettings::Initialize() {
         GW::HookBase::CreateHook(GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
+
+    // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
+    address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\game\\gmtipskill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0x7b);
+    CreateEncodedTextLabel_Func = (CreateCodedTextLabel_pt)GW::Scanner::FunctionFromNearCall(address);
+    skill_description_patch.SetRedirect(address, CreateCodedTextLabel_SkillDescription);
+    skill_description_patch.TogglePatch(true);
+
     // See OnAgentAllegianceChanged
     address = GW::Scanner::Find("\x75\x18\x81\xce\x00\x00\x00\x02\x56", "xxxxxxxxx", 0x9);
     SetGlobalNameTagVisibility_Func = (SetGlobalNameTagVisibility_pt)GW::Scanner::FunctionFromNearCall(address);
@@ -1467,6 +1520,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     disable_item_descriptions_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_outpost), disable_item_descriptions_in_outpost);
     disable_item_descriptions_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_explorable), disable_item_descriptions_in_explorable);
     hide_email_address = ini->GetBoolValue(Name(), VAR_NAME(hide_email_address), hide_email_address);
+    disable_skill_descriptions_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_outpost), disable_skill_descriptions_in_outpost);
+    disable_skill_descriptions_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_explorable), disable_skill_descriptions_in_explorable);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1600,6 +1655,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
     ini->SetBoolValue(Name(), VAR_NAME(hide_email_address), hide_email_address);
 
+    ini->SetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_outpost), disable_skill_descriptions_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_explorable), disable_skill_descriptions_in_explorable);
+
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     ::SaveChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -1647,7 +1705,7 @@ void GameSettings::DrawInventorySettings() {
 
     ImGui::Checkbox("Lazy chest looting", &lazy_chest_looting);
     ImGui::ShowHelp("Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
-    ImGui::Text("Only show item names when hovering in:");
+    ImGui::Text("Hide item descriptions in:");
     ImGui::ShowHelp("When hovering an item in inventory or weapon sets,\nonly show the item name in the tooltip that appears.");
     ImGui::Indent();
     ImGui::Checkbox("Explorable Area###disable_item_descriptions_in_explorable", &disable_item_descriptions_in_explorable);
@@ -1809,6 +1867,19 @@ void GameSettings::DrawSettingInternal() {
     ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Other Player (In Party)", &nametag_color_player_in_party, flags);
     ImGui::NextSpacedElement(); Colors::DrawSettingHueWheel("Item", &nametag_color_item, flags);
     ImGui::Unindent();
+
+    ImGui::Text("Hide skill descriptions in:");
+    ImGui::ShowHelp("When hovering a skill in the game,\nonly show the skill name  and cooldown etc in the tooltip that appears.");
+    ImGui::Indent();
+    ImGui::Checkbox("Explorable Area###disable_skill_descriptions_in_explorable", &disable_skill_descriptions_in_explorable);
+    ImGui::SameLine();
+    ImGui::Checkbox("Outpost###disable_skill_descriptions_in_outpost", &disable_skill_descriptions_in_outpost);
+    if (disable_skill_descriptions_in_explorable || disable_skill_descriptions_in_outpost) {
+        ImGui::Indent();
+        ImGui::TextDisabled("Hold Alt when hovering a skill to show full description");
+        ImGui::Unindent();
+    }
+    ImGui::Unindent();
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
@@ -1872,6 +1943,7 @@ void GameSettings::FactionEarnedCheckAndWarn() {
 }
 
 void GameSettings::Update(float) {
+    UpdateSkillTooltip();
     UpdateReinvite();
     UpdateItemTooltip();
     if (set_window_title_delay && TIMER_DIFF(set_window_title_delay) > 3000) {
