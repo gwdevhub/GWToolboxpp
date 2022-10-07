@@ -20,7 +20,6 @@
 #include <filesystem>
 #include <SimpleIni.h>
 
-HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
     static Armory instance;

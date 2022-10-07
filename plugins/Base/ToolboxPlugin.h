@@ -30,7 +30,7 @@ struct ImGuiAllocFns {
 //
 // Dll interface.
 //
-extern HMODULE plugin_handle; // set in dllmain
+inline HMODULE plugin_handle; // set in dllmain
 class ToolboxPlugin; // Full declaration below.
 DLLAPI ToolboxPlugin* ToolboxPluginInstance();
 
