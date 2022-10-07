@@ -37,7 +37,7 @@ public:
     }
 
     const char* Name() const override { return "Damage"; }
-    const char8_t* Icon() const override { return ICON_FA_BARS; }
+    const char* Icon() const override { return ICON_FA_BARS; }
 
     void Initialize() override;
     void Terminate() override;

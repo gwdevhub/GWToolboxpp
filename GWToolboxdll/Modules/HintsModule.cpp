@@ -10,6 +10,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Utilities/Hook.h>
 
 #include <GWCA/GameContainers/GamePos.h>
 

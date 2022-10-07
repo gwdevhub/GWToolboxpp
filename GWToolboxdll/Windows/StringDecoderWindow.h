@@ -16,7 +16,7 @@ public:
     }
 
     const char* Name() const override { return "String Decoder"; }
-    const char8_t* Icon() const override { return ICON_FA_LOCK_OPEN; }
+    const char* Icon() const override { return ICON_FA_LOCK_OPEN; }
 
     void Draw(IDirect3DDevice9* pDevice) override;
 

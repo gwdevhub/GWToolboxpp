@@ -66,7 +66,7 @@ public:
     }
 
     const char* Name() const override { return "Chat Settings"; }
-    const char8_t* Icon() const override { return ICON_FA_COMMENTS; }
+    const char* Icon() const override { return ICON_FA_COMMENTS; }
 
     void Initialize() override;
     void Terminate() override;

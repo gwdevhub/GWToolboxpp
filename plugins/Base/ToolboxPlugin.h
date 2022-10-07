@@ -46,7 +46,7 @@ public:
     // name of the window and the ini section
     [[nodiscard]] virtual const char* Name() const = 0;
 
-    [[nodiscard]] virtual const char8_t* Icon() const { return nullptr; }
+    [[nodiscard]] virtual const char* Icon() const { return nullptr; }
 
     [[nodiscard]] virtual bool HasSettings() const { return true; }
 

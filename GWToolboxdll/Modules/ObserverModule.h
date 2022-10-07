@@ -441,7 +441,7 @@ public:
     bool is_enabled = false;
 
     const char* Name() const override { return "Observer Module"; }
-    const char8_t* Icon() const override { return ICON_FA_EYE; }
+    const char* Icon() const override { return ICON_FA_EYE; }
 
     void Initialize() override;
     void Terminate() override;

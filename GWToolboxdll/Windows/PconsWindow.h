@@ -21,7 +21,7 @@ public:
     }
 
     const char* Name() const override { return "Pcons"; }
-    const char8_t* Icon() const override { return ICON_FA_BIRTHDAY_CAKE; }
+    const char* Icon() const override { return ICON_FA_BIRTHDAY_CAKE; }
 
     void Initialize() override;
     void Terminate() override;

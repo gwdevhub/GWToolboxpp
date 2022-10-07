@@ -50,11 +50,13 @@ void PluginModule::DrawSettingInternal()
         const auto origin_header_col = style.Colors[ImGuiCol_Header];
         style.Colors[ImGuiCol_Header] = {0, 0, 0, 0};
 
-        const bool is_showing = ImGui::CollapsingHeader(plugin.path.filename().string().c_str(), ImGuiTreeNodeFlags_AllowItemOverlap);
+        static char buf[128];
+        sprintf(buf, "      %s", plugin.path.filename().string().c_str());
+        const auto pos = ImGui::GetCursorScreenPos();
+        const bool is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
 
         const auto icon = plugin.initialized ? plugin.instance->Icon() : nullptr;
         if (icon) {
-            const auto pos = ImGui::GetCursorScreenPos();
             const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
             ImGui::GetWindowDrawList()->AddText(
                 ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2),
@@ -77,7 +79,6 @@ void PluginModule::DrawSettingInternal()
         ImGui::Separator();
     }
 
-    ImGui::Separator();
     if (ImGui::Button("Refresh")) {
         RefreshDlls();
     }

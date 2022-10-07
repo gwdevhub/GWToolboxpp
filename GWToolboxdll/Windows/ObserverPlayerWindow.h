@@ -28,7 +28,7 @@ public:
         const std::vector<GW::Constants::SkillID>& skill_ids);
 
     const char* Name() const override { return "Observer Player"; }
-    const char8_t* Icon() const override { return ICON_FA_EYE; }
+    const char* Icon() const override { return ICON_FA_EYE; }
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
 

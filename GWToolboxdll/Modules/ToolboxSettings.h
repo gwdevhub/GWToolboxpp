@@ -18,7 +18,7 @@ public:
     }
 
     const char* Name() const override { return "Toolbox Settings"; }
-    const char8_t* Icon() const override { return ICON_FA_TOOLBOX;  }
+    const char* Icon() const override { return ICON_FA_TOOLBOX;  }
 
     void LoadModules(CSimpleIni* ini);
 

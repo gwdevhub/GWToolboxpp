@@ -1,8 +1,5 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-#include <GWCA/Packets/StoC.h>
-
 #include <ToolboxModule.h>
 
 class HintsModule : public ToolboxModule {
@@ -11,7 +8,7 @@ public:
         static HintsModule instance;
         return instance;
     }
-    const char8_t* Icon() const override { return ICON_FA_LIGHTBULB; }
+    const char* Icon() const override { return ICON_FA_LIGHTBULB; }
     const char* Name() const override { return "Hints"; }
     const char* SettingsName() const override { return "In-Game Hints"; }
 

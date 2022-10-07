@@ -12,7 +12,7 @@ public:
     }
 
     const char* Name() const override { return "Clock"; }
-    const char8_t* Icon() const override { return ICON_FA_CLOCK; }
+    const char* Icon() const override { return ICON_FA_CLOCK; }
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;

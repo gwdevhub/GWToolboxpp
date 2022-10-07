@@ -18,7 +18,7 @@ public:
     }
 
     const char* Name() const override { return "Party Search"; }
-    const char8_t* Icon() const override { return ICON_FA_PEOPLE_ARROWS; }
+    const char* Icon() const override { return ICON_FA_PEOPLE_ARROWS; }
 
     void Initialize() override;
 
