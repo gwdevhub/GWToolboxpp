@@ -9,6 +9,8 @@ public:
     void Draw(IDirect3DDevice9*) override;
     void Update(float) override;
     void DrawSettings() override;
+    void LoadSettings(const wchar_t*) override;
+    void SaveSettings(const wchar_t*) override;
     void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     void Terminate() override;
 

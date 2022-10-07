@@ -17,6 +17,9 @@
 #include "Helpers.h"
 #include "ImGuiAddons.h"
 
+#include <filesystem>
+#include <SimpleIni.h>
+
 HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
@@ -135,14 +138,34 @@ void Armory::DrawSettings()
     ImGui::Checkbox("Visible", &visible);
 }
 
+void Armory::LoadSettings(const wchar_t* folder)
+{
+    CSimpleIniA ini{};
+    const auto path = std::filesystem::path(folder) / L"armory.ini";
+    ini.LoadFile(path.wstring().c_str());
+    visible = ini.GetBoolValue(Name(), "visible", visible);
+}
+
+void Armory::SaveSettings(const wchar_t* folder)
+{
+    CSimpleIniA ini{};
+    const auto path = std::filesystem::path(folder) / L"armory.ini";
+    ini.SetBoolValue(Name(), "visible", visible);
+    const auto error = ini.SaveFile(path.wstring().c_str());
+    if (error < 0) {
+        GW::Chat::WriteChat(GW::Chat::CHANNEL_GWCA1, L"Failed to save settings.", L"Armory");
+    }
+}
+
 void Armory::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
 
     GW::Scanner::Initialize();
+    const auto old_color = GW::Chat::SetMessageColor(GW::Chat::CHANNEL_GWCA1, 0xFFFFFFFF);
     SetItem_Func = reinterpret_cast<SetItem_pt>(GW::Scanner::Find("\x83\xC4\x04\x8B\x08\x8B\xC1\xC1", "xxxxxxxx", -0x24));
     if (!SetItem_Func) {
-        GW::Chat::WriteChat(GW::Chat::CHANNEL_MODERATOR, L"Armory: Failed to find the SetItem function");
+        GW::Chat::WriteChat(GW::Chat::CHANNEL_GWCA1, L"Failed to find the SetItem function.", L"Armory");
         return;
     }
 
@@ -156,7 +179,8 @@ void Armory::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dl
         InitItemPiece(&player_armor.feets, &equip->feet);
     }
 
-    GW::Chat::WriteChat(GW::Chat::CHANNEL_MODERATOR, L"Armory: Initialized");
+    GW::Chat::WriteChat(GW::Chat::CHANNEL_GWCA1, L"Initialized", L"Armory");
+    GW::Chat::SetMessageColor(GW::Chat::CHANNEL_GWCA1, old_color);
 }
 
 void Armory::Terminate()
