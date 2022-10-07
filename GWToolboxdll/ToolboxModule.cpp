@@ -46,8 +46,8 @@ void ToolboxModule::RegisterSettingsContent(
     }
     if (icon) {
         if (const auto ic = settings_icons.find(section); ic == settings_icons.end()) {
-            settings_icons[section] = reinterpret_cast<const char*>(icon);
-        } else if (reinterpret_cast<const char*>(icon) != ic->second) {
+            settings_icons[section] = icon;
+        } else if (icon != ic->second) {
             ASSERT(false && "Trying to set different icon for the same setting!");
         }
     }

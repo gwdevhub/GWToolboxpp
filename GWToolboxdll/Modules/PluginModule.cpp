@@ -60,7 +60,7 @@ void PluginModule::DrawSettingInternal()
             const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
             ImGui::GetWindowDrawList()->AddText(
                 ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2),
-                ImColor(style.Colors[ImGuiCol_Text]), reinterpret_cast<const char*>(icon));
+                ImColor(style.Colors[ImGuiCol_Text]), icon);
         }
 
         style.Colors[ImGuiCol_Header] = origin_header_col;
