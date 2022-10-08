@@ -13,7 +13,6 @@
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
 
-HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
     static InstanceTimer instance;

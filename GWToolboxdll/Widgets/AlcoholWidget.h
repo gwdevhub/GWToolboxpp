@@ -26,7 +26,7 @@ public:
     }
 
     const char* Name() const override { return "Alcohol"; }
-    const char8_t* Icon() const override { return ICON_FA_BEER; }
+    const char* Icon() const override { return ICON_FA_BEER; }
 
     void Initialize() override;
     void Update(float delta) override;

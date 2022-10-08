@@ -33,7 +33,7 @@ public:
     }
 
     const char* Name() const override { return "Objectives"; }
-    const char8_t* Icon() const override { return ICON_FA_BULLSEYE; }
+    const char* Icon() const override { return ICON_FA_BULLSEYE; }
 
     void Initialize() override;
 

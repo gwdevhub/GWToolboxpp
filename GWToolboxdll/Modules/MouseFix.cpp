@@ -55,7 +55,7 @@ struct GwMouseMove {
     int captured_x;
     int captured_y;
 };
-GwMouseMove* gw_mouse_move = 0;
+GwMouseMove* gw_mouse_move = nullptr;
 LONG rawInputRelativePosX = 0;
 LONG rawInputRelativePosY = 0;
 bool* HasRegisteredTrackMouseEvent = 0;
@@ -72,7 +72,8 @@ void OnSetCursorPosCenter(GwMouseMove* gwmm)
     const HWND gw_window_handle = GetFocus();
     // @Enhancement: Maybe check that the focussed window handle is the GW window handle?
     RECT rect;
-    if (!(gw_window_handle && GetClientRect(gw_window_handle, &rect))) goto leave;
+    if (!(gw_window_handle && GetClientRect(gw_window_handle, &rect)))
+        goto leave;
     gwmm->center_x = (rect.left + rect.right) / 2;
     gwmm->center_y = (rect.bottom + rect.top) / 2;
     rawInputRelativePosX = rawInputRelativePosY = 0;
@@ -85,9 +86,12 @@ leave:
 bool OnProcessInput(uint32_t* wParam, uint32_t* lParam)
 {
     GW::Hook::EnterHook();
-    if (!(HasRegisteredTrackMouseEvent && gw_mouse_move)) goto forward_call;               // Failed to find addresses for variables
-    if (!(wParam && wParam[1] == 0x200)) goto forward_call;                                // Not mouse movement
-    if (!(*HasRegisteredTrackMouseEvent && gw_mouse_move->move_camera)) goto forward_call; // Not moving the camera, or GW hasn't yet called TrackMouseEvent
+    if (!(HasRegisteredTrackMouseEvent && gw_mouse_move))
+        goto forward_call; // Failed to find addresses for variables
+    if (!(wParam && wParam[1] == 0x200))
+        goto forward_call; // Not mouse movement
+    if (!(*HasRegisteredTrackMouseEvent && gw_mouse_move->move_camera))
+        goto forward_call; // Not moving the camera, or GW hasn't yet called TrackMouseEvent
 
     lParam[0] = 0x12;
     // Set the output parameters to be the relative position of the mouse to the center of the screen
@@ -106,8 +110,10 @@ forward_call:
 
 void CursorFixWndProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
-    if (!(Message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam)) return; // Not raw input
-    if (!gw_mouse_move) return;                                                                    // No gw mouse move ptr; this shouldn't happen
+    if (!(Message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam))
+        return; // Not raw input
+    if (!gw_mouse_move)
+        return; // No gw mouse move ptr; this shouldn't happen
 
     UINT dwSize = sizeof(RAWINPUT);
     BYTE lpb[sizeof(RAWINPUT)];
@@ -127,9 +133,11 @@ void CursorFixWndProc(UINT Message, WPARAM wParam, LPARAM lParam)
 }
 bool CursorFixInitialise()
 {
-    if (gw_mouse_move) return true;
+    if (gw_mouse_move)
+        return true;
     const auto hwnd = GW::MemoryMgr::GetGWWindowHandle();
-    if (!hwnd) return false;
+    if (!hwnd)
+        return false;
     uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\base\os\win32\osinput.cpp)", "osMsg", 0x32);
     address = GW::Scanner::FunctionFromNearCall(address);
     if (address) {
@@ -156,12 +164,12 @@ bool CursorFixInitialise()
     ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
 
     // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
-    RAWINPUTDEVICE Rid;
-    Rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
-    Rid.usUsage = HID_USAGE_GENERIC_MOUSE;
-    Rid.dwFlags = RIDEV_INPUTSINK;
-    Rid.hwndTarget = hwnd;
-    ASSERT(RegisterRawInputDevices(&Rid, 1, sizeof(Rid)));
+    static RAWINPUTDEVICE rid;
+    rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
+    rid.usUsage = HID_USAGE_GENERIC_MOUSE;
+    rid.dwFlags = RIDEV_INPUTSINK;
+    rid.hwndTarget = hwnd;
+    ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
     return true;
 }
 
@@ -171,22 +179,27 @@ void CursorFixTerminate()
     GW::Hook::DisableHooks(ProcessInput_Func);
 }
 
+bool initialized = false;
 void MouseFix::Initialize()
 {
     ToolboxModule::Initialize();
-
-    OldCursorFix::InstallCursorFix();
-    CursorFixInitialise();
 }
 
 void MouseFix::Terminate()
 {
-    CursorFixTerminate();
-    OldCursorFix::UninstallCursorFix();
+    if (initialized) {
+        CursorFixTerminate();
+        OldCursorFix::UninstallCursorFix();
+    }
 }
 
 bool MouseFix::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
+    if (!initialized) [[unlikely]] {
+        OldCursorFix::InstallCursorFix();
+        ASSERT(CursorFixInitialise());
+        initialized = true;
+    }
     CursorFixWndProc(Message, wParam, lParam);
     return false;
 }

@@ -16,7 +16,6 @@ CreateCommandFn create_command = nullptr;
 DeleteCommandFn delete_command = nullptr;
 SendChatFn send_chat = nullptr;
 
-HMODULE plugin_handle;
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
     static Clock instance;

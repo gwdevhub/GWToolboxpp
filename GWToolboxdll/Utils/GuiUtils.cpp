@@ -68,7 +68,7 @@ namespace GuiUtils {
     std::string WikiUrl(std::wstring url_path) {
 
         // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
-        if (!url_path.size())
+        if (url_path.empty())
             return GetWikiPrefix();
         char cmd[256];
         std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(url_path)),'_');
@@ -76,12 +76,12 @@ namespace GuiUtils {
         return cmd;
     }
     void SearchWiki(std::wstring term) {
-        if (!term.size())
+        if (term.empty())
             return;
         char cmd[256];
         std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
         ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)cmd);
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
     }
     void OpenWiki(std::wstring url_path) {
         GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)WikiUrl(url_path).c_str());
@@ -432,12 +432,12 @@ namespace GuiUtils {
     std::wstring StringToWString(const std::string& str)
     {
         // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
-        if (str.empty()) return std::wstring();
+        if (str.empty()) return {};
         // NB: GW uses code page 0 (CP_ACP)
-        int size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, &str[0], (int)str.size(), NULL, 0);
+        const int size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.data(), (int)str.size(), NULL, 0);
         ASSERT(size_needed != 0);
-        std::wstring wstrTo(static_cast<size_t>(size_needed), 0);
-        ASSERT(MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed));
+        std::wstring wstrTo(size_needed, 0);
+        ASSERT(MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), wstrTo.data(), size_needed));
         return wstrTo;
     }
     std::wstring SanitizePlayerName(std::wstring s) {
@@ -446,7 +446,7 @@ namespace GuiUtils {
         wchar_t out[64];
         size_t len = 0;
         wchar_t remove_char_token = 0;
-        for (wchar_t& wchar : s) {
+        for (const auto& wchar : s) {
             if (remove_char_token) {
                 if (wchar == remove_char_token)
                     remove_char_token = 0;
@@ -467,7 +467,7 @@ namespace GuiUtils {
             out[len++] = wchar;
         }
         out[len++] = 0;
-        return std::wstring(out);
+        return {out};
     }
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out, const wchar_t** end_pos_out)
     {
@@ -551,11 +551,11 @@ namespace GuiUtils {
         return offset;
     }
     size_t TimeToString(time_t utc_timestamp, std::string& out) {
-        struct tm* timeinfo = localtime(&utc_timestamp);
+        tm* timeinfo = localtime(&utc_timestamp);
         if (!timeinfo)
             return 0;
         time_t now = time(NULL);
-        struct tm* nowinfo = localtime(&now);
+        tm* nowinfo = localtime(&now);
         if (!nowinfo)
             return 0;
         out.resize(64);
@@ -638,10 +638,10 @@ namespace GuiUtils {
     }
     std::wstring ToWstr(std::string& str) {
         // @Cleanup: No error handling whatsoever
-        if (str.empty()) return std::wstring();
-        int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-        std::wstring wstrTo(static_cast<size_t>(size_needed), 0);
-        MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+        if (str.empty()) return {};
+        const int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0);
+        std::wstring wstrTo(size_needed, 0);
+        MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), wstrTo.data(), size_needed);
         return wstrTo;
     }
     size_t wcstostr(char* dest, const wchar_t* src, size_t n) {
@@ -725,20 +725,3 @@ namespace GuiUtils {
         return decoded_s;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -21,7 +21,7 @@ public:
     {
         return "Skillbar";
     }
-    const char8_t* Icon() const override { return ICON_FA_HISTORY; }
+    const char* Icon() const override { return ICON_FA_HISTORY; }
 
     void LoadSettings(CSimpleIni *ini) override;
     void SaveSettings(CSimpleIni *ini) override;

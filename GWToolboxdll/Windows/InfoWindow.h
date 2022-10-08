@@ -19,7 +19,7 @@ public:
     }
 
     const char* Name() const override { return "Info"; }
-    const char8_t* Icon() const override { return ICON_FA_INFO_CIRCLE; }
+    const char* Icon() const override { return ICON_FA_INFO_CIRCLE; }
 
     void Initialize() override;
     void Terminate() override;

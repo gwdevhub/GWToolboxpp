@@ -13,7 +13,7 @@ public:
     }
 
     const char* Name() const override { return "Distance"; }
-    const char8_t* Icon() const override { return ICON_FA_RULER; }
+    const char* Icon() const override { return ICON_FA_RULER; }
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
