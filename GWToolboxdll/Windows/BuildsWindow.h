@@ -51,7 +51,7 @@ public:
     static void CmdLoad(const wchar_t* message, int argc, LPWSTR* argv);
 
     const char* Name() const override { return "Builds"; }
-    const char8_t* Icon() const override { return ICON_FA_LIST; }
+    const char* Icon() const override { return ICON_FA_LIST; }
 
     void Initialize() override;
     void Terminate() override;

@@ -39,15 +39,15 @@ void ToolboxModule::RegisterSettingsContent() {
         SettingsWeighting());
 }
 void ToolboxModule::RegisterSettingsContent(
-    const char* section, const char8_t* icon, const SectionDrawCallback& callback, float weighting)
+    const char* section, const char* icon, const SectionDrawCallback& callback, float weighting)
 {
     if (!settings_draw_callbacks.contains(section)) {
         settings_draw_callbacks.emplace(section, SectionDrawCallbackList());
     }
     if (icon) {
         if (const auto ic = settings_icons.find(section); ic == settings_icons.end()) {
-            settings_icons[section] = reinterpret_cast<const char*>(icon);
-        } else if (reinterpret_cast<const char*>(icon) != ic->second) {
+            settings_icons[section] = icon;
+        } else if (icon != ic->second) {
             ASSERT(false && "Trying to set different icon for the same setting!");
         }
     }

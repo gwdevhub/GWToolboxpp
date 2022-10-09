@@ -23,7 +23,7 @@ public:
     }
 
     const char* Name() const override { return "Plugins"; }
-    const char8_t* Icon() const override { return ICON_FA_PUZZLE_PIECE; }
+    const char* Icon() const override { return ICON_FA_PUZZLE_PIECE; }
 
     void Initialize() override;
 

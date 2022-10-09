@@ -4,7 +4,8 @@
 
 class Updater : public ToolboxUIElement {
     Updater() { can_show_in_main_window = false; };
-    ~Updater() {};
+    ~Updater() = default;
+
 public:
     static Updater& Instance() {
         static Updater instance;
@@ -14,7 +15,7 @@ public:
         std::string body;
         std::string version;
         std::string download_url;
-        uintmax_t size;
+        uintmax_t size = 0;
     };
     const char* Name() const override { return "Updater"; }
     // DrawSettingInternal() called via ToolboxSettings; don't draw it again

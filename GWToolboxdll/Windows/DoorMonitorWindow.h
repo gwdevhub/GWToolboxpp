@@ -66,7 +66,7 @@ public:
         return d;
     };
     const char* Name() const override { return "Door Monitor"; }
-    const char8_t* Icon() const override { return ICON_FA_DOOR_OPEN; }
+    const char* Icon() const override { return ICON_FA_DOOR_OPEN; }
 
     void Initialize() override;
 

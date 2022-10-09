@@ -21,7 +21,7 @@ public:
     }
 
     const char* Name() const override { return "Daily Quests"; }
-    const char8_t* Icon() const override { return ICON_FA_CALENDAR_ALT; }
+    const char* Icon() const override { return ICON_FA_CALENDAR_ALT; }
 
     void Initialize() override;
     void LoadSettings(CSimpleIni* ini) override;

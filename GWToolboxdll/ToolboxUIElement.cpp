@@ -8,7 +8,7 @@
 const char* ToolboxUIElement::UIName() const {
     if (Icon()) {
         static char buf[128];
-        sprintf(buf, "%s  %s", reinterpret_cast<const char*>(Icon()), Name());
+        sprintf(buf, "%s  %s", Icon(), Name());
         return buf;
     }
     return Name();

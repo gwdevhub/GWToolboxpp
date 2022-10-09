@@ -30,7 +30,7 @@ struct ImGuiAllocFns {
 //
 // Dll interface.
 //
-extern HMODULE plugin_handle; // set in dllmain
+inline HMODULE plugin_handle; // set in dllmain
 class ToolboxPlugin; // Full declaration below.
 DLLAPI ToolboxPlugin* ToolboxPluginInstance();
 
@@ -44,7 +44,11 @@ public:
     ToolboxPlugin& operator=(const ToolboxPlugin&) = delete;
 
     // name of the window and the ini section
-    virtual const char* Name() const = 0;
+    [[nodiscard]] virtual const char* Name() const = 0;
+
+    [[nodiscard]] virtual const char* Icon() const { return nullptr; }
+
+    [[nodiscard]] virtual bool HasSettings() const { return true; }
 
     // Initialize module
     virtual void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll)

@@ -54,7 +54,7 @@ public:
     }
 
     const char* Name() const override { return "Party Statistics"; }
-    const char8_t* Icon() const override { return ICON_FA_TABLE; }
+    const char* Icon() const override { return ICON_FA_TABLE; }
 
     void Initialize() override;
     void Terminate() override;

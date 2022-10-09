@@ -117,7 +117,7 @@ public:
     static void AddFriendAliasToMessage(wchar_t** message_ptr);
 
     const char* Name() const override { return "Friend List"; }
-    const char8_t* Icon() const override { return ICON_FA_USER_FRIENDS; }
+    const char* Icon() const override { return ICON_FA_USER_FRIENDS; }
 
     bool IsWidget() const override;
     bool IsWindow() const override;
