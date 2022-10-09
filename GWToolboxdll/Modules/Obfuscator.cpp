@@ -465,14 +465,14 @@ namespace {
             if (obfuscate) {
                 if (player->current_name
                     && player->current_name[0]
-                    && ObfuscateName(player->current_name, tmp)
+                    && ObfuscateName(player->current_name, tmp, true)
                     && tmp != player->current_name) {
                     wcscpy(player->current_name, tmp.c_str());
                     guild_member_updated = true;
                 }
                 if (player->invited_name
                     && player->invited_name[0]
-                    && ObfuscateName(player->invited_name, tmp)
+                    && ObfuscateName(player->invited_name, tmp, true)
                     && tmp != player->invited_name) {
                     wcscpy(player->invited_name, tmp.c_str());
                     guild_member_updated = true;
