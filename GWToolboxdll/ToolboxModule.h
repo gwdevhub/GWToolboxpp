@@ -1,7 +1,7 @@
 #pragma once
 
-typedef std::function<void(const std::string* section, bool is_showing)> SectionDrawCallback;
-typedef std::vector<std::pair<float,SectionDrawCallback>> SectionDrawCallbackList;
+typedef std::function<void(const std::string& section, bool is_showing)> SectionDrawCallback;
+typedef std::vector<std::pair<float, SectionDrawCallback>> SectionDrawCallbackList;
 
 class ToolboxModule {
 protected:

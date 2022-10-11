@@ -42,8 +42,7 @@ void ToolboxUIElement::RegisterSettingsContent() {
     ToolboxModule::RegisterSettingsContent(
         SettingsName(),
         Icon(),
-        [this](const std::string* section, bool is_showing) {
-            UNREFERENCED_PARAMETER(section);
+        [this](const std::string&, bool is_showing) {
             ShowVisibleRadio();
             if (!is_showing) return;
             DrawSizeAndPositionSettings();

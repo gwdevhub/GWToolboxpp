@@ -1555,15 +1555,13 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 void GameSettings::RegisterSettingsContent() {
     ToolboxModule::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent("Inventory Settings", ICON_FA_BOXES,
-        [this](const std::string* section, bool is_showing) {
-            UNREFERENCED_PARAMETER(section);
+        [this](const std::string&, bool is_showing) {
             if (!is_showing) return;
             DrawInventorySettings();
         }, 0.9f);
 
     ToolboxModule::RegisterSettingsContent("Party Settings", ICON_FA_USERS,
-        [this](const std::string* section, bool is_showing) {
-            UNREFERENCED_PARAMETER(section);
+        [this](const std::string&, bool is_showing) {
             if (!is_showing) return;
             DrawPartySettings();
         }, 0.9f);
@@ -2523,9 +2521,11 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
     GW::Chat::WriteChatEnc(static_cast<GW::Chat::Channel>(msg->channel), new_message);
     // Copy file to clipboard
 
-    int size = sizeof(DROPFILES) + ((file_path_len + 2) * sizeof(wchar_t));
+    int size = sizeof(DROPFILES) + (file_path_len + 2) * sizeof(wchar_t);
     HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
+    ASSERT(hGlobal != nullptr);
     DROPFILES* df = (DROPFILES*)GlobalLock(hGlobal);
+    ASSERT(df != nullptr);
     ZeroMemory(df, size);
     df->pFiles = sizeof(DROPFILES);
     df->fWide = TRUE;
@@ -2534,7 +2534,7 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
     GlobalUnlock(hGlobal);
 
     // prepare the clipboard
-    OpenClipboard(NULL);
+    OpenClipboard(nullptr);
     EmptyClipboard();
     SetClipboardData(CF_HDROP, hGlobal);
     CloseClipboard();
