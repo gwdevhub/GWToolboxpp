@@ -180,7 +180,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     for (const auto& setting_callback : settings_section->second | std::views::values) {
         //if (i && is_showing) ImGui::Separator();
         ImGui::PushID(i);
-        setting_callback(&settings_section->first, is_showing);
+        setting_callback(settings_section->first, is_showing);
         i++;
         ImGui::PopID();
     }

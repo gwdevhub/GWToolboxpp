@@ -87,7 +87,9 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 #if 0
     modules.push_back(&GWFileRequester::Instance());
 #endif
+#ifdef _DEBUG
     if (use_plugins) modules.push_back(&PluginModule::Instance());
+#endif
     if (use_chatcommand) modules.push_back(&ChatCommands::Instance());
     if (use_chatfilter) modules.push_back(&ChatFilter::Instance());
     if (use_itemfilter) modules.push_back(&ItemFilter::Instance());
@@ -223,7 +225,9 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Obfuscator", &use_obfuscator},
         {"Party Window", &use_partywindowmodule},
         {"Pcons", &use_pcons},
+#ifdef _DEBUG
         {"Plugins", &use_plugins},
+#endif
         {"Reroll", &use_reroll_window},
         {"Skill Monitor", &use_skill_monitor},
         {"Timer", &use_timer},

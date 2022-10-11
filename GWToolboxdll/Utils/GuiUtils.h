@@ -5,10 +5,10 @@
 #include <nlohmann/json.hpp>
 
 #ifndef DLLAPI
-#ifdef GWCA_BUILD_EXPORTS
-#define DLLAPI extern "C" __declspec(dllexport)
-#else
+#ifdef GWCA_IMPORT
 #define DLLAPI __declspec(dllimport)
+#else
+#define DLLAPI extern "C" __declspec(dllexport)
 #endif
 #endif
 

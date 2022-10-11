@@ -407,14 +407,17 @@ void ChatLog::Initialize() {
         },-0x8000);
     Init();
 }
-void ChatLog::RegisterSettingsContent() {
-    ToolboxModule::RegisterSettingsContent("Chat Settings", ICON_FA_COMMENTS,
-        [this](const std::string* section, bool is_showing) {
-            UNREFERENCED_PARAMETER(section);
-            if (!is_showing) return;
+void ChatLog::RegisterSettingsContent()
+{
+    ToolboxModule::RegisterSettingsContent(
+        "Chat Settings", ICON_FA_COMMENTS,
+        [this](const std::string&, bool is_showing) {
+            if (!is_showing)
+                return;
             ImGui::Checkbox("Enable GWToolbox chat log", &Instance().enabled);
             ImGui::ShowHelp("Guild Wars doesn't save your chat history or sent messages if you log out of the game.\nTurn this feature on to let GWToolbox keep better track of your chat history between logins");
-        }, 0.8f);
+        },
+        0.8f);
 }
 void ChatLog::OnAddToSentLog(wchar_t* message) {
     GW::HookBase::EnterHook();

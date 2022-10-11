@@ -512,7 +512,7 @@ void PconsWindow::RegisterSettingsContent() {
     ToolboxModule::RegisterSettingsContent(
         "Game Settings",
         nullptr,
-        [this](const std::string*, bool is_showing) {
+        [this](const std::string&, bool is_showing) {
             if (!is_showing) return;
             DrawLunarsAndAlcoholSettings();
         }, 1.1f);

@@ -890,8 +890,7 @@ void FriendListWindow::DrawSettingInternal() {
 void FriendListWindow::RegisterSettingsContent() {
     ToolboxUIElement::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent("Chat Settings", nullptr,
-        [this](const std::string* section, bool is_showing) {
-            UNREFERENCED_PARAMETER(section);
+        [this](const std::string&, bool is_showing) {
             if (!is_showing) return;
             DrawChatSettings();
         },0.91f);
