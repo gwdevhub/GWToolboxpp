@@ -35,7 +35,7 @@ void ToolboxModule::RegisterSettingsContent()
 void ToolboxModule::RegisterSettingsContent(const char* section, const char* icon, const SectionDrawCallback& callback, float weighting)
 {
     if (!settings_draw_callbacks.contains(section)) {
-        settings_draw_callbacks.emplace(section, SectionDrawCallbackList());
+        settings_draw_callbacks[section] = {};
     }
     if (icon) {
         if (!settings_icons.contains(section)) {
