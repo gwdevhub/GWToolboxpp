@@ -317,7 +317,7 @@ namespace GuiUtils {
             }
             initialised = true;
         }
-        char out[256];
+        char out[256]{};
         size_t len = 0;
         const char* in = s.c_str();
         for (size_t i = 0; in[i] && len < 255; i++) {
@@ -349,7 +349,7 @@ namespace GuiUtils {
             }
             initialised = true;
         }
-        char out[256];
+        char out[256]{};
         size_t len = 0;
         const char* in = s.c_str();
         for (size_t i = 0; in[i] && len < 255; i++) {
@@ -443,7 +443,7 @@ namespace GuiUtils {
     std::wstring SanitizePlayerName(std::wstring s) {
         // e.g. "Player Name (2)" => "Player Name", for pvp player names
         // e.g. "Player Name [TAG]" = >"Player Name", for alliance message sender name
-        wchar_t out[64];
+        wchar_t out[64]{};
         size_t len = 0;
         wchar_t remove_char_token = 0;
         for (const auto& wchar : s) {
@@ -579,9 +579,7 @@ namespace GuiUtils {
         return TimeToString(filetime_to_timet(utc_timestamp), out);
     }
     time_t filetime_to_timet(const FILETIME& ft) {
-        ULARGE_INTEGER ull;
-        ull.LowPart = ft.dwLowDateTime;
-        ull.HighPart = ft.dwHighDateTime;
+        const ULARGE_INTEGER ull{ft.dwLowDateTime, ft.dwHighDateTime};
         return ull.QuadPart / 10000000ULL - 11644473600ULL;
     }
 
