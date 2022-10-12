@@ -122,7 +122,7 @@ GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent)
     }
 }
 
-bool armor_filter_array_getter([[maybe_unused]] void* data, int idx, const char** out_text)
+bool armor_filter_array_getter(void* data, int idx, const char** out_text)
 {
     switch (idx) {
         case Campaign_All: *out_text = "All"; break;

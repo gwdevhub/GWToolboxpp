@@ -58,7 +58,7 @@ void InstanceTimer::Terminate()
     ToolboxPlugin::Terminate();
 }
 
-void InstanceTimer::Draw([[maybe_unused]] IDirect3DDevice9* pDevice)
+void InstanceTimer::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle) return;
     if (!visible) return;

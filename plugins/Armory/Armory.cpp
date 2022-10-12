@@ -70,7 +70,7 @@ void Armory::Update(const float delta)
     }
 }
 
-void Armory::Draw([[maybe_unused]] IDirect3DDevice9* device)
+void Armory::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle)
         return;

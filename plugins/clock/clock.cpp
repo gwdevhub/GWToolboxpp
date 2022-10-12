@@ -33,7 +33,7 @@ auto GetTime()
     return str;
 }
 
-void Clock::Draw([[maybe_unused]] IDirect3DDevice9* device)
+void Clock::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle)
         return;
