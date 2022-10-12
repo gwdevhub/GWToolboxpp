@@ -767,12 +767,11 @@ IDirect3DTexture9* PvESkill::GetMissionImage()
 PvESkill::PvESkill(SkillID _skill_id)
 	: Mission(MapID::None, dummy_var, dummy_var), skill_id(_skill_id) {
 	if (_skill_id != SkillID::No_Skill) {
-		GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-		if (s) {
-			name.reset(s->name);
-			profession = s->profession;
+        const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+		if (skill) {
+			name.reset(skill->name);
+			profession = skill->profession;
 		}
-
     }
 }
 void PvESkill::OnClick() {
