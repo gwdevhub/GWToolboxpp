@@ -21,8 +21,6 @@ target_sources(GWToolboxdll PRIVATE ${SOURCES})
 
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
-target_compile_definitions(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:GWCA_BUILD_EXPORTS>)
-target_compile_definitions(gwca PRIVATE $<$<CONFIG:Debug>:GWCA_BUILD_EXPORTS>)
 
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy)
 target_compile_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GL>)
