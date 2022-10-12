@@ -195,7 +195,7 @@ void MouseFix::Terminate()
 
 bool MouseFix::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
-    if (!initialized) [[unlikely]] {
+    if (!initialized) {
         OldCursorFix::InstallCursorFix();
         ASSERT(CursorFixInitialise());
         initialized = true;
