@@ -249,7 +249,7 @@ namespace {
         return to_move - remaining;
     }
 
-    std::vector<InventoryManager::Item*> filter_items(GW::Constants::Bag from, GW::Constants::Bag to, std::function<bool(InventoryManager::Item*)> cmp) {
+    std::vector<InventoryManager::Item*> filter_items(GW::Constants::Bag from, GW::Constants::Bag to, std::function<bool(InventoryManager::Item*)> cmp, uint32_t limit = 0) {
         std::vector<InventoryManager::Item*> out;
         const size_t bag_first = static_cast<size_t>(from);
         const size_t bag_last = static_cast<size_t>(to);
@@ -259,8 +259,11 @@ namespace {
             if (!bag) continue;
             for (size_t slot = 0; slot < bag->items.size(); slot++) {
                 item = static_cast<InventoryManager::Item*>(bag->items[slot]);
-                if (cmp(item))
-                    out.push_back(item);
+                if (!cmp(item))
+                    continue;
+                out.push_back(item);
+                if (out.size() == limit)
+                    return out;
             }
         }
         return out;
