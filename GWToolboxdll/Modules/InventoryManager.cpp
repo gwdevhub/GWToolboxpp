@@ -268,6 +268,14 @@ namespace {
         }
         return out;
     }
+    uint16_t count_items(GW::Constants::Bag from, GW::Constants::Bag to, std::function<bool(InventoryManager::Item*)> cmp) {
+        auto items = filter_items(from, to, cmp);
+        uint16_t out = 0;
+        for (const auto item : items) {
+            out += item->quantity;
+        }
+        return out;
+    }
 
     const GW::Array<GW::TradeContext::Item>* GetPlayerTradeItems() {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
@@ -298,18 +306,17 @@ namespace {
     }
     void move_all_item(InventoryManager::Item* like_item) {
         ASSERT(like_item && like_item->bag);
+        const auto is_same_item = [like_item](InventoryManager::Item* cmp) {
+            return cmp && InventoryManager::IsSameItem(like_item, cmp);
+        };
         if (like_item->bag->IsInventoryBag()) {
-            std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [like_item](InventoryManager::Item* cmp) {
-                return cmp && InventoryManager::IsSameItem(like_item, cmp);
-                });
+            std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, is_same_item);
             for (auto& item : items) {
                 move_item_to_storage(item);
             }
         }
         else {
-            std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, [like_item](InventoryManager::Item* cmp) {
-                return cmp && InventoryManager::IsSameItem(like_item, cmp);
-                });
+            std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, is_same_item);
             for (auto& item : items) {
                 move_item_to_inventory(item);
             }
