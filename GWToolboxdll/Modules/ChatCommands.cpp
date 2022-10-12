@@ -209,6 +209,8 @@ namespace {
         result->OpenInBrowser();
     }
 
+    const char* withdraw_syntax = "'/withdraw [quantity (1-65535)] model_id1 [model_id2 ...]' tops up your inventory with a minimum quantity of 1 or more items, identified by model_id";
+
 } // namespace
 
 void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
@@ -388,6 +390,7 @@ void ChatCommands::DrawHelp() {
         "Use '/useskill <skill>' to stop the skill.");
     ImGui::Bullet(); ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
     ImGui::Bullet(); ImGui::Text("'/wiki [quest|<search_term>]' search GWW for current quest or search term. By default, will search for the current map.");
+    ImGui::Bullet(); ImGui::Text(withdraw_syntax);
     ImGui::TreePop();
 }
 
@@ -1654,23 +1657,29 @@ void ChatCommands::CmdHom(const wchar_t* message, int argc, LPWSTR*) {
 // /withdraw quantity model_id1 [model_id2 ...]
 void ChatCommands::CmdWithdraw(const wchar_t*, int argc, LPWSTR* argv)
 {
+    const auto syntax_error = []() {
+        Log::Error("Incorrect syntax:");
+        Log::Error(withdraw_syntax);
+    };
     if (argc < 3)
-        return Log::Warning("Incorrect usage. Format is /withdraw quantity model_id1 [model_id2 ...]");
-    unsigned wanted_quantity = 0;
-    std::vector<unsigned> model_ids;
+        return syntax_error();
+    uint32_t wanted_quantity = 0;
+    std::vector<uint32_t> model_ids;
 
-    if (!GuiUtils::ParseUInt(argv[1], &wanted_quantity)) {
-        return Log::Warning("Incorrect usage. Format is /withdraw quantity model_id1 [model_id2 ...]");
+    if (!(GuiUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
+        return syntax_error();
     }
     for (int i = 2; i < argc; i++) {
-        unsigned model_id;
+        uint32_t model_id;
         if (!GuiUtils::ParseUInt(argv[i], &model_id)) {
-            return Log::Warning("Incorrect usage. Format is /withdraw quantity model_id1 [model_id2 ...]");
+            return syntax_error();
         }
         model_ids.push_back(model_id);
     }
 
-    InventoryManager::Instance().RefillUpToQuantity(wanted_quantity, model_ids);
+    // NB: uint16_t used already throughout Inv manager, and can't possibly have move than 0xffff of any item anyway.
+    uint16_t to_move = (uint16_t)wanted_quantity;
+    InventoryManager::Instance().RefillUpToQuantity(to_move, model_ids);
 }
 
 void ChatCommands::CmdTransmo(const wchar_t *, int argc, LPWSTR *argv) {
