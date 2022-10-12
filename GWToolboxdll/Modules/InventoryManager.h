@@ -68,8 +68,6 @@ public:
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
     static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
-    static void OnMoveItemPacket(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
-    static void OnRequestQuote(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     static void __fastcall OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id);
 

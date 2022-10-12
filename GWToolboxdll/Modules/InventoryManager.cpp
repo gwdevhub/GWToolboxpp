@@ -472,124 +472,7 @@ namespace {
         }
         return slots;
     }
-#if 0
-    void DrawInventoryOverlay() {
-        // Testing inventory slots overlay
-        if (inventory_bags_window_position && inventory_bags_window_position->visible()) {
-            float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
-            // NB: Use case to define GW::Vec4f ?
-            GW::Vec2f x = inventory_bags_window_position->xAxis(uiscale_multiply);
-            GW::Vec2f y = inventory_bags_window_position->yAxis(uiscale_multiply);
-            float window_width = x.y - x.x;
-            float window_height = y.y - y.x;
-            Rect padding = GetGWWindowPadding();
-            float inner_width = window_width - padding.left - padding.right;
-            float inner_height = window_height - padding.top - padding.bottom;
-            ImGui::SetNextWindowPos({ x.x + padding.left,y.x + padding.top });
-            ImGui::SetNextWindowSize({ inner_width,inner_height });
-            ImGui::SetNextWindowBgAlpha(0.0f);
-            ImVec4 semi = ImColor(0xff, 0xff, 0xff, 100).Value;
-            ImGui::PushStyleColor(ImGuiCol_Border, semi);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
 
-            if (ImGui::Begin("Inventory Slots Overlay", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoInputs)) {
-                ImVec2 pos = { 0.f, 0.f };
-                char imgui_id[12];
-                ImVec4 trans = ImColor(0, 0, 0, 0).Value;
-                ImGui::PushStyleColor(ImGuiCol_Button, trans);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, trans);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, trans);
-                ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
-                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
-                // @Cleanup: This logic is based on bags being "combined" - find out positioning when its not!
-                bool has_bag_headings = !GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ShowCollapsedBags) == 1;
-
-                const GW::Vec2f& inventory_slot_size = GetInventorySlotSize();
-                float cols_per_rowf = inner_width / inventory_slot_size.x;
-                float cols_per_row = floor(cols_per_rowf);
-                float remainder = cols_per_rowf - cols_per_row;
-                if (remainder > 0.f && inventory_slot_size.x * remainder > 37.f * uiscale_multiply)
-                    cols_per_row += 1.f;
-                int bags = 0;
-                int slots = 0;
-                GW::Bag* bag = nullptr;
-                for (size_t bag_index = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_index < static_cast<size_t>(GW::Constants::Bag::Equipment_Pack); bag_index++) {
-                    bag = GW::Items::GetBag(bag_index);
-                    if (!bag) continue;
-                    bags++;
-                    slots += bag->items.m_size;
-                }
-                Rect bag_padding = { 21.f, 0.f, 9.f, 0.f };
-                bag_padding *= uiscale_multiply;
-                if (!has_bag_headings)
-                    bag_padding *= 0.f;
-                inner_height -= (bag_padding.top * bags) - (bag_padding.bottom * bags);
-                inner_width -= bag_padding.right - bag_padding.left;
-                // Calculate rows per column (requires slot count to calculate if scrollbar is visible)
-                float rows_per_col = floor(inner_height / inventory_slot_size.y);
-                float slots_visible = rows_per_col * cols_per_row;
-                bool scrollbar = slots_visible < slots;
-                if (scrollbar) {
-                    // Scrollbar has been added; recalculate columns per row
-                    inner_width -= gw_scrollbar_width * uiscale_multiply;
-                    cols_per_rowf = inner_width / inventory_slot_size.x;
-                    cols_per_row = floor(cols_per_rowf);
-                    remainder = cols_per_rowf - cols_per_row;
-                    if (remainder > 0.f && inventory_slot_size.x * remainder > 37.f * uiscale_multiply)
-                        cols_per_row += 1.f;
-                }
-                cols_per_row = std::max(cols_per_row, 5.f);
-                // Cycle inventory, find click target.
-                Rect slot;
-                slot.left = x.x + padding.left;
-                slot.top = y.x + padding.top;
-                int row_slot = 0;
-                slot.bottom = slot.top + inventory_slot_size.y;
-                for (size_t bag_index = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_index < static_cast<size_t>(GW::Constants::Bag::Equipment_Pack); bag_index++) {
-                    bag = GW::Items::GetBag(bag_index);
-                    if (!bag) continue;
-                    int item_count = static_cast<int>(bag->items.size());
-                    int slot_idx = 0;
-                    if (has_bag_headings) {
-                        slot.top += bag_padding.top;
-                        slot.bottom = slot.top + inventory_slot_size.y;
-                    }
-                    do {
-                        if (row_slot == cols_per_row) {
-                            slot.left = x.x + padding.left;
-                            slot.top += inventory_slot_size.y;
-                            slot.bottom = slot.top + inventory_slot_size.y;
-                            row_slot = 0;
-                        }
-                        slot.right = slot.left + inventory_slot_size.x;
-                        ImGui::SetCursorScreenPos({ slot.left, slot.top });
-                        snprintf(imgui_id, _countof(imgui_id), "###inv_slot_%d%d", bag->bag_id, slot_idx);
-                        ImGui::Button(imgui_id, { inventory_slot_size.x, inventory_slot_size.y });
-
-                        slot.left += inventory_slot_size.x;
-                        slot_idx++;
-                        row_slot++;
-                    } while (slot_idx < item_count);
-                    if (has_bag_headings) {
-                        slot.left = x.x + padding.left;
-                        slot.top += inventory_slot_size.y + bag_padding.bottom;
-                        slot.bottom = slot.top + inventory_slot_size.y;
-                        row_slot = 0;
-                    }
-                }
-                ImGui::PopStyleVar(2);
-                ImGui::PopStyleColor(3);
-
-            }
-            ImGui::End();
-            ImGui::PopStyleVar(4);
-            ImGui::PopStyleColor(1);
-        }
-    }
-#endif
 } // namespace
 InventoryManager::InventoryManager()
     : tome_pending_stage(), pending_transaction() {
@@ -1391,6 +1274,7 @@ GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, bool
     return best_item;
 }
 bool InventoryManager::IsSameItem(const GW::Item* item1, const GW::Item* item2) {
+    // TODO: Special cases for minipets and kits (dunno whats up with minipets, but kits have uses in mod struct)
     return item1 && item2
         && (!item1->model_id || item1->model_id == item2->model_id)
         && (!item1->model_file_id || item1->model_file_id == item2->model_file_id)
