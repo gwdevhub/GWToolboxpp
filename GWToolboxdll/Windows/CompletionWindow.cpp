@@ -753,7 +753,12 @@ IDirect3DTexture9* ItemAchievement::GetMissionImage()
     return nullptr;
 }
 void ItemAchievement::OnClick() {
-    GuiUtils::OpenWiki(name.wstring());
+    wchar_t* buf = new wchar_t[name.wstring().size() + 1];
+    wcscpy(buf, name.wstring().c_str());
+    GW::GameThread::Enqueue([buf]() {
+        GuiUtils::OpenWiki(buf);
+        delete[] buf;
+        });
 }
 
 IDirect3DTexture9* PvESkill::GetMissionImage()
