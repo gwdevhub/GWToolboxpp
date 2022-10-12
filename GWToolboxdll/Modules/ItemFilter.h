@@ -26,7 +26,6 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
-    void Update([[maybe_unused]] float delta) override {}
 
     [[nodiscard]] GW::AgentID GetItemOwner(GW::ItemID item_id) const;
     void SpawnSuppressedItems();
