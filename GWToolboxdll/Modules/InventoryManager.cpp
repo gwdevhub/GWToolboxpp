@@ -1156,7 +1156,7 @@ uint16_t InventoryManager::RefillUpToQuantity(uint16_t wanted_quantity, const st
 {
     uint16_t moved = 0;
     for (const auto model_id : model_ids) {
-        const auto is_same_item = [model_id](InventoryManager::Item* cmp) {
+        const auto is_same_item = [model_id](const InventoryManager::Item* cmp) {
             return cmp && cmp->model_id == model_id;
         };
         const auto amount_in_inventory = count_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Equipment_Pack, is_same_item);
