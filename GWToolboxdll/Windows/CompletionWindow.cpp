@@ -775,11 +775,9 @@ PvESkill::PvESkill(SkillID _skill_id)
     }
 }
 void PvESkill::OnClick() {
-    wchar_t buf[128];
-    swprintf(buf, 128, L"Game_link:Skill_%d", skill_id);
-    GW::GameThread::Enqueue([buf]() {
-        GuiUtils::OpenWiki(buf);
-        });
+    GW::GameThread::Enqueue([url = std::format(L"Game_link:Skill_{}", skill_id)] {
+        GuiUtils::OpenWiki(url);
+    });
 }
 bool PvESkill::Draw(IDirect3DDevice9* device) {
     const ImVec2 cursor_pos = ImGui::GetCursorPos();
@@ -801,10 +799,10 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
 
         ImGui::SetCursorPos(cursor_pos);
 
-        const ImVec2 check_size = ImGui::CalcTextSize(reinterpret_cast<const char*>(ICON_FA_CHECK));
-        ImGui::GetWindowDrawList()->AddText({screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2.f),
-                                                screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2.f)},
-            completed_text, reinterpret_cast<const char*>(ICON_FA_CHECK));
+        const ImVec2 check_size = ImGui::CalcTextSize(ICON_FA_CHECK);
+        ImGui::GetWindowDrawList()->AddText({screen_pos.x + (icon_size_scaled.x - check_size.x) / 2.f,
+                                                screen_pos.y + (icon_size_scaled.y - check_size.y) / 2.f},
+                                                completed_text, ICON_FA_CHECK);
         ImGui::SetCursorPos(cursor_pos2);
     }
     return true;
