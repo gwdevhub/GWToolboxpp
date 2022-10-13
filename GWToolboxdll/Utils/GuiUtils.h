@@ -36,7 +36,7 @@ namespace GuiUtils {
     void LoadFonts();
     std::string WikiUrl(std::wstring term);
     std::string WikiUrl(std::string term);
-    void OpenWiki(std::wstring term);
+    void OpenWiki(const std::wstring& term);
     void SearchWiki(std::wstring term);
     bool FontsLoaded();
     DLLAPI ImFont* GetFont(FontSize size);

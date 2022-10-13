@@ -83,7 +83,7 @@ namespace GuiUtils {
         ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
         GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
     }
-    void OpenWiki(std::wstring url_path) {
+    void OpenWiki(const std::wstring& url_path) {
         GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)WikiUrl(url_path).c_str());
     }
     // Has LoadFonts() finished?
