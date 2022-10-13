@@ -195,17 +195,6 @@ void Pcon::Update(int delay) {
     }
 
 }
-GW::Bag* Pcon::GetBag(GW::Constants::Bag bag_id) {
-    GW::Bag** bags = GW::Items::GetBagArray();
-    if (!bags) return nullptr;
-    for (size_t i = 1; i < static_cast<int>(GW::Constants::BagMax); i++) {
-        GW::Bag* bag = bags[i];
-        if (!bag) continue;
-        if (bag->bag_id == static_cast<GW::Constants::Bag>(bag_id))
-            return bag;
-    }
-    return nullptr;
-}
 bool Pcon::ReserveSlotForMove(size_t bagIndex, size_t slot)
 {
     if (IsSlotReservedForMove(bagIndex, slot))
