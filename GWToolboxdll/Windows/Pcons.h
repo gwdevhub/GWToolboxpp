@@ -62,7 +62,7 @@ public:
     // Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
     static uint32_t MoveItem(GW::Item *item, GW::Bag *bag, size_t slot,
                              size_t quantity = 0);
-    static GW::Bag* GetBag(uint32_t bag_id);
+    static GW::Bag* GetBag(GW::Constants::Bag bag_id);
     wchar_t* SetPlayerName();
     // Pass true to start refill, or false to stop.
     void Refill(bool do_refill = true);

@@ -25,8 +25,6 @@
 #include <Windows/Pcons.h>
 #include <Windows/PconsWindow.h>
 
-using namespace GW::Constants;
-
 float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;
 int Pcon::lunar_delay = 500;
@@ -197,7 +195,7 @@ void Pcon::Update(int delay) {
     }
 
 }
-GW::Bag* Pcon::GetBag(uint32_t bag_id) {
+GW::Bag* Pcon::GetBag(GW::Constants::Bag bag_id) {
     GW::Bag** bags = GW::Items::GetBagArray();
     if (!bags) return nullptr;
     for (size_t i = 1; i < static_cast<int>(GW::Constants::BagMax); i++) {
@@ -477,6 +475,7 @@ size_t PconGeneric::QuantityForEach(const GW::Item* item) const {
 }
 
 void PconGeneric::OnButtonClick() {
+    using namespace GW::Constants;
     Pcon::OnButtonClick();
 
     if (PconsWindow::Instance().shift_click_toggles_category && ImGui::IsKeyDown(ImGuiKey_ModShift)) {
@@ -547,6 +546,7 @@ bool PconCity::CanUseByInstanceType() const {
     return maptype == GW::Constants::InstanceType::Outpost;
 }
 bool PconCity::CanUseByEffect() const {
+    using namespace GW::Constants;
     GW::Agent* _player = GW::Agents::GetPlayer();
     if (!_player)
         return false; // player doesn't exist?
@@ -573,6 +573,7 @@ bool PconCity::IsVisible() const {
     return visible && (!hide_city_pcons_in_explorable_areas || maptype == GW::Constants::InstanceType::Outpost);
 }
 size_t PconCity::QuantityForEach(const GW::Item* item) const {
+    using namespace GW::Constants;
     switch (item->model_id) {
     case ItemID::CremeBrulee:
     case ItemID::ChocolateBunny:
@@ -593,6 +594,7 @@ bool PconAlcohol::CanUseByEffect() const {
     return AlcoholWidget::Instance().GetAlcoholLevel() <= 1;
 }
 size_t PconAlcohol::QuantityForEach(const GW::Item* item) const {
+    using namespace GW::Constants;
     switch (item->model_id) {
     case ItemID::Eggnog:
     case ItemID::DwarvenAle:
@@ -648,6 +650,7 @@ void PconLunar::Update(int delay) {
     Pcon::Update(lunar_delay);
 }
 size_t PconLunar::QuantityForEach(const GW::Item* item) const {
+    using namespace GW::Constants;
     switch (item->model_id) {
     case ItemID::LunarPig:
     case ItemID::LunarRat:
