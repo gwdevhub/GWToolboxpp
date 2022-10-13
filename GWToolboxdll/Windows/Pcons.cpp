@@ -455,18 +455,18 @@ void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
     inifile->SetBoolValue(section, buf_visible, visible);
 
     for (const auto& charname_pcons : settings_by_charname) {
-        bool* _enabled = charname_pcons.second;
+        bool _enabled = charname_pcons.second;
         if (charname_pcons.first == L"default") {
-            inifile->SetBoolValue(section, buf_active, *_enabled);
+            inifile->SetBoolValue(section, buf_active, _enabled);
             continue;
         }
-        std::wstring charname = charname_pcons.first;
+        const auto& charname = charname_pcons.first;
         if (charname.empty())
             continue;
         std::string char_section(section);
         char_section.append(":");
         char_section.append(GuiUtils::WStringToString(charname).c_str());
-        inifile->SetBoolValue(char_section.c_str(), buf_active, *_enabled);
+        inifile->SetBoolValue(char_section.c_str(), buf_active, _enabled);
     }
 }
 
