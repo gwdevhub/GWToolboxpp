@@ -78,7 +78,7 @@ public:
     static IDirect3DTexture9** GetGuildWarsWikiImage(const char* filename, size_t width = 0);
 
     // Guaranteed to return a pointer, but may not yet be decoded.
-    GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);
+    static GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);
 
     // Ensure file exists on disk, download from remote location if not found. If an error occurs, details are held in error string
     static void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
