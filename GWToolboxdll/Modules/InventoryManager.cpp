@@ -498,10 +498,6 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage mes
     case GW::UI::UIMessage::kItemUpdated: {
         clear_pending_move((uint32_t)wparam);
     } break;
-    case GW::UI::UIMessage::kItemMoved: {
-        // { Item* item, Bag* bag, uint32_t slot }
-        //clear_pending_move((uint32_t)wparam);
-    } break;
         // About to request a quote for an item
     case GW::UI::UIMessage::kSendMerchantRequestQuote: {
         requesting_quote_type = 0;
@@ -565,8 +561,7 @@ void InventoryManager::Initialize() {
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMoveItem,
         GW::UI::UIMessage::kSendUseItem,
-        GW::UI::UIMessage::kItemUpdated,
-        GW::UI::UIMessage::kItemMoved
+        GW::UI::UIMessage::kItemUpdated
     };
     for (const auto message_id : message_id_hooks) {
         GW::UI::RegisterUIMessageCallback(&ItemClick_Entry, message_id, OnUIMessage);

@@ -203,7 +203,7 @@ GW::Bag* Pcon::GetBag(uint32_t bag_id) {
     for (size_t i = 1; i < static_cast<int>(GW::Constants::BagMax); i++) {
         GW::Bag* bag = bags[i];
         if (!bag) continue;
-        if (bag->bag_id == bag_id)
+        if (bag->bag_id == static_cast<GW::Constants::Bag>(bag_id))
             return bag;
     }
     return nullptr;

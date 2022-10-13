@@ -223,7 +223,7 @@ private:
         uint32_t type = 0;
         uint32_t gold_give = 0;
         uint32_t item_give_count = 0;
-        uint32_t item_give_ids[16];
+        uint32_t item_give_ids[16]{};
         uint32_t item_give_quantities[16]{};
         uint32_t gold_recv = 0;
         uint32_t item_recv_count = 0;
