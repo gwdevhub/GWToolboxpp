@@ -220,26 +220,26 @@ public:
     uint32_t stack_prompt_item_id = 0;
 private:
     struct TransactItems {
-        uint32_t type;
-        uint32_t gold_give;
-        uint32_t item_give_count = 0;
-        uint32_t item_give_ids[16];
-        uint32_t item_give_quantities[16];
-        uint32_t gold_recv;
-        uint32_t item_recv_count = 0;
-        uint32_t item_recv_ids[16];
-        uint32_t item_recv_quantities[16];
-    };
-    struct CtoS_QuoteItem {
-        uint32_t header = GAME_CMSG_REQUEST_QUOTE;
-        uint32_t type;
-        uint32_t unk1 = 0;
+        uint32_t type = 0;
         uint32_t gold_give = 0;
         uint32_t item_give_count = 0;
         uint32_t item_give_ids[16];
+        uint32_t item_give_quantities[16]{};
         uint32_t gold_recv = 0;
         uint32_t item_recv_count = 0;
-        uint32_t item_recv_ids[16];
+        uint32_t item_recv_ids[16]{};
+        uint32_t item_recv_quantities[16]{};
+    };
+    struct CtoS_QuoteItem {
+        uint32_t header = GAME_CMSG_REQUEST_QUOTE;
+        uint32_t type = 0;
+        uint32_t unk1 = 0;
+        uint32_t gold_give = 0;
+        uint32_t item_give_count = 0;
+        uint32_t item_give_ids[16]{};
+        uint32_t gold_recv = 0;
+        uint32_t item_recv_count = 0;
+        uint32_t item_recv_ids[16]{};
     };
     static_assert(sizeof(CtoS_QuoteItem) == 0x9C);
     struct PendingTransaction {
@@ -251,9 +251,9 @@ private:
             Quoted,
             Transacting
         } state = None;
-        uint32_t type;
-        uint32_t price;
-        uint32_t item_id;
+        uint32_t type = 0;
+        uint32_t price = 0;
+        uint32_t item_id = 0;
         clock_t state_timestamp = 0;
         uint8_t retries = 0;
         void setState(State _state) {

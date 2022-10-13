@@ -35,7 +35,7 @@ void ToolboxModule::RegisterSettingsContent()
 void ToolboxModule::RegisterSettingsContent(const char* section, const char* icon, const SectionDrawCallback& callback, float weighting)
 {
     if (!settings_draw_callbacks.contains(section)) {
-        settings_draw_callbacks.emplace(section, SectionDrawCallbackList());
+        settings_draw_callbacks[section] = {};
     }
     if (icon) {
         if (!settings_icons.contains(section)) {
@@ -43,10 +43,8 @@ void ToolboxModule::RegisterSettingsContent(const char* section, const char* ico
         }
         ASSERT(settings_icons.at(section) == icon && "Trying to set different icon for the same setting!");
     }
-    auto it = settings_draw_callbacks[section].begin();
-    for (; it != settings_draw_callbacks[section].end(); it++) {
-        if (it->first > weighting)
-            break;
-    }
+    const auto it = std::ranges::find_if(settings_draw_callbacks[section], [weighting](const auto& pair) {
+        return pair.first > weighting;
+    });
     settings_draw_callbacks[section].insert(it, {weighting, callback});
 }
