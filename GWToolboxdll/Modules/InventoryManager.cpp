@@ -62,6 +62,16 @@ namespace {
         const uint32_t bag_slot = bag_idx << 16 | slot;
         pending_moves[bag_slot] = { (uint16_t)(get_pending_move(bag_idx, slot) + quantity_to_move), TIMER_INIT() };
     }
+    void clear_pending_move(GW::Constants::Bag bag_idx, uint32_t slot) {
+        const uint32_t bag_slot = (uint32_t)bag_idx << 16 | slot;
+        pending_moves.erase(bag_slot);
+    }
+    void clear_pending_move(uint32_t item_id) {
+        const auto item = GW::Items::GetItemById(item_id);
+        if (item && item->bag) {
+            return clear_pending_move(item->bag->bag_id, item->slot);
+        }
+    }
 
     // GW Client doesn't actually know max material storage size for the account.
 // We can make a guess by checking how many materials are currently in storage.
@@ -485,6 +495,13 @@ InventoryManager::~InventoryManager()
 void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
     auto& instance = Instance();
     switch (message_id) {
+    case GW::UI::UIMessage::kItemUpdated: {
+        clear_pending_move((uint32_t)wparam);
+    } break;
+    case GW::UI::UIMessage::kItemMoved: {
+        // { Item* item, Bag* bag, uint32_t slot }
+        //clear_pending_move((uint32_t)wparam);
+    } break;
         // About to request a quote for an item
     case GW::UI::UIMessage::kSendMerchantRequestQuote: {
         requesting_quote_type = 0;
@@ -547,7 +564,9 @@ void InventoryManager::Initialize() {
         GW::UI::UIMessage::kQuotedItemPrice,
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMoveItem,
-        GW::UI::UIMessage::kSendUseItem
+        GW::UI::UIMessage::kSendUseItem,
+        GW::UI::UIMessage::kItemUpdated,
+        GW::UI::UIMessage::kItemMoved
     };
     for (const auto message_id : message_id_hooks) {
         GW::UI::RegisterUIMessageCallback(&ItemClick_Entry, message_id, OnUIMessage);
