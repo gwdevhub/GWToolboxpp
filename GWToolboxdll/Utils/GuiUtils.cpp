@@ -678,7 +678,7 @@ namespace GuiUtils {
             return this;
         decoded_ws.clear();
         decoded_s.clear();
-        decoding = sanitised = false;
+        decoding = sanitised = decoded = false;
         language_id = l;
         return this;
     }
@@ -690,7 +690,7 @@ namespace GuiUtils {
         encoded_ws.clear();
         decoded_ws.clear();
         decoded_s.clear();
-        decoding = false;
+        decoding = decoded = false;
         sanitised = !sanitise;
         if (_enc_string)
             encoded_ws = _enc_string;
@@ -698,9 +698,9 @@ namespace GuiUtils {
 
     std::wstring& EncString::wstring()
     {
-        if (!decoding && !encoded_ws.empty()) {
-            GW::UI::AsyncDecodeStr(encoded_ws.c_str(), &decoded_ws, (uint32_t)language_id);
+        if (!decoded && !decoding && !encoded_ws.empty()) {
             decoding = true;
+            GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, (void*)this, (uint32_t)language_id);
         }
         sanitise();
         return decoded_ws;
@@ -712,6 +712,14 @@ namespace GuiUtils {
             static const std::wregex sanitiser(L"<[^>]+>");
             decoded_ws = std::regex_replace(decoded_ws, sanitiser, L"");
         }
+    }
+    void EncString::OnStringDecoded(void* param, wchar_t* decoded) {
+        EncString* context = (EncString*)param;
+        ASSERT(context && context->decoding && !context->decoded);
+        if(decoded && decoded[0])
+            context->decoded_ws = decoded;
+        context->decoded = true;
+        context->decoding = false;
     }
 
     std::string& EncString::string()

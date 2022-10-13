@@ -130,9 +130,11 @@ namespace GuiUtils {
         std::wstring decoded_ws;
         std::string decoded_s;
         bool decoding = false;
+        bool decoded = false;
         bool sanitised = false;
         virtual void sanitise();
         GW::Constants::TextLanguage language_id = (GW::Constants::TextLanguage)-1;
+        static void OnStringDecoded(void* param, wchar_t* decoded);
     public:
         // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
         EncString* language(GW::Constants::TextLanguage l = (GW::Constants::TextLanguage)-1);
