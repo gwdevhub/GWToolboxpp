@@ -12,20 +12,30 @@
 #include <ToolboxWindow.h>
 
 class FriendListWindow : public ToolboxWindow {
-    FriendListWindow() {
-        inifile = new CSimpleIni(false, false, false);
-    }
-    ~FriendListWindow() {
-        if (settings_thread.joinable())
-            settings_thread.join();
-        delete inifile;
-    }
-
     std::thread settings_thread;
     // Structs because we don't case about public or private; this whole struct is private to this module anyway.
     struct Character {
+    private:
         std::wstring name;
+        std::string name_str;
+
+    public:
         uint8_t profession = 0;
+        const std::string& getNameA() {
+            if (name_str.empty() && !name.empty()) {
+                name_str = GuiUtils::WStringToString(name);
+            }
+            return name_str;
+        }
+        const std::wstring& getNameW() const {
+            return name;
+        }
+        void setName(const std::wstring& _name) {
+            if (name == _name)
+                return;
+            name = std::move(_name);
+            name_str.clear();
+        }
     };
     struct UIChatMessage {
         uint32_t channel;
@@ -37,12 +47,17 @@ class FriendListWindow : public ToolboxWindow {
         ~Friend() {
             characters.clear();
         };
-        std::string uuid;
-        UUID uuid_bytes;
+        Friend(const Friend&) = delete;
+    private:
         std::wstring alias;
-        FriendListWindow* parent;
+        std::string alias_str;
+    public:
+        std::string uuid;
+        UUID uuid_bytes = { 0 };
+
+        FriendListWindow* parent = 0;
         Character* current_char = nullptr;
-        GuiUtils::EncString current_map_name;
+        GuiUtils::EncString* current_map_name = nullptr;
         uint32_t current_map_id = 0;
         std::unordered_map<std::wstring, Character> characters;
         GW::FriendStatus status = GW::FriendStatus::Offline;
@@ -50,6 +65,7 @@ class FriendListWindow : public ToolboxWindow {
         clock_t last_update = 0;
         std::string cached_charnames_hover_str;
         bool cached_charnames_hover = false;
+
         Character* GetCharacter(const wchar_t*);
         Character* SetCharacter(const wchar_t*, uint8_t);
         GW::Friend* GetFriend();
@@ -63,14 +79,29 @@ class FriendListWindow : public ToolboxWindow {
         const bool NeedToUpdate(clock_t now) {
             return (now - last_update) > 10000; // 10 Second stale.
         }
+        std::string& getAliasA() {
+            if (alias_str.empty() && !alias.empty()) {
+                alias_str = GuiUtils::WStringToString(alias);
+            }
+            return alias_str;
+        }
+        const std::wstring& getAliasW() const {
+            return alias;
+        }
+        void setAlias(const std::wstring& _alias) {
+            if (alias == _alias)
+                return;
+            alias = std::move(_alias);
+            alias_str.clear();
+        }
     };
 
     Friend* SetFriend(uint8_t*, GW::FriendType, GW::FriendStatus, uint32_t, const wchar_t*, const wchar_t*);
     Friend* SetFriend(GW::Friend*);
     Friend* GetFriend(const wchar_t*);
-    Friend* GetFriend(GW::Friend*);
-    Friend* GetFriendByUUID(const char*);
-    Friend* GetFriend(uint8_t*);
+    Friend* GetFriend(const GW::Friend*);
+    Friend* GetFriendByUUID(const std::string&);
+    Friend* GetFriend(const uint8_t*);
 
     bool RemoveFriend(Friend* f);
     void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out);
