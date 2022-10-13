@@ -775,7 +775,7 @@ PvESkill::PvESkill(SkillID _skill_id)
     }
 }
 void PvESkill::OnClick() {
-    GW::GameThread::Enqueue([url = std::format(L"Game_link:Skill_{}", skill_id)] {
+    GW::GameThread::Enqueue([url = std::format(L"Game_link:Skill_{}", static_cast<uint32_t>(skill_id))] {
         GuiUtils::OpenWiki(url);
     });
 }
