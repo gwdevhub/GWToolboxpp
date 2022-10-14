@@ -62,7 +62,6 @@ public:
     // Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
     static uint32_t MoveItem(GW::Item *item, GW::Bag *bag, size_t slot,
                              size_t quantity = 0);
-    static GW::Bag* GetBag(uint32_t bag_id);
     wchar_t* SetPlayerName();
     // Pass true to start refill, or false to stop.
     void Refill(bool do_refill = true);
@@ -76,7 +75,6 @@ public:
     void LoadSettings(CSimpleIni* ini, const char* section);
     void SaveSettings(CSimpleIni* ini, const char* section);
 
-public:
     bool* enabled; // This is a ptr to the current char's status if applicable.
     bool pcon_quantity_checked = false;
     bool refilling = false; // Set when a refill is in progress. Dont touch.

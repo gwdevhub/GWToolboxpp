@@ -348,7 +348,7 @@ namespace {
     }
 
     // Key held to show/hide item descriptions
-    const int modifier_key_item_descriptions = VK_MENU;
+    constexpr int modifier_key_item_descriptions = VK_MENU;
     int modifier_key_item_descriptions_key_state = 0;
 
     typedef void(__cdecl* GetItemDescription_pt)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
@@ -356,9 +356,8 @@ namespace {
     GetItemDescription_pt GetItemDescription_Ret = nullptr;
     void OnGetItemDescription(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** name_out, wchar_t** description_out) {
         GW::Hook::EnterHook();
-        bool block_description = (disable_item_descriptions_in_outpost && IsOutpost()) || (disable_item_descriptions_in_explorable && IsExplorable());
-        if (block_description && GetKeyState(modifier_key_item_descriptions) < 0)
-            block_description = false;
+        bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
+        block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
         GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
         if (block_description && description_out)
             *description_out = 0;
@@ -366,19 +365,18 @@ namespace {
     }
 
     // Key held to show/hide skill descriptions
-    const int modifier_key_skill_descriptions = VK_MENU;
+    constexpr int modifier_key_skill_descriptions = VK_MENU;
     int modifier_key_skill_descriptions_key_state = 0;
 
     // Function called by GW to add the description of the skill to a skill tooltip
-    typedef void(__cdecl* CreateCodedTextLabel_pt)(uint32_t frame_id,wchar_t* encoded_string);
+    typedef void(__cdecl* CreateCodedTextLabel_pt)(uint32_t frame_id, const wchar_t* encoded_string);
     CreateCodedTextLabel_pt CreateEncodedTextLabel_Func = nullptr;
-    void CreateCodedTextLabel_SkillDescription(uint32_t frame_id, wchar_t* encoded_string) {
+    void CreateCodedTextLabel_SkillDescription(uint32_t frame_id, const wchar_t* encoded_string) {
         GW::Hook::EnterHook();
-        bool block_description = (disable_skill_descriptions_in_outpost && IsOutpost()) || (disable_skill_descriptions_in_explorable && IsExplorable());
-        if (block_description && GetKeyState(modifier_key_skill_descriptions) < 0)
-            block_description = false;
+        bool block_description = disable_skill_descriptions_in_outpost && IsOutpost() || disable_skill_descriptions_in_explorable && IsExplorable();
+        block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
         if (block_description)
-            encoded_string = (wchar_t*)L"\x101";
+            encoded_string = L"\x101";
         CreateEncodedTextLabel_Func(frame_id, encoded_string);
         GW::Hook::LeaveHook();
     }
@@ -388,12 +386,12 @@ namespace {
     uint32_t* GlobalNameTagVisibilityFlags = 0;
 
     GW::Player* GetPlayerByAgentId(uint32_t agent_id, GW::AgentLiving** info_out = nullptr) {
-        GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-        if (!(a && a->GetIsLivingType() && a->IsPlayer()))
+        const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        if (!(agent && agent->GetIsLivingType() && agent->IsPlayer()))
             return nullptr;
         if (info_out)
-            *info_out = a;
-        return GW::PlayerMgr::GetPlayerByID(a->login_number);
+            *info_out = agent;
+        return GW::PlayerMgr::GetPlayerByID(agent->login_number);
 
     }
 
