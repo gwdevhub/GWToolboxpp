@@ -1108,7 +1108,7 @@ void HotkeyEquipItem::Execute()
         item = nullptr;
         return;
     }
-    if (item->bag && item->bag->bag_type == 2) {
+    if (item->bag && item->bag->bag_type == GW::Constants::BagType::Equipped) {
         // Log::Info("Success!");
         ongoing = false;
         item = nullptr;
