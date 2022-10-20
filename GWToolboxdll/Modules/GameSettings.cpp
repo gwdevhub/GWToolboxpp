@@ -2185,10 +2185,6 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
             allegiance = 1; // Luxon
         if (wcscmp(dialog->message, raising_kurzick_faction_cap) == 0)
             allegiance = 0; // Kurzick
-        if (dialog->dialog_id == dialog_id
-            && wcscmp(dialog->message, L"\x8102\x0444\xa441\xc28e\x0193") != 0) {
-            return; // Not faction donation message
-        }
     }
     uint32_t* current_faction = nullptr;
     switch (allegiance) {
@@ -2198,8 +2194,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
     case 1: // Luxon
         current_faction = &GW::GetWorldContext()->current_luxon;
         break;
-    default: // Didn't find an allegiance?
-        Log::Error("Failed to find allegiance from NPC");
+    default: // Didn't find an allegiance, not the relevent dialog
         return;
     }
     GW::GuildContext* c = GW::GetGuildContext();
