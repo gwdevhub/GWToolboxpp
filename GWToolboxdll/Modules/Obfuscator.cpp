@@ -3,6 +3,8 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Party.h>
+
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -11,6 +13,8 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Hook.h>
@@ -18,6 +22,8 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <Utils/GuiUtils.h>
+#include <Utils/ToolboxUtils.h>
+
 #include <Logger.h>
 #include <ImGuiAddons.h>
 #include <Defines.h>
@@ -322,12 +328,8 @@ namespace {
             }
             ASSERT(swprintf(tmp_out, _countof(tmp_out), L"%.16s %d", res, cnt) != -1);
         }
-        size_t len = wcslen(tmp_out);
-        if (out.size() < len) {
-            out.resize(len,0);
-        }
-        wcscpy(out.data(), tmp_out);
-        return wcslen(out.data());
+        out.assign(tmp_out);
+        return true;
     }
     bool UnobfuscateName(const std::wstring& _obfuscated_name, std::wstring& out) {
         if (_obfuscated_name.empty()) {
@@ -337,11 +339,8 @@ namespace {
         auto found = obfuscated_by_obfuscation.find(obfuscated_name);
         if (found == obfuscated_by_obfuscation.end())
             return false;
-        if (out.size() < found->second.size()) {
-            out.resize(found->second.size(), 0);
-        }
-        wcscpy(out.data(), found->second.data());
-        return wcslen(out.data());
+        out.assign(found->second);
+        return true;
     }
     bool ObfuscateMessage(const wchar_t* message, std::wstring& out, bool obfuscate = true) {
         const wchar_t* player_name_start = nullptr;
@@ -359,7 +358,7 @@ namespace {
             offset = player_name_start + player_name_len;
             tmp_name.assign(player_name_start, player_name_len);
             if (obfuscate) {
-                ObfuscateName(tmp_name.c_str(), tmp_name);
+                ObfuscateName(tmp_name.c_str(), tmp_name,true);
             }
             else {
                 UnobfuscateName(tmp_name.c_str(), tmp_name);
@@ -368,11 +367,8 @@ namespace {
             found = FindPlayerNameInMessage(offset, &player_name_start, &player_name_end);
         } while (found);
         tmp_out.append(offset);
-        if (out.size() < tmp_out.size()) {
-            out.resize(tmp_out.size());
-        }
-        wcscpy(out.data(), tmp_out.data());
-        return wcslen(out.data());
+        out = std::move(tmp_out);
+        return out.size();
     }
     bool UnobfuscateMessage(const wchar_t* message, std::wstring& out) {
         return ObfuscateMessage(message, out, false);
@@ -609,22 +605,16 @@ namespace {
         case GAME_SMSG_AGENT_CREATE_PLAYER: {
             if (!IsObfuscatorEnabled())
                 break;
-            struct Packet {
-                uint32_t chaff[7];
-                wchar_t name[32];
-            } *packet_actual = (Packet*)packet;
-            if (ObfuscateName(packet_actual->name, ui_message_temp_message)) {
-                wcscpy(packet_actual->name, ui_message_temp_message.c_str());
+            GW::Packet::StoC::PlayerJoinInstance* packet_actual = (GW::Packet::StoC::PlayerJoinInstance*)packet;
+            if (ObfuscateName(packet_actual->player_name, ui_message_temp_message)) {
+                wcscpy(packet_actual->player_name, ui_message_temp_message.c_str());
             }
         } break;
             // Hide Mercenary Hero name
         case GAME_SMSG_MERCENARY_INFO: {
             if (!IsObfuscatorEnabled())
                 break;
-            struct Packet {
-                uint32_t chaff[20];
-                wchar_t name[32];
-            } *packet_actual = (Packet*)packet;
+            GW::Packet::StoC::MercenaryHeroInfo* packet_actual = (GW::Packet::StoC::MercenaryHeroInfo*)packet;
             if (ObfuscateName(packet_actual->name, ui_message_temp_message,true)) {
                 wcscpy(packet_actual->name, ui_message_temp_message.c_str());
             }
@@ -633,14 +623,16 @@ namespace {
         case GAME_SMSG_AGENT_UPDATE_NPC_NAME: {
             if (!IsObfuscatorEnabled())
                 break;
-            struct Packet {
-                uint32_t chaff[2];
-                wchar_t name[32];
-            } *packet_actual = (Packet*)packet;
-            if (wcsncmp(L"\x108\x107", packet_actual->name, 2) != 0)
+            GW::Packet::StoC::AgentName* packet_actual = (GW::Packet::StoC::AgentName*)packet;
+            if (wcsstr(packet_actual->name_enc, L"\x108\x107") != packet_actual->name_enc)
                 return; // Not a mercenary name
-            if (ObfuscateMessage(packet_actual->name, ui_message_temp_message,true)) {
-                wcscpy(packet_actual->name, ui_message_temp_message.c_str());
+            auto end_pos = wcschr(packet_actual->name_enc, '\x1');
+            ASSERT(end_pos);
+            *end_pos = 0;
+            std::wstring tmp(&packet_actual->name_enc[2]);
+            *end_pos = '\x1';
+            if (ObfuscateName(tmp, ui_message_temp_message, true)) {
+                swprintf(packet_actual->name_enc, _countof(packet_actual->name_enc), L"\x108\x107%s\x1", ui_message_temp_message.c_str());
             }
         } break;
             // Hide "Customised for <player_name>". Packet header is poorly named, this is actually something like GAME_SMSG_ITEM_CUSTOMISED_NAME
@@ -685,7 +677,7 @@ namespace {
         static bool processing = false;
         if (processing)
             return;
-        wchar_t* whisper_separator = wcschr(message, ',');
+        const wchar_t* whisper_separator = wcschr(message, ',');
         if (!whisper_separator)
             return;
         size_t len = (whisper_separator - message);
