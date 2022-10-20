@@ -131,12 +131,7 @@ namespace {
     }
 
 
-    bool IsOutpost() {
-        return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
-    }
-    bool IsExplorable() {
-        return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
-    }
+
     enum PING_PARTS {
         NAME=1,
         DESC=2
@@ -385,86 +380,6 @@ namespace {
     SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = 0;
     uint32_t* GlobalNameTagVisibilityFlags = 0;
 
-    GW::Player* GetPlayerByAgentId(uint32_t agent_id, GW::AgentLiving** info_out = nullptr) {
-        const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-        if (!(agent && agent->GetIsLivingType() && agent->IsPlayer()))
-            return nullptr;
-        if (info_out)
-            *info_out = agent;
-        return GW::PlayerMgr::GetPlayerByID(agent->login_number);
-
-    }
-
-    bool IsHenchmanInParty(uint32_t agent_id, GW::HenchmanPartyMember** info_out = nullptr) {
-        auto* party = GW::PartyMgr::GetPartyInfo();
-        if (!party) return false;
-        for (auto p : party->henchmen) {
-            if (p.agent_id == agent_id) {
-                if (info_out)
-                    *info_out = &p;
-                return true;
-            }
-        }
-        return false;
-    }
-    bool IsHeroInParty(uint32_t agent_id, GW::HeroPartyMember** info_out = nullptr) {
-        auto* party = GW::PartyMgr::GetPartyInfo();
-        if (!party) return false;
-        for (auto& p : party->heroes) {
-            if (p.agent_id == agent_id) {
-                if (info_out)
-                    *info_out = &p;
-                return true;
-            }
-        }
-        return false;
-    }
-    bool IsPlayerInParty(uint32_t login_number, GW::PlayerPartyMember** info_out = nullptr) {
-        auto* party = GW::PartyMgr::GetPartyInfo();
-        if (!party)
-            return false;
-        for (auto& p : party->players) {
-            if (p.login_number == login_number) {
-                if (info_out)
-                    *info_out = &p;
-                return true;
-            }
-        }
-        return false;
-    }
-    bool IsPlayerInvitedBy(uint32_t login_number)
-    {
-        auto* party = GW::GetPartyContext();
-        if (!party)
-            return false;
-        if (!party->requests_count)
-            return false;
-        auto rlink = party->requests.Get();
-        auto request = rlink->Next();
-        while (request) {
-            rlink = rlink->NextLink();
-            const auto& players = request->players;
-            if (!players.size()) {
-                request = rlink->Next();
-                continue;
-            }
-            if (players[0].login_number == login_number) {
-                return true;
-            }
-            request = rlink->Next();
-        }
-        return false;
-    }
-    bool IsAgentInParty(uint32_t agent_id) {
-        const auto* party = GW::PartyMgr::GetPartyInfo();
-        if (!party)
-            return false;
-        if (IsHenchmanInParty(agent_id) || IsHeroInParty(agent_id))
-            return true;
-        const auto player = GetPlayerByAgentId(agent_id);
-        return player && IsPlayerInParty(player->player_number);
-    }
-
     // Refresh agent name tags when allegiance changes
     void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*) {
         // Backup the current name tag flag state, then "flash" nametags to update.
@@ -474,45 +389,6 @@ namespace {
         ASSERT(*GlobalNameTagVisibilityFlags == prev_flags);
     }
 
-    GW::HeroInfo* GetHeroInfo(uint32_t hero_id) {
-        auto w = GW::GetWorldContext();
-        if (!(w && w->hero_info.size()))
-            return nullptr;
-        for (auto& a : w->hero_info) {
-            if (a.hero_id == hero_id)
-                return &a;
-        }
-        return nullptr;
-    }
-    bool IsHenchman(uint32_t agent_id) {
-        if (!IsOutpost()) {
-            return IsHenchmanInParty(agent_id);
-        }
-        auto w = GW::GetWorldContext();
-        if (!(w && w->henchmen_agent_ids.size()))
-            return false;
-        for (auto a : w->henchmen_agent_ids) {
-            if (a == agent_id)
-                return true;
-        }
-        return false;
-    }
-    bool IsHero(uint32_t agent_id, GW::HeroInfo** info_out = nullptr) {
-        if (!IsOutpost()) {
-            return IsHeroInParty(agent_id);
-        }
-        auto w = GW::GetWorldContext();
-        if (!(w && w->hero_info.size()))
-            return false;
-        for (auto& a : w->hero_info) {
-            if (a.agent_id == agent_id) {
-                if (info_out)
-                    *info_out = &a;
-                return true;
-            }
-        }
-        return false;
-    }
 
     uint32_t current_party_target_id = 0;
     // Record current party target - this isn't always the same as the compass target.
@@ -631,8 +507,11 @@ namespace {
             }
 
             // Hero kick
-            GW::HeroPartyMember* hero_info = 0;
-            if (IsHeroInParty(pending_reinvite.identifier, &hero_info)) {
+            GW::PartyInfo* check = 0;
+            auto hero_info = GetHeroPartyMember(pending_reinvite.identifier, &check);
+            if (hero_info) {
+                if (check != party)
+                    return;
                 if (hero_info->owner_player_id != me->login_number) {
                     Log::Error("The targetted hero doesn't belong to you");
                     return pending_reinvite.reset();
@@ -643,8 +522,10 @@ namespace {
                 return;
             }
             // Henchman kick
-            GW::HenchmanPartyMember* henchman_info = 0;
-            if (IsHenchmanInParty(pending_reinvite.identifier, &henchman_info)) {
+            auto henchman_info = GetHenchmanPartyMember(pending_reinvite.identifier, &check);
+            if (henchman_info) {
+                if (check != party)
+                    return;
                 if (!is_leader) {
                     Log::Error("Only party leader can reinvite henchmen");
                     return pending_reinvite.reset();
