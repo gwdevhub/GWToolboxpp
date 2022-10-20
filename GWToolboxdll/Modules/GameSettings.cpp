@@ -2278,8 +2278,9 @@ void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::
 {
     if (status->blocked) return;                                                                                // Sender blocked, packet handled.
     if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) return; // Not team chat or no sender
-    std::wstring message(GetMessageCore());
-    if (message[0] != 0x778 && message[0] != 0x781) return; // Not "I'm Following X" or "I'm Targeting X" message.
+    const auto core = GetMessageCore();
+    if (core[0] != 0x778 && core[0] != 0x781) return; // Not "I'm Following X" or "I'm Targeting X" message.
+    std::wstring message(core);
     size_t start_idx = message.find(L"\xba9\x107");
     if (start_idx == std::wstring::npos) return; // Not a player name.
     start_idx += 2;
