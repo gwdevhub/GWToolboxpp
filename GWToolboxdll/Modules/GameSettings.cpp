@@ -2357,15 +2357,6 @@ void GameSettings::OnMapTravel(GW::HookStatus* status, GW::Packet::StoC::GameSrv
 
 void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) const
 {
-    if (!current_party_target_id) {
-        Log::ErrorW(L"Target a party member to re-invite");
-        return;
-    }
-    const auto agent = GW::Agents::GetAgentByID(current_party_target_id);
-    if (!agent || !agent->GetAsAgentLiving() || !IsPlayerInParty(agent->GetAsAgentLiving()->login_number)) {
-        current_party_target_id = 0;
-        return;
-    }
     pending_reinvite.reset(current_party_target_id);
 }
 

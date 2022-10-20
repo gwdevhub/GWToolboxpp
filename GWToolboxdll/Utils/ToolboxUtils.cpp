@@ -144,6 +144,7 @@ namespace ToolboxUtils {
         const auto* parties = GetParties();
         if (!parties) return nullptr;
         for (const auto party : *parties) {
+            if (!party) continue;
             for (const auto& p : party->henchmen) {
                 if (p.agent_id != agent_id)
                     continue;
@@ -163,6 +164,7 @@ namespace ToolboxUtils {
         const auto* parties = GetParties();
         if (!parties) return nullptr;
         for (const auto party : *parties) {
+            if (!party) continue;
             for (const auto& p : party->heroes) {
                 if (p.agent_id != agent_id)
                     continue;
@@ -182,6 +184,7 @@ namespace ToolboxUtils {
         const auto* parties = GetParties();
         if (!parties) return nullptr;
         for (const auto party : *parties) {
+            if (!party) continue;
             for (const auto& p : party->players) {
                 if (p.login_number != login_number)
                     continue;
@@ -194,7 +197,7 @@ namespace ToolboxUtils {
     }
     bool IsPlayerInParty(uint32_t login_number) {
         GW::PartyInfo* party = nullptr;
-        return GetHeroPartyMember(login_number, &party) && party == GW::PartyMgr::GetPartyInfo();
+        return GetPlayerPartyMember(login_number, &party) && party == GW::PartyMgr::GetPartyInfo();
     }
 
     bool IsAgentInParty(uint32_t agent_id) {
