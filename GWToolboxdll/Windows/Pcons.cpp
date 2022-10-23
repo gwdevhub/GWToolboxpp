@@ -89,11 +89,11 @@ bool Pcon::IsVisible() const {
     return visible;
 }
 wchar_t* Pcon::SetPlayerName() {
-    GW::GameContext* g = GW::GetGameContext();
-    if (!g || !g->character || !g->character->player_name)
+    const auto c = GW::GetCharContext();
+    if (!(c && c->player_name))
         return nullptr;
-    enabled = GetSettingsByName(pcons_by_character ? g->character->player_name : L"default");
-    return g->character->player_name;
+    enabled = GetSettingsByName(pcons_by_character ? c->player_name : L"default");
+    return c->player_name;
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
@@ -442,7 +442,7 @@ void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
     inifile->SetBoolValue(section, buf_visible, visible);
 
     for (const auto& charname_pcons : settings_by_charname) {
-        bool _enabled = charname_pcons.second;
+        bool _enabled = *charname_pcons.second;
         if (charname_pcons.first == L"default") {
             inifile->SetBoolValue(section, buf_active, _enabled);
             continue;
