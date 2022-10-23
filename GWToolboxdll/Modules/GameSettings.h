@@ -79,7 +79,6 @@ public:
     void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*) const;
     void OnGlobalMessage(GW::HookStatus*, GW::Packet::StoC::MessageGlobal*) const;
     void OnScreenShake(GW::HookStatus*, void* packet) const;
-    void OnChangeTarget(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void* lParam) const;
     void OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*) const;
     void OnAgentStartCast(GW::HookStatus* status, GW::UI::UIMessage, void*, void*) const;
     void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
@@ -88,7 +87,6 @@ public:
     void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet) const;
     void OnUpdateSkillCount(GW::HookStatus*, void* packet);
     void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*) const;
-    void OnWhisper(GW::HookStatus*, const wchar_t* from, const wchar_t* msg) const;
     void OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
     void FriendStatusCallback(GW::HookStatus*, GW::Friend* f, GW::FriendStatus status, const wchar_t* alias, const wchar_t* charname) const;
     void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv) const;
@@ -156,7 +154,7 @@ public:
     bool block_ghostinthebox_effect = false;
     bool block_sparkly_drops_effect = false;
 
-    bool lazy_chest_looting = false;
+
 
     bool auto_age2_on_age = true;
     bool auto_age_on_vanquish = false;
@@ -196,7 +194,7 @@ private:
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;
     bool disable_camera_smoothing = false;
-    bool targeting_nearest_item = false;
+
     bool improve_move_to_cast = false;
     bool check_message_on_party_change = true;
 

@@ -127,7 +127,9 @@ namespace {
     bool block_faction_gain = false;
     bool block_experience_gain = false;
     bool block_zero_experience_gain = true;
+    bool lazy_chest_looting = false;
 
+    bool targeting_nearest_item = false;
 
     bool IsInfused(GW::Item* item) {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
@@ -901,6 +903,76 @@ namespace {
         return original;
     }
 
+    void OnKeyDownAction(GW::HookStatus*, uint32_t key) {
+        switch (static_cast<GW::UI::ControlAction>(key)) {
+            case GW::UI::ControlAction_TargetNearestItem:
+                if (lazy_chest_looting) {
+                    targeting_nearest_item = true;
+                    GW::Agents::ChangeTarget((uint32_t)0); // To ensure OnChangeTarget is triggered
+                }
+                break;
+        }
+    }
+    void OnKeyUpAction(GW::HookStatus*, uint32_t key) {
+        switch (static_cast<GW::UI::ControlAction>(key)) {
+            case GW::UI::ControlAction_TargetNearestItem:
+                targeting_nearest_item = false;
+                break;
+        }
+    }
+    // Logic for targetting nearest item; Don't target chest as nearest item, Target green items from chest last
+    void OnChangeTarget(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*)
+    {
+        if (!targeting_nearest_item)
+            return;
+        const auto msg = (GW::UI::ChangeTargetUIMsg*)wParam;
+        auto chosen_target = static_cast<GW::Agent*>(GW::Agents::GetAgentByID(msg->manual_target_id));
+        if (!chosen_target)
+            return;
+        uint32_t override_manual_agent_id = 0;
+        GW::Item* target_item = nullptr;
+        const auto agents = GW::Agents::GetAgentArray();
+        const auto me = agents ? GW::Agents::GetPlayer() : nullptr;
+        if (!me) return;
+        // If the item targeted is a green that belongs to me, and its next to the chest, try to find another item instead.
+        if (chosen_target->GetIsItemType() && ((GW::AgentItem*)chosen_target)->owner == me->agent_id) {
+            target_item = GW::Items::GetItemById(((GW::AgentItem*)chosen_target)->item_id);
+            if (!(target_item && (target_item->interaction & 0x10) == 0))
+                return; // Failed to get target item, or is not green.
+            for (auto* agent : *agents) {
+                if (!(agent && agent->GetIsGadgetType())) continue;
+                if (GW::GetDistance(agent->pos, chosen_target->pos) <= GW::Constants::Range::Nearby) {
+                    // Choose the chest as the target instead of this green item, and drop through to the next loop
+                    chosen_target = agent;
+                    override_manual_agent_id = agent->agent_id;
+                    break;
+                }
+            }
+        }
+
+        // If we're targeting a gadget (presume its the chest), try to find adjacent items that belong to me instead.
+        if (chosen_target->GetIsGadgetType()) {
+            float closest_item_dist = GW::Constants::Range::Compass;
+            for (auto* agent : *agents) {
+                if (!(agent && agent->GetIsItemType())) continue;
+                const auto agent_item = agent->GetAsAgentItem();
+                if (agent_item->owner != me->agent_id) continue;
+                target_item = GW::Items::GetItemById(agent_item->item_id);
+                if ((target_item->interaction & 0x10) != 0)
+                    continue; // Don't target green items.
+                if (GW::GetDistance(agent->pos, chosen_target->pos) > GW::Constants::Range::Nearby)
+                    continue;
+                float dist = GW::GetDistance(me->pos, agent->pos);
+                if (dist > closest_item_dist) continue;
+                override_manual_agent_id = agent->agent_id;
+                closest_item_dist = dist;
+            }
+        }
+        if (override_manual_agent_id) {
+            status->blocked = true;
+            GW::Agents::ChangeTarget(override_manual_agent_id);
+        }
+    }
 }
 
 
@@ -1166,26 +1238,16 @@ void GameSettings::Initialize() {
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, bind_member(this, &GameSettings::OnScreenShake));
 
-    GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, GW::UI::UIMessage::kChangeTarget, bind_member(this, &GameSettings::OnChangeTarget));
+    GW::UI::RegisterUIMessageCallback(&OnChangeTarget_Entry, GW::UI::UIMessage::kChangeTarget, OnChangeTarget);
     GW::UI::RegisterUIMessageCallback(&OnWriteChat_Entry, GW::UI::UIMessage::kWriteToChatLog, bind_member(this, &GameSettings::OnWriteChat));
     GW::UI::RegisterUIMessageCallback(&OnAgentStartCast_Entry, GW::UI::UIMessage::kAgentStartCasting, bind_member(this, &GameSettings::OnAgentStartCast));
     GW::UI::RegisterUIMessageCallback(&OnOpenWikiUrl_Entry, GW::UI::UIMessage::kOpenWikiUrl, bind_member(this, &GameSettings::OnOpenWiki));
     GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kShowAgentNameTag, bind_member(this, &GameSettings::OnAgentNameTag));
     GW::UI::RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kSetAgentNameTagAttribs, bind_member(this, &GameSettings::OnAgentNameTag));
 
-    GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
-        if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
-            return;
-        if (!lazy_chest_looting)
-            return;
-        targeting_nearest_item = true;
-        GW::Agents::ChangeTarget((uint32_t)0); // To ensure OnChangeTarget is triggered
-        });
-    GW::UI::RegisterKeyupCallback(&OnChangeTarget_Entry, [this](GW::HookStatus*, uint32_t key) {
-        if (key != static_cast<uint32_t>(GW::UI::ControlAction_TargetNearestItem))
-            return;
-        targeting_nearest_item = false;
-        });
+    GW::UI::RegisterKeydownCallback(&OnChangeTarget_Entry, OnKeyDownAction);
+    GW::UI::RegisterKeyupCallback(&OnChangeTarget_Entry, OnKeyUpAction);
+
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry, bind_member(this, &GameSettings::FriendStatusCallback));
     GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendPingWeaponSet, bind_member(this, &GameSettings::OnPingWeaponSet));
     GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, bind_member(this, &GameSettings::OnCast));
@@ -2446,65 +2508,6 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage, void* w
         else {
             Log::Error("No current target");
         }
-    }
-}
-
-// Don't target chest as nearest item, Target green items from chest last
-void GameSettings::OnChangeTarget(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) const
-{
-    GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
-    // Logic for targetting nearest item.
-    if (!targeting_nearest_item)
-        return;
-    GW::Agent* chosen_target = static_cast<GW::AgentItem*>(GW::Agents::GetAgentByID(msg->manual_target_id));
-    if (!chosen_target)
-        return;
-    uint32_t override_manual_agent_id = 0;
-    GW::Item* target_item = nullptr;
-    const GW::AgentArray* agents = GW::Agents::GetAgentArray();
-    GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
-    if (!me)
-        return;
-    // If the item targeted is a green that belongs to me, and its next to the chest, try to find another item instead.
-    if (chosen_target->GetIsItemType() && ((GW::AgentItem*)chosen_target)->owner == me->agent_id) {
-        target_item = GW::Items::GetItemById(((GW::AgentItem*)chosen_target)->item_id);
-        if (!target_item || (target_item->interaction & 0x10) == 0)
-            return; // Failed to get target item, or is not green.
-        for (auto* agent : *agents) {
-            if (!agent) continue;
-            if (!agent->GetIsGadgetType()) continue;
-            if (GW::GetDistance(agent->pos, chosen_target->pos) <= GW::Constants::Range::Nearby) {
-                // Choose the chest as the target instead of this green item, and drop through to the next loop
-                chosen_target = agent;
-                override_manual_agent_id = agent->agent_id;
-                break;
-            }
-        }
-    }
-
-    // If we're targeting a gadget (presume its the chest), try to find adjacent items that belong to me instead.
-    if (chosen_target->GetIsGadgetType()) {
-        float closest_item_dist = GW::Constants::Range::Compass;
-        GW::AgentItem* agent_item = nullptr;
-        for (auto* agent : *agents) {
-            if (!agent || !agent->GetIsItemType()) continue;
-            agent_item = agent->GetAsAgentItem();
-            if (!agent_item || agent_item->owner != me->agent_id) continue;
-            target_item = GW::Items::GetItemById(agent_item->item_id);
-            // Don't target green items.
-            if (!target_item || (target_item->interaction & 0x10) != 0)
-                continue;
-            if (GW::GetDistance(agent->pos, chosen_target->pos) > GW::Constants::Range::Nearby)
-                continue;
-            float dist = GW::GetDistance(me->pos, agent->pos);
-            if (dist > closest_item_dist) continue;
-            override_manual_agent_id = agent->agent_id;
-            closest_item_dist = dist;
-        }
-    }
-    if (override_manual_agent_id) {
-        status->blocked = true;
-        GW::Agents::ChangeTarget(override_manual_agent_id);
     }
 }
 
