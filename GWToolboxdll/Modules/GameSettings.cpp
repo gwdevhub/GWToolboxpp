@@ -124,6 +124,9 @@ namespace {
     bool hide_email_address = false;
     bool disable_skill_descriptions_in_outpost = false;
     bool disable_skill_descriptions_in_explorable = false;
+    bool block_faction_gain = false;
+    bool block_experience_gain = false;
+    bool block_zero_experience_gain = true;
 
 
     bool IsInfused(GW::Item* item) {
@@ -169,7 +172,7 @@ namespace {
     };
 
     // prophecies = factions
-    std::map<GW::Constants::SkillID, GW::Constants::SkillID> duplicate_skills = {
+    const std::map<GW::Constants::SkillID, GW::Constants::SkillID> duplicate_skills = {
         {GW::Constants::SkillID::Desperation_Blow, GW::Constants::SkillID::Drunken_Blow },
         {GW::Constants::SkillID::Galrath_Slash, GW::Constants::SkillID::Silverwing_Slash },
         {GW::Constants::SkillID::Griffons_Sweep, GW::Constants::SkillID::Leviathans_Sweep },
@@ -203,7 +206,7 @@ namespace {
         {GW::Constants::SkillID::Earthquake, GW::Constants::SkillID::Dragons_Stomp }
     };
     // luxon = kurzick
-    std::map<GW::Constants::SkillID, GW::Constants::SkillID> factions_skills = {
+    const std::map<GW::Constants::SkillID, GW::Constants::SkillID> factions_skills = {
         {GW::Constants::SkillID::Save_Yourselves_luxon, GW::Constants::SkillID::Save_Yourselves_kurzick },
         {GW::Constants::SkillID::Aura_of_Holy_Might_luxon, GW::Constants::SkillID::Aura_of_Holy_Might_kurzick },
         {GW::Constants::SkillID::Elemental_Lord_luxon, GW::Constants::SkillID::Elemental_Lord_kurzick },
@@ -321,22 +324,21 @@ namespace {
     }
 
     typedef void(__cdecl* ShowAgentFactionGain_pt)(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained);
-    ShowAgentFactionGain_pt ShowAgentFactionGain_Func = nullptr;;
-    ShowAgentFactionGain_pt ShowAgentFactionGain_Ret = nullptr;
+    ShowAgentFactionGain_pt ShowAgentFactionGain_Func = nullptr, ShowAgentFactionGain_Ret = nullptr;
+    // Block overhead faction gain numbers
     void OnShowAgentFactionGain(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained) {
         GW::Hook::EnterHook();
-        const bool blocked = GameSettings::Instance().block_faction_gain;
-        if (!blocked)
+        if (!block_faction_gain)
             ShowAgentFactionGain_Ret(agent_id, stat_type, amount_gained);
         GW::Hook::LeaveHook();
     }
 
     typedef void(__cdecl* ShowAgentExperienceGain_pt)(uint32_t agent_id, uint32_t amount_gained);
-    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = nullptr;
-    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Ret = nullptr;
+    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = nullptr, ShowAgentExperienceGain_Ret = nullptr;
+    // Block overhead experience gain numbers
     void OnShowAgentExperienceGain(uint32_t agent_id, uint32_t amount_gained) {
         GW::Hook::EnterHook();
-        const bool blocked = (GameSettings::Instance().block_experience_gain || (GameSettings::Instance().block_zero_experience_gain && amount_gained == 0));
+        const bool blocked = (block_experience_gain || (block_zero_experience_gain && amount_gained == 0));
         if (!blocked)
             ShowAgentExperienceGain_Ret(agent_id, amount_gained);
         GW::Hook::LeaveHook();
@@ -347,8 +349,8 @@ namespace {
     int modifier_key_item_descriptions_key_state = 0;
 
     typedef void(__cdecl* GetItemDescription_pt)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
-    GetItemDescription_pt GetItemDescription_Func = nullptr;
-    GetItemDescription_pt GetItemDescription_Ret = nullptr;
+    GetItemDescription_pt GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
+    // Block full item descriptions
     void OnGetItemDescription(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** name_out, wchar_t** description_out) {
         GW::Hook::EnterHook();
         bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
@@ -363,15 +365,15 @@ namespace {
     constexpr int modifier_key_skill_descriptions = VK_MENU;
     int modifier_key_skill_descriptions_key_state = 0;
 
-    // Function called by GW to add the description of the skill to a skill tooltip
     typedef void(__cdecl* CreateCodedTextLabel_pt)(uint32_t frame_id, const wchar_t* encoded_string);
     CreateCodedTextLabel_pt CreateEncodedTextLabel_Func = nullptr;
+    // Hide skill description in tooltip; called by GW to add the description of the skill to a skill tooltip
     void CreateCodedTextLabel_SkillDescription(uint32_t frame_id, const wchar_t* encoded_string) {
         GW::Hook::EnterHook();
         bool block_description = disable_skill_descriptions_in_outpost && IsOutpost() || disable_skill_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
         if (block_description)
-            encoded_string = L"\x101";
+            encoded_string = L"\x101"; // Decodes to ""
         CreateEncodedTextLabel_Func(frame_id, encoded_string);
         GW::Hook::LeaveHook();
     }
@@ -380,7 +382,7 @@ namespace {
     SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = 0;
     uint32_t* GlobalNameTagVisibilityFlags = 0;
 
-    // Refresh agent name tags when allegiance changes
+    // Refresh agent name tags when allegiance changes ( https://github.com/HasKha/GWToolboxpp/issues/781 )
     void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*) {
         // Backup the current name tag flag state, then "flash" nametags to update.
         uint32_t prev_flags = *GlobalNameTagVisibilityFlags;
@@ -388,7 +390,6 @@ namespace {
         SetGlobalNameTagVisibility_Func(prev_flags);
         ASSERT(*GlobalNameTagVisibilityFlags == prev_flags);
     }
-
 
     uint32_t current_party_target_id = 0;
     // Record current party target - this isn't always the same as the compass target.
@@ -648,6 +649,7 @@ namespace {
         }
     }
     GW::HookEntry OnCreateUIComponent_Entry;
+    // Flag email address entry field as a password format (e.g. asterisks instead of email)
     void OnCreateUIComponent(GW::UI::CreateUIComponentPacket* msg) {
         if (hide_email_address && msg->component_label && wcscmp(msg->component_label, L"EditAccount") == 0) {
             msg->component_flags |= 0x01000000;
