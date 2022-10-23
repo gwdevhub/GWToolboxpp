@@ -7,6 +7,8 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+
 #include <GWCA/Packets/StoC.h>
 
 #include <Utils/GuiUtils.h>
@@ -43,18 +45,7 @@ namespace {
         // filter non-item-agents
         if (packet.type != 4 || packet.unk3 != 0)
             return nullptr;
-
-        if (!GW::GetGameContext())
-            return nullptr;
-        if (!GW::GetGameContext()->items)
-            return nullptr;
-
-        const auto& items = GW::GetGameContext()->items->item_array;
-        const auto item_id = packet.agent_type;
-        if (item_id >= items.size())
-            return nullptr;
-
-        return items[item_id];
+        return GW::Items::GetItemById(packet.agent_type);
     }
 
     const std::map<ItemModelID, std::string> default_dont_hide_for_player = {
@@ -270,8 +261,8 @@ void ItemFilter::OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* 
 void ItemFilter::OnAgentRemove(GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet)
 {
     // Block despawning the agent if the client never spawned it.
-    const auto it = std::ranges::find_if(suppressed_packets, [&packet](const auto& suppressed_packet) {
-        return suppressed_packet.agent_id == packet->agent_id;
+    const auto it = std::ranges::find_if(suppressed_packets, [agent_id = packet->agent_id](const auto& suppressed_packet) {
+        return suppressed_packet.agent_id == agent_id;
     });
 
     if (it == suppressed_packets.end())
@@ -289,8 +280,8 @@ void ItemFilter::OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
 
 void ItemFilter::OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID* packet)
 {
-    const auto it = std::ranges::find_if(item_owners, [packet](auto owner) {
-        return owner.item == packet->item_id;
+    const auto it = std::ranges::find_if(item_owners, [item_id = packet->item_id](auto owner) {
+        return owner.item == item_id;
     });
 
     if (it != item_owners.end())
@@ -299,8 +290,8 @@ void ItemFilter::OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_Re
 
 void ItemFilter::OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner* packet)
 {
-    const auto it = std::ranges::find_if(item_owners, [packet](auto owner) {
-        return owner.item == packet->item_id;
+    const auto it = std::ranges::find_if(item_owners, [item_id = packet->item_id](auto owner) {
+        return owner.item == item_id;
     });
 
     if (it == item_owners.end()) {
@@ -316,10 +307,7 @@ GW::AgentID ItemFilter::GetItemOwner(const GW::ItemID item_id) const
     const auto it = std::ranges::find_if(item_owners, [item_id](auto owner) {
         return owner.item == item_id;
     });
-    if (it == item_owners.end())
-        return 0;
-
-    return it->owner;
+    return it == item_owners.end() ? 0 : it->owner;
 }
 
 bool ItemFilter::WantToHide(const GW::Item& item, const bool can_pick_up) const
