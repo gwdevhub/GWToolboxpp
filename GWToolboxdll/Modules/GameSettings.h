@@ -54,10 +54,6 @@ public:
     void Update(float delta) override;
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void DrawFOVSetting();
-    bool maintain_fov = false;
-    float fov = 1.308997f; // default fov
-
     // callback functions
     void OnPingWeaponSet(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
     void OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*) const;
@@ -88,7 +84,6 @@ public:
     void OnUpdateSkillCount(GW::HookStatus*, void* packet);
     void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*) const;
     void OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
-    void FriendStatusCallback(GW::HookStatus*, GW::Friend* f, GW::FriendStatus status, const wchar_t* alias, const wchar_t* charname) const;
     void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv) const;
 
     GuiUtils::EncString* pending_wiki_search_term = 0;
@@ -132,16 +127,7 @@ public:
     bool faction_warn_percent = true;
     int faction_warn_percent_amount = 75;
 
-    bool notify_when_friends_online = true;
-    bool notify_when_friends_offline = false;
-    bool notify_when_friends_join_outpost = true;
-    bool notify_when_friends_leave_outpost = false;
 
-    bool notify_when_players_join_outpost = false;
-    bool notify_when_players_leave_outpost = false;
-
-    bool notify_when_party_member_leaves = false;
-    bool notify_when_party_member_joins = false;
 
     bool disable_gold_selling_confirmation = false;
     bool collectors_edition_emotes = true;
@@ -172,9 +158,6 @@ public:
     Color nametag_color_enemy = NAMETAG_COLOR_DEFAULT_ENEMY;
     Color nametag_color_item = NAMETAG_COLOR_DEFAULT_ITEM;
 
-
-    static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
-
 private:
 
 
@@ -199,8 +182,6 @@ private:
     bool check_message_on_party_change = true;
 
     bool is_prompting_hard_mode_mission = 0;
-
-    static float GetSkillRange(GW::Constants::SkillID);
 
     GW::HookEntry VanquishComplete_Entry;
     GW::HookEntry ItemClickCallback_Entry;

@@ -377,7 +377,7 @@ namespace GuiUtils {
         ASSERT(size_needed != 0);
         std::string strTo(size_needed, 0);
         ASSERT(WideCharToMultiByte(CP_UTF8, 0, &s[0], (int)s.size(), &strTo[0], size_needed, NULL, NULL));
-        return strTo;
+        return std::move(strTo);
     }
     // Makes sure the file name doesn't have chars that won't be allowed on disk
     // https://docs.microsoft.com/en-gb/windows/win32/fileio/naming-a-file
@@ -438,7 +438,7 @@ namespace GuiUtils {
         ASSERT(size_needed != 0);
         std::wstring wstrTo(size_needed, 0);
         ASSERT(MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), wstrTo.data(), size_needed));
-        return wstrTo;
+        return std::move(wstrTo);
     }
     std::wstring SanitizePlayerName(std::wstring s) {
         // e.g. "Player Name (2)" => "Player Name", for pvp player names

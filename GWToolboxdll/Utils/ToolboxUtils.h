@@ -9,6 +9,14 @@ namespace GW {
     struct HenchmanPartyMember;
     struct PartyInfo;
     struct HeroInfo;
+    struct Friend;
+    struct Item;
+    enum class FriendType : uint32_t;
+    enum class FriendStatus : uint32_t;
+
+    namespace Constants {
+        enum class SkillID;
+    }
 
     template <typename T>
     class Array;
@@ -63,4 +71,15 @@ namespace ToolboxUtils {
     const GW::PlayerPartyMember* GetPlayerPartyMember(uint32_t, GW::PartyInfo** = nullptr);
     bool IsPlayerInParty(uint32_t);
     bool IsAgentInParty(uint32_t);
+
+    // Skills
+
+    // Get skill range in gwinches
+    float GetSkillRange(GW::Constants::SkillID skill_id);
+
+    // Friends
+    GW::Friend* GetFriend(wchar_t* account, wchar_t* playing, GW::FriendType type, GW::FriendStatus status);
+
+    std::wstring ShorthandItemDescription(GW::Item* item);
+
 };
