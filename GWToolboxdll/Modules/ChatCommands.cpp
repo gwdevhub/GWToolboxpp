@@ -177,9 +177,8 @@ namespace {
     bool title_names_sorted = false;
 
     GW::Array<GW::Title>* GetTitles() {
-        GW::GameContext* g = GW::GetGameContext();
-        if (!g || !g->world) return nullptr;
-        return &g->world->titles;
+        const auto w = GW::GetWorldContext();
+        return w ? &w->titles : nullptr;
     }
 
     typedef void(__cdecl* SetMuted_pt)(bool mute);
@@ -207,6 +206,23 @@ namespace {
     void OnAchievementsLoaded(HallOfMonumentsAchievements* result) {
         hom_loading = false;
         result->OpenInBrowser();
+    }
+
+    const char* fps_syntax = "'/fps [limit (15-400)]' sets a hard frame limit for Guild Wars. Pass '0' to remove the limit.\n'/fps' shows current frame limit";
+    void CmdFps(const wchar_t*, int argc, LPWSTR* argv) {
+        if (argc < 2) {
+            const auto current_limit = GW::UI::GetFrameLimit();
+            if (!current_limit)
+                Log::Info("Frame limit is not set");
+            else
+                Log::Info("Frame limit set to %dfps", current_limit);
+        }
+        uint32_t frame_limit = 0;
+        if (!GuiUtils::ParseUInt(argv[1], &frame_limit))
+            return Log::Error(fps_syntax);
+        if (frame_limit && frame_limit < 15) frame_limit = 15;
+        if (frame_limit && frame_limit > 400) frame_limit = 400;
+        GW::UI::SetFrameLimit(frame_limit);
     }
 
     const char* withdraw_syntax = "'/withdraw [quantity (1-65535)] model_id1 [model_id2 ...]' tops up your inventory with a minimum quantity of 1 or more items, identified by model_id";
@@ -340,6 +356,7 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
     ImGui::Bullet(); ImGui::Text("'/flag [all|<number>] [x] [y]' to flag a hero to coordinates [x],[y].");
     ImGui::Bullet(); ImGui::Text("'/flag <number> clear' to clear flag for a hero.");
+    ImGui::Bullet(); ImGui::Text(fps_syntax);
     ImGui::Bullet(); ImGui::Text("'/hero [avoid|guard|attack]' to set your hero behavior in an explorable area.");
     const char* toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
     ImGui::Bullet(); ImGui::Text("'/hide <name>' closes the window, in-game feature or widget titled <name>.");
@@ -539,6 +556,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"hardmode", CmdSetHardMode);
     GW::Chat::CreateCommand(L"animation", CmdAnimation);
     GW::Chat::CreateCommand(L"hom", CmdHom);
+    GW::Chat::CreateCommand(L"fps", CmdFps);
 
     // Experimental chat commands
 #if _DEBUG
