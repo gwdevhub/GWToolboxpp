@@ -223,86 +223,14 @@ namespace ToolboxUtils {
 
     float GetSkillRange(GW::Constants::SkillID skill_id)
     {
-        const auto* constant_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-        if (!constant_data) return 0.f;
-        using T = GW::Constants::SkillType;
-        using S = GW::Constants::SkillID;
-        switch (static_cast<T>(constant_data->type)) {
-        case T::Hex:
-        case T::Spell:
-        case T::Enchantment:
-        case T::Signet:
-        case T::Condition:
-        case T::Well:
-        case T::Skill:
-        case T::ItemSpell:
-        case T::WeaponSpell:
-        case T::EchoRefrain:
-            break;
-        default:
+        const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+        if (!skill)
             return 0.f;
-        }
-        switch (static_cast<S>(constant_data->skill_id)) {
-        case S::A_Touch_of_Guile:
-        case S::Blackout:
-        case S::Blood_Ritual:
-        case S::Brawling_Headbutt:
-        case S::Brawling_Headbutt_Brawling_skill:
-        case S::Dwaynas_Touch:
-        case S::Ear_Bite:
-        case S::Enfeebling_Touch:
-        case S::Expunge_Enchantments:
-        case S::Grapple:
-        case S::Headbutt:
-        case S::Healing_Touch:
-        case S::Hex_Eater_Signet:
-        case S::Holy_Strike:
-        case S::Iron_Palm:
-        case S::Lift_Enchantment:
-        case S::Lightning_Touch:
-        case S::Low_Blow:
-        case S::Mending_Touch:
-        case S::Palm_Strike:
-        case S::Plague_Touch:
-        case S::Rending_Touch:
-        case S::Renew_Life:
-        case S::Restore_Life:
-        case S::Shock:
-        case S::Shove:
-        case S::Shroud_of_Silence:
-        case S::Signet_of_Midnight:
-        case S::Spirit_to_Flesh:
-        case S::Star_Burst:
-        case S::Stonesoul_Strike:
-        case S::Test_of_Faith:
-        case S::Throw_Dirt:
-        case S::Ursan_Rage:
-        case S::Ursan_Strike:
-        case S::Ursan_Strike_Blood_Washes_Blood:
-        case S::Vampiric_Bite:
-        case S::Vampiric_Touch:
-        case S::Vile_Touch:
-        case S::Volfen_Claw:
-        case S::Volfen_Claw_Curse_of_the_Nornbear:
-        case S::Wallows_Bite:
-            return 144.f;
-        case S::Augury_of_Death:
-        case S::Awe:
-        case S::Caltrops:
-        case S::Crippling_Dagger:
-        case S::Dancing_Daggers:
-        case S::Disrupting_Dagger:
-        case S::Healing_Whisper:
-        case S::Resurrection_Chant:
-        case S::Scorpion_Wire:
-        case S::Seeping_Wound:
-        case S::Signet_of_Judgment:
-        case S::Signet_of_Judgment_PvP:
-        case S::Siphon_Speed:
+        if (skill->IsTouchRange())
+            return GW::Constants::Range::Touch;
+        if (skill->IsHalfRange())
             return GW::Constants::Range::Spellcast / 2.f;
-        default:
-            return GW::Constants::Range::Spellcast;
-        }
+        return GW::Constants::Range::Spellcast;
     }
 
     // Helper function; avoids doing string checks on offline friends.
