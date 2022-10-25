@@ -264,12 +264,11 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
         show_error_on_failure = ini->GetBoolValue(
             section, VAR_NAME(show_error_on_failure), show_error_on_failure);
         block_gw = ini->GetBoolValue(section, VAR_NAME(block_gw), block_gw);
-        trigger_on_explorable = ini->GetBoolValue(
-            section, VAR_NAME(trigger_on_explorable), trigger_on_explorable);
-        trigger_on_outpost = ini->GetBoolValue(
-            section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
-        trigger_on_pvp_character = ini->GetBoolValue(
-            section, VAR_NAME(trigger_on_pvp_character), trigger_on_pvp_character);
+        trigger_on_explorable = ini->GetBoolValue(section, VAR_NAME(trigger_on_explorable), trigger_on_explorable);
+        trigger_on_outpost = ini->GetBoolValue(section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
+        trigger_on_pvp_character = ini->GetBoolValue(section, VAR_NAME(trigger_on_pvp_character), trigger_on_pvp_character);
+        trigger_on_lose_focus = ini->GetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
+        trigger_on_gain_focus = ini->GetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
 
         in_range_of_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance));
         in_range_of_npc_id = ini->GetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
@@ -318,6 +317,8 @@ void TBHotkey::Save(CSimpleIni *ini, const char *section) const
                       trigger_on_outpost);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_pvp_character),
         trigger_on_pvp_character);
+    ini->SetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
+    ini->SetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
     ini->SetValue(section, VAR_NAME(player_name), player_name);
 
     std::string out;
@@ -443,14 +444,17 @@ bool TBHotkey::Draw(Op *op)
         const float offset_sameline = indent_offset + (ImGui::GetContentRegionAvail().x / 2);
         hotkey_changed |= ImGui::Checkbox("Block key in Guild Wars when triggered", &block_gw);
         ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event");
-        if (can_trigger_on_map_change) {
-            ImGui::SameLine(offset_sameline);
-            hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
-            hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost);
-        }
         ImGui::SameLine(offset_sameline);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when playing on PvP character", &trigger_on_pvp_character);
         ImGui::ShowHelp("Unless enabled, this hotkey will not activate when playing on a PvP only character.");
+        if (can_trigger_on_map_change) {   
+            hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
+            ImGui::SameLine(offset_sameline);
+            hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost);
+        }
+        hotkey_changed |= ImGui::Checkbox("Trigger hotkey when Guild Wars loses focus", &trigger_on_lose_focus);
+        ImGui::SameLine(offset_sameline);
+        hotkey_changed |= ImGui::Checkbox("Trigger hotkey when Guild Wars gains focus", &trigger_on_gain_focus);
         ImGui::Separator();
         ImGui::Text("Instance Type: ");
         ImGui::SameLine();

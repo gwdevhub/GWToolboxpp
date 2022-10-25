@@ -44,6 +44,8 @@ public:
     bool trigger_on_explorable = false; // Trigger when entering explorable area
     bool trigger_on_outpost = false; // Trigger when entering outpost area
     bool trigger_on_pvp_character = false; // Trigger when playing a PvP character
+    bool trigger_on_lose_focus = false; // Trigger when GW window is no longer focussed
+    bool trigger_on_gain_focus = false; // Trigger when GW window is focussed
     bool can_trigger_on_map_change = true; // Some hotkeys cant trigger on map change e.g. Guild Wars Key
 
     std::vector<uint32_t> map_ids;
