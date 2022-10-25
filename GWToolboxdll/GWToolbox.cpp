@@ -281,7 +281,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         if (ChatCommands::Instance().WndProc(Message, wParam, lParam)) {
             return true;
         }
-
+    case WM_ACTIVATE:
         // send to toolbox modules and plugins
         {
             bool captured = false;

@@ -22,6 +22,43 @@
 
 
 namespace {
+    
+    std::vector<TBHotkey*> hotkeys;             // list of hotkeys
+    // Subset of hotkeys that are valid to current character/map combo
+    std::vector<TBHotkey*> valid_hotkeys;
+
+    // Ordered subsets
+    enum class GroupBy : int {
+        None,
+        Profession,
+        Map,
+        PlayerName,
+    };
+    GroupBy group_by = GroupBy::None;
+    std::map<int, std::vector<TBHotkey*>> by_profession;
+    std::map<int, std::vector<TBHotkey*>> by_map;
+    std::map<int, std::vector<TBHotkey*>> by_instance_type;
+    std::map<std::string, std::vector<TBHotkey*>> by_player_name;
+    bool need_to_check_valid_hotkeys = true;
+    
+
+    long max_id_ = 0;
+    bool block_hotkeys = false;
+
+    bool clickerActive = false;             // clicker is active or not
+    bool dropCoinsActive = false;           // coin dropper is active or not
+
+    bool map_change_triggered = false;
+
+    clock_t clickerTimer = 0;               // timer for clicker
+    clock_t dropCoinsTimer = 0;             // timer for coin dropper
+
+    float movementX = 0;                    // X coordinate of the destination of movement macro
+    float movementY = 0;                    // Y coordinate of the destination of movement macro
+
+    TBHotkey* current_hotkey = nullptr;
+    bool is_window_active = true;
+
     bool loaded_action_labels = false;
     // NB: GetActionLabel_Func() must be called when we're in-game, because it relies on other gw modules being loaded internally.
     // Because we only draw this module when we're in-game, we just need to call this from the Draw() loop instead of on Initialise()
@@ -40,22 +77,126 @@ namespace {
             label.second = new GuiUtils::EncString(GetActionLabel_Func(label.first));
         }
     }
+    bool IsMapReady()
+    {
+        return GW::Map::GetIsMapLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
+    }
+    // @Cleanup: Find the address for this without checking map garbage - how does inv window know to show "pvp equipment" button?
+    bool IsPvPCharacter() {
+        // This is the 3rd module that uses this function, should really be part of GWCA but leave here for now.
+        return !(GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_outpost)
+            || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Shing_Jea_Monastery_outpost)
+            || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost)
+            || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_pre_searing));
+    }
+    // Repopulates applicable_hotkeys based on current character/map context.
+    // Used because its not necessary to check these vars on every keystroke, only when they change
+    bool CheckSetValidHotkeys() {
+        auto c = GW::GetCharContext();
+        if (!c) return false;
+        GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
+        if (!me) return false;
+        std::string player_name = GuiUtils::WStringToString(c->player_name);
+        GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+        GW::Constants::MapID map_id = GW::Map::GetMapID();
+        GW::Constants::Profession primary = (GW::Constants::Profession)me->primary;
+        bool is_pvp = IsPvPCharacter();
+        valid_hotkeys.clear();
+        by_profession.clear();
+        by_map.clear();
+        by_instance_type.clear();
+        by_player_name.clear();
+        for (auto* hotkey : hotkeys) {
+            if (hotkey->IsValid(player_name.c_str(), instance_type, primary, map_id, is_pvp))
+                valid_hotkeys.push_back(hotkey);
+            for (size_t i = 0; i < _countof(hotkey->prof_ids);i++) {
+                if (!hotkey->prof_ids[i])
+                    continue;
+                if (!by_profession.contains(i))
+                    by_profession[i] = std::vector<TBHotkey*>();
+                by_profession[i].push_back(hotkey);
+            }
+            for (auto h_map_id : hotkey->map_ids) {
+                if (!by_map.contains(h_map_id))
+                    by_map[h_map_id] = std::vector<TBHotkey*>();
+                by_map[h_map_id].push_back(hotkey);
+            }
+
+            if (!by_instance_type.contains(hotkey->instance_type))
+                by_instance_type[hotkey->instance_type] = std::vector<TBHotkey*>();
+            by_instance_type[hotkey->instance_type].push_back(hotkey);
+            if (!by_player_name.contains(hotkey->player_name))
+                by_player_name[hotkey->player_name] = std::vector<TBHotkey*>();
+            by_player_name[hotkey->player_name].push_back(hotkey);
+        }
+
+        return true;
+    }
+    bool OnMapChanged() {
+        if (!IsMapReady())
+            return false;
+        if (!GW::Agents::GetPlayerAsAgentLiving())
+            return false;
+        GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
+        if (mt == GW::Constants::InstanceType::Loading)
+            return false;
+        if (!CheckSetValidHotkeys())
+            return false;
+        // NB: CheckSetValidHotkeys() has already checked validity of char/map etc
+        for (TBHotkey* hk : valid_hotkeys) {
+            if (!block_hotkeys
+                && ((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
+                    || (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
+                && !hk->pressed) {
+
+                hk->pressed = true;
+                current_hotkey = hk;
+                hk->Execute();
+                current_hotkey = nullptr;
+                hk->pressed = false;
+            }
+        }
+        return true;
+    }
+
+    
+    
+    // Called in Update loop after WM_ACTIVATE has been received via WndProc
+    bool OnWindowActivated(bool activated) {
+        if (!IsMapReady())
+            return false;
+        if (!GW::Agents::GetPlayerAsAgentLiving())
+            return false;
+        if (!CheckSetValidHotkeys())
+            return false;
+        // NB: CheckSetValidHotkeys() has already checked validity of char/map etc
+        for (TBHotkey* hk : valid_hotkeys) {
+            if (!block_hotkeys && !hk->pressed 
+                && ((activated && hk->trigger_on_gain_focus)
+                || (!activated && hk->trigger_on_lose_focus))) {
+                hk->pressed = true;
+                current_hotkey = hk;
+                hk->Execute();
+                current_hotkey = nullptr;
+                hk->pressed = false;
+            }
+        }
+        return true;
+    }
 }
 
-// @Cleanup: Find the address for this without checking map garbage - how does inv window know to show "pvp equipment" button?
-bool HotkeysWindow::IsPvPCharacter() {
-    // This is the 3rd module that uses this function, should really be part of GWCA but leave here for now.
-    return !(GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_outpost)
-        || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Shing_Jea_Monastery_outpost)
-        || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost)
-        || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_pre_searing));
-}
+
 
 void HotkeysWindow::Initialize() {
     ToolboxWindow::Initialize();
     clickerTimer = TIMER_INIT();
     dropCoinsTimer = TIMER_INIT();
 }
+
+const TBHotkey* HotkeysWindow::CurrentHotkey() {
+    return current_hotkey;
+}
+
 void HotkeysWindow::Terminate() {
     ToolboxWindow::Terminate();
     for (TBHotkey* hotkey : hotkeys) {
@@ -66,52 +207,9 @@ void HotkeysWindow::Terminate() {
         it.second = nullptr;
     }
 }
-bool HotkeysWindow::IsMapReady()
-{
-    return GW::Map::GetIsMapLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
-}
 
-bool HotkeysWindow::CheckSetValidHotkeys() {
-    auto c = GW::GetGameContext()->character;
-    if (!c) return false;
-    GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
-    if (!me) return false;
-    std::string player_name = GuiUtils::WStringToString(c->player_name);
-    GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
-    GW::Constants::MapID map_id = GW::Map::GetMapID();
-    GW::Constants::Profession primary = (GW::Constants::Profession)me->primary;
-    bool is_pvp = IsPvPCharacter();
-    valid_hotkeys.clear();
-    by_profession.clear();
-    by_map.clear();
-    by_instance_type.clear();
-    by_player_name.clear();
-    for (auto* hotkey : hotkeys) {
-        if (hotkey->IsValid(player_name.c_str(), instance_type, primary, map_id, is_pvp))
-            valid_hotkeys.push_back(hotkey);
-        for (size_t i = 0; i < _countof(hotkey->prof_ids);i++) {
-            if (!hotkey->prof_ids[i])
-                continue;
-            if (!by_profession.contains(i))
-                by_profession[i] = std::vector<TBHotkey*>();
-            by_profession[i].push_back(hotkey);
-        }
-        for (auto h_map_id : hotkey->map_ids) {
-            if (!by_map.contains(h_map_id))
-                by_map[h_map_id] = std::vector<TBHotkey*>();
-            by_map[h_map_id].push_back(hotkey);
-        }
-
-        if (!by_instance_type.contains(hotkey->instance_type))
-            by_instance_type[hotkey->instance_type] = std::vector<TBHotkey*>();
-        by_instance_type[hotkey->instance_type].push_back(hotkey);
-        if (!by_player_name.contains(hotkey->player_name))
-            by_player_name[hotkey->player_name] = std::vector<TBHotkey*>();
-        by_player_name[hotkey->player_name].push_back(hotkey);
-    }
-
-    return true;
-}
+bool HotkeysWindow::ToggleClicker() { return clickerActive = !clickerActive; }
+bool HotkeysWindow::ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
 
 void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
@@ -231,7 +329,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
             return these_hotkeys_changed;
         };
         switch (group_by) {
-            case Profession:
+        case GroupBy::Profession:
                 for (auto& it : by_profession) {
                     if (ImGui::CollapsingHeader(TBHotkey::professions[it.first])) {
                         ImGui::Indent();
@@ -244,7 +342,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                     }
                 }
                 break;
-            case Map: {
+            case GroupBy::Map: {
                 const char* map_name;
                 for (auto& it : by_map) {
                     if (it.first == 0)
@@ -264,7 +362,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                     }
                 }
             } break;
-            case PlayerName: {
+            case GroupBy::PlayerName: {
                 const char* player_name;
                 for (auto& it : by_player_name) {
                     if (it.first.empty())
@@ -355,6 +453,10 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     if (GW::Chat::GetIsTyping())
         return false;
+    if (Message == WM_ACTIVATE) {
+        OnWindowActivated(wParam != WA_INACTIVE);
+        return false;
+    }
     if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow())
         return false;
     long keyData = 0;
@@ -438,32 +540,6 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
         return false;
     }
 }
-bool HotkeysWindow::HandleMapChange() {
-    if (!IsMapReady())
-        return false;
-    if (!GW::Agents::GetPlayerAsAgentLiving())
-        return false;
-    GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
-    if (mt == GW::Constants::InstanceType::Loading)
-        return false;
-    if (!CheckSetValidHotkeys())
-        return false;
-    // NB: CheckSetValidHotkeys() has already checked validity of char/map etc
-    for (TBHotkey* hk : valid_hotkeys) {
-        if (!block_hotkeys
-            && ((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
-                || (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
-            && !hk->pressed) {
-
-            hk->pressed = true;
-            current_hotkey = hk;
-            hk->Execute();
-            current_hotkey = nullptr;
-            hk->pressed = false;
-            }
-    }
-    return true;
-}
 
 void HotkeysWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
@@ -473,7 +549,7 @@ void HotkeysWindow::Update(float delta) {
         return;
     }
     if (!map_change_triggered)
-        map_change_triggered = HandleMapChange();
+        map_change_triggered = OnMapChanged();
 
     for (unsigned int i = 0; i < hotkeys.size(); ++i) {
         if (hotkeys[i]->ongoing)

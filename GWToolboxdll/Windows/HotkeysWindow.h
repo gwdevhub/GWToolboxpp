@@ -22,16 +22,11 @@ public:
     void Initialize() override;
     void Terminate() override;
 
-    inline bool ToggleClicker() { return clickerActive = !clickerActive; }
-    inline bool ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
+    static bool ToggleClicker();
+    static bool ToggleCoinDrop();
 
-    TBHotkey* current_hotkey = nullptr;
+    static const TBHotkey* CurrentHotkey();
 
-    // Repopulates applicable_hotkeys based on current character/map context.
-    // Used because its not necessary to check these vars on every keystroke, only when they change
-    bool CheckSetValidHotkeys();
-
-    bool IsMapReady();
     // Update. Will always be called every frame.
     void Update(float delta) override;
 
@@ -44,39 +39,10 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
 
+
+
 private:
-    std::vector<TBHotkey*> hotkeys;             // list of hotkeys
-    // Subset of hotkeys that are valid to current character/map combo
-    std::vector<TBHotkey*> valid_hotkeys;
 
-    // Ordered subsets
-    enum GroupBy : int {
-        None,
-        Profession,
-        Map,
-        PlayerName,
-    } group_by = None;
-    std::map<int, std::vector<TBHotkey*>> by_profession;
-    std::map<int, std::vector<TBHotkey*>> by_map;
-    std::map<int, std::vector<TBHotkey*>> by_instance_type;
-    std::map<std::string, std::vector<TBHotkey*>> by_player_name;
-    bool need_to_check_valid_hotkeys = true;
 
-    bool IsPvPCharacter();
 
-    long max_id_ = 0;
-    bool block_hotkeys = false;
-
-    bool clickerActive = false;             // clicker is active or not
-    bool dropCoinsActive = false;           // coin dropper is active or not
-
-    bool map_change_triggered = false;
-
-    clock_t clickerTimer = 0;               // timer for clicker
-    clock_t dropCoinsTimer = 0;             // timer for coin dropper
-
-    float movementX = 0;                    // X coordinate of the destination of movement macro
-    float movementY = 0;                    // Y coordinate of the destination of movement macro
-
-    bool HandleMapChange();
 };

@@ -487,9 +487,8 @@ bool PconsWindow::SetEnabled(bool b) {
         if(tick_with_pcons)
             GW::PartyMgr::Tick(enabled);
     case InstanceType::Explorable: {
-        if (HotkeysWindow::Instance().current_hotkey &&
-            !HotkeysWindow::Instance()
-                 .current_hotkey->show_message_in_emote_channel)
+        if (HotkeysWindow::CurrentHotkey() &&
+            !HotkeysWindow::CurrentHotkey()->show_message_in_emote_channel)
             break; // Selected hotkey doesn't allow a message.
         ImGuiWindow *main =
             ImGui::FindWindowByName(MainWindow::Instance().Name());
