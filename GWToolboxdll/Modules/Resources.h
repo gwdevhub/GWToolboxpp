@@ -79,6 +79,8 @@ public:
 
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);
+    // Guaranteed to return a pointer, but may not yet be decoded.
+    static GuiUtils::EncString* DecodeStringId(uint32_t enc_str_id);
 
     // Ensure file exists on disk, download from remote location if not found. If an error occurs, details are held in error string
     static void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);

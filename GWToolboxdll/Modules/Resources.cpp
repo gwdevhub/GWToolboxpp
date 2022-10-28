@@ -55,6 +55,7 @@ namespace {
     std::map<std::string, IDirect3DTexture9**> guild_wars_wiki_images;
     std::map<uint32_t, IDirect3DTexture9**> profession_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
+    std::map<uint32_t, GuiUtils::EncString*> encoded_string_ids;
     std::string ns;
     constexpr size_t MAX_WORKERS = 5;
     const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
@@ -200,14 +201,15 @@ void Resources::Cleanup() {
         delete tex;
     }
     item_images.clear();
-    for (const auto& tex : map_names | std::views::values) {
-        delete tex;
-    }
-    map_names.clear();
     for (const auto& img : guild_wars_wiki_images | std::views::values) {
         delete img;
     }
     guild_wars_wiki_images.clear();
+    for (const auto& img : encoded_string_ids | std::views::values) {
+        delete img;
+    }
+    encoded_string_ids.clear();
+    map_names.clear(); // NB: Map names are pointers to encoded_string_ids
 }
 void Resources::Terminate() {
     ToolboxModule::Terminate();
@@ -702,13 +704,23 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
 }
 
 GuiUtils::EncString* Resources::GetMapName(GW::Constants::MapID map_id) {
-    if (map_names.contains(map_id)) {
-        return map_names.at(map_id);
+    const auto found = map_names.find(map_id);
+    if (found != map_names.end()) {
+        return found->second;
     }
     const auto area = GW::Map::GetMapInfo(map_id);
     ASSERT(area);
-    const auto enc_string = new GuiUtils::EncString(area->name_id, false);
-    map_names[map_id] = enc_string;
+    const auto ret = DecodeStringId(area->name_id);
+    map_names[map_id] = ret;
+    return ret;
+}
+GuiUtils::EncString* Resources::DecodeStringId(uint32_t enc_str_id) {
+    const auto found = encoded_string_ids.find(enc_str_id);
+    if (found != encoded_string_ids.end()) {
+        return found->second;
+    }
+    const auto enc_string = new GuiUtils::EncString(enc_str_id, false);
+    encoded_string_ids[enc_str_id] = enc_string;
     return enc_string;
 }
 
