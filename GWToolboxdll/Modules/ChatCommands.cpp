@@ -2127,6 +2127,8 @@ void ChatCommands::CmdVolume(const wchar_t*, int argc, LPWSTR* argv) {
 }
 
 void ChatCommands::CmdSetHardMode(const wchar_t*, int , LPWSTR* ) {
+    if (!GW::GetWorldContext()->is_hard_mode_unlocked)
+        return;
     GW::PartyMgr::SetHardMode(true);
 }
 
