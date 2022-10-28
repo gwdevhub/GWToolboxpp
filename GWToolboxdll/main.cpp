@@ -8,47 +8,70 @@
 #include <Modules/CrashHandler.h>
 
 namespace {
-    std::thread GWToolboxThread;
+    HMODULE dllmodule;
+    volatile bool thread_running = false;
+    volatile bool is_detaching = false;
 }
-
-// Do all your startup things here instead.
-DWORD WINAPI Init(HMODULE hModule) noexcept {
-    ASSERT(!GWToolboxThread.joinable());
-    GWToolboxThread = std::thread([hModule]() {
-        __try {
-            if (!Log::InitializeLog()) {
-                MessageBoxA(0, "Failed to create outgoing log file.\nThis could be due to a file permissions error or antivirus blocking.", "GWToolbox++ - Clientside Error Detected", 0);
-                FreeLibraryAndExitThread(hModule, EXIT_SUCCESS);
-            }
-            GW::Scanner::Initialize();
-            Log::Log("Creating toolbox thread\n");
-            SafeThreadEntry(hModule);
-        }
-        __except (EXCEPT_EXPRESSION_ENTRY) {
-        }
-        });
-    ASSERT(GWToolboxThread.joinable());
-    GWToolboxThread.detach();
-    return 0;
-}
-
 // Exported functions
 extern "C" __declspec(dllexport) const char* GWToolboxVersion = GWTOOLBOXDLL_VERSION;
 extern "C" __declspec(dllexport) void __cdecl Terminate() {
-    // Tell tb to close, then wait for the thread to finish.
-    GWToolbox::Instance().StartSelfDestruct();
-    if (GWToolboxThread.joinable())
-        GWToolboxThread.join();
+    if (thread_running) {
+        // Tell tb to close, then wait for the thread to finish.
+        GWToolbox::Instance().StartSelfDestruct();
+        while (thread_running)
+            Sleep(16);
+    }
+    Sleep(16);
+    if(!is_detaching)
+        FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+}
+
+
+// Do all your startup things here instead.
+DWORD WINAPI Init() noexcept {
+    ASSERT(!thread_running);
+    thread_running = true;
+    __try {
+        if (!Log::InitializeLog()) {
+            MessageBoxA(0, "Failed to create outgoing log file.\nThis could be due to a file permissions error or antivirus blocking.", "GWToolbox++ - Clientside Error Detected", 0);
+            goto leave;
+        }
+        GW::Scanner::Initialize();
+        Log::Log("Creating toolbox thread\n");
+        SafeThreadEntry(dllmodule);
+    }
+    __except (EXCEPT_EXPRESSION_ENTRY) {
+    }
+    leave:
+    thread_running = false;
+    if(!is_detaching)
+        FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+    return 0;
 }
 
 // DLL entry point, dont do things in this thread unless you know what you are doing.
 BOOL WINAPI DllMain(_In_ HMODULE _HDllHandle, _In_ DWORD _Reason, _In_opt_ LPVOID _Reserved){
     UNREFERENCED_PARAMETER(_Reserved);
+    DisableThreadLibraryCalls(_HDllHandle);
     switch (_Reason) {
     case DLL_PROCESS_ATTACH: {
-        Init(_HDllHandle);
+        dllmodule = _HDllHandle;
+        __try {
+            HANDLE hThread = CreateThread(
+                0,
+                0,
+                (LPTHREAD_START_ROUTINE)Init,
+                0,
+                0,
+                0);
+
+            if (hThread != NULL)
+                CloseHandle(hThread);
+        } __except ( EXCEPT_EXPRESSION_ENTRY ) {
+        }
     } break;
     case DLL_PROCESS_DETACH: {
+        is_detaching = true;
         Terminate();
     }break;
     }
