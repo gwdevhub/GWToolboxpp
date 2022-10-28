@@ -180,8 +180,7 @@ leave:
 
     Log::Log("Closing log/console, bye!\n");
     Log::Terminate();
-
-    FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+    return 0;
 }
 
 LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) noexcept {
