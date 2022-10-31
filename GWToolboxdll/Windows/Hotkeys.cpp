@@ -1281,7 +1281,7 @@ HotkeyToggle::HotkeyToggle(CSimpleIni *ini, const char *section)
     initialised = true;
     switch (target) {
     case Clicker:
-        interval = 50;
+        interval = 7;
         break;
     case CoinDrop:
         interval = 500;
