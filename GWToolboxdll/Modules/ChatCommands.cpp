@@ -225,6 +225,101 @@ namespace {
         GW::UI::SetFrameLimit(frame_limit);
     }
 
+    const char* pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";
+    typedef void(__cdecl* CmdPrefCB)(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id);
+    void CmdValuePref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id) {
+        GW::UI::NumberPreference pref = (GW::UI::NumberPreference)pref_id;
+
+        // Find value and set preference
+        uint32_t value = 0xff;
+        if(argc > 2 && GuiUtils::ParseUInt(argv[2],&value) && GW::UI::SetPreference(pref, value))
+            return; // Success
+
+        // Print current value
+        if (argc < 3)
+            Log::InfoW(L"Current preference value for %s is %d", argv[1], GW::UI::GetPreference(pref));
+        return Log::Error(pref_syntax);
+    }
+    void CmdEnumPref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id) {
+        GW::UI::EnumPreference pref = (GW::UI::EnumPreference)pref_id;
+
+        // Find value and set preference
+        uint32_t value = 0xff;
+        if(argc > 2 && GuiUtils::ParseUInt(argv[2],&value) && GW::UI::SetPreference(pref, value))
+            return; // Success
+
+        // Print current value
+        if (argc < 3)
+            Log::InfoW(L"Current preference value for %s is %d", argv[1], GW::UI::GetPreference(pref));
+
+        // Got this far; print out available values for this preference.
+        uint32_t* values = 0;
+        uint32_t available = GW::UI::GetPreferenceOptions(pref,&values);
+        wchar_t available_vals_buffer[120];
+        uint32_t offset = 0;
+        offset += swprintf(&available_vals_buffer[offset], offset - _countof(available_vals_buffer), L"Available values for %s: ", argv[1]);
+        for (size_t i = 0; i < available; i++) {
+            offset += swprintf(&available_vals_buffer[offset], offset - _countof(available_vals_buffer), i > 0 ? L", %d" : L"%d", values[i]);
+        }
+        Log::InfoW(available_vals_buffer);
+    }
+
+
+    struct PrefMapCommand {
+        PrefMapCommand(GW::UI::EnumPreference p) : preference_id((uint32_t)p) {
+            preference_callback = CmdEnumPref;
+        }
+        PrefMapCommand(GW::UI::NumberPreference p) : preference_id((uint32_t)p) {
+            preference_callback = CmdValuePref;
+        }
+
+        const uint32_t preference_id;
+        CmdPrefCB preference_callback;
+    };
+
+    typedef std::map<const std::wstring, const PrefMapCommand> PrefMap;
+    PrefMap pref_map;
+    const PrefMap& getPrefCommandOptions() {
+        if (pref_map.empty()) {
+            pref_map = {
+                {L"antialiasing",GW::UI::EnumPreference::AntiAliasing},
+                {L"shaderquality",GW::UI::EnumPreference::ShaderQuality},
+                {L"terrainquality",GW::UI::EnumPreference::TerrainQuality},
+                {L"reflections",GW::UI::EnumPreference::Reflections},
+                {L"shadowquality",GW::UI::EnumPreference::ShadowQuality},
+                {L"interfacesize",GW::UI::EnumPreference::InterfaceSize},
+                {L"texturequality",GW::UI::NumberPreference::TextureQuality}
+            };
+        }
+        return pref_map;
+    };
+
+    void CmdPref(const wchar_t* cmd, int argc, LPWSTR* argv) {
+        const auto& options = getPrefCommandOptions();
+        if (argc > 1 && wcscmp(argv[1], L"list") == 0) {
+            wchar_t buffer[512];
+            int offset = 0;
+            for (auto it = options.begin(); it != options.end();it++) {
+                int written = swprintf(&buffer[offset], offset - _countof(buffer), offset > 0 ? L", %s" : L"%s", it->first.c_str());
+                ASSERT(written != -1);
+                offset += written;
+            }
+            return Log::InfoW(L"/pref options:\n%s", buffer);
+        }
+        if (argc < 2)
+            return Log::Error(pref_syntax);
+
+        // Find preference by name
+        const PrefMapCommand* pref = 0;
+        const auto found = options.find(argv[1]);
+        if(found == options.end())
+            return Log::Error(pref_syntax);
+        pref = &found->second;
+
+        pref->preference_callback(cmd, argc, argv,pref->preference_id);
+
+    }
+
     const char* withdraw_syntax = "'/withdraw [quantity (1-65535)] model_id1 [model_id2 ...]' tops up your inventory with a minimum quantity of 1 or more items, identified by model_id";
 
 } // namespace
@@ -370,6 +465,7 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/pingitem <equipped_item>' to ping your equipment in chat.\n"
         "<equipped_item> options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume");
     ImGui::Bullet(); ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");
+    ImGui::Bullet(); ImGui::Text(pref_syntax);
     ImGui::Bullet(); ImGui::Text("'/resize <width> <height>' resize the GW window");
     ImGui::Bullet(); ImGui::Text("'/scwiki [<search_term>]' search http://wiki.fbgmguild.com.");
     ImGui::Bullet(); ImGui::Text("'/show <name>' opens the window, in-game feature or widget titled <name>.");
@@ -557,6 +653,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"animation", CmdAnimation);
     GW::Chat::CreateCommand(L"hom", CmdHom);
     GW::Chat::CreateCommand(L"fps", CmdFps);
+    GW::Chat::CreateCommand(L"pref", CmdPref);
 
     // Experimental chat commands
 #if _DEBUG
