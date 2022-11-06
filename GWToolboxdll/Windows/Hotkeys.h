@@ -35,6 +35,7 @@ public:
     static TBHotkey* HotkeyFactory(CSimpleIni* ini, const char* section);
     static void HotkeySelector(WORD* key, DWORD* modifier = nullptr);
 
+    char group[128] = "";
     bool pressed = false;   // if the key has been pressed
     bool active = true;     // if the hotkey is enabled/active
     bool show_message_in_emote_channel = true; // if hotkey should show message in emote channel when triggered

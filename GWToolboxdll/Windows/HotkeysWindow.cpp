@@ -33,12 +33,14 @@ namespace {
         Profession,
         Map,
         PlayerName,
+        Group
     };
-    GroupBy group_by = GroupBy::None;
-    std::map<int, std::vector<TBHotkey*>> by_profession;
-    std::map<int, std::vector<TBHotkey*>> by_map;
-    std::map<int, std::vector<TBHotkey*>> by_instance_type;
-    std::map<std::string, std::vector<TBHotkey*>> by_player_name;
+    GroupBy group_by = GroupBy::Group;
+    std::unordered_map<int, std::vector<TBHotkey*>> by_profession;
+    std::unordered_map<int, std::vector<TBHotkey*>> by_map;
+    std::unordered_map<int, std::vector<TBHotkey*>> by_instance_type;
+    std::unordered_map<std::string, std::vector<TBHotkey*>> by_player_name;
+    std::unordered_map<std::string, std::vector<TBHotkey*>> by_group;
     bool need_to_check_valid_hotkeys = true;
     
 
@@ -106,9 +108,11 @@ namespace {
         by_map.clear();
         by_instance_type.clear();
         by_player_name.clear();
+        by_group.clear();
         for (auto* hotkey : hotkeys) {
             if (hotkey->IsValid(player_name.c_str(), instance_type, primary, map_id, is_pvp))
                 valid_hotkeys.push_back(hotkey);
+
             for (size_t i = 0; i < _countof(hotkey->prof_ids);i++) {
                 if (!hotkey->prof_ids[i])
                     continue;
@@ -128,6 +132,9 @@ namespace {
             if (!by_player_name.contains(hotkey->player_name))
                 by_player_name[hotkey->player_name] = std::vector<TBHotkey*>();
             by_player_name[hotkey->player_name].push_back(hotkey);
+            if (!by_group.contains(hotkey->group))
+                by_group[hotkey->group] = std::vector<TBHotkey*>();
+            by_group[hotkey->group].push_back(hotkey);
         }
 
         return true;
@@ -158,8 +165,6 @@ namespace {
         }
         return true;
     }
-
-    
     
     // Called in Update loop after WM_ACTIVATE has been received via WndProc
     bool OnWindowActivated(bool activated) {
@@ -285,6 +290,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::EndPopup();
             if (new_hotkey) {
                 hotkeys.push_back(new_hotkey);
+                hotkeys_changed = true;
             }
         }
 
@@ -314,10 +320,13 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                     }
                 } break;
                 case TBHotkey::Op_Delete: {
-                    TBHotkey* hk = hotkeys[i];
-                    hotkeys.erase(hotkeys.begin() + static_cast<int>(i));
-                    delete hk;
-                    return true;
+                    auto it = std::ranges::find(hotkeys, in[i]);
+                    if (it != hotkeys.end()) {
+                        hotkeys.erase(it);
+                        delete in[i];
+                        return true;
+                    }
+
                 } break;
                 case TBHotkey::Op_BlockInput:
                     block_hotkeys = true;
@@ -329,6 +338,26 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
             return these_hotkeys_changed;
         };
         switch (group_by) {
+        case GroupBy::Group:
+            for (auto& it : by_group) {
+                if (it.first == "") {
+                    // No collapsing header for hotkeys without a group.
+                    if (draw_hotkeys_vec(it.second)) {
+                        hotkeys_changed = true;
+                        break;
+                    }
+                }
+                else if (ImGui::CollapsingHeader(it.first.c_str())) {
+                    ImGui::Indent();
+                    if (draw_hotkeys_vec(it.second)) {
+                        hotkeys_changed = true;
+                        ImGui::Unindent();
+                        break;
+                    }
+                    ImGui::Unindent();
+                }
+            }
+            break;
         case GroupBy::Profession:
                 for (auto& it : by_profession) {
                     if (ImGui::CollapsingHeader(TBHotkey::professions[it.first])) {
@@ -422,7 +451,7 @@ void HotkeysWindow::LoadSettings(CSimpleIni* ini) {
         TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
         if (hk) hotkeys.push_back(hk);
     }
-
+    CheckSetValidHotkeys();
     TBHotkey::hotkeys_changed = false;
 }
 void HotkeysWindow::SaveSettings(CSimpleIni* ini) {
@@ -451,12 +480,13 @@ void HotkeysWindow::SaveSettings(CSimpleIni* ini) {
 
 bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
-    if (GW::Chat::GetIsTyping())
-        return false;
+
     if (Message == WM_ACTIVATE) {
         OnWindowActivated(wParam != WA_INACTIVE);
         return false;
     }
+    if (GW::Chat::GetIsTyping())
+        return false;
     if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow())
         return false;
     long keyData = 0;

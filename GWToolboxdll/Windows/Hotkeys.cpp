@@ -179,6 +179,8 @@ TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
     std::string id = str.substr(first_sep + 1, second_sep - first_sep - 1);
     std::string type = str.substr(second_sep + 1);
 
+    hotkeys_changed = true;
+
     if (type == HotkeySendChat::IniSection()) {
         return new HotkeySendChat(ini, section);
     }
@@ -257,6 +259,11 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
                 prof_ids[prof_id] = true;
         }
 
+        ini_str = ini->GetValue(section, VAR_NAME(group), group);
+        memset(group, 0, sizeof(group));
+        strncpy(group, ini_str.c_str(), _countof(group) - 1);
+
+
         instance_type = ini->GetLongValue(section, VAR_NAME(instance_type), instance_type);
         show_message_in_emote_channel =
             ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
@@ -320,6 +327,7 @@ void TBHotkey::Save(CSimpleIni *ini, const char *section) const
     ini->SetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
     ini->SetValue(section, VAR_NAME(player_name), player_name);
+    ini->SetValue(section, VAR_NAME(group), group);
 
     std::string out;
     std::vector<uint32_t> prof_ids_tmp;
@@ -442,6 +450,9 @@ bool TBHotkey::Draw(Op *op)
         // === Hotkey section ===
         const float indent_offset = ImGui::GetCurrentWindow()->DC.Indent.x;
         const float offset_sameline = indent_offset + (ImGui::GetContentRegionAvail().x / 2);
+        hotkey_changed |= ImGui::InputTextEx("Hotkey Group##hotkey_group", "No Hotkey Group", group, sizeof(group), ImVec2(0, 0), ImGuiInputTextFlags_EnterReturnsTrue, 0, 0);
+        if (ImGui::IsItemDeactivatedAfterEdit())
+            hotkey_changed = true;
         hotkey_changed |= ImGui::Checkbox("Block key in Guild Wars when triggered", &block_gw);
         ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event");
         ImGui::SameLine(offset_sameline);
