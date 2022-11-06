@@ -209,10 +209,12 @@ void DialogModule::SendDialog(const uint32_t dialog_id, clock_t time) {
         const uint32_t quest_id = GetQuestID(dialog_id);
         switch (GetQuestDialogType(dialog_id)) {
         case QuestDialogType::TAKE: // Dialog is for taking a quest
-            queued_dialogs_to_send[quest_id << 8 | 0x800003] = time;
+            queued_dialogs_to_send[SetQuestDialogType(quest_id, QuestDialogType::ENQUIRE_NEXT)] = time;
+            queued_dialogs_to_send[SetQuestDialogType(quest_id, QuestDialogType::ENQUIRE)] = time;
             break;
         case QuestDialogType::REWARD: // Dialog is for accepting a quest reward
-            queued_dialogs_to_send[quest_id << 8 | 0x800006] = time;
+            queued_dialogs_to_send[SetQuestDialogType(quest_id, QuestDialogType::ENQUIRE_NEXT)] = time;
+            queued_dialogs_to_send[SetQuestDialogType(quest_id, QuestDialogType::ENQUIRE_REWARD)] = time;
             break;
         default: return;
         }
@@ -288,6 +290,7 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
         switch (GetQuestDialogType(dialog_id)) {
         case QuestDialogType::TAKE:
         case QuestDialogType::ENQUIRE:
+        case QuestDialogType::ENQUIRE_NEXT:
         case QuestDialogType::ENQUIRE_REWARD:
         case QuestDialogType::REWARD:
             available_quests.push_back(quest_id);
@@ -303,8 +306,8 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
             continue;
         }
         SendDialogs({
-            quest_id << 8 | 0x800001,   // take quest
-            quest_id << 8 | 0x800007    // acept quest reward
+            SetQuestDialogType(quest_id,QuestDialogType::TAKE),
+            SetQuestDialogType(quest_id,QuestDialogType::REWARD)
         });
         return quest_id;
     }
