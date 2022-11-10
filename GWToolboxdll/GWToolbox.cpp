@@ -215,7 +215,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
     // === Send events to ImGui ===
     const ImGuiIO& io = ImGui::GetIO();
-    const bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing();
+    const bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing() || GW::Map::GetIsInCinematic();
     if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture) {
         return TRUE;
     }
@@ -440,10 +440,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         tb_destroyed = true;
     }
     // === runtime ===
-    if (initialized
-        && !must_self_destruct
-        && GW::Render::GetViewportWidth() > 0
-        && GW::Render::GetViewportHeight() > 0) {
+    if (initialized && !must_self_destruct) {
         // Attach WndProc in the render loop to make sure the window is loaded and ready
         ASSERT(AttachWndProcHandler());
         // Attach imgui if not already done so
@@ -451,16 +448,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         if (!GW::UI::GetIsUIDrawn())
             return;
-
-        const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
-
         if (GW::GetPreGameContext())
             return; // Login screen
-#ifndef _DEBUG
         if (GW::Map::GetIsInCinematic())
             return;
-#endif
-
         if (IsIconic(GW::MemoryMgr::GetGWWindowHandle()))
             return;
 
@@ -471,6 +462,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         ImGui_ImplDX9_NewFrame();
         ImGui_ImplWin32_NewFrame();
+
+        const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
         if (!world_map_showing)
             Minimap::Render(device);
