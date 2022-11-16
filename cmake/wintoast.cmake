@@ -1,0 +1,1 @@
+target_include_directories(wintoast INTERFACE "${PROJECT_SOURCE_DIR}/dependencies/wintoast")

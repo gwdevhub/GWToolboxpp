@@ -95,4 +95,5 @@ private:
     bool use_latency_widget = true;
     bool use_skill_monitor = true;
     bool use_plugins = true;
+    bool use_toast_notifications = true;
 };

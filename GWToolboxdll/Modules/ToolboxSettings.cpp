@@ -28,6 +28,7 @@
 #include <Modules/ChatLog.h>
 #include <Modules/HintsModule.h>
 #include <Modules/PluginModule.h>
+#include <Modules/ToastNotifications.h>
 #if 0
 #include <Modules/GWFileRequester.h>
 #endif
@@ -98,6 +99,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     modules.push_back(&InventoryManager::Instance());
     if (use_partywindowmodule) modules.push_back(&PartyWindowModule::Instance());
     modules.push_back(&ZrawDeepModule::Instance());
+    if (use_toast_notifications) modules.push_back(&ToastNotifications::Instance());
 
     if (use_discord) modules.push_back(&DiscordModule::Instance());
     if (use_twitch) modules.push_back(&TwitchModule::Instance());
@@ -230,10 +232,11 @@ void ToolboxSettings::DrawSettingInternal() {
 #endif
         {"Reroll", &use_reroll_window},
         {"Skill Monitor", &use_skill_monitor},
+        {"Teamspeak", &use_teamspeak},
         {"Timer", &use_timer},
+        {"Toast Notifications", &use_toast_notifications},
         {"Trade", &use_trade},
         {"Travel", &use_travel},
-        {"Teamspeak", &use_teamspeak},
         {"Twitch", &use_twitch},
         {"Observer", &use_observer},
         {"Observer Player Window", &use_observer_player_window},
@@ -315,6 +318,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_party_statistics = ini->GetBoolValue(Name(), VAR_NAME(use_party_statistics), use_party_statistics);
     use_skill_monitor = ini->GetBoolValue(Name(), VAR_NAME(use_skill_monitor), use_skill_monitor);
     use_latency_widget = ini->GetBoolValue(Name(), VAR_NAME(use_latency_widget), use_latency_widget);
+    use_toast_notifications = ini->GetBoolValue(Name(), VAR_NAME(use_toast_notifications), use_toast_notifications);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -368,6 +372,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_party_statistics), use_party_statistics);
     ini->SetBoolValue(Name(), VAR_NAME(use_skill_monitor), use_skill_monitor);
     ini->SetBoolValue(Name(), VAR_NAME(use_latency_widget), use_latency_widget);
+    ini->SetBoolValue(Name(), VAR_NAME(use_toast_notifications), use_toast_notifications);
 }
 
 void ToolboxSettings::Draw(IDirect3DDevice9*) {
