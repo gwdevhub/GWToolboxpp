@@ -57,6 +57,28 @@ namespace {
     std::queue<std::wstring> send_queue;
     
     uint32_t last_hovered_item_id = 0;
+
+    bool EncInfoField(const char* label, const wchar_t* enc_string) {
+        std::string info_string;
+        size_t size_reqd = enc_string ? (wcslen(enc_string) * 7) + 1 : 0;
+        info_string.resize(size_reqd,0); // 7 chars = 0xFFFF plus a space
+        size_t offset = 0;
+        for (size_t i = 0; enc_string && enc_string[i] && offset < size_reqd - 1; i++) {
+            offset += sprintf(&info_string[offset], "0x%X ", enc_string[i]);
+        }
+        return ImGui::InputTextEx(label, NULL, info_string.data(), info_string.size(), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
+    }
+
+    bool InfoField(const char* label, const char* fmt, ...) {
+        char info_string[128];
+        va_list vl;
+        va_start(vl, fmt);
+        vsnprintf(info_string, _countof(info_string), fmt, vl);
+        info_string[127] = 0;
+        va_end(vl);
+        return ImGui::InputTextEx(label, NULL, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
+    }
+
     const char* GetStatusStr(Status _status) {
         switch (_status) {
         case Status::Unknown: return "Unknown";
@@ -106,7 +128,46 @@ namespace {
                 return; // Someone else still to resign.
         }
 
-        Log::Warning("You're the last person to resign!");
+        Log::Warning("You're the only player left to resign. Type /resign in chat to resign.");
+    }
+    // Returns non-null terminated pointer to start of string argument.
+    wchar_t* GetStringArgument(wchar_t* encoded_string, size_t* string_argument_length) {
+        wchar_t* start = wcschr(encoded_string, 0x107);
+        if (!start) return nullptr;
+        start += 1;
+        wchar_t* end = wcschr(start, 0x1);
+        if (!end) return nullptr;
+        *string_argument_length = end - start;
+        return start;
+    }
+    void OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* pak) {
+        // 0x107 is the "start string" marker
+        if (wmemcmp(pak->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) != 0)
+            return;
+
+        // get all the data
+        GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+        if (info == nullptr) return;
+        GW::PlayerPartyMemberArray& partymembers = info->players;
+        if (!partymembers.valid()) return;
+
+        // Prepare the name
+        size_t name_len = 0;
+        wchar_t* name_argument = GetStringArgument(pak->message,&name_len);
+        if (!name_argument)
+            return;
+        const std::wstring buf(name_argument, name_len);
+        // set the right index in party
+        for (size_t i = 0; i < partymembers.size() && i < resign_statuses.size();i++) {
+            if (resign_statuses[i] == Status::Resigned) continue;
+            wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymembers[i].login_number);
+            if (player_name && GuiUtils::SanitizePlayerName(player_name) == buf) {
+                resign_statuses[i] = Status::Resigned;
+                timestamp[i] = GW::Map::GetInstanceTime();
+                break;
+            }
+        }
+        CheckAndWarnIfNotResigned();
     }
 }
 
@@ -157,52 +218,6 @@ void InfoWindow::OnInstanceLoad(GW::HookStatus*, GW::Packet::StoC::InstanceLoadF
         resign_statuses[i] = Status::NotYetConnected;
         timestamp[i] = 0;
     }
-}
-
-void InfoWindow::OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* pak) {
-    // 0x107 is the "start string" marker
-    if (wmemcmp(pak->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) != 0)
-        return;
-
-    // get all the data
-    GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-    if (info == nullptr) return;
-    GW::PlayerPartyMemberArray& partymembers = info->players;
-    if (!partymembers.valid()) return;
-
-    // Prepare the name
-    wchar_t* start = wcschr(pak->message, 0x107) + 1;
-    std::wstring buf(start, wcschr(start, 0x1) - start);
-    // set the right index in party
-    for (size_t i = 0; i < partymembers.size() && i < resign_statuses.size();i++) {
-        if (resign_statuses[i] == Status::Resigned) continue;
-        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymembers[i].login_number);
-        if (player_name && GuiUtils::SanitizePlayerName(player_name) == buf) {
-            resign_statuses[i] = Status::Resigned;
-            timestamp[i] = GW::Map::GetInstanceTime();
-            break;
-        }
-    }
-    CheckAndWarnIfNotResigned();
-}
-
-void InfoWindow::InfoField(const char* label, const char* fmt, ...) {
-    static char info_string[128];
-    va_list vl;
-    va_start(vl, fmt);
-    vsnprintf(info_string, _countof(info_string), fmt, vl);
-    va_end(vl);
-    ImGui::InputTextEx(label, NULL, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
-}
-void InfoWindow::EncInfoField(const char* label, const wchar_t* enc_string) {
-    static std::string info_string;
-    size_t size_reqd = enc_string ? (wcslen(enc_string) * 7) + 1 : 0;
-    info_string.resize(size_reqd,0); // 7 chars = 0xFFFF plus a space
-    size_t offset = 0;
-    for (size_t i = 0; enc_string && enc_string[i] && offset < size_reqd - 1; i++) {
-        offset += sprintf(&info_string[offset], "0x%X ", enc_string[i]);
-    }
-    ImGui::InputTextEx(label, NULL, info_string.data(), info_string.size(), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
 }
 
 void InfoWindow::DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, bool force_advanced) {

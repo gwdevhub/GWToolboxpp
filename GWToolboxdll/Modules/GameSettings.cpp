@@ -734,29 +734,35 @@ namespace {
         }
     }
 
+    bool IsOnline(GW::FriendStatus status) {
+        switch (status) {
+        case GW::FriendStatus::Away:
+        case GW::FriendStatus::DND:
+        case GW::FriendStatus::Online:
+            return true;
+        }
+        return false;
+    }
+
     void FriendStatusCallback(
         GW::HookStatus*,const GW::Friend* old_state, const GW::Friend* new_state)
     {
         if (!(new_state && old_state))
             return; // Friend added, or deleted
-        if (new_state->status == old_state->status)
-            return; // No charname or status hasn't changed
+        if (old_state->status == GW::FriendStatus::Unknown)
+            return; // First info about friend
+        bool was_online = IsOnline(old_state->status);
+        bool is_online = IsOnline(new_state->status);
+        if (was_online == is_online)
+            return;
         wchar_t buffer[128];
-        switch (new_state->status) {
-        case GW::FriendStatus::Offline:
-            if (notify_when_friends_offline) {
-                swprintf(buffer, _countof(buffer), L"%s (%s) has just logged out.", old_state->charname, old_state->alias);
-                GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
-            }
-            return;
-        case GW::FriendStatus::Away:
-        case GW::FriendStatus::DND:
-        case GW::FriendStatus::Online:
-            if (new_state->status != GW::FriendStatus::Offline && notify_when_friends_online) {
-                swprintf(buffer, _countof(buffer), L"<a=1>%s</a> (%s) has just logged in.", new_state->charname, new_state->alias);
-                GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
-            }
-            return;
+        if (is_online) {
+            swprintf(buffer, _countof(buffer), L"<a=1>%s</a> (%s) has just logged in.", new_state->charname, new_state->alias);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        }
+        else {
+            swprintf(buffer, _countof(buffer), L"%s (%s) has just logged out.", old_state->charname, old_state->alias);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
     }
 
