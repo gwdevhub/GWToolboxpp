@@ -735,28 +735,25 @@ namespace {
     }
 
     void FriendStatusCallback(
-        GW::HookStatus*,
-        GW::Friend* f,
-        GW::FriendStatus status,
-        const wchar_t* alias,
-        const wchar_t* charname)
+        GW::HookStatus*,const GW::Friend* old_state, const GW::Friend* new_state)
     {
-
-        if (!(f && charname && charname[0] && status != f->status))
+        if (!(new_state && old_state))
+            return; // Friend added, or deleted
+        if (new_state->status == old_state->status)
             return; // No charname or status hasn't changed
         wchar_t buffer[128];
-        switch (status) {
+        switch (new_state->status) {
         case GW::FriendStatus::Offline:
             if (notify_when_friends_offline) {
-                swprintf(buffer, _countof(buffer), L"%s (%s) has just logged out.", charname, alias);
+                swprintf(buffer, _countof(buffer), L"%s (%s) has just logged out.", old_state->charname, old_state->alias);
                 GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
             }
             return;
         case GW::FriendStatus::Away:
         case GW::FriendStatus::DND:
         case GW::FriendStatus::Online:
-            if (f->status != GW::FriendStatus::Offline && notify_when_friends_online) {
-                swprintf(buffer, _countof(buffer), L"<a=1>%s</a> (%s) has just logged in.", charname, alias);
+            if (new_state->status != GW::FriendStatus::Offline && notify_when_friends_online) {
+                swprintf(buffer, _countof(buffer), L"<a=1>%s</a> (%s) has just logged in.", new_state->charname, new_state->alias);
                 GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
             }
             return;

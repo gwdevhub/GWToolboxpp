@@ -1733,30 +1733,25 @@ void ChatCommands::CmdTransmoTarget(const wchar_t*, int argc, LPWSTR* argv) {
 }
 
 
-void GetAchievements(const wchar_t* player_name) {
-    if (player_name && player_name[0]) {
-        memset(&hom_achievements, 0, sizeof(hom_achievements));
-        HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(
-            player_name, &hom_achievements, OnAchievementsLoaded);
-    } else {
-        Log::Error("Invalid player name for hall of monuments command");
+void GetAchievements(std::wstring& player_name) {
+    if (!(player_name.size() && player_name.size() < 20)) {
+        return Log::Error("Invalid player name for hall of monuments command");
     }
+    memset(&hom_achievements, 0, sizeof(hom_achievements));
+    HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(
+        player_name, &hom_achievements, OnAchievementsLoaded);
 }
 
 void ChatCommands::CmdHom(const wchar_t* message, int argc, LPWSTR*) {
-    wchar_t player_name[20]{};
+    std::wstring player_name;
     if (argc > 1) {
-        std::wstring args = GetRemainingArgsWstr(message, 1);
+        player_name = GetRemainingArgsWstr(message, 1);
 
-        if (args == L"me") {
-            wcscpy(player_name, GW::PlayerMgr::GetPlayerName(0));
+        if (player_name == L"me") {
+            player_name = GW::PlayerMgr::GetPlayerName(0);
             return GetAchievements(player_name);
         }
-        if (args.find(L" ") != std::wstring::npos && args.size() < 20) {
-            wcscpy(player_name, args.c_str());
-            return GetAchievements(player_name);
-        }
-        if (!args.empty()) {
+        if (player_name.find(L" ") != std::wstring::npos && player_name.size() < 20) {
             return GetAchievements(player_name);
         }
     }
@@ -1764,7 +1759,7 @@ void ChatCommands::CmdHom(const wchar_t* message, int argc, LPWSTR*) {
     auto target = GW::Agents::GetTargetAsAgentLiving();
     auto player = target && target->IsPlayer() ? GW::PlayerMgr::GetPlayerByID(target->player_number) : nullptr;
     if (player) {
-        wcscpy(player_name, player->name);
+        player_name = player->name;
         return GetAchievements(player_name);
     }
 }

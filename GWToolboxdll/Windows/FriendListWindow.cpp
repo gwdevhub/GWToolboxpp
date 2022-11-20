@@ -32,6 +32,11 @@
 using namespace ToolboxUtils;
 namespace
 {
+    std::thread settings_thread;
+    FriendListWindow& Instance() {
+        return FriendListWindow::Instance();
+    }
+
     const ImColor ProfColors[11] = {0xFFFFFFFF, 0xFFEEAA33, 0xFF55AA00,
                                     0xFF4444BB, 0xFF00AA55, 0xFF8800AA,
                                     0xFFBB3333, 0xFFAA0088, 0xFF00AAAA,
@@ -116,6 +121,141 @@ namespace
         }
         return player_name;
     }
+    // Encoded message types as received via encoded chat message
+    enum class MessageType : wchar_t {
+        CANNOT_ADD_YOURSELF_AS_A_FRIEND = 0x2f3,
+        EXCEEDED_MAX_NUMBER_OF_FRIENDS,
+        CHARACTER_NAME_X_DOES_NOT_EXIST,
+        FRIEND_ALREADY_ADDED_AS_X,
+        INCOMING_WHISPER = 0x76d,
+        OUTGOING_WHISPER,
+        PLAYER_NAME_IS_INVALID = 0x880,
+        PLAYER_X_NOT_ONLINE
+    };
+    bool WriteError(MessageType message_type, const wchar_t* character_name) {
+        wchar_t buffer[122];
+        GW::Chat::Channel channel = GW::Chat::CHANNEL_GLOBAL;
+        switch (message_type) {
+        case MessageType::CHARACTER_NAME_X_DOES_NOT_EXIST:
+        case MessageType::FRIEND_ALREADY_ADDED_AS_X:
+            ASSERT(swprintf(buffer, _countof(buffer), L"%c\x107%s\x1", message_type, character_name) > 0);
+            break;
+        case MessageType::PLAYER_X_NOT_ONLINE:
+            ASSERT(swprintf(buffer, _countof(buffer), L"%c\x101\x100\x107%s\x1\x108\x1", message_type, character_name) > 0);
+            break;
+        default:
+            return false;
+        }
+        GW::Chat::WriteChatEnc(channel, buffer);
+        return true;
+    }
+    // When a whisper is being redirected by this module, this flag is set. Stops infinite redirect loops.
+    bool is_redirecting_whisper = false;
+    struct PendingWhisper {
+        std::wstring charname;
+        std::wstring message;
+        clock_t pending_add = 0;
+        inline void reset(std::wstring _charname = L"", std::wstring _message = L"") {
+            charname = _charname;
+            message = _message;
+            pending_add = 0;
+        }
+    };
+    PendingWhisper pending_whisper;
+    void UpdatePendingWhisper() {
+        if (!pending_whisper.pending_add)
+            return;
+        if (TIMER_DIFF(pending_whisper.pending_add) > 5000) {
+            pending_whisper.reset(); // Timeout reached adding player to friend list.
+            return;
+        }
+        // Check if pending player has been added.
+        auto instance = Instance();
+        instance.Poll();
+        auto lf = instance.GetFriend(pending_whisper.charname.c_str());
+        if (!(lf && lf->ValidUuid()))
+            return;
+        // This is a player that TB has added to friend list to find out who they're actually playing on.
+
+        if (lf->IsOffline()) {
+            // If they're still not online, then show the "Player is not online" error
+            ASSERT(WriteError(MessageType::PLAYER_X_NOT_ONLINE, pending_whisper.charname.c_str()));
+            pending_whisper.reset();
+            return;
+        }
+
+        // If they're online, send the original message...
+        ASSERT(lf->current_char);
+        is_redirecting_whisper = true;
+        GW::Chat::SendChat(lf->current_char->getNameW().c_str(), pending_whisper.message.c_str());
+        is_redirecting_whisper = false;
+        pending_whisper.reset();
+
+        // ... then remove from GW.
+        ASSERT(lf->RemoveGWFriend());
+        ASSERT(instance.RemoveFriend(lf));
+    }
+    void OnAddFriendError(GW::HookStatus* status, wchar_t*) {
+        if (!pending_whisper.charname.empty()) {
+            ASSERT(WriteError(MessageType::PLAYER_X_NOT_ONLINE, pending_whisper.charname.c_str()));
+            pending_whisper.reset();
+            status->blocked = true;
+        }
+    }
+    // Record the pending outgoing whisper
+    void OnOutgoingWhisper(GW::HookStatus *, int channel, wchar_t *message)
+    {
+        // If this outgoing whisper was created due to a redirect, or its not a whisper, drop out here.
+        if (is_redirecting_whisper || static_cast<GW::Chat::Channel>(channel) != GW::Chat::CHANNEL_WHISPER)
+            return;
+        wchar_t* separator_pos = wcschr(message, ',');
+        if (!separator_pos)
+            return;
+        pending_whisper.reset(std::wstring(message, separator_pos), std::wstring(&separator_pos[1]));
+    }
+    // Remove from pending whispers when whisper has been sent
+    void OnOutgoingWhisperSuccess(GW::HookStatus *, wchar_t *)
+    {
+        pending_whisper.reset();
+    }
+    void OnPlayerNotOnline(GW::HookStatus *status, wchar_t *message)
+    {
+        std::wstring player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
+        auto f = Instance().GetFriend(player_name.c_str());
+        if (f) {
+            // If this player is already in my friend list, send the message directly.
+            if (!f->IsOffline() && f->current_char->getNameW() != player_name) {
+                is_redirecting_whisper = true;
+                GW::Chat::SendChat(f->current_char->getNameW().c_str(), pending_whisper.message.c_str());
+                is_redirecting_whisper = false;
+                pending_whisper.reset();
+                status->blocked = true;
+            }
+            return;
+        }
+        if (pending_whisper.pending_add && player_name == pending_whisper.charname)
+            return; // This is an error message generated by toolbox
+        // Otherwise if this player isn't already in my friend list, add them temporarily. OnFriendCreated will then resend the message and remove the friend.
+        if (pending_whisper.charname.size()) {
+            GW::FriendListMgr::AddFriend(pending_whisper.charname.c_str());
+            pending_whisper.pending_add = TIMER_INIT();
+            status->blocked = true;
+        }
+    }
+    void OnFriendAlreadyAdded(GW::HookStatus *status, wchar_t *message)
+    {
+        std::wstring player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
+        auto f = Instance().GetFriend(player_name.c_str());
+        if (f) {
+            f->SetCharacter(player_name.c_str());
+        }
+        if (pending_whisper.charname.size()) {
+            ASSERT(WriteError(MessageType::PLAYER_X_NOT_ONLINE,pending_whisper.charname.c_str()));
+            pending_whisper.reset();
+            status->blocked = true;
+        }
+    }
+
 }
 // Find out whether the player related to this packet is on the current player's ignore list.
 bool FriendListWindow::GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak) {
@@ -196,7 +336,7 @@ FriendListWindow::Character* FriendListWindow::Friend::GetCharacter(const wchar_
     return &it->second;
 }
 // Get the character belonging to this friend (e.g. to find profession etc)
-FriendListWindow::Character* FriendListWindow::Friend::SetCharacter(const wchar_t* char_name, uint8_t profession = 0) {
+FriendListWindow::Character* FriendListWindow::Friend::SetCharacter(const wchar_t* char_name, uint8_t profession) {
     Character* existing = GetCharacter(char_name);
     if (!existing) {
         Character c;
@@ -230,7 +370,7 @@ bool FriendListWindow::Friend::ValidUuid() {
 
 /* Setters */
 // Update local friend record from raw info.
-FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendType type, GW::FriendStatus status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
+FriendListWindow::Friend* FriendListWindow::SetFriend(const uint8_t* uuid, const GW::FriendType type, const GW::FriendStatus status, const uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
     if (type != GW::FriendType::Friend && type != GW::FriendType::Ignore)
         return nullptr;
     // Validate UUID (When a friend is created GW doesn't immediately have the right UUID)
@@ -291,7 +431,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendT
     return lf;
 }
 // Update local friend record from existing friend.
-FriendListWindow::Friend* FriendListWindow::SetFriend(GW::Friend* f) {
+FriendListWindow::Friend* FriendListWindow::SetFriend(const GW::Friend* f) {
     return SetFriend(f->uuid, f->type, f->status, f->zone_id, (wchar_t*)&f->charname[0], (wchar_t*)&f->alias[0]);
 }
 
@@ -440,29 +580,18 @@ void FriendListWindow::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage mes
     } break;
     }
 }
-void FriendListWindow::OnFriendUpdated(GW::HookStatus*, GW::Friend* f, GW::FriendStatus status, const wchar_t* alias, const wchar_t* charname) {
+void FriendListWindow::OnFriendUpdated(GW::HookStatus*, const GW::Friend* old_state, const GW::Friend* new_state) {
+    auto& instance = Instance();
     // Keep a log mapping char name to uuid. This is saved to disk.
-    Friend* lf = Instance().SetFriend(f->uuid, f->type, status, f->zone_id, charname, alias);
+    if (!new_state) {
+        // Friend removed from friend list.
+        ASSERT(old_state);
+        instance.RemoveFriend(instance.GetFriend(old_state));
+        return;
+    }
+    auto lf = Instance().SetFriend(new_state);
     if (!lf) return;
     lf->last_update = clock();
-}
-bool FriendListWindow::WriteError(MessageType message_type, const wchar_t* character_name) {
-    wchar_t buffer[122];
-    GW::Chat::Channel channel = GW::Chat::CHANNEL_GLOBAL;
-    switch (message_type) {
-    case MessageType::CHARACTER_NAME_X_DOES_NOT_EXIST:
-    case MessageType::FRIEND_ALREADY_ADDED_AS_X:
-        ASSERT(swprintf(buffer, 122, L"%c\x107%s\x1", message_type, character_name) > 0);
-        break;
-    case MessageType::PLAYER_X_NOT_ONLINE:
-        ASSERT(swprintf(buffer, 122, L"%c\x101\x100\x107%s\x1\x108\x1", message_type, character_name) > 0);
-        break;
-    default:
-        return false;
-    }
-    std::wstring player_not_online = buffer;
-    GW::Chat::WriteChatEnc(channel, buffer);
-    return true;
 }
 void FriendListWindow::OnPostPartyInvite(GW::HookStatus*, GW::Packet::StoC::PartyInviteReceived_Create* pak) {
     if (GetIsPlayerIgnored(pak))
@@ -472,15 +601,6 @@ void FriendListWindow::OnPostTradePacket(GW::HookStatus*, GW::Packet::StoC::Trad
     if (GetIsPlayerIgnored(pak))
         GW::Trade::CancelTrade();
 }
-void FriendListWindow::OnAddFriendError(GW::HookStatus* status, wchar_t*) {
-    FriendListWindow& instance = Instance();
-    if (!instance.pending_whisper.charname.empty()) {
-        ASSERT(instance.WriteError(MessageType::PLAYER_X_NOT_ONLINE, instance.pending_whisper.charname.c_str()));
-        instance.pending_whisper.reset();
-        status->blocked = true;
-    }
-}
-
 // Record a friend's character profession when they join your map
 void FriendListWindow::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) {
     UNREFERENCED_PARAMETER(status);
@@ -497,25 +617,6 @@ void FriendListWindow::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::
         return;
     if (profession > 0 && profession < 11)
         fc->profession = profession;
-}
-// Record the pending outgoing whisper
-void FriendListWindow::OnOutgoingWhisper(GW::HookStatus *, int channel, wchar_t *message)
-{
-    FriendListWindow& instance = Instance();
-    // If this outgoing whisper was created due to a redirect, or its not a whisper, drop out here.
-    if (instance.is_redirecting_whisper || static_cast<GW::Chat::Channel>(channel) != GW::Chat::CHANNEL_WHISPER)
-        return;
-    wchar_t* separator_pos = wcschr(message, ',');
-    if (!separator_pos)
-        return;
-    instance.pending_whisper.reset(std::wstring(message, separator_pos), std::wstring(&separator_pos[1]));
-}
-
-// Remove from pending whispers when whisper has been sent
-void FriendListWindow::OnOutgoingWhisperSuccess(GW::HookStatus *, wchar_t *)
-{
-    FriendListWindow &instance = Instance();
-    instance.pending_whisper.reset();
 }
 // Optionally add friend alias to incoming/outgoing messages
 void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr) {
@@ -540,46 +641,6 @@ void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr) {
     // TODO; Would doing this cause a memory leak on the previous wchar_t* ?
     *message_ptr = (wchar_t*)new_message.c_str();
 }
-void FriendListWindow::OnFriendAlreadyAdded(GW::HookStatus *status, wchar_t *message)
-{
-    FriendListWindow &instance = Instance();
-    std::wstring player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
-    Friend *f = instance.GetFriend(player_name.c_str());
-    if (f) {
-        f->SetCharacter(player_name.c_str());
-    }
-    if (instance.pending_whisper.charname.size()) {
-        ASSERT(instance.WriteError(MessageType::PLAYER_X_NOT_ONLINE, instance.pending_whisper.charname.c_str()));
-        instance.pending_whisper.reset();
-        status->blocked = true;
-    }
-}
-void FriendListWindow::OnPlayerNotOnline(GW::HookStatus *status, wchar_t *message)
-{
-    FriendListWindow &instance = Instance();
-    std::wstring player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
-    Friend *f = instance.GetFriend(player_name.c_str());
-    if (f) {
-        // If this player is already in my friend list, send the message directly.
-        if (!f->IsOffline() && f->current_char->getNameW() != player_name) {
-            instance.is_redirecting_whisper = true;
-            GW::Chat::SendChat(f->current_char->getNameW().c_str(), instance.pending_whisper.message.c_str());
-            instance.is_redirecting_whisper = false;
-            instance.pending_whisper.reset();
-            status->blocked = true;
-        }
-        return;
-    }
-    if (instance.pending_whisper.pending_add && player_name == instance.pending_whisper.charname)
-        return; // This is an error message generated by toolbox
-    // Otherwise if this player isn't already in my friend list, add them temporarily. OnFriendCreated will then resend the message and remove the friend.
-    if (instance.pending_whisper.charname.size()) {
-        GW::FriendListMgr::AddFriend(instance.pending_whisper.charname.c_str());
-        instance.pending_whisper.pending_add = TIMER_INIT();
-        status->blocked = true;
-    }
-}
-
 void FriendListWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     if (loading)
@@ -596,40 +657,7 @@ void FriendListWindow::Update(float delta) {
             Poll();
         }
     }
-    if (pending_whisper.pending_add != 0) {
-        // GW::FriendListMgr::FriendStatusCallback doesn't correctly assign the UUID when a friend is added (this is done elsewhere in Auth manager), so we need to check manually
-        if (TIMER_DIFF(pending_whisper.pending_add) > 5000) {
-            // Timeout reached adding player to friend list.
-            pending_whisper.reset();
-        }
-        else {
-            // Check if pending player has been added.
-            Poll();
-            Friend* lf = GetFriend(pending_whisper.charname.c_str());
-            if (lf && lf->ValidUuid()) {
-                // This is a player that TB has added to friend list to find out who they're actually playing on.
-                std::wstring& message = pending_whisper.message;
-                // Temporary friend added successfully
-                if (!lf->IsOffline()) {
-                    // If they're online, send the original message...
-                    ASSERT(lf->current_char);
-                    is_redirecting_whisper = true;
-                    GW::Chat::SendChat(lf->current_char->getNameW().c_str(), message.c_str());
-                    is_redirecting_whisper = false;
-                }
-                else {
-                    // If they're still not online, then show the "Player is not online" error
-                    ASSERT(WriteError(MessageType::PLAYER_X_NOT_ONLINE, pending_whisper.charname.c_str()));
-                }
-                pending_whisper.reset();
-                // ... then remove from GW.
-                ASSERT(lf->RemoveGWFriend());
-                ASSERT(RemoveFriend(lf));
-                pending_whisper.reset();
-            }
-        }
-
-    }
+    UpdatePendingWhisper();
 }
 void FriendListWindow::Poll() {
     if (loading || polling) return;

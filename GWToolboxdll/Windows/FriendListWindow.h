@@ -12,7 +12,12 @@
 #include <ToolboxWindow.h>
 
 class FriendListWindow : public ToolboxWindow {
-    std::thread settings_thread;
+public:
+    static FriendListWindow& Instance() {
+        static FriendListWindow instance;
+        return instance;
+    }
+protected:
     // Structs because we don't case about public or private; this whole struct is private to this module anyway.
     struct Character {
     private:
@@ -42,6 +47,7 @@ class FriendListWindow : public ToolboxWindow {
         wchar_t* message;
         uint32_t channel2;
     };
+public:
     struct Friend {
         Friend(FriendListWindow* _parent) : parent(_parent) {};
         ~Friend() {
@@ -67,7 +73,7 @@ class FriendListWindow : public ToolboxWindow {
         bool cached_charnames_hover = false;
 
         Character* GetCharacter(const wchar_t*);
-        Character* SetCharacter(const wchar_t*, uint8_t);
+        Character* SetCharacter(const wchar_t*, uint8_t profession = 0);
         GW::Friend* GetFriend();
         const std::string GetCharactersHover(bool include_charname = false);
         void StartWhisper();
@@ -95,48 +101,30 @@ class FriendListWindow : public ToolboxWindow {
             alias_str.clear();
         }
     };
+protected:
+    Friend* SetFriend(const uint8_t*, const GW::FriendType, const GW::FriendStatus, const uint32_t, const wchar_t*, const wchar_t*);
+    Friend* SetFriend(const GW::Friend*);
 
-    Friend* SetFriend(uint8_t*, GW::FriendType, GW::FriendStatus, uint32_t, const wchar_t*, const wchar_t*);
-    Friend* SetFriend(GW::Friend*);
-    Friend* GetFriend(const wchar_t*);
-    Friend* GetFriend(const GW::Friend*);
-    Friend* GetFriendByUUID(const std::string&);
-    Friend* GetFriend(const uint8_t*);
 
-    bool RemoveFriend(Friend* f);
+
     void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out);
 
     std::unordered_map<uint32_t,bool> ignored_parties{};
     bool ignore_trade = false;
 public:
-    static FriendListWindow& Instance() {
-        static FriendListWindow instance;
-        return instance;
-    }
-    // Encoded message types as received via encoded chat message
-    enum class MessageType : wchar_t {
-        CANNOT_ADD_YOURSELF_AS_A_FRIEND = 0x2f3,
-        EXCEEDED_MAX_NUMBER_OF_FRIENDS,
-        CHARACTER_NAME_X_DOES_NOT_EXIST,
-        FRIEND_ALREADY_ADDED_AS_X,
-        INCOMING_WHISPER = 0x76d,
-        OUTGOING_WHISPER,
-        PLAYER_NAME_IS_INVALID = 0x880,
-        PLAYER_X_NOT_ONLINE
-    };
-    bool WriteError(MessageType message_type, const wchar_t* character_name);
+
+    Friend* GetFriend(const wchar_t*);
+    Friend* GetFriend(const GW::Friend*);
+    Friend* GetFriendByUUID(const std::string&);
+    Friend* GetFriend(const uint8_t*);
+    bool RemoveFriend(Friend* f);
 
     // Callback functions
     static void OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak);
-    static void OnOutgoingWhisper(GW::HookStatus *status, int channel, wchar_t *message);
-    static void OnOutgoingWhisperSuccess(GW::HookStatus *status, wchar_t *message);
-    static void OnFriendAlreadyAdded(GW::HookStatus *status, wchar_t *message);
-    static void OnPlayerNotOnline(GW::HookStatus *status, wchar_t *message);
-    static void OnFriendUpdated(GW::HookStatus*, GW::Friend* f, GW::FriendStatus status, const wchar_t* alias, const wchar_t* charname);
-    static void OnAddFriendError(GW::HookStatus* status, wchar_t* message);
+    // Handle friend updated (map change, char change, online status change, added or removed from fl)
+    static void OnFriendUpdated(GW::HookStatus*, const GW::Friend* old_state, const GW::Friend* new_state);
     static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage , void*, void*);
     static void OnPrintChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t** message_ptr, FILETIME, int);
-    static void OnChatMessage(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet);
     // Ignore party invitations from players on my ignore list
 
     static bool GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak);
@@ -181,7 +169,7 @@ public:
     void LoadFromFile();
     void SaveToFile();
 
-private:
+protected:
     CSimpleIni* inifile = nullptr;
     const wchar_t* ini_filename = L"friends.ini";
     bool loading = false; // Loading from disk?
@@ -196,20 +184,6 @@ private:
     bool show_alias_on_whisper = false;
     bool show_my_status = true;
 
-    // When a whisper is being redirected by this module, this flag is set. Stops infinite redirect loops.
-    bool is_redirecting_whisper = false;
-    struct PendingWhisper {
-        std::wstring charname;
-        std::wstring message;
-        clock_t pending_add = 0;
-        inline void reset(std::wstring _charname = L"", std::wstring _message = L"") {
-            charname = _charname;
-            message = _message;
-            pending_add = 0;
-        }
-    };
-
-    PendingWhisper pending_whisper;
 
     int explorable_show_as = 1;
     int outpost_show_as = 1;
