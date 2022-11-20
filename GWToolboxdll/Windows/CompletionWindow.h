@@ -100,6 +100,13 @@ namespace Missions {
         void OnClick() override;
         const char* Name() override;
     };
+    class FestivalHat : public ItemAchievement {
+    public:
+        FestivalHat(size_t _encoded_name_index, const wchar_t* encoded_name) :
+            ItemAchievement(_encoded_name_index, encoded_name) {}
+        void CheckProgress(const std::wstring& player_name) override;
+    };
+
     class MinipetAchievement : public ItemAchievement {
     public:
         MinipetAchievement(size_t hom_achievement_index, const wchar_t* encoded_name) :
@@ -303,6 +310,7 @@ protected:
         std::string hom_code;
         HallOfMonumentsAchievements hom_achievements;
         std::vector<uint32_t> minipets_unlocked;
+        std::vector<uint32_t> festival_hats;
     };
 
 public:
@@ -347,6 +355,7 @@ public:
     std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
     std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
     std::map<GW::Constants::Campaign, std::vector<Missions::HeroUnlock*>> heros;
+    std::vector<Missions::FestivalHat*> festival_hats;
     std::vector<Missions::MinipetAchievement*> minipets;
     std::vector<Missions::WeaponAchievement*> hom_weapons;
     std::vector<Missions::ArmorAchievement*> hom_armor;

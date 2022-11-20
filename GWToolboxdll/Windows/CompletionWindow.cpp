@@ -80,6 +80,11 @@ namespace {
         "Zei Ri"
     };
 
+    const wchar_t* encoded_festival_hat_names[] = {
+        L"\x245D\xCD3B\xC2E1\x2AC3", // Pumpkin crown
+        L"\x2481\x821F\xD73C\x4CD2" // Horns of Grenth
+    };
+
     // This array is keyed in the order of armors listed in HallOfMonumentsModule::Detail enum
 // i.e. index 0 is Elite Canthan Armor.
     const wchar_t* encoded_armor_names[] = {
@@ -100,9 +105,9 @@ namespace {
         L"\x108\x107" "Granite Citadel Elite Armor\x1", // Granite Citadel Elite Armor
         L"\x108\x107" "Granite Citadel Exclusive Armor\x1", // Granite Citadel Exclusive Armor
         L"\x108\x107" "Granite Citadel Ascended Armor\x1", // Granite Citadel Ascended Armor
-        L"\x108\x107" "Marhans Grotto Elite Armor\x1", // Marhans Grottol Ascended Armor
-        L"\x108\x107" "Marhans Grotto Exclusive Armor\x1", // Marhans Grotto Ascended Armor
-        L"\x108\x107" "Marhans Grotto Ascended Armor\x1", // Marhans Grotto Ascended Armor
+        L"\x108\x107" "Marhan's Grotto Elite Armor\x1", // Marhans Grottol Ascended Armor
+        L"\x108\x107" "Marhan's Grotto Exclusive Armor\x1", // Marhans Grotto Ascended Armor
+        L"\x108\x107" "Marhan's Grotto Ascended Armor\x1", // Marhans Grotto Ascended Armor
     };
     static_assert(_countof(encoded_armor_names) == (size_t)ResilienceDetail::Count);
 
@@ -299,16 +304,13 @@ namespace {
         return CompletionWindow::Instance();
     }
 
-    // Check for "Cycle displayed minipets" button - if present, this is our hom dialog!
-    void OnDialogButton(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
-        ASSERT(message_id == GW::UI::UIMessage::kDialogButton);
-        GW::UI::DialogButtonInfo* button = (GW::UI::DialogButtonInfo*)wparam;
-        if (wcsncmp(button->message, L"\x8102\x2B96\xA802\xD212\x380C",5) != 0)
+    void OnCycleDisplayedMinipetsButton(const GW::UI::DialogButtonInfo* button) {
+        if (wcsncmp(button->message, L"\x8102\x2B96\xA802\xD212\x380C", 5) != 0)
             return; // Not "Cycle displayed minipets"
         const wchar_t* dialog_body = DialogModule::Instance().GetDialogBody();
         if (!(dialog_body && wcsncmp(dialog_body, L"\x8102\x2B9D\xDE1D\xB19F\x52DD", 5) == 0))
             return; // Not devotion dialog "Miniatures on display"
-        std::wregex displayed_miniatures(L"\x2\x102\x2([^\x102\x2]+)");
+        const std::wregex displayed_miniatures(L"\x2\x102\x2([^\x102\x2]+)");
         std::wsmatch m;
         std::wstring subject(dialog_body);
         std::wstring msg;
@@ -331,7 +333,7 @@ namespace {
             }
             subject = m.suffix().str();
         }
-        std::wregex available_miniatures(L"\x2\x109\x2([^\x109\x2]+)");
+        const std::wregex available_miniatures(L"\x2\x109\x2([^\x109\x2]+)");
         while (std::regex_search(subject, m, available_miniatures)) {
             std::wstring miniature_encoded_name(m[1].str());
             for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
@@ -349,6 +351,34 @@ namespace {
             subject = m.suffix().str();
         }
         Instance().CheckProgress();
+    }
+    void OnFestivalHatButton(const GW::UI::DialogButtonInfo* button) {
+        if (wcsncmp(button->message, L"\x8101\x62E2\xAD6D\x82EB\x4C26 ", 5) != 0)
+            return; // Not "Lets talk about something else"
+        const wchar_t* dialog_body = DialogModule::Instance().GetDialogBody();
+        if (!(dialog_body && wcsncmp(dialog_body, L"\x8101\x62E3\x8BAE\xA150\x1329", 5) != 0))
+            return; // Not "Which festival hat would you like me to make you?"
+
+        const auto& buttons = DialogModule::Instance().GetDialogButtons();
+        auto cc = Instance().character_completion[GetPlayerName()];
+        auto& unlocked = cc->festival_hats;
+        for (const auto btn : buttons) {
+            for (size_t i = 0; i < _countof(encoded_festival_hat_names);i++) {
+                if (wcsstr(btn->message, encoded_festival_hat_names[i])) {
+                    unlocked[i] = true;
+                    break;
+                }
+            }
+        }
+        Instance().CheckProgress();
+    }
+
+    // Check for "Cycle displayed minipets" button - if present, this is our hom dialog!
+    void OnDialogButton(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+        ASSERT(message_id == GW::UI::UIMessage::kDialogButton);
+        GW::UI::DialogButtonInfo* button = (GW::UI::DialogButtonInfo*)wparam;
+        OnCycleDisplayedMinipetsButton(button);
+        OnFestivalHatButton(button);
     }
 
     // Flag miniature as unlocked for current character when dedicated
@@ -400,7 +430,7 @@ namespace {
 
 	void OnHomLoaded(HallOfMonumentsAchievements* result) {
 		if (result->state != HallOfMonumentsAchievements::State::Done) {
-            Log::LogW(L"Failed to load Hall of Monuments achievements for %s", result->character_name);
+            Log::LogW(L"Failed to load Hall of Monuments achievements for %s", result->character_name.c_str());
             return;
 		}
         //Log::InfoW(L"Loaded Hom for %s", result->character_name);
@@ -916,6 +946,9 @@ void CompletionWindow::Initialize()
     for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
         minipets.push_back(new MinipetAchievement(i,encoded_minipet_names[i]));
     }
+    for (size_t i = 0; i < _countof(encoded_festival_hat_names); i++) {
+        festival_hats.push_back(new FestivalHat(i, encoded_festival_hat_names[i]));
+    }
     for (size_t i = 0; i < _countof(encoded_weapon_names); i++) {
         hom_weapons.push_back(new WeaponAchievement(i, encoded_weapon_names[i]));
     }
@@ -937,9 +970,9 @@ void CompletionWindow::Initialize()
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Elite Armor\x1", "Ranger_Elite_Fur-Lined_armor_m.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Exclusive Armor\x1", "Elementalist_Elite_Iceforged_armor_f.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Ascended Armor\x1", "Warrior_Elite_Platemail_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhans Grotto Elite Armor\x1", "Ranger_Elite_Druid_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhans Grotto Exclusive Armor\x1", "Elementalist_Elite_Stormforged_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhans Grotto Ascended Armor\x1", "Warrior_Elite_Templar_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Elite Armor\x1", "Ranger_Elite_Druid_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Exclusive Armor\x1", "Elementalist_Elite_Stormforged_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Ascended Armor\x1", "Warrior_Elite_Templar_armor_m.jpg"));
 
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zenmai\x1","Zenmai_statue.jpg"));
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Norgu\x1","Norgu_statue.jpg"));
@@ -1122,17 +1155,17 @@ void CompletionWindow::Initialize()
 	    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
 	    uint32_t player_number = ((uint32_t*)pak)[1];
-	    GW::CharContext* c = GW::GetGameContext()->character;
-	    if (player_number == c->player_number) {
-		    GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
-		    if (me) {
-                const auto comp = Instance().GetCharacterCompletion(c->player_name);
-			    if (comp)
-				    comp->profession = (Profession)me->primary;
-			    Instance().ParseCompletionBuffer(Heroes);
-		    }
-		    Instance().CheckProgress();
-	    }
+	    const auto c = GW::GetCharContext();
+        if (!(c && player_number == c->player_number))
+            return;
+		const auto me = GW::PlayerMgr::GetPlayerByID(c->player_number);
+        if (!me)
+            return;
+        const auto comp = Instance().GetCharacterCompletion(c->player_name);
+		if (comp)
+			comp->profession = (Profession)me->primary;
+		Instance().ParseCompletionBuffer(Heroes);
+		Instance().CheckProgress();
 	    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, [](GW::HookStatus*, void*) {
 	    Instance().ParseCompletionBuffer(Skills);
@@ -2626,7 +2659,7 @@ CompletionWindow::Completion* CompletionWindow::GetCharacterCompletion(const wch
 	if (create_if_not_found) {
 		this_character_completion = new Completion();
 		this_character_completion->name_str = GuiUtils::WStringToString(character_name);
-        wcscpy(this_character_completion->hom_achievements.character_name, character_name);
+        this_character_completion->hom_achievements.character_name = character_name;
 		character_completion[character_name] = this_character_completion;
         FetchHom(&this_character_completion->hom_achievements);
 	}
@@ -2797,4 +2830,14 @@ void HonorAchievement::CheckProgress(const std::wstring& player_name)
 	if (hom.state != HallOfMonumentsAchievements::State::Done) return;
 	const auto& unlocked = hom.honor_detail;
 	is_completed = bonus = unlocked[encoded_name_index] != 0;
+}
+
+void Missions::FestivalHat::CheckProgress(const std::wstring& player_name)
+{
+    is_completed = false;
+    auto& cc = CompletionWindow::Instance().character_completion;
+    if (!cc.contains(player_name))
+        return;
+    std::vector<uint32_t>& minipets_unlocked = cc.at(player_name)->minipets_unlocked;
+    is_completed = bonus = ArrayBoolAt(minipets_unlocked, encoded_name_index);
 }

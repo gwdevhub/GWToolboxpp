@@ -248,7 +248,7 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out) {
     }
     return true;
 }
-void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback callback)
+void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback callback)
 {
     out->state = HallOfMonumentsAchievements::State::Loading;
     std::string character_name_s = GuiUtils::WStringToString(character_name);
@@ -258,7 +258,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character
         else if (character_name_s[x - 1] == ' ')
             character_name_s[x] = (char)toupper(character_name_s[x]);
     }
-    wcscpy(out->character_name, character_name);
+    out->character_name = character_name;
 
     std::string char_name_escaped;
     EscapeUrl(char_name_escaped, character_name_s.c_str());
@@ -266,7 +266,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const wchar_t* character
 
     Resources::Instance().Download(url_str, [out, callback](bool success, const std::string& response) {
         if (!success) {
-            Log::Log("Failed to load account hom code %s\n%s", out->character_name, response.c_str());
+            Log::Log("Failed to load account hom code %s\n%s", out->character_name.c_str(), response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
             if (callback) callback(out);
             return;

@@ -37,17 +37,7 @@ public:
     static void OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore*);
 
 private:
-    enum Status {
-        Unknown,
-        NotYetConnected,
-        Connected,
-        Resigned,
-        Left
-    };
 
-    static const char* GetStatusStr(Status status);
-
-    void PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name);
     void DrawResignlog();
 
     void InfoField(const char* label, const char* fmt, ...);
@@ -62,10 +52,10 @@ private:
 
     std::map<std::wstring,HallOfMonumentsAchievements*> target_achievements;
 
-    std::vector<Status> status;
-    std::vector<unsigned long> timestamp;
+    
+    
 
-    std::queue<std::wstring> send_queue;
+    
     clock_t send_timer = 0;
 
     uint32_t quoted_item_id = 0;

@@ -45,7 +45,69 @@
 #include <Modules/DialogModule.h>
 
 namespace {
+    enum class Status {
+        Unknown,
+        NotYetConnected,
+        Connected,
+        Resigned,
+        Left
+    };
+    std::vector<Status> resign_statuses;
+    std::vector<unsigned long> timestamp;
+    std::queue<std::wstring> send_queue;
+    
     uint32_t last_hovered_item_id = 0;
+    const char* GetStatusStr(Status _status) {
+        switch (_status) {
+        case Status::Unknown: return "Unknown";
+        case Status::NotYetConnected: return "Not connected";
+        case Status::Connected: return "Connected";
+        case Status::Resigned: return "Resigned";
+        case Status::Left: return "Left";
+        default: return "";
+        }
+    }
+
+    const Status GetResignStatus(size_t index) {
+        return index < resign_statuses.size() ? resign_statuses[index] : Status::Unknown;
+    }
+
+    int PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name) {
+        if (!player_name) return 0;
+        const auto player_status = GetResignStatus(index);
+        const char* status_str = GetStatusStr(GetResignStatus(index));
+        return swprintf(buffer, size, L"%zu. %s - %S", index + 1, player_name,
+            (player_status == Status::Connected
+                && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+            ? "Connected (not resigned)" : status_str);
+    }
+    const size_t GetPartyPlayerIndex(uint32_t login_number) {
+        const auto party = GW::PartyMgr::GetPartyInfo();
+        for (size_t i = 0;party && i < party->players.size(); i++) {
+            if (party->players[i].login_number == login_number)
+                return i;
+        }
+        return 0xff;
+    }
+
+    void CheckAndWarnIfNotResigned() {
+        const auto party = GW::PartyMgr::GetPartyInfo();
+        if (!(party && party->players.size() > 1))
+            return; // Not in a party of more than 1 person
+
+        size_t my_index = GetPartyPlayerIndex(GW::PlayerMgr::GetPlayerNumber());
+        if (GetResignStatus(my_index) == Status::Resigned)
+            return; // I've resigned
+
+        for (size_t i = 0; i < resign_statuses.size();i++) {
+            if (i == my_index)
+                continue;
+            if (resign_statuses[i] == Status::Connected)
+                return; // Someone else still to resign.
+        }
+
+        Log::Warning("You're the last person to resign!");
+    }
 }
 
 void InfoWindow::Terminate() {
@@ -75,25 +137,25 @@ void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
     if (info == nullptr) return;
     GW::PlayerPartyMemberArray& partymembers = info->players;
     if (!partymembers.valid()) return;
-    auto instance = &Instance();
-    size_t index_max = std::min<size_t>(instance->status.size(), partymembers.size());
+    size_t index_max = std::min<size_t>(resign_statuses.size(), partymembers.size());
     for (size_t i = 0; i < index_max; ++i) {
         GW::PlayerPartyMember& partymember = partymembers[i];
         wchar_t buffer[256];
-        if (instance->status[i] == Connected) {
-            instance->PrintResignStatus(buffer, 256, i, GW::PlayerMgr::GetPlayerName(partymember.login_number));
-            instance->send_queue.push(std::wstring(buffer));
-        }
+        if (resign_statuses[i] != Status::Connected)
+            continue;
+        PrintResignStatus(buffer, _countof(buffer), i, GW::PlayerMgr::GetPlayerName(partymember.login_number));
+        send_queue.push(std::wstring(buffer));
     }
+    CheckAndWarnIfNotResigned();
 }
 
 void InfoWindow::OnInstanceLoad(GW::HookStatus*, GW::Packet::StoC::InstanceLoadFile* packet) {
     auto instance = &Instance();
     instance->quoted_item_id = 0;
     instance->mapfile = packet->map_fileID;
-    for (unsigned i = 0; i < instance->status.size(); ++i) {
-        instance->status[i] = NotYetConnected;
-        instance->timestamp[i] = 0;
+    for (unsigned i = 0; i < resign_statuses.size(); ++i) {
+        resign_statuses[i] = Status::NotYetConnected;
+        timestamp[i] = 0;
     }
 }
 
@@ -112,16 +174,16 @@ void InfoWindow::OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* p
     wchar_t* start = wcschr(pak->message, 0x107) + 1;
     std::wstring buf(start, wcschr(start, 0x1) - start);
     // set the right index in party
-    auto instance = &Instance();
-    for (size_t i = 0; i < partymembers.size() && i < instance->status.size();i++) {
-        if (instance->status[i] == Resigned) continue;
+    for (size_t i = 0; i < partymembers.size() && i < resign_statuses.size();i++) {
+        if (resign_statuses[i] == Status::Resigned) continue;
         wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymembers[i].login_number);
         if (player_name && GuiUtils::SanitizePlayerName(player_name) == buf) {
-            instance->status[i] = Resigned;
-            Instance().timestamp[i] = GW::Map::GetInstanceTime();
+            resign_statuses[i] = Status::Resigned;
+            timestamp[i] = GW::Map::GetInstanceTime();
             break;
         }
     }
+    CheckAndWarnIfNotResigned();
 }
 
 void InfoWindow::InfoField(const char* label, const char* fmt, ...) {
@@ -185,7 +247,7 @@ void InfoWindow::DrawHomAchievements(const GW::Player* player) {
     if (ImGui::TreeNodeEx("Hall of Monuments Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         if (!target_achievements.contains(player->name)) {
             auto* achievements = new HallOfMonumentsAchievements();
-            wcscpy(achievements->character_name, player->name);
+            achievements->character_name = player->name;
             target_achievements[achievements->character_name] = achievements;
             HallOfMonumentsModule::AsyncGetAccountAchievements(achievements->character_name, achievements);
         }
@@ -611,21 +673,21 @@ void InfoWindow::Update(float delta) {
         && GW::PartyMgr::GetPartyInfo()) {
         GW::PlayerPartyMemberArray& partymembers = GW::PartyMgr::GetPartyInfo()->players;
         if (partymembers.valid()) {
-            if (partymembers.size() != status.size()) {
-                status.resize(partymembers.size(), Unknown);
+            if (partymembers.size() != resign_statuses.size()) {
+                resign_statuses.resize(partymembers.size(), Status::Unknown);
                 timestamp.resize(partymembers.size(), 0);
             }
         }
         for (unsigned i = 0; i < partymembers.size(); ++i) {
             GW::PlayerPartyMember& partymember = partymembers[i];
             if (partymember.connected()) {
-                if (status[i] == NotYetConnected || status[i] == Unknown) {
-                    status[i] = Connected;
+                if (resign_statuses[i] == Status::NotYetConnected || resign_statuses[i] == Status::Unknown) {
+                    resign_statuses[i] = Status::Connected;
                     timestamp[i] = GW::Map::GetInstanceTime();
                 }
             } else {
-                if (status[i] == Connected || status[i] == Resigned) {
-                    status[i] = Left;
+                if (resign_statuses[i] == Status::Connected || resign_statuses[i] == Status::Resigned) {
+                    resign_statuses[i] = Status::Left;
                     timestamp[i] = GW::Map::GetInstanceTime();
                 }
             }
@@ -633,27 +695,7 @@ void InfoWindow::Update(float delta) {
     }
 }
 
-const char* InfoWindow::GetStatusStr(Status status) {
-    switch (status) {
-    case InfoWindow::Unknown: return "Unknown";
-    case InfoWindow::NotYetConnected: return "Not connected";
-    case InfoWindow::Connected: return "Connected";
-    case InfoWindow::Resigned: return "Resigned";
-    case InfoWindow::Left: return "Left";
-    default: return "";
-    }
-}
 
-void InfoWindow::PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name) {
-    if (!player_name) return;
-    ASSERT(index < status.size());
-    Status player_status = status[index];
-    const char* status_str = GetStatusStr(player_status);
-    _snwprintf(buffer, size, L"%zu. %s - %S", index + 1, player_name,
-        (player_status == Connected
-            && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
-        ? "Connected (not resigned)" : status_str);
-}
 
 void InfoWindow::DrawResignlog() {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
@@ -673,9 +715,9 @@ void InfoWindow::DrawResignlog() {
             GW::Chat::SendChat('#', buf);
         }
         ImGui::SameLine();
-        const char* status_str = GetStatusStr(status[i]);
+        const char* status_str = GetStatusStr(resign_statuses[i]);
         ImGui::Text("%d. %S - %s", i + 1, player_name, status_str);
-        if (status[i] != Unknown) {
+        if (resign_statuses[i] != Status::Unknown) {
             ImGui::SameLine();
             ImGui::TextDisabled("[%d:%02d:%02d.%03d]",
                 (timestamp[i] / (60 * 60 * 1000)),

@@ -225,7 +225,7 @@ enum class DevotionDetail {
     Count
 };
 struct HallOfMonumentsAchievements {
-    wchar_t character_name[20] = { 0 };
+    std::wstring character_name;
     enum class State {
         Pending,
         Loading,
@@ -313,5 +313,5 @@ public:
     // Decode a zero terminated base64 encoded hom code
     bool DecodeHomCode(HallOfMonumentsAchievements* out);
     // Get the account achiemenets for the current player
-    static void AsyncGetAccountAchievements(const wchar_t* character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback = nullptr);
+    static void AsyncGetAccountAchievements(const std::wstring& character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback = nullptr);
 };
