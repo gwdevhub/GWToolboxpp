@@ -25,9 +25,9 @@ public:
     void Initialize();
     void Terminate();
 
-    void OpenSettingsFile() const;
+    void OpenSettingsFile(std::filesystem::path config = L"GWToolbox.ini") const;
     void LoadModuleSettings() const;
-    void SaveSettings() const;
+    void SaveSettings(std::filesystem::path config = L"GWToolbox.ini") const;
 
     void StartSelfDestruct() {
         if (initialized) {

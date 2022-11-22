@@ -2268,7 +2268,7 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
 	ImGui::Checkbox("Hide unlocked achievements", &hide_unlocked_achievements);
 	ImGui::PopStyleVar();
-	auto hom = character_completion[chosen_player_name]->hom_achievements;
+	const auto& hom = character_completion[chosen_player_name]->hom_achievements;
 	// Devotion
 	uint32_t completed = 0;
 	if (hom.isReady()) {
@@ -2291,7 +2291,7 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
     snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d minipets dedicated) - %.0f%%###devotion_points", "Devotion",
         completed, DevotionPoints::TotalAvailable,
         dedicated, minipets.size(),
-        ((float)dedicated / (float)minipets.size()) * 100.f);
+        (float)dedicated / (float)minipets.size() * 100.f);
 
 	if (ImGui::CollapsingHeader(label)) {
 		ImGui::TextDisabled(R"(To update this list, talk to the "Devotion" pedestal in Eye of the North,
@@ -2303,7 +2303,7 @@ then press "Examine the Monument to Devotion.")");
 
         if (!minipets_sorted) {
             bool ready = true;
-            for (auto m : minipets) {
+            for (const auto m : minipets) {
                 if (!m->Name()[0]) {
                     ready = false;
                     break;
@@ -2315,7 +2315,7 @@ then press "Examine the Monument to Devotion.")");
             }
         }
 
-		for (auto m : minipets) {
+		for (const auto m : minipets) {
 			if (m->is_completed && hide_unlocked_achievements)
 				continue;
 			if (!m->Draw(device))

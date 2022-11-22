@@ -1043,34 +1043,34 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
         return;
     }
 
+    const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
     if (argc < 3) {
-        const std::wstring arg = GuiUtils::ToLower(argv[1]);
-        if (arg == L"hide") { // e.g. /tb hide
+        if (arg1 == L"hide") { // e.g. /tb hide
             MainWindow::Instance().visible = false;
         }
-        else if (arg == L"show") { // e.g. /tb show
+        else if (arg1 == L"show") { // e.g. /tb show
             MainWindow::Instance().visible = true;
         }
-        else if (arg == L"save") { // e.g. /tb save
+        else if (arg1 == L"save") { // e.g. /tb save
             GWToolbox::Instance().SaveSettings();
         }
-        else if (arg == L"load") { // e.g. /tb load
+        else if (arg1 == L"load") { // e.g. /tb load
             GWToolbox::Instance().OpenSettingsFile();
             GWToolbox::Instance().LoadModuleSettings();
         }
-        else if (arg == L"reset") { // e.g. /tb reset
+        else if (arg1 == L"reset") { // e.g. /tb reset
             ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
             ImGui::SetWindowPos(SettingsWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
             MainWindow::Instance().visible = false;
             SettingsWindow::Instance().visible = true;
         }
-        else if (arg == L"mini" || arg == L"minimize" || arg == L"collapse") { // e.g. /tb mini
+        else if (arg1 == L"mini" || arg1 == L"minimize" || arg1 == L"collapse") { // e.g. /tb mini
             ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), true);
         }
-        else if (arg == L"maxi" || arg == L"maximize") { // e.g. /tb maxi
+        else if (arg1 == L"maxi" || arg1 == L"maximize") { // e.g. /tb maxi
             ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), false);
         }
-        else if (arg == L"close" || arg == L"quit" || arg == L"exit") { // e.g. /tb close
+        else if (arg1 == L"close" || arg1 == L"quit" || arg1 == L"exit") { // e.g. /tb close
             GWToolbox::Instance().StartSelfDestruct();
         }
         else { // e.g. /tb travel
@@ -1082,28 +1082,47 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
         return;
     }
     std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
-    const std::wstring arg = GuiUtils::ToLower(argv[2]);
-    if (arg == L"hide") { // e.g. /tb travel hide
+    const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+    if (arg2 == L"hide") { // e.g. /tb travel hide
         for (auto const& window : windows)
             window->visible = false;
     }
-    else if (arg == L"show") { // e.g. /tb travel show
+    else if (arg2 == L"show") { // e.g. /tb travel show
         for (auto const& window : windows)
             window->visible = true;
     }
-    else if (arg == L"mini" || arg == L"minimize" || arg == L"collapse") { // e.g. /tb travel mini
+    else if (arg2 == L"mini" || arg2 == L"minimize" || arg2 == L"collapse") { // e.g. /tb travel mini
         for (auto const& window : windows)
             ImGui::SetWindowCollapsed(window->Name(), true);
     }
-    else if (arg == L"maxi" || arg == L"maximize") { // e.g. /tb travel maxi
+    else if (arg2 == L"maxi" || arg2 == L"maximize") { // e.g. /tb travel maxi
         for (auto const& window : windows)
             ImGui::SetWindowCollapsed(window->Name(), false);
     }
+    else if (arg1 == L"save") { // e.g. /tb save pure
+        const bool all_alpha = std::ranges::all_of(arg2, [](auto c) {
+            return std::isalpha(c);
+        });
+        if (!all_alpha) {
+            Log::Error("Syntax: /tb save [name] (name must be alpha only)");
+            return;
+        }
+        GWToolbox::Instance().SaveSettings(arg2);
+    }
+    else if (arg1 == L"load") { // e.g. /tb load tas
+        const bool all_alpha = std::ranges::all_of(arg2, [](auto c) {
+            return std::isalpha(c);
+        });
+        if (!all_alpha) {
+            Log::Error("Syntax: /tb load [name] (name must be alpha only)");
+            return;
+        }
+        GWToolbox::Instance().OpenSettingsFile(arg2);
+        GWToolbox::Instance().LoadModuleSettings();
+    }
     else { // Invalid argument
-        constexpr size_t buffer_size = 255;
-        char buffer[buffer_size];
-        snprintf(buffer, buffer_size, "Syntax: /%S %S [hide|show|mini|maxi]", argv[0], argv[1]);
-        Log::Error(buffer);
+        const auto text = std::format(L"Syntax: {} {} [hide|show|mini|maxi|load|save]", argv[0], argv[1]);
+        Log::ErrorW(text.c_str());
     }
 }
 
