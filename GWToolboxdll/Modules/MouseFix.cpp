@@ -150,10 +150,7 @@ namespace {
             SetCursorPosCenter_Func = reinterpret_cast<SetCursorPosCenter_pt>(GW::Scanner::FunctionFromNearCall(address));
 
             GW::Hook::CreateHook(ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
-            GW::Hook::EnableHooks(ProcessInput_Func);
-
             GW::Hook::CreateHook(SetCursorPosCenter_Func, OnSetCursorPosCenter, reinterpret_cast<void**>(&SetCursorPosCenter_Ret));
-            GW::Hook::EnableHooks(SetCursorPosCenter_Func);
         }
 
         GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
@@ -173,21 +170,23 @@ namespace {
         return true;
     }
 
-    void CursorFixEnable(bool enable) {
-        CursorFixInitialise();
+    bool CursorFixEnable(const bool enable)
+    {
+        if (!CursorFixInitialise())
+            return false;
         if (enable) {
-            if(ProcessInput_Func)
+            if (ProcessInput_Func)
                 GW::Hook::EnableHooks(ProcessInput_Func);
-            if(SetCursorPosCenter_Func)
+            if (SetCursorPosCenter_Func)
                 GW::Hook::EnableHooks(SetCursorPosCenter_Func);
         }
         else {
-            if(SetCursorPosCenter_Func)
+            if (SetCursorPosCenter_Func)
                 GW::Hook::DisableHooks(SetCursorPosCenter_Func);
-            if(ProcessInput_Func)
+            if (ProcessInput_Func)
                 GW::Hook::DisableHooks(ProcessInput_Func);
         }
-
+        return true;
     }
 
     bool initialized = false;
@@ -214,7 +213,7 @@ bool MouseFix::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
         return false;
     if (!initialized) {
         OldCursorFix::InstallCursorFix();
-        ASSERT(CursorFixInitialise());
+        ASSERT(CursorFixEnable(enable_cursor_fix));
         initialized = true;
     }
     CursorFixWndProc(Message, wParam, lParam);
