@@ -15,12 +15,9 @@ public:
     const char* Name() const override { return "Mouse Settings"; }
     const char* Icon() const override { return ICON_FA_MOUSE_POINTER; }
 
-#ifndef _DEBUG
-    bool HasSettings() override { return false; }
-#endif
-
+    void LoadSettings(CSimpleIniA*) override;
+    void SaveSettings(CSimpleIniA*) override;
     void Terminate() override;
     bool WndProc(UINT, WPARAM, LPARAM) override;
-
     void DrawSettingInternal() override;
 };

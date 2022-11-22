@@ -6,6 +6,8 @@
 #include <GWCA/Utilities/Scanner.h>
 
 #include "MouseFix.h"
+#include "Defines.h"
+
 #include <hidusage.h>
 
 namespace OldCursorFix {
@@ -170,10 +172,9 @@ namespace {
         return true;
     }
 
-    bool CursorFixEnable(const bool enable)
+    void CursorFixEnable(const bool enable)
     {
-        if (!CursorFixInitialise())
-            return false;
+        ASSERT(CursorFixInitialise());
         if (enable) {
             if (ProcessInput_Func)
                 GW::Hook::EnableHooks(ProcessInput_Func);
@@ -186,11 +187,20 @@ namespace {
             if (ProcessInput_Func)
                 GW::Hook::DisableHooks(ProcessInput_Func);
         }
-        return true;
     }
 
     bool initialized = false;
     bool enable_cursor_fix = true;
+}
+
+void MouseFix::LoadSettings(CSimpleIniA* ini)
+{
+    enable_cursor_fix = ini->GetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
+}
+
+void MouseFix::SaveSettings(CSimpleIniA* ini)
+{
+    ini->SetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
 }
 
 void MouseFix::Terminate()
@@ -213,7 +223,7 @@ bool MouseFix::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
         return false;
     if (!initialized) {
         OldCursorFix::InstallCursorFix();
-        ASSERT(CursorFixEnable(enable_cursor_fix));
+        CursorFixEnable(enable_cursor_fix);
         initialized = true;
     }
     CursorFixWndProc(Message, wParam, lParam);
