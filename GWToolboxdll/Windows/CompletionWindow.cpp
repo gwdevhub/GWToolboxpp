@@ -805,7 +805,9 @@ PvESkill::PvESkill(SkillID _skill_id)
     }
 }
 void PvESkill::OnClick() {
-    GW::GameThread::Enqueue([url = std::format(L"Game_link:Skill_{}", static_cast<std::underlying_type_t<SkillID>>(skill_id))] {
+    const auto wtf = std::format(L"Game_link:Skill_{}", static_cast<std::underlying_type_t<SkillID>>(skill_id));
+    // revert this dumb shit once Microsoft fixes the weird bug
+    GW::GameThread::Enqueue([url = wtf] {
         GuiUtils::OpenWiki(url);
     });
 }
