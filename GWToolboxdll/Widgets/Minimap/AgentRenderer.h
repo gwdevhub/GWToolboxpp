@@ -41,6 +41,7 @@ public:
     void LoadDefaultSizes();
 
     bool show_hidden_npcs = false;
+    bool show_quest_npcs_on_minimap = false;
     bool boss_colors = true;
     uint32_t agent_border_thickness = 0;
 
@@ -49,8 +50,8 @@ public:
 private:
     static AgentRenderer* instance;
 
-    static constexpr size_t shape_size = 4;
-    enum Shape_e { Tear, Circle, Quad, BigCircle };
+    static constexpr size_t shape_size = 5;
+    enum Shape_e { Tear, Circle, Quad, BigCircle, Star };
     enum Color_Modifier {
         None, // rgb 0,0,0
         Dark, // user defined

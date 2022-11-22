@@ -58,6 +58,7 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     color_ally_minion = Colors::Load(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
     color_ally_dead = Colors::Load(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
     boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
+    show_quest_npcs_on_minimap = ini->GetBoolValue(section, VAR_NAME(show_quest_npcs_on_minimap), show_quest_npcs_on_minimap);
 
     LoadDefaultSizes();
     size_default = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_default), size_default));
@@ -129,7 +130,7 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
-
+    ini->SetBoolValue(section, VAR_NAME(show_quest_npcs_on_minimap), show_quest_npcs_on_minimap);
     SaveCustomAgents();
 }
 
@@ -366,6 +367,21 @@ AgentRenderer::AgentRenderer() {
     shapes[Quad].AddVertex(1.0f, -1.0f, Dark);
     shapes[Quad].AddVertex(0.0f, 0.0f, Light);
 
+    const size_t star_ntriangles = 16;
+    float star_size_small = 1.f;
+    float star_size_big = 1.5f;
+    for (unsigned int i = 0; i < star_ntriangles; ++i) {
+        float angle1 = 2 * (i + 0) * pi / star_ntriangles;
+        float angle2 = 2 * (i + 1) * pi / star_ntriangles;
+        
+        float size1 = ((i + 0) % 2 == 0 ? star_size_small : star_size_big);
+        float size2 = ((i + 1) % 2 == 0 ? star_size_small : star_size_big);
+        shapes[Star].AddVertex(std::cos(angle1) * size1, std::sin(angle1) * size1, None);
+        shapes[Star].AddVertex(std::cos(angle2) * size2, std::sin(angle2) * size2, None);
+        shapes[Star].AddVertex(0.0f, 0.0f, CircleCenter);
+    }
+
+
     max_shape_verts = 0;
     for (int shape = 0; shape < shape_size; ++shape) {
         if (max_shape_verts < shapes[shape].vertices.size()) {
@@ -462,6 +478,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
         default:
             break;
         }
+
     }
     // 2. non-player agents
     static std::vector<std::pair<const GW::Agent*, const CustomAgent*>> custom_agents_to_draw;
@@ -804,6 +821,10 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const Cus
 
     const GW::AgentLiving* living = agent->GetAsAgentLiving();
     if (living->login_number > 0) return Tear;  // players
+
+    if (show_quest_npcs_on_minimap && living->GetHasQuest()) {
+        return Star;
+    }
 
     if (ca && ca->shape_active) {
         return ca->shape;

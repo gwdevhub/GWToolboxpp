@@ -352,7 +352,6 @@ void GWToolbox::Initialize()
     core_modules.push_back(&ToolboxSettings::Instance());
     core_modules.push_back(&MainWindow::Instance());
     core_modules.push_back(&DialogModule::Instance());
-    core_modules.push_back(&MouseFix::Instance());
 
     for (ToolboxModule* module : core_modules) {
         module->LoadSettings(inifile);
