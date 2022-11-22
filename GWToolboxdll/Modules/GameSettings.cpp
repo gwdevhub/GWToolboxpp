@@ -756,11 +756,11 @@ namespace {
         if (was_online == is_online)
             return;
         wchar_t buffer[128];
-        if (is_online) {
+        if (is_online && notify_when_friends_online) {
             swprintf(buffer, _countof(buffer), L"<a=1>%s</a> (%s) has just logged in.", new_state->charname, new_state->alias);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
-        else {
+        else if (notify_when_friends_offline) {
             swprintf(buffer, _countof(buffer), L"%s (%s) has just logged out.", old_state->charname, old_state->alias);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
@@ -822,7 +822,7 @@ namespace {
             DeleteDC(destDC);
         if(srcDC)
             DeleteDC(srcDC);
-        
+
         return outBitmap;
     }
 
@@ -1510,7 +1510,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_self), nametag_color_player_self);
 
     ini->SetLongValue(Name(), VAR_NAME(cursor_size), cursor_size);
-    
+
 }
 
 void GameSettings::DrawInventorySettings() {
