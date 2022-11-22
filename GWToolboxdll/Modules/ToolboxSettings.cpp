@@ -90,7 +90,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 #if 0
     modules.push_back(&GWFileRequester::Instance());
 #endif
-#if 0
+#ifdef USE_PLUGINS
     if (use_plugins) modules.push_back(&PluginModule::Instance());
 #endif
     if (use_chatcommand) modules.push_back(&ChatCommands::Instance());
