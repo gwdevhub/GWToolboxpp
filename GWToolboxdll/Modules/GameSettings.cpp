@@ -364,7 +364,7 @@ namespace {
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
         GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
         if (block_description && description_out)
-            *description_out = 0;
+            *description_out = nullptr;
         GW::Hook::LeaveHook();
     }
 
