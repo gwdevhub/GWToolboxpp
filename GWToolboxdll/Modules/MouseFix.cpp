@@ -173,30 +173,45 @@ namespace {
         return true;
     }
 
-    void CursorFixTerminate()
-    {
-        GW::Hook::DisableHooks(SetCursorPosCenter_Func);
-        GW::Hook::DisableHooks(ProcessInput_Func);
+    void CursorFixEnable(bool enable) {
+        CursorFixInitialise();
+        if (enable) {
+            if(ProcessInput_Func)
+                GW::Hook::EnableHooks(ProcessInput_Func);
+            if(SetCursorPosCenter_Func)
+                GW::Hook::EnableHooks(SetCursorPosCenter_Func);
+        }
+        else {
+            if(SetCursorPosCenter_Func)
+                GW::Hook::DisableHooks(SetCursorPosCenter_Func);
+            if(ProcessInput_Func)
+                GW::Hook::DisableHooks(ProcessInput_Func);
+        }
+
     }
 
     bool initialized = false;
-}
-
-void MouseFix::Initialize()
-{
-    ToolboxModule::Initialize();
+    bool enable_cursor_fix = true;
 }
 
 void MouseFix::Terminate()
 {
     if (initialized) {
-        CursorFixTerminate();
+        CursorFixEnable(false);
         OldCursorFix::UninstallCursorFix();
+    }
+}
+void MouseFix::DrawSettingInternal()
+{
+    if (ImGui::Checkbox("Enable cursor fix", &enable_cursor_fix)) {
+        CursorFixEnable(enable_cursor_fix);
     }
 }
 
 bool MouseFix::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
+    if (!enable_cursor_fix)
+        return false;
     if (!initialized) {
         OldCursorFix::InstallCursorFix();
         ASSERT(CursorFixInitialise());

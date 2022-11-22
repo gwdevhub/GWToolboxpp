@@ -34,6 +34,7 @@
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/ToastNotifications.h>
 #include <Modules/LoginModule.h>
+#include <Modules/MouseFix.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -110,6 +111,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     modules.push_back(&HintsModule::Instance());
     modules.push_back(&HallOfMonumentsModule::Instance());
     modules.push_back(&LoginModule::Instance());
+    modules.push_back(&MouseFix::Instance());
 
     SettingsWindow::Instance().sep_windows = modules.size();
     modules.push_back(&SettingsWindow::Instance());
