@@ -751,18 +751,15 @@ namespace {
             return; // Friend added, or deleted
         if (old_state->status == GW::FriendStatus::Unknown)
             return; // First info about friend
-        bool was_online = IsOnline(old_state->status);
-        bool is_online = IsOnline(new_state->status);
+        const bool was_online = IsOnline(old_state->status);
+        const bool is_online = IsOnline(new_state->status);
         if (was_online == is_online)
             return;
-        wchar_t buffer[128];
         if (is_online && notify_when_friends_online) {
-            swprintf(buffer, _countof(buffer), L"<a=1>%s</a> (%s) has just logged in.", new_state->charname, new_state->alias);
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) has just logged in.", new_state->charname, new_state->alias).c_str());
         }
         else if (notify_when_friends_offline) {
-            swprintf(buffer, _countof(buffer), L"%s (%s) has just logged out.", old_state->charname, old_state->alias);
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"{} ({}) has just logged out.", old_state->charname, old_state->alias).c_str());
         }
     }
 
@@ -1913,16 +1910,12 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::Playe
         return; // Player already joined
     if (notify_when_friends_join_outpost) {
         if (const auto f = GetFriend(nullptr, pak->player_name, GW::FriendType::Friend, GW::FriendStatus::Online)) {
-            wchar_t buffer[128];
-            swprintf(buffer, _countof(buffer), L"<a=1>%ls</a> (%ls) entered the outpost.", f->charname, f->alias);
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) entered the outpost.", f->charname, f->alias).c_str());
             return;
         }
     }
     if (notify_when_players_join_outpost) {
-        wchar_t buffer[64];
-        swprintf(buffer, _countof(buffer), L"<a=1>%ls</a> entered the outpost.", pak->player_name);
-        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> entered the outpost.", pak->player_name).c_str());
     }
 }
 
