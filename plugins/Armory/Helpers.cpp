@@ -46,7 +46,6 @@ DyeColor DyeColorFromInt(size_t color)
 {
     const auto col = static_cast<DyeColor>(color);
     switch (col) {
-        case DyeColor::None:
         case DyeColor::Blue:
         case DyeColor::Green:
         case DyeColor::Purple:
@@ -122,7 +121,7 @@ GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent)
     }
 }
 
-bool armor_filter_array_getter(void* data, int idx, const char** out_text)
+bool armor_filter_array_getter(void*, int idx, const char** out_text)
 {
     switch (idx) {
         case Campaign_All: *out_text = "All"; break;
@@ -203,7 +202,7 @@ void UpdateArmorsFilter(GW::Constants::Profession prof, Campaign campaign)
     current_profession = prof;
 }
 
-void InitItemPiece(PlayerArmorPiece* piece, GW::Equipment::ItemData* item_data)
+void InitItemPiece(PlayerArmorPiece* piece, const GW::Equipment::ItemData* item_data)
 {
     piece->model_file_id = item_data->model_file_id;
     piece->unknow1 = item_data->dye.dye_id;
