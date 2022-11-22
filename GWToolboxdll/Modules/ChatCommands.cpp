@@ -2252,7 +2252,7 @@ void ChatCommands::CmdAnimation(const wchar_t*, int argc, LPWSTR* argv) {
     if (!GuiUtils::ParseUInt(argv[2],&animationid) || animationid < 1 || animationid > 2076)
         return Log::Error(syntax);
 
-    GW::GameThread::Enqueue([animationid, agentid]() {
+    GW::GameThread::Enqueue([animationid, agentid] {
         GW::Packet::StoC::GenericValue packet;
         packet.value_id = 20;
         packet.agent_id = agentid;
@@ -2260,7 +2260,7 @@ void ChatCommands::CmdAnimation(const wchar_t*, int argc, LPWSTR* argv) {
         GW::StoC::EmulatePacket(&packet);
     });
 }
-void ChatCommands::CmdMute(const wchar_t*, int , LPWSTR* ) {
+void ChatCommands::CmdMute(const wchar_t*, int , LPWSTR*) {
     if (SetMuted_Func) {
         SetMuted_Func(!(*is_muted));
         PostMuted_Func(0);

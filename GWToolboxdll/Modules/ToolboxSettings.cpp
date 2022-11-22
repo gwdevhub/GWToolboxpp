@@ -231,7 +231,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Obfuscator", &use_obfuscator},
         {"Party Window", &use_partywindowmodule},
         {"Pcons", &use_pcons},
-#ifdef _DEBUG
+#ifdef USE_PLUGINS
         {"Plugins", &use_plugins},
 #endif
         {"Reroll", &use_reroll_window},
