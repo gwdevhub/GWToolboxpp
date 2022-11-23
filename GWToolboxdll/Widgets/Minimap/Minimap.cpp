@@ -28,6 +28,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 #include <Utils/GuiUtils.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
@@ -133,6 +134,22 @@ namespace {
         return gamectx->party->player_party;
     }
     GW::UI::WindowPosition* compass_frame = 0;
+
+    typedef uint32_t(__fastcall* DrawCompassAgentsByType_pt)(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags);
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = 0;
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Ret = 0;
+
+    bool hide_compass_agents = false;
+    uint32_t __fastcall OnDrawCompassAgentsByType(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags)
+    {
+        GW::Hook::EnterHook();
+        uint32_t result = 0;
+        if (!hide_compass_agents) {
+            result = DrawCompassAgentsByType_Ret(ecx, edx, param_1, param_2, flags);
+        }
+        GW::Hook::LeaveHook();
+        return result;
+    }
 }
 
 void Minimap::Terminate()
@@ -160,6 +177,10 @@ void Minimap::Initialize()
     }
     Log::Log("[SCAN] CaptureMouseClickTypePtr = %p\n", CaptureMouseClickTypePtr);
     Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
+
+    DrawCompassAgentsByType_Func = (DrawCompassAgentsByType_pt)GW::Scanner::Find("\x8b\x46\x08\x8d\x5e\x18\x53", "xxxxxxx", -0xb);
+    GW::HookBase::CreateHook(DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
+    GW::HookBase::EnableHooks(DrawCompassAgentsByType_Func);
 
     GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus* ,uint32_t key) {
         if (key != GW::UI::ControlAction_ReverseCamera)
@@ -371,6 +392,7 @@ void Minimap::DrawSettingInternal()
     }
     ImGui::Checkbox("Snap to compass", &snap_to_compass);
     ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
+    ImGui::Checkbox("Hide compass agents", &hide_compass_agents);
 
     is_movable = is_resizable = !snap_to_compass;
     if (is_resizable) {
@@ -486,6 +508,7 @@ void Minimap::LoadSettings(CSimpleIni *ini)
     smooth_rotation = ini->GetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
     circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
     snap_to_compass = ini->GetBoolValue(Name(), VAR_NAME(snap_to_compass), snap_to_compass);
+    hide_compass_agents = ini->GetBoolValue(Name(), VAR_NAME(hide_compass_agents), hide_compass_agents);
 
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
     key_ctrl_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_ctrl_behavior), 2));
@@ -520,6 +543,7 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     ini->SetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
     ini->SetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
     ini->SetBoolValue(Name(), VAR_NAME(snap_to_compass), snap_to_compass);
+    ini->SetBoolValue(Name(), VAR_NAME(hide_compass_agents), hide_compass_agents);
 
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
@@ -717,14 +741,15 @@ void Minimap::Draw(IDirect3DDevice9 *)
 }
 
 void Minimap::Render(IDirect3DDevice9* device) {
-    auto& instance = Instance();
-    if (!instance.IsActive())
-        return;
     if (compass_fix_pending) {
         // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
         GW::UI::SetWindowVisible(GW::UI::WindowID_Compass, false);
         compass_fix_pending = false;
     }
+    auto& instance = Instance();
+    if (!instance.IsActive())
+        return;
+
 
     GW::Agent* me = GW::Agents::GetPlayer();
     if (me == nullptr) return;
