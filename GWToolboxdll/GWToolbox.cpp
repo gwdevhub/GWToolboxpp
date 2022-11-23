@@ -376,12 +376,16 @@ void GWToolbox::Initialize()
     initialized = true;
 }
 
-void GWToolbox::OpenSettingsFile() const
+void GWToolbox::OpenSettingsFile(std::filesystem::path config) const
 {
+    if (config != L"GWToolbox.ini") {
+        config = std::filesystem::path(L"configs") / config;
+        config += L".ini";
+    }
     Log::Log("Opening ini file\n");
     if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
     inifile->Reset();
-    inifile->LoadFile(Resources::GetPath(L"GWToolbox.ini").c_str());
+    inifile->LoadFile(Resources::GetPath(config).c_str());
 }
 void GWToolbox::LoadModuleSettings() const
 {
@@ -389,14 +393,18 @@ void GWToolbox::LoadModuleSettings() const
         module->LoadSettings(inifile);
     }
 }
-void GWToolbox::SaveSettings() const
+void GWToolbox::SaveSettings(std::filesystem::path config) const
 {
     if (!inifile)
         return;
+    if (config != L"GWToolbox.ini") {
+        config = std::filesystem::path(L"configs") / config;
+        config += L".ini";
+    }
     for (ToolboxModule* module : modules) {
         module->SaveSettings(inifile);
     }
-    ASSERT(SaveIniToFile(inifile, Resources::GetPath(L"GWToolbox.ini")));
+    ASSERT(SaveIniToFile(inifile, Resources::GetPath(config)));
 }
 
 void GWToolbox::Terminate() {

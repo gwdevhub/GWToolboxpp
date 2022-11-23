@@ -232,9 +232,9 @@ struct HallOfMonumentsAchievements {
         Error,
         Done
     } state = State::Pending;
-    bool isReady() { return state == State::Done;  }
-    bool isPending() { return state == State::Pending; }
-    bool isLoading() { return state == State::Loading; }
+    bool isReady() const { return state == State::Done;  }
+    bool isPending() const { return state == State::Pending; }
+    bool isLoading() const { return state == State::Loading; }
     char hom_code[128] = { 0 };
     void OpenInBrowser();
     // Details of which armors have or haven't been dedicated, indexed by ResilienceDetail

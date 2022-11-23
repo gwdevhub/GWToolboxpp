@@ -65,7 +65,7 @@ extern GW::Constants::Profession current_profession;
 const char* GetProfessionName(GW::Constants::Profession prof);
 GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent);
 void UpdateArmorsFilter(GW::Constants::Profession prof, Campaign campaign);
-void InitItemPiece(PlayerArmorPiece* piece, GW::Equipment::ItemData* item_data);
+void InitItemPiece(PlayerArmorPiece* piece, const GW::Equipment::ItemData* item_data);
 void SetArmorItem(const PlayerArmorPiece* piece);
 bool DrawArmorPiece(const char* label, PlayerArmorPiece* player_piece, ComboListState* state);
 

@@ -90,7 +90,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 #if 0
     modules.push_back(&GWFileRequester::Instance());
 #endif
-#if 0
+#ifdef USE_PLUGINS
     if (use_plugins) modules.push_back(&PluginModule::Instance());
 #endif
     if (use_chatcommand) modules.push_back(&ChatCommands::Instance());
@@ -231,7 +231,7 @@ void ToolboxSettings::DrawSettingInternal() {
         {"Obfuscator", &use_obfuscator},
         {"Party Window", &use_partywindowmodule},
         {"Pcons", &use_pcons},
-#ifdef _DEBUG
+#ifdef USE_PLUGINS
         {"Plugins", &use_plugins},
 #endif
         {"Reroll", &use_reroll_window},

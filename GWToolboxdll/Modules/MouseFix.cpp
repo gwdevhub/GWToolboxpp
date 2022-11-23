@@ -6,6 +6,8 @@
 #include <GWCA/Utilities/Scanner.h>
 
 #include "MouseFix.h"
+#include "Defines.h"
+
 #include <hidusage.h>
 
 namespace OldCursorFix {
@@ -150,10 +152,7 @@ namespace {
             SetCursorPosCenter_Func = reinterpret_cast<SetCursorPosCenter_pt>(GW::Scanner::FunctionFromNearCall(address));
 
             GW::Hook::CreateHook(ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
-            GW::Hook::EnableHooks(ProcessInput_Func);
-
             GW::Hook::CreateHook(SetCursorPosCenter_Func, OnSetCursorPosCenter, reinterpret_cast<void**>(&SetCursorPosCenter_Ret));
-            GW::Hook::EnableHooks(SetCursorPosCenter_Func);
         }
 
         GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
@@ -173,25 +172,35 @@ namespace {
         return true;
     }
 
-    void CursorFixEnable(bool enable) {
-        CursorFixInitialise();
+    void CursorFixEnable(const bool enable)
+    {
+        ASSERT(CursorFixInitialise());
         if (enable) {
-            if(ProcessInput_Func)
+            if (ProcessInput_Func)
                 GW::Hook::EnableHooks(ProcessInput_Func);
-            if(SetCursorPosCenter_Func)
+            if (SetCursorPosCenter_Func)
                 GW::Hook::EnableHooks(SetCursorPosCenter_Func);
         }
         else {
-            if(SetCursorPosCenter_Func)
+            if (SetCursorPosCenter_Func)
                 GW::Hook::DisableHooks(SetCursorPosCenter_Func);
-            if(ProcessInput_Func)
+            if (ProcessInput_Func)
                 GW::Hook::DisableHooks(ProcessInput_Func);
         }
-
     }
 
     bool initialized = false;
     bool enable_cursor_fix = true;
+}
+
+void MouseFix::LoadSettings(CSimpleIniA* ini)
+{
+    enable_cursor_fix = ini->GetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
+}
+
+void MouseFix::SaveSettings(CSimpleIniA* ini)
+{
+    ini->SetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
 }
 
 void MouseFix::Terminate()
@@ -214,7 +223,7 @@ bool MouseFix::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
         return false;
     if (!initialized) {
         OldCursorFix::InstallCursorFix();
-        ASSERT(CursorFixInitialise());
+        CursorFixEnable(enable_cursor_fix);
         initialized = true;
     }
     CursorFixWndProc(Message, wParam, lParam);

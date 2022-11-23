@@ -43,9 +43,9 @@ There are three main kinds of Toolbox components: Modules, Widgets and Windows. 
 * Widgets are visual elements without an explicit window (border, header, etc).
 * Windows are visual elements with an explicit window.
 
-Both Widgets and Windows can also have a panel in Settings, and share common code in ToolboxUIElement, which handles saving of position, visibility, etc. If you wish to create a new window/widget, please take a look at how similar ones have already been implemented.
+Both Widgets and Windows can also have a panel in Settings, and share common code in ToolboxUIElement, which handles saving of position, visibility, etc. If you wish to create a new window/widget, please take a look at how similar ones have already been implemented.  
 
-**Important**: The destruction chain is as follows: SignalTerminate -> Terminate -> Destructor. Make sure to handle all destruction logic that uses other modules or interfaces with GWCA in SignalTerminate, only use the constructor for class scope clean up.
+**Important**: The destruction chain is as follows: SignalTerminate -> Terminate -> Destructor. Make sure to handle all destruction logic that uses other modules or interfaces with GWCA in SignalTerminate, Terminate to revert any changes to the game and only use the destructor for class scope clean up.
 
 ## Plugins
 Toolbox supports plugins, meaning you can extend Toolboxes functionality.
