@@ -89,6 +89,10 @@ void ArmoryWindow::Update(const float delta)
     }
 }
 
+void ArmoryWindow::LoadSettings(CSimpleIni* ini) {}
+
+void ArmoryWindow::SaveSettings(CSimpleIni* ini) {}
+
 void ArmoryWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible)

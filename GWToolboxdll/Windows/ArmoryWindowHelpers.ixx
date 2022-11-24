@@ -1,17 +1,18 @@
 module;
 
 #include "stdafx.h"
-#include "ImGuiAddons.h"
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
+
+#include <ImGuiAddons.h>
 
 export module ArmoryWindow:helpers;
 export import :database;
 
 export namespace Helpers
 {
-    using namespace Database;
     enum class DyeColor
     {
         None = 0,
@@ -30,9 +31,9 @@ export namespace Helpers
     };
     
     struct ComboListState {
-        std::vector<Armor*> pieces;
+        std::vector<Database::Armor*> pieces;
         int current_piece_index = -1;
-        Armor* current_piece = nullptr;
+        Database::Armor* current_piece = nullptr;
     };
 
     struct PlayerArmorPiece {
@@ -68,7 +69,7 @@ export namespace Helpers
     //  - Armor =   0x20110007 (3)
     //  - Chaos glove = 0x20110407 (38)
 
-    ImVec4 palette[] = {
+    const ImVec4 palette[] = {
         {0.f, 0.f, 1.f, 0.f},       // Blue
         {0.f, 0.75f, 0.f, 0.f},     // Green
         {0.5f, 0.f, 0.5f, 0.f},     // Purple
@@ -165,12 +166,12 @@ export namespace Helpers
     bool armor_filter_array_getter(void*, int idx, const char** out_text)
     {
         switch (idx) {
-            case Campaign_All: *out_text = "All"; break;
-            case Campaign_Core: *out_text = "Core"; break;
-            case Campaign_Prophecies: *out_text = "Prophecies"; break;
-            case Campaign_Factions: *out_text = "Factions"; break;
-            case Campaign_Nightfall: *out_text = "Nightfall"; break;
-            case Campaign_EotN: *out_text = "Eye of the North"; break;
+            case Database::Campaign_All: *out_text = "All"; break;
+            case Database::Campaign_Core: *out_text = "Core"; break;
+            case Database::Campaign_Prophecies: *out_text = "Prophecies"; break;
+            case Database::Campaign_Factions: *out_text = "Factions"; break;
+            case Database::Campaign_Nightfall: *out_text = "Nightfall"; break;
+            case Database::Campaign_EotN: *out_text = "Eye of the North"; break;
             default: return false;
         }
         return true;
@@ -178,7 +179,7 @@ export namespace Helpers
 
     bool armor_pieces_array_getter(void* data, int idx, const char** out_text)
     {
-        const auto armors = static_cast<Armor**>(data);
+        const auto armors = static_cast<Database::Armor**>(data);
         *out_text = armors[idx]->label;
         return true;
     }
@@ -208,10 +209,10 @@ export namespace Helpers
     }
     
 
-    void UpdateArmorsFilter(GW::Constants::Profession prof, Campaign campaign)
+    void UpdateArmorsFilter(GW::Constants::Profession prof, Database::Campaign campaign)
     {
         size_t count = 0;
-        Armor* armors = GetArmorsPerProfession(prof, &count);
+        Database::Armor* armors = Database::GetArmorsPerProfession(prof, &count);
 
         head.pieces.clear();
         chest.pieces.clear();
@@ -230,23 +231,23 @@ export namespace Helpers
             PlayerArmorPiece* piece = nullptr;
 
             switch (armors[i].item_slot) {
-                case ItemSlot_Head:
+                case Database::ItemSlot_Head:
                     state = &head;
                     piece = &player_armor.head;
                     break;
-                case ItemSlot_Chest:
+                case Database::ItemSlot_Chest:
                     state = &chest;
                     piece = &player_armor.chest;
                     break;
-                case ItemSlot_Hands:
+                case Database::ItemSlot_Hands:
                     state = &hands;
                     piece = &player_armor.hands;
                     break;
-                case ItemSlot_Legs:
+                case Database::ItemSlot_Legs:
                     state = &legs;
                     piece = &player_armor.legs;
                     break;
-                case ItemSlot_Feets:
+                case Database::ItemSlot_Feets:
                     state = &feets;
                     piece = &player_armor.feets;
                     break;
@@ -256,7 +257,7 @@ export namespace Helpers
                 continue;
             if (piece->model_file_id == armors[i].model_file_id)
                 state->current_piece = &armors[i];
-            if (campaign != Campaign_All && armors[i].campaign != campaign)
+            if (campaign != Database::Campaign_All && armors[i].campaign != campaign)
                 continue;
             state->pieces.push_back(&armors[i]);
 
