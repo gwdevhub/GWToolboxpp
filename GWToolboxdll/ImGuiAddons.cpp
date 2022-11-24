@@ -286,7 +286,7 @@ namespace ImGui {
         ImVec2 size = { bottom_right.x - top_left.x, bottom_right.y - top_left.y };
         ImGui::GetWindowDrawList()->AddImage(user_texture_id, top_left, bottom_right, { 0,0 }, CalculateUvCrop(user_texture_id, size));
     }
-    bool ColorPalette(const char* label, size_t* palette_index, ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags)
+    bool ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags)
     {
         PushID(label);
         BeginGroup();

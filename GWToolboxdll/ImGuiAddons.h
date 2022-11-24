@@ -36,5 +36,5 @@ namespace ImGui {
     // Calculate the end position of a crop box for the given texture to fit into the given size
     IMGUI_API ImVec2 CalculateUvCrop(ImTextureID user_texture_id, const ImVec2& size);
 
-    IMGUI_API bool ColorPalette(const char* label, size_t* palette_index, ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags);
+    IMGUI_API bool ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags);
 }
