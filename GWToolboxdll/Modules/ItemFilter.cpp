@@ -23,6 +23,41 @@
     }
 
 namespace {
+    struct ItemOwner {
+        GW::ItemID item;
+        GW::AgentID owner;
+    };
+    using ItemModelID = decltype(GW::Item::model_id);
+    std::vector<GW::Packet::StoC::AgentAdd> suppressed_packets{};
+    std::vector<ItemOwner> item_owners{};
+    
+    bool hide_player_white = false;
+    bool hide_player_blue = false;
+    bool hide_player_purple = false;
+    bool hide_player_gold = false;
+    bool hide_player_green = false;
+    bool hide_party_white = false;
+    bool hide_party_blue = false;
+    bool hide_party_purple = false;
+    bool hide_party_gold = false;
+    bool hide_party_green = false;
+    std::map<ItemModelID, std::string> dont_hide_for_player{};
+    std::map<ItemModelID, std::string> dont_hide_for_party{};
+
+    void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd*);
+    void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove*);
+    void OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
+    void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID*);
+    void OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner*);
+
+    GW::HookEntry OnAgentAdd_Entry;
+    GW::HookEntry OnAgentRemove_Entry;
+    GW::HookEntry OnMapLoad_Entry;
+    GW::HookEntry OnItemReuseId_Entry;
+    GW::HookEntry OnItemUpdateOwner_Entry;
+
+    
+    enum class Rarity : uint8_t { White, Blue, Purple, Gold, Green, Unknown };
     using namespace GW::Constants::ItemID;
 
     Rarity GetRarity(GW::Item const& item)
@@ -156,6 +191,134 @@ namespace {
         MAP_ENTRY(DSR),
         MAP_ENTRY(ObsidianEdge),
     };
+    GW::AgentID GetItemOwner(const GW::ItemID item_id)
+    {
+        const auto it = std::ranges::find_if(item_owners, [item_id](auto owner) {
+            return owner.item == item_id;
+            });
+        return it == item_owners.end() ? 0 : it->owner;
+    }
+
+    bool WantToHide(const GW::Item& item, const bool can_pick_up)
+    {
+        using GW::Constants::ItemType;
+        switch (static_cast<ItemType>(item.type)) {
+        case ItemType::Quest_Item: return false;
+        case ItemType::Minipet: return false;
+        default: break;
+        }
+
+        const auto rarity = GetRarity(item);
+
+        if (can_pick_up) {
+            if (dont_hide_for_player.contains(item.model_id))
+                return false;
+
+            switch (rarity) {
+            case Rarity::White: return hide_player_white;
+            case Rarity::Blue: return hide_player_blue;
+            case Rarity::Purple: return hide_player_purple;
+            case Rarity::Gold: return hide_player_gold;
+            case Rarity::Green: return hide_player_green;
+            case Rarity::Unknown: return false;
+            }
+        }
+
+        if (dont_hide_for_party.contains(item.model_id))
+            return false;
+
+        switch (rarity) {
+        case Rarity::White: return hide_party_white;
+        case Rarity::Blue: return hide_party_blue;
+        case Rarity::Purple: return hide_party_purple;
+        case Rarity::Gold: return hide_party_gold;
+        case Rarity::Green: return hide_party_green;
+        case Rarity::Unknown: return false;
+        }
+
+        return false;
+    }
+
+    void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet)
+    {
+        const auto* item = GetItemFromPacket(*packet);
+        if (!item)
+            return;
+
+        const auto* player = GW::Agents::GetCharacter();
+        if (player == nullptr)
+            return;
+
+        if (player->max_energy == 0 || player->login_number == 0) {
+            // we're spectating, not sure what our own player is
+            if (WantToHide(*item, false) && WantToHide(*item, true)) {
+                // only block items that we want to block for player and party
+                status->blocked = true;
+                suppressed_packets.push_back(*packet);
+            }
+            return;
+        }
+
+        const auto owner_id = GetItemOwner(item->item_id);
+        const auto can_pick_up = owner_id == 0                    // not reserved
+            || owner_id == player->agent_id; // reserved for user
+
+        if (WantToHide(*item, can_pick_up)) {
+            status->blocked = true;
+            suppressed_packets.push_back(*packet);
+        }
+    }
+    void OnAgentRemove(GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet)
+    {
+        // Block despawning the agent if the client never spawned it.
+        const auto it = std::ranges::find_if(suppressed_packets, [agent_id = packet->agent_id](const auto& suppressed_packet) {
+            return suppressed_packet.agent_id == agent_id;
+            });
+
+        if (it == suppressed_packets.end())
+            return;
+
+        suppressed_packets.erase(it);
+        status->blocked = true;
+    }
+    void OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
+    {
+        suppressed_packets.clear();
+        item_owners.clear();
+    }
+    void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID* packet)
+    {
+        const auto it = std::ranges::find_if(item_owners, [item_id = packet->item_id](auto owner) {
+            return owner.item == item_id;
+            });
+
+        if (it != item_owners.end())
+            item_owners.erase(it);
+    }
+    void OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner* packet)
+    {
+        const auto it = std::ranges::find_if(item_owners, [item_id = packet->item_id](auto owner) {
+            return owner.item == item_id;
+            });
+
+        if (it == item_owners.end()) {
+            item_owners.push_back({packet->item_id, packet->owner_agent_id});
+        }
+        else {
+            it->owner = packet->owner_agent_id;
+        }
+    }
+
+    void SpawnSuppressedItems()
+    {
+        for (const auto& packet : suppressed_packets) {
+            GW::GameThread::Enqueue([cpy = packet]() mutable {
+                GW::StoC::EmulatePacket(reinterpret_cast<GW::Packet::StoC::PacketBase*>(&cpy));
+                });
+        }
+
+        suppressed_packets.clear();
+    }
 
 } // namespace
 
@@ -163,11 +326,11 @@ void ItemFilter::Initialize()
 {
     ToolboxModule::Initialize();
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdd_Entry, bind_member(this, &ItemFilter::OnAgentAdd));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry, bind_member(this, &ItemFilter::OnAgentRemove));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry, bind_member(this, &ItemFilter::OnMapLoad));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry, bind_member(this, &ItemFilter::OnItemReuseId));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry, bind_member(this, &ItemFilter::OnItemUpdateOwner));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdd_Entry, OnAgentAdd);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry, OnAgentRemove);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry, OnMapLoad);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry, OnItemReuseId);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry, OnItemUpdateOwner);
 }
 
 void ItemFilter::SignalTerminate()
@@ -182,7 +345,12 @@ void ItemFilter::SignalTerminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry);
 }
 
-void ItemFilter::LoadSettings(CSimpleIniA* ini)
+bool ItemFilter::CanTerminate()
+{
+    return suppressed_packets.empty();
+}
+
+void ItemFilter::LoadSettings(CSimpleIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(hide_player_white);
@@ -200,7 +368,7 @@ void ItemFilter::LoadSettings(CSimpleIniA* ini)
     dont_hide_for_party = GuiUtils::IniToMap<decltype(dont_hide_for_party)>(ini, Name(), "dont_hide_for_party", default_dont_hide_for_party);
 }
 
-void ItemFilter::SaveSettings(CSimpleIniA* ini)
+void ItemFilter::SaveSettings(CSimpleIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(hide_player_white);
@@ -216,138 +384,6 @@ void ItemFilter::SaveSettings(CSimpleIniA* ini)
 
     GuiUtils::MapToIni(ini, Name(), "dont_hide_for_player", dont_hide_for_player);
     GuiUtils::MapToIni(ini, Name(), "dont_hide_for_party", dont_hide_for_party);
-}
-
-void ItemFilter::SpawnSuppressedItems()
-{
-    for (const auto& packet : suppressed_packets) {
-        GW::GameThread::Enqueue([cpy = packet]() mutable {
-            GW::StoC::EmulatePacket(reinterpret_cast<GW::Packet::StoC::PacketBase*>(&cpy));
-        });
-    }
-
-    suppressed_packets.clear();
-}
-void ItemFilter::OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet)
-{
-    const auto* item = GetItemFromPacket(*packet);
-    if (!item)
-        return;
-
-    const auto* player = GW::Agents::GetCharacter();
-    if (player == nullptr)
-        return;
-
-    if (player->max_energy == 0 || player->login_number == 0) {
-        // we're spectating, not sure what our own player is
-        if (WantToHide(*item, false) && WantToHide(*item, true)) {
-            // only block items that we want to block for player and party
-            status->blocked = true;
-            suppressed_packets.push_back(*packet);
-        }
-        return;
-    }
-
-    const auto owner_id = GetItemOwner(item->item_id);
-    const auto can_pick_up = owner_id == 0                    // not reserved
-                             || owner_id == player->agent_id; // reserved for user
-
-    if (WantToHide(*item, can_pick_up)) {
-        status->blocked = true;
-        suppressed_packets.push_back(*packet);
-    }
-}
-
-void ItemFilter::OnAgentRemove(GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet)
-{
-    // Block despawning the agent if the client never spawned it.
-    const auto it = std::ranges::find_if(suppressed_packets, [agent_id = packet->agent_id](const auto& suppressed_packet) {
-        return suppressed_packet.agent_id == agent_id;
-    });
-
-    if (it == suppressed_packets.end())
-        return;
-
-    suppressed_packets.erase(it);
-    status->blocked = true;
-}
-
-void ItemFilter::OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
-{
-    suppressed_packets.clear();
-    item_owners.clear();
-}
-
-void ItemFilter::OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID* packet)
-{
-    const auto it = std::ranges::find_if(item_owners, [item_id = packet->item_id](auto owner) {
-        return owner.item == item_id;
-    });
-
-    if (it != item_owners.end())
-        item_owners.erase(it);
-}
-
-void ItemFilter::OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner* packet)
-{
-    const auto it = std::ranges::find_if(item_owners, [item_id = packet->item_id](auto owner) {
-        return owner.item == item_id;
-    });
-
-    if (it == item_owners.end()) {
-        item_owners.push_back({packet->item_id, packet->owner_agent_id});
-    }
-    else {
-        it->owner = packet->owner_agent_id;
-    }
-}
-
-GW::AgentID ItemFilter::GetItemOwner(const GW::ItemID item_id) const
-{
-    const auto it = std::ranges::find_if(item_owners, [item_id](auto owner) {
-        return owner.item == item_id;
-    });
-    return it == item_owners.end() ? 0 : it->owner;
-}
-
-bool ItemFilter::WantToHide(const GW::Item& item, const bool can_pick_up) const
-{
-    using GW::Constants::ItemType;
-    switch (static_cast<ItemType>(item.type)) {
-        case ItemType::Quest_Item: return false;
-        case ItemType::Minipet: return false;
-        default: break;
-    }
-
-    const auto rarity = GetRarity(item);
-
-    if (can_pick_up) {
-        if (dont_hide_for_player.contains(item.model_id))
-            return false;
-
-        switch (rarity) {
-            case Rarity::White: return hide_player_white;
-            case Rarity::Blue: return hide_player_blue;
-            case Rarity::Purple: return hide_player_purple;
-            case Rarity::Gold: return hide_player_gold;
-            case Rarity::Green: return hide_player_green;
-            case Rarity::Unknown: return false;
-        }
-    }
-
-    if (dont_hide_for_party.contains(item.model_id))
-        return false;
-
-    switch (rarity) {
-        case Rarity::White: return hide_party_white;
-        case Rarity::Blue: return hide_party_blue;
-        case Rarity::Purple: return hide_party_purple;
-        case Rarity::Gold: return hide_party_gold;
-        case Rarity::Green: return hide_party_green;
-        case Rarity::Unknown: return false;
-    }
-
-    return false;
 }
 
 void ItemFilter::DrawSettingInternal()

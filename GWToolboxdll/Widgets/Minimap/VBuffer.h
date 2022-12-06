@@ -36,13 +36,11 @@ public:
         device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
         device->DrawPrimitive(type, 0, count);
     }
+    virtual void Initialize(IDirect3DDevice9* device) = 0;
 
 protected:
     IDirect3DVertexBuffer9* buffer = nullptr;
     D3DPRIMITIVETYPE type = D3DPT_TRIANGLELIST;
     unsigned long count = 0;
     bool initialized = false;
-
-private:
-    virtual void Initialize(IDirect3DDevice9* device) = 0;
 };

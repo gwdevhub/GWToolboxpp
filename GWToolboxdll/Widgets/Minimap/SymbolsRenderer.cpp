@@ -40,6 +40,9 @@ void SymbolsRenderer::DrawSettings() {
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {
+    if (initialized)
+        return;
+    initialized = true;
     type = D3DPT_TRIANGLELIST;
 
     D3DVertex* vertices = nullptr;
@@ -99,10 +102,7 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {
 }
 
 void SymbolsRenderer::Render(IDirect3DDevice9* device) {
-    if (!initialized) {
-        initialized = true;
-        Initialize(device);
-    }
+    Initialize(device);
 
     GW::Agent* me = GW::Agents::GetPlayer();
     if (me == nullptr) return;

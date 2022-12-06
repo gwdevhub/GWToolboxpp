@@ -14,6 +14,8 @@
 #include <Modules/Updater.h>
 #include <Windows/SettingsWindow.h>
 
+#include <ToolboxWidget.h>
+
 void SettingsWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
@@ -120,7 +122,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
                 ImGui::Bullet(); ImGui::Text("Send Chat hotkey to enter one of the commands above.");
                 ImGui::TreePop();
             }
-            for (const auto module : GWToolbox::Instance().GetModules()) {
+            for (const auto module : GWToolbox::Instance().GetAllModules()) {
                 module->DrawHelp();
             }
         }
@@ -128,11 +130,21 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         DrawSettingsSection(ToolboxTheme::Instance().SettingsName());
         DrawSettingsSection(ToolboxSettings::Instance().SettingsName());
 
-        const std::vector<ToolboxModule*>& optional_modules = ToolboxSettings::Instance().GetModules();
-        for (unsigned i = 0; i < optional_modules.size(); ++i) {
-            if (i == sep_windows) ImGui::Text("Windows:");
-            if (i == sep_widgets) ImGui::Text("Widgets:");
-            DrawSettingsSection(optional_modules[i]->SettingsName());
+        const auto modules = GWToolbox::Instance().GetModules();
+        for (auto m : modules) {
+            DrawSettingsSection(m->SettingsName());
+        }
+        const auto windows = GWToolbox::Instance().GetWindows();
+        if(!windows.empty())
+            ImGui::Text("Windows:");
+        for (auto m : windows) {
+            DrawSettingsSection(m->SettingsName());
+        }
+        const auto widgets = GWToolbox::Instance().GetWidgets();
+        if(!widgets.empty())
+            ImGui::Text("Widgets:");
+        for (auto m : widgets) {
+            DrawSettingsSection(m->SettingsName());
         }
 
         if (ImGui::Button("Save Now", ImVec2(w, 0))) {

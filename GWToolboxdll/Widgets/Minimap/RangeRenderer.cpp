@@ -93,6 +93,9 @@ size_t RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD colo
 
 void RangeRenderer::Initialize(IDirect3DDevice9 *device)
 {
+    if (initialized)
+        return;
+    initialized = true;
     count = circle_points * num_circles;
     type = D3DPT_TRIANGLESTRIP;
 
@@ -162,10 +165,7 @@ void RangeRenderer::Initialize(IDirect3DDevice9 *device)
 
 void RangeRenderer::Render(IDirect3DDevice9 *device)
 {
-    if (!initialized) {
-        initialized = true;
-        Initialize(device);
-    }
+    Initialize(device);
 
     switch (GW::Map::GetInstanceType()) {
         case GW::Constants::InstanceType::Explorable:

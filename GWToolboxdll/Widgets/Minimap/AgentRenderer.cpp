@@ -388,13 +388,6 @@ AgentRenderer::AgentRenderer() {
             max_shape_verts = shapes[shape].vertices.size();
         }
     }
-    constexpr GW::UI::UIMessage hook_messages[] = {
-        GW::UI::UIMessage::kShowAgentNameTag,
-        GW::UI::UIMessage::kSetAgentNameTagAttribs
-    };
-    for (const auto message_id : hook_messages) {
-        GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
-    }
 }
 void AgentRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*) {
     switch (msgid) {
@@ -425,12 +418,23 @@ void AgentRenderer::Shape_t::AddVertex(float x, float y, AgentRenderer::Color_Mo
 }
 
 void AgentRenderer::Initialize(IDirect3DDevice9* device) {
+    if (initialized)
+        return;
+    initialized = true;
     type = D3DPT_TRIANGLELIST;
     vertices_max = max_shape_verts * 0x200; // support for up to 512 agents, should be enough
     vertices = nullptr;
     HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
         D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
     if (FAILED(hr)) printf("AgentRenderer initialize error: HRESULT: 0x%lX\n", hr);
+
+    constexpr GW::UI::UIMessage hook_messages[] = {
+        GW::UI::UIMessage::kShowAgentNameTag,
+        GW::UI::UIMessage::kSetAgentNameTagAttribs
+    };
+    for (const auto message_id : hook_messages) {
+        GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
+    }
 }
 
 void AgentRenderer::Render(IDirect3DDevice9* device) {

@@ -49,6 +49,12 @@ namespace {
         return true;
     }
 
+    bool must_self_destruct = false;    // is true when toolbox should quit
+    GW::HookEntry Update_Entry;
+    GW::HookEntry HandleCrash_Entry;
+
+    bool initialized = false;
+
     bool event_handler_attached = false;
     bool AttachWndProcHandler() {
         if (event_handler_attached)
@@ -109,8 +115,127 @@ namespace {
         imgui_initialized = false;
         return true;
     }
+
+    std::vector<ToolboxModule*> modules_enabled{};
+    std::vector<ToolboxWidget*> widgets_enabled{};
+    std::vector<ToolboxWindow*> windows_enabled{};
+
+    std::vector<ToolboxModule*> all_modules_enabled{};
+    std::vector<ToolboxUIElement*> ui_elements_enabled{};
+
+    std::vector<ToolboxModule*> modules_terminating{};
+    void ReorderModules(std::vector<ToolboxModule*>& modules) {
+        std::sort(
+            modules.begin(),
+            modules.end(),
+            [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+                return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
+            });
+    }
+
+    bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, bool enable) {
+        auto found = std::ranges::find(vec.begin(), vec.end(), &m);
+        if (found != vec.end()) {
+            // Module found
+            if (enable)
+                return true;
+            if(inifile)
+                m.SaveSettings(inifile);
+            modules_terminating.push_back(&m);
+            m.SignalTerminate();
+            vec.erase(found);
+            ReorderModules(vec);
+            return false;
+        }
+        else {
+            // Module not found
+            if (!enable)
+                return false;
+            auto is_terminating = std::ranges::find(modules_terminating.begin(), modules_terminating.end(), &m);
+            if (is_terminating != modules_terminating.end())
+                return false; // Not finished terminating
+            vec.push_back(&m);
+            m.Initialize();
+            if(inifile)
+                m.LoadSettings(inifile);
+            ReorderModules(vec);
+            return true; // Added successfully
+        }
+    }
+
+
+
+}
+const std::vector<ToolboxModule*>& GWToolbox::GetAllModules()
+{
+    return all_modules_enabled;
+}
+const std::vector<ToolboxUIElement*>& GWToolbox::GetUIElements()
+{
+    return ui_elements_enabled;
+}
+const std::vector<ToolboxModule*>& GWToolbox::GetModules()
+{
+    return modules_enabled;
+}
+const std::vector<ToolboxWindow*>& GWToolbox::GetWindows()
+{
+    return windows_enabled;
+}
+const std::vector<ToolboxWidget*>& GWToolbox::GetWidgets()
+{
+    return widgets_enabled;
 }
 
+void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added) {
+
+    auto UpdateVec = [added](std::vector<void*>& vec, void* m) {
+        auto found = std::ranges::find(vec.begin(), vec.end(), m);
+        if (added) {
+            if (found == vec.end()) {
+                vec.push_back(m);
+            }
+        }
+        else {
+            if (found != vec.end()) {
+                vec.erase(found);
+            }
+        }
+    };
+    UpdateVec((std::vector<void*>&)all_modules_enabled, m);
+    if (!added) {
+        UpdateVec((std::vector<void*>&)widgets_enabled, m);
+        UpdateVec((std::vector<void*>&)ui_elements_enabled, m);
+        UpdateVec((std::vector<void*>&)modules_enabled, m);
+    }
+    else if(m->IsWidget()) {
+        UpdateVec((std::vector<void*>&)widgets_enabled, m);
+        UpdateVec((std::vector<void*>&)ui_elements_enabled, m);
+    }
+    else if(m->IsWindow()) {
+        UpdateVec((std::vector<void*>&)windows_enabled, m);
+        UpdateVec((std::vector<void*>&)ui_elements_enabled, m);
+    }
+    else {
+        UpdateVec((std::vector<void*>&)modules_enabled, m);
+    }
+}
+bool GWToolbox::IsInitialized() const { return initialized; }
+bool GWToolbox::ToggleModule(ToolboxWidget& m, bool enable) {
+    bool added = ToggleTBModule(m, (std::vector<ToolboxModule*>&)widgets_enabled, enable);
+    UpdateEnabledWidgetVectors(&m, added);
+    return added;
+}
+bool GWToolbox::ToggleModule(ToolboxWindow& m, bool enable) {
+    bool added = ToggleTBModule(m, (std::vector<ToolboxModule*>&)windows_enabled, enable);
+    UpdateEnabledWidgetVectors(&m, added);
+    return added;
+}
+bool GWToolbox::ToggleModule(ToolboxModule& m, bool enable) {
+    bool added = ToggleTBModule(m, modules_enabled, enable);
+    UpdateEnabledWidgetVectors(&m, added);
+    return added;
+}
 HMODULE GWToolbox::GetDLLModule() {
     return dllmodule;
 }
@@ -222,13 +347,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 
     // === Send events to toolbox ===
-    const GWToolbox& tb = GWToolbox::Instance();
+    GWToolbox& tb = GWToolbox::Instance();
     switch (Message) {
     // Send button up mouse events to everything, to avoid being stuck on mouse-down
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
     case WM_INPUT:
-        for (ToolboxModule* m : tb.GetModules()) {
+        for (const auto m : tb.GetAllModules()) {
             m->WndProc(Message, wParam, lParam);
         }
         break;
@@ -247,7 +372,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         if (io.WantCaptureMouse && !skip_mouse_capture)
             return true;
         bool captured = false;
-        for (ToolboxModule* m : tb.GetModules()) {
+        for (const auto m : tb.GetAllModules()) {
             if (m->WndProc(Message, wParam, lParam)) captured = true;
         }
         if (captured)
@@ -284,7 +409,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         // send to toolbox modules and plugins
         {
             bool captured = false;
-            for (ToolboxModule* m : tb.GetModules()) {
+            for (const auto m : tb.GetAllModules()) {
                 if (m->WndProc(Message, wParam, lParam)) captured = true;
             }
             if (captured) return true;
@@ -301,7 +426,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
     default:
         // Custom messages registered via RegisterWindowMessage
         if (Message >= 0xC000 && Message <= 0xFFFF) {
-            for (ToolboxModule* m : tb.GetModules()) {
+            for (const auto m : tb.GetAllModules()) {
                 m->WndProc(Message, wParam, lParam);
             }
         }
@@ -346,17 +471,12 @@ void GWToolbox::Initialize()
     OpenSettingsFile();
 
     Log::Log("Creating Modules\n");
-    core_modules.push_back(&CrashHandler::Instance());
-    core_modules.push_back(&Resources::Instance());
-    core_modules.push_back(&ToolboxTheme::Instance());
-    core_modules.push_back(&ToolboxSettings::Instance());
-    core_modules.push_back(&MainWindow::Instance());
-    core_modules.push_back(&DialogModule::Instance());
-
-    for (ToolboxModule* module : core_modules) {
-        module->LoadSettings(inifile);
-        module->Initialize();
-    }
+    ToggleModule(CrashHandler::Instance());
+    ToggleModule(Resources::Instance());
+    ToggleModule(ToolboxTheme::Instance());
+    ToggleModule(ToolboxSettings::Instance());
+    ToggleModule(MainWindow::Instance());
+    ToggleModule(DialogModule::Instance());
 
     ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
 
@@ -389,8 +509,14 @@ void GWToolbox::OpenSettingsFile(std::filesystem::path config) const
 }
 void GWToolbox::LoadModuleSettings() const
 {
-    for (ToolboxModule* module : modules) {
-        module->LoadSettings(inifile);
+    for (auto m : modules_enabled) {
+        m->LoadSettings(inifile);
+    }
+    for (auto m : widgets_enabled) {
+        m->LoadSettings(inifile);
+    }
+    for (auto m : windows_enabled) {
+        m->LoadSettings(inifile);
     }
 }
 void GWToolbox::SaveSettings(std::filesystem::path config) const
@@ -401,10 +527,34 @@ void GWToolbox::SaveSettings(std::filesystem::path config) const
         config = std::filesystem::path(L"configs") / config;
         config += L".ini";
     }
-    for (ToolboxModule* module : modules) {
-        module->SaveSettings(inifile);
+    for (auto m : modules_enabled) {
+        m->SaveSettings(inifile);
+    }
+    for (auto m : widgets_enabled) {
+        m->SaveSettings(inifile);
+    }
+    for (auto m : windows_enabled) {
+        m->SaveSettings(inifile);
     }
     ASSERT(SaveIniToFile(inifile, Resources::GetPath(config)));
+}
+
+void GWToolbox::StartSelfDestruct()
+{
+    if (initialized) {
+        SaveSettings();
+        while (modules_enabled.size()) {
+            ASSERT(ToggleModule(*modules_enabled[0], false) == false);
+        }
+        while (widgets_enabled.size()) {
+            ASSERT(ToggleModule(*widgets_enabled[0], false) == false);
+        }
+        while (windows_enabled.size()) {
+            ASSERT(ToggleModule(*windows_enabled[0], false) == false);
+        }
+        ASSERT(all_modules_enabled.empty());
+    }
+    must_self_destruct = true;
 }
 
 void GWToolbox::Terminate() {
@@ -419,13 +569,18 @@ void GWToolbox::Terminate() {
 
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
 
-    for (ToolboxModule* module : modules) {
-        module->Terminate();
-    }
+    ASSERT(CanTerminate());
+
+    ASSERT(all_modules_enabled.empty());
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
         Log::Info("Bye!");
     }
+}
+
+
+bool GWToolbox::CanTerminate() {
+    return modules_terminating.empty();
 }
 
 void GWToolbox::Draw(IDirect3DDevice9* device) {
@@ -433,10 +588,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
     if (initialized && must_self_destruct) {
         if (!GuiUtils::FontsLoaded())
             return;
-        for (ToolboxModule* module : Instance().modules) {
-            if (!module->CanTerminate())
-                return;
-        }
+        if (!CanTerminate())
+            return;
 
         Instance().Terminate();
         ASSERT(DetachImgui());
@@ -484,7 +637,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         io.AddKeyEvent(ImGuiKey_ModShift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
         io.AddKeyEvent(ImGuiKey_ModAlt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
-        for (ToolboxUIElement* uielement : Instance().uielements) {
+        for (auto uielement : ui_elements_enabled) {
             if (world_map_showing && !uielement->ShowOnWorldMap())
                 continue;
             uielement->Draw(device);
@@ -514,20 +667,31 @@ void GWToolbox::Update(GW::HookStatus *)
     if (last_tick_count == 0)
         last_tick_count = GetTickCount();
 
+    // @Enhancement:
+    // Improve precision with QueryPerformanceCounter
+    const DWORD tick = GetTickCount();
+    const DWORD delta = tick - last_tick_count;
+    const float delta_f = delta / 1000.f;
+
     if (initialized
         && imgui_initialized
         && !must_self_destruct) {
 
-        // @Enhancement:
-        // Improve precision with QueryPerformanceCounter
-        const DWORD tick = GetTickCount();
-        const DWORD delta = tick - last_tick_count;
-        const float delta_f = delta / 1000.f;
-
-        for (ToolboxModule* module : modules) {
-            module->Update(delta_f);
+        for (auto m : all_modules_enabled) {
+            m->Update(delta_f);
         }
 
-        last_tick_count = tick;
     }
+
+    for (auto m : modules_terminating) {
+        if (m->CanTerminate()) {
+            m->Terminate();
+            auto found = std::ranges::find(modules_terminating.begin(), modules_terminating.end(), m);
+            ASSERT(found != modules_terminating.end());
+            modules_terminating.erase(found);
+            break;
+        }
+        m->Update(delta_f);
+    }
+    last_tick_count = tick;
 }

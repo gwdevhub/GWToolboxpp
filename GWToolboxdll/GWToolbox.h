@@ -11,6 +11,10 @@ DWORD __stdcall ThreadEntry(LPVOID);
 LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) noexcept;
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
+class ToolboxWidget;
+class ToolboxWindow;
+class ToolboxModule;
+
 class GWToolbox {
 public:
     static GWToolbox& Instance() {
@@ -25,51 +29,32 @@ public:
     void Initialize();
     void Terminate();
 
+    bool CanTerminate();
+
     void OpenSettingsFile(std::filesystem::path config = L"GWToolbox.ini") const;
     void LoadModuleSettings() const;
     void SaveSettings(std::filesystem::path config = L"GWToolbox.ini") const;
 
-    void StartSelfDestruct() {
-        if (initialized) {
-            SaveSettings();
-            for (ToolboxModule* module : modules) {
-                module->SignalTerminate();
-            }
-        }
-        must_self_destruct = true;
-    }
-    bool must_self_destruct = false;    // is true when toolbox should quit
+    void StartSelfDestruct();
 
-    bool RegisterModule(ToolboxModule* m) {
-        if (std::ranges::find(modules, m) == modules.end())
-            return modules.push_back(m), true;
-        return false;
-    }
-    bool RegisterUIElement(ToolboxUIElement* e) {
-        if (std::ranges::find(uielements, e) == uielements.end())
-            return uielements.push_back(e), true;
-        return false;
-    }
 
-    const std::vector<ToolboxModule*>& GetModules() const { return modules; }
-    const std::vector<ToolboxModule*>& GetCoreModules() const { return core_modules; }
-    const std::vector<ToolboxUIElement*>& GetUIElements() const { return uielements; }
+
+    //const std::vector<ToolboxModule*>& GetModules();
+    const std::vector<ToolboxModule*>& GetAllModules();
+    //const std::vector<ToolboxModule*>& GetCoreModules() const { return core_modules; }
+    const std::vector<ToolboxUIElement*>& GetUIElements();
+
+    const std::vector<ToolboxModule*>& GetModules();
+
+    const std::vector<ToolboxWindow*>& GetWindows();
+
+    const std::vector<ToolboxWidget*>& GetWidgets();
 
     bool right_mouse_down = false;
 
-    bool IsInitialized() const { return initialized; }
+    bool IsInitialized() const;
 
-private:
-    std::vector<ToolboxModule*> modules;
-
-    // List of modules that can't be disabled
-    std::vector<ToolboxModule*> core_modules;
-    // List of modules that are UI elements. They can be disable
-    std::vector<ToolboxUIElement*> uielements;
-
-    GW::HookEntry Update_Entry;
-    GW::HookEntry HandleCrash_Entry;
-
-    bool initialized = false;
-
+    static bool ToggleModule(ToolboxWidget& m, bool enable = true);
+    static bool ToggleModule(ToolboxWindow& m, bool enable = true);
+    static bool ToggleModule(ToolboxModule& m, bool enable = true);
 };

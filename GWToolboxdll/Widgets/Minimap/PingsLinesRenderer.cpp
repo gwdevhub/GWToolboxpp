@@ -152,6 +152,9 @@ void PingsLinesRenderer::P153Callback(GW::Packet::StoC::GenericValueTarget *pak)
 };
 
 void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
+    if (initialized)
+        return;
+    initialized = true;
     type = D3DPT_LINELIST;
 
     vertices_max = 0x1000; // support for up to 4096 line segments, should be enough
@@ -166,10 +169,7 @@ void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
 }
 
 void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
-    if (!initialized) {
-        initialized = true;
-        Initialize(device);
-    }
+    Initialize(device);
 
     DrawPings(device);
 

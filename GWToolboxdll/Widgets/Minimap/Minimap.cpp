@@ -648,6 +648,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
         }
     }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus))) {
         // window pos are already rounded by imgui, so casting is no big deal
@@ -681,7 +682,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
         };
     }
     ImGui::End();
-    ImGui::PopStyleColor();
+    ImGui::PopStyleColor(2);
 
     if (hero_flag_controls_show && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
 

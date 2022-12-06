@@ -128,4 +128,6 @@ private:
     std::vector<CustomPolygon> polygons{};
 
     CSimpleIni* inifile = nullptr;
+
+    bool initialized = false;
 };

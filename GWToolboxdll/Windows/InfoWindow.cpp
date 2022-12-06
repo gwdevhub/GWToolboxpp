@@ -43,6 +43,7 @@
 
 #include <Modules/ToolboxSettings.h>
 #include <Modules/DialogModule.h>
+#include <GWToolbox.h>
 
 namespace {
     enum class Status {
@@ -458,22 +459,14 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (show_widgets) {
-            const std::vector<ToolboxModule *>& optional_modules = ToolboxSettings::Instance().GetModules();
-            std::vector<ToolboxUIElement *> widgets;
-            widgets.reserve(optional_modules.size());
-            for (ToolboxModule *module : optional_modules) {
-                ToolboxUIElement *widget = dynamic_cast<ToolboxUIElement *>(module);
-                if (!widget || !widget->IsWidget())
-                    continue;
-                widgets.push_back(widget);
-            }
-            std::ranges::sort(widgets, [](auto *a, auto *b) { return std::strcmp(a->Name(), b->Name()) < 0; });
+            const auto& widgets = GWToolbox::Instance().GetWidgets();
+
             const unsigned cols = static_cast<unsigned>(ceil(ImGui::GetWindowSize().x / 200.f));
             ImGui::PushID("info_enable_widget_items");
             ImGui::Columns(static_cast<int>(cols), "info_enable_widgets", false);
             const size_t items_per_col = static_cast<size_t>(ceil(static_cast<float>(widgets.size()) / cols));
             size_t col_count = 0u;
-            for (ToolboxUIElement* widget : widgets) {
+            for (const auto widget : widgets) {
                 ImGui::Checkbox(widget->Name(), &widget->visible);
                 if (++col_count == items_per_col) {
                     ImGui::NextColumn();

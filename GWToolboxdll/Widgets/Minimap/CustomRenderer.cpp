@@ -490,6 +490,9 @@ void CustomRenderer::DrawSettings()
 
 void CustomRenderer::Initialize(IDirect3DDevice9* device)
 {
+    if (initialized)
+        return;
+    initialized = true;
     type = D3DPT_LINELIST;
     vertices_max = 0x100; // support for up to 256 line segments, should be enough
     vertices = nullptr;
@@ -663,10 +666,7 @@ void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device)
 
 void CustomRenderer::Render(IDirect3DDevice9* device)
 {
-    if (!initialized) {
-        initialized = true;
-        Initialize(device);
-    }
+    Initialize(device);
 
     DrawCustomMarkers(device);
 

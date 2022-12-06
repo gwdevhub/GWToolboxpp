@@ -28,4 +28,6 @@ private:
 
     const DWORD north_ntriangles = 2;
     DWORD north_offset = 0;
+
+    bool initialized = false;
 };

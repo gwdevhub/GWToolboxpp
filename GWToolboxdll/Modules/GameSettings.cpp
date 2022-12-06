@@ -1078,7 +1078,6 @@ void GameSettings::Initialize() {
     ChangeCursorIcon_Func = (ChangeCursorIcon_pt)GW::Scanner::FunctionFromNearCall(address);
     if (ChangeCursorIcon_Func) {
         GW::HookBase::CreateHook(ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
-        GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
     }
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
@@ -1374,6 +1373,12 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     cursor_size = ini->GetLongValue(Name(), VAR_NAME(cursor_size), cursor_size);
     RedrawCursorIcon();
+    if (cursor_size != 32) {
+        GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
+    }
+    else {
+        GW::HookBase::DisableHooks(ChangeCursorIcon_Func);
+    }
 
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     SetWindowTitle(set_window_title_as_charname);
@@ -1717,6 +1722,12 @@ void GameSettings::DrawSettingInternal() {
     ImGui::SliderInt("Guild Wars cursor size", &cursor_size, 16, 64);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         RedrawCursorIcon();
+        if (cursor_size != 32) {
+            GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
+        }
+        else {
+            GW::HookBase::DisableHooks(ChangeCursorIcon_Func);
+        }
     }
 }
 

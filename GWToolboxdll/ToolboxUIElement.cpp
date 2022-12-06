@@ -16,7 +16,6 @@ const char* ToolboxUIElement::UIName() const {
 
 void ToolboxUIElement::Initialize() {
     ToolboxModule::Initialize();
-    GWToolbox::Instance().RegisterUIElement(this);
 }
 
 void ToolboxUIElement::Terminate() {

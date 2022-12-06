@@ -27,8 +27,6 @@ public:
 
     virtual bool ToggleVisible() { return visible = !visible; }
 
-    virtual bool IsWindow() const { return false; }
-    virtual bool IsWidget() const { return false; }
     virtual bool ShowOnWorldMap() const { return false; }
 
     const char* TypeName() const override { return "ui element"; }

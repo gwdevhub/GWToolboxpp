@@ -28,12 +28,10 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
     void Draw(IDirect3DDevice9*) override;
-    void ShowVisibleRadio() override {}
+    void ShowVisibleRadio() override {};
 
     void DrawFreezeSetting();
     void DrawSizeAndPositionSettings() override {}
-
-    const std::vector<ToolboxModule*>& GetModules() const { return modules; }
 
     static bool move_all;
 
@@ -43,8 +41,6 @@ private:
     GW::Constants::MapID location_current_map = static_cast<GW::Constants::MapID>(0);
     std::wofstream location_file;
     bool save_location_data = false;
-
-    std::vector<ToolboxModule*> modules{};
 
     bool use_pcons = true;
     bool use_hotkeys = true;
@@ -96,4 +92,7 @@ private:
     bool use_skill_monitor = true;
     bool use_plugins = true;
     bool use_toast_notifications = true;
+    bool use_chat_log = true;
+    bool use_mouse_fix = true;
+    bool use_hints = true;
 };
