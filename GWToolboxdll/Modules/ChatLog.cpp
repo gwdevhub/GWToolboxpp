@@ -249,7 +249,7 @@ void ChatLog::Load(const std::wstring& _account) {
     // Recv log FIFO
     account = _account;
     CSimpleIni* inifile = new CSimpleIni(false, false, false);
-    inifile->LoadFile(LogPath(L"recv").c_str());
+    ASSERT(Resources::LoadIniFromFile(LogPath(L"recv"), inifile) == 0);
     CSimpleIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
     std::wstring buf;
@@ -272,7 +272,7 @@ void ChatLog::Load(const std::wstring& _account) {
 
     // sent log FIFO
     inifile = new CSimpleIni(false, false, false);
-    inifile->LoadFile(LogPath(L"sent").c_str());
+    ASSERT(Resources::LoadIniFromFile(LogPath(L"sent"), inifile) == 0);
     entries.clear();
     inifile->GetAllSections(entries);
     for (CSimpleIni::Entry& entry : entries) {

@@ -465,6 +465,49 @@ bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_fil
     return true;
 }
 
+// Load from resource file name on disk with 3 retries
+int Resources::LoadIniFromFile(const wchar_t* resource_path, CSimpleIni* inifile) {
+    ASSERT(resource_path && *resource_path);
+    const auto absolute_path = Resources::GetPath(resource_path);
+    return LoadIniFromFile(absolute_path, inifile);
+}
+// Load from absolute file path on disk with 3 retries
+int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, CSimpleIni* inifile) {
+    if (!std::filesystem::exists(absolute_path)) {
+        Log::LogW(L"Failed to find ini file for %s", absolute_path.c_str());
+        return 0; // This isn't a fail
+    }
+    int res = 0;
+    // 3 tries to load from disk
+    for (int i = 0; i < 3; i++) {
+        res = inifile->LoadFile(absolute_path.c_str());
+        if (res == 0)
+            break;
+    }
+    if (res != 0) {
+        Log::LogW(L"Failed to LoadFile for %s", absolute_path.c_str());
+    }
+    return res;
+}
+int Resources::SaveIniToFile(const wchar_t* resource_filename, const CSimpleIni* inifile) {
+    ASSERT(resource_filename && *resource_filename);
+    const auto absolute_path = Resources::GetPath(resource_filename);
+    return SaveIniToFile(absolute_path, inifile);
+}
+int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const CSimpleIni* ini) {
+    auto tmp_file = std::filesystem::path(absolute_path);
+    tmp_file += ".tmp";
+    const SI_Error res = ini->SaveFile(tmp_file.c_str());
+    if (res < 0)
+        return res;
+    std::error_code ec;
+    std::filesystem::rename(tmp_file, absolute_path, ec);
+    if (ec.value() != 0)
+        return ec.value();
+    if (!(!std::filesystem::exists(tmp_file) && std::filesystem::exists(absolute_path)))
+        return -1; // renmae failed
+    return 0;
+}
 
 void Resources::DxUpdate(IDirect3DDevice9* device) {
     while (true) {

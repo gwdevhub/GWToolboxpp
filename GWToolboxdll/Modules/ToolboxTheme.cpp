@@ -44,20 +44,17 @@ ImGuiStyle ToolboxTheme::DefaultTheme() {
 
 void ToolboxTheme::Terminate() {
     ToolboxModule::Terminate();
-    if (inifile) {
-        inifile->Reset();
-        delete inifile;
-        inifile = nullptr;
-    }
+    if (windows_ini) delete windows_ini;
+    if (theme_ini) delete theme_ini;
+    windows_ini = theme_ini = nullptr;
 }
 
 void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
 
-    if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-    inifile->LoadFile(Resources::GetPath(IniFilename).c_str());
+    const auto inifile = GetThemeIni();
 
-    font_global_scale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", 1.0);
+    font_global_scale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", font_global_scale);
 
     ini_style.Alpha = (float)inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha);
     ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f); // clamp to [0.2, 1.0]
@@ -105,22 +102,42 @@ void ToolboxTheme::SaveUILayout() {
         snprintf(key, 128, "_%s_Collapsed", window->Name);
         ini->SetBoolValue(window_ini_section, key, window->Collapsed);
     }
-    ini->SaveFile(Resources::GetPath(WindowPositionsFilename).c_str());
+    ASSERT(Resources::SaveIniToFile(WindowPositionsFilename,ini) == 0);
 }
 CSimpleIni* ToolboxTheme::GetLayoutIni() {
-    if (!windows_ini)
+    if(!windows_ini)
         windows_ini = new CSimpleIni(false, false, false);
-    windows_ini->Reset();
-    std::wstring filename = Resources::GetPath(WindowPositionsFilename);
-    if (std::filesystem::exists(filename.c_str())) {
-        windows_ini->LoadFile(filename.c_str());
-    } else {
-        Log::LogW(L"File %s doesn't exist.", filename.c_str());
+    const auto path = Resources::GetPath(WindowPositionsFilename);
+    if (!std::filesystem::exists(path)) {
+        Log::LogW(L"File %s doesn't exist.", path.c_str());
+        return windows_ini;
     }
+    CSimpleIni* tmp = new CSimpleIni(false, false, false);
+    ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
+    if (windows_ini)
+        delete windows_ini;
+    windows_ini = tmp;
     return windows_ini;
 }
+CSimpleIni* ToolboxTheme::GetThemeIni() {
+    if(!theme_ini)
+        theme_ini = new CSimpleIni(false, false, false);
+    const auto path = Resources::GetPath(IniFilename);
+    if (!std::filesystem::exists(path)) {
+        Log::LogW(L"File %s doesn't exist.", path.c_str());
+        return theme_ini;
+    }
+    CSimpleIni* tmp = new CSimpleIni(false, false, false);
+    ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
+    if (theme_ini)
+        delete theme_ini;
+    theme_ini = tmp;
+    return theme_ini;
+}
 void ToolboxTheme::LoadUILayout() {
+    // Copy theme over
     ImGui::GetStyle() = ini_style;
+    // Copy window positions over
     ImGui::GetIO().FontGlobalScale = font_global_scale;
     CSimpleIni* ini = GetLayoutIni();
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
@@ -151,6 +168,8 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
 
     ImGuiStyle& style = ImGui::GetStyle();
+    const auto inifile = GetThemeIni();
+
     inifile->SetDoubleValue(IniSection, "FontGlobalScale", ImGui::GetIO().FontGlobalScale);
     if (style.Alpha != ini_style.Alpha) inifile->SetDoubleValue(IniSection, "GlobalAlpha", style.Alpha);
     if (style.WindowPadding.x != ini_style.WindowPadding.x) inifile->SetDoubleValue(IniSection, "WindowPaddingX", style.WindowPadding.x);
@@ -181,7 +200,8 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
         }
     }
 
-    inifile->SaveFile(Resources::GetPath(IniFilename).c_str());
+    ASSERT(Resources::SaveIniToFile(IniFilename,inifile) == 0);
+
     ini_style = style;
 
     SaveUILayout();
@@ -195,8 +215,8 @@ void ToolboxTheme::Draw(IDirect3DDevice9*) {
 void ToolboxTheme::DrawSettingInternal() {
     ImGuiStyle& style = ImGui::GetStyle();
     if (ImGui::SmallButton("Restore Default")) {
-        const ImGuiStyle default_style = DefaultTheme(); // Default style
-        style = default_style;
+        ini_style = DefaultTheme();
+        layout_dirty = true;
     }
     ImGui::Text("Note: window position/size is stored in 'Layout.ini' in settings folder. You can share the file or parts of it with other people.");
     ImGui::Text("Note: theme is stored in 'Theme.ini' in settings folder. You can share the file or parts of it with other people.");
@@ -227,7 +247,10 @@ void ToolboxTheme::DrawSettingInternal() {
         Color cur = ImColor(style.Colors[i]);
         if (cur != ImColor(ini_style.Colors[i])) {
             ImGui::SameLine();
-            if (ImGui::Button("Revert")) style.Colors[i] = ImColor(Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i])));
+            if (ImGui::Button("Revert")) {
+
+                style.Colors[i] = ImColor(Colors::Load(GetThemeIni(), IniSection, name, ImColor(ini_style.Colors[i])));
+            } 
         }
         ImGui::PopID();
     }

@@ -31,9 +31,9 @@ public:
 
     bool CanTerminate();
 
-    void OpenSettingsFile(std::filesystem::path config = L"GWToolbox.ini") const;
-    void LoadModuleSettings() const;
-    void SaveSettings(std::filesystem::path config = L"GWToolbox.ini") const;
+    CSimpleIni* OpenSettingsFile(std::filesystem::path config = GWTOOLBOX_INI_FILENAME, bool fresh = false) const;
+    void SaveSettings(std::filesystem::path config = GWTOOLBOX_INI_FILENAME) const;
+    void LoadSettings(std::filesystem::path config = GWTOOLBOX_INI_FILENAME, bool fresh = false) const;
 
     void StartSelfDestruct();
 

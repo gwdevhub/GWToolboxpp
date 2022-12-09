@@ -1055,8 +1055,7 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
             GWToolbox::Instance().SaveSettings();
         }
         else if (arg1 == L"load") { // e.g. /tb load
-            GWToolbox::Instance().OpenSettingsFile();
-            GWToolbox::Instance().LoadModuleSettings();
+            GWToolbox::Instance().LoadSettings(GWTOOLBOX_INI_FILENAME,true);
         }
         else if (arg1 == L"reset") { // e.g. /tb reset
             ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
@@ -1117,8 +1116,7 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
             Log::Error("Syntax: /tb load [name] (name must be alpha only)");
             return;
         }
-        GWToolbox::Instance().OpenSettingsFile(arg2);
-        GWToolbox::Instance().LoadModuleSettings();
+        GWToolbox::Instance().LoadSettings(arg2, true);
     }
     else { // Invalid argument
         const auto text = std::format(L"Syntax: {} {} [hide|show|mini|maxi|load|save]", argv[0], argv[1]);

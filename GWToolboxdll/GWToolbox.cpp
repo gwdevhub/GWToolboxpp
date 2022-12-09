@@ -37,17 +37,9 @@ namespace {
     HWND gw_window_handle = nullptr;
 
     utf8::string imgui_inifile;
+
     CSimpleIni* inifile = nullptr;
-    bool SaveIniToFile(const CSimpleIni* ini, const std::filesystem::path& location) {
-        auto tmp_file = std::filesystem::path(location);
-        tmp_file += ".tmp";
-        const SI_Error res = ini->SaveFile(tmp_file.c_str());
-        if (res < 0) {
-            return false;
-        }
-        std::filesystem::rename(tmp_file, location);
-        return true;
-    }
+    std::filesystem::path inifile_path;
 
     bool must_self_destruct = false;    // is true when toolbox should quit
     GW::HookEntry Update_Entry;
@@ -203,18 +195,14 @@ void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added) {
         }
     };
     UpdateVec((std::vector<void*>&)all_modules_enabled, m);
-    if (!added) {
-        UpdateVec((std::vector<void*>&)widgets_enabled, m);
+    if (m->IsUIElement()) {
         UpdateVec((std::vector<void*>&)ui_elements_enabled, m);
-        UpdateVec((std::vector<void*>&)modules_enabled, m);
-    }
-    else if(m->IsWidget()) {
-        UpdateVec((std::vector<void*>&)widgets_enabled, m);
-        UpdateVec((std::vector<void*>&)ui_elements_enabled, m);
-    }
-    else if(m->IsWindow()) {
-        UpdateVec((std::vector<void*>&)windows_enabled, m);
-        UpdateVec((std::vector<void*>&)ui_elements_enabled, m);
+        if(m->IsWidget()) {
+            UpdateVec((std::vector<void*>&)widgets_enabled, m);
+        }
+        if(m->IsWindow()) {
+            UpdateVec((std::vector<void*>&)windows_enabled, m);
+        }
     }
     else {
         UpdateVec((std::vector<void*>&)modules_enabled, m);
@@ -454,17 +442,6 @@ void GWToolbox::Initialize()
     Resources::EnsureFolderExists(Resources::GetPath(L"img\\materials"));
     Resources::EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
     Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));
-    Resources::EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
-        "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
-        [this](bool success, const std::wstring& error) {
-        if (success) {
-            OpenSettingsFile();
-            LoadModuleSettings();
-        }
-        else {
-            Log::ErrorW(L"Failed to download GWToolbox ini\n%s", error.c_str());
-        }
-    });
 
     // if the file does not exist we'll load module settings once downloaded, but we need the file open
     // in order to read defaults
@@ -496,19 +473,27 @@ void GWToolbox::Initialize()
     initialized = true;
 }
 
-void GWToolbox::OpenSettingsFile(std::filesystem::path config) const
+CSimpleIni* GWToolbox::OpenSettingsFile(std::filesystem::path config, bool fresh) const
 {
-    if (config != L"GWToolbox.ini") {
+    if (config != GWTOOLBOX_INI_FILENAME) {
         config = std::filesystem::path(L"configs") / config;
         config += L".ini";
     }
-    Log::Log("Opening ini file\n");
-    if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-    inifile->Reset();
-    inifile->LoadFile(Resources::GetPath(config).c_str());
+    if (inifile_path != config || fresh) {
+        // inifile is cached, unless path for config has changed.
+        CSimpleIni* tmp = new CSimpleIni(false, false, false);
+        Log::Log("Opening ini file\n");
+        ASSERT(Resources::LoadIniFromFile(config, tmp) == 0);
+        if (inifile)
+            delete inifile;
+        inifile_path = config;
+        inifile = tmp;
+    }
+    return inifile;
 }
-void GWToolbox::LoadModuleSettings() const
+void GWToolbox::LoadSettings(std::filesystem::path config, bool fresh) const
 {
+    inifile = OpenSettingsFile(config, fresh);
     for (auto m : modules_enabled) {
         m->LoadSettings(inifile);
     }
@@ -521,12 +506,7 @@ void GWToolbox::LoadModuleSettings() const
 }
 void GWToolbox::SaveSettings(std::filesystem::path config) const
 {
-    if (!inifile)
-        return;
-    if (config != L"GWToolbox.ini") {
-        config = std::filesystem::path(L"configs") / config;
-        config += L".ini";
-    }
+    inifile = OpenSettingsFile(config);
     for (auto m : modules_enabled) {
         m->SaveSettings(inifile);
     }
@@ -536,7 +516,7 @@ void GWToolbox::SaveSettings(std::filesystem::path config) const
     for (auto m : windows_enabled) {
         m->SaveSettings(inifile);
     }
-    ASSERT(SaveIniToFile(inifile, Resources::GetPath(config)));
+    ASSERT(Resources::SaveIniToFile(inifile_path, inifile) == 0);
 }
 
 void GWToolbox::StartSelfDestruct()

@@ -40,6 +40,11 @@ public:
     void DxUpdate(IDirect3DDevice9* device);
     void WorkerUpdate();
 
+    static int LoadIniFromFile(const wchar_t* filename, CSimpleIni* inifile);
+    static int LoadIniFromFile(const std::filesystem::path& absolute_path, CSimpleIni* inifile);
+    static int SaveIniToFile(const wchar_t* filename, const CSimpleIni* inifile);
+    static int SaveIniToFile(const std::filesystem::path& absolute_path, const CSimpleIni* inifile);
+
     static std::filesystem::path GetSettingsFolderPath();
     static std::filesystem::path GetPath(const std::filesystem::path& file);
     static std::filesystem::path GetPath(const std::filesystem::path& folder, const std::filesystem::path& file);

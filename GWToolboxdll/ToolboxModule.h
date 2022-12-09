@@ -10,6 +10,7 @@ public:
 
     virtual const bool IsWidget() const { return false; }
     virtual const bool IsWindow() const { return false; }
+    virtual const bool IsUIElement() const { return false; }
 
     // name of the window and the ini section
     virtual const char* Name() const = 0;

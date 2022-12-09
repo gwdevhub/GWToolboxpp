@@ -4,10 +4,6 @@
 
 class ToolboxTheme : public ToolboxUIElement {
     ToolboxTheme();
-    ~ToolboxTheme() {
-        if (windows_ini) delete windows_ini;
-        if (inifile) delete inifile;
-    }
 public:
     static ToolboxTheme& Instance() {
         static ToolboxTheme instance;
@@ -30,7 +26,7 @@ public:
     void DrawSettingInternal() override;
 
     CSimpleIni* GetLayoutIni();
-
+    CSimpleIni* GetThemeIni();
 private:
     ImGuiStyle DefaultTheme();
 
@@ -38,6 +34,6 @@ private:
     ImGuiStyle ini_style;
     bool layout_dirty = false;
 
-    CSimpleIni* inifile = nullptr;
+    CSimpleIni* theme_ini = nullptr;
     CSimpleIni* windows_ini = nullptr;
 };

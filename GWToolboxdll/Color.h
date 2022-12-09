@@ -42,13 +42,9 @@ namespace Colors {
         const char* wc = ini->GetValue(section, key, nullptr);
         if (wc == nullptr) return def;
         unsigned int c;
-        if (GuiUtils::ParseUInt(wc, &c, 16)) {
-            // swap red and blue channels
+        if (GuiUtils::ParseUInt(wc, &c, 16))
             return c;
-        } else {
-            // invalid argument, out of range, whatever
-            return Black();
-        }
+        return def;
     }
 
     static void Save(CSimpleIni* ini, const char* section, const char* key, Color val) {

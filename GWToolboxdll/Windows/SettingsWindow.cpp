@@ -153,8 +153,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toolbox normally saves settings on exit.\nClick to save to disk now.");
         ImGui::SameLine();
         if (ImGui::Button("Load Now", ImVec2(w, 0))) {
-            GWToolbox::Instance().OpenSettingsFile();
-            GWToolbox::Instance().LoadModuleSettings();
+            GWToolbox::Instance().LoadSettings();
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toolbox normally loads settings on launch.\nClick to re-load from disk now.");
         ImGui::PopTextWrapPos();

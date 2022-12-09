@@ -8,6 +8,8 @@ class ToolboxUIElement : public ToolboxModule {
 
 public:
 
+    const bool IsUIElement() const { return true; }
+
     // Draw user interface. Will be called every frame if the element is visible
     virtual void Draw(IDirect3DDevice9*) {}
 
