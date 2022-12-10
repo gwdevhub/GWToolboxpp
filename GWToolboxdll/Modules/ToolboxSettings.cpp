@@ -124,8 +124,6 @@ namespace {
         Obfuscator::Instance()
     };
 
-
-
     std::vector<WidgetToggle> optional_widgets = {
         TimerWidget::Instance(),
         HealthWidget::Instance(),
@@ -167,8 +165,6 @@ namespace {
         RerollWindow::Instance(),
         PartyStatisticsWindow::Instance()
     };
-
-
 
 }
 

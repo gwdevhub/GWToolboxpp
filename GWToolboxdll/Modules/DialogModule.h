@@ -16,6 +16,7 @@ struct DialogButton;
 
 class DialogModule : public ToolboxModule {
     DialogModule() = default;
+    ~DialogModule() = default;
 
 public:
     static DialogModule& Instance() {
@@ -24,6 +25,7 @@ public:
     }
 
     const char* Name() const override { return "Dialogs"; }
+    bool HasSettings() override { return false; }
 
     void Initialize() override;
     void Terminate() override;
