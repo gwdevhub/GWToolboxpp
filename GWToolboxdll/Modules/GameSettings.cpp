@@ -762,133 +762,6 @@ namespace {
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"{} ({}) has just logged out.", old_state->charname, old_state->alias).c_str());
         }
     }
-
-    /*
-    *  Logic for scaling gw cursor up or down
-    */
-    HBITMAP ScaleBitmap(HBITMAP inBitmap,
-        int inWidth,
-        int inHeight,
-        int outWidth,
-        int outHeight)
-    {
-        // NB: We could use GDIPlus for this logic which has better image res handling etc, but no need
-        HDC destDC = NULL, srcDC = NULL;
-        BYTE*      ppvBits = 0;
-        BOOL bResult = 0;
-        HBITMAP outBitmap = NULL;
-
-
-        // create a destination bitmap and DC with size w/h
-        BITMAPINFO bmi;
-        memset(&bmi, 0, sizeof(bmi));
-        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-        bmi.bmiHeader.biBitCount = 32;
-        bmi.bmiHeader.biWidth = outWidth;
-        bmi.bmiHeader.biHeight = outWidth;
-        bmi.bmiHeader.biPlanes = 1;
-
-        // Do not use CreateCompatibleBitmap otherwise api will not allocate memory for bitmap
-        destDC = CreateCompatibleDC(NULL);
-        if (!destDC)
-            goto cleanup;
-        outBitmap = CreateDIBSection(destDC, &bmi, DIB_RGB_COLORS, (void**)&ppvBits, NULL, 0);
-        if (outBitmap == NULL)
-            goto cleanup;
-        if (SelectObject(destDC, outBitmap) == NULL)
-            goto cleanup;
-
-        srcDC = CreateCompatibleDC(NULL);
-        if (!srcDC)
-            goto cleanup;
-        if (SelectObject(srcDC, inBitmap) == NULL)
-            goto cleanup;
-
-        // copy and scaling to new width/height (w,h)
-        if (SetStretchBltMode(destDC, HALFTONE) == 0)
-            goto cleanup;
-        bResult = StretchBlt(destDC, 0, 0, outWidth, outHeight,srcDC, 0, 0, inWidth, inHeight, SRCCOPY);
-    cleanup:
-        if (!bResult) {
-            if (outBitmap) {
-                DeleteObject(outBitmap);
-                outBitmap = NULL;
-            }
-        }
-        if(destDC)
-            DeleteDC(destDC);
-        if(srcDC)
-            DeleteDC(srcDC);
-
-        return outBitmap;
-    }
-
-    int cursor_size = 32;
-    HCURSOR current_cursor = NULL;
-    int current_cursor_size = 0;
-    HCURSOR ScaleCursor(HCURSOR cursor, const int targetSize) {
-        ICONINFO icon_info;
-        HCURSOR new_cursor = NULL;
-        GetIconInfo(cursor, &icon_info);
-        BITMAP tmpBitmap;
-        GetObject(icon_info.hbmMask, sizeof(BITMAP), &tmpBitmap);
-        if (tmpBitmap.bmWidth == targetSize)
-            return NULL;
-        HBITMAP scaledMask = ScaleBitmap(icon_info.hbmMask, tmpBitmap.bmWidth, tmpBitmap.bmHeight, targetSize, targetSize);
-        GetObject(icon_info.hbmColor, sizeof(BITMAP), &tmpBitmap);
-        HBITMAP scaledColor = scaledMask ? ScaleBitmap(icon_info.hbmColor, tmpBitmap.bmWidth, tmpBitmap.bmHeight, targetSize, targetSize) : NULL;
-        if (scaledMask && scaledColor) {
-            icon_info.hbmColor = scaledColor;
-            icon_info.hbmMask = scaledMask;
-            new_cursor = CreateIconIndirect(&icon_info);
-        }
-        else {
-            Log::Error("Failed to scale bitmap");
-        }
-        if (scaledColor)
-            DeleteObject(scaledColor);
-        if (scaledMask)
-            DeleteObject(scaledMask);
-        return new_cursor;
-    }
-    struct GWWindowUserData {
-        uint8_t unk[0xc43];
-        HCURSOR cursor; // h0c44
-        uint8_t unk1[0xb0];
-        HWND window_handle; // h0cf8
-    } ;
-    typedef void(__cdecl* ChangeCursorIcon_pt)(GWWindowUserData*);
-    ChangeCursorIcon_pt ChangeCursorIcon_Func = 0;
-    ChangeCursorIcon_pt ChangeCursorIcon_Ret = 0;
-    void OnChangeCursorIcon(GWWindowUserData* user_data) {
-        GW::Hook::EnterHook();
-        ChangeCursorIcon_Ret(user_data);
-        if (user_data && user_data->cursor && user_data->cursor != current_cursor) {
-            if (cursor_size < 0 || cursor_size > 64)
-                cursor_size = 0;
-            // Cursor has been changed by the game; pull it back out, scale it to target size...
-            HCURSOR new_cursor = cursor_size ? ScaleCursor(user_data->cursor, cursor_size) : NULL;
-            if (new_cursor) {
-                // Don't forget to free the original cursor before overwriting the handle
-                DestroyCursor(user_data->cursor);
-                user_data->cursor = new_cursor;
-                SetCursor(new_cursor);
-                // Also override the window class for the cursor
-                SetClassLongA(user_data->window_handle, -0xc, (LONG)new_cursor);
-                current_cursor = new_cursor;
-            }
-        }
-        GW::Hook::LeaveHook();
-    }
-    void RedrawCursorIcon() {
-        GW::GameThread::Enqueue([]() {
-            // Force redraw
-            GWWindowUserData* user_data = (GWWindowUserData*)GetWindowLongA(GW::MemoryMgr::GetGWWindowHandle(), -0x15);
-            current_cursor = NULL;
-            if(user_data)
-                OnChangeCursorIcon(user_data);
-            });
-    }
 }
 
 void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
@@ -1072,12 +945,6 @@ void GameSettings::Initialize() {
     if (GetItemDescription_Func) {
         GW::HookBase::CreateHook(GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
         GW::HookBase::EnableHooks(GetItemDescription_Func);
-    }
-
-    address = GW::Scanner::Find("\x8b\x41\x08\x89\x82\x50\x0c\x00\x00","xxxxxxxxx",0x9);
-    ChangeCursorIcon_Func = (ChangeCursorIcon_pt)GW::Scanner::FunctionFromNearCall(address);
-    if (ChangeCursorIcon_Func) {
-        GW::HookBase::CreateHook(ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
     }
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
@@ -1371,15 +1238,6 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     nametag_color_player_other = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_other), nametag_color_player_other);
     nametag_color_player_self = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_self), nametag_color_player_self);
 
-    cursor_size = ini->GetLongValue(Name(), VAR_NAME(cursor_size), cursor_size);
-    RedrawCursorIcon();
-    if (cursor_size != 32) {
-        GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
-    }
-    else {
-        GW::HookBase::DisableHooks(ChangeCursorIcon_Func);
-    }
-
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     SetWindowTitle(set_window_title_as_charname);
     SetWindowTitle(set_window_title_as_charname);
@@ -1510,9 +1368,6 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_in_party), nametag_color_player_in_party);
     Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_other), nametag_color_player_other);
     Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_self), nametag_color_player_self);
-
-    ini->SetLongValue(Name(), VAR_NAME(cursor_size), cursor_size);
-
 }
 
 void GameSettings::DrawInventorySettings() {
@@ -1719,16 +1574,6 @@ void GameSettings::DrawSettingInternal() {
         ImGui::Unindent();
     }
     ImGui::Unindent();
-    ImGui::SliderInt("Guild Wars cursor size", &cursor_size, 16, 64);
-    if (ImGui::IsItemDeactivatedAfterEdit()) {
-        RedrawCursorIcon();
-        if (cursor_size != 32) {
-            GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
-        }
-        else {
-            GW::HookBase::DisableHooks(ChangeCursorIcon_Func);
-        }
-    }
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
