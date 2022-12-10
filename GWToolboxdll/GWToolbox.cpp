@@ -483,6 +483,7 @@ CSimpleIni* GWToolbox::OpenSettingsFile(std::filesystem::path config, bool fresh
         // inifile is cached, unless path for config has changed.
         CSimpleIni* tmp = new CSimpleIni(false, false, false);
         Log::Log("Opening ini file\n");
+        config = Resources::GetPath(config);
         ASSERT(Resources::LoadIniFromFile(config, tmp) == 0);
         if (inifile)
             delete inifile;
