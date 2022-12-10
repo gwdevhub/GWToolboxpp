@@ -490,6 +490,8 @@ void CustomRenderer::DrawSettings()
 
 void CustomRenderer::Initialize(IDirect3DDevice9* device)
 {
+    if (!buffer)
+        initialized = false;
     if (initialized)
         return;
     initialized = true;
@@ -497,8 +499,8 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device)
     vertices_max = 0x100; // support for up to 256 line segments, should be enough
     vertices = nullptr;
 
-    HRESULT hr = device->CreateVertexBuffer(
-        sizeof(D3DVertex) * vertices_max, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+    const HRESULT hr = device->CreateVertexBuffer(
+        sizeof(D3DVertex) * vertices_max, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     if (FAILED(hr)) {
         printf("Error setting up CustomRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
     }
@@ -667,6 +669,8 @@ void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device)
 void CustomRenderer::Render(IDirect3DDevice9* device)
 {
     Initialize(device);
+    if (!initialized)
+        return;
 
     DrawCustomMarkers(device);
 
