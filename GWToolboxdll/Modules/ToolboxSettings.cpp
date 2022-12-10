@@ -182,6 +182,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     GWToolbox::ToggleModule(HallOfMonumentsModule::Instance());
     GWToolbox::ToggleModule(LoginModule::Instance());
     GWToolbox::ToggleModule(AprilFools::Instance());
+    GWToolbox::ToggleModule(SettingsWindow::Instance());
 
 #ifdef _DEBUG
 #if 0
@@ -192,7 +193,6 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     GWToolbox::ToggleModule(StringDecoderWindow::Instance());
     GWToolbox::ToggleModule(DoorMonitorWindow::Instance());
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
-    GWToolbox::ToggleModule(SettingsWindow::Instance());
 #endif
 #ifdef USE_PLUGINS
     if (use_plugins) GWToolbox::ToggleModule(PluginModule::Instance());

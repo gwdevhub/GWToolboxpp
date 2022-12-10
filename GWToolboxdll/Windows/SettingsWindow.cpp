@@ -28,7 +28,7 @@ void SettingsWindow::SaveSettings(CSimpleIni* ini) {
 void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
-    GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+    const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 
     if (instance_type != last_instance_type) {
         if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable)
@@ -41,7 +41,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(768, 768), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         drawn_settings.clear();
-        ImColor sCol(102, 187, 238, 255);
+        const ImColor sCol(102, 187, 238, 255);
         ImGui::PushTextWrapPos();
         ImGui::Text("GWToolbox++");
         ImGui::SameLine(0, 0);
@@ -68,7 +68,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::SameLine();
             ImGui::Text("(Debug)");
 #endif
-        float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2;
+        const float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2;
         if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
             if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
                 ShellExecuteW(NULL, L"open", Resources::GetSettingsFolderPath().c_str(), NULL, NULL, SW_SHOWNORMAL);
@@ -130,7 +130,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         DrawSettingsSection(ToolboxTheme::Instance().SettingsName());
         DrawSettingsSection(ToolboxSettings::Instance().SettingsName());
 
-        const auto sort = [](ToolboxModule* a, ToolboxModule* b) {
+        const auto sort = [](const ToolboxModule* a, const ToolboxModule* b) {
             return strcmp(a->Name(), b->Name()) < 0;
         };
 
@@ -144,7 +144,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         std::ranges::sort(windows, sort);
         if(!windows.empty())
             ImGui::Text("Windows:");
-        for (auto m : windows) {
+        for (const auto m : windows) {
             if (m->HasSettings())
                 DrawSettingsSection(m->SettingsName());
         }
@@ -152,7 +152,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         std::ranges::sort(widgets, sort);
         if(!widgets.empty())
             ImGui::Text("Widgets:");
-        for (auto m : widgets) {
+        for (const auto m : widgets) {
             if (m->HasSettings())
                 DrawSettingsSection(m->SettingsName());
         }
