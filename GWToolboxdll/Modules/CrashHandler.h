@@ -16,6 +16,7 @@ public:
     }
 
     const char* Name() const override { return "Crash Handler"; }
+    bool HasSettings() override { return false; }
 
     void Initialize() override;
 

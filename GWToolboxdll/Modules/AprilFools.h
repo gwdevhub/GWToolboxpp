@@ -17,6 +17,7 @@ public:
     }
 
     const char* Name() const override { return "April Fools"; }
+    bool HasSettings() override { return false; }
 
     void Initialize() override;
     void Update(float delta) override;

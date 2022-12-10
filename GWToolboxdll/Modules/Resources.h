@@ -18,20 +18,23 @@ namespace GW {
 }
 class Resources : public ToolboxModule {
     Resources();
-    Resources(const Resources&) = delete;
     ~Resources();
 
     std::recursive_mutex worker_mutex;
     std::recursive_mutex main_mutex;
     std::recursive_mutex dx_mutex;
     void InitRestClient(RestClient* r);
+
 public:
+    Resources(const Resources&) = delete;
+
     static Resources& Instance() {
         static Resources instance;
         return instance;
     }
 
     const char* Name() const override { return "Resources"; }
+    bool HasSettings() override { return false; }
 
     void Initialize() override;
     void Terminate() override;
