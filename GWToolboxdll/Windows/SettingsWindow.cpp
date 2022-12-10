@@ -130,21 +130,31 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         DrawSettingsSection(ToolboxTheme::Instance().SettingsName());
         DrawSettingsSection(ToolboxSettings::Instance().SettingsName());
 
-        const auto modules = GWToolbox::Instance().GetModules();
-        for (auto m : modules) {
-            DrawSettingsSection(m->SettingsName());
+        const auto sort = [](ToolboxModule* a, ToolboxModule* b) {
+            return strcmp(a->Name(), b->Name()) < 0;
+        };
+
+        auto modules = GWToolbox::Instance().GetModules();
+        std::ranges::sort(modules, sort);
+        for (const auto m : modules) {
+            if (m->HasSettings())
+                DrawSettingsSection(m->SettingsName());
         }
-        const auto windows = GWToolbox::Instance().GetWindows();
+        auto windows = GWToolbox::Instance().GetWindows();
+        std::ranges::sort(windows, sort);
         if(!windows.empty())
             ImGui::Text("Windows:");
         for (auto m : windows) {
-            DrawSettingsSection(m->SettingsName());
+            if (m->HasSettings())
+                DrawSettingsSection(m->SettingsName());
         }
-        const auto widgets = GWToolbox::Instance().GetWidgets();
+        auto widgets = GWToolbox::Instance().GetWidgets();
+        std::ranges::sort(widgets, sort);
         if(!widgets.empty())
             ImGui::Text("Widgets:");
         for (auto m : widgets) {
-            DrawSettingsSection(m->SettingsName());
+            if (m->HasSettings())
+                DrawSettingsSection(m->SettingsName());
         }
 
         if (ImGui::Button("Save Now", ImVec2(w, 0))) {
