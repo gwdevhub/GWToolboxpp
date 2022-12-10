@@ -1055,7 +1055,7 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
             GWToolbox::Instance().SaveSettings();
         }
         else if (arg1 == L"load") { // e.g. /tb load
-            GWToolbox::Instance().LoadSettings(GWTOOLBOX_INI_FILENAME,true);
+            GWToolbox::Instance().LoadSettings(GWTOOLBOX_INI_FILENAME, true);
         }
         else if (arg1 == L"reset") { // e.g. /tb reset
             ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));

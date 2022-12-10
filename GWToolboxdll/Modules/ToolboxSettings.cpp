@@ -189,8 +189,8 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 
 #ifdef _DEBUG
 #if 0
-    modules.push_back(&PartySearchWindow::Instance());
-    modules.push_back(&GWFileRequester::Instance());
+    GWToolbox::ToggleModule(PartySearchWindow::Instance());
+    GWToolbox::ToggleModule(GWFileRequester::Instance());
 #endif
     GWToolbox::ToggleModule(PacketLoggerWindow::Instance());
     GWToolbox::ToggleModule(StringDecoderWindow::Instance());
@@ -199,7 +199,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     GWToolbox::ToggleModule(SettingsWindow::Instance());
 #endif
 #ifdef USE_PLUGINS
-    if (use_plugins) modules.push_back(&PluginModule::Instance());
+    if (use_plugins) GWToolbox::ToggleModule(PluginModule::Instance());
 #endif
     for (const auto& m : optional_modules) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
