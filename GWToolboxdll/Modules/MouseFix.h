@@ -17,6 +17,7 @@ public:
 
     void LoadSettings(CSimpleIniA*) override;
     void SaveSettings(CSimpleIniA*) override;
+    void Initialize() override;
     void Terminate() override;
     bool WndProc(UINT, WPARAM, LPARAM) override;
     void DrawSettingInternal() override;
