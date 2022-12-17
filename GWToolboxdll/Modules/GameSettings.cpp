@@ -142,6 +142,8 @@ namespace {
     bool notify_when_party_member_leaves = false;
     bool notify_when_party_member_joins = false;
 
+    bool block_enter_area_message = false;
+
     enum PING_PARTS {
         NAME=1,
         DESC=2
@@ -763,7 +765,10 @@ namespace {
         }
     }
 
-
+    void OnShowMapEntryMessage(GW::HookStatus* status, GW::UI::UIMessage, void*, void*) {
+        if (block_enter_area_message)
+            status->blocked = true;
+    }
 }
 
 void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
@@ -1040,6 +1045,7 @@ void GameSettings::Initialize() {
     GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendPingWeaponSet, bind_member(this, &GameSettings::OnPingWeaponSet));
     GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, bind_member(this, &GameSettings::OnCast));
 
+    GW::UI::RegisterUIMessageCallback(&OnPostSendDialog_Entry, GW::UI::UIMessage::kShowMapEntryMessage, OnShowMapEntryMessage);
     constexpr GW::UI::UIMessage dialog_ui_messages[] = {
         GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kDialogBody,
@@ -1240,6 +1246,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     nametag_color_player_other = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_other), nametag_color_player_other);
     nametag_color_player_self = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_self), nametag_color_player_self);
 
+    block_enter_area_message = ini->GetBoolValue(Name(), VAR_NAME(block_enter_area_message), block_enter_area_message);
 
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     SetWindowTitle(set_window_title_as_charname);
@@ -1354,6 +1361,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
     ini->SetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_outpost), disable_skill_descriptions_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_explorable), disable_skill_descriptions_in_explorable);
+
+    ini->SetBoolValue(Name(), VAR_NAME(block_enter_area_message), block_enter_area_message);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1579,6 +1588,7 @@ void GameSettings::DrawSettingInternal() {
         ImGui::Unindent();
     }
     ImGui::Unindent();
+    ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message);
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
