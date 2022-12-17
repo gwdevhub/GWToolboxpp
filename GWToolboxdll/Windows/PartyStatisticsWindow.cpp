@@ -261,8 +261,8 @@ void PartyStatisticsWindow::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC:
     if (in_explorable && !instance.in_explorable) {
         // Reset party stats; just entered explorable area.
         instance.UnsetPartyStatistics();
-        instance.pending_party_members = true;
     }
+    instance.pending_party_members = true;
     instance.in_explorable = in_explorable;
 }
 
