@@ -121,7 +121,8 @@ namespace GuiUtils {
     size_t wcstostr(char* dest, const wchar_t* src, size_t n);
     std::wstring ToWstr(std::string& str);
 
-    void FlashWindow();
+    // Will flash GW Window if not already in focus. Pass force = true to flash regardless of focus.
+    void FlashWindow(bool force = false);
     void FocusWindow();
 
     class EncString {

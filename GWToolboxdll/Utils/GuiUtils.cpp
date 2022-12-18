@@ -46,10 +46,12 @@ namespace {
 
 }
 namespace GuiUtils {
-    void FlashWindow() {
+    void FlashWindow(bool force) {
         FLASHWINFO flashInfo = { 0 };
         flashInfo.cbSize = sizeof(FLASHWINFO);
         flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
+        if (!force && GetActiveWindow() == flashInfo.hwnd)
+            return; // Already in focus
         if (!flashInfo.hwnd) return;
         flashInfo.dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG;
         flashInfo.uCount = 5;

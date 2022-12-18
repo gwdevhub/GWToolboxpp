@@ -15,7 +15,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Toast Notifications"; }
+    const char* Name() const override { return "Notifications"; }
     const char* Icon() const override { return ICON_FA_BULLHORN; }
 
     void Initialize() override;
@@ -52,4 +52,6 @@ public:
     static bool IsCompatible();
     // Show windows toast message.
     static Toast* SendToast(const wchar_t* title, const wchar_t* message, OnToastCallback callback = 0, void* callback_args = 0);
+    // Dismiss a toast matching a title
+    static bool DismissToast(const wchar_t* title);
 };

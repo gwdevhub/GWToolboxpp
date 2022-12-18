@@ -9,6 +9,9 @@
 
 #define VAR_NAME(v) (#v)
 
+#define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
+#define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
+
 /*
 Notes:
 - EXCEPT_EXPRESSION_ENTRY is for the initialization

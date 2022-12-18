@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+
+#include <Defines.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Agent.h>
@@ -21,9 +23,6 @@
 #include <Utils/ToolboxUtils.h>
 
 //#define PRINT_CHAT_PACKETS
-
-#define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
-#define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
 
 static bool IsInChallengeMission() {
     GW::AreaInfo* a = GW::Map::GetCurrentMapInfo();

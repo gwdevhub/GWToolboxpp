@@ -2,11 +2,14 @@
 
 #include "ToastNotifications.h"
 
+#include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Utilities/Hook.h>
 
 #include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Packets/StoC.h>
+
+#include <GWCA/GameEntities/Party.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
@@ -14,13 +17,14 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Constants/Constants.h>
-
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
 #include <wintoast/wintoastlib.cpp>
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Defines.h>
+#include <GWCA/Context/PartyContext.h>
 
 namespace {
 
@@ -35,9 +39,60 @@ namespace {
     bool show_notifications_on_whisper = true;
     bool show_notifications_on_guild_chat = false;
     bool show_notifications_on_ally_chat = false;
+    bool show_notifications_on_last_to_ready = false;
+
+    bool flash_window_on_whisper = true;
+    bool flash_window_on_guild_chat = false;
+    bool flash_window_on_ally_chat = false;
+    bool flash_window_on_last_to_ready = false;
+
+    const wchar_t* party_ready_toast_title = L"Party Ready";
 
     // Pointers deleted in ChatSettings::Terminate
     std::map<std::wstring, ToastNotifications::Toast*> toasts;
+
+    bool CanNotify() {
+        bool show_toast = false;
+        auto whnd = GW::MemoryMgr::GetGWWindowHandle();
+        if (!whnd)
+            return false;
+        if (IsIconic(whnd)) {
+            show_toast = show_notifications_when_minimised;
+            goto show_toast;
+        }
+        if (GetActiveWindow() != whnd) {
+            show_toast = show_notifications_when_in_background;
+            goto show_toast;
+        }
+        show_toast = show_notifications_when_focussed;
+
+    show_toast:
+        if (!show_toast)
+            return false;
+
+        GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+
+        switch (instance_type) {
+        case GW::Constants::InstanceType::Explorable:
+            show_toast = show_notifications_when_in_explorable;
+            break;
+        case GW::Constants::InstanceType::Outpost:
+            show_toast = show_notifications_when_in_outpost;
+            break;
+        }
+
+        return show_toast;
+    }
+
+    void FlashWindow() {
+        if (CanNotify())
+            GuiUtils::FlashWindow();
+    }
+
+    uint32_t GetPartyId() {
+        auto p = GW::PartyMgr::GetPartyInfo();
+        return p ? p->party_id : static_cast<uint32_t>(-1);
+    }
 
     void OnWhisperToastActivated(const ToastNotifications::Toast* toast, bool activated) {
         if (!activated)
@@ -58,6 +113,8 @@ namespace {
     {
         if(show_notifications_on_whisper)
             ToastNotifications::SendToast(from, msg,OnWhisperToastActivated);
+        if (flash_window_on_whisper)
+            FlashWindow();
     }
 
     void TriggerToastCallback(const ToastNotifications::Toast* toast, bool result) {
@@ -69,7 +126,6 @@ namespace {
         nonconst->dismiss();
     }
 
-    GW::HookEntry OnMessageGlobal_Entry;
     void OnToastMessageDecoded(void* callback_param, wchar_t* decoded) {
         wchar_t* title = (wchar_t*)callback_param;
         ToastNotifications::SendToast(title, decoded,OnGenericToastActivated);
@@ -82,16 +138,21 @@ namespace {
         wcscpy(title_copy, title);
         GW::UI::AsyncDecodeStr(encoded_message, OnToastMessageDecoded, title_copy);
     }
-    void OnMessageGlobal(GW::HookStatus*, GW::Packet::StoC::MessageGlobal* packet) {
+    void OnMessageGlobal(GW::HookStatus*, GW::Packet::StoC::PacketBase* base) {
         const wchar_t* title = nullptr;
+        const auto packet = static_cast<GW::Packet::StoC::MessageGlobal*>(base);
         switch (packet->channel) {
         case GW::Chat::Channel::CHANNEL_GUILD:
             if (show_notifications_on_guild_chat)
                 title = L"Guild Chat";
+            if (flash_window_on_guild_chat)
+                FlashWindow();
             break;
         case GW::Chat::Channel::CHANNEL_ALLIANCE:
             if (show_notifications_on_ally_chat)
                 title = L"Alliance Chat";
+            if (flash_window_on_ally_chat)
+                FlashWindow();
             break;
         }
         if (!title)
@@ -108,6 +169,51 @@ namespace {
         SendEncodedToastMessage(title, message_including_sender);
         delete[] message_including_sender;
     }
+
+    void CheckLastToReady() {
+        const uint32_t my_player_id = GW::PlayerMgr::GetPlayerNumber();
+        const auto p = GW::PartyMgr::GetPartyInfo();
+        if(!(p && p->players.size() > 1))
+            return;
+        for (const auto& player : p->players) {
+            if (player.login_number == my_player_id) {
+                if (player.ticked()) {
+                    ToastNotifications::DismissToast(party_ready_toast_title);
+                    return; // I'm ticked.
+                }
+                continue;
+            }
+            if (!player.ticked())
+                return; // Other player not ticked yet.
+        }
+        // This far; I'm the last player to ready up
+        if(show_notifications_on_last_to_ready)
+            ToastNotifications::SendToast(party_ready_toast_title, L"You're the last player in your party to tick up", OnGenericToastActivated);
+        if (flash_window_on_last_to_ready)
+            FlashWindow();
+    }
+    void OnPartyPlayerReady(GW::HookStatus*, GW::Packet::StoC::PacketBase* base) {
+        const auto packet = static_cast<GW::Packet::StoC::PartyPlayerReady*>(base);
+        if (packet->party_id == GetPartyId())
+            CheckLastToReady();
+    }
+    void OnMapChange(GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
+        ToastNotifications::DismissToast(party_ready_toast_title);
+    }
+
+    struct StoC_Callback {
+        uint32_t header = 0;
+        GW::StoC::PacketCallback cb;
+        GW::HookEntry hook_entry;
+        StoC_Callback(uint32_t _header, GW::StoC::PacketCallback _cb) : header(_header), cb(_cb) {};
+    };
+
+    std::vector<StoC_Callback> stoc_callbacks = {
+        {GAME_SMSG_CHAT_MESSAGE_GLOBAL, OnMessageGlobal},
+        {GAME_SMSG_PARTY_PLAYER_READY, OnPartyPlayerReady},
+        {GAME_SMSG_INSTANCE_LOADED, OnMapChange}
+    };
+
 
 } // namespace
 ToastNotifications::Toast::Toast(std::wstring _title, std::wstring _message) : title(_title), message(_message) {};
@@ -155,47 +261,27 @@ bool ToastNotifications::Toast::dismiss() {
     toast_id = -1;
     return ok;
 }
-
+bool ToastNotifications::DismissToast(const wchar_t* title) {
+    auto found = toasts.find(title);
+    if (found != toasts.end()) {
+        delete found->second;
+        toasts.erase(found);
+    }
+    return true;
+}
 ToastNotifications::Toast* ToastNotifications::SendToast(const wchar_t* title, const wchar_t* message, OnToastCallback callback, void* extra_args) {
     if (!IsCompatible())
         return nullptr;
-    bool show_toast = false;
-    auto whnd = GW::MemoryMgr::GetGWWindowHandle();
-    ASSERT(whnd);
-    if (IsIconic(whnd)) {
-        show_toast = show_notifications_when_minimised;
-        goto show_toast;
-    }
-    if (GetActiveWindow() != whnd) {
-        show_toast = show_notifications_when_in_background;
-        goto show_toast;
-    }
-    show_toast = show_notifications_when_focussed;
-
-show_toast:
-    if (!show_toast)
+    if (!CanNotify())
         return nullptr;
-
-    GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
-
-    switch (instance_type) {
-    case GW::Constants::InstanceType::Explorable:
-        show_toast = show_notifications_when_in_explorable;
-        break;
-    case GW::Constants::InstanceType::Outpost:
-        show_toast = show_notifications_when_in_outpost;
-        break;
-    }
-
-    if (!show_toast)
-        return nullptr;
-
     auto found = toasts.find(title);
     Toast* toast = found != toasts.end() ? found->second : 0;
     if (!toast) {
         toast = new Toast(title, message);
         toasts[toast->title] = toast;
     }
+    if (toast->message == message)
+        return toast; // Avoid spamming desktop notifications
     toast->message = message;
     toast->callback = callback;
     toast->extra_args = extra_args;
@@ -211,10 +297,10 @@ void ToastNotifications::Initialize()
     ToolboxModule::Initialize();
 
     is_platform_compatible = WinToast::instance()->isCompatible();
-    if (is_platform_compatible) {
-        GW::Chat::RegisterWhisperCallback(&OnWhisper_Entry, OnWhisper);
+    GW::Chat::RegisterWhisperCallback(&OnWhisper_Entry, OnWhisper);
+    for (auto& callback : stoc_callbacks) {
+        GW::StoC::RegisterPacketCallback( &callback.hook_entry, callback.header, callback.cb, 0x8000);
     }
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageGlobal>(&OnMessageGlobal_Entry, OnMessageGlobal);
 }
 bool ToastNotifications::IsCompatible() {
     return is_platform_compatible;
@@ -223,7 +309,9 @@ bool ToastNotifications::IsCompatible() {
 void ToastNotifications::Terminate()
 {
     ToolboxModule::Terminate();
-    GW::StoC::RemoveCallback<GW::Packet::StoC::MessageGlobal>(&OnMessageGlobal_Entry);
+    for (auto& callback : stoc_callbacks) {
+        GW::StoC::RemoveCallback( callback.header, &callback.hook_entry);
+    }
     GW::Chat::RemoveWhisperCallback(&OnWhisper_Entry);
     for (auto toast : toasts) {
         TriggerToastCallback(toast.second, false);
@@ -234,7 +322,7 @@ void ToastNotifications::Terminate()
 void ToastNotifications::DrawSettingInternal()
 {
     ToolboxModule::DrawSettingInternal();
-    ImGui::TextDisabled("GWToolbox++ can send desktop notifications when you receive whispers from friends.");
+    ImGui::TextDisabled("GWToolbox++ can send notifications and flash the taskbar on certain in-game triggers.");
 
     constexpr float checkbox_w = 150.f;
 
@@ -244,9 +332,19 @@ void ToastNotifications::DrawSettingInternal()
     ImGui::NextSpacedElement(); ImGui::Checkbox("Whisper", &show_notifications_on_whisper);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Guild Chat", &show_notifications_on_guild_chat);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Alliance Chat", &show_notifications_on_ally_chat);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Last to Tick", &show_notifications_on_last_to_ready);
     ImGui::Unindent();
 
-    ImGui::Text("Show desktop notifications when Guild Wars is:");
+    ImGui::Text("Flash taskbar on:");
+    ImGui::Indent();
+    ImGui::StartSpacedElements(checkbox_w);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Whisper", &flash_window_on_whisper);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Guild Chat", &flash_window_on_guild_chat);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Alliance Chat", &flash_window_on_ally_chat);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Last to Tick", &flash_window_on_last_to_ready);
+    ImGui::Unindent();
+
+    ImGui::Text("Allow these notifications when Guild Wars is:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Minimised", &show_notifications_when_minimised);
@@ -261,28 +359,40 @@ void ToastNotifications::LoadSettings(CSimpleIniA* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
-    show_notifications_when_minimised = ini->GetBoolValue(Name(), VAR_NAME(show_notifications_when_minimised), show_notifications_when_minimised);
-    show_notifications_when_in_background = ini->GetBoolValue(Name(), VAR_NAME(show_notifications_when_in_background), show_notifications_when_in_background);
-    show_notifications_when_focussed = ini->GetBoolValue(Name(), VAR_NAME(show_notifications_when_focussed), show_notifications_when_focussed);
-    show_notifications_when_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(show_notifications_when_in_outpost), show_notifications_when_in_outpost);
-    show_notifications_when_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(show_notifications_when_in_explorable), show_notifications_when_in_explorable);
+    LOAD_BOOL(show_notifications_when_minimised);
+    LOAD_BOOL(show_notifications_when_in_background);
+    LOAD_BOOL(show_notifications_when_focussed);
+    LOAD_BOOL(show_notifications_when_in_outpost);
+    LOAD_BOOL(show_notifications_when_in_explorable);
 
-    show_notifications_on_whisper = ini->GetBoolValue(Name(), VAR_NAME(show_notifications_on_whisper), show_notifications_on_whisper);
-    show_notifications_on_guild_chat = ini->GetBoolValue(Name(), VAR_NAME(show_notifications_on_guild_chat), show_notifications_on_guild_chat);
-    show_notifications_on_ally_chat = ini->GetBoolValue(Name(), VAR_NAME(show_notifications_on_ally_chat), show_notifications_on_ally_chat);
+    LOAD_BOOL(show_notifications_on_whisper);
+    LOAD_BOOL(show_notifications_on_guild_chat);
+    LOAD_BOOL(show_notifications_on_ally_chat);
+    LOAD_BOOL(show_notifications_on_last_to_ready);
+
+    LOAD_BOOL(flash_window_on_whisper);
+    LOAD_BOOL(flash_window_on_guild_chat);
+    LOAD_BOOL(flash_window_on_ally_chat);
+    LOAD_BOOL(flash_window_on_last_to_ready);
 }
 
 void ToastNotifications::SaveSettings(CSimpleIniA* ini)
 {
     ToolboxModule::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(show_notifications_when_minimised), show_notifications_when_minimised);
-    ini->SetBoolValue(Name(), VAR_NAME(show_notifications_when_in_background), show_notifications_when_in_background);
-    ini->SetBoolValue(Name(), VAR_NAME(show_notifications_when_focussed), show_notifications_when_focussed);
-    ini->SetBoolValue(Name(), VAR_NAME(show_notifications_when_in_outpost), show_notifications_when_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(show_notifications_when_in_explorable), show_notifications_when_in_explorable);
+    SAVE_BOOL(show_notifications_when_minimised);
+    SAVE_BOOL(show_notifications_when_in_background);
+    SAVE_BOOL(show_notifications_when_focussed);
+    SAVE_BOOL(show_notifications_when_in_outpost);
+    SAVE_BOOL(show_notifications_when_in_explorable);
 
-    ini->SetBoolValue(Name(), VAR_NAME(show_notifications_on_whisper), show_notifications_on_whisper);
-    ini->SetBoolValue(Name(), VAR_NAME(show_notifications_on_guild_chat), show_notifications_on_guild_chat);
-    ini->SetBoolValue(Name(), VAR_NAME(show_notifications_on_ally_chat), show_notifications_on_ally_chat);
+    SAVE_BOOL(show_notifications_on_whisper);
+    SAVE_BOOL(show_notifications_on_guild_chat);
+    SAVE_BOOL(show_notifications_on_ally_chat);
+    SAVE_BOOL(show_notifications_on_last_to_ready);
+
+    SAVE_BOOL(flash_window_on_whisper);
+    SAVE_BOOL(flash_window_on_guild_chat);
+    SAVE_BOOL(flash_window_on_ally_chat);
+    SAVE_BOOL(flash_window_on_last_to_ready);
 }
