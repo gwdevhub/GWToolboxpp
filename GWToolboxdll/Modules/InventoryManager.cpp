@@ -1789,7 +1789,10 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
         im.show_item_context_menu = true;
         status->blocked = true;
         return;
-    } else if (type == 7 && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && GameSettings::Instance().move_item_on_ctrl_click) {
+    } else if (type == 7 
+        && ImGui::IsKeyDown(ImGuiKey_ModCtrl) 
+        && GameSettings::Instance().move_item_on_ctrl_click
+        && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         // Move item on ctrl click
         if (ImGui::IsKeyDown(ImGuiKey_ModShift) && item->quantity > 1)
             prompt_split_stack(item);
