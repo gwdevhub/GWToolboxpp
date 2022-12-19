@@ -86,6 +86,8 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
     layout_dirty = true;
 }
 void ToolboxTheme::SaveUILayout() {
+    if (!ImGui::GetCurrentContext())
+        return;
     CSimpleIni* ini = GetLayoutIni();
     const char* window_ini_section = "Windows";
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
@@ -135,6 +137,8 @@ CSimpleIni* ToolboxTheme::GetThemeIni() {
     return theme_ini;
 }
 void ToolboxTheme::LoadUILayout() {
+    if (!ImGui::GetCurrentContext())
+        return;
     // Copy theme over
     ImGui::GetStyle() = ini_style;
     // Copy window positions over
@@ -166,6 +170,9 @@ void ToolboxTheme::LoadUILayout() {
 
 void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
+
+    if (!ImGui::GetCurrentContext())
+        return; // Imgui not initialised, can happen if destructing before first draw
 
     ImGuiStyle& style = ImGui::GetStyle();
     const auto inifile = GetThemeIni();
