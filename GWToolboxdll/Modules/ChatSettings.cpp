@@ -19,7 +19,8 @@
 #include "GWCA/Managers/FriendListMgr.h"
 #include "GWCA/Managers/StoCMgr.h"
 
-namespace { // Settings
+namespace {
+    // Settings
     bool show_timestamps = false;
     bool enable_chat_log = true;
     bool hide_player_speech_bubbles = false;
@@ -27,17 +28,16 @@ namespace { // Settings
     bool show_timestamp_24h = false;
     bool npc_speech_bubbles_as_chat = false;
     bool redirect_npc_messages_to_emote_chat = false;
-    bool openlinks = false;
-    bool auto_url = false;
-    bool ctrl_enter_whisper = false;
-    Color timestamps_color = 0;
+    bool openlinks = true;
+    bool auto_url = true;
 
+    Color timestamps_color = Colors::RGB(0xc0, 0xc0, 0xbf);
+
+    // Runtime
+    bool ctrl_enter_whisper = false;
     std::wstring afk_message;
     clock_t afk_message_time = 0;
 
-} // namespace
-
-namespace {
     GW::HookEntry WhisperCallback_Entry;
     GW::HookEntry StartWhisperCallback_Entry;
     GW::HookEntry SendChatCallback_Entry;
@@ -433,15 +433,16 @@ void ChatSettings::LoadSettings(CSimpleIniA* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
-    show_timestamps = ini->GetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
-    show_timestamp_24h = ini->GetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
-    show_timestamp_seconds = ini->GetBoolValue(Name(), VAR_NAME(show_timestamp_seconds), show_timestamp_seconds);
+    LOAD_BOOL(show_timestamps);
+    LOAD_BOOL(show_timestamp_24h);
+    LOAD_BOOL(show_timestamp_seconds);
+    LOAD_BOOL(hide_player_speech_bubbles);
+    LOAD_BOOL(npc_speech_bubbles_as_chat);
+    LOAD_BOOL(redirect_npc_messages_to_emote_chat);
+    LOAD_BOOL(openlinks);
+    LOAD_BOOL(auto_url);
+
     timestamps_color = Colors::Load(ini, Name(), VAR_NAME(timestamps_color), Colors::RGB(0xc0, 0xc0, 0xbf));
-    hide_player_speech_bubbles = ini->GetBoolValue(Name(), VAR_NAME(hide_player_speech_bubbles), hide_player_speech_bubbles);
-    npc_speech_bubbles_as_chat = ini->GetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
-    redirect_npc_messages_to_emote_chat = ini->GetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
-    openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
-    auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
     GW::UI::SetOpenLinks(openlinks);
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
@@ -452,17 +453,16 @@ void ChatSettings::SaveSettings(CSimpleIniA* ini)
 {
     ToolboxModule::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
-    ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
-    ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_seconds), show_timestamp_seconds);
+    SAVE_BOOL(show_timestamps);
+    SAVE_BOOL(show_timestamp_24h);
+    SAVE_BOOL(show_timestamp_seconds);
+    SAVE_BOOL(hide_player_speech_bubbles);
+    SAVE_BOOL(npc_speech_bubbles_as_chat);
+    SAVE_BOOL(redirect_npc_messages_to_emote_chat);
+    SAVE_BOOL(openlinks);
+    SAVE_BOOL(auto_url);
+
     Colors::Save(ini, Name(), VAR_NAME(timestamps_color), timestamps_color);
-
-    ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
-
-    ini->SetBoolValue(Name(), VAR_NAME(hide_player_speech_bubbles), hide_player_speech_bubbles);
-    ini->SetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
-    ini->SetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
 }
 
 bool ChatSettings::WndProc(UINT Message, WPARAM wParam, LPARAM)
