@@ -219,16 +219,8 @@ namespace GuiUtils {
 
         return ImGui::GetIO().Fonts->Fonts[0];
     }
-    float GetGWScaleMultiplier() {
-        const auto interfacesize =
-            static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::EnumPreference::InterfaceSize));
-
-        switch (interfacesize) {
-        case GW::Constants::InterfaceSize::SMALL: return .9f;
-        case GW::Constants::InterfaceSize::LARGE: return 1.166666f;
-        case GW::Constants::InterfaceSize::LARGER: return 1.3333333f;
-        default: return 1.f;
-        }
+    float GetGWScaleMultiplier(bool force) {
+        return Resources::GetGWScaleMultiplier(force);
     }
     ImVec4& ClampRect(ImVec4& rect, const ImVec4& viewport) {
         float correct;

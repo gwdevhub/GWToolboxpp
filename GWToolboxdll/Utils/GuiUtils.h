@@ -42,7 +42,7 @@ namespace GuiUtils {
     DLLAPI ImFont* GetFont(FontSize size);
 
     float GetPartyHealthbarHeight();
-    float GetGWScaleMultiplier();
+    float GetGWScaleMultiplier(bool force = false);
 
     // Reposition a rect within its container to make sure it isn't overflowing it.
     ImVec4& ClampRect(ImVec4& rect, const ImVec4& viewport);

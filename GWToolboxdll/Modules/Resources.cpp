@@ -5,6 +5,7 @@
 
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <EmbeddedResource.h>
 #include <Defines.h>
@@ -15,6 +16,7 @@
 #include <Str.h>
 
 #include <Utils/GuiUtils.h>
+#include <GWCA/Constants/Constants.h>
 #include <Modules/Resources.h>
 
 namespace {
@@ -75,6 +77,17 @@ namespace {
         callback(false, out);
     };
 
+    float cached_ui_scale = .0f;
+
+    GW::HookEntry OnUIMessage_Hook;
+    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kEnumPreference:
+            if(wparam && *(GW::UI::EnumPreference*)wparam == GW::UI::EnumPreference::InterfaceSize)
+                Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
+            break;
+        }
+    }
 }
 
 Resources::Resources() {
@@ -97,6 +110,21 @@ Resources::~Resources() {
     map_names.clear();
 
 };
+
+float Resources::GetGWScaleMultiplier(bool force) {
+    if (force || cached_ui_scale == .0f) {
+        const auto interfacesize =
+            static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::EnumPreference::InterfaceSize));
+
+        switch (interfacesize) {
+        case GW::Constants::InterfaceSize::SMALL: cached_ui_scale = .9f; break;
+        case GW::Constants::InterfaceSize::LARGE: cached_ui_scale = 1.166666f; break;
+        case GW::Constants::InterfaceSize::LARGER: cached_ui_scale = 1.3333333f; break;
+        default: cached_ui_scale = 1.f; break;
+        }
+    }
+    return cached_ui_scale;
+}
 
 void Resources::InitRestClient(RestClient* r) {
     char user_agent_str[32];
@@ -182,6 +210,7 @@ void Resources::Initialize() {
             WorkerUpdate();
             }));
     }
+    GW::UI::RegisterUIMessageCallback(&OnUIMessage_Hook, GW::UI::UIMessage::kEnumPreference, OnUIMessage, 0x8000);
 }
 void Resources::Cleanup() {
     should_stop = true;
@@ -213,6 +242,9 @@ void Resources::Cleanup() {
 }
 void Resources::Terminate() {
     ToolboxModule::Terminate();
+
+    GW::UI::RemoveUIMessageCallback(&OnUIMessage_Hook);
+
     Cleanup();
 }
 

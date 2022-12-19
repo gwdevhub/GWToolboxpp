@@ -56,6 +56,9 @@ public:
     static utf8::string GetPathUtf8(const std::wstring& file);
     static bool EnsureFolderExists(const std::filesystem::path& path);
 
+    // Returns current scale multiplier based on gw preferences. Cached for per frame access, pass force = true to get fresh from gw settings.
+    static float GetGWScaleMultiplier(bool force = false);
+
     // Generic callback used when loading async functions. If success is false, any error details are held in response.
     typedef std::function<void(bool success, const std::wstring& response)> AsyncLoadCallback;
     // Callback for binary, usually only curl stuff; try to stick to wstrings where possible
