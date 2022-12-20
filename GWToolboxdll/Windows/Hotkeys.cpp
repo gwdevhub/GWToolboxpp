@@ -300,12 +300,11 @@ bool TBHotkey::IsValid(const char* _player_name, GW::Constants::InstanceType _in
         && (instance_type == -1 || (GW::Constants::InstanceType)instance_type == _instance_type)
         && (prof_ids[(size_t)_profession] || !HasProfession())
         && (map_ids.empty() || std::ranges::find(map_ids, (uint32_t)_map_id) != map_ids.end())
-        && (!player_name[0] || strcmp(_player_name, player_name) == 0)
-        && IsInRangeOfNPC();
+        && (!player_name[0] || strcmp(_player_name, player_name) == 0);
 }
 bool TBHotkey::CanUse()
 {
-    return !isLoading() && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
+    return !isLoading() && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow() && IsInRangeOfNPC();
 }
 void TBHotkey::Save(CSimpleIni *ini, const char *section) const
 {
