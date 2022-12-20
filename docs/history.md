@@ -43,6 +43,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [QoL] Fixed GW bug preventing reconnect dialog when re-running GW using the -charname parameter ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
 * [QoL] Removed requirement for the -charname parameter to auto login ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
 
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.1_Release/GWToolboxdll.dll)
 
 ## Version 6.0
 * [New] GWToolbox no longer requires installation, you can immediately execute the exe or inject the dll manually
