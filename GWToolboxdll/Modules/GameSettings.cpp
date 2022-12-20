@@ -391,6 +391,8 @@ namespace {
     SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = 0;
     uint32_t* GlobalNameTagVisibilityFlags = 0;
 
+    GW::MemoryPatcher skip_map_entry_message_patch;
+
     // Refresh agent name tags when allegiance changes ( https://github.com/HasKha/GWToolboxpp/issues/781 )
     void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*) {
         // Backup the current name tag flag state, then "flash" nametags to update.
@@ -765,10 +767,6 @@ namespace {
         }
     }
 
-    void OnShowMapEntryMessage(GW::HookStatus* status, GW::UI::UIMessage, void*, void*) {
-        if (block_enter_area_message)
-            status->blocked = true;
-    }
 }
 
 void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
@@ -942,6 +940,13 @@ void GameSettings::Initialize() {
     if (address) {
         tome_patch.SetPatch(address, "\x75\x1E\x90\x90\x90\x90\x90", 7);
     }
+
+    address = GW::Scanner::Find("\x81\xff\x86\x02\x00\x00", "xxxxxx", 6);
+    printf("[SCAN] MapEntryMessagePatch = %p\n", (void *)address);
+    if (address) {
+        skip_map_entry_message_patch.SetPatch(address, "\x90\xe9", 2);
+    }
+
     address = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
     printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)address);
     if (address) {
@@ -1045,7 +1050,6 @@ void GameSettings::Initialize() {
     GW::UI::RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendPingWeaponSet, bind_member(this, &GameSettings::OnPingWeaponSet));
     GW::SkillbarMgr::RegisterUseSkillCallback(&OnCast_Entry, bind_member(this, &GameSettings::OnCast));
 
-    GW::UI::RegisterUIMessageCallback(&OnPostSendDialog_Entry, GW::UI::UIMessage::kShowMapEntryMessage, OnShowMapEntryMessage);
     constexpr GW::UI::UIMessage dialog_ui_messages[] = {
         GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kDialogBody,
@@ -1254,6 +1258,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     tome_patch.TogglePatch(show_unlearned_skill);
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
+    skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
 
     if (focus_window_on_launch) {
         FocusWindow();
@@ -1588,7 +1593,9 @@ void GameSettings::DrawSettingInternal() {
         ImGui::Unindent();
     }
     ImGui::Unindent();
-    ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message);
+    if (ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message)) {
+        skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
+    }
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
