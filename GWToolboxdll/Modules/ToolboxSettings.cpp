@@ -41,7 +41,6 @@
 #include <Windows/BuildsWindow.h>
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/TravelWindow.h>
-#include <Windows/DialogsWindow.h>
 #include <Windows/InfoWindow.h>
 #include <Windows/MaterialsWindow.h>
 #include <Windows/SettingsWindow.h>
@@ -147,7 +146,6 @@ namespace {
         BuildsWindow::Instance(),
         HeroBuildsWindow::Instance(),
         TravelWindow::Instance(),
-        DialogsWindow::Instance(),
         InfoWindow::Instance(),
         MaterialsWindow::Instance(),
         TradeWindow::Instance(),

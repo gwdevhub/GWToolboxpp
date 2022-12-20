@@ -46,26 +46,22 @@ namespace {
     "DoA - Foundry 2: Foundry Breakout"
     };
 
-    std::map<const char*, std::vector<int>> dialogs_by_name = {
-        {"Craft fow armor",{GW::Constants::DialogID::FowCraftArmor}},
-        {"Prof Change - Warrior",{GW::Constants::DialogID::ProfChangeWarrior + 1, GW::Constants::DialogID::ProfChangeWarrior}},
-        {"Prof Change - Ranger",{GW::Constants::DialogID::ProfChangeRanger + 1, GW::Constants::DialogID::ProfChangeRanger}},
-        {"Prof Change - Monk",{GW::Constants::DialogID::ProfChangeMonk + 1, GW::Constants::DialogID::ProfChangeMonk}},
-        {"Prof Change - Necro",{GW::Constants::DialogID::ProfChangeNecro + 1, GW::Constants::DialogID::ProfChangeNecro}},
-        {"Prof Change - Mesmer",{GW::Constants::DialogID::ProfChangeMesmer + 1, GW::Constants::DialogID::ProfChangeMesmer}},
-        {"Prof Change - Elementalist",{GW::Constants::DialogID::ProfChangeEle + 1, GW::Constants::DialogID::ProfChangeEle}},
-        {"Prof Change - Assassin",{GW::Constants::DialogID::ProfChangeAssassin + 1, GW::Constants::DialogID::ProfChangeAssassin}},
-        {"Prof Change - Ritualist",{GW::Constants::DialogID::ProfChangeRitualist + 1, GW::Constants::DialogID::ProfChangeRitualist}},
-        {"Prof Change - Paragon",{GW::Constants::DialogID::ProfChangeParagon + 1, GW::Constants::DialogID::ProfChangeParagon}},
-        {"Prof Change - Dervish",{GW::Constants::DialogID::ProfChangeDervish + 1, GW::Constants::DialogID::ProfChangeDervish}},
-        {"Kama -> Docks @ Hahnna",{GW::Constants::DialogID::FerryKamadanToDocks}},
-        {"Docks -> Kaineng @ Mhenlo",{GW::Constants::DialogID::FerryDocksToKaineng}},
-        {"Docks -> LA Gate @ Mhenlo",{GW::Constants::DialogID::FerryDocksToLA}},
-        {"LA Gate -> LA @ Neiro",{GW::Constants::DialogID::FerryGateToLA}},
-        {"Faction mission outpost",{GW::Constants::DialogID::FactionMissionOutpost}},
-        {"Nightfall mission outpost",{GW::Constants::DialogID::NightfallMissionOutpost}}
-    };
+    int fav_count = 0;
+    std::vector<int> fav_index{};
 
+    bool show_common = true;
+    bool show_uwteles = true;
+    bool show_favorites = true;
+    bool show_custom = true;
+
+    char customdialogbuf[11] = "";
+
+    static constexpr uint32_t QuestAcceptDialog(GW::Constants::QuestID quest) {
+        return static_cast<int>(quest) << 8 | 0x800001;
+    }
+    static constexpr uint32_t QuestRewardDialog(GW::Constants::QuestID quest) {
+        return static_cast<int>(quest) << 8 | 0x800007;
+    }
     void GoNPCSendDialogs(std::initializer_list<uint32_t> dialog_ids) {
         if (!DialogModule::GetDialogAgent()) {
             if (const auto target = GW::Agents::GetTarget()) {
@@ -73,6 +69,40 @@ namespace {
             }
         }
         DialogModule::SendDialogs(dialog_ids);
+    }
+    GW::Constants::QuestID IndexToQuestID(const int index) {
+        switch (index) {
+        case 0: return GW::Constants::QuestID::UW_Chamber;
+        case 1: return GW::Constants::QuestID::UW_Wastes;
+        case 2: return GW::Constants::QuestID::UW_UWG;
+        case 3: return GW::Constants::QuestID::UW_Mnt;
+        case 4: return GW::Constants::QuestID::UW_Pits;
+        case 5: return GW::Constants::QuestID::UW_Planes;
+        case 6: return GW::Constants::QuestID::UW_Pools;
+        case 7: return GW::Constants::QuestID::UW_Escort;
+        case 8: return GW::Constants::QuestID::UW_Restore;
+        case 9: return GW::Constants::QuestID::UW_Vale;
+        case 10: return GW::Constants::QuestID::Fow_Defend;
+        case 11: return GW::Constants::QuestID::Fow_ArmyOfDarknesses;
+        case 12: return GW::Constants::QuestID::Fow_WailingLord;
+        case 13: return GW::Constants::QuestID::Fow_Griffons;
+        case 14: return GW::Constants::QuestID::Fow_Slaves;
+        case 15: return GW::Constants::QuestID::Fow_Restore;
+        case 16: return GW::Constants::QuestID::Fow_Hunt;
+        case 17: return GW::Constants::QuestID::Fow_Forgemaster;
+        case 18: return GW::Constants::QuestID::Fow_Tos;
+        case 19: return GW::Constants::QuestID::Fow_Toc;
+        case 20: return GW::Constants::QuestID::Fow_Khobay;
+        case 21: return GW::Constants::QuestID::Doa_DeathbringerCompany;
+        case 22: return GW::Constants::QuestID::Doa_RiftBetweenUs;
+        case 23: return GW::Constants::QuestID::Doa_ToTheRescue;
+        case 24: return GW::Constants::QuestID::Doa_City;
+        case 25: return GW::Constants::QuestID::Doa_BreachingStygianVeil;
+        case 26: return GW::Constants::QuestID::Doa_BroodWars;
+        case 27: return GW::Constants::QuestID::Doa_FoundryOfFailedCreations;
+        case 28: return GW::Constants::QuestID::Doa_FoundryBreakout;
+        default: return GW::Constants::QuestID::None;
+        }
     }
 }
 
@@ -135,27 +165,6 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::Separator();
         }
         if (show_custom) {
-            static int dialogindex = 0;
-            ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-            const auto current = std::next(dialogs_by_name.begin(), dialogindex);
-            if (ImGui::BeginCombo("###dialogcombo", current->first)) {
-                int offset = 0;
-                for (auto it = dialogs_by_name.begin(); it != dialogs_by_name.end(); it++) {
-                    if (ImGui::Selectable(it->first, it == current)) {
-                        dialogindex = offset;
-                        break;
-                    }
-                    offset++;
-                }
-                ImGui::EndCombo();
-            }
-            ImGui::PopItemWidth();
-            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-            if (ImGui::Button("Send##1", ImVec2(60.0f, 0))) {
-                for (const auto dialog_id : current->second) {
-                    DialogModule::SendDialog(dialog_id);
-                }
-            }
 
             ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
             ImGui::InputText("###dialoginput", customdialogbuf, _countof(customdialogbuf), ImGuiInputTextFlags_None);
@@ -196,7 +205,6 @@ void DialogsWindow::DrawSettingInternal() {
 
 void DialogsWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
-    show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
     fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
     size_t count = static_cast<size_t>(fav_count);
@@ -206,10 +214,10 @@ void DialogsWindow::LoadSettings(CSimpleIni* ini) {
         snprintf(key, 32, "Quest%zu", i);
         fav_index[i] = ini->GetLongValue(Name(), key, 0);
     }
-    show_common = ini->GetBoolValue(Name(), VAR_NAME(show_common), show_common);
-    show_uwteles = ini->GetBoolValue(Name(), VAR_NAME(show_uwteles), show_uwteles);
-    show_favorites = ini->GetBoolValue(Name(), VAR_NAME(show_favorites), show_favorites);
-    show_custom = ini->GetBoolValue(Name(), VAR_NAME(show_custom), show_custom);
+    LOAD_BOOL(show_common);
+    LOAD_BOOL(show_uwteles);
+    LOAD_BOOL(show_favorites);
+    LOAD_BOOL(show_custom);
 }
 
 void DialogsWindow::SaveSettings(CSimpleIni* ini) {
@@ -221,66 +229,10 @@ void DialogsWindow::SaveSettings(CSimpleIni* ini) {
         snprintf(key, 32, "Quest%zu", i);
         ini->SetLongValue(Name(), key, fav_index[i]);
     }
-    ini->SetBoolValue(Name(), VAR_NAME(show_common), show_common);
-    ini->SetBoolValue(Name(), VAR_NAME(show_uwteles), show_uwteles);
-    ini->SetBoolValue(Name(), VAR_NAME(show_favorites), show_favorites);
-    ini->SetBoolValue(Name(), VAR_NAME(show_custom), show_custom);
+    SAVE_BOOL(show_common);
+    SAVE_BOOL(show_uwteles);
+    SAVE_BOOL(show_favorites);
+    SAVE_BOOL(show_custom);
 }
 
-GW::Constants::QuestID DialogsWindow::IndexToQuestID(const int index) {
-    switch (index) {
-    case 0: return GW::Constants::QuestID::UW_Chamber;
-    case 1: return GW::Constants::QuestID::UW_Wastes;
-    case 2: return GW::Constants::QuestID::UW_UWG;
-    case 3: return GW::Constants::QuestID::UW_Mnt;
-    case 4: return GW::Constants::QuestID::UW_Pits;
-    case 5: return GW::Constants::QuestID::UW_Planes;
-    case 6: return GW::Constants::QuestID::UW_Pools;
-    case 7: return GW::Constants::QuestID::UW_Escort;
-    case 8: return GW::Constants::QuestID::UW_Restore;
-    case 9: return GW::Constants::QuestID::UW_Vale;
-    case 10: return GW::Constants::QuestID::Fow_Defend;
-    case 11: return GW::Constants::QuestID::Fow_ArmyOfDarknesses;
-    case 12: return GW::Constants::QuestID::Fow_WailingLord;
-    case 13: return GW::Constants::QuestID::Fow_Griffons;
-    case 14: return GW::Constants::QuestID::Fow_Slaves;
-    case 15: return GW::Constants::QuestID::Fow_Restore;
-    case 16: return GW::Constants::QuestID::Fow_Hunt;
-    case 17: return GW::Constants::QuestID::Fow_Forgemaster;
-    case 18: return GW::Constants::QuestID::Fow_Tos;
-    case 19: return GW::Constants::QuestID::Fow_Toc;
-    case 20: return GW::Constants::QuestID::Fow_Khobay;
-    case 21: return GW::Constants::QuestID::Doa_DeathbringerCompany;
-    case 22: return GW::Constants::QuestID::Doa_RiftBetweenUs;
-    case 23: return GW::Constants::QuestID::Doa_ToTheRescue;
-    case 24: return GW::Constants::QuestID::Doa_City;
-    case 25: return GW::Constants::QuestID::Doa_BreachingStygianVeil;
-    case 26: return GW::Constants::QuestID::Doa_BroodWars;
-    case 27: return GW::Constants::QuestID::Doa_FoundryOfFailedCreations;
-    case 28: return GW::Constants::QuestID::Doa_FoundryBreakout;
-    default: return GW::Constants::QuestID::None;
-    }
-}
 
-uint32_t DialogsWindow::IndexToDialogID(const int index) {
-    switch (index) {
-    case 0: return GW::Constants::DialogID::FowCraftArmor;
-    case 1: return GW::Constants::DialogID::ProfChangeWarrior;
-    case 2: return GW::Constants::DialogID::ProfChangeRanger;
-    case 3: return GW::Constants::DialogID::ProfChangeMonk;
-    case 4: return GW::Constants::DialogID::ProfChangeNecro;
-    case 5: return GW::Constants::DialogID::ProfChangeMesmer;
-    case 6: return GW::Constants::DialogID::ProfChangeEle;
-    case 7: return GW::Constants::DialogID::ProfChangeAssassin;
-    case 8: return GW::Constants::DialogID::ProfChangeRitualist;
-    case 9: return GW::Constants::DialogID::ProfChangeParagon;
-    case 10: return GW::Constants::DialogID::ProfChangeDervish;
-    case 11: return GW::Constants::DialogID::FerryKamadanToDocks;
-    case 12: return GW::Constants::DialogID::FerryDocksToKaineng;
-    case 13: return GW::Constants::DialogID::FerryDocksToLA;
-    case 14: return GW::Constants::DialogID::FerryGateToLA;
-    case 15: return GW::Constants::DialogID::FactionMissionOutpost;
-    case 16: return GW::Constants::DialogID::NightfallMissionOutpost;
-    default: return 0;
-    }
-}
