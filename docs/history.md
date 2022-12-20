@@ -8,9 +8,41 @@ Previous releases are provided as dll files. If you are looking for the latest v
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
 ## Version 6.1
-* [New] Improved plugin API for developers
 * [New] Added `/withdraw <quantity> <model_id1> [<model_id2 ...]` chat command
+* [New] Added options to hide skill descriptions on hover
+* [New] Added /fps command
+* [New] Added /pref command
+* [New] Added option for hotkeys to trigger when gw gains/loses focus
+* [New] Added grouping to hotkeys
+* [New] Added option to set in-game cursor size
+* [New] Added windows toast notifications for some triggers
+* [New] Added warning in chat when you're last to resign
+* [New] Added option to show quest givers on minimap as stars
+* [New] Added option to hide or show agents on the gw compass
+* [New] Added extra argument to /load command to tell gwtoolbox to load a certain config
+* [New] Added notifications for last to tick
+* [New] Added options to block map entry message
 * [Fix] Restore Windows 7 support
+* [Fix] Fixed potential crash when loading custom markers
+* [Fix] Fixed crash when item description is blocked when talking to merchant
+* [Fix] Fixed skip character name when donating Luxon faction not working
+* [Fix] Fixed bug sometimes causing all pcons to be enabled when logging into a character
+* [Fix] Fixed hero builds not always loading secondary profession
+* [Fix] Fixed bug preventing gw input in a cinematic
+* [Fix] Fixed bugs/crashes related to loading the wrong theme
+* [Fix] Fixed bugs with party stats window
+* [Fix] Fixed bug preventing hotkeys in range of npc from working on map load
+* [Minor] Removed dialogs window
+* [Minor] Disable ctrl click storage when not in outpost
+* [Minor] Added file size check to updater
+* [Minor] Obfuscator also hides mercenary hero names
+* [Minor] Don't block quest items or minipets in item filter
+* [Minor] Reduced auto clicker interval from 50ms to 7ms
+* [Minor] Added extra quest related dialog type when using `/dialog take`
+* [Minor] GWToolbox modules are toggleable at runtime and don't require a restart
+* [QoL] Fixed GW bug preventing reconnect dialog when re-running GW using the -charname parameter ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
+* [QoL] Removed requirement for the -charname parameter to auto login ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
+
 
 ## Version 6.0
 * [New] GWToolbox no longer requires installation, you can immediately execute the exe or inject the dll manually
