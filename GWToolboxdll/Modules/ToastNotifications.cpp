@@ -325,7 +325,8 @@ void ToastNotifications::DrawSettingInternal()
     ImGui::TextDisabled("GWToolbox++ can send notifications and flash the taskbar on certain in-game triggers.");
 
     constexpr float checkbox_w = 150.f;
-
+    
+    ImGui::PushID("desktop_notifications");
     ImGui::Text("Send a desktop notification on:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
@@ -334,7 +335,9 @@ void ToastNotifications::DrawSettingInternal()
     ImGui::NextSpacedElement(); ImGui::Checkbox("Alliance Chat", &show_notifications_on_ally_chat);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Last to Tick", &show_notifications_on_last_to_ready);
     ImGui::Unindent();
+    ImGui::PopID();
 
+    ImGui::PushID("flash_taskbar");
     ImGui::Text("Flash taskbar on:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
@@ -343,6 +346,7 @@ void ToastNotifications::DrawSettingInternal()
     ImGui::NextSpacedElement(); ImGui::Checkbox("Alliance Chat", &flash_window_on_ally_chat);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Last to Tick", &flash_window_on_last_to_ready);
     ImGui::Unindent();
+    ImGui::PopID();
 
     ImGui::Text("Allow these notifications when Guild Wars is:");
     ImGui::Indent();
