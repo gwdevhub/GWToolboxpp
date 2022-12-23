@@ -796,8 +796,6 @@ void InfoWindow::DrawSettingInternal() {
     ImGui::NextSpacedElement(); ImGui::Checkbox("Show Quest", &show_quest);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Show Enemy Count", &show_mobcount);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Show Resign Log", &show_resignlog);
-
-
 }
 
 void InfoWindow::LoadSettings(CSimpleIni* ini) {
@@ -834,7 +832,7 @@ void InfoWindow::SaveSettings(CSimpleIni* ini) {
 
 void InfoWindow::RegisterSettingsContent()
 {
-    ToolboxModule::RegisterSettingsContent();
+    ToolboxWindow::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
         "Game Settings", ICON_FA_GAMEPAD,
         [this](const std::string&, bool is_showing) {
