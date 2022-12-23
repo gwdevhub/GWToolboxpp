@@ -35,7 +35,7 @@ protected:
         const std::wstring& getNameW() const {
             return name;
         }
-        void setName(const std::wstring& _name) {
+        void setName(std::wstring _name) {
             if (name == _name)
                 return;
             name = std::move(_name);
@@ -94,7 +94,7 @@ public:
         const std::wstring& getAliasW() const {
             return alias;
         }
-        void setAlias(const std::wstring& _alias) {
+        void setAlias(std::wstring _alias) {
             if (alias == _alias)
                 return;
             alias = std::move(_alias);
@@ -203,7 +203,7 @@ protected:
     uint8_t poll_interval_seconds = 10;
 
     // Mapping of Name > UUID
-    std::unordered_map<std::wstring, std::string> uuid_by_name{};
+    std::unordered_map<std::wstring, Friend*> uuid_by_name{};
 
     // Main store of Friend info
     std::unordered_map<std::string, Friend*> friends{};

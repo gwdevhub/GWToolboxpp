@@ -125,6 +125,11 @@ namespace GuiUtils {
     void FlashWindow(bool force = false);
     void FocusWindow();
 
+    // Same as std::format, but use printf formatting
+    std::string format(const char* msg, ...);
+    // Same as std::format, but use printf formatting
+    std::wstring format(const wchar_t* msg, ...);
+
     class EncString {
     protected:
         std::wstring encoded_ws;
