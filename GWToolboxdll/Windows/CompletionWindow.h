@@ -34,8 +34,6 @@ namespace Missions {
         const MissionImageList& normal_mode_textures;
         const MissionImageList& hard_mode_textures;
 
-
-
     public:
         Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, GW::Constants::QuestID = (GW::Constants::QuestID)0);
         static ImVec2 icon_size;
@@ -270,49 +268,26 @@ namespace Missions {
         bool IsDaily() override;
         bool HasQuest() override;
     };
-}
-
+} // namespace Missions
+struct CharacterCompletion {
+    GW::Constants::Profession profession = (GW::Constants::Profession)0;
+    std::string name_str;
+    std::vector<uint32_t> skills;
+    std::vector<uint32_t> mission;
+    std::vector<uint32_t> mission_bonus;
+    std::vector<uint32_t> mission_hm;
+    std::vector<uint32_t> mission_bonus_hm;
+    std::vector<uint32_t> vanquishes;
+    std::vector<uint32_t> heroes;
+    std::vector<uint32_t> maps_unlocked;
+    std::string hom_code;
+    HallOfMonumentsAchievements hom_achievements;
+    std::vector<uint32_t> minipets_unlocked;
+    std::vector<uint32_t> festival_hats;
+};
 
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class CompletionWindow : public ToolboxWindow {
-protected:
-    bool hide_unlocked_achievements = false;
-    bool hide_unlocked_skills = false;
-    bool hide_completed_vanquishes = false;
-    bool hide_completed_missions = false;
-    bool pending_sort = true;
-    const char* completion_ini_filename = "character_completion.ini";
-
-    bool hard_mode = false;
-
-    enum CompletionType : uint8_t {
-        Skills,
-        Mission,
-        MissionBonus,
-        MissionHM,
-        MissionBonusHM,
-        Vanquishes,
-        Heroes,
-        MapsUnlocked,
-        MinipetsUnlocked
-    };
-    struct Completion {
-        GW::Constants::Profession profession;
-        std::string name_str;
-        std::vector<uint32_t> skills;
-        std::vector<uint32_t> mission;
-        std::vector<uint32_t> mission_bonus;
-        std::vector<uint32_t> mission_hm;
-        std::vector<uint32_t> mission_bonus_hm;
-        std::vector<uint32_t> vanquishes;
-        std::vector<uint32_t> heroes;
-        std::vector<uint32_t> maps_unlocked;
-        std::string hom_code;
-        HallOfMonumentsAchievements hom_achievements;
-        std::vector<uint32_t> minipets_unlocked;
-        std::vector<uint32_t> festival_hats;
-    };
-
 public:
     static CompletionWindow& Instance() {
         static CompletionWindow instance;
@@ -322,7 +297,6 @@ public:
     const char* Name() const override { return "Completion"; }
     const char* Icon() const override { return ICON_FA_BOOK; }
 
-    bool IsHardMode() const { return hard_mode; }
 
     void Initialize() override;
     void Initialize_Prophecies();
@@ -334,12 +308,7 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawHallOfMonuments(IDirect3DDevice9* device);
 
-    std::unordered_map<std::wstring, Completion*> character_completion;
-
-    Completion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
-
-    // IF character_name is null, parse current logged in char.
-    CompletionWindow* ParseCompletionBuffer(CompletionType type, wchar_t* character_name = 0, uint32_t* buffer = 0, size_t len = 0);
+    CharacterCompletion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
 
     void DrawSettingInternal() override;
     void LoadSettings(CSimpleIni* ini) override;
@@ -348,20 +317,4 @@ public:
     CompletionWindow* CheckProgress(bool fetch_hom = false);
 
 
-    GW::HookEntry skills_unlocked_stoc_entry;
-
-    std::map<GW::Constants::Campaign, std::vector<Missions::Mission*>> missions;
-    std::map<GW::Constants::Campaign, std::vector<Missions::Mission*>> vanquishes;
-    std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
-    std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
-    std::map<GW::Constants::Campaign, std::vector<Missions::HeroUnlock*>> heros;
-    std::vector<Missions::FestivalHat*> festival_hats;
-    std::vector<Missions::MinipetAchievement*> minipets;
-    std::vector<Missions::WeaponAchievement*> hom_weapons;
-    std::vector<Missions::ArmorAchievement*> hom_armor;
-    std::vector<Missions::CompanionAchievement*> hom_companions;
-    std::vector<Missions::HonorAchievement*> hom_titles;
-    bool minipets_sorted = false;
-    HallOfMonumentsAchievements hom_achievements;
-    int hom_achievements_status = 0xf;
 };

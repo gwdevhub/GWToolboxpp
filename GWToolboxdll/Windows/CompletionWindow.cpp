@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/Constants.h>
+
 #include <GWCA/Packets/Opcodes.h>
 
 #include <GWCA/Context/CharContext.h>
@@ -24,6 +24,7 @@
 
 #include <Windows/RerollWindow.h>
 #include <Windows/CompletionWindow.h>
+#include <Windows/CompletionWindow_Constants.h>
 #include <Windows/TravelWindow.h>
 
 #include <Color.h>
@@ -31,262 +32,43 @@
 
 using namespace GW::Constants;
 using namespace Missions;
+using namespace CompletionWindow_Constants;
 
 namespace {
 
-    const char* campaign_names[] = {
-        "Core",
-        "Prophecies",
-        "Factions",
-        "Nightfall",
-        "Eye Of The North",
-        "Dungeons"
-    };
-
-    const char* CampaignName(const Campaign camp) {
-        return campaign_names[static_cast<uint8_t>(camp)];
+    bool ArrayBoolAt(GW::Array<uint32_t>& array, uint32_t index)
+    {
+        uint32_t real_index = index / 32;
+        if (real_index >= array.size())
+            return false;
+        uint32_t shift = index % 32;
+        uint32_t flag = 1 << shift;
+        return (array[real_index] & flag) != 0;
     }
-    const char* hero_names[] = {
-        "",
-        "Norgu",
-        "Goren",
-        "Tahlkora",
-        "Master of Whispers",
-        "Acolyte Jin",
-        "Koss",
-        "Dunkoro",
-        "Acolyte Sousuke",
-        "Melonni",
-        "Zhed Shadowhoof",
-        "General Morgahn",
-        "Margrid the Sly",
-        "Zenmai",
-        "Olias",
-        "Razah",
-        "M.O.X.",
-        "Keiran Thackeray",
-        "Jora",
-        "Pyre Fierceshot",
-        "Anton",
-        "Livia",
-        "Hayda",
-        "Kahmu",
-        "Gwen",
-        "Xandra",
-        "Vekk",
-        "Ogden Stonehealer",
-        "","","","","","","","",
-        "Miku",
-        "Zei Ri"
-    };
-
-    const wchar_t* encoded_festival_hat_names[] = {
-        L"\x245D\xCD3B\xC2E1\x2AC3", // Pumpkin crown
-        L"\x2481\x821F\xD73C\x4CD2" // Horns of Grenth
-    };
-
-    // This array is keyed in the order of armors listed in HallOfMonumentsModule::Detail enum
-// i.e. index 0 is Elite Canthan Armor.
-    const wchar_t* encoded_armor_names[] = {
-        L"\x108\x107" "Elite Canthan Armor\x1", // Elite Canthan Armor
-        L"\x108\x107" "Elite Exotic Armor\x1", // Elite Exotic Armor
-        L"\x108\x107" "Elite Kurzick Armor\x1", // Elite Kurzick Armor
-        L"\x108\x107" "Elite Luxon Armor\x1", // Elite Luxon Armor
-        L"\x108\x107" "Imperial Ascended Armor\x1", // Imperial Ascended Armor
-        L"\x108\x107" "Ancient Armor\x1", // Ancient Armor
-        L"\x108\x107" "Elite Sunspear Armor\x1", // Elite Sunspear Armor
-        L"\x108\x107" "Vabbian Armor\x1", // Vabbian Armor
-        L"\x108\x107" "Primeval Armor\x1", // Primeval Armor
-        L"\x108\x107" "Asuran Armor\x1", // Asuran Armor
-        L"\x108\x107" "Norn Armor\x1", // Norn Armor
-        L"\x108\x107" "Silver Eagle Armor\x1", // Silver Eagle Armor
-        L"\x108\x107" "Monument Armor\x1", // Monument Armor
-        L"\x108\x107" "Obsidian Armor\x1", // Obsidian Armor
-        L"\x108\x107" "Granite Citadel Elite Armor\x1", // Granite Citadel Elite Armor
-        L"\x108\x107" "Granite Citadel Exclusive Armor\x1", // Granite Citadel Exclusive Armor
-        L"\x108\x107" "Granite Citadel Ascended Armor\x1", // Granite Citadel Ascended Armor
-        L"\x108\x107" "Marhan's Grotto Elite Armor\x1", // Marhans Grottol Ascended Armor
-        L"\x108\x107" "Marhan's Grotto Exclusive Armor\x1", // Marhans Grotto Ascended Armor
-        L"\x108\x107" "Marhan's Grotto Ascended Armor\x1", // Marhans Grotto Ascended Armor
-    };
-    static_assert(_countof(encoded_armor_names) == (size_t)ResilienceDetail::Count);
-
-    // This array is keyed in the order of weapons listed in HallOfMonumentsModule::Detail enum
-    // i.e. index 0 is Destroyer Axe.
-    const wchar_t* encoded_weapon_names[] = {
-        L"\x8101\x7776\xCCA9\xBAA8\x10E0", // Destroyer Axe
-        L"\x8101\x7777\xA0D7\x9027\x2458", // Destroyer Bow
-        L"\x8101\x7778\xB879\xDFF6\x3310", // Destroyer Daggers
-        L"\x8101\x7779\x83CC\xCECC\x5CA4", // Destroyer Focus
-        L"\x8101\x777A\xDC41\x9DBE\x663A", // Destroyer Hammer
-        L"\x8101\x777B\xB050\xBB40\x245B", // Destroyer Wandz
-        L"\x8101\x777C\xFFD7\xE16E\x4BEE", // Destroyer Scythe
-        L"\x8101\x777D\xCA7A\xB9E2\x3BDD", // Destroyer Shield
-        L"\x8101\x777E\xB3DD\x830E\x4CA1", // Destroyer Spear
-        L"\x8101\x777F\xCCF0\xA1E7\x2A5E", // Destroyer Staff
-        L"\x8101\x7780\x8DAB\xA3C4\x48B1", // Destroyer Sword
-
-        L"\x108\x107" "Tormented Axe\x1", // Tormented Axe
-        L"\x108\x107" "Tormented Bow\x1", // Tormented Bow
-        L"\x108\x107" "Tormented Daggers\x1", // Tormented Daggers
-        L"\x108\x107" "Tormented Focus\x1", // Tormented Focus
-        L"\x108\x107" "Tormented Hammer\x1", // Tormented Hammer
-        L"\x108\x107" "Tormented Scepter\x1", // Tormented Scepter
-        L"\x108\x107" "Tormented Scythe\x1", // Tormented Scythe
-        L"\x8102\x45E0\xDC95\xF3B4\x404", // Tormented Shield
-        L"\x108\x107" "Tormented Spear\x1", // Tormented Spear
-        L"\x8102\x45E2\xA1E4\xBB9E\x2A8", // Tormented Staff
-        L"\x108\x107" "Tormented Sword\x1", // Tormented Sword
-
-        L"\x8102\xEDD\xD560\xED5C\x2578", // Oppressor's Axe
-        L"\x8102\xEDE\x945E\x98D8\x4698", // Oppressor's Bow
-        L"\x8102\x2C72\xCC78\xA2B4\x5F85", // Oppressor's Daggers
-        L"\x8102\x6B5C\x9773\xD778\x3567", // Oppressor's Focus
-        L"\x108\x107" "Oppressor's Hammer\x1", // Oppressor's Hammer
-        L"\x8102\x6B5E\x9964\xCAF9\x700D", // Oppressor's Scepter
-        L"\x8102\x6B5F\x8E3F\x8145\x1956", // Oppressor's Scythe
-        L"\x8102\x6B60\xFC25\xD943\x329F", // Oppressor's Shield
-        L"\x8102\x6B61\xC1EA\xD1AF\x4F8", // Oppressor's Spear
-        L"\x8102\x6B62\xB5BE\xA6EE\x2937", // Oppressor's Staff
-        L"\x8102\x6B63\x9222\xF8D1\x5715", // Oppressor's Sword
-    };
-    static_assert(_countof(encoded_weapon_names) == (size_t)ValorDetail::Count);
-
-    // NOTE: Do NOT try to reorder this list; the keys are used to identify which minipet is which in the tracker across saves.
-    const wchar_t* encoded_minipet_names[] = {
-
-        L"\x8101\x730C", // Aatxe
-        L"\x8102\x4509", // Abyssal
-        L"\x8101\x682F", // Asura
-        L"\x8102\x450A", // Black Beast of Aaaaarrrrrrggghhh
-        L"\x8102\x2176\xA5D1\x8A87\x6C96", // Black Moa Chick
-        L"\x8101\x3E8\xB1EC\xA471\xA12", // Bone Dragon
-        L"\x8102\x5387\x8E7B\xC70D\x6A66", // Brown Rabbit
-        L"\x8101\x3F2\xA392\x9F0A\x2FD5", // Burning Titan
-        L"\x8102\x4515", // Cave Spider
-        L"\x8102\x3F68\xB9DD\x9EEE\x73A7", // Celestial Dog
-        L"\x8102\x3F62\xF4D2\xB3A7\x50D9", // Celestial Dragon
-        L"\x8102\x3F64\x91D1\xFF08\x1406", // Celestial Horse
-        L"\x8102\x3F66\xC842\x9CB3\xF11", // Celestial Monkey
-        L"\x8102\x3F5F\xEAB3\x9E25\x22C9", // Celestial Ox
-        L"\x8102\x3F5D\x82A5\xCB19\x49F7", // Celestial Pig
-        L"\x8102\x3F61\xD886\xC8C6\x70BD", // Celestial Rabbit
-        L"\x8102\x3F5E\xA749\x8783\x5EE0", // Celestial Rat
-        L"\x8102\x3F67\xA65A\xEF3A\x7E4F", // Celestial Rooster
-        L"\x8102\x3F65\xF85B\xEFA1\x5929", // Celestial Sheep
-        L"\x8102\x3F63\xBF56\xE485\x37B7", // Celestial Snake
-        L"\x8102\x3F60\xB396\xABEF\x3CA6", // Celestial Tiger
-        L"\x8102\x3272", // Ceratadon
-        L"\x8101\x3E9\xDD98\xBEEE\x5ABA", // Charr Shaman
-        L"\x8102\x4514", // Cloudtouched Simian
-        L"\x8101\x76DD", // Destroyer of Flesh
-        L"\x8102\x5945", // Dredge Brute
-        L"\x8103\x6F9", // Ecclesiate Xun Rao
-        L"\x8101\x7303", // Elf
-        L"\x8101\x730B", // Fire Imp
-        L"\x8102\x450E", // Forest Minotaur
-        L"\x8102\x450B", // Freezie
-        L"\x8101\x3E7\xFB88\xF384\x7D78", // Fungal Wallow
-        L"\x8102\x122E", // Grawl
-        L"\x8101\x2EA1\xAECB\x8321\x55B2", // Gray Giant
-        L"\x8101\x66FD\xB774\x8AC7\x4878", // Greased Lightning
-        L"\x8102\x7446", // Guild Lord
-        L"\x8101\x7300", // Gwen
-        L"\x8102\x5385\xB5F4\xDD41\x6DE", // Gwen Doll
-        L"\x8101\x7308", // Harpy Ranger
-        L"\x8101\x7307", // Heket Warrior
-        L"\x8101\x3EC\xC067\xCE23\x645C", // Hydra
-        L"\x8102\x450C", // Irukandji
-        L"\x108\x107" "Miniature Island Guardian\x1", // Island Guardian (need)
-        L"\x8101\x3ED\xF9DD\xCFE6\x144F", // Jade Armor
-        L"\x8101\x7309", // Juggernaught
-        L"\x8101\x3F3\x870C\xA10D\xB74", // Jungle Troll
-        L"\x108\x107" "Miniature Kanaxai\x1", // Kanaxai (need)
-        L"\x8101\x3EE\xFEE1\x8908\xA80", // Kirin
-        L"\x8101\x7305", // Koss
-        L"\x8101\x9Bc", // Kuunavang
-        L"\x8103\xAF7\xCFC2\x99A2\x3DDC", // Legionnaire
-        L"\x8101\x7302", // Lich
-        L"\x8101\xF81\x9D3D\xF28A\x2F4E", // Longhair Yeti
-        L"\x8101\xF7D\xBCAD\xF3B9\xC22", // Naga Raincaller
-        L"\x8101\x3EB\xFBB9\xF538\x2C8", // Necrid Horseman
-        L"\x8102\x4510", // Nornbear
-        L"\x8102\x450D", // Mad King Thorn
-        L"\x8102\x5CC5", // Mad King's Guard
-        L"\x8101\x39EF\xC406\xC4C7\x7D88", // Mallyx
-        L"\x8101\x7306", // Mandragor Imp
-        L"\x8103\x6F8", // Minister Reiko
-        L"\x8102\x450F", // Mursaat
-        L"\x8101\xF7E\x95BD\xB2B4\x51E7", // Oni
-        L"\x8102\x4511", // Ooze
-        L"\x8101\x7304", // Palawa Joko
-        L"\x108\x107" "Miniature Panda\x1", // Panda (need)
-        L"\x8101\x66FC\xC207\xBD26\x40CB", // Pig
-        L"\x8101\x3C78", // Polar Bear
-        L"\x8101\x3EF\xE477\xD632\x3AC", // Prince Rurik
-        L"\x8102\x4512", // Raptor
-        L"\x8102\x4513", // Roaring Ether
-        L"\x8101\x3F0\x98B5\xB78C\x1EBD", // Shiro
-        L"\x8101\x6BB6", // Shiro'ken Assassin
-        L"\x8101\x3F4\x9D9B\xEDB3\x3EA7", // Siege Turtle
-        L"\x8101\x3F1\xCAA4\xC7B1\x77B8", // Temple Guardian
-        L"\x8101\x730D", // Thorn Wolf
-        L"\x8101\x5EE0", // Varesh
-        L"\x8101\x6BB7", // Vizu
-        L"\x8101\x7301", // Water Djinn
-        L"\x8101\x3EA\xB3F6\xFFBA\x1293", // Whiptail Devourer
-        L"\x8102\x4516", // White Rabbit
-        L"\x8101\x730A", // Wind Rider
-        L"\x8102\x5944", // Word of Madness
-        L"\x8102\x5389\xD54E\xE94E\x5120", // Yakkington
-        L"\x8101\x6BB8", // Zhed Shadowhoof
-
-        L"\x8102\x5946", // Terrorweb Dryder
-        L"\x8102\x5947", // Abomination
-        L"\x8102\x5948", // Krait Neoss
-        L"\x8102\x5949", // Desert Griffon
-        L"\x8102\x594A", // Kveldulf
-        L"\x8102\x594B", // Quetzal Sly
-        L"\x8102\x594C", // Jora
-        L"\x8102\x594D", // Flowstone Elemental
-        L"\x8102\x594E", // Nian
-        L"\x8102\x594F", // Dagnar Stoneplate
-        L"\x8102\x5950", // Flame Djinn
-        L"\x8102\x5952", // Eye of Janthir
-
-
-        L"\x8102\x5CC6", // Smite Crawler
-        L"\x8102\x5E49", // Dhuum
-
-        L"\x8102\x6505", // Seer
-        L"\x8102\x6506", // Siege Devourer
-        L"\x8102\x6507", // Shard Wolf
-        L"\x8102\x6508", // Fire Drake
-        L"\x8102\x6509", // Summit Giant Herder
-        L"\x8102\x650A", // Ophil Nahualli
-        L"\x8102\x650B", // Cobalt Scabara
-        L"\x8102\x650C", // Scourge Manta
-        L"\x8102\x650D", // Ventari
-        L"\x8102\x650E", // Oola
-        L"\x8102\x650F", // Candysmith Marley
-        L"\x8102\x6510", // Zhu Hanuku
-        L"\x8102\x6511", // King Adelbern
-        L"\x8102\x6512", // M.O.X
-
-        L"\x8102\x6799", // Salma
-        L"\x8102\x679A", // Livia
-        L"\x8102\x679B", // Evennia
-        L"\x8102\x679C", // Confessor Isaiah
-        L"\x8102\x679D", // Confessor Dorian
-        L"\x8102\x679E", // Peacekeeper Enforcer
-
-        L"\x8102\x7526", // High Priest Zhang
-        L"\x8102\x7527", // Ghostly Priest
-        L"\x8102\x7528", // Rift Warden
-
-        L"\x8103\xA3B\xEEC0\xD3AD\x6648", // World-Famous Racing Beetle
-        L"\x8101\x6730", // Ghostly Hero (need)
-    };
+    bool ArrayBoolAt(std::vector<uint32_t>& array, uint32_t index)
+    {
+        uint32_t real_index = index / 32;
+        if (real_index >= array.size())
+            return false;
+        uint32_t shift = index % 32;
+        uint32_t flag = 1 << shift;
+        return (array[real_index] & flag) != 0;
+    }
+    void ArrayBoolSet(std::vector<uint32_t>& array, uint32_t index, bool is_set = true)
+    {
+        uint32_t real_index = (uint32_t)index / 32;
+        if (real_index >= array.size()) {
+            array.resize(real_index + 1, 0);
+        }
+        uint32_t shift = (uint32_t)index % 32;
+        uint32_t flag = 1u << shift;
+        if (is_set) {
+            array[real_index] |= flag;
+        }
+        else {
+            array[real_index] ^= flag;
+        }
+    }
 
     const wchar_t* GetPlayerName() {
         auto c = GW::GetCharContext();
@@ -299,6 +81,51 @@ namespace {
 
     std::wstring chosen_player_name;
     std::string chosen_player_name_s;
+
+    bool hide_unlocked_achievements = false;
+    bool hide_unlocked_skills = false;
+    bool hide_completed_vanquishes = false;
+    bool hide_completed_missions = false;
+    bool hide_collected_hats = false;
+
+    bool pending_sort = true;
+    const char* completion_ini_filename = "character_completion.ini";
+
+    bool hard_mode = false;
+
+    bool IsHardMode() { return hard_mode; }
+    enum CompletionType : uint8_t
+    {
+        Skills,
+        Mission,
+        MissionBonus,
+        MissionHM,
+        MissionBonusHM,
+        Vanquishes,
+        Heroes,
+        MapsUnlocked,
+        MinipetsUnlocked,
+        FestivalHats
+    };
+
+
+    std::unordered_map<std::wstring, CharacterCompletion*> character_completion;
+    GW::HookEntry skills_unlocked_stoc_entry;
+
+    std::map<GW::Constants::Campaign, std::vector<Missions::Mission*>> missions;
+    std::map<GW::Constants::Campaign, std::vector<Missions::Mission*>> vanquishes;
+    std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
+    std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
+    std::map<GW::Constants::Campaign, std::vector<Missions::HeroUnlock*>> heros;
+    std::vector<Missions::FestivalHat*> festival_hats;
+    std::vector<Missions::MinipetAchievement*> minipets;
+    std::vector<Missions::WeaponAchievement*> hom_weapons;
+    std::vector<Missions::ArmorAchievement*> hom_armor;
+    std::vector<Missions::CompanionAchievement*> hom_companions;
+    std::vector<Missions::HonorAchievement*> hom_titles;
+    bool minipets_sorted = false;
+    HallOfMonumentsAchievements hom_achievements;
+    int hom_achievements_status = 0xf;
 
     CompletionWindow& Instance() {
         return CompletionWindow::Instance();
@@ -314,20 +141,14 @@ namespace {
         std::wsmatch m;
         std::wstring subject(dialog_body);
         std::wstring msg;
-        auto cc = Instance().character_completion[GetPlayerName()];
+        auto cc = character_completion[GetPlayerName()];
         auto& minipets_unlocked = cc->minipets_unlocked;
         minipets_unlocked.clear();
         while (std::regex_search(subject, m, displayed_miniatures)) {
             std::wstring miniature_encoded_name(m[1].str());
             for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
                 if (encoded_minipet_names[i] == miniature_encoded_name) {
-                    uint32_t real_index = (uint32_t)i / 32;
-                    if (real_index >= minipets_unlocked.size()) {
-                        minipets_unlocked.resize(real_index + 1, 0);
-                    }
-                    uint32_t shift = (uint32_t)i % 32;
-                    uint32_t flag = 1u << shift;
-                    minipets_unlocked[real_index] |= flag;
+                    ArrayBoolSet(minipets_unlocked, i, true);
                     break;
                 }
             }
@@ -338,13 +159,7 @@ namespace {
             std::wstring miniature_encoded_name(m[1].str());
             for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
                 if (encoded_minipet_names[i] == miniature_encoded_name) {
-                    uint32_t real_index = (uint32_t)i / 32;
-                    if (real_index >= minipets_unlocked.size()) {
-                        minipets_unlocked.resize(real_index + 1, 0);
-                    }
-                    uint32_t shift = (uint32_t)i % 32;
-                    uint32_t flag = 1u << shift;
-                    minipets_unlocked[real_index] |= flag;
+                    ArrayBoolSet(minipets_unlocked, i, true);
                     break;
                 }
             }
@@ -356,16 +171,16 @@ namespace {
         if (wcsncmp(button->message, L"\x8101\x62E2\xAD6D\x82EB\x4C26 ", 5) != 0)
             return; // Not "Lets talk about something else"
         const wchar_t* dialog_body = DialogModule::Instance().GetDialogBody();
-        if (!(dialog_body && wcsncmp(dialog_body, L"\x8101\x62E3\x8BAE\xA150\x1329", 5) != 0))
+        if (!(dialog_body && wcsncmp(dialog_body, L"\x8101\x62E3\x8BAE\xA150\x1329", 5) == 0))
             return; // Not "Which festival hat would you like me to make you?"
 
         const auto& buttons = DialogModule::Instance().GetDialogButtons();
-        auto cc = Instance().character_completion[GetPlayerName()];
+        auto cc = character_completion[GetPlayerName()];
         auto& unlocked = cc->festival_hats;
         for (const auto btn : buttons) {
             for (size_t i = 0; i < _countof(encoded_festival_hat_names);i++) {
                 if (wcsstr(btn->message, encoded_festival_hat_names[i])) {
-                    unlocked[i] = true;
+                    ArrayBoolSet(unlocked, i, true);
                     break;
                 }
             }
@@ -395,20 +210,14 @@ namespace {
         std::wsmatch m;
         std::wstring subject((*this_dialog_button)->message);
         std::wstring msg;
-        auto cc = Instance().character_completion[GetPlayerName()];
+        auto cc = character_completion[GetPlayerName()];
         auto& minipets_unlocked = cc->minipets_unlocked;
         if (!std::regex_search(subject, m, miniature_displayed_regex))
             return;
         std::wstring miniature_encoded_name(m[1].str());
         for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
             if (encoded_minipet_names[i] == miniature_encoded_name) {
-                uint32_t real_index = (uint32_t)i / 32;
-                if (real_index >= minipets_unlocked.size()) {
-                    minipets_unlocked.resize(real_index + 1, 0);
-                }
-                uint32_t shift = (uint32_t)i % 32;
-                uint32_t flag = 1u << shift;
-                minipets_unlocked[real_index] |= flag;
+                ArrayBoolSet(minipets_unlocked, i, true);
                 Instance().CheckProgress();
                 break;
             }
@@ -451,6 +260,97 @@ namespace {
 		}
 
 	}
+
+    bool ParseCompletionBuffer(CompletionType type, wchar_t* character_name = nullptr, uint32_t* buffer = nullptr, size_t len = 0)
+    {
+        bool from_game = false;
+        if (!character_name) {
+            from_game = true;
+            GW::GameContext* g = GW::GetGameContext();
+            if (!g)
+                return false;
+            GW::CharContext* c = g->character;
+            if (!c)
+                return false;
+            GW::WorldContext* w = g->world;
+            if (!w)
+                return false;
+            character_name = c->player_name;
+            switch (type) {
+                case CompletionType::Mission:
+                    buffer = w->missions_completed.m_buffer;
+                    len = w->missions_completed.m_size;
+                    break;
+                case CompletionType::MissionBonus:
+                    buffer = w->missions_bonus.m_buffer;
+                    len = w->missions_bonus.m_size;
+                    break;
+                case CompletionType::MissionHM:
+                    buffer = w->missions_completed_hm.m_buffer;
+                    len = w->missions_completed_hm.m_size;
+                    break;
+                case CompletionType::MissionBonusHM:
+                    buffer = w->missions_bonus_hm.m_buffer;
+                    len = w->missions_bonus_hm.m_size;
+                    break;
+                case CompletionType::Skills:
+                    buffer = w->unlocked_character_skills.m_buffer;
+                    len = w->unlocked_character_skills.m_size;
+                    break;
+                case CompletionType::Vanquishes:
+                    buffer = w->vanquished_areas.m_buffer;
+                    len = w->vanquished_areas.m_size;
+                    break;
+                case CompletionType::Heroes:
+                    buffer = (uint32_t*)w->hero_info.m_buffer;
+                    len = w->hero_info.m_size;
+                    break;
+                case CompletionType::MapsUnlocked:
+                    buffer = (uint32_t*)w->unlocked_map.m_buffer;
+                    len = w->unlocked_map.m_size;
+                    break;
+                default: ASSERT("Invalid CompletionType" && false);
+            }
+        }
+        const auto this_character_completion = Instance().GetCharacterCompletion(character_name, true);
+        std::vector<uint32_t>* write_buf = 0;
+        switch (type) {
+            case CompletionType::Mission: write_buf = &this_character_completion->mission; break;
+            case CompletionType::MissionBonus: write_buf = &this_character_completion->mission_bonus; break;
+            case CompletionType::MissionHM: write_buf = &this_character_completion->mission_hm; break;
+            case CompletionType::MissionBonusHM: write_buf = &this_character_completion->mission_bonus_hm; break;
+            case CompletionType::Skills: write_buf = &this_character_completion->skills; break;
+            case CompletionType::Vanquishes: write_buf = &this_character_completion->vanquishes; break;
+            case CompletionType::Heroes: {
+                write_buf = &this_character_completion->heroes;
+                if (from_game) {
+                    // Writing from game memory, not from file
+                    std::vector<uint32_t>& write = *write_buf;
+                    GW::HeroInfo* hero_arr = (GW::HeroInfo*)buffer;
+                    if (write.size() < len) {
+                        write.resize(len, 0);
+                    }
+                    for (size_t i = 0; i < len; i++) {
+                        write[i] = hero_arr[i].hero_id;
+                    }
+                    return true;
+                }
+            } break;
+            case CompletionType::MapsUnlocked: write_buf = &this_character_completion->maps_unlocked; break;
+            case CompletionType::MinipetsUnlocked: write_buf = &this_character_completion->minipets_unlocked; break;
+            case CompletionType::FestivalHats: write_buf = &this_character_completion->festival_hats; break;
+            default: ASSERT("Invalid CompletionType" && false);
+        }
+        std::vector<uint32_t>& write = *write_buf;
+        if (write.size() < len) {
+            write.resize(len, 0);
+        }
+        for (size_t i = 0; i < len; i++) {
+            write[i] |= buffer[i];
+        }
+        return true;
+    }
+
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -532,24 +432,6 @@ Color Mission::is_daily_bg_color = Colors::ARGB(102, 0, 255, 0);
 Color Mission::has_quest_bg_color = Colors::ARGB(102, 0, 150, 0);
 ImVec2 Mission::icon_size = { 48.0f, 48.0f };
 
-static bool ArrayBoolAt(GW::Array<uint32_t>& array, uint32_t index)
-{
-    uint32_t real_index = index / 32;
-    if (real_index >= array.size())
-        return false;
-    uint32_t shift = index % 32;
-    uint32_t flag = 1 << shift;
-    return (array[real_index] & flag) != 0;
-}
-static bool ArrayBoolAt(std::vector<uint32_t>& array, uint32_t index)
-{
-    uint32_t real_index = index / 32;
-    if (real_index >= array.size())
-        return false;
-    uint32_t shift = index % 32;
-    uint32_t flag = 1 << shift;
-    return (array[real_index] & flag) != 0;
-}
 
 
 Mission::Mission(MapID _outpost,
@@ -652,13 +534,13 @@ void Mission::OnClick() {
 }
 void Mission::CheckProgress(const std::wstring& player_name) {
     is_completed = bonus = false;
-    const auto& completion = CompletionWindow::Instance().character_completion;
+    const auto& completion = character_completion;
     if (!completion.contains(player_name))
         return;
     const auto& player_completion = completion.at(player_name);
     std::vector<uint32_t>* missions_complete = &player_completion->mission;
     std::vector<uint32_t>* missions_bonus = &player_completion->mission_bonus;
-    if (CompletionWindow::Instance().IsHardMode()) {
+    if (hard_mode) {
         missions_complete = &player_completion->mission_hm;
         missions_bonus = &player_completion->mission_bonus_hm;
     }
@@ -670,7 +552,7 @@ IDirect3DTexture9* Mission::GetMissionImage()
 {
     auto* texture_list = &normal_mode_textures;
 
-    if (CompletionWindow::Instance().IsHardMode()) {
+    if (hard_mode) {
         texture_list = &hard_mode_textures;
     }
     uint8_t index = is_completed + 2 * bonus;
@@ -723,7 +605,7 @@ HeroUnlock::HeroUnlock(HeroID _hero_id)
 }
 void HeroUnlock::CheckProgress(const std::wstring& player_name) {
     is_completed = false;
-    const auto& skills = CompletionWindow::Instance().character_completion;
+    const auto& skills = character_completion;
     if (!skills.contains(player_name))
         return;
     auto& heroes = skills.at(player_name)->heroes;
@@ -841,7 +723,7 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
 }
 void PvESkill::CheckProgress(const std::wstring& player_name) {
     is_completed = false;
-    const auto& skills = CompletionWindow::Instance().character_completion;
+    const auto& skills = character_completion;
     if (!skills.contains(player_name))
         return;
     auto& unlocked = skills.at(player_name)->skills;
@@ -876,11 +758,11 @@ bool FactionsPvESkill::Draw(IDirect3DDevice9* device) {
 
 void EotNMission::CheckProgress(const std::wstring& player_name) {
     is_completed = false;
-    const auto& completion = CompletionWindow::Instance().character_completion;
+    const auto& completion = character_completion;
     if (!completion.contains(player_name))
         return;
     std::vector<uint32_t>* missions_bonus = &completion.at(player_name)->mission_bonus;
-    if (CompletionWindow::Instance().IsHardMode()) {
+    if (hard_mode) {
         missions_bonus = &completion.at(player_name)->mission_bonus_hm;
     }
     is_completed = bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
@@ -888,7 +770,7 @@ void EotNMission::CheckProgress(const std::wstring& player_name) {
 IDirect3DTexture9* EotNMission::GetMissionImage()
 {
     auto* texture_list = &normal_mode_textures;
-    if (CompletionWindow::Instance().IsHardMode()) {
+    if (hard_mode) {
         texture_list = &hard_mode_textures;
     }
     return texture_list->at(is_completed ? 1 : 0).texture;
@@ -896,7 +778,7 @@ IDirect3DTexture9* EotNMission::GetMissionImage()
 
 void Vanquish::CheckProgress(const std::wstring& player_name) {
     is_completed = false;
-    const auto& completion = CompletionWindow::Instance().character_completion;
+    const auto& completion = character_completion;
     if (!completion.contains(player_name))
         return;
     auto& unlocked = completion.at(player_name)->vanquishes;
@@ -1134,25 +1016,25 @@ void CompletionWindow::Initialize()
     skills.push_back(new PvESkill(SkillID::Heroic_Refrain));
 
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_MAPS_UNLOCKED, [](GW::HookStatus*, void*) {
-        Instance().ParseCompletionBuffer(Mission);
-        Instance().ParseCompletionBuffer(MissionBonus);
-        Instance().ParseCompletionBuffer(MissionBonusHM);
-        Instance().ParseCompletionBuffer(MissionHM);
-        Instance().ParseCompletionBuffer(MapsUnlocked);
+        ParseCompletionBuffer(CompletionType::Mission);
+        ParseCompletionBuffer(CompletionType::MissionBonus);
+        ParseCompletionBuffer(CompletionType::MissionBonusHM);
+        ParseCompletionBuffer(CompletionType::MissionHM);
+        ParseCompletionBuffer(CompletionType::MapsUnlocked);
         Instance().CheckProgress();
         });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_PROGRESS, [](GW::HookStatus*, void*) {
-        Instance().ParseCompletionBuffer(Vanquishes);
+        ParseCompletionBuffer(CompletionType::Vanquishes);
         Instance().CheckProgress();
         });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_COMPLETE, [](GW::HookStatus*, void*) {
-        Instance().ParseCompletionBuffer(Vanquishes);
+        ParseCompletionBuffer(CompletionType::Vanquishes);
         Instance().CheckProgress();
         });
 
 
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILLS_UNLOCKED, [](GW::HookStatus*, void*) {
-	    Instance().ParseCompletionBuffer(Skills);
+        ParseCompletionBuffer(CompletionType::Skills);
 	    Instance().CheckProgress();
 	    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
@@ -1166,11 +1048,11 @@ void CompletionWindow::Initialize()
         const auto comp = Instance().GetCharacterCompletion(c->player_name);
 		if (comp)
 			comp->profession = (Profession)me->primary;
-		Instance().ParseCompletionBuffer(Heroes);
+        ParseCompletionBuffer(CompletionType::Heroes);
 		Instance().CheckProgress();
 	    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, [](GW::HookStatus*, void*) {
-	    Instance().ParseCompletionBuffer(Skills);
+        ParseCompletionBuffer(CompletionType::Skills);
 	    Instance().CheckProgress();
 	    });
     // Reset chosen player name to be current character on login
@@ -1181,26 +1063,26 @@ void CompletionWindow::Initialize()
 		    chosen_player_name.clear();
             FetchHom();
 	    }
-	    ParseCompletionBuffer(Skills);
-	    ParseCompletionBuffer(Mission);
-	    ParseCompletionBuffer(MissionBonus);
-	    ParseCompletionBuffer(MissionBonusHM);
-	    ParseCompletionBuffer(MissionHM);
-	    ParseCompletionBuffer(MapsUnlocked);
+        ParseCompletionBuffer(CompletionType::Skills);
+        ParseCompletionBuffer(CompletionType::Mission);
+        ParseCompletionBuffer(CompletionType::MissionBonus);
+        ParseCompletionBuffer(CompletionType::MissionBonusHM);
+        ParseCompletionBuffer(CompletionType::MissionHM);
+        ParseCompletionBuffer(CompletionType::MapsUnlocked);
 	    CheckProgress();
 	    });
 
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kDialogButton, OnDialogButton);
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kSendDialog, OnSendDialog);
 
-    ParseCompletionBuffer(Mission);
-    ParseCompletionBuffer(MissionBonus);
-    ParseCompletionBuffer(MissionBonusHM);
-    ParseCompletionBuffer(MissionHM);
-    ParseCompletionBuffer(Skills);
-    ParseCompletionBuffer(Vanquishes);
-    ParseCompletionBuffer(Heroes);
-    ParseCompletionBuffer(MapsUnlocked);
+    ParseCompletionBuffer(CompletionType::Mission);
+    ParseCompletionBuffer(CompletionType::MissionBonus);
+    ParseCompletionBuffer(CompletionType::MissionBonusHM);
+    ParseCompletionBuffer(CompletionType::MissionHM);
+    ParseCompletionBuffer(CompletionType::Skills);
+    ParseCompletionBuffer(CompletionType::Vanquishes);
+    ParseCompletionBuffer(CompletionType::Heroes);
+    ParseCompletionBuffer(CompletionType::MapsUnlocked);
     CheckProgress();
     const wchar_t* player_name = GetPlayerName();
     if(player_name)
@@ -2088,12 +1970,15 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         single_item_width *= 5.f;
     int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x)));
     const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
-    auto draw_missions = [missions_per_row, device](auto& camp_missions) {
+    auto draw_missions = [missions_per_row, device](auto& camp_missions, size_t end = 0) {
+        if (end == 0) {
+            end = camp_missions.size();
+        }
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
-        size_t items_per_col = (size_t)ceil(camp_missions.size() / static_cast<float>(missions_per_row));
+        size_t items_per_col = (size_t)ceil(end / static_cast<float>(missions_per_row));
         size_t col_count = 0;
-        for (size_t i = 0; i < camp_missions.size(); i++) {
+        for (size_t i = 0; i < end; i++) {
             if (camp_missions[i]->Draw(device)) {
                 col_count++;
                 if (col_count == items_per_col) {
@@ -2255,6 +2140,77 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             draw_missions(camp_missions);
         }
     }
+
+    ImGui::Text("Festival Hats");
+    ImGui::ShowHelp("To update this list, talk to a Festival Hat Keeper and select \"Please make me a new hat.\"");
+    ImGui::SameLine(checkbox_offset);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
+    ImGui::Checkbox("Hide collected hats", &hide_collected_hats);
+    ImGui::PopStyleVar();
+
+    size_t completed = 0;
+    size_t offset = 0;
+    size_t to_index = 0;
+    const size_t cnt = festival_hats.size();
+    char label[128];
+    std::vector<Missions::FestivalHat*> filtered;
+    // Halloween hats
+    completed = 0;
+    to_index = wintersday_index;
+    filtered.clear();
+    for (size_t i = offset; i < to_index && i < cnt; i++) {
+        const auto m = festival_hats[i];
+        if (m->is_completed) {
+            completed++;
+            if (hide_collected_hats)
+                continue;
+        }
+        filtered.push_back(m);
+    }
+    snprintf(label, _countof(label), "Halloween Hats (%d of %d collected) - %.0f%%###halloween_hats", completed, (to_index - offset), ((float)completed / (float)(to_index - offset)) * 100.f);
+    if (ImGui::CollapsingHeader(label)) {
+        draw_missions(filtered);
+    }
+    offset = to_index;
+
+    // Wintersday hats
+    filtered.clear();
+    completed = 0;
+    to_index = dragon_festival_index;
+    for (size_t i = offset; i < to_index && i < cnt; i++) {
+        const auto m = festival_hats[i];
+        if (m->is_completed) {
+            completed++;
+            if (hide_collected_hats)
+                continue;
+        }
+        filtered.push_back(m);
+    }
+    snprintf(label, _countof(label), "Wintersday Hats (%d of %d collected) - %.0f%%###wintersday_hats", completed, (to_index - offset), ((float)completed / (float)(to_index - offset)) * 100.f);
+    if (ImGui::CollapsingHeader(label)) {
+        draw_missions(filtered);
+    }
+    offset = to_index;
+
+    // Dragon festival hats
+    filtered.clear();
+    completed = 0;
+    to_index = festival_hats.size();
+    for (size_t i = offset; i < to_index && i < cnt; i++) {
+        const auto m = festival_hats[i];
+        if (m->is_completed) {
+            completed++;
+            if (hide_collected_hats)
+                continue;
+        }
+        filtered.push_back(m);
+    }
+    snprintf(label, _countof(label), "Dragon Festival Hats (%d of %d collected) - %.0f%%###dragon_festival_hats", completed, (to_index - offset), ((float)completed / (float)(to_index - offset)) * 100.f);
+    if (ImGui::CollapsingHeader(label)) {
+        draw_missions(filtered);
+    }
+    offset = to_index;
+
     DrawHallOfMonuments(device);
     ImGui::EndChild();
     ImGui::End();
@@ -2518,10 +2474,12 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
     std::wstring name_ws;
     const char* ini_section;
 
-    hide_unlocked_skills = ini->GetBoolValue(Name(), VAR_NAME(hide_unlocked_skills), hide_unlocked_skills);
-    hide_completed_vanquishes = ini->GetBoolValue(Name(), VAR_NAME(hide_completed_vanquishes), hide_completed_vanquishes);
-    hide_completed_missions = ini->GetBoolValue(Name(), VAR_NAME(hide_completed_missions), hide_completed_missions);
-    hide_unlocked_achievements = ini->GetBoolValue(Name(), VAR_NAME(hide_unlocked_achievements), hide_unlocked_achievements);
+    LOAD_BOOL(show_as_list);
+    LOAD_BOOL(hide_unlocked_skills);
+    LOAD_BOOL(hide_completed_vanquishes);
+    LOAD_BOOL(hide_completed_missions);
+    LOAD_BOOL(hide_unlocked_achievements);
+    LOAD_BOOL(hide_collected_hats);
 
     auto read_ini_to_buf = [&](CompletionType type, const char* section) {
         char ini_key_buf[64];
@@ -2544,17 +2502,18 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
         ini_section = entry.pItem;
         name_ws = GuiUtils::StringToWString(ini_section);
 
-        read_ini_to_buf(Mission, "mission");
-        read_ini_to_buf(MissionBonus, "mission_bonus");
-        read_ini_to_buf(MissionHM, "mission_hm");
-        read_ini_to_buf(MissionBonusHM, "mission_bonus_hm");
-        read_ini_to_buf(Skills, "skills");
-        read_ini_to_buf(Vanquishes, "vanquishes");
-        read_ini_to_buf(Heroes, "heros");
-        read_ini_to_buf(MapsUnlocked, "maps_unlocked");
-        read_ini_to_buf(MinipetsUnlocked, "minipets_unlocked");
+        read_ini_to_buf(CompletionType::Mission, "mission");
+        read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus");
+        read_ini_to_buf(CompletionType::MissionHM, "mission_hm");
+        read_ini_to_buf(CompletionType::MissionBonusHM, "mission_bonus_hm");
+        read_ini_to_buf(CompletionType::Skills, "skills");
+        read_ini_to_buf(CompletionType::Vanquishes, "vanquishes");
+        read_ini_to_buf(CompletionType::Heroes, "heros");
+        read_ini_to_buf(CompletionType::MapsUnlocked, "maps_unlocked");
+        read_ini_to_buf(CompletionType::MinipetsUnlocked, "minipets_unlocked");
+        read_ini_to_buf(CompletionType::FestivalHats, "festival_hats");
 
-        Completion* c = GetCharacterCompletion(name_ws.data());
+        auto c = GetCharacterCompletion(name_ws.data());
         if(c)
             c->profession = (Profession)completion_ini->GetLongValue(ini_section, "profession", 0);
     }
@@ -2586,6 +2545,9 @@ CompletionWindow* CompletionWindow::CheckProgress(bool fetch_hom) {
 			skill->CheckProgress(chosen_player_name);
 		}
 	}
+    for (auto achievement : festival_hats) {
+        achievement->CheckProgress(chosen_player_name);
+    }
 	for (auto achievement : minipets) {
 		achievement->CheckProgress(chosen_player_name);
 	}
@@ -2616,13 +2578,14 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
     CSimpleIni* completion_ini = new CSimpleIni(false, false, false);
     std::string ini_str;
     std::string* name;
-    Completion* char_comp;
+    CharacterCompletion* char_comp = nullptr;
 
-    ini->SetBoolValue(Name(), VAR_NAME(show_as_list), show_as_list);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_unlocked_skills), hide_unlocked_skills);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_completed_vanquishes), hide_completed_vanquishes);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_completed_missions), hide_completed_missions);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_unlocked_achievements), hide_unlocked_achievements);
+    SAVE_BOOL(show_as_list);
+    SAVE_BOOL(hide_unlocked_skills);
+    SAVE_BOOL(hide_completed_vanquishes);
+    SAVE_BOOL(hide_completed_missions);
+    SAVE_BOOL(hide_unlocked_achievements);
+    SAVE_BOOL(hide_collected_hats);
 
     auto write_buf_to_ini = [completion_ini](const char* section, std::vector<uint32_t>* read, std::string& ini_str,std::string* name) {
         char ini_key_buf[64];
@@ -2647,19 +2610,21 @@ void CompletionWindow::SaveSettings(CSimpleIni* ini)
         write_buf_to_ini("heros", &char_comp->heroes, ini_str, name);
         write_buf_to_ini("maps_unlocked", &char_comp->maps_unlocked, ini_str, name);
         write_buf_to_ini("minipets_unlocked", &char_comp->minipets_unlocked, ini_str, name);
+        write_buf_to_ini("festival_hats", &char_comp->festival_hats, ini_str, name);
+
         completion_ini->SetValue(name->c_str(), "hom_code", char_comp->hom_code.c_str());
     }
     completion_ini->SaveFile(Resources::GetPath(completion_ini_filename).c_str());
     delete completion_ini;
 }
 
-CompletionWindow::Completion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, bool create_if_not_found) {
+CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, bool create_if_not_found) {
     if (character_completion.contains(character_name)) {
         return character_completion.at(character_name);
     }
-    Completion* this_character_completion = nullptr;
+    CharacterCompletion* this_character_completion = nullptr;
 	if (create_if_not_found) {
-		this_character_completion = new Completion();
+        this_character_completion = new CharacterCompletion();
 		this_character_completion->name_str = GuiUtils::WStringToString(character_name);
         this_character_completion->hom_achievements.character_name = character_name;
 		character_completion[character_name] = this_character_completion;
@@ -2668,113 +2633,11 @@ CompletionWindow::Completion* CompletionWindow::GetCharacterCompletion(const wch
 	return this_character_completion;
 }
 
-CompletionWindow* CompletionWindow::ParseCompletionBuffer(CompletionType type, wchar_t* character_name, uint32_t* buffer, size_t len) {
-    bool from_game = false;
-    if (!character_name) {
-        from_game = true;
-        GW::GameContext* g = GW::GetGameContext();
-        if (!g) return this;
-        GW::CharContext* c = g->character;
-        if (!c) return this;
-        GW::WorldContext* w = g->world;
-        if (!w) return this;
-        character_name = c->player_name;
-        switch (type) {
-        case Mission:
-            buffer = w->missions_completed.m_buffer;
-            len = w->missions_completed.m_size;
-            break;
-        case MissionBonus:
-            buffer = w->missions_bonus.m_buffer;
-            len = w->missions_bonus.m_size;
-            break;
-        case MissionHM:
-            buffer = w->missions_completed_hm.m_buffer;
-            len = w->missions_completed_hm.m_size;
-            break;
-        case MissionBonusHM:
-            buffer = w->missions_bonus_hm.m_buffer;
-            len = w->missions_bonus_hm.m_size;
-            break;
-        case Skills:
-            buffer = w->unlocked_character_skills.m_buffer;
-            len = w->unlocked_character_skills.m_size;
-            break;
-        case Vanquishes:
-            buffer = w->vanquished_areas.m_buffer;
-            len = w->vanquished_areas.m_size;
-            break;
-        case Heroes:
-            buffer = (uint32_t*)w->hero_info.m_buffer;
-            len = w->hero_info.m_size;
-            break;
-        case MapsUnlocked:
-            buffer = (uint32_t*)w->unlocked_map.m_buffer;
-            len = w->unlocked_map.m_size;
-            break;
-        default:
-            ASSERT("Invalid CompletionType" && false);
-        }
-    }
-    Completion* this_character_completion = GetCharacterCompletion(character_name,true);
-    std::vector<uint32_t>* write_buf = 0;
-    switch (type) {
-    case Mission:
-        write_buf = &this_character_completion->mission;
-        break;
-    case MissionBonus:
-        write_buf = &this_character_completion->mission_bonus;
-        break;
-    case MissionHM:
-        write_buf = &this_character_completion->mission_hm;
-        break;
-    case MissionBonusHM:
-        write_buf = &this_character_completion->mission_bonus_hm;
-        break;
-    case Skills:
-        write_buf = &this_character_completion->skills;
-        break;
-    case Vanquishes:
-        write_buf = &this_character_completion->vanquishes;
-        break;
-    case Heroes: {
-        write_buf = &this_character_completion->heroes;
-        if (from_game) {
-            // Writing from game memory, not from file
-            std::vector<uint32_t>& write = *write_buf;
-            GW::HeroInfo* hero_arr = (GW::HeroInfo*)buffer;
-            if (write.size() < len) {
-                write.resize(len, 0);
-            }
-            for (size_t i = 0; i < len; i++) {
-                write[i] = hero_arr[i].hero_id;
-            }
-            return this;
-        }
-    } break;
-    case MapsUnlocked:
-        write_buf = &this_character_completion->maps_unlocked;
-        break;
-    case MinipetsUnlocked:
-        write_buf = &this_character_completion->minipets_unlocked;
-        break;
-    default:
-        ASSERT("Invalid CompletionType" && false);
-    }
-    std::vector<uint32_t>& write = *write_buf;
-    if (write.size() < len) {
-        write.resize(len,0);
-    }
-    for (size_t i = 0; i < len; i++) {
-        write[i] |= buffer[i];
-    }
-    return this;
-}
 
 void MinipetAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
-    auto& cc = CompletionWindow::Instance().character_completion;
+    auto& cc = character_completion;
     if (!cc.contains(player_name))
         return;
     std::vector<uint32_t>& minipets_unlocked = cc.at(player_name)->minipets_unlocked;
@@ -2783,7 +2646,7 @@ void MinipetAchievement::CheckProgress(const std::wstring& player_name)
 void WeaponAchievement::CheckProgress(const std::wstring& player_name)
 {
 	is_completed = false;
-    const auto& cc = CompletionWindow::Instance().character_completion;
+    const auto& cc = character_completion;
 	if (!cc.contains(player_name))
 		return;
 	const auto& hom = cc.at(player_name)->hom_achievements;
@@ -2803,7 +2666,7 @@ IDirect3DTexture9* AchieventWithWikiFile::GetMissionImage()
 void ArmorAchievement::CheckProgress(const std::wstring& player_name)
 {
 	is_completed = false;
-    const auto& cc = CompletionWindow::Instance().character_completion;
+    const auto& cc = character_completion;
     if (!cc.contains(player_name))
         return;
     const auto& hom = cc.at(player_name)->hom_achievements;
@@ -2814,7 +2677,7 @@ void ArmorAchievement::CheckProgress(const std::wstring& player_name)
 void CompanionAchievement::CheckProgress(const std::wstring& player_name)
 {
 	is_completed = false;
-    const auto& cc = CompletionWindow::Instance().character_completion;
+    const auto& cc = character_completion;
 	if (!cc.contains(player_name))
 		return;
 	const auto& hom = cc.at(player_name)->hom_achievements;
@@ -2825,7 +2688,7 @@ void CompanionAchievement::CheckProgress(const std::wstring& player_name)
 void HonorAchievement::CheckProgress(const std::wstring& player_name)
 {
 	is_completed = false;
-    const auto& cc = CompletionWindow::Instance().character_completion;
+    const auto& cc = character_completion;
 	if (!cc.contains(player_name))
 		return;
     const auto& hom = cc.at(player_name)->hom_achievements;
@@ -2837,9 +2700,9 @@ void HonorAchievement::CheckProgress(const std::wstring& player_name)
 void Missions::FestivalHat::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
-    auto& cc = CompletionWindow::Instance().character_completion;
+    auto& cc = character_completion;
     if (!cc.contains(player_name))
         return;
-    std::vector<uint32_t>& minipets_unlocked = cc.at(player_name)->minipets_unlocked;
-    is_completed = bonus = ArrayBoolAt(minipets_unlocked, encoded_name_index);
+    std::vector<uint32_t>& unlocked = cc.at(player_name)->festival_hats;
+    is_completed = bonus = ArrayBoolAt(unlocked, encoded_name_index);
 }
