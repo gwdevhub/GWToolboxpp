@@ -16,11 +16,11 @@ namespace CompletionWindow_Constants {
         L"\x8102\x5C2B\xB7F4\xC976\x5CE1", // Charr hat
         L"\x8101\x5EBF\xE584\x8367\x5830", // Furious pumpkin crown
         L"\x8102\x6E5B\x9CE4\xF433\x7437", // Furrocious ears
-        L"\x108\x107Mummy Mask\x1",        // Mummy mask
-        L"\x108\x107Lupine Mask\x1",       // Lupine mask
+        L"\x8102\x34F7\xD06F\x9B03\x1D89",        // Mummy mask
+        L"\x8102\x34F6\x9A67\xE2B0\x19A6",       // Lupine mask
         L"\x245D\xCD3B\xC2E1\x2AC3",       // Pumpkin crown
         L"\x8102\x7F39\xEDE6\xF160\x552",  // Reapers hood
-        L"\x108\x107Scarecrow Mask\x1",    // Scarecrow Mask
+        L"\x8102\x34F8\xE9FE\x9F4D\x4B4A",    // Scarecrow Mask
         L"\x8102\x5C2A\xBF3B\x9294\x717F", // Skeleton face paint
         L"\x8102\x6E5C\xE744\xE51D\x549D", // Spectercles
         L"\x8102\x7F3A\xD2B3\xE31C\x8F1",  // Tricorne
@@ -32,22 +32,22 @@ namespace CompletionWindow_Constants {
         L"\x8103\x1E6\xCA8E\xFEBE\x13F1",  // Festive winter hood
         L"\x8101\x60FF\xD57C\xEE89\x1B58", // Freezie crown
         L"\x8101\x6100\xE654\xF2D6\x4A8",  // Great horns of grenth
-        L"\x108\x107Grentch Cap\x1",       // Grentch Cap
+        L"\x8102\x34F3\xA758\x90C4\x16B6",       // Grentch Cap
         L"\x2481\x821F\xD73C\x4CD2",       // Horns of Grenth
-        L"\x108\x107Ice Crown\x1",         // Ice crown
+        L"\x8102\x34F1\xDF5B\xCBEB\x51B3",         // Ice crown
         L"\x8102\x5EA2\xF571\xCFCB\x35A6", // Ice shard crest
-        L"\x108\x107Jesters Cap\x1",       // Jesters cap
-        L"\x108\x107Rudi Mask\x1",         // Rudi mask
+        L"\x8101\x60FE\xDE91\x9A0C\x158B ",       // Jesters cap
+        L"\x8102\x34F4\xB9A7\x8ED1\x23ED",         // Rudi mask
         L"\x8102\x5EA3\xBF84\xA60F\xC33",  // Snow crystal crest
         L"\x8103\x1E9\xDD16\x9987\x490C",  // Stylish black scarf
         L"\x8103\x1E7\xDD75\xA264\x4968",  // Stylish red striped scarf
         L"\x8103\x1E8\xDBFA\xB129\x3687",  // Stylish white striped scarf
         L"\x8101\x6101\xCAC9\xC13F\x5086", // Stylish yule cap
-        L"\x108\x107Wreath Crown\x1",      // Wreath crown
+        L"\x8102\x34F2\xBED1\xD377\x12A0",      // Wreath crown
         L"\x2482\x81E2\xEE52\x471F",       // Yule cap
         // Dragon Festival
         L"\x8102\x216A\xF512\xCE87\x46F",     // Demon mask
-        L"\x108\x107Grasping Mask\x1",        // Grasping mask
+        L"\x8102\x4669\xAC2E\xFF9A\x29A4",        // Grasping mask
         L"\x8102\x5A95\xB979\xA70E\x1639",    // Imperial dragon mask
         L"\x8101\x66FE\xE888\xCFB3\x1F77",    // Lion mask
         L"\x108\x107Mirthful Dragon Mask\x1", // Mirthful dragon mask
