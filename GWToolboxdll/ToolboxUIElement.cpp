@@ -27,14 +27,14 @@ void ToolboxUIElement::Terminate() {
 
 void ToolboxUIElement::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
-    visible = ini->GetBoolValue(Name(), VAR_NAME(visible), visible);
-    show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
+    LOAD_BOOL(visible);
+    LOAD_BOOL(show_menubutton);
 }
 
 void ToolboxUIElement::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(visible), visible);
-    ini->SetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
+    SAVE_BOOL(visible);
+    SAVE_BOOL(show_menubutton);
 }
 
 void ToolboxUIElement::RegisterSettingsContent() {
