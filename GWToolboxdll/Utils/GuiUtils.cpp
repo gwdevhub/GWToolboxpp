@@ -716,6 +716,27 @@ namespace GuiUtils {
         context->decoding = false;
     }
 
+    std::string format(const char* msg, ...) {
+        std::string out;
+        va_list args;
+        va_start(args, msg);
+        const auto size = vsnprintf(NULL, 0, msg,args);
+        out.resize(size + 1);
+        ASSERT(vsnprintf(out.data(), out.size(), msg, args) <= size);
+        va_end(args);
+        return std::move(out);
+    }
+    std::wstring format(const wchar_t* msg, ...) {
+        std::wstring out;
+        va_list args;
+        va_start(args, msg);
+        const auto size = _vsnwprintf(NULL, 0, msg, args);
+        out.resize(size + 1);
+        ASSERT(_vsnwprintf(out.data(), out.size(), msg, args) <= size);
+        va_end(args);
+        return std::move(out);
+    }
+
     std::string& EncString::string()
     {
         wstring();
