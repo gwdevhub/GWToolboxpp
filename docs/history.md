@@ -22,6 +22,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [New] Added extra argument to /load command to tell gwtoolbox to load a certain config
 * [New] Added notifications for last to tick
 * [New] Added options to block map entry message
+* [New] Festival hats added to completion window
 * [Fix] Restore Windows 7 support
 * [Fix] Fixed potential crash when loading custom markers
 * [Fix] Fixed crash when item description is blocked when talking to merchant
@@ -40,6 +41,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Minor] Reduced auto clicker interval from 50ms to 7ms
 * [Minor] Added extra quest related dialog type when using `/dialog take`
 * [Minor] GWToolbox modules are toggleable at runtime and don't require a restart
+* [Minor] Bump up MSVC toolkit version to 143
 * [QoL] Fixed GW bug preventing reconnect dialog when re-running GW using the -charname parameter ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
 * [QoL] Removed requirement for the -charname parameter to auto login ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
 
