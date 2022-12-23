@@ -256,6 +256,22 @@ namespace
         }
     }
 
+    bool GetIsMapReady() {
+        if (!GW::Map::GetIsMapLoaded())
+            return false;
+        const auto instance_type = GW::Map::GetInstanceType();
+        return instance_type == GW::Constants::InstanceType::Explorable || instance_type == GW::Constants::InstanceType::Outpost;
+    }
+
+    bool cached_is_friend_list_ready = false;
+    bool GetIsFriendListReady(bool fresh = false) {
+        if (fresh) {
+            const auto fl = GW::FriendListMgr::GetFriendList();
+            cached_is_friend_list_ready = fl && fl->friends.size() > 0;
+        }
+        return cached_is_friend_list_ready;
+    }
+
 }
 // Find out whether the player related to this packet is on the current player's ignore list.
 bool FriendListWindow::GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak) {
@@ -387,10 +403,8 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(const uint8_t* uuid, const
     if(!lf && alias)
         lf = GetFriend(alias);
 
-    const std::string uuid_str = GuidToString(*(UUID*)uuid);
-    const std::wstring alias_str(alias);
     if(!lf) {
-        // New friend
+        // New friend (uuid_changed will trigger the add later)
         lf = new Friend(this);
     }
     const bool type_changed = lf->type != type;
@@ -399,14 +413,16 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(const uint8_t* uuid, const
     const bool alias_changed = alias != lf->getAliasW();
     if (uuid_changed) {
         // UUID is different. This could be because GW has assigned a UUID to this friend.
-        lf->uuid = uuid_str;
+        friends.erase(lf->uuid);
         lf->uuid_bytes = *(UUID*)uuid;
+        lf->uuid = GuidToString(lf->uuid_bytes);
+        friends.emplace(lf->uuid, lf);
     }
-    if (alias && (alias_changed || uuid_changed)) {
+    if (alias && alias_changed) {
         // Friend's alias for this uuid has changed, or the uuid for this alias has changed.
         uuid_by_name.erase(lf->getAliasW());
-        lf->setAlias(alias_str);
-        uuid_by_name.emplace(lf->getAliasW(), lf->uuid);
+        lf->setAlias(alias);
+        uuid_by_name.emplace(lf->getAliasW(),lf);
     }
     if (lf->current_map_id != map_id) {
         // Map changed
@@ -418,7 +434,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(const uint8_t* uuid, const
         lf->current_char = nullptr;
     if (status != GW::FriendStatus::Offline && charname) {
         lf->current_char = lf->SetCharacter(charname);
-        uuid_by_name.emplace(charname, lf->uuid);
+        uuid_by_name.emplace(charname, lf);
     }
     const bool status_changed = lf->status != status;
     lf->status = status;
@@ -474,7 +490,7 @@ const std::string FriendListWindow::Friend::GetCharactersHover(bool include_char
 // Find existing record for friend by char name.
 FriendListWindow::Friend* FriendListWindow::GetFriend(const wchar_t* name) {
     const auto it = uuid_by_name.find(name);
-    return it == uuid_by_name.end() ? nullptr : GetFriendByUUID(it->second);
+    return it == uuid_by_name.end() ? nullptr : it->second;
 }
 // Find existing record for friend by GW Friend object
 FriendListWindow::Friend* FriendListWindow::GetFriend(const GW::Friend* f) {
@@ -661,17 +677,13 @@ void FriendListWindow::Update(float delta) {
 }
 void FriendListWindow::Poll() {
     if (loading || polling) return;
+    if (!GetIsMapReady()) return;
+    if (!GetIsFriendListReady(true)) return;
     polling = true;
     clock_t now = clock();
-    GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
-    if (!fl) return;
-    for (unsigned int i = 0; i < fl->friends.size(); i++) {
-        GW::Friend* f = fl->friends[i];
-        if (!f) continue;
-        Friend* lf = SetFriend(f->uuid, f->type, f->status, f->zone_id, f->charname, f->alias);
-        if (!lf) continue;
-        lf->last_update = now;
-    }
+
+
+    // 1. Remove friends from toolbox list that are no longer in gw list
     std::unordered_map<std::string, Friend*>::iterator it = friends.begin();
     while (it != friends.end()) {
         Friend* lf = it->second;
@@ -684,7 +696,18 @@ void FriendListWindow::Poll() {
         ASSERT(RemoveFriend(lf));
         it = friends.begin();
     }
-    //Log::Log("Friends list polled\n");
+
+    // 2. Update or add friends from gw list into toolbox list
+    GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
+    ASSERT(fl);
+    for (unsigned int i = 0; i < fl->friends.size(); i++) {
+        GW::Friend* f = fl->friends[i];
+        if (!f) continue;
+        Friend* lf = SetFriend(f->uuid, f->type, f->status, f->zone_id, f->charname, f->alias);
+        if (!lf) continue;
+        lf->last_update = now;
+    }
+
     friends_list_checked = now;
     polling = false;
 }
@@ -716,7 +739,7 @@ const bool FriendListWindow::IsWindow() const
 }
 void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
-    if (!visible || GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+    if (!(visible && GetIsFriendListReady() && GetIsMapReady()))
         return;
     const bool is_widget = IsWidget();
     const bool is_window = IsWindow();
@@ -1047,9 +1070,9 @@ void FriendListWindow::LoadFromFile() {
             }
             friends.emplace(lf->uuid, lf);
             for (const auto& it : lf->characters) {
-                uuid_by_name[it.first] = lf->uuid;
+                uuid_by_name[it.first] = lf;
             }
-            uuid_by_name[lf->getAliasW()] = lf->uuid;
+            uuid_by_name[lf->getAliasW()] = lf;
         }
         Log::Log("%s: Loaded friends from ini\n", Name());
         friends_list_checked = false;
