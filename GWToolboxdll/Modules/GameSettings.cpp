@@ -144,6 +144,73 @@ namespace {
 
     bool block_enter_area_message = false;
 
+        GuiUtils::EncString* pending_wiki_search_term = 0;
+
+    bool tick_is_toggle = false;
+
+    bool limit_signets_of_capture = true;
+    uint32_t actual_signets_of_capture_amount = 1;
+
+    bool shorthand_item_ping = true;
+    // bool select_with_chat_doubleclick = false;
+    bool move_item_on_ctrl_click = false;
+    bool move_item_to_current_storage_pane = true;
+    bool move_materials_to_current_storage_pane = false;
+    bool drop_ua_on_cast = false;
+
+    bool focus_window_on_launch = true;
+    bool flash_window_on_pm = false;
+    bool flash_window_on_guild_chat = false;
+    bool flash_window_on_party_invite = false;
+    bool flash_window_on_zoning = false;
+    bool focus_window_on_zoning = false;
+    bool flash_window_on_cinematic = true;
+    bool flash_window_on_trade = true;
+    bool focus_window_on_trade = false;
+    bool flash_window_on_name_ping = true;
+    bool set_window_title_as_charname = true;
+
+    bool auto_return_on_defeat = false;
+    bool auto_accept_invites = false;
+    bool auto_accept_join_requests = false;
+
+    bool auto_set_away = false;
+    int auto_set_away_delay = 10;
+    bool auto_set_online = false;
+    clock_t activity_timer = 0;
+
+    bool auto_skip_cinematic = false;
+    bool show_unlearned_skill = false;
+
+    bool faction_warn_percent = true;
+    int faction_warn_percent_amount = 75;
+
+    bool disable_gold_selling_confirmation = false;
+    bool collectors_edition_emotes = true;
+
+    bool block_transmogrify_effect = false;
+    bool block_sugar_rush_effect = false;
+    bool block_snowman_summoner = false;
+    bool block_party_poppers = false;
+    bool block_bottle_rockets = false;
+    bool block_ghostinthebox_effect = false;
+    bool block_sparkly_drops_effect = false;
+
+    bool auto_age2_on_age = true;
+    bool auto_age_on_vanquish = false;
+
+    bool auto_open_locked_chest = false;
+
+    Color nametag_color_npc = NAMETAG_COLOR_DEFAULT_NPC;
+    Color nametag_color_player_self = NAMETAG_COLOR_DEFAULT_PLAYER_SELF;
+    Color nametag_color_player_other = NAMETAG_COLOR_DEFAULT_PLAYER_OTHER;
+    Color nametag_color_player_in_party = NAMETAG_COLOR_DEFAULT_PLAYER_IN_PARTY;
+    Color nametag_color_gadget = NAMETAG_COLOR_DEFAULT_GADGET;
+    Color nametag_color_enemy = NAMETAG_COLOR_DEFAULT_ENEMY;
+    Color nametag_color_item = NAMETAG_COLOR_DEFAULT_ITEM;
+
+    constexpr float checkbox_w = 270.f;
+
     enum PING_PARTS {
         NAME=1,
         DESC=2
@@ -767,6 +834,82 @@ namespace {
         }
     }
 
+    void DrawNotificationsSettings() {
+        ImGui::Text("Flash Guild Wars taskbar icon when:");
+        ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
+        ImGui::Indent();
+        ImGui::StartSpacedElements(checkbox_w);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Receiving a private message", &flash_window_on_pm);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Receiving a guild message", &flash_window_on_guild_chat);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
+        ImGui::Unindent();
+
+            ImGui::Text("Show Guild Wars in foreground when:");
+        ImGui::ShowHelp("When enabled, GWToolbox++ can automatically restore\n"
+                        "the window from a minimized state when important events\n"
+                        "occur, such as entering instances.");
+        ImGui::Indent();
+        ImGui::StartSpacedElements(checkbox_w);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &focus_window_on_launch);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
+        ImGui::Unindent();
+
+            ImGui::Text("Show a message when a friend:");
+        ImGui::Indent();
+        ImGui::StartSpacedElements(checkbox_w);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Logs in", &notify_when_friends_online);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &notify_when_friends_join_outpost);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Logs out", &notify_when_friends_offline);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost);
+        ImGui::Unindent();
+
+        ImGui::Text("Show a message when a player:");
+        ImGui::Indent();
+        ImGui::StartSpacedElements(checkbox_w);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Joins your party", &notify_when_party_member_joins);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &notify_when_players_join_outpost);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Leaves your party", &notify_when_party_member_leaves);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &notify_when_players_leave_outpost);
+        ImGui::Unindent();
+    }
+
+}
+
+const bool GameSettings::GetSettingBool(const char* setting) {
+#define RETURN_SETTING_IF_MATCH(var) if (strcmp(setting, #var) == 0) return var
+    RETURN_SETTING_IF_MATCH(auto_age2_on_age);
+    RETURN_SETTING_IF_MATCH(flash_window_on_guild_chat);
+    RETURN_SETTING_IF_MATCH(flash_window_on_name_ping);
+    RETURN_SETTING_IF_MATCH(flash_window_on_pm);
+    RETURN_SETTING_IF_MATCH(move_materials_to_current_storage_pane);
+    RETURN_SETTING_IF_MATCH(move_item_to_current_storage_pane);
+    RETURN_SETTING_IF_MATCH(move_item_on_ctrl_click);
+
+    ASSERT("Failed to find valid setting" && false);
+    return false;
 }
 
 void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
@@ -1278,6 +1421,14 @@ void GameSettings::RegisterSettingsContent() {
             if (!is_showing) return;
             DrawPartySettings();
         }, 0.9f);
+
+        ToolboxModule::RegisterSettingsContent(
+        "Notifications", ICON_FA_BULLHORN,
+        [this](const std::string&, bool is_showing) {
+            if (is_showing)
+                DrawNotificationsSettings();
+        },
+        0.9f);
 }
 
 void GameSettings::Terminate() {
@@ -1443,53 +1594,12 @@ void GameSettings::DrawPartySettings() {
 }
 
 void GameSettings::DrawSettingInternal() {
-    constexpr float checkbox_w = 270.f;
+    
     ImGui::Checkbox("Hide email address on login screen", &hide_email_address);
     ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
     ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
     ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
     ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
-    ImGui::Text("Flash Guild Wars taskbar icon when:");
-    ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
-    ImGui::Indent();
-    ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Receiving a private message", &flash_window_on_pm);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Receiving a guild message", &flash_window_on_guild_chat);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
-    ImGui::Unindent();
-
-    ImGui::Text("Show Guild Wars in foreground when:");
-    ImGui::ShowHelp("When enabled, GWToolbox++ can automatically restore\n"
-        "the window from a minimized state when important events\n"
-        "occur, such as entering instances.");
-    ImGui::Indent();
-    ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &focus_window_on_launch);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
-    ImGui::Unindent();
-
-    ImGui::Text("Show a message when a friend:");
-    ImGui::Indent();
-    ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Logs in", &notify_when_friends_online);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &notify_when_friends_join_outpost);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Logs out", &notify_when_friends_offline);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost);
-    ImGui::Unindent();
-
-    ImGui::Text("Show a message when a player:");
-    ImGui::Indent();
-    ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Joins your party", &notify_when_party_member_joins);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &notify_when_players_join_outpost);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Leaves your party", &notify_when_party_member_leaves);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &notify_when_players_leave_outpost);
-    ImGui::Unindent();
 
     ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
     ImGui::SameLine();

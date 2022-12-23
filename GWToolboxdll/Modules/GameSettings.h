@@ -51,6 +51,8 @@ public:
     void DrawInventorySettings();
     void DrawPartySettings();
 
+    static const bool GetSettingBool(const char* setting);
+
     void Update(float delta) override;
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
@@ -86,77 +88,7 @@ public:
     void OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
     void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv) const;
 
-    GuiUtils::EncString* pending_wiki_search_term = 0;
 
-    bool tick_is_toggle = false;
-
-    bool limit_signets_of_capture = true;
-    uint32_t actual_signets_of_capture_amount = 1;
-
-    bool shorthand_item_ping = true;
-    // bool select_with_chat_doubleclick = false;
-    bool move_item_on_ctrl_click = false;
-    bool move_item_to_current_storage_pane = true;
-    bool move_materials_to_current_storage_pane = false;
-    bool drop_ua_on_cast = false;
-
-    bool focus_window_on_launch = true;
-    bool flash_window_on_pm = false;
-    bool flash_window_on_guild_chat = false;
-    bool flash_window_on_party_invite = false;
-    bool flash_window_on_zoning = false;
-    bool focus_window_on_zoning = false;
-    bool flash_window_on_cinematic = true;
-    bool flash_window_on_trade = true;
-    bool focus_window_on_trade = false;
-    bool flash_window_on_name_ping = true;
-    bool set_window_title_as_charname = true;
-
-    bool auto_return_on_defeat = false;
-    bool auto_accept_invites = false;
-    bool auto_accept_join_requests = false;
-
-    bool auto_set_away = false;
-    int auto_set_away_delay = 10;
-    bool auto_set_online = false;
-    clock_t activity_timer = 0;
-
-    bool auto_skip_cinematic = false;
-    bool show_unlearned_skill = false;
-
-    bool faction_warn_percent = true;
-    int faction_warn_percent_amount = 75;
-
-
-
-    bool disable_gold_selling_confirmation = false;
-    bool collectors_edition_emotes = true;
-
-    bool block_transmogrify_effect = false;
-    bool block_sugar_rush_effect = false;
-    bool block_snowman_summoner = false;
-    bool block_party_poppers = false;
-    bool block_bottle_rockets = false;
-    bool block_ghostinthebox_effect = false;
-    bool block_sparkly_drops_effect = false;
-
-
-
-    bool auto_age2_on_age = true;
-    bool auto_age_on_vanquish = false;
-
-    bool auto_open_locked_chest = false;
-
-
-
-
-    Color nametag_color_npc = NAMETAG_COLOR_DEFAULT_NPC;
-    Color nametag_color_player_self = NAMETAG_COLOR_DEFAULT_PLAYER_SELF;
-    Color nametag_color_player_other = NAMETAG_COLOR_DEFAULT_PLAYER_OTHER;
-    Color nametag_color_player_in_party = NAMETAG_COLOR_DEFAULT_PLAYER_IN_PARTY;
-    Color nametag_color_gadget = NAMETAG_COLOR_DEFAULT_GADGET;
-    Color nametag_color_enemy = NAMETAG_COLOR_DEFAULT_ENEMY;
-    Color nametag_color_item = NAMETAG_COLOR_DEFAULT_ITEM;
 
 private:
 

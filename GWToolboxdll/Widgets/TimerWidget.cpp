@@ -373,7 +373,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
             ImVec2 min = ImGui::GetWindowPos();
             ImVec2 max(min.x + size.x, min.y + size.y);
             if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
-                if (!GameSettings::Instance().auto_age2_on_age) {
+                if (!GameSettings::GetSettingBool("auto_age2_on_age")) {
                     PrintTimer();
                 }
                 GW::Chat::SendChat('/', "age");

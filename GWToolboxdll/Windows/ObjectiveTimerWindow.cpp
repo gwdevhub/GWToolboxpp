@@ -1280,7 +1280,7 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
         if (Instance().auto_send_age) {
             GW::Chat::SendChat('/', "age");
         }
-        TimerWidget::Instance().SetRunCompleted(GameSettings::Instance().auto_age2_on_age);
+        TimerWidget::Instance().SetRunCompleted(GameSettings::GetSettingBool("auto_age2_on_age"));
     }
 }
 

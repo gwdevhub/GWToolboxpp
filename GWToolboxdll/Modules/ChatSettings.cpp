@@ -115,7 +115,7 @@ namespace {
     void OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak)
     {
         UNREFERENCED_PARAMETER(status);
-        if (!GameSettings::Instance().auto_age2_on_age || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL) return; // Disabled or message pending
+        if (!GameSettings::Instance().GetSettingBool("auto_age2_on_age") || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL) return; // Disabled or message pending
         const wchar_t* msg = ToolboxUtils::GetMessageCore();
         // 0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
         // 0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
@@ -146,7 +146,7 @@ namespace {
     void OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak)
     {
         if (status->blocked) return;                                // Sender blocked, packet handled.
-        if (!GameSettings::Instance().flash_window_on_guild_chat || // Flash window on guild chat message
+        if (!GameSettings::GetSettingBool("flash_window_on_guild_chat") || // Flash window on guild chat message
             static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GUILD)
             return; // Disabled or messsage not from guild chat
         const auto sender_name = std::wstring(pak->sender_name);
@@ -170,7 +170,7 @@ namespace {
         if (player_pinged.empty()) return; // No recipient
         const auto sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
         if (!sender) return;                                                                                                               // No sender
-        if (GameSettings::Instance().flash_window_on_name_ping && ToolboxUtils::GetPlayerName() == player_pinged) GuiUtils::FlashWindow(); // Flash window - we've been followed!
+        if (GameSettings::GetSettingBool("flash_window_on_name_ping") && ToolboxUtils::GetPlayerName() == player_pinged) GuiUtils::FlashWindow(); // Flash window - we've been followed!
         // Allow clickable player name
         message.insert(start_idx, L"<a=1>");
         message.insert(end_idx + 5, L"</a>");
@@ -308,7 +308,7 @@ namespace {
     void OnWhisper(GW::HookStatus*, const wchar_t* from, const wchar_t* msg)
     {
         UNREFERENCED_PARAMETER(msg);
-        if (GameSettings::Instance().flash_window_on_pm) GuiUtils::FlashWindow();
+        if (GameSettings::GetSettingBool("flash_window_on_pm")) GuiUtils::FlashWindow();
         auto const status = GW::FriendListMgr::GetMyStatus();
         if (status == GW::FriendStatus::Away && !afk_message.empty()) {
             wchar_t buffer[120];

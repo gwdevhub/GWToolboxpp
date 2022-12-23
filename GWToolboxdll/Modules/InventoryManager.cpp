@@ -210,14 +210,14 @@ namespace {
         const uint16_t to_move = std::min<uint16_t>(item->quantity,quantity);
         uint16_t remaining = to_move;
         const bool is_storage_open = GW::Items::GetIsStorageOpen();
-        if (remaining && is_storage_open && item->GetIsMaterial() && GameSettings::Instance().move_materials_to_current_storage_pane) {
+        if (remaining && is_storage_open && item->GetIsMaterial() && GameSettings::GetSettingBool("move_materials_to_current_storage_pane")) {
             const size_t current_storage = GW::Items::GetStoragePage();
             remaining -= move_item_to_storage_page(item, current_storage, remaining);
         }
         if(remaining && item->GetIsMaterial())
             remaining -= move_materials_to_storage(item);
 
-        if (remaining && is_storage_open && GameSettings::Instance().move_item_to_current_storage_pane) {
+        if (remaining && is_storage_open && GameSettings::GetSettingBool("move_item_to_current_storage_pane")) {
             const size_t current_storage = GW::Items::GetStoragePage();
             remaining -= move_item_to_storage_page(item, current_storage, remaining);
         }
@@ -1791,7 +1791,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
         return;
     } else if (type == 7 
         && ImGui::IsKeyDown(ImGuiKey_ModCtrl) 
-        && GameSettings::Instance().move_item_on_ctrl_click
+        && GameSettings::GetSettingBool("move_item_on_ctrl_click")
         && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         // Move item on ctrl click
         if (ImGui::IsKeyDown(ImGuiKey_ModShift) && item->quantity > 1)
