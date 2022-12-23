@@ -101,7 +101,7 @@ namespace
 
     std::string GuidToString(const GUID& guid)
     {
-        return std::format("%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+        return std::format("{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
             guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
             guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4],
             guid.Data4[5], guid.Data4[6], guid.Data4[7]);
@@ -170,9 +170,9 @@ namespace
             return;
         }
         // Check if pending player has been added.
-        auto instance = Instance();
+        auto& instance = Instance();
         instance.Poll();
-        auto lf = instance.GetFriend(pending_whisper.charname.c_str());
+        const auto lf = instance.GetFriend(pending_whisper.charname.c_str());
         if (!(lf && lf->ValidUuid()))
             return;
         // This is a player that TB has added to friend list to find out who they're actually playing on.
