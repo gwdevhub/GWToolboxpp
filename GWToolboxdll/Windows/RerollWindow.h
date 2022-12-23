@@ -3,6 +3,12 @@
 #include "ToolboxWindow.h"
 #include <GWCA/GameEntities/Friendslist.h>
 
+namespace GW {
+    namespace Constants {
+        enum class MapID;
+    }
+}
+
 class RerollWindow : public ToolboxWindow {
     RerollWindow() = default;
     ~RerollWindow() {
@@ -77,7 +83,7 @@ private:
     uint32_t reroll_index_needed = 0;
     uint32_t reroll_index_current = 0xffffffdd;
     GW::FriendStatus online_status = GW::FriendStatus::Online;
-    GW::Constants::MapID map_id = GW::Constants::MapID::None;
+    GW::Constants::MapID map_id = (GW::Constants::MapID)0;
     int district_id = 0;
     int region_id = 0;
     int language_id = 0;
