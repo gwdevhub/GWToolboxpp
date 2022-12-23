@@ -57,16 +57,10 @@ namespace {
     std::vector<unsigned long> timestamp;
     std::queue<std::wstring> send_queue;
 
-    
-    
-    uint32_t last_hovered_item_id = 0;
-
     DWORD mapfile = 0;
-
     std::map<std::wstring, HallOfMonumentsAchievements*> target_achievements;
-
     clock_t send_timer = 0;
-
+    uint32_t last_hovered_item_id = 0;
     uint32_t quoted_item_id = 0;
 
     bool show_widgets = true;
@@ -90,7 +84,7 @@ namespace {
 
     bool EncInfoField(const char* label, const wchar_t* enc_string) {
         std::string info_string;
-        size_t size_reqd = enc_string ? (wcslen(enc_string) * 7) + 1 : 0;
+        const size_t size_reqd = enc_string ? (wcslen(enc_string) * 7) + 1 : 0;
         info_string.resize(size_reqd,0); // 7 chars = 0xFFFF plus a space
         size_t offset = 0;
         for (size_t i = 0; enc_string && enc_string[i] && offset < size_reqd - 1; i++) {
@@ -147,7 +141,7 @@ namespace {
         if (!(party && party->players.size() > 1))
             return; // Not in a party of more than 1 person
 
-        size_t my_index = GetPartyPlayerIndex(GW::PlayerMgr::GetPlayerNumber());
+        const size_t my_index = GetPartyPlayerIndex(GW::PlayerMgr::GetPlayerNumber());
         if (GetResignStatus(my_index) == Status::Resigned)
             return; // I've resigned
 
@@ -165,7 +159,7 @@ namespace {
         wchar_t* start = wcschr(encoded_string, 0x107);
         if (!start) return nullptr;
         start += 1;
-        wchar_t* end = wcschr(start, 0x1);
+        const wchar_t* end = wcschr(start, 0x1);
         if (!end) return nullptr;
         *string_argument_length = end - start;
         return start;
@@ -183,14 +177,14 @@ namespace {
 
         // Prepare the name
         size_t name_len = 0;
-        wchar_t* name_argument = GetStringArgument(pak->message,&name_len);
+        const wchar_t* name_argument = GetStringArgument(pak->message,&name_len);
         if (!name_argument)
             return;
         const std::wstring buf(name_argument, name_len);
         // set the right index in party
         for (size_t i = 0; i < partymembers.size() && i < resign_statuses.size();i++) {
             if (resign_statuses[i] == Status::Resigned) continue;
-            wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymembers[i].login_number);
+            const wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymembers[i].login_number);
             if (player_name && GuiUtils::SanitizePlayerName(player_name) == buf) {
                 resign_statuses[i] = Status::Resigned;
                 timestamp[i] = GW::Map::GetInstanceTime();
@@ -213,9 +207,9 @@ namespace {
         GW::PlayerPartyMemberArray& partymembers = info->players;
         if (!partymembers.valid())
             return;
-        size_t index_max = std::min<size_t>(resign_statuses.size(), partymembers.size());
+        const size_t index_max = std::min<size_t>(resign_statuses.size(), partymembers.size());
         for (size_t i = 0; i < index_max; ++i) {
-            GW::PlayerPartyMember& partymember = partymembers[i];
+            const GW::PlayerPartyMember& partymember = partymembers[i];
             wchar_t buffer[256];
             if (resign_statuses[i] != Status::Connected)
                 continue;
@@ -286,7 +280,7 @@ namespace {
                 target_achievements[achievements->character_name] = achievements;
                 HallOfMonumentsModule::AsyncGetAccountAchievements(achievements->character_name, achievements);
             }
-            auto hom_result = target_achievements[player->name];
+            const auto hom_result = target_achievements[player->name];
             if (ImGui::Button("Go to Hom Calculator")) {
                 hom_result->OpenInBrowser();
             }
@@ -322,7 +316,7 @@ namespace {
                 ImGui::Text("Mod Struct (identifier, arg1, arg2)");
                 char mod_struct_label[] = "###Mod Struct 1";
                 for (size_t i = 0; i < item->mod_struct_size; i++) {
-                    GW::ItemModifier* mod = &item->mod_struct[i];
+                    const GW::ItemModifier* mod = &item->mod_struct[i];
                     mod_struct_label[14] = static_cast<char>(i + 1) + '0';
                     InfoField(mod_struct_label, "0x%X (%d %d %d)", mod->mod, mod->identifier(), mod->arg1(), mod->arg2());
                 }
@@ -341,7 +335,7 @@ namespace {
             return;
         UNREFERENCED_PARAMETER(agent);
         const GW::AgentLiving* living = agent->GetAsAgentLiving();
-        bool is_player = agent->agent_id == GW::Agents::GetPlayerId();
+        const bool is_player = agent->agent_id == GW::Agents::GetPlayerId();
         const GW::AgentGadget* gadget = agent->GetAsAgentGadget();
         const GW::AgentItem* item = agent->GetAsAgentItem();
         GW::Item* item_actual = item ? GW::Items::GetItemById(item->item_id) : nullptr;
@@ -363,7 +357,7 @@ namespace {
         ImGui::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
         InfoField("X pos", "%.2f", agent->pos.x);
         InfoField("Y pos", "%.2f", agent->pos.y);
-        float speed = sqrtf(agent->move_x * agent->move_x + agent->move_y * agent->move_y);
+        const float speed = sqrtf(agent->move_x * agent->move_x + agent->move_y * agent->move_y);
         InfoField("Speed (Relative)", "%.2f (%.2f) ", speed, speed > 0.f ? speed / 288.0f : 0.f);
         if (living) {
             InfoField(living->IsPlayer() ? "Player ID" : "Model ID", "%d", living->player_number);
@@ -385,7 +379,7 @@ namespace {
                 InfoField("Addr", "%p", player);
                 InfoField("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
                 if (player->active_title_tier) {
-                    GW::TitleTier& tier = GW::GetGameContext()->world->title_tiers[player->active_title_tier];
+                    const GW::TitleTier& tier = GW::GetGameContext()->world->title_tiers[player->active_title_tier];
                     static GuiUtils::EncString title_enc_string;
                     title_enc_string.reset(tier.tier_name_enc);
                     InfoField("Current Title", "%s", title_enc_string.string().c_str());
@@ -408,7 +402,7 @@ namespace {
         if (is_player && ImGui::TreeNodeEx("Buffs", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             GW::BuffArray* effects = GW::Effects::GetAgentBuffs(agent->agent_id);
             if (effects) {
-                for (auto& effect : *effects) {
+                for (const auto& effect : *effects) {
                     ImGui::Text("id: %d", effect.skill_id);
                     if (effect.target_agent_id) {
                         ImGui::SameLine();
@@ -468,7 +462,7 @@ namespace {
                 InfoField("NPC Scale", "0x%X", npc->scale);
                 ImGui::PopID();
             }
-            GW::MapAgent* map_agent = GW::Agents::GetMapAgentByID(agent->agent_id);
+            const auto map_agent = GW::Agents::GetMapAgentByID(agent->agent_id);
             if (map_agent) {
                 InfoField("Map agent effects", "0x%X", map_agent->effects);
             }
@@ -486,7 +480,7 @@ namespace {
         if (!partymembers.valid())
             return;
         for (size_t i = 0; i < partymembers.size(); ++i) {
-            GW::PlayerPartyMember& partymember = partymembers[i];
+            const GW::PlayerPartyMember& partymember = partymembers[i];
             wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymember.login_number);
             if (!player_name)
                 continue;
@@ -514,8 +508,8 @@ namespace {
 }
 
 void InfoWindow::Terminate() {
-    for (const auto& a : target_achievements) {
-        delete a.second;
+    for (const auto& achievement : target_achievements | std::views::values) {
+        delete achievement;
     }
     target_achievements.clear();
 }
@@ -566,7 +560,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
 
         if (ImGui::CollapsingHeader("Camera")) {
-            GW::Camera* cam = GW::CameraMgr::GetCamera();
+            const GW::Camera* cam = GW::CameraMgr::GetCamera();
             if (cam != nullptr) {
                 InfoField("Position##cam_pos", "%.2f, %.2f, %.2f", cam->position.x, cam->position.y, cam->position.z);
                 InfoField("Target##cam_target", "%.2f, %.2f, %.2f", cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z);
@@ -658,7 +652,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         if (show_item && ImGui::CollapsingHeader("Hovered Item")) {
             static GuiUtils::EncString item_name;
             ImGui::PushID("hovered_item");
-            GW::Item* current = GW::Items::GetHoveredItem();
+            const GW::Item* current = GW::Items::GetHoveredItem();
             if (current) {
                 last_hovered_item_id = current->item_id;
             }
@@ -678,7 +672,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         #endif
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
-            GW::Quest* q = GW::PlayerMgr::GetActiveQuest();
+            const GW::Quest* q = GW::PlayerMgr::GetActiveQuest();
             if (q) {
                 ImGui::Text("ID: 0x%X", q->quest_id);
                 ImGui::Text("Marker: (%.0f, %.0f)", q->marker.x, q->marker.y);
@@ -691,16 +685,16 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             int spirit_count = 0;
             int compass_count = 0;
             GW::AgentArray* agents = GW::Agents::GetAgentArray();
-            GW::Agent* player = GW::Agents::GetPlayer();
+            const GW::Agent* player = GW::Agents::GetPlayer();
             if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
                 && agents
                 && player != nullptr) {
 
                 for (auto* a : *agents) {
-                    GW::AgentLiving* agent = a ? a->GetAsAgentLiving() : nullptr;
+                    const GW::AgentLiving* agent = a ? a->GetAsAgentLiving() : nullptr;
                     if (!(agent && agent->allegiance == GW::Constants::Allegiance::Enemy)) continue; // ignore non-hostiles
                     if (agent->GetIsDead()) continue; // ignore dead
-                    float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
+                    const float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
                     if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor
                         || agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
                         if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish

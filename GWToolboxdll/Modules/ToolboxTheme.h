@@ -25,8 +25,9 @@ public:
 
     void DrawSettingInternal() override;
 
-    CSimpleIni* GetLayoutIni();
-    CSimpleIni* GetThemeIni();
+    CSimpleIni* GetLayoutIni(bool reload = true);
+    CSimpleIni* GetThemeIni(bool reload = true);
+
 private:
     ImGuiStyle DefaultTheme();
 
@@ -35,5 +36,5 @@ private:
     bool layout_dirty = false;
 
     CSimpleIni* theme_ini = nullptr;
-    CSimpleIni* windows_ini = nullptr;
+    CSimpleIni* layout_ini = nullptr;
 };

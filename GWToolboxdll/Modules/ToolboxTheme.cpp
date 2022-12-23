@@ -10,11 +10,13 @@
 #define WindowPositionsFilename L"Layout.ini"
 #define IniSection "Theme"
 
-ToolboxTheme::ToolboxTheme() {
+ToolboxTheme::ToolboxTheme()
+{
     ini_style = DefaultTheme();
 }
 
-ImGuiStyle ToolboxTheme::DefaultTheme() {
+ImGuiStyle ToolboxTheme::DefaultTheme()
+{
     ImGuiStyle style = ImGuiStyle();
     style.WindowRounding = 6.0f;
     style.FrameRounding = 2.0f;
@@ -22,7 +24,7 @@ ImGuiStyle ToolboxTheme::DefaultTheme() {
     style.ScrollbarRounding = 4.0f;
     style.GrabMinSize = 17.0f;
     style.GrabRounding = 2.0f;
-    //fixme: rewrite the colors to remove the need for SwapRB
+    // fixme: rewrite the colors to remove the need for SwapRB
     style.Colors[ImGuiCol_WindowBg] = ImColor(0xD0000000);
     style.Colors[ImGuiCol_TitleBg] = ImColor(0xD7282828);
     style.Colors[ImGuiCol_TitleBgCollapsed] = ImColor(0x82282828);
@@ -42,17 +44,23 @@ ImGuiStyle ToolboxTheme::DefaultTheme() {
     return style;
 }
 
-void ToolboxTheme::Terminate() {
-    ToolboxModule::Terminate();
-    if (windows_ini) delete windows_ini;
-    if (theme_ini) delete theme_ini;
-    windows_ini = theme_ini = nullptr;
+void ToolboxTheme::Terminate()
+{
+    ToolboxUIElement::Terminate();
+    delete layout_ini;
+    delete theme_ini;
+    layout_ini = theme_ini = nullptr;
 }
 
-void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
+void ToolboxTheme::LoadSettings(CSimpleIni* ini)
+{
     ToolboxModule::LoadSettings(ini);
 
     const auto inifile = GetThemeIni();
+    if (!inifile) {
+        ini_style = DefaultTheme();
+        return;
+    }
 
     font_global_scale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", font_global_scale);
 
@@ -79,19 +87,20 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
     ini_style.ButtonTextAlign.y = (float)inifile->GetDoubleValue(IniSection, "ButtonTextAlignY", ini_style.ButtonTextAlign.y);
     for (int i = 0; i < ImGuiCol_COUNT; ++i) {
         const char* name = ImGui::GetStyleColorName(i);
-        Color color = Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i]));
+        const Color color = Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i]));
         ini_style.Colors[i] = ImColor(color);
     }
 
     layout_dirty = true;
 }
-void ToolboxTheme::SaveUILayout() {
+void ToolboxTheme::SaveUILayout()
+{
     if (!ImGui::GetCurrentContext())
         return;
-    CSimpleIni* ini = GetLayoutIni();
+    CSimpleIni* ini = GetLayoutIni(false);
     const char* window_ini_section = "Windows";
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
-    for (ImGuiWindow* window : windows) {
+    for (const ImGuiWindow* window : windows) {
         char key[128];
         snprintf(key, 128, "_%s_X", window->Name);
         ini->SetDoubleValue(window_ini_section, key, window->Pos.x);
@@ -104,39 +113,40 @@ void ToolboxTheme::SaveUILayout() {
         snprintf(key, 128, "_%s_Collapsed", window->Name);
         ini->SetBoolValue(window_ini_section, key, window->Collapsed);
     }
-    ASSERT(Resources::SaveIniToFile(WindowPositionsFilename,ini) == 0);
+    ASSERT(Resources::SaveIniToFile(WindowPositionsFilename, ini) == 0);
 }
-CSimpleIni* ToolboxTheme::GetLayoutIni() {
-    if(!windows_ini)
-        windows_ini = new CSimpleIni(false, false, false);
+CSimpleIni* ToolboxTheme::GetLayoutIni(const bool reload)
+{
     const auto path = Resources::GetPath(WindowPositionsFilename);
     if (!std::filesystem::exists(path)) {
         Log::LogW(L"File %s doesn't exist.", path.c_str());
-        return windows_ini;
+        return layout_ini;
     }
+    if (layout_ini && !reload)
+        return layout_ini;
     CSimpleIni* tmp = new CSimpleIni(false, false, false);
     ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
-    if (windows_ini)
-        delete windows_ini;
-    windows_ini = tmp;
-    return windows_ini;
+    delete layout_ini;
+    layout_ini = tmp;
+    return layout_ini;
 }
-CSimpleIni* ToolboxTheme::GetThemeIni() {
-    if(!theme_ini)
-        theme_ini = new CSimpleIni(false, false, false);
+CSimpleIni* ToolboxTheme::GetThemeIni(const bool reload)
+{
     const auto path = Resources::GetPath(IniFilename);
     if (!std::filesystem::exists(path)) {
         Log::LogW(L"File %s doesn't exist.", path.c_str());
         return theme_ini;
     }
+    if (theme_ini && !reload)
+        return theme_ini;
     CSimpleIni* tmp = new CSimpleIni(false, false, false);
     ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
-    if (theme_ini)
-        delete theme_ini;
+    delete theme_ini;
     theme_ini = tmp;
     return theme_ini;
 }
-void ToolboxTheme::LoadUILayout() {
+void ToolboxTheme::LoadUILayout()
+{
     if (!ImGui::GetCurrentContext())
         return;
     // Copy theme over
@@ -147,7 +157,8 @@ void ToolboxTheme::LoadUILayout() {
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     const char* window_ini_section = "Windows";
     for (ImGuiWindow* window : windows) {
-        if (!window) continue;
+        if (!window)
+            continue;
         ImVec2 pos = window->Pos;
         ImVec2 size = window->Size;
         char key[128];
@@ -160,7 +171,7 @@ void ToolboxTheme::LoadUILayout() {
         snprintf(key, 128, "_%s_H", window->Name);
         size.y = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, size.y));
         snprintf(key, 128, "_%s_Collapsed", window->Name);
-        bool collapsed = ini->GetBoolValue(window_ini_section, key, false);
+        const bool collapsed = ini->GetBoolValue(window_ini_section, key, false);
         ImGui::SetWindowPos(window, pos);
         ImGui::SetWindowSize(window, size);
         ImGui::SetWindowCollapsed(window, collapsed);
@@ -168,58 +179,56 @@ void ToolboxTheme::LoadUILayout() {
     layout_dirty = false;
 }
 
-void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
+void ToolboxTheme::SaveSettings(CSimpleIni* ini)
+{
     ToolboxModule::SaveSettings(ini);
 
     if (!ImGui::GetCurrentContext())
         return; // Imgui not initialised, can happen if destructing before first draw
 
-    ImGuiStyle& style = ImGui::GetStyle();
-    const auto inifile = GetThemeIni();
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const auto inifile = GetThemeIni(false);
 
     inifile->SetDoubleValue(IniSection, "FontGlobalScale", ImGui::GetIO().FontGlobalScale);
-    if (style.Alpha != ini_style.Alpha) inifile->SetDoubleValue(IniSection, "GlobalAlpha", style.Alpha);
-    if (style.WindowPadding.x != ini_style.WindowPadding.x) inifile->SetDoubleValue(IniSection, "WindowPaddingX", style.WindowPadding.x);
-    if (style.WindowPadding.y != ini_style.WindowPadding.y) inifile->SetDoubleValue(IniSection, "WindowPaddingY", style.WindowPadding.y);
-    if (style.WindowRounding != ini_style.WindowRounding) inifile->SetDoubleValue(IniSection, "WindowRounding", style.WindowRounding);
-    if (style.FramePadding.x != ini_style.FramePadding.x) inifile->SetDoubleValue(IniSection, "FramePaddingX", style.FramePadding.x);
-    if (style.FramePadding.y != ini_style.FramePadding.y) inifile->SetDoubleValue(IniSection, "FramePaddingY", style.FramePadding.y);
-    if (style.FrameRounding != ini_style.FrameRounding) inifile->SetDoubleValue(IniSection, "FrameRounding", style.FrameRounding);
-    if (style.ItemSpacing.x != ini_style.ItemSpacing.x) inifile->SetDoubleValue(IniSection, "ItemSpacingX", style.ItemSpacing.x);
-    if (style.ItemSpacing.y != ini_style.ItemSpacing.y) inifile->SetDoubleValue(IniSection, "ItemSpacingY", style.ItemSpacing.y);
-    if (style.ItemInnerSpacing.x != ini_style.ItemInnerSpacing.x) inifile->SetDoubleValue(IniSection, "ItemInnerSpacingX", style.ItemInnerSpacing.x);
-    if (style.ItemInnerSpacing.y != ini_style.ItemInnerSpacing.y) inifile->SetDoubleValue(IniSection, "ItemInnerSpacingY", style.ItemInnerSpacing.y);
-    if (style.IndentSpacing != ini_style.IndentSpacing) inifile->SetDoubleValue(IniSection, "IndentSpacing", style.IndentSpacing);
-    if (style.ScrollbarSize != ini_style.ScrollbarSize) inifile->SetDoubleValue(IniSection, "ScrollbarSize", style.ScrollbarSize);
-    if (style.ScrollbarRounding != ini_style.ScrollbarRounding) inifile->SetDoubleValue(IniSection, "ScrollbarRounding", style.ScrollbarRounding);
-    if (style.GrabMinSize != ini_style.GrabMinSize) inifile->SetDoubleValue(IniSection, "GrabMinSize", style.GrabMinSize);
-    if (style.GrabRounding != ini_style.GrabRounding) inifile->SetDoubleValue(IniSection, "GrabRounding", style.GrabRounding);
-    if (style.WindowTitleAlign.x != ini_style.WindowTitleAlign.x) inifile->SetDoubleValue(IniSection, "WindowTitleAlignX", style.WindowTitleAlign.x);
-    if (style.WindowTitleAlign.y != ini_style.WindowTitleAlign.y) inifile->SetDoubleValue(IniSection, "WindowTitleAlignY", style.WindowTitleAlign.y);
-    if (style.ButtonTextAlign.x != ini_style.ButtonTextAlign.x) inifile->SetDoubleValue(IniSection, "ButtonTextAlignX", style.ButtonTextAlign.x);
-    if (style.ButtonTextAlign.y != ini_style.ButtonTextAlign.y) inifile->SetDoubleValue(IniSection, "ButtonTextAlignY", style.ButtonTextAlign.y);
+    inifile->SetDoubleValue(IniSection, "GlobalAlpha", style.Alpha);
+    inifile->SetDoubleValue(IniSection, "WindowPaddingX", style.WindowPadding.x);
+    inifile->SetDoubleValue(IniSection, "WindowPaddingY", style.WindowPadding.y);
+    inifile->SetDoubleValue(IniSection, "WindowRounding", style.WindowRounding);
+    inifile->SetDoubleValue(IniSection, "FramePaddingX", style.FramePadding.x);
+    inifile->SetDoubleValue(IniSection, "FramePaddingY", style.FramePadding.y);
+    inifile->SetDoubleValue(IniSection, "FrameRounding", style.FrameRounding);
+    inifile->SetDoubleValue(IniSection, "ItemSpacingX", style.ItemSpacing.x);
+    inifile->SetDoubleValue(IniSection, "ItemSpacingY", style.ItemSpacing.y);
+    inifile->SetDoubleValue(IniSection, "ItemInnerSpacingX", style.ItemInnerSpacing.x);
+    inifile->SetDoubleValue(IniSection, "ItemInnerSpacingY", style.ItemInnerSpacing.y);
+    inifile->SetDoubleValue(IniSection, "IndentSpacing", style.IndentSpacing);
+    inifile->SetDoubleValue(IniSection, "ScrollbarSize", style.ScrollbarSize);
+    inifile->SetDoubleValue(IniSection, "ScrollbarRounding", style.ScrollbarRounding);
+    inifile->SetDoubleValue(IniSection, "GrabMinSize", style.GrabMinSize);
+    inifile->SetDoubleValue(IniSection, "GrabRounding", style.GrabRounding);
+    inifile->SetDoubleValue(IniSection, "WindowTitleAlignX", style.WindowTitleAlign.x);
+    inifile->SetDoubleValue(IniSection, "WindowTitleAlignY", style.WindowTitleAlign.y);
+    inifile->SetDoubleValue(IniSection, "ButtonTextAlignX", style.ButtonTextAlign.x);
+    inifile->SetDoubleValue(IniSection, "ButtonTextAlignY", style.ButtonTextAlign.y);
     for (int i = 0; i < ImGuiCol_COUNT; ++i) {
         const char* name = ImGui::GetStyleColorName(i);
-        Color cur = ImColor(style.Colors[i]);
-        if (cur != ImColor(ini_style.Colors[i])) {
-            Color color = ImColor(style.Colors[i]);
-            Colors::Save(inifile, IniSection, name, color);
-        }
+        const Color color = ImColor(style.Colors[i]);
+        Colors::Save(inifile, IniSection, name, color);
     }
 
-    ASSERT(Resources::SaveIniToFile(IniFilename,inifile) == 0);
-
-    ini_style = style;
+    ASSERT(Resources::SaveIniToFile(IniFilename, inifile) == 0);
 
     SaveUILayout();
 }
 
-void ToolboxTheme::Draw(IDirect3DDevice9*) {
+void ToolboxTheme::Draw(IDirect3DDevice9*)
+{
     if (layout_dirty)
         LoadUILayout();
 }
 
-void ToolboxTheme::DrawSettingInternal() {
+void ToolboxTheme::DrawSettingInternal()
+{
     ImGuiStyle& style = ImGui::GetStyle();
     if (ImGui::SmallButton("Restore Default")) {
         style = DefaultTheme();
@@ -227,8 +236,7 @@ void ToolboxTheme::DrawSettingInternal() {
     ImGui::Text("Note: window position/size is stored in 'Layout.ini' in settings folder. You can share the file or parts of it with other people.");
     ImGui::Text("Note: theme is stored in 'Theme.ini' in settings folder. You can share the file or parts of it with other people.");
     ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
-    if (style.Alpha > 1.0f) style.Alpha = 1.0f;
-    if (style.Alpha < .2f) style.Alpha = .2f;
+    style.Alpha = std::clamp(style.Alpha, 0.2f, 1.f);
     ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.1f");
     ImGui::Text("Sizes");
     ImGui::SliderFloat2("Window Padding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
@@ -249,14 +257,13 @@ void ToolboxTheme::DrawSettingInternal() {
     for (int i = 0; i < ImGuiCol_COUNT; ++i) {
         const char* name = ImGui::GetStyleColorName(i);
         ImGui::PushID(i);
-        ImGui::ColorEdit4(name, (float*)&style.Colors[i]);
-        Color cur = ImColor(style.Colors[i]);
+        ImGui::ColorEdit4(name, reinterpret_cast<float*>(&style.Colors[i]));
+        const Color cur = ImColor(style.Colors[i]);
         if (cur != ImColor(ini_style.Colors[i])) {
             ImGui::SameLine();
             if (ImGui::Button("Revert")) {
-
                 style.Colors[i] = ImColor(Colors::Load(GetThemeIni(), IniSection, name, ImColor(ini_style.Colors[i])));
-            } 
+            }
         }
         ImGui::PopID();
     }
