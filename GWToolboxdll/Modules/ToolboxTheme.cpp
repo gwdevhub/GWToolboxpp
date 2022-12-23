@@ -222,8 +222,7 @@ void ToolboxTheme::Draw(IDirect3DDevice9*) {
 void ToolboxTheme::DrawSettingInternal() {
     ImGuiStyle& style = ImGui::GetStyle();
     if (ImGui::SmallButton("Restore Default")) {
-        ini_style = DefaultTheme();
-        layout_dirty = true;
+        style = DefaultTheme();
     }
     ImGui::Text("Note: window position/size is stored in 'Layout.ini' in settings folder. You can share the file or parts of it with other people.");
     ImGui::Text("Note: theme is stored in 'Theme.ini' in settings folder. You can share the file or parts of it with other people.");
