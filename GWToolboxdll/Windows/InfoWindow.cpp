@@ -507,6 +507,10 @@ namespace {
             ImGui::PopID();
         }
     }
+
+    void DrawGameSettings() { 
+        ImGui::Checkbox("Show message in chat when you're the last player to resign", &show_last_to_resign_message);
+    }
 }
 
 void InfoWindow::Terminate() {
@@ -793,7 +797,7 @@ void InfoWindow::DrawSettingInternal() {
     ImGui::NextSpacedElement(); ImGui::Checkbox("Show Enemy Count", &show_mobcount);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Show Resign Log", &show_resignlog);
 
-    ImGui::Checkbox("Show message in chat when you're the last player to resign", &show_last_to_resign_message);
+
 }
 
 void InfoWindow::LoadSettings(CSimpleIni* ini) {
@@ -826,4 +830,16 @@ void InfoWindow::SaveSettings(CSimpleIni* ini) {
     SAVE_BOOL(show_resignlog);
 
     SAVE_BOOL(show_last_to_resign_message);
+}
+
+void InfoWindow::RegisterSettingsContent()
+{
+    ToolboxModule::RegisterSettingsContent();
+    ToolboxModule::RegisterSettingsContent(
+        "Game Settings", ICON_FA_GAMEPAD,
+        [this](const std::string&, bool is_showing) {
+            if (is_showing)
+                DrawGameSettings();
+        },
+        0.9f);
 }
