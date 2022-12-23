@@ -50,8 +50,8 @@ namespace CompletionWindow_Constants {
         L"\x8102\x4669\xAC2E\xFF9A\x29A4",        // Grasping mask
         L"\x8102\x5A95\xB979\xA70E\x1639",    // Imperial dragon mask
         L"\x8101\x66FE\xE888\xCFB3\x1F77",    // Lion mask
-        L"\x108\x107Mirthful Dragon Mask\x1", // Mirthful dragon mask
-        L"\x108\x107Sinister Dragon Mask\x1"  // Sinister dragon mask
+        L"\x8102\x7699\x94D7\xAEA5\x2431", // Mirthful dragon mask
+        L"\x8102\x6901\x8F3A\xC47B\x4E1A"  // Sinister dragon mask
     };
     constexpr size_t wintersday_index = 13;      // Index in the encoded_festival_hat_names array where wintersday hats start
     constexpr size_t dragon_festival_index = 31; // Index in the encoded_festival_hat_names array where wintersday hats start
