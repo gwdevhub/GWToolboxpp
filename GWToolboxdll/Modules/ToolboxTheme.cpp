@@ -10,6 +10,26 @@
 #define WindowPositionsFilename L"Layout.ini"
 #define IniSection "Theme"
 
+namespace {
+    CSimpleIni* LoadIni(CSimpleIni** out, const wchar_t* filename, const bool reload_from_disk = false) {
+        if (!*out) {
+            *out = new CSimpleIni(false, false, false);
+        }
+        if (!reload_from_disk)
+            return *out;
+        const auto path = Resources::GetPath(filename);
+        if (!std::filesystem::exists(path)) {
+            Log::LogW(L"File %s doesn't exist.", path.c_str());
+            return *out;
+        }
+        CSimpleIni* tmp = new CSimpleIni(false, false, false);
+        ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
+        delete* out;
+        *out = tmp;
+        return *out;
+    }
+}
+
 ToolboxTheme::ToolboxTheme()
 {
     ini_style = DefaultTheme();
@@ -117,33 +137,11 @@ void ToolboxTheme::SaveUILayout()
 }
 CSimpleIni* ToolboxTheme::GetLayoutIni(const bool reload)
 {
-    const auto path = Resources::GetPath(WindowPositionsFilename);
-    if (!std::filesystem::exists(path)) {
-        Log::LogW(L"File %s doesn't exist.", path.c_str());
-        return layout_ini;
-    }
-    if (layout_ini && !reload)
-        return layout_ini;
-    CSimpleIni* tmp = new CSimpleIni(false, false, false);
-    ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
-    delete layout_ini;
-    layout_ini = tmp;
-    return layout_ini;
+    return LoadIni(&layout_ini, WindowPositionsFilename, reload);
 }
 CSimpleIni* ToolboxTheme::GetThemeIni(const bool reload)
 {
-    const auto path = Resources::GetPath(IniFilename);
-    if (!std::filesystem::exists(path)) {
-        Log::LogW(L"File %s doesn't exist.", path.c_str());
-        return theme_ini;
-    }
-    if (theme_ini && !reload)
-        return theme_ini;
-    CSimpleIni* tmp = new CSimpleIni(false, false, false);
-    ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
-    delete theme_ini;
-    theme_ini = tmp;
-    return theme_ini;
+    return LoadIni(&theme_ini, IniFilename, reload);
 }
 void ToolboxTheme::LoadUILayout()
 {
