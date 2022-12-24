@@ -7,7 +7,7 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
-## Version 6.1
+## Version 6.2
 * [New] Added `/withdraw <quantity> <model_id1> [<model_id2 ...]` chat command
 * [New] Added options to hide skill descriptions on hover
 * [New] Added /fps command
@@ -45,7 +45,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [QoL] Fixed GW bug preventing reconnect dialog when re-running GW using the -charname parameter ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
 * [QoL] Removed requirement for the -charname parameter to auto login ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.1_Release/GWToolboxdll.dll)
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.2_Release/GWToolboxdll.dll)
 
 ## Version 6.0
 * [New] GWToolbox no longer requires installation, you can immediately execute the exe or inject the dll manually
