@@ -36,7 +36,7 @@ namespace CompletionWindow_Constants {
         L"\x2481\x821F\xD73C\x4CD2",       // Horns of Grenth
         L"\x8102\x34F1\xDF5B\xCBEB\x51B3",         // Ice crown
         L"\x8102\x5EA2\xF571\xCFCB\x35A6", // Ice shard crest
-        L"\x8101\x60FE\xDE91\x9A0C\x158B ",       // Jesters cap
+        L"\x8101\x60FE\xDE91\x9A0C\x158B",       // Jesters cap
         L"\x8102\x34F4\xB9A7\x8ED1\x23ED",         // Rudi mask
         L"\x8102\x5EA3\xBF84\xA60F\xC33",  // Snow crystal crest
         L"\x8103\x1E9\xDD16\x9987\x490C",  // Stylish black scarf
@@ -47,11 +47,13 @@ namespace CompletionWindow_Constants {
         L"\x2482\x81E2\xEE52\x471F",       // Yule cap
         // Dragon Festival
         L"\x8102\x216A\xF512\xCE87\x46F",     // Demon mask
+        L"\x8101\x151F\x918F\xB47E\x36CA",  // Dragon mask
         L"\x8102\x4669\xAC2E\xFF9A\x29A4",        // Grasping mask
         L"\x8102\x5A95\xB979\xA70E\x1639",    // Imperial dragon mask
         L"\x8101\x66FE\xE888\xCFB3\x1F77",    // Lion mask
         L"\x8102\x7699\x94D7\xAEA5\x2431", // Mirthful dragon mask
-        L"\x8102\x6901\x8F3A\xC47B\x4E1A"  // Sinister dragon mask
+        L"\x8102\x6901\x8F3A\xC47B\x4E1A",  // Sinister dragon mask
+        L"\x8101\x3DE\xE3E9\xAFAA\x152"  // Tengu mask
     };
     constexpr size_t wintersday_index = 13;      // Index in the encoded_festival_hat_names array where wintersday hats start
     constexpr size_t dragon_festival_index = 31; // Index in the encoded_festival_hat_names array where wintersday hats start
