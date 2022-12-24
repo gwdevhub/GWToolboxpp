@@ -30,6 +30,7 @@ endif()
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy)
 target_compile_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GL>)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:RelWithDebInfo>:/ZI>)
 
 set_target_properties(GWToolboxdll PROPERTIES
     VS_GLOBAL_RunCodeAnalysis false
