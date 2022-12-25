@@ -25,6 +25,7 @@
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <hidusage.h>
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -55,6 +56,15 @@ namespace {
         gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
         OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
         Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
+        
+        // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
+        static RAWINPUTDEVICE rid;
+        rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
+        rid.usUsage = HID_USAGE_GENERIC_MOUSE;
+        rid.dwFlags = RIDEV_INPUTSINK;
+        rid.hwndTarget = gw_window_handle;
+        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+
         event_handler_attached = true;
         return true;
     }

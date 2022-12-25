@@ -165,13 +165,6 @@ namespace {
 
         ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
 
-        // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
-        static RAWINPUTDEVICE rid;
-        rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
-        rid.usUsage = HID_USAGE_GENERIC_MOUSE;
-        rid.dwFlags = RIDEV_INPUTSINK;
-        rid.hwndTarget = hwnd;
-        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
         return true;
     }
 
