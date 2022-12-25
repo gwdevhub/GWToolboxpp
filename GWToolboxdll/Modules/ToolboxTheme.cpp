@@ -11,9 +11,10 @@
 #define IniSection "Theme"
 
 namespace {
-    CSimpleIni* LoadIni(CSimpleIni** out, const wchar_t* filename, const bool reload_from_disk = false) {
+    CSimpleIni* LoadIni(CSimpleIni** out, const wchar_t* filename, bool reload_from_disk = false) {
         if (!*out) {
             *out = new CSimpleIni(false, false, false);
+            reload_from_disk = true;
         }
         if (!reload_from_disk)
             return *out;
