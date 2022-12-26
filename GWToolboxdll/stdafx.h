@@ -65,7 +65,8 @@
 // libraries
 #include <Logger.h>
 #include <discord_game_sdk.h>
-#include <SimpleIni.h>
+#include <ToolboxIni.h>
+
 #include <nlohmann/json.hpp>
 #include <easywsclient.hpp>
 #include <mp3.h>
@@ -76,7 +77,6 @@
 #include <imgui_internal.h>
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx9.h"
-
 
 #pragma warning(pop)
 

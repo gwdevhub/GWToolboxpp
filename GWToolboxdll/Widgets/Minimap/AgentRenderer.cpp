@@ -42,7 +42,7 @@ AgentRenderer* AgentRenderer::instance = 0;
 
 unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 
-void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+void AgentRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
     auto Name = [section]() {
         return section;
     };
@@ -92,16 +92,16 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 }
 
 void AgentRenderer::LoadCustomAgents() {
-    if (agentcolorinifile == nullptr) agentcolorinifile = new CSimpleIni();
+    if (agentcolorinifile == nullptr) agentcolorinifile = new ToolboxIni();
     agentcolorinifile->LoadFile(Resources::GetPath(AGENTCOLOR_INIFILENAME).c_str());
 
     custom_agents.clear();
     custom_agents_map.clear();
 
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     agentcolorinifile->GetAllSections(entries);
 
-    for (const CSimpleIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         // we know that all sections are agent colors, don't even check the section names
         auto* customAgent = new CustomAgent(agentcolorinifile, entry.pItem);
         customAgent->index = custom_agents.size();
@@ -111,7 +111,7 @@ void AgentRenderer::LoadCustomAgents() {
     agentcolors_changed = false;
 }
 
-void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const {
     auto Name = [section]() {
         return section;
     };
@@ -929,7 +929,7 @@ void AgentRenderer::BuildCustomAgentsMap() {
     }
 }
 
-AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
+AgentRenderer::CustomAgent::CustomAgent(ToolboxIni* ini, const char* section)
     : ui_id(++cur_ui_id) {
 
     active = ini->GetBoolValue(section, VAR_NAME(active), active);
@@ -962,7 +962,7 @@ AgentRenderer::CustomAgent::CustomAgent(DWORD _modelId, Color _color, const char
     active = true;
 }
 
-void AgentRenderer::CustomAgent::SaveSettings(CSimpleIni* ini, const char* section) const {
+void AgentRenderer::CustomAgent::SaveSettings(ToolboxIni* ini, const char* section) const {
     ini->SetBoolValue(section, VAR_NAME(active), active);
     ini->SetValue(section, VAR_NAME(name), name);
     ini->SetLongValue(section, VAR_NAME(modelId), static_cast<long>(modelId));

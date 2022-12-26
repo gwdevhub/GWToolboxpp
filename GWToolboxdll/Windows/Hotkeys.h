@@ -32,7 +32,7 @@ public:
     static WORD* key_out;
     static DWORD* mod_out;
 
-    static TBHotkey* HotkeyFactory(CSimpleIni* ini, const char* section);
+    static TBHotkey* HotkeyFactory(ToolboxIni* ini, const char* section);
     static void HotkeySelector(WORD* key, DWORD* modifier = nullptr);
 
     char group[128] = "";
@@ -60,7 +60,7 @@ public:
     long modifier = 0;
 
     // Create hotkey, load from file if 'ini' is not null
-    TBHotkey(CSimpleIni* ini, const char* section);
+    TBHotkey(ToolboxIni* ini, const char* section);
     virtual ~TBHotkey() = default;
 
     virtual bool CanUse();
@@ -71,7 +71,7 @@ public:
     virtual bool IsValid(const char* _player_name, GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, bool is_pvp_character);
 
 
-    virtual void Save(CSimpleIni* ini, const char* section) const;
+    virtual void Save(ToolboxIni* ini, const char* section) const;
 
     bool Draw(Op* op);
 
@@ -105,9 +105,9 @@ public:
     inline static const char* IniSection() { return "SendChat"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeySendChat(CSimpleIni* ini, const char* section);
+    HotkeySendChat(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -156,9 +156,9 @@ public:
     static const char* IniSection() { return "EquipItem"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyEquipItem(CSimpleIni* ini, const char* section);
+    HotkeyEquipItem(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char* buf, size_t bufsz) override;
@@ -179,9 +179,9 @@ public:
     static const char* IniSection() { return "UseItem"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyUseItem(CSimpleIni* ini, const char* section);
+    HotkeyUseItem(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool CanUse() override { return TBHotkey::CanUse() && item_id != 0; }
 
@@ -208,9 +208,9 @@ public:
     static const char* IniSection() { return "DropUseBuff"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyDropUseBuff(CSimpleIni* ini, const char* section);
+    HotkeyDropUseBuff(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -230,13 +230,13 @@ class HotkeyToggle : public TBHotkey {
 
 
 public:
-    static bool IsValid(CSimpleIni *ini, const char *section);
+    static bool IsValid(ToolboxIni *ini, const char *section);
     static const char* IniSection() { return "Toggle"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyToggle(CSimpleIni* ini, const char* section);
+    HotkeyToggle(ToolboxIni* ini, const char* section);
     ~HotkeyToggle();
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -271,9 +271,9 @@ public:
     static const char* IniSection() { return "Action"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyAction(CSimpleIni* ini, const char* section);
+    HotkeyAction(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -300,9 +300,9 @@ public:
     static const char* IniSection() { return "Target"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyTarget(CSimpleIni* ini, const char* section);
+    HotkeyTarget(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -321,9 +321,9 @@ public:
     static const char* IniSection() { return "Move"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyMove(CSimpleIni* ini, const char* section);
+    HotkeyMove(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -338,9 +338,9 @@ public:
     static const char* IniSection() { return "Dialog"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyDialog(CSimpleIni* ini, const char* section);
+    HotkeyDialog(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -356,9 +356,9 @@ public:
     static const char* IniSection() { return "PingBuild"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyPingBuild(CSimpleIni* ini, const char* section);
+    HotkeyPingBuild(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -374,9 +374,9 @@ public:
     static const char* IniSection() { return "HeroTeamBuild"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyHeroTeamBuild(CSimpleIni* ini, const char* section);
+    HotkeyHeroTeamBuild(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -399,9 +399,9 @@ public:
         return IniSection();
     }
 
-    HotkeyFlagHero(CSimpleIni *ini, const char *section);
+    HotkeyFlagHero(ToolboxIni *ini, const char *section);
 
-    void Save(CSimpleIni *ini, const char *section) const override;
+    void Save(ToolboxIni *ini, const char *section) const override;
 
     bool Draw() override;
     int Description(char *buf, size_t bufsz) override;
@@ -418,9 +418,9 @@ public:
     static const char* IniSection() { return "GWHotkey"; }
     const char* Name() const override { return IniSection(); }
 
-    HotkeyGWKey(CSimpleIni* ini, const char* section);
+    HotkeyGWKey(ToolboxIni* ini, const char* section);
 
-    void Save(CSimpleIni* ini, const char* section) const override;
+    void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
     int Description(char* buf, size_t bufsz) override;

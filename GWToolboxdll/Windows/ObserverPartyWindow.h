@@ -25,8 +25,8 @@ public:
     void DrawParty(float& offset, const ObserverModule::ObservableParty& party);
     void DrawHeaders(const size_t party_count);
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
 
 
@@ -58,6 +58,6 @@ protected:
 
 private:
     // ini
-    CSimpleIni* inifile = nullptr;
+    ToolboxIni* inifile = nullptr;
 };
 

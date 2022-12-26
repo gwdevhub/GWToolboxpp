@@ -552,13 +552,13 @@ void ChatCommands::DrawSettingInternal() {
 
 }
 
-void ChatCommands::LoadSettings(CSimpleIni* ini) {
+void ChatCommands::LoadSettings(ToolboxIni* ini) {
     forward_fix_z = ini->GetBoolValue(Name(), VAR_NAME(forward_fix_z), forward_fix_z);
     cam_speed = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(cam_speed), DEFAULT_CAM_SPEED));
     default_title_id = ini->GetLongValue(Name(), VAR_NAME(default_title_id), default_title_id);
 }
 
-void ChatCommands::SaveSettings(CSimpleIni* ini) {
+void ChatCommands::SaveSettings(ToolboxIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(forward_fix_z), forward_fix_z);
     ini->SetDoubleValue(Name(), VAR_NAME(cam_speed), cam_speed);
     ini->SetLongValue(Name(), VAR_NAME(default_title_id), default_title_id);

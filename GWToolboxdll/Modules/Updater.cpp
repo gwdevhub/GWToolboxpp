@@ -7,7 +7,7 @@
 #include <Modules/Resources.h>
 #include <Modules/Updater.h>
 
-void Updater::LoadSettings(CSimpleIni* ini) {
+void Updater::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
 #ifdef _DEBUG
     mode = (Mode)0;
@@ -17,7 +17,7 @@ void Updater::LoadSettings(CSimpleIni* ini) {
     CheckForUpdate();
 }
 
-void Updater::SaveSettings(CSimpleIni* ini) {
+void Updater::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
 #ifdef _DEBUG
     return;

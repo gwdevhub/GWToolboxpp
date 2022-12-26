@@ -30,6 +30,6 @@ public:
     void Update(float delta) override;
 
     void DrawSettingInternal() override;
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
 };

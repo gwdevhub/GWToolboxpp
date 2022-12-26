@@ -483,7 +483,7 @@ void Minimap::DrawSettingInternal()
     ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
 }
 
-void Minimap::LoadSettings(CSimpleIni *ini)
+void Minimap::LoadSettings(ToolboxIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
     Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"),
@@ -524,7 +524,7 @@ void Minimap::LoadSettings(CSimpleIni *ini)
     effect_renderer.LoadSettings(ini, Name());
 }
 
-void Minimap::SaveSettings(CSimpleIni *ini)
+void Minimap::SaveSettings(ToolboxIni *ini)
 {
     ToolboxWidget::SaveSettings(ini);
     ini->SetDoubleValue(Name(), VAR_NAME(scale), scale);

@@ -183,7 +183,7 @@ void ChatLog::Save() {
     if (!enabled || account.empty())
         return;
     // Received log FIFO
-    CSimpleIni* inifile = new CSimpleIni(false, false, false);
+    ToolboxIni* inifile = new ToolboxIni(false, false, false);
     std::string msg_buf;
     char addr_buf[8];
     TBChatMessage* recv = recv_first;
@@ -211,7 +211,7 @@ void ChatLog::Save() {
     delete inifile;
 
     // Sent log FIFO
-    inifile = new CSimpleIni(false, false, false);
+    inifile = new ToolboxIni(false, false, false);
     TBSentMessage* sent = sent_first;
     i = 0;
     while (sent) {
@@ -226,13 +226,13 @@ void ChatLog::Save() {
     inifile->SaveFile(LogPath(L"sent").c_str());
     delete inifile;
 }
-void ChatLog::SaveSettings(CSimpleIni* ini) {
+void ChatLog::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     Save();
     ini->SetBoolValue(Name(), VAR_NAME(enabled), enabled);
 
 }
-void ChatLog::LoadSettings(CSimpleIni* ini) {
+void ChatLog::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     Save();
     enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);
@@ -248,15 +248,15 @@ void ChatLog::Load(const std::wstring& _account) {
     Reset();
     // Recv log FIFO
     account = _account;
-    CSimpleIni* inifile = new CSimpleIni(false, false, false);
+    ToolboxIni* inifile = new ToolboxIni(false, false, false);
     ASSERT(Resources::LoadIniFromFile(LogPath(L"recv"), inifile) == 0);
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
     std::wstring buf;
     FILETIME t;
     uint32_t channel = 0;
     uint32_t addr = 0;
-    for (CSimpleIni::Entry& entry : entries) {
+    for (ToolboxIni::Entry& entry : entries) {
         std::string message = inifile->GetValue(entry.pItem, "message", "");
         if (message.empty())
             continue;
@@ -271,11 +271,11 @@ void ChatLog::Load(const std::wstring& _account) {
     delete inifile;
 
     // sent log FIFO
-    inifile = new CSimpleIni(false, false, false);
+    inifile = new ToolboxIni(false, false, false);
     ASSERT(Resources::LoadIniFromFile(LogPath(L"sent"), inifile) == 0);
     entries.clear();
     inifile->GetAllSections(entries);
-    for (CSimpleIni::Entry& entry : entries) {
+    for (ToolboxIni::Entry& entry : entries) {
         std::string message = inifile->GetValue(entry.pItem, "message", "");
         if (message.empty())
             continue;

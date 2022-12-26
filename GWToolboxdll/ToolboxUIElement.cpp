@@ -25,13 +25,13 @@ void ToolboxUIElement::Terminate() {
     button_texture = nullptr;
 }
 
-void ToolboxUIElement::LoadSettings(CSimpleIni* ini) {
+void ToolboxUIElement::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(visible);
     LOAD_BOOL(show_menubutton);
 }
 
-void ToolboxUIElement::SaveSettings(CSimpleIni* ini) {
+void ToolboxUIElement::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(visible);
     SAVE_BOOL(show_menubutton);

@@ -41,13 +41,13 @@ void ClockWidget::Draw(IDirect3DDevice9* pDevice) {
     ImGui::PopStyleColor();
 }
 
-void ClockWidget::LoadSettings(CSimpleIni* ini) {
+void ClockWidget::LoadSettings(ToolboxIni* ini) {
     ToolboxWidget::LoadSettings(ini);
     use_24h_clock = ini->GetBoolValue(Name(), VAR_NAME(use_24h_clock), use_24h_clock);
     show_seconds = ini->GetBoolValue(Name(), VAR_NAME(show_seconds), show_seconds);
 }
 
-void ClockWidget::SaveSettings(CSimpleIni* ini) {
+void ClockWidget::SaveSettings(ToolboxIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(use_24h_clock), use_24h_clock);
     ini->SetBoolValue(Name(), VAR_NAME(show_seconds), show_seconds);

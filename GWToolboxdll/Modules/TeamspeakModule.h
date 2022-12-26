@@ -28,8 +28,8 @@ public:
 
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void LoadSettings(CSimpleIni* ini);
-    void SaveSettings(CSimpleIni* ini);
+    void LoadSettings(ToolboxIni* ini);
+    void SaveSettings(ToolboxIni* ini);
 
     struct PluginRelease {
         std::string body;

@@ -513,7 +513,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     ImGui::PopStyleVar(2);
 }
 
-void EffectsMonitorWidget::LoadSettings(CSimpleIni* ini)
+void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
 
@@ -528,7 +528,7 @@ void EffectsMonitorWidget::LoadSettings(CSimpleIni* ini)
     color_background = Colors::Load(ini, Name(), VAR_NAME(color_background), color_background);
 }
 
-void EffectsMonitorWidget::SaveSettings(CSimpleIni* ini)
+void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
 

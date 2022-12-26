@@ -254,14 +254,14 @@ void HintsModule::DrawSettingInternal() {
             hints_shown.clear();
     }
 }
-void HintsModule::SaveSettings(CSimpleIni* ini) {
+void HintsModule::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     std::string ini_str;
     ini->SetBoolValue(Name(), VAR_NAME(only_show_hints_once), only_show_hints_once);
     ASSERT(GuiUtils::ArrayToIni(hints_shown.data(), hints_shown.size(), &ini_str));
     ini->SetValue(Name(), VAR_NAME(hints_shown), ini_str.c_str());
 }
-void HintsModule::LoadSettings(CSimpleIni* ini) {
+void HintsModule::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     only_show_hints_once = ini->GetBoolValue(Name(), VAR_NAME(only_show_hints_once), only_show_hints_once);
     std::string ini_str = ini->GetValue(Name(), VAR_NAME(hints_shown), "");

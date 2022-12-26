@@ -16,8 +16,8 @@ public:
     void Update(float) override;
     void Terminate() override;
     void DrawSettingInternal() override;
-    void SaveSettings(CSimpleIni* ini) override;
-    void LoadSettings(CSimpleIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
 
     static void Obfuscate(bool obfuscate);
 };

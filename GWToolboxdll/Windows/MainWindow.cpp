@@ -5,7 +5,7 @@
 
 #include <Windows/MainWindow.h>
 
-void MainWindow::LoadSettings(CSimpleIni* ini) {
+void MainWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     one_panel_at_time_only = ini->GetBoolValue(Name(), VAR_NAME(one_panel_at_time_only), one_panel_at_time_only);
     show_icons = ini->GetBoolValue(Name(), VAR_NAME(show_icons), show_icons);
@@ -14,7 +14,7 @@ void MainWindow::LoadSettings(CSimpleIni* ini) {
     pending_refresh_buttons = true;
 }
 
-void MainWindow::SaveSettings(CSimpleIni* ini) {
+void MainWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(one_panel_at_time_only), one_panel_at_time_only);
     ini->SetBoolValue(Name(), VAR_NAME(show_icons), show_icons);

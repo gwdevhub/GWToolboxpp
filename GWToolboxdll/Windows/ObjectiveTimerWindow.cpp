@@ -868,7 +868,7 @@ void ObjectiveTimerWindow::DrawSettingInternal()
     ComputeNColumns();
 }
 
-void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini)
+void ObjectiveTimerWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
     show_decimal = ini->GetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
@@ -884,7 +884,7 @@ void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini)
     ComputeNColumns();
     LoadRuns();
 }
-void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini)
+void ObjectiveTimerWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);

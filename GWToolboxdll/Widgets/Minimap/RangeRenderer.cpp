@@ -16,7 +16,7 @@
 
 #include "Minimap.h"
 
-void RangeRenderer::LoadSettings(CSimpleIni *ini, const char *section)
+void RangeRenderer::LoadSettings(ToolboxIni *ini, const char *section)
 {
     LoadDefaults();
     color_range_hos = Colors::Load(ini, section, "color_range_hos", color_range_hos);
@@ -42,7 +42,7 @@ void RangeRenderer::LoadDefaults() {
     line_thickness = 1.f;
     Invalidate();
 }
-void RangeRenderer::SaveSettings(CSimpleIni *ini, const char *section) const
+void RangeRenderer::SaveSettings(ToolboxIni *ini, const char *section) const
 {
     Colors::Save(ini, section, "color_range_hos", color_range_hos);
     Colors::Save(ini, section, "color_range_aggro", color_range_aggro);

@@ -44,8 +44,8 @@ public:
 
     void Update(float delta) override;
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
     static int RegionFromDistrict(GW::Constants::District district);
     static int LanguageFromDistrict(GW::Constants::District district);

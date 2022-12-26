@@ -866,11 +866,11 @@ void Obfuscator::Update(float) {
         pending_guild_obfuscate = false;
     }
 }
-void Obfuscator::SaveSettings(CSimpleIni* ini) {
+void Obfuscator::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled);
 }
-void Obfuscator::LoadSettings(CSimpleIni* ini) {
+void Obfuscator::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
 
     if (ini->GetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled)) {

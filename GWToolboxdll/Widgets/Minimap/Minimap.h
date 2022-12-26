@@ -73,8 +73,8 @@ public:
     static void OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv);
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void LoadSettings(CSimpleIni *ini) override;
-    void SaveSettings(CSimpleIni *ini) override;
+    void LoadSettings(ToolboxIni *ini) override;
+    void SaveSettings(ToolboxIni *ini) override;
     void DrawSettingInternal() override;
 
     float GetMapRotation() const;

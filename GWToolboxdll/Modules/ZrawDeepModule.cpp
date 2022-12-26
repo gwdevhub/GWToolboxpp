@@ -237,7 +237,7 @@ void ZrawDeepModule::SignalTerminate() {
     terminating = true;
     SetEnabled(false);
 }
-void ZrawDeepModule::SaveSettings(CSimpleIni* ini) {
+void ZrawDeepModule::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(enabled), enabled);
@@ -245,7 +245,7 @@ void ZrawDeepModule::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(rewrite_npc_dialogs), rewrite_npc_dialogs);
     ini->SetBoolValue(Name(), VAR_NAME(kanaxais_true_form), kanaxais_true_form);
 }
-void ZrawDeepModule::LoadSettings(CSimpleIni* ini) {
+void ZrawDeepModule::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
 
     enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);

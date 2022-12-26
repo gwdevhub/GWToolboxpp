@@ -210,7 +210,7 @@ void SkillMonitorWidget::Update(float delta) {
     }
 }
 
-void SkillMonitorWidget::LoadSettings(CSimpleIni* ini) {
+void SkillMonitorWidget::LoadSettings(ToolboxIni* ini) {
     ToolboxWidget::LoadSettings(ini);
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     show_non_party_members = ini->GetBoolValue(Name(), VAR_NAME(show_non_party_members), show_non_party_members);
@@ -234,7 +234,7 @@ void SkillMonitorWidget::LoadSettings(CSimpleIni* ini) {
     history_timeout = ini->GetLongValue(Name(), VAR_NAME(history_timeout), history_timeout);
 }
 
-void SkillMonitorWidget::SaveSettings(CSimpleIni* ini) {
+void SkillMonitorWidget::SaveSettings(ToolboxIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(show_non_party_members), show_non_party_members);

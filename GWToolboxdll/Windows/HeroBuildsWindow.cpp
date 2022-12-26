@@ -606,7 +606,7 @@ void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, int argc, LPWSTR* argv) 
     Instance().Load(tbuild);
 }
 
-void HeroBuildsWindow::LoadSettings(CSimpleIni* ini) {
+void HeroBuildsWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
     one_teambuild_at_a_time = ini->GetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
@@ -619,7 +619,7 @@ void HeroBuildsWindow::DrawSettingInternal() {
     ImGui::ShowHelp("Close other teambuild windows when you open a new one");
 }
 
-void HeroBuildsWindow::SaveSettings(CSimpleIni* ini) {
+void HeroBuildsWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
     ini->SetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
@@ -633,9 +633,9 @@ void HeroBuildsWindow::LoadFromFile() {
     inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
 
     // then load
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
-    for (CSimpleIni::Entry& entry : entries) {
+    for (ToolboxIni::Entry& entry : entries) {
         const char* section = entry.pItem;
 
         TeamHeroBuild tb(inifile->GetValue(section, "buildname", ""));

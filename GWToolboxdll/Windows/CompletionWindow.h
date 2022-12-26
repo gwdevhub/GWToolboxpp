@@ -311,8 +311,8 @@ public:
     CharacterCompletion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
 
     void DrawSettingInternal() override;
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     // Check explicitly rather than every frame
     CompletionWindow* CheckProgress(bool fetch_hom = false);
 

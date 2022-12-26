@@ -431,7 +431,7 @@ void HotkeysWindow::DrawSettingInternal() {
     ImGui::Checkbox("Show 'Run' button in header", &TBHotkey::show_run_in_header);
 }
 
-void HotkeysWindow::LoadSettings(CSimpleIni* ini) {
+void HotkeysWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
@@ -445,25 +445,25 @@ void HotkeysWindow::LoadSettings(CSimpleIni* ini) {
     hotkeys.clear();
 
     // then load again
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     ini->GetAllSections(entries);
-    for (CSimpleIni::Entry& entry : entries) {
+    for (ToolboxIni::Entry& entry : entries) {
         TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
         if (hk) hotkeys.push_back(hk);
     }
     CheckSetValidHotkeys();
     TBHotkey::hotkeys_changed = false;
 }
-void HotkeysWindow::SaveSettings(CSimpleIni* ini) {
+void HotkeysWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), "show_active_in_header", TBHotkey::show_active_in_header);
     ini->SetBoolValue(Name(), "show_run_in_header", TBHotkey::show_run_in_header);
 
     if (TBHotkey::hotkeys_changed) {
         // clear hotkeys from ini
-        CSimpleIni::TNamesDepend entries;
+        ToolboxIni::TNamesDepend entries;
         ini->GetAllSections(entries);
-        for (CSimpleIni::Entry& entry : entries) {
+        for (ToolboxIni::Entry& entry : entries) {
             if (strncmp(entry.pItem, "hotkey-", 7) == 0) {
                 ini->Delete(entry.pItem, nullptr);
             }

@@ -7,7 +7,7 @@ public:
     const bool IsWidget() const override { return true; }
     const char* TypeName() const override { return "widget"; }
 
-    void LoadSettings(CSimpleIni* ini) override {
+    void LoadSettings(ToolboxIni* ini) override {
         ToolboxUIElement::LoadSettings(ini);
         lock_move = true;
         lock_size = true;

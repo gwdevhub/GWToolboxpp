@@ -11,9 +11,9 @@
 #define IniSection "Theme"
 
 namespace {
-    CSimpleIni* LoadIni(CSimpleIni** out, const wchar_t* filename, bool reload_from_disk = false) {
+    ToolboxIni* LoadIni(ToolboxIni** out, const wchar_t* filename, bool reload_from_disk = false) {
         if (!*out) {
-            *out = new CSimpleIni(false, false, false);
+            *out = new ToolboxIni(false, false, false);
             reload_from_disk = true;
         }
         if (!reload_from_disk)
@@ -23,7 +23,7 @@ namespace {
             Log::LogW(L"File %s doesn't exist.", path.c_str());
             return *out;
         }
-        CSimpleIni* tmp = new CSimpleIni(false, false, false);
+        ToolboxIni* tmp = new ToolboxIni(false, false, false);
         ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
         delete* out;
         *out = tmp;
@@ -73,7 +73,7 @@ void ToolboxTheme::Terminate()
     layout_ini = theme_ini = nullptr;
 }
 
-void ToolboxTheme::LoadSettings(CSimpleIni* ini)
+void ToolboxTheme::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
@@ -118,7 +118,7 @@ void ToolboxTheme::SaveUILayout()
 {
     if (!ImGui::GetCurrentContext())
         return;
-    CSimpleIni* ini = GetLayoutIni(false);
+    auto ini = GetLayoutIni(false);
     const char* window_ini_section = "Windows";
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     for (const ImGuiWindow* window : windows) {
@@ -136,11 +136,11 @@ void ToolboxTheme::SaveUILayout()
     }
     ASSERT(Resources::SaveIniToFile(WindowPositionsFilename, ini) == 0);
 }
-CSimpleIni* ToolboxTheme::GetLayoutIni(const bool reload)
+ToolboxIni* ToolboxTheme::GetLayoutIni(const bool reload)
 {
     return LoadIni(&layout_ini, WindowPositionsFilename, reload);
 }
-CSimpleIni* ToolboxTheme::GetThemeIni(const bool reload)
+ToolboxIni* ToolboxTheme::GetThemeIni(const bool reload)
 {
     return LoadIni(&theme_ini, IniFilename, reload);
 }
@@ -152,7 +152,7 @@ void ToolboxTheme::LoadUILayout()
     ImGui::GetStyle() = ini_style;
     // Copy window positions over
     ImGui::GetIO().FontGlobalScale = font_global_scale;
-    CSimpleIni* ini = GetLayoutIni();
+    ToolboxIni* ini = GetLayoutIni();
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     const char* window_ini_section = "Windows";
     for (ImGuiWindow* window : windows) {
@@ -178,7 +178,7 @@ void ToolboxTheme::LoadUILayout()
     layout_dirty = false;
 }
 
-void ToolboxTheme::SaveSettings(CSimpleIni* ini)
+void ToolboxTheme::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
 

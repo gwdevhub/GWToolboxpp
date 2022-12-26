@@ -350,7 +350,7 @@ bool ItemFilter::CanTerminate()
     return suppressed_packets.empty();
 }
 
-void ItemFilter::LoadSettings(CSimpleIni* ini)
+void ItemFilter::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(hide_player_white);
@@ -368,7 +368,7 @@ void ItemFilter::LoadSettings(CSimpleIni* ini)
     dont_hide_for_party = GuiUtils::IniToMap<decltype(dont_hide_for_party)>(ini, Name(), "dont_hide_for_party", default_dont_hide_for_party);
 }
 
-void ItemFilter::SaveSettings(CSimpleIni* ini)
+void ItemFilter::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(hide_player_white);

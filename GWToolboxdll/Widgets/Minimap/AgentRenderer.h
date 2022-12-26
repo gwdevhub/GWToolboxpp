@@ -33,8 +33,8 @@ public:
     void Render(IDirect3DDevice9* device) override;
 
     void DrawSettings();
-    void LoadSettings(CSimpleIni* ini, const char* section);
-    void SaveSettings(CSimpleIni* ini, const char* section) const;
+    void LoadSettings(ToolboxIni* ini, const char* section);
+    void SaveSettings(ToolboxIni* ini, const char* section) const;
     void LoadCustomAgents();
     void SaveCustomAgents() const;
 
@@ -71,12 +71,12 @@ private:
             ModelIdChange
         };
 
-        CustomAgent(CSimpleIni* ini, const char* section);
+        CustomAgent(ToolboxIni* ini, const char* section);
         CustomAgent(DWORD _modelId, Color _color, const char* _name);
 
         bool DrawHeader();
         bool DrawSettings(Operation& op);
-        void SaveSettings(CSimpleIni* ini, const char* section) const;
+        void SaveSettings(ToolboxIni* ini, const char* section) const;
 
         // utility
         const unsigned int ui_id = 0; // to ensure UI consistency
@@ -172,7 +172,7 @@ private:
     Shape_e default_shape = Tear;
 
     bool agentcolors_changed = false;
-    CSimpleIni* agentcolorinifile = nullptr;
+    ToolboxIni* agentcolorinifile = nullptr;
 
     GW::HookEntry UIMsg_Entry;
     static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);

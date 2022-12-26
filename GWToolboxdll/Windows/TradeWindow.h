@@ -32,8 +32,8 @@ public:
     void SignalTerminate() override;
     void RegisterSettingsContent() override;
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
     void DrawChatSettings(bool ownwindow = false);
 

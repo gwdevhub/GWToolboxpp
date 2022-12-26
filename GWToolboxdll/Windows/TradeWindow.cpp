@@ -602,7 +602,7 @@ void TradeWindow::DrawSettingInternal() {
     DrawAlertsWindowContent(false);
 }
 
-void TradeWindow::LoadSettings(CSimpleIni* ini) {
+void TradeWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
     print_game_chat_asc = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat_asc), print_game_chat_asc);
@@ -621,7 +621,7 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
     SwitchSockets();
 }
 
-void TradeWindow::SaveSettings(CSimpleIni* ini) {
+void TradeWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);

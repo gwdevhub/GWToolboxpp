@@ -1258,7 +1258,7 @@ void DailyQuests::DrawSettingInternal() {
     
     ImGui::Unindent();
 }
-void DailyQuests::LoadSettings(CSimpleIni* ini) {
+void DailyQuests::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 
     show_zaishen_bounty_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_zaishen_bounty_in_window), show_zaishen_bounty_in_window);
@@ -1312,7 +1312,7 @@ void DailyQuests::LoadSettings(CSimpleIni* ini) {
         subscribed_weekly_bonus_pvp[i] = wbpb[i] == 1;
     }
 }
-void DailyQuests::SaveSettings(CSimpleIni* ini) {
+void DailyQuests::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(show_zaishen_bounty_in_window), show_zaishen_bounty_in_window);

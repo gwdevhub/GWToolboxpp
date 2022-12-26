@@ -31,7 +31,6 @@ public:
 
     bool CanTerminate();
 
-    CSimpleIni* OpenSettingsFile(std::filesystem::path config = GWTOOLBOX_INI_FILENAME, bool fresh = false) const;
     void SaveSettings(std::filesystem::path config = GWTOOLBOX_INI_FILENAME) const;
     void LoadSettings(std::filesystem::path config = GWTOOLBOX_INI_FILENAME, bool fresh = false) const;
 

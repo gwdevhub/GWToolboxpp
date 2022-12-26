@@ -39,8 +39,8 @@ public:
     void DrawSettingInternal() override;
     void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
     void PlayKanaxaiDialog(uint8_t idx);
-    void SaveSettings(CSimpleIni* ini);
-    void LoadSettings(CSimpleIni* ini);
+    void SaveSettings(ToolboxIni* ini);
+    void LoadSettings(ToolboxIni* ini);
 
     void SetTransmogs();
     bool IsEnabled() {

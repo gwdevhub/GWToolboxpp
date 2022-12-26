@@ -29,8 +29,8 @@ public:
 
     void Draw(IDirect3DDevice9* device) override;
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void Initialize() override;
     void DrawSettingInternal() override;
     void GetLatestRelease(GWToolboxRelease*) const;

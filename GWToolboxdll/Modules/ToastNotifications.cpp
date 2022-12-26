@@ -359,7 +359,7 @@ void ToastNotifications::DrawSettingInternal()
     ImGui::Unindent();
 }
 
-void ToastNotifications::LoadSettings(CSimpleIniA* ini)
+void ToastNotifications::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
@@ -380,7 +380,7 @@ void ToastNotifications::LoadSettings(CSimpleIniA* ini)
     LOAD_BOOL(flash_window_on_last_to_ready);
 }
 
-void ToastNotifications::SaveSettings(CSimpleIniA* ini)
+void ToastNotifications::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
 

@@ -161,8 +161,8 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
     void DrawChatSettings();
 
@@ -170,7 +170,7 @@ public:
     void SaveToFile();
 
 protected:
-    CSimpleIni* inifile = nullptr;
+    ToolboxIni* inifile = nullptr;
     const wchar_t* ini_filename = L"friends.ini";
     bool loading = false; // Loading from disk?
     bool polling = false; // Polling in progress?

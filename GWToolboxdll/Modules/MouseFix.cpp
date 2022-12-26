@@ -351,14 +351,14 @@ void MouseFix::Initialize() {
         GW::HookBase::CreateHook(ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
     }
 }
-void MouseFix::LoadSettings(CSimpleIniA* ini)
+void MouseFix::LoadSettings(ToolboxIni* ini)
 {
     enable_cursor_fix = ini->GetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
     SetCursorSize(ini->GetLongValue(Name(), VAR_NAME(cursor_size), cursor_size));
     RedrawCursorIcon();
 }
 
-void MouseFix::SaveSettings(CSimpleIniA* ini)
+void MouseFix::SaveSettings(ToolboxIni* ini)
 {
     ini->SetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
     ini->SetLongValue(Name(), VAR_NAME(cursor_size), cursor_size);

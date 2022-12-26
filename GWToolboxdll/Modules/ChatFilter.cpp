@@ -92,7 +92,7 @@ void ChatFilter::ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet:
         ToolboxUtils::ClearMessageCore();
 }
 
-void ChatFilter::LoadSettings(CSimpleIni* ini) {
+void ChatFilter::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(self_drop_rare);
     LOAD_BOOL(self_drop_common);
@@ -172,7 +172,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 #endif
 }
 
-void ChatFilter::SaveSettings(CSimpleIni* ini) {
+void ChatFilter::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(self_drop_rare);
     SAVE_BOOL(self_drop_common);

@@ -9,14 +9,14 @@
 #include <Widgets/Minimap/PmapRenderer.h>
 
 
-void PmapRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+void PmapRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
     color_map = Colors::Load(ini, section, "color_map", 0xFF999999);
     color_mapshadow = Colors::Load(ini, section, "color_mapshadow", 0xFF120808);
     color_mapbackground = Colors::Load(ini, section, "color_mapbackground", 0x00000000);
     Invalidate();
 }
 
-void PmapRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+void PmapRenderer::SaveSettings(ToolboxIni* ini, const char* section) const {
     Colors::Save(ini, section, "color_map", color_map);
     Colors::Save(ini, section, "color_mapshadow", color_mapshadow);
     Colors::Save(ini, section, "color_mapbackground", color_mapbackground);

@@ -64,13 +64,13 @@ public:
     // Draw window(s) related to the "preferred skill order" feature
     void DrawPreferredSkillOrders(IDirect3DDevice9* pDevice);
     void DrawHelp() override;
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
 
     void LoadFromFile();
     void SaveToFile();
-    bool MoveOldBuilds(CSimpleIni* ini);
+    bool MoveOldBuilds(ToolboxIni* ini);
 
     void Send(unsigned int idx);
     const char* BuildName(unsigned int idx) const;
@@ -110,7 +110,7 @@ private:
     clock_t send_timer = 0;
     std::queue<std::string> queue;
 
-    CSimpleIni* inifile = nullptr;
+    ToolboxIni* inifile = nullptr;
 
     // Preferred skill orders
     bool preferred_skill_orders_visible = false;

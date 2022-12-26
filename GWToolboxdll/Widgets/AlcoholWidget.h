@@ -31,8 +31,8 @@ public:
     void Initialize() override;
     void Update(float delta) override;
     uint32_t GetAlcoholLevel();
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     uint32_t GetAlcoholTitlePoints(); // Gets current alcohol title points.
     static void AlcUpdate(GW::HookStatus *, GW::Packet::StoC::PostProcess *packet);
 

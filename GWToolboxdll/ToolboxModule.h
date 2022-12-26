@@ -59,10 +59,10 @@ public:
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
     // Load what is needed from ini
-    virtual void LoadSettings(CSimpleIni*) {}
+    virtual void LoadSettings(ToolboxIni*) {}
 
     // Save what is needed to ini
-    virtual void SaveSettings(CSimpleIni*) {}
+    virtual void SaveSettings(ToolboxIni*) {}
 
     // Draw settings interface. Will be called if the setting panel is visible, calls DrawSettingsInternal()
     //virtual void DrawSettings();

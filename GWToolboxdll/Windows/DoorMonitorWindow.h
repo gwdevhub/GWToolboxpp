@@ -74,8 +74,8 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     //void DrawSettingInternal() override;
 
-    //void LoadSettings(CSimpleIni* ini) override;
-    //void SaveSettings(CSimpleIni* ini) override;
+    //void LoadSettings(ToolboxIni* ini) override;
+    //void SaveSettings(ToolboxIni* ini) override;
 
 private:
     bool in_zone = false;

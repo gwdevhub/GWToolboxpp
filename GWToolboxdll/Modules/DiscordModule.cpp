@@ -507,7 +507,7 @@ void DiscordModule::DrawSettingInternal() {
     if(edited) // Picked up in the Update() loop
         pending_discord_connect = pending_activity_update = discord_enabled;
 }
-void DiscordModule::SaveSettings(CSimpleIni* ini) {
+void DiscordModule::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(discord_enabled), discord_enabled);
     ini->SetBoolValue(Name(), VAR_NAME(hide_activity_when_offline), hide_activity_when_offline);
@@ -515,7 +515,7 @@ void DiscordModule::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_character_info), show_character_info);
     ini->SetBoolValue(Name(), VAR_NAME(show_party_info), show_party_info);
 }
-void DiscordModule::LoadSettings(CSimpleIni* ini) {
+void DiscordModule::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     discord_enabled = ini->GetBoolValue(Name(), VAR_NAME(discord_enabled), discord_enabled);
     hide_activity_when_offline = ini->GetBoolValue(Name(), VAR_NAME(hide_activity_when_offline), hide_activity_when_offline);

@@ -127,8 +127,8 @@ public:
 
     void Initialize() override;
     void RegisterSettingsContent() override;
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
 
     static void OnAddToSentLog(wchar_t* message);
     // On fresh chat log, inject toolbox message history

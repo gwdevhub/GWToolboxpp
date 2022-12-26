@@ -581,9 +581,9 @@ bool RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_pa
     reroll_stage = PromptPendingLogout;
     return true;
 }
-void RerollWindow::LoadSettings(CSimpleIni* ini) {
+void RerollWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
-    CSimpleIni::TNamesDepend keys;
+    ToolboxIni::TNamesDepend keys;
     if (ini->GetAllKeys("RerollWindow_AvailableChars", keys)) {
         for (auto& it : keys) {
             std::wstring charname_ws = GuiUtils::StringToWString(it.pItem);
@@ -597,7 +597,7 @@ void RerollWindow::LoadSettings(CSimpleIni* ini) {
     rejoin_party_after_rerolling = ini->GetBoolValue(Name(), VAR_NAME(rejoin_party_after_rerolling), rejoin_party_after_rerolling);
     return_on_fail = ini->GetBoolValue(Name(), VAR_NAME(return_on_fail), return_on_fail);
 }
-void RerollWindow::SaveSettings(CSimpleIni* ini) {
+void RerollWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     for (const auto& it : account_characters) {
         std::string email_s = GuiUtils::WStringToString(it.first);

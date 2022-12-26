@@ -86,7 +86,7 @@ namespace {
             SetWindowTextW(hwnd, title.c_str());
     }
 
-    void SaveChannelColor(CSimpleIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
+    void SaveChannelColor(ToolboxIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
         char key[128];
         GW::Chat::Color sender, message;
         GW::Chat::GetChannelColors(chan, &sender, &message);
@@ -97,7 +97,7 @@ namespace {
         Colors::Save(ini, section, key, (Color)message);
     }
 
-    void LoadChannelColor(CSimpleIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
+    void LoadChannelColor(ToolboxIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
         char key[128];
         GW::Chat::Color sender, message;
         GW::Chat::GetDefaultColors(chan, &sender, &message);
@@ -1297,7 +1297,7 @@ void GameSettings::MessageOnPartyChange() {
     previous_party_names = current_party_names;
     check_message_on_party_change = false;
 }
-void GameSettings::LoadSettings(CSimpleIni* ini) {
+void GameSettings::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
 
     disable_camera_smoothing = ini->GetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
@@ -1438,7 +1438,7 @@ void GameSettings::Terminate() {
     gold_confirm_patch.Reset();
 }
 
-void GameSettings::SaveSettings(CSimpleIni* ini) {
+void GameSettings::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);

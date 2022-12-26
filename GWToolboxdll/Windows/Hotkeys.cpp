@@ -169,7 +169,7 @@ std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey:
     { GW::UI::ControlAction::ControlAction_TargetSelf, nullptr }
 };
 
-TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
+TBHotkey *TBHotkey::HotkeyFactory(ToolboxIni *ini, const char *section)
 {
     std::string str(section);
     if (str.compare(0, 7, "hotkey-") != 0)
@@ -224,7 +224,7 @@ TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
     return nullptr;
 }
 
-TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
+TBHotkey::TBHotkey(ToolboxIni *ini, const char *section)
     : ui_id(++cur_ui_id)
 {
     memset(prof_ids, false, sizeof(prof_ids));
@@ -306,7 +306,7 @@ bool TBHotkey::CanUse()
 {
     return !isLoading() && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow() && IsInRangeOfNPC();
 }
-void TBHotkey::Save(CSimpleIni *ini, const char *section) const
+void TBHotkey::Save(ToolboxIni *ini, const char *section) const
 {
     ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
     ini->SetLongValue(section, VAR_NAME(modifier), modifier);
@@ -696,13 +696,13 @@ bool TBHotkey::IsInRangeOfNPC() {
     }
     return false;
 }
-HotkeySendChat::HotkeySendChat(CSimpleIni *ini, const char *section)
+HotkeySendChat::HotkeySendChat(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     strcpy_s(message, ini->GetValue(section, "msg", ""));
     channel = ini->GetValue(section, "channel", "/")[0];
 }
-void HotkeySendChat::Save(CSimpleIni *ini, const char *section) const
+void HotkeySendChat::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetValue(section, "msg", message);
@@ -789,13 +789,13 @@ void HotkeySendChat::Execute()
     GW::Chat::SendChat(channel, message);
 }
 
-HotkeyUseItem::HotkeyUseItem(CSimpleIni *ini, const char *section)
+HotkeyUseItem::HotkeyUseItem(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     item_id = static_cast<size_t>(ini->GetLongValue(section, "ItemID", 0));
     strcpy_s(name, ini->GetValue(section, "ItemName", ""));
 }
-void HotkeyUseItem::Save(CSimpleIni *ini, const char *section) const
+void HotkeyUseItem::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ItemID", static_cast<long>(item_id));
@@ -863,7 +863,7 @@ bool HotkeyEquipItemAttributes::check(GW::Item* item) {
     return true;
 }
 
-HotkeyEquipItem::HotkeyEquipItem(CSimpleIni *ini, const char *section)
+HotkeyEquipItem::HotkeyEquipItem(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     // @Cleanup: Add error handling
@@ -890,7 +890,7 @@ HotkeyEquipItem::HotkeyEquipItem(CSimpleIni *ini, const char *section)
         item_attributes.set(model_id, enc_name.c_str(), enc_desc.c_str(), mod_structs.size() ? (GW::ItemModifier*)mod_structs.data() : nullptr, mod_structs.size());
     }
 }
-void HotkeyEquipItem::Save(CSimpleIni *ini, const char *section) const
+void HotkeyEquipItem::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "EquipBy", static_cast<long>(equip_by));
@@ -1187,13 +1187,13 @@ HotkeyDropUseBuff::SkillIndex HotkeyDropUseBuff::GetIndex() const
             return Other;
     }
 }
-HotkeyDropUseBuff::HotkeyDropUseBuff(CSimpleIni *ini, const char *section)
+HotkeyDropUseBuff::HotkeyDropUseBuff(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     id = (GW::Constants::SkillID)ini->GetLongValue(
         section, "SkillID", (long)GW::Constants::SkillID::Recall);
 }
-void HotkeyDropUseBuff::Save(CSimpleIni *ini, const char *section) const
+void HotkeyDropUseBuff::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "SkillID", (long)id);
@@ -1276,12 +1276,12 @@ bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
     }
 }
 
-bool HotkeyToggle::IsValid(CSimpleIni *ini, const char *section)
+bool HotkeyToggle::IsValid(ToolboxIni *ini, const char *section)
 {
     long val = ini->GetLongValue(section, "ToggleID", static_cast<long>(Clicker));
     return val >= 0 && val < Count;
 }
-HotkeyToggle::HotkeyToggle(CSimpleIni *ini, const char *section)
+HotkeyToggle::HotkeyToggle(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     target = (ToggleTarget)ini->GetLongValue(section, "ToggleID", target);
@@ -1298,7 +1298,7 @@ HotkeyToggle::HotkeyToggle(CSimpleIni *ini, const char *section)
         break;
     }
 }
-void HotkeyToggle::Save(CSimpleIni *ini, const char *section) const
+void HotkeyToggle::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ToggleID", (long)target);
@@ -1417,12 +1417,12 @@ bool HotkeyAction::GetText(void *, int idx, const char **out_text)
             return false;
     }
 }
-HotkeyAction::HotkeyAction(CSimpleIni* ini, const char* section)
+HotkeyAction::HotkeyAction(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     action = (Action)ini->GetLongValue(section, "ActionID", OpenXunlaiChest);
 }
-void HotkeyAction::Save(CSimpleIni *ini, const char *section) const
+void HotkeyAction::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ActionID", action);
@@ -1475,7 +1475,7 @@ void HotkeyAction::Execute()
     }
 }
 
-HotkeyTarget::HotkeyTarget(CSimpleIni *ini, const char *section)
+HotkeyTarget::HotkeyTarget(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     // don't print target hotkey to chat by default
@@ -1496,7 +1496,7 @@ HotkeyTarget::HotkeyTarget(CSimpleIni *ini, const char *section)
     ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
                         show_message_in_emote_channel);
 }
-void HotkeyTarget::Save(CSimpleIni *ini, const char *section) const
+void HotkeyTarget::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetValue(section, "TargetID", id);
@@ -1559,7 +1559,7 @@ void HotkeyTarget::Execute()
     }
 }
 
-HotkeyMove::HotkeyMove(CSimpleIni *ini, const char *section)
+HotkeyMove::HotkeyMove(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     x = (float)ini->GetDoubleValue(section, "x", 0.0);
@@ -1568,7 +1568,7 @@ HotkeyMove::HotkeyMove(CSimpleIni *ini, const char *section)
                                        GW::Constants::Range::Compass);
     strcpy_s(name, ini->GetValue(section, "name", ""));
 }
-void HotkeyMove::Save(CSimpleIni *ini, const char *section) const
+void HotkeyMove::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetDoubleValue(section, "x", x);
@@ -1611,13 +1611,13 @@ void HotkeyMove::Execute()
     }
 }
 
-HotkeyDialog::HotkeyDialog(CSimpleIni *ini, const char *section)
+HotkeyDialog::HotkeyDialog(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     id = static_cast<size_t>(ini->GetLongValue(section, "DialogID", 0));
     strcpy_s(name, ini->GetValue(section, "DialogName", ""));
 }
-void HotkeyDialog::Save(CSimpleIni *ini, const char *section) const
+void HotkeyDialog::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "DialogID", static_cast<long>(id));
@@ -1661,12 +1661,12 @@ bool HotkeyPingBuild::GetText(void *, int idx, const char **out_text)
     *out_text = BuildsWindow::Instance().BuildName(static_cast<size_t>(idx));
     return true;
 }
-HotkeyPingBuild::HotkeyPingBuild(CSimpleIni *ini, const char *section)
+HotkeyPingBuild::HotkeyPingBuild(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     index = static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0));
 }
-void HotkeyPingBuild::Save(CSimpleIni *ini, const char *section) const
+void HotkeyPingBuild::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "BuildIndex", static_cast<long>(index));
@@ -1706,12 +1706,12 @@ bool HotkeyHeroTeamBuild::GetText(void *, int idx, const char **out_text)
     *out_text = HeroBuildsWindow::Instance().BuildName(index);
     return true;
 }
-HotkeyHeroTeamBuild::HotkeyHeroTeamBuild(CSimpleIni *ini, const char *section)
+HotkeyHeroTeamBuild::HotkeyHeroTeamBuild(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     index = static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0));
 }
-void HotkeyHeroTeamBuild::Save(CSimpleIni *ini, const char *section) const
+void HotkeyHeroTeamBuild::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "BuildIndex", static_cast<long>(index));
@@ -1742,7 +1742,7 @@ void HotkeyHeroTeamBuild::Execute()
     HeroBuildsWindow::Instance().Load(index);
 }
 
-HotkeyFlagHero::HotkeyFlagHero(CSimpleIni *ini, const char *section)
+HotkeyFlagHero::HotkeyFlagHero(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
     degree = static_cast<float>(ini->GetDoubleValue(section, "degree", degree));
@@ -1751,7 +1751,7 @@ HotkeyFlagHero::HotkeyFlagHero(CSimpleIni *ini, const char *section)
     if (hero < 0) hero = 0;
     if (hero > 11) hero = 11;
 }
-void HotkeyFlagHero::Save(CSimpleIni *ini, const char *section) const
+void HotkeyFlagHero::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetDoubleValue(section, "degree", degree);
@@ -1839,7 +1839,7 @@ void HotkeyFlagHero::Execute()
     }
 }
 
-HotkeyGWKey::HotkeyGWKey(CSimpleIni* ini, const char* section)
+HotkeyGWKey::HotkeyGWKey(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     can_trigger_on_map_change = trigger_on_explorable = trigger_on_outpost = false;
@@ -1851,7 +1851,7 @@ HotkeyGWKey::HotkeyGWKey(CSimpleIni* ini, const char* section)
         action_idx = std::distance(control_labels.begin(), found);
     }
 }
-void HotkeyGWKey::Save(CSimpleIni* ini, const char* section) const
+void HotkeyGWKey::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ActionID", (long)action);

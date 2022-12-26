@@ -13,8 +13,8 @@ public:
     void SetDrawCenter(bool b) { draw_center_ = b; }
 
     void DrawSettings();
-    void LoadSettings(CSimpleIni* ini, const char* section);
-    void SaveSettings(CSimpleIni* ini, const char* section) const;
+    void LoadSettings(ToolboxIni* ini, const char* section);
+    void SaveSettings(ToolboxIni* ini, const char* section) const;
     void LoadDefaults();
     // Returns number of vertices used.
     size_t CreateCircle(D3DVertex *vertices, float radius, DWORD color) const;

@@ -732,7 +732,7 @@ void BuildsWindow::Update(float delta) {
     }
 }
 
-void BuildsWindow::LoadSettings(CSimpleIni* ini) {
+void BuildsWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
     order_by_name = ini->GetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
@@ -750,7 +750,7 @@ void BuildsWindow::LoadSettings(CSimpleIni* ini) {
     }
 }
 
-void BuildsWindow::SaveSettings(CSimpleIni* ini) {
+void BuildsWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
     ini->SetBoolValue(Name(), VAR_NAME(auto_load_pcons), auto_load_pcons);
@@ -760,13 +760,13 @@ void BuildsWindow::SaveSettings(CSimpleIni* ini) {
     SaveToFile();
 }
 
-bool BuildsWindow::MoveOldBuilds(CSimpleIni* ini) {
+bool BuildsWindow::MoveOldBuilds(ToolboxIni* ini) {
     if (!teambuilds.empty()) return false; // builds are already loaded, skip
 
     bool found_old_build = false;
-    CSimpleIni::TNamesDepend oldentries;
+    ToolboxIni::TNamesDepend oldentries;
     ini->GetAllSections(oldentries);
-    for (CSimpleIni::Entry& oldentry : oldentries) {
+    for (ToolboxIni::Entry& oldentry : oldentries) {
         const char* section = oldentry.pItem;
         if (strncmp(section, "builds", 6) == 0) {
             int count = ini->GetLongValue(section, "count", 12);
@@ -800,22 +800,22 @@ void BuildsWindow::LoadFromFile() {
     // clear builds from toolbox
     teambuilds.clear();
 
-    if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+    if (inifile == nullptr) inifile = new ToolboxIni(false, false, false);
     inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
 
 
 
     // then load
     preferred_skill_order_builds.clear();
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     inifile->GetAllKeys("preferred_skill_orders",entries);
-    for (CSimpleIni::Entry& entry : entries) {
+    for (ToolboxIni::Entry& entry : entries) {
         AddPreferredBuild(entry.pItem);
     }
 
     entries.clear();
     inifile->GetAllSections(entries);
-    for (CSimpleIni::Entry& entry : entries) {
+    for (ToolboxIni::Entry& entry : entries) {
         if (memcmp(entry.pItem, "builds", 6) != 0) {
             continue;
         }
@@ -860,7 +860,7 @@ void BuildsWindow::LoadFromFile() {
 
 void BuildsWindow::SaveToFile() {
     if (builds_changed) {
-        if (inifile == nullptr) inifile = new CSimpleIni();
+        if (inifile == nullptr) inifile = new ToolboxIni();
 
         // clear builds from ini
         inifile->Reset();

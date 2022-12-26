@@ -1016,7 +1016,7 @@ bool ObserverModule::SynchroniseParties() {
 
 
 // Load settings
-void ObserverModule::LoadSettings(CSimpleIni* ini) {
+void ObserverModule::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     is_enabled                  = ini->GetBoolValue(Name(), VAR_NAME(is_enabled), true);
     trim_hench_names            = ini->GetBoolValue(Name(), VAR_NAME(trim_hench_names), false);
@@ -1025,7 +1025,7 @@ void ObserverModule::LoadSettings(CSimpleIni* ini) {
 
 
 // Save settings
-void ObserverModule::SaveSettings(CSimpleIni* ini) {
+void ObserverModule::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(is_enabled), is_enabled);
     ini->SetBoolValue(Name(), VAR_NAME(trim_hench_names), trim_hench_names);

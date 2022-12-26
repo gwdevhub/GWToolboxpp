@@ -38,7 +38,7 @@ namespace Colors {
     static Color Yellow() { return RGB(0xFF, 0xFF, 0x0); }
     static Color Blue() { return RGB(0x0, 0x0, 0xFF); }
 
-    static Color Load(CSimpleIni* ini, const char* section, const char* key, Color def) {
+    static Color Load(ToolboxIni* ini, const char* section, const char* key, Color def) {
         const char* wc = ini->GetValue(section, key, nullptr);
         if (wc == nullptr) return def;
         unsigned int c;
@@ -47,7 +47,7 @@ namespace Colors {
         return def;
     }
 
-    static void Save(CSimpleIni* ini, const char* section, const char* key, Color val) {
+    static void Save(ToolboxIni* ini, const char* section, const char* key, Color val) {
         char buf[11];
         snprintf(buf, sizeof(buf), "0x%X", val);
         ini->SetValue(section, key, buf);

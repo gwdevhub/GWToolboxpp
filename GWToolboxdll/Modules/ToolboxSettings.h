@@ -20,12 +20,12 @@ public:
     const char* Name() const override { return "Toolbox Settings"; }
     const char* Icon() const override { return ICON_FA_TOOLBOX;  }
 
-    void LoadModules(CSimpleIni* ini);
+    void LoadModules(ToolboxIni* ini);
 
     void Update(float delta) override;
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
     void Draw(IDirect3DDevice9*) override;
     void ShowVisibleRadio() override {};
