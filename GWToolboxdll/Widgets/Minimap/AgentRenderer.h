@@ -8,6 +8,7 @@
 
 namespace GW {
     struct Agent;
+    struct MapProp;
     namespace UI {
         enum class UIMessage : uint32_t;
     }
@@ -117,6 +118,7 @@ private:
     Shape_e GetShape(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
 
     void Enqueue(Shape_e shape, const GW::Agent* agent, float size, Color color);
+    void Enqueue(Shape_e shape, const GW::MapProp* agent, float size, Color color);
 
     D3DVertex* vertices = nullptr;  // vertices array
     unsigned int vertices_count = 0;// count of vertices
