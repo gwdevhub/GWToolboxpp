@@ -137,6 +137,8 @@ namespace {
     }
 
     void CheckAndWarnIfNotResigned() {
+        if (!show_last_to_resign_message)
+            return;
         const auto party = GW::PartyMgr::GetPartyInfo();
         if (!(party && party->players.size() > 1))
             return; // Not in a party of more than 1 person

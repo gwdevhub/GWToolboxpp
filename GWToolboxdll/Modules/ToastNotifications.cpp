@@ -40,11 +40,13 @@ namespace {
     bool show_notifications_on_guild_chat = false;
     bool show_notifications_on_ally_chat = false;
     bool show_notifications_on_last_to_ready = false;
+    bool show_notifications_on_everyone_ready = false;
 
     bool flash_window_on_whisper = true;
     bool flash_window_on_guild_chat = false;
     bool flash_window_on_ally_chat = false;
     bool flash_window_on_last_to_ready = false;
+    bool flash_window_on_everyone_ready = false;
 
     const wchar_t* party_ready_toast_title = L"Party Ready";
 
@@ -175,22 +177,30 @@ namespace {
         const auto p = GW::PartyMgr::GetPartyInfo();
         if(!(p && p->players.size() > 1))
             return;
+        bool player_ticked = false;
         for (const auto& player : p->players) {
             if (player.login_number == my_player_id) {
-                if (player.ticked()) {
-                    ToastNotifications::DismissToast(party_ready_toast_title);
-                    return; // I'm ticked.
-                }
+                player_ticked = player.ticked();
                 continue;
             }
             if (!player.ticked())
                 return; // Other player not ticked yet.
         }
-        // This far; I'm the last player to ready up
-        if(show_notifications_on_last_to_ready)
-            ToastNotifications::SendToast(party_ready_toast_title, L"You're the last player in your party to tick up", OnGenericToastActivated);
-        if (flash_window_on_last_to_ready)
-            FlashWindow();
+        // This far; Everyone else is ticked up
+        if (!player_ticked) {
+            if(show_notifications_on_last_to_ready)
+                ToastNotifications::SendToast(party_ready_toast_title, L"You're the last player in your party to tick up", OnGenericToastActivated);
+            if (flash_window_on_last_to_ready)
+                FlashWindow();
+        }
+        else {
+            // Everyone including me is ticked
+            if(show_notifications_on_everyone_ready)
+                ToastNotifications::SendToast(party_ready_toast_title, L"Everyone in your party is ticked up and ready to go!", OnGenericToastActivated);
+            if (flash_window_on_everyone_ready)
+                FlashWindow();
+        }
+
     }
     void OnPartyPlayerReady(GW::HookStatus*, GW::Packet::StoC::PacketBase* base) {
         const auto packet = static_cast<GW::Packet::StoC::PartyPlayerReady*>(base);
@@ -334,6 +344,7 @@ void ToastNotifications::DrawSettingInternal()
     ImGui::NextSpacedElement(); ImGui::Checkbox("Guild Chat", &show_notifications_on_guild_chat);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Alliance Chat", &show_notifications_on_ally_chat);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Last to Tick", &show_notifications_on_last_to_ready);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Everyone Ticked", &show_notifications_on_everyone_ready);
     ImGui::Unindent();
     ImGui::PopID();
 
@@ -345,6 +356,7 @@ void ToastNotifications::DrawSettingInternal()
     ImGui::NextSpacedElement(); ImGui::Checkbox("Guild Chat", &flash_window_on_guild_chat);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Alliance Chat", &flash_window_on_ally_chat);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Last to Tick", &flash_window_on_last_to_ready);
+    ImGui::NextSpacedElement(); ImGui::Checkbox("Everyone Ticked", &flash_window_on_everyone_ready);
     ImGui::Unindent();
     ImGui::PopID();
 
@@ -373,11 +385,13 @@ void ToastNotifications::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_notifications_on_guild_chat);
     LOAD_BOOL(show_notifications_on_ally_chat);
     LOAD_BOOL(show_notifications_on_last_to_ready);
+    LOAD_BOOL(show_notifications_on_everyone_ready);
 
     LOAD_BOOL(flash_window_on_whisper);
     LOAD_BOOL(flash_window_on_guild_chat);
     LOAD_BOOL(flash_window_on_ally_chat);
     LOAD_BOOL(flash_window_on_last_to_ready);
+    LOAD_BOOL(flash_window_on_everyone_ready);
 }
 
 void ToastNotifications::SaveSettings(ToolboxIni* ini)
@@ -394,9 +408,11 @@ void ToastNotifications::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_notifications_on_guild_chat);
     SAVE_BOOL(show_notifications_on_ally_chat);
     SAVE_BOOL(show_notifications_on_last_to_ready);
+    SAVE_BOOL(show_notifications_on_everyone_ready);
 
     SAVE_BOOL(flash_window_on_whisper);
     SAVE_BOOL(flash_window_on_guild_chat);
     SAVE_BOOL(flash_window_on_ally_chat);
     SAVE_BOOL(flash_window_on_last_to_ready);
+    SAVE_BOOL(flash_window_on_everyone_ready);
 }
