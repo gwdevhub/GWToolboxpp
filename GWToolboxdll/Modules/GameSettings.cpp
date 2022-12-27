@@ -460,13 +460,28 @@ namespace {
 
     GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = 0;
     GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = 0;
+    bool closing_gw = false;
     void OnMinOrRestoreOrExitBtnClicked(GW::UI::InteractionMessage* message, void* wparam, void* lparam) {
-        if (message->message_id == 0x2f && wparam && *(uint32_t*)wparam == 0x3) {
-            // Left button clicked, on the exit button (ID 0x3)
-            SendMessage(GW::MemoryMgr::GetGWWindowHandle(), WM_CLOSE, NULL, NULL);
-            return;
+        GW::Hook::EnterHook();
+        if (message->message_id == 0x2f && wparam) {
+            struct MouseParams {
+                uint32_t button_id;
+                uint32_t button_id_dupe;
+                uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
+            } *param = (MouseParams*)wparam;
+            if (param->button_id == 0x3 && param->current_state == 0x6) {
+                param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
+
+                // Left button clicked, on the exit button (ID 0x3)
+                if (!closing_gw)
+                    SendMessage(GW::MemoryMgr::GetGWWindowHandle(), WM_CLOSE, NULL, NULL);
+                closing_gw = true;
+                GW::Hook::LeaveHook();
+                return;
+            }
         }
         OnMinOrRestoreOrExitBtnClicked_Ret(message, wparam, lparam);
+        GW::Hook::LeaveHook();
     }
 
     GW::MemoryPatcher skip_map_entry_message_patch;
