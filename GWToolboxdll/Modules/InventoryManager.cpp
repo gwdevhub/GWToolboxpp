@@ -444,7 +444,7 @@ namespace {
     }
 
     GW::HookEntry on_offer_item_hook;
-    bool check_context_menu_position = false;
+    clock_t check_context_menu_position = 0;
     DWORD is_right_clicking = 0;
     DWORD mouse_moved = 0;
 
@@ -480,6 +480,8 @@ namespace {
         }
         return slots;
     }
+
+    uint32_t right_clicked_item = 0;
 
 } // namespace
 InventoryManager::InventoryManager()
@@ -626,12 +628,15 @@ bool InventoryManager::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
         }
     } break;
 
-    case WM_RBUTTONDOWN:
+    case WM_RBUTTONDOWN: {
         is_right_clicking = 1;
         mouse_moved = 0;
-        break;
+        const auto item = GW::Items::GetHoveredItem();
+        right_clicked_item = item ? item->item_id : 0;
+    } break;
     case WM_RBUTTONUP:
-        check_context_menu_position = mouse_moved != 1;
+        // 100ms delay allows gw to reset cursor position, otherwise the context menu will show in the middle of the screen
+        check_context_menu_position = mouse_moved != 1 ? TIMER_INIT() + 50 : 0;
         is_right_clicking = mouse_moved = 0;
         break;
     case WM_LBUTTONDOWN:
@@ -1309,15 +1314,15 @@ void InventoryManager::DrawSettingInternal() {
     }
 }
 void InventoryManager::Update(float) {
-    if (check_context_menu_position) {
-        const Item* item = reinterpret_cast<Item*>(GW::Items::GetHoveredItem());
-        GW::Bag* bag = item ? item->bag : nullptr;
+    if (check_context_menu_position && TIMER_DIFF(check_context_menu_position) > 0) {
+        const auto item = right_clicked_item ? GW::Items::GetItemById(right_clicked_item) : nullptr;
+        const auto bag = item ? item->bag : nullptr;
         if (bag) {
             // Item right clicked - spoof a click event
             GW::HookStatus status;
             ItemClickCallback(&status, 999, item->slot, bag);
         }
-        check_context_menu_position = false;
+        check_context_menu_position = 0;
     }
 
     if (pending_item_move_for_trade) {
