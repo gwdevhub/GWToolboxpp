@@ -1,6 +1,8 @@
 #include "Minimap.h"
 #include "stdafx.h"
 
+#include <GWCA/Context/MapContext.h>
+
 #include <GWCA/Constants/AgentIDs.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
@@ -9,6 +11,7 @@
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -31,13 +34,18 @@ namespace {
     }
 
     uint32_t auto_target_id = 0;
+
+    bool show_props_on_minimap = false;
 }
 
 AgentRenderer* AgentRenderer::instance = 0;
 
 unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 
-void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+void AgentRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
+    auto Name = [section]() {
+        return section;
+    };
     LoadDefaultColors();
     color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
     color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_damaged_modifier), color_agent_damaged_modifier);
@@ -60,6 +68,10 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
     show_quest_npcs_on_minimap = ini->GetBoolValue(section, VAR_NAME(show_quest_npcs_on_minimap), show_quest_npcs_on_minimap);
 
+#ifdef _DEBUG
+    LOAD_BOOL(show_props_on_minimap);
+#endif
+
     LoadDefaultSizes();
     size_default = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_default), size_default));
     size_player = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_player), size_player));
@@ -80,16 +92,16 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 }
 
 void AgentRenderer::LoadCustomAgents() {
-    if (agentcolorinifile == nullptr) agentcolorinifile = new CSimpleIni();
+    if (agentcolorinifile == nullptr) agentcolorinifile = new ToolboxIni();
     agentcolorinifile->LoadFile(Resources::GetPath(AGENTCOLOR_INIFILENAME).c_str());
 
     custom_agents.clear();
     custom_agents_map.clear();
 
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     agentcolorinifile->GetAllSections(entries);
 
-    for (const CSimpleIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         // we know that all sections are agent colors, don't even check the section names
         auto* customAgent = new CustomAgent(agentcolorinifile, entry.pItem);
         customAgent->index = custom_agents.size();
@@ -99,7 +111,11 @@ void AgentRenderer::LoadCustomAgents() {
     agentcolors_changed = false;
 }
 
-void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const {
+    auto Name = [section]() {
+        return section;
+    };
+
     Colors::Save(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
     Colors::Save(ini, section, VAR_NAME(color_agent_damaged_modifier), color_agent_damaged_modifier);
     Colors::Save(ini, section, VAR_NAME(color_eoe), color_eoe);
@@ -127,6 +143,8 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
     ini->SetDoubleValue(section, VAR_NAME(size_minion), size_minion);
     ini->SetLongValue(section, VAR_NAME(default_shape), static_cast<long>(default_shape));
     ini->SetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness);
+
+    SAVE_BOOL(show_props_on_minimap);
 
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
     ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
@@ -185,7 +203,9 @@ void AgentRenderer::LoadDefaultColors() {
     agent_border_thickness = 0;
 }
 void AgentRenderer::DrawSettings() {
-
+#ifdef _DEBUG
+    ImGui::Checkbox("Show props on minimap", &show_props_on_minimap);
+#endif
     if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         bool confirmed = false;
         if (ImGui::SmallConfirmButton("Restore Defaults", &confirmed, "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n")) {
@@ -447,6 +467,15 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     if (FAILED(res)) printf("AgentRenderer Lock() HRESULT: 0x%lX\n", res);
 
     vertices_count = 0;
+
+    if (show_props_on_minimap) {
+        const auto& props = GW::GetMapContext()->props->propArray;
+        for (size_t i = 0; i < props.size(); i++) {
+            Enqueue(Shape_e::Quad, props[i], size_item, color_signpost);
+        }
+    }
+
+
 
     // get stuff
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
@@ -869,6 +898,26 @@ void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, C
     vertices += num_v;
     vertices_count += num_v;
 }
+void AgentRenderer::Enqueue(Shape_e shape, const GW::MapProp* agent, float size, Color color) {
+    if ((color & IM_COL32_A_MASK) == 0) return;
+
+    size_t num_v = shapes[shape].vertices.size();
+    for (size_t i = 0; i < num_v; ++i) {
+        const Shape_Vertex& vert = shapes[shape].vertices[i];
+        GW::Vec2f pos = (GW::Rotate(vert, agent->rotation_cos, agent->rotation_sin) * size) + agent->position;
+        switch (vert.modifier) {
+        case Dark: vertices[i].color = Colors::Sub(color, color_agent_modifier); break;
+        case Light: vertices[i].color = Colors::Add(color, color_agent_modifier); break;
+        case CircleCenter: vertices[i].color = Colors::Sub(color, IM_COL32(0, 0, 0, 50)); break;
+        default: vertices[i].color = color; break;
+        }
+        vertices[i].z = 0.0f;
+        vertices[i].x = pos.x;
+        vertices[i].y = pos.y;
+    }
+    vertices += num_v;
+    vertices_count += num_v;
+}
 
 void AgentRenderer::BuildCustomAgentsMap() {
     custom_agents_map.clear();
@@ -880,7 +929,7 @@ void AgentRenderer::BuildCustomAgentsMap() {
     }
 }
 
-AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
+AgentRenderer::CustomAgent::CustomAgent(ToolboxIni* ini, const char* section)
     : ui_id(++cur_ui_id) {
 
     active = ini->GetBoolValue(section, VAR_NAME(active), active);
@@ -913,7 +962,7 @@ AgentRenderer::CustomAgent::CustomAgent(DWORD _modelId, Color _color, const char
     active = true;
 }
 
-void AgentRenderer::CustomAgent::SaveSettings(CSimpleIni* ini, const char* section) const {
+void AgentRenderer::CustomAgent::SaveSettings(ToolboxIni* ini, const char* section) const {
     ini->SetBoolValue(section, VAR_NAME(active), active);
     ini->SetValue(section, VAR_NAME(name), name);
     ini->SetLongValue(section, VAR_NAME(modelId), static_cast<long>(modelId));

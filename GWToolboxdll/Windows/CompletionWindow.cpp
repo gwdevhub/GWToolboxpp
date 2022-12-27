@@ -2465,10 +2465,10 @@ void CompletionWindow::DrawSettingInternal()
     ToolboxWindow::DrawSettingInternal();
 }
 
-void CompletionWindow::LoadSettings(CSimpleIni* ini)
+void CompletionWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    CSimpleIni* completion_ini = new CSimpleIni(false, false, false);
+    ToolboxIni* completion_ini = new ToolboxIni(false, false, false);
     completion_ini->LoadFile(Resources::GetPath(completion_ini_filename).c_str());
     std::string ini_str;
     std::wstring name_ws;
@@ -2496,9 +2496,9 @@ void CompletionWindow::LoadSettings(CSimpleIni* ini)
         ParseCompletionBuffer(type, name_ws.data(), completion_buf.data(), completion_buf.size());
     };
 
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     completion_ini->GetAllSections(entries);
-    for (CSimpleIni::Entry& entry : entries) {
+    for (ToolboxIni::Entry& entry : entries) {
         ini_section = entry.pItem;
         name_ws = GuiUtils::StringToWString(ini_section);
 
@@ -2572,10 +2572,10 @@ CompletionWindow* CompletionWindow::CheckProgress(bool fetch_hom) {
 	}
 	return this;
 }
-void CompletionWindow::SaveSettings(CSimpleIni* ini)
+void CompletionWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    CSimpleIni* completion_ini = new CSimpleIni(false, false, false);
+    ToolboxIni* completion_ini = new ToolboxIni(false, false, false);
     std::string ini_str;
     std::string* name;
     CharacterCompletion* char_comp = nullptr;

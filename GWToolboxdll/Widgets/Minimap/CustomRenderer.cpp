@@ -55,7 +55,7 @@ CustomRenderer::CustomPolygon::CustomPolygon(GW::Constants::MapID m, const char*
     else
         GuiUtils::StrCopy(name, "marker", sizeof name);
 };
-void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section)
+void CustomRenderer::LoadSettings(ToolboxIni* ini, const char* section)
 {
     color = Colors::Load(ini, section, "color_custom_markers", 0xFFFFFFFF);
     Invalidate();
@@ -68,13 +68,13 @@ void CustomRenderer::LoadMarkers()
     markers.clear();
     polygons.clear();
 
-    if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+    if (inifile == nullptr) inifile = new ToolboxIni(false, false, false);
     inifile->LoadFile(Resources::GetPath(IniFilename).c_str());
 
     // then load new
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
-    for (CSimpleIni::Entry& entry : entries) {
+    for (ToolboxIni::Entry& entry : entries) {
         const char* section = entry.pItem;
         if (!section)
             continue;
@@ -127,7 +127,7 @@ void CustomRenderer::LoadMarkers()
 
     markers_changed = false;
 }
-void CustomRenderer::SaveSettings(CSimpleIni* ini, const char* section) const
+void CustomRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
 {
     Colors::Save(ini, section, "color_custom_markers", color);
     SaveMarkers();
@@ -137,9 +137,9 @@ void CustomRenderer::SaveMarkers() const
     // clear markers from ini
     // then load new
     if (markers_changed) {
-        CSimpleIni::TNamesDepend entries;
+        ToolboxIni::TNamesDepend entries;
         inifile->GetAllSections(entries);
-        for (CSimpleIni::Entry& entry : entries) {
+        for (ToolboxIni::Entry& entry : entries) {
             const char* section = entry.pItem;
             if (strncmp(section, "customline", 10) == 0) {
                 inifile->Delete(section, nullptr);

@@ -137,6 +137,8 @@ namespace {
     }
 
     void CheckAndWarnIfNotResigned() {
+        if (!show_last_to_resign_message)
+            return;
         const auto party = GW::PartyMgr::GetPartyInfo();
         if (!(party && party->players.size() > 1))
             return; // Not in a party of more than 1 person
@@ -792,7 +794,7 @@ void InfoWindow::DrawSettingInternal() {
     ImGui::NextSpacedElement(); ImGui::Checkbox("Show Resign Log", &show_resignlog);
 }
 
-void InfoWindow::LoadSettings(CSimpleIni* ini) {
+void InfoWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     LOAD_BOOL(show_widgets);
     LOAD_BOOL(show_open_chest);
@@ -808,7 +810,7 @@ void InfoWindow::LoadSettings(CSimpleIni* ini) {
     LOAD_BOOL(show_last_to_resign_message);
 }
 
-void InfoWindow::SaveSettings(CSimpleIni* ini) {
+void InfoWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     SAVE_BOOL(show_widgets);
     SAVE_BOOL(show_open_chest);

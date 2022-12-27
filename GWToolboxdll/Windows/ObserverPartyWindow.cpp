@@ -508,7 +508,7 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice) {
 
 
 // Load settings
-void ObserverPartyWindow::LoadSettings(CSimpleIni* ini) {
+void ObserverPartyWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 
     show_player_number = ini->GetBoolValue(Name(), VAR_NAME(show_player_number), true);
@@ -533,7 +533,7 @@ void ObserverPartyWindow::LoadSettings(CSimpleIni* ini) {
 
 
 // Save settings
-void ObserverPartyWindow::SaveSettings(CSimpleIni* ini) {
+void ObserverPartyWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(show_player_number), show_player_number);

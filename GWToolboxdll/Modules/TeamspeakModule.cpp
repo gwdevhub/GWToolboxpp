@@ -79,12 +79,12 @@ TeamspeakModule::~TeamspeakModule() {
     if (wsaData.wVersion)
         WSACleanup();
 }
-void TeamspeakModule::LoadSettings(CSimpleIni* ini) {
+void TeamspeakModule::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);
     pending_connect = true;
 }
-void TeamspeakModule::SaveSettings(CSimpleIni* ini) {
+void TeamspeakModule::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(enabled), enabled);
 }

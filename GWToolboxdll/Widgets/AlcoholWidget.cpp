@@ -143,12 +143,12 @@ void AlcoholWidget::DrawSettingInternal() {
     ImGui::ShowHelp("Hides widget when not using alcohol");
     ImGui::Text("Note: only visible in explorable areas.");
 }
-void AlcoholWidget::LoadSettings(CSimpleIni* ini) {
+void AlcoholWidget::LoadSettings(ToolboxIni* ini) {
     ToolboxWidget::LoadSettings(ini);
     only_show_when_drunk = ini->GetBoolValue(Name(), VAR_NAME(only_show_when_drunk), only_show_when_drunk);
 }
 
-void AlcoholWidget::SaveSettings(CSimpleIni* ini) {
+void AlcoholWidget::SaveSettings(ToolboxIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(only_show_when_drunk), only_show_when_drunk);
 }

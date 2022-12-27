@@ -498,13 +498,14 @@ bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_fil
 }
 
 // Load from resource file name on disk with 3 retries
-int Resources::LoadIniFromFile(const wchar_t* resource_path, CSimpleIni* inifile) {
+int Resources::LoadIniFromFile(const wchar_t* resource_path, ToolboxIni* inifile) {
     ASSERT(resource_path && *resource_path);
     const auto absolute_path = Resources::GetPath(resource_path);
     return LoadIniFromFile(absolute_path, inifile);
 }
 // Load from absolute file path on disk with 3 retries
-int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, CSimpleIni* inifile) {
+int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile) {
+    inifile->location_on_disk = absolute_path;
     if (!std::filesystem::exists(absolute_path)) {
         Log::LogW(L"Failed to find ini file for %s", absolute_path.c_str());
         return 0; // This isn't a fail
@@ -521,12 +522,12 @@ int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, CSimp
     }
     return res;
 }
-int Resources::SaveIniToFile(const wchar_t* resource_filename, const CSimpleIni* inifile) {
+int Resources::SaveIniToFile(const wchar_t* resource_filename, const ToolboxIni* inifile) {
     ASSERT(resource_filename && *resource_filename);
     const auto absolute_path = Resources::GetPath(resource_filename);
     return SaveIniToFile(absolute_path, inifile);
 }
-int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const CSimpleIni* ini) {
+int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* ini) {
     auto tmp_file = std::filesystem::path(absolute_path);
     tmp_file += ".tmp";
     const SI_Error res = ini->SaveFile(tmp_file.c_str());

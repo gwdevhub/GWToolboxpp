@@ -324,7 +324,7 @@ void TwitchModule::DrawSettingInternal() {
     }
     ImGui::PopID();
 }
-void TwitchModule::LoadSettings(CSimpleIni* ini) {
+void TwitchModule::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
 
     irc_alias = ini->GetValue(Name(), VAR_NAME(irc_alias), irc_alias.c_str());
@@ -345,7 +345,7 @@ void TwitchModule::LoadSettings(CSimpleIni* ini) {
 
     pending_connect = true;
 }
-void TwitchModule::SaveSettings(CSimpleIni* ini) {
+void TwitchModule::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
 
     ini->SetValue(Name(), VAR_NAME(irc_alias), irc_alias.c_str());

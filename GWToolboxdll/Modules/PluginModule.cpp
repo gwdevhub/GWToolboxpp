@@ -172,14 +172,14 @@ void PluginModule::Draw(IDirect3DDevice9* device)
     }
 }
 
-void PluginModule::LoadSettings(CSimpleIniA*)
+void PluginModule::LoadSettings(ToolboxIni*)
 {
     for (const auto& plugin : GetInitializedPlugins()) {
         plugin.instance->LoadSettings(pluginsfoldername);
     }
 }
 
-void PluginModule::SaveSettings(CSimpleIniA*)
+void PluginModule::SaveSettings(ToolboxIni*)
 {
     for (const auto& plugin : GetInitializedPlugins()) {
         plugin.instance->SaveSettings(pluginsfoldername);

@@ -25,8 +25,8 @@ public:
     const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
     void Initialize() override;
-    void LoadSettings(CSimpleIni *ini) override;
-    void SaveSettings(CSimpleIni *ini) override;
+    void LoadSettings(ToolboxIni *ini) override;
+    void SaveSettings(ToolboxIni *ini) override;
     void DrawSettingInternal() override;
     ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const;
 

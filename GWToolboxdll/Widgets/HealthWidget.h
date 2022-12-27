@@ -21,8 +21,8 @@ public:
     const char* Name() const override { return "Health"; }
     const char* Icon() const override { return ICON_FA_PERCENTAGE; }
 
-    void LoadSettings(CSimpleIni *ini) override;
-    void SaveSettings(CSimpleIni *ini) override;
+    void LoadSettings(ToolboxIni *ini) override;
+    void SaveSettings(ToolboxIni *ini) override;
     void DrawSettingInternal() override;
 
     // Draw user interface. Will be called every frame if the element is visible
@@ -48,12 +48,12 @@ private:
                 Delete,
             };
 
-            Threshold(CSimpleIni* ini, const char* section);
+            Threshold(ToolboxIni* ini, const char* section);
             Threshold(const char* _name, Color _color, int _value);
 
             bool DrawHeader();
             bool DrawSettings(Operation& op);
-            void SaveSettings(CSimpleIni* ini, const char* section);
+            void SaveSettings(ToolboxIni* ini, const char* section);
 
             const unsigned int ui_id = 0;
             size_t index = 0;
@@ -69,5 +69,5 @@ private:
     };
 
     std::vector<Threshold*> thresholds{};
-    CSimpleIni* inifile = nullptr;
+    ToolboxIni* inifile = nullptr;
 };

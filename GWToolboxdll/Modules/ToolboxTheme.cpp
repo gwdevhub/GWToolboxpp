@@ -10,6 +10,27 @@
 #define WindowPositionsFilename L"Layout.ini"
 #define IniSection "Theme"
 
+namespace {
+    ToolboxIni* LoadIni(ToolboxIni** out, const wchar_t* filename, bool reload_from_disk = false) {
+        if (!*out) {
+            *out = new ToolboxIni(false, false, false);
+            reload_from_disk = true;
+        }
+        if (!reload_from_disk)
+            return *out;
+        const auto path = Resources::GetPath(filename);
+        if (!std::filesystem::exists(path)) {
+            Log::LogW(L"File %s doesn't exist.", path.c_str());
+            return *out;
+        }
+        ToolboxIni* tmp = new ToolboxIni(false, false, false);
+        ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
+        delete* out;
+        *out = tmp;
+        return *out;
+    }
+}
+
 ToolboxTheme::ToolboxTheme()
 {
     ini_style = DefaultTheme();
@@ -52,7 +73,7 @@ void ToolboxTheme::Terminate()
     layout_ini = theme_ini = nullptr;
 }
 
-void ToolboxTheme::LoadSettings(CSimpleIni* ini)
+void ToolboxTheme::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
@@ -97,7 +118,7 @@ void ToolboxTheme::SaveUILayout()
 {
     if (!ImGui::GetCurrentContext())
         return;
-    CSimpleIni* ini = GetLayoutIni(false);
+    auto ini = GetLayoutIni(false);
     const char* window_ini_section = "Windows";
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     for (const ImGuiWindow* window : windows) {
@@ -115,35 +136,13 @@ void ToolboxTheme::SaveUILayout()
     }
     ASSERT(Resources::SaveIniToFile(WindowPositionsFilename, ini) == 0);
 }
-CSimpleIni* ToolboxTheme::GetLayoutIni(const bool reload)
+ToolboxIni* ToolboxTheme::GetLayoutIni(const bool reload)
 {
-    const auto path = Resources::GetPath(WindowPositionsFilename);
-    if (!std::filesystem::exists(path)) {
-        Log::LogW(L"File %s doesn't exist.", path.c_str());
-        return layout_ini;
-    }
-    if (layout_ini && !reload)
-        return layout_ini;
-    CSimpleIni* tmp = new CSimpleIni(false, false, false);
-    ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
-    delete layout_ini;
-    layout_ini = tmp;
-    return layout_ini;
+    return LoadIni(&layout_ini, WindowPositionsFilename, reload);
 }
-CSimpleIni* ToolboxTheme::GetThemeIni(const bool reload)
+ToolboxIni* ToolboxTheme::GetThemeIni(const bool reload)
 {
-    const auto path = Resources::GetPath(IniFilename);
-    if (!std::filesystem::exists(path)) {
-        Log::LogW(L"File %s doesn't exist.", path.c_str());
-        return theme_ini;
-    }
-    if (theme_ini && !reload)
-        return theme_ini;
-    CSimpleIni* tmp = new CSimpleIni(false, false, false);
-    ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
-    delete theme_ini;
-    theme_ini = tmp;
-    return theme_ini;
+    return LoadIni(&theme_ini, IniFilename, reload);
 }
 void ToolboxTheme::LoadUILayout()
 {
@@ -153,7 +152,7 @@ void ToolboxTheme::LoadUILayout()
     ImGui::GetStyle() = ini_style;
     // Copy window positions over
     ImGui::GetIO().FontGlobalScale = font_global_scale;
-    CSimpleIni* ini = GetLayoutIni();
+    ToolboxIni* ini = GetLayoutIni();
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     const char* window_ini_section = "Windows";
     for (ImGuiWindow* window : windows) {
@@ -179,7 +178,7 @@ void ToolboxTheme::LoadUILayout()
     layout_dirty = false;
 }
 
-void ToolboxTheme::SaveSettings(CSimpleIni* ini)
+void ToolboxTheme::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
 

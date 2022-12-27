@@ -72,8 +72,8 @@ public:
     inline void Toggle() { SetEnabled(!IsEnabled()); }
     // Resets pcon counters so it needs to recalc number and refill.
     void ResetCounts();
-    void LoadSettings(CSimpleIni* ini, const char* section);
-    void SaveSettings(CSimpleIni* ini, const char* section);
+    void LoadSettings(ToolboxIni* ini, const char* section);
+    void SaveSettings(ToolboxIni* ini, const char* section);
 
     bool* enabled; // This is a ptr to the current char's status if applicable.
     bool pcon_quantity_checked = false;

@@ -365,7 +365,7 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
     ImGui::PopFont();
 }
 
-void SkillbarWidget::LoadSettings(CSimpleIni* ini)
+void SkillbarWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
     layout = static_cast<Layout>(ini->GetLongValue(Name(), VAR_NAME(layout), static_cast<long>(layout)));
@@ -403,7 +403,7 @@ void SkillbarWidget::LoadSettings(CSimpleIni* ini)
     is_movable = is_resizable = !snap_to_skillbar;
 }
 
-void SkillbarWidget::SaveSettings(CSimpleIni* ini)
+void SkillbarWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
     ini->SetLongValue(Name(), VAR_NAME(layout), static_cast<long>(layout));

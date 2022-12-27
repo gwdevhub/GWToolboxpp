@@ -681,7 +681,7 @@ void PartySearchWindow::DrawSettingInternal() {
     DrawAlertsWindowContent(false);
 }
 
-void PartySearchWindow::LoadSettings(CSimpleIni* ini) {
+void PartySearchWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
     filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
@@ -696,7 +696,7 @@ void PartySearchWindow::LoadSettings(CSimpleIni* ini) {
     alert_file.close();
 }
 
-void PartySearchWindow::SaveSettings(CSimpleIni* ini) {
+void PartySearchWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);

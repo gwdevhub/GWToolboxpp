@@ -70,7 +70,7 @@ void EffectRenderer::Invalidate() {
         trigger.second->triggers_handled.clear();
     }
 }
-void EffectRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+void EffectRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
     Invalidate();
     LoadDefaults();
     for (const auto& settings : aoe_effect_settings) {
@@ -79,7 +79,7 @@ void EffectRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
         settings.second->color = Colors::Load(ini, section, color_buf, settings.second->color);
     }
 }
-void EffectRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+void EffectRenderer::SaveSettings(ToolboxIni* ini, const char* section) const {
     for (const auto& settings : aoe_effect_settings) {
         char color_buf[64];
         sprintf(color_buf, "color_aoe_effect_%d", settings.first);

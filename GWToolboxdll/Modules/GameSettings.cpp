@@ -86,7 +86,7 @@ namespace {
             SetWindowTextW(hwnd, title.c_str());
     }
 
-    void SaveChannelColor(CSimpleIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
+    void SaveChannelColor(ToolboxIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
         char key[128];
         GW::Chat::Color sender, message;
         GW::Chat::GetChannelColors(chan, &sender, &message);
@@ -97,7 +97,7 @@ namespace {
         Colors::Save(ini, section, key, (Color)message);
     }
 
-    void LoadChannelColor(CSimpleIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
+    void LoadChannelColor(ToolboxIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
         char key[128];
         GW::Chat::Color sender, message;
         GW::Chat::GetDefaultColors(chan, &sender, &message);
@@ -457,6 +457,32 @@ namespace {
     typedef void(__cdecl* SetGlobalNameTagVisibility_pt)(uint32_t flags);
     SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = 0;
     uint32_t* GlobalNameTagVisibilityFlags = 0;
+
+    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = 0;
+    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = 0;
+    bool closing_gw = false;
+    void OnMinOrRestoreOrExitBtnClicked(GW::UI::InteractionMessage* message, void* wparam, void* lparam) {
+        GW::Hook::EnterHook();
+        if (message->message_id == 0x2f && wparam) {
+            struct MouseParams {
+                uint32_t button_id;
+                uint32_t button_id_dupe;
+                uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
+            } *param = (MouseParams*)wparam;
+            if (param->button_id == 0x3 && param->current_state == 0x6) {
+                param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
+
+                // Left button clicked, on the exit button (ID 0x3)
+                if (!closing_gw)
+                    SendMessage(GW::MemoryMgr::GetGWWindowHandle(), WM_CLOSE, NULL, NULL);
+                closing_gw = true;
+                GW::Hook::LeaveHook();
+                return;
+            }
+        }
+        OnMinOrRestoreOrExitBtnClicked_Ret(message, wparam, lparam);
+        GW::Hook::LeaveHook();
+    }
 
     GW::MemoryPatcher skip_map_entry_message_patch;
 
@@ -1129,6 +1155,13 @@ void GameSettings::Initialize() {
     GW::HookBase::CreateHook(ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, (void**)&ShowAgentExperienceGain_Ret);
     GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
 
+    // Stop GW from force closing the game when clicking on the exit button in window fullscreen; instead route it through the close signal.
+    OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback) GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
+    if (OnMinOrRestoreOrExitBtnClicked_Func) {
+        GW::HookBase::CreateHook(OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, (void**)&OnMinOrRestoreOrExitBtnClicked_Ret);
+        GW::HookBase::EnableHooks();
+    }
+
     GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, bind_member(this, &GameSettings::OnFactionDonate));
     GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILLBAR_UPDATE, OnPostLoadSkillBar, 0x8000);
@@ -1297,7 +1330,7 @@ void GameSettings::MessageOnPartyChange() {
     previous_party_names = current_party_names;
     check_message_on_party_change = false;
 }
-void GameSettings::LoadSettings(CSimpleIni* ini) {
+void GameSettings::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
 
     disable_camera_smoothing = ini->GetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
@@ -1438,7 +1471,7 @@ void GameSettings::Terminate() {
     gold_confirm_patch.Reset();
 }
 
-void GameSettings::SaveSettings(CSimpleIni* ini) {
+void GameSettings::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);

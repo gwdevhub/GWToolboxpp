@@ -7,6 +7,15 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 6.3
+* [New] Added option to show notification/flash window when whole party is ready
+* [Fix] Fixed right click context menu not working if mouse fix it turned off
+* [Fix] Fixed crash when trying to load or save theme on toolbox open or close
+* [Minor] Added props to minimap in debug
+* [QoL] Changed behavior of the close button when in fullscreen borderless to gracefully close GW
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.3_Release/GWToolboxdll.dll)
+
 ## Version 6.2
 * [New] Added `/withdraw <quantity> <model_id1> [<model_id2 ...]` chat command
 * [New] Added options to hide skill descriptions on hover

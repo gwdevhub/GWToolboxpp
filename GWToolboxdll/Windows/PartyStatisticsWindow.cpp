@@ -545,14 +545,14 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::End();
 }
 
-void PartyStatisticsWindow::LoadSettings(CSimpleIni* ini) {
+void PartyStatisticsWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     show_abs_values = ini->GetBoolValue(Name(), VAR_NAME(show_abs_values), show_abs_values);
     show_perc_values = ini->GetBoolValue(Name(), VAR_NAME(show_perc_values), show_perc_values);
     print_by_click = ini->GetBoolValue(Name(), VAR_NAME(print_by_click), print_by_click);
 }
 
-void PartyStatisticsWindow::SaveSettings(CSimpleIni* ini) {
+void PartyStatisticsWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(show_abs_values), show_abs_values);
     ini->SetBoolValue(Name(), VAR_NAME(show_perc_values), show_perc_values);

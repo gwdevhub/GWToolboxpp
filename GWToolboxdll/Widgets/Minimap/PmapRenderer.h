@@ -10,8 +10,8 @@ public:
     void Render(IDirect3DDevice9* device) override;
 
     void DrawSettings();
-    void LoadSettings(CSimpleIni* ini, const char* section);
-    void SaveSettings(CSimpleIni* ini, const char* section) const;
+    void LoadSettings(ToolboxIni* ini, const char* section);
+    void SaveSettings(ToolboxIni* ini, const char* section) const;
     Color GetBackgroundColor() { return color_mapbackground; }
 
 

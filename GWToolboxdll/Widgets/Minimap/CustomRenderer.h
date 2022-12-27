@@ -93,8 +93,8 @@ public:
     void DrawLineSettings();
     void DrawMarkerSettings();
     void DrawPolygonSettings();
-    void LoadSettings(CSimpleIni* ini, const char* section);
-    void SaveSettings(CSimpleIni* ini, const char* section) const;
+    void LoadSettings(ToolboxIni* ini, const char* section);
+    void SaveSettings(ToolboxIni* ini, const char* section) const;
     void LoadMarkers();
     void SaveMarkers() const;
 
@@ -127,7 +127,7 @@ private:
     std::vector<CustomMarker> markers;
     std::vector<CustomPolygon> polygons{};
 
-    CSimpleIni* inifile = nullptr;
+    ToolboxIni* inifile = nullptr;
 
     bool initialized = false;
 };

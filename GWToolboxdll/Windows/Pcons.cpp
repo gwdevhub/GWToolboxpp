@@ -403,7 +403,7 @@ bool* Pcon::GetSettingsByName(const wchar_t* name) {
     }
     return settings_by_charname[name];
 }
-void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
+void Pcon::LoadSettings(ToolboxIni* inifile, const char* section) {
     char buf_active[256];
     char buf_threshold[256];
     char buf_visible[256];
@@ -416,12 +416,12 @@ void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
     *def = inifile->GetBoolValue(section, buf_active, *def);
     visible = inifile->GetBoolValue(section, buf_visible, visible);
 
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
     std::string sectionsub(section);
     sectionsub += ':';
     size_t section_len = sectionsub.size();
-    for (CSimpleIni::Entry& entry : entries) {
+    for (ToolboxIni::Entry& entry : entries) {
         if (strncmp(entry.pItem, sectionsub.c_str(), section_len) != 0)
             continue;
         std::string str(entry.pItem);
@@ -431,7 +431,7 @@ void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
         *char_enabled = inifile->GetBoolValue(entry.pItem, buf_active, *char_enabled);
     }
 }
-void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
+void Pcon::SaveSettings(ToolboxIni* inifile, const char* section) {
     char buf_active[256];
     char buf_threshold[256];
     char buf_visible[256];

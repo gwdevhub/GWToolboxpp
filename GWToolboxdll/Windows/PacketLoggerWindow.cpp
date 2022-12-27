@@ -757,7 +757,7 @@ void PacketLoggerWindow::Update(float delta) {
     }
 }
 
-void PacketLoggerWindow::SaveSettings(CSimpleIni* ini) {
+void PacketLoggerWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(timestamp_type), timestamp_type);
@@ -774,7 +774,7 @@ void PacketLoggerWindow::SaveSettings(CSimpleIni* ini) {
     ClearMessageLog();
 }
 
-void PacketLoggerWindow::LoadSettings(CSimpleIni* ini) {
+void PacketLoggerWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 
     timestamp_type = ini->GetBoolValue(Name(), VAR_NAME(timestamp_type), TimestampType::TimestampType_None);

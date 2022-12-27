@@ -97,8 +97,8 @@ public:
     void P221Callback(GW::Packet::StoC::SkillActivate *pak);
 
     void DrawSettings();
-    void LoadSettings(CSimpleIni* ini, const char* section);
-    void SaveSettings(CSimpleIni* ini, const char* section) const;
+    void LoadSettings(ToolboxIni* ini, const char* section);
+    void SaveSettings(ToolboxIni* ini, const char* section) const;
 
 private:
     void Initialize(IDirect3DDevice9* device) override;

@@ -15,7 +15,7 @@
 #include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/Minimap.h>
 
-void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+void PingsLinesRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
     color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));
     if ((color_drawings & IM_COL32_A_MASK) == 0) color_drawings |= Colors::ARGB(255, 0, 0, 0);
     ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(128, 255, 0, 0));
@@ -28,7 +28,7 @@ void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     reduce_ping_spam = ini->GetBoolValue(section, VAR_NAME(reduce_ping_spam), reduce_ping_spam);
     Invalidate();
 }
-void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+void PingsLinesRenderer::SaveSettings(ToolboxIni* ini, const char* section) const {
     Colors::Save(ini, section, "color_drawings", color_drawings);
     Colors::Save(ini, section, "color_pings", ping_circle.color);
     Colors::Save(ini, section, "color_shadowstep_mark", marker.color);

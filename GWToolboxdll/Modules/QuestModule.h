@@ -19,6 +19,6 @@ public:
     void Terminate() override;
     void Update(float) override;
     void DrawSettingInternal() override;
-    void LoadSettings(CSimpleIniA*) override;
-    void SaveSettings(CSimpleIniA*) override;
+    void LoadSettings(ToolboxIni*) override;
+    void SaveSettings(ToolboxIni*) override;
 };

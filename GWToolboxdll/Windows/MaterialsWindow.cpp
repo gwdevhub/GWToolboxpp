@@ -177,13 +177,13 @@ void MaterialsWindow::Terminate() {
     ToolboxWindow::Terminate();
 }
 
-void MaterialsWindow::LoadSettings(CSimpleIni* ini) {
+void MaterialsWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     manage_gold = ini->GetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
     use_stock = ini->GetBoolValue(Name(), VAR_NAME(use_stock), use_stock);
 }
 
-void MaterialsWindow::SaveSettings(CSimpleIni* ini) {
+void MaterialsWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
     ini->SetBoolValue(Name(), VAR_NAME(use_stock), use_stock);

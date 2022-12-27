@@ -44,9 +44,9 @@ public:
 
     void Initialize() override;
     void Terminate() override;
-    void LoadSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
     void RegisterSettingsContent() override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
     void DrawInventorySettings();
     void DrawPartySettings();

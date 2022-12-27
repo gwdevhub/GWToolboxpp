@@ -25,6 +25,7 @@
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <hidusage.h>
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -38,8 +39,7 @@ namespace {
 
     utf8::string imgui_inifile;
 
-    CSimpleIni* inifile = nullptr;
-    std::filesystem::path inifile_path;
+
 
     bool must_self_destruct = false;    // is true when toolbox should quit
     GW::HookEntry Update_Entry;
@@ -55,6 +55,15 @@ namespace {
         gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
         OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
         Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
+        
+        // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
+        static RAWINPUTDEVICE rid;
+        rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
+        rid.usUsage = HID_USAGE_GENERIC_MOUSE;
+        rid.dwFlags = RIDEV_INPUTSINK;
+        rid.hwndTarget = gw_window_handle;
+        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+
         event_handler_attached = true;
         return true;
     }
@@ -125,14 +134,42 @@ namespace {
             });
     }
 
+    ToolboxIni* OpenSettingsFile(std::filesystem::path config = GWTOOLBOX_INI_FILENAME, bool fresh = false)
+    {
+        // NB: No way of manually freeing inifile if its trapped inside this function, but nbd, OS will clean up. Alternative is memcpy, but no need for the extra copy
+        static ToolboxIni* inifile = nullptr;
+        if (config != GWTOOLBOX_INI_FILENAME) {
+            config = std::filesystem::path(L"configs") / config;
+            config += L".ini";
+        }
+        const auto full_path = Resources::GetPath(config);
+        if (!fresh && !(inifile && inifile->location_on_disk == full_path))
+            fresh = true;
+        if (fresh) {
+            // inifile is cached, unless path for config has changed.
+            ToolboxIni* tmp = new ToolboxIni(false, false, false);
+            
+            if (!std::filesystem::exists(full_path)) {
+                Log::LogW(L"%s doesn't exist", full_path.wstring().c_str());
+            }
+            else {
+                Log::LogW(L"Loading ini file %s",full_path.wstring().c_str());
+                ASSERT(Resources::LoadIniFromFile(full_path, tmp) == 0);
+            }
+            if (inifile)
+                delete inifile;
+            inifile = tmp;
+        }
+        return inifile;
+    }
+
     bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, bool enable) {
         auto found = std::ranges::find(vec.begin(), vec.end(), &m);
         if (found != vec.end()) {
             // Module found
             if (enable)
                 return true;
-            if(inifile)
-                m.SaveSettings(inifile);
+            m.SaveSettings(OpenSettingsFile());
             modules_terminating.push_back(&m);
             m.SignalTerminate();
             vec.erase(found);
@@ -148,8 +185,7 @@ namespace {
                 return false; // Not finished terminating
             vec.push_back(&m);
             m.Initialize();
-            if(inifile)
-                m.LoadSettings(inifile);
+            m.LoadSettings(OpenSettingsFile());
             ReorderModules(vec);
             return true; // Added successfully
         }
@@ -307,7 +343,7 @@ LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
     static bool right_mouse_down = false;
 
-    if (Message == WM_CLOSE || Message == WM_SYSCOMMAND && wParam == SC_CLOSE) {
+    if (Message == WM_CLOSE || (Message == WM_SYSCOMMAND && wParam == SC_CLOSE)) {
         // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
         // we can't sleep here, because toolbox modules will probably be using the render loop to close off things
         // like hooks
@@ -442,10 +478,11 @@ void GWToolbox::Initialize()
     Resources::EnsureFolderExists(Resources::GetPath(L"img\\materials"));
     Resources::EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
     Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"configs"));
 
     // if the file does not exist we'll load module settings once downloaded, but we need the file open
     // in order to read defaults
-    OpenSettingsFile();
+    const auto ini = OpenSettingsFile();
 
     Log::Log("Creating Modules\n");
     ToggleModule(CrashHandler::Instance());
@@ -455,7 +492,7 @@ void GWToolbox::Initialize()
     ToggleModule(MainWindow::Instance());
     ToggleModule(DialogModule::Instance());
 
-    ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
+    ToolboxSettings::Instance().LoadModules(ini); // initialize all other modules as specified by the user
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
         const auto* c = GW::GetCharContext();
@@ -473,55 +510,40 @@ void GWToolbox::Initialize()
     initialized = true;
 }
 
-CSimpleIni* GWToolbox::OpenSettingsFile(std::filesystem::path config, bool fresh) const
-{
-    if (config != GWTOOLBOX_INI_FILENAME) {
-        config = std::filesystem::path(L"configs") / config;
-        config += L".ini";
-    }
-    if (inifile_path != config || fresh) {
-        // inifile is cached, unless path for config has changed.
-        CSimpleIni* tmp = new CSimpleIni(false, false, false);
-        Log::Log("Opening ini file\n");
-        config = Resources::GetPath(config);
-        ASSERT(Resources::LoadIniFromFile(config, tmp) == 0);
-        if (inifile)
-            delete inifile;
-        inifile_path = config;
-        inifile = tmp;
-    }
-    return inifile;
-}
 void GWToolbox::LoadSettings(std::filesystem::path config, bool fresh) const
 {
-    inifile = OpenSettingsFile(config, fresh);
+    const auto ini = OpenSettingsFile(config, fresh);
     for (auto m : modules_enabled) {
-        m->LoadSettings(inifile);
+        m->LoadSettings(ini);
     }
     for (auto m : widgets_enabled) {
-        m->LoadSettings(inifile);
+        m->LoadSettings(ini);
     }
     for (auto m : windows_enabled) {
-        m->LoadSettings(inifile);
+        m->LoadSettings(ini);
     }
 }
 void GWToolbox::SaveSettings(std::filesystem::path config) const
 {
-    inifile = OpenSettingsFile(config);
+    const auto ini = OpenSettingsFile(config, false);
+    ASSERT(ini->location_on_disk.wstring().length());
     for (auto m : modules_enabled) {
-        m->SaveSettings(inifile);
+        m->SaveSettings(ini);
     }
     for (auto m : widgets_enabled) {
-        m->SaveSettings(inifile);
+        m->SaveSettings(ini);
     }
     for (auto m : windows_enabled) {
-        m->SaveSettings(inifile);
+        m->SaveSettings(ini);
     }
-    ASSERT(Resources::SaveIniToFile(inifile_path, inifile) == 0);
+    ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
+    Log::LogW(L"Toolbox settings saved to %s", ini->location_on_disk.wstring().c_str());
 }
 
 void GWToolbox::StartSelfDestruct()
 {
+    if (must_self_destruct)
+        return;
     if (initialized) {
         SaveSettings();
         while (modules_enabled.size()) {
@@ -541,12 +563,7 @@ void GWToolbox::StartSelfDestruct()
 void GWToolbox::Terminate() {
     if (!initialized)
         return;
-    if (inifile) {
-        SaveSettings();
-        inifile->Reset();
-        delete inifile;
-        inifile = nullptr;
-    }
+    SaveSettings();
 
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
 

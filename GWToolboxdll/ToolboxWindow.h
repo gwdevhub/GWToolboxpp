@@ -15,14 +15,14 @@ public:
         has_closebutton = true;
     }
 
-    virtual void LoadSettings(CSimpleIni* ini) override {
+    virtual void LoadSettings(ToolboxIni* ini) override {
         ToolboxUIElement::LoadSettings(ini);
         LOAD_BOOL(lock_move);
         LOAD_BOOL(lock_size);
         LOAD_BOOL(show_closebutton);
     }
 
-    virtual void SaveSettings(CSimpleIni* ini) override {
+    virtual void SaveSettings(ToolboxIni* ini) override {
         ToolboxUIElement::SaveSettings(ini);
         SAVE_BOOL(lock_move);
         SAVE_BOOL(lock_size);

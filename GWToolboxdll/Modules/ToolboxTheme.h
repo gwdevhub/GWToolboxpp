@@ -14,8 +14,8 @@ public:
     const char* Icon() const override { return ICON_FA_PALETTE; }
 
     void Terminate() override;
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void Draw(IDirect3DDevice9* device) override;
     void ShowVisibleRadio() override {}
     void DrawSizeAndPositionSettings() override {}
@@ -25,8 +25,8 @@ public:
 
     void DrawSettingInternal() override;
 
-    CSimpleIni* GetLayoutIni(bool reload = true);
-    CSimpleIni* GetThemeIni(bool reload = true);
+    ToolboxIni* GetLayoutIni(bool reload = true);
+    ToolboxIni* GetThemeIni(bool reload = true);
 
 private:
     ImGuiStyle DefaultTheme();
@@ -35,6 +35,6 @@ private:
     ImGuiStyle ini_style;
     bool layout_dirty = false;
 
-    CSimpleIni* theme_ini = nullptr;
-    CSimpleIni* layout_ini = nullptr;
+    ToolboxIni* theme_ini = nullptr;
+    ToolboxIni* layout_ini = nullptr;
 };

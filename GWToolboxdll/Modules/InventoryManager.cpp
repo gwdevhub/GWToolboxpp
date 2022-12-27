@@ -650,7 +650,7 @@ bool InventoryManager::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
     }
     return false;
 }
-void InventoryManager::SaveSettings(CSimpleIni* ini) {
+void InventoryManager::SaveSettings(ToolboxIni* ini) {
     ToolboxUIElement::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(only_use_superior_salvage_kits), only_use_superior_salvage_kits);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_rare_mats), salvage_rare_mats);
@@ -665,7 +665,7 @@ void InventoryManager::SaveSettings(CSimpleIni* ini) {
 
     GuiUtils::MapToIni(ini, Name(), VAR_NAME(hide_from_merchant_items), hide_from_merchant_items);
 }
-void InventoryManager::LoadSettings(CSimpleIni* ini) {
+void InventoryManager::LoadSettings(ToolboxIni* ini) {
     ToolboxUIElement::LoadSettings(ini);
     only_use_superior_salvage_kits = ini->GetBoolValue(Name(), VAR_NAME(only_use_superior_salvage_kits), only_use_superior_salvage_kits);
     salvage_rare_mats = ini->GetBoolValue(Name(), VAR_NAME(salvage_rare_mats), salvage_rare_mats);

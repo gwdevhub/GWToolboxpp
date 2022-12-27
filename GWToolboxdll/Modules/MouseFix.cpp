@@ -165,13 +165,6 @@ namespace {
 
         ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
 
-        // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
-        static RAWINPUTDEVICE rid;
-        rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
-        rid.usUsage = HID_USAGE_GENERIC_MOUSE;
-        rid.dwFlags = RIDEV_INPUTSINK;
-        rid.hwndTarget = hwnd;
-        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
         return true;
     }
 
@@ -358,14 +351,14 @@ void MouseFix::Initialize() {
         GW::HookBase::CreateHook(ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
     }
 }
-void MouseFix::LoadSettings(CSimpleIniA* ini)
+void MouseFix::LoadSettings(ToolboxIni* ini)
 {
     enable_cursor_fix = ini->GetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
     SetCursorSize(ini->GetLongValue(Name(), VAR_NAME(cursor_size), cursor_size));
     RedrawCursorIcon();
 }
 
-void MouseFix::SaveSettings(CSimpleIniA* ini)
+void MouseFix::SaveSettings(ToolboxIni* ini)
 {
     ini->SetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
     ini->SetLongValue(Name(), VAR_NAME(cursor_size), cursor_size);

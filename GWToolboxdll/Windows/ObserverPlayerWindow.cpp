@@ -194,7 +194,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 // Load settings
-void ObserverPlayerWindow::LoadSettings(CSimpleIni* ini) {
+void ObserverPlayerWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 
     show_tracking = ini->GetBoolValue(Name(), VAR_NAME(show_tracking), true);
@@ -209,7 +209,7 @@ void ObserverPlayerWindow::LoadSettings(CSimpleIni* ini) {
 
 
 // Save settings
-void ObserverPlayerWindow::SaveSettings(CSimpleIni* ini) {
+void ObserverPlayerWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(show_tracking), show_tracking);

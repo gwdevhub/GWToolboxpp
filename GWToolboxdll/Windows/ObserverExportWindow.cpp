@@ -509,13 +509,13 @@ void ObserverExportWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 // Load settings
-void ObserverExportWindow::LoadSettings(CSimpleIni* ini) {
+void ObserverExportWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 }
 
 
 // Save settings
-void ObserverExportWindow::SaveSettings(CSimpleIni* ini) {
+void ObserverExportWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 }
 

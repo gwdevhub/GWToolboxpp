@@ -429,7 +429,7 @@ void ChatSettings::DrawSettingInternal()
     ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 }
 
-void ChatSettings::LoadSettings(CSimpleIniA* ini)
+void ChatSettings::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
@@ -449,7 +449,7 @@ void ChatSettings::LoadSettings(CSimpleIniA* ini)
     GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
 }
 
-void ChatSettings::SaveSettings(CSimpleIniA* ini)
+void ChatSettings::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
 

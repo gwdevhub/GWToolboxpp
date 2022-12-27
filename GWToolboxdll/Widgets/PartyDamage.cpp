@@ -391,7 +391,7 @@ void PartyDamage::ResetDamage() {
     }
 }
 
-void PartyDamage::LoadSettings(CSimpleIni* ini) {
+void PartyDamage::LoadSettings(ToolboxIni* ini) {
     ToolboxWidget::LoadSettings(ini);
     lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
     width = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(width), 100.0f));
@@ -406,11 +406,11 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
     snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
     user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 
-    if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+    if (inifile == nullptr) inifile = new ToolboxIni(false, false, false);
     inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
-    CSimpleIni::TNamesDepend keys;
+    ToolboxIni::TNamesDepend keys;
     inifile->GetAllKeys(IniSection, keys);
-    for (const CSimpleIni::Entry& key : keys) {
+    for (const ToolboxIni::Entry& key : keys) {
         int lkey;
         if (GuiUtils::ParseInt(key.pItem, &lkey)) {
             if (lkey <= 0) continue;
@@ -423,7 +423,7 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
     is_movable = is_resizable = !snap_to_party_window;
 }
 
-void PartyDamage::SaveSettings(CSimpleIni* ini) {
+void PartyDamage::SaveSettings(ToolboxIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), "lock_move", lock_move);
 

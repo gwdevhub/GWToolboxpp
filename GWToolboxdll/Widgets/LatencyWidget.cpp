@@ -86,7 +86,7 @@ void LatencyWidget::Draw(IDirect3DDevice9* pDevice) {
     ImGui::PopStyleColor();
 }
 
-void LatencyWidget::LoadSettings(CSimpleIni* ini) {
+void LatencyWidget::LoadSettings(ToolboxIni* ini) {
     ToolboxWidget::LoadSettings(ini);
 
     red_threshold = ini->GetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
@@ -104,7 +104,7 @@ void LatencyWidget::LoadSettings(CSimpleIni* ini) {
     }
 }
 
-void LatencyWidget::SaveSettings(CSimpleIni* ini) {
+void LatencyWidget::SaveSettings(ToolboxIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
     ini->SetBoolValue(Name(), VAR_NAME(show_avg_ping), show_avg_ping);

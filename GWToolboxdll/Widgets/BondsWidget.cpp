@@ -215,7 +215,7 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
     });
 }
 
-void BondsWidget::LoadSettings(CSimpleIni* ini) {
+void BondsWidget::LoadSettings(ToolboxIni* ini) {
     ToolboxWidget::LoadSettings(ini);
     lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
 
@@ -231,7 +231,7 @@ void BondsWidget::LoadSettings(CSimpleIni* ini) {
     user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 }
 
-void BondsWidget::SaveSettings(CSimpleIni* ini) {
+void BondsWidget::SaveSettings(ToolboxIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
     Colors::Save(ini, Name(), VAR_NAME(background), background);

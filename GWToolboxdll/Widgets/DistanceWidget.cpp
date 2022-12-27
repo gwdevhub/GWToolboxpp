@@ -23,7 +23,7 @@ void DistanceWidget::DrawSettingInternal() {
     Colors::DrawSettingHueWheel("Spirit Range", &color_spirit, 0);
     Colors::DrawSettingHueWheel("Compass Range", &color_compass, 0);
 }
-void DistanceWidget::LoadSettings(CSimpleIni* ini) {
+void DistanceWidget::LoadSettings(ToolboxIni* ini) {
     ToolboxWidget::LoadSettings(ini);
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     show_perc_value = ini->GetBoolValue(Name(), VAR_NAME(show_perc_value), show_perc_value);
@@ -36,7 +36,7 @@ void DistanceWidget::LoadSettings(CSimpleIni* ini) {
     color_spirit = Colors::Load(ini, Name(), VAR_NAME(color_spirit), color_spirit);
     color_compass = Colors::Load(ini, Name(), VAR_NAME(color_compass), color_compass);
 }
-void DistanceWidget::SaveSettings(CSimpleIni* ini) {
+void DistanceWidget::SaveSettings(ToolboxIni* ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(show_perc_value), show_perc_value);

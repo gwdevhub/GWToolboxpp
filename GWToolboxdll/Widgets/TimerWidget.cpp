@@ -132,7 +132,7 @@ void TimerWidget::Initialize() {
 }
 
 
-void TimerWidget::LoadSettings(CSimpleIni *ini) {
+void TimerWidget::LoadSettings(ToolboxIni *ini) {
     ToolboxWidget::LoadSettings(ini);
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     use_instance_timer = ini->GetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
@@ -169,7 +169,7 @@ void TimerWidget::LoadSettings(CSimpleIni *ini) {
     }
 }
 
-void TimerWidget::SaveSettings(CSimpleIni *ini) {
+void TimerWidget::SaveSettings(ToolboxIni *ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);

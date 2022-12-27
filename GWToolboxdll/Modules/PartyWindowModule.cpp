@@ -604,7 +604,7 @@ void PartyWindowModule::DrawSettingInternal() {
         CheckMap();
     }
 }
-void PartyWindowModule::SaveSettings(CSimpleIni* ini) {
+void PartyWindowModule::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     // Clear existing ini settings
     ini->Delete(Name(), NULL, NULL);
@@ -624,10 +624,10 @@ void PartyWindowModule::SaveSettings(CSimpleIni* ini) {
         ini->SetValue(Name(), std::to_string(user_defined_npc->model_id).c_str(), s.c_str());
     }
 }
-void PartyWindowModule::LoadSettings(CSimpleIni* ini) {
+void PartyWindowModule::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     // get all keys in a section
-    CSimpleIniA::TNamesDepend keys;
+    CSimpleIni::TNamesDepend keys;
     ini->GetAllKeys(Name(), keys);
     if (keys.empty())
         return LoadDefaults();

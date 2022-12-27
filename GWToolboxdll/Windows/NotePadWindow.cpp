@@ -23,7 +23,7 @@ void NotePadWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::PopStyleVar();
 }
 
-void NotePadWindow::LoadSettings(CSimpleIni* ini) {
+void NotePadWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 
     std::ifstream file(Resources::GetPath(L"Notepad.txt"));
@@ -33,7 +33,7 @@ void NotePadWindow::LoadSettings(CSimpleIni* ini) {
     }
 }
 
-void NotePadWindow::SaveSettings(CSimpleIni* ini) {
+void NotePadWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     if (filedirty) {

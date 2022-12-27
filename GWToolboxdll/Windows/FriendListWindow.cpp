@@ -519,7 +519,7 @@ bool FriendListWindow::RemoveFriend(Friend* f) {
 void FriendListWindow::Initialize() {
     ToolboxWindow::Initialize();
 
-    inifile = new CSimpleIni(false, false, false);
+    inifile = new ToolboxIni(false, false, false);
 
     GW::Chat::CreateCommand(L"addfriend", CmdAddFriend);
     GW::Chat::CreateCommand(L"removefriend", CmdRemoveFriend);
@@ -948,7 +948,7 @@ void FriendListWindow::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/busy' or '/dnd' Set your friend list status to 'Do Not Disturb'.");
     ImGui::TreePop();
 }
-void FriendListWindow::LoadSettings(CSimpleIni* ini) {
+void FriendListWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     lock_move_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
     lock_size_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
@@ -965,7 +965,7 @@ void FriendListWindow::LoadSettings(CSimpleIni* ini) {
 
     LoadFromFile();
 }
-void FriendListWindow::SaveSettings(CSimpleIni* ini) {
+void FriendListWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
     ini->SetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
@@ -1007,9 +1007,9 @@ void FriendListWindow::Terminate() {
 }
 void FriendListWindow::LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out) {
     // Grab char names
-    CSimpleIniA::TNamesDepend values;
+    CSimpleIni::TNamesDepend values;
     inifile->GetAllValues(section, "charname", values);
-    CSimpleIniA::TNamesDepend::const_iterator i;
+    CSimpleIni::TNamesDepend::const_iterator i;
     for (i = values.begin(); i != values.end(); ++i) {
         std::wstring char_wstr = GuiUtils::StringToWString(i->pItem), temp;
         std::vector<std::wstring> parts;
@@ -1045,9 +1045,9 @@ void FriendListWindow::LoadFromFile() {
         inifile->SetMultiKey(true);
         inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
 
-        CSimpleIni::TNamesDepend entries;
+        ToolboxIni::TNamesDepend entries;
         inifile->GetAllSections(entries);
-        for (CSimpleIni::Entry& entry : entries) {
+        for (ToolboxIni::Entry& entry : entries) {
             Friend* lf = new Friend(this);
             lf->uuid = entry.pItem;
             lf->uuid_bytes = StringToGuid(lf->uuid);

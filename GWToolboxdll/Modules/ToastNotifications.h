@@ -21,8 +21,8 @@ public:
     void Initialize() override;
     void Terminate() override;
     void DrawSettingInternal() override;
-    void LoadSettings(CSimpleIniA*) override;
-    void SaveSettings(CSimpleIniA*) override;
+    void LoadSettings(ToolboxIni*) override;
+    void SaveSettings(ToolboxIni*) override;
 
     class Toast;
     // Runs when a toast is activated, deactivated or destructed. Will only trigger once.

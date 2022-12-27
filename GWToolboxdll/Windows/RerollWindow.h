@@ -38,8 +38,8 @@ public:
     void Update(float) override;
     std::vector<std::wstring>* GetAvailableChars();
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
 
 
     // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI

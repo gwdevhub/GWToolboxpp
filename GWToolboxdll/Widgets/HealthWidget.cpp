@@ -20,20 +20,20 @@
 
 constexpr const wchar_t* HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
-void HealthWidget::LoadSettings(CSimpleIni *ini) {
+void HealthWidget::LoadSettings(ToolboxIni *ini) {
     ToolboxWidget::LoadSettings(ini);
     click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     show_abs_value = ini->GetBoolValue(Name(), VAR_NAME(show_abs_value), show_abs_value);
     show_perc_value = ini->GetBoolValue(Name(), VAR_NAME(show_perc_value), show_perc_value);
 
-    if (inifile == nullptr) inifile = new CSimpleIni();
+    if (inifile == nullptr) inifile = new ToolboxIni();
     inifile->LoadFile(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME).c_str());
 
-    CSimpleIni::TNamesDepend entries;
+    ToolboxIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
 
-    for (const CSimpleIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         Threshold* threshold = new Threshold(inifile, entry.pItem);
         threshold->index = thresholds.size();
         thresholds.push_back(threshold);
@@ -53,7 +53,7 @@ void HealthWidget::LoadSettings(CSimpleIni *ini) {
     }
 }
 
-void HealthWidget::SaveSettings(CSimpleIni *ini) {
+void HealthWidget::SaveSettings(ToolboxIni *ini) {
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
@@ -244,7 +244,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 
 unsigned int HealthWidget::Threshold::cur_ui_id = 0;
 
-HealthWidget::Threshold::Threshold(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
+HealthWidget::Threshold::Threshold(ToolboxIni* ini, const char* section) : ui_id(++cur_ui_id) {
     active = ini->GetBoolValue(section, VAR_NAME(active));
     GuiUtils::StrCopy(name, ini->GetValue(section, VAR_NAME(name), ""), sizeof(name));
     modelId = ini->GetLongValue(section, VAR_NAME(modelId), modelId);
@@ -328,7 +328,7 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op) {
     return changed;
 }
 
-void HealthWidget::Threshold::SaveSettings(CSimpleIni* ini, const char* section) {
+void HealthWidget::Threshold::SaveSettings(ToolboxIni* ini, const char* section) {
     ini->SetBoolValue(section, VAR_NAME(active), active);
     ini->SetValue(section, VAR_NAME(name), name);
     ini->SetLongValue(section, VAR_NAME(modelId), modelId);

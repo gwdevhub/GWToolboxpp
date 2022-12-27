@@ -16,11 +16,11 @@
 
 #include <ToolboxWidget.h>
 
-void SettingsWindow::LoadSettings(CSimpleIni* ini) {
+void SettingsWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
 }
-void SettingsWindow::SaveSettings(CSimpleIni* ini) {
+void SettingsWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
 }

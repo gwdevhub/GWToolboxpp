@@ -40,8 +40,8 @@ public:
     bool DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text) override;
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
     void RegisterSettingsContent() override;
     void DrawLunarsAndAlcoholSettings();

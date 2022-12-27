@@ -1012,7 +1012,7 @@ void TravelWindow::DrawSettingInternal() {
     ImGui::PopItemWidth();
 }
 
-void TravelWindow::LoadSettings(CSimpleIni* ini) {
+void TravelWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
@@ -1026,7 +1026,7 @@ void TravelWindow::LoadSettings(CSimpleIni* ini) {
     close_on_travel = ini->GetBoolValue(Name(), VAR_NAME(close_on_travel), false);
 }
 
-void TravelWindow::SaveSettings(CSimpleIni* ini) {
+void TravelWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetLongValue(Name(), VAR_NAME(fav_count), fav_count);
     for (int i = 0; i < fav_count; ++i) {

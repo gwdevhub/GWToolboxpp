@@ -82,7 +82,7 @@
 
 namespace {
 
-    CSimpleIni* inifile = nullptr;
+    ToolboxIni* inifile = nullptr;
 
     class ModuleToggle {
     public:
@@ -168,7 +168,7 @@ namespace {
 
 bool ToolboxSettings::move_all = false;
 
-void ToolboxSettings::LoadModules(CSimpleIni* ini) {
+void ToolboxSettings::LoadModules(ToolboxIni* ini) {
     inifile = ini;
 
     GWToolbox::ToggleModule(Updater::Instance());
@@ -271,7 +271,7 @@ void ToolboxSettings::DrawFreezeSetting() {
     ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
 }
 
-void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
+void ToolboxSettings::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     inifile = ini; // Keep this to load module info
 
@@ -288,7 +288,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     }
 }
 
-void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
+void ToolboxSettings::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     if (location_file.is_open()) location_file.close();
 

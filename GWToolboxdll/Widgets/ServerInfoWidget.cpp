@@ -151,11 +151,11 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*) {
 void ServerInfoWidget::DrawSettingInternal() {
     ImGui::Text("Displays current server IP Address and location if available");
 }
-void ServerInfoWidget::SaveSettings(CSimpleIni* ini) {
+void ServerInfoWidget::SaveSettings(ToolboxIni* ini) {
     ToolboxWidget::SaveSettings(ini);
 
 
 }
-void ServerInfoWidget::LoadSettings(CSimpleIni* ini) {
+void ServerInfoWidget::LoadSettings(ToolboxIni* ini) {
     ToolboxWidget::LoadSettings(ini);
 }

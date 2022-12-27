@@ -16,6 +16,7 @@ file(GLOB SOURCES
     "Windows/*.h"
     "Windows/*.cpp")
 
+
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
 
@@ -28,8 +29,8 @@ if(USE_PLUGINS)
 endif()
 
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy)
-target_compile_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GL>)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:RelWithDebInfo>:/Zi>)
 
 set_target_properties(GWToolboxdll PROPERTIES
     VS_GLOBAL_RunCodeAnalysis false

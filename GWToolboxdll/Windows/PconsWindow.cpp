@@ -572,7 +572,7 @@ void PconsWindow::CheckBossRangeAutoDisable() { // Trigger Elite area auto disab
     }
 }
 
-void PconsWindow::LoadSettings(CSimpleIni* ini) {
+void PconsWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
@@ -606,7 +606,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
     disable_cons_on_objective_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
 }
 
-void PconsWindow::SaveSettings(CSimpleIni* ini) {
+void PconsWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     for (Pcon* pcon : pcons) {
