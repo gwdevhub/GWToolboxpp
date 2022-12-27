@@ -458,6 +458,17 @@ namespace {
     SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = 0;
     uint32_t* GlobalNameTagVisibilityFlags = 0;
 
+    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = 0;
+    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = 0;
+    void OnMinOrRestoreOrExitBtnClicked(GW::UI::InteractionMessage* message, void* wparam, void* lparam) {
+        if (message->message_id == 0x2f && wparam && *(uint32_t*)wparam == 0x3) {
+            // Left button clicked, on the exit button (ID 0x3)
+            SendMessage(GW::MemoryMgr::GetGWWindowHandle(), WM_CLOSE, NULL, NULL);
+            return;
+        }
+        OnMinOrRestoreOrExitBtnClicked_Ret(message, wparam, lparam);
+    }
+
     GW::MemoryPatcher skip_map_entry_message_patch;
 
     // Refresh agent name tags when allegiance changes ( https://github.com/HasKha/GWToolboxpp/issues/781 )
@@ -1128,6 +1139,13 @@ void GameSettings::Initialize() {
     GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
     GW::HookBase::CreateHook(ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, (void**)&ShowAgentExperienceGain_Ret);
     GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
+
+    // Stop GW from force closing the game when clicking on the exit button in window fullscreen; instead route it through the close signal.
+    OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback) GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
+    if (OnMinOrRestoreOrExitBtnClicked_Func) {
+        GW::HookBase::CreateHook(OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, (void**)&OnMinOrRestoreOrExitBtnClicked_Ret);
+        GW::HookBase::EnableHooks();
+    }
 
     GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, bind_member(this, &GameSettings::OnFactionDonate));
     GW::UI::RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
