@@ -3,6 +3,7 @@
 // ReSharper disable once CppUnusedIncludeDirective
 #include <ImGuiAddons.h>
 #include <nlohmann/json.hpp>
+#include <ToolboxIni.h>
 
 #ifndef DLLAPI
 #ifdef GWCA_IMPORT
