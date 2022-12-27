@@ -343,7 +343,7 @@ LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
     static bool right_mouse_down = false;
 
-    if (Message == WM_CLOSE || Message == WM_SYSCOMMAND && wParam == SC_CLOSE) {
+    if (Message == WM_CLOSE || (Message == WM_SYSCOMMAND && wParam == SC_CLOSE)) {
         // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
         // we can't sleep here, because toolbox modules will probably be using the render loop to close off things
         // like hooks
@@ -542,6 +542,8 @@ void GWToolbox::SaveSettings(std::filesystem::path config) const
 
 void GWToolbox::StartSelfDestruct()
 {
+    if (must_self_destruct)
+        return;
     if (initialized) {
         SaveSettings();
         while (modules_enabled.size()) {
