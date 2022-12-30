@@ -72,9 +72,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
                                   crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth,
                                   stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond, ProcessId, ThreadId);
 
-    HANDLE hFile = CreateFileW(
-        szFileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
-
+    HANDLE hFile = NULL;
     MINIDUMP_USER_STREAM_INFORMATION* UserStreamParam = 0;
     char* extra_info = nullptr;
 
@@ -90,6 +88,8 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers) {
         failure_message = "Failed to swprintf crash file name";
         goto failed;
     }
+    hFile = CreateFileW(
+        szFileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
     if (hFile == INVALID_HANDLE_VALUE) {
         failure_message = "Failed to CreateFileW crash file";
         goto failed;

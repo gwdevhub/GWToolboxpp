@@ -246,46 +246,46 @@ std::filesystem::path ChatLog::LogPath(const wchar_t* prefix) {
 }
 void ChatLog::Load(const std::wstring& _account) {
     Reset();
+
     // Recv log FIFO
     account = _account;
-    ToolboxIni* inifile = new ToolboxIni(false, false, false);
-    ASSERT(Resources::LoadIniFromFile(LogPath(L"recv"), inifile) == 0);
+    ToolboxIni inifile;
+    ASSERT(inifile.LoadIfExists(LogPath(L"recv")) == SI_OK);
+
     ToolboxIni::TNamesDepend entries;
-    inifile->GetAllSections(entries);
+    inifile.GetAllSections(entries);
     std::wstring buf;
     FILETIME t;
     uint32_t channel = 0;
     uint32_t addr = 0;
     for (ToolboxIni::Entry& entry : entries) {
-        std::string message = inifile->GetValue(entry.pItem, "message", "");
+        std::string message = inifile.GetValue(entry.pItem, "message", "");
         if (message.empty())
             continue;
         size_t written = GuiUtils::IniToArray(message,buf);
         if (!written)
             continue;
-        t.dwLowDateTime = inifile->GetLongValue(entry.pItem, "dwLowDateTime", 0);
-        t.dwHighDateTime = inifile->GetLongValue(entry.pItem, "dwHighDateTime", 0);
-        channel = inifile->GetLongValue(entry.pItem, "channel", 0);
+        t.dwLowDateTime = inifile.GetLongValue(entry.pItem, "dwLowDateTime", 0);
+        t.dwHighDateTime = inifile.GetLongValue(entry.pItem, "dwHighDateTime", 0);
+        channel = inifile.GetLongValue(entry.pItem, "channel", 0);
         Add(buf.data(), channel, t);
     }
-    delete inifile;
 
     // sent log FIFO
-    inifile = new ToolboxIni(false, false, false);
-    ASSERT(Resources::LoadIniFromFile(LogPath(L"sent"), inifile) == 0);
+    inifile.Reset();
+    ASSERT(inifile.LoadIfExists(LogPath(L"sent")) == SI_OK);
     entries.clear();
-    inifile->GetAllSections(entries);
+    inifile.GetAllSections(entries);
     for (ToolboxIni::Entry& entry : entries) {
-        std::string message = inifile->GetValue(entry.pItem, "message", "");
+        std::string message = inifile.GetValue(entry.pItem, "message", "");
         if (message.empty())
             continue;
         size_t written = GuiUtils::IniToArray(message, buf);
         if (!written)
             continue;
-        addr = inifile->GetLongValue(entry.pItem, "addr", 0);
+        addr = inifile.GetLongValue(entry.pItem, "addr", 0);
         AddSent(buf.data(), addr);
     }
-    delete inifile;
 }
 void ChatLog::Inject() {
     if (injecting || !enabled || !ClearChatLog_Func || !InitChatLog_Func || !pending_inject) {

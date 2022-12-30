@@ -93,7 +93,7 @@ void AgentRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
 
 void AgentRenderer::LoadCustomAgents() {
     if (agentcolorinifile == nullptr) agentcolorinifile = new ToolboxIni();
-    agentcolorinifile->LoadFile(Resources::GetPath(AGENTCOLOR_INIFILENAME).c_str());
+    ASSERT(agentcolorinifile->LoadIfExists(Resources::GetPath(AGENTCOLOR_INIFILENAME)) == SI_OK);
 
     custom_agents.clear();
     custom_agents_map.clear();
@@ -163,7 +163,7 @@ void AgentRenderer::SaveCustomAgents() const {
             snprintf(buf, 256, "customagent%03d", i);
             custom_agents[i]->SaveSettings(agentcolorinifile, buf);
         }
-        agentcolorinifile->SaveFile(Resources::GetPath(AGENTCOLOR_INIFILENAME).c_str());
+        ASSERT(agentcolorinifile->SaveFile(Resources::GetPath(AGENTCOLOR_INIFILENAME).c_str()) == SI_OK);
     }
 }
 void AgentRenderer::LoadDefaultSizes() {

@@ -22,13 +22,13 @@ constexpr const wchar_t* HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
 void HealthWidget::LoadSettings(ToolboxIni *ini) {
     ToolboxWidget::LoadSettings(ini);
-    click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    show_abs_value = ini->GetBoolValue(Name(), VAR_NAME(show_abs_value), show_abs_value);
-    show_perc_value = ini->GetBoolValue(Name(), VAR_NAME(show_perc_value), show_perc_value);
+    LOAD_BOOL(click_to_print_health);
+    LOAD_BOOL(hide_in_outpost);
+    LOAD_BOOL(show_abs_value);
+    LOAD_BOOL(show_perc_value);
 
     if (inifile == nullptr) inifile = new ToolboxIni();
-    inifile->LoadFile(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME).c_str());
+    ASSERT(inifile->LoadIfExists(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
 
     ToolboxIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
@@ -55,10 +55,10 @@ void HealthWidget::LoadSettings(ToolboxIni *ini) {
 
 void HealthWidget::SaveSettings(ToolboxIni *ini) {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(show_abs_value), show_abs_value);
-    ini->SetBoolValue(Name(), VAR_NAME(show_perc_value), show_perc_value);
+    SAVE_BOOL(click_to_print_health);
+    SAVE_BOOL(hide_in_outpost);
+    SAVE_BOOL(show_abs_value);
+    SAVE_BOOL(show_perc_value);
 
     if (thresholds_changed && inifile) {
         inifile->Reset();
@@ -70,7 +70,7 @@ void HealthWidget::SaveSettings(ToolboxIni *ini) {
             thresholds[i]->SaveSettings(inifile, buf);
         }
 
-        inifile->SaveFile(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME).c_str());
+        ASSERT(inifile->SaveFile(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME).c_str()) == SI_OK);
         thresholds_changed = false;
     }
 }

@@ -138,6 +138,8 @@ namespace {
     {
         // NB: No way of manually freeing inifile if its trapped inside this function, but nbd, OS will clean up. Alternative is memcpy, but no need for the extra copy
         static ToolboxIni* inifile = nullptr;
+        if (config.empty())
+            config = GWTOOLBOX_INI_FILENAME;
         if (config != GWTOOLBOX_INI_FILENAME) {
             config = std::filesystem::path(L"configs") / config;
             config += L".ini";
@@ -148,14 +150,8 @@ namespace {
         if (fresh) {
             // inifile is cached, unless path for config has changed.
             ToolboxIni* tmp = new ToolboxIni(false, false, false);
-            
-            if (!std::filesystem::exists(full_path)) {
-                Log::LogW(L"%s doesn't exist", full_path.wstring().c_str());
-            }
-            else {
-                Log::LogW(L"Loading ini file %s",full_path.wstring().c_str());
-                ASSERT(Resources::LoadIniFromFile(full_path, tmp) == 0);
-            }
+            ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
+            tmp->location_on_disk = full_path;
             if (inifile)
                 delete inifile;
             inifile = tmp;
@@ -526,7 +522,6 @@ void GWToolbox::LoadSettings(std::filesystem::path config, bool fresh) const
 void GWToolbox::SaveSettings(std::filesystem::path config) const
 {
     const auto ini = OpenSettingsFile(config, false);
-    ASSERT(ini->location_on_disk.wstring().length());
     for (auto m : modules_enabled) {
         m->SaveSettings(ini);
     }
