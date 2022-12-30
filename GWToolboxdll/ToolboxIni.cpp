@@ -2,11 +2,6 @@
 
 #include <ToolboxIni.h>
 
-ToolboxIni::ToolboxIni(
-    bool a_bIsUtf8,
-    bool a_bMultiKey,
-    bool a_bMultiLine
-) : CSimpleIni(a_bIsUtf8, a_bMultiKey, a_bMultiLine) { }
 SI_Error ToolboxIni::LoadFile(const wchar_t* a_pwszFile) {
     const std::filesystem::path pFile = a_pwszFile;
     return LoadFile(pFile);
