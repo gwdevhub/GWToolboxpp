@@ -44,11 +44,12 @@ private:
     static void SendDialog(uint32_t dialog_id, clock_t time);
 
     enum class QuestDialogType {
-        TAKE = 0x800001,
-        ENQUIRE = 0x800003,
-        ENQUIRE_NEXT = 0x800004,
-        ENQUIRE_REWARD = 0x800006,
-        REWARD = 0x800007
+        ENQUIRE = 0x800003, // Quest available - green exclamation mark
+        TAKE = 0x800001, // Add this quest to my log - green tick mark
+        ENQUIRE_NEXT = 0x800004, // Progressing on a current quest - green speech bubble
+        RECAP = 0x800005, // You've already taken the quest - yellow question mark
+        ENQUIRE_REWARD = 0x800006, // Quest completed, discuss reward - green speech bubble
+        REWARD = 0x800007 // Accept quest reward
     };
     static bool IsQuest(const uint32_t dialog_id) {
         return (dialog_id & 0x800000) != 0;
