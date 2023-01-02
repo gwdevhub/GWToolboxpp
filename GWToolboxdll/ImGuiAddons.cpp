@@ -37,17 +37,17 @@ namespace ImGui {
 
     void ShowHelp(const char* help) {
         SameLine();
-        TextDisabled("(?)");
+        TextDisabled("%s","(?)");
         if (IsItemHovered()) {
-            SetTooltip(help);
+            SetTooltip("%s",help);
         }
     }
     void TextShadowed(const char* label, ImVec2 offset, ImVec4 shadow_color) {
         ImVec2 pos = GetCursorPos();
         SetCursorPos(ImVec2(pos.x + offset.x, pos.y + offset.y));
-        TextColored(shadow_color, label);
+        TextColored(shadow_color, "%s", label);
         SetCursorPos(pos);
-        Text(label);
+        TextUnformatted(label);
     }
     void SetNextWindowCenter(ImGuiWindowFlags flags) {
         const auto& io = GetIO();

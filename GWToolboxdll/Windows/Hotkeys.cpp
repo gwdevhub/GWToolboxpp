@@ -918,7 +918,7 @@ bool HotkeyEquipItem::Draw()
 {
     bool hotkey_changed = false;
     constexpr const char* bags[6] = { "None", "Backpack", "Belt Pouch", "Bag 1", "Bag 2", "Equipment Pack" };
-    ImGui::Text("Equip By: "); ImGui::SameLine();
+    ImGui::TextUnformatted("Equip By: "); ImGui::SameLine();
     hotkey_changed |= ImGui::RadioButton("Item", (int*)&equip_by, EquipBy::ITEM);
     ImGui::ShowHelp("Find and equip an item by its attributes, regardless of location in inventory.");
     ImGui::SameLine();
@@ -931,19 +931,19 @@ bool HotkeyEquipItem::Draw()
     else {
         static bool need_to_fetch_bag_items = false;
         if (!item_attributes.model_id) {
-            ImGui::Text("No item chosen");
+            ImGui::TextUnformatted("No item chosen");
         }
         else {
-            ImGui::Text("%s", item_attributes.name().c_str());
+            ImGui::TextUnformatted(item_attributes.name().c_str());
             if (!item_attributes.desc().empty()) {
-                ImGui::Text("%s", item_attributes.desc().c_str());
+                ImGui::TextUnformatted(item_attributes.desc().c_str());
             }
         }
         if (ImGui::Button("Edit")) {
             need_to_fetch_bag_items = true;
             ImGui::OpenPopup("Choose Item to Equip");
         }
-        constexpr size_t bags_size = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack) + 1;
+        constexpr size_t bags_size = _countof(bags);
         static std::vector<std::vector<HotkeyEquipItemAttributes>> available_items(bags_size);
         if (ImGui::BeginPopupModal("Choose Item to Equip",0, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (need_to_fetch_bag_items) {
@@ -968,7 +968,7 @@ bool HotkeyEquipItem::Draw()
                 auto& items = available_items[i];
                 if (items.empty())
                     continue;
-                ImGui::Text(bags[i]);
+                ImGui::TextUnformatted(bags[i]);
                 ImGui::Indent();
                 for (auto& ai : available_items[i]) {
                     ImGui::PushID(&ai);
@@ -979,7 +979,7 @@ bool HotkeyEquipItem::Draw()
                     }
                     if (ImGui::IsItemHovered()) {
                         ImGui::BeginTooltip();
-                        ImGui::Text("%s",ai.desc().c_str());
+                        ImGui::TextUnformatted(ai.desc().c_str());
                         ImGui::EndTooltip();
                     }
                     ImGui::PopID();
