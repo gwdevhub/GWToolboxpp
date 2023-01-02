@@ -670,10 +670,8 @@ namespace GuiUtils {
     {
         if (language_id == l)
             return this;
-        decoded_ws.clear();
-        decoded_s.clear();
-        decoding = sanitised = decoded = false;
         language_id = l;
+        reset(encoded_ws.c_str());
         return this;
     }
 
@@ -709,7 +707,8 @@ namespace GuiUtils {
     }
     void EncString::OnStringDecoded(void* param, wchar_t* decoded) {
         EncString* context = (EncString*)param;
-        ASSERT(context && context->decoding && !context->decoded);
+        if (!(context && context->decoding && !context->decoded))
+            return; // Not expecting a decoded string; may have been reset() before response was received.
         if(decoded && decoded[0])
             context->decoded_ws = decoded;
         context->decoded = true;
