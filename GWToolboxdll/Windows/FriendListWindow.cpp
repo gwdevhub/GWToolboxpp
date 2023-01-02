@@ -601,7 +601,9 @@ void FriendListWindow::OnFriendUpdated(GW::HookStatus*, const GW::Friend* old_st
     // Keep a log mapping char name to uuid. This is saved to disk.
     if (!new_state) {
         // Friend removed from friend list.
-        ASSERT(old_state);
+        if (!old_state) {
+            return; // No old state or new state; ignore this event
+        }
         instance.RemoveFriend(instance.GetFriend(old_state));
         return;
     }
