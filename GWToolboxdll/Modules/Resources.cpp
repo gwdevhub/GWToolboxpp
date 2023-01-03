@@ -66,6 +66,22 @@ namespace {
     const wchar_t* ITEM_IMAGES_PATH = L"img\\items";
     const wchar_t* PROF_ICONS_PATH = L"img\\professions";
 
+
+    std::recursive_mutex worker_mutex;
+    std::recursive_mutex main_mutex;
+    std::recursive_mutex dx_mutex;
+
+    // tasks to be done async by the worker thread
+    std::queue<std::function<void()>> thread_jobs;
+    // tasks to be done in the render thread
+    std::queue<std::function<void(IDirect3DDevice9*)>> dx_jobs;
+    // tasks to be done in main thread
+    std::queue<std::function<void()>> main_jobs;
+
+    bool should_stop = false;
+
+    std::vector<std::thread*> workers;
+
     // snprintf error message, pass to callback as a failure. Used internally.
     void trigger_failure_callback(std::function<void(bool,const std::wstring&)> callback,const wchar_t* format, ...) {
         std::wstring out;
@@ -87,6 +103,32 @@ namespace {
                 Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
             break;
         }
+    }
+
+    void WorkerUpdate() {
+        while (!should_stop) {
+            worker_mutex.lock();
+            if (thread_jobs.empty()) {
+                worker_mutex.unlock();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            else {
+                std::function<void()> func = thread_jobs.front();
+                thread_jobs.pop();
+                worker_mutex.unlock();
+                func();
+            }
+        }
+    }
+
+    void InitRestClient(RestClient* r) {
+        char user_agent_str[32];
+        ASSERT(snprintf(user_agent_str, sizeof(user_agent_str), "GWToolboxpp/%s", GWTOOLBOXDLL_VERSION) != -1);
+        r->SetUserAgent(user_agent_str);
+        r->SetFollowLocation(true);
+        r->SetVerifyPeer(false); // idc about mitm or out of date certs
+        r->SetMethod(HttpMethod::Get);
+        r->SetVerifyPeer(false);
     }
 }
 
@@ -111,6 +153,10 @@ Resources::~Resources() {
 
 };
 
+void Resources::EnqueueWorkerTask(std::function<void()> f) { worker_mutex.lock(); thread_jobs.push(f); worker_mutex.unlock();}
+void Resources::EnqueueMainTask(std::function<void()> f) { main_mutex.lock(); main_jobs.push(f); main_mutex.unlock(); }
+void Resources::EnqueueDxTask(std::function<void(IDirect3DDevice9*)> f) { dx_mutex.lock(); dx_jobs.push(f); dx_mutex.unlock(); }
+
 float Resources::GetGWScaleMultiplier(bool force) {
     if (force || cached_ui_scale == .0f) {
         const auto interfacesize =
@@ -124,16 +170,6 @@ float Resources::GetGWScaleMultiplier(bool force) {
         }
     }
     return cached_ui_scale;
-}
-
-void Resources::InitRestClient(RestClient* r) {
-    char user_agent_str[32];
-    ASSERT(snprintf(user_agent_str, sizeof(user_agent_str), "GWToolboxpp/%s", GWTOOLBOXDLL_VERSION) != -1);
-    r->SetUserAgent(user_agent_str);
-    r->SetFollowLocation(true);
-    r->SetVerifyPeer(false); // idc about mitm or out of date certs
-    r->SetMethod(HttpMethod::Get);
-    r->SetVerifyPeer(false);
 }
 
 HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path)
@@ -355,6 +391,37 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback)
     });
 }
 
+bool Resources::Post(const std::string& url, const std::string& payload, std::string& response)
+{
+    RestClient r;
+    InitRestClient(&r);
+    r.SetMethod(HttpMethod::Post);
+    r.SetPostContent(payload.c_str(),payload.size(), ContentFlag::ByRef);
+
+    const nlohmann::json& is_json = nlohmann::json::parse(payload);
+    if (is_json != nlohmann::json::value_t::discarded) {
+        r.SetHeader("Content-Type", "application/json");
+    }
+    r.SetUrl(url.c_str());
+    r.Execute();
+    if (!(r.IsSuccessful() || r.GetStatusCode() == 415)) {
+        StrSprintf(response, "Failed to POST %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
+        return false;
+    }
+    response = std::move(r.GetContent());
+    return true;
+}
+void Resources::Post(const std::string& url, const std::string& payload, AsyncLoadMbCallback callback)
+{
+    EnqueueWorkerTask([url, payload, callback] {
+        std::string response;
+        bool ok = Post(url, payload, response);
+        EnqueueMainTask([callback, ok, response]() {
+            callback(ok, response);
+            });
+        });
+}
+
 void Resources::EnsureFileExists(
     const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
@@ -551,21 +618,6 @@ void Resources::Update(float) {
     main_jobs.pop();
     main_mutex.unlock();
     func();
-}
-void Resources::WorkerUpdate() {
-    while (!should_stop) {
-        worker_mutex.lock();
-        if (thread_jobs.empty()) {
-            worker_mutex.unlock();
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        else {
-            std::function<void()> func = thread_jobs.front();
-            thread_jobs.pop();
-            worker_mutex.unlock();
-            func();
-        }
-    }
 }
 
 IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {

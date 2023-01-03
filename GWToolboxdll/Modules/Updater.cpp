@@ -231,7 +231,7 @@ void Updater::CheckForUpdate(const bool forced) {
         return;
     }
 
-    Resources::Instance().EnqueueWorkerTask([forced] {
+    Resources::EnqueueWorkerTask([forced] {
         if (!forced && mode == Mode::DontCheckForUpdates)
             return; // Do not check for updates
 

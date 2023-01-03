@@ -20,11 +20,6 @@ class Resources : public ToolboxModule {
     Resources();
     ~Resources();
 
-    std::recursive_mutex worker_mutex;
-    std::recursive_mutex main_mutex;
-    std::recursive_mutex dx_mutex;
-    void InitRestClient(RestClient* r);
-
 public:
     Resources(const Resources&) = delete;
 
@@ -41,7 +36,14 @@ public:
 
     void Update(float delta) override;
     void DxUpdate(IDirect3DDevice9* device);
-    void WorkerUpdate();
+
+    // Enqueue instruction to be called on worker thread, away from the render loop e.g. curl requests
+    static void EnqueueWorkerTask(std::function<void()> f);
+    // Enqueue instruction to be called on the main update loop of GW
+    static void EnqueueMainTask(std::function<void()> f);
+    // Enqueue instruction to be called on the draw loop of GW e.g. messing with DirectX9 device
+    static void EnqueueDxTask(std::function<void(IDirect3DDevice9*)> f);
+
 
     static int LoadIniFromFile(const wchar_t* filename, ToolboxIni* inifile);
     static int LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile);
@@ -105,27 +107,15 @@ public:
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
     void Download(const std::string& url, AsyncLoadMbCallback callback);
 
-    // Enqueue instruction to be called on worker thread, away from the render loop e.g. curl requests
-    void EnqueueWorkerTask(std::function<void()> f) { worker_mutex.lock(); thread_jobs.push(f); worker_mutex.unlock();}
-    // Enqueue instruction to be called on the main update loop of GW
-    void EnqueueMainTask(std::function<void()> f) { main_mutex.lock(); main_jobs.push(f); main_mutex.unlock(); }
-    // Enqueue instruction to be called on the draw loop of GW e.g. messing with DirectX9 device
-    void EnqueueDxTask(std::function<void(IDirect3DDevice9*)> f) { dx_mutex.lock(); dx_jobs.push(f); dx_mutex.unlock(); }
+
+    // download to memory, blocking. If an error occurs, details are held in response string
+    static bool Post(const std::string& url, const std::string& payload, std::string& response);
+    // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
+    static void Post(const std::string& url, const std::string& payload, AsyncLoadMbCallback callback);
 
     // Stops the worker thread once it's done with the current jobs.
     void EndLoading();
 private:
-
-    // tasks to be done async by the worker thread
-    std::queue<std::function<void()>> thread_jobs;
-    // tasks to be done in the render thread
-    std::queue<std::function<void(IDirect3DDevice9*)>> dx_jobs;
-    // tasks to be done in main thread
-    std::queue<std::function<void()>> main_jobs;
-
-    bool should_stop = false;
-
-    std::vector<std::thread*> workers;
 
     void Cleanup();
     // Assign IDirect3DTexture9* from file
