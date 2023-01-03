@@ -54,7 +54,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::SameLine();
             ImGui::Text("- %s", GWTOOLBOXDLL_VERSION_BETA);
         } else {
-            const std::string server_version = Updater::Instance().GetServerVersion();
+            const std::string server_version = Updater::GetServerVersion();
             if (!server_version.empty()) {
                 if (server_version == GWTOOLBOXDLL_VERSION) {
                     ImGui::SameLine();
