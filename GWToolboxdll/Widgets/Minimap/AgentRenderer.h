@@ -8,6 +8,7 @@
 
 namespace GW {
     struct Agent;
+    struct AgentLiving;
     struct MapProp;
     namespace UI {
         enum class UIMessage : uint32_t;
@@ -112,13 +113,23 @@ private:
 
     void Initialize(IDirect3DDevice9* device) override;
 
-    void Enqueue(const GW::Agent* agent, const CustomAgent* ca = nullptr);
+    
     Color GetColor(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     float GetSize(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     Shape_e GetShape(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
 
+    struct RenderPosition {
+        float rotation_cos;
+        float rotation_sin;
+        GW::Vec2f position;
+    };
+
+    void Enqueue(const GW::Agent* agent, const CustomAgent* ca = nullptr);
     void Enqueue(Shape_e shape, const GW::Agent* agent, float size, Color color);
     void Enqueue(Shape_e shape, const GW::MapProp* agent, float size, Color color);
+    void Enqueue(Shape_e shape, const RenderPosition& pos, float size, Color color, Color modifier = 0);
+
+    std::vector<const AgentRenderer::CustomAgent*>* GetCustomAgentsToDraw(const GW::AgentLiving* agent);
 
     D3DVertex* vertices = nullptr;  // vertices array
     unsigned int vertices_count = 0;// count of vertices
@@ -143,6 +154,7 @@ private:
     Color color_ally_spirit = 0;
     Color color_ally_minion = 0;
     Color color_ally_dead = 0;
+    Color color_marked_target = 0;
 
     Color profession_colors[11] = {
         0xFF666666,
@@ -169,6 +181,7 @@ private:
     float size_item = 25.f;
     float size_boss = 125.f;
     float size_minion = 50.f;
+    float size_marked_target = 75.f;
     Shape_e default_shape = Tear;
 
     bool agentcolors_changed = false;

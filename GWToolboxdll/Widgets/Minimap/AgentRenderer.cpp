@@ -15,6 +15,7 @@
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
@@ -36,6 +37,26 @@ namespace {
     uint32_t auto_target_id = 0;
 
     bool show_props_on_minimap = false;
+
+
+
+
+    std::set<uint32_t> markedTargets; 
+    bool IsMarkedTarget(const GW::Agent* agent) {
+        return agent && markedTargets.find(agent->agent_id) != markedTargets.end();
+    }
+    void CmdMarkTarget(const wchar_t*, int , LPWSTR* )
+    {
+        const auto target_id = GW::Agents::GetTargetId();
+        if (target_id)
+            markedTargets.emplace(target_id);
+    }
+
+    void CmdClearMarkTarget(const wchar_t*, int , LPWSTR* ) { 
+        markedTargets.clear(); 
+    }
+
+
 }
 
 AgentRenderer* AgentRenderer::instance = 0;
@@ -47,6 +68,7 @@ void AgentRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
         return section;
     };
     LoadDefaultColors();
+    color_marked_target = Colors::Load(ini, section, VAR_NAME(color_marked_target), color_marked_target);
     color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
     color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_damaged_modifier), color_agent_damaged_modifier);
     color_eoe = Colors::Load(ini, section, VAR_NAME(color_eoe), color_eoe);
@@ -73,6 +95,7 @@ void AgentRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
 #endif
 
     LoadDefaultSizes();
+    size_marked_target = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_marked_target), size_marked_target));
     size_default = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_default), size_default));
     size_player = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_player), size_player));
     size_signpost = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_signpost), size_signpost));
@@ -173,8 +196,11 @@ void AgentRenderer::LoadDefaultSizes() {
     size_item = 25.0f;
     size_boss = 125.0f;
     size_minion = 50.0f;
+    size_marked_target = 75.0f;
+    agent_border_thickness = 0;
 }
 void AgentRenderer::LoadDefaultColors() {
+    color_marked_target = 0xFFFFFC00;
     color_agent_modifier = 0x001E1E1E;
     color_agent_damaged_modifier = 0x00505050;
     color_eoe = 0x3200FF00;
@@ -193,14 +219,7 @@ void AgentRenderer::LoadDefaultColors() {
     color_ally_spirit = 0xFF608000;
     color_ally_minion = 0xFF008060;
     color_ally_dead = 0x64006400;
-    size_default = 75.0f;
-    size_player = 100.0f;
-    size_signpost = 50.0f;
-    size_item = 25.0f;
-    size_boss = 125.0f;
-    size_minion = 50.0f;
     boss_colors = true;
-    agent_border_thickness = 0;
 }
 void AgentRenderer::DrawSettings() {
 #ifdef _DEBUG
@@ -234,7 +253,8 @@ void AgentRenderer::DrawSettings() {
         ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
         Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
         ImGui::ShowHelp("Each hostile agent has this value subtracted from it when under 90% HP.");
-
+        Colors::DrawSettingHueWheel("Marked Target", &color_marked_target);
+        ImGui::ShowHelp("Agents highlighted as marked target via /marktarget command");
         ImGui::TreePop();
     }
 
@@ -250,6 +270,8 @@ void AgentRenderer::DrawSettings() {
         ImGui::DragFloat("Item Size", &size_item, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Boss Size", &size_boss, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Minion Size", &size_minion, 1.0f, 1.0f, 0.0f, "%.0f");
+        ImGui::DragFloat("Marked Target Size", &size_marked_target, 1.0f, 1.0f, 0.0f, "%.0f");
+        ImGui::ShowHelp("Agents highlighted as marked target via /marktarget command");
         static const char* items[] = {"Tear", "Circle", "Square", "Big Circle"};
         ImGui::Combo("Shape", reinterpret_cast<int*>(&default_shape), items, 4);
         ImGui::ShowHelp("The default shape of agents.");
@@ -455,7 +477,33 @@ void AgentRenderer::Initialize(IDirect3DDevice9* device) {
     for (const auto message_id : hook_messages) {
         GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
     }
+
+    GW::Chat::CreateCommand(L"marktarget", CmdMarkTarget);
+    GW::Chat::CreateCommand(L"clearmarktarget", CmdClearMarkTarget);
 }
+
+std::vector<const AgentRenderer::CustomAgent*>* AgentRenderer::GetCustomAgentsToDraw(const GW::AgentLiving* agent) {
+    if (!agent) 
+        return nullptr;
+    const auto it = custom_agents_map.find(agent->player_number);
+    if (it == custom_agents_map.end())
+        return nullptr;
+    static std::vector<const CustomAgent*> out;
+    out.clear();
+    for (const CustomAgent* ca : it->second) {
+        if (!ca->active) continue;
+        if (ca->mapId > 0 && ca->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
+        out.push_back(ca);
+    }
+    if (out.empty())
+        return nullptr;
+    std::ranges::sort(out,
+        [&](const CustomAgent* pA,
+            const CustomAgent* pB) -> bool {
+                return pA->index > pB->index;
+        });
+    return &out;
+};
 
 void AgentRenderer::Render(IDirect3DDevice9* device) {
     if (!initialized) {
@@ -474,8 +522,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
             Enqueue(Shape_e::Quad, props[i], size_item, color_signpost);
         }
     }
-
-
 
     // get stuff
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
@@ -517,22 +563,39 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     static std::vector<std::pair<const GW::Agent*, const CustomAgent*>> custom_agents_to_draw;
     custom_agents_to_draw.clear();
 
+    static std::vector<const GW::AgentLiving*> marked_targets_to_draw;
+    marked_targets_to_draw.clear();
+
+    static std::vector<const GW::AgentLiving*> players_to_draw;
+    players_to_draw.clear();
+
     // some helper lambads
-    auto AddCustomAgentsToDraw = [this](const GW::Agent* agent) -> bool {
-        const GW::AgentLiving* living = agent->GetAsAgentLiving();
-        if (!living) return false;
-        const auto it = custom_agents_map.find(living->player_number);
-        bool found_custom_agent = false;
-        if (it != custom_agents_map.end()) {
-            for (const CustomAgent* ca : it->second) {
-                if (!ca->active) continue;
-                if (ca->mapId > 0 && ca->mapId != static_cast<DWORD>(GW::Map::GetMapID())) continue;
-                custom_agents_to_draw.push_back({ agent, ca });
-                found_custom_agent = true;
-            }
+    
+
+    auto AddCustomAgentsToDraw = [this](const GW::AgentLiving* agent) -> bool {
+        const auto custom_agents_for_this_agent = GetCustomAgentsToDraw(agent);
+        if (!custom_agents_for_this_agent)
+            return false;
+        for (auto ca : *custom_agents_for_this_agent) {
+            custom_agents_to_draw.push_back({ agent, ca });
         }
-        return found_custom_agent;
+        return true;
     };
+
+    auto AddMarkedTarget = [](const GW::AgentLiving* agent) -> bool {
+        if (!IsMarkedTarget(agent))
+            return false;
+        marked_targets_to_draw.push_back(agent);
+        return true;
+    };
+
+    auto AddOtherPlayersToDraw = [](const GW::AgentLiving* agent) -> bool {
+        if (!(agent && agent->IsPlayer() && agent != GW::Agents::GetPlayer()))
+            return false;
+        players_to_draw.push_back(agent);
+        return true;
+    };
+
     auto sort_custom_agents_to_draw = []() -> void {
         std::ranges::sort(custom_agents_to_draw,
           [&](const std::pair<const GW::Agent*, const CustomAgent*>& pA,
@@ -540,46 +603,46 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
               return pA.second->index > pB.second->index;
           });
     };
+    
 
-    for (GW::Agent* agent_ptr : *agents) {
+    // 2. Generic agents
+    for (const auto agent_ptr : *agents) {
         if (!agent_ptr) continue;
-        if (target == agent_ptr) continue; // will draw target at the end
+        if (agent_ptr == player)
+            continue; //  7. player
+        if (target == agent_ptr) 
+            continue; // 4. target if it's a non-player, 6. target if it's a player
         if (agent_ptr->GetIsGadgetType()) {
-            GW::AgentGadget* agent = agent_ptr->GetAsAgentGadget();
+            const auto agent = agent_ptr->GetAsAgentGadget();
             if(GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && agent->extra_type == 7602) continue;
         }
         else if (agent_ptr->GetIsLivingType()) {
-            GW::AgentLiving* agent = agent_ptr->GetAsAgentLiving();
-            if (agent->player_number <= 12) continue;
-            if (!show_hidden_npcs
-                && agent->IsNPC()
-                && agent->player_number < npcs->size()
-                && (npcs->at(agent->player_number).npc_flags & 0x10000) > 0) continue;
+            const auto agent = agent_ptr->GetAsAgentLiving();
+            if (AddMarkedTarget(agent))
+                continue; // 8. marked targets
+            if (AddOtherPlayersToDraw(agent))
+                continue; // 5. players
+            if (!show_hidden_npcs && !GW::Agents::GetIsAgentTargettable(agent_ptr))
+                continue;
+            if (AddCustomAgentsToDraw(agent))
+                continue; // 3. custom colored models
         }
-        if (AddCustomAgentsToDraw(agent_ptr)) {
-            // found a custom agent to draw, we'll draw them later
-        } else {
-            Enqueue(agent_ptr);
-        }
-        if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
+        Enqueue(agent_ptr);
     }
+
     // 3. custom colored models
     sort_custom_agents_to_draw();
     for (const auto& [fst, snd] : custom_agents_to_draw) {
         Enqueue(fst, snd);
-        if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
     }
-    custom_agents_to_draw.clear();
 
     // 4. target if it's a non-player
-    if (target && target->player_number > 12) {
-        if (AddCustomAgentsToDraw(target)) {
-            sort_custom_agents_to_draw();
-            for (const auto& [fst, snd] : custom_agents_to_draw) {
-                Enqueue(fst, snd);
-                if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
+    if (target && !target->IsPlayer()) {
+        const auto custom_agents_for_this_agent = GetCustomAgentsToDraw(target);
+        if (custom_agents_for_this_agent) {
+            for (const auto ca : *custom_agents_for_this_agent) {
+                Enqueue(target, ca);
             }
-            custom_agents_to_draw.clear();
         } else {
             Enqueue(target);
         }
@@ -588,27 +651,26 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     // note: we don't support custom agents for players
 
     // 5. players
-    for (GW::Agent* agent_ptr : *agents) {
-        if (!agent_ptr) continue;
-        GW::AgentLiving* agent = agent_ptr->GetAsAgentLiving();
-        if (agent == nullptr) continue;
-        if (agent->player_number > 12) continue;
-        if (agent == player) continue; // will draw player at the end
-        if (agent == target) continue; // will draw target at the end
-
+    for (const auto agent : players_to_draw) {
         Enqueue(agent);
-
-        if (vertices_count >= vertices_max - 4 * max_shape_verts) break;
     }
 
     // 6. target if it's a player
-    if (target && target != player && target->player_number <= 12) {
+    if (target && target != player && target->IsPlayer()) {
         Enqueue(target);
     }
 
     // 7. player
     if (player) {
         Enqueue(player);
+    }
+
+    // 8. marked
+    for (const auto agent_id : markedTargets) {
+        const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        if (!(agent && agent->GetIsLivingType() && agent->GetIsAlive()))
+            continue;
+        Enqueue(default_shape, agent, size_marked_target, color_marked_target);
     }
 
     buffer->Unlock();
@@ -622,22 +684,8 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
     const auto color = GetColor(agent, ca);
-    const auto alpha = color >> IM_COL32_A_SHIFT & 0xFFu;
     const auto size = GetSize(agent, ca);
     const auto shape = GetShape(agent, ca);
-    // No target highlight if BigCircle
-    if (shape != BigCircle) {
-        // Target highlight if this is the current or next target
-        if (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id) {
-            Enqueue(shape, agent, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
-            return Enqueue(shape, agent, size, color);
-        }
-    }
-    if (!alpha) return;
-    if (agent_border_thickness && agent->GetIsLivingType()) {
-        Enqueue(shape, agent, size + static_cast<float>(agent_border_thickness),
-            Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
-    }
     return Enqueue(shape, agent, size, color);
 }
 
@@ -879,46 +927,57 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const Cus
 }
 
 void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, Color color) {
-    if ((color & IM_COL32_A_MASK) == 0) return;
-
-    size_t num_v = shapes[shape].vertices.size();
-    for (size_t i = 0; i < num_v; ++i) {
-        const Shape_Vertex& vert = shapes[shape].vertices[i];
-        GW::Vec2f pos = (GW::Rotate(vert, agent->rotation_cos, agent->rotation_sin) * size) + agent->pos;
-        switch (vert.modifier) {
-        case Dark: vertices[i].color = Colors::Sub(color, color_agent_modifier); break;
-        case Light: vertices[i].color = Colors::Add(color, color_agent_modifier); break;
-        case CircleCenter: vertices[i].color = Colors::Sub(color, IM_COL32(0, 0, 0, 50)); break;
-        default: vertices[i].color = color; break;
+    const auto alpha = color >> IM_COL32_A_SHIFT & 0xFFu;
+    if (!alpha) return;
+    RenderPosition pos = {
+        agent->rotation_cos,
+        agent->rotation_sin,
+        agent->pos
+    };
+    // NB: No border if BigCircle
+    if (shape != BigCircle) {
+        // Add agent border if applicable
+        if (agent_border_thickness && agent->GetIsLivingType()) {
+            Enqueue(shape, pos, size + static_cast<float>(agent_border_thickness), Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
         }
-        vertices[i].z = 0.0f;
-        vertices[i].x = pos.x;
-        vertices[i].y = pos.y;
+        // Add target highlight if applicable
+        if (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id) {
+            Enqueue(shape, pos, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
+        }
     }
-    vertices += num_v;
-    vertices_count += num_v;
+
+    return Enqueue(shape, pos, size, color, color_agent_modifier);
 }
 void AgentRenderer::Enqueue(Shape_e shape, const GW::MapProp* agent, float size, Color color) {
-    if ((color & IM_COL32_A_MASK) == 0) return;
+    RenderPosition pos = {
+        agent->rotation_cos,
+        agent->rotation_sin,
+        agent->position
+    };
+    return Enqueue(shape, pos, size, color);
+}
 
+void AgentRenderer::Enqueue(Shape_e shape, const RenderPosition& pos, float size, Color color, Color modifier) {
+    if ((color & IM_COL32_A_MASK) == 0) return;
     size_t num_v = shapes[shape].vertices.size();
+    ASSERT(vertices_count < vertices_max - num_v);
+
     for (size_t i = 0; i < num_v; ++i) {
         const Shape_Vertex& vert = shapes[shape].vertices[i];
-        GW::Vec2f pos = (GW::Rotate(vert, agent->rotation_cos, agent->rotation_sin) * size) + agent->position;
+        GW::Vec2f calc_pos = (GW::Rotate(vert, pos.rotation_cos, pos.rotation_sin) * size) + pos.position;
         switch (vert.modifier) {
-        case Dark: vertices[i].color = Colors::Sub(color, color_agent_modifier); break;
-        case Light: vertices[i].color = Colors::Add(color, color_agent_modifier); break;
+        case Dark: vertices[i].color = Colors::Sub(color, modifier); break;
+        case Light: vertices[i].color = Colors::Add(color, modifier); break;
         case CircleCenter: vertices[i].color = Colors::Sub(color, IM_COL32(0, 0, 0, 50)); break;
         default: vertices[i].color = color; break;
         }
         vertices[i].z = 0.0f;
-        vertices[i].x = pos.x;
-        vertices[i].y = pos.y;
+        vertices[i].x = calc_pos.x;
+        vertices[i].y = calc_pos.y;
     }
     vertices += num_v;
     vertices_count += num_v;
 }
-
 void AgentRenderer::BuildCustomAgentsMap() {
     custom_agents_map.clear();
     for (const CustomAgent* ca : custom_agents) {
