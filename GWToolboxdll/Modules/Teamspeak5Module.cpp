@@ -53,8 +53,6 @@ namespace {
     WSAData wsaData = { 0 };
     easywsclient::WebSocket* websocket = nullptr;
 
-    std::thread connector;
-
     struct TS3Server {
         uint32_t my_client_id = 0;
         std::string my_channel_id;
@@ -227,12 +225,10 @@ namespace {
             return false;
         }
         step = Connecting;
-        if (connector.joinable())
-            connector.join();
-        connector = std::thread([user_invoked]() {
+        Resources::EnqueueWorkerTask([user_invoked]() {
             websocket = WebSocket::from_url(GetWebsocketHost());
             if (websocket == nullptr) {
-                if(user_invoked)
+                if (user_invoked)
                     Log::Error("Couldn't connect to the teamspeak 5 websocket; ensure Teamspeak 5 is running and that the 'Remote Apps' feature is enabled");
             }
             else {
@@ -427,8 +423,6 @@ void Teamspeak5Module::Initialize() {
 
 
 void Teamspeak5Module::Terminate() {
-    if (connector.joinable())
-       connector.join();
     DeleteWebSocket();
     if (wsaData.wVersion) {
         WSACleanup();

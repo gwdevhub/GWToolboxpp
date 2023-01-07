@@ -22,7 +22,7 @@
 #include <Modules/ZrawDeepModule.h>
 #include <Modules/AprilFools.h>
 #include <Modules/InventoryManager.h>
-//#include <Modules/TeamspeakModule.h>
+#include <Modules/TeamspeakModule.h>
 #include <Modules/Teamspeak5Module.h>
 #include <Modules/ObserverModule.h>
 #include <Modules/Obfuscator.h>
@@ -116,6 +116,7 @@ namespace {
         ToastNotifications::Instance(),
         DiscordModule::Instance(),
         TwitchModule::Instance(),
+        TeamspeakModule::Instance(),
         Teamspeak5Module::Instance(),
         ObserverModule::Instance(),
         ChatLog::Instance(),
