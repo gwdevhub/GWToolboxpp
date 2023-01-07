@@ -47,7 +47,7 @@ void ChatLog::Add(GW::Chat::ChatMessage* in) {
 void ChatLog::Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp) {
     if (injecting || !enabled)
         return;
-    if (!(_message && _message[0]))
+    if (!(((size_t)_message & 3) == 0 && _message[0]))
         return; // Empty message
     TBChatMessage* new_message = new TBChatMessage(_message, _channel, _timestamp);
     TBChatMessage* inject = recv_last;
@@ -101,10 +101,11 @@ trim_log:
     }
 }
 void ChatLog::AddSent(wchar_t* _message, uint32_t addr) {
+    if (!(((size_t)_message & 3) == 0 && _message[0]))
+        return; // Empty message
     if(injecting || IsAdded(_message, addr))
         return;
-    if (!(_message && _message[0]))
-        return; // Empty message
+
     TBSentMessage* new_message = new TBSentMessage(_message, addr);
     TBSentMessage* inject = sent_last;
     if (!sent_first) {
