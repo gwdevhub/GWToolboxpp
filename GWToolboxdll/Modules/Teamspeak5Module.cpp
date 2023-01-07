@@ -166,7 +166,33 @@ namespace {
             callback(url);
             });
     }
+    void OnTeamspeakCommand(const wchar_t*, int , LPWSTR* ) {
+        if (!IsConnected()) {
+            Log::Error("GWToolbox isn't connected to Teamspeak 5");
+            return;
+        }
+        const auto teamspeak_server = GetCurrentServer();
+        if (!(teamspeak_server && teamspeak_server->host.size())) {
+            Log::Error("Teamspeak 5 isn't connected to a server");
+            return;
+        }
+        wchar_t buf[120];
+        swprintf(buf, _countof(buf) - 1, L"%s (%d users)",
+            GuiUtils::StringToWString(teamspeak_server->name).c_str(),
+            teamspeak_server->user_count);
+        GW::Chat::SendChat('#', buf);
 
+        swprintf(buf, _countof(buf) - 1, L"TS3: [http://invite.teamspeak.com/%S/?port=%d;xx]",
+            teamspeak_server->host.c_str(),
+            teamspeak_server->port);
+        GW::Chat::SendChat('#', buf);
+
+        GetServerInviteLink(teamspeak_server, teamspeak_server->my_channel_id, [](const std::string& url) {
+            wchar_t buf[120];
+            swprintf(buf, _countof(buf) - 1, L"TS5: [%S;xx]", url.c_str());
+            GW::Chat::SendChat('#', buf);
+            });
+    }
     void SendTeamspeakHandshake() {
         json packet;
         packet["type"] = "auth";
@@ -213,6 +239,8 @@ namespace {
                 if (user_invoked)
                     Log::Info("Teamspeak 5 connected");
                 SendTeamspeakHandshake();
+                GW::Chat::CreateCommand(L"ts", OnTeamspeakCommand);
+                GW::Chat::CreateCommand(L"ts5", OnTeamspeakCommand);
             }
             step = Idle;
             pending_connect = false;
@@ -220,28 +248,7 @@ namespace {
         return true;
     }
 
-    void OnTeamspeakCommand(const wchar_t*, int , LPWSTR* ) {
-        if (!IsConnected()) {
-            Log::Error("GWToolbox isn't connected to Teamspeak 5");
-            return;
-        }
-        const auto teamspeak_server = GetCurrentServer();
-        if (!(teamspeak_server && teamspeak_server->host.size())) {
-            Log::Error("Teamspeak 5 isn't connected to a server");
-            return;
-        }
-        wchar_t buf[120];
-        swprintf(buf, _countof(buf) - 1, L"%s (%d users)",
-            GuiUtils::StringToWString(teamspeak_server->name).c_str(),
-            teamspeak_server->user_count);
-        GW::Chat::SendChat('#', buf);
 
-        GetServerInviteLink(teamspeak_server, teamspeak_server->my_channel_id, [](const std::string& url) {
-            wchar_t buf[120];
-            swprintf(buf, _countof(buf) - 1, L"[%S;xx]", url.c_str());
-            GW::Chat::SendChat('#', buf);
-        });
-    }
 
     TS3Server* UpsertServer(const json& props_json, uint32_t connection_id) {
         if(!props_json.is_object())
@@ -423,8 +430,11 @@ void Teamspeak5Module::Terminate() {
     if (connector.joinable())
        connector.join();
     DeleteWebSocket();
-    if (wsaData.wVersion)
+    if (wsaData.wVersion) {
         WSACleanup();
+        wsaData = { 0 };
+    }
+    GW::Chat::DeleteCommand(L"ts");
 }
 void Teamspeak5Module::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
@@ -519,7 +529,7 @@ void Teamspeak5Module::DrawSettingInternal() {
             }
             ImGui::Unindent();
         }
-        ImGui::TextDisabled("Use the /ts command to send your current server info in chat");
+        ImGui::TextDisabled("Use the /ts5 command to send your current server info in chat");
     }
     ImGui::PopID();
 }

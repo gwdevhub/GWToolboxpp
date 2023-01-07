@@ -3,8 +3,6 @@
 #include <ToolboxModule.h>
 
 class Teamspeak5Module : public ToolboxModule {
-    Teamspeak5Module() {};
-    ~Teamspeak5Module() { Terminate(); };
 public:
     static Teamspeak5Module& Instance() {
         static Teamspeak5Module instance;
