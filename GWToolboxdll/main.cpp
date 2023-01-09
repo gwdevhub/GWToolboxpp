@@ -18,8 +18,11 @@ extern "C" __declspec(dllexport) void __cdecl Terminate() {
     if (thread_running) {
         // Tell tb to close, then wait for the thread to finish.
         GWToolbox::Instance().StartSelfDestruct();
-        while (thread_running)
-            Sleep(16);
+    }
+    // Wait up to 5000 ms for toolbox to clean up after itself; after that, bomb out
+    uint32_t timeout = 5000 / 16;
+    for (uint32_t i = 0; i < timeout && thread_running;i++) {
+        Sleep(16);
     }
     Sleep(16);
     if(!is_detaching)
