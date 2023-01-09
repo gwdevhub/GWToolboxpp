@@ -20,13 +20,7 @@ class AgentRenderer : public VBuffer {
 
 public:
     AgentRenderer();
-    virtual ~AgentRenderer() {
-        for (const CustomAgent* ca : custom_agents) {
-            delete ca;
-        }
-        custom_agents.clear();
-        custom_agents_map.clear();
-    }
+    ~AgentRenderer();
 
     void Invalidate() override;
     static AgentRenderer& Instance();

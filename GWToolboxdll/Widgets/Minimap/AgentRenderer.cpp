@@ -16,6 +16,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
@@ -38,25 +39,101 @@ namespace {
 
     bool show_props_on_minimap = false;
 
+    bool target_drawn = false;
 
+    struct MarkedTarget {
+        uint32_t type = 0;
+        uint32_t identifier = 0;
+        wchar_t* agent_name = nullptr;
+        MarkedTarget& operator=(const MarkedTarget&) = delete;
+        MarkedTarget(MarkedTarget&&) = delete;
+        MarkedTarget& operator=(MarkedTarget&& other) = delete;
+        MarkedTarget(const GW::Agent* agent) {
+            ASSERT(agent);
+            type = agent->type;
+            identifier = GetIdentifier(agent);
+            const auto found = GW::Agents::GetAgentEncName(agent);
+            if (found) {
+                agent_name = new wchar_t[wcslen(found) + 1];
+                wcscpy(agent_name, found);
+            }
+        }
+        static uint32_t GetIdentifier(const GW::Agent* agent) {
+            ASSERT(agent);
+            switch (agent->type) {
+            case 0xdb:
+                return agent->GetAsAgentLiving()->player_number;
+            case 0x200:
+                return agent->GetAsAgentGadget()->extra_type;
+            case 0x400:
+                return (uint32_t)agent->GetAsAgentItem()->x;
+            }
+            return 0;
+        }
+        bool Matches(const GW::Agent* agent) {
+            if (!(agent && agent->type == type && GetIdentifier(agent) == identifier))
+                return false;
+            const auto found = GW::Agents::GetAgentEncName(agent);
+            if (found)
+                return agent_name && wcscmp(found, agent_name) == 0;
+            return agent_name == nullptr;
+        }
+        ~MarkedTarget() {
+            if (agent_name) {
+                delete[] agent_name;
+                agent_name = nullptr;
+            }
+        }
+    };
 
-
-    std::set<uint32_t> markedTargets; 
-    bool IsMarkedTarget(const GW::Agent* agent) {
-        return agent && markedTargets.find(agent->agent_id) != markedTargets.end();
+    std::map<uint32_t, MarkedTarget*> markedTargets; // {agent_id, MarkedTarget}
+    MarkedTarget* GetMarkedTarget(const uint32_t agent_id) {
+        const auto found = agent_id ? markedTargets.find(agent_id) : markedTargets.end();
+        return found != markedTargets.end() ? found->second : nullptr;
     }
-    void CmdMarkTarget(const wchar_t*, int , LPWSTR* )
+    bool RemoveMarkedTarget(uint32_t agent_id = 0) {
+        if (!agent_id) {
+            for (const auto it : markedTargets) {
+                RemoveMarkedTarget(it.first);
+            }
+            return true;
+        }
+        const auto found = markedTargets.find(agent_id);
+        if (found == markedTargets.end())
+            return false;
+        delete found->second;
+        markedTargets.erase(found);
+        return true;
+    }
+    void CmdMarkTarget(const wchar_t*, int argc, LPWSTR* argv)
     {
-        const auto target_id = GW::Agents::GetTargetId();
-        if (target_id)
-            markedTargets.emplace(target_id);
+        const auto agent = GW::Agents::GetTarget();
+        if (!agent)
+            return;
+        // /markedtarget clear
+        if (argc > 1 && (wcscmp(argv[1], L"clear") == 0 || wcscmp(argv[1], L"remove") == 0)) {
+            RemoveMarkedTarget(agent->agent_id);
+            return;
+        }
+        markedTargets.emplace(agent->agent_id,new MarkedTarget(agent));
     }
 
-    void CmdClearMarkTarget(const wchar_t*, int , LPWSTR* ) { 
-        markedTargets.clear(); 
+    void CmdClearMarkTarget(const wchar_t*, int , LPWSTR* ) {
+        RemoveMarkedTarget();
     }
 
+    GW::HookEntry OnAgentAdded_HookEntry;
 
+    void OnAgentAdded(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet) {
+        const auto agent_id = packet->agent_id;
+        auto marked_target = GetMarkedTarget(agent_id);
+        if (!marked_target) return;
+        const auto agent = GW::Agents::GetAgentByID(agent_id);
+        if (!marked_target->Matches(agent)) {
+            // agent_id has been recycled
+            RemoveMarkedTarget(agent_id);
+        }
+    }
 }
 
 AgentRenderer* AgentRenderer::instance = 0;
@@ -348,6 +425,14 @@ void AgentRenderer::DrawSettings() {
     }
 }
 
+AgentRenderer::~AgentRenderer()  {
+    for (const CustomAgent* ca : custom_agents) {
+        delete ca;
+    }
+    custom_agents.clear();
+    custom_agents_map.clear();
+    RemoveMarkedTarget();
+}
 void AgentRenderer::Invalidate() {
     VBuffer::Invalidate();
 }
@@ -477,6 +562,7 @@ void AgentRenderer::Initialize(IDirect3DDevice9* device) {
     for (const auto message_id : hook_messages) {
         GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
     }
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdded_HookEntry, OnAgentAdded);
 
     GW::Chat::CreateCommand(L"marktarget", CmdMarkTarget);
     GW::Chat::CreateCommand(L"clearmarktarget", CmdClearMarkTarget);
@@ -565,9 +651,14 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
     static std::vector<const GW::AgentLiving*> marked_targets_to_draw;
     marked_targets_to_draw.clear();
-
     static std::vector<const GW::AgentLiving*> players_to_draw;
     players_to_draw.clear();
+    static std::vector<const GW::AgentLiving*> dead_agents_to_draw;
+    dead_agents_to_draw.clear();
+    static std::vector<const GW::Agent*> other_agents_to_draw;
+    other_agents_to_draw.clear();
+
+    target_drawn = false;
 
     // some helper lambads
     
@@ -583,7 +674,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     };
 
     auto AddMarkedTarget = [](const GW::AgentLiving* agent) -> bool {
-        if (!IsMarkedTarget(agent))
+        if (!GetMarkedTarget(agent ? agent->agent_id : 0))
             return false;
         marked_targets_to_draw.push_back(agent);
         return true;
@@ -593,6 +684,12 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
         if (!(agent && agent->IsPlayer() && agent != GW::Agents::GetPlayer()))
             return false;
         players_to_draw.push_back(agent);
+        return true;
+    };
+    auto AddDeadAgentToDraw = [](const GW::AgentLiving* agent) -> bool {
+        if (!(agent && agent->GetIsDead()))
+            return false;
+        dead_agents_to_draw.push_back(agent);
         return true;
     };
 
@@ -605,29 +702,41 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     };
     
 
-    // 2. Generic agents
-    for (const auto agent_ptr : *agents) {
-        if (!agent_ptr) continue;
-        if (agent_ptr == player)
+    // Sort through all agents, fill out arrays
+    for (const auto agent : *agents) {
+        if (!agent) continue;
+        if (agent == player)
             continue; //  7. player
-        if (target == agent_ptr) 
+        if (agent == target) 
             continue; // 4. target if it's a non-player, 6. target if it's a player
-        if (agent_ptr->GetIsGadgetType()) {
-            const auto agent = agent_ptr->GetAsAgentGadget();
-            if(GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && agent->extra_type == 7602) continue;
+        if (agent->GetIsGadgetType()) {
+            const auto gadget = agent->GetAsAgentGadget();
+            if(GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && gadget->extra_type == 7602) continue;
         }
-        else if (agent_ptr->GetIsLivingType()) {
-            const auto agent = agent_ptr->GetAsAgentLiving();
-            if (AddMarkedTarget(agent))
-                continue; // 8. marked targets
-            if (AddOtherPlayersToDraw(agent))
-                continue; // 5. players
-            if (!show_hidden_npcs && !GW::Agents::GetIsAgentTargettable(agent_ptr))
+        else if (agent->GetIsLivingType()) {
+            const auto living = agent->GetAsAgentLiving();
+            if (!show_hidden_npcs && !GW::Agents::GetIsAgentTargettable(living))
                 continue;
-            if (AddCustomAgentsToDraw(agent))
+            if (AddOtherPlayersToDraw(living))
+                continue; // 5. players
+            if (AddDeadAgentToDraw(living))
+                continue;
+            if (AddMarkedTarget(living))
+                continue; // 8. marked targets
+            if (AddCustomAgentsToDraw(living))
                 continue; // 3. custom colored models
         }
-        Enqueue(agent_ptr);
+        other_agents_to_draw.push_back(agent);
+    }
+
+    // Dead agents
+    for (const auto agent : dead_agents_to_draw) {
+        Enqueue(agent);
+    }
+
+    // 2. Generic agents
+    for (const auto agent : other_agents_to_draw) {
+        Enqueue(agent);
     }
 
     // 3. custom colored models
@@ -636,14 +745,27 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
         Enqueue(fst, snd);
     }
 
+    // 8. marked
+    for (const auto agent : marked_targets_to_draw) {
+        if (!agent->GetIsAlive())
+            continue;
+        Enqueue(default_shape, agent, size_marked_target, color_marked_target);
+    }
+
     // 4. target if it's a non-player
     if (target && !target->IsPlayer()) {
+        const auto marked = GetMarkedTarget(target->agent_id);
         const auto custom_agents_for_this_agent = GetCustomAgentsToDraw(target);
         if (custom_agents_for_this_agent) {
             for (const auto ca : *custom_agents_for_this_agent) {
                 Enqueue(target, ca);
             }
-        } else {
+        }
+        if (marked) {
+            Enqueue(default_shape, target, size_marked_target, color_marked_target);
+        }
+        
+        if(!marked && !custom_agents_for_this_agent) {
             Enqueue(target);
         }
     }
@@ -663,14 +785,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
     // 7. player
     if (player) {
         Enqueue(player);
-    }
-
-    // 8. marked
-    for (const auto agent_id : markedTargets) {
-        const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-        if (!(agent && agent->GetIsLivingType() && agent->GetIsAlive()))
-            continue;
-        Enqueue(default_shape, agent, size_marked_target, color_marked_target);
     }
 
     buffer->Unlock();
@@ -936,13 +1050,17 @@ void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, C
     };
     // NB: No border if BigCircle
     if (shape != BigCircle) {
+        bool is_target = (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id);
+        if (is_target && target_drawn)
+            return; // Don't draw target twice
         // Add agent border if applicable
         if (agent_border_thickness && agent->GetIsLivingType()) {
             Enqueue(shape, pos, size + static_cast<float>(agent_border_thickness), Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
         }
         // Add target highlight if applicable
-        if (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id) {
-            Enqueue(shape, pos, size + 50.0f, Colors::Sub(color_target, IM_COL32(0, 0, 0, 50)));
+        if (is_target) {
+            Enqueue(shape, pos, size + 50.0f, color_target);
+            target_drawn = true;
         }
     }
 
