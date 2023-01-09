@@ -207,6 +207,7 @@ void HotkeysWindow::Terminate() {
     for (TBHotkey* hotkey : hotkeys) {
         delete hotkey;
     }
+    hotkeys.clear();
     for (auto& it : HotkeyGWKey::control_labels) {
         if (it.second) delete it.second;
         it.second = nullptr;

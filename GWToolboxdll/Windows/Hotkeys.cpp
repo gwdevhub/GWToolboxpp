@@ -839,6 +839,13 @@ void HotkeyUseItem::Execute()
 HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(const GW::Item* item) {
     set(item->model_id, item->complete_name_enc ? item->complete_name_enc : item->name_enc, item->info_string, item->mod_struct, item->mod_struct_size);
 }
+HotkeyEquipItemAttributes::~HotkeyEquipItemAttributes() {
+    if (mod_struct) {
+        delete mod_struct;
+        mod_struct = nullptr;
+        mod_struct_size = 0;
+    }
+}
 HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, size_t _mod_struct_size) {
     set(_model_id, _name_enc, _info_string, _mod_struct, _mod_struct_size);
 }
@@ -846,10 +853,17 @@ HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(uint32_t _model_id, co
     model_id = _model_id;
     enc_name.reset(_name_enc);
     enc_desc.reset(_info_string);
-    mod_struct_size = 0;
-    if (_mod_struct) {
-        mod_struct_size = _mod_struct_size;
-        memcpy(mod_struct, _mod_struct, mod_struct_size * sizeof(GW::ItemModifier));
+    if (mod_struct) {
+        delete mod_struct;
+        mod_struct = nullptr;
+        mod_struct_size = 0;
+    }
+    mod_struct_size = _mod_struct_size;
+    if (mod_struct_size) {
+        ASSERT(_mod_struct);
+        const size_t bytes = _mod_struct_size * sizeof(*_mod_struct);
+        mod_struct = (uint32_t*)malloc(bytes);
+        memcpy(mod_struct, _mod_struct, bytes);
     }
     return this;
 }
@@ -858,7 +872,7 @@ bool HotkeyEquipItemAttributes::check(GW::Item* item) {
         return false;
     if (wcscmp(item->complete_name_enc ? item->complete_name_enc : item->name_enc, enc_name.encoded().c_str()) != 0)
         return false;
-    if (memcmp(mod_struct, item->mod_struct, item->mod_struct_size * sizeof(GW::ItemModifier)) != 0)
+    if (mod_struct_size == item->mod_struct_size && memcmp(mod_struct, item->mod_struct, item->mod_struct_size * sizeof(*item->mod_struct)) != 0)
         return false;
     return true;
 }
