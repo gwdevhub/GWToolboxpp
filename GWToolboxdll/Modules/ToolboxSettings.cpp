@@ -56,6 +56,7 @@
 #include <Windows/ObserverPartyWindow.h>
 #include <Windows/ObserverExportWindow.h>
 #include <Windows/CompletionWindow.h>
+#include <Windows/DupingWindow.h>
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
@@ -158,10 +159,11 @@ namespace {
         ObserverTargetWindow::Instance(),
         ObserverPartyWindow::Instance(),
         ObserverExportWindow::Instance(),
-        
+
         CompletionWindow::Instance(),
         RerollWindow::Instance(),
-        PartyStatisticsWindow::Instance()
+        PartyStatisticsWindow::Instance(),
+        DupingWindow::Instance()
     };
 
 }
@@ -206,7 +208,7 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
     }
 
-    
+
 }
 
 void ToolboxSettings::DrawSettingInternal() {
@@ -276,7 +278,7 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini) {
     inifile = ini; // Keep this to load module info
 
     move_all = false;
-    
+
     for (auto& m : optional_modules) {
         m.enabled = ini->GetBoolValue(modules_ini_section, m.name, m.enabled);
     }
