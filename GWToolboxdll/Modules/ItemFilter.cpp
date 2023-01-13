@@ -204,6 +204,7 @@ namespace {
         using GW::Constants::ItemType;
         switch (static_cast<ItemType>(item.type)) {
         case ItemType::Quest_Item: return false;
+        case ItemType::Mission_Item: return false;
         case ItemType::Minipet: return false;
         default: break;
         }
