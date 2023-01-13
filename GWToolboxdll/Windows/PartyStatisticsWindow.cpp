@@ -257,6 +257,8 @@ namespace {
 
         auto set_party_member = [&valid_party_members,&party_idx](uint32_t agent_id) {
             const wchar_t* agent_name = GW::Agents::GetAgentEncName(agent_id);
+            if (!agent_name)
+                return (PartyMember*)nullptr; // Can fail if game hasn't got all the goodies yet
             // NB: Sanitising removes [henchman type] and player numbers
             const auto sanitised = GuiUtils::SanitizePlayerName(agent_name);
             auto party_member = GetPartyMemberByEncName(sanitised.c_str());
@@ -284,6 +286,8 @@ namespace {
             const auto agent_id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
 
             auto party_member = set_party_member(agent_id);
+            if (!party_member)
+                return false;
 
             if (agent_id == my_player_id) {
                 player_party_member = party_member;
@@ -293,6 +297,8 @@ namespace {
                 if (hero.owner_player_id != player.login_number) continue;
 
                 party_member = set_party_member(hero.agent_id);
+                if (!party_member)
+                    return false;
                 const GW::Skillbar* skillbar = GetAgentSkillbar(hero.agent_id);
                 if (!skillbar) continue;
                 /* Skillbar for other players and henchmen is unknown in outpost init with No_Skill */
