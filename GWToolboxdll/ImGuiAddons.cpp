@@ -261,11 +261,12 @@ namespace ImGui {
     ImVec2 CalculateUvCrop(ImTextureID user_texture_id, const ImVec2& size) {
         ImVec2 uv1 = { 1.f,1.f };
         if (user_texture_id) {
-            float ratio = size.x / size.y;
             IDirect3DTexture9* texture = (IDirect3DTexture9*)user_texture_id;
             D3DSURFACE_DESC desc;
             HRESULT res = texture->GetLevelDesc(0, &desc);
-            ASSERT(SUCCEEDED(res));
+            if (!SUCCEEDED(res))
+                return uv1; // Don't throw anything into the log here; this function is called every frame by modules that use it!
+            float ratio = size.x / size.y;
             float image_ratio = (float)desc.Width / (float)desc.Height;
             if (image_ratio < ratio) {
                 // Image is taller than the required crop; remove bottom of image to fit.

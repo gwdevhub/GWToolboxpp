@@ -438,17 +438,18 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
+    auto ext = path_to_file.extension();
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
-        if (path_to_file.extension() == ".dds") {
+        if(ext == ".dds")
             res = DirectX::CreateDDSTextureFromFileEx(device, path_to_file.c_str(), 0, D3DPOOL_MANAGED, true, texture);
-        } else if (auto ext = path_to_file.extension(); ext == ".png" || ext == ".bmp" || ext == ".jpg" || ext == ".JPEG") {
+        else
             res = CreateWICTextureFromFileEx(device, path_to_file.c_str(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_FLAGS::WIC_LOADER_DEFAULT, texture);
-        }
     }
     if (res != D3D_OK) {
         StrSwprintf(error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
+        return res;
     }
-    else if (!*texture) {
+    if (!*texture) {
         res = D3DERR_NOTFOUND;
         StrSwprintf(error, L"Error loading resource from file %s - texture loaded is null", path_to_file.filename().wstring().c_str());
     }

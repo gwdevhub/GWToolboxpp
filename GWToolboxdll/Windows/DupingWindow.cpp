@@ -14,10 +14,12 @@
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
 #include <Windows/DupingWindow.h>
+
+#include <Timer.h>
 namespace {
     struct DupeInfo {
         DupeInfo(GW::AgentID agent_id) : agent_id(agent_id) {};
-#include <Timer.h>
+
 
         GW::AgentID agent_id;
         clock_t last_duped = 0;
