@@ -1,12 +1,62 @@
-module;
+#pragma once
 
-#include "stdafx.h"
 #include <GWCA/Constants/Constants.h>
 
-export module ArmoryWindow:database;
+namespace GWArmory {
 
-export namespace Database
-{
+    enum class DyeColor
+    {
+        None = 0,
+        Blue = 2,
+        Green = 3,
+        Purple = 4,
+        Red = 5,
+        Yellow = 6,
+        Brown = 7,
+        Orange = 8,
+        Silver = 9,
+        Black = 10,
+        Gray = 11,
+        White = 12,
+        Pink = 13
+    };
+    // Arg3:
+    //  - Costume = 0x20000006
+    //  - Armor =   0x20110007 (3)
+    //  - Chaos glove = 0x20110407 (38)
+
+    const ImVec4 palette[] = {
+        {0.f, 0.f, 1.f, 0.f},       // Blue
+        {0.f, 0.75f, 0.f, 0.f},     // Green
+        {0.5f, 0.f, 0.5f, 0.f},     // Purple
+        {1.f, 0.f, 0.f, 0.f},       // Red
+        {1.f, 1.f, 0.f, 0.f},       // Yellow
+        {0.5f, 0.25f, 0.f, 0.f},    // Brown
+        {1.f, 0.65f, 0.f, 0.f},     // Orange
+        {0.75f, 0.75f, 0.75f, 0.f}, // Silver
+        {0.f, 0.f, 0.f, 0.f},       // Black
+        {0.5f, 0.5f, 0.5f, 0.f},    // Gray
+        {1.f, 1.f, 1.f, 0.f},       // White
+        {0.95f, 0.5f, 0.95f, 0.f},  // Pink
+    };
+
+
+    struct PlayerArmorPiece {
+        uint32_t model_file_id;
+        uint32_t unknow1;
+        DyeColor color1;
+        DyeColor color2;
+        DyeColor color3;
+        DyeColor color4;
+    };
+
+    struct PlayerArmor {
+        PlayerArmorPiece head;
+        PlayerArmorPiece chest;
+        PlayerArmorPiece hands;
+        PlayerArmorPiece legs;
+        PlayerArmorPiece feets;
+    };
     enum ItemSlot
     {
         ItemSlot_Head,
@@ -33,6 +83,12 @@ export namespace Database
         ItemSlot item_slot;
         Campaign campaign;
         uint32_t unknow1;
+    };
+
+    struct ComboListState {
+        std::vector<Armor*> pieces;
+        int current_piece_index = -1;
+        Armor* current_piece = nullptr;
     };
 
     Armor warrior_armors[] = {
@@ -1401,21 +1457,4 @@ export namespace Database
         {"0xC9A", 0xC9A, GW::Constants::Profession::Dervish, ItemSlot_Head, Campaign_All, 8},
     };
 
-    Armor* GetArmorsPerProfession(GW::Constants::Profession prof, size_t * count)
-    {
-        switch (prof) {
-            case GW::Constants::Profession::Warrior: *count = _countof(warrior_armors); return warrior_armors;
-            case GW::Constants::Profession::Ranger: *count = _countof(ranger_armors); return ranger_armors;
-            case GW::Constants::Profession::Monk: *count = _countof(monk_armors); return monk_armors;
-            case GW::Constants::Profession::Necromancer: *count = _countof(necromancer_armors); return necromancer_armors;
-            case GW::Constants::Profession::Mesmer: *count = _countof(mesmer_armors); return mesmer_armors;
-            case GW::Constants::Profession::Elementalist: *count = _countof(elementalist_armors); return elementalist_armors;
-            case GW::Constants::Profession::Assassin: *count = _countof(assassin_armors); return assassin_armors;
-            case GW::Constants::Profession::Ritualist: *count = _countof(ritualist_armors); return ritualist_armors;
-            case GW::Constants::Profession::Paragon: *count = _countof(paragon_armors); return paragon_armors;
-            case GW::Constants::Profession::Dervish: *count = _countof(dervish_armors); return dervish_armors;
-            case GW::Constants::Profession::None:
-            default: *count = 0; return nullptr;
-        }
-    }
-};
+}
