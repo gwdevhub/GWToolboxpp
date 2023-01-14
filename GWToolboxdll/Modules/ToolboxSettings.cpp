@@ -65,6 +65,7 @@
 #include <Windows/SkillListingWindow.h>
 #endif
 #include <Windows/RerollWindow.h>
+#include <Windows/ArmoryWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -165,14 +166,26 @@ namespace {
         CompletionWindow::Instance(),
         RerollWindow::Instance(),
         PartyStatisticsWindow::Instance(),
-        DupingWindow::Instance()
+        DupingWindow::Instance(),
+        ArmoryWindow::Instance()
     };
 
+    bool modules_sorted = false;
 }
 
 bool ToolboxSettings::move_all = false;
 
 void ToolboxSettings::LoadModules(ToolboxIni* ini) {
+    if (!modules_sorted) {
+        modules_sorted = true;
+        auto sort = [](const auto& a, const  auto& b) {
+            return strcmp(a.toolbox_module->Name(), b.toolbox_module->Name()) < 0;
+        };
+        std::sort(optional_modules.begin(), optional_modules.end(), sort);
+        std::sort(optional_widgets.begin(), optional_widgets.end(), sort);
+        std::sort(optional_windows.begin(), optional_windows.end(), sort);
+    }
+
     inifile = ini;
 
     GWToolbox::ToggleModule(Updater::Instance());
