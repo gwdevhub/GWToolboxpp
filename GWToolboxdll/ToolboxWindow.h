@@ -10,19 +10,19 @@ public:
     const bool IsWindow() const override { return true; }
     const char* TypeName() const override { return "window"; }
 
-    virtual void Initialize() override {
+    void Initialize() override {
         ToolboxUIElement::Initialize();
         has_closebutton = true;
     }
 
-    virtual void LoadSettings(ToolboxIni* ini) override {
+    void LoadSettings(ToolboxIni* ini) override {
         ToolboxUIElement::LoadSettings(ini);
         LOAD_BOOL(lock_move);
         LOAD_BOOL(lock_size);
         LOAD_BOOL(show_closebutton);
     }
 
-    virtual void SaveSettings(ToolboxIni* ini) override {
+    void SaveSettings(ToolboxIni* ini) override {
         ToolboxUIElement::SaveSettings(ini);
         SAVE_BOOL(lock_move);
         SAVE_BOOL(lock_size);

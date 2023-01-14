@@ -128,16 +128,16 @@ namespace {
     }
 
     GW::PartyInfo* GetPlayerParty() {
-        const GW::GameContext * gamectx = GW::GetGameContext();
+        const GW::GameContext* gamectx = GW::GetGameContext();
         if (!(gamectx && gamectx->party))
             return nullptr;
         return gamectx->party->player_party;
     }
-    GW::UI::WindowPosition* compass_frame = 0;
+    GW::UI::WindowPosition* compass_frame = nullptr;
 
     typedef uint32_t(__fastcall* DrawCompassAgentsByType_pt)(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags);
-    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = 0;
-    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Ret = 0;
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = nullptr;
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Ret = nullptr;
 
     bool hide_compass_agents = false;
     uint32_t __fastcall OnDrawCompassAgentsByType(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags)
@@ -170,16 +170,16 @@ void Minimap::Initialize()
 
     uintptr_t address = GW::Scanner::Find("\x00\x74\x16\x6A\x27\x68\x80\x00\x00\x00\x6A\x00\x68", "xxxxxxxxxxxxx",-0x51);
     if (address) {
-        address = *(uintptr_t*)address;
-        MouseClickCaptureDataPtr = (MouseClickCaptureData*)address;
-        GameCursorState = (uint32_t*)(address + 0x4);
-        CaptureMouseClickTypePtr = (CaptureMouseClickType*)(address - 0x10);
+        address = *reinterpret_cast<uintptr_t*>(address);
+        MouseClickCaptureDataPtr = reinterpret_cast<MouseClickCaptureData*>(address);
+        GameCursorState = reinterpret_cast<uint32_t*>(address + 0x4);
+        CaptureMouseClickTypePtr = reinterpret_cast<CaptureMouseClickType*>(address - 0x10);
     }
     Log::Log("[SCAN] CaptureMouseClickTypePtr = %p\n", CaptureMouseClickTypePtr);
     Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
 
-    DrawCompassAgentsByType_Func = (DrawCompassAgentsByType_pt)GW::Scanner::Find("\x8b\x46\x08\x8d\x5e\x18\x53", "xxxxxxx", -0xb);
-    GW::HookBase::CreateHook(DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
+    DrawCompassAgentsByType_Func = reinterpret_cast<DrawCompassAgentsByType_pt>(GW::Scanner::Find("\x8b\x46\x08\x8d\x5e\x18\x53", "xxxxxxx", -0xb));
+    GW::HookBase::CreateHook(DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, reinterpret_cast<void**>(&DrawCompassAgentsByType_Ret));
     GW::HookBase::EnableHooks(DrawCompassAgentsByType_Func);
 
     GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus* ,uint32_t key) {

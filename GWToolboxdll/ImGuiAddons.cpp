@@ -287,4 +287,35 @@ namespace ImGui {
         ImVec2 size = { bottom_right.x - top_left.x, bottom_right.y - top_left.y };
         ImGui::GetWindowDrawList()->AddImage(user_texture_id, top_left, bottom_right, { 0,0 }, CalculateUvCrop(user_texture_id, size));
     }
+    bool ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags)
+    {
+        PushID(label);
+        BeginGroup();
+
+        bool value_changed = false;
+        for (size_t i = 0; i < count; i++) {
+            PushID(i);
+            if (ColorButton("", palette[i])) {
+                *palette_index = i;
+                value_changed = true;
+            }
+            PopID();
+            if (((i + 1) % max_per_line) != 0)
+                ImGui::SameLine();
+        }
+
+        if (flags & ImGuiColorEditFlags_AlphaPreview) {
+            const ImVec4 col;
+            PushID(count);
+            if (ColorButton("", col, ImGuiColorEditFlags_AlphaPreview)) {
+                *palette_index = count;
+                value_changed = true;
+            }
+            PopID();
+        }
+
+        EndGroup();
+        PopID();
+        return value_changed;
+    }
 }
