@@ -40,8 +40,18 @@ namespace GWArmory {
         {0.95f, 0.5f, 0.95f, 0.f},  // Pink
     };
 
-
+    enum ItemSlot
+    {
+        ItemSlot_Head,
+        ItemSlot_Chest,
+        ItemSlot_Hands,
+        ItemSlot_Legs,
+        ItemSlot_Feets,
+        ItemSlot_Unknown
+    };
     struct PlayerArmorPiece {
+        PlayerArmorPiece(ItemSlot _slot) : slot(_slot) {};
+        ItemSlot slot = ItemSlot::ItemSlot_Unknown;
         uint32_t model_file_id;
         uint32_t unknow1;
         DyeColor color1;
@@ -50,23 +60,10 @@ namespace GWArmory {
         DyeColor color4;
     };
 
-    struct PlayerArmor {
-        PlayerArmorPiece head;
-        PlayerArmorPiece chest;
-        PlayerArmorPiece hands;
-        PlayerArmorPiece legs;
-        PlayerArmorPiece feets;
-    };
-    enum ItemSlot
-    {
-        ItemSlot_Head,
-        ItemSlot_Chest,
-        ItemSlot_Hands,
-        ItemSlot_Legs,
-        ItemSlot_Feets,
-    };
 
-    enum Campaign
+
+
+    enum Campaign : int
     {
         Campaign_All,
         Campaign_Core,

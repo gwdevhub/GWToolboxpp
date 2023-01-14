@@ -7,11 +7,13 @@
 #include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Timer.h>
 #include <ImGuiAddons.h>
@@ -23,17 +25,54 @@ namespace GWArmory {
 
     bool reset_helm_visibility = false;
     bool head_item_set = false;
+    bool got_original_armor = false;
+
+    struct PlayerArmor {
+        PlayerArmorPiece head = ItemSlot::ItemSlot_Head;
+        PlayerArmorPiece chest = ItemSlot::ItemSlot_Chest;
+        PlayerArmorPiece hands = ItemSlot::ItemSlot_Hands;
+        PlayerArmorPiece legs = ItemSlot::ItemSlot_Legs;
+        PlayerArmorPiece feets = ItemSlot::ItemSlot_Feets;
+    };
+
+    PlayerArmor player_armor;
 
     typedef void(__fastcall * SetItem_pt)(GW::Equipment * equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id);
-    SetItem_pt SetItem_Func;
+    SetItem_pt SetItem_Func = 0;
+    SetItem_pt SetItem_Ret = 0;
+
+    bool gwarmory_setitem = false;
+
+    bool Reset();
+
+    GW::Equipment* GetPlayerEquipment() {
+        const auto player = GW::Agents::GetPlayerAsAgentLiving();
+        return player && player->equip && *player->equip ? *player->equip : nullptr;
+    }
+
+    void __fastcall OnSetItem(GW::Equipment* equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id) {
+        GW::Hook::EnterHook();
+        SetItem_Ret(equip, edx, model_file_id, color, arg3, agent_id);
+        const auto player_equip = GetPlayerEquipment();
+        const auto player = static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer());
+        if (!gwarmory_setitem && player && (!player_equip || equip == player_equip)) {
+            // Reset controls - this could be done a little smarter to remember bits that haven't changed.
+            Reset();
+        }
+        GW::Hook::LeaveHook();
+    }
+
+
     ComboListState head;
     ComboListState chest;
     ComboListState hands;
     ComboListState legs;
     ComboListState feets;
 
-    PlayerArmor player_armor;
     GW::Constants::Profession current_profession = GW::Constants::Profession::None;
+    Campaign current_campaign = Campaign_All;
+
+    bool pending_reset_equipment = false;
 
     Armor* GetArmorsPerProfession(GW::Constants::Profession prof, size_t * count)
     {
@@ -166,21 +205,37 @@ namespace GWArmory {
 
     void SetArmorItem(const PlayerArmorPiece* piece)
     {
-        const auto player = GW::Agents::GetPlayerAsAgentLiving();
-        if (!(player && player->equip && *player->equip))
-            return;
+        const auto equip = GetPlayerEquipment();
         const uint32_t color = CreateColor(piece->color1, piece->color2, piece->color3, piece->color4);
         // 0x60111109
         if (piece->model_file_id && SetItem_Func) {
-            SetItem_Func(*player->equip, nullptr, piece->model_file_id, color, 0x20110007, piece->unknow1);
+            gwarmory_setitem = true;
+            SetItem_Func(equip, nullptr, piece->model_file_id, color, 0x20110007, piece->unknow1);
+            gwarmory_setitem = false;
         }
     }
 
 
-    void UpdateArmorsFilter(GW::Constants::Profession prof, Campaign campaign)
+    bool IsEquipmentShowing(const GW::EquipmentType type) {
+        const auto state = GW::Items::GetEquipmentVisibility(type);
+        switch (state) {
+        case GW::EquipmentStatus::AlwaysShow:
+            return true;
+        case GW::EquipmentStatus::AlwaysHide:
+            return false;
+        case GW::EquipmentStatus::HideInCombatAreas:
+            return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable;
+        case GW::EquipmentStatus::HideInTownsAndOutposts:
+            return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost;
+        }
+        return false;
+    }
+
+
+    void UpdateArmorsFilter()
     {
         size_t count = 0;
-        Armor* armors = GetArmorsPerProfession(prof, &count);
+        Armor* armors = GetArmorsPerProfession(current_profession, &count);
 
         head.pieces.clear();
         chest.pieces.clear();
@@ -189,10 +244,15 @@ namespace GWArmory {
         feets.pieces.clear();
 
         head.current_piece_index = -1;
+        head.current_piece = nullptr;
         chest.current_piece_index = -1;
+        chest.current_piece = nullptr;
         hands.current_piece_index = -1;
+        hands.current_piece = nullptr;
         legs.current_piece_index = -1;
+        legs.current_piece = nullptr;
         feets.current_piece_index = -1;
+        feets.current_piece = nullptr;
 
         for (size_t i = 0; i < count; i++) {
             ComboListState* state = nullptr;
@@ -225,16 +285,15 @@ namespace GWArmory {
                 continue;
             if (piece->model_file_id == armors[i].model_file_id)
                 state->current_piece = &armors[i];
-            if (campaign != Campaign_All && armors[i].campaign != campaign)
+            if (current_campaign != Campaign_All && armors[i].campaign != current_campaign)
                 continue;
             state->pieces.push_back(&armors[i]);
 
             if (piece && piece->model_file_id) {
+                // Why is this here?
                 SetArmorItem(piece);
             }
         }
-
-        current_profession = prof;
     }
 
     void InitItemPiece(PlayerArmorPiece * piece, const GW::Equipment::ItemData* item_data)
@@ -247,6 +306,35 @@ namespace GWArmory {
         piece->color4 = DyeColorFromInt(item_data->dye.dye4);
     }
 
+    bool GetPlayerArmor(PlayerArmor& out) {
+        const auto player = static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer());
+        if (!(player && player->equip && player->equip[0]))
+            return false;
+        const GW::Equipment* equip = player->equip[0];
+        InitItemPiece(&out.head, &equip->head);
+        InitItemPiece(&out.chest, &equip->chest);
+        InitItemPiece(&out.hands, &equip->hands);
+        InitItemPiece(&out.legs, &equip->legs);
+        InitItemPiece(&out.feets, &equip->feet);
+
+        return true;
+    }
+
+    bool Reset() {
+        if (!GetPlayerArmor(player_armor))
+            return false;
+        SetArmorItem(&player_armor.head);
+        SetArmorItem(&player_armor.chest);
+        SetArmorItem(&player_armor.hands);
+        SetArmorItem(&player_armor.legs);
+        SetArmorItem(&player_armor.feets);
+
+        current_campaign = Campaign_All;
+        current_profession = GetAgentProfession(static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer()));
+
+        UpdateArmorsFilter();
+        return true;
+    }
 
     bool DyePicker(const char* label, DyeColor* color)
     {
@@ -315,43 +403,8 @@ using namespace GWArmory;
 void ArmoryWindow::Update(const float delta)
 {
     ToolboxWindow::Update(delta);
-    if (!head_item_set) {
-        reset_helm_visibility = false;
-        return;
-    }
-    static clock_t timer = 0;
-
-    const auto is_visible = GW::Items::GetEquipmentVisibility(GW::EquipmentType::Helm);
-    static auto wanted_visibility = is_visible;
-
-    const auto toggle_visibility = [is_visible] {
-        if (is_visible == GW::EquipmentStatus::AlwaysHide) {
-            GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
-        }
-        else if (is_visible == GW::EquipmentStatus::HideInCombatAreas) {
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-                GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
-            }
-        }
-        else if (is_visible == GW::EquipmentStatus::HideInTownsAndOutposts) {
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-                GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
-            }
-        }
-    };
-
-    if (reset_helm_visibility) {
-        timer = TIMER_INIT();
-        wanted_visibility = is_visible;
-        reset_helm_visibility = false;
-        toggle_visibility();
-    }
-
-    if (timer != 0 && TIMER_DIFF(timer) > 300) {
-        GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, wanted_visibility);
-        timer = 0;
-        head_item_set = false;
-    }
+    if (pending_reset_equipment && Reset())
+        pending_reset_equipment = false;
 }
 
 void ArmoryWindow::Draw(IDirect3DDevice9*)
@@ -367,47 +420,58 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     if (prof != current_profession)
         update_data = true;
 
-    static int filter_index = Campaign_All;
+    const auto equip = GetPlayerEquipment();
+    if (!equip)
+        return;
 
-    // constexpr ImVec2 window_size(330.f, 208.f);
-    // ImGui::SetNextWindowSize(window_size);
-    if (ImGui::Begin("Armory", &visible, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar)) {
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         ImGui::Text("Profession: %s", GetProfessionName(prof));
         ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
 
-        if (ImGui::Button("Refresh")) {
-            reset_helm_visibility = true;
-            head.current_piece = nullptr;
-            if (player_agent->equip && player_agent->equip[0]) {
-                GW::Equipment* equip = player_agent->equip[0];
-                InitItemPiece(&player_armor.head, &equip->head);
-                InitItemPiece(&player_armor.chest, &equip->chest);
-                InitItemPiece(&player_armor.hands, &equip->hands);
-                InitItemPiece(&player_armor.legs, &equip->legs);
-                InitItemPiece(&player_armor.feets, &equip->feet);
+        if (ImGui::Button("Reset"))
+            pending_reset_equipment = true;
+
+        if (ImGui::MyCombo("##filter", "All", (int*) & current_campaign, armor_filter_array_getter, nullptr, 5))
+            UpdateArmorsFilter();
+        bool showing_helm = !equip->costume_head.model_file_id && IsEquipmentShowing(GW::EquipmentType::Helm);
+        bool showing_body = !equip->costume_body.model_file_id;
+
+        if (showing_helm) {
+            if (DrawArmorPiece("##head", &player_armor.head, &head))
+                SetArmorItem(&player_armor.head);
+        }
+        if (showing_body) {
+            if (DrawArmorPiece("##chest", &player_armor.chest, &chest))
+                SetArmorItem(&player_armor.chest);
+            if (DrawArmorPiece("##hands", &player_armor.hands, &hands))
+                SetArmorItem(&player_armor.hands);
+            if (DrawArmorPiece("##legs", &player_armor.legs, &legs))
+                SetArmorItem(&player_armor.legs);
+            if (DrawArmorPiece("##feets", &player_armor.feets, &feets))
+                SetArmorItem(&player_armor.feets);
+        }
+
+        if (!showing_helm) {
+            ImGui::TextUnformatted(ICON_FA_EXCLAMATION_TRIANGLE " Your helm is currently hidden ");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Show Helm")) {
+                GW::GameThread::Enqueue([]() {
+                    GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
+                    GW::Items::SetEquipmentVisibility(GW::EquipmentType::CostumeHeadpiece, GW::EquipmentStatus::AlwaysHide);
+                    });
             }
-
-            update_data = true;
         }
-
-        if (ImGui::MyCombo("##filter", "All", &filter_index, armor_filter_array_getter, nullptr, 5))
-            update_data = true;
-        if (update_data) {
-            UpdateArmorsFilter(prof, static_cast<Campaign>(filter_index));
+        if (!showing_body) {
+            ImGui::TextUnformatted(ICON_FA_EXCLAMATION_TRIANGLE " Your armor is currently hidden ");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Hide Costume")) {
+                GW::GameThread::Enqueue([]() {
+                    GW::Items::SetEquipmentVisibility(GW::EquipmentType::CostumeBody, GW::EquipmentStatus::AlwaysHide);
+                    });
+            }
         }
-
-        if (DrawArmorPiece("##head", &player_armor.head, &head)) {
-            SetArmorItem(&player_armor.head);
-            head_item_set = true;
-        }
-        if (DrawArmorPiece("##chest", &player_armor.chest, &chest))
-            SetArmorItem(&player_armor.chest);
-        if (DrawArmorPiece("##hands", &player_armor.hands, &hands))
-            SetArmorItem(&player_armor.hands);
-        if (DrawArmorPiece("##legs", &player_armor.legs, &legs))
-            SetArmorItem(&player_armor.legs);
-        if (DrawArmorPiece("##feets", &player_armor.feets, &feets))
-            SetArmorItem(&player_armor.feets);
     }
     ImGui::End();
 }
@@ -417,26 +481,19 @@ void ArmoryWindow::Initialize()
     ToolboxWindow::Initialize();
 
     SetItem_Func = (SetItem_pt)GW::Scanner::Find("\x83\xC4\x04\x8B\x08\x8B\xC1\xC1", "xxxxxxxx", -0x24);
-    if (!SetItem_Func) {
+    if (SetItem_Func) {
+        GW::Hook::CreateHook(SetItem_Func, OnSetItem, (void**)&SetItem_Ret);
+    }
+    else {
         Log::Error("GWArmory failed to find the SetItem function");
     }
 
-    const auto player_agent = GW::Agents::GetPlayerAsAgentLiving();
-    if (player_agent && player_agent->equip && player_agent->equip[0]) {
-        GW::Equipment* equip = player_agent->equip[0];
-        InitItemPiece(&player_armor.head, &equip->head);
-        InitItemPiece(&player_armor.chest, &equip->chest);
-        InitItemPiece(&player_armor.hands, &equip->hands);
-        InitItemPiece(&player_armor.legs, &equip->legs);
-        InitItemPiece(&player_armor.feets, &equip->feet);
-    }
+    pending_reset_equipment = true;
+    got_original_armor = false;
 }
-
-void ArmoryWindow::Terminate()
-{
-    ToolboxWindow::Terminate();
-    GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
-    const GW::Constants::Profession prof = GetAgentProfession(player_agent);
-
-    UpdateArmorsFilter(prof, Campaign_All);
+void ArmoryWindow::Terminate() {
+    if (SetItem_Func) {
+        GW::Hook::RemoveHook(SetItem_Func);
+        SetItem_Func = 0;
+    }
 }
