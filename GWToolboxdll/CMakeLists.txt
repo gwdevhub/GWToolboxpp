@@ -15,7 +15,6 @@ file(GLOB SOURCES
     "Widgets/Minimap/*.cpp"
     "Windows/*.h"
     "Windows/*.cpp"
-    "Windows/*.ixx"
     )
 
 
