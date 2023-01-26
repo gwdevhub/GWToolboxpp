@@ -73,10 +73,7 @@ namespace {
 
                 ImGui::TableSetColumnIndex(2);
                 if (agent->hp_pips > 0) {
-                    ImGui::Text(std::string((int)std::ceil(agent->hp_pips / 0.001852), '>').c_str());
-                }
-                else {
-                    ImGui::Text("");
+                    ImGui::Text("%.0f>",std::ceil(agent->hp_pips / 0.001852));
                 }
 
                 ImGui::TableSetColumnIndex(3);
