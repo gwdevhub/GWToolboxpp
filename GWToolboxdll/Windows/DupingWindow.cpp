@@ -72,7 +72,12 @@ namespace {
                 ImGui::ProgressBar(agent->hp);
 
                 ImGui::TableSetColumnIndex(2);
-                ImGui::Text(std::string((int)std::ceil(agent->hp_pips / 0.001852), '>').c_str());
+                if (agent->hp_pips > 0) {
+                    ImGui::Text(std::string((int)std::ceil(agent->hp_pips / 0.001852), '>').c_str());
+                }
+                else {
+                    ImGui::Text("");
+                }
 
                 ImGui::TableSetColumnIndex(3);
                 ImGui::Text("%d", dupe_info.dupe_count);
