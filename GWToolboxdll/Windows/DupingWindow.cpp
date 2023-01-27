@@ -26,6 +26,14 @@ namespace {
         size_t dupe_count = 0;
     };
 
+    int GetHealthRegenPips(const GW::AgentLiving* agent) {
+        if (!(agent && agent->max_hp && agent->hp_pips != .0f))
+            return 0; // Invalid agent, unknown max HP, or no regen or degen
+        float health_regen_per_second = agent->max_hp * agent->hp_pips;
+        float pips = std::ceil(health_regen_per_second / 2.f); // 1 pip = 20 health per second
+        return (int)pips;
+    }
+
     bool OrderDupeInfo(DupeInfo& a, DupeInfo& b) {
         const GW::AgentLiving* agentA = GW::Agents::GetAgentByID(a.agent_id)->GetAsAgentLiving();
         const GW::AgentLiving* agentB = GW::Agents::GetAgentByID(b.agent_id)->GetAsAgentLiving();
@@ -72,8 +80,9 @@ namespace {
                 ImGui::ProgressBar(agent->hp);
 
                 ImGui::TableSetColumnIndex(2);
-                if (agent->hp_pips > 0) {
-                    ImGui::Text("%.0f>",std::ceil(agent->hp_pips / 0.001852));
+                const auto pips = GetHealthRegenPips(agent);
+                if (pips > 0 && pips < 11) {
+                    ImGui::Text("%.*s",pips > 0 && pips < 11 ? pips : 0,">>>>>>>>>>");
                 }
 
                 ImGui::TableSetColumnIndex(3);
@@ -314,27 +323,25 @@ void DupingWindow::DrawSettingInternal() {
 void DupingWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
     LOAD_BOOL(hide_when_nothing);
-    range = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(range), 1600.0f));
-
     LOAD_BOOL(show_souls_counter);
     LOAD_BOOL(show_waters_counter);
     LOAD_BOOL(show_minds_counter);
 
-    souls_threshhold = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(souls_threshhold), 0.6f));
-    waters_threshhold = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(waters_threshhold), 0.5f));
-    minds_threshhold = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(minds_threshhold), 0.0f));
+    LOAD_FLOAT(souls_threshhold);
+    LOAD_FLOAT(waters_threshhold);
+    LOAD_FLOAT(minds_threshhold);
+    LOAD_FLOAT(range);
 }
 
 void DupingWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     SAVE_BOOL(hide_when_nothing);
-    ini->SetDoubleValue(Name(), VAR_NAME(range), range);
-
     SAVE_BOOL(show_souls_counter);
     SAVE_BOOL(show_waters_counter);
     SAVE_BOOL(show_minds_counter);
 
-    ini->SetDoubleValue(Name(), VAR_NAME(souls_threshhold), souls_threshhold);
-    ini->SetDoubleValue(Name(), VAR_NAME(waters_threshhold), waters_threshhold);
-    ini->SetDoubleValue(Name(), VAR_NAME(minds_threshhold), minds_threshhold);
+    SAVE_FLOAT(souls_threshhold);
+    SAVE_FLOAT(waters_threshhold);
+    SAVE_FLOAT(minds_threshhold);
+    SAVE_FLOAT(range);
 }
