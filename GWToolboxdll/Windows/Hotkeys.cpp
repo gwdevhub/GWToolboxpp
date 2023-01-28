@@ -1576,10 +1576,12 @@ void HotkeyTarget::Execute()
 HotkeyMove::HotkeyMove(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
+    type = (MoveType)ini->GetLongValue(section, "type", (int)type);
     x = (float)ini->GetDoubleValue(section, "x", 0.0);
     y = (float)ini->GetDoubleValue(section, "y", 0.0);
     range = (float)ini->GetDoubleValue(section, "distance",
                                        GW::Constants::Range::Compass);
+    distance_from_location = (float)ini->GetDoubleValue(section, "distance_from_location", distance_from_location);
     strcpy_s(name, ini->GetValue(section, "name", ""));
 }
 void HotkeyMove::Save(ToolboxIni *ini, const char *section) const
@@ -1592,17 +1594,42 @@ void HotkeyMove::Save(ToolboxIni *ini, const char *section) const
 }
 int HotkeyMove::Description(char *buf, size_t bufsz)
 {
-    if (!name[0])
+    if (name[0])
+        return snprintf(buf, bufsz, "Move to %s", name);
+    switch (type) {
+    case MoveType::Target:
+        return snprintf(buf, bufsz, "Move to current target");
+    default:
         return snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
-    return snprintf(buf, bufsz, "Move to %s", name);
+    }
 }
 bool HotkeyMove::Draw()
 {
-    bool hotkey_changed = ImGui::InputFloat("x", &x, 0.0f, 0.0f);
-    hotkey_changed |= ImGui::InputFloat("y", &y, 0.0f, 0.0f);
-    hotkey_changed |= ImGui::InputFloat("Range", &range, 0.0f, 0.0f);
+    bool hotkey_changed = false;
+    ImGui::TextUnformatted("Type: ");
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Target", type == MoveType::Target) && type != MoveType::Target) {
+        hotkey_changed = true;
+        type = MoveType::Target;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Location", type == MoveType::Location) && type != MoveType::Location) {
+        hotkey_changed = true;
+        type = MoveType::Location;
+    }
+    if (type == MoveType::Location) {
+        hotkey_changed |= ImGui::InputFloat("x", &x, 0.0f, 0.0f);
+        hotkey_changed |= ImGui::InputFloat("y", &y, 0.0f, 0.0f);
+    }
+    hotkey_changed |= ImGui::InputFloat("Trigger within Range", &range, 0.0f, 0.0f);
     ImGui::ShowHelp(
         "The hotkey will only trigger within this range.\nUse 0 for no limit.");
+    // TODO: Distance from location calc
+#if 0
+    hotkey_changed |= ImGui::InputFloat("Distance from location", &distance_from_location, 0.0f, 0.0f);
+    ImGui::ShowHelp(
+        "Calculate and move to a point this many gwinches away from the location.\nUse 0 to go to that exact location.");
+#endif
     hotkey_changed |= ImGui::InputText("Name", name, 140);
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
     return hotkey_changed;
@@ -1612,9 +1639,22 @@ void HotkeyMove::Execute()
     if (!CanUse())
         return;
     GW::Agent *me = GW::Agents::GetPlayer();
-    double dist = GW::GetDistance(me->pos, GW::Vec2f(x, y));
+    GW::Vec2f location(x, y);
+    if (type == MoveType::Target) {
+        const auto target = GW::Agents::GetTarget();
+        if (!target) return;
+        location = target->pos;
+    }
+
+    double dist = GW::GetDistance(me->pos, location);
     if (range != 0 && dist > range)
         return;
+    // TODO: Distance from location calc
+#if 0
+    if (distance_from_location) {
+        // TODO
+    }
+#endif
     GW::Agents::Move(x, y);
     if (name[0] == '\0') {
         if (show_message_in_emote_channel)

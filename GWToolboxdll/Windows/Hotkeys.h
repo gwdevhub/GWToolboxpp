@@ -314,9 +314,14 @@ public:
 // it will only move in explorables, and if in compass range from destination
 class HotkeyMove : public TBHotkey {
 public:
+    enum class MoveType : int {
+        Location,
+        Target
+    } type = MoveType::Location;
     float x = 0.0;
     float y = 0.0;
     float range = 0.0;
+    float distance_from_location = 0.0;
     char name[140];
 
     static const char* IniSection() { return "Move"; }
