@@ -82,14 +82,6 @@ namespace {
     GW::HookEntry OnDialogButton_Entry;
     GW::HookEntry OnSendDialog_Entry;
 
-    int GetHealthRegenPips(const GW::AgentLiving* agent) {
-        if (!(agent && agent->max_hp && agent->hp_pips != .0f))
-            return 0; // Invalid agent, unknown max HP, or no regen or degen
-        float health_regen_per_second = agent->max_hp * agent->hp_pips;
-        float pips = std::ceil(health_regen_per_second / 2.f); // 1 pip = 20 health per second
-        return (int)pips;
-    }
-
     bool EncInfoField(const char* label, const wchar_t* enc_string) {
         std::string info_string;
         const size_t size_reqd = enc_string ? (wcslen(enc_string) * 7) + 1 : 0;
@@ -443,7 +435,6 @@ namespace {
                 InfoField("ExtraType", "%d", gadget->extra_type);
             }
             if (living) {
-                InfoField("Regen pips", "%d", GetHealthRegenPips(living));
                 InfoField("AS of Weapon", "%f", living->weapon_attack_speed);
                 InfoField("AS modifier", "%f", living->attack_speed_modifier);
                 InfoField("Primary Prof", "%d", living->primary);

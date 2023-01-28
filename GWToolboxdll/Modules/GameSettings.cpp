@@ -1430,7 +1430,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini) {
 
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     SetWindowTitle(set_window_title_as_charname);
-    SetWindowTitle(set_window_title_as_charname);
 
     tome_patch.TogglePatch(show_unlearned_skill);
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
@@ -1469,6 +1468,8 @@ void GameSettings::Terminate() {
     ctrl_click_patch.Reset();
     tome_patch.Reset();
     gold_confirm_patch.Reset();
+    skill_description_patch.Reset();
+    skip_map_entry_message_patch.Reset();
 }
 
 void GameSettings::SaveSettings(ToolboxIni* ini) {
