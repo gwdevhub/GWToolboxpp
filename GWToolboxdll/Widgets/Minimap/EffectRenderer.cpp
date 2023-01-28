@@ -100,9 +100,6 @@ namespace {
 
     unsigned int vertices_max = 0x1000; // max number of vertices to draw in one call
 }
-EffectRenderer::EffectRenderer() {
-    LoadDefaults();
-}
 void EffectRenderer::LoadDefaults() {
     aoe_effect_settings.clear();
     aoe_effect_settings.emplace(Maelstrom, new EffectSettings("Maelstrom", Maelstrom, GW::Constants::Range::Adjacent, 10000));
@@ -120,6 +117,7 @@ void EffectRenderer::LoadDefaults() {
     aoe_effect_triggers.emplace(Spike_Trap_Activate, new EffectTrigger(Spike_Trap, 2000, GW::Constants::Range::Nearby));
 }
 void EffectRenderer::Terminate() {
+    VBuffer::Terminate();
     for (const auto& settings : aoe_effect_settings) {
         delete settings.second;
     }

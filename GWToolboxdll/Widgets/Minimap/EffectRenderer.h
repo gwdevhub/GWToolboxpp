@@ -22,8 +22,6 @@ public:
     void Render(IDirect3DDevice9* device) override;
 
     void Invalidate() override;
-    EffectRenderer();
-    EffectRenderer(const EffectRenderer&) = delete;
     void Terminate() override;
     void PacketCallback(GW::Packet::StoC::GenericValue* pak);
     void PacketCallback(GW::Packet::StoC::GenericValueTarget* pak);
