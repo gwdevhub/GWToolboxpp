@@ -9,6 +9,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
@@ -26,11 +27,29 @@ namespace {
         size_t dupe_count = 0;
     };
 
+    uint32_t GetAgentMaxHP(const GW::AgentLiving* agent) {
+        if (!agent)
+            return 0; // Invalid agent
+        if (agent->max_hp)
+            return agent->max_hp;
+        switch (agent->player_number) {
+            case GW::Constants::ModelID::DoA::SoulTormentor:
+            case GW::Constants::ModelID::DoA::VeilSoulTormentor:
+            case GW::Constants::ModelID::DoA::WaterTormentor:
+            case GW::Constants::ModelID::DoA::VeilWaterTormentor:
+            case GW::Constants::ModelID::DoA::MindTormentor:
+            case GW::Constants::ModelID::DoA::VeilMindTormentor:
+                return GW::PartyMgr::GetIsPartyInHardMode() ? 540 : 0; // TODO: HP in normal mode
+        }
+        return 0;
+    }
+
     int GetHealthRegenPips(const GW::AgentLiving* agent) {
-        if (!(agent && agent->max_hp && agent->hp_pips != .0f))
+        const auto max_hp = GetAgentMaxHP(agent);
+        if (!(max_hp && agent->hp_pips != .0f))
             return 0; // Invalid agent, unknown max HP, or no regen or degen
-        float health_regen_per_second = agent->max_hp * agent->hp_pips;
-        float pips = std::ceil(health_regen_per_second / 2.f); // 1 pip = 20 health per second
+        float health_regen_per_second = max_hp * agent->hp_pips;
+        float pips = std::ceil(health_regen_per_second / 2.f); // 1 pip = 2 health per second
         return (int)pips;
     }
 
