@@ -155,13 +155,13 @@ namespace {
 void Minimap::Terminate()
 {
     ToolboxWidget::Terminate();
-    range_renderer.Invalidate();
-    pmap_renderer.Invalidate();
-    agent_renderer.Invalidate();
-    pingslines_renderer.Invalidate();
-    symbols_renderer.Invalidate();
-    custom_renderer.Invalidate();
-    effect_renderer.Invalidate();
+    range_renderer.Terminate();
+    pmap_renderer.Terminate();
+    agent_renderer.Terminate();
+    pingslines_renderer.Terminate();
+    symbols_renderer.Terminate();
+    custom_renderer.Terminate();
+    effect_renderer.Terminate();
 }
 
 void Minimap::Initialize()

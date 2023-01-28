@@ -36,6 +36,9 @@ public:
         device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
         device->DrawPrimitive(type, 0, count);
     }
+    virtual void Terminate() {
+        Invalidate();
+    }
     virtual void Initialize(IDirect3DDevice9* device) = 0;
 
 protected:

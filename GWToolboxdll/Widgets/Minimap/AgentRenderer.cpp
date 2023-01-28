@@ -425,16 +425,14 @@ void AgentRenderer::DrawSettings() {
     }
 }
 
-AgentRenderer::~AgentRenderer()  {
+void AgentRenderer::Terminate()  {
+    VBuffer::Terminate();
     for (const CustomAgent* ca : custom_agents) {
         delete ca;
     }
     custom_agents.clear();
     custom_agents_map.clear();
     RemoveMarkedTarget();
-}
-void AgentRenderer::Invalidate() {
-    VBuffer::Invalidate();
 }
 AgentRenderer& AgentRenderer::Instance() { return *instance; }
 AgentRenderer::AgentRenderer() {

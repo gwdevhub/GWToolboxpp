@@ -20,9 +20,8 @@ class AgentRenderer : public VBuffer {
 
 public:
     AgentRenderer();
-    ~AgentRenderer();
 
-    void Invalidate() override;
+    void Terminate() override;
     static AgentRenderer& Instance();
 
     void Render(IDirect3DDevice9* device) override;
