@@ -2,10 +2,11 @@
 // Microsoft Visual C++ generated include file.
 // Used by GWToolbox.rc
 //
-#define IDB_Mat_Mobstopper              100
-#define IDB_Mat_GhostintheBox           101
-#define IDB_Mat_PumpkinCookie           102
-#define IDB_Mat_Honeycomb               103
+#define IDB_Mat_Mobstopper              99
+#define IDB_Mat_GhostintheBox           100
+#define IDB_Mat_PumpkinCookie           101
+#define IDB_Mat_Honeycomb               102
+#define IDB_Mat_SealoftheDragonEmpire   103
 #define IDB_Mat_Powerstone              104
 #define IDB_Mat_ResScroll               105
 #define IDB_Icon_Airplane               106
