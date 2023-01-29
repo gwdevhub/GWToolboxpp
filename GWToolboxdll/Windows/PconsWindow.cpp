@@ -108,6 +108,16 @@ PconsWindow::PconsWindow() {
         ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::ResScrolls, 5));
     pcons.push_back(new PconRefiller("Powerstone of Courage", "Pstone", "pstone", L"Powerstone of Courage", IDB_Mat_Powerstone,
         ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::Powerstone, 5));
+    pcons.push_back(new PconRefiller("Seal of the Dragon Empire", "Seal", "seal", L"Seal of the Dragon Empire", IDB_Mat_SealoftheDragonEmpire,
+        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::SealOfTheDragonEmpire, 5));
+    pcons.push_back(new PconRefiller("Honeycomb", "Honeycomb", "honeycomb", L"Honeycomb", IDB_Mat_Honeycomb,
+        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::Honeycomb, 5));
+    pcons.push_back(new PconRefiller("Pumpkin Cookie", "Cookie", "cookie", L"Pumpkin Cookie", IDB_Mat_PumpkinCookie,
+        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::PumpkinCookie, 5));
+    pcons.push_back(new PconRefiller("Ghost in the Box", "Ghost", "ghost", L"Ghost-in-the-Box", IDB_Mat_GhostintheBox,
+        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::GhostInTheBox, 5));
+    pcons.push_back(new PconRefiller("Everlasting Mobstopper", "Mobstopper", "mobstopper", L"Everlasting Mobstopper", IDB_Mat_Mobstopper,
+        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::Mobstopper, 5));
 
     // Summoning Stones
     // @Cleanup: Add these items to GWCA or something
@@ -129,7 +139,7 @@ PconsWindow::PconsWindow() {
     pcons.push_back(new PconRefiller(L"Mysterious Summoning Stone", 31155));
     pcons.push_back(new PconRefiller(L"Zaishen Summoning Stone", 31156));
     pcons.push_back(new PconRefiller(L"Ghastly Summoning Stone", 32557));
-    pcons.push_back(new PconRefiller(L"Shining Blade Warhorn", 35126));
+    pcons.push_back(new PconRefiller(L"Shining Blade War Horn", 35126));
 }
 void PconsWindow::Initialize() {
     ToolboxWindow::Initialize();
