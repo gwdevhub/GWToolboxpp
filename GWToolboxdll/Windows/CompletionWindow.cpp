@@ -858,6 +858,8 @@ void CompletionWindow::Initialize()
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Exclusive Armor\x1", "Elementalist_Elite_Stormforged_armor_f.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Ascended Armor\x1", "Warrior_Elite_Templar_armor_m.jpg"));
 
+    ASSERT(hom_armor.size() == (size_t)ResilienceDetail::Count);
+
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zenmai\x1","Zenmai_statue.jpg"));
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Norgu\x1","Norgu_statue.jpg"));
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Goren\x1","Goren_statue.jpg"));
@@ -889,6 +891,8 @@ void CompletionWindow::Initialize()
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Olias\x1", "Olias_statue.jpg"));
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "MOX\x1", "M.O.X._statue.jpg"));
 
+    ASSERT(hom_companions.size() == (size_t)FellowshipDetail::Count);
+
     size_t hom_titles_index = 0;
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Champion\x1","Eternal_Champion.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Commander\x1","Eternal_Commander.jpg"));
@@ -907,7 +911,6 @@ void CompletionWindow::Initialize()
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Skill Hunter\x1","Eternal_Tyrian_Skill_Hunter.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Vanquisher\x1","Eternal_Tyrian_Vanquisher.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Cartographer\x1","Eternal_Canthan_Cartographer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Vanquisher\x1","Eternal_Tyrian_Vanquisher.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Cantha\x1","Eternal_Guardian_of_Cantha.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Cantha\x1","Eternal_Protector_of_Cantha.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Skill Hunter\x1","Eternal_Canthan_Skill_Hunter.jpg"));
@@ -930,6 +933,7 @@ void CompletionWindow::Initialize()
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Sweet Tooth\x1","Eternal_Sweet_Tooth.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Spearmarshal\x1","Eternal_Spearmarshal.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Survivor\x1","Eternal_Survivor.jpg"));
+    hom_titles_index++; // NB: This is the character based survivor title, which isn't used anymore.
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Treasure Hunter\x1","Eternal_Treasure_Hunter.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Misfortune\x1","Eternal_Misfortune.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Source of Wisdom\x1","Eternal_Source_of_Wisdom.jpg"));
@@ -944,6 +948,8 @@ void CompletionWindow::Initialize()
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Domain of Anguish\x1","Eternal_Conqueror_of_the_Domain_of_Anguish.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Zaishen Supporter\x1","Eternal_Zaishen_Supporter.jpg"));
     hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Codex Disciple\x1","Eternal_Codex_Disciple.png"));
+
+    ASSERT(hom_titles_index == (size_t)HonorDetail::Count);
 
     Initialize_Prophecies();
     Initialize_Factions();
@@ -2568,7 +2574,8 @@ CompletionWindow* CompletionWindow::CheckProgress(bool fetch_hom) {
 	}
     if (fetch_hom)
     {
-        FetchHom();
+        const auto cc = GetCharacterCompletion(chosen_player_name.c_str(), true);
+        FetchHom(&cc->hom_achievements);
 	}
 	return this;
 }
