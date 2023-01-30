@@ -34,11 +34,10 @@ protected:
         const char* abbrevname,
         const char* ininame,
         const wchar_t* filename,
-        WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
         ImVec2 uv0, ImVec2 uv1, int threshold,
         const char* desc = nullptr);
     Pcon(const wchar_t* file, int threshold = 20)
-        :Pcon(0, 0, 0, file, 0, { 0,0 }, { 1,1 }, threshold) {}
+        :Pcon(0, 0, 0, file, { 0,0 }, { 1,1 }, threshold) {}
     Pcon(const Pcon&) = delete;
     virtual ~Pcon();
     bool* GetSettingsByName(const wchar_t* name);
@@ -82,8 +81,6 @@ public:
     int threshold = 0;
     bool visible = true;
     int quantity = 0;
-    // Icon vars
-    WORD res_id = 0;
     std::wstring filename;
     int quantity_storage = 0;
 
@@ -135,12 +132,11 @@ public:
         const char* abbrev,
         const char* ini,
         const wchar_t* file,
-        WORD res_id,
         ImVec2 uv0, ImVec2 uv1,
         DWORD item, GW::Constants::SkillID effect,
         int threshold,
         const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc),
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc),
         itemID(item), effectID(effect) {}
     PconGeneric(const PconGeneric&) = delete;
 
@@ -161,12 +157,11 @@ public:
         const char* abbrev,
         const char* ini,
         const wchar_t* file,
-        WORD res_id,
         ImVec2 uv0, ImVec2 uv1,
         DWORD item, GW::Constants::SkillID effect,
         int threshold,
             const char* desc = nullptr)
-        : PconGeneric(chat, abbrev, ini, file, res_id, uv0, uv1, item, effect, threshold, desc) {}
+        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effect, threshold, desc) {}
     PconCons(const PconCons&) = delete;
 
     bool CanUseByEffect() const override;
@@ -178,11 +173,10 @@ public:
         const char* abbrev,
         const char* ini,
         const wchar_t* file,
-        WORD res_id,
         ImVec2 uv0, ImVec2 uv1,
         int threshold,
             const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) {}
     PconCity(const PconCity&) = delete;
 
     bool CanUseByInstanceType() const;
@@ -194,19 +188,18 @@ public:
 class PconRefiller : public PconCity {
 public:
     PconRefiller(const wchar_t* file, DWORD item, int threshold = 250)
-        : PconRefiller(0, 0, 0, file, 0, { 0,0 }, { 1,1 }, item, threshold) {
+        : PconRefiller(0, 0, 0, file, { 0,0 }, { 1,1 }, item, threshold) {
         visible = false;
     };
     PconRefiller(const char* chat,
         const char* abbrev,
         const char* ini,
         const wchar_t* file,
-        WORD res_id,
         ImVec2 uv0, ImVec2 uv1,
         DWORD item,
         int threshold,
         const char* desc_ = nullptr)
-        : PconCity(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc_), itemID(item) {
+        : PconCity(chat, abbrev, ini, file, uv0, uv1, threshold, desc_), itemID(item) {
         if (desc.size())
             desc += "\n";
         desc += "Enable in an outpost to refill your inventory.";
@@ -229,11 +222,10 @@ public:
         const char* abbrev,
         const char* ini,
         const wchar_t* file,
-        WORD res_id,
         ImVec2 uv0, ImVec2 uv1,
         int threshold,
             const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) {}
 
     PconAlcohol(const PconAlcohol&) = delete;
 
@@ -248,11 +240,10 @@ public:
         const char* abbrev,
         const char* ini,
         const wchar_t* file,
-        WORD res_id,
         ImVec2 uv0, ImVec2 uv1,
         int threshold,
             const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) {}
 
     PconLunar(const PconLunar&) = delete;
 

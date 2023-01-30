@@ -48,11 +48,10 @@ std::array<std::array<clock_t, 25>, 22> Pcon::reserved_bag_slots{};
 Pcon::Pcon(const char* chatname,
     const char* abbrevname,
     const char* ininame,
-    const wchar_t* filename_, WORD res_id_,
+    const wchar_t* filename_,
     ImVec2 uv0_, ImVec2 uv1_, int threshold_,
     const char* desc_)
     : threshold(threshold_)
-    , res_id(res_id_)
     , filename(filename_)
     , timer(TIMER_INIT())
     , uv0(uv0_)

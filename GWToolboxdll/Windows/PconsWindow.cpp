@@ -28,96 +28,93 @@ bool Pcon::map_has_effects_array = false;
 PconsWindow::PconsWindow() {
     const float s = 64.0f; // all icons are 64x64
 
-    pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity", IDB_Pcons_Essence,
+    pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
         ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
         ItemID::ConsEssence, SkillID::Essence_of_Celerity_item_effect, 5));
 
-    pcons.push_back(new PconCons("Grail of Might", "Grail", "grail", L"Grail of Might", IDB_Pcons_Grail,
+    pcons.push_back(new PconCons("Grail of Might", "Grail", "grail", L"Grail of Might",
         ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s),
         ItemID::ConsGrail, SkillID::Grail_of_Might_item_effect, 5));
 
-    pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", L"Armor of Salvation", IDB_Pcons_Armor,
+    pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", L"Armor of Salvation",
         ImVec2(0 / s, 2 / s), ImVec2(56 / s, 58 / s),
         ItemID::ConsArmor, SkillID::Armor_of_Salvation_item_effect, 5));
 
-    pcons.push_back(new PconGeneric("Red Rock Candy", "Red Rock", "redrock", L"Red Rock Candy", IDB_Pcons_RedRock,
+    pcons.push_back(new PconGeneric("Red Rock Candy", "Red Rock", "redrock", L"Red Rock Candy",
         ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
         ItemID::RRC, SkillID::Red_Rock_Candy_Rush, 5));
 
-    pcons.push_back(new PconGeneric("Blue Rock Candy", "Blue Rock", "bluerock", L"Blue Rock Candy", IDB_Pcons_BlueRock,
+    pcons.push_back(new PconGeneric("Blue Rock Candy", "Blue Rock", "bluerock", L"Blue Rock Candy",
         ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
         ItemID::BRC, SkillID::Blue_Rock_Candy_Rush, 10));
 
-    pcons.push_back(new PconGeneric("Green Rock Candy", "Green Rock", "greenrock", L"Green Rock Candy", IDB_Pcons_GreenRock,
+    pcons.push_back(new PconGeneric("Green Rock Candy", "Green Rock", "greenrock", L"Green Rock Candy",
         ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
         ItemID::GRC, SkillID::Green_Rock_Candy_Rush, 15));
 
-    pcons.push_back(new PconGeneric("Golden Egg", "Egg", "egg", L"Golden Egg", IDB_Pcons_Egg,
+    pcons.push_back(new PconGeneric("Golden Egg", "Egg", "egg", L"Golden Egg",
         ImVec2(1 / s, 8 / s), ImVec2(48 / s, 55 / s),
         ItemID::Eggs, SkillID::Golden_Egg_skill, 20));
 
-    pcons.push_back(new PconGeneric("Candy Apple", "Apple", "apple", L"Candy Apple", IDB_Pcons_Apple,
+    pcons.push_back(new PconGeneric("Candy Apple", "Apple", "apple", L"Candy Apple",
         ImVec2(0 / s, 7 / s), ImVec2(50 / s, 57 / s),
         ItemID::Apples, SkillID::Candy_Apple_skill, 10));
 
-    pcons.push_back(new PconGeneric("Candy Corn", "Corn", "corn", L"Candy Corn", IDB_Pcons_Corn,
+    pcons.push_back(new PconGeneric("Candy Corn", "Corn", "corn", L"Candy Corn",
         ImVec2(5 / s, 10 / s), ImVec2(48 / s, 53 / s),
         ItemID::Corns, SkillID::Candy_Corn_skill, 10));
 
-    pcons.push_back(new PconGeneric("Birthday Cupcake", "Cupcake", "cupcake", L"Birthday Cupcake", IDB_Pcons_Cupcake,
+    pcons.push_back(new PconGeneric("Birthday Cupcake", "Cupcake", "cupcake", L"Birthday Cupcake",
         ImVec2(1 / s, 5 / s), ImVec2(51 / s, 55 / s),
         ItemID::Cupcakes, SkillID::Birthday_Cupcake_skill, 10));
 
-    pcons.push_back(new PconGeneric("Slice of Pumpkin Pie", "Pie", "pie", L"Slice of Pumpkin Pie", IDB_Pcons_Pie,
+    pcons.push_back(new PconGeneric("Slice of Pumpkin Pie", "Pie", "pie", L"Slice of Pumpkin Pie",
         ImVec2(0 / s, 7 / s), ImVec2(52 / s, 59 / s),
         ItemID::Pies, SkillID::Pie_Induced_Ecstasy, 10));
 
-    pcons.push_back(new PconGeneric("War Supplies", "War Supply", "warsupply", L"War Supplies", IDB_Pcons_WarSupplies,
+    pcons.push_back(new PconGeneric("War Supplies", "War Supply", "warsupply", L"War Supplies",
         ImVec2(0 / s, 0 / s), ImVec2(63 / s, 63 / s),
         ItemID::Warsupplies, SkillID::Well_Supplied, 20));
 
-    pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "Alcohol", "alcohol", L"Dwarven Ale", IDB_Pcons_Ale,
+    pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "Alcohol", "alcohol", L"Dwarven Ale",
         ImVec2(-5 / s, 1 / s), ImVec2(57 / s, 63 / s),
         10));
 
-    pcons.push_back(new PconLunar("Lunar Fortunes", "Lunars", "lunars", L"Lunar Fortune", IDB_Pcons_Lunar,
+    pcons.push_back(new PconLunar("Lunar Fortunes", "Lunars", "lunars", L"Lunar Fortune",
         ImVec2(1 / s, 4 / s), ImVec2(56 / s, 59 / s),
         10));
 
-    pcons.push_back(new PconCity("City speedboost", "City IMS", "city", L"Sugary Blue Drink", IDB_Pcons_BlueDrink,
+    pcons.push_back(new PconCity("City speedboost", "City IMS", "city", L"Sugary Blue Drink",
         ImVec2(0 / s, 1 / s), ImVec2(61 / s, 62 / s),
         20));
 
-    pcons.push_back(new PconGeneric("Drake Kabob", "Kabob", "kabob", L"Drake Kabob", IDB_Pcons_Kabob,
+    pcons.push_back(new PconGeneric("Drake Kabob", "Kabob", "kabob", L"Drake Kabob",
         ImVec2(0 / s, 0 / s), ImVec2(64 / s, 64 / s),
         ItemID::Kabobs, SkillID::Drake_Skin, 10));
 
-    pcons.push_back(new PconGeneric("Bowl of Skalefin Soup", "Soup", "soup", L"Bowl of Skalefin Soup", IDB_Pcons_Soup,
+    pcons.push_back(new PconGeneric("Bowl of Skalefin Soup", "Soup", "soup", L"Bowl of Skalefin Soup",
         ImVec2(2 / s, 5 / s), ImVec2(51 / s, 54 / s),
         ItemID::SkalefinSoup, SkillID::Skale_Vigor, 10));
 
-    pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", L"Pahnai Salad", IDB_Pcons_Salad,
+    pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", L"Pahnai Salad",
         ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
         ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
     pcons.push_back(new PconGeneric(L"Scroll of Hunter's Insight", 5976, SkillID::Hunters_Insight, 20));
-    pcons.back()->visible = false; // sets the default, LoadSettings will overwrite this
+    pcons.back()->visible = false;
 
     // Refillers
-    pcons.push_back(new PconRefiller("Scroll of Resurrection", "Scroll", "resscroll", L"Scroll of Resurrection", IDB_Mat_ResScroll,
-        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::ResScrolls, 5));
-    pcons.push_back(new PconRefiller("Powerstone of Courage", "Pstone", "pstone", L"Powerstone of Courage", IDB_Mat_Powerstone,
-        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::Powerstone, 5));
-    pcons.push_back(new PconRefiller("Seal of the Dragon Empire", "Seal", "seal", L"Seal of the Dragon Empire", IDB_Mat_SealoftheDragonEmpire,
-        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::SealOfTheDragonEmpire, 5));
-    pcons.push_back(new PconRefiller("Honeycomb", "Honeycomb", "honeycomb", L"Honeycomb", IDB_Mat_Honeycomb,
-        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::Honeycomb, 5));
-    pcons.push_back(new PconRefiller("Pumpkin Cookie", "Cookie", "cookie", L"Pumpkin Cookie", IDB_Mat_PumpkinCookie,
-        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::PumpkinCookie, 5));
-    pcons.push_back(new PconRefiller("Ghost in the Box", "Ghost", "ghost", L"Ghost-in-the-Box", IDB_Mat_GhostintheBox,
-        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::GhostInTheBox, 5));
-    pcons.push_back(new PconRefiller("Everlasting Mobstopper", "Mobstopper", "mobstopper", L"Everlasting Mobstopper", IDB_Mat_Mobstopper,
-        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::Mobstopper, 5));
+
+    pcons.push_back(new PconRefiller(L"Scroll of Resurrection",ItemID::ResScrolls, 5));
+    pcons.back()->ini = "resscroll";
+    pcons.push_back(new PconRefiller(L"Powerstone of Courage",ItemID::Powerstone,5));
+    pcons.back()->ini = "pstone";
+    pcons.push_back(new PconRefiller(L"Seal of the Dragon Empire",ItemID::SealOfTheDragonEmpire,5));
+
+    pcons.push_back(new PconRefiller(L"Honeycomb",ItemID::Honeycomb));
+    pcons.push_back(new PconRefiller(L"Pumpkin Cookie",ItemID::PumpkinCookie));
+    pcons.push_back(new PconRefiller(L"Ghost in the Box",ItemID::GhostInTheBox));
+    pcons.push_back(new PconRefiller(L"Everlasting Mobstopper",ItemID::Mobstopper));
 
     // Summoning Stones
     // @Cleanup: Add these items to GWCA or something
@@ -340,7 +337,7 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv) {
                 argPcon.append(L" ");
                 argPcon.append(GuiUtils::ToLower(argv[i]));
             }
-            std::vector<Pcon*> pcons = Instance().pcons;
+            std::vector<Pcon*>& pcons = Instance().pcons;
             std::string compare = GuiUtils::WStringToString(argPcon);
             unsigned int compareLength = compare.length();
             Pcon* bestMatch = nullptr;
