@@ -357,6 +357,8 @@ namespace {
             tmp_out.append(offset, (player_name_start - offset));
             offset = player_name_start + player_name_len;
             tmp_name.assign(player_name_start, player_name_len);
+            if (tmp_name.empty())
+                break;
             if (obfuscate) {
                 ObfuscateName(tmp_name.c_str(), tmp_name,true);
             }
