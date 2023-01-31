@@ -29,6 +29,7 @@
 #include <Modules/ChatLog.h>
 #include <Modules/HintsModule.h>
 #include <Modules/PluginModule.h>
+#include <Modules/KeyboardLanguageFix.h>
 #if 0
 #include <Modules/GWFileRequester.h>
 #endif
@@ -124,7 +125,8 @@ namespace {
         ChatLog::Instance(),
         HintsModule::Instance(),
         MouseFix::Instance(),
-        Obfuscator::Instance()
+        Obfuscator::Instance(),
+        KeyboardLanguageFix::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
