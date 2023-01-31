@@ -17,7 +17,7 @@ void KeyboardLanguageFix::Initialize() {
         Log::Error("Failed to find keyboard layout address");
         return;
     }
-    Log::Info("Keyboard layout address %p, %p", address, *address);
+    Log::Log("Keyboard layout address %p, %p", address, *address);
     if (*address) {
         Log::Log("Failed to intercept keyboard layout override; Guild Wars has already set the keyboard language");
         return;
