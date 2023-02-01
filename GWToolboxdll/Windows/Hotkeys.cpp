@@ -297,9 +297,9 @@ size_t TBHotkey::HasProfession() {
 bool TBHotkey::IsValid(const char* _player_name, GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, bool is_pvp_character) {
     return active
         && (!is_pvp_character || trigger_on_pvp_character)
-        && (instance_type == -1 || (GW::Constants::InstanceType)instance_type == _instance_type)
-        && (prof_ids[(size_t)_profession] || !HasProfession())
-        && (map_ids.empty() || std::ranges::find(map_ids, (uint32_t)_map_id) != map_ids.end())
+        && (instance_type == -1 || static_cast<GW::Constants::InstanceType>(instance_type) == _instance_type)
+        && (prof_ids[static_cast<size_t>(_profession)] || !HasProfession())
+        && (map_ids.empty() || std::ranges::find(map_ids, static_cast<uint32_t>(_map_id)) != map_ids.end())
         && (!player_name[0] || strcmp(_player_name, player_name) == 0);
 }
 bool TBHotkey::CanUse()
@@ -411,7 +411,7 @@ bool TBHotkey::Draw(Op *op)
             const char* format = ", %s";
             if (!prof_ids_written)
                 format = "%s";
-            prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, GW::Constants::GetProfessionAcronym((GW::Constants::Profession)i).c_str());
+            prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(i)).c_str());
         }
         written += snprintf(&header[written], _countof(header) - written, " [%s]", prof_ids_buf);
     } break;
@@ -490,7 +490,7 @@ bool TBHotkey::Draw(Op *op)
             if (map_ids.empty()) {
                 ImGui::Text("    This hotkey will trigger in any map - add a map ID below to limit to a map");
             }
-            for (int i = 0; i < (int)map_ids.size(); i++) {
+            for (int i = 0; i < static_cast<int>(map_ids.size()); i++) {
                 ImGui::PushID(i);
                 ImGui::Text("%d", map_ids[i]);
                 ImGui::SameLine(indent_offset + map_id_w);
@@ -528,7 +528,7 @@ bool TBHotkey::Draw(Op *op)
         if (ImGui::CollapsingHeader("Professions")) {
             ImGui::Indent();
             float prof_w = 140.f * scale;
-            int per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / prof_w);
+            int per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / prof_w));
             ImGui::TextDisabled("Only trigger when player is one of these professions");
             for (int i = 1; i < _countof(prof_ids); i++) {
                 int offset = ((i-1) % per_row);
@@ -862,7 +862,7 @@ HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(uint32_t _model_id, co
     if (mod_struct_size) {
         ASSERT(_mod_struct);
         const size_t bytes = _mod_struct_size * sizeof(*_mod_struct);
-        mod_struct = (uint32_t*)malloc(bytes);
+        mod_struct = static_cast<uint32_t*>(malloc(bytes));
         memcpy(mod_struct, _mod_struct, bytes);
     }
     return this;
@@ -1171,7 +1171,7 @@ void HotkeyEquipItem::Execute()
 bool HotkeyDropUseBuff::GetText(void *data, int idx, const char **out_text)
 {
     static char other_buf[64];
-    switch ((SkillIndex)idx) {
+    switch (static_cast<SkillIndex>(idx)) {
         case Recall:
             *out_text = "Recall";
             break;
@@ -1204,13 +1204,13 @@ HotkeyDropUseBuff::SkillIndex HotkeyDropUseBuff::GetIndex() const
 HotkeyDropUseBuff::HotkeyDropUseBuff(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
-    id = (GW::Constants::SkillID)ini->GetLongValue(
-        section, "SkillID", (long)GW::Constants::SkillID::Recall);
+    id = static_cast<GW::Constants::SkillID>(ini->GetLongValue(
+        section, "SkillID", (long)GW::Constants::SkillID::Recall));
 }
 void HotkeyDropUseBuff::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
-    ini->SetLongValue(section, "SkillID", (long)id);
+    ini->SetLongValue(section, "SkillID", static_cast<long>(id));
 }
 int HotkeyDropUseBuff::Description(char *buf, size_t bufsz)
 {
@@ -1235,7 +1235,7 @@ bool HotkeyDropUseBuff::Draw()
                 id = GW::Constants::SkillID::Holy_Veil;
                 break;
             case HotkeyDropUseBuff::Other:
-                id = (GW::Constants::SkillID)0;
+                id = static_cast<GW::Constants::SkillID>(0);
                 break;
             default:
                 break;
@@ -1272,7 +1272,7 @@ void HotkeyDropUseBuff::Execute()
 
 bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
 {
-    switch ((ToggleTarget)idx) {
+    switch (static_cast<ToggleTarget>(idx)) {
         case Clicker:
             *out_text = "Clicker";
             return true;
@@ -1298,7 +1298,7 @@ bool HotkeyToggle::IsValid(ToolboxIni *ini, const char *section)
 HotkeyToggle::HotkeyToggle(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
-    target = (ToggleTarget)ini->GetLongValue(section, "ToggleID", target);
+    target = static_cast<ToggleTarget>(ini->GetLongValue(section, "ToggleID", target));
     static bool initialised = false;
     if (!initialised)
         toggled.reserve(512);
@@ -1411,7 +1411,7 @@ void HotkeyToggle::Execute()
 
 bool HotkeyAction::GetText(void *, int idx, const char **out_text)
 {
-    switch ((Action)idx) {
+    switch (static_cast<Action>(idx)) {
         case OpenXunlaiChest:
             *out_text = "Open Xunlai Chest";
             return true;
@@ -1434,7 +1434,7 @@ bool HotkeyAction::GetText(void *, int idx, const char **out_text)
 HotkeyAction::HotkeyAction(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
-    action = (Action)ini->GetLongValue(section, "ActionID", OpenXunlaiChest);
+    action = static_cast<Action>(ini->GetLongValue(section, "ActionID", OpenXunlaiChest));
 }
 void HotkeyAction::Save(ToolboxIni *ini, const char *section) const
 {
@@ -1576,12 +1576,12 @@ void HotkeyTarget::Execute()
 HotkeyMove::HotkeyMove(ToolboxIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
-    type = (MoveType)ini->GetLongValue(section, "type", (int)type);
-    x = (float)ini->GetDoubleValue(section, "x", 0.0);
-    y = (float)ini->GetDoubleValue(section, "y", 0.0);
-    range = (float)ini->GetDoubleValue(section, "distance",
-                                       GW::Constants::Range::Compass);
-    distance_from_location = (float)ini->GetDoubleValue(section, "distance_from_location", distance_from_location);
+    type = static_cast<MoveType>(ini->GetLongValue(section, "type", static_cast<int>(type)));
+    x = static_cast<float>(ini->GetDoubleValue(section, "x", 0.0));
+    y = static_cast<float>(ini->GetDoubleValue(section, "y", 0.0));
+    range = static_cast<float>(ini->GetDoubleValue(section, "distance",
+                                                   GW::Constants::Range::Compass));
+    distance_from_location = static_cast<float>(ini->GetDoubleValue(section, "distance_from_location", distance_from_location));
     strcpy_s(name, ini->GetValue(section, "name", ""));
 }
 void HotkeyMove::Save(ToolboxIni *ini, const char *section) const
@@ -1591,6 +1591,7 @@ void HotkeyMove::Save(ToolboxIni *ini, const char *section) const
     ini->SetDoubleValue(section, "y", y);
     ini->SetDoubleValue(section, "distance", range);
     ini->SetValue(section, "name", name);
+    ini->SetDoubleValue(section, "distance_from_location", distance_from_location);
 }
 int HotkeyMove::Description(char *buf, size_t bufsz)
 {
@@ -1621,15 +1622,12 @@ bool HotkeyMove::Draw()
         hotkey_changed |= ImGui::InputFloat("x", &x, 0.0f, 0.0f);
         hotkey_changed |= ImGui::InputFloat("y", &y, 0.0f, 0.0f);
     }
-    hotkey_changed |= ImGui::InputFloat("Trigger within Range", &range, 0.0f, 0.0f);
+    hotkey_changed |= ImGui::InputFloat("Trigger within range", &range, 0.0f, 0.0f);
     ImGui::ShowHelp(
         "The hotkey will only trigger within this range.\nUse 0 for no limit.");
-    // TODO: Distance from location calc
-#if 0
     hotkey_changed |= ImGui::InputFloat("Distance from location", &distance_from_location, 0.0f, 0.0f);
     ImGui::ShowHelp(
         "Calculate and move to a point this many gwinches away from the location.\nUse 0 to go to that exact location.");
-#endif
     hotkey_changed |= ImGui::InputText("Name", name, 140);
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
     return hotkey_changed;
@@ -1638,7 +1636,7 @@ void HotkeyMove::Execute()
 {
     if (!CanUse())
         return;
-    GW::Agent *me = GW::Agents::GetPlayer();
+    const auto me = GW::Agents::GetPlayer();
     GW::Vec2f location(x, y);
     if (type == MoveType::Target) {
         const auto target = GW::Agents::GetTarget();
@@ -1646,16 +1644,15 @@ void HotkeyMove::Execute()
         location = target->pos;
     }
 
-    double dist = GW::GetDistance(me->pos, location);
+    const auto dist = GW::GetDistance(me->pos, location);
     if (range != 0 && dist > range)
         return;
-    // TODO: Distance from location calc
-#if 0
-    if (distance_from_location) {
-        // TODO
+    if (distance_from_location > 0.f) {
+        const auto direction = location - me->pos;
+        const auto unit = Normalize(direction);
+        location = location - unit * distance_from_location;
     }
-#endif
-    GW::Agents::Move(x, y);
+    GW::Agents::Move(location.x, location.y);
     if (name[0] == '\0') {
         if (show_message_in_emote_channel)
             Log::Info("Moving to (%.0f, %.0f)", x, y);
@@ -1674,7 +1671,7 @@ HotkeyDialog::HotkeyDialog(ToolboxIni *ini, const char *section)
 void HotkeyDialog::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
-    ini->SetLongValue(section, "DialogID", static_cast<long>(id));
+    ini->SetLongValue(section, "DialogID", id);
     ini->SetValue(section, "DialogName", name);
 }
 int HotkeyDialog::Description(char *buf, size_t bufsz)
@@ -1710,7 +1707,7 @@ void HotkeyDialog::Execute()
 
 bool HotkeyPingBuild::GetText(void *, int idx, const char **out_text)
 {
-    if (idx >= (int)BuildsWindow::Instance().BuildCount())
+    if (idx >= static_cast<int>(BuildsWindow::Instance().BuildCount()))
         return false;
     *out_text = BuildsWindow::Instance().BuildName(static_cast<size_t>(idx));
     return true;
@@ -1754,7 +1751,7 @@ void HotkeyPingBuild::Execute()
 
 bool HotkeyHeroTeamBuild::GetText(void *, int idx, const char **out_text)
 {
-    if (idx >= (int)HeroBuildsWindow::Instance().BuildCount())
+    if (idx >= static_cast<int>(HeroBuildsWindow::Instance().BuildCount()))
         return false;
     size_t index = static_cast<size_t>(idx);
     *out_text = HeroBuildsWindow::Instance().BuildName(index);
@@ -1897,7 +1894,7 @@ HotkeyGWKey::HotkeyGWKey(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     can_trigger_on_map_change = trigger_on_explorable = trigger_on_outpost = false;
-    action = (GW::UI::ControlAction)ini->GetLongValue(section, "ActionID", (long)action);
+    action = static_cast<GW::UI::ControlAction>(ini->GetLongValue(section, "ActionID", (long)action));
     const auto found = std::ranges::find_if(control_labels, [&](std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
         return action == in.first;
         });
@@ -1912,7 +1909,7 @@ void HotkeyGWKey::Save(ToolboxIni* ini, const char* section) const
 }
 int HotkeyGWKey::Description(char* buf, size_t bufsz)
 {
-    if (action_idx < 0 || action_idx >= (int)control_labels.size()) {
+    if (action_idx < 0 || action_idx >= static_cast<int>(control_labels.size())) {
         return snprintf(buf, bufsz, "Guild Wars Key: Unknown Action %d", action_idx);
     }
     return snprintf(buf, bufsz, "Guild Wars Key: %s", control_labels[action_idx].second->string().c_str());

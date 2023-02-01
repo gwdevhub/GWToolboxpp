@@ -322,7 +322,7 @@ public:
     float y = 0.0;
     float range = 0.0;
     float distance_from_location = 0.0;
-    char name[140];
+    char name[140]{};
 
     static const char* IniSection() { return "Move"; }
     const char* Name() const override { return IniSection(); }
