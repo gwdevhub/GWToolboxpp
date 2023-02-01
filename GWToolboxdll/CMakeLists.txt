@@ -23,11 +23,8 @@ target_sources(GWToolboxdll PRIVATE ${SOURCES})
 
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
-if(USE_PLUGINS)
-    target_compile_definitions(GWToolboxdll PRIVATE "USE_PLUGINS")
-    target_compile_definitions(GWToolboxdll PRIVATE "GWCA_BUILD_EXPORTS")
-    target_compile_definitions(gwca PRIVATE "GWCA_BUILD_EXPORTS")
-endif()
+target_compile_definitions(GWToolboxdll PRIVATE "GWCA_BUILD_EXPORTS")
+target_compile_definitions(gwca PRIVATE "GWCA_BUILD_EXPORTS")
 
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)

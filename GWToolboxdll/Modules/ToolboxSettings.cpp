@@ -113,6 +113,7 @@ namespace {
     const char* modules_ini_section = "Toolbox Modules";
 
     std::vector<ModuleToggle> optional_modules = {
+        PluginModule::Instance(),
         ChatFilter::Instance(),
         ItemFilter::Instance(),
         PartyWindowModule::Instance(),
@@ -183,9 +184,9 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini) {
         auto sort = [](const auto& a, const  auto& b) {
             return strcmp(a.toolbox_module->Name(), b.toolbox_module->Name()) < 0;
         };
-        std::sort(optional_modules.begin(), optional_modules.end(), sort);
-        std::sort(optional_widgets.begin(), optional_widgets.end(), sort);
-        std::sort(optional_windows.begin(), optional_windows.end(), sort);
+        std::ranges::sort(optional_modules, sort);
+        std::ranges::sort(optional_widgets, sort);
+        std::ranges::sort(optional_windows, sort);
     }
 
     inifile = ini;
@@ -210,9 +211,6 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini) {
     GWToolbox::ToggleModule(StringDecoderWindow::Instance());
     GWToolbox::ToggleModule(DoorMonitorWindow::Instance());
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
-#endif
-#ifdef USE_PLUGINS
-    if (use_plugins) GWToolbox::ToggleModule(PluginModule::Instance());
 #endif
     for (const auto& m : optional_modules) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
