@@ -97,7 +97,6 @@ private:
 // hotkey to send a message in chat
 // can be used for anything that uses SendChat
 class HotkeySendChat : public TBHotkey {
-private:
     char message[139];
     char channel = '/';
 
@@ -141,7 +140,6 @@ public:
     };
 };
 class HotkeyEquipItem : public TBHotkey {
-private:
     UINT bag_idx = 0;
     UINT slot_idx = 0;
     enum EquipBy : int {
@@ -173,7 +171,6 @@ public:
 // hotkey to use an item
 // will use the item in explorable areas, and display a warning with given name if not found
 class HotkeyUseItem : public TBHotkey {
-private:
     UINT item_id = 0;
     char name[140];
 public:
@@ -236,7 +233,7 @@ public:
     const char* Name() const override { return IniSection(); }
 
     HotkeyToggle(ToolboxIni* ini, const char* section);
-    ~HotkeyToggle();
+    ~HotkeyToggle() override;
     void Save(ToolboxIni* ini, const char* section) const override;
 
     bool Draw() override;
@@ -246,7 +243,7 @@ public:
     bool IsToggled(bool force = false);
 
 private:
-    inline bool HasInterval() { return target == Clicker || target == CoinDrop; };
+    bool HasInterval() const { return target == Clicker || target == CoinDrop; };
     WORD togglekey = VK_LBUTTON;
     bool is_key_down = false;
     clock_t last_use = 0;
@@ -284,7 +281,6 @@ public:
 // hotkey to target something in-game
 // it will target the closest agent with the given PlayerNumber (aka modelID)
 class HotkeyTarget : public TBHotkey {
-private:
     const uint32_t types[3] = { 0xDB,0x200,0x400 };
     const char *type_labels[3] = { "NPC", "Signpost", "Item" };
     const char *identifier_labels[3] = { "Model ID or Name", "Gadget ID or Name", "Item ModelID or Name" };
@@ -339,7 +335,7 @@ public:
 class HotkeyDialog : public TBHotkey {
 public:
     uint32_t id = 0;
-    char name[140];
+    char name[140]{};
 
     static const char* IniSection() { return "Dialog"; }
     const char* Name() const override { return IniSection(); }
