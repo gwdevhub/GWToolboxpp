@@ -1587,6 +1587,7 @@ HotkeyMove::HotkeyMove(ToolboxIni *ini, const char *section)
 void HotkeyMove::Save(ToolboxIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
+    ini->SetLongValue(section, "type", static_cast<long>(type));
     ini->SetDoubleValue(section, "x", x);
     ini->SetDoubleValue(section, "y", y);
     ini->SetDoubleValue(section, "distance", range);
