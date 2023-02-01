@@ -1,8 +1,5 @@
 #pragma once
 
-#include <GWCA/Managers/UIMgr.h>
-
-#include <Color.h>
 #include <ToolboxWindow.h>
 
 class DupingWindow : public ToolboxWindow {
