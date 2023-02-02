@@ -7,6 +7,14 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 6.5
+* [New] Enabled plugin system for public use
+* [New] Duping Window for solo doa players
+* [New] Disables gw automatically adding en-US keyboard layout
+* [Fix] Fixed crashes caused by adding non-existent characters to friendlist.
+* [Fix] ???
+
+
 ## Version 6.4
 * [Fix] Fixed crashes caused when saving toolbox settings for the first time
 
