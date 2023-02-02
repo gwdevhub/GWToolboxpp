@@ -58,6 +58,7 @@ public:
 
     float Scale() const { return scale; }
 
+    void DrawHelp() override;
     void Initialize() override;
     void Terminate() override;
 

@@ -11,9 +11,23 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [New] Enabled plugin system for public use
 * [New] Duping Window for solo doa players
 * [New] Disables gw automatically adding en-US keyboard layout
+* [New] Added TS5 module; use /teamspeak to share current channel info to chat
+* [New] Enabled plugin system for public use
+* [New] Added marked targets to minimap; use /marktarget to highlight on current target on minimap
+* [New] Added GwArmory window
+* [Minor] Move To hotkey has an option to go to target or location, and to move a certain distance away from location
+* [Minor] Added mission bundles to item filter
+* [Minor] Added missing doa tendril
+* [Minor] Added honeycomb, pumpkin cookie, gitb and mobstopper to pcons
+* [Fix] Fixed honor section of completion window not showing accurate title achievements
+* [Fix] Fixed issue causing persistent update notification even if you're on the latest version
+* [Fix] Fixed crash related to chat log
+* [Fix] Fixed crash when using party stats window before party is ready
+* [Fix] Fixed crash related to skill images failing to render on-screen
 * [Fix] Fixed crashes caused by adding non-existent characters to friendlist.
-* [Fix] ???
+* [Fix] Fixed occasional crash when right clicking items or changing character with obfuscator on
 
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.5_Release/GWToolboxdll.dll)
 
 ## Version 6.4
 * [Fix] Fixed crashes caused when saving toolbox settings for the first time

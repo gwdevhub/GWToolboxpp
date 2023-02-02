@@ -151,7 +151,15 @@ namespace {
         return result;
     }
 }
+void Minimap::DrawHelp() {
+    if (!ImGui::TreeNodeEx("Minimap", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
+        return;
 
+    ImGui::Bullet(); ImGui::Text("'/marktarget' highlights the current target on your minimap.");
+    ImGui::Bullet(); ImGui::Text("'/marktarget clear' removes the current target as a marked target on your minimap.");
+    ImGui::Bullet(); ImGui::Text("'/clearmarktarget clear' removes all marked target highlights on your minimap.");
+    ImGui::TreePop();
+}
 void Minimap::Terminate()
 {
     ToolboxWidget::Terminate();
