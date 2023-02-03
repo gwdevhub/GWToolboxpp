@@ -161,12 +161,11 @@ void PluginModule::Draw(IDirect3DDevice9* device)
 {
     static bool message_displayed = false;
     if (!plugins.empty() && !message_displayed) {
-        const auto old_color = GW::Chat::SetMessageColor(GW::Chat::CHANNEL_GWCA2, 0xFFFF0000);
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA2,
-            L"Plugins detected, these may be unsafe to use and are not officially supported by GWToolbox++ developers.\n"
-            "Use at your own risk if you trust the author.\nDo not report bugs that occur while you play with plugins.",
+            L"<c=#FF0000>Plugins detected, these may be unsafe to use and are not officially supported by GWToolbox++ developers.\n"
+            "Use at your own risk if you trust the author.\n"
+            "Do not report bugs that occur while you play with plugins.</c>",
             L"GWToolbox++");
-        GW::Chat::SetMessageColor(GW::Chat::CHANNEL_GWCA2, old_color);
         message_displayed = true;
     }
     for (auto& plugin : plugins) {
