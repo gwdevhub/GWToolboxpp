@@ -54,8 +54,12 @@ namespace {
     }
 
     bool OrderDupeInfo(DupeInfo& a, DupeInfo& b) {
-        const GW::AgentLiving* agentA = GW::Agents::GetAgentByID(a.agent_id)->GetAsAgentLiving();
-        const GW::AgentLiving* agentB = GW::Agents::GetAgentByID(b.agent_id)->GetAsAgentLiving();
+        const auto aa = GW::Agents::GetAgentByID(a.agent_id);
+        const auto ab = GW::Agents::GetAgentByID(b.agent_id);
+        if (!aa || !ab)
+            return false;
+        const auto agentA = aa->GetAsAgentLiving();
+        const auto agentB = ab->GetAsAgentLiving();
 
         if (agentA->hp > 0.35f && agentB->hp > 0.35f) {
             return agentA->hp_pips > agentB->hp_pips;
@@ -79,8 +83,11 @@ namespace {
             const GW::Agent* target = GW::Agents::GetTarget();
 
             for (const auto& dupe_info : vec) {
-                auto agent = GW::Agents::GetAgentByID(dupe_info.agent_id)->GetAsAgentLiving();
-                const auto selected = target && target->agent_id == agent->agent_id;
+                const auto agent = GW::Agents::GetAgentByID(dupe_info.agent_id);
+                if (!agent)
+                    continue;
+                const auto living = agent->GetAsAgentLiving();
+                const auto selected = target && target->agent_id == living->agent_id;
 
                 ImGui::PushID(dupe_info.agent_id);
                 ImGui::TableNextRow();
@@ -89,17 +96,17 @@ namespace {
 
                 if (ImGui::Selectable("", selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap, ImVec2(0, 23))) {
                     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-                        GW::GameThread::Enqueue([agent]() {
-                            GW::Agents::ChangeTarget(agent);
+                        GW::GameThread::Enqueue([living] {
+                            GW::Agents::ChangeTarget(living);
                             });
                     }
                 }
 
                 ImGui::TableSetColumnIndex(1);
-                ImGui::ProgressBar(agent->hp);
+                ImGui::ProgressBar(living->hp);
 
                 ImGui::TableSetColumnIndex(2);
-                const auto pips = GetHealthRegenPips(agent);
+                const auto pips = GetHealthRegenPips(living);
                 if (pips > 0 && pips < 11) {
                     ImGui::Text("%.*s",pips > 0 && pips < 11 ? pips : 0,">>>>>>>>>>");
                 }
@@ -114,8 +121,8 @@ namespace {
                         ImGui::PushStyleColor(ImGuiCol_Text, Colors::ARGB(205, 102, 153, 230));
                     }
 
-                    const auto div = std::div(seconds_ago, 60);
-                    ImGui::Text("%d:%02d", div.quot, div.rem);
+                    const auto [quot, rem] = std::div(seconds_ago, 60);
+                    ImGui::Text("%d:%02d", quot, rem);
 
                     if (seconds_ago < 5) {
                         ImGui::PopStyleColor();
