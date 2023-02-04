@@ -519,6 +519,7 @@ void ArmoryWindow::Initialize()
     got_original_armor = false;
 }
 void ArmoryWindow::Terminate() {
+    Reset(); // NB: We're on the game thread, so this is ok
     if (SetItem_Func) {
         GW::Hook::RemoveHook(SetItem_Func);
         SetItem_Func = 0;
