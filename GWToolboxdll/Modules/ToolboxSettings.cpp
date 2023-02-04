@@ -252,6 +252,11 @@ void ToolboxSettings::DrawSettingInternal() {
             GWToolbox::Instance().SaveSettings();
             GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
         }
+        if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted(m.toolbox_module->Description());
+            ImGui::EndTooltip();
+        }
 
         col_count++;
         if (col_count == items_per_col) {
@@ -261,8 +266,15 @@ void ToolboxSettings::DrawSettingInternal() {
     }
     for (auto& m : optional_widgets) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
+            GWToolbox::Instance().SaveSettings();
             GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
         }
+        if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted(m.toolbox_module->Description());
+            ImGui::EndTooltip();
+        }
+
         col_count++;
         if (col_count == items_per_col) {
             ImGui::NextColumn();
@@ -271,8 +283,15 @@ void ToolboxSettings::DrawSettingInternal() {
     }
     for (auto& m : optional_windows) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
+            GWToolbox::Instance().SaveSettings();
             GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
         }
+        if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted(m.toolbox_module->Description());
+            ImGui::EndTooltip();
+        }
+
         col_count++;
         if (col_count == items_per_col) {
             ImGui::NextColumn();

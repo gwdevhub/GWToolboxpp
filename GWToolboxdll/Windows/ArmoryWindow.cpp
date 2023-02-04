@@ -24,10 +24,6 @@
 
 namespace GWArmory {
 
-    bool reset_helm_visibility = false;
-    bool head_item_set = false;
-    bool got_original_armor = false;
-
     struct PlayerArmor {
         PlayerArmorPiece head = ItemSlot::ItemSlot_Head;
         PlayerArmorPiece chest = ItemSlot::ItemSlot_Chest;
@@ -516,7 +512,6 @@ void ArmoryWindow::Initialize()
     }
 #endif
     pending_reset_equipment = true;
-    got_original_armor = false;
 }
 void ArmoryWindow::Terminate() {
     Reset(); // NB: We're on the game thread, so this is ok

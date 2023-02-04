@@ -15,6 +15,9 @@ public:
     // name of the window and the ini section
     virtual const char* Name() const = 0;
 
+    // something to make sense of this module to actual human beings that don't have time to read source code
+    virtual const char* Description() const { return nullptr; }
+
     // Icon for this module (if any).
     virtual const char* Icon() const { return nullptr; }
 

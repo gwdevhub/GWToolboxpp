@@ -123,6 +123,7 @@ public:
     }
 
     const char* Name() const override { return "Chat Log"; }
+    const char* Description() const override { return "Guild Wars doesn't save your chat history or sent messages if you log out of the game.\nTurn this feature on to let GWToolbox keep better track of your chat history between logins"; }
     const char* SettingsName() const override { return "Chat Settings"; }
 
     void Initialize() override;

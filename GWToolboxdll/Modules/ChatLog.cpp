@@ -416,7 +416,7 @@ void ChatLog::RegisterSettingsContent()
             if (!is_showing)
                 return;
             ImGui::Checkbox("Enable GWToolbox chat log", &Instance().enabled);
-            ImGui::ShowHelp("Guild Wars doesn't save your chat history or sent messages if you log out of the game.\nTurn this feature on to let GWToolbox keep better track of your chat history between logins");
+            ImGui::ShowHelp(Description());
         },
         0.8f);
 }

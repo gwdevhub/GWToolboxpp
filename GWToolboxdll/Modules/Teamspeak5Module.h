@@ -10,6 +10,7 @@ public:
     }
 
     const char* Name() const override { return "Teamspeak 5"; }
+    const char* Description() const override { return "Enables /teamspeak command to send current teamspeak 5 server info to chat"; }
     const char* Icon() const override { return ICON_FA_HEADSET; }
 
     const char* SettingsName() const override { return "Third Party Integration"; }

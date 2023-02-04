@@ -16,6 +16,7 @@ public:
     }
 
     const char* Name() const override { return "Notifications"; }
+    const char* Description() const override { return "Enables desktop notifications when in-game events happen."; }
     const char* Icon() const override { return ICON_FA_BULLHORN; }
 
     void Initialize() override;
