@@ -1,7 +1,13 @@
 #pragma once
 
 typedef std::function<void(const std::string& section, bool is_showing)> SectionDrawCallback;
-typedef std::vector<std::pair<float, SectionDrawCallback>> SectionDrawCallbackList;
+class ToolboxModule;
+struct SectionDrawCallbackInfo {
+    float weighting;
+    SectionDrawCallback callback;
+    ToolboxModule* module;
+};
+typedef std::vector<SectionDrawCallbackInfo> SectionDrawCallbackList;
 
 class ToolboxModule {
 protected:
@@ -53,7 +59,7 @@ public:
     virtual bool HasSettings() { return true; }
 
     // Terminate module
-    virtual void Terminate() {}
+    virtual void Terminate();
 
     // Update. Will always be called once every frame. Delta in seconds
     virtual void Update(float) {}
@@ -72,7 +78,7 @@ public:
     virtual void DrawSettingInternal() {}
 
     // Register settings content
-    static void RegisterSettingsContent(
+    void RegisterSettingsContent(
         const char* section, const char* icon, const SectionDrawCallback& callback, float weighting);
 
 protected:

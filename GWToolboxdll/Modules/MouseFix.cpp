@@ -367,6 +367,7 @@ void MouseFix::SaveSettings(ToolboxIni* ini)
 
 void MouseFix::Terminate()
 {
+    ToolboxModule::Terminate();
     if (initialized) {
         CursorFixEnable(false);
         OldCursorFix::UninstallCursorFix();
