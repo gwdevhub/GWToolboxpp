@@ -27,6 +27,11 @@ namespace {
         size_t dupe_count = 0;
     };
 
+    GW::AgentLiving* GetAgentLivingByID(uint32_t agent_id) {
+        const auto a = GW::Agents::GetAgentByID(agent_id);
+        return a ? a->GetAsAgentLiving() : nullptr;
+    }
+
     uint32_t GetAgentMaxHP(const GW::AgentLiving* agent) {
         if (!agent)
             return 0; // Invalid agent
@@ -54,12 +59,10 @@ namespace {
     }
 
     bool OrderDupeInfo(DupeInfo& a, DupeInfo& b) {
-        const auto aa = GW::Agents::GetAgentByID(a.agent_id);
-        const auto ab = GW::Agents::GetAgentByID(b.agent_id);
-        if (!aa || !ab)
-            return false;
-        const auto agentA = aa->GetAsAgentLiving();
-        const auto agentB = ab->GetAsAgentLiving();
+        const auto agentA = GetAgentLivingByID(a.agent_id);
+        const auto agentB = agentA ? GetAgentLivingByID(b.agent_id) : nullptr;
+
+        if (!agentB) return false;
 
         if (agentA->hp > 0.35f && agentB->hp > 0.35f) {
             return agentA->hp_pips > agentB->hp_pips;
@@ -83,10 +86,9 @@ namespace {
             const GW::Agent* target = GW::Agents::GetTarget();
 
             for (const auto& dupe_info : vec) {
-                const auto agent = GW::Agents::GetAgentByID(dupe_info.agent_id);
-                if (!agent)
+                const auto living = GetAgentLivingByID(dupe_info.agent_id);
+                if (!living)
                     continue;
-                const auto living = agent->GetAsAgentLiving();
                 const auto selected = target && target->agent_id == living->agent_id;
 
                 ImGui::PushID(dupe_info.agent_id);
