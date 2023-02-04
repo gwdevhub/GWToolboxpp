@@ -5,6 +5,7 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Item.h>
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -48,6 +49,24 @@ namespace GWArmory {
     GW::Equipment* GetPlayerEquipment() {
         const auto player = GW::Agents::GetPlayerAsAgentLiving();
         return player && player->equip && *player->equip ? *player->equip : nullptr;
+    }
+
+    uint32_t GetEquipmentPieceItemId(ItemSlot slot) {
+        const auto equip = GetPlayerEquipment();
+        if (!equip) return 0;
+        switch (slot) {
+        case ItemSlot::ItemSlot_Chest: return equip->item_id_chest;
+        case ItemSlot::ItemSlot_Feets: return equip->item_id_feet;
+        case ItemSlot::ItemSlot_Hands: return equip->item_id_hands;
+        case ItemSlot::ItemSlot_Head: return equip->item_id_head;
+        case ItemSlot::ItemSlot_Legs: return equip->item_id_legs;
+        default:
+            return 0;
+        }
+    }
+    uint32_t GetItemInteraction(ItemSlot slot) {
+        const auto item = GW::Items::GetItemById(GetEquipmentPieceItemId(slot));
+        return item ? item->interaction : 0;
     }
 
     void __fastcall OnSetItem(GW::Equipment* equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id) {
@@ -208,9 +227,10 @@ namespace GWArmory {
         const auto equip = GetPlayerEquipment();
         const uint32_t color = CreateColor(piece->color1, piece->color2, piece->color3, piece->color4);
         // 0x60111109
-        if (piece->model_file_id && SetItem_Func) {
+        uint32_t interaction = GetItemInteraction(piece->slot);
+        if (piece->model_file_id && interaction && SetItem_Func) {
             gwarmory_setitem = true;
-            SetItem_Func(equip, nullptr, piece->model_file_id, color, 0x20110007, piece->unknow1);
+            SetItem_Func(equip, nullptr, piece->model_file_id, color, interaction, piece->unknow1);
             gwarmory_setitem = false;
         }
     }
