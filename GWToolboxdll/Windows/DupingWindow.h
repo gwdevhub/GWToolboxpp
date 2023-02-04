@@ -12,7 +12,7 @@ public:
     }
 
     const char* Name() const override { return "Duping"; }
-    const char* Name() const override { return "Keeps track of soul/water/mind tormentor counts in Ravenheart Gloom"; }
+    const char* Description() const override { return "Keeps track of soul/water/mind tormentor counts in Ravenheart Gloom"; }
     const char* Icon() const override { return ICON_FA_COPY; }
 
     void Terminate() override;
