@@ -200,16 +200,6 @@ void Updater::SaveSettings(ToolboxIni* ini) {
 #endif
 }
 
-void Updater::Initialize() {
-    ToolboxUIElement::Initialize();
-
-    if (!GetCurrentVersionInfo(&current_release)) {
-        Log::Error("Failed to get current toolbox version info");
-    }
-
-    CheckForUpdate();
-}
-
 void Updater::DrawSettingInternal() {
     ImGui::Text("Update mode:");
     const float btnWidth = 180.0f * ImGui::GetIO().FontGlobalScale;
@@ -224,6 +214,9 @@ void Updater::DrawSettingInternal() {
 }
 
 void Updater::CheckForUpdate(const bool forced) {
+    if (!GetCurrentVersionInfo(&current_release)) {
+        Log::Error("Failed to get current toolbox version info");
+    }
     step = Checking;
     last_check = clock();
     if (!forced && mode == Mode::DontCheckForUpdates) {

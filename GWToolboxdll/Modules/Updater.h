@@ -25,7 +25,6 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void Initialize() override;
     void DrawSettingInternal() override;
     
     static const std::string& GetServerVersion();
