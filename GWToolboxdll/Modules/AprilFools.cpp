@@ -13,6 +13,56 @@
 #include <Logger.h>
 #include <Modules/AprilFools.h>
 
+namespace {
+    bool enabled = false;
+    
+
+    std::map<uint32_t, GW::Agent*> player_agents;
+
+    GW::HookEntry AgentAdd_Hook;
+    GW::HookEntry AgentRemove_Hook;
+    GW::HookEntry GameSrvTransfer_Hook;
+
+
+
+    void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet) {
+        if (!enabled)
+            return;
+        if ((packet->agent_type & 0x30000000) != 0x30000000)
+            return; // Not a player
+        uint32_t player_number = packet->agent_type ^ 0x30000000;
+        GW::AgentLiving* agent = (GW::AgentLiving*)GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number));
+        if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
+            return; // Not a valid agent
+        player_agents.emplace(agent->agent_id, agent);
+    }
+    void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove* packet) {
+        if (!enabled)
+            return;
+        auto found = player_agents.find(packet->agent_id);
+        if (found != player_agents.end())
+            player_agents.erase(found);
+    }
+    void OnGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*) {
+        player_agents.clear();
+    }
+    bool listeners_added = false;
+    void AddListeners() {
+        if (listeners_added) return;
+        GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Hook,OnAgentAdd);
+        GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Hook,OnAgentRemove);
+        GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Hook,OnGameSrvTransfer);
+        listeners_added = true;
+    }
+    void RemoveListeners() {
+        if (!listeners_added) return;
+        GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Hook);
+        GW::StoC::RemoveCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Hook);
+        GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Hook);
+        listeners_added = false;
+    }
+}
+
 static const wchar_t* af_2020_quotes[] = {
     L"Happy April Fools Da-- *cough*",
     L"I don't feel so good...",
@@ -35,48 +85,18 @@ static const wchar_t* af_2020_quotes[] = {
 static const int af_quotes_length = sizeof(af_2020_quotes) / 4;
 void AprilFools::Initialize() {
     ToolboxModule::Initialize();
-    GW::Chat::CreateCommand(L"aprilfools", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-        UNREFERENCED_PARAMETER(message);
-        UNREFERENCED_PARAMETER(argc);
-        UNREFERENCED_PARAMETER(argv);
+    GW::Chat::CreateCommand(L"aprilfools", [this](const wchar_t*, int, LPWSTR*) -> void {
         SetEnabled(!enabled);
     });
     
-    // Automatically return to outpost on defeat
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(
-        &stoc_hook,
-        [&](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            if (!enabled)
-                return;
-            if ((packet->agent_type & 0x30000000) != 0x30000000)
-                return; // Not a player
-            uint32_t player_number = packet->agent_type ^ 0x30000000;
-            GW::AgentLiving* agent = (GW::AgentLiving*)GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number));
-            if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
-                return; // Not a valid agent
-            player_agents.emplace(agent->agent_id, agent);
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(
-        &stoc_hook,
-        [&](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            if (!enabled)
-                return;
-            auto found = player_agents.find(packet->agent_id);
-            if (found != player_agents.end())
-                player_agents.erase(found);
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
-        &stoc_hook,
-        [&](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            UNREFERENCED_PARAMETER(packet);
-            player_agents.clear();
-        });
     time_t now = time(NULL);
     struct tm* ltm = gmtime(&now);
     SetEnabled(ltm->tm_mon == 3 && ((ltm->tm_mday == 1 && ltm->tm_hour > 6) || (ltm->tm_mday == 2 && ltm->tm_hour < 7)));
+}
+void AprilFools::Terminate() {
+    ToolboxModule::Terminate();
+    GW::Chat::DeleteCommand(L"aprilfools");
+    RemoveListeners();
 }
 void AprilFools::SetEnabled(bool is_enabled) {
     if (enabled == is_enabled)
@@ -91,6 +111,8 @@ void AprilFools::SetEnabled(bool is_enabled) {
                 player_agents.emplace(player.agent_id, agent);
         }
         Log::Info("April Fools 2020 enabled. Type '/aprilfools' to disable it");
+        AddListeners();
+
     }
     else {
         for (const auto& agent : player_agents) {
@@ -98,6 +120,7 @@ void AprilFools::SetEnabled(bool is_enabled) {
         }
         player_agents.clear();
         Log::Info("April Fools 2020 disabled. Type '/aprilfools' to enable it");
+        RemoveListeners();
     }
 }
 void AprilFools::SetInfected(GW::Agent* agent,bool is_infected) {

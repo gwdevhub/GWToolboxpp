@@ -20,12 +20,8 @@ public:
     bool HasSettings() override { return false; }
 
     void Initialize() override;
+    void Terminate() override;
     void Update(float delta) override;
     void SetInfected(GW::Agent* agent, bool is_infected);
     void SetEnabled(bool is_enabled);
-    bool enabled = false;
-private:
-    GW::HookEntry stoc_hook;
-
-    std::map<uint32_t, GW::Agent*> player_agents;
 };
