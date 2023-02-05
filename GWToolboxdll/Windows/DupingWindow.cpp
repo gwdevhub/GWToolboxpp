@@ -70,8 +70,8 @@ namespace {
 
         return agentA->hp > agentB->hp;
     }
-    void DrawDuping(const char* label, std::vector<DupeInfo>& vec) {
-        if (vec.size() == 0) return;
+    void DrawDuping(const char* label, const std::vector<DupeInfo>& vec) {
+        if (vec.empty()) return;
 
         ImGui::Spacing();
         ImGui::Text(label);

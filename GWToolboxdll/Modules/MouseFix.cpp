@@ -1,15 +1,14 @@
 #include "stdafx.h"
 
-
 #include <GWCA/Utilities/Debug.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
-#include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
-#include "MouseFix.h"
 #include "Defines.h"
+#include "MouseFix.h"
 
 #include <hidusage.h>
 
@@ -63,7 +62,7 @@ namespace {
     GwMouseMove* gw_mouse_move = nullptr;
     LONG rawInputRelativePosX = 0;
     LONG rawInputRelativePosY = 0;
-    bool* HasRegisteredTrackMouseEvent = 0;
+    bool* HasRegisteredTrackMouseEvent = nullptr;
     typedef void(__cdecl* SetCursorPosCenter_pt)(GwMouseMove* wParam);
     SetCursorPosCenter_pt SetCursorPosCenter_Func = nullptr;
     SetCursorPosCenter_pt SetCursorPosCenter_Ret = nullptr;
@@ -189,20 +188,15 @@ namespace {
     bool enable_cursor_fix = true;
 
     /*
-    *  Logic for scaling gw cursor up or down
-    */
-    HBITMAP ScaleBitmap(HBITMAP inBitmap,
-        int inWidth,
-        int inHeight,
-        int outWidth,
-        int outHeight)
+     *  Logic for scaling gw cursor up or down
+     */
+    HBITMAP ScaleBitmap(HBITMAP inBitmap, int inWidth, int inHeight, int outWidth, int outHeight)
     {
         // NB: We could use GDIPlus for this logic which has better image res handling etc, but no need
-        HDC destDC = NULL, srcDC = NULL;
-        BYTE*      ppvBits = 0;
+        HDC destDC = nullptr, srcDC = nullptr;
+        BYTE* ppvBits = nullptr;
         BOOL bResult = 0;
-        HBITMAP outBitmap = NULL;
-
+        HBITMAP outBitmap = nullptr;
 
         // create a destination bitmap and DC with size w/h
         BITMAPINFO bmi;
@@ -214,48 +208,49 @@ namespace {
         bmi.bmiHeader.biPlanes = 1;
 
         // Do not use CreateCompatibleBitmap otherwise api will not allocate memory for bitmap
-        destDC = CreateCompatibleDC(NULL);
+        destDC = CreateCompatibleDC(nullptr);
         if (!destDC)
             goto cleanup;
-        outBitmap = CreateDIBSection(destDC, &bmi, DIB_RGB_COLORS, (void**)&ppvBits, NULL, 0);
-        if (outBitmap == NULL)
+        outBitmap = CreateDIBSection(destDC, &bmi, DIB_RGB_COLORS, (void**)&ppvBits, nullptr, 0);
+        if (outBitmap == nullptr)
             goto cleanup;
-        if (SelectObject(destDC, outBitmap) == NULL)
+        if (SelectObject(destDC, outBitmap) == nullptr)
             goto cleanup;
 
-        srcDC = CreateCompatibleDC(NULL);
+        srcDC = CreateCompatibleDC(nullptr);
         if (!srcDC)
             goto cleanup;
-        if (SelectObject(srcDC, inBitmap) == NULL)
+        if (SelectObject(srcDC, inBitmap) == nullptr)
             goto cleanup;
 
         // copy and scaling to new width/height (w,h)
         if (SetStretchBltMode(destDC, HALFTONE) == 0)
             goto cleanup;
-        bResult = StretchBlt(destDC, 0, 0, outWidth, outHeight,srcDC, 0, 0, inWidth, inHeight, SRCCOPY);
+        bResult = StretchBlt(destDC, 0, 0, outWidth, outHeight, srcDC, 0, 0, inWidth, inHeight, SRCCOPY);
     cleanup:
         if (!bResult) {
             if (outBitmap) {
                 DeleteObject(outBitmap);
-                outBitmap = NULL;
+                outBitmap = nullptr;
             }
         }
-        if(destDC)
+        if (destDC)
             DeleteDC(destDC);
-        if(srcDC)
+        if (srcDC)
             DeleteDC(srcDC);
 
         return outBitmap;
     }
 
     int cursor_size = 32;
-    HCURSOR current_cursor = NULL;
+    HCURSOR current_cursor = nullptr;
     bool cursor_size_hooked = false;
-    HCURSOR ScaleCursor(HCURSOR cursor, const int targetSize) {
+    HCURSOR ScaleCursor(HCURSOR cursor, const int targetSize)
+    {
         ICONINFO icon_info;
-        HCURSOR new_cursor = NULL;
+        HCURSOR new_cursor = nullptr;
         BITMAP tmpBitmap;
-        HBITMAP scaledMask = NULL, scaledColor = NULL;
+        HBITMAP scaledMask = nullptr, scaledColor = nullptr;
         if (!GetIconInfo(cursor, &icon_info))
             goto cleanup;
         if (GetObject(icon_info.hbmMask, sizeof(BITMAP), &tmpBitmap) == 0)
@@ -270,7 +265,7 @@ namespace {
         scaledColor = ScaleBitmap(icon_info.hbmColor, tmpBitmap.bmWidth, tmpBitmap.bmHeight, targetSize, targetSize);
         if (!scaledColor)
             goto cleanup;
-        scaledColor = scaledMask ? ScaleBitmap(icon_info.hbmColor, tmpBitmap.bmWidth, tmpBitmap.bmHeight, targetSize, targetSize) : NULL;
+        scaledColor = scaledMask ? ScaleBitmap(icon_info.hbmColor, tmpBitmap.bmWidth, tmpBitmap.bmHeight, targetSize, targetSize) : nullptr;
         icon_info.hbmColor = scaledColor;
         icon_info.hbmMask = scaledMask;
         new_cursor = CreateIconIndirect(&icon_info);
@@ -286,15 +281,16 @@ namespace {
         HCURSOR cursor; // h0c44
         uint8_t unk1[0xb0];
         HWND window_handle; // h0cf8
-    } ;
+    };
     typedef void(__cdecl* ChangeCursorIcon_pt)(GWWindowUserData*);
-    ChangeCursorIcon_pt ChangeCursorIcon_Func = 0;
-    ChangeCursorIcon_pt ChangeCursorIcon_Ret = 0;
-    void OnChangeCursorIcon(GWWindowUserData* user_data) {
+    ChangeCursorIcon_pt ChangeCursorIcon_Func = nullptr;
+    ChangeCursorIcon_pt ChangeCursorIcon_Ret = nullptr;
+    void OnChangeCursorIcon(GWWindowUserData* user_data)
+    {
         GW::Hook::EnterHook();
         ChangeCursorIcon_Ret(user_data);
         // Cursor has been changed by the game; pull it back out, scale it to target size..
-        HCURSOR new_cursor = NULL;
+        HCURSOR new_cursor;
         if (cursor_size < 0 || cursor_size > 64 || cursor_size == 32)
             goto leave;
         if (!(user_data && user_data->cursor && user_data->cursor != current_cursor))
@@ -305,47 +301,49 @@ namespace {
         if (user_data->cursor) {
             // Don't forget to free the original cursor before overwriting the handle
             DestroyCursor(user_data->cursor);
-            SetCursor(0);
+            SetCursor(nullptr);
             SetClassLongA(user_data->window_handle, GCL_HCURSOR, 0);
-            user_data->cursor = 0;
+            user_data->cursor = nullptr;
         }
         user_data->cursor = new_cursor;
         SetCursor(new_cursor);
         // Also override the window class for the cursor
-        SetClassLongA(user_data->window_handle, GCL_HCURSOR, (LONG)new_cursor);
+        SetClassLongA(user_data->window_handle, GCL_HCURSOR, reinterpret_cast<LONG>(new_cursor));
         current_cursor = new_cursor;
     leave:
         GW::Hook::LeaveHook();
     }
-    void RedrawCursorIcon() {
-        GW::GameThread::Enqueue([]() {
+    void RedrawCursorIcon()
+    {
+        GW::GameThread::Enqueue([] {
             // Force redraw
-            GWWindowUserData* user_data = (GWWindowUserData*)GetWindowLongA(GW::MemoryMgr::GetGWWindowHandle(), -0x15);
-            current_cursor = NULL;
-            if(user_data)
+            const auto user_data = (GWWindowUserData*)GetWindowLongA(GW::MemoryMgr::GetGWWindowHandle(), -0x15);
+            current_cursor = nullptr;
+            if (user_data)
                 OnChangeCursorIcon(user_data);
-            });
+        });
     }
-    void SetCursorSize(int new_size) {
+    void SetCursorSize(int new_size)
+    {
         cursor_size = new_size;
         if (cursor_size != 32) {
-            if(!cursor_size_hooked)
+            if (!cursor_size_hooked)
                 GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
             cursor_size_hooked = true;
         }
         else {
-            if(cursor_size_hooked)
+            if (cursor_size_hooked)
                 GW::HookBase::DisableHooks(ChangeCursorIcon_Func);
             cursor_size_hooked = false;
         }
     }
-}
+} // namespace
 
-
-void MouseFix::Initialize() {
+void MouseFix::Initialize()
+{
     ToolboxModule::Initialize();
 
-    uintptr_t address = GW::Scanner::Find("\x8b\x41\x08\x89\x82\x50\x0c\x00\x00","xxxxxxxxx",0x9);
+    const uintptr_t address = GW::Scanner::Find("\x8b\x41\x08\x89\x82\x50\x0c\x00\x00", "xxxxxxxxx", 0x9);
     ChangeCursorIcon_Func = (ChangeCursorIcon_pt)GW::Scanner::FunctionFromNearCall(address);
     if (ChangeCursorIcon_Func) {
         GW::HookBase::CreateHook(ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
@@ -362,7 +360,6 @@ void MouseFix::SaveSettings(ToolboxIni* ini)
 {
     ini->SetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
     ini->SetLongValue(Name(), VAR_NAME(cursor_size), cursor_size);
-
 }
 
 void MouseFix::Terminate()
