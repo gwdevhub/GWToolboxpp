@@ -241,12 +241,11 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::PushID("global_enable");
     ImGui::Text("Enable the following features:");
     ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
-    ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
-
-    const auto optional_modules_total = optional_modules.size() + optional_widgets.size() + optional_windows.size();
-
-    const auto items_per_col = static_cast<size_t>(ceil(optional_modules_total / static_cast<float>(cols)));
+    
+    ImGui::Text("Modules");
+    auto items_per_col = static_cast<size_t>(ceil(optional_modules.size() / static_cast<float>(cols)));
     size_t col_count = 0;
+    ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
     for (auto& m : optional_modules) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
             GWToolbox::Instance().SaveSettings();
@@ -264,6 +263,33 @@ void ToolboxSettings::DrawSettingInternal() {
             col_count = 0;
         }
     }
+    ImGui::EndColumns();
+    col_count = 0;
+    ImGui::Text("Windows");
+    ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
+    items_per_col = static_cast<size_t>(ceil(optional_windows.size() / static_cast<float>(cols)));
+    for (auto& m : optional_windows) {
+        if (ImGui::Checkbox(m.name, &m.enabled)) {
+            GWToolbox::Instance().SaveSettings();
+            GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
+        }
+        if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted(m.toolbox_module->Description());
+            ImGui::EndTooltip();
+        }
+
+        col_count++;
+        if (col_count == items_per_col) {
+            ImGui::NextColumn();
+            col_count = 0;
+        }
+    }
+    ImGui::EndColumns();
+    col_count = 0;
+    ImGui::Text("Widgets");
+    ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
+    items_per_col = static_cast<size_t>(ceil(optional_widgets.size() / static_cast<float>(cols)));
     for (auto& m : optional_widgets) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
             GWToolbox::Instance().SaveSettings();
@@ -281,24 +307,7 @@ void ToolboxSettings::DrawSettingInternal() {
             col_count = 0;
         }
     }
-    for (auto& m : optional_windows) {
-        if (ImGui::Checkbox(m.name, &m.enabled)) {
-            GWToolbox::Instance().SaveSettings();
-            GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
-        }
-        if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
-            ImGui::BeginTooltip();
-            ImGui::TextUnformatted(m.toolbox_module->Description());
-            ImGui::EndTooltip();
-        }
-
-        col_count++;
-        if (col_count == items_per_col) {
-            ImGui::NextColumn();
-            col_count = 0;
-        }
-     }
-    ImGui::Columns(1);
+    ImGui::EndColumns();
     ImGui::PopID();
 }
 
