@@ -18,7 +18,8 @@ public:
     void DrawSettings() override;
     void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     void Terminate() override;
-
+    bool CanTerminate() override;
+    void SignalTerminate() override;
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
 
