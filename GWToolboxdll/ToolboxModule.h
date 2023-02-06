@@ -12,6 +12,8 @@ typedef std::vector<SectionDrawCallbackInfo> SectionDrawCallbackList;
 class ToolboxModule {
 protected:
     ToolboxModule() = default;
+    virtual ~ToolboxModule() = default;
+
 public:
 
     virtual const bool IsWidget() const { return false; }
