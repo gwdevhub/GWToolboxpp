@@ -121,16 +121,11 @@ ToolboxPlugin* PluginModule::LoadDll(const std::filesystem::path& path)
 
 bool PluginModule::UnloadDlls()
 {
-    const bool can_terminate = std::ranges::all_of(plugins, [](const auto& plugin) {
-        return plugin.instance->CanTerminate();
-    });
-    if (!can_terminate) {
-        for (const auto& plugin : plugins) {
-            plugin.instance->SignalTerminate();
-        }
+    if (!CanTerminate()) {
+        SignalTerminate();
         return false;
     }
-    for (const auto& plugin : plugins) {
+    for (const auto& plugin : std::views::reverse(plugins)) {
         if (plugin.initialized) {
             plugin.instance->Terminate();
         }
@@ -146,7 +141,7 @@ bool PluginModule::UnloadDlls()
 
 bool PluginModule::CanTerminate()
 {
-    return std::ranges::all_of(plugins, [](const auto& plugin) {
+    return std::ranges::all_of(GetInitializedPlugins(), [](const auto& plugin) {
         return plugin.instance->CanTerminate();
     });
 }
@@ -206,7 +201,7 @@ void PluginModule::Update(float delta)
 
 void PluginModule::SignalTerminate()
 {
-    for (const auto& plugin : GetInitializedPlugins()) {
+    for (const auto& plugin : std::views::reverse(GetInitializedPlugins())) {
         plugin.instance->SignalTerminate();
     }
 }

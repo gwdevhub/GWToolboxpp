@@ -42,7 +42,7 @@ public:
     auto GetInitializedPlugins()
     {
         return std::views::filter(plugins, [](const auto& plugin) {
-            return plugin.initialized && plugin.active;
+            return plugin.initialized;
         });
     }
 
