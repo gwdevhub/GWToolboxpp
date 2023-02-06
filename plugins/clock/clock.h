@@ -9,4 +9,5 @@ public:
     void Draw(IDirect3DDevice9*) override;
     void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     void Terminate() override;
+    void Update(float) override;
 };
