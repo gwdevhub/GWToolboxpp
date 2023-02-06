@@ -238,7 +238,7 @@ void Updater::CheckForUpdate(const bool forced) {
         }
 
 
-        if (latest_release.version == current_release.version && latest_release.size == current_release.size) {
+        if (latest_release.version == current_release.version) {
             // Version and size match
             step = Done;
             if (forced) {
