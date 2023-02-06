@@ -7,6 +7,19 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 6.6
+* [Minor] Separate modules, widgets and windows in toolbox settings
+* [Minor] Rename warrior obsidian armor in armory module
+* [Minor] Added some hover descriptions to module tickboxes in toolbox settings
+* [Fix] Fixed bug causing duplicate module settings if re-enabled within the same runtime
+* [Fix] Hide empty keyboard settings tab in settings window
+* [Fix] Fixed occasional repeat update prompt when already on latest version
+* [Fix] Fixed crashes caused by dupe window bugs
+* [Fix] Fixed crashes caused by adding non-existent characters to friendlist.
+* [Fix] Fixed occasional crash when right clicking items or changing character with obfuscator on
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.6_Release/GWToolboxdll.dll)
+
 ## Version 6.5
 * [New] Enabled plugin system for public use
 * [New] Duping Window for solo doa players
