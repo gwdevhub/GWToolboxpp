@@ -12,6 +12,8 @@
 #include <Defines.h>
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/GWCA.h>
 
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
@@ -51,11 +53,17 @@ void InstanceTimer::DrawSettings()
 void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
+
+    GW::Scanner::Initialize();
+    GW::Initialize();
 }
 
 void InstanceTimer::Terminate()
 {
     ToolboxPlugin::Terminate();
+
+    GW::Terminate();
+    
 }
 
 void InstanceTimer::Draw(IDirect3DDevice9*)

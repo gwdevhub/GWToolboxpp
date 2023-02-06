@@ -1,61 +1,58 @@
 #include "Clock.h"
 
-#include "GWCA/Managers/ChatMgr.h"
-#include "GWCA/Managers/GameThreadMgr.h"
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 
-#include <format>
 #include <imgui.h>
+#include <cstdint>
+#include <corecrt_wstdio.h>
+#include <time.h>
+
+#define _countof(var) sizeof(var) / sizeof(*var)
 
 namespace {
-    bool send_to_chat = false;
-
-    using CreateCommandFn = void (*)(const wchar_t*, const GW::Chat::CmdCB&);
-    using DeleteCommandFn = void (*)(const wchar_t*);
-    using SendChatFn = void (*)(char, const char*);
-
-    CreateCommandFn create_command = nullptr;
-    DeleteCommandFn delete_command = nullptr;
-    SendChatFn send_chat = nullptr;
-
-    void CmdClock(const wchar_t*, int, wchar_t**)
+    char time_buf[100] = { 0 };
+    errno_t GetTime(char* out, size_t len)
     {
-        send_to_chat = true;
+        time_t timestamp;
+        if (time(&timestamp) != timestamp)
+            return -1;
+        if (ctime_s(out, len, &timestamp) != 0)
+            return -1;
+        out[strlen(out) - 1] = 0; // Remove newline char
+        return 0;
     }
-    std::string GetTime()
-    {
-        const auto now = std::chrono::system_clock::now();
-        const auto time = std::chrono::system_clock::to_time_t(now);
-        char buf[100];
-        ctime_s(buf, sizeof buf, &time);
-        auto str = std::format("{}", buf);
-        str.pop_back();
-        return str;
+
+    typedef void(__cdecl *SendChat_pt)(wchar_t *message, uint32_t agent_id);
+    SendChat_pt SendChat_Func = nullptr;
+    SendChat_pt SendChat_Ret = nullptr;
+
+    void __cdecl OnSendChat(wchar_t *message, uint32_t agent_id) {
+        GW::Hook::EnterHook();
+        if (message && wcsncmp(L"/clock", message, 6) == 0) {
+            wchar_t sendchat_buf[100];
+            GetTime(time_buf, _countof(time_buf));
+            swprintf(sendchat_buf, _countof(sendchat_buf), L"#%S", time_buf);
+            message = sendchat_buf;
+            agent_id = 0;
+        }
+        SendChat_Ret(message, agent_id);
+        GW::Hook::LeaveHook();
     }
 }
-
 
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
     static Clock instance;
     return &instance;
 }
-
-
-void Clock::Update(float)
-{
-    if (!toolbox_handle)
-        return;
-    if (send_to_chat && send_chat) {
-        send_chat('#', GetTime().c_str());
-        send_to_chat = false;
-    }
-}
 void Clock::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle)
         return;
     ImGui::Begin("clock");
-    ImGui::TextUnformatted(GetTime().c_str());
+    GetTime(time_buf, _countof(time_buf));
+    ImGui::TextUnformatted(time_buf);
     ImGui::End();
 }
 
@@ -63,17 +60,23 @@ void Clock::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll
 {
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
 
-    // we load our gwca methods dynamically
-    create_command = reinterpret_cast<CreateCommandFn>(GetProcAddress(toolbox_dll, "?CreateCommand@Chat@GW@@YAXPB_WABV?$function@$$A6AXPB_WHPAPA_W@Z@std@@@Z"));
-    delete_command = reinterpret_cast<DeleteCommandFn>(GetProcAddress(toolbox_dll, "?DeleteCommand@Chat@GW@@YAXPB_W@Z"));
-    send_chat = reinterpret_cast<SendChatFn>(GetProcAddress(toolbox_dll, "?SendChat@Chat@GW@@YAXDPBD@Z"));
-    if(create_command)
-        create_command(L"clock", CmdClock);
+    GW::HookBase::Initialize();
+    GW::Scanner::Initialize();
+    // Copied from GWCA's ChatMgr module
+    SendChat_Func = (SendChat_pt)GW::Scanner::Find("\x8D\x85\xE0\xFE\xFF\xFF\x50\x68\x1C\x01", "xxxxxxxxx", -0x3E);
+
+    if (SendChat_Func) {
+        GW::HookBase::CreateHook(SendChat_Func, OnSendChat, (void **)&SendChat_Ret);
+        GW::HookBase::EnableHooks(SendChat_Func);
+    }
+
 }
 
 void Clock::Terminate()
 {
     ToolboxPlugin::Terminate();
-    if(delete_command)
-        delete_command(L"clock");
+    if(SendChat_Func)
+        GW::HookBase::RemoveHook(SendChat_Func);
+
+    GW::HookBase::Deinitialize();
 }
