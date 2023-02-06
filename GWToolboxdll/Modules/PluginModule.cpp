@@ -2,9 +2,8 @@
 
 #include "PluginModule.h"
 
-#include "ChatSettings.h"
-#include "GWToolbox.h"
-#include "GWCA/Managers/ChatMgr.h"
+#include <GWToolbox.h>
+#include <GWCA/Managers/ChatMgr.h>
 
 #include <Modules/Resources.h>
 #include <filesystem>

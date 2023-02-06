@@ -17,7 +17,7 @@ target_link_libraries(plugin_base INTERFACE
     nlohmann_json::nlohmann_json
     gwca
     IconFontCppHeaders
-    GWToolboxdll # for gwca imports
+    GWToolboxdll # for GetFont
     )
 target_compile_definitions(plugin_base INTERFACE BUILD_DLL)
 
