@@ -39,6 +39,18 @@ namespace GWArmory {
     SetItem_pt SetItem_Ret = 0;
 
     bool gwarmory_setitem = false;
+    bool pending_reset_equipment = false;
+
+    struct ItemModelInfo {
+        uint32_t class_flags;
+        uint32_t file_id_1;
+        uint32_t unk[4];
+        uint32_t file_id_2;
+        uint32_t unk2[5];
+    };
+    static_assert(sizeof(ItemModelInfo) == 0x30);
+
+    GW::Array<ItemModelInfo>* item_model_info_array = nullptr;
 
     bool Reset();
 
@@ -72,7 +84,7 @@ namespace GWArmory {
         const auto player = static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer());
         if (!gwarmory_setitem && player && (!player_equip || equip == player_equip)) {
             // Reset controls - this could be done a little smarter to remember bits that haven't changed.
-            Reset();
+            pending_reset_equipment = true;
         }
         GW::Hook::LeaveHook();
     }
@@ -87,7 +99,7 @@ namespace GWArmory {
     GW::Constants::Profession current_profession = GW::Constants::Profession::None;
     Campaign current_campaign = Campaign_All;
 
-    bool pending_reset_equipment = false;
+    
 
     Armor* GetArmorsPerProfession(GW::Constants::Profession prof, size_t * count)
     {
@@ -218,13 +230,19 @@ namespace GWArmory {
         return composite;
     }
 
+    ItemModelInfo* GetItemModelInfo(uint32_t model_file_id) {
+        if (!(item_model_info_array && model_file_id && model_file_id < item_model_info_array->size()))
+            return nullptr;
+        return &item_model_info_array->m_buffer[model_file_id];
+    }
+
     void SetArmorItem(const PlayerArmorPiece* piece)
     {
         const auto equip = GetPlayerEquipment();
         const uint32_t color = CreateColor(piece->color1, piece->color2, piece->color3, piece->color4);
         // 0x60111109
         uint32_t interaction = GetItemInteraction(piece->slot);
-        if (piece->model_file_id && interaction && SetItem_Func) {
+        if (GetItemModelInfo(piece->model_file_id) && interaction && SetItem_Func) {
             gwarmory_setitem = true;
             SetItem_Func(equip, nullptr, piece->model_file_id, color, interaction, piece->unknow1);
             gwarmory_setitem = false;
@@ -416,13 +434,6 @@ namespace GWArmory {
 
 using namespace GWArmory;
 
-void ArmoryWindow::Update(const float delta)
-{
-    ToolboxWindow::Update(delta);
-    if (pending_reset_equipment && Reset())
-        pending_reset_equipment = false;
-}
-
 void ArmoryWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible)
@@ -439,6 +450,11 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     const auto equip = GetPlayerEquipment();
     if (!equip)
         return;
+
+    if (pending_reset_equipment) {
+        Reset();
+        pending_reset_equipment = false;
+    }  
 
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
@@ -495,6 +511,16 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
 void ArmoryWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+
+
+    uintptr_t address = GW::Scanner::Find("\x8b\x04\xc7\x5f\xc1\xe8\x16", "xxxxxxx", -0x2c);
+    address = GW::Scanner::FunctionFromNearCall(address); // GetModelItemInfo
+    
+    if (address) {
+        address += 0x27;
+        item_model_info_array = *(GW::Array<ItemModelInfo>**)address;
+    }
+    
 
     SetItem_Func = (SetItem_pt)GW::Scanner::Find("\x83\xC4\x04\x8B\x08\x8B\xC1\xC1", "xxxxxxxx", -0x24);
     if (SetItem_Func) {

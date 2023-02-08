@@ -52,12 +52,12 @@ namespace GWArmory {
     struct PlayerArmorPiece {
         PlayerArmorPiece(ItemSlot _slot) : slot(_slot) {};
         ItemSlot slot = ItemSlot::ItemSlot_Unknown;
-        uint32_t model_file_id;
-        uint32_t unknow1;
-        DyeColor color1;
-        DyeColor color2;
-        DyeColor color3;
-        DyeColor color4;
+        uint32_t model_file_id = 0;
+        uint32_t unknow1 = 0;
+        DyeColor color1 = DyeColor::None;
+        DyeColor color2 = DyeColor::None;
+        DyeColor color3 = DyeColor::None;
+        DyeColor color4 = DyeColor::None;
     };
 
 
