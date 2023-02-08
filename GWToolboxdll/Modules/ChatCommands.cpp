@@ -36,6 +36,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
@@ -186,6 +187,31 @@ namespace {
     typedef void(__cdecl* PostMute_pt)(int param);
     PostMute_pt PostMuted_Func;
 
+    GW::UI::UIInteractionCallback OnChatInteraction_Callback_Func = nullptr;
+    GW::UI::UIInteractionCallback OnChatInteraction_Callback_Ret = nullptr;
+
+    typedef void(__fastcall* SetChatState_pt)(void* chat_frame, void* edx, uint32_t state /* = 0 or 1 */, uint32_t tab);
+    SetChatState_pt SetChatState_Func = nullptr;
+
+    void OnChatUI_Callback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        // If a channel was given in the UI message, set it now.
+        if ((GW::UI::UIMessage)message->message_id == GW::UI::UIMessage::kAppendMessageToChat && lParam && SetChatState_Func) {
+            uint32_t* frame_ptr = *(uint32_t**)message->wParam;
+            uint32_t state = 1;
+            uint32_t tab = (uint32_t)lParam ^ 0x8000;
+            if (tab == 0xff) { // close chat.
+                tab = frame_ptr[3]; // current tab
+                state = 0;
+            }
+            lParam = 0; // reset
+            SetChatState_Func(frame_ptr, 0, state, tab);
+        }
+            
+        OnChatInteraction_Callback_Ret(message, wParam, lParam);
+        GW::Hook::LeaveHook();
+    }
+
     bool* is_muted = 0;
 
     void CmdSkillImage(const wchar_t*, int, LPWSTR* argv) {
@@ -263,7 +289,17 @@ namespace {
         }
         Log::InfoW(available_vals_buffer);
     }
+    void CmdFlagPref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id) {
+        GW::UI::FlagPreference pref = (GW::UI::FlagPreference)pref_id;
 
+        // Find value and set preference
+        uint32_t value = 0xff;
+        if(argc > 2 && GuiUtils::ParseUInt(argv[2],&value) && GW::UI::SetPreference(pref, value == 1 ? 1 : 0))
+            return; // Success
+
+        // Print current value
+        Log::InfoW(L"Current preference value for %s is %d", argv[1], GW::UI::GetPreference(pref));
+    }
 
     struct PrefMapCommand {
         PrefMapCommand(GW::UI::EnumPreference p) : preference_id((uint32_t)p) {
@@ -271,6 +307,9 @@ namespace {
         }
         PrefMapCommand(GW::UI::NumberPreference p) : preference_id((uint32_t)p) {
             preference_callback = CmdValuePref;
+        }
+        PrefMapCommand(GW::UI::FlagPreference p) : preference_id((uint32_t)p) {
+            preference_callback = CmdFlagPref;
         }
 
         const uint32_t preference_id;
@@ -288,23 +327,31 @@ namespace {
                 {L"reflections",GW::UI::EnumPreference::Reflections},
                 {L"shadowquality",GW::UI::EnumPreference::ShadowQuality},
                 {L"interfacesize",GW::UI::EnumPreference::InterfaceSize},
-                {L"texturequality",GW::UI::NumberPreference::TextureQuality}
+                {L"texturequality",GW::UI::NumberPreference::TextureQuality},
+                {L"channel",GW::UI::NumberPreference::ChatTab},
+                {L"alliance",GW::UI::FlagPreference::ChannelAlliance},
+                {L"guild",GW::UI::FlagPreference::ChannelGuild},
+                {L"team",GW::UI::FlagPreference::ChannelGroup},
+                {L"alliance",GW::UI::FlagPreference::ChannelAlliance}
             };
         }
         return pref_map;
     };
 
+
     void CmdPref(const wchar_t* cmd, int argc, LPWSTR* argv) {
         const auto& options = getPrefCommandOptions();
         if (argc > 1 && wcscmp(argv[1], L"list") == 0) {
-            wchar_t buffer[512];
+            const size_t buf_size = 16 * options.size(); // Roughly 16 chars per option label
+            wchar_t* buffer = new wchar_t[buf_size];
             int offset = 0;
             for (auto it = options.begin(); it != options.end();it++) {
-                int written = swprintf(&buffer[offset], offset - _countof(buffer), offset > 0 ? L", %s" : L"%s", it->first.c_str());
+                int written = swprintf(&buffer[offset], offset - buf_size, offset > 0 ? L", %s" : L"%s", it->first.c_str());
                 ASSERT(written != -1);
                 offset += written;
             }
-            return Log::InfoW(L"/pref options:\n%s", buffer);
+            Log::InfoW(L"/pref options:\n%s", buffer);
+            delete[] buffer;
         }
         if (argc < 2)
             return Log::Error(pref_syntax);
@@ -318,6 +365,34 @@ namespace {
 
         pref->preference_callback(cmd, argc, argv,pref->preference_id);
 
+    }
+    const char* chat_tab_syntax = "'/chat [all|guild|team|trade|alliance|whisper|close]' open chat channel.";
+    void CmdChatTab(const wchar_t* cmd, int argc, LPWSTR* argv) {
+        wchar_t* message = nullptr;
+        if (argc < 1)
+            return Log::Error(chat_tab_syntax);
+        uint32_t channel = 0xff;
+        if (wcscmp(argv[1], L"close") == 0)
+            channel = 0xff;
+        else if (wcscmp(argv[1], L"all") == 0)
+            channel = 0;
+        else if (wcscmp(argv[1], L"guild") == 0)
+            channel = 2;
+        else if (wcscmp(argv[1], L"team") == 0)
+            channel = 3;
+        else if (wcscmp(argv[1], L"trade") == 0)
+            channel = 4;
+        else if (wcscmp(argv[1], L"alliance") == 0)
+            channel = 1;
+        else if (wcscmp(argv[1], L"whisper") == 0)
+            channel = 5;
+        else
+            return Log::Error(chat_tab_syntax);
+        channel |= 0x8000;
+        GW::GameThread::Enqueue([channel]() {
+            // See OnChatUI_Callback for intercept
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kAppendMessageToChat, (void*)L"", (void*)channel);
+            });
     }
 
     const char* withdraw_syntax = "'/withdraw [quantity (1-65535)] model_id1 [model_id2 ...]' tops up your inventory with a minimum quantity of 1 or more items, identified by model_id";
@@ -437,6 +512,7 @@ void ChatCommands::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/camera fog (on|off)' sets game fog effect on or off.");
     ImGui::Bullet(); ImGui::Text("'/camera fov <value>' sets the field of view. '/camera fov' resets to default.");
     ImGui::Bullet(); ImGui::Text("'/camera speed <value>' sets the unlocked camera speed.");
+    ImGui::Bullet(); ImGui::Text(chat_tab_syntax);
     ImGui::Bullet(); ImGui::Text("'/chest' opens xunlai in outposts.");
     ImGui::Bullet(); ImGui::Text("'/damage' or '/dmg' to print party damage to chat.\n"
         "'/damage me' sends your own damage only.\n"
@@ -605,6 +681,7 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"gh", [](const wchar_t*, int, LPWSTR*) {
         GW::Chat::SendChat('/', "tp gh");
     });
+    GW::Chat::CreateCommand(L"chat", CmdChatTab);
     GW::Chat::CreateCommand(L"enter", CmdEnterMission);
     GW::Chat::CreateCommand(L"age2", CmdAge2);
     GW::Chat::CreateCommand(L"dialog", CmdDialog);
@@ -668,11 +745,21 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"mute", CmdMute); // Doesn't unmute!
 #endif
 
+    address = GW::Scanner::Find("\x3d\x7d\x00\x00\x10\x0f\x87\xe5\x02\x00\x00","xxxxxxxxxxx",-0x11);
+    if (address) {
+        OnChatInteraction_Callback_Func = (GW::UI::UIInteractionCallback)address;
+        SetChatState_Func = (SetChatState_pt)GW::Scanner::FunctionFromNearCall(address + 0x43);
+        GW::HookBase::CreateHook(OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
+        GW::HookBase::EnableHooks();
+    }
 
 }
 
 void ChatCommands::Terminate()
 {
+    if (SetChatState_Func)
+        GW::HookBase::RemoveHook(SetChatState_Func);
+
     for (auto* it : title_names) {
         delete it;
     }
