@@ -11,12 +11,10 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <Timer.h>
 #include <ImGuiAddons.h>
 
 #include <Windows/ArmoryWindow_Constants.h>
@@ -35,8 +33,8 @@ namespace GWArmory {
     PlayerArmor player_armor;
 
     typedef void(__fastcall * SetItem_pt)(GW::Equipment * equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id);
-    SetItem_pt SetItem_Func = 0;
-    SetItem_pt SetItem_Ret = 0;
+    SetItem_pt SetItem_Func = nullptr;
+    SetItem_pt SetItem_Ret = nullptr;
 
     bool gwarmory_setitem = false;
     bool pending_reset_equipment = false;

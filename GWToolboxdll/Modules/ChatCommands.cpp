@@ -739,7 +739,7 @@ void ChatCommands::Initialize() {
     if (address) {
         SetMuted_Func = (SetMuted_pt)GW::Scanner::FunctionFromNearCall(address);
         PostMuted_Func = (PostMute_pt)GW::Scanner::FunctionFromNearCall(address + 0x10);
-        is_muted = *(bool**)(((uintptr_t)SetMuted_Func) + 0x6);
+        is_muted = *(bool**)((uintptr_t)SetMuted_Func + 0x6);
     }
     GW::Chat::CreateCommand(L"mute", CmdMute); // Doesn't unmute!
 #endif
