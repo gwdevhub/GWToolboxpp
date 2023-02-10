@@ -17,8 +17,13 @@ namespace GW {
 
 class InventoryManager : public ToolboxUIElement {
 public:
-    InventoryManager();
-    ~InventoryManager();
+    InventoryManager()
+        : tome_pending_stage()
+    {
+        current_salvage_session.salvage_item_id = 0;
+        is_movable = is_resizable = has_closebutton = can_show_in_main_window = false;
+    }
+    ~InventoryManager() override { ClearPotentialItems(); }
     enum class SalvageAllType : uint8_t {
         None,
         White,

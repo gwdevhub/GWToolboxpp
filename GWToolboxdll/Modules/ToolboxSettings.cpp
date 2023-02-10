@@ -127,7 +127,8 @@ namespace {
         HintsModule::Instance(),
         MouseFix::Instance(),
         Obfuscator::Instance(),
-        KeyboardLanguageFix::Instance()
+        KeyboardLanguageFix::Instance(),
+        ZrawDeepModule::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
@@ -196,7 +197,6 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini) {
     GWToolbox::ToggleModule(GameSettings::Instance());
     GWToolbox::ToggleModule(ChatSettings::Instance());
     GWToolbox::ToggleModule(InventoryManager::Instance());
-    GWToolbox::ToggleModule(ZrawDeepModule::Instance());
     GWToolbox::ToggleModule(HallOfMonumentsModule::Instance());
     GWToolbox::ToggleModule(LoginModule::Instance());
     GWToolbox::ToggleModule(AprilFools::Instance());
@@ -337,13 +337,13 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
     if (location_file.is_open()) location_file.close();
 
-    for (auto& m : optional_modules) {
+    for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
     }
-    for (auto& m : optional_windows) {
+    for (const auto& m : optional_windows) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
     }
-    for (auto& m : optional_widgets) {
+    for (const auto& m : optional_widgets) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
     }
 }
@@ -386,7 +386,7 @@ void ToolboxSettings::Update(float delta) {
                     map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
                 }
 
-                std::wstring prof_string = L"";
+                std::wstring prof_string;
                 GW::AgentLiving* me = GW::Agents::GetCharacter();
                 if (me) {
                     prof_string += L" - ";
