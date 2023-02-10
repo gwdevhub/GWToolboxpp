@@ -7,13 +7,11 @@
 #include <ToolboxModule.h>
 
 class ZrawDeepModule : public ToolboxModule {
-    ZrawDeepModule() {};
-    ~ZrawDeepModule() {
-        if (mp3) delete mp3;
-        CoUninitialize();
+    ~ZrawDeepModule() override
+    {
+        delete mp3;
     };
-private:
-    void* mp3 = nullptr;
+    Mp3* mp3 = nullptr;
     
     bool enabled = false;
     bool transmo_team = true;
@@ -32,18 +30,20 @@ public:
     const char* Name() const override { return "24h Deep Mode"; }
     void Initialize() override;
     void SignalTerminate() override;
-    bool CanTerminate() { return can_terminate; }
-    bool HasSettings() { return enabled; }
+    void Terminate() override;
+    bool CanTerminate() override { return can_terminate; }
+    bool HasSettings() override { return enabled; }
     void SetEnabled(bool enabled);
     void Update(float delta) override;
     void DrawSettingInternal() override;
     void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
     void PlayKanaxaiDialog(uint8_t idx);
-    void SaveSettings(ToolboxIni* ini);
-    void LoadSettings(ToolboxIni* ini);
+    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
 
     void SetTransmogs();
-    bool IsEnabled() {
+    bool IsEnabled() const
+    {
         return enabled;
     }
 

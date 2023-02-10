@@ -165,7 +165,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 }
 void ZrawDeepModule::Initialize() {
     ToolboxModule::Initialize();
-    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     SetEnabled(enabled);
     GW::Chat::CreateCommand(L"deep24h",
         [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
@@ -228,8 +228,7 @@ void ZrawDeepModule::SetTransmogs() {
             });
     }
 }
-void ZrawDeepModule::Update(float delta) {
-    UNREFERENCED_PARAMETER(delta);
+void ZrawDeepModule::Update(float) {
     if (pending_transmog)
         SetTransmogs();
 }
@@ -237,6 +236,12 @@ void ZrawDeepModule::SignalTerminate() {
     terminating = true;
     SetEnabled(false);
 }
+
+void ZrawDeepModule::Terminate() {
+    ToolboxModule::Terminate();
+    CoUninitialize();
+}
+
 void ZrawDeepModule::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
 
@@ -265,7 +270,7 @@ void ZrawDeepModule::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) 
 void ZrawDeepModule::PlayKanaxaiDialog(uint8_t idx) {
     if (!mp3)
         mp3 = new Mp3();
-    if (!((Mp3*)mp3)->Load(Resources::GetPath(kanaxai_audio_filenames[idx]).c_str()))
+    if (!mp3->Load(Resources::GetPath(kanaxai_audio_filenames[idx]).c_str()))
         return;
-    ((Mp3 *)mp3)->Play();
+    mp3->Play();
 }
