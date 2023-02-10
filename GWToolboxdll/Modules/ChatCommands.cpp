@@ -367,8 +367,7 @@ namespace {
 
     }
     const char* chat_tab_syntax = "'/chat [all|guild|team|trade|alliance|whisper|close]' open chat channel.";
-    void CmdChatTab(const wchar_t* cmd, int argc, LPWSTR* argv) {
-        wchar_t* message = nullptr;
+    void CmdChatTab(const wchar_t*, int argc, LPWSTR* argv) {
         if (argc < 1)
             return Log::Error(chat_tab_syntax);
         uint32_t channel = 0xff;
