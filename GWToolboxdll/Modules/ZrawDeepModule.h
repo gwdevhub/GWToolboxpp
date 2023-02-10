@@ -17,20 +17,18 @@ public:
     void Initialize() override;
     void Terminate() override;
     void SignalTerminate() override;
-    bool CanTerminate();
-    bool HasSettings();
+    bool CanTerminate() override;
+    bool HasSettings() override;
     void SetEnabled(bool enabled);
     void Update(float delta) override;
     void DrawSettingInternal() override;
     void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
     void PlayKanaxaiDialog(uint8_t idx);
-    void SaveSettings(ToolboxIni* ini);
-    void LoadSettings(ToolboxIni* ini);
+    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
 
     void SetTransmogs();
-    bool IsEnabled() {
-        return enabled;
-    }
+    bool IsEnabled();
 
     GW::HookEntry ZrawDeepModule_StoCs;
 };

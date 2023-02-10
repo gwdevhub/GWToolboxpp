@@ -47,7 +47,7 @@ namespace {
         L"kanaxai\\kanaxai.mp3"
     };
 
-    void* mp3 = nullptr;
+    Mp3* mp3 = nullptr;
 
     bool enabled = false;
     bool transmo_team = true;
@@ -188,6 +188,7 @@ void ZrawDeepModule::Terminate() {
     CoUninitialize();
 }
 bool ZrawDeepModule::CanTerminate() { return can_terminate; }
+bool ZrawDeepModule::IsEnabled() { return enabled; }
 bool ZrawDeepModule::HasSettings() { return enabled; }
 void ZrawDeepModule::Initialize() {
     ToolboxModule::Initialize();
@@ -249,12 +250,6 @@ void ZrawDeepModule::SignalTerminate() {
     terminating = true;
     SetEnabled(false);
 }
-
-void ZrawDeepModule::Terminate() {
-    ToolboxModule::Terminate();
-    CoUninitialize();
-}
-
 void ZrawDeepModule::SaveSettings(ToolboxIni* ini) {
     ToolboxModule::SaveSettings(ini);
 
