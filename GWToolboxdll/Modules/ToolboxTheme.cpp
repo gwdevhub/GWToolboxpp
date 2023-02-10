@@ -23,7 +23,7 @@ namespace {
             Log::LogW(L"File %s doesn't exist.", path.c_str());
             return *out;
         }
-        ToolboxIni* tmp = new ToolboxIni(false, false, false);
+        const auto tmp = new ToolboxIni(false, false, false);
         ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
         delete* out;
         *out = tmp;
@@ -75,7 +75,7 @@ void ToolboxTheme::Terminate()
 
 void ToolboxTheme::LoadSettings(ToolboxIni* ini)
 {
-    ToolboxModule::LoadSettings(ini);
+    ToolboxUIElement::LoadSettings(ini);
 
     const auto inifile = GetThemeIni();
     if (!inifile) {
@@ -83,29 +83,29 @@ void ToolboxTheme::LoadSettings(ToolboxIni* ini)
         return;
     }
 
-    font_global_scale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", font_global_scale);
+    font_global_scale = static_cast<float>(inifile->GetDoubleValue(IniSection, "FontGlobalScale", font_global_scale));
 
-    ini_style.Alpha = (float)inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha);
+    ini_style.Alpha = static_cast<float>(inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha));
     ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f); // clamp to [0.2, 1.0]
-    ini_style.WindowPadding.x = (float)inifile->GetDoubleValue(IniSection, "WindowPaddingX", ini_style.WindowPadding.x);
-    ini_style.WindowPadding.y = (float)inifile->GetDoubleValue(IniSection, "WindowPaddingY", ini_style.WindowPadding.y);
-    ini_style.WindowRounding = (float)inifile->GetDoubleValue(IniSection, "WindowRounding", ini_style.WindowRounding);
-    ini_style.FramePadding.x = (float)inifile->GetDoubleValue(IniSection, "FramePaddingX", ini_style.FramePadding.x);
-    ini_style.FramePadding.y = (float)inifile->GetDoubleValue(IniSection, "FramePaddingY", ini_style.FramePadding.y);
-    ini_style.FrameRounding = (float)inifile->GetDoubleValue(IniSection, "FrameRounding", ini_style.FrameRounding);
-    ini_style.ItemSpacing.x = (float)inifile->GetDoubleValue(IniSection, "ItemSpacingX", ini_style.ItemSpacing.x);
-    ini_style.ItemSpacing.y = (float)inifile->GetDoubleValue(IniSection, "ItemSpacingY", ini_style.ItemSpacing.y);
-    ini_style.ItemInnerSpacing.x = (float)inifile->GetDoubleValue(IniSection, "ItemInnerSpacingX", ini_style.ItemInnerSpacing.x);
-    ini_style.ItemInnerSpacing.y = (float)inifile->GetDoubleValue(IniSection, "ItemInnerSpacingY", ini_style.ItemInnerSpacing.y);
-    ini_style.IndentSpacing = (float)inifile->GetDoubleValue(IniSection, "IndentSpacing", ini_style.IndentSpacing);
-    ini_style.ScrollbarSize = (float)inifile->GetDoubleValue(IniSection, "ScrollbarSize", ini_style.ScrollbarSize);
-    ini_style.ScrollbarRounding = (float)inifile->GetDoubleValue(IniSection, "ScrollbarRounding", ini_style.ScrollbarRounding);
-    ini_style.GrabMinSize = (float)inifile->GetDoubleValue(IniSection, "GrabMinSize", ini_style.GrabMinSize);
-    ini_style.GrabRounding = (float)inifile->GetDoubleValue(IniSection, "GrabRounding", ini_style.GrabRounding);
-    ini_style.WindowTitleAlign.x = (float)inifile->GetDoubleValue(IniSection, "WindowTitleAlignX", ini_style.WindowTitleAlign.x);
-    ini_style.WindowTitleAlign.y = (float)inifile->GetDoubleValue(IniSection, "WindowTitleAlignY", ini_style.WindowTitleAlign.y);
-    ini_style.ButtonTextAlign.x = (float)inifile->GetDoubleValue(IniSection, "ButtonTextAlignX", ini_style.ButtonTextAlign.x);
-    ini_style.ButtonTextAlign.y = (float)inifile->GetDoubleValue(IniSection, "ButtonTextAlignY", ini_style.ButtonTextAlign.y);
+    ini_style.WindowPadding.x = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowPaddingX", ini_style.WindowPadding.x));
+    ini_style.WindowPadding.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowPaddingY", ini_style.WindowPadding.y));
+    ini_style.WindowRounding = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowRounding", ini_style.WindowRounding));
+    ini_style.FramePadding.x = static_cast<float>(inifile->GetDoubleValue(IniSection, "FramePaddingX", ini_style.FramePadding.x));
+    ini_style.FramePadding.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "FramePaddingY", ini_style.FramePadding.y));
+    ini_style.FrameRounding = static_cast<float>(inifile->GetDoubleValue(IniSection, "FrameRounding", ini_style.FrameRounding));
+    ini_style.ItemSpacing.x = static_cast<float>(inifile->GetDoubleValue(IniSection, "ItemSpacingX", ini_style.ItemSpacing.x));
+    ini_style.ItemSpacing.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "ItemSpacingY", ini_style.ItemSpacing.y));
+    ini_style.ItemInnerSpacing.x = static_cast<float>(inifile->GetDoubleValue(IniSection, "ItemInnerSpacingX", ini_style.ItemInnerSpacing.x));
+    ini_style.ItemInnerSpacing.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "ItemInnerSpacingY", ini_style.ItemInnerSpacing.y));
+    ini_style.IndentSpacing = static_cast<float>(inifile->GetDoubleValue(IniSection, "IndentSpacing", ini_style.IndentSpacing));
+    ini_style.ScrollbarSize = static_cast<float>(inifile->GetDoubleValue(IniSection, "ScrollbarSize", ini_style.ScrollbarSize));
+    ini_style.ScrollbarRounding = static_cast<float>(inifile->GetDoubleValue(IniSection, "ScrollbarRounding", ini_style.ScrollbarRounding));
+    ini_style.GrabMinSize = static_cast<float>(inifile->GetDoubleValue(IniSection, "GrabMinSize", ini_style.GrabMinSize));
+    ini_style.GrabRounding = static_cast<float>(inifile->GetDoubleValue(IniSection, "GrabRounding", ini_style.GrabRounding));
+    ini_style.WindowTitleAlign.x = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowTitleAlignX", ini_style.WindowTitleAlign.x));
+    ini_style.WindowTitleAlign.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowTitleAlignY", ini_style.WindowTitleAlign.y));
+    ini_style.ButtonTextAlign.x = static_cast<float>(inifile->GetDoubleValue(IniSection, "ButtonTextAlignX", ini_style.ButtonTextAlign.x));
+    ini_style.ButtonTextAlign.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "ButtonTextAlignY", ini_style.ButtonTextAlign.y));
     for (int i = 0; i < ImGuiCol_COUNT; ++i) {
         const char* name = ImGui::GetStyleColorName(i);
         const Color color = Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i]));
@@ -116,10 +116,10 @@ void ToolboxTheme::LoadSettings(ToolboxIni* ini)
 }
 void ToolboxTheme::SaveUILayout()
 {
-    if (!ImGui::GetCurrentContext())
+    if (!ImGui::GetCurrentContext() || !ImGui::GetCurrentContext()->Initialized || !imgui_style_loaded)
         return;
-    auto ini = GetLayoutIni(false);
-    const char* window_ini_section = "Windows";
+    const auto ini = GetLayoutIni(false);
+    const auto window_ini_section = "Windows";
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     for (const ImGuiWindow* window : windows) {
         char key[128];
@@ -152,9 +152,9 @@ void ToolboxTheme::LoadUILayout()
     ImGui::GetStyle() = ini_style;
     // Copy window positions over
     ImGui::GetIO().FontGlobalScale = font_global_scale;
-    ToolboxIni* ini = GetLayoutIni();
+    const auto ini = GetLayoutIni();
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
-    const char* window_ini_section = "Windows";
+    const auto window_ini_section = "Windows";
     for (ImGuiWindow* window : windows) {
         if (!window)
             continue;
@@ -176,13 +176,14 @@ void ToolboxTheme::LoadUILayout()
         ImGui::SetWindowCollapsed(window, collapsed);
     }
     layout_dirty = false;
+    imgui_style_loaded = true;
 }
 
 void ToolboxTheme::SaveSettings(ToolboxIni* ini)
 {
-    ToolboxModule::SaveSettings(ini);
+    ToolboxUIElement::SaveSettings(ini);
 
-    if (!ImGui::GetCurrentContext())
+    if (!ImGui::GetCurrentContext() || !imgui_style_loaded)
         return; // Imgui not initialised, can happen if destructing before first draw
 
     const ImGuiStyle& style = ImGui::GetStyle();
@@ -238,20 +239,20 @@ void ToolboxTheme::DrawSettingInternal()
     style.Alpha = std::clamp(style.Alpha, 0.2f, 1.f);
     ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.1f");
     ImGui::Text("Sizes");
-    ImGui::SliderFloat2("Window Padding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat2("Window Padding", reinterpret_cast<float*>(&style.WindowPadding), 0.0f, 20.0f, "%.0f");
     ImGui::SliderFloat("Window Rounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
-    ImGui::SliderFloat2("Frame Padding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat2("Frame Padding", reinterpret_cast<float*>(&style.FramePadding), 0.0f, 20.0f, "%.0f");
     ImGui::SliderFloat("Frame Rounding", &style.FrameRounding, 0.0f, 16.0f, "%.0f");
-    ImGui::SliderFloat2("Item Spacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
-    ImGui::SliderFloat2("Item InnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat2("Item Spacing", reinterpret_cast<float*>(&style.ItemSpacing), 0.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat2("Item InnerSpacing", reinterpret_cast<float*>(&style.ItemInnerSpacing), 0.0f, 20.0f, "%.0f");
     ImGui::SliderFloat("Indent Spacing", &style.IndentSpacing, 0.0f, 30.0f, "%.0f");
     ImGui::SliderFloat("Scrollbar Size", &style.ScrollbarSize, 1.0f, 20.0f, "%.0f");
     ImGui::SliderFloat("Scrollbar Rounding", &style.ScrollbarRounding, 0.0f, 16.0f, "%.0f");
     ImGui::SliderFloat("Grab MinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
     ImGui::SliderFloat("Grab Rounding", &style.GrabRounding, 0.0f, 16.0f, "%.0f");
     ImGui::Text("Alignment");
-    ImGui::SliderFloat2("Window Title Align", (float*)&style.WindowTitleAlign, 0.0f, 1.0f, "%.2f");
-    ImGui::SliderFloat2("Button Text Align", (float*)&style.ButtonTextAlign, 0.0f, 1.0f, "%.2f");
+    ImGui::SliderFloat2("Window Title Align", reinterpret_cast<float*>(&style.WindowTitleAlign), 0.0f, 1.0f, "%.2f");
+    ImGui::SliderFloat2("Button Text Align", reinterpret_cast<float*>(&style.ButtonTextAlign), 0.0f, 1.0f, "%.2f");
     ImGui::Text("Colors");
     for (int i = 0; i < ImGuiCol_COUNT; ++i) {
         const char* name = ImGui::GetStyleColorName(i);
