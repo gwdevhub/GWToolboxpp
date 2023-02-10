@@ -116,7 +116,7 @@ void ToolboxTheme::LoadSettings(ToolboxIni* ini)
 }
 void ToolboxTheme::SaveUILayout()
 {
-    if (!ImGui::GetCurrentContext() || !ImGui::GetCurrentContext()->Initialized || !imgui_style_loaded)
+    if (!ImGui::GetCurrentContext() || !imgui_style_loaded)
         return;
     const auto ini = GetLayoutIni(false);
     const auto window_ini_section = "Windows";
