@@ -732,14 +732,14 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"pref", CmdPref);
 
     // Experimental chat commands
+    uintptr_t address = 0;
 #if _DEBUG
     GW::Chat::CreateCommand(L"skillimage", CmdSkillImage);
-
-    uintptr_t address = GW::Scanner::Find("\x83\xc4\x04\xc7\x45\x08\x00\x00\x00\x00", "xxxxxxxxxx", -5);
+    address = GW::Scanner::Find("\x83\xc4\x04\xc7\x45\x08\x00\x00\x00\x00", "xxxxxxxxxx", -5);
     if (address) {
         SetMuted_Func = (SetMuted_pt)GW::Scanner::FunctionFromNearCall(address);
         PostMuted_Func = (PostMute_pt)GW::Scanner::FunctionFromNearCall(address + 0x10);
-        is_muted = *(bool**)(((uintptr_t)SetMuted_Func) + 0x6);
+        is_muted = *(bool**)((uintptr_t)SetMuted_Func + 0x6);
     }
     GW::Chat::CreateCommand(L"mute", CmdMute); // Doesn't unmute!
 #endif
