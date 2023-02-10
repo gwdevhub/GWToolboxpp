@@ -7,22 +7,6 @@
 #include <ToolboxModule.h>
 
 class ZrawDeepModule : public ToolboxModule {
-    ZrawDeepModule() {};
-    ~ZrawDeepModule() {
-        if (mp3) delete mp3;
-        CoUninitialize();
-    };
-private:
-    void* mp3 = nullptr;
-    
-    bool enabled = false;
-    bool transmo_team = true;
-    bool rewrite_npc_dialogs = true;
-    bool kanaxais_true_form = true;
-
-    clock_t pending_transmog = 0;
-    bool can_terminate = true;
-    bool terminating = false;
 public:
     static ZrawDeepModule& Instance() {
         static ZrawDeepModule instance;
@@ -31,9 +15,10 @@ public:
 
     const char* Name() const override { return "24h Deep Mode"; }
     void Initialize() override;
+    void Terminate() override;
     void SignalTerminate() override;
-    bool CanTerminate() { return can_terminate; }
-    bool HasSettings() { return enabled; }
+    bool CanTerminate();
+    bool HasSettings();
     void SetEnabled(bool enabled);
     void Update(float delta) override;
     void DrawSettingInternal() override;

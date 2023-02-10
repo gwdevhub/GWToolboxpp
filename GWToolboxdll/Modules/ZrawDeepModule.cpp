@@ -46,6 +46,18 @@ namespace {
         L"kanaxai\\room14.mp3",
         L"kanaxai\\kanaxai.mp3"
     };
+
+    void* mp3 = nullptr;
+
+    bool enabled = false;
+    bool transmo_team = true;
+    bool rewrite_npc_dialogs = true;
+    bool kanaxais_true_form = true;
+
+    clock_t pending_transmog = 0;
+    bool can_terminate = true;
+    bool terminating = false;
+
     const wchar_t* GetRandomKanaxaiDialog() {
         return kanaxai_dialogs[rand() % 8];
     }
@@ -83,6 +95,10 @@ namespace {
                 return false;
         }
         return true;
+    }
+    void CmdDeep24h(const wchar_t* , int , LPWSTR* ) {
+        ZrawDeepModule::Instance().SetEnabled(!enabled);
+        Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
     }
 }
 void ZrawDeepModule::SetEnabled(bool _enabled) {
@@ -163,25 +179,22 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
     }
     pending_transmog = -500;
 }
+void ZrawDeepModule::Terminate() {
+    GW::Chat::DeleteCommand(L"deep24h");
+    GW::Chat::DeleteCommand(L"24hdeep");
+    SetEnabled(false);
+    if (mp3) delete mp3;
+    mp3 = nullptr;
+    CoUninitialize();
+}
+bool ZrawDeepModule::CanTerminate() { return can_terminate; }
+bool ZrawDeepModule::HasSettings() { return enabled; }
 void ZrawDeepModule::Initialize() {
     ToolboxModule::Initialize();
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     SetEnabled(enabled);
-    GW::Chat::CreateCommand(L"deep24h",
-        [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-            UNREFERENCED_PARAMETER(message);
-            UNREFERENCED_PARAMETER(argc);
-            UNREFERENCED_PARAMETER(argv);
-            SetEnabled(!enabled);
-            Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
-        });
-    GW::Chat::CreateCommand(L"24hdeep",
-        [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-            UNREFERENCED_PARAMETER(message);
-            UNREFERENCED_PARAMETER(argc);
-            UNREFERENCED_PARAMETER(argv);
-            GW::Chat::SendChat('/', "deep24h");
-        });
+    GW::Chat::CreateCommand(L"deep24h", CmdDeep24h);
+    GW::Chat::CreateCommand(L"24hdeep", CmdDeep24h);
 }
 void ZrawDeepModule::DrawSettingInternal() {
     ImGui::TextDisabled("Use chat command /deep24h to toggle this module on or off at any time");
