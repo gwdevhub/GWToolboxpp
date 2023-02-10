@@ -570,6 +570,13 @@ void InventoryManager::Initialize() {
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
     }
 }
+
+void InventoryManager::Terminate()
+{
+    ToolboxUIElement::Terminate();
+    ClearPotentialItems();
+}
+
 // Hide unsellable items from merchant
 void InventoryManager::OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
     GW::Hook::EnterHook();
