@@ -7,6 +7,13 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 6.7
+* [New] Added `/chat [all|guild|team|trade|alliance|whisper|close]` to toggle chat tabs
+* [Fix] Fixed crash on start related to gwarmory
+* [Fix] Fixed imgui theme not being loaded on some starts
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.7_Release/GWToolboxdll.dll)
+
 ## Version 6.6
 * [Minor] Separate modules, widgets and windows in toolbox settings
 * [Minor] Rename warrior obsidian armor in armory module
