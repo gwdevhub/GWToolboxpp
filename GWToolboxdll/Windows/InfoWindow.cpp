@@ -168,7 +168,7 @@ namespace {
     }
     void OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* pak) {
         // 0x107 is the "start string" marker
-        if (!(show_last_to_resign_message && wmemcmp(pak->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0))
+        if (!(wmemcmp(pak->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0))
             return;
 
         // get all the data
