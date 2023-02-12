@@ -190,22 +190,46 @@ namespace {
     GW::UI::UIInteractionCallback OnChatInteraction_Callback_Func = nullptr;
     GW::UI::UIInteractionCallback OnChatInteraction_Callback_Ret = nullptr;
 
-    typedef void(__fastcall* SetChatState_pt)(void* chat_frame, void* edx, uint32_t state /* = 0 or 1 */, uint32_t tab);
-    SetChatState_pt SetChatState_Func = nullptr;
+    // '/chat [all|guild|team|trade|alliance|whisper|close]' 
+    const char* chat_tab_syntax = "'/chat [all|guild|team|trade|alliance|whisper]' open chat channel.";
+    void CmdChatTab(const wchar_t*, int argc, LPWSTR* argv) {
+        if (argc < 1)
+            return Log::Error(chat_tab_syntax);
+        uint32_t channel = 0xff;
+        if (wcscmp(argv[1], L"all") == 0)
+            channel = 0;
+        else if (wcscmp(argv[1], L"guild") == 0)
+            channel = 2;
+        else if (wcscmp(argv[1], L"team") == 0)
+            channel = 3;
+        else if (wcscmp(argv[1], L"trade") == 0)
+            channel = 4;
+        else if (wcscmp(argv[1], L"alliance") == 0)
+            channel = 1;
+        else if (wcscmp(argv[1], L"whisper") == 0)
+            channel = 5;
+        else
+            return Log::Error(chat_tab_syntax);
+        channel |= 0x8000;
+        GW::GameThread::Enqueue([channel]() {
+            // See OnChatUI_Callback for intercept
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kAppendMessageToChat, (void*)L"", (void*)channel);
+            });
+    }
+    typedef void(__fastcall* FocusChatTab_pt)(void* chat_frame, void* edx, uint32_t tab);
+    FocusChatTab_pt FocusChatTab_Func = nullptr;
 
     void OnChatUI_Callback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
         GW::Hook::EnterHook();
         // If a channel was given in the UI message, set it now.
-        if ((GW::UI::UIMessage)message->message_id == GW::UI::UIMessage::kAppendMessageToChat && lParam && SetChatState_Func) {
+        if ((GW::UI::UIMessage)message->message_id == GW::UI::UIMessage::kAppendMessageToChat && lParam) {
             uint32_t* frame_ptr = *(uint32_t**)message->wParam;
-            uint32_t state = 1;
             uint32_t tab = (uint32_t)lParam ^ 0x8000;
-            if (tab == 0xff) { // close chat.
-                tab = frame_ptr[3]; // current tab
-                state = 0;
+            if (tab < 6 && FocusChatTab_Func) {
+                FocusChatTab_Func(frame_ptr, 0, tab);
+                GW::Hook::LeaveHook();
+                return;
             }
-            lParam = 0; // reset
-            SetChatState_Func(frame_ptr, 0, state, tab);
         }
             
         OnChatInteraction_Callback_Ret(message, wParam, lParam);
@@ -366,33 +390,7 @@ namespace {
         pref->preference_callback(cmd, argc, argv,pref->preference_id);
 
     }
-    const char* chat_tab_syntax = "'/chat [all|guild|team|trade|alliance|whisper|close]' open chat channel.";
-    void CmdChatTab(const wchar_t*, int argc, LPWSTR* argv) {
-        if (argc < 1)
-            return Log::Error(chat_tab_syntax);
-        uint32_t channel = 0xff;
-        if (wcscmp(argv[1], L"close") == 0)
-            channel = 0xff;
-        else if (wcscmp(argv[1], L"all") == 0)
-            channel = 0;
-        else if (wcscmp(argv[1], L"guild") == 0)
-            channel = 2;
-        else if (wcscmp(argv[1], L"team") == 0)
-            channel = 3;
-        else if (wcscmp(argv[1], L"trade") == 0)
-            channel = 4;
-        else if (wcscmp(argv[1], L"alliance") == 0)
-            channel = 1;
-        else if (wcscmp(argv[1], L"whisper") == 0)
-            channel = 5;
-        else
-            return Log::Error(chat_tab_syntax);
-        channel |= 0x8000;
-        GW::GameThread::Enqueue([channel]() {
-            // See OnChatUI_Callback for intercept
-            GW::UI::SendUIMessage(GW::UI::UIMessage::kAppendMessageToChat, (void*)L"", (void*)channel);
-            });
-    }
+
 
     const char* withdraw_syntax = "'/withdraw [quantity (1-65535)] model_id1 [model_id2 ...]' tops up your inventory with a minimum quantity of 1 or more items, identified by model_id";
 
@@ -747,17 +745,25 @@ void ChatCommands::Initialize() {
     address = GW::Scanner::Find("\x3d\x7d\x00\x00\x10\x0f\x87\xe5\x02\x00\x00","xxxxxxxxxxx",-0x11);
     if (address) {
         OnChatInteraction_Callback_Func = (GW::UI::UIInteractionCallback)address;
-        SetChatState_Func = (SetChatState_pt)GW::Scanner::FunctionFromNearCall(address + 0x43);
+        FocusChatTab_Func = (FocusChatTab_pt)GW::Scanner::FunctionFromNearCall(address + 0x248);
         GW::HookBase::CreateHook(OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
         GW::HookBase::EnableHooks();
     }
 
+
+#ifdef _DEBUG
+    ASSERT(SetMuted_Func);
+    ASSERT(PostMuted_Func);
+    ASSERT(is_muted);
+    ASSERT(OnChatInteraction_Callback_Func);
+    ASSERT(FocusChatTab_Func);
+#endif
 }
 
 void ChatCommands::Terminate()
 {
-    if (SetChatState_Func)
-        GW::HookBase::RemoveHook(SetChatState_Func);
+    if (FocusChatTab_Func)
+        GW::HookBase::RemoveHook(FocusChatTab_Func);
 
     for (auto* it : title_names) {
         delete it;
