@@ -183,7 +183,7 @@ void ZrawDeepModule::Terminate() {
     GW::Chat::DeleteCommand(L"deep24h");
     GW::Chat::DeleteCommand(L"24hdeep");
     SetEnabled(false);
-    if (mp3) delete mp3;
+    delete mp3;
     mp3 = nullptr;
     CoUninitialize();
 }
@@ -213,8 +213,8 @@ void ZrawDeepModule::SetTransmogs() {
     if (pending_transmog == 0 || TIMER_DIFF(pending_transmog) < 500)
         return;
     pending_transmog = 0;
-    bool transmo_kanaxai_ = !terminating && enabled && kanaxais_true_form;
-    bool transmo_team_ = !terminating && enabled && transmo_team;
+    const bool transmo_kanaxai_ = !terminating && enabled && kanaxais_true_form;
+    const bool transmo_team_ = !terminating && enabled && transmo_team;
     if (transmo_team_) {
         if(!IsWholePartyTransformed())
             GW::Chat::SendChat('/', "transmoparty kanaxai 34");

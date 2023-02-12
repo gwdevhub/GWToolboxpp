@@ -4,7 +4,7 @@
 
 class LoginModule : public ToolboxModule {
     LoginModule() = default;
-    ~LoginModule() = default;
+    ~LoginModule() override = default;
 
 public:
     static LoginModule& Instance()

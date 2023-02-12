@@ -17,8 +17,11 @@ namespace GW {
 
 class InventoryManager : public ToolboxUIElement {
 public:
-    InventoryManager();
-    ~InventoryManager();
+    InventoryManager() {
+        current_salvage_session.salvage_item_id = 0;
+        is_movable = is_resizable = has_closebutton = can_show_in_main_window = false;
+    }
+
     enum class SalvageAllType : uint8_t {
         None,
         White,
@@ -51,6 +54,7 @@ public:
     bool IsPendingSalvage();
     bool HasSettings() override { return true; }
     void Initialize() override;
+    void Terminate() override;
     void Update(float delta) override;
     void DrawSettingInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
@@ -145,7 +149,7 @@ private:
         ChangeProfession,
         AwaitProfession,
         UseItem
-    } tome_pending_stage;
+    } tome_pending_stage{};
     uint32_t tome_pending_profession{};
     time_t tome_pending_timeout = 0;
     uint32_t tome_pending_item_id = 0;
@@ -291,7 +295,7 @@ private:
     struct PotentialItem : PendingItem {
         bool proceed = true;
     };
-    std::vector<PotentialItem*> potential_salvage_all_items; // List of items that would be processed if user confirms Salvage All
+    std::vector<PotentialItem*> potential_salvage_all_items{}; // List of items that would be processed if user confirms Salvage All
     void ClearPotentialItems();
     PendingItem pending_identify_item;
     PendingItem pending_identify_kit;

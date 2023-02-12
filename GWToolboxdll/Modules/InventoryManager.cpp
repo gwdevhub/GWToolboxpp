@@ -484,16 +484,6 @@ namespace {
     uint32_t right_clicked_item = 0;
 
 } // namespace
-InventoryManager::InventoryManager()
-    : tome_pending_stage(), pending_transaction() {
-    current_salvage_session.salvage_item_id = 0;
-    is_movable = is_resizable = has_closebutton = can_show_in_main_window = false;
-}
-
-InventoryManager::~InventoryManager()
-{
-    ClearPotentialItems();
-}
 void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
     auto& instance = Instance();
     switch (message_id) {
@@ -580,6 +570,13 @@ void InventoryManager::Initialize() {
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
     }
 }
+
+void InventoryManager::Terminate()
+{
+    ToolboxUIElement::Terminate();
+    ClearPotentialItems();
+}
+
 // Hide unsellable items from merchant
 void InventoryManager::OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
     GW::Hook::EnterHook();
