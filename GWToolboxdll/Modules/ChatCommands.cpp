@@ -143,7 +143,7 @@ namespace {
             if (agent == nullptr || agent == me
                 || !agent->GetIsLivingType() || agent->GetIsDead()
                 || agent->allegiance == GW::Constants::Allegiance::Enemy
-                || !GW::Agents::GetIsAgentTargettable(agent))
+                || !GW::Agents::GetIsAgentTargettable(agent, true))
                 continue;
             const float this_distance = GW::GetSquareDistance(me->pos, agent->pos);
             if (this_distance > max_distance || distance > this_distance)
@@ -915,7 +915,7 @@ void ChatCommands::SearchAgent::Init(const wchar_t* _search, TargetType type) {
         return;
     for (const GW::Agent* agent : *agents) {
         if (!agent) continue;
-        if (!GW::Agents::GetIsAgentTargettable(agent))
+        if (!GW::Agents::GetIsAgentTargettable(agent, true))
             continue;
         switch (type) {
         case Item:
@@ -1972,7 +1972,7 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, TargetType typ
     for (const GW::Agent * agent : *agents) {
         if (!agent || agent == me)
             continue;
-        if (!GW::Agents::GetIsAgentTargettable(agent))
+        if (!GW::Agents::GetIsAgentTargettable(agent, true))
             continue;
         switch (type) {
             case Gadget: {

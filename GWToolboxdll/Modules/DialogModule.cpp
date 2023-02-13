@@ -6,6 +6,7 @@
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -253,6 +254,42 @@ void DialogModule::Update(float) {
             queued_dialogs_to_send.erase(it);
             break;
         }
+
+        std::set<uint32_t> illegalDialogs({
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::Doa_ToTheRescue), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::Doa_RiftBetweenUs), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::Doa_FoundryOfFailedCreations), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::Doa_FoundryBreakout), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Chamber), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Chamber), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Wastes), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Wastes), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_UWG), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_UWG), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Mnt), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Mnt), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Pits), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Pits), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Planes), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Planes), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Pools), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Pools), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore), QuestDialogType::REWARD),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Vale), QuestDialogType::TAKE),
+            SetQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Vale), QuestDialogType::REWARD),
+        });
+
+        if (illegalDialogs.contains(it->first)) {
+            GW::GameThread::Enqueue([it] {
+                GW::Agents::SendDialogRaw(it->first);
+            });
+            queued_dialogs_to_send.erase(it);
+            break;
+        }
+
         if (!GetDialogAgent())
             continue;
         if (it->first == 0) {
