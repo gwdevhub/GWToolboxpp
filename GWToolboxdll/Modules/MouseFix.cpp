@@ -265,7 +265,6 @@ namespace {
         scaledColor = ScaleBitmap(icon_info.hbmColor, tmpBitmap.bmWidth, tmpBitmap.bmHeight, targetSize, targetSize);
         if (!scaledColor)
             goto cleanup;
-        scaledColor = scaledMask ? ScaleBitmap(icon_info.hbmColor, tmpBitmap.bmWidth, tmpBitmap.bmHeight, targetSize, targetSize) : nullptr;
         icon_info.hbmColor = scaledColor;
         icon_info.hbmMask = scaledMask;
         new_cursor = CreateIconIndirect(&icon_info);
