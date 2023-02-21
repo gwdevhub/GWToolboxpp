@@ -30,6 +30,7 @@
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/Hotkeys.h>
 #include <Windows/PconsWindow.h>
+#include <Modules/Resources.h>
 
 
 bool TBHotkey::show_active_in_header = true;
@@ -168,6 +169,11 @@ std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey:
     { GW::UI::ControlAction::ControlAction_TargetPriorityTarget, nullptr },
     { GW::UI::ControlAction::ControlAction_TargetSelf, nullptr }
 };
+namespace {
+    // @Cleanup: when toolbox closes, this array isn't freed properly
+    std::vector<std::vector<HotkeyEquipItemAttributes*>> available_items;
+}
+
 
 TBHotkey *TBHotkey::HotkeyFactory(ToolboxIni *ini, const char *section)
 {
@@ -862,11 +868,15 @@ HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(uint32_t _model_id, co
     if (mod_struct_size) {
         ASSERT(_mod_struct);
         const size_t bytes = _mod_struct_size * sizeof(*_mod_struct);
-        mod_struct = static_cast<uint32_t*>(malloc(bytes));
+        mod_struct = static_cast<GW::ItemModifier*>(malloc(bytes));
         memcpy(mod_struct, _mod_struct, bytes);
     }
     return this;
 }
+HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(HotkeyEquipItemAttributes const& other) {
+    return set(other.model_id, other.enc_name.encoded().c_str(), other.enc_desc.encoded().c_str(), other.mod_struct, other.mod_struct_size);
+}
+
 bool HotkeyEquipItemAttributes::check(GW::Item* item) {
     if (!item || item->model_id != model_id || item->mod_struct_size != mod_struct_size)
         return false;
@@ -917,7 +927,7 @@ void HotkeyEquipItem::Save(ToolboxIni *ini, const char *section) const
         ini->SetValue(section, "EncodedName", out.c_str());
         ASSERT(GuiUtils::ArrayToIni(item_attributes.enc_desc.encoded().c_str(), &out));
         ini->SetValue(section, "EncodedDesc", out.c_str());
-        ASSERT(GuiUtils::ArrayToIni(item_attributes.mod_struct, item_attributes.mod_struct_size, &out));
+        ASSERT(GuiUtils::ArrayToIni((uint32_t*)item_attributes.mod_struct, item_attributes.mod_struct_size, &out));
         ini->SetLongValue(section, "ModStructSize", item_attributes.mod_struct_size);
         ini->SetValue(section, "ModStruct", out.c_str());
     }
@@ -958,9 +968,14 @@ bool HotkeyEquipItem::Draw()
             ImGui::OpenPopup("Choose Item to Equip");
         }
         constexpr size_t bags_size = _countof(bags);
-        static std::vector<std::vector<HotkeyEquipItemAttributes>> available_items(bags_size);
         if (ImGui::BeginPopupModal("Choose Item to Equip",0, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (need_to_fetch_bag_items) {
+                // Free available_items ptrs
+                for (auto i = available_items.begin(); i != available_items.end(); i++) {
+                    for (auto j = i->begin(); j != i->end(); j++) {
+                        delete* j;
+                    }
+                }
                 available_items.clear();
                 available_items.resize(bags_size);
                 for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size; i++) {
@@ -971,7 +986,7 @@ bool HotkeyEquipItem::Draw()
                     for (size_t slot = 0; slot < items.size(); slot++) {
                         const GW::Item* cur_item = items[slot];
                         if (!IsEquippable(cur_item)) continue;
-                        available_items[i].push_back(cur_item);
+                        available_items[i].push_back(new HotkeyEquipItemAttributes(cur_item));
                     }
                 }
                 need_to_fetch_bag_items = false;
@@ -982,18 +997,19 @@ bool HotkeyEquipItem::Draw()
                 auto& items = available_items[i];
                 if (items.empty())
                     continue;
+                
                 ImGui::TextUnformatted(bags[i]);
                 ImGui::Indent();
                 for (auto& ai : available_items[i]) {
                     ImGui::PushID(&ai);
-                    if (ImGui::Button(ai.name().c_str())) {
-                        item_attributes = ai;
+                    if (ImGui::Button(ai->name().c_str())) {
+                        item_attributes.set(*ai);
                         hotkey_changed = true;
                         ImGui::CloseCurrentPopup();
                     }
                     if (ImGui::IsItemHovered()) {
                         ImGui::BeginTooltip();
-                        ImGui::TextUnformatted(ai.desc().c_str());
+                        ImGui::TextUnformatted(ai->desc().c_str());
                         ImGui::EndTooltip();
                     }
                     ImGui::PopID();

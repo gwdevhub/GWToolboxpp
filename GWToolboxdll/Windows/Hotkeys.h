@@ -117,27 +117,22 @@ class HotkeyEquipItemAttributes {
 public:
     HotkeyEquipItemAttributes(uint32_t _model_id = 0, const wchar_t* _name_enc = 0, const wchar_t* _info_string = 0, const GW::ItemModifier* _mod_struct = 0, size_t _mod_struct_size = 0);
     HotkeyEquipItemAttributes* set(uint32_t _model_id = 0, const wchar_t* _name_enc = 0, const wchar_t* _info_string = 0, const GW::ItemModifier* _mod_struct = 0, size_t _mod_struct_size = 0);
+    HotkeyEquipItemAttributes* set(HotkeyEquipItemAttributes const& other);
     HotkeyEquipItemAttributes(const GW::Item* item);
     ~HotkeyEquipItemAttributes();
+
+    HotkeyEquipItemAttributes& operator=(HotkeyEquipItemAttributes const& other) = delete;
+
     bool check(GW::Item* item = nullptr);
     uint32_t model_id = 0;
     GuiUtils::EncString enc_name;
     GuiUtils::EncString enc_desc;
-    uint32_t* mod_struct = nullptr;
+    GW::ItemModifier* mod_struct = nullptr;
     uint32_t mod_struct_size = 0;
     std::string& name() { return enc_name.string(); }
     std::wstring& name_ws() { return enc_name.wstring(); }
     std::string& desc() { return enc_desc.string(); }
     std::wstring& desc_ws() { return enc_desc.wstring(); }
-    HotkeyEquipItemAttributes(const HotkeyEquipItemAttributes& temp_obj) {
-        *this = temp_obj;
-    };
-    HotkeyEquipItemAttributes& operator=(const HotkeyEquipItemAttributes& temp_obj) {
-        set(temp_obj.model_id, temp_obj.enc_name.encoded().c_str(), temp_obj.enc_desc.encoded().c_str());
-        memcpy(mod_struct, temp_obj.mod_struct, sizeof(temp_obj.mod_struct));
-        mod_struct_size = temp_obj.mod_struct_size;
-        return *this;
-    };
 };
 class HotkeyEquipItem : public TBHotkey {
     UINT bag_idx = 0;
