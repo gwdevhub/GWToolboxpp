@@ -43,8 +43,8 @@ public:
 
 protected:
     std::vector<std::wstring> SanitiseForSend();
-    const bool PrintMessage();
-    const bool Send();
+    bool PrintMessage();
+    bool Send();
     void Init();
 };
 

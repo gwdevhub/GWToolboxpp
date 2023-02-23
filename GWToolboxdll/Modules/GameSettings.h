@@ -30,7 +30,7 @@ namespace GW {
 
 class GameSettings : public ToolboxModule {
     GameSettings() = default;
-    ~GameSettings() = default;
+    ~GameSettings() override = default;
 
 public:
     static GameSettings& Instance() {
@@ -51,7 +51,7 @@ public:
     void DrawInventorySettings();
     void DrawPartySettings();
 
-    static const bool GetSettingBool(const char* setting);
+    static bool GetSettingBool(const char* setting);
 
     void Update(float delta) override;
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
