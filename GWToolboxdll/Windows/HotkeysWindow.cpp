@@ -479,9 +479,7 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini) {
     }
 }
 
-bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
-    UNREFERENCED_PARAMETER(lParam);
-
+bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM) {
     if (Message == WM_ACTIVATE) {
         OnWindowActivated(wParam != WA_INACTIVE);
         return false;

@@ -79,7 +79,7 @@ public:
     virtual bool Draw() = 0;
     virtual int Description(char *buf, size_t bufsz) = 0;
     virtual void Execute() = 0;
-    virtual void Toggle() { return Execute(); };
+    virtual void Toggle() { return Execute(); }
 protected:
 
     static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
