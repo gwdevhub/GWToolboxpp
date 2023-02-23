@@ -397,6 +397,10 @@ namespace {
             skillbar_packet.agent_id = 0;
             return;
         }
+        if (std::ranges::equal(skillbar_packet.skill_ids, post_pack->skill_ids)) {
+            skillbar_packet.agent_id = 0;
+            return;
+        }
         if (skillbar_packet.agent_id && FixLoadSkillData(skillbar_packet.skill_ids)) {
             GW::SkillbarMgr::LoadSkillbar(skillbar_packet.skill_ids,_countof(skillbar_packet.skill_ids), GW::PartyMgr::GetAgentHeroID(skillbar_packet.agent_id));
         }
