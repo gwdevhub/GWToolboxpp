@@ -149,19 +149,18 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 for (const GW::Effect& effect : agent_effects) {
                     const auto skill_id = static_cast<GW::Constants::SkillID>(effect.skill_id);
                     if (!bond_map.contains(skill_id)) continue;
-
-                    bool overlay = false;
+                    
                     const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
                     if (!skill_data || skill_data->duration0 == 0x20000) continue; // Maintained skill/enchantment
                     const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
                     assert(agentAttributes);
                     agentAttributes = &agentAttributes[skill_data->attribute];
-                    overlay = effect.attribute_level < agentAttributes->level;
+                    const bool overlay = effect.attribute_level < agentAttributes->level;
 
                     size_t y = party_map[agent_id];
                     size_t x = bond_map[skill_id];
 
-                    const auto texture = *Resources::GetSkillImage( skill_id);
+                    const auto texture = *Resources::GetSkillImage(skill_id);
                     ImVec2 tl = GetGridPos(x, y, true);
                     ImVec2 br = GetGridPos(x, y, false);
                     if (texture) {
