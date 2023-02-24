@@ -54,6 +54,7 @@ private:
         GW::Constants::SkillID::Mending_Refrain,
         GW::Constants::SkillID::Bladeturn_Refrain,
         GW::Constants::SkillID::Hasty_Refrain,
+        GW::Constants::SkillID::Aggressive_Refrain,
     };
 
     void UseBuff(GW::AgentID target, DWORD buff_skillid);

@@ -307,7 +307,7 @@ namespace {
         struct Pack {
             uint32_t agent_id = 0;
             GW::Constants::SkillID skill_ids[8];
-        } *packet = (Pack*)wparam;
+        } *packet = static_cast<Pack*>(wparam);
         // @Enhancement: may cause weird stuff if we load loads of builds at once; heros could get mixed up with player. Use a map.
         memcpy(skillbar_packet.skill_ids, packet->skill_ids, sizeof(skillbar_packet.skill_ids));
         skillbar_packet.agent_id = packet->agent_id;
@@ -315,71 +315,75 @@ namespace {
 
     // Takes SkillData* ptr, rectifies any missing dupe skills. True if bar has been tweaked.
     bool FixLoadSkillData(GW::Constants::SkillID* skill_ids) {
-        auto find_skill = [](GW::Constants::SkillID* skill_ids, GW::Constants::SkillID skill_id) {
+        auto find_skill = [](const GW::Constants::SkillID* skill_ids, const GW::Constants::SkillID skill_id) {
             for (int i = 0; i < 8; i++) {
                 if (skill_ids[i] == skill_id)
                     return i;
             }
             return -1;
         };
-        int found_first;
-        int found_second;
+        int found_first = -1;
+        int found_second = -1;
         bool unlocked_first;
         bool unlocked_second;
         bool tweaked = false;
-        for (auto& skill : duplicate_skills) {
-            found_first = find_skill(skill_ids, skill.first);
-            found_second = find_skill(skill_ids, skill.second);
+        for (const auto& [first_skill, second_skill] : duplicate_skills) {
+            found_first = find_skill(skill_ids, first_skill);
+            found_second = find_skill(skill_ids, second_skill);
             if (found_first == -1 && found_second == -1)
                 continue;
-            unlocked_first = GW::SkillbarMgr::GetIsSkillUnlocked(skill.first);
-            unlocked_second = GW::SkillbarMgr::GetIsSkillUnlocked(skill.second);
+            unlocked_first = GW::SkillbarMgr::GetIsSkillUnlocked(first_skill);
+            unlocked_second = GW::SkillbarMgr::GetIsSkillUnlocked(second_skill);
 
             if (found_first != -1 && found_second == -1
                 && !unlocked_first && unlocked_second) {
                 // First skill found in build template, second skill not already in template, user only has second skill
-                skill_ids[found_first] = skill.second;
+                skill_ids[found_first] = second_skill;
                 tweaked = true;
             }
             else if (found_second != -1 && found_first == -1
                 && !unlocked_second && unlocked_first) {
                 // Second skill found in build template, first skill not already in template, user only has first skill
-                skill_ids[found_second] = skill.first;
+                skill_ids[found_second] = first_skill;
                 tweaked = true;
             }
         }
-        for (auto& skill : factions_skills) {
-            found_first = find_skill(skill_ids, skill.first);
-            found_second = find_skill(skill_ids, skill.second);
+        for (const auto& [luxon_skill, kurzick_skill] : factions_skills) {
+            found_first = find_skill(skill_ids, luxon_skill);
+            found_second = find_skill(skill_ids, kurzick_skill);
             if (found_first == -1 && found_second == -1)
                 continue;
-            unlocked_first = GW::SkillbarMgr::GetIsSkillUnlocked(skill.first);
-            unlocked_second = GW::SkillbarMgr::GetIsSkillUnlocked(skill.second);
+            if (found_first != -1 && found_second != -1)
+                continue;
+            unlocked_first = GW::SkillbarMgr::GetIsSkillUnlocked(luxon_skill);
+            unlocked_second = GW::SkillbarMgr::GetIsSkillUnlocked(kurzick_skill);
 
             if (found_first != -1 && found_second == -1
                 && !unlocked_first && unlocked_second) {
                 // First skill found in build template, second skill not already in template, user only has second skill
-                skill_ids[found_first] = skill.second;
+                skill_ids[found_first] = kurzick_skill;
                 tweaked = true;
             }
             else if (found_second != -1 && found_first == -1
                 && !unlocked_second && unlocked_first) {
                 // Second skill found in build template, first skill not already in template, user only has first skill
-                skill_ids[found_second] = skill.first;
+                skill_ids[found_second] = luxon_skill;
                 tweaked = true;
             }
             else if (unlocked_first && unlocked_second) {
                 // Find skill with higher title track
-                auto kurzick_title = GW::PlayerMgr::GetTitleTrack(GW::Constants::TitleID::Kurzick);
-                uint32_t kurzick_rank = kurzick_title ? kurzick_title->points_needed_current_rank : 0;
-                auto luxon_title = GW::PlayerMgr::GetTitleTrack(GW::Constants::TitleID::Luxon);
-                uint32_t luxon_rank = luxon_title ? luxon_title->points_needed_current_rank : 0;
+                const auto kurzick_title = GW::PlayerMgr::GetTitleTrack(GW::Constants::TitleID::Kurzick);
+                const uint32_t kurzick_rank = kurzick_title ? kurzick_title->points_needed_current_rank : 0;
+                const auto luxon_title = GW::PlayerMgr::GetTitleTrack(GW::Constants::TitleID::Luxon);
+                const uint32_t luxon_rank = luxon_title ? luxon_title->points_needed_current_rank : 0;
+                const int skillbar_index = std::max(found_first, found_second);
+                ASSERT(skillbar_index >= 0 && skillbar_index < 8);
                 if (kurzick_rank > luxon_rank) {
-                    skill_ids[std::max(found_first, found_second)] = skill.second;
+                    skill_ids[skillbar_index] = kurzick_skill;
                     tweaked = true;
                 }
                 else if (kurzick_rank < luxon_rank) {
-                    skill_ids[std::max(found_first, found_second)] = skill.first;
+                    skill_ids[skillbar_index] = luxon_skill;
                     tweaked = true;
                 }
             }
@@ -393,8 +397,12 @@ namespace {
             skillbar_packet.agent_id = 0;
             return;
         }
+        if (std::ranges::equal(skillbar_packet.skill_ids, post_pack->skill_ids)) {
+            skillbar_packet.agent_id = 0;
+            return;
+        }
         if (skillbar_packet.agent_id && FixLoadSkillData(skillbar_packet.skill_ids)) {
-            GW::SkillbarMgr::LoadSkillbar(skillbar_packet.skill_ids,_countof(skillbar_packet.skill_ids),GW::PartyMgr::GetAgentHeroID(skillbar_packet.agent_id));
+            GW::SkillbarMgr::LoadSkillbar(skillbar_packet.skill_ids,_countof(skillbar_packet.skill_ids), GW::PartyMgr::GetAgentHeroID(skillbar_packet.agent_id));
         }
         skillbar_packet.agent_id = 0;
     }
@@ -924,7 +932,8 @@ namespace {
 
 }
 
-const bool GameSettings::GetSettingBool(const char* setting) {
+bool GameSettings::GetSettingBool(const char* setting)
+{
 #define RETURN_SETTING_IF_MATCH(var) if (strcmp(setting, #var) == 0) return var
     RETURN_SETTING_IF_MATCH(auto_age2_on_age);
     RETURN_SETTING_IF_MATCH(flash_window_on_guild_chat);
@@ -998,7 +1007,9 @@ PendingChatMessage* PendingChatMessage::queuePrint(GW::Chat::Channel channel, co
 bool PendingChatMessage::Cooldown() {
     return last_send && clock() < last_send + (clock_t)(CLOCKS_PER_SEC / 2);
 }
-const bool PendingChatMessage::Send() {
+
+bool PendingChatMessage::Send()
+{
     if (!IsDecoded() || this->invalid) return false; // Not ready or invalid.
     std::vector<std::wstring> sanitised_lines = SanitiseForSend();
     wchar_t buf[120];
@@ -1050,7 +1061,8 @@ void PendingChatMessage::Init() {
     }
 }
 std::vector<std::wstring> PendingChatMessage::SanitiseForSend() {
-    std::wregex no_tags(L"<[^>]+>"), no_new_lines(L"\n");
+    const std::wregex no_tags(L"<[^>]+>");
+    const std::wregex no_new_lines(L"\n");
     std::wstring sanitised, sanitised2, temp;
     std::regex_replace(std::back_inserter(sanitised), output_message.begin(), output_message.end(), no_tags, L"");
     std::regex_replace(std::back_inserter(sanitised2), sanitised.begin(), sanitised.end(), no_new_lines, L"|");
@@ -1060,7 +1072,7 @@ std::vector<std::wstring> PendingChatMessage::SanitiseForSend() {
         parts.push_back(temp);
     return parts;
 }
-const bool PendingChatMessage::PrintMessage() {
+bool PendingChatMessage::PrintMessage() {
     if (!IsDecoded() || this->invalid) return false; // Not ready or invalid.
     if (this->printed) return true; // Already printed.
     wchar_t buffer[512];
