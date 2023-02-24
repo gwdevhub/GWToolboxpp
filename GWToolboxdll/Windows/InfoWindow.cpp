@@ -571,6 +571,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         if (show_player && ImGui::CollapsingHeader("Player")) {
             ImGui::PushID("player_info");
+            InfoField("Is Typing?", "%s", GW::Chat::GetIsTyping() ? "Yes" : "No");
             DrawAgentInfo(GW::Agents::GetPlayer());
             ImGui::PopID();
         }
