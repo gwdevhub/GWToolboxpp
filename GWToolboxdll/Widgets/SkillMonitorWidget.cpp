@@ -255,7 +255,7 @@ void SkillMonitorWidget::SaveSettings(ToolboxIni* ini) {
     Colors::Save(ini, Name(), VAR_NAME(status_color_interrupted), status_color_interrupted);
 
     ini->SetLongValue(Name(), VAR_NAME(history_length), history_length);
-    ini->SetDoubleValue(Name(), VAR_NAME(history_timeout), history_timeout);
+    ini->SetLongValue(Name(), VAR_NAME(history_timeout), history_timeout);
 }
 
 void SkillMonitorWidget::DrawSettingInternal() {
