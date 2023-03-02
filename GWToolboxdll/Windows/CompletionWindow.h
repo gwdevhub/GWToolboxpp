@@ -271,6 +271,7 @@ namespace Missions {
 } // namespace Missions
 struct CharacterCompletion {
     GW::Constants::Profession profession = (GW::Constants::Profession)0;
+    std::wstring account;
     std::string name_str;
     std::vector<uint32_t> skills;
     std::vector<uint32_t> mission;

@@ -29,6 +29,7 @@
 
 #include <Color.h>
 #include <Modules/DialogModule.h>
+#include <GWCA/Context/PreGameContext.h>
 
 using namespace GW::Constants;
 using namespace Missions;
@@ -70,9 +71,14 @@ namespace {
         }
     }
 
+    const wchar_t* GetAccountEmail() {
+        const auto c = GW::GetCharContext();
+        return c && *c->player_email ? c->player_email : nullptr;
+    }
+
     const wchar_t* GetPlayerName() {
         auto c = GW::GetCharContext();
-        return c ? c->player_name : nullptr;
+        return c && *c->player_name ? c->player_name : nullptr;
     }
 
     wchar_t last_player_name[20];
@@ -351,6 +357,34 @@ namespace {
         return true;
     }
 
+    struct AccountInfo {
+        std::wstring email;
+        std::vector<std::wstring> characters;
+    };
+    bool only_show_account_chars = true;
+    // Check login screen; assign missing characters to email account
+    void RefreshAccountCharacters() {
+        const auto email = GetAccountEmail();
+        if (!email) return;
+        const auto p = GW::GetPreGameContext();
+        if (p) {
+            for (const auto& character : p->chars) {
+                auto cc = CompletionWindow::Instance().GetCharacterCompletion(character.character_name, true);
+                cc->account = email;
+            }
+        }
+        const auto pn = GetPlayerName();
+        if (pn) {
+            auto cc = CompletionWindow::Instance().GetCharacterCompletion(pn);
+            if (cc) cc->account = email;
+        }
+
+    }
+
+    void OnPostCheckUIState(GW::HookStatus* , GW::UI::UIMessage, void* , void* state) {
+        if(state && *(uint32_t*)state == 2)
+            RefreshAccountCharacters();
+    }
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -1075,6 +1109,7 @@ void CompletionWindow::Initialize()
         ParseCompletionBuffer(CompletionType::MissionBonusHM);
         ParseCompletionBuffer(CompletionType::MissionHM);
         ParseCompletionBuffer(CompletionType::MapsUnlocked);
+        RefreshAccountCharacters();
 	    CheckProgress();
 	    });
 
@@ -1093,6 +1128,10 @@ void CompletionWindow::Initialize()
     const wchar_t* player_name = GetPlayerName();
     if(player_name)
         wcscpy(last_player_name,player_name);
+
+    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kCheckUIState, OnPostCheckUIState,0x8000);
+
+    RefreshAccountCharacters();
 }
 void CompletionWindow::Initialize_Prophecies()
 {
@@ -1939,6 +1978,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::PushItemWidth(200.f * gscale);
     if (ImGui::BeginCombo("##completion_character_select", chosen_player_name_s.c_str())) // The second parameter is the label previewed before opening the combo.
     {
+        const auto email = GetAccountEmail();
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 2.f, 8.f });
         bool is_selected = false;
         for (auto& it : character_completion) {
@@ -1946,6 +1986,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             if (!sel && chosen_player_name == it.first) {
                 is_selected = true;
                 sel = &it.first;
+            }
+            if (!is_selected && only_show_account_chars && it.second->account != email) {
+                continue; // Different account
             }
 
 			if (it.second->name_str.size() > 0 && ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
@@ -1958,11 +2001,18 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 		ImGui::EndCombo();
 	}
 	ImGui::PopItemWidth();
+
+
 #if 1
     ImGui::SameLine();
     if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0)
         RerollWindow::Instance().Reroll(chosen_player_name.data(),false,false);
 #endif
+    ImGui::SameLine();
+    if (ImGui::Checkbox("This Account", &only_show_account_chars)) {
+        RefreshAccountCharacters();
+    }
+    ImGui::ShowHelp("Limits the character dropdown to only show the characters belonging to this account.");
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - (200.f * gscale));
     ImGui::Checkbox("View as list", &show_as_list);
     ImGui::SameLine();
@@ -2486,6 +2536,7 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_completed_missions);
     LOAD_BOOL(hide_unlocked_achievements);
     LOAD_BOOL(hide_collected_hats);
+    LOAD_BOOL(only_show_account_chars);
 
     auto read_ini_to_buf = [&](CompletionType type, const char* section) {
         char ini_key_buf[64];
@@ -2519,9 +2570,9 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
         read_ini_to_buf(CompletionType::MinipetsUnlocked, "minipets_unlocked");
         read_ini_to_buf(CompletionType::FestivalHats, "festival_hats");
 
-        auto c = GetCharacterCompletion(name_ws.data());
-        if(c)
-            c->profession = (Profession)completion_ini->GetLongValue(ini_section, "profession", 0);
+        auto c = GetCharacterCompletion(name_ws.data(),true);
+        c->profession = (Profession)completion_ini->GetLongValue(ini_section, "profession", 0);
+        c->account = GuiUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
     }
     CheckProgress();
 }
@@ -2593,6 +2644,7 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_completed_missions);
     SAVE_BOOL(hide_unlocked_achievements);
     SAVE_BOOL(hide_collected_hats);
+    SAVE_BOOL(only_show_account_chars);
 
     auto write_buf_to_ini = [completion_ini](const char* section, std::vector<uint32_t>* read, std::string& ini_str,std::string* name) {
         char ini_key_buf[64];
@@ -2608,6 +2660,7 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
         char_comp = char_unlocks.second;
         name = &char_comp->name_str;
         completion_ini->SetLongValue(name->c_str(), "profession", (uint32_t)char_comp->profession);
+        completion_ini->SetValue(name->c_str(), "account", GuiUtils::WStringToString(char_comp->account).c_str());
         write_buf_to_ini("mission", &char_comp->mission, ini_str, name);
         write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, ini_str, name);
         write_buf_to_ini("mission_hm", &char_comp->mission_hm, ini_str, name);
