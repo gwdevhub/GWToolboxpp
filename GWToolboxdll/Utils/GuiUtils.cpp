@@ -523,6 +523,24 @@ namespace GuiUtils {
         } while ((pos = in.find(' ', pos)) != std::string::npos);
         return offset;
     }
+    size_t IniToArray(const char* in, std::vector<std::string>& out, const char separator) {
+        const char* found = in;
+        out.clear();
+        while(true) {
+            if (!(found && *found))
+                break;
+            auto next_token = (char*)strchr(found, separator);
+            if (next_token)
+                *next_token = 0;
+            out.push_back(found);
+            found = 0;
+            if (next_token) {
+                found = next_token + 1;
+            }
+        }
+        return out.size();
+    }
+
     size_t IniToArray(const std::string& in, std::vector<uint32_t>& out) {
         out.resize((in.size() + 1) / 9);
         out.resize(IniToArray(in, out.data(), out.size()));

@@ -140,6 +140,43 @@ namespace {
         return out;
     };
 
+    std::wstring LowerCaseRemovePunct(std::wstring in) {
+        return GuiUtils::ToLower(GuiUtils::RemovePunctuation(in));
+    }
+    std::wstring LowerCaseRemovePunct(std::string in) {
+        return LowerCaseRemovePunct(GuiUtils::StringToWString(in));
+    }
+
+    std::vector<std::wstring> exclude_charnames_from_reroll_cmd;
+    char excluded_char_add_buf[20] = { 0 };
+    bool IsExcludedFromReroll(const wchar_t* player_name) {
+        return std::ranges::find(exclude_charnames_from_reroll_cmd, LowerCaseRemovePunct(player_name)) != exclude_charnames_from_reroll_cmd.end();
+    }
+    void DrawExcludedCharacters() {
+        ImGui::Spacing();
+        if (ImGui::TreeNodeEx("Excluded Characters from /reroll command", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            for (size_t i = 0; i < exclude_charnames_from_reroll_cmd.size();i++) {
+                auto& excluded = exclude_charnames_from_reroll_cmd[i];
+                ImGui::PushID(i);
+                ImGui::TextUnformatted(GuiUtils::WStringToString(excluded).c_str());
+                ImGui::SameLine();
+                bool clicked = ImGui::SmallButton("X");
+                ImGui::PopID();
+                if(clicked) {
+                    exclude_charnames_from_reroll_cmd.erase(exclude_charnames_from_reroll_cmd.begin() + i);
+                    break; // next loop
+                }
+            }
+            if (ImGui::InputText("###add_character_to_exclude", excluded_char_add_buf, _countof(excluded_char_add_buf), ImGuiInputTextFlags_EnterReturnsTrue)) {
+                auto charname_w = GuiUtils::StringToWString(excluded_char_add_buf);
+                if (charname_w.length() && !IsExcludedFromReroll(charname_w.c_str())) {
+                    exclude_charnames_from_reroll_cmd.push_back(LowerCaseRemovePunct(charname_w));
+                }
+                excluded_char_add_buf[0] = 0;
+            }
+            ImGui::TreePop();
+        }
+    }
 }
 void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
@@ -207,6 +244,7 @@ void RerollWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         ImGui::PopStyleVar();
     }
+    DrawExcludedCharacters();
 
     ImGui::End();
 
@@ -247,20 +285,25 @@ void RerollWindow::CmdReroll(const wchar_t* message, int argc, LPWSTR*) {
             continue;
         if (!wcsstr(to_find[i], character_or_profession.c_str()))
             continue;
-        for (size_t j = 0; j < available_characters->size(); j++) {
-            if (available_characters->at(j).primary() == i) {
-                Instance().Reroll(available_characters->at(j).player_name, Instance().travel_to_same_location_after_rerolling, Instance().rejoin_party_after_rerolling);
-                return;
-            }
+        for (auto& available_char : *available_characters) {
+            if (available_char.primary() != i)
+                continue;
+            const auto player_name = available_char.player_name;
+            if (IsExcludedFromReroll(player_name))
+                continue;
+            Instance().Reroll(player_name, Instance().travel_to_same_location_after_rerolling, Instance().rejoin_party_after_rerolling);
+            return;
         }
     }
 
-
     // Search by character name
-    for (size_t i = 0; i < available_characters->size(); i++) {
-        if (!wcsstr(GuiUtils::ToLower(available_characters->at(i).player_name).c_str(), character_or_profession.c_str()))
+    for (auto& available_char : *available_characters) {
+        const auto player_name = available_char.player_name;
+        if (IsExcludedFromReroll(player_name))
             continue;
-        Instance().Reroll(available_characters->at(i).player_name, Instance().travel_to_same_location_after_rerolling, Instance().rejoin_party_after_rerolling);
+        if (!wcsstr(GuiUtils::ToLower(player_name).c_str(), character_or_profession.c_str()))
+            continue;
+        Instance().Reroll(available_char.player_name, Instance().travel_to_same_location_after_rerolling, Instance().rejoin_party_after_rerolling);
         return;
     }
     Log::Error("Failed to match profession or character name for command");
@@ -593,10 +636,21 @@ void RerollWindow::LoadSettings(ToolboxIni* ini) {
             AddAvailableCharacter(email_ws.c_str(), charname_ws.c_str());
         }
     }
-    travel_to_same_location_after_rerolling = ini->GetBoolValue(Name(), VAR_NAME(travel_to_same_location_after_rerolling), travel_to_same_location_after_rerolling);
-    rejoin_party_after_rerolling = ini->GetBoolValue(Name(), VAR_NAME(rejoin_party_after_rerolling), rejoin_party_after_rerolling);
-    return_on_fail = ini->GetBoolValue(Name(), VAR_NAME(return_on_fail), return_on_fail);
+    LOAD_BOOL(travel_to_same_location_after_rerolling);
+    LOAD_BOOL(rejoin_party_after_rerolling);
+    LOAD_BOOL(return_on_fail);
+
+
+    std::vector<std::string> excluded_charnames_strings;
+    GuiUtils::IniToArray(ini->GetValue(Name(), "exclude_charnames_from_reroll_cmd", ""),excluded_charnames_strings,',');
+    for (auto& cstring : excluded_charnames_strings) {
+        auto charname_w = GuiUtils::StringToWString(cstring);
+        if (charname_w.length() && !IsExcludedFromReroll(charname_w.c_str())) {
+            exclude_charnames_from_reroll_cmd.push_back(LowerCaseRemovePunct(charname_w));
+        }
+    }
 }
+
 void RerollWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     for (const auto& it : account_characters) {
@@ -608,7 +662,15 @@ void RerollWindow::SaveSettings(ToolboxIni* ini) {
             ini->SetValue("RerollWindow_AvailableChars", charname_s.c_str(), email_s.c_str());
         }
     }
-    ini->SetBoolValue(Name(), VAR_NAME(travel_to_same_location_after_rerolling), travel_to_same_location_after_rerolling);
-    ini->SetBoolValue(Name(), VAR_NAME(rejoin_party_after_rerolling), rejoin_party_after_rerolling);
-    ini->SetBoolValue(Name(), VAR_NAME(return_on_fail), return_on_fail);
+    SAVE_BOOL(travel_to_same_location_after_rerolling);
+    SAVE_BOOL(rejoin_party_after_rerolling);
+    SAVE_BOOL(return_on_fail);
+
+    std::string excluded_charnames_ini = "";
+    for (auto& excluded : exclude_charnames_from_reroll_cmd) {
+        if (excluded_charnames_ini.length())
+            excluded_charnames_ini += ',';
+        excluded_charnames_ini += GuiUtils::WStringToString(excluded);
+    }
+    ini->SetValue(Name(), "exclude_charnames_from_reroll_cmd", excluded_charnames_ini.c_str());
 }
