@@ -15,19 +15,6 @@
 #include <Widgets/Minimap/PingsLinesRenderer.h>
 
 #include "Minimap.h"
-
-namespace {
-    uint32_t compass_range_vertices = 0;
-    uint32_t spirit_range_vertices = 0;
-    uint32_t spellcast_range_vertices = 0;
-    uint32_t aggro_range_vertices = 0;
-    uint32_t hos_range_vertices = 0;
-    uint32_t chain_aggro_range_vertices = 0;
-    uint32_t res_aggro_range_vertices = 0;
-    uint32_t shadowstep_aggro_range_vertices = 0;
-    uint32_t hos_line_vertices = 0;
-}
-
 void RangeRenderer::LoadSettings(ToolboxIni *ini, const char *section)
 {
     LoadDefaults();
