@@ -68,7 +68,7 @@ public:
     const bool IsEnabled() { return IsVisible() && *enabled; }
     virtual bool IsVisible() const;
     void AfterUsed(bool used, int qty);
-    inline void Toggle() { SetEnabled(!IsEnabled()); }
+    void Toggle() { SetEnabled(!IsEnabled()); }
     // Resets pcon counters so it needs to recalc number and refill.
     void ResetCounts();
     void LoadSettings(ToolboxIni* ini, const char* section);
@@ -88,7 +88,7 @@ public:
 
     std::string chat;
     std::string abbrev;
-    std::string& description() { return desc; };
+    std::string& description() { return desc; }
     std::string ini;
 
 protected:

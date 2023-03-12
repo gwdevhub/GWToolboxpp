@@ -5,12 +5,12 @@
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
@@ -25,8 +25,9 @@ using namespace GW::Constants;
 
 bool Pcon::map_has_effects_array = false;
 
-PconsWindow::PconsWindow() {
-    const float s = 64.0f; // all icons are 64x64
+PconsWindow::PconsWindow()
+{
+    constexpr float s = 64.0f; // all icons are 64x64
 
     pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
         ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
@@ -105,25 +106,26 @@ PconsWindow::PconsWindow() {
 
     // Refillers
 
-    pcons.push_back(new PconRefiller(L"Scroll of Resurrection",ItemID::ResScrolls, 5));
+    pcons.push_back(new PconRefiller(L"Scroll of Resurrection", ItemID::ResScrolls, 5));
     pcons.back()->ini = "resscroll";
-    pcons.push_back(new PconRefiller(L"Powerstone of Courage",ItemID::Powerstone,5));
+    pcons.push_back(new PconRefiller(L"Powerstone of Courage", ItemID::Powerstone,5));
     pcons.back()->ini = "pstone";
-    pcons.push_back(new PconRefiller(L"Seal of the Dragon Empire",ItemID::SealOfTheDragonEmpire,5));
+    pcons.push_back(new PconRefiller(L"Seal of the Dragon Empire", ItemID::SealOfTheDragonEmpire,5));
 
-    pcons.push_back(new PconRefiller(L"Honeycomb",ItemID::Honeycomb));
-    pcons.push_back(new PconRefiller(L"Pumpkin Cookie",ItemID::PumpkinCookie));
-    pcons.push_back(new PconRefiller(L"Ghost in the Box",ItemID::GhostInTheBox));
-    pcons.push_back(new PconRefiller(L"Everlasting Mobstopper",ItemID::Mobstopper));
+    pcons.push_back(new PconRefiller(L"Honeycomb", ItemID::Honeycomb));
+    pcons.push_back(new PconRefiller(L"Pumpkin Cookie", ItemID::PumpkinCookie));
+    pcons.push_back(new PconRefiller(L"Ghost in the Box", ItemID::GhostInTheBox));
+    pcons.push_back(new PconRefiller(L"Everlasting Mobstopper", ItemID::Mobstopper));
 
     // Summoning Stones
+    pcons.push_back(new PconRefiller(L"Tengu Support Flare", ItemID::TenguSummon));
+    pcons.push_back(new PconRefiller(L"Imperial Guard Reinforcement Order", ItemID::ImperialGuardSummon));
+    pcons.push_back(new PconRefiller(L"Shining Blade War Horn", ItemID::WarhornSummon));
+    pcons.push_back(new PconRefiller(L"Ghastly Summoning Stone", ItemID::GhastlyStone));
     // @Cleanup: Add these items to GWCA or something
-    pcons.push_back(new PconRefiller(L"Tengu Support Flare",30209));
-    pcons.push_back(new PconRefiller(L"Imperial Guard Reinforcement Order", 30210));
     pcons.push_back(new PconRefiller(L"Chitinous Summoning Stone", 30959));
     pcons.push_back(new PconRefiller(L"Amber Summoning Stone", 30961));
     pcons.push_back(new PconRefiller(L"Arctic Summoning Stone", 30962));
-    //pcons.push_back(new PconRefiller(L"Automaton Summoning Stone", ????));
     pcons.push_back(new PconRefiller(L"Celestial Summoning Stone", 34176));
     pcons.push_back(new PconRefiller(L"Mystical Summoning Stone", 30960));
     pcons.push_back(new PconRefiller(L"Demonic Summoning Stone", 30963));
@@ -135,59 +137,55 @@ PconsWindow::PconsWindow() {
     pcons.push_back(new PconRefiller(L"Mercantile Summoning Stone", 31154));
     pcons.push_back(new PconRefiller(L"Mysterious Summoning Stone", 31155));
     pcons.push_back(new PconRefiller(L"Zaishen Summoning Stone", 31156));
-    pcons.push_back(new PconRefiller(L"Ghastly Summoning Stone", 32557));
-    pcons.push_back(new PconRefiller(L"Shining Blade War Horn", 35126));
 }
-void PconsWindow::Initialize() {
+
+void PconsWindow::Initialize()
+{
     ToolboxWindow::Initialize();
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
     Resources::Instance().LoadTexture(&button_texture, Resources::GetPath(L"img/icons", L"cupcake.png"), IDB_Icon_Cupcake);
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentSetPlayer>(&AgentSetPlayer_Entry,
-    [](GW::HookStatus *, GW::Packet::StoC::AgentSetPlayer *pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentSetPlayer>(&AgentSetPlayer_Entry, [](GW::HookStatus*, GW::Packet::StoC::AgentSetPlayer* pak) -> void {
         Pcon::player_id = pak->unk1;
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AddExternalBond>(&AddExternalBond_Entry,&OnAddExternalBond);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry,&OnPostProcessEffect);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry,&OnGenericValue);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry,&OnAgentState);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry,&OnSpeechBubble);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AddExternalBond>(&AddExternalBond_Entry, &OnAddExternalBond);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &OnPostProcessEffect);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, &OnGenericValue);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, &OnAgentState);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, &OnSpeechBubble);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, &OnObjectiveDone);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, &OnVanquishComplete);
     GW::Chat::CreateCommand(L"pcons", &CmdPcons);
 }
+
 void PconsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
-    for (Pcon *pcon : pcons) {
+    for (Pcon* pcon : pcons) {
         pcon->Terminate();
     }
 }
-void PconsWindow::OnAddExternalBond(GW::HookStatus *status, GW::Packet::StoC::AddExternalBond *pak)
+
+void PconsWindow::OnAddExternalBond(GW::HookStatus* status, GW::Packet::StoC::AddExternalBond* pak)
 {
-    if (PconAlcohol::suppress_lunar_skills &&
-        pak->caster_id == GW::Agents::GetPlayerId() && pak->receiver_id == 0 &&
-        (pak->skill_id == (DWORD)SkillID::Spiritual_Possession ||
-         pak->skill_id == (DWORD)SkillID::Lucky_Aura)) {
+    if (PconAlcohol::suppress_lunar_skills && pak->caster_id == GW::Agents::GetPlayerId() && pak->receiver_id == 0 && (pak->skill_id == (DWORD)SkillID::Spiritual_Possession || pak->skill_id == (DWORD)SkillID::Lucky_Aura)) {
         // printf("blocked skill %d\n", pak->skill_id);
         status->blocked = true;
     }
 }
-void PconsWindow::OnPostProcessEffect(GW::HookStatus *status,
-                                      GW::Packet::StoC::PostProcess *pak)
+
+void PconsWindow::OnPostProcessEffect(GW::HookStatus* status, GW::Packet::StoC::PostProcess* pak)
 {
     PconAlcohol::alcohol_level = pak->level;
-    PconsWindow &instance = Instance();
-    //printf("Level = %d, tint = %d\n", pak->level, pak->tint);
+    PconsWindow& instance = Instance();
+    // printf("Level = %d, tint = %d\n", pak->level, pak->tint);
     if (instance.enabled)
         instance.pcon_alcohol->Update();
     status->blocked = PconAlcohol::suppress_drunk_effect;
 }
-void PconsWindow::OnGenericValue(GW::HookStatus *, GW::Packet::StoC::GenericValue *pak) {
-    if (PconAlcohol::suppress_drunk_emotes
-        && pak->agent_id == GW::Agents::GetPlayerId()
-        && pak->value_id == 22) {
-
+void PconsWindow::OnGenericValue(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak)
+{
+    if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetPlayerId() && pak->value_id == 22) {
         if (pak->value == 0x33E807E5) pak->value = 0; // kneel
         if (pak->value == 0x313AC9D1) pak->value = 0; // bored
         if (pak->value == 0x3033596A) pak->value = 0; // moan
@@ -196,15 +194,16 @@ void PconsWindow::OnGenericValue(GW::HookStatus *, GW::Packet::StoC::GenericValu
         if (pak->value == 0x30446E61) pak->value = 0; // roar
     }
 }
-void PconsWindow::OnAgentState(GW::HookStatus *, GW::Packet::StoC::AgentState *pak)
+void PconsWindow::OnAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* pak)
 {
-    if (PconAlcohol::suppress_drunk_emotes &&
-        pak->agent_id == GW::Agents::GetPlayerId() && pak->state & 0x2000) {
+    if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetPlayerId() && pak->state & 0x2000) {
         pak->state ^= 0x2000;
     }
 }
-void PconsWindow::OnSpeechBubble(GW::HookStatus *status, GW::Packet::StoC::SpeechBubble *pak) {
-    if (!PconAlcohol::suppress_drunk_text || status->blocked) return;
+void PconsWindow::OnSpeechBubble(GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* pak)
+{
+    if (!PconAlcohol::suppress_drunk_text || status->blocked)
+        return;
 
     const wchar_t* m = pak->message;
     const std::wstring_view msg{m, 4};
@@ -297,41 +296,47 @@ void PconsWindow::OnSpeechBubble(GW::HookStatus *status, GW::Packet::StoC::Speec
         status->blocked = true;
     }
 
-    //printf("\\x%X\\x%X\\x%X\\x%X\n", m[0], m[1], m[2], m[3]);
+    // printf("\\x%X\\x%X\\x%X\\x%X\n", m[0], m[1], m[2], m[3]);
 }
-void PconsWindow::OnObjectiveDone(GW::HookStatus *,GW::Packet::StoC::ObjectiveDone *packet)
+void PconsWindow::OnObjectiveDone(GW::HookStatus*, GW::Packet::StoC::ObjectiveDone* packet)
 {
-    PconsWindow &instance = Instance();
+    PconsWindow& instance = Instance();
     instance.objectives_complete.push_back(packet->objective_id);
     instance.CheckObjectivesCompleteAutoDisable();
 }
-void PconsWindow::OnVanquishComplete(GW::HookStatus *,GW::Packet::StoC::VanquishComplete *)
+void PconsWindow::OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::VanquishComplete*)
 {
-    PconsWindow &instance = Instance();
+    PconsWindow& instance = Instance();
     if (!instance.disable_cons_on_vanquish_completion || !instance.enabled)
         return;
     instance.SetEnabled(false);
     Log::Info("Cons auto-disabled on completion");
 }
-void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv) {
+void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv)
+{
     if (argc <= 1) {
         Instance().ToggleEnable();
-    } else if (argc >= 2) {
-        std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    }
+    else if (argc >= 2) {
+        const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
         if (arg1 != L"on" && arg1 != L"off" && arg1 != L"toggle" && arg1 != L"refill") {
             Log::Error("Invalid argument '%ls', please use /pcons [on|off|toggle] [pcon]", argv[1]);
         }
         if (argc == 2) {
             if (arg1 == L"on") {
                 Instance().SetEnabled(true);
-            } else if (arg1 == L"off") {
+            }
+            else if (arg1 == L"off") {
                 Instance().SetEnabled(false);
-            } else if (arg1 == L"toggle") {
+            }
+            else if (arg1 == L"toggle") {
                 Instance().ToggleEnable();
-            } else if (arg1 == L"refill") {
+            }
+            else if (arg1 == L"refill") {
                 Instance().Refill();
             }
-        } else {
+        }
+        else {
             std::wstring argPcon = GuiUtils::ToLower(argv[2]);
             for (int i = 3; i < argc; i++) {
                 argPcon.append(L" ");
@@ -347,8 +352,10 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv) {
                 std::string pconName(pcon->chat);
                 std::string pconNameSanitized = GuiUtils::ToLower(pconName);
                 unsigned int pconNameLength = pconNameSanitized.length();
-                if (compareLength > pconNameLength) continue;
-                if (pconNameSanitized.rfind(compare) == std::string::npos) continue;
+                if (compareLength > pconNameLength)
+                    continue;
+                if (pconNameSanitized.rfind(compare) == std::string::npos)
+                    continue;
                 if (bestMatchLength < pconNameLength) {
                     bestMatchLength = pconNameLength;
                     bestMatch = pcon;
@@ -363,39 +370,43 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv) {
             }
             if (arg1 == L"on") {
                 bestMatch->SetEnabled(true);
-            } else if (arg1 == L"off") {
+            }
+            else if (arg1 == L"off") {
                 bestMatch->SetEnabled(false);
-            } else if (arg1 == L"toggle") {
+            }
+            else if (arg1 == L"toggle") {
                 bestMatch->Toggle();
-            } else if (arg1 == L"refill") {
+            }
+            else if (arg1 == L"refill") {
                 bestMatch->Refill();
             }
         }
     }
 }
 
-bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text) {
+bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text)
+{
     bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text, center_align_text);
 
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
-        ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+    if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
         ToggleEnable();
     }
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     return clicked;
 }
-void PconsWindow::Draw(IDirect3DDevice9* device) {
-    if (!visible) return;
+void PconsWindow::Draw(IDirect3DDevice9* device)
+{
+    if (!visible)
+        return;
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
     if (show_enable_button) {
         ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-        if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
-            ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+        if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
             ToggleEnable();
         }
         ImGui::PopStyleColor();
@@ -404,7 +415,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
     for (unsigned int i = 0; i < pcons.size(); ++i) {
         if (pcons[i]->IsVisible()) {
             if (j++ % items_per_row > 0) {
-                ImGui::SameLine(0,2.0f);
+                ImGui::SameLine(0, 2.0f);
             }
             pcons[i]->Draw(device);
         }
@@ -427,9 +438,9 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
         }
     }
     ImGui::End();
-
 }
-void PconsWindow::Update(float delta) {
+void PconsWindow::Update(float delta)
+{
     UNREFERENCED_PARAMETER(delta);
     if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID())
         MapChanged(); // Map changed.
@@ -444,11 +455,12 @@ void PconsWindow::Update(float delta) {
         pcon->Update();
     }
 }
-void PconsWindow::MapChanged() {
+void PconsWindow::MapChanged()
+{
     elite_area_check_timer = TIMER_INIT();
     map_id = GW::Map::GetMapID();
     Pcon::map_has_effects_array = false;
-    if(instance_type != InstanceType::Loading)
+    if (instance_type != InstanceType::Loading)
         previous_instance_type = instance_type;
     instance_type = GW::Map::GetInstanceType();
     // If we've just come from an explorable area then disable pcons.
@@ -458,7 +470,7 @@ void PconsWindow::MapChanged() {
     player = nullptr;
     elite_area_disable_triggered = false;
     // Find out which objectives we need to complete for this map.
-    auto map_objectives_it = objectives_to_complete_by_map_id.find(map_id);
+    const auto map_objectives_it = objectives_to_complete_by_map_id.find(map_id);
     if (map_objectives_it != objectives_to_complete_by_map_id.end()) {
         objectives_complete.clear();
         current_objectives_to_check = map_objectives_it->second;
@@ -467,83 +479,91 @@ void PconsWindow::MapChanged() {
         current_objectives_to_check.clear();
     }
     // Find out if we need to check for boss range for this map.
-    auto map_location_it = final_room_location_by_map_id.find(map_id);
+    const auto map_location_it = final_room_location_by_map_id.find(map_id);
     if (map_location_it != final_room_location_by_map_id.end()) {
         current_final_room_location = map_location_it->second;
     }
     else {
         current_final_room_location = GW::Vec2f(0, 0);
     }
-
-
 }
-void PconsWindow::Refill(bool do_refill) {
+
+void PconsWindow::Refill(bool do_refill)
+{
     for (Pcon* pcon : pcons) {
         pcon->Refill(do_refill && pcon->IsEnabled());
     }
 }
-bool PconsWindow::GetEnabled() {
+
+bool PconsWindow::GetEnabled()
+{
     return enabled;
 }
-bool PconsWindow::SetEnabled(bool b) {
-    if (enabled == b) return enabled; // Do nothing - already enabled/disabled.
+
+bool PconsWindow::SetEnabled(bool b)
+{
+    if (enabled == b)
+        return enabled; // Do nothing - already enabled/disabled.
     enabled = b;
     Refill(enabled);
     switch (GW::Map::GetInstanceType()) {
-    case InstanceType::Outpost:
-        if(tick_with_pcons)
-            GW::PartyMgr::Tick(enabled);
-    case InstanceType::Explorable: {
-        if (HotkeysWindow::CurrentHotkey() &&
-            !HotkeysWindow::CurrentHotkey()->show_message_in_emote_channel)
-            break; // Selected hotkey doesn't allow a message.
-        ImGuiWindow *main =
-            ImGui::FindWindowByName(MainWindow::Instance().Name());
-        ImGuiWindow *pcon = ImGui::FindWindowByName(Name());
-        if ((pcon == nullptr || pcon->Collapsed || !visible) &&
-            (main == nullptr || main->Collapsed ||
-             !MainWindow::Instance().visible)) {
-            Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
+        case InstanceType::Outpost:
+            if (tick_with_pcons)
+                GW::PartyMgr::Tick(enabled);
+        case InstanceType::Explorable: {
+            if (HotkeysWindow::CurrentHotkey() && !HotkeysWindow::CurrentHotkey()->show_message_in_emote_channel)
+                break; // Selected hotkey doesn't allow a message.
+            ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
+            ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
+            if ((pcon == nullptr || pcon->Collapsed || !visible) && (main == nullptr || main->Collapsed || !MainWindow::Instance().visible)) {
+                Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
+            }
+            break;
         }
-        break;
-    }
-    default:
-        break;
+        default: break;
     }
     return enabled;
 }
 
-void PconsWindow::RegisterSettingsContent() {
+void PconsWindow::RegisterSettingsContent()
+{
     ToolboxUIElement::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
-        "Game Settings",
-        nullptr,
+        "Game Settings", nullptr,
         [this](const std::string&, bool is_showing) {
-            if (!is_showing) return;
+            if (!is_showing)
+                return;
             DrawLunarsAndAlcoholSettings();
-        }, 1.1f);
+        },
+        1.1f);
 }
 
-void PconsWindow::DrawLunarsAndAlcoholSettings() {
+void PconsWindow::DrawLunarsAndAlcoholSettings()
+{
     ImGui::Text("Lunars and Alcohol");
     ImGui::Text("Current drunk level: %d", Pcon::alcohol_level);
     ImGui::StartSpacedElements(380.f);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Suppress lunar and drunk post-processing effects", &Pcon::suppress_drunk_effect);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Suppress lunar and drunk post-processing effects", &Pcon::suppress_drunk_effect);
     ImGui::ShowHelp("Will actually disable any *change*, so make sure you're not drunk already when enabling this!");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Suppress lunar and drunk text", &Pcon::suppress_drunk_text);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Suppress lunar and drunk text", &Pcon::suppress_drunk_text);
     ImGui::ShowHelp("Will hide drunk and lunars messages on top of your and other characters");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Suppress drunk emotes", &Pcon::suppress_drunk_emotes);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Suppress drunk emotes", &Pcon::suppress_drunk_emotes);
     ImGui::ShowHelp("Important:\n"
-        "This feature is experimental and might crash your game.\n"
-        "Using level 1 alcohol instead of this is recommended for preventing drunk emotes.\n"
-        "This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
+                    "This feature is experimental and might crash your game.\n"
+                    "Using level 1 alcohol instead of this is recommended for preventing drunk emotes.\n"
+                    "This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
     ImGui::ShowHelp("Will hide the skills in your effect monitor");
 }
 
-void PconsWindow::CheckObjectivesCompleteAutoDisable() {
+void PconsWindow::CheckObjectivesCompleteAutoDisable()
+{
     if (!enabled || elite_area_disable_triggered || instance_type != InstanceType::Explorable) {
-        return;     // Pcons disabled, auto disable already triggered, or not in explorable area.
+        return; // Pcons disabled, auto disable already triggered, or not in explorable area.
     }
     if (!disable_cons_on_objective_completion || objectives_complete.empty() || current_objectives_to_check.empty()) {
         return; // No objectives complete, or no objectives to check for this map.
@@ -554,7 +574,8 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable() {
         for (size_t j = 0; j < objectives_complete.size() && !objective_complete; j++) {
             objective_complete = current_objectives_to_check.at(i) == objectives_complete.at(j);
         }
-        if (!objective_complete)    return; // Not all objectives complete.
+        if (!objective_complete)
+            return; // Not all objectives complete.
     }
     if (objective_complete) {
         elite_area_disable_triggered = true;
@@ -563,12 +584,13 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable() {
     }
 }
 
-void PconsWindow::CheckBossRangeAutoDisable() { // Trigger Elite area auto disable if applicable
+void PconsWindow::CheckBossRangeAutoDisable()
+{ // Trigger Elite area auto disable if applicable
     if (!enabled || elite_area_disable_triggered || instance_type != InstanceType::Explorable) {
-        return;     // Pcons disabled, auto disable already triggered, or not in explorable area.
+        return; // Pcons disabled, auto disable already triggered, or not in explorable area.
     }
     if (!disable_cons_in_final_room || current_final_room_location == GW::Vec2f(0, 0) || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
-        return;     // No boss location to check for this map, player ptr not loaded, or checked recently already.
+        return; // No boss location to check for this map, player ptr not loaded, or checked recently already.
     }
     elite_area_check_timer = TIMER_INIT();
     float d = GetDistance(GW::Vec2f(player->pos), current_final_room_location);
@@ -579,7 +601,8 @@ void PconsWindow::CheckBossRangeAutoDisable() { // Trigger Elite area auto disab
     }
 }
 
-void PconsWindow::LoadSettings(ToolboxIni* ini) {
+void PconsWindow::LoadSettings(ToolboxIni* ini)
+{
     ToolboxWindow::LoadSettings(ini);
     show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
@@ -591,7 +614,7 @@ void PconsWindow::LoadSettings(ToolboxIni* ini) {
     items_per_row = ini->GetLongValue(Name(), VAR_NAME(items_per_row), 3);
     Pcon::pcons_delay = ini->GetLongValue(Name(), VAR_NAME(pcons_delay), 5000);
     Pcon::lunar_delay = ini->GetLongValue(Name(), VAR_NAME(lunar_delay), 500);
-    Pcon::size = (float)ini->GetDoubleValue(Name(), "pconsize", 46.0);
+    Pcon::size = static_cast<float>(ini->GetDoubleValue(Name(), "pconsize", 46.0));
     Pcon::disable_when_not_found = ini->GetBoolValue(Name(), VAR_NAME(disable_when_not_found), true);
     Pcon::enabled_bg_color = Colors::Load(ini, Name(), VAR_NAME(enabled_bg_color), Pcon::enabled_bg_color);
     show_enable_button = ini->GetBoolValue(Name(), VAR_NAME(show_enable_button), show_enable_button);
@@ -611,9 +634,27 @@ void PconsWindow::LoadSettings(ToolboxIni* ini) {
     disable_cons_on_vanquish_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_vanquish_completion), disable_cons_on_vanquish_completion);
     disable_cons_in_final_room = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
     disable_cons_on_objective_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
+
+    std::string order = ini->GetValue(Name(), "order", "");
+    std::vector<std::string_view> order_vec;
+    for (const auto str : std::views::split(order, ';') | std::views::transform([](auto&& rng) {
+             if (rng.begin() == rng.end())
+                 return std::string_view("");
+             return std::string_view(&*rng.begin(), std::ranges::distance(rng));
+         })) {
+        if (str.empty())
+            continue;
+        order_vec.push_back(str);
+    }
+    std::ranges::sort(pcons, [&order_vec](const Pcon* a, const Pcon* b) {
+        const auto a_it = std::ranges::find(order_vec, a->ini);
+        const auto b_it = std::ranges::find(order_vec, b->ini);
+        return a_it != order_vec.end() && (b_it == order_vec.end() || a_it < b_it);
+    });
 }
 
-void PconsWindow::SaveSettings(ToolboxIni* ini) {
+void PconsWindow::SaveSettings(ToolboxIni* ini)
+{
     ToolboxWindow::SaveSettings(ini);
 
     for (Pcon* pcon : pcons) {
@@ -646,21 +687,34 @@ void PconsWindow::SaveSettings(ToolboxIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_vanquish_completion), disable_cons_on_vanquish_completion);
     ini->SetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
     ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
+
+    auto ss = std::stringstream();
+    std::ranges::for_each(pcons, [&ss](const auto pcon) {
+        ss << pcon->ini << ";";
+    });
+    const auto str = ss.str();
+    ini->SetValue(Name(), "order", str.c_str());
 }
 
-void PconsWindow::DrawSettingInternal() {
+void PconsWindow::DrawSettingInternal()
+{
     ImGui::Separator();
     ImGui::Text("Functionality:");
     ImGui::StartSpacedElements(275.f);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Toggle Pcons per character", &Pcon::pcons_by_character);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Toggle Pcons per character", &Pcon::pcons_by_character);
     ImGui::ShowHelp("Tick to remember pcon enable/disable per character.\nUntick to enable/disable regardless of current character.");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Tick with pcons", &tick_with_pcons);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Tick with pcons", &tick_with_pcons);
     ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
     ImGui::ShowHelp("Toolbox will disable a pcon if it is not found in the inventory");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Refill from storage", &Pcon::refill_if_below_threshold);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Refill from storage", &Pcon::refill_if_below_threshold);
     ImGui::ShowHelp("Toolbox will refill pcons from storage if below the threshold");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
     ImGui::ShowHelp("Display a number on the bottom of each pcon icon, showing total quantity in storage.\n"
                     "This only displays when in an outpost.");
     ImGui::NextSpacedElement();
@@ -668,10 +722,9 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::ShowHelp("If this is ticked, clicking on a pcon while holding shift will enable/disable all of the same category\n"
                     "Categories: Conset, Rock Candies, Kabob+Soup+Salad");
     ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%d milliseconds");
-    ImGui::ShowHelp(
-        "After using a pcon, toolbox will not use it again for this amount of time.\n"
-        "It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
-        "Decrease the value if you have good ping and you die a lot.");
+    ImGui::ShowHelp("After using a pcon, toolbox will not use it again for this amount of time.\n"
+                    "It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
+                    "Decrease the value if you have good ping and you die a lot.");
     ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%d milliseconds");
     if (ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");
@@ -687,17 +740,41 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::DragFloat("Pcon Size", &Pcon::size, 1.0f, 10.0f, 0.0f);
     ImGui::ShowHelp("Size of each Pcon icon in the interface");
     Colors::DrawSettingHueWheel("Enabled-Background", &Pcon::enabled_bg_color);
-    if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
+    if (Pcon::size <= 1.0f)
+        Pcon::size = 1.0f;
     if (ImGui::TreeNodeEx("Visibility", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::StartSpacedElements(300.f);
-        ImGui::NextSpacedElement(); ImGui::Checkbox("Show Enable/Disable button", &show_enable_button);
-        ImGui::NextSpacedElement(); ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
+        ImGui::Checkbox("Show Enable/Disable button", &show_enable_button);
+        ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
         ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
-        ImGui::NextSpacedElement(); ImGui::Checkbox("Hide city Pcons in explorable areas", &Pcon::hide_city_pcons_in_explorable_areas);
-        ImGui::StartSpacedElements(280.f);
-        for (Pcon* pcon : pcons) {
-            ImGui::NextSpacedElement(); ImGui::Checkbox(pcon->chat.c_str(), &pcon->visible);
+        ImGui::Checkbox("Hide city Pcons in explorable areas", &Pcon::hide_city_pcons_in_explorable_areas);
+        if (ImGui::BeginTable("pcons_visibility", 2)) {
+            for (auto it = pcons.begin(); it != pcons.end(); it++) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                Pcon* pcon = *it;
+                ImGui::PushID(pcon->ini.c_str());
+                ImGui::Checkbox(pcon->chat.c_str(), &pcon->visible);
+                ImGui::TableNextColumn();
+                if (it != pcons.begin()) {
+                    if (ImGui::Button("Up")) {
+                        std::iter_swap(it, it - 1);
+                    }
+                    if (it != pcons.end() - 1) {
+                        ImGui::SameLine();
+                    }
+                }
+                else {
+                    ImGui::SameLine(62);
+                }
+                if (it != pcons.end() - 1) {
+                    if (ImGui::Button("Down")) {
+                        std::iter_swap(it, it + 1);
+                    }
+                }
+                ImGui::PopID();
+            }
         }
+        ImGui::EndTable();
         ImGui::TreePop();
     }
 
@@ -706,12 +783,16 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::Separator();
     ImGui::Text("Auto-Disabling Pcons");
     ImGui::StartSpacedElements(380.f);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Auto Disable on Vanquish completion", &disable_cons_on_vanquish_completion);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Auto Disable on Vanquish completion", &disable_cons_on_vanquish_completion);
     ImGui::ShowHelp(disable_cons_on_vanquish_completion_hint);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room);
     ImGui::ShowHelp(disable_cons_in_final_room_hint);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Auto Disable on final objective completion", &disable_cons_on_objective_completion);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Auto Disable on final objective completion", &disable_cons_on_objective_completion);
     ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Disable on map change", &disable_pcons_on_map_change);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Disable on map change", &disable_pcons_on_map_change);
     ImGui::ShowHelp("Toolbox will disable pcons when leaving an explorable area");
 }
