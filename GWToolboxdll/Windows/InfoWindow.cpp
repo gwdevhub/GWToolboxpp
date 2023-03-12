@@ -625,25 +625,25 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopID();
         }
         if (show_dialog && ImGui::CollapsingHeader("Dialog")) {
-            EncInfoField("Dialog Body", DialogModule::Instance().GetDialogBody());
+            EncInfoField("Dialog Body", DialogModule::GetDialogBody());
             InfoField("Last Dialog", "0x%X", GW::Agents::GetLastDialogId());
             ImGui::Text("Available NPC Dialogs:");
             ImGui::ShowHelp("Talk to an NPC to see available dialogs");
-            const auto& messages = DialogModule::Instance().GetDialogButtonMessages();
-            const auto& buttons = DialogModule::Instance().GetDialogButtons();
+            const auto& messages = DialogModule::GetDialogButtonMessages();
+            const auto& buttons = DialogModule::GetDialogButtons();
             char bbuf[48];
             for (size_t i = 0; i < buttons.size();i++) {
                 snprintf(bbuf, _countof(bbuf), "send_dialog_%d", i);
                 ImGui::PushID(bbuf);
                 if (ImGui::Button("Send")) {
                     uint32_t dialog_id = buttons[i]->dialog_id;
-                    GW::GameThread::Enqueue([dialog_id]() {
-                        GW::Agents::SendDialog(dialog_id);
-                        });
+                    GW::GameThread::Enqueue([dialog_id] {
+                        DialogModule::SendDialog(dialog_id);
+                    });
                 }
                 ImGui::SameLine();
                 InfoField("Icon", "0x%X", buttons[i]->button_icon);
-                EncInfoField("Encoded",messages[i]->encoded().c_str());
+                EncInfoField("Encoded", messages[i]->encoded().c_str());
                 InfoField(messages[i]->string().c_str(), "0x%X", buttons[i]->dialog_id);
                 ImGui::PopID();
             }
@@ -682,7 +682,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             }
         }
         if (show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
-            const float sqr_soul_range = 1400.0f * 1400.0f;
+            constexpr float sqr_soul_range = 1400.0f * 1400.0f;
             int soul_count = 0;
             int cast_count = 0;
             int spirit_count = 0;
