@@ -356,7 +356,8 @@ namespace {
                 {L"alliance",GW::UI::FlagPreference::ChannelAlliance},
                 {L"guild",GW::UI::FlagPreference::ChannelGuild},
                 {L"team",GW::UI::FlagPreference::ChannelGroup},
-                {L"alliance",GW::UI::FlagPreference::ChannelAlliance}
+                {L"alliance",GW::UI::FlagPreference::ChannelAlliance},
+                {L"music",GW::UI::NumberPreference::MusicVolume}
             };
         }
         return pref_map;
