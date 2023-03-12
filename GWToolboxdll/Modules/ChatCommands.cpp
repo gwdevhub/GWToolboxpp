@@ -877,6 +877,7 @@ void ChatCommands::Update(float delta) {
 void ChatCommands::QuestPing::Init() {
     auto* quest = GW::PlayerMgr::GetActiveQuest();
     if (quest) {
+        quest_id = quest->quest_id;
         name.reset(quest->name);
         objectives.reset(quest->objectives);
     }
@@ -899,7 +900,9 @@ void ChatCommands::QuestPing::Update() {
         objectives.reset(nullptr);
     }
     if (!name.wstring().empty()) {
-        GW::Chat::SendChat('#', GuiUtils::WikiUrl(name.wstring().c_str()).c_str());
+        wchar_t url_buf[64];
+        swprintf(url_buf, _countof(url_buf), L"%SGame_link:Quest_%d", GuiUtils::WikiUrl(L"").c_str(), quest_id);
+        GW::Chat::SendChat('#', url_buf);
         name.reset(nullptr);
     }
 }

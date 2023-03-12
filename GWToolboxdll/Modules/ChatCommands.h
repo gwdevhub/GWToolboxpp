@@ -137,6 +137,7 @@ private:
     } skill_to_use;
 
     struct QuestPing {
+        GW::Constants::QuestID  quest_id = (GW::Constants::QuestID)0;
         GuiUtils::EncString name;
         GuiUtils::EncString description;
         GuiUtils::EncString objectives;
