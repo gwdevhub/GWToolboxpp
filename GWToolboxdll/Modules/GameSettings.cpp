@@ -2358,7 +2358,7 @@ void GameSettings::OnAgentStartCast(GW::HookStatus* , GW::UI::UIMessage, void* w
 };
 
 // Redirect /wiki commands to go to useful pages
-void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*) {
+void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
     std::string url = GuiUtils::ToLower((char*)wParam);
     if (strstr(url.c_str(), "/wiki/main_page")) {
         // Redirect /wiki to /wiki <current map name>
@@ -2371,7 +2371,9 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage, void* w
         status->blocked = true;
         auto* quest = GW::PlayerMgr::GetActiveQuest();
         if (quest) {
-            pending_wiki_search_term = new GuiUtils::EncString(quest->name);
+            char redirected_url[255];
+            snprintf(redirected_url, _countof(redirected_url), "%sGame_link:Quest_%d", GuiUtils::WikiUrl(L"").c_str(), quest->quest_id);
+            GW::UI::SendUIMessage(message_id, redirected_url);
         }
         else {
             Log::Error("No current active quest");
