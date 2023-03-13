@@ -1332,7 +1332,7 @@ void TravelWindow::CmdTP(const wchar_t *message, int argc, LPWSTR *argv)
         argOutpost.append(argDistrict);
     }
     if (ParseOutpost(argOutpost, outpost, district, district_number)) {
-        wchar_t first_char_of_last_arg = *argv[last_arg_pos];
+        wchar_t first_char_of_last_arg = *argv[argc-1];
         switch (outpost) {
             case GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost:
             case GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost:
