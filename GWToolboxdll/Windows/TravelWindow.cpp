@@ -600,6 +600,52 @@ namespace {
             && TravelWindow::LanguageFromDistrict(_district) == GW::Map::GetLanguage()
             && (!_district_number || _district_number == static_cast<uint32_t>(GW::Map::GetDistrict()));
     }
+
+
+    struct MapStruct {
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        int region_id = 0;
+        int language_id = 0;
+        uint32_t district_number = 0;
+    };
+
+    struct UIErrorMessage {
+        int error_index;
+        wchar_t* message;
+    };
+
+    bool retry_map_travel = false;
+    MapStruct pending_map_travel;
+
+    GW::UI::UIMessage messages_to_hook[] = {
+        GW::UI::UIMessage::kErrorMessage,
+        GW::UI::UIMessage::kMapChange,
+        GW::UI::UIMessage::kTravel
+    };
+    GW::HookEntry OnUIMessage_HookEntry;
+    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kMapChange: {
+            pending_map_travel.map_id = GW::Constants::MapID::None;
+        } break;
+        case GW::UI::UIMessage::kTravel: {
+            MapStruct* t = (MapStruct*)wparam;
+            if (t && t != &pending_map_travel) 
+                pending_map_travel = *t;
+        } break;
+        case GW::UI::UIMessage::kErrorMessage: {
+            if (!(retry_map_travel && pending_map_travel.map_id != GW::Constants::MapID::None))
+                break;
+            UIErrorMessage* msg = (UIErrorMessage*)wparam;
+            if (msg && msg->message && *msg->message == 0xb25) {
+                // Travel failed, but we want to retry
+                // NB: 0xb25 = "That district is full. Please select another."
+                status->blocked = true;
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kTravel, (void*)&pending_map_travel);
+            }
+        } break;
+        }
+    }
 }
 
 void TravelWindow::Initialize() {
@@ -611,6 +657,11 @@ void TravelWindow::Initialize() {
     GW::Chat::CreateCommand(L"tp", &CmdTP);
     GW::Chat::CreateCommand(L"to", &CmdTP);
     GW::Chat::CreateCommand(L"travel", &CmdTP);
+
+    for (auto message_id : messages_to_hook) {
+        GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
+    }
+    
 }
 void TravelWindow::Terminate() {
     ToolboxWindow::Terminate();
@@ -618,6 +669,10 @@ void TravelWindow::Terminate() {
         delete[] it;
     }
     searchable_explorable_areas.clear();
+    for (auto message_id : messages_to_hook) {
+        (message_id);
+        GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
+    }
 }
 
 void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid) {
@@ -933,12 +988,7 @@ bool TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _d
     //return GW::Map::Travel(MapID, District, district_number);
 }
 void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
-    struct MapStruct {
-        GW::Constants::MapID map_id;
-        int region_id;
-        int language_id;
-        uint32_t district_number;
-    };
+
     MapStruct* t = new MapStruct();
     t->map_id = MapID;
     t->district_number = _district_number;
@@ -1010,6 +1060,7 @@ void TravelWindow::DrawSettingInternal() {
         fav_index.resize(static_cast<size_t>(fav_count), -1);
     }
     ImGui::PopItemWidth();
+    ImGui::Checkbox("Automatically retry if the district is full", &retry_map_travel);
 }
 
 void TravelWindow::LoadSettings(ToolboxIni* ini) {
@@ -1023,7 +1074,8 @@ void TravelWindow::LoadSettings(ToolboxIni* ini) {
         snprintf(key, 32, "Fav%d", i);
         fav_index[static_cast<size_t>(i)] = ini->GetLongValue(Name(), key, -1);
     }
-    close_on_travel = ini->GetBoolValue(Name(), VAR_NAME(close_on_travel), false);
+    LOAD_BOOL(close_on_travel);
+    LOAD_BOOL(retry_map_travel);
 }
 
 void TravelWindow::SaveSettings(ToolboxIni* ini) {
@@ -1035,7 +1087,8 @@ void TravelWindow::SaveSettings(ToolboxIni* ini) {
         snprintf(key, 32, "Fav%d", i);
         ini->SetLongValue(Name(), key, fav_index[ui]);
     }
-    ini->SetBoolValue(Name(), VAR_NAME(close_on_travel), close_on_travel);
+    SAVE_BOOL(close_on_travel);
+    SAVE_BOOL(retry_map_travel);
 }
 
 GW::Constants::MapID TravelWindow::IndexToOutpostID(int index) {
