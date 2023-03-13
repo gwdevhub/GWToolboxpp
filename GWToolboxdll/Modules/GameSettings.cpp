@@ -1277,7 +1277,7 @@ void GameSettings::OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
             // 8101 7f88 010a 8101 730e 0001
             if (auto_open_locked_chest && wcscmp(info->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
                 // Auto use lockpick
-                GW::Agents::SendDialog(info->dialog_id);
+                DialogModule::SendDialog(info->dialog_id);
             }
         } break;
     }
