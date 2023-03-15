@@ -42,7 +42,7 @@ namespace {
     }
     // Parse any buttons held within the dialog body
     void OnDialogBodyDecoded(void*, wchar_t* decoded) {
-        const std::wregex button_regex(L"<a=([0-9]+)>([^<]+)<");
+        const std::wregex button_regex(L"<a=([0-9]+)>([^<]+)(<|$)");
         std::wsmatch m;
         std::wstring subject(decoded);
         std::wstring msg;
