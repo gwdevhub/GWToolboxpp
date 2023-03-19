@@ -37,6 +37,7 @@
 #include <Modules/ToastNotifications.h>
 #include <Modules/LoginModule.h>
 #include <Modules/MouseFix.h>
+#include <Modules/GuildWarsSettingsModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -128,7 +129,8 @@ namespace {
         MouseFix::Instance(),
         Obfuscator::Instance(),
         KeyboardLanguageFix::Instance(),
-        ZrawDeepModule::Instance()
+        ZrawDeepModule::Instance(),
+        GuildWarsSettingsModule::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
