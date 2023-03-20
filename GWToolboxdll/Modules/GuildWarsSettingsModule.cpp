@@ -227,6 +227,7 @@ namespace {
             key_mappings_array[i] = in.key_mappings[i];
         }
     }
+
     // Read preferences from an ini file to a PreferencesStruct
     void LoadPreferences(PreferencesStruct& prefs, ToolboxIni& ini) {
         GetPreferences(prefs); // Use current settings as a default
@@ -294,8 +295,60 @@ namespace {
         }
     }
 
+    void OnPreferencesLoadFileChosen(const char* result) {
+        if (!result)
+            return;
+        std::filesystem::path* filename_cpy = new std::filesystem::path(result);
+        GW::GameThread::Enqueue([filename_cpy]() {
+            int err = SI_OK;
+            PreferencesStruct prefs;
+            ToolboxIni ini;
+            if (!std::filesystem::exists(*filename_cpy)) {
+                Log::Error("File name %s doesn't exist",filename_cpy->string().c_str());
+                goto cleanup;
+            }
+
+            err = ini.LoadFile(filename_cpy->string().c_str());
+            if (err != SI_OK) {
+                Log::Error("Failed to load ini file %s - error code %d",filename_cpy->string().c_str(),err);
+                goto cleanup;
+            }
+
+            LoadPreferences(prefs, ini);
+            SetPreferences(prefs);
+
+            Log::Info("Preferences loaded from %s", filename_cpy->filename().string().c_str());
+
+            cleanup:
+            delete filename_cpy;
+            });
+    }
+
+    std::filesystem::path GetDefaultFilename() {
+        return std::format(L"{}_GuildWarsSettings.ini", GW::GetCharContext()->player_email);
+    }
+
+    void OnPreferencesSaveFileChosen(const char* result) {
+        if (!result)
+            return;
+        std::filesystem::path* filename_cpy = new std::filesystem::path(result);
+        GW::GameThread::Enqueue([filename_cpy]() {
+            PreferencesStruct current_prefs;
+            GetPreferences(current_prefs);
+            ToolboxIni ini;
+            SavePreferences(current_prefs, ini);
+            auto err = ini.SaveFile(filename_cpy->string().c_str());
+            if (err == SI_OK) {
+                Log::Info("Preferences saved to %s", filename_cpy->filename().string().c_str());
+            }
+            else {
+                Log::Error("Failed to save ini file %s - error code %d",filename_cpy->string().c_str(),err);
+            }
+            delete filename_cpy;
+            });
+    }
     void CmdSave(const wchar_t*, int argc, LPWSTR* argv) {
-        std::filesystem::path filename = std::format(L"{}_GuildWarsSettings.ini",GW::GetCharContext()->player_email);
+        std::filesystem::path filename = GetDefaultFilename();
         if (argc > 1)
             filename = argv[1];
         if (filename.extension() != L".ini")
@@ -303,18 +356,11 @@ namespace {
         filename = GuiUtils::SanitiseFilename(filename.string());
         filename = Resources::GetPath(filename);
 
-        PreferencesStruct current_prefs;
-        GetPreferences(current_prefs);
-        ToolboxIni ini;
-        SavePreferences(current_prefs, ini);
-
-        auto err = ini.SaveFile(filename.string().c_str());
-        if(err != SI_OK)
-            return Log::Error("Failed to save ini file %s - error code %d",filename.string().c_str(),err);
+        OnPreferencesSaveFileChosen(filename.string().c_str());
     }
 
     void CmdLoad(const wchar_t*, int argc, LPWSTR* argv) {
-        std::filesystem::path filename = std::format(L"{}_GuildWarsSettings.ini",GW::GetCharContext()->player_email);
+        std::filesystem::path filename = GetDefaultFilename();
         if (argc > 1)
             filename = argv[1];
         if (filename.extension() != L".ini")
@@ -322,22 +368,7 @@ namespace {
         filename = GuiUtils::SanitiseFilename(filename.string());
         filename = Resources::GetPath(filename);
 
-        if(!std::filesystem::exists(filename))
-            return Log::Error("File name %s doesn't exist",filename.string().c_str());
-
-        ToolboxIni ini;
-        const auto err = ini.LoadFile(filename.string().c_str());
-        if(err != SI_OK)
-            return Log::Error("Failed to load ini file %s - error code %d",filename.string().c_str(),err);
-
-        PreferencesStruct* prefs = new PreferencesStruct();
-        LoadPreferences(*prefs, ini);
-        GW::GameThread::Enqueue([prefs,filename_cpy = filename]() {
-            SetPreferences(*prefs);
-
-            Log::Info("Preferences loaded from %s", filename_cpy.filename().string().c_str());
-            delete prefs;
-            });
+        OnPreferencesLoadFileChosen(filename.string().c_str());
     }
 }
 
@@ -358,6 +389,18 @@ void GuildWarsSettingsModule::Terminate() {
     GW::Chat::DeleteCommand(L"saveprefs");
     GW::Chat::DeleteCommand(L"loadprefs");
 }
-void GuildWarsSettingsModule::Update(float) {
-
+void GuildWarsSettingsModule::DrawSettingInternal() {
+    ImGui::TextUnformatted("Choose a file from your computer to load Guild Wars settings");
+    if (ImGui::Button("Load from disk...")) {
+        std::filesystem::path filename = GetDefaultFilename();
+        filename = Resources::GetPath(filename);
+        Resources::OpenFileDialog(OnPreferencesLoadFileChosen,"ini",filename.string().c_str());
+    }
+    ImGui::Separator();
+    ImGui::TextUnformatted("Choose a file from your computer to save Guild Wars settings");
+    if (ImGui::Button("Save to disk...")) {
+        std::filesystem::path filename = GetDefaultFilename();
+        filename = Resources::GetPath(filename);
+        Resources::SaveFileDialog(OnPreferencesSaveFileChosen,"ini",filename.string().c_str());
+    }
 }

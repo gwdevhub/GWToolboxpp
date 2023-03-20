@@ -52,6 +52,7 @@ include(easywsclient)
 include(simpleini)
 include(discord_game_sdk)
 include(gwtoolboxdll_plugins)
+include(nativefiledialog)
 
 add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)

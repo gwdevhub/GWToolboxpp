@@ -19,6 +19,11 @@
 #include <GWCA/Constants/Constants.h>
 #include <Modules/Resources.h>
 
+#include <include/nfd.h>
+#include <nfd_common.h>
+#include <nfd_common.c>
+#include <nfd_win.cpp>
+
 namespace {
     const char* d3dErrorMessage(HRESULT code) {
         switch (code) {
@@ -157,6 +162,56 @@ void Resources::EnqueueWorkerTask(std::function<void()> f) { worker_mutex.lock()
 void Resources::EnqueueMainTask(std::function<void()> f) { main_mutex.lock(); main_jobs.push(f); main_mutex.unlock(); }
 void Resources::EnqueueDxTask(std::function<void(IDirect3DDevice9*)> f) { dx_mutex.lock(); dx_jobs.push(f); dx_mutex.unlock(); }
 
+void Resources::OpenFileDialog(std::function<void(const char*)> callback, const char* filterList, const char* defaultPath) {
+
+    std::string* filterList_cpy = new std::string(filterList);
+    std::string* defaultPath_cpy = new std::string(defaultPath);
+    EnqueueWorkerTask([callback, filterList_cpy,defaultPath_cpy]() {
+        nfdchar_t *outPath = NULL;
+        nfdresult_t result = NFD_OpenDialog( filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
+        delete filterList_cpy;
+        delete defaultPath_cpy;
+
+        switch (result) {
+        case NFD_OKAY:
+        case NFD_CANCEL:
+            break;
+        default:
+            Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+            break;
+        }
+
+        callback(outPath);
+        if(outPath)
+            free(outPath);
+        });
+}
+void Resources::SaveFileDialog(std::function<void(const char*)> callback, const char* filterList, const char* defaultPath) {
+
+    std::string* filterList_cpy = new std::string(filterList);
+    std::string* defaultPath_cpy = new std::string(defaultPath);
+
+    EnqueueWorkerTask([callback, filterList_cpy,defaultPath_cpy]() {
+        nfdchar_t *outPath = NULL;
+        nfdresult_t result = NFD_OpenDialog( filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
+        delete filterList_cpy;
+        delete defaultPath_cpy;
+
+        switch (result) {
+        case NFD_OKAY:
+            callback(outPath);
+            break;
+        case NFD_CANCEL:
+            callback(NULL);
+            break;
+        default:
+            Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+            break;
+        }
+        if(outPath)
+            free(outPath);
+        });
+}
 float Resources::GetGWScaleMultiplier(bool force) {
     if (force || cached_ui_scale == .0f) {
         const auto interfacesize =

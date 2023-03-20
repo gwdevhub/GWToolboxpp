@@ -63,6 +63,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     simpleini
     imgui::fonts
     IconFontCppHeaders
+	nativefiledialog
 
     # libs:
     Dbghelp.lib # for MiniDump

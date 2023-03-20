@@ -11,12 +11,11 @@ public:
         static GuildWarsSettingsModule instance;
         return instance;
     }
-
+    const char* Icon() const override { return ICON_FA_CHECK_SQUARE;  }
     const char* Name() const override { return "Guild Wars Settings"; }
     const char* Description() const override { return "Ability to save or load Guild Wars settings to a file on disk"; }
-    bool HasSettings() override { return false; }
 
     void Initialize() override;
     void Terminate() override;
-    void Update(float) override;
+    void DrawSettingInternal() override;
 };

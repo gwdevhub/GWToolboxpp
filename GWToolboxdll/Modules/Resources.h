@@ -44,6 +44,8 @@ public:
     // Enqueue instruction to be called on the draw loop of GW e.g. messing with DirectX9 device
     static void EnqueueDxTask(std::function<void(IDirect3DDevice9*)> f);
 
+    static void OpenFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
+    static void SaveFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
 
     static int LoadIniFromFile(const wchar_t* filename, ToolboxIni* inifile);
     static int LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile);
