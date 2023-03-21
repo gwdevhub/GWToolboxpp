@@ -8,6 +8,7 @@
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/Packets/StoC.h>
 
+#include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
@@ -35,6 +36,7 @@
 
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/Resources.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
 
 namespace {
     DirectX::XMFLOAT2 gwinch_scale;
@@ -150,6 +152,34 @@ namespace {
         GW::Hook::LeaveHook();
         return result;
     }
+
+    bool hide_compass_quest_marker = false;
+    GW::MemoryPatcher show_compass_quest_marker_patch;
+    void ToggleCompassQuestMarker(bool enable) {
+        if (enable == show_compass_quest_marker_patch.GetIsEnable())
+            return;
+        show_compass_quest_marker_patch.TogglePatch(enable);
+        GW::GameThread::Enqueue([]() {
+            const auto quest = GW::PlayerMgr::GetActiveQuest();
+            if (quest) {
+                struct QuestUIMsg {
+                    GW::Constants::QuestID quest_id;
+                    GW::Vec3f marker;
+                    uint32_t h0024;
+                    GW::Constants::MapID map_to;
+                    uint32_t log_state;
+                } msg;
+                msg.quest_id = quest->quest_id;
+                msg.marker = quest->marker;
+                msg.h0024 = quest->h0024;
+                msg.map_to = quest->map_to;
+                msg.log_state = quest->log_state;
+
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &msg);
+            }
+            });
+
+    }
 }
 void Minimap::DrawHelp() {
     if (!ImGui::TreeNodeEx("Minimap", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
@@ -189,6 +219,12 @@ void Minimap::Initialize()
     DrawCompassAgentsByType_Func = (DrawCompassAgentsByType_pt)GW::Scanner::Find("\x8b\x46\x08\x8d\x5e\x18\x53", "xxxxxxx", -0xb);
     GW::HookBase::CreateHook(DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
     GW::HookBase::EnableHooks(DrawCompassAgentsByType_Func);
+
+    address = GW::Scanner::Find("\xdd\xd8\x6a\x01\x52","xxxxx");
+    if (address)
+        show_compass_quest_marker_patch.SetPatch(address, "\xEB\xEC", 2);
+    ToggleCompassQuestMarker(hide_compass_quest_marker);
+
 
     GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus* ,uint32_t key) {
         if (key != GW::UI::ControlAction_ReverseCamera)
@@ -400,7 +436,11 @@ void Minimap::DrawSettingInternal()
     }
     ImGui::Checkbox("Snap to compass", &snap_to_compass);
     ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
-    ImGui::Checkbox("Hide compass agents", &hide_compass_agents);
+    ImGui::Checkbox("Hide GW compass agents", &hide_compass_agents);
+    if (ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
+        ToggleCompassQuestMarker(hide_compass_quest_marker);
+    }
+    ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
 
     is_movable = is_resizable = !snap_to_compass;
     if (is_resizable) {
@@ -518,6 +558,9 @@ void Minimap::LoadSettings(ToolboxIni *ini)
     snap_to_compass = ini->GetBoolValue(Name(), VAR_NAME(snap_to_compass), snap_to_compass);
     hide_compass_agents = ini->GetBoolValue(Name(), VAR_NAME(hide_compass_agents), hide_compass_agents);
 
+    hide_compass_quest_marker = LOAD_BOOL(hide_compass_quest_marker);
+    ToggleCompassQuestMarker(hide_compass_quest_marker);
+
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
     key_ctrl_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_ctrl_behavior), 2));
     key_shift_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_shift_behavior), 3));
@@ -552,6 +595,8 @@ void Minimap::SaveSettings(ToolboxIni *ini)
     ini->SetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
     ini->SetBoolValue(Name(), VAR_NAME(snap_to_compass), snap_to_compass);
     ini->SetBoolValue(Name(), VAR_NAME(hide_compass_agents), hide_compass_agents);
+
+    SAVE_BOOL(hide_compass_quest_marker);
 
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
