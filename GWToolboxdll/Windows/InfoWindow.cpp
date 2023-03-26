@@ -44,6 +44,7 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/DialogModule.h>
 #include <GWToolbox.h>
+#include <GWCA/Utilities/Scanner.h>
 
 namespace {
     enum class Status {
@@ -507,6 +508,33 @@ namespace {
     void DrawGameSettings() { 
         ImGui::Checkbox("Show message in chat when you're the last player to resign", &show_last_to_resign_message);
     }
+
+    typedef void(__cdecl* GetQuestInfo_pt)(GW::Constants::QuestID);
+    GetQuestInfo_pt RequestQuestInfo_Func = nullptr;
+
+    bool RequestQuestInfo(GW::Constants::QuestID quest_id) {
+        if (!RequestQuestInfo_Func) {
+            uintptr_t address = GW::Scanner::Find("\x68\x4a\x01\x00\x10\xff\x77\x04", "xxxxxxxx", 0x7a);
+            RequestQuestInfo_Func = (GetQuestInfo_pt)GW::Scanner::FunctionFromNearCall(address);
+        }
+        return RequestQuestInfo_Func ? RequestQuestInfo_Func(quest_id), true : false;
+    }
+
+    bool GetQuestEntryGroupName(GW::Constants::QuestID quest_id, wchar_t* out, size_t out_len) {
+        auto quest = GW::PlayerMgr::GetQuest(quest_id);
+        switch (quest->log_state & 0xf0) {
+        case 0x20:
+            return swprintf(out, out_len, L"\x564") != -1;
+        case 0x40:
+            return quest->location && swprintf(out, out_len, L"\x8102\x1978\x10A%s\x1",quest->location) != -1;
+        case 0:
+            return quest->location && swprintf(out, out_len, L"\x565\x10A%s\x1",quest->location) != -1;
+        case 0x10:
+            // Unknown, maybe current mission quest, but this type of quest isn't in the quest log.
+            break;
+        }
+        return false;
+    }
 }
 
 void InfoWindow::Terminate() {
@@ -679,7 +707,33 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             if (q) {
                 ImGui::Text("ID: 0x%X", q->quest_id);
                 ImGui::Text("Marker: (%.0f, %.0f)", q->marker.x, q->marker.y);
+                ImGui::Text("State: 0x%08x", q->log_state);
+                EncInfoField("Location:", q->location);
+                static wchar_t name_buf[128];
+                GetQuestEntryGroupName(q->quest_id, name_buf, _countof(name_buf));
+                EncInfoField("Quest Entry:", name_buf);
+
             }
+#ifdef _DEBUG
+            std::string quests;
+            const auto& quest_log = GW::PlayerMgr::GetQuestLog();
+            std::vector<GW::Quest*> quests_missing_info;
+            if (quest_log) {
+                for (auto& quest : *quest_log) {
+                    if ((quest.log_state & 1) == 0) {
+                        quests_missing_info.push_back(&quest);
+                    }
+                }
+            }
+            ImGui::Text("Quests missing info: %d", quests_missing_info.size());
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Request quest info")) {
+                for (auto& quest : quests_missing_info) {
+                    RequestQuestInfo(quest->quest_id);
+                }
+            }
+#endif
+
         }
         if (show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
             constexpr float sqr_soul_range = 1400.0f * 1400.0f;
