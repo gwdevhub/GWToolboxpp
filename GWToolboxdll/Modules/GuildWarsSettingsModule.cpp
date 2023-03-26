@@ -220,16 +220,13 @@ namespace {
         if (!(quest_entry_encoded_name && *quest_entry_encoded_name && quest_entry_group_context))
             return nullptr;
         auto& quest_entries = quest_entry_group_context->quest_entries;
-        auto node = quest_entries.Get();
-        while (node && node->Next()) {
-            if (wcscmp(node->Next()->encoded_name, quest_entry_encoded_name) == 0)
-                return node->Next();
-            node = node->NextLink();
-        }
-        return nullptr;
+        const auto found = std::ranges::find_if(quest_entries, [quest_entry_encoded_name](auto& entry) {
+            return wcscmp(entry.encoded_name, quest_entry_encoded_name) == 0;
+        });
+        return found == std::ranges::end(quest_entries) ? nullptr : &*found;
     }
     QuestEntryGroup* GetQuestEntryGroup(GW::Constants::QuestID quest_id) {
-        if (quest_id == (GW::Constants::QuestID)0)
+        if (quest_id == static_cast<GW::Constants::QuestID>(0))
             return nullptr;
         wchar_t out[128];
         return GetQuestEntryGroupName(quest_id, out, _countof(out)) ? GetQuestEntryGroup(out) : nullptr;
@@ -537,11 +534,9 @@ void GuildWarsSettingsModule::Update(float) {
     case PendingAction::EXPAND_ALL:
         if (quest_entry_group_context) {
             auto& quest_entries = quest_entry_group_context->quest_entries;
-            auto node = quest_entries.Get();
-            while (node && node->Next()) {
-                node->Next()->is_visible = true;
-                quest_entry_group_visibility[node->Next()->encoded_name] = true;
-                node = node->NextLink();
+            for (auto& entry : quest_entries) {
+                entry.is_visible = true;
+                quest_entry_group_visibility[entry.encoded_name] = true;
             }
         }
         pending_action = PendingAction::REFRESH_LOG;
@@ -549,11 +544,9 @@ void GuildWarsSettingsModule::Update(float) {
     case PendingAction::COLLAPSE_ALL:
         if (quest_entry_group_context) {
             auto& quest_entries = quest_entry_group_context->quest_entries;
-            auto node = quest_entries.Get();
-            while (node && node->Next()) {
-                node->Next()->is_visible = false;
-                quest_entry_group_visibility[node->Next()->encoded_name] = false;
-                node = node->NextLink();
+            for (auto& entry : quest_entries) {
+                entry.is_visible = false;
+                quest_entry_group_visibility[entry.encoded_name] = false;
             }
         }
         pending_action = PendingAction::REFRESH_LOG;
@@ -565,15 +558,15 @@ void GuildWarsSettingsModule::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     CSimpleIni::TNamesDepend keys;
 
-    auto current_quest_group = GetQuestEntryGroup(GW::PlayerMgr::GetActiveQuestId());
+    const auto current_quest_group = GetQuestEntryGroup(GW::PlayerMgr::GetActiveQuestId());
     if (ini->GetAllKeys(section_name, keys)) {
         std::wstring quest_entry_group_name;
         for (const auto& key : keys) {
             if (!GuiUtils::IniToArray(key.pItem, quest_entry_group_name))
                 continue; // @Cleanup: error handling
-            bool is_visible = ini->GetBoolValue(section_name, key.pItem, true);
+            const bool is_visible = ini->GetBoolValue(section_name, key.pItem, true);
             quest_entry_group_visibility[quest_entry_group_name] = is_visible;
-            auto group = GetQuestEntryGroup(quest_entry_group_name.c_str());
+            const auto group = GetQuestEntryGroup(quest_entry_group_name.c_str());
             if (group && current_quest_group != group && group->is_visible != is_visible) {
                 group->is_visible = is_visible;
                 pending_action = PendingAction::REFRESH_LOG;
@@ -586,7 +579,7 @@ void GuildWarsSettingsModule::SaveSettings(ToolboxIni* ini) {
     CSimpleIni::TNamesDepend keys;
     
     std::string tmp;
-    for (auto it : quest_entry_group_visibility) {
+    for (const auto& it : quest_entry_group_visibility) {
         if (!GuiUtils::ArrayToIni(it.first, &tmp))
             continue;// @Cleanup: error handling
         ini->SetBoolValue(section_name, tmp.c_str(), it.second);
