@@ -202,6 +202,8 @@ namespace {
 
     bool auto_open_locked_chest = false;
 
+    bool keep_current_quest_when_new_quest_added = false;
+
     Color nametag_color_npc = NAMETAG_COLOR_DEFAULT_NPC;
     Color nametag_color_player_self = NAMETAG_COLOR_DEFAULT_PLAYER_SELF;
     Color nametag_color_player_other = NAMETAG_COLOR_DEFAULT_PLAYER_OTHER;
@@ -931,6 +933,44 @@ namespace {
         ImGui::Unindent();
     }
 
+
+    GW::Constants::QuestID player_requested_active_quest_id = GW::Constants::QuestID::None;
+
+    GW::HookEntry OnQuestUIMessage_HookEntry;
+    void OnPostQuestUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void*, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kSendSetActiveQuest:
+            if (status->blocked)
+                break;
+            player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
+            break;
+        case GW::UI::UIMessage::kQuestAdded:
+            if (status->blocked)
+                break;
+            if (GW::QuestMgr::GetActiveQuestId() == player_requested_active_quest_id)
+                break;
+            if (keep_current_quest_when_new_quest_added) {
+                // Re-request a quest change
+                auto quest = GW::QuestMgr::GetQuest(player_requested_active_quest_id);
+                if (!quest)
+                    break;
+                GW::Packet::StoC::QuestAdd packet;
+                packet.quest_id = quest->quest_id;
+                packet.marker = quest->marker;
+                packet.map_to = quest->map_to;
+                packet.log_state = quest->log_state;
+                packet.map_from = quest->map_from;
+                wcscpy(packet.location, quest->location);
+                wcscpy(packet.name, quest->name);
+                wcscpy(packet.npc, quest->npc);
+                GW::StoC::EmulatePacket(&packet);
+                GW::QuestMgr::SetActiveQuestId(quest->quest_id);
+            }
+
+            break;
+        }
+    }
+
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
@@ -1266,6 +1306,17 @@ void GameSettings::Initialize() {
     GW::UI::RegisterCreateUIComponentCallback(&OnCreateUIComponent_Entry, OnCreateUIComponent);
 
     set_window_title_delay = TIMER_INIT();
+
+
+    GW::UI::UIMessage ui_message_ids[] = {
+        GW::UI::UIMessage::kQuestAdded,
+        GW::UI::UIMessage::kSendSetActiveQuest
+    };
+    for (auto message_id : ui_message_ids) {
+        GW::UI::RegisterUIMessageCallback(&OnQuestUIMessage_HookEntry, message_id, OnPostQuestUIMessage,0x8000);
+    }
+    player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
+
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
 #endif
@@ -1441,6 +1492,8 @@ void GameSettings::LoadSettings(ToolboxIni* ini) {
 
     block_enter_area_message = ini->GetBoolValue(Name(), VAR_NAME(block_enter_area_message), block_enter_area_message);
 
+    LOAD_BOOL(keep_current_quest_when_new_quest_added);
+
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     SetWindowTitle(set_window_title_as_charname);
 
@@ -1483,6 +1536,8 @@ void GameSettings::Terminate() {
     gold_confirm_patch.Reset();
     skill_description_patch.Reset();
     skip_map_entry_message_patch.Reset();
+
+    GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
 }
 
 void GameSettings::SaveSettings(ToolboxIni* ini) {
@@ -1583,6 +1638,8 @@ void GameSettings::SaveSettings(ToolboxIni* ini) {
     Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_in_party), nametag_color_player_in_party);
     Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_other), nametag_color_player_other);
     Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_self), nametag_color_player_self);
+
+    SAVE_BOOL(keep_current_quest_when_new_quest_added);
 
 
 }
@@ -1695,6 +1752,8 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
     ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting",&drop_ua_on_cast);
     ImGui::Checkbox("Auto use lockpick when interacting with locked chest", &auto_open_locked_chest);
+    ImGui::Checkbox("Keep current quest when accepting a new one", &keep_current_quest_when_new_quest_added);
+
     ImGui::Text("Block floating numbers above character when:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);

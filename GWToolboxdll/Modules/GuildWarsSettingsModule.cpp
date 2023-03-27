@@ -15,11 +15,14 @@
 
 #include "GuildWarsSettingsModule.h"
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <GWCA/GameContainers/List.h>
 #include <GWCA/Constants/QuestIDs.h>
 #include <GWCA/Utilities/Hooker.h>
+
+#include <GWCA/Packets/Opcodes.h>
 
 namespace {
 
@@ -185,22 +188,6 @@ namespace {
     const char* ini_label_flags = "Preference Flags";
     const char* ini_label_key_mappings = "Key Mappings";
     const char* ini_label_windows = "Window Positions";
-
-    bool GetQuestEntryGroupName(GW::Constants::QuestID quest_id, wchar_t* out, size_t out_len) {
-        auto quest = GW::PlayerMgr::GetQuest(quest_id);
-        switch (quest->log_state & 0xf0) {
-        case 0x20:
-            return swprintf(out, out_len, L"\x564") != -1;
-        case 0x40:
-            return quest->location && swprintf(out, out_len, L"\x8102\x1978\x10A%s\x1",quest->location) != -1;
-        case 0:
-            return quest->location && swprintf(out, out_len, L"\x565\x10A%s\x1",quest->location) != -1;
-        case 0x10:
-            // Unknown, maybe current mission quest, but this type of quest isn't in the quest log.
-            break;
-        }
-        return false;
-    }
     std::map<std::wstring, bool> quest_entry_group_visibility;
     
     struct QuestEntryGroup {
@@ -229,7 +216,7 @@ namespace {
         if (quest_id == static_cast<GW::Constants::QuestID>(0))
             return nullptr;
         wchar_t out[128];
-        return GetQuestEntryGroupName(quest_id, out, _countof(out)) ? GetQuestEntryGroup(out) : nullptr;
+        return GW::QuestMgr::GetQuestEntryGroupName(quest_id, out, _countof(out)) ? GetQuestEntryGroup(out) : nullptr;
     }
 
 
@@ -429,9 +416,19 @@ namespace {
         NONE,
         EXPAND_ALL,
         COLLAPSE_ALL,
+        WAIT_REFRESH_LOG,
         REFRESH_LOG,
         OPEN_LOG
     } pending_action = PendingAction::NONE;
+
+    void ToggleQuestEntrySection(QuestEntryGroup* entry, bool is_visible, bool refresh_log = true) {
+        if (!(entry && entry->is_visible != is_visible))
+            return;
+        entry->is_visible = is_visible;
+        quest_entry_group_visibility[entry->encoded_name] = is_visible;
+        if(refresh_log)
+            pending_action = PendingAction::WAIT_REFRESH_LOG;
+    }
 
     typedef QuestEntryGroup*(__fastcall* GetOrCreateQuestEntryGroup_pt)(QuestEntryGroupContext* context, void* edx, wchar_t* quest_entry_group_name);
     GetOrCreateQuestEntryGroup_pt GetOrCreateQuestEntryGroup_Func = 0;
@@ -441,7 +438,7 @@ namespace {
         GW::Hook::EnterHook();
         bool is_creating = GetQuestEntryGroup(quest_entry_group_name) == nullptr;
         QuestEntryGroup* group = GetOrCreateQuestEntryGroup_Ret(context, edx, quest_entry_group_name);
-        auto current_quest_group = GetQuestEntryGroup(GW::PlayerMgr::GetActiveQuestId());
+        auto current_quest_group = GetQuestEntryGroup(GW::QuestMgr::GetActiveQuestId());
         if (!is_creating)
             goto ret;
         
@@ -483,8 +480,6 @@ namespace {
         GW::HookBase::LeaveHook();
     }
     const char* section_name = "GuildWarsSettingsModule:Quest Log Entries Visible";
-
-
 }
 
 void GuildWarsSettingsModule::Initialize() {
@@ -509,13 +504,20 @@ void GuildWarsSettingsModule::Initialize() {
         }
     }
 
+
+
     GW::Chat::CreateCommand(L"saveprefs", CmdSave);
 
     GW::Chat::CreateCommand(L"loadprefs", CmdLoad);
+
 }
 
 void GuildWarsSettingsModule::Update(float) {
     switch (pending_action) {
+    case PendingAction::WAIT_REFRESH_LOG:
+        // In some cases, we have to wait a frame before toggling the log e.g. taking a new quest
+        pending_action = PendingAction::REFRESH_LOG;
+        break;
     case PendingAction::REFRESH_LOG: {
         auto window_pos = GW::UI::GetWindowPosition(GW::UI::WindowID_QuestLog);
         if (window_pos && window_pos->visible()) {
@@ -531,8 +533,7 @@ void GuildWarsSettingsModule::Update(float) {
         if (quest_entry_group_context) {
             auto& quest_entries = quest_entry_group_context->quest_entries;
             for (auto& entry : quest_entries) {
-                entry.is_visible = true;
-                quest_entry_group_visibility[entry.encoded_name] = true;
+                ToggleQuestEntrySection(&entry, true);
             }
         }
         pending_action = PendingAction::REFRESH_LOG;
@@ -541,8 +542,7 @@ void GuildWarsSettingsModule::Update(float) {
         if (quest_entry_group_context) {
             auto& quest_entries = quest_entry_group_context->quest_entries;
             for (auto& entry : quest_entries) {
-                entry.is_visible = false;
-                quest_entry_group_visibility[entry.encoded_name] = false;
+                ToggleQuestEntrySection(&entry, false);
             }
         }
         pending_action = PendingAction::REFRESH_LOG;
@@ -554,7 +554,7 @@ void GuildWarsSettingsModule::LoadSettings(ToolboxIni* ini) {
     ToolboxModule::LoadSettings(ini);
     CSimpleIni::TNamesDepend keys;
 
-    const auto current_quest_group = GetQuestEntryGroup(GW::PlayerMgr::GetActiveQuestId());
+    const auto current_quest_group = GetQuestEntryGroup(GW::QuestMgr::GetActiveQuestId());
     if (ini->GetAllKeys(section_name, keys)) {
         std::wstring quest_entry_group_name;
         for (const auto& key : keys) {
@@ -563,9 +563,8 @@ void GuildWarsSettingsModule::LoadSettings(ToolboxIni* ini) {
             const bool is_visible = ini->GetBoolValue(section_name, key.pItem, true);
             quest_entry_group_visibility[quest_entry_group_name] = is_visible;
             const auto group = GetQuestEntryGroup(quest_entry_group_name.c_str());
-            if (group && current_quest_group != group && group->is_visible != is_visible) {
-                group->is_visible = is_visible;
-                pending_action = PendingAction::REFRESH_LOG;
+            if (current_quest_group != group) {
+                ToggleQuestEntrySection(group, is_visible);
             }
         }
     }
