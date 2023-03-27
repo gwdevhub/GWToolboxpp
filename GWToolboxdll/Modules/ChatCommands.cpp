@@ -56,6 +56,7 @@
 #include <Widgets/TimerWidget.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/DialogModule.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 
 #define F_PI 3.14159265358979323846f
@@ -875,7 +876,7 @@ void ChatCommands::Update(float delta) {
     quest_ping.Update();
 }
 void ChatCommands::QuestPing::Init() {
-    auto* quest = GW::PlayerMgr::GetActiveQuest();
+    auto* quest = GW::QuestMgr::GetActiveQuest();
     if (quest) {
         quest_id = quest->quest_id;
         name.reset(quest->name);

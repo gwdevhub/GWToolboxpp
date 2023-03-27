@@ -61,6 +61,7 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Defines.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 #pragma warning(disable : 6011)
 
@@ -2369,7 +2370,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage message_
     else if (strstr(url.c_str(), "?search=quest")) {
         // Redirect /wiki quest to /wiki <current quest name>
         status->blocked = true;
-        auto* quest = GW::PlayerMgr::GetActiveQuest();
+        auto* quest = GW::QuestMgr::GetActiveQuest();
         if (quest) {
             char redirected_url[255];
             snprintf(redirected_url, _countof(redirected_url), "%sGame_link:Quest_%d", GuiUtils::WikiUrl(L"").c_str(), quest->quest_id);

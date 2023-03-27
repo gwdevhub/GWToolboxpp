@@ -37,6 +37,7 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/Resources.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 namespace {
     DirectX::XMFLOAT2 gwinch_scale;
@@ -160,7 +161,7 @@ namespace {
             return;
         show_compass_quest_marker_patch.TogglePatch(enable);
         GW::GameThread::Enqueue([]() {
-            const auto quest = GW::PlayerMgr::GetActiveQuest();
+            const auto quest = GW::QuestMgr::GetActiveQuest();
             if (quest) {
                 struct QuestUIMsg {
                     GW::Constants::QuestID quest_id;

@@ -45,6 +45,7 @@
 #include <Modules/DialogModule.h>
 #include <GWToolbox.h>
 #include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 namespace {
     enum class Status {
@@ -521,7 +522,7 @@ namespace {
     }
 
     bool GetQuestEntryGroupName(GW::Constants::QuestID quest_id, wchar_t* out, size_t out_len) {
-        auto quest = GW::PlayerMgr::GetQuest(quest_id);
+        auto quest = GW::QuestMgr::GetQuest(quest_id);
         switch (quest->log_state & 0xf0) {
         case 0x20:
             return swprintf(out, out_len, L"\x564") != -1;
@@ -703,7 +704,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         #endif
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
-            const GW::Quest* q = GW::PlayerMgr::GetActiveQuest();
+            const GW::Quest* q = GW::QuestMgr::GetActiveQuest();
             if (q) {
                 ImGui::Text("ID: 0x%X", q->quest_id);
                 ImGui::Text("Marker: (%.0f, %.0f)", q->marker.x, q->marker.y);
@@ -716,7 +717,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             }
 #ifdef _DEBUG
             std::string quests;
-            const auto& quest_log = GW::PlayerMgr::GetQuestLog();
+            const auto& quest_log = GW::QuestMgr::GetQuestLog();
             std::vector<GW::Quest*> quests_missing_info;
             if (quest_log) {
                 for (auto& quest : *quest_log) {

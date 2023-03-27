@@ -13,6 +13,7 @@
 
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/Minimap/SymbolsRenderer.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 void SymbolsRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
     color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
@@ -120,7 +121,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
     if (tau > 10 * PI) tau -= 10 * PI;
     DirectX::XMMATRIX translate, world;
 
-    if (const GW::Quest* quest = GW::PlayerMgr::GetActiveQuest()) {
+    if (const GW::Quest* quest = GW::QuestMgr::GetActiveQuest()) {
         const GW::Vec2f qpos = { quest->marker.x, quest->marker.y };
         const float compass_scale = Minimap::Instance().Scale();
         const float marker_scale = (1.0f / compass_scale);

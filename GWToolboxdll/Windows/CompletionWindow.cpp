@@ -30,6 +30,7 @@
 #include <Color.h>
 #include <Modules/DialogModule.h>
 #include <GWCA/Context/PreGameContext.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 using namespace GW::Constants;
 using namespace Missions;
@@ -599,16 +600,7 @@ bool Mission::IsDaily()
 }
 bool Mission::HasQuest()
 {
-    if (zm_quest == QuestID::None)
-        return false;
-    auto* quests = GW::PlayerMgr::GetQuestLog();
-    if (!quests)
-        return false;
-    for (auto& quest : *quests) {
-        if (quest.quest_id == zm_quest)
-            return true;
-    }
-    return false;
+    return GW::QuestMgr::GetQuest(zm_quest) != nullptr;
 }
 
 bool Dungeon::IsDaily()
@@ -617,16 +609,9 @@ bool Dungeon::IsDaily()
 }
 bool Dungeon::HasQuest()
 {
-    if (zb_quests.empty())
-        return false;
-    auto* quests = GW::PlayerMgr::GetQuestLog();
-    if (!quests)
-        return false;
-    for (auto& quest : *quests) {
-        for (auto& zb : zb_quests) {
-            if (quest.quest_id == zb) {
-                return true;
-            }
+    for (auto& zb : zb_quests) {
+        if (GW::QuestMgr::GetQuest(zb)) {
+            return true;
         }
     }
     return false;
