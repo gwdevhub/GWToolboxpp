@@ -609,8 +609,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
     // get stuff
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
-    GW::NPCArray* npcs = agents ? GW::Agents::GetNPCArray() : nullptr;
-    if (!npcs) return;
+    if (!agents) return;
 
     const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
     const GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
