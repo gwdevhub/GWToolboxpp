@@ -3,17 +3,14 @@ layout: default
 ---
 
 # Version History
-Previous releases are provided as dll files. If you are looking for the latest version, go to the [Home Page](./) instead.
-
-In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
+Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for the latest version, go to the [Home Page](./) instead.
 
 ## Version 6.7
 * [New] Added `/chat [all|guild|team|trade|alliance|whisper|close]` to toggle chat tabs
 * [Fix] Fixed crash on start related to gwarmory
 * [Fix] Fixed imgui theme not being loaded on some starts
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.7_Release/GWToolboxdll.dll)
-
+ 
 ## Version 6.6
 * [Minor] Separate modules, widgets and windows in toolbox settings
 * [Minor] Rename warrior obsidian armor in armory module
@@ -25,8 +22,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed crashes caused by adding non-existent characters to friendlist.
 * [Fix] Fixed occasional crash when right clicking items or changing character with obfuscator on
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.6_Release/GWToolboxdll.dll)
-
+ 
 ## Version 6.5
 * [New] Enabled plugin system for public use
 * [New] Duping Window for solo doa players
@@ -47,13 +43,11 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed crashes caused by adding non-existent characters to friendlist.
 * [Fix] Fixed occasional crash when right clicking items or changing character with obfuscator on
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.5_Release/GWToolboxdll.dll)
-
+ 
 ## Version 6.4
 * [Fix] Fixed crashes caused when saving toolbox settings for the first time
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.4_Release/GWToolboxdll.dll)
-
+ 
 ## Version 6.3
 * [New] Added option to show notification/flash window when whole party is ready
 * [Fix] Fixed right click context menu not working if mouse fix it turned off
@@ -61,8 +55,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Minor] Added props to minimap in debug
 * [QoL] Changed behavior of the close button when in fullscreen borderless to gracefully close GW
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.3_Release/GWToolboxdll.dll)
-
+ 
 ## Version 6.2
 * [New] Added `/withdraw <quantity> <model_id1> [<model_id2 ...]` chat command
 * [New] Added options to hide skill descriptions on hover
@@ -101,8 +94,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [QoL] Fixed GW bug preventing reconnect dialog when re-running GW using the -charname parameter ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
 * [QoL] Removed requirement for the -charname parameter to auto login ( requires gwtoolbox to be loaded before login e.g. gwlauncher)
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.2_Release/GWToolboxdll.dll)
-
+ 
 ## Version 6.0
 * [New] GWToolbox no longer requires installation, you can immediately execute the exe or inject the dll manually
 * [New] `/target ally` and `/target enemy` added
@@ -135,8 +127,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Reapply title defaults to Lightbringer again
 * [Fix] Fixed camera sometimes jumping/glitching when looking around with RMB pressed
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/6.0_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.16
 * [New] Added option in game settings to suppress overhead info for experience/faction gained
 * [Minor] `/dialog take` now also takes quest rewards
@@ -147,8 +138,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed ownership logic in ItemFilter module
 * [Fix] Fixed bug causing rerolling to log out completely rather than to char select screen
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.16_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.15
 * [New] Item and skills images now load on demand from Guild Wars Wiki instead of being compiled inside toolbox
 * [New] Added Preferred Skill Ordes window via settings > builds
@@ -195,8 +185,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 
 ...and loads of other stuff I've forgotten to write down
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.15_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.14
 * [New] Added Party Statistics Module
 * [New] Added GW Key Hotkeys to be able to bind modifier keys to in-game controls
@@ -209,15 +198,13 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Minor] Reroll function now kicks all heroes before re-inviting to former party
 * [Minor] Added option to limit signets of capture on skills window to 10
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.14_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.13
 * [Fix] Fixed chat related crash when using obfuscator
 * [Fix] Fixed `/reroll` command not working unless reroll window is visible
 * [Minor] Automatically ignore trade requests and party invites from ignored players
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.13_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.12
 * [Fix] Fixed crash when using `/t` command without any other args
 * [Fix] Fixed occasional crash talking to NPCs
@@ -230,14 +217,12 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Minor] Revisited clickthough settings in minimap widget
 * [Minor] Crash dialogs are handled exclusively by gwtoolbox, and contain more debug info
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.12_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.11
 * [Fix] Fixed crash when completing and objective that hasn't started in objective timer
 * [Fix] Fixed issues connecting to twitch
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.11_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.10
 * [New] Added option to specify player name for hotkeys
 * [New] Hotkeys are now able to be triggered for more than 1 map id
@@ -251,8 +236,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Further fixes to objective timer window should address recent issues with instance timer not resetting properly/invalid times
 * [Fix] Fixed occasional crashes related to incoming chat messages
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.10_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.9
 * [New] Added `/morale` chat command
 * [Minor] Added bulb icon in settings for hints
@@ -264,8 +248,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed bug preventing friend list messages from displaying in the current map that toolbox is loaded in
 * [Fix] Fixed out of memory error after closing toolbox from the char select screen
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.9_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.8
 * [New] Added option in Party Settings to rename tengu/imperial guard summons to their elise skill
 * [New] Completion overhaul; added hero tracking, hard mode toggle, character selector
@@ -282,8 +265,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed bug preventing mouse interaction on char select
 * [Fix] Fixed bugs with objective timer showing wrong start time for runs
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.8_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.7
 
 * [Fix] Fixed crashing related to stack overflow issues on string decoding
@@ -291,8 +273,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed bug causing crash for players who had a character without any skills (e.g. expired trial account)
 * [Fix] Fixed bug causing pcons to refill when disabled
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.7_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.6
 
 * [Minor] Hide pointless quest marker for zaishen scout in all outposts
@@ -313,8 +294,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed bug causing `/target` command to target dead NPCs
 * [Fix] Fixed bug when using `/target` to target signposts
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.6_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.5
 
 * [Fix] Removed unusable settings for world map widget
@@ -322,8 +302,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed jittery movement when camera smoothing is disabled
 * [Fix] Fixed bug in toolbox settings related to controls sharing the same ID
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.5_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.4
 
 * [Minor] Don't credit NPC kills in observer module
@@ -353,15 +332,13 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed bug causing item context menu wiki link to include item quantity when opening the website
 * [Fix] Fixed some NPC dialogs still mentioning the player name when obfuscator is on
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.4_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.3
 
 * [Fix] Fixed some map load crashes when using obfuscator
 * [Fix] Fixed blank pcon icons caused by d3d errors loading from disk
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.3_Release/GWToolboxdll.dll)
-
+ 
 ## Version 5.1
 Please note that a lot of changes have been made in this version in an effort to hide player names in-game in response to the recent bans, so there may be bugs with it. Please raise an issue on GitHub or the Toolbox Discord if you find one!
 
@@ -372,15 +349,13 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed issues preventing resign log from working properly
 * [Fix] Hotfixes for some players on 5.0
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/5.1_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.11
 * [New] Observer module (and windows) added for pvp
 * [Fix] Fixed bugs after GW update 37121
 * [Fix] Fixed crashing issues from 4.10
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.11_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.9
 * [Minor] Added option to disable right click context menu in outpost/explorable
 * [Minor] Added option to disable wiki link on context menu
@@ -391,8 +366,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed crashes when using /tell, /whisper, /t and /w
 * [Fix] Fixed GWToolbox not working after GW update 37112
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.9_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.8
 * [New] Added "Seek Party" to top of trade window when in Kamadan to avoid having to use party search window to buy/sell
 * [New] Right click context menu for materials shows option to store all into chest
@@ -411,8 +385,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed right click not always working when clicking on an item
 * [Fix] Fixed bug that showed the bulk buy option when using materials window whilst ctrl is held
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.8_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.7.1
 * [New] Double click to send items to trade window when trade is open; works with material storage and chest items without having to withdraw them
 * [New] Added option to move entire stacks to trade window by default
@@ -430,22 +403,19 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed bug preventing `/tp kama ae1` from travelling to district 1
 * [Fix] Fixed bug causing objectives to start before timer was reset
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.7_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.6
 * [New] Added `/herobuild` command to load hero teambuild
 * [New] Timer improvements and new options. 
 * [Fix] Fixed a crash bug with the objective timer in Deep
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.6_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.5
 * [Fix] Fixed a crash issue with withdrawing gold from chest
 * [Fix] Fixed some issues with the objective timer
 * [Fix] Fixed some issues with `/reinvite`
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.5_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.4
 * [New] Timer and objective timer now tracks real-time since (first) loading screen. Added options to have the old behavior. 
 * [New] Added more detailed timers for DoA in the objective timer. 
@@ -461,8 +431,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed bug preventing chat filter form blocking some player title achievement messages
 * [Fix] Fixed bug with flagging hotkeys/buttons not working properly after an initial flagging action
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.4_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.3
 * [New] GWToolbox now saves ImGui window positions into Layouts.ini - if you bork up your window size, just "Load Now" to fix it
 * [New] Target nearest item (default `;`) will avoid targeting a chest if there are non-green assigned items next to it
@@ -483,8 +452,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed bug causing windows to open only partially on-screen for the first time due to recent ImGui update
 * [Fix] GWToolbox.exe 2.1.0.0 no longer shows console on-screen when launching
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.3_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.2
 * [New] Support for multi-column skillbar layouts in the skillbar widget
 * [New] Modified launcher to show available GW instances that don't have a character name but do have an email address (e.g. login window)
@@ -503,8 +471,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed issue with alcohol not being popped at the right time
 * [Fix] Fixed bug preventing hero flagging when observing another player whilst dead
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.2_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.1
 * [Fix] Fixed GWToolbox not working for Windows 7/8 users
 * [Fix] Fixed wrong character name in window title
@@ -512,8 +479,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed wrong icon for faction leaderboard in toolbox main window
 * [Fix] Fixed "Hello (null)!" message when starting toolbox without being in a map
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.1_Release/GWToolboxdll.dll)
-
+ 
 ## Version 4.0
 * [New] Added option to improve move-to-cast to better avoid getting aggro when auto-moving to cast range for a spell
 * [New] Updated icons for all widgets and windows
@@ -560,8 +526,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed bond monitor showing bonds on your player that you didn't cast
 * [Fix] Fixed a crash when trying to travel to embark beach without it unlocked via `/tp` command
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/4.0_Release/GWToolboxdll.dll)
-
+ 
 ## Version 3.8.1
 * [New] Added DoA cave timer to timer widget
 * [Minor] Removed salvage/identify chat commands
@@ -578,8 +543,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed buffer overflow crash when moving district in Deep/Urgoz
 * [Fix] Fixed crash when closing Guild Wars in Windows 8
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.8.1_Release/GWToolboxdll.dll)
-
+ 
 ## Version 3.7
 * [Fix] Fixed bug preventing materials from being ctrl+clicked to store when storage is > 250
 * [Fix] Fixed crashes when using `/useskill`
@@ -587,8 +551,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed crash when entering Slavers' Exile dungeon
 * [Minor] Added `/tp kc` for Kaineng Center
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.7_Release/GWToolboxdll.dll)
-
+ 
 ## Version 3.6
 * [New] Added dungeons to objective timer
 * [New] Added refrains to bond monitor
@@ -620,13 +583,11 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed bug preventing "show close button" settings from being available for tb windows
 * [Fix] Ignore perfect salvage kits when using the salvage feature
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.6_Release/GWToolboxdll.dll)
-
+ 
 ## Version 3.4.2
 * [Fix] Reverted custom markers appearing in outposts. Fault Misty.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.42_Release/GWToolbox.dll)
-
+ 
 ## Version 3.4
 * [New] Changed all color inputs to use a slightly different control; now able to click on the color swatch to choose instead of inputting RGBA manually
 * [New] Added available dialog IDs to dialog section of info window when talking to an NPC
@@ -651,8 +612,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed bug preventing hero builds being sent to chat in explorable areas
 * [Fix] Fixed a bug causing alcohol to be spammed when the alcohol widget is disabled in toolbox
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.4_Release/GWToolbox.dll)
-
+ 
 ## Version 3.2
 * [New] Added DirectX distributable check inside GWToolbox at runtime; will now display a message with a link to the DirectX download page instead of just not launching at all.
 * [New] Added option to hide bond monitor in outpost (default showing)
@@ -681,13 +641,11 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed crash when adding a new custom minimap agent whilst the matching NPC is within range.
 * [Fix] Fixed IRC timeout after 3 minutes when connected to Twitch
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.2_Release/GWToolbox.dll)
-
+ 
 ## Version 3.1
 * [Fix] Fix bug where the launcher would ask everytime to download the toolbox.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.1_Release/GWToolbox.dll)
-
+ 
 ## Version 3.0
 * [New] Merged [3vcloud](https://github.com/3vcloud) fork and added him as maintainer to GWToolbox. The following changes are made to GWToolbox.
 * [New] `/loadbuild` command added, allows player to load builds from the GWToolbox Builds window by name or build code. See help section of GWToolbox in-game for more info.
@@ -774,41 +732,34 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixes resign log not working when player numbers are turned on in an explorable area.
 * [Fix] Reduced flashing GW window spam when being invited to a party.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.0_Release/GWToolbox.dll)
-
+ 
 ## Version 2.35
 * [Fix] Fixes following April 22 update.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.35_Release/GWToolbox.dll)
-
+ 
 ## Version 2.34
 * [Fix] Fix crashes with enemies count in info window.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.34_Release/GWToolbox.dll)
-
+ 
 ## Version 2.33
 * [Fix] Fix crashes when trying to drop gold coins.
 * [Fix] Fix a long due bug that caused random crashes, often when using the minimap.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.33_Release/GWToolbox.dll)
-
+ 
 ## Version 2.32
 * [Fix] Fix crashes caused because of bad header values.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.32_Release/GWToolbox.dll)
-
+ 
 ## Version 2.31
 * [Fix] Fixes following February 14 update.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.31_Release/GWToolbox.dll)
-
+ 
 ## Version 2.30
 * [Fix] Fix bug with launcher asking to download every time.
 * [Fix] Main window options are now accessible again.
 * [Fix] Fixed crash dump generation.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.30_Release/GWToolbox.dll)
-
+ 
 ## Version 2.29
 * [New] Added Discord 'Rich Presence' integration.
 * [Fix] Fixes following December 13th update.
@@ -818,8 +769,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Minor] Vanquish Widget can now be ctrl+clicked to print the vanquish information to group chat.
 * [Minor] Now, '/resignlog' only prints name of players who didn't resigned yet.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.29_Release/GWToolbox.dll)
-
+ 
 ## Version 2.27
 * [New] Added support for adrenaline skill with /useskill command.
 * [New] Added /resignlog command.
@@ -829,25 +779,21 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed bug related to player status introduced in recent game update.
 * [Minor] Several improvements in GWCA and updated 3rd party libraries.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.27_Release/GWToolbox.dll)
-
+ 
 ## Version 2.26
 * [Fix] Fixed bug with friend status message.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.26_Release/GWToolbox.dll)
-
+ 
 ## Version 2.25
 * [New] Added option to disable minimap mouse capture in outpost.
 * [Fix] Fixed bugs related to GW June 12th update.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.25_Release/GWToolbox.dll)
-
+ 
 ## Version 2.24
 * [Fix] Fixed several crash bugs related to GW May 1st update. 
 * [Note] Toolbox borderless functionality is current disabled. It might be fixed or removed in the future. For now, please use the in-game borderless that you can find in GW Options -> Graphics -> Resolution.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.24_Release/GWToolbox.dll)
-
+ 
 ## Version 2.23
 * [New] Added an option to disable the prompt when selling green and gold items.
 * [New] Added an option to show a notification when a friend comes online or goes offline.
@@ -857,26 +803,22 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Minor] Added more bosses to the minimap.
 * [Minor] Added map ids of the event versions of Kamadan to disable the trade chat.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.23_Release/GWToolbox.dll)
-
+ 
 ## Version 2.22.1
 * [Fix] Material buying and auto-manage gold
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.22.1_Release/GWToolbox.dll)
-
+ 
 ## Version 2.22
 * [Fix] General fixes for the February 5th update.
 * [Fix] Pcons not finding proper quantities
 * [Fix] Ctrl+Click storage/inventory item quick-move
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.22_Release/GWToolbox.dll)
-
+ 
 ## Version 2.21
 * [Fix] Added Year of the Pig lunars to lunar pop list.
 * [New] Added an option to ctrl+click on target health (widget) to print it.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.21_Release/GWToolbox.dll)
-
+ 
 
 ## Version 2.20
 * [Fix] Fixed a bug with the bond monitor.
@@ -885,8 +827,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [New] `/afk` will now remove the message set by `/afk message`.
 * [New] Added an option to not set normal or hard mode when loading hero builds.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.20_Release/GWToolbox.dll)
-
+ 
 ## Version 2.19
 * [New] Reapply Title hotkey now applies the appropriate title for the area, not just Lightbringer title.
 * [New] Added an option to allow mouse clickthrough in the minimap.
@@ -898,8 +839,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed bug with bond monitor where it would not update to party size.
 * [Fix] Fixed bug where Jora and Keiran were inversed in hero builds.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.19_Release/GWToolbox.dll)
-
+ 
 ## Version 2.18
 * [New] `/tb`, `/hide` and `/show` do not require quotes for windows with multiple names. 
 * [New] Added an option (in Game Settings) to only show non-learned skills when using a tome.
@@ -914,8 +854,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed the Dhuum start trigger in the Objective Timer.
 * [Fix] Fixed bug where Recall line would not know where to go after your Recall target despawned.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.18_Release/GWToolbox.dll)
-
+ 
 ## Version 2.17
 * [New] Options to change game messages color. (Under GameSettings)
 * [Fix] The "x" in Objective Timer will now delete the record.
@@ -923,8 +862,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Bug were Materials window wouldn't save his settings.
 * [Minor] You can now choose which column to show in Objective Timer.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.17_Release/GWToolbox.dll)
-
+ 
 ## Version 2.16
 * [New] Objective timer for DoA, UW, FoW
 * [New] Option to automatically withdraw and deposit gold while buying materials. (disable by default)
@@ -938,56 +876,48 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Minor] Chat timestamps will work for older messages. (pre-inject)
 * [Minor] The real name of mercenary hero will be used in hero builds instead of "Mercenary Hero X".
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.16_Release/GWToolbox.dll)
-
+ 
 ## Version 2.15
 * [Fix] Fixed toolbox functionality after June 07 2018 game update.
 * [New] GWToolbox will hide itself if you hide the game user interface. Will also work with "Shift+Print Screen".
 * [New] You can now send whisper with hotkeys. In the message text field use the format: ```<target name>,<message>```.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.15_Release/GWToolbox.dll)
-
+ 
 ## Version 2.14
 * [Fix] Fixed toolbox functionality after May 9 2018 game update.
 * [Fix] Fixed bug with ctrl+click & dyes.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.14_Release/GWToolbox.dll)
-
+ 
 ## Version 2.13
 * [Fix] Fixed toolbox functionality after May 9 2018 game update.
 * [New] The damage report will now print the names of the npcs.
 * [Minor] You can now use iso alpha 2 country codes for district with the command `/tp`.
 * [Minor] You can now target player with the command `/target "Player Name"`. (with quotes)
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.13_Release/GWToolbox.dll)
-
+ 
 ## Version 2.12.1
 * [Fix] Removed Borderless Windowed mode, use official implementation instead :)
 * [Fix] Fixed crash bug on toolbox start.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.12.1_Release/GWToolbox.dll)
-
+ 
 ## Version 2.12
 * [Fix] Fixed toolbox functionality after April 30 2018 game update.
 * [New] Added an option in the chat filter to match messages with regular expressions.
 * [New] Improved custom agent rendering functionality. 
 * [Fix] Empty lines in the chat filter will not ignore everything any more.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.12_Release/GWToolbox.dll)
-
+ 
 ## Version 2.11
 * [New] Added the option to set custom color for specific agents in the minimap. 
 * [Fix] Fixed toolbox functionality after April 23 2018 game update.
 * [Fix] Improved overall robustness.
 * [Fix] Improved ctrl+click (move items) behaviors.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.11_Release/GWToolbox.dll)
-
+ 
 ## Version 2.10
 * [Fix] Fixed toolbox functionality after April 2 2018 game update.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.10_Release/GWToolbox.dll)
-
+ 
 ## Version 2.9
 * [Fix] Fixed toolbox functionality after March 23 2018 game update.
 * [New] Added a new Trade chat window containing Kamadan Trade Chat. Powered by `https://kamadan.decltype.org/`.
@@ -1003,19 +933,16 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Fixed a bug where pcons would sometimes not be used if the player had no other effects. 
 * [Fix] Fixed a crash bug when sending Hero Builds to <No Hero>.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.9_Release/GWToolbox.dll)
-
+ 
 ## Version 2.8
 * [Fix] Fixed a crash bug in the hero build window. 
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.8_Release/GWToolbox.dll)
-
+ 
 ## Version 2.7
 * [New] Can now omit the town in `/tp [town] [district] to change district. 
 * [Fix] Fixed the "Close other windows..." option.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.7_Release/GWToolbox.dll)
-
+ 
 ## Version 2.6
 * [New] You can now add or remove any window to the main toolbox window - check Settings -> Toolbox Settings. 
 * [New] Added a new Window to create and load hero team builds.
@@ -1027,18 +954,15 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] You can now once again set up hotkeys on mouse buttons x1 and x2 (forward and back).
 * [Fix] Fixed various small issues. 
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.6_Release/GWToolbox.dll)
-
+ 
 ## Version 2.5
 * [Fix] Fixed bug where toolbox window positions would reset when restoring from an alt-tabbed fullscreen GW.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.5_Release/GWToolbox.dll)
-
+ 
 ## Version 2.4
 * [Fix] Fixed bug where GW would freeze when launching Toolbox while in fullscreen mode.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.4_Release/GWToolbox.dll)
-
+ 
 ## Version 2.3
 * [New] Added `/load <build name>` command to load builds from your saved templates.
 * [New] Added an option to display chat message timestamps.
@@ -1047,8 +971,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [New] Added an alcohol duration widget. 
 * [Fix] Fixed several minor bugs.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.3_Release/GWToolbox.dll)
-
+ 
 ## Version 2.2
 * [New] You can now /tp gh [tag] to any guild in your alliance.
 * [New] Added options to make Guild Wars flash in the taskbar when invited to a party or when your party zones.
@@ -1061,8 +984,7 @@ Please note that a lot of changes have been made in this version in an effort to
 * [Fix] Quest marker will now appear correctly on the minimap.
 * [Fix] Fixed several typos and minor issues.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.2_Release/GWToolbox.dll)
-
+ 
 ## Version 2.1
 In this patch we change the update server to GitHub and fix minor bugs from 2.0 and add a Vanquish counter.
 
@@ -1075,8 +997,7 @@ In this patch we change the update server to GitHub and fix minor bugs from 2.0 
 * [Fix] Custom dialog now works properly
 * [Fix] Fixed several typos and minor issues
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.1_Release/GWToolbox.dll)
-
+ 
 ## Version 2.0 - New interface
 * [New] Rewrote interface
 * [New] Materials Panel
@@ -1086,8 +1007,7 @@ In this patch we change the update server to GitHub and fix minor bugs from 2.0 
 * [New] Clock
 * [New] Notepad
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.0_Release/GWToolbox.dll)
-
+ 
 ## Version 1.11
 * [Minor] Added support for Year of the Rooster Lunars
 * [Minor] Added lunar usage messages to the chat filter
@@ -1095,13 +1015,11 @@ In this patch we change the update server to GitHub and fix minor bugs from 2.0 
 * [Fix] Improved precision of drawings and pings on the minimap
 * [Fix] Improved rendering order in the minimap, players should now be more visible
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/1.11_Release/GWToolbox.dll)
-
+ 
 ## Version 1.10
 * [Fix] Toolbox and timer now show on top and handle clicks on top of the minimap
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/1.10_Release/GWToolbox.dll)
-
+ 
 ## Version 1.9 – Minimap Update
 **IMPORTANT:** GWToolbox does no longer support GWMultiLaunch. Using GWToolbox on clients launched by GWMultiLaunch will probably cause crashes or unexpected behavior. Check https://github.com/GregLando113/gwlauncher/releases for an alternative.
 
@@ -1112,13 +1030,11 @@ In this patch we change the update server to GitHub and fix minor bugs from 2.0 
 * [Fix] Toolbox will not make you pm Toolbox when you press delete after a Toolbox message. Toolbox won’t mind the lack of pms, don’t worry.
 * [Fix] Fixed some crash bugs
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/1.9_Release/GWToolbox.dll)
-
+ 
 ## Version 1.8
 * [Fix] Fixed a crash bug related to Borderless Window
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/1.8_Release/GWToolbox.dll)
-
+ 
 ## Version 1.7
 * [New] Added an option to turn Guild Wars into Borderless fullscreen window.
 * [New] Added a simple /useskill command to use a skill on recharge.
@@ -1128,8 +1044,7 @@ In this patch we change the update server to GitHub and fix minor bugs from 2.0 
 * [Minor] Target hotkey will not target dead agents anymore (e.g. a dead Boo).
 * [Minor] Added a few known ferry dialogs.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/1.7_Release/GWToolbox.dll)
-
+ 
 ## Version 1.6
 * [Minor] Added support for Lunars [Year of the Monkey]
 
@@ -1138,8 +1053,7 @@ In this patch we change the update server to GitHub and fix minor bugs from 2.0 
 * [Fix] Fixed bug where tb would crash on initialization in char selection screen
 * [Minor] increased coindrop interval to 500ms (from 400)
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/1.5_Release/GWToolbox.dll)
-
+ 
 ## Version 1.4
 * [New] Added chat commands
 * [New] Added an option to enable or disable opening of template links
@@ -1149,8 +1063,7 @@ In this patch we change the update server to GitHub and fix minor bugs from 2.0 
 * [Fix] Party damage window now ignores damage inflicted to allies (e.g. from Life Bond)
 * [Fix] Toolbox now properly resize its drawing area after a gw window resize
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/1.4_Release/GWToolbox.dll)
-
+ 
 ## Version 1.3
 * [Fix] Better fix on crash bug by toggling pcons on loading and char selection screen, added flag in launcher to check update messages
 
