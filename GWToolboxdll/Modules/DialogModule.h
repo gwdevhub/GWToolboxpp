@@ -57,8 +57,8 @@ private:
     static uint32_t GetQuestID(const uint32_t dialog_id) {
         return (dialog_id ^ 0x800000) >> 8;
     }
-    static uint32_t SetQuestDialogType(const uint32_t quest_id, QuestDialogType type) {
-        return (quest_id << 8) | (uint32_t)type;
+    static uint32_t GetDialogIDForQuestDialogType(const uint32_t quest_id, QuestDialogType type) {
+        return (quest_id << 8) | static_cast<uint32_t>(type);
     }
     static QuestDialogType GetQuestDialogType(const uint32_t dialog_id) {
         return static_cast<QuestDialogType>(dialog_id & 0xf0000f);

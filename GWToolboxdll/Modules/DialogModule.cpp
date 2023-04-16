@@ -209,12 +209,12 @@ void DialogModule::SendDialog(const uint32_t dialog_id, clock_t time) {
         const uint32_t quest_id = GetQuestID(dialog_id);
         switch (GetQuestDialogType(dialog_id)) {
         case QuestDialogType::TAKE: // Dialog is for taking a quest
-            queued_dialogs_to_send[SetQuestDialogType(quest_id, QuestDialogType::ENQUIRE_NEXT)] = time;
-            queued_dialogs_to_send[SetQuestDialogType(quest_id, QuestDialogType::ENQUIRE)] = time;
+            queued_dialogs_to_send[GetDialogIDForQuestDialogType(quest_id, QuestDialogType::ENQUIRE_NEXT)] = time;
+            queued_dialogs_to_send[GetDialogIDForQuestDialogType(quest_id, QuestDialogType::ENQUIRE)] = time;
             break;
         case QuestDialogType::REWARD: // Dialog is for accepting a quest reward
-            queued_dialogs_to_send[SetQuestDialogType(quest_id, QuestDialogType::ENQUIRE_NEXT)] = time;
-            queued_dialogs_to_send[SetQuestDialogType(quest_id, QuestDialogType::ENQUIRE_REWARD)] = time;
+            queued_dialogs_to_send[GetDialogIDForQuestDialogType(quest_id, QuestDialogType::ENQUIRE_NEXT)] = time;
+            queued_dialogs_to_send[GetDialogIDForQuestDialogType(quest_id, QuestDialogType::ENQUIRE_REWARD)] = time;
             break;
         default: return;
         }
@@ -299,15 +299,27 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
             break;
         }
     }
-    for (const auto quest_id : available_quests) {
-        if (quest_id == static_cast<uint32_t>(GW::Constants::QuestID::UW_UWG) 
-            && available_quests.size() > 1) {
-            // skip unless it's the only available dialog - certain quests almost always want to be taken last
-            continue;
-        }
+    
+    // restore -> escort -> uwg
+    if (std::ranges::find(available_quests, static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore)) != std::ranges::end(available_quests)) {
         SendDialogs({
-            SetQuestDialogType(quest_id,QuestDialogType::TAKE),
-            SetQuestDialogType(quest_id,QuestDialogType::REWARD)
+            GetDialogIDForQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore), QuestDialogType::TAKE),
+            GetDialogIDForQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore), QuestDialogType::REWARD)
+        });
+        return static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore);
+    }
+    if (std::ranges::find(available_quests, static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort)) != std::ranges::end(available_quests)) {
+        SendDialogs({
+            GetDialogIDForQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort), QuestDialogType::TAKE),
+            GetDialogIDForQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort), QuestDialogType::REWARD)
+        });
+        return static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort);
+    }
+
+    for (const auto quest_id : available_quests) {
+        SendDialogs({
+            GetDialogIDForQuestDialogType(quest_id, QuestDialogType::TAKE),
+            GetDialogIDForQuestDialogType(quest_id, QuestDialogType::REWARD)
         });
         return quest_id;
     }
