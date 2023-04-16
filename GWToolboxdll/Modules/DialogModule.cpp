@@ -188,7 +188,7 @@ void DialogModule::Initialize() {
     }
     // NB: Can also be found via floating dialogs array in memory. We're not using hooks for any of the other floating dialogs, but would be good to document later.
     NPCDialogUICallback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(GW::Scanner::FindAssertion(
-        R"(p:\code\gw\ui\game\gmnpc.cpp)", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb));
+        "p:\\code\\gw\\ui\\game\\gmnpc.cpp", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb));
     if (NPCDialogUICallback_Func) {
         GW::HookBase::CreateHook(NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
@@ -301,19 +301,15 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
     }
     
     // restore -> escort -> uwg
-    if (std::ranges::find(available_quests, static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore)) != std::ranges::end(available_quests)) {
-        SendDialogs({
-            GetDialogIDForQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore), QuestDialogType::TAKE),
-            GetDialogIDForQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore), QuestDialogType::REWARD)
-        });
-        return static_cast<uint32_t>(GW::Constants::QuestID::UW_Restore);
-    }
-    if (std::ranges::find(available_quests, static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort)) != std::ranges::end(available_quests)) {
-        SendDialogs({
-            GetDialogIDForQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort), QuestDialogType::TAKE),
-            GetDialogIDForQuestDialogType(static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort), QuestDialogType::REWARD)
-        });
-        return static_cast<uint32_t>(GW::Constants::QuestID::UW_Escort);
+    for (const auto quest_id : { GW::Constants::QuestID::UW_Restore, GW::Constants::QuestID::UW_Escort }) {
+        const uint32_t uquest_id = static_cast<uint32_t>(quest_id);
+        if (std::ranges::find(available_quests, uquest_id) != std::ranges::end(available_quests)) {
+            SendDialogs({
+                GetDialogIDForQuestDialogType(uquest_id, QuestDialogType::TAKE),
+                GetDialogIDForQuestDialogType(uquest_id, QuestDialogType::REWARD)
+            });
+            return uquest_id;
+        }
     }
 
     for (const auto quest_id : available_quests) {
