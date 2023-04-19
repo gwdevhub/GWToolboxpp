@@ -1196,24 +1196,12 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
             ImGui::SetWindowCollapsed(window->Name(), false);
     }
     else if (arg1 == L"save") { // e.g. /tb save pure
-        const bool all_alpha = std::ranges::all_of(arg2, [](auto c) {
-            return std::isalpha(c);
-        });
-        if (!all_alpha) {
-            Log::Error("Syntax: /tb save [name] (name must be alpha only)");
-            return;
-        }
-        GWToolbox::Instance().SaveSettings(arg2);
+        const auto file_location = GWToolbox::Instance().SaveSettings(GuiUtils::SanitiseFilename(arg2.c_str()));
+        Log::InfoW(L"Settings saved to %s", file_location.c_str());
     }
     else if (arg1 == L"load") { // e.g. /tb load tas
-        const bool all_alpha = std::ranges::all_of(arg2, [](auto c) {
-            return std::isalpha(c);
-        });
-        if (!all_alpha) {
-            Log::Error("Syntax: /tb load [name] (name must be alpha only)");
-            return;
-        }
-        GWToolbox::Instance().LoadSettings(arg2, true);
+        const auto file_location = GWToolbox::Instance().LoadSettings(GuiUtils::SanitiseFilename(arg2.c_str()), true);
+        Log::InfoW(L"Settings loaded from %s", file_location.c_str());
     }
     else { // Invalid argument
         const auto text = std::format(L"Syntax: {} {} [hide|show|mini|maxi|load|save]", argv[0], argv[1]);

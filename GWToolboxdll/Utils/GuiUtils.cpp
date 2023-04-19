@@ -389,6 +389,20 @@ namespace GuiUtils {
         out.resize(len);
         return out;
     }
+    std::wstring SanitiseFilename(const std::wstring& str) {
+        const wchar_t* invalid_chars = L"<>:\"/\\|?*";
+        size_t len = 0;
+        std::wstring out;
+        out.resize(str.length());
+        for (size_t i = 0; i < str.length(); i++) {
+            if (wcschr(invalid_chars, str[i]))
+                continue;
+            out[len] = str[i];
+            len++;
+        }
+        out.resize(len);
+        return out;
+    }
 
     std::wstring RemoveDiacritics(const std::wstring& s) {
         static std::map<wchar_t, wchar_t> charmap;

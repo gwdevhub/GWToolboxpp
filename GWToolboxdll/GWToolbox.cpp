@@ -506,7 +506,7 @@ void GWToolbox::Initialize()
     initialized = true;
 }
 
-void GWToolbox::LoadSettings(std::filesystem::path config, bool fresh) const
+std::filesystem::path GWToolbox::LoadSettings(std::filesystem::path config, bool fresh) const
 {
     const auto ini = OpenSettingsFile(config, fresh);
     for (auto m : modules_enabled) {
@@ -518,8 +518,9 @@ void GWToolbox::LoadSettings(std::filesystem::path config, bool fresh) const
     for (auto m : windows_enabled) {
         m->LoadSettings(ini);
     }
+    return ini->location_on_disk;
 }
-void GWToolbox::SaveSettings(std::filesystem::path config) const
+std::filesystem::path GWToolbox::SaveSettings(std::filesystem::path config) const
 {
     const auto ini = OpenSettingsFile(config, false);
     for (auto m : modules_enabled) {
@@ -533,6 +534,7 @@ void GWToolbox::SaveSettings(std::filesystem::path config) const
     }
     ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
     Log::LogW(L"Toolbox settings saved to %s", ini->location_on_disk.wstring().c_str());
+    return ini->location_on_disk;
 }
 
 void GWToolbox::StartSelfDestruct()
