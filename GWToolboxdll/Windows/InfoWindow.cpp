@@ -64,6 +64,7 @@ namespace {
     clock_t send_timer = 0;
     uint32_t last_hovered_item_id = 0;
     uint32_t quoted_item_id = 0;
+    GW::Constants::SkillID last_hovered_skill_id = (GW::Constants::SkillID)0;
 
     bool show_widgets = true;
     bool show_open_chest = true;
@@ -233,6 +234,12 @@ namespace {
         }
     }
 
+    void GetIdsFromFileId(uint32_t param_1,short *param_2) {
+        param_2[1] = (short)((param_1 - 1) / 0xff00) + 0x100;
+        *param_2 = (short)((param_1 - 1) % 0xff00) + 0x100;
+        return;
+    }
+
     void DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, bool force_advanced = false)
     {
         if (!skill)
@@ -246,6 +253,11 @@ namespace {
         auto draw_advanced = [&, skill]() {
             InfoField("Addr", "%p", skill);
             InfoField("Type", "%d", skill->type);
+            short file_ids[2];
+            GetIdsFromFileId(skill->icon_file_id, file_ids);
+            InfoField("FileIds", "%08x %04x %04x", skill->icon_file_id, file_ids[0],file_ids[1]);
+            GetIdsFromFileId(skill->icon_file_id_2, file_ids);
+            InfoField("FileIds2", "%04x %04x", file_ids[0],file_ids[1]);
             EncInfoField("Name Enc", name->encoded().c_str());
             wchar_t out[8];
             GW::UI::UInt32ToEncStr(skill->description, out, _countof(out));
@@ -679,7 +691,11 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         if (ImGui::CollapsingHeader("Hovered Skill")) {
             static GuiUtils::EncString skill_name;
-            DrawSkillInfo(GW::SkillbarMgr::GetHoveredSkill(), &skill_name, true);
+            const auto current = GW::SkillbarMgr::GetHoveredSkill();
+            if (current) {
+                last_hovered_skill_id = current->skill_id;
+            }
+            DrawSkillInfo(GW::SkillbarMgr::GetSkillConstantData(last_hovered_skill_id), &skill_name, true);
         }
         if (show_item && ImGui::CollapsingHeader("Hovered Item")) {
             static GuiUtils::EncString item_name;
