@@ -299,25 +299,23 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
             break;
         }
     }
-    
-    // restore -> escort -> uwg
-    for (const auto quest_id : { GW::Constants::QuestID::UW_Restore, GW::Constants::QuestID::UW_Escort }) {
-        const uint32_t uquest_id = static_cast<uint32_t>(quest_id);
-        if (std::ranges::find(available_quests, uquest_id) != std::ranges::end(available_quests)) {
-            SendDialogs({
-                GetDialogIDForQuestDialogType(uquest_id, QuestDialogType::TAKE),
-                GetDialogIDForQuestDialogType(uquest_id, QuestDialogType::REWARD)
-            });
-            return uquest_id;
-        }
-    }
 
-    for (const auto quest_id : available_quests) {
+    auto take_quest = [](uint32_t quest_id) {
         SendDialogs({
             GetDialogIDForQuestDialogType(quest_id, QuestDialogType::TAKE),
             GetDialogIDForQuestDialogType(quest_id, QuestDialogType::REWARD)
-        });
+            });
         return quest_id;
+    };
+
+    // restore -> escort -> uwg
+    for (const auto quest_id : { GW::Constants::QuestID::UW_Restore, GW::Constants::QuestID::UW_Escort }) {
+        const uint32_t uquest_id = static_cast<uint32_t>(quest_id);
+        if (std::ranges::find(available_quests, uquest_id) != std::ranges::end(available_quests))
+            return take_quest(uquest_id);
+    }
+    if (available_quests.size()) {
+        return take_quest(available_quests[0]);
     }
     return 0;
 }
