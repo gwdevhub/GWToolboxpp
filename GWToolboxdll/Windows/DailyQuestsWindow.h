@@ -6,13 +6,13 @@
 
 namespace GW {
     namespace Constants {
-        enum class QuestID;
+        enum class QuestID : uint32_t;
     }
 }
 
 class DailyQuests : public ToolboxWindow {
     DailyQuests() = default;
-    ~DailyQuests() = default;
+    ~DailyQuests() override = default;
 
 public:
     static DailyQuests& Instance() {

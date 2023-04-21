@@ -13,12 +13,12 @@ namespace GW {
     namespace Constants {
         enum class Profession;
         enum class MapID;
-        enum class SkillID;
+        enum class SkillID : uint32_t;
     }
 }
 class Resources : public ToolboxModule {
     Resources();
-    ~Resources();
+    ~Resources() override;
 
 public:
     Resources(const Resources&) = delete;

@@ -21,7 +21,7 @@ namespace GW {
     struct Friend;
     enum class FriendStatus : uint32_t;
     namespace Constants {
-        enum class SkillID;
+        enum class SkillID : uint32_t;
     }
     namespace UI {
         enum class UIMessage : uint32_t;

@@ -15,7 +15,7 @@ namespace GW {
     enum class FriendStatus : uint32_t;
 
     namespace Constants {
-        enum class SkillID;
+        enum class SkillID : uint32_t;
     }
 
     template <typename T>
