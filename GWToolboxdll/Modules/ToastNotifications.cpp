@@ -3,12 +3,9 @@
 #include "ToastNotifications.h"
 
 #include <GWCA/Constants/Constants.h>
-
 #include <GWCA/Utilities/Hook.h>
-
 #include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Packets/StoC.h>
-
 #include <GWCA/GameEntities/Party.h>
 
 #include <GWCA/Managers/ChatMgr.h>
@@ -20,11 +17,10 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 
-#include <wintoast/wintoastlib.cpp>
+#include <wintoast/wintoastlib.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Defines.h>
-#include <GWCA/Context/PartyContext.h>
 
 namespace {
 
@@ -215,7 +211,7 @@ namespace {
         uint32_t header = 0;
         GW::StoC::PacketCallback cb;
         GW::HookEntry hook_entry;
-        StoC_Callback(uint32_t _header, GW::StoC::PacketCallback _cb) : header(_header), cb(_cb) {};
+        StoC_Callback(uint32_t _header, GW::StoC::PacketCallback _cb) : header(_header), cb(_cb) {}
     };
 
     std::vector<StoC_Callback> stoc_callbacks = {
@@ -267,7 +263,7 @@ bool ToastNotifications::Toast::send() {
     return toast_id != -1;
 }
 bool ToastNotifications::Toast::dismiss() {
-    bool ok = toast_id == -1 ? true : WinToast::instance()->hideToast(toast_id);
+    bool ok = toast_id == -1 ? true : WinToastLib::WinToast::instance()->hideToast(toast_id);
     toast_id = -1;
     return ok;
 }
@@ -306,7 +302,7 @@ void ToastNotifications::Initialize()
 {
     ToolboxModule::Initialize();
 
-    is_platform_compatible = WinToast::instance()->isCompatible();
+    is_platform_compatible = WinToastLib::WinToast::instance()->isCompatible();
     GW::Chat::RegisterWhisperCallback(&OnWhisper_Entry, OnWhisper);
     for (auto& callback : stoc_callbacks) {
         GW::StoC::RegisterPacketCallback( &callback.hook_entry, callback.header, callback.cb, 0x8000);
