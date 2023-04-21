@@ -46,6 +46,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/")
 
 include(gwca)
 include(imgui)
+include(wintoast)
 include(directxtex)
 include(utf8proc)
 include(easywsclient)

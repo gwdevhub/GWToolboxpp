@@ -225,8 +225,7 @@ namespace {
 ToastNotifications::Toast::Toast(std::wstring _title, std::wstring _message) : title(_title), message(_message) {};
 ToastNotifications::Toast::~Toast() {
     TriggerToastCallback(this, false);
-    if (toast_template)
-        delete toast_template;
+    delete toast_template;
 }
 void ToastNotifications::Toast::toastActivated() const {  
     TriggerToastCallback(this, true);
@@ -243,7 +242,7 @@ void ToastNotifications::Toast::toastFailed() const {
 }
 bool ToastNotifications::Toast::send() {
     using namespace WinToastLib;
-    auto instance = WinToast::instance();
+    const auto instance = WinToast::instance();
     if (!instance->isCompatible())
         return false;
     if (!instance->isInitialized()) {
@@ -263,12 +262,12 @@ bool ToastNotifications::Toast::send() {
     return toast_id != -1;
 }
 bool ToastNotifications::Toast::dismiss() {
-    bool ok = toast_id == -1 ? true : WinToastLib::WinToast::instance()->hideToast(toast_id);
+    const bool ok = toast_id == -1 ? true : WinToastLib::WinToast::instance()->hideToast(toast_id);
     toast_id = -1;
     return ok;
 }
 bool ToastNotifications::DismissToast(const wchar_t* title) {
-    auto found = toasts.find(title);
+    const auto found = toasts.find(title);
     if (found != toasts.end()) {
         delete found->second;
         toasts.erase(found);
@@ -280,7 +279,7 @@ ToastNotifications::Toast* ToastNotifications::SendToast(const wchar_t* title, c
         return nullptr;
     if (!CanNotify())
         return nullptr;
-    auto found = toasts.find(title);
+    const auto found = toasts.find(title);
     Toast* toast = found != toasts.end() ? found->second : 0;
     if (!toast) {
         toast = new Toast(title, message);
