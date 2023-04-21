@@ -106,25 +106,25 @@ namespace {
         return nullptr;
     }
     PartyMember* GetPartyMemberByPartyIdx(const uint32_t party_idx) {
-        const auto found = std::ranges::find_if(party_members.begin(), party_members.end(), [party_idx](const auto party_member) {
+        const auto found = std::ranges::find_if(party_members, [party_idx](const auto party_member) {
             return party_member->party_idx == party_idx;
             });
         return found != party_members.end() ? *found : nullptr;
     }
     PartyMember* GetPartyMemberByAgentId(const uint32_t agent_id) {
         // NB: This function is called on the game thread whenever a skill is used. Would it be much performance difference to keep a std::map for this?
-        const auto found = std::ranges::find_if(party_members.begin(), party_members.end(), [agent_id](const auto party_member) {
+        const auto found = std::ranges::find_if(party_members, [agent_id](const auto party_member) {
             return party_member->agent_id == agent_id;
             });
         return found != party_members.end() ? *found : nullptr;
     }
     PartyMember* GetPartyMemberByEncName(const wchar_t* enc_name) {
-        const auto found = std::ranges::find_if(party_members.begin(), party_members.end(), [enc_name](const auto party_member) {
+        const auto found = std::ranges::find_if(party_members, [enc_name](const auto party_member) {
             return party_member->name_enc == enc_name;
             });
         return found != party_members.end() ? *found : nullptr;
     }
-    int GetSkillString(const std::wstring& agent_name,const std::wstring& skill_name,
+    int GetSkillString(const std::wstring& agent_name, const std::wstring& skill_name,
         const uint32_t skill_count, wchar_t* out, size_t len) {
         int written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.",
             agent_name.c_str(), skill_name.c_str(), skill_count);
@@ -323,7 +323,7 @@ namespace {
         // Clear out any party members that are no longer in the party.
         auto it = party_members.begin();
         while (it != party_members.end()) {
-            const auto found = std::ranges::find_if(valid_party_members.begin(), valid_party_members.end(), [it](const auto valid) {
+            const auto found = std::ranges::find_if(valid_party_members, [it](const auto valid) {
                 return valid == *it;
                 });
             if (found == valid_party_members.end()) {

@@ -160,7 +160,7 @@ namespace {
     }
 
     bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, bool enable) {
-        auto found = std::ranges::find(vec.begin(), vec.end(), &m);
+        const auto found = std::ranges::find(vec, &m);
         if (found != vec.end()) {
             // Module found
             if (enable)
@@ -176,7 +176,7 @@ namespace {
             // Module not found
             if (!enable)
                 return false;
-            auto is_terminating = std::ranges::find(modules_terminating.begin(), modules_terminating.end(), &m);
+            const auto is_terminating = std::ranges::find(modules_terminating, &m);
             if (is_terminating != modules_terminating.end())
                 return false; // Not finished terminating
             vec.push_back(&m);
@@ -214,7 +214,7 @@ const std::vector<ToolboxWidget*>& GWToolbox::GetWidgets()
 void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added) {
 
     auto UpdateVec = [added](std::vector<void*>& vec, void* m) {
-        auto found = std::ranges::find(vec.begin(), vec.end(), m);
+        const auto found = std::ranges::find(vec, m);
         if (added) {
             if (found == vec.end()) {
                 vec.push_back(m);
@@ -681,7 +681,7 @@ void GWToolbox::Update(GW::HookStatus *)
     for (auto m : modules_terminating) {
         if (m->CanTerminate()) {
             m->Terminate();
-            auto found = std::ranges::find(modules_terminating.begin(), modules_terminating.end(), m);
+            const auto found = std::ranges::find(modules_terminating, m);
             ASSERT(found != modules_terminating.end());
             modules_terminating.erase(found);
             break;

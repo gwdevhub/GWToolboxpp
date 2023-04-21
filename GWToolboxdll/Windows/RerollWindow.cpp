@@ -168,7 +168,7 @@ namespace {
                 }
             }
             if (ImGui::InputText("###add_character_to_exclude", excluded_char_add_buf, _countof(excluded_char_add_buf), ImGuiInputTextFlags_EnterReturnsTrue)) {
-                auto charname_w = GuiUtils::StringToWString(excluded_char_add_buf);
+                const auto charname_w = GuiUtils::StringToWString(excluded_char_add_buf);
                 if (charname_w.length() && !IsExcludedFromReroll(charname_w.c_str())) {
                     exclude_charnames_from_reroll_cmd.push_back(LowerCaseRemovePunct(charname_w));
                 }

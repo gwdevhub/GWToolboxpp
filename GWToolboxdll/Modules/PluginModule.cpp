@@ -244,7 +244,7 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
     auto to_unload = std::views::filter(loaded_plugins, [&](auto plugin) {
         return std::ranges::find(plugins_loaded_from_ini, plugin) == plugins_loaded_from_ini.end();
         });
-    for (auto plugin : std::views::reverse(to_unload)) {
+    for (const auto plugin : std::views::reverse(to_unload)) {
         UnloadPlugin(plugin);
     }
 }

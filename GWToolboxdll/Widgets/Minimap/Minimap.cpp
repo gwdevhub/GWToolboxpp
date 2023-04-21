@@ -87,7 +87,7 @@ namespace {
     FlaggingState GetFlaggingState() {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
             return FlaggingState::FlagState_None;
-        if (!CaptureMouseClickTypePtr || !(*CaptureMouseClickTypePtr == CaptureType_FlagHero) || !MouseClickCaptureDataPtr || !MouseClickCaptureDataPtr->sub1)
+        if (!CaptureMouseClickTypePtr || *CaptureMouseClickTypePtr != CaptureType_FlagHero || !MouseClickCaptureDataPtr || !MouseClickCaptureDataPtr->sub1)
             return FlaggingState::FlagState_None;
         return *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
     }
@@ -160,7 +160,7 @@ namespace {
         if (enable == show_compass_quest_marker_patch.GetIsEnable())
             return;
         show_compass_quest_marker_patch.TogglePatch(enable);
-        GW::GameThread::Enqueue([]() {
+        GW::GameThread::Enqueue([] {
             const auto quest = GW::QuestMgr::GetActiveQuest();
             if (quest) {
                 struct QuestUIMsg {
@@ -178,7 +178,7 @@ namespace {
 
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &msg);
             }
-            });
+        });
 
     }
 }
@@ -270,7 +270,7 @@ void Minimap::Initialize()
                 effect_renderer.PacketCallback(pak);
         }
     });
-    const GW::UI::UIMessage hook_messages[] = {
+    constexpr GW::UI::UIMessage hook_messages[] = {
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kChangeTarget,
