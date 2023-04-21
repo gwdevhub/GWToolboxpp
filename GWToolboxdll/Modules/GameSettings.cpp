@@ -201,13 +201,13 @@ namespace {
 
     bool keep_current_quest_when_new_quest_added = false;
 
-    Color nametag_color_npc = NAMETAG_COLOR_DEFAULT_NPC;
-    Color nametag_color_player_self = NAMETAG_COLOR_DEFAULT_PLAYER_SELF;
-    Color nametag_color_player_other = NAMETAG_COLOR_DEFAULT_PLAYER_OTHER;
-    Color nametag_color_player_in_party = NAMETAG_COLOR_DEFAULT_PLAYER_IN_PARTY;
-    Color nametag_color_gadget = NAMETAG_COLOR_DEFAULT_GADGET;
-    Color nametag_color_enemy = NAMETAG_COLOR_DEFAULT_ENEMY;
-    Color nametag_color_item = NAMETAG_COLOR_DEFAULT_ITEM;
+    Color nametag_color_npc = static_cast<Color>(DEFAULT_NAMETAG_COLOR::NPC);
+    Color nametag_color_player_self = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_SELF);
+    Color nametag_color_player_other = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_OTHER);
+    Color nametag_color_player_in_party = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY);
+    Color nametag_color_gadget = static_cast<Color>(DEFAULT_NAMETAG_COLOR::GADGET);
+    Color nametag_color_enemy = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ENEMY);
+    Color nametag_color_item = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ITEM);
 
     constexpr float checkbox_w = 270.f;
 
@@ -2466,14 +2466,14 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, GW::UI::UIMessage msgid, void
 {
     if (msgid != GW::UI::UIMessage::kShowAgentNameTag && msgid != GW::UI::UIMessage::kSetAgentNameTagAttribs)
         return;
-    GW::UI::AgentNameTagInfo* tag = (GW::UI::AgentNameTagInfo * )wParam;
-    switch (tag->text_color) {
-    case NAMETAG_COLOR_DEFAULT_NPC: tag->text_color = nametag_color_npc; break;
-    case NAMETAG_COLOR_DEFAULT_ENEMY: tag->text_color = nametag_color_enemy; break;
-    case NAMETAG_COLOR_DEFAULT_GADGET: tag->text_color = nametag_color_gadget; break;
-    case NAMETAG_COLOR_DEFAULT_PLAYER_IN_PARTY: tag->text_color = nametag_color_player_in_party; break;
-    case NAMETAG_COLOR_DEFAULT_PLAYER_OTHER: tag->text_color = nametag_color_player_other; break;
-    case NAMETAG_COLOR_DEFAULT_PLAYER_SELF: tag->text_color = nametag_color_player_self; break;
-    case NAMETAG_COLOR_DEFAULT_ITEM: tag->text_color = nametag_color_item; break;
+    const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
+    switch (static_cast<DEFAULT_NAMETAG_COLOR>(tag->text_color)) {
+    case DEFAULT_NAMETAG_COLOR::NPC: tag->text_color = nametag_color_npc; break;
+    case DEFAULT_NAMETAG_COLOR::ENEMY: tag->text_color = nametag_color_enemy; break;
+    case DEFAULT_NAMETAG_COLOR::GADGET: tag->text_color = nametag_color_gadget; break;
+    case DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY: tag->text_color = nametag_color_player_in_party; break;
+    case DEFAULT_NAMETAG_COLOR::PLAYER_OTHER: tag->text_color = nametag_color_player_other; break;
+    case DEFAULT_NAMETAG_COLOR::PLAYER_SELF: tag->text_color = nametag_color_player_self; break;
+    case DEFAULT_NAMETAG_COLOR::ITEM: tag->text_color = nametag_color_item; break;
     }
 }

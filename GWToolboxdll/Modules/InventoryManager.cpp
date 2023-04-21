@@ -24,6 +24,7 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <Timer.h>
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 #include <Modules/InventoryManager.h>
