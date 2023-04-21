@@ -46,7 +46,6 @@ namespace {
     GW::HookEntry OnCheckboxPreferenceChanged_Entry;
     GW::HookEntry MessageNPC_Entry;
     GW::HookEntry MessageLocal_Entry;
-    GW::HookEntry MessageGlobal_Entry;
     GW::HookEntry MessageServer_Entry;
     GW::HookEntry OnPlayerChatMessage_Entry;
 
@@ -112,10 +111,9 @@ namespace {
     }
 
     // Automatically send /age2 on /age.
-    void OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak)
+    void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer* pak)
     {
-        UNREFERENCED_PARAMETER(status);
-        if (!GameSettings::Instance().GetSettingBool("auto_age2_on_age") || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL) return; // Disabled or message pending
+        if (!GameSettings::GetSettingBool("auto_age2_on_age") || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL) return; // Disabled or message pending
         const wchar_t* msg = ToolboxUtils::GetMessageCore();
         // 0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
         // 0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
@@ -140,18 +138,6 @@ namespace {
         }
         ToolboxUtils::ClearMessageCore();
         status->blocked = true; // consume original packet.
-    }
-
-    // Flash window on guild chat message
-    void OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak)
-    {
-        if (status->blocked) return;                                // Sender blocked, packet handled.
-        if (!GameSettings::GetSettingBool("flash_window_on_guild_chat") || // Flash window on guild chat message
-            static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GUILD)
-            return; // Disabled or messsage not from guild chat
-        const auto sender_name = std::wstring(pak->sender_name);
-        if (const auto player_name = ToolboxUtils::GetPlayerName(); sender_name == player_name) return; // we sent the message ourselves
-        GuiUtils::FlashWindow();
     }
 
     // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
@@ -305,11 +291,9 @@ namespace {
         }
     }
 
-    void OnWhisper(GW::HookStatus*, const wchar_t* from, const wchar_t* msg)
+    void OnWhisper(GW::HookStatus*, const wchar_t* from, const wchar_t*)
     {
-        UNREFERENCED_PARAMETER(msg);
-        if (GameSettings::GetSettingBool("flash_window_on_pm")) GuiUtils::FlashWindow();
-        auto const status = GW::FriendListMgr::GetMyStatus();
+        const auto status = GW::FriendListMgr::GetMyStatus();
         if (status == GW::FriendStatus::Away && !afk_message.empty()) {
             wchar_t buffer[120];
             const auto diff_time = (clock() - afk_message_time) / CLOCKS_PER_SEC;
@@ -321,14 +305,13 @@ namespace {
         }
     }
 
-} // namespace
+}
 
 void ChatSettings::Initialize()
 {
     ToolboxModule::Initialize();
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, OnServerMessage);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&MessageGlobal_Entry, OnGlobalMessage);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, OnLocalChatMessage);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, OnSpeechBubble);
@@ -347,7 +330,6 @@ void ChatSettings::Terminate()
     ToolboxModule::Terminate();
 
     GW::StoC::RemoveCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::MessageGlobal>(&MessageGlobal_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry);
 
     GW::StoC::RemoveCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry);
