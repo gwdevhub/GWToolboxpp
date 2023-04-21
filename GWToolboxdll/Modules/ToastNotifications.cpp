@@ -50,8 +50,8 @@ namespace {
     std::map<std::wstring, ToastNotifications::Toast*> toasts;
 
     bool CanNotify() {
-        bool show_toast = false;
-        auto whnd = GW::MemoryMgr::GetGWWindowHandle();
+        bool show_toast;
+        const auto whnd = GW::MemoryMgr::GetGWWindowHandle();
         if (!whnd)
             return false;
         if (IsIconic(whnd)) {
@@ -68,7 +68,7 @@ namespace {
         if (!show_toast)
             return false;
 
-        GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+        const auto instance_type = GW::Map::GetInstanceType();
 
         switch (instance_type) {
         case GW::Constants::InstanceType::Explorable:
@@ -184,14 +184,14 @@ namespace {
         }
         // This far; Everyone else is ticked up
         if (!player_ticked) {
-            if(show_notifications_on_last_to_ready)
+            if (show_notifications_on_last_to_ready)
                 ToastNotifications::SendToast(party_ready_toast_title, L"You're the last player in your party to tick up", OnGenericToastActivated);
             if (flash_window_on_last_to_ready)
                 FlashWindow();
         }
         else {
             // Everyone including me is ticked
-            if(show_notifications_on_everyone_ready)
+            if (show_notifications_on_everyone_ready)
                 ToastNotifications::SendToast(party_ready_toast_title, L"Everyone in your party is ticked up and ready to go!", OnGenericToastActivated);
             if (flash_window_on_everyone_ready)
                 FlashWindow();
@@ -302,7 +302,7 @@ void ToastNotifications::Initialize()
 {
     ToolboxModule::Initialize();
 
-    is_platform_compatible = WinToastLib::WinToast::instance()->isCompatible();
+    is_platform_compatible = WinToastLib::WinToast::isCompatible();
     GW::Chat::RegisterWhisperCallback(&OnWhisper_Entry, OnWhisper);
     for (auto& callback : stoc_callbacks) {
         GW::StoC::RegisterPacketCallback( &callback.hook_entry, callback.header, callback.cb, 0x8000);
@@ -319,9 +319,9 @@ void ToastNotifications::Terminate()
         GW::StoC::RemoveCallback( callback.header, &callback.hook_entry);
     }
     GW::Chat::RemoveWhisperCallback(&OnWhisper_Entry);
-    for (auto toast : toasts) {
-        TriggerToastCallback(toast.second, false);
-        delete toast.second;
+    for (const auto& toast : toasts | std::views::values) {
+        TriggerToastCallback(toast, false);
+        delete toast;
     }
     toasts.clear();
 }

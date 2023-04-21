@@ -72,15 +72,13 @@ public:
     void OnPlayerLeaveInstance(GW::HookStatus*, GW::Packet::StoC::PlayerLeaveInstance*) const;
     void OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance*) const;
     void OnPartyInviteReceived(GW::HookStatus*, GW::Packet::StoC::PartyInviteReceived_Create*) const;
-    void OnPartyPlayerReady(GW::HookStatus*, GW::Packet::StoC::PartyPlayerReady*) const;
     void OnPartyPlayerJoined(GW::HookStatus*, GW::Packet::StoC::PartyPlayerAdd*);
-    void OnLocalChatMessage(GW::HookStatus*, GW::Packet::StoC::MessageLocal*);
+    void OnLocalChatMessage(GW::HookStatus*, GW::Packet::StoC::MessageLocal*) const;
     void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*) const;
-    void OnGlobalMessage(GW::HookStatus*, GW::Packet::StoC::MessageGlobal*) const;
     void OnScreenShake(GW::HookStatus*, void* packet) const;
     void OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*) const;
     void OnAgentStartCast(GW::HookStatus* status, GW::UI::UIMessage, void*, void*) const;
-    void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
     void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target) const;
     void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) const;
     void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet) const;
@@ -90,11 +88,7 @@ public:
     void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv) const;
 
 
-
 private:
-
-
-    void UpdateFOV() const;
     void FactionEarnedCheckAndWarn();
     bool faction_checked = false;
 

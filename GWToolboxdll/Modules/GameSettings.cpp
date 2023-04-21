@@ -116,7 +116,6 @@ namespace {
     clock_t set_window_title_delay = 0;
 
     clock_t last_send = 0;
-    uint32_t last_dialog_npc_id = 0;
 
     clock_t instance_entered_at = 0;
 
@@ -145,7 +144,7 @@ namespace {
 
     bool block_enter_area_message = false;
 
-        GuiUtils::EncString* pending_wiki_search_term = 0;
+    GuiUtils::EncString* pending_wiki_search_term = nullptr;
 
     bool tick_is_toggle = false;
 
@@ -160,8 +159,6 @@ namespace {
     bool drop_ua_on_cast = false;
 
     bool focus_window_on_launch = true;
-    bool flash_window_on_pm = false;
-    bool flash_window_on_guild_chat = false;
     bool flash_window_on_party_invite = false;
     bool flash_window_on_zoning = false;
     bool focus_window_on_zoning = false;
@@ -169,7 +166,6 @@ namespace {
     bool flash_window_on_trade = true;
     bool focus_window_on_trade = false;
     bool flash_window_on_name_ping = true;
-    bool flash_window_on_all_ready = true;
     bool set_window_title_as_charname = true;
 
     bool auto_return_on_defeat = false;
@@ -878,9 +874,6 @@ namespace {
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Receiving a private message", &flash_window_on_pm);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Receiving a guild message", &flash_window_on_guild_chat);
         ImGui::NextSpacedElement();
         ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
         ImGui::NextSpacedElement();
@@ -891,8 +884,6 @@ namespace {
         ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
         ImGui::NextSpacedElement();
         ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("All other party members have ticked up", &flash_window_on_all_ready);
         ImGui::Unindent();
 
             ImGui::Text("Show Guild Wars in foreground when:");
@@ -954,7 +945,7 @@ namespace {
                 break;
             if (keep_current_quest_when_new_quest_added) {
                 // Re-request a quest change
-                auto quest = GW::QuestMgr::GetQuest(player_requested_active_quest_id);
+                const auto quest = GW::QuestMgr::GetQuest(player_requested_active_quest_id);
                 if (!quest)
                     break;
                 GW::Packet::StoC::QuestAdd packet;
@@ -980,9 +971,7 @@ bool GameSettings::GetSettingBool(const char* setting)
 {
 #define RETURN_SETTING_IF_MATCH(var) if (strcmp(setting, #var) == 0) return var
     RETURN_SETTING_IF_MATCH(auto_age2_on_age);
-    RETURN_SETTING_IF_MATCH(flash_window_on_guild_chat);
     RETURN_SETTING_IF_MATCH(flash_window_on_name_ping);
-    RETURN_SETTING_IF_MATCH(flash_window_on_pm);
     RETURN_SETTING_IF_MATCH(move_materials_to_current_storage_pane);
     RETURN_SETTING_IF_MATCH(move_item_to_current_storage_pane);
     RETURN_SETTING_IF_MATCH(move_item_on_ctrl_click);
@@ -1249,7 +1238,6 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, bind_member(this, &GameSettings::OnTradeStarted));
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyInviteReceived));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyPlayerJoined));
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerReady>(&PartyPlayerReady_Entry, bind_member(this, &GameSettings::OnPartyPlayerReady));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, bind_member(this, &GameSettings::OnMapTravel));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, bind_member(this, &GameSettings::OnCinematic));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, bind_member(this, &GameSettings::OnVanquishComplete));
@@ -1329,7 +1317,7 @@ void GameSettings::OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
 {
     switch (message_id) {
         case GW::UI::UIMessage::kDialogButton: {
-            GW::UI::DialogButtonInfo* info = (GW::UI::DialogButtonInfo*)wparam;
+            const auto info = static_cast<GW::UI::DialogButtonInfo*>(wparam);
             // 8101 7f88 010a 8101 730e 0001
             if (auto_open_locked_chest && wcscmp(info->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
                 // Auto use lockpick
@@ -1408,10 +1396,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini) {
     move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
     move_item_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
     move_materials_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_materials_to_current_storage_pane), move_materials_to_current_storage_pane);
-
-    flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
-    flash_window_on_guild_chat =
-        ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_guild_chat), flash_window_on_guild_chat);
+    
     flash_window_on_party_invite =
         ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
     flash_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
@@ -1421,7 +1406,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini) {
     flash_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
     focus_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
     flash_window_on_name_ping = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
-    flash_window_on_all_ready = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_all_ready), flash_window_on_all_ready);
     set_window_title_as_charname = ini->GetBoolValue(Name(), VAR_NAME(set_window_title_as_charname), set_window_title_as_charname);
 
     auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
@@ -1559,8 +1543,6 @@ void GameSettings::SaveSettings(ToolboxIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(move_materials_to_current_storage_pane), move_materials_to_current_storage_pane);
     ini->SetBoolValue(Name(), VAR_NAME(stop_screen_shake), stop_screen_shake);
 
-    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
-    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_guild_chat), flash_window_on_guild_chat);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_launch), focus_window_on_launch);
@@ -1569,7 +1551,6 @@ void GameSettings::SaveSettings(ToolboxIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
-    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_all_ready), flash_window_on_all_ready);
     ini->SetBoolValue(Name(), VAR_NAME(set_window_title_as_charname), set_window_title_as_charname);
 
     ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
@@ -1830,7 +1811,7 @@ void GameSettings::FactionEarnedCheckAndWarn() {
     if (faction_checked)
         return; // Already checked.
     faction_checked = true;
-    GW::WorldContext * world_context = GW::GetWorldContext();
+    const auto world_context = GW::GetWorldContext();
     if (!world_context || !world_context->max_luxon || !world_context->total_earned_kurzick) {
         faction_checked = false;
         return; // No world context yet.
@@ -1932,7 +1913,7 @@ void GameSettings::Update(float) {
         }
 
         if (casting && me->GetIsMoving() && !me->skill && !me->GetIsCasting()) { // casting/skill don't update fast enough, so delay the rupt
-            auto cast_skill = pending_cast.GetSkill();
+            const auto cast_skill = pending_cast.GetSkill();
             if (cast_skill == GW::Constants::SkillID::No_Skill) // Skill ID no longer valid
                 return pending_cast.reset();
 
@@ -2042,42 +2023,6 @@ void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::Sto
     }
     if (flash_window_on_party_invite)
         FlashWindow();
-}
-
-// Flash when all other party members have ticked up
-void GameSettings::OnPartyPlayerReady(GW::HookStatus* status, GW::Packet::StoC::PartyPlayerReady* packet) const {
-    UNREFERENCED_PARAMETER(status);
-    if (!flash_window_on_all_ready || !packet->is_ready) {
-        return;
-    }
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-        return;  // not an outpost.
-    }
-    const GW::AgentLiving* living = GW::Agents::GetPlayerAsAgentLiving();
-    if (!living) {
-        return;
-    }
-    if (packet->player_id == living->login_number) {
-        return;  // own player, ignore
-    }
-    GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
-    if (!current_party) {
-        return;  // not in a party.
-    }
-    if (current_party->party_id != packet->party_id) {
-        return;  // should not reach here..?
-    }
-    for (const GW::PlayerPartyMember& member : current_party->players) {
-        if (member.login_number == living->login_number) {
-            if (member.ticked()) {
-                return; // own player is already ticked up
-            }
-        }
-        else if (member.login_number != packet->player_id && !member.ticked()) {
-            return;  // not everyone is already ticked
-        }
-    }
-    FlashWindow();
 }
 
 // Flash window on player added
@@ -2195,7 +2140,7 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::Ge
     pak2.value_id = 23;
     pak2.value = pak->value; // Glowing hands, any profession
     if (pak->value == 0x43394f1d) { // 0x31939cbb = /dance, 0x43394f1d = /dancenew
-        switch ((GW::Constants::Profession)GW::Agents::GetPlayerAsAgentLiving()->primary) {
+        switch (static_cast<GW::Constants::Profession>(GW::Agents::GetPlayerAsAgentLiving()->primary)) {
         case GW::Constants::Profession::Assassin:
         case GW::Constants::Profession::Ritualist:
         case GW::Constants::Profession::Dervish:
@@ -2289,20 +2234,9 @@ void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
     }
 }
 
-// Flash window on guild chat message
-void GameSettings::OnGlobalMessage(GW::HookStatus* status, GW::Packet::StoC::MessageGlobal* pak) const
-{
-    if (status->blocked) return;       // Sender blocked, packet handled.
-    if (!flash_window_on_guild_chat || // Flash window on guild chat message
-        static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GUILD)
-        return; // Disabled or messsage not from guild chat
-    const auto sender_name = std::wstring(pak->sender_name);
-    if (const auto player_name = GetPlayerName(); sender_name == player_name) return; // we sent the message ourselves
-    FlashWindow();
-}
 
 // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
-void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak)
+void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) const
 {
     if (status->blocked) return;                                                                                // Sender blocked, packet handled.
     if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) return; // Not team chat or no sender
@@ -2312,11 +2246,11 @@ void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::
     size_t start_idx = message.find(L"\xba9\x107");
     if (start_idx == std::wstring::npos) return; // Not a player name.
     start_idx += 2;
-    size_t end_idx = message.find(L'\x1', start_idx);
+    const size_t end_idx = message.find(L'\x1', start_idx);
     if (end_idx == std::wstring::npos) return; // Not a player name, this should never happen.
-    std::wstring player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx));
+    const auto player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx));
     if (player_pinged.empty()) return; // No recipient
-    GW::Player* sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
+    const auto sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
     if (!sender) return;                                                              // No sender
     if (flash_window_on_name_ping && GetPlayerName() == player_pinged) FlashWindow(); // Flash window - we've been followed!
     // Allow clickable player name
@@ -2460,7 +2394,8 @@ void GameSettings::OnAgentStartCast(GW::HookStatus* , GW::UI::UIMessage, void* w
 };
 
 // Redirect /wiki commands to go to useful pages
-void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
+void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) const
+{
     std::string url = GuiUtils::ToLower((char*)wParam);
     if (strstr(url.c_str(), "/wiki/main_page")) {
         // Redirect /wiki to /wiki <current map name>
@@ -2518,7 +2453,7 @@ void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) co
 
 // Hide more than 10 signets of capture
 void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet) {
-    GW::Packet::StoC::UpdateSkillCountAfterMapLoad* pak = (GW::Packet::StoC::UpdateSkillCountAfterMapLoad*)packet;
+    const auto pak = static_cast<GW::Packet::StoC::UpdateSkillCountAfterMapLoad*>(packet);
     if (limit_signets_of_capture && static_cast<GW::Constants::SkillID>(pak->skill_id) == GW::Constants::SkillID::Signet_of_Capture) {
         actual_signets_of_capture_amount = pak->count;
         if (pak->count > 10)
