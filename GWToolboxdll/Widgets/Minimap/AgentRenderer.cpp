@@ -887,7 +887,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     // friendly
     if (living->GetIsDead()) return color_ally_dead;
     switch (living->allegiance) {
-    case GW::Constants::Allegiance::Ally_NonAttackable: return color_ally; // ally
+    case GW::Constants::Allegiance::Ally_NonAttackable: return (living->IsNPC() ? color_ally_npc : color_ally); // ally
     case GW::Constants::Allegiance::Npc_Minipet: return color_ally_npc; // npc / minipet
     case GW::Constants::Allegiance::Spirit_Pet: return color_ally_spirit; // spirit / pet
     case GW::Constants::Allegiance::Minion: return color_ally_minion; // minion
