@@ -300,7 +300,7 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
         }
     }
 
-    auto take_quest = [](uint32_t quest_id) {
+    const auto take_quest = [](const uint32_t quest_id) {
         SendDialogs({
             GetDialogIDForQuestDialogType(quest_id, QuestDialogType::TAKE),
             GetDialogIDForQuestDialogType(quest_id, QuestDialogType::REWARD)
@@ -314,7 +314,7 @@ uint32_t DialogModule::AcceptFirstAvailableQuest() {
         if (std::ranges::find(available_quests, uquest_id) != std::ranges::end(available_quests))
             return take_quest(uquest_id);
     }
-    if (available_quests.size()) {
+    if (!available_quests.empty()) {
         return take_quest(available_quests[0]);
     }
     return 0;
