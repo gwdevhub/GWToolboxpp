@@ -169,7 +169,7 @@ namespace {
     bool flash_window_on_trade = true;
     bool focus_window_on_trade = false;
     bool flash_window_on_name_ping = true;
-    bool flash_window_on_all_ready = false;
+    bool flash_window_on_all_ready = true;
     bool set_window_title_as_charname = true;
 
     bool auto_return_on_defeat = false;
