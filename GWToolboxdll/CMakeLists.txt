@@ -63,7 +63,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     simpleini
     imgui::fonts
     IconFontCppHeaders
-	nativefiledialog
+    nativefiledialog
     wintoast
 
     # libs:
