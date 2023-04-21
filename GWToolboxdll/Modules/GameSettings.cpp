@@ -169,6 +169,7 @@ namespace {
     bool flash_window_on_trade = true;
     bool focus_window_on_trade = false;
     bool flash_window_on_name_ping = true;
+    bool flash_window_on_all_ready = true;
     bool set_window_title_as_charname = true;
 
     bool auto_return_on_defeat = false;
@@ -890,6 +891,8 @@ namespace {
         ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
         ImGui::NextSpacedElement();
         ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("All other party members have ticked up", &flash_window_on_all_ready);
         ImGui::Unindent();
 
             ImGui::Text("Show Guild Wars in foreground when:");
@@ -1246,6 +1249,7 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, bind_member(this, &GameSettings::OnTradeStarted));
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyInviteReceived));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyPlayerJoined));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerReady>(&PartyPlayerReady_Entry, bind_member(this, &GameSettings::OnPartyPlayerReady));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, bind_member(this, &GameSettings::OnMapTravel));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, bind_member(this, &GameSettings::OnCinematic));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, bind_member(this, &GameSettings::OnVanquishComplete));
@@ -1417,6 +1421,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini) {
     flash_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
     focus_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
     flash_window_on_name_ping = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
+    flash_window_on_all_ready = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_all_ready), flash_window_on_all_ready);
     set_window_title_as_charname = ini->GetBoolValue(Name(), VAR_NAME(set_window_title_as_charname), set_window_title_as_charname);
 
     auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
@@ -1564,6 +1569,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
+    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_all_ready), flash_window_on_all_ready);
     ini->SetBoolValue(Name(), VAR_NAME(set_window_title_as_charname), set_window_title_as_charname);
 
     ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
@@ -2036,6 +2042,42 @@ void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::Sto
     }
     if (flash_window_on_party_invite)
         FlashWindow();
+}
+
+// Flash when all other party members have ticked up
+void GameSettings::OnPartyPlayerReady(GW::HookStatus* status, GW::Packet::StoC::PartyPlayerReady* packet) const {
+    UNREFERENCED_PARAMETER(status);
+    if (!flash_window_on_all_ready || !packet->is_ready) {
+        return;
+    }
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+        return;  // not an outpost.
+    }
+    const GW::AgentLiving* living = GW::Agents::GetPlayerAsAgentLiving();
+    if (!living) {
+        return;
+    }
+    if (packet->player_id == living->login_number) {
+        return;  // own player, ignore
+    }
+    GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
+    if (!current_party) {
+        return;  // not in a party.
+    }
+    if (current_party->party_id != packet->party_id) {
+        return;  // should not reach here..?
+    }
+    for (const GW::PlayerPartyMember& member : current_party->players) {
+        if (member.login_number == living->login_number) {
+            if (member.ticked()) {
+                return; // own player is already ticked up
+            }
+        }
+        else if (member.login_number != packet->player_id && !member.ticked()) {
+            return;  // not everyone is already ticked
+        }
+    }
+    FlashWindow();
 }
 
 // Flash window on player added

@@ -72,6 +72,7 @@ public:
     void OnPlayerLeaveInstance(GW::HookStatus*, GW::Packet::StoC::PlayerLeaveInstance*) const;
     void OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance*) const;
     void OnPartyInviteReceived(GW::HookStatus*, GW::Packet::StoC::PartyInviteReceived_Create*) const;
+    void OnPartyPlayerReady(GW::HookStatus*, GW::Packet::StoC::PartyPlayerReady*) const;
     void OnPartyPlayerJoined(GW::HookStatus*, GW::Packet::StoC::PartyPlayerAdd*);
     void OnLocalChatMessage(GW::HookStatus*, GW::Packet::StoC::MessageLocal*);
     void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*) const;
@@ -125,6 +126,7 @@ private:
     GW::HookEntry AgentAdd_Entry;
     GW::HookEntry TradeStart_Entry;
     GW::HookEntry PartyPlayerAdd_Entry;
+    GW::HookEntry PartyPlayerReady_Entry;
     GW::HookEntry PartyPlayerRemove_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry CinematicPlay_Entry;
