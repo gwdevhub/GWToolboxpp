@@ -14,7 +14,7 @@
 #define LOAD_FLOAT(var) var = (float)ini->GetDoubleValue(Name(), #var, (double)var);
 #define SAVE_FLOAT(var) ini->SetDoubleValue(Name(), #var, (double)var);
 #define LOAD_UINT(var) var = (unsigned int)ini->GetLongValue(Name(), #var, (long)var);
-#define SAVE_UINT(var) ini->SetLongValue(Name(), #var, (double)var);
+#define SAVE_UINT(var) ini->SetLongValue(Name(), #var, (long)var);
 
 /*
 Notes:

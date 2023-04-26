@@ -396,6 +396,31 @@ namespace {
 
     const char* withdraw_syntax = "'/withdraw [quantity (1-65535)] model_id1 [model_id2 ...]' tops up your inventory with a minimum quantity of 1 or more items, identified by model_id";
 
+    struct CmdAlias {
+        char alias_cstr[256] = { 0 };
+        wchar_t alias_wstr[128] = { 0 };
+        char command_cstr[256] = { 0 };
+        wchar_t command_wstr[128] = { 0 };
+        bool processing = false;
+    };
+
+    std::vector<CmdAlias*> cmd_aliases;
+
+    GW::HookEntry OnSentChat_HookEntry;
+    void OnSendChat(GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* message) {
+        if (channel != GW::Chat::CHANNEL_COMMAND || status->blocked)
+            return;
+        for (const auto alias : cmd_aliases) {
+            if (wcscmp(alias->alias_wstr, message) == 0 && !alias->processing && wcslen(alias->command_wstr) > 1) {
+                status->blocked = true;
+                alias->processing = true;
+                GW::Chat::SendChat(alias->command_cstr[0],&alias->command_wstr[1]);
+                alias->processing = false;
+                return;
+            }
+        }
+    }
+
 } // namespace
 
 void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
@@ -625,18 +650,91 @@ void ChatCommands::DrawSettingInternal() {
     }
     ImGui::Unindent();
 
+    ImGui::TextUnformatted("Chat Command aliases");
+    ImGui::TextDisabled("First matching command alias found will be triggered");
+
+    const auto avail_w = ImGui::GetContentRegionAvail().x - 128.f;
+    for (auto it = cmd_aliases.begin(); it != cmd_aliases.end();it++) {
+        ImGui::PushID(it._Ptr);
+
+        ImGui::PushItemWidth(avail_w * .3f);
+        if (ImGui::InputText("###cmd_alias", (*it)->alias_cstr, _countof(CmdAlias::alias_cstr))) {
+            swprintf((*it)->alias_wstr, _countof(CmdAlias::alias_wstr), L"%S", (*it)->alias_cstr);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Alias for this command");
+        }
+        ImGui::PopItemWidth();
+        ImGui::PushItemWidth(avail_w * .6f);
+        ImGui::SameLine();
+        if (ImGui::InputText("###cmd_command", (*it)->command_cstr, _countof(CmdAlias::command_cstr))) {
+            swprintf((*it)->command_wstr, _countof(CmdAlias::command_wstr), L"%S", (*it)->command_cstr);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Chat command to trigger");
+        }
+        ImGui::PopItemWidth();
+        ImGui::SameLine(avail_w);
+        static bool confirm_delete = false;
+        if (ImGui::SmallConfirmButton("Delete", &confirm_delete, "Are you sure you want to delete this entry?")) {
+            cmd_aliases.erase(it);
+            confirm_delete = false;
+            ImGui::PopID();
+            break; // Skip this frame
+        }
+        ImGui::PopID();
+    }
+    if (ImGui::Button("Add New Alias")) {
+        auto alias = new CmdAlias();
+        strcpy(alias->alias_cstr, "thetime");
+        wcscpy(alias->alias_wstr, L"thetime");
+        strcpy(alias->command_cstr, "/age");
+        wcscpy(alias->command_wstr, L"/age");
+        cmd_aliases.push_back(alias);
+    }
 }
 
 void ChatCommands::LoadSettings(ToolboxIni* ini) {
-    forward_fix_z = ini->GetBoolValue(Name(), VAR_NAME(forward_fix_z), forward_fix_z);
-    cam_speed = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(cam_speed), DEFAULT_CAM_SPEED));
-    default_title_id = ini->GetLongValue(Name(), VAR_NAME(default_title_id), default_title_id);
+    LOAD_BOOL(forward_fix_z);
+    LOAD_FLOAT(cam_speed);
+    LOAD_UINT(default_title_id);
+
+    for (auto* it : cmd_aliases) {
+        delete it;
+    }
+    cmd_aliases.clear();
+
+    const auto section_name = "Chat Command Aliases";
+
+    ToolboxIni::TNamesDepend entries;
+    ini->GetAllKeys(section_name, entries);
+    for (const auto entry : entries) {
+        if (!entry.pItem[0]) continue;
+        std::string cmd = ini->GetValue(section_name, entry.pItem, "");
+        if (cmd.empty()) continue;
+        auto a = new CmdAlias();
+        strncpy(a->alias_cstr, entry.pItem, _countof(a->alias_cstr) - 1);
+        strncpy(a->command_cstr, cmd.c_str(), _countof(a->command_cstr) - 1);
+        swprintf(a->alias_wstr, _countof(a->alias_wstr), L"%S",a->alias_cstr);
+        swprintf(a->command_wstr, _countof(a->command_wstr), L"%S",a->command_cstr);
+        cmd_aliases.push_back(a);
+    }
 }
 
 void ChatCommands::SaveSettings(ToolboxIni* ini) {
-    ini->SetBoolValue(Name(), VAR_NAME(forward_fix_z), forward_fix_z);
-    ini->SetDoubleValue(Name(), VAR_NAME(cam_speed), cam_speed);
-    ini->SetLongValue(Name(), VAR_NAME(default_title_id), default_title_id);
+    SAVE_BOOL(forward_fix_z);
+    SAVE_FLOAT(cam_speed);
+    SAVE_UINT(default_title_id);
+
+    const auto section_name = "Chat Command Aliases";
+
+    ini->Delete("Chat Command Aliases",NULL);
+
+    for (const auto alias : cmd_aliases) {
+        if (!alias->alias_cstr && alias->alias_cstr[0])
+            continue;
+        ini->SetValue(section_name, alias->alias_cstr, alias->command_cstr);
+    }
 }
 
 void ChatCommands::CmdPingQuest(const wchar_t* , int , LPWSTR* ) {
@@ -731,6 +829,8 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"fps", CmdFps);
     GW::Chat::CreateCommand(L"pref", CmdPref);
 
+    GW::Chat::RegisterSendChatCallback(&OnSentChat_HookEntry, OnSendChat);
+
     // Experimental chat commands
     uintptr_t address = 0;
 #if _DEBUG
@@ -766,11 +866,19 @@ void ChatCommands::Terminate()
 {
     if (FocusChatTab_Func)
         GW::HookBase::RemoveHook(FocusChatTab_Func);
+    if (OnChatInteraction_Callback_Func)
+        GW::HookBase::RemoveHook(OnChatInteraction_Callback_Func);
+
+    GW::Chat::RemoveSendChatCallback(&OnSentChat_HookEntry);
 
     for (auto* it : title_names) {
         delete it;
     }
     title_names.clear();
+    for (auto* it : cmd_aliases) {
+        delete it;
+    }
+    cmd_aliases.clear();
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
