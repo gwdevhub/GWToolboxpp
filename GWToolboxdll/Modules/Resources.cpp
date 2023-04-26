@@ -193,7 +193,7 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
 
     EnqueueWorkerTask([callback, filterList_cpy,defaultPath_cpy]() {
         nfdchar_t *outPath = NULL;
-        nfdresult_t result = NFD_OpenDialog( filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
+        nfdresult_t result = NFD_SaveDialog( filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
         delete filterList_cpy;
         delete defaultPath_cpy;
 
