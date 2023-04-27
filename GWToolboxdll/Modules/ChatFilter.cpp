@@ -129,6 +129,9 @@ void ChatFilter::LoadSettings(ToolboxIni* ini) {
     LOAD_BOOL(filter_channel_alliance);
     LOAD_BOOL(filter_channel_emotes);
 
+    LOAD_BOOL(bycontent_words_case_insensitive);
+    LOAD_BOOL(bycontent_regex_case_insensitive);
+
     LOAD_BOOL(block_messages_from_inactive_channels);
 
     strcpy_s(bycontent_word_buf, "");
@@ -208,6 +211,9 @@ void ChatFilter::SaveSettings(ToolboxIni* ini) {
     SAVE_BOOL(filter_channel_trade);
     SAVE_BOOL(filter_channel_alliance);
     SAVE_BOOL(filter_channel_emotes);
+
+    SAVE_BOOL(bycontent_words_case_insensitive);
+    SAVE_BOOL(bycontent_regex_case_insensitive);
 
     SAVE_BOOL(block_messages_from_inactive_channels);
 
@@ -512,18 +518,24 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) cons
     if (!temp.count)
         return false;
 
-    const utf8::string text = Utf8Normalize(temp.bytes);
-    if (!text.count) {
+    const utf8::string wordtext = Utf8Normalize(temp.bytes, bycontent_words_case_insensitive);
+    if (!wordtext.count) {
         return false;
     }
 
     for (const auto& s : bycontent_words) {
-        if (strstr(text.bytes, s.c_str())) {
+        if (strstr(wordtext.bytes, s.c_str())) {
             return true;
         }
     }
+
+    const utf8::string regextext = Utf8Normalize(temp.bytes, bycontent_regex_case_insensitive);
+    if (!regextext.count) {
+        return false;
+    }
+
     for (const std::regex& r : bycontent_regex) {
-        if (std::regex_match(temp.bytes, r)) {
+        if (std::regex_match(regextext.bytes, r)) {
             return true;
         }
     }
@@ -656,9 +668,9 @@ void ChatFilter::DrawSettingInternal() {
     if (block_messages_from_inactive_channels) {
         ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "Messages from channels you have turned off in chat are not being logged in-game");
     }
-    ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
-    ImGui::Indent();
-    ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");
+
+    ImGui::Separator();
+    ImGui::Text("Apply content filters (below) for these channels:");
     ImGui::Checkbox("Local", &filter_channel_local);
     ImGui::SameLine(0.0f, -1.0f);
     ImGui::Checkbox("Guild", &filter_channel_guild);
@@ -670,13 +682,22 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::Checkbox("Alliance", &filter_channel_alliance);
     ImGui::SameLine(0.0f, -1.0f);
     ImGui::Checkbox("Emotes", &filter_channel_emotes);
+    
+    ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
+    ImGui::Indent();
+    ImGui::TextDisabled("(Each in a separate line.)");
+    ImGui::Checkbox("Case insensitive###iwords", &bycontent_words_case_insensitive);
 
     if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf,
         FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
         timer_parse_filters = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
     }
     ImGui::Text("And messages matching regular expressions:");
-    ImGui::ShowHelp("Regular expressions allow you to specify wildcards and express more.\nThe syntax is described at www.cplusplus.com/reference/regex/ECMAScript\nNote that the whole message needs to be matched, so for example you might want .* at the end.");
+    ImGui::ShowHelp(
+        "Regular expressions allow you to specify wildcards and express more.\n"
+        "The syntax is described at www.cplusplus.com/reference/regex/ECMAScript\n"
+        "Note that the whole message needs to be matched, so for example you might want .* at the end.");
+    ImGui::Checkbox("Case insensitive###iregex", &bycontent_regex_case_insensitive);
     if (ImGui::InputTextMultiline("##bycontentfilter_regex", bycontent_regex_buf,
         FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
         timer_parse_regexes = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
@@ -699,7 +720,7 @@ void ChatFilter::DrawSettingInternal() {
 
 void ChatFilter::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
-    uint32_t timestamp = GetTickCount();
+    const auto timestamp = GetTickCount();
     if (timer_parse_filters && timer_parse_filters < timestamp) {
         timer_parse_filters = 0;
         ParseBuffer(bycontent_word_buf, bycontent_words);
@@ -715,7 +736,7 @@ void ChatFilter::Update(float delta) {
 
 void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) const {
     words.clear();
-    const auto normalized_text = Utf8Normalize(text);
+    const auto normalized_text = Utf8Normalize(text, bycontent_words_case_insensitive);
     std::istringstream stream(normalized_text.bytes);
     std::string word;
     while (std::getline(stream, word)) {
@@ -744,9 +765,9 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) c
     std::string word;
     while (std::getline(stream, word)) {
         if (!word.empty()) {
-            // std::ranges::transform(word, word.begin(), ::tolower);
             try {
-                regex.push_back(std::regex(word));
+                const auto flags = bycontent_regex_case_insensitive ? std::regex_constants::ECMAScript | std::regex_constants::icase : std::regex_constants::ECMAScript;
+                regex.push_back(std::regex(word, flags));
             } catch (const std::regex_error&) {
                 Log::Warning("Cannot parse regular expression '%s'", word.c_str());
             }
