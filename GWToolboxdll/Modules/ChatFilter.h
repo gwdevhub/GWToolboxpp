@@ -39,7 +39,7 @@ public:
 private:
     const wchar_t* Get1stSegment(const wchar_t *message) const;
     const wchar_t* Get2ndSegment(const wchar_t *message) const;
-    bool FullMatch(const wchar_t* p, const std::initializer_list<wchar_t>& msg) const;
+    bool FullMatch(const wchar_t* s, const std::initializer_list<wchar_t>& msg) const;
 
     DWORD GetNumericSegment(const wchar_t *message) const;
     bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
@@ -50,16 +50,16 @@ private:
     static void ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*);
 
     // Should this message for this channel be ignored either by encoded string or content?
-    bool ShouldIgnore(const wchar_t* message, uint32_t channel);
+    bool ShouldIgnore(const wchar_t* message, uint32_t channel) const;
     // Should this message be ignored by encoded string?
-    bool ShouldIgnore(const wchar_t *message);
+    bool ShouldIgnore(const wchar_t *message) const;
     // Should this message be ignored by content?
-    bool ShouldIgnoreByContent(const wchar_t *message, size_t size = 1024);
-    bool ShouldIgnoreBySender(const std::wstring& sender);
+    bool ShouldIgnoreByContent(const wchar_t *message, size_t size = 1024) const;
+    bool ShouldIgnoreBySender(const std::wstring& sender) const;
     // Should this channel be checked for ignored messages?
-    bool ShouldFilterByChannel(uint32_t channel);
+    bool ShouldFilterByChannel(uint32_t channel) const;
     // Should this channel be blocked altogether?
-    bool ShouldBlockByChannel(uint32_t channel);
+    bool ShouldBlockByChannel(uint32_t channel) const;
 
 
     bool guild_announcement = false;
@@ -104,7 +104,7 @@ private:
     bool filter_channel_alliance = false;
     bool filter_channel_emotes = false;
 
-    static const size_t FILTER_BUF_SIZE = 1024*16;
+    static constexpr size_t FILTER_BUF_SIZE = 1024*16;
 
     // Chat filter
     std::vector<std::string> bycontent_words;

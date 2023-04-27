@@ -1,15 +1,40 @@
-#ifndef UTF8_H_INC
-#define UTF8_H_INC
+#pragma once
 
 namespace utf8 {
     struct string {
         char  *bytes = nullptr;
         size_t count = 0;
-    };
-}
+        bool allocated = false;
+        
+        string() = default;
+        ~string()
+        {
+            if (allocated)
+                free(bytes);
+            bytes = nullptr;
+            count = 0;
+        }
 
-static void free(utf8::string& s) {
-    if (s.bytes) delete s.bytes;
+        string(const string& s) = delete;
+        string& operator=(const string& s) = delete;
+
+        string(string&& s) noexcept
+        {
+            bytes = s.bytes;
+            count = s.count;
+            s.bytes = nullptr;
+            s.count = 0;
+        }
+
+        string& operator=(string&& s) noexcept
+        {
+            bytes = s.bytes;
+            count = s.count;
+            s.bytes = nullptr;
+            s.count = 0;
+            return *this;
+        }
+    };
 }
 
 // encode a unicode16 to utf8 using a allocated buffer (malloc).
@@ -26,5 +51,3 @@ size_t Utf8ToUnicode(const char *str, wchar_t *buffer, size_t count);
 //  - remove accent
 //  - remove non-printable character (e.g. zero-width spaces)
 utf8::string Utf8Normalize(const char *str);
-
-#endif // UTF8_H_INC

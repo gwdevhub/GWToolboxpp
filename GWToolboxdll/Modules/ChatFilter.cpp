@@ -25,16 +25,8 @@
 //#define PRINT_CHAT_PACKETS
 
 static bool IsInChallengeMission() {
-    GW::AreaInfo* a = GW::Map::GetCurrentMapInfo();
+    const GW::AreaInfo* a = GW::Map::GetCurrentMapInfo();
     return a && a->type == GW::RegionType::Challenge;
-}
-
-static void printchar(wchar_t c) {
-    if (c >= L' ' && c <= L'~') {
-        printf("%lc", c);
-    } else {
-        printf("0x%X ", c);
-    }
 }
 
 void ChatFilter::Initialize() {
@@ -309,7 +301,8 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
     return true;
 }
 
-bool ChatFilter::ShouldIgnore(const wchar_t* message, uint32_t channel) {
+bool ChatFilter::ShouldIgnore(const wchar_t* message, uint32_t channel) const
+{
     if (ShouldBlockByChannel(channel))
         return true;
     if (ShouldIgnore(message))
@@ -318,7 +311,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t* message, uint32_t channel) {
         return false;
     return ShouldIgnoreByContent(message);
 }
-bool ChatFilter::ShouldIgnore(const wchar_t *message) {
+bool ChatFilter::ShouldIgnore(const wchar_t *message) const
+{
     if (!message)
         return false;
 
@@ -488,7 +482,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
     return false;
 }
 
-bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
+bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) const
+{
     UNREFERENCED_PARAMETER(size);
 
     if (!messagebycontent) return false;
@@ -513,30 +508,30 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 
     // std::string temp(start, end);
     char buffer[1024];
-    utf8::string temp = Unicode16ToUtf8(buffer, 1024, start, end);
+    const utf8::string temp = Unicode16ToUtf8(buffer, 1024, start, end);
     if (!temp.count)
         return false;
 
-    utf8::string text = Utf8Normalize(temp.bytes);
+    const utf8::string text = Utf8Normalize(temp.bytes);
     if (!text.count) {
         return false;
     }
 
     for (const auto& s : bycontent_words) {
         if (strstr(text.bytes, s.c_str())) {
-            free(text);
             return true;
         }
     }
     for (const std::regex& r : bycontent_regex) {
-        if (std::regex_match(text.bytes, r)) {
+        if (std::regex_match(temp.bytes, r)) {
             return true;
         }
     }
-    free(text);
     return false;
 }
-bool ChatFilter::ShouldFilterByChannel(uint32_t channel) {
+
+bool ChatFilter::ShouldFilterByChannel(uint32_t channel) const
+{
     switch (channel) {
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALL):        return filter_channel_local;
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GUILD):      return filter_channel_guild;
@@ -547,10 +542,12 @@ bool ChatFilter::ShouldFilterByChannel(uint32_t channel) {
     }
     return false;
 }
-bool ChatFilter::ShouldBlockByChannel(uint32_t channel) {
+
+bool ChatFilter::ShouldBlockByChannel(uint32_t channel) const
+{
     if (Instance().block_messages_from_inactive_channels) {
         // Don't log chat messages if the channel is turned off - avoids hitting the chat log limit
-        GW::UI::FlagPreference prefCheck = (GW::UI::FlagPreference)0xffff;
+        auto prefCheck = static_cast<GW::UI::FlagPreference>(0xffff);
         switch (static_cast<GW::Chat::Channel>(channel)) {
         case GW::Chat::Channel::CHANNEL_ALL:
             prefCheck = GW::UI::FlagPreference::ChannelLocal;
@@ -572,14 +569,16 @@ bool ChatFilter::ShouldBlockByChannel(uint32_t channel) {
             prefCheck = GW::UI::FlagPreference::ChannelTrade;
             break;
         }
-        if (prefCheck != (GW::UI::FlagPreference)0xffff
+        if (prefCheck != static_cast<GW::UI::FlagPreference>(0xffff)
             && GW::UI::GetPreference(prefCheck) == 1) {
             return true;
         }
     }
     return false;
 }
-bool ChatFilter::ShouldIgnoreBySender(const std::wstring& sender) {
+
+bool ChatFilter::ShouldIgnoreBySender(const std::wstring& sender) const
+{
     return GW::FriendListMgr::GetFriend(nullptr, sender.c_str(), GW::FriendType::Ignore) != nullptr;
 }
 
@@ -716,7 +715,7 @@ void ChatFilter::Update(float delta) {
 
 void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) const {
     words.clear();
-    utf8::string normalized_text = Utf8Normalize(text);
+    const auto normalized_text = Utf8Normalize(text);
     std::istringstream stream(normalized_text.bytes);
     std::string word;
     while (std::getline(stream, word)) {
@@ -724,7 +723,6 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) 
             words.push_back(word);
         }
     }
-    free(normalized_text);
 }
 
 void ChatFilter::ParseBuffer(const char *text, std::vector<std::wstring> &words) const {
