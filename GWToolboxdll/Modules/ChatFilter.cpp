@@ -686,7 +686,9 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
     ImGui::Indent();
     ImGui::TextDisabled("(Each in a separate line.)");
-    ImGui::Checkbox("Case insensitive###iwords", &bycontent_words_case_insensitive);
+    if (ImGui::Checkbox("Case insensitive###iwords", &bycontent_words_case_insensitive)) {
+        timer_parse_filters = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
+    }
 
     if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf,
         FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
@@ -697,7 +699,9 @@ void ChatFilter::DrawSettingInternal() {
         "Regular expressions allow you to specify wildcards and express more.\n"
         "The syntax is described at www.cplusplus.com/reference/regex/ECMAScript\n"
         "Note that the whole message needs to be matched, so for example you might want .* at the end.");
-    ImGui::Checkbox("Case insensitive###iregex", &bycontent_regex_case_insensitive);
+    if (ImGui::Checkbox("Case insensitive###iregex", &bycontent_regex_case_insensitive)) {
+        timer_parse_regexes = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
+    }
     if (ImGui::InputTextMultiline("##bycontentfilter_regex", bycontent_regex_buf,
         FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
         timer_parse_regexes = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
@@ -718,7 +722,7 @@ void ChatFilter::DrawSettingInternal() {
 #endif // EXTENDED_IGNORE_LIST
 }
 
-void ChatFilter::Update(float delta) {
+void ChatFilter::Update(const float delta) {
     UNREFERENCED_PARAMETER(delta);
     const auto timestamp = GetTickCount();
     if (timer_parse_filters && timer_parse_filters < timestamp) {
