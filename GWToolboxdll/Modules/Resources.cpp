@@ -757,8 +757,8 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             return;
         }
         std::string image_url = m[1].str();
-        std::wstring path_to_file;
-        StrSwprintf(path_to_file, L"%s\\%S", path.c_str(), filename_sanitised.c_str());
+        std::wstring path_to_file2;
+        StrSwprintf(path_to_file2, L"%s\\%S", path.c_str(), filename_sanitised.c_str());
         if (width) {
             // Divert to resized version using mediawiki's method
             image_finder = "/images/(.*)/([^/]+)$";
@@ -775,7 +775,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             StrSprintf(tmp_str, "https://wiki.guildwars.com%s", image_url.c_str());
             image_url = tmp_str;
         }
-        Instance().LoadTexture(texture, path_to_file, image_url, callback);
+        Instance().LoadTexture(texture, path_to_file2, image_url, callback);
         });
     return texture;
 }

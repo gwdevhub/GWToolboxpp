@@ -91,12 +91,12 @@ namespace {
             return FlaggingState::FlagState_None;
         return *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
     }
-    static bool compass_fix_pending = false;
+    bool compass_fix_pending = false;
     bool SetFlaggingState(FlaggingState set_state) {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
             return false;
         // keep an internal flag for the minimap flagging until StartCaptureMouseClick_Func is working
-        //minimap_flagging_state = set_state;
+        // minimap_flagging_state = set_state;
         if (GetFlaggingState() == set_state)
             return true;
         if (set_state == FlaggingState::FlagState_None) {
@@ -121,7 +121,7 @@ namespace {
     bool GetPlayerIsLeader() {
         GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
         if (!party || !party->players.size()) return false;
-        uint32_t player_id = GW::PlayerMgr::GetPlayerNumber();
+        const uint32_t player_id = GW::PlayerMgr::GetPlayerNumber();
         for (auto& player : party->players) {
             if (!player.connected())
                 continue;
@@ -293,7 +293,7 @@ void Minimap::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam
         instance.pmap_renderer.Invalidate();
         instance.loading = false;
         // Compass fix to allow hero flagging controls
-        GW::UI::WindowPosition* compass_info = GW::UI::GetWindowPosition(GW::UI::WindowID_Compass);
+        const GW::UI::WindowPosition* compass_info = GW::UI::GetWindowPosition(GW::UI::WindowID_Compass);
         if (compass_info && !compass_info->visible()) {
             // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
             compass_fix_pending = true;
@@ -302,10 +302,10 @@ void Minimap::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam
         instance.is_observing = GW::Map::GetIsObserving();
     } break;
     case GW::UI::UIMessage::kSkillActivated: {
-        struct Payload {
+        const struct Payload {
             uint32_t agent_id;
             GW::Constants::SkillID skill_id;
-        } *payload = (Payload*)wParam;
+        } *payload = static_cast<Payload*>(wParam);
         if (payload->agent_id == GW::Agents::GetPlayerId()) {
             if (payload->skill_id == GW::Constants::SkillID::Shadow_of_Haste || payload->skill_id == GW::Constants::SkillID::Shadow_Walk) {
                 instance.shadowstep_location = GW::Agents::GetPlayer()->pos;
@@ -317,7 +317,7 @@ void Minimap::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam
         instance.agent_renderer.auto_target_id = 0;
     } break;
     case GW::UI::UIMessage::kChangeTarget: {
-        GW::UI::ChangeTargetUIMsg* msg = (GW::UI::ChangeTargetUIMsg*)wParam;
+        const GW::UI::ChangeTargetUIMsg* msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
         instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
     } break;
     }
@@ -618,7 +618,7 @@ size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::Agen
         return 0;
     const GW::HeroPartyMemberArray& heroes = party->heroes;
 
-    bool player_is_leader = GetPlayerIsLeader();
+    const bool player_is_leader = GetPlayerIsLeader();
     std::map<uint32_t, const GW::PlayerPartyMember*> party_players_by_id;
     if (player_is_leader) {
         for (const GW::PlayerPartyMember& pplayer : party->players) {
@@ -667,7 +667,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
     if (!IsActive())
         return;
 
-    GW::Agent *me = GW::Agents::GetPlayer();
+    const GW::Agent *me = GW::Agents::GetPlayer();
     if (me == nullptr)
         return;
 
@@ -679,7 +679,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
         }
         else {
             bool found = false;
-            for (auto& effect : *effects) {
+            for (const auto& effect : *effects) {
                 found = effect.skill_id == GW::Constants::SkillID::Shadow_of_Haste || effect.skill_id == GW::Constants::SkillID::Shadow_Walk;
                 if (found) break;
             }
@@ -721,10 +721,10 @@ void Minimap::Draw(IDirect3DDevice9 *)
                 const float multiplier = GuiUtils::GetGWScaleMultiplier();
                 const float compass_width = compass_frame->width(multiplier);
                 const float compass_padding = compass_width * .05f;
-                location = { (int)(compass_frame->left(multiplier) + compass_padding),(int)(compass_frame->top(multiplier) + compass_padding) };
-                size = { (int)(compass_width - (compass_padding * 2.f)) , (int)(compass_frame->height(multiplier) - (compass_padding * 2.f)) };
-                ImGui::SetWindowPos({ (float)location.x,(float)location.y });
-                ImGui::SetWindowSize({ (float)size.x,(float)size.y });
+                location = { static_cast<int>(compass_frame->left(multiplier) + compass_padding),static_cast<int>(compass_frame->top(multiplier) + compass_padding) };
+                size = { static_cast<int>(compass_width - (compass_padding * 2.f)) , static_cast<int>(compass_frame->height(multiplier) - (compass_padding * 2.f)) };
+                ImGui::SetWindowPos({ static_cast<float>(location.x),static_cast<float>(location.y) });
+                ImGui::SetWindowSize({ static_cast<float>(size.x),static_cast<float>(size.y) });
             }
         }
 
@@ -784,7 +784,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
                 ImGui::SameLine();
                 if (ImGui::Button("Clear", ImVec2(-1, 0))) {
                     GW::PartyMgr::UnflagAll();
-                    for (uint32_t agent_id : player_heroes) {
+                    for (const uint32_t agent_id : player_heroes) {
                         GW::PartyMgr::FlagHeroAgent(agent_id, GW::GamePos(HUGE_VALF, HUGE_VALF, 0));
                     }
                 }
@@ -805,8 +805,7 @@ void Minimap::Render(IDirect3DDevice9* device) {
     if (!instance.IsActive())
         return;
 
-
-    GW::Agent* me = GW::Agents::GetPlayer();
+    const GW::Agent* me = GW::Agents::GetPlayer();
     if (me == nullptr) return;
 
     // Backup the DX9 state
@@ -960,9 +959,9 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
 GW::Vec2f Minimap::InterfaceToWorldPoint(Vec2i pos) const
 {
-    GW::Agent *me = GW::Agents::GetPlayer();
+    const GW::Agent *me = GW::Agents::GetPlayer();
     if (me == nullptr)
-        return GW::Vec2f(0, 0);
+        return {0, 0};
 
     GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
 
@@ -1093,7 +1092,7 @@ bool Minimap::FlagHeros(LPARAM lParam)
     GetPlayerHeroes(GetPlayerParty(), player_heroes, &has_flagall);
     const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
-    FlaggingState flag_state = GetFlaggingState();
+    const FlaggingState flag_state = GetFlaggingState();
     switch (flag_state) {
     case FlaggingState::FlagState_None:
         return false;
@@ -1258,7 +1257,7 @@ bool Minimap::IsInside(int x, int y) const
     // if centered, use radar range
     if (translation.x == 0 && translation.y == 0) {
         const GW::Vec2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
-        GW::Agent *me = GW::Agents::GetPlayer();
+        const GW::Agent *me = GW::Agents::GetPlayer();
         if (!me)
             return false;
         const float sqrdst = GW::GetSquareDistance(me->pos, gamepos);

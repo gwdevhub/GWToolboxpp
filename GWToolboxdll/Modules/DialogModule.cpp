@@ -45,7 +45,6 @@ namespace {
         const std::wregex button_regex(L"<a=([0-9]+)>([^<]+)(<|$)");
         std::wsmatch m;
         std::wstring subject(decoded);
-        std::wstring msg;
         GW::UI::DialogButtonInfo embedded_button{};
         embedded_button.dialog_id = 0;
         embedded_button.skill_id = 0xFFFFFFF;
@@ -55,7 +54,7 @@ namespace {
                 return;
             }
             // Technically theres no encoded string for this button, wrap it to avoid issues later.
-            msg = L"\x108\x107";
+            std::wstring msg = L"\x108\x107";
             msg += m[2].str();
             msg += L"\x1";
 

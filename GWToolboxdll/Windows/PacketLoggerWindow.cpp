@@ -558,17 +558,18 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) {
 }
 
 void PacketLoggerWindow::AddMessageLog(const wchar_t* encoded) {
-    std::wstring encoded_ws(encoded);
+    const std::wstring encoded_ws(encoded);
     if (!encoded || message_log.contains(encoded_ws))
         return;
-    ForTranslation* t = new ForTranslation();
+    const auto t = new ForTranslation();
     t->in = encoded;
     pending_translation.push_back(t);
     GW::UI::AsyncDecodeStr(encoded, &t->out);
 }
 
-void PacketLoggerWindow::SaveMessageLog() {
-    utf8::string filename = Resources::GetPathUtf8(L"message_log.csv");
+void PacketLoggerWindow::SaveMessageLog() const
+{
+    const utf8::string filename = Resources::GetPathUtf8(L"message_log.csv");
     std::wofstream myFile(filename.bytes);
 
     // Send column names to the stream
@@ -586,8 +587,8 @@ void PacketLoggerWindow::SaveMessageLog() {
 }
 
 void PacketLoggerWindow::ClearMessageLog() {
-    for (const auto& it : message_log) {
-        delete it.second;
+    for (const auto& val : message_log | std::views::values) {
+        delete val;
     }
     message_log.clear();
 }

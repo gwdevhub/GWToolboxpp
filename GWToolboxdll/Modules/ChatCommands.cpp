@@ -999,7 +999,7 @@ void ChatCommands::QuestPing::Update() {
     }
     if (!objectives.wstring().empty()) {
         // Find current objective using regex
-        std::wregex current_obj_regex(L"\\{s\\}([^\\{]+)");
+        const std::wregex current_obj_regex(L"\\{s\\}([^\\{]+)");
         std::wsmatch m;
         if (std::regex_search(objectives.wstring(), m, current_obj_regex)) {
             wchar_t print_buf[128];

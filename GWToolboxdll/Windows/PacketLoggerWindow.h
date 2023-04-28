@@ -28,7 +28,7 @@ public:
     void Enable();
     void Disable();
     void AddMessageLog(const wchar_t* encoded);
-    void SaveMessageLog();
+    void SaveMessageLog() const;
     void ClearMessageLog();
     void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet);
     void CtoSHandler(GW::HookStatus* status, void* packet);
