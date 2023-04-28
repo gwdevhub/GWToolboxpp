@@ -242,17 +242,17 @@ void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added) {
 }
 bool GWToolbox::IsInitialized() const { return initialized; }
 bool GWToolbox::ToggleModule(ToolboxWidget& m, bool enable) {
-    bool added = ToggleTBModule(m, (std::vector<ToolboxModule*>&)widgets_enabled, enable);
+    const bool added = ToggleTBModule(m, (std::vector<ToolboxModule*>&)widgets_enabled, enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
 }
 bool GWToolbox::ToggleModule(ToolboxWindow& m, bool enable) {
-    bool added = ToggleTBModule(m, (std::vector<ToolboxModule*>&)windows_enabled, enable);
+    const bool added = ToggleTBModule(m, (std::vector<ToolboxModule*>&)windows_enabled, enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
 }
 bool GWToolbox::ToggleModule(ToolboxModule& m, bool enable) {
-    bool added = ToggleTBModule(m, modules_enabled, enable);
+    const bool added = ToggleTBModule(m, modules_enabled, enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
 }
@@ -506,30 +506,30 @@ void GWToolbox::Initialize()
     initialized = true;
 }
 
-std::filesystem::path GWToolbox::LoadSettings(std::filesystem::path config, bool fresh) const
+std::filesystem::path GWToolbox::LoadSettings(const std::filesystem::path& config, const bool fresh)
 {
     const auto ini = OpenSettingsFile(config, fresh);
-    for (auto m : modules_enabled) {
+    for (const auto m : modules_enabled) {
         m->LoadSettings(ini);
     }
-    for (auto m : widgets_enabled) {
+    for (const auto m : widgets_enabled) {
         m->LoadSettings(ini);
     }
-    for (auto m : windows_enabled) {
+    for (const auto m : windows_enabled) {
         m->LoadSettings(ini);
     }
     return ini->location_on_disk;
 }
-std::filesystem::path GWToolbox::SaveSettings(std::filesystem::path config) const
+std::filesystem::path GWToolbox::SaveSettings(const std::filesystem::path& config) const
 {
     const auto ini = OpenSettingsFile(config, false);
-    for (auto m : modules_enabled) {
+    for (const auto m : modules_enabled) {
         m->SaveSettings(ini);
     }
-    for (auto m : widgets_enabled) {
+    for (const auto m : widgets_enabled) {
         m->SaveSettings(ini);
     }
-    for (auto m : windows_enabled) {
+    for (const auto m : windows_enabled) {
         m->SaveSettings(ini);
     }
     ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
@@ -632,7 +632,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         io.AddKeyEvent(ImGuiKey_ModShift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
         io.AddKeyEvent(ImGuiKey_ModAlt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
-        for (auto uielement : ui_elements_enabled) {
+        for (const auto uielement : ui_elements_enabled) {
             if (world_map_showing && !uielement->ShowOnWorldMap())
                 continue;
             uielement->Draw(device);
@@ -672,13 +672,13 @@ void GWToolbox::Update(GW::HookStatus *)
         && imgui_initialized
         && !must_self_destruct) {
 
-        for (auto m : all_modules_enabled) {
+        for (const auto m : all_modules_enabled) {
             m->Update(delta_f);
         }
 
     }
 
-    for (auto m : modules_terminating) {
+    for (const auto m : modules_terminating) {
         if (m->CanTerminate()) {
             m->Terminate();
             const auto found = std::ranges::find(modules_terminating, m);

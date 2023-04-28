@@ -102,7 +102,7 @@ private:
     static void CmdWithdraw(const wchar_t*, int argc, LPWSTR* argv);
 
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
-    static bool GetNPCInfoByName(const std::string name, PendingTransmo &transmo);
+    static bool GetNPCInfoByName(const std::string& name, PendingTransmo &transmo);
     static bool GetNPCInfoByName(const std::wstring name, PendingTransmo &transmo);
     static bool ParseScale(int scale,PendingTransmo& transmo);
     static bool GetTargetTransmoInfo(PendingTransmo& transmo);

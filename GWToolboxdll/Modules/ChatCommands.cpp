@@ -99,7 +99,7 @@ namespace {
     void TargetVipers() {
         // target best vipers target (closest)
         GW::AgentArray* agents = GW::Agents::GetAgentArray();
-        GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
+        const GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
         if (me == nullptr) return;
 
         const float wanted_angle = (me->rotation_angle * 180.0f / F_PI);
@@ -129,7 +129,7 @@ namespace {
     void TargetEE() {
         // target best ebon escape target
         GW::AgentArray* agents = GW::Agents::GetAgentArray();
-        GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
+        const GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
         if (me == nullptr) return;
 
         const float facing_angle = (me->rotation_angle * 180.0f / F_PI);
@@ -225,7 +225,7 @@ namespace {
         // If a channel was given in the UI message, set it now.
         if ((GW::UI::UIMessage)message->message_id == GW::UI::UIMessage::kAppendMessageToChat && lParam) {
             uint32_t* frame_ptr = *(uint32_t**)message->wParam;
-            uint32_t tab = (uint32_t)lParam ^ 0x8000;
+            const uint32_t tab = (uint32_t)lParam ^ 0x8000;
             if (tab < 6 && FocusChatTab_Func) {
                 FocusChatTab_Func(frame_ptr, 0, tab);
                 GW::Hook::LeaveHook();
@@ -279,7 +279,7 @@ namespace {
     const char* pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";
     typedef void(__cdecl* CmdPrefCB)(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id);
     void CmdValuePref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id) {
-        GW::UI::NumberPreference pref = (GW::UI::NumberPreference)pref_id;
+        const GW::UI::NumberPreference pref = (GW::UI::NumberPreference)pref_id;
 
         // Find value and set preference
         uint32_t value = 0xff;
@@ -292,7 +292,7 @@ namespace {
         return Log::Error(pref_syntax);
     }
     void CmdEnumPref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id) {
-        GW::UI::EnumPreference pref = (GW::UI::EnumPreference)pref_id;
+        const GW::UI::EnumPreference pref = (GW::UI::EnumPreference)pref_id;
 
         // Find value and set preference
         uint32_t value = 0xff;
@@ -305,7 +305,7 @@ namespace {
 
         // Got this far; print out available values for this preference.
         uint32_t* values = 0;
-        uint32_t available = GW::UI::GetPreferenceOptions(pref,&values);
+        const uint32_t available = GW::UI::GetPreferenceOptions(pref,&values);
         wchar_t available_vals_buffer[120];
         uint32_t offset = 0;
         offset += swprintf(&available_vals_buffer[offset], offset - _countof(available_vals_buffer), L"Available values for %s: ", argv[1]);
@@ -315,7 +315,7 @@ namespace {
         Log::InfoW(available_vals_buffer);
     }
     void CmdFlagPref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id) {
-        GW::UI::FlagPreference pref = (GW::UI::FlagPreference)pref_id;
+        const GW::UI::FlagPreference pref = (GW::UI::FlagPreference)pref_id;
 
         // Find value and set preference
         uint32_t value = 0xff;
@@ -372,7 +372,7 @@ namespace {
             wchar_t* buffer = new wchar_t[buf_size];
             int offset = 0;
             for (auto it = options.begin(); it != options.end();it++) {
-                int written = swprintf(&buffer[offset], offset - buf_size, offset > 0 ? L", %s" : L"%s", it->first.c_str());
+                const int written = swprintf(&buffer[offset], offset - buf_size, offset > 0 ? L", %s" : L"%s", it->first.c_str());
                 ASSERT(written != -1);
                 offset += written;
             }
@@ -458,7 +458,7 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
         npc.scale = scale;
         npc.default_level = 0;
         GW::GameThread::Enqueue([npc_id, npc]() {
-            GW::Packet::StoC::NpcGeneralStats packet;
+            GW::Packet::StoC::NpcGeneralStats packet{};
             packet.npc_id = npc_id;
             packet.file_id = npc.model_file_id;
             packet.data1 = 0;
@@ -502,7 +502,7 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
     });
 }
 
-bool ChatCommands::GetNPCInfoByName(const std::string name, PendingTransmo& transmo)
+bool ChatCommands::GetNPCInfoByName(const std::string& name, PendingTransmo& transmo)
 {
     for (const auto& npc_transmo : npc_transmos) {
         const size_t found_len = npc_transmo.first.find(name);
@@ -685,7 +685,7 @@ void ChatCommands::DrawSettingInternal() {
         ImGui::PopID();
     }
     if (ImGui::Button("Add New Alias")) {
-        auto alias = new CmdAlias();
+        const auto alias = new CmdAlias();
         strcpy(alias->alias_cstr, "thetime");
         wcscpy(alias->alias_wstr, L"thetime");
         strcpy(alias->command_cstr, "/age");
@@ -699,7 +699,7 @@ void ChatCommands::LoadSettings(ToolboxIni* ini) {
     LOAD_FLOAT(cam_speed);
     LOAD_UINT(default_title_id);
 
-    for (auto* it : cmd_aliases) {
+    for (const auto* it : cmd_aliases) {
         delete it;
     }
     cmd_aliases.clear();
@@ -708,7 +708,7 @@ void ChatCommands::LoadSettings(ToolboxIni* ini) {
 
     ToolboxIni::TNamesDepend entries;
     ini->GetAllKeys(section_name, entries);
-    for (const auto entry : entries) {
+    for (const auto& entry : entries) {
         if (!entry.pItem[0]) continue;
         std::string cmd = ini->GetValue(section_name, entry.pItem, "");
         if (cmd.empty()) continue;
@@ -744,7 +744,7 @@ void ChatCommands::CmdPingQuest(const wchar_t* , int , LPWSTR* ) {
 void ChatCommands::Initialize() {
     ToolboxModule::Initialize();
 
-    const DWORD def_scale = 0x64000000;
+    constexpr DWORD def_scale = 0x64000000;
     // Available Transmo NPCs
     // @Enhancement: Ability to target an NPC in-game and add it to this list via a GUI
     npc_transmos = {
@@ -871,11 +871,11 @@ void ChatCommands::Terminate()
 
     GW::Chat::RemoveSendChatCallback(&OnSentChat_HookEntry);
 
-    for (auto* it : title_names) {
+    for (const auto it : title_names) {
         delete it;
     }
     title_names.clear();
-    for (auto* it : cmd_aliases) {
+    for (const auto it : cmd_aliases) {
         delete it;
     }
     cmd_aliases.clear();
@@ -922,7 +922,7 @@ void ChatCommands::Update(float delta) {
             case GW::Constants::TitleID::Deprecated_Wisdom:
                 continue;
             }
-            DecodedTitleName* dtn = new DecodedTitleName((GW::Constants::TitleID)i);
+            auto dtn = new DecodedTitleName((GW::Constants::TitleID)i);
             title_names.push_back(dtn);
             dtn->name.string(); // Trigger decode for sorting.
         }
@@ -984,7 +984,7 @@ void ChatCommands::Update(float delta) {
     quest_ping.Update();
 }
 void ChatCommands::QuestPing::Init() {
-    auto* quest = GW::QuestMgr::GetActiveQuest();
+    const auto* quest = GW::QuestMgr::GetActiveQuest();
     if (quest) {
         quest_id = quest->quest_id;
         name.reset(quest->name);
@@ -1069,25 +1069,25 @@ void ChatCommands::SearchAgent::Update() {
         Init(nullptr);
         return;
     }
-    for (auto& enc_name : npc_names) {
-        if (enc_name.second->wstring().empty())
+    for (const auto& str : npc_names | std::views::values) {
+        if (str->wstring().empty())
             return; // Not all decoded yet
     }
     // Do search
     size_t found = std::wstring::npos;
     float distance = GW::Constants::SqrRange::Compass;
     size_t closest = 0;
-    GW::Agent* me = GW::Agents::GetPlayer();
+    const GW::Agent* me = GW::Agents::GetPlayer();
     if (!me)
         return;
-    for (auto& enc_name : npc_names) {
+    for (const auto& enc_name : npc_names) {
         found = GuiUtils::ToLower(enc_name.second->wstring()).find(search.c_str());
         if (found == std::wstring::npos)
             continue;
-        GW::Agent* agent = GW::Agents::GetAgentByID(enc_name.first);
+        const GW::Agent* agent = GW::Agents::GetAgentByID(enc_name.first);
         if (!agent)
             continue;
-        float dist = GW::GetDistance(me->pos, agent->pos);
+        const float dist = GW::GetDistance(me->pos, agent->pos);
         if (dist < distance) {
             closest = agent->agent_id;
             distance = dist;
@@ -1111,7 +1111,7 @@ void ChatCommands::SkillToUse::Update() {
         slot = 0;
         return;
     }
-    uint32_t lslot = slot - 1;
+    const uint32_t lslot = slot - 1;
     const GW::SkillbarSkill& skill = skillbar->skills[lslot];
     if (skill.skill_id == GW::Constants::SkillID::No_Skill
         || skill.skill_id == GW::Constants::SkillID::Mystic_Healing
@@ -1127,14 +1127,14 @@ void ChatCommands::SkillToUse::Update() {
     }
 }
 bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSize) {
-    HANDLE fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+    const HANDLE fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
     if (fileHandle == INVALID_HANDLE_VALUE) {
         // We don't print that error, because we can /load [template]
         // Log::Error("Failed openning file '%S'", path.c_str());
         return false;
     }
 
-    DWORD fileSize = GetFileSize(fileHandle, NULL);
+    const DWORD fileSize = GetFileSize(fileHandle, NULL);
     if (fileSize >= buffSize) {
         Log::Error("Buffer size too small, file size is %d", fileSize);
         CloseHandle(fileHandle);
@@ -1278,14 +1278,14 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
             GWToolbox::Instance().StartSelfDestruct();
         }
         else { // e.g. /tb travel
-            std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
+            const std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
             for (ToolboxUIElement* window : windows) {
                 window->visible ^= 1;
             }
         }
         return;
     }
-    std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
+    const std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
     const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
     if (arg2 == L"hide") { // e.g. /tb travel hide
         for (auto const& window : windows)
@@ -1376,7 +1376,7 @@ void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
         Log::ErrorW(L"Invalid syntax: %s", message);
         return;
     }
-    std::wstring last_arg = GuiUtils::ToLower(argv[argc - 1]);
+    const std::wstring last_arg = GuiUtils::ToLower(argv[argc - 1]);
     bool ignore_last_arg = false;
     enum ActionType : uint8_t {
         Toggle,
@@ -1391,7 +1391,7 @@ void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
         action = Off;
         ignore_last_arg = true;
     }
-    std::wstring second_arg = GuiUtils::ToLower(argv[1]);
+    const std::wstring second_arg = GuiUtils::ToLower(argv[1]);
 
     GW::EquipmentType equipment_slot = GW::EquipmentType::Unknown;
 
@@ -1424,7 +1424,7 @@ void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
         ASSERT(GW::Items::SetEquipmentVisibility(equipment_slot, state));
         return;
     }
-    std::vector<ToolboxUIElement*> windows = MatchingWindows(message, ignore_last_arg ? argc - 1 : argc, argv);
+    const std::vector<ToolboxUIElement*> windows = MatchingWindows(message, ignore_last_arg ? argc - 1 : argc, argv);
     /*if (windows.empty()) {
         Log::Error("Cannot find window or command '%ls'", argc > 1 ? argv[1] : L"");
         return;
@@ -1442,7 +1442,7 @@ void ChatCommands::CmdToggle(const wchar_t* message, int argc, LPWSTR* argv) {
             break;
         }
     }
-    GW::UI::WindowID gw_window = MatchingGWWindow(message, ignore_last_arg ? argc - 1 : argc, argv);
+    const GW::UI::WindowID gw_window = MatchingGWWindow(message, ignore_last_arg ? argc - 1 : argc, argv);
     if (gw_window < GW::UI::WindowID_Count) {
         bool set = true;
         switch (action) {
@@ -1489,7 +1489,7 @@ void ChatCommands::CmdCamera(const wchar_t *message, int argc, LPWSTR *argv) {
             Log::Info("Use Q/E, A/D, W/S, X/Z, R and arrows for camera movement");
         } else if (arg1 == L"fog") {
             if (argc == 3) {
-                std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+                const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
                 if (arg2 == L"on") {
                     GW::CameraMgr::SetFog(true);
                 } else if (arg2 == L"off") {
@@ -1662,7 +1662,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
         } else {
             if (!party->heroes.valid()) return;
             uint32_t partyMemberNumber = 0;
-            uint32_t partySize = party->players.size() + party->heroes.size();
+            const uint32_t partySize = party->players.size() + party->heroes.size();
 
             if (!GuiUtils::ParseUInt(argv[2], &partyMemberNumber) || partyMemberNumber <= 0 ||
                 partyMemberNumber > partySize) {
@@ -1688,7 +1688,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
             }
         }
         if (calledTargetId == 0) return;
-        GW::Agent* agent = GW::Agents::GetAgentByID(calledTargetId);
+        const GW::Agent* agent = GW::Agents::GetAgentByID(calledTargetId);
         if (!agent) return;
         GW::Agents::ChangeTarget(agent);
     }
@@ -1888,13 +1888,13 @@ void ChatCommands::CmdTransmoParty(const wchar_t*, int argc, LPWSTR* argv) {
         if (!GetTargetTransmoInfo(transmo))
             return;
     }
-    for (GW::HeroPartyMember& p : pInfo->heroes) {
+    for (const GW::HeroPartyMember& p : pInfo->heroes) {
         TransmoAgent(p.agent_id, transmo);
     }
-    for (GW::HenchmanPartyMember& p : pInfo->henchmen) {
+    for (const GW::HenchmanPartyMember& p : pInfo->henchmen) {
         TransmoAgent(p.agent_id, transmo);
     }
-    for (GW::PlayerPartyMember& p : pInfo->players) {
+    for (const GW::PlayerPartyMember& p : pInfo->players) {
         const GW::Player* const player = GW::PlayerMgr::GetPlayerByID(p.login_number);
         if (!player) continue;
         TransmoAgent(player->agent_id, transmo);
@@ -1966,8 +1966,8 @@ void ChatCommands::CmdHom(const wchar_t* message, int argc, LPWSTR*) {
         }
     }
 
-    auto target = GW::Agents::GetTargetAsAgentLiving();
-    auto player = target && target->IsPlayer() ? GW::PlayerMgr::GetPlayerByID(target->player_number) : nullptr;
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    const auto player = target && target->IsPlayer() ? GW::PlayerMgr::GetPlayerByID(target->player_number) : nullptr;
     if (player) {
         player_name = player->name;
         return GetAchievements(player_name);
@@ -1998,7 +1998,7 @@ void ChatCommands::CmdWithdraw(const wchar_t*, int argc, LPWSTR* argv)
     }
 
     // NB: uint16_t used already throughout Inv manager, and can't possibly have move than 0xffff of any item anyway.
-    uint16_t to_move = (uint16_t)wanted_quantity;
+    const uint16_t to_move = (uint16_t)wanted_quantity;
     InventoryManager::Instance().RefillUpToQuantity(to_move, model_ids);
 }
 
@@ -2154,7 +2154,7 @@ void ChatCommands::CmdTransmoAgent(const wchar_t* , int argc, LPWSTR* argv) {
     if(!GuiUtils::ParseInt(argv[1], &iagent_id) || iagent_id < 0)
         return Log::Error("Invalid /transmoagent agent_id");
     PendingTransmo transmo;
-    uint32_t agent_id = static_cast<uint32_t>(iagent_id);
+    const uint32_t agent_id = static_cast<uint32_t>(iagent_id);
     int iscale;
     if (wcsncmp(argv[2], L"reset", 5) == 0) {
         transmo.npc_id = INT_MAX;
@@ -2184,7 +2184,7 @@ void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
         Log::Error("The syntax is /resize width height");
         return;
     }
-    HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+    const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
     RECT rect;
     GetWindowRect(hwnd, &rect);
     MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
@@ -2376,7 +2376,7 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
     GW::HeroFlagArray* f = w ? &w->hero_flags : nullptr;
     if (!(f && f->size()))
         return;
-    for (auto& hero : *f) {
+    for (const auto& hero : *f) {
         GW::PartyMgr::SetHeroBehavior(hero.agent_id, behaviour);
     }
 }
@@ -2390,7 +2390,7 @@ void ChatCommands::CmdVolume(const wchar_t*, int argc, LPWSTR* argv) {
         value = argv[1];
         break;
     case 3: {
-        wchar_t* pref_str = argv[1];
+        const wchar_t* pref_str = argv[1];
         if (wcscmp(pref_str, L"master") == 0) {
             pref = GW::UI::NumberPreference::MasterVolume;
         }
@@ -2447,10 +2447,10 @@ void ChatCommands::CmdAnimation(const wchar_t*, int argc, LPWSTR* argv) {
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 
     if (arg1 == L"me") {
-        GW::AgentLiving* agent = GW::Agents::GetPlayerAsAgentLiving();
+        const GW::AgentLiving* agent = GW::Agents::GetPlayerAsAgentLiving();
         agentid = agent->agent_id;
     } else if (arg1 == L"target") {
-        GW::AgentLiving* agent = GW::Agents::GetTargetAsAgentLiving();
+        const GW::AgentLiving* agent = GW::Agents::GetTargetAsAgentLiving();
         if(!agent)
             return Log::Error("No target chosen");
         agentid = agent->agent_id;

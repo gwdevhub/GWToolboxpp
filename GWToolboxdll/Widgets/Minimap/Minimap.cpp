@@ -164,11 +164,11 @@ namespace {
             const auto quest = GW::QuestMgr::GetActiveQuest();
             if (quest) {
                 struct QuestUIMsg {
-                    GW::Constants::QuestID quest_id;
-                    GW::Vec3f marker;
-                    uint32_t h0024;
-                    GW::Constants::MapID map_to;
-                    uint32_t log_state;
+                    GW::Constants::QuestID quest_id{};
+                    GW::Vec3f marker{};
+                    uint32_t h0024{};
+                    GW::Constants::MapID map_to{};
+                    uint32_t log_state{};
                 } msg;
                 msg.quest_id = quest->quest_id;
                 msg.marker = quest->marker;

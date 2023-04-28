@@ -31,8 +31,8 @@ public:
 
     bool CanTerminate();
 
-    std::filesystem::path SaveSettings(std::filesystem::path config = GWTOOLBOX_INI_FILENAME) const;
-    std::filesystem::path LoadSettings(std::filesystem::path config = GWTOOLBOX_INI_FILENAME, bool fresh = false) const;
+    std::filesystem::path SaveSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME) const;
+    std::filesystem::path LoadSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME, bool fresh = false);
 
     void StartSelfDestruct();
 
