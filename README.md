@@ -54,11 +54,10 @@ Please take note that plugins are currently a *beta* feature - plugins compiled 
 For users: put the plugin into GWToolboxpp/\<Computername\>/plugins
 
 For developers: there are a few things you should take note of:
-* two examples (clock and InstanceTimer) will automatically be added to the solution (see CMakeLists.txt)
-* Toolbox is compiled with /MT - this means that memory allocation/deallocation must not happen across dll or library boundaries
+* three examples (Clock, Armory and InstanceTimer) will automatically be added to the solution (see CMakeLists.txt)
 * Your Plugin::Initialize must call ToolboxPlugin::Initialize(ctx, fns, tbdll), otherwise you must take care of creating and destroying your own ImGui context.
 * we do not guarantee API stability between versions but try to not change existing exported method signatures
-* you must not call GW::Initialize in your plugin, it will use the instance created by Toolbox. Get access to functions either through GetProcAddress(toolbox_handle, mangled_name) or by linking with GWToolboxdll.lib
+* you will likely want GWCA access in your plugin, so call GW::Initialize(). If you also change toolbox functionality, by pattern scanning the Toolbox dll, make sure your plugins signature scanner is pointed to gw.exe at the end of Plugin::Initialize().
 
 ## Credits
 
