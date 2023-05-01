@@ -1734,6 +1734,8 @@ void GameSettings::DrawSettingInternal() {
     if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
         SetWindowTitle(set_window_title_as_charname);
     }
+    ImGui::Checkbox("Apply Collector's Edition animations on player dance", &collectors_edition_emotes);
+    ImGui::ShowHelp("Only applies to your own character");
     ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
     ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
@@ -2133,7 +2135,7 @@ void GameSettings::OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::
 // Apply Collector's Edition animations on player dancing,
 void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) const
 {
-    if (pak->agent_id != GW::Agents::GetPlayerId() || collectors_edition_emotes)
+    if (!(pak->agent_id == GW::Agents::GetPlayerId() && collectors_edition_emotes))
         return;
     static GW::Packet::StoC::GenericValue pak2;
     pak2.agent_id = pak->agent_id;
