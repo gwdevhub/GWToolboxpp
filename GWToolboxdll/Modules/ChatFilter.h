@@ -108,12 +108,10 @@ private:
 
     // Chat filter
     std::vector<std::string> bycontent_words;
-    bool bycontent_words_case_insensitive = true;
     char bycontent_word_buf[FILTER_BUF_SIZE] = "";
     bool bycontent_filedirty = false;
 
     std::vector<std::regex> bycontent_regex;
-    bool bycontent_regex_case_insensitive = true;
     char bycontent_regex_buf[FILTER_BUF_SIZE] = "";
 
 #ifdef EXTENDED_IGNORE_LIST

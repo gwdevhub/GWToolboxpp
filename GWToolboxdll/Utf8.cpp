@@ -54,10 +54,10 @@ size_t Utf8ToUnicode(const char *str, wchar_t *buffer, size_t count)
     return static_cast<size_t>(iret);
 }
 
-utf8::string Utf8Normalize(const char *str, const bool case_insensitive)
+utf8::string Utf8Normalize(const char *str)
 {
-    const int flags = UTF8PROC_NULLTERM | UTF8PROC_STABLE |
-        UTF8PROC_COMPOSE | UTF8PROC_COMPAT | UTF8PROC_IGNORE | UTF8PROC_STRIPMARK | (case_insensitive ? UTF8PROC_CASEFOLD : 0);
+    constexpr int flags = UTF8PROC_NULLTERM | UTF8PROC_STABLE |
+        UTF8PROC_COMPOSE | UTF8PROC_COMPAT | UTF8PROC_CASEFOLD | UTF8PROC_IGNORE | UTF8PROC_STRIPMARK;
     utf8::string res;
     utf8proc_map((utf8proc_uint8_t *)str, 0, (utf8proc_uint8_t **)&res.bytes, (utf8proc_option_t)flags);
     res.count = res.bytes ? strlen(res.bytes) : 0;

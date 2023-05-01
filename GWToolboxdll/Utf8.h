@@ -50,4 +50,4 @@ size_t Utf8ToUnicode(const char *str, wchar_t *buffer, size_t count);
 //  - change to lower case
 //  - remove accent
 //  - remove non-printable character (e.g. zero-width spaces)
-utf8::string Utf8Normalize(const char *str, bool case_insensitive = true);
+utf8::string Utf8Normalize(const char *str);
