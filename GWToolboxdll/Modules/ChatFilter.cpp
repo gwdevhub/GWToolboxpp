@@ -21,6 +21,7 @@
 #include <Modules/ChatFilter.h>
 #include <GWCA/GameEntities/Friendslist.h>
 #include <Utils/ToolboxUtils.h>
+#include <Utils/GuiUtils.h>
 
 //#define PRINT_CHAT_PACKETS
 
@@ -506,26 +507,18 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) cons
     }
     if (end == nullptr) end = &message[i];
 
-    // std::string temp(start, end);
-    char buffer[1024];
-    const utf8::string temp = Unicode16ToUtf8(buffer, 1024, start, end);
-    if (!temp.count)
+    using namespace GuiUtils;
+    std::wstring substring = std::wstring(start, end);
+    if (substring.empty())
         return false;
-
-    const utf8::string text = Utf8Normalize(temp.bytes);
-    if (!text.count) {
-        return false;
-    }
-
+    substring = RemoveDiacritics(ToLower(substring));
     for (const auto& s : bycontent_words) {
-        if (strstr(text.bytes, s.c_str())) {
+        if (substring.find(s) != std::wstring::npos)
             return true;
-        }
     }
-    for (const std::regex& r : bycontent_regex) {
-        if (std::regex_match(temp.bytes, r)) {
+    for (const auto& r : bycontent_regex) {
+        if(std::regex_match(substring, r))
             return true;
-        }
     }
     return false;
 }
@@ -713,43 +706,33 @@ void ChatFilter::Update(float delta) {
     }
 }
 
-void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) const {
-    words.clear();
-    const auto normalized_text = Utf8Normalize(text);
-    std::istringstream stream(normalized_text.bytes);
-    std::string word;
-    while (std::getline(stream, word)) {
-        if (!word.empty()) {
-            words.push_back(word);
-        }
-    }
-}
-
 void ChatFilter::ParseBuffer(const char *text, std::vector<std::wstring> &words) const {
+    using namespace GuiUtils;
     words.clear();
-    wchar_t buffer[1024];
-    Utf8ToUnicode(text, buffer, 1024);
-    std::wstringstream stream(buffer);
+    const auto text_ws = RemoveDiacritics(ToLower(StringToWString(text)));
+    std::wstringstream stream(text_ws.c_str());
     std::wstring word;
     while (std::getline(stream, word)) {
-        if (!word.empty()) {
-            words.push_back(word);
-        }
+        if (word.empty())
+            continue;
+        words.push_back(word);
     }
 }
 
-void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) const {
+void ChatFilter::ParseBuffer(const char *text, std::vector<std::wregex> &regex) const {
+    using namespace GuiUtils;
     regex.clear();
-    std::istringstream stream(text);
-    std::string word;
+    const auto text_ws = RemoveDiacritics(StringToWString(text));
+    std::wstringstream stream(text_ws.c_str());
+    std::wstring word;
     while (std::getline(stream, word)) {
-        if (!word.empty()) {
-            // std::ranges::transform(word, word.begin(), ::tolower);
-            try {
-                regex.push_back(std::regex(word));
-            } catch (const std::regex_error&) {
-                Log::Warning("Cannot parse regular expression '%s'", word.c_str());
-            }
+        if (word.empty())
+            continue;
+        try {
+            regex.push_back(std::wregex(word,std::regex_constants::icase));
+        } catch (const std::regex_error&) {
+            Log::Warning("Cannot parse regular expression '%s'", word.c_str());
         }
     }
+
 }

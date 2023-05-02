@@ -107,11 +107,11 @@ private:
     static constexpr size_t FILTER_BUF_SIZE = 1024*16;
 
     // Chat filter
-    std::vector<std::string> bycontent_words;
+    std::vector<std::wstring> bycontent_words;
     char bycontent_word_buf[FILTER_BUF_SIZE] = "";
     bool bycontent_filedirty = false;
 
-    std::vector<std::regex> bycontent_regex;
+    std::vector<std::wregex> bycontent_regex;
     char bycontent_regex_buf[FILTER_BUF_SIZE] = "";
 
 #ifdef EXTENDED_IGNORE_LIST
@@ -124,9 +124,8 @@ private:
     uint32_t timer_parse_filters = 0;
     uint32_t timer_parse_regexes = 0;
 
-    void ParseBuffer(const char *text, std::vector<std::string>  &words) const;
     void ParseBuffer(const char *text, std::vector<std::wstring> &words) const;
-    void ParseBuffer(const char* text, std::vector<std::regex> &regex) const;
+    void ParseBuffer(const char* text, std::vector<std::wregex> &regexes) const;
 
     //void ByContent_ParseBuf() {
     //      ParseBuffer(bycontent_buf, bycontent_regex);
