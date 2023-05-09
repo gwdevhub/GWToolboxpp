@@ -1409,7 +1409,7 @@ bool TravelWindow::ParseOutpost(const std::wstring &s, GW::Constants::MapID &out
             thisMapLength = sanitized.length();
             if (searchStringLength > thisMapLength)
                 continue; // String entered by user is longer than this outpost name.
-            if (sanitized.rfind(compare) != 0)
+            if (sanitized.find(compare) != 0)
                 continue; // No match
             if (bestMatchLength < thisMapLength) {
                 bestMatchLength = thisMapLength;
