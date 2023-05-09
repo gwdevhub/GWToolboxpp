@@ -138,6 +138,11 @@ namespace {
         return CompletionWindow::Instance();
     }
 
+    HallOfMonumentsAchievements* GetCharacterHom(const std::wstring& player_name) {
+        const auto cc = Instance().GetCharacterCompletion(player_name.c_str(),false);
+        return cc ? &cc->hom_achievements : nullptr;
+    }
+
     void OnCycleDisplayedMinipetsButton(const GW::UI::DialogButtonInfo* button) {
         if (wcsncmp(button->message, L"\x8102\x2B96\xA802\xD212\x380C", 5) != 0)
             return; // Not "Cycle displayed minipets"
@@ -2267,12 +2272,12 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
 	ImGui::Checkbox("Hide unlocked achievements", &hide_unlocked_achievements);
 	ImGui::PopStyleVar();
-	const auto& hom = character_completion[chosen_player_name]->hom_achievements;
+    const auto hom = GetCharacterHom(chosen_player_name);
 	// Devotion
 	uint32_t completed = 0;
-	if (hom.isReady()) {
-		for (size_t i = 0; i < _countof(hom.devotion_points); i++) {
-			completed += hom.devotion_points[i];
+	if (hom && hom->isReady()) {
+		for (size_t i = 0; i < _countof(hom->devotion_points); i++) {
+			completed += hom->devotion_points[i];
 		}
 	}
 	uint32_t dedicated = 0;
@@ -2330,9 +2335,9 @@ then press "Examine the Monument to Devotion.")");
 	}
 	// Valor
 	completed = 0;
-	if (hom.isReady()) {
-		for (size_t i = 0; i < _countof(hom.valor_points); i++) {
-			completed += hom.valor_points[i];
+	if (hom && hom->isReady()) {
+		for (size_t i = 0; i < _countof(hom->valor_points); i++) {
+			completed += hom->valor_points[i];
 		}
 	}
 	dedicated = 0;
@@ -2374,11 +2379,11 @@ then press "Examine the Monument to Devotion.")");
 
 	// Resilience
 	completed = 0;
-	if (hom.isReady()) {
-		for (size_t i = 0; i < _countof(hom.resilience_points); i++) {
-			completed += hom.resilience_points[i];
-		}
-	}
+    if (hom && hom->isReady()) {
+        for (size_t i = 0; i < _countof(hom->resilience_points); i++) {
+            completed += hom->resilience_points[i];
+        }
+    }
 	dedicated = 0;
 	drawn = 0;
 	for (auto m : hom_armor) {
@@ -2417,11 +2422,11 @@ then press "Examine the Monument to Devotion.")");
 
 	// Fellowship
 	completed = 0;
-	if (hom.isReady()) {
-		for (size_t i = 0; i < _countof(hom.fellowship_points); i++) {
-			completed += hom.fellowship_points[i];
-		}
-	}
+    if (hom && hom->isReady()) {
+        for (size_t i = 0; i < _countof(hom->fellowship_points); i++) {
+            completed += hom->fellowship_points[i];
+        }
+    }
 	dedicated = 0;
 	drawn = 0;
 	for (auto m : hom_companions) {
@@ -2460,11 +2465,11 @@ then press "Examine the Monument to Devotion.")");
 
 	// Honor
 	completed = 0;
-	if (hom.isReady()) {
-		for (size_t i = 0; i < _countof(hom.honor_points); i++) {
-			completed += hom.honor_points[i];
-		}
-	}
+    if (hom && hom->isReady()) {
+        for (size_t i = 0; i < _countof(hom->honor_points); i++) {
+            completed += hom->honor_points[i];
+        }
+    }
 	dedicated = 0;
 	drawn = 0;
 	for (auto m : hom_titles) {
