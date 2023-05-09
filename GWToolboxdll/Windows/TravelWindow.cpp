@@ -1398,38 +1398,38 @@ bool TravelWindow::ParseOutpost(const std::wstring &s, GW::Constants::MapID &out
         compare.replace(found, 4, "");
 
     // Helper function
-    auto FindMatchingMap = [](const std::string &compare, const char **map_names, const GW::Constants::MapID *map_ids, size_t map_count) -> GW::Constants::MapID {
-        std::string sanitized;
-        unsigned int searchStringLength = compare.length();
-        unsigned int bestMatchLength = 0;
-        unsigned int thisMapLength = 0;
+    auto FindMatchingMap = [](const char* compare, const char **map_names, const GW::Constants::MapID *map_ids, size_t map_count) -> GW::Constants::MapID {
+        const char* bestMatchMapName = nullptr;
         GW::Constants::MapID bestMatchMapID = GW::Constants::MapID::None;
+
+        const auto searchStringLength = compare ? strlen(compare) : 0;
+        if (!searchStringLength)
+            return bestMatchMapID;
         for (size_t i = 0; i < map_count; i++) {
-            sanitized = map_names[i]; // Remove punctuation, to lower case.
-            thisMapLength = sanitized.length();
+            const auto thisMapLength = strlen(map_names[i]);
             if (searchStringLength > thisMapLength)
                 continue; // String entered by user is longer than this outpost name.
-            if (sanitized.find(compare) != 0)
+            if (strncmp(map_names[i],compare,searchStringLength) != 0)
                 continue; // No match
-            if (bestMatchLength < thisMapLength) {
-                bestMatchLength = thisMapLength;
+            if (thisMapLength == searchStringLength)
+                return map_ids[i]; // Exact match, break.
+            if (!bestMatchMapName || strcmp(map_names[i],bestMatchMapName) < 0) {
                 bestMatchMapID = map_ids[i];
-                if (searchStringLength == thisMapLength)
-                    return bestMatchMapID; // Exact match, break.
+                bestMatchMapName = map_names[i];
             }
         }
         return bestMatchMapID;
     };
     GW::Constants::MapID best_match_map_id = GW::Constants::MapID::None;
     if (ImInPresearing()) {
-        best_match_map_id = FindMatchingMap(compare, instance.presearing_map_names, instance.presearing_map_ids, _countof(instance.presearing_map_ids));
+        best_match_map_id = FindMatchingMap(compare.c_str(), instance.presearing_map_names, instance.presearing_map_ids, _countof(instance.presearing_map_ids));
     } else {
-        best_match_map_id = FindMatchingMap(compare, instance.searchable_map_names, instance.searchable_map_ids, _countof(instance.searchable_map_ids));
+        best_match_map_id = FindMatchingMap(compare.c_str(), instance.searchable_map_names, instance.searchable_map_ids, _countof(instance.searchable_map_ids));
         if (best_match_map_id == GW::Constants::MapID::None)
-            best_match_map_id = FindMatchingMap(compare, instance.searchable_dungeon_names, instance.dungeon_map_ids, _countof(instance.dungeon_map_ids));
+            best_match_map_id = FindMatchingMap(compare.c_str(), instance.searchable_dungeon_names, instance.dungeon_map_ids, _countof(instance.dungeon_map_ids));
         if (best_match_map_id == GW::Constants::MapID::None && instance.fetched_searchable_explorable_areas == Ready) {
             // find explorable area matching this, and then find nearest unlocked outpost.
-            best_match_map_id = FindMatchingMap(compare, const_cast<const char**>(instance.searchable_explorable_areas.data()), const_cast<const GW::Constants::MapID*>(instance.searchable_explorable_area_ids.data()), instance.searchable_explorable_area_ids.size());
+            best_match_map_id = FindMatchingMap(compare.c_str(), const_cast<const char**>(instance.searchable_explorable_areas.data()), const_cast<const GW::Constants::MapID*>(instance.searchable_explorable_area_ids.data()), instance.searchable_explorable_area_ids.size());
             if(best_match_map_id != GW::Constants::MapID::None)
                 best_match_map_id = GetNearestOutpost(best_match_map_id);
         }
