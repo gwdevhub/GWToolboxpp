@@ -132,7 +132,7 @@ namespace {
             if (word.empty())
                 continue;
             try {
-                regex.push_back(std::wregex(word,std::regex_constants::icase));
+                regex.push_back(std::wregex(word,std::regex_constants::icase | std::regex_constants::optimize));
             } catch (const std::regex_error&) {
                 Log::Warning("Cannot parse regular expression '%s'", word.c_str());
             }
@@ -392,7 +392,7 @@ namespace {
                 return true;
         }
         for (const auto& r : bycontent_regex) {
-            if(std::regex_match(substring, r))
+            if (std::regex_match(substring, r))
                 return true;
         }
         return false;
