@@ -69,12 +69,12 @@ namespace {
     bool filter_channel_alliance = false;
     bool filter_channel_emotes = false;
 
-    static constexpr size_t FILTER_BUF_SIZE = 1024*16;
+    constexpr size_t FILTER_BUF_SIZE = 1024*16;
 
     // @Remark:
     // The text buffer will only be parsed if there was no modification within this period of time.
     // It can be re-ajusted to be more enjoyable.
-    static const uint32_t NOISE_REDUCTION_DELAY_MS = 1000;
+    constexpr uint32_t NOISE_REDUCTION_DELAY_MS = 1000;
 
     // Chat filter
     std::vector<std::wstring> bycontent_words;
@@ -132,7 +132,10 @@ namespace {
             if (word.empty())
                 continue;
             try {
-                regex.push_back(std::wregex(word,std::regex_constants::icase | std::regex_constants::optimize));
+                if (word.starts_with('/') && word.ends_with('/'))
+                    regex.push_back(std::wregex(word.substr(1, word.length() - 2), std::regex_constants::optimize));
+                else
+                    regex.push_back(std::wregex(word, std::regex_constants::icase | std::regex_constants::optimize));
             } catch (const std::regex_error&) {
                 Log::Warning("Cannot parse regular expression '%s'", word.c_str());
             }
@@ -383,16 +386,17 @@ namespace {
         if (end == nullptr) end = &message[i];
 
         using namespace GuiUtils;
-        std::wstring substring = std::wstring(start, end);
-        if (substring.empty())
+        const auto str = std::wstring(start, end);
+        if (str.empty())
             return false;
-        substring = ToLower(RemoveDiacritics(substring));
+        const auto sanitized = RemoveDiacritics(str);
+        const auto lowercase = ToLower(sanitized);
         for (const auto& s : bycontent_words) {
-            if (substring.find(s) != std::wstring::npos)
+            if (lowercase.find(s) != std::wstring::npos)
                 return true;
         }
         for (const auto& r : bycontent_regex) {
-            if (std::regex_match(substring, r))
+            if (std::regex_search(sanitized, r))
                 return true;
         }
         return false;
@@ -782,7 +786,10 @@ void ChatFilter::DrawSettingInternal() {
         timer_parse_filters = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
     }
     ImGui::Text("And messages matching regular expressions:");
-    ImGui::ShowHelp("Regular expressions allow you to specify wildcards and express more.\nThe syntax is described at www.cplusplus.com/reference/regex/ECMAScript\nNote that the whole message needs to be matched, so for example you might want .* at the end.");
+    ImGui::ShowHelp("Regular expressions allow you to specify wildcards and express more.\n"
+                    "The syntax is described at www.cplusplus.com/reference/regex/ECMAScript\n"
+                    "If you wish to only block if the entire message is matched, use the ^...$ syntax (^ for start, $ for end).\n"
+                    "Regexes will be matched case-insensitive by default, if you wish to match case-sensitive, use /.../ syntax (starts and ends with /).");
     if (ImGui::InputTextMultiline("##bycontentfilter_regex", bycontent_regex_buf,
         FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
         timer_parse_regexes = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
