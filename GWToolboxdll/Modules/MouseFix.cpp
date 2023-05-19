@@ -8,6 +8,7 @@
 #include <GWCA/Managers/MemoryMgr.h>
 
 #include "Defines.h"
+#include "ImGuiAddons.h"
 #include "MouseFix.h"
 
 #include <hidusage.h>
@@ -289,14 +290,15 @@ namespace {
         GW::Hook::EnterHook();
         ChangeCursorIcon_Ret(user_data);
         // Cursor has been changed by the game; pull it back out, scale it to target size..
-        HCURSOR new_cursor;
         if (cursor_size < 0 || cursor_size > 64 || cursor_size == 32)
-            goto leave;
+            return GW::Hook::LeaveHook();
         if (!(user_data && user_data->cursor && user_data->cursor != current_cursor))
-            goto leave;
-        new_cursor = ScaleCursor(user_data->cursor, cursor_size);
+            return GW::Hook::LeaveHook();
+        const HCURSOR new_cursor = ScaleCursor(user_data->cursor, cursor_size);
         if (!new_cursor)
-            goto leave;
+            return GW::Hook::LeaveHook();
+        if (user_data->cursor == new_cursor)
+            return GW::Hook::LeaveHook();
         if (user_data->cursor) {
             // Don't forget to free the original cursor before overwriting the handle
             DestroyCursor(user_data->cursor);
@@ -309,7 +311,6 @@ namespace {
         // Also override the window class for the cursor
         SetClassLongA(user_data->window_handle, GCL_HCURSOR, reinterpret_cast<LONG>(new_cursor));
         current_cursor = new_cursor;
-    leave:
         GW::Hook::LeaveHook();
     }
     void RedrawCursorIcon()
@@ -377,6 +378,8 @@ void MouseFix::DrawSettingInternal()
         CursorFixEnable(enable_cursor_fix);
     }
     ImGui::SliderInt("Guild Wars cursor size", &cursor_size, 16, 64);
+    ImGui::ShowHelp("Sizes other than 32 might lead the the cursor disappearing at random.\n"
+                    "Right click to make the cursor dis- and reappear for this to take effect.");
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         SetCursorSize(cursor_size);
         RedrawCursorIcon();

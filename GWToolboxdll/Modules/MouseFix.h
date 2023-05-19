@@ -4,7 +4,7 @@
 
 class MouseFix : public ToolboxModule {
     MouseFix() = default;
-    ~MouseFix() = default;
+    ~MouseFix() override = default;
 
 public:
     static MouseFix& Instance()
