@@ -172,7 +172,7 @@ namespace {
                     regex.emplace_back(regex_str, regex_flags);
                 }
                 else
-                    regex.emplace_back(word, std::regex_constants::icase | std::regex_constants::optimize);
+                    regex.emplace_back(word, std::regex_constants::optimize);
             } catch (const std::regex_error&) {
                 Log::Warning("Cannot parse regular expression '%s'", word.c_str());
             }
