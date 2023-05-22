@@ -5,6 +5,20 @@ layout: default
 # Version History
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 6.8
+* [New] Added extended regex options
+* [New] Added option to keep current quest active when accepting a new quest,
+* [New] Added shift click to collapse or expand all quest log entries
+* [New] Added Guild Wars Settings Module (allowing you to export and import your game settings). Experimental for now.
+* [New] Added Chat command aliases (Game Settings)
+* [Minor] Removed duplicate flash_gw_on_pm settings
+* [Minor] Keep last hovered skill id in info window
+* [Minor] Added info description to Custor Size under Mouse Settings
+* [Fix] Fixed map travel outpost matching bug
+* [Fix] Fixed friend list crash
+* [Fix] Fixed minor minimap range render bug
+
+
 ## Version 6.7
 * [New] Added `/chat [all|guild|team|trade|alliance|whisper|close]` to toggle chat tabs
 * [Fix] Fixed crash on start related to gwarmory
