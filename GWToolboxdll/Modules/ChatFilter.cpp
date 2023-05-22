@@ -132,10 +132,47 @@ namespace {
             if (word.empty())
                 continue;
             try {
-                if (word.starts_with('/') && word.ends_with('/'))
-                    regex.push_back(std::wregex(word.substr(1, word.length() - 2), std::regex_constants::optimize));
+                const auto last_slash = word.rfind('/');
+                if (word.starts_with('/') && last_slash != std::wstring::npos && last_slash != 0) {
+                    const auto regex_str = word.substr(1, last_slash - 1);
+                    const auto flags = word.substr(last_slash + 1);
+                    auto regex_flags = std::regex_constants::optimize;
+                    for (const auto chr : flags) {
+                        switch (chr) {
+                        case 'i':
+                            regex_flags |= std::regex_constants::icase;
+                            break;
+                        case 'c':
+                            regex_flags |= std::regex_constants::collate;
+                            break;
+                        case 'n':
+                            regex_flags |= std::regex_constants::nosubs;
+                            break;
+                        case 's':
+                            regex_flags |= std::regex_constants::ECMAScript;
+                            break;
+                        case 'b':
+                            regex_flags |= std::regex_constants::basic;
+                            break;
+                        case 'x':
+                            regex_flags |= std::regex_constants::extended;
+                            break;
+                        case 'a':
+                            regex_flags |= std::regex_constants::awk;
+                            break;
+                        case 'g':
+                            regex_flags |= std::regex_constants::grep;
+                            break;
+                        case 'e':
+                            regex_flags |= std::regex_constants::egrep;
+                            break;
+                        default: break;
+                        }
+                    }
+                    regex.emplace_back(regex_str, regex_flags);
+                }
                 else
-                    regex.push_back(std::wregex(word, std::regex_constants::icase | std::regex_constants::optimize));
+                    regex.emplace_back(word, std::regex_constants::icase | std::regex_constants::optimize);
             } catch (const std::regex_error&) {
                 Log::Warning("Cannot parse regular expression '%s'", word.c_str());
             }
@@ -787,9 +824,20 @@ void ChatFilter::DrawSettingInternal() {
     }
     ImGui::Text("And messages matching regular expressions:");
     ImGui::ShowHelp("Regular expressions allow you to specify wildcards and express more.\n"
-                    "The syntax is described at www.cplusplus.com/reference/regex/ECMAScript\n"
+                    "The default syntax is described at www.cplusplus.com/reference/regex/ECMAScript\n"
                     "If you wish to only block if the entire message is matched, use the ^...$ syntax (^ for start, $ for end).\n"
-                    "Regexes will be matched case-insensitive by default, if you wish to match case-sensitive, use /.../ syntax (starts and ends with /).");
+                    "You can apply flags to your regexes by using the form /^...$/ics\n"
+                    "i (icase) for case-insensitive\n"
+                    "c (collate) for locale sensitive character ranges\n"
+                    "n (nosubs) for non marking sub expressions\n"
+                    "s (ECMAScript) for modified ECMAScript syntax (default)\n"
+                    "b (basic) for BASIC regex syntax\n"
+                    "x (extended) for extended POSIX regex syntax\n"
+                    "a (awk) for awk grep syntax\n"
+                    "g (grep) for grep syntax\n"
+                    "e (egrep) for egrep synax\n"
+                    "You must supply at most one syntax flag.\n"
+                    "See https://en.cppreference.com/w/cpp/regex/syntax_option_type for further documentation.");
     if (ImGui::InputTextMultiline("##bycontentfilter_regex", bycontent_regex_buf,
         FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
         timer_parse_regexes = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
