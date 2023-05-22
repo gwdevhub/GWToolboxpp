@@ -39,8 +39,6 @@ namespace {
 
     utf8::string imgui_inifile;
 
-
-
     bool must_self_destruct = false;    // is true when toolbox should quit
     GW::HookEntry Update_Entry;
     GW::HookEntry HandleCrash_Entry;
@@ -85,10 +83,9 @@ namespace {
         ImGui_ImplDX9_Init(device);
         ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
 
-        GW::Render::SetResetCallback([](IDirect3DDevice9* device) {
-            UNREFERENCED_PARAMETER(device);
+        GW::Render::SetResetCallback([](const IDirect3DDevice9*) {
             ImGui_ImplDX9_InvalidateDeviceObjects();
-            });
+        });
 
         ImGuiIO& io = ImGui::GetIO();
         io.MouseDrawCursor = false;
@@ -126,12 +123,9 @@ namespace {
 
     std::vector<ToolboxModule*> modules_terminating{};
     void ReorderModules(std::vector<ToolboxModule*>& modules) {
-        std::sort(
-            modules.begin(),
-            modules.end(),
-            [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-                return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
-            });
+        std::ranges::sort(modules, [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+            return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
+        });
     }
 
     ToolboxIni* OpenSettingsFile(std::filesystem::path config = GWTOOLBOX_INI_FILENAME, bool fresh = false)
@@ -149,11 +143,10 @@ namespace {
             fresh = true;
         if (fresh) {
             // inifile is cached, unless path for config has changed.
-            ToolboxIni* tmp = new ToolboxIni(false, false, false);
+            const auto tmp = new ToolboxIni(false, false, false);
             ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
             tmp->location_on_disk = full_path;
-            if (inifile)
-                delete inifile;
+            delete inifile;
             inifile = tmp;
         }
         return inifile;
@@ -226,28 +219,28 @@ void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added) {
             }
         }
     };
-    UpdateVec((std::vector<void*>&)all_modules_enabled, m);
+    UpdateVec(reinterpret_cast<std::vector<void*>&>(all_modules_enabled), m);
     if (m->IsUIElement()) {
-        UpdateVec((std::vector<void*>&)ui_elements_enabled, m);
+        UpdateVec(reinterpret_cast<std::vector<void*>&>(ui_elements_enabled), m);
         if(m->IsWidget()) {
-            UpdateVec((std::vector<void*>&)widgets_enabled, m);
+            UpdateVec(reinterpret_cast<std::vector<void*>&>(widgets_enabled), m);
         }
         if(m->IsWindow()) {
-            UpdateVec((std::vector<void*>&)windows_enabled, m);
+            UpdateVec(reinterpret_cast<std::vector<void*>&>(windows_enabled), m);
         }
     }
     else {
-        UpdateVec((std::vector<void*>&)modules_enabled, m);
+        UpdateVec(reinterpret_cast<std::vector<void*>&>(modules_enabled), m);
     }
 }
 bool GWToolbox::IsInitialized() const { return initialized; }
 bool GWToolbox::ToggleModule(ToolboxWidget& m, bool enable) {
-    const bool added = ToggleTBModule(m, (std::vector<ToolboxModule*>&)widgets_enabled, enable);
+    const bool added = ToggleTBModule(m, reinterpret_cast<std::vector<ToolboxModule*>&>(widgets_enabled), enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
 }
 bool GWToolbox::ToggleModule(ToolboxWindow& m, bool enable) {
-    const bool added = ToggleTBModule(m, (std::vector<ToolboxModule*>&)windows_enabled, enable);
+    const bool added = ToggleTBModule(m, reinterpret_cast<std::vector<ToolboxModule*>&>(windows_enabled), enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
 }

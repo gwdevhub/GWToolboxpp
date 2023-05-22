@@ -18,7 +18,7 @@ namespace ImGui {
         element_spacing_width = width;
         if (include_font_scaling)
             element_spacing_width *= FontScale();
-        element_spacing_cols = (int)std::floor(GetContentRegionAvail().x / element_spacing_width);
+        element_spacing_cols = static_cast<int>(std::floor(GetContentRegionAvail().x / element_spacing_width));
         element_spacing_col_idx = 0;
         element_spacing_indent = &(GetCurrentWindow()->DC.Indent.x);
     }
@@ -43,7 +43,7 @@ namespace ImGui {
         }
     }
     void TextShadowed(const char* label, ImVec2 offset, ImVec4 shadow_color) {
-        ImVec2 pos = GetCursorPos();
+        const ImVec2 pos = GetCursorPos();
         SetCursorPos(ImVec2(pos.x + offset.x, pos.y + offset.y));
         TextColored(shadow_color, "%s", label);
         SetCursorPos(pos);
@@ -100,7 +100,7 @@ namespace ImGui {
         sprintf(button_id, "###icon_button_%s", label);
         const ImVec2& pos = GetCursorScreenPos();
         const ImVec2& textsize = CalcTextSize(label);
-        bool clicked = ButtonEx(button_id, size, flags);
+        const bool clicked = ButtonEx(button_id, size, flags);
 
         const ImVec2& button_size = GetItemRectSize();
         ImVec2 img_size = icon_size;
@@ -118,10 +118,10 @@ namespace ImGui {
                 img_size.x = img_size.y;
         }
         const ImGuiStyle& style = GetStyle();
-        float content_width = img_size.x + textsize.x + (style.FramePadding.x * 2.f);
+        const float content_width = img_size.x + textsize.x + (style.FramePadding.x * 2.f);
         float content_x = pos.x + style.FramePadding.x;
         if (content_width < button_size.x) {
-            float avail_space = button_size.x - content_width;
+            const float avail_space = button_size.x - content_width;
             content_x += (avail_space * style.ButtonTextAlign.x);
         }
         const float img_x = content_x;
@@ -142,13 +142,10 @@ namespace ImGui {
             ImGuiColorEditFlags_NoInputs);
     }
     bool MyCombo(const char* label, const char* preview_text, int* current_item, bool(*items_getter)(void*, int, const char**),
-        void* data, int items_count, int height_in_items) {
-
-        // @Cleanup: Remove this parameter?
-        UNREFERENCED_PARAMETER(height_in_items);
+        void* data, int items_count) {
 
         ImGuiContext& g = *GImGui;
-        const float word_building_delay = .5f; // after this many seconds, typing will make a new search
+        constexpr float word_building_delay = .5f; // after this many seconds, typing will make a new search
 
         if (*current_item >= 0 && *current_item < items_count) {
             items_getter(data, *current_item, &preview_text);
@@ -170,7 +167,7 @@ namespace ImGui {
         time_since_last_update += g.IO.DeltaTime;
         bool update_keyboard_match = false;
         for (int n = 0; n < g.IO.InputQueueCharacters.size() && g.IO.InputQueueCharacters[n]; n++) {
-            if (unsigned int c = (unsigned int)g.IO.InputQueueCharacters[n]) {
+            if (const auto c = static_cast<unsigned int>(g.IO.InputQueueCharacters[n])) {
                 if (c == ' '
                     || (c >= '0' && c <= '9')
                     || (c >= 'A' && c <= 'Z')
@@ -233,7 +230,7 @@ namespace ImGui {
         // Display items
         bool value_changed = false;
         for (int i = 0; i < items_count; i++) {
-            PushID((void*)(intptr_t)i);
+            PushID(reinterpret_cast<void*>(i));
             const bool item_selected = (i == *current_item);
             const bool item_keyboard_selected = (i == keyboard_selected);
             const char* item_text;
@@ -261,13 +258,13 @@ namespace ImGui {
     ImVec2 CalculateUvCrop(ImTextureID user_texture_id, const ImVec2& size) {
         ImVec2 uv1 = { 1.f,1.f };
         if (user_texture_id) {
-            IDirect3DTexture9* texture = (IDirect3DTexture9*)user_texture_id;
+            const auto texture = static_cast<IDirect3DTexture9*>(user_texture_id);
             D3DSURFACE_DESC desc;
-            HRESULT res = texture->GetLevelDesc(0, &desc);
+            const HRESULT res = texture->GetLevelDesc(0, &desc);
             if (!SUCCEEDED(res))
                 return uv1; // Don't throw anything into the log here; this function is called every frame by modules that use it!
-            float ratio = size.x / size.y;
-            float image_ratio = (float)desc.Width / (float)desc.Height;
+            const float ratio = size.x / size.y;
+            const float image_ratio = static_cast<float>(desc.Width) / static_cast<float>(desc.Height);
             if (image_ratio < ratio) {
                 // Image is taller than the required crop; remove bottom of image to fit.
                 uv1.y = ratio * image_ratio;
@@ -284,7 +281,7 @@ namespace ImGui {
         ImGui::Image(user_texture_id, size, { 0,0 }, CalculateUvCrop(user_texture_id,size));
     }
     void AddImageCropped(ImTextureID user_texture_id, const ImVec2& top_left, const ImVec2& bottom_right) {
-        ImVec2 size = { bottom_right.x - top_left.x, bottom_right.y - top_left.y };
+        const ImVec2 size = { bottom_right.x - top_left.x, bottom_right.y - top_left.y };
         ImGui::GetWindowDrawList()->AddImage(user_texture_id, top_left, bottom_right, { 0,0 }, CalculateUvCrop(user_texture_id, size));
     }
     bool ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags)
@@ -305,7 +302,7 @@ namespace ImGui {
         }
 
         if (flags & ImGuiColorEditFlags_AlphaPreview) {
-            const ImVec4 col;
+            constexpr ImVec4 col;
             PushID(count);
             if (ColorButton("", col, ImGuiColorEditFlags_AlphaPreview)) {
                 *palette_index = count;
