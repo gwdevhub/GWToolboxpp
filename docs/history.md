@@ -11,6 +11,7 @@ Previous releases are available on Github as dll files. There is no support for 
 * [New] Added shift click to collapse or expand all quest log entries
 * [New] Added Guild Wars Settings Module (allowing you to export and import your game settings). Experimental for now.
 * [New] Added Chat command aliases (Game Settings)
+* [New] Added auto retry function to /travel
 * [Minor] Removed duplicate flash_gw_on_pm settings
 * [Minor] Keep last hovered skill id in info window
 * [Minor] Added info description to Custor Size under Mouse Settings
