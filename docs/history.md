@@ -13,6 +13,9 @@ Previous releases are available on Github as dll files. There is no support for 
 * [New] Added Chat command aliases (Game Settings)
 * [New] Added auto retry function to /travel
 * [New] Added feature to exclude character names in Reroll Module
+* [New] Added option to filter character list to the current logged in account in Completion window
+* [Minor] Fixed "is typing" check to avoid triggering hotkeys when inputting text anywhere in the game
+* [Minor] Added agressive refrain to bond monitor
 * [Minor] Removed duplicate flash_gw_on_pm settings
 * [Minor] Keep last hovered skill id in info window
 * [Minor] Added info description to Custor Size under Mouse Settings
@@ -26,6 +29,11 @@ Previous releases are available on Github as dll files. There is no support for 
 * [Fix] Fixed bug preventing minimap from showing agents if entering and area without any NPCs
 * [Fix] Fixed bug preventing the player from choosing the last option of a dialog when talking to some Nightfall NPCs
 * [Fix] Fixed minimap bug related to showing random vertices, usually seen with shadow step skills
+* [Fix] Fixed skill monitor history setting not saving
+* [Fix] Fixed bug causing skill templates to be continuously loaded in some cases
+* [Fix] Fixed crash when assigning equip hotkey to an item with a lot of mods
+
+
 
 
 ## Version 6.7
