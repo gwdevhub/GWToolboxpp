@@ -107,7 +107,7 @@ public:
         }
     };
 protected:
-    Friend* SetFriend(const uint8_t*, const GW::FriendType, const GW::FriendStatus, const uint32_t, const wchar_t*, const wchar_t*);
+    Friend* SetFriend(const uint8_t*, GW::FriendType, GW::FriendStatus, uint32_t, const wchar_t*, const wchar_t*);
     Friend* SetFriend(const GW::Friend*);
 
 
@@ -133,7 +133,7 @@ public:
     // Ignore party invitations from players on my ignore list
 
     static bool GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak);
-    static bool GetIsPlayerIgnored(uint32_t player_id);
+    static bool GetIsPlayerIgnored(uint32_t player_number);
     static bool GetIsPlayerIgnored(const std::wstring& player_name);
 
     static void OnPostPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* pak);
