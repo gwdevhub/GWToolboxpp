@@ -6,18 +6,26 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for the latest version, go to the [Home Page](./) instead.
 
 ## Version 6.8
-* [New] Added extended regex options
+* [New] Added extended regex options to Chat Filter
 * [New] Added option to keep current quest active when accepting a new quest,
 * [New] Added shift click to collapse or expand all quest log entries
 * [New] Added Guild Wars Settings Module (allowing you to export and import your game settings). Experimental for now.
 * [New] Added Chat command aliases (Game Settings)
 * [New] Added auto retry function to /travel
+* [New] Added feature to exclude character names in Reroll Module
 * [Minor] Removed duplicate flash_gw_on_pm settings
 * [Minor] Keep last hovered skill id in info window
 * [Minor] Added info description to Custor Size under Mouse Settings
+* [Minor] Improved chat filter to match accented or special characters
+* [Minor] Added feature to re-order Pcons Window
+* [Minor] `/quest` command shows the direct wiki url via quest id rather than search term
 * [Fix] Fixed map travel outpost matching bug
 * [Fix] Fixed friend list crash
 * [Fix] Fixed minor minimap range render bug
+* [Fix] Fixed missing options for Collector's Edition dance emotes
+* [Fix] Fixed bug preventing minimap from showing agents if entering and area without any NPCs
+* [Fix] Fixed bug preventing the player from choosing the last option of a dialog when talking to some Nightfall NPCs
+* [Fix] Fixed minimap bug related to showing random vertices, usually seen with shadow step skills
 
 
 ## Version 6.7
