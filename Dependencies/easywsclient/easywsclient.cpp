@@ -457,6 +457,10 @@ class _RealWebSocket : public easywsclient::WebSocket
 
 };
 
+int verify_callback(int res, void*) {
+    // Override ssl errors (!!)
+    return SSL_SUCCESS;
+}
 
 easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, const std::string& origin) {
 	char sc[128];
@@ -510,32 +514,47 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
     }
 
     if (is_ssl) {
-    	// ssl handshake
-    	// Register the error strings for libcrypto & libssl
-      SSL_load_error_strings ();
-      // Register the available ciphers and digests
-      SSL_library_init ();
+        int res = 0;
+        auto err_out = [res,ptConnCtx]() {
+            ERR_print_errors_cb(print_error_callback, 0);
+            char err_str[255];
+            wolfSSL_ERR_error_string(SSL_get_error(ptConnCtx->sslHandle, 0),err_str);
+            log_error("SSL error: %s", err_str);
+            return nullptr;
+        };
+        // ssl handshake
+        // Register the error strings for libcrypto & libssl
+        SSL_load_error_strings();
+        // Register the available ciphers and digests
+        SSL_library_init();
 
-      // New context saying we are a client using TLS 1.2
-      ptConnCtx->sslContext = SSL_CTX_new(TLSv1_2_client_method());
-      if (ptConnCtx->sslContext == NULL)
-          ERR_print_errors_cb(print_error_callback,0);
+        // New context saying we are a client using TLS 1.2
+        ptConnCtx->sslContext = SSL_CTX_new(TLSv1_2_client_method());
+        if (ptConnCtx->sslContext == NULL)
+            return err_out();
 
-      // Create an SSL struct for the connection
-      SSL_CTX_set_verify(ptConnCtx->sslContext, SSL_VERIFY_NONE, NULL);
-      ptConnCtx->sslHandle = SSL_new (ptConnCtx->sslContext);
-      if (ptConnCtx->sslHandle == NULL)
-          ERR_print_errors_cb(print_error_callback, 0);
+        // Create an SSL struct for the connection
+        SSL_CTX_set_verify(ptConnCtx->sslContext, SSL_VERIFY_PEER, (VerifyCallback)verify_callback);
+
+        ptConnCtx->sslHandle = SSL_new(ptConnCtx->sslContext);
+        if (ptConnCtx->sslHandle == NULL)
+            return err_out();
+
+        //SSL_set_verify(ptConnCtx->sslHandle, SSL_VERIFY_NONE, (VerifyCallback)verify_callback);
+
+        if(SSL_CTX_set_session_cache_mode(ptConnCtx->sslContext, SSL_SESS_CACHE_OFF) != SSL_SUCCESS)
+            return err_out();
 
       // Connect the SSL struct to our connection
-      if (!SSL_set_fd (ptConnCtx->sslHandle, ptConnCtx->sockfd))
-          ERR_print_errors_cb(print_error_callback, 0);
+      if (SSL_set_fd (ptConnCtx->sslHandle, ptConnCtx->sockfd) != SSL_SUCCESS)
+          return err_out();
 
-      SSL_set_tlsext_host_name(ptConnCtx->sslHandle, host);
+      if(SSL_set_tlsext_host_name(ptConnCtx->sslHandle, host) != SSL_SUCCESS)
+          return err_out();
 
       // Initiate SSL handshake
-      if (SSL_connect (ptConnCtx->sslHandle) != 1)
-          ERR_print_errors_cb(print_error_callback, 0);
+      if (SSL_connect(ptConnCtx->sslHandle) != SSL_SUCCESS)
+          return err_out();
     }
     {
         // XXX: this should be done non-blocking,
