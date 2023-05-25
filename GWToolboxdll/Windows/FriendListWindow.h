@@ -75,34 +75,39 @@ public:
         Character* GetCharacter(const wchar_t*);
         Character* SetCharacter(const wchar_t*, uint8_t profession = 0);
         GW::Friend* GetFriend();
-        const std::string GetCharactersHover(bool include_charname = false);
+        std::string GetCharactersHover(bool include_charname = false);
         void StartWhisper();
         bool RemoveGWFriend();
         bool ValidUuid();
-        const bool IsOffline() {
+
+        [[nodiscard]] bool IsOffline() const
+        {
             return status == GW::FriendStatus::Offline;
         };
-        const bool NeedToUpdate(clock_t now) {
+        [[nodiscard]] bool NeedToUpdate(clock_t now) const
+        {
             return (now - last_update) > 10000; // 10 Second stale.
         }
-        std::string& getAliasA() {
+        [[nodiscard]] std::string& getAliasA()
+        {
             if (alias_str.empty() && !alias.empty()) {
                 alias_str = GuiUtils::WStringToString(alias);
             }
             return alias_str;
         }
-        const std::wstring& getAliasW() const {
+
+        [[nodiscard]] const std::wstring& getAliasW() const {
             return alias;
         }
-        void setAlias(std::wstring _alias) {
+        void setAlias(const std::wstring_view _alias) {
             if (alias == _alias)
                 return;
-            alias = std::move(_alias);
+            alias = _alias;
             alias_str.clear();
         }
     };
 protected:
-    Friend* SetFriend(const uint8_t*, const GW::FriendType, const GW::FriendStatus, const uint32_t, const wchar_t*, const wchar_t*);
+    Friend* SetFriend(const uint8_t*, GW::FriendType, GW::FriendStatus, uint32_t, const wchar_t*, const wchar_t*);
     Friend* SetFriend(const GW::Friend*);
 
 
@@ -128,7 +133,7 @@ public:
     // Ignore party invitations from players on my ignore list
 
     static bool GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak);
-    static bool GetIsPlayerIgnored(uint32_t player_id);
+    static bool GetIsPlayerIgnored(uint32_t player_number);
     static bool GetIsPlayerIgnored(const std::wstring& player_name);
 
     static void OnPostPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* pak);
