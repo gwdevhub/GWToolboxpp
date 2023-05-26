@@ -664,6 +664,7 @@ void HeroUnlock::OnClick() {
 ItemAchievement::ItemAchievement(size_t _encoded_name_index, const wchar_t* encoded_name)
 	: PvESkill(SkillID::No_Skill) {
 	encoded_name_index = _encoded_name_index;
+    name.language(GW::Constants::TextLanguage::English);
 	name.reset(encoded_name);
 }
 const char* ItemAchievement::Name() {
