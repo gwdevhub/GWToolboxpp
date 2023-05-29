@@ -2363,11 +2363,11 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, int argc, LPWSTR* argv)
     GW::HeroBehavior behaviour = GW::HeroBehavior::Guard; // guard by default
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
     if (arg1 == L"avoid") {
-        behaviour = GW::HeroBehavior::Avoid; // avoid combat
+        behaviour = GW::HeroBehavior::AvoidCombat; // avoid combat
     } else if (arg1 == L"guard") {
         behaviour = GW::HeroBehavior::Guard; // guard
     } else if (arg1 == L"attack") {
-        behaviour = GW::HeroBehavior::Attack; // attack
+        behaviour = GW::HeroBehavior::Fight; // attack
     } else {
         return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
     }

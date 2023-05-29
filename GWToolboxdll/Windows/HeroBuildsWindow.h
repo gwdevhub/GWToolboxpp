@@ -123,7 +123,7 @@ private:
             , behavior((GW::HeroBehavior)_behavior)
         {
             snprintf(code, BUFFER_SIZE, "%s", c);
-            if (behavior > GW::HeroBehavior::Avoid)
+            if (behavior > GW::HeroBehavior::AvoidCombat)
                 behavior = GW::HeroBehavior::Guard;
         }
         // True when processing is done

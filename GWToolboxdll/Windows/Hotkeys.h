@@ -11,6 +11,11 @@
 
 #include <Utils/GuiUtils.h>
 
+
+namespace GW {
+    enum class HeroBehavior : uint32_t;
+}
+
 // abstract class Toolbox Hotkey
 // has the key code and pressed status
 class TBHotkey {
@@ -421,5 +426,28 @@ public:
 
     bool Draw() override;
     int Description(char* buf, size_t bufsz) override;
+    void Execute() override;
+};
+
+class HotkeyCommandPet : public TBHotkey
+{
+public:
+    GW::HeroBehavior behavior = (GW::HeroBehavior)0;;
+
+    static const char *IniSection()
+    {
+        return "CommandPet";
+    }
+    const char *Name() const override
+    {
+        return IniSection();
+    }
+
+    HotkeyCommandPet(ToolboxIni *ini, const char *section);
+
+    void Save(ToolboxIni *ini, const char *section) const override;
+
+    bool Draw() override;
+    int Description(char *buf, size_t bufsz) override;
     void Execute() override;
 };

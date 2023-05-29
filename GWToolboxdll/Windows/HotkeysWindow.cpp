@@ -286,8 +286,11 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
             if (ImGui::Selectable("Flag Hero")) {
                 new_hotkey = new HotkeyFlagHero(nullptr, nullptr);
             }
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Flag a hero relative to your position");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Flag a hero relative to your position");
+            if (ImGui::Selectable("Command Pet")) {
+                new_hotkey = new HotkeyCommandPet(nullptr, nullptr);
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Change behavior of your pet");
             ImGui::EndPopup();
             if (new_hotkey) {
                 hotkeys.push_back(new_hotkey);

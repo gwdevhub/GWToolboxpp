@@ -172,6 +172,12 @@ std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey:
 namespace {
     // @Cleanup: when toolbox closes, this array isn't freed properly
     std::vector<std::vector<HotkeyEquipItemAttributes*>> available_items;
+
+    const char* behaviors[] = {
+        "Fight",
+        "Guard",
+        "Avoid Combat"
+    };
 }
 
 
@@ -226,6 +232,9 @@ TBHotkey *TBHotkey::HotkeyFactory(ToolboxIni *ini, const char *section)
     }
     if (type == HotkeyGWKey::IniSection()) {
         return new HotkeyGWKey(ini, section);
+    }
+    if (type == HotkeyCommandPet::IniSection()) {
+        return new HotkeyCommandPet(ini, section);
     }
     return nullptr;
 }
@@ -1961,5 +1970,44 @@ void HotkeyGWKey::Execute()
 {
     GW::GameThread::Enqueue([&]() {
         GW::UI::Keypress(action);
+        });
+}
+
+namespace {
+
+    const char* GetBehaviorDesc(GW::HeroBehavior behaviour) {
+        if ((uint32_t)behaviour < _countof(behaviors))
+            return behaviors[(uint32_t)behaviour];
+        return nullptr;
+    }
+}
+
+HotkeyCommandPet::HotkeyCommandPet(ToolboxIni* ini, const char* section)
+    : TBHotkey(ini, section)
+{
+    behavior = ini ? (GW::HeroBehavior)ini->GetLongValue(section, "behavior", (long)behavior) : behavior;
+    if (!GetBehaviorDesc(behavior))
+        behavior = GW::HeroBehavior::Fight;
+}
+void HotkeyCommandPet::Save(ToolboxIni* ini, const char* section) const
+{
+    TBHotkey::Save(ini, section);
+    ini->SetLongValue(section, "behavior", (long)behavior);
+}
+int HotkeyCommandPet::Description(char* buf, size_t bufsz)
+{
+    return snprintf(buf, bufsz, "Command Pet: %s", GetBehaviorDesc(behavior));
+}
+bool HotkeyCommandPet::Draw()
+{
+    bool changed = ImGui::Combo("Behavior###combo", (int*)&behavior, behaviors, _countof(behaviors), _countof(behaviors));
+    if(changed && !GetBehaviorDesc(behavior))
+        behavior = GW::HeroBehavior::Fight;
+    return changed;
+}
+void HotkeyCommandPet::Execute()
+{
+    GW::GameThread::Enqueue([&]() {
+        GW::PartyMgr::SetPetBehavior(behavior);
         });
 }
