@@ -225,7 +225,7 @@ namespace {
             goto cleanup;
 
         // copy and scaling to new width/height (w,h)
-        if (SetStretchBltMode(destDC, HALFTONE) == 0)
+        if (SetStretchBltMode(destDC, WHITEONBLACK) == 0)
             goto cleanup;
         bResult = StretchBlt(destDC, 0, 0, outWidth, outHeight, srcDC, 0, 0, inWidth, inHeight, SRCCOPY);
     cleanup:
@@ -302,8 +302,8 @@ namespace {
         if (user_data->cursor) {
             // Don't forget to free the original cursor before overwriting the handle
             DestroyCursor(user_data->cursor);
-            SetCursor(nullptr);
             SetClassLongA(user_data->window_handle, GCL_HCURSOR, 0);
+            SetCursor(nullptr);
             user_data->cursor = nullptr;
         }
         user_data->cursor = new_cursor;
