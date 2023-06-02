@@ -5,6 +5,15 @@ layout: default
 # Version History
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 6.9
+
+* [New] Added command pet hotkey
+* [Minor] Added logic to swap primary with secondary when trying to load a build through toolbox that belongs to another primary profession but has no dependency on that profession.
+* [Fix] Fixed hero builds not loading via toolbox
+* [Fix] Removed SSL certificate verification when fetching third party data e.g. trade chat, wiki resources
+* [Fix] Fixed crash when completing the last quest in the quest log
+* [Fix] Fixed bug preventing item images from loading when game is not in English
+
 ## Version 6.8
 * [New] Added extended regex options to Chat Filter
 * [New] Added option to keep current quest active when accepting a new quest,
