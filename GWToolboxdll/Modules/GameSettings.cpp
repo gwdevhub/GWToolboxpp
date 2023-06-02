@@ -201,6 +201,8 @@ namespace {
 
     bool keep_current_quest_when_new_quest_added = false;
 
+    bool automatically_flag_pet_to_fight_called_target = true;
+
     Color nametag_color_npc = static_cast<Color>(DEFAULT_NAMETAG_COLOR::NPC);
     Color nametag_color_player_self = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_SELF);
     Color nametag_color_player_other = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_OTHER);
@@ -520,6 +522,11 @@ namespace {
         case GW::UI::UIMessage::kTargetNPCPartyMember: {
             if (IsAgentInParty(party_target_info->identifier)) {
                 current_party_target_id = party_target_info->identifier;
+            }
+        } break;
+        case GW::UI::UIMessage::kCalledTargetChange: {
+            if (automatically_flag_pet_to_fight_called_target && party_target_info->source == GW::PlayerMgr::GetPlayerNumber()) {
+                GW::PartyMgr::SetPetBehavior(GW::HeroBehavior::Fight, party_target_info->identifier);
             }
         } break;
         }
@@ -1287,7 +1294,8 @@ void GameSettings::Initialize() {
 
     constexpr GW::UI::UIMessage party_target_ui_messages[] = {
         GW::UI::UIMessage::kTargetPlayerPartyMember,
-        GW::UI::UIMessage::kTargetNPCPartyMember
+        GW::UI::UIMessage::kTargetNPCPartyMember,
+        GW::UI::UIMessage::kCalledTargetChange
     };
     for (const auto message_id : party_target_ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnPostSendDialog_Entry, message_id, OnPartyTargetChanged, 0x8000);
@@ -1483,6 +1491,8 @@ void GameSettings::LoadSettings(ToolboxIni* ini) {
 
     LOAD_BOOL(keep_current_quest_when_new_quest_added);
 
+    LOAD_BOOL(automatically_flag_pet_to_fight_called_target);
+
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     SetWindowTitle(set_window_title_as_charname);
 
@@ -1628,6 +1638,8 @@ void GameSettings::SaveSettings(ToolboxIni* ini) {
 
     SAVE_BOOL(keep_current_quest_when_new_quest_added);
 
+    SAVE_BOOL(automatically_flag_pet_to_fight_called_target);
+
 
 }
 
@@ -1682,6 +1694,7 @@ void GameSettings::DrawPartySettings() {
     ImGui::ShowHelp("When you're invited to join someone elses party");
     ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
     ImGui::ShowHelp("When a player wants to join your existing party");
+    ImGui::Checkbox("Automatically flag your pet to fight when calling a target", &automatically_flag_pet_to_fight_called_target);
 }
 
 void GameSettings::DrawSettingInternal() {
