@@ -133,7 +133,7 @@ namespace {
         r->SetFollowLocation(true);
         r->SetVerifyPeer(false); // idc about mitm or out of date certs
         r->SetMethod(HttpMethod::Get);
-        r->SetVerifyPeer(false);
+        r->SetVerifyHost(false);
     }
 }
 
