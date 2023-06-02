@@ -27,7 +27,7 @@ namespace GWArmory {
         PlayerArmorPiece chest = ItemSlot::ItemSlot_Chest;
         PlayerArmorPiece hands = ItemSlot::ItemSlot_Hands;
         PlayerArmorPiece legs = ItemSlot::ItemSlot_Legs;
-        PlayerArmorPiece feets = ItemSlot::ItemSlot_Feets;
+        PlayerArmorPiece feets = ItemSlot::ItemSlot_Feet;
     };
 
     PlayerArmor player_armor;
@@ -62,7 +62,7 @@ namespace GWArmory {
         if (!equip) return 0;
         switch (slot) {
         case ItemSlot::ItemSlot_Chest: return equip->item_id_chest;
-        case ItemSlot::ItemSlot_Feets: return equip->item_id_feet;
+        case ItemSlot::ItemSlot_Feet: return equip->item_id_feet;
         case ItemSlot::ItemSlot_Hands: return equip->item_id_hands;
         case ItemSlot::ItemSlot_Head: return equip->item_id_head;
         case ItemSlot::ItemSlot_Legs: return equip->item_id_legs;
@@ -70,20 +70,28 @@ namespace GWArmory {
             return 0;
         }
     }
+
+
     uint32_t GetItemInteraction(ItemSlot slot) {
         const auto item = GW::Items::GetItemById(GetEquipmentPieceItemId(slot));
         return item ? item->interaction : 0;
     }
 
+    ItemSlot GetItemSlot(uint32_t model_file_id);
+
     void __fastcall OnSetItem(GW::Equipment* equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id) {
         GW::Hook::EnterHook();
+        
         SetItem_Ret(equip, edx, model_file_id, color, arg3, agent_id);
         const auto player_equip = GetPlayerEquipment();
-        const auto player = static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer());
-        if (!gwarmory_setitem && player && (!player_equip || equip == player_equip)) {
+        if (!gwarmory_setitem && (!player_equip || equip == player_equip)) {
             // Reset controls - this could be done a little smarter to remember bits that haven't changed.
             pending_reset_equipment = true;
         }
+        /*if (equip == player_equip) {
+            const auto slot = GetItemSlot(model_file_id);
+            Log::Info("Item in slot %d changed to model %d", slot, model_file_id);
+        }*/
         GW::Hook::LeaveHook();
     }
 
@@ -233,6 +241,46 @@ namespace GWArmory {
             return nullptr;
         return &item_model_info_array->m_buffer[model_file_id];
     }
+    ItemSlot GetItemSlot(uint32_t model_file_id) {
+        if (!model_file_id)
+            return ItemSlot::ItemSlot_Unknown;
+        const auto info = GetItemModelInfo(model_file_id);
+        if (!info)
+            return ItemSlot::ItemSlot_Unknown;
+        switch (info->class_flags >> 0x16) {
+        case 0:
+        case 1:
+        case 2:
+            return ItemSlot::ItemSlot_Unknown; // 8
+        case 3:
+        case 15:
+            return ItemSlot::ItemSlot_Chest;
+        case 4:
+        case 14:
+            return ItemSlot::ItemSlot_Feet;
+        case 5:
+        case 16:
+            return ItemSlot::ItemSlot_Hands;
+        case 6:
+        case 18:
+            return ItemSlot::ItemSlot_Legs;
+        case 7:
+        case 8:
+        case 9:
+            return ItemSlot::ItemSlot_Unknown; // 7
+        case 10:
+        case 11:
+            return ItemSlot::ItemSlot_Unknown; // 0
+        case 12:
+        case 13:
+            return ItemSlot::ItemSlot_Unknown; // 2
+        case 19:
+            return ItemSlot::ItemSlot_Head;
+        default:
+            return ItemSlot::ItemSlot_Unknown;
+        }
+
+    }
 
     void SetArmorItem(const PlayerArmorPiece* piece)
     {
@@ -307,7 +355,7 @@ namespace GWArmory {
                 state = &legs;
                 piece = &player_armor.legs;
                 break;
-            case ItemSlot_Feets:
+            case ItemSlot_Feet:
                 state = &feets;
                 piece = &player_armor.feets;
                 break;
