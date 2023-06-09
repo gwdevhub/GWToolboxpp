@@ -357,8 +357,8 @@ namespace {
         3
     };
     static const char* nicholas_item_cycles[137] = {
-        "Red Iris Flowers",
-        "Feathered Avicara Scalps",
+        "Red Iris Flowers", // 0x271E 0xDBDF 0xBBD8 0x34CB 
+        "Feathered Avicara Scalps", // 0x294f
         "Margonite Masks",
         "Quetzal Crests",
         "Plague Idols",
