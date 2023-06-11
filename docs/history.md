@@ -5,6 +5,13 @@ layout: default
 # Version History
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 6.10
+
+* [New] Added option in party settings to automatically flag pet to attack pinged target
+* [Fix] Fixed pet behavior hotkey not working properly
+* [Fix] Fixed skillbars not loading that contain skills but not attributes for a secondary profession
+* [Fix] Fixed bugs caused by toolbox no longer being able to grab in-game preferences due to change in 37059 gw update
+
 ## Version 6.9
 
 * [New] Added command pet hotkey

@@ -5,9 +5,9 @@ set(CMAKE_GENERATOR_PLATFORM win32)
 project(gwtoolbox)
 
 set(GWTOOLBOXEXE_VERSION "4.0")
-set(GWTOOLBOXDLL_VERSION "6.9")
+set(GWTOOLBOXDLL_VERSION "6.10")
 set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
-set(GWTOOBOX_MODULE_VERSION "6,9,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+set(GWTOOBOX_MODULE_VERSION "6,10,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 # this is no longer required, but in case we have to add an installer again some day
 # configure_file(${PROJECT_SOURCE_DIR}/gwtoolbox.wxs.in ${PROJECT_SOURCE_DIR}/gwtoolbox.wxs @ONLY)
