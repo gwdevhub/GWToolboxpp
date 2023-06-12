@@ -42,25 +42,26 @@ namespace {
     wchar_t* OnGetStringParameter(uint32_t param_id_plus_0x27) {
         GW::Hook::EnterHook();
         wchar_t* parameter_value = GetStringParameter_Ret(param_id_plus_0x27);
-        if (param_id_plus_0x27 == 0x29) {
+        if (param_id_plus_0x27 == 0x26) {
             // charname parameter
             original_charname_parameter = parameter_value;
             parameter_value = (wchar_t*)L"NA";
         }
+        Log::Info("GetStringParameter_Ret %p = %ls", param_id_plus_0x27, parameter_value);
         GW::Hook::LeaveHook();
         return parameter_value;
     }
 
-    typedef void(__cdecl* PortalAccountLogin_pt)(uint32_t transaction_id,uint32_t* user_id,uint32_t* session_id,wchar_t* preselect_character, wchar_t* security_character);
+    typedef void(__cdecl* PortalAccountLogin_pt)(uint32_t transaction_id,uint32_t* user_id,uint32_t* session_id,wchar_t* preselect_character);
     PortalAccountLogin_pt PortalAccountLogin_Func = 0;
     PortalAccountLogin_pt PortalAccountLogin_Ret = 0;
 
     // Ensure we're asking for a valid character on login if given as a parameter
-    void OnPortalAccountLogin(uint32_t transaction_id, uint32_t* user_id, uint32_t* session_id, wchar_t* preselect_character, wchar_t* security_character) {
+    void OnPortalAccountLogin(uint32_t transaction_id, uint32_t* user_id, uint32_t* session_id, wchar_t* preselect_character) {
         GW::Hook::EnterHook();
         // Don't pre-select the character yet; we'll do this in the Update() loop after sucessful login
         preselect_character[0] = 0;
-        PortalAccountLogin_Ret(transaction_id, user_id, session_id, preselect_character, security_character);
+        PortalAccountLogin_Ret(transaction_id, user_id, session_id, preselect_character);
         state_timestamp = TIMER_INIT();
         state = LoginState::PendingLogin;
         GW::Hook::LeaveHook();
@@ -71,15 +72,29 @@ void LoginModule::Initialize() {
 
     state = LoginState::Idle;
 
-    GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\param\\param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))", -0x13);
-    GW::HookBase::CreateHook(GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
-    if(GetStringParameter_Func)
-        GW::HookBase::EnableHooks(GetStringParameter_Func);
+    int res = -1;
 
-    PortalAccountLogin_Func = (PortalAccountLogin_pt)GW::Scanner::Find("\xc7\x45\xe4\x38\x00\x00\x00\x89\x4d\xec", "xxxxxxxxxx", -0x2f);
-    GW::HookBase::CreateHook(PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
-    if (PortalAccountLogin_Func)
-        GW::HookBase::EnableHooks(PortalAccountLogin_Func);
+    PortalAccountLogin_Func = (PortalAccountLogin_pt)GW::Scanner::Find("\xc7\x45\xe8\x38\x00\x00\x00\x89\x4d\xf0", "xxxxxxxxxx", -0x2b);
+    if (!PortalAccountLogin_Func) goto failed_to_initialise;
+
+    GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\param\\param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))", -0x13);
+    if (!GetStringParameter_Func) goto failed_to_initialise;
+
+    res = GW::HookBase::CreateHook(PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
+    if (res == -1) goto failed_to_initialise;
+
+    res = GW::HookBase::CreateHook(GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
+    if (res == -1) goto failed_to_initialise;
+
+    GW::HookBase::EnableHooks(PortalAccountLogin_Func);
+    GW::HookBase::EnableHooks(GetStringParameter_Func);
+    return;
+
+failed_to_initialise:
+    Log::Error("Failed to initialise LoginModule");
+#if _DEBUG
+    ASSERT(false);
+#endif
 }
 void LoginModule::Terminate()
 {
