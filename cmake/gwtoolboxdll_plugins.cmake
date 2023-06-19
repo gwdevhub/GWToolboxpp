@@ -5,10 +5,10 @@
 # Below is for toolbox plugins (WIP):
 add_library(plugin_base INTERFACE)
 target_sources(plugin_base INTERFACE
-    "plugins/base/dllmain.cpp"
-    "plugins/base/ToolboxPlugin.h")
+    "plugins/Base/dllmain.cpp"
+    "plugins/Base/ToolboxPlugin.h")
 target_include_directories(plugin_base INTERFACE
-    "plugins/base"
+    "plugins/Base"
     "GWToolboxdll" # careful here, we only get access to exported and header functions!
     )
 target_link_libraries(plugin_base INTERFACE
