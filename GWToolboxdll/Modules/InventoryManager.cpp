@@ -4,6 +4,7 @@
 #include <GWCA/Constants/Maps.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Player.h>
 
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/TradeContext.h>
@@ -33,6 +34,10 @@
 
 
 namespace {
+    InventoryManager& Instance() {
+        return InventoryManager::Instance();
+    }
+
     ImVec4 ItemBlue = ImColor(153, 238, 255).Value;
     ImVec4 ItemPurple = ImColor(187, 137, 237).Value;
     ImVec4 ItemGold = ImColor(255, 204, 86).Value;
@@ -44,6 +49,20 @@ namespace {
         "Bag 1",
         "Bag 2"
     };
+
+    bool GetIsProfessionUnlocked(GW::Constants::Profession prof) {
+        auto world = GW::GetWorldContext();
+        auto player = GW::PlayerMgr::GetPlayerByID();
+        if (!(world && player)) 
+            return false;
+        GW::Array< GW::ProfessionState>& profession_unlocks_array = world->party_profession_states;
+        const GW::ProfessionState* found = nullptr;
+        for (size_t i = 0; !found && profession_unlocks_array.valid() && i < profession_unlocks_array.size(); i++) {
+            if (profession_unlocks_array[i].agent_id == player->agent_id)
+                found = &profession_unlocks_array[i];
+        }
+        return found && ((found->unlocked_professions >> (uint32_t)prof) & 1) == 1;
+    }
 
     bool IsMapReady()
     {
@@ -448,6 +467,7 @@ namespace {
     clock_t check_context_menu_position = 0;
     DWORD is_right_clicking = 0;
     DWORD mouse_moved = 0;
+    bool change_secondary_for_tome = true;
 
     struct PreMoveItemStruct {
         uint32_t item_id = 0;
@@ -483,6 +503,148 @@ namespace {
     }
 
     uint32_t right_clicked_item = 0;
+
+    enum PendingTomeUseStage {
+        None,
+        PromptUser,
+        AwaitPromptReply,
+        ChangeProfession,
+        AwaitProfession,
+        UseItem
+    } tome_pending_stage;
+    GW::Constants::Profession tome_pending_profession;
+    time_t tome_pending_timeout = 0;
+    uint32_t tome_pending_item_id = 0;
+
+    // Run every frame; if we're pending aa change of secondary profession to use a tome, check and action.
+    void DrawPendingTomeUsage() {
+        if (tome_pending_stage == PendingTomeUseStage::None)
+            return;
+        const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+        constexpr const char* popup_label = "Change secondary profession?###change-secondary";
+        if (tome_pending_timeout && TIMER_INIT() > tome_pending_timeout) {
+            Log::Error("Timeout reached trying to change profession for tome use");
+            goto cancel;
+        }
+        if (!player)
+            return;
+        if (tome_pending_stage == PendingTomeUseStage::PromptUser) {
+            if (player->secondary == (uint8_t)tome_pending_profession || player->primary == (uint8_t)tome_pending_profession) {
+                tome_pending_stage = PendingTomeUseStage::UseItem;
+                return;
+            }
+            const auto& d = ImGui::GetIO().DisplaySize;
+            ImGui::SetNextWindowPos({ d.x * .5f,d.y * .5f }, 0, ImVec2(0.5f, 0.5f));
+            ImGui::OpenPopup(popup_label);
+            tome_pending_stage = PendingTomeUseStage::AwaitPromptReply;
+        }
+        if (ImGui::BeginPopupModal(popup_label, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Changing your secondary profession will change your skills and attributes.\nDo you want to continue?");
+            if (ImGui::Button("OK", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+                tome_pending_stage = PendingTomeUseStage::ChangeProfession;
+                tome_pending_timeout = TIMER_INIT() + 3000;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::IsWindowAppearing())
+                ImGui::SetFocusID(ImGui::GetItemID(), ImGui::GetCurrentWindow());
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+            return;
+        }
+        if (tome_pending_stage == PendingTomeUseStage::AwaitPromptReply) {
+            // Popup not drawn; cancelled.
+            goto cancel;
+        }
+
+
+        switch (tome_pending_stage) {
+        case PendingTomeUseStage::ChangeProfession: {
+            if (player->secondary == (uint8_t)tome_pending_profession) {
+                tome_pending_stage = PendingTomeUseStage::UseItem;
+                return;
+            }
+            if (!GetIsProfessionUnlocked(tome_pending_profession)) {
+                tome_pending_stage = PendingTomeUseStage::UseItem;
+                return;
+            }
+            if (!GW::PlayerMgr::ChangeSecondProfession((GW::Constants::Profession)tome_pending_profession)) {
+                Log::Error("ChangeSecondProfession call failed");
+                goto cancel;
+            }
+            tome_pending_stage = PendingTomeUseStage::AwaitProfession;
+            return;
+        }
+        case PendingTomeUseStage::AwaitProfession: {
+            if (player->secondary == (uint8_t)tome_pending_profession) {
+                tome_pending_stage = PendingTomeUseStage::UseItem;
+            }
+            return;
+        }
+        case PendingTomeUseStage::UseItem: {
+            const GW::Item* item = GW::Items::GetItemById(tome_pending_item_id);
+            if (item) {
+                GW::Items::UseItem(item);
+            }
+            goto cancel;
+        }
+        }
+    cancel:
+        tome_pending_stage = PendingTomeUseStage::None;
+        tome_pending_timeout = 0;
+        tome_pending_item_id = 0;
+        tome_pending_profession = GW::Constants::Profession::None;
+    }
+
+    void OnUseItem(GW::HookStatus* status, uint32_t item_id) {
+        if (tome_pending_stage != PendingTomeUseStage::None)
+            return;
+        if (!change_secondary_for_tome)
+            return;
+        const auto item = GW::Items::GetItemById(item_id);
+        if (!item) return;
+        GW::Constants::Profession profession_needed = GW::Constants::Profession::None;
+        switch (item->model_id) {
+        case 21786:case 21796:
+            profession_needed = GW::Constants::Profession::Assassin;
+            break;
+        case 21787:case 21797:
+            profession_needed = GW::Constants::Profession::Mesmer;
+            break;
+        case 21788:case 21798:
+            profession_needed = GW::Constants::Profession::Necromancer;
+            break;
+        case 21789:case 21799:
+            profession_needed = GW::Constants::Profession::Elementalist;
+            break;
+        case 21790:case 21800:
+            profession_needed = GW::Constants::Profession::Monk;
+            break;
+        case 21791:case 21801:
+            profession_needed = GW::Constants::Profession::Warrior;
+            break;
+        case 21792:case 21802:
+            profession_needed = GW::Constants::Profession::Ranger;
+            break;
+        case 21793:case 21803:
+            profession_needed = GW::Constants::Profession::Dervish;
+            break;
+        case 21794:case 21804:
+            profession_needed = GW::Constants::Profession::Ritualist;
+            break;
+        case 21795:case 21805:
+            profession_needed = GW::Constants::Profession::Paragon;
+            break;
+        }
+        if (profession_needed != GW::Constants::Profession::None) {
+            tome_pending_profession = profession_needed;
+            tome_pending_item_id = item_id;
+            tome_pending_stage = PendingTomeUseStage::PromptUser;
+            status->blocked = true;
+        }
+    }
 
 } // namespace
 void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
@@ -540,6 +702,11 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage mes
     case GW::UI::UIMessage::kMoveItem: {
         instance.stack_prompt_item_id = 0;
     } break;
+    case GW::UI::UIMessage::kSendUseItem: {
+        OnUseItem(status, (uint32_t)wparam);
+    } break;
+    default:
+        ASSERT(false); // Subscribed to a UI message that we don't use!
     }
 }
 
@@ -1809,157 +1976,6 @@ void InventoryManager::ClearPotentialItems()
         delete item;
     }
     potential_salvage_all_items.clear();
-}
-
-// Change secondary if using a tome
-void InventoryManager::OnUseItem(GW::HookStatus* status, void* packet) {
-    const uint32_t header = *(uint32_t*)packet;
-    if (header != GAME_CMSG_ITEM_USE)
-        return;
-    const uint32_t item_id = ((uint32_t*)packet)[1];
-    auto& instance = Instance();
-    if (instance.tome_pending_stage != PendingTomeUseStage::None)
-        return;
-    const GW::Item* item = GW::Items::GetItemById(item_id);
-    if (!item) return;
-    GW::Constants::Profession profession_needed = GW::Constants::Profession::None;
-    switch (item->model_id) {
-    case 21786:case 21796:
-        profession_needed = GW::Constants::Profession::Assassin;
-        break;
-    case 21787:case 21797:
-        profession_needed = GW::Constants::Profession::Mesmer;
-        break;
-    case 21788:case 21798:
-        profession_needed = GW::Constants::Profession::Necromancer;
-        break;
-    case 21789:case 21799:
-        profession_needed = GW::Constants::Profession::Elementalist;
-        break;
-    case 21790:case 21800:
-        profession_needed = GW::Constants::Profession::Monk;
-        break;
-    case 21791:case 21801:
-        profession_needed = GW::Constants::Profession::Warrior;
-        break;
-    case 21792:case 21802:
-        profession_needed = GW::Constants::Profession::Ranger;
-        break;
-    case 21793:case 21803:
-        profession_needed = GW::Constants::Profession::Dervish;
-        break;
-    case 21794:case 21804:
-        profession_needed = GW::Constants::Profession::Ritualist;
-        break;
-    case 21795:case 21805:
-        profession_needed = GW::Constants::Profession::Paragon;
-        break;
-    }
-    if (profession_needed != GW::Constants::Profession::None) {
-        instance.tome_pending_profession = (uint32_t)profession_needed;
-        instance.tome_pending_item_id = item_id;
-        instance.tome_pending_stage = PendingTomeUseStage::PromptUser;
-        status->blocked = true;
-    }
-}
-
-// Run every frame; if we're pending aa change of secondary profession to use a tome, check and action.
-void InventoryManager::DrawPendingTomeUsage() {
-    if (tome_pending_stage == PendingTomeUseStage::None)
-        return;
-    constexpr const char* popup_label = "Change secondary profession?###change-secondary";
-    if (tome_pending_timeout && TIMER_INIT() > tome_pending_timeout) {
-        Log::Error("Timeout reached trying to change profession for tome use");
-        goto cancel;
-    }
-    if (tome_pending_stage == PendingTomeUseStage::PromptUser) {
-        const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
-        if (player && (player->secondary == tome_pending_profession || player->primary == tome_pending_profession)) {
-            tome_pending_stage = PendingTomeUseStage::UseItem;
-            return;
-        }
-        const auto& d = ImGui::GetIO().DisplaySize;
-        ImGui::SetNextWindowPos({ d.x * .5f,d.y * .5f }, 0, ImVec2(0.5f, 0.5f));
-        ImGui::OpenPopup(popup_label);
-        tome_pending_stage = PendingTomeUseStage::AwaitPromptReply;
-    }
-    if (ImGui::BeginPopupModal(popup_label, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Changing your secondary profession will change your skills and attributes.\nDo you want to continue?");
-        if (ImGui::Button("OK", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
-            tome_pending_stage = PendingTomeUseStage::ChangeProfession;
-            tome_pending_timeout = TIMER_INIT() + 3000;
-            ImGui::CloseCurrentPopup();
-        }
-        if (ImGui::IsWindowAppearing())
-            ImGui::SetFocusID(ImGui::GetItemID(), ImGui::GetCurrentWindow());
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
-        return;
-    }
-    if (tome_pending_stage == PendingTomeUseStage::AwaitPromptReply) {
-        // Popup not drawn; cancelled.
-        goto cancel;
-    }
-
-
-    switch (tome_pending_stage) {
-        case PendingTomeUseStage::ChangeProfession: {
-            const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
-            if (!player)
-                return;
-            if (player && player->secondary == tome_pending_profession) {
-                tome_pending_stage = PendingTomeUseStage::UseItem;
-                return;
-            }
-            auto* world = GW::GetWorldContext();
-            if (!world) {
-                goto cancel;
-            }
-            GW::Array< GW::ProfessionState>& profession_unlocks_array = world->party_profession_states;
-            const GW::ProfessionState* found = nullptr;
-            for (size_t i = 0; !found && profession_unlocks_array.valid() && i < profession_unlocks_array.size(); i++) {
-                if (profession_unlocks_array[i].agent_id == player->agent_id)
-                    found = &profession_unlocks_array[i];
-            }
-            if (!found) {
-                Log::Error("Player's profession info not found in world->party_profession_states");
-                goto cancel;
-            }
-            if (((found->unlocked_professions >> tome_pending_profession) & 1) != 1) {
-                // Skip to use item error; profession isn't unlocked
-                tome_pending_stage = PendingTomeUseStage::UseItem;
-                return;
-            }
-            GW::PlayerMgr::ChangeSecondProfession((GW::Constants::Profession)tome_pending_profession);
-            tome_pending_stage = PendingTomeUseStage::AwaitProfession;
-            return;
-        }
-
-
-
-        case PendingTomeUseStage::AwaitProfession: {
-            const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
-            if (player && player->secondary == tome_pending_profession) {
-                tome_pending_stage = PendingTomeUseStage::UseItem;
-            }
-            return;
-        }
-        case PendingTomeUseStage::UseItem: {
-            const GW::Item* item = GW::Items::GetItemById(tome_pending_item_id);
-            if (item) {
-                GW::Items::UseItem(item);
-            }
-            goto cancel;
-        }
-    }
-cancel:
-    tome_pending_stage = PendingTomeUseStage::None;
-    tome_pending_timeout = 0;
-    tome_pending_item_id = 0;
-    tome_pending_profession = 0;
 }
 
 bool InventoryManager::Item::IsWeaponSetItem()
