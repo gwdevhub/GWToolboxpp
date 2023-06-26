@@ -803,12 +803,13 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     GW::WorldContext* w = g->world;
     GW::PartyContext* p = g->party;
     GW::MapContext* m = g->map;
+    GW::AccountContext* acc = g->account;
     GW::ItemContext* i = g->items;
     GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
     GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
     GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
-    (g || c || w || p || m || i || me || me_player || log || gu || ai);
+    (g || c || w || p || m || i || me || me_player || log || gu || ai || acc);
 #endif
 }
 

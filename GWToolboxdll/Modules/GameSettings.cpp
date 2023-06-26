@@ -334,8 +334,8 @@ namespace {
             found_second = find_skill(skill_ids, second_skill);
             if (found_first == -1 && found_second == -1)
                 continue;
-            unlocked_first = GW::SkillbarMgr::GetIsSkillUnlocked(first_skill);
-            unlocked_second = GW::SkillbarMgr::GetIsSkillUnlocked(second_skill);
+            unlocked_first = GW::SkillbarMgr::GetIsSkillLearnt(first_skill);
+            unlocked_second = GW::SkillbarMgr::GetIsSkillLearnt(second_skill);
 
             if (found_first != -1 && found_second == -1
                 && !unlocked_first && unlocked_second) {
@@ -357,8 +357,8 @@ namespace {
                 continue;
             if (found_first != -1 && found_second != -1)
                 continue;
-            unlocked_first = GW::SkillbarMgr::GetIsSkillUnlocked(luxon_skill);
-            unlocked_second = GW::SkillbarMgr::GetIsSkillUnlocked(kurzick_skill);
+            unlocked_first = GW::SkillbarMgr::GetIsSkillLearnt(luxon_skill);
+            unlocked_second = GW::SkillbarMgr::GetIsSkillLearnt(kurzick_skill);
 
             if (found_first != -1 && found_second == -1
                 && !unlocked_first && unlocked_second) {
