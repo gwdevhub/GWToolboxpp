@@ -719,10 +719,29 @@ void Minimap::Draw(IDirect3DDevice9 *)
             }
             else {
                 const float multiplier = GuiUtils::GetGWScaleMultiplier();
-                const float compass_width = compass_frame->width(multiplier);
-                const float compass_padding = compass_width * .05f;
+                float compass_width = compass_frame->width(multiplier);
+                float compass_height = compass_frame->height(multiplier);
+                float compass_padding = compass_width * .05f;
                 location = { static_cast<int>(compass_frame->left(multiplier) + compass_padding),static_cast<int>(compass_frame->top(multiplier) + compass_padding) };
-                size = { static_cast<int>(compass_width - (compass_padding * 2.f)) , static_cast<int>(compass_frame->height(multiplier) - (compass_padding * 2.f)) };
+                size = { static_cast<int>(compass_width - (compass_padding * 2.f)) , static_cast<int>(compass_height - (compass_padding * 2.f)) };
+
+                if (compass_width == 0 && location.x == 0 && location.y == 0) {
+                    // In "Restore Defaults" state - replace with sane default values
+                    // Default values for a multiplier of 1.0f
+                    const int DEFAULT_WIDTH = 245;
+                    const int DEFAULT_HEIGHT = 269;
+                    
+                    compass_width = std::roundf(DEFAULT_WIDTH * multiplier);
+                    compass_height = std::roundf(DEFAULT_HEIGHT * multiplier);
+                    compass_padding = compass_width * .05f;
+
+                    int windowWidth = GW::UI::GetPreference(GW::UI::NumberPreference::WindowSizeX);
+                    location.x = static_cast<int>(windowWidth - compass_width + compass_padding);
+                    location.y = static_cast<int>(compass_padding);
+                    size.x = static_cast<int>(compass_width - (compass_padding * 2.0f));
+                    size.y = static_cast<int>(compass_height - (compass_padding * 2.0f));
+                }
+
                 ImGui::SetWindowPos({ static_cast<float>(location.x),static_cast<float>(location.y) });
                 ImGui::SetWindowSize({ static_cast<float>(size.x),static_cast<float>(size.y) });
             }
