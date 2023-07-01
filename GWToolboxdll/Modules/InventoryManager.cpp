@@ -50,6 +50,9 @@ namespace {
         "Bag 2"
     };
 
+    bool hide_unsellable_items = false;
+
+
     bool GetIsProfessionUnlocked(GW::Constants::Profession prof) {
         auto world = GW::GetWorldContext();
         auto player = GW::PlayerMgr::GetPlayerByID();
@@ -645,6 +648,19 @@ namespace {
             status->blocked = true;
         }
     }
+    uint32_t merchant_list_tab = 0;
+    void __fastcall OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
+        GW::Hook::EnterHook();
+        if (merchant_list_tab == 0xb && hide_unsellable_items) {
+            const auto item = GW::Items::GetItemById(item_id);
+            if (item && !item->value) {
+                GW::Hook::LeaveHook();
+                return;
+            }
+        }
+        RetAddItemRowToWindow(ecx, edx, frame, item_id);
+        GW::Hook::LeaveHook();
+    }
 
 } // namespace
 void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
@@ -653,6 +669,9 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage mes
     case GW::UI::UIMessage::kItemUpdated: {
         clear_pending_move((uint32_t)wparam);
     } break;
+    case GW::UI::UIMessage::kInitMerchantList: {
+        merchant_list_tab = *(uint32_t*)wparam;
+    }
         // About to request a quote for an item
     case GW::UI::UIMessage::kSendMerchantRequestQuote: {
         requesting_quote_type = 0;
@@ -721,7 +740,8 @@ void InventoryManager::Initialize() {
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMoveItem,
         GW::UI::UIMessage::kSendUseItem,
-        GW::UI::UIMessage::kItemUpdated
+        GW::UI::UIMessage::kItemUpdated,
+        GW::UI::UIMessage::kInitMerchantList
     };
     for (const auto message_id : message_id_hooks) {
         GW::UI::RegisterUIMessageCallback(&ItemClick_Entry, message_id, OnUIMessage);
@@ -746,24 +766,6 @@ void InventoryManager::Terminate()
 }
 
 // Hide unsellable items from merchant
-void InventoryManager::OnAddItemToWindow(void* ecx, void* edx, uint32_t frame, uint32_t item_id) {
-    GW::Hook::EnterHook();
-    const auto item = GW::Items::GetItemById(item_id);
-    bool block_item = false;
-    if (item) {
-        if (Instance().hide_unsellable_items && !item->value) {
-            block_item = true;
-        }
-        if (Instance().hide_from_merchant_items.contains(item->model_id)) {
-            block_item = true;
-        }
-    }
-
-    if (!block_item) {
-        RetAddItemRowToWindow(ecx, edx, frame, item_id);
-    }
-    GW::Hook::LeaveHook();
-}
 void InventoryManager::OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity) {
     if (ImGui::IsKeyDown(ImGuiKey_ModShift) || !Instance().trade_whole_stacks)
         return; // Default behaviour; prompt user for amount
@@ -822,34 +824,35 @@ bool InventoryManager::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
 }
 void InventoryManager::SaveSettings(ToolboxIni* ini) {
     ToolboxUIElement::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(only_use_superior_salvage_kits), only_use_superior_salvage_kits);
-    ini->SetBoolValue(Name(), VAR_NAME(salvage_rare_mats), salvage_rare_mats);
+    SAVE_BOOL(only_use_superior_salvage_kits);
+    SAVE_BOOL(salvage_rare_mats);
+    SAVE_BOOL(trade_whole_stacks);
+    SAVE_BOOL(wiki_link_on_context_menu);
+    SAVE_BOOL(hide_unsellable_items);
+    SAVE_BOOL(change_secondary_for_tome);
+
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
-    ini->SetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
-    ini->SetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
-    ini->SetBoolValue(Name(), VAR_NAME(change_secondary_for_tome), change_secondary_for_tome);
 
     GuiUtils::MapToIni(ini, Name(), VAR_NAME(hide_from_merchant_items), hide_from_merchant_items);
 }
 void InventoryManager::LoadSettings(ToolboxIni* ini) {
     ToolboxUIElement::LoadSettings(ini);
-    only_use_superior_salvage_kits = ini->GetBoolValue(Name(), VAR_NAME(only_use_superior_salvage_kits), only_use_superior_salvage_kits);
-    salvage_rare_mats = ini->GetBoolValue(Name(), VAR_NAME(salvage_rare_mats), salvage_rare_mats);
+    LOAD_BOOL(only_use_superior_salvage_kits);
+    LOAD_BOOL(salvage_rare_mats);
+    LOAD_BOOL(trade_whole_stacks);
+    LOAD_BOOL(wiki_link_on_context_menu);
+    LOAD_BOOL(hide_unsellable_items);
+    LOAD_BOOL(change_secondary_for_tome);
+
     bags_to_salvage_from[GW::Constants::Bag::Backpack] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
     bags_to_salvage_from[GW::Constants::Bag::Bag_1] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
-    trade_whole_stacks = ini->GetBoolValue(Name(), VAR_NAME(trade_whole_stacks), trade_whole_stacks);
-    wiki_link_on_context_menu = ini->GetBoolValue(Name(), VAR_NAME(wiki_link_on_context_menu), wiki_link_on_context_menu);
-    hide_unsellable_items = ini->GetBoolValue(Name(), VAR_NAME(hide_unsellable_items), hide_unsellable_items);
-    change_secondary_for_tome = ini->GetBoolValue(Name(), VAR_NAME(change_secondary_for_tome), change_secondary_for_tome);
 
-    hide_from_merchant_items =
-        GuiUtils::IniToMap<std::map<uint32_t, std::string>>(ini, Name(), VAR_NAME(hide_from_merchant_items));
+    hide_from_merchant_items = GuiUtils::IniToMap<std::map<uint32_t, std::string>>(ini, Name(), VAR_NAME(hide_from_merchant_items));
 }
 void InventoryManager::ClearSalvageSession(GW::HookStatus* status, void *)
 {
