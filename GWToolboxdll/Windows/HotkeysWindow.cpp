@@ -300,7 +300,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 
         // === each hotkey ===
         block_hotkeys = false;
-        auto draw_hotkeys_vec = [&](std::vector<TBHotkey*>& in) {
+        const auto draw_hotkeys_vec = [&](std::vector<TBHotkey*>& in) -> bool {
             bool these_hotkeys_changed = false;
             for (unsigned int i = 0; i < in.size(); ++i) {
                 TBHotkey::Op op = TBHotkey::Op_None;
@@ -308,7 +308,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                 switch (op) {
                 case TBHotkey::Op_None: break;
                 case TBHotkey::Op_MoveUp: {
-                    auto it = std::ranges::find(hotkeys, in[i]);
+                    const auto it = std::ranges::find(hotkeys, in[i]);
                     if (it != hotkeys.end() && it != hotkeys.begin()) {
                         std::swap(*it, *(it - 1));
                         these_hotkeys_changed = true;
@@ -316,7 +316,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                     }
                 } break;
                 case TBHotkey::Op_MoveDown: {
-                    auto it = std::ranges::find(hotkeys, in[i]);
+                    const auto it = std::ranges::find(hotkeys, in[i]);
                     if (it != hotkeys.end() && it != hotkeys.end() - 1) {
                         std::swap(*it, *(it + 1));
                         these_hotkeys_changed = true;
@@ -324,7 +324,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                     }
                 } break;
                 case TBHotkey::Op_Delete: {
-                    auto it = std::ranges::find(hotkeys, in[i]);
+                    const auto it = std::ranges::find(hotkeys, in[i]);
                     if (it != hotkeys.end()) {
                         hotkeys.erase(it);
                         delete in[i];
