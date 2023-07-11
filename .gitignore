@@ -1,3 +1,6 @@
+# IntelliJ
+.idea
+
 # Build directories
 Debug/
 Release/
