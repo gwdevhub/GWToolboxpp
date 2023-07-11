@@ -184,14 +184,25 @@ void TradeWindow::Update(float delta) {
 bool TradeWindow::parse_json_message(const json& js, Message* msg) {
     if (js == json::value_t::discarded)
         return false;
-    if (!(js.contains("s") && js["s"].is_string())
-        || !(js.contains("m") && js["m"].is_string())
-        || !(js.contains("t") && js["t"].is_number_unsigned()))
+    if (!(js.contains("s") && js["s"].is_string()))
         return false;
     msg->name = js["s"].get<std::string>();
+    if (!(js.contains("m") && js["m"].is_string()))
+        return false;
     msg->message = js["m"].get<std::string>();
-    msg->name = js["s"].get<std::string>();
-    msg->timestamp = static_cast<uint32_t>(js["t"].get<uint64_t>() / 1000); // Messy?
+    if (!js.contains("t"))
+        return false;
+    unsigned long long timestamp_ull = 0ull;
+    if (js["t"].is_string()) {
+        const auto str = js["t"].get<std::string>();
+        timestamp_ull = strtoull (str.c_str(), NULL, 10);
+    }
+    else if (js["t"].is_number_unsigned()) {
+        timestamp_ull = js["t"].get<uint64_t>();
+    }
+    if (timestamp_ull == 0ull)
+        return false;
+    msg->timestamp = static_cast<uint32_t>(timestamp_ull / 1000); // Messy?
     return true;
 }
 
