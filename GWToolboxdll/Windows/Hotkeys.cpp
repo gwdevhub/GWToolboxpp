@@ -596,8 +596,8 @@ bool TBHotkey::Draw(Op *op)
 
             if (newkey == 0) { // we are looking for the key
                 BYTE keyboard_state[256]{};
-                ::GetKeyboardState(keyboard_state);
-                for (WORD i = 0; i < 256; i++) {
+                const auto ret = ::GetKeyboardState(keyboard_state);
+                for (WORD i = 0; ret && i < 256; i++) {
                     switch (i) {
                         case VK_CONTROL:
                         case VK_LCONTROL:
@@ -609,6 +609,8 @@ bool TBHotkey::Draw(Op *op)
                         case VK_LMENU:
                         case VK_RMENU:
                             continue;
+                        case VK_PACKET:
+                            continue; // ((KBDLLHOOKSTRUCT*)lParam)->scanCode should contain the unicode source input
                         default: {
                             if (keyboard_state[i] & 0x80)
                                 newkey = i;
