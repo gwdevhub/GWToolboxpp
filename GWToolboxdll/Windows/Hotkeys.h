@@ -34,11 +34,11 @@ public:
     static bool show_active_in_header;
     static bool show_run_in_header;
     static bool hotkeys_changed;
-    static WORD* key_out;
-    static DWORD* mod_out;
+    static LONG* key_out;
+    static LONG* mod_out;
 
     static TBHotkey* HotkeyFactory(ToolboxIni* ini, const char* section);
-    static void HotkeySelector(WORD* key, DWORD* modifier = nullptr);
+    static void HotkeySelector(LONG* key, LONG* modifier = nullptr);
 
     char group[128] = "";
     bool pressed = false;   // if the key has been pressed
