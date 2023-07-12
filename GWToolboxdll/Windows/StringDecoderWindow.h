@@ -4,13 +4,16 @@
 
 class StringDecoderWindow : public ToolboxWindow {
     StringDecoderWindow() = default;
-    ~StringDecoderWindow() {
+
+    ~StringDecoderWindow() override
+    {
         delete[] encoded;
         encoded = nullptr;
     }
 
 public:
-    static StringDecoderWindow& Instance() {
+    static StringDecoderWindow& Instance()
+    {
         static StringDecoderWindow instance;
         return instance;
     }

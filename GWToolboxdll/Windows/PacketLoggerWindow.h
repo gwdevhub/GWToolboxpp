@@ -7,9 +7,11 @@
 
 class PacketLoggerWindow : public ToolboxWindow {
     PacketLoggerWindow() = default;
-    ~PacketLoggerWindow() { ClearMessageLog(); };
+    ~PacketLoggerWindow() override { ClearMessageLog(); };
+
 public:
-    static PacketLoggerWindow& Instance() {
+    static PacketLoggerWindow& Instance()
+    {
         static PacketLoggerWindow instance;
         return instance;
     }
@@ -44,13 +46,14 @@ private:
 
     std::unordered_map<std::wstring, std::wstring*> message_log;
     std::wstring* last_message_decoded = nullptr;
-    uint32_t identifiers[512] = { 0 }; // Presume 512 is big enough for header size...
+    uint32_t identifiers[512] = {0}; // Presume 512 is big enough for header size...
     GW::HookEntry hook_entry;
 
     struct ForTranslation {
         std::wstring in;
         std::wstring out;
     };
+
     std::vector<ForTranslation*> pending_translation;
 
 
@@ -59,7 +62,7 @@ private:
     GW::HookEntry MessageLocal_Entry;
     GW::HookEntry NpcGeneralStats_Entry;
 
-    int timestamp_type = TimestampType::TimestampType_None;
+    int timestamp_type = TimestampType_None;
     bool timestamp_show_hours = true;
     bool timestamp_show_minutes = true;
     bool timestamp_show_seconds = true;

@@ -9,15 +9,19 @@
 class ObserverPlayerWindow : public ToolboxWindow {
 protected:
     ObserverPlayerWindow() = default;
-    ~ObserverPlayerWindow() = default;
+    ~ObserverPlayerWindow() override = default;
 
 public:
-    static ObserverPlayerWindow& Instance() {
+    static ObserverPlayerWindow& Instance()
+    {
         static ObserverPlayerWindow instance;
         return instance;
     }
 
-    virtual void Prepare() {}
+    virtual void Prepare()
+    {
+    }
+
     virtual uint32_t GetTracking();
     virtual uint32_t GetComparison();
 
@@ -25,7 +29,7 @@ public:
     void DrawAction(const std::string& name, const ObserverModule::ObservedAction* action);
 
     void DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,
-        const std::vector<GW::Constants::SkillID>& skill_ids);
+                    const std::vector<GW::Constants::SkillID>& skill_ids);
 
     const char* Name() const override { return "Observer Player"; }
     const char* Icon() const override { return ICON_FA_EYE; }
@@ -37,10 +41,10 @@ public:
     void DrawSettingInternal() override;
 
 protected:
-    float text_long     = 0;
-    float text_medium   = 0;
-    float text_short    = 0;
-    float text_tiny     = 0;
+    float text_long = 0;
+    float text_medium = 0;
+    float text_short = 0;
+    float text_tiny = 0;
     uint32_t previously_tracked_agent_id = NO_AGENT;
     uint32_t previously_compared_agent_id = NO_AGENT;
 

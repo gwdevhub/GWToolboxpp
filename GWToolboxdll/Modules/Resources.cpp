@@ -25,22 +25,17 @@
 #include <nfd_win.cpp>
 
 namespace {
-    const char* d3dErrorMessage(HRESULT code) {
+    const char* d3dErrorMessage(HRESULT code)
+    {
         switch (code) {
-        case D3DERR_NOTAVAILABLE:
-            return  "D3DERR_NOTAVAILABLE";
-        case D3DERR_OUTOFVIDEOMEMORY:
-            return  "D3DERR_OUTOFVIDEOMEMORY";
-        case D3DERR_INVALIDCALL:
-            return  "D3DERR_INVALIDCALL";
-        case E_OUTOFMEMORY:
-            return  "E_OUTOFMEMORY";
-        case D3D_OK:
-            return "D3D_OK";
-        default:
-            static std::string str;
-            str = std::format("Unknown D3D error {:#08x}", code);
-            return str.c_str();
+            case D3DERR_NOTAVAILABLE: return "D3DERR_NOTAVAILABLE";
+            case D3DERR_OUTOFVIDEOMEMORY: return "D3DERR_OUTOFVIDEOMEMORY";
+            case D3DERR_INVALIDCALL: return "D3DERR_INVALIDCALL";
+            case E_OUTOFMEMORY: return "E_OUTOFMEMORY";
+            case D3D_OK: return "D3D_OK";
+            default: static std::string str;
+                str = std::format("Unknown D3D error {:#08x}", code);
+                return str.c_str();
         }
     }
 
@@ -88,7 +83,8 @@ namespace {
     std::vector<std::thread*> workers;
 
     // snprintf error message, pass to callback as a failure. Used internally.
-    void trigger_failure_callback(std::function<void(bool,const std::wstring&)> callback,const wchar_t* format, ...) {
+    void trigger_failure_callback(std::function<void(bool, const std::wstring&)> callback, const wchar_t* format, ...)
+    {
         std::wstring out;
         va_list vl;
         va_start(vl, format);
@@ -101,16 +97,18 @@ namespace {
     float cached_ui_scale = .0f;
 
     GW::HookEntry OnUIMessage_Hook;
-    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+
+    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    {
         switch (message_id) {
-        case GW::UI::UIMessage::kEnumPreference:
-            if(wparam && *(GW::UI::EnumPreference*)wparam == GW::UI::EnumPreference::InterfaceSize)
-                Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
-            break;
+            case GW::UI::UIMessage::kEnumPreference: if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize)
+                    Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
+                break;
         }
     }
 
-    void WorkerUpdate() {
+    void WorkerUpdate()
+    {
         while (!should_stop) {
             worker_mutex.lock();
             if (thread_jobs.empty()) {
@@ -126,7 +124,8 @@ namespace {
         }
     }
 
-    void InitRestClient(RestClient* r) {
+    void InitRestClient(RestClient* r)
+    {
         char user_agent_str[32];
         ASSERT(snprintf(user_agent_str, sizeof(user_agent_str), "GWToolboxpp/%s", GWTOOLBOXDLL_VERSION) != -1);
         r->SetUserAgent(user_agent_str);
@@ -137,10 +136,13 @@ namespace {
     }
 }
 
-Resources::Resources() {
+Resources::Resources()
+{
     InitCurl();
 }
-Resources::~Resources() {
+
+Resources::~Resources()
+{
     Cleanup();
     ShutdownCurl();
     for (const auto& tex : skill_images | std::views::values) {
@@ -155,73 +157,91 @@ Resources::~Resources() {
         delete tex;
     }
     map_names.clear();
-
 };
 
-void Resources::EnqueueWorkerTask(std::function<void()> f) { worker_mutex.lock(); thread_jobs.push(f); worker_mutex.unlock();}
-void Resources::EnqueueMainTask(std::function<void()> f) { main_mutex.lock(); main_jobs.push(f); main_mutex.unlock(); }
-void Resources::EnqueueDxTask(std::function<void(IDirect3DDevice9*)> f) { dx_mutex.lock(); dx_jobs.push(f); dx_mutex.unlock(); }
+void Resources::EnqueueWorkerTask(std::function<void()> f)
+{
+    worker_mutex.lock();
+    thread_jobs.push(f);
+    worker_mutex.unlock();
+}
 
-void Resources::OpenFileDialog(std::function<void(const char*)> callback, const char* filterList, const char* defaultPath) {
+void Resources::EnqueueMainTask(std::function<void()> f)
+{
+    main_mutex.lock();
+    main_jobs.push(f);
+    main_mutex.unlock();
+}
 
-    std::string* filterList_cpy = new std::string(filterList);
-    std::string* defaultPath_cpy = new std::string(defaultPath);
+void Resources::EnqueueDxTask(std::function<void(IDirect3DDevice9*)> f)
+{
+    dx_mutex.lock();
+    dx_jobs.push(f);
+    dx_mutex.unlock();
+}
+
+void Resources::OpenFileDialog(std::function<void(const char*)> callback, const char* filterList, const char* defaultPath)
+{
+    auto filterList_cpy = new std::string(filterList);
+    auto defaultPath_cpy = new std::string(defaultPath);
     EnqueueWorkerTask([callback, filterList_cpy,defaultPath_cpy]() {
-        nfdchar_t *outPath = NULL;
-        nfdresult_t result = NFD_OpenDialog( filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
+        nfdchar_t* outPath = nullptr;
+        nfdresult_t result = NFD_OpenDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
         delete filterList_cpy;
         delete defaultPath_cpy;
 
         switch (result) {
-        case NFD_OKAY:
-        case NFD_CANCEL:
-            break;
-        default:
-            Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
-            break;
+            case NFD_OKAY:
+            case NFD_CANCEL: break;
+            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+                break;
         }
 
         callback(outPath);
-        if(outPath)
+        if (outPath)
             free(outPath);
-        });
+    });
 }
-void Resources::SaveFileDialog(std::function<void(const char*)> callback, const char* filterList, const char* defaultPath) {
 
-    std::string* filterList_cpy = new std::string(filterList);
-    std::string* defaultPath_cpy = new std::string(defaultPath);
+void Resources::SaveFileDialog(std::function<void(const char*)> callback, const char* filterList, const char* defaultPath)
+{
+    auto filterList_cpy = new std::string(filterList);
+    auto defaultPath_cpy = new std::string(defaultPath);
 
     EnqueueWorkerTask([callback, filterList_cpy,defaultPath_cpy]() {
-        nfdchar_t *outPath = NULL;
-        nfdresult_t result = NFD_SaveDialog( filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
+        nfdchar_t* outPath = nullptr;
+        nfdresult_t result = NFD_SaveDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
         delete filterList_cpy;
         delete defaultPath_cpy;
 
         switch (result) {
-        case NFD_OKAY:
-            callback(outPath);
-            break;
-        case NFD_CANCEL:
-            callback(NULL);
-            break;
-        default:
-            Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
-            break;
+            case NFD_OKAY: callback(outPath);
+                break;
+            case NFD_CANCEL: callback(nullptr);
+                break;
+            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+                break;
         }
-        if(outPath)
+        if (outPath)
             free(outPath);
-        });
+    });
 }
-float Resources::GetGWScaleMultiplier(bool force) {
+
+float Resources::GetGWScaleMultiplier(bool force)
+{
     if (force || cached_ui_scale == .0f) {
         const auto interfacesize =
-            static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::EnumPreference::InterfaceSize));
+            static_cast<GW::Constants::InterfaceSize>(GetPreference(GW::UI::EnumPreference::InterfaceSize));
 
         switch (interfacesize) {
-        case GW::Constants::InterfaceSize::SMALL: cached_ui_scale = .9f; break;
-        case GW::Constants::InterfaceSize::LARGE: cached_ui_scale = 1.166666f; break;
-        case GW::Constants::InterfaceSize::LARGER: cached_ui_scale = 1.3333333f; break;
-        default: cached_ui_scale = 1.f; break;
+            case GW::Constants::InterfaceSize::SMALL: cached_ui_scale = .9f;
+                break;
+            case GW::Constants::InterfaceSize::LARGE: cached_ui_scale = 1.166666f;
+                break;
+            case GW::Constants::InterfaceSize::LARGER: cached_ui_scale = 1.3333333f;
+                break;
+            default: cached_ui_scale = 1.f;
+                break;
         }
     }
     return cached_ui_scale;
@@ -234,10 +254,10 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
         out_actual_path = in_shortcut_path;
         return S_OK;
     }
-    hRes = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    hRes = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (!SUCCEEDED(hRes))
         return hRes;
-    IShellLink* psl = NULL;
+    IShellLink* psl = nullptr;
 
     // buffer that receives the null-terminated string
     // for the drive and path
@@ -250,16 +270,16 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
 
     // Get a pointer to the IShellLink interface
     hRes = CoCreateInstance(CLSID_ShellLink,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        IID_IShellLink,
-        (void**)&psl);
+                            nullptr,
+                            CLSCTX_INPROC_SERVER,
+                            IID_IShellLink,
+                            (void**)&psl);
     if (!SUCCEEDED(hRes)) {
         CoUninitialize();
         return hRes;
     }
     // Get a pointer to the IPersistFile interface
-    IPersistFile* ppf = NULL;
+    IPersistFile* ppf = nullptr;
     psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&ppf));
 
     // IPersistFile is using LPCOLESTR,
@@ -271,7 +291,7 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     }
     // Try to find the target of a shortcut,
     // even if it has been moved or renamed
-    hRes = psl->Resolve(NULL, SLR_UPDATE);
+    hRes = psl->Resolve(nullptr, SLR_UPDATE);
     if (!SUCCEEDED(hRes)) {
         CoUninitialize();
         return hRes;
@@ -294,16 +314,19 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     return hRes;
 }
 
-void Resources::Initialize() {
+void Resources::Initialize()
+{
     ToolboxModule::Initialize();
     for (size_t i = 0; i < MAX_WORKERS; i++) {
         workers.push_back(new std::thread([this]() {
             WorkerUpdate();
-            }));
+        }));
     }
-    GW::UI::RegisterUIMessageCallback(&OnUIMessage_Hook, GW::UI::UIMessage::kEnumPreference, OnUIMessage, 0x8000);
+    RegisterUIMessageCallback(&OnUIMessage_Hook, GW::UI::UIMessage::kEnumPreference, OnUIMessage, 0x8000);
 }
-void Resources::Cleanup() {
+
+void Resources::Cleanup()
+{
     should_stop = true;
     for (std::thread* worker : workers) {
         if (!worker)
@@ -331,7 +354,9 @@ void Resources::Cleanup() {
     encoded_string_ids.clear();
     map_names.clear(); // NB: Map names are pointers to encoded_string_ids
 }
-void Resources::Terminate() {
+
+void Resources::Terminate()
+{
     ToolboxModule::Terminate();
 
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Hook);
@@ -339,7 +364,8 @@ void Resources::Terminate() {
     Cleanup();
 }
 
-void Resources::EndLoading() {
+void Resources::EndLoading()
+{
     EnqueueWorkerTask([this] { should_stop = true; });
 }
 
@@ -356,10 +382,12 @@ std::filesystem::path Resources::GetSettingsFolderPath()
 
     return docpath;
 }
+
 std::filesystem::path Resources::GetPath(const std::filesystem::path& file)
 {
     return GetSettingsFolderPath() / file;
 }
+
 std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, const std::filesystem::path& file)
 {
     return GetSettingsFolderPath() / folder / file;
@@ -370,12 +398,14 @@ bool Resources::EnsureFolderExists(const std::filesystem::path& path)
     return exists(path) || create_directory(path);
 }
 
-utf8::string Resources::GetPathUtf8(const std::wstring& file) {
+utf8::string Resources::GetPathUtf8(const std::wstring& file)
+{
     const std::wstring path = GetPath(file);
     return Unicode16ToUtf8(path.c_str());
 }
 
-bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response) {
+bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response)
+{
     if (exists(path_to_file)) {
         if (!std::filesystem::remove(path_to_file)) {
             return StrSwprintf(response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
@@ -387,19 +417,19 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
 
     std::string content;
     if (!Download(url, content)) {
-        return StrSwprintf(response,L"%S", content.c_str()), false;
+        return StrSwprintf(response, L"%S", content.c_str()), false;
     }
     if (!content.length()) {
-        return StrSwprintf(response,L"Failed to download %S, no content length", url.c_str()), false;
+        return StrSwprintf(response, L"Failed to download %S, no content length", url.c_str()), false;
     }
     FILE* fp = fopen(path_to_file.string().c_str(), "wb");
     if (!fp) {
-        return StrSwprintf(response,L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+        return StrSwprintf(response, L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     const int written = fwrite(content.data(), content.size() + 1, 1, fp);
     fclose(fp);
-    if(written != 1) {
-        return StrSwprintf(response,L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
+    if (written != 1) {
+        return StrSwprintf(response, L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
     return true;
 }
@@ -413,13 +443,12 @@ void Resources::Download(const std::filesystem::path& path_to_file, const std::s
         if (callback) {
             EnqueueMainTask([callback, success, error_message] {
                 callback(success, error_message);
-                });
+            });
         }
         else if (!success) {
             Log::LogW(L"Failed to download %s from %S\n%S", path_to_file.wstring().c_str(), url.c_str(), error_message.c_str());
         }
-
-        });
+    });
 }
 
 bool Resources::Download(const std::string& url, std::string& response)
@@ -435,6 +464,7 @@ bool Resources::Download(const std::string& url, std::string& response)
     response = std::move(r.GetContent());
     return true;
 }
+
 void Resources::Download(const std::string& url, AsyncLoadMbCallback callback)
 {
     EnqueueWorkerTask([this, url, callback] {
@@ -451,7 +481,7 @@ bool Resources::Post(const std::string& url, const std::string& payload, std::st
     RestClient r;
     InitRestClient(&r);
     r.SetMethod(HttpMethod::Post);
-    r.SetPostContent(payload.c_str(),payload.size(), ContentFlag::ByRef);
+    r.SetPostContent(payload.c_str(), payload.size(), ContentFlag::ByRef);
 
     const nlohmann::json& is_json = nlohmann::json::parse(payload);
     if (is_json != nlohmann::json::value_t::discarded) {
@@ -466,6 +496,7 @@ bool Resources::Post(const std::string& url, const std::string& payload, std::st
     response = std::move(r.GetContent());
     return true;
 }
+
 void Resources::Post(const std::string& url, const std::string& payload, AsyncLoadMbCallback callback)
 {
     EnqueueWorkerTask([url, payload, callback] {
@@ -473,8 +504,8 @@ void Resources::Post(const std::string& url, const std::string& payload, AsyncLo
         bool ok = Post(url, payload, response);
         EnqueueMainTask([callback, ok, response]() {
             callback(ok, response);
-            });
         });
+    });
 }
 
 void Resources::EnsureFileExists(
@@ -483,19 +514,21 @@ void Resources::EnsureFileExists(
     if (exists(path_to_file)) {
         // if file exists, run the callback immediately in the same thread
         callback(true, L"");
-    } else {
+    }
+    else {
         // otherwise try to download it in the worker
         Instance().Download(path_to_file, url, callback);
     }
 }
 
-HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring& error) {
+HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring& error)
+{
     // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     auto ext = path_to_file.extension();
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
-        if(ext == ".dds")
+        if (ext == ".dds")
             res = DirectX::CreateDDSTextureFromFileEx(device, path_to_file.c_str(), 0, D3DPOOL_MANAGED, true, texture);
         else
             res = CreateWICTextureFromFileEx(device, path_to_file.c_str(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_FLAGS::WIC_LOADER_DEFAULT, texture);
@@ -510,7 +543,9 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     }
     return res;
 }
-HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule, LPCSTR id, IDirect3DTexture9** texture, std::wstring& error) {
+
+HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule, LPCSTR id, IDirect3DTexture9** texture, std::wstring& error)
+{
     // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
     using namespace std::string_literals;
     HRESULT res = D3DERR_NOTAVAILABLE;
@@ -521,7 +556,6 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule
         if (res != S_OK) {
             res = CreateDDSTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()),
                                                resource.size(), 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
-
         }
     }
     if (res != D3D_OK) {
@@ -533,6 +567,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule
     }
     return res;
 }
+
 void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback)
 {
     EnqueueDxTask([path_to_file, texture, callback](IDirect3DDevice9* device) {
@@ -546,6 +581,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
         }
     });
 }
+
 void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback)
 {
     EnqueueDxTask([id, texture, callback](IDirect3DDevice9* device) {
@@ -559,6 +595,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallb
         }
     });
 }
+
 void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
     EnsureFileExists(path_to_file, url, [texture,path_to_file,callback](bool success, const std::wstring& error) {
@@ -575,18 +612,21 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
         }
     });
 }
+
 void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback)
 {
     LoadTexture(texture, path_to_file, [texture, id, callback](bool success, const std::wstring& error) {
         if (!success) {
             Instance().LoadTexture(texture, id, callback);
         }
-        else if(callback) {
+        else if (callback) {
             callback(success, error);
         }
-        });
+    });
 }
-bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error) {
+
+bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error)
+{
     // otherwise try to install it from resource
     HRSRC hResInfo = FindResourceA(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
     if (!hResInfo) {
@@ -604,9 +644,9 @@ bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_fil
         return false;
     }
     // write to file so the user can customize his icons
-    HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     DWORD bytesWritten;
-    BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
+    BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, nullptr);
     if (wfRes != TRUE) {
         StrSwprintf(error, L"Error writing file %s - Error is %lu", path_to_file.filename().wstring().c_str(), GetLastError());
         return false;
@@ -621,21 +661,28 @@ bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_fil
 }
 
 // Load from resource file name on disk with 3 retries
-int Resources::LoadIniFromFile(const wchar_t* resource_path, ToolboxIni* inifile) {
+int Resources::LoadIniFromFile(const wchar_t* resource_path, ToolboxIni* inifile)
+{
     ASSERT(resource_path && *resource_path);
-    const auto absolute_path = Resources::GetPath(resource_path);
+    const auto absolute_path = GetPath(resource_path);
     return LoadIniFromFile(absolute_path, inifile);
 }
+
 // Load from absolute file path on disk with 3 retries
-int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile) {
+int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile)
+{
     return inifile->LoadFile(absolute_path);
 }
-int Resources::SaveIniToFile(const wchar_t* resource_filename, const ToolboxIni* inifile) {
+
+int Resources::SaveIniToFile(const wchar_t* resource_filename, const ToolboxIni* inifile)
+{
     ASSERT(resource_filename && *resource_filename);
-    const auto absolute_path = Resources::GetPath(resource_filename);
+    const auto absolute_path = GetPath(resource_filename);
     return SaveIniToFile(absolute_path, inifile);
 }
-int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* ini) {
+
+int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* ini)
+{
     auto tmp_file = std::filesystem::path(absolute_path);
     tmp_file += ".tmp";
     const SI_Error res = ini->SaveFile(tmp_file.c_str());
@@ -645,12 +692,13 @@ int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const T
     std::filesystem::rename(tmp_file, absolute_path, ec);
     if (ec.value() != 0)
         return ec.value();
-    if (!(!std::filesystem::exists(tmp_file) && std::filesystem::exists(absolute_path)))
+    if (!(!exists(tmp_file) && exists(absolute_path)))
         return -1; // renmae failed
     return 0;
 }
 
-void Resources::DxUpdate(IDirect3DDevice9* device) {
+void Resources::DxUpdate(IDirect3DDevice9* device)
+{
     while (true) {
         dx_mutex.lock();
         if (dx_jobs.empty()) {
@@ -664,7 +712,8 @@ void Resources::DxUpdate(IDirect3DDevice9* device) {
     }
 }
 
-void Resources::Update(float) {
+void Resources::Update(float)
+{
     main_mutex.lock();
     if (main_jobs.empty()) {
         main_mutex.unlock();
@@ -676,7 +725,8 @@ void Resources::Update(float) {
     func();
 }
 
-IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
+IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p)
+{
     auto prof_id = static_cast<uint32_t>(p);
     if (profession_icons.contains(prof_id)) {
         return profession_icons.at(prof_id);
@@ -695,12 +745,13 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p) {
             if (!success) {
                 Log::ErrorW(L"Failed to load icon for profession %d\n%s", prof_id, error.c_str());
             }
-            });
+        });
     }
     return texture;
 }
 
-IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_t width) {
+IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_t width)
+{
     ASSERT(filename && filename[0]);
     std::string filename_on_disk;
     if (width > 0) {
@@ -710,8 +761,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
         filename_on_disk = filename;
     }
     const auto filename_sanitised = GuiUtils::SanitiseFilename(filename_on_disk);
-    if (guild_wars_wiki_images.contains(filename_sanitised))
-    {
+    if (guild_wars_wiki_images.contains(filename_sanitised)) {
         return guild_wars_wiki_images.at(filename_sanitised);
     }
     const auto callback = [filename_sanitised](bool success, const std::wstring& error) {
@@ -764,7 +814,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             image_finder = "/images/(.*)/([^/]+)$";
             std::regex_search(image_url, m, image_finder);
             if (!m.size()) {
-                trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S",image_url.c_str());
+                trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
                 return;
             }
             StrSprintf(tmp_str, "/images/thumb/%s/%s/%dpx-%s", m[1].str().c_str(), m[2].str().c_str(), width, m[2].str().c_str());
@@ -776,12 +826,12 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             image_url = tmp_str;
         }
         Instance().LoadTexture(texture, path_to_file2, image_url, callback);
-        });
+    });
     return texture;
 }
 
-IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
-
+IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
+{
     if (skill_images.contains(skill_id)) {
         return skill_images.at(skill_id);
     }
@@ -868,11 +918,12 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id) {
             snprintf(url, _countof(url), "https://wiki.guildwars.com%s%s", image_path.c_str(), image_extension.c_str());
         }
         Instance().LoadTexture(texture, path_to_file, url, callback);
-        });
+    });
     return texture;
 }
 
-GuiUtils::EncString* Resources::GetMapName(GW::Constants::MapID map_id) {
+GuiUtils::EncString* Resources::GetMapName(GW::Constants::MapID map_id)
+{
     const auto found = map_names.find(map_id);
     if (found != map_names.end()) {
         return found->second;
@@ -883,7 +934,9 @@ GuiUtils::EncString* Resources::GetMapName(GW::Constants::MapID map_id) {
     map_names[map_id] = ret;
     return ret;
 }
-GuiUtils::EncString* Resources::DecodeStringId(uint32_t enc_str_id) {
+
+GuiUtils::EncString* Resources::DecodeStringId(uint32_t enc_str_id)
+{
     const auto found = encoded_string_ids.find(enc_str_id);
     if (found != encoded_string_ids.end()) {
         return found->second;
@@ -893,7 +946,8 @@ GuiUtils::EncString* Resources::DecodeStringId(uint32_t enc_str_id) {
     return enc_string;
 }
 
-IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
+IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
+{
     if (item_name.empty()) {
         return nullptr;
     }
@@ -931,7 +985,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
         }
         const std::string item_name_str = GuiUtils::WStringToString(item_name);
         // matches any characters that need to be escaped in RegEx
-        const std::regex specialChars{ R"([-[\]{}()*+?.,\^$|#\s])" };
+        const std::regex specialChars{R"([-[\]{}()*+?.,\^$|#\s])"};
         const std::string sanitized = std::regex_replace(item_name_str, specialChars, R"(\$&)");
         std::smatch m;
         // Find first png image that has an alt tag matching the html encoded title of the page
@@ -966,6 +1020,6 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name) {
             snprintf(url, _countof(url), "https://wiki.guildwars.com%s%s", image_path.c_str(), image_extension.c_str());
         }
         Instance().LoadTexture(texture, path_to_file, url, callback);
-        });
+    });
     return texture;
 }

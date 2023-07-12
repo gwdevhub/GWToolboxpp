@@ -29,15 +29,18 @@ public:
     static bool hide_city_pcons_in_explorable_areas;
 
 protected:
-
     Pcon(const char* chatname,
-        const char* abbrevname,
-        const char* ininame,
-        const wchar_t* filename,
-        ImVec2 uv0, ImVec2 uv1, int threshold,
-        const char* desc = nullptr);
+         const char* abbrevname,
+         const char* ininame,
+         const wchar_t* filename,
+         ImVec2 uv0, ImVec2 uv1, int threshold,
+         const char* desc = nullptr);
+
     Pcon(const wchar_t* file, int threshold = 20)
-        :Pcon(0, 0, 0, file, { 0,0 }, { 1,1 }, threshold) {}
+        : Pcon(nullptr, nullptr, nullptr, file, {0, 0}, {1, 1}, threshold)
+    {
+    }
+
     Pcon(const Pcon&) = delete;
     virtual ~Pcon();
     bool* GetSettingsByName(const wchar_t* name);
@@ -52,6 +55,7 @@ protected:
     GW::Bag* pending_move_to_bag = nullptr;
     uint32_t pending_move_to_slot = 0;
     uint32_t pending_move_to_quantity = 0;
+
 public:
     void Terminate();
 
@@ -59,7 +63,7 @@ public:
     virtual void Update(int delay = -1);
     // Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.
     // Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
-    static uint32_t MoveItem(GW::Item *item, GW::Bag *bag, size_t slot,
+    static uint32_t MoveItem(GW::Item* item, GW::Bag* bag, size_t slot,
                              size_t quantity = 0);
     wchar_t* SetPlayerName();
     // Pass true to start refill, or false to stop.
@@ -76,7 +80,7 @@ public:
 
     bool* enabled; // This is a ptr to the current char's status if applicable.
     bool pcon_quantity_checked = false;
-    bool refilling = false; // Set when a refill is in progress. Dont touch.
+    bool refilling = false;        // Set when a refill is in progress. Dont touch.
     bool refill_attempted = false; // Set to true when refill thread has run for this map
     int threshold = 0;
     bool visible = true;
@@ -107,7 +111,7 @@ protected:
     // and, if so, used *used to true
     // returns the number of items found, or -1 in case of error
     int CheckInventory(
-        bool *used = nullptr, size_t *used_qty = nullptr,
+        bool* used = nullptr, size_t* used_qty = nullptr,
         size_t from_bag = static_cast<size_t>(GW::Constants::Bag::Backpack),
         size_t to_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2)) const;
 
@@ -118,26 +122,32 @@ protected:
 
 private:
     IDirect3DTexture9** texture = nullptr;
-    const ImVec2 uv0 = { 0,0 };
-    const ImVec2 uv1 = { 1,1 };
+    const ImVec2 uv0 = {0, 0};
+    const ImVec2 uv1 = {1, 1};
 };
 
 // A generic Pcon has an item_id and effect_id
 class PconGeneric : public Pcon {
 public:
     PconGeneric(const wchar_t* file, DWORD item, GW::Constants::SkillID effect, int threshold = 20)
-        :Pcon(file,  threshold),
-        itemID(item), effectID(effect) {}
+        : Pcon(file, threshold),
+          itemID(item), effectID(effect)
+    {
+    }
+
     PconGeneric(const char* chat,
-        const char* abbrev,
-        const char* ini,
-        const wchar_t* file,
-        ImVec2 uv0, ImVec2 uv1,
-        DWORD item, GW::Constants::SkillID effect,
-        int threshold,
-        const char* desc = nullptr)
+                const char* abbrev,
+                const char* ini,
+                const wchar_t* file,
+                ImVec2 uv0, ImVec2 uv1,
+                DWORD item, GW::Constants::SkillID effect,
+                int threshold,
+                const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc),
-        itemID(item), effectID(effect) {}
+          itemID(item), effectID(effect)
+    {
+    }
+
     PconGeneric(const PconGeneric&) = delete;
 
 protected:
@@ -154,14 +164,17 @@ private:
 class PconCons : public PconGeneric {
 public:
     PconCons(const char* chat,
-        const char* abbrev,
-        const char* ini,
-        const wchar_t* file,
-        ImVec2 uv0, ImVec2 uv1,
-        DWORD item, GW::Constants::SkillID effect,
-        int threshold,
-            const char* desc = nullptr)
-        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effect, threshold, desc) {}
+             const char* abbrev,
+             const char* ini,
+             const wchar_t* file,
+             ImVec2 uv0, ImVec2 uv1,
+             DWORD item, GW::Constants::SkillID effect,
+             int threshold,
+             const char* desc = nullptr)
+        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effect, threshold, desc)
+    {
+    }
+
     PconCons(const PconCons&) = delete;
 
     bool CanUseByEffect() const override;
@@ -170,36 +183,43 @@ public:
 class PconCity : public Pcon {
 public:
     PconCity(const char* chat,
-        const char* abbrev,
-        const char* ini,
-        const wchar_t* file,
-        ImVec2 uv0, ImVec2 uv1,
-        int threshold,
-            const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) {}
+             const char* abbrev,
+             const char* ini,
+             const wchar_t* file,
+             ImVec2 uv0, ImVec2 uv1,
+             int threshold,
+             const char* desc = nullptr)
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc)
+    {
+    }
+
     PconCity(const PconCity&) = delete;
 
-    bool CanUseByInstanceType() const;
+    bool CanUseByInstanceType() const override;
     bool IsVisible() const override;
     bool CanUseByEffect() const override;
     size_t QuantityForEach(const GW::Item* item) const override;
 };
+
 // Used only in outposts for refilling
 class PconRefiller : public PconCity {
 public:
     PconRefiller(const wchar_t* file, DWORD item, int threshold = 250)
-        : PconRefiller(0, 0, 0, file, { 0,0 }, { 1,1 }, item, threshold) {
+        : PconRefiller(nullptr, nullptr, nullptr, file, {0, 0}, {1, 1}, item, threshold)
+    {
         visible = false;
     };
+
     PconRefiller(const char* chat,
-        const char* abbrev,
-        const char* ini,
-        const wchar_t* file,
-        ImVec2 uv0, ImVec2 uv1,
-        DWORD item,
-        int threshold,
-        const char* desc_ = nullptr)
-        : PconCity(chat, abbrev, ini, file, uv0, uv1, threshold, desc_), itemID(item) {
+                 const char* abbrev,
+                 const char* ini,
+                 const wchar_t* file,
+                 ImVec2 uv0, ImVec2 uv1,
+                 DWORD item,
+                 int threshold,
+                 const char* desc_ = nullptr)
+        : PconCity(chat, abbrev, ini, file, uv0, uv1, threshold, desc_), itemID(item)
+    {
         if (desc.size())
             desc += "\n";
         desc += "Enable in an outpost to refill your inventory.";
@@ -212,6 +232,7 @@ public:
     bool IsVisible() const override { return visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
     void Draw(IDirect3DDevice9* device) override;
     size_t QuantityForEach(const GW::Item* item) const override { return item->model_id == itemID ? 1u : 0u; }
+
 private:
     const DWORD itemID;
 };
@@ -219,13 +240,15 @@ private:
 class PconAlcohol : public Pcon {
 public:
     PconAlcohol(const char* chat,
-        const char* abbrev,
-        const char* ini,
-        const wchar_t* file,
-        ImVec2 uv0, ImVec2 uv1,
-        int threshold,
-            const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) {}
+                const char* abbrev,
+                const char* ini,
+                const wchar_t* file,
+                ImVec2 uv0, ImVec2 uv1,
+                int threshold,
+                const char* desc = nullptr)
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc)
+    {
+    }
 
     PconAlcohol(const PconAlcohol&) = delete;
 
@@ -237,13 +260,15 @@ public:
 class PconLunar : public Pcon {
 public:
     PconLunar(const char* chat,
-        const char* abbrev,
-        const char* ini,
-        const wchar_t* file,
-        ImVec2 uv0, ImVec2 uv1,
-        int threshold,
-            const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) {}
+              const char* abbrev,
+              const char* ini,
+              const wchar_t* file,
+              ImVec2 uv0, ImVec2 uv1,
+              int threshold,
+              const char* desc = nullptr)
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc)
+    {
+    }
 
     PconLunar(const PconLunar&) = delete;
 

@@ -4,10 +4,8 @@
 #include <ToolboxUIElement.h>
 
 class PluginModule final : public ToolboxUIElement {
-
-
     PluginModule();
-    ~PluginModule() = default;
+    ~PluginModule() override = default;
 
 public:
     static PluginModule& Instance()
@@ -30,11 +28,13 @@ public:
     void Terminate() override;
     bool CanTerminate() override;
 
-    void ShowVisibleRadio() override {}
-    void DrawSizeAndPositionSettings() override {}
+    void ShowVisibleRadio() override
+    {
+    }
 
-
+    void DrawSizeAndPositionSettings() override
+    {
+    }
 
 private:
-
 };

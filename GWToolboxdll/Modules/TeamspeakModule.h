@@ -4,7 +4,8 @@
 
 class TeamspeakModule : public ToolboxModule {
 public:
-    static TeamspeakModule& Instance() {
+    static TeamspeakModule& Instance()
+    {
         static TeamspeakModule instance;
         return instance;
     }
@@ -20,6 +21,6 @@ public:
     void Update(float) override;
     void DrawSettingInternal() override;
 
-    void LoadSettings(ToolboxIni* ini);
-    void SaveSettings(ToolboxIni* ini);
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
 };

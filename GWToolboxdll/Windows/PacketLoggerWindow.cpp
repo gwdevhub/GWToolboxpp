@@ -24,17 +24,21 @@
 #include <Windows/PacketLoggerWindow.h>
 
 namespace {
-    static wchar_t* GetMessageCore() {
+    wchar_t* GetMessageCore()
+    {
         GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
         return buff ? buff->begin() : nullptr;
     }
+
     struct MapInfo {
         wchar_t enc_name[8];
         std::wstring name;
         wchar_t enc_desc[8];
         std::wstring description;
         GW::AreaInfo* map_info;
-        nlohmann::json ToJson() {
+
+        nlohmann::json ToJson()
+        {
             nlohmann::json json;
             if (!name.empty())
                 json["name"] = GuiUtils::WStringToString(name);
@@ -48,14 +52,18 @@ namespace {
             return json;
         };
     };
-    static std::map<uint32_t, MapInfo*> maps;
-    void FetchMapInfo() {
+
+    std::map<uint32_t, MapInfo*> maps;
+
+    void FetchMapInfo()
+    {
         if (!maps.empty())
             return;
-        for (uint32_t map_id = 1; map_id < (uint32_t)GW::Constants::MapID::Count; map_id++) {
-            auto map_info = GW::Map::GetMapInfo((GW::Constants::MapID)map_id);
-            if (!map_info) continue;
-            MapInfo* map = new MapInfo();
+        for (uint32_t map_id = 1; map_id < static_cast<uint32_t>(GW::Constants::MapID::Count); map_id++) {
+            auto map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
+            if (!map_info)
+                continue;
+            auto map = new MapInfo();
             map->map_info = map_info;
             GW::UI::UInt32ToEncStr(map_info->name_id, map->enc_name, 8);
             GW::UI::AsyncDecodeStr(map->enc_name, &map->name);
@@ -65,7 +73,9 @@ namespace {
         }
         Log::Info("Fetching map info now");
     }
-    void ExportMapInfo() {
+
+    void ExportMapInfo()
+    {
         nlohmann::json json;
         for (const auto& it : maps) {
             json[it.first] = it.second->ToJson();
@@ -88,13 +98,15 @@ namespace {
 struct IDirect3DDevice9;
 
 // Taken from StoCMgr.cpp
-typedef bool(__fastcall* StoCHandler_pt)(GW::Packet::StoC::PacketBase* pak);
+using StoCHandler_pt = bool(__fastcall*)(GW::Packet::StoC::PacketBase* pak);
+
 struct StoCHandler {
     uint32_t* fields;
-    uint32_t       field_count;
+    uint32_t field_count;
     StoCHandler_pt handler_func;
 };
-typedef GW::Array<StoCHandler> StoCHandlerArray;
+
+using StoCHandlerArray = GW::Array<StoCHandler>;
 
 enum class FieldType {
     Ignore,
@@ -116,12 +128,14 @@ enum class FieldType {
 
 bool log_message_content = false;
 bool log_npc_dialogs = false;
+
 struct NPCDialog {
-    wchar_t msg_in[122] = { 0 };
-    wchar_t sender_in[32] = { 0 };
+    wchar_t msg_in[122] = {0};
+    wchar_t sender_in[32] = {0};
     std::wstring msg_out = L"";
     std::wstring sender_out = L"";
 } npc_dialog;
+
 bool logger_enabled = false;
 bool log_packet_content = false;
 bool auto_ignore_packets = false;
@@ -129,13 +143,14 @@ bool debug = false;
 uint32_t log_message_callback_identifier = 0;
 static volatile bool running;
 
-static StoCHandlerArray*  game_server_handler;
+static StoCHandlerArray* game_server_handler;
 static const size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
-static bool ignored_packets[packet_max] = { 0 };
-static bool blocked_packets[packet_max] = { 0 };
+static bool ignored_packets[packet_max] = {false};
+static bool blocked_packets[packet_max] = {false};
 GW::HookEntry hook_entry;
 
-static void printchar(wchar_t c) {
+static void printchar(wchar_t c)
+{
     if (c >= L' ' && c <= L'~') {
         printf("%lc", c);
     }
@@ -143,6 +158,7 @@ static void printchar(wchar_t c) {
         printf("0x%X ", c);
     }
 }
+
 uintptr_t game_srv_object_addr;
 
 static void InitStoC()
@@ -151,27 +167,30 @@ static void InitStoC()
         return;
     struct GameServer {
         uint8_t h0000[8];
+
         struct {
             uint8_t h0000[12];
+
             struct {
                 uint8_t h0000[12];
                 void* next;
                 uint8_t h0010[12];
                 uint32_t ClientCodecArray[4];
                 StoCHandlerArray handlers;
-            } *ls_codec;
+            } * ls_codec;
+
             uint8_t h0010[12];
             // Client codec
             uint32_t ClientCodecArray[4];
             StoCHandlerArray handlers;
-        } *gs_codec;
+        } * gs_codec;
     };
 
     uintptr_t StoCHandler_Addr;
     uintptr_t address = GW::Scanner::Find("\x75\x04\x33\xC0\x5D\xC3\x8B\x41\x08\xA8\x01\x75", "xxxxxxxxxxxx", -6);
     StoCHandler_Addr = *(uintptr_t*)address;
 
-    GameServer** addr = (GameServer * *)StoCHandler_Addr;
+    auto addr = (GameServer* *)StoCHandler_Addr;
     if (!(addr && *addr))
         return;
 
@@ -189,30 +208,27 @@ static void InitStoC()
 static FieldType GetField(uint32_t type, uint32_t size, uint32_t count)
 {
     switch (type) {
-    case 0: return FieldType::AgentId;
-    case 1: return FieldType::Float;
-    case 2: return FieldType::Vect2;
-    case 3: return FieldType::Vect3;
-    case 4: case 8:
-        switch (count) {
-        case 1: return FieldType::Byte;
-        case 2: return FieldType::Word;
-        case 4: return FieldType::Dword;
-        }
-    case 5: case 9:
-        return FieldType::Blob;
-    case 6: case 10:
-        return FieldType::Ignore;
-    case 7:
-        return FieldType::String16;
-    case 11:
-        switch (size) {
-        case 1: return FieldType::Array8;
-        case 2: return FieldType::Array32;
-        case 4: return FieldType::Array32;
-        }
-    case 12:
-        return FieldType::NestedStruct;
+        case 0: return FieldType::AgentId;
+        case 1: return FieldType::Float;
+        case 2: return FieldType::Vect2;
+        case 3: return FieldType::Vect3;
+        case 4:
+        case 8: switch (count) {
+                case 1: return FieldType::Byte;
+                case 2: return FieldType::Word;
+                case 4: return FieldType::Dword;
+            }
+        case 5:
+        case 9: return FieldType::Blob;
+        case 6:
+        case 10: return FieldType::Ignore;
+        case 7: return FieldType::String16;
+        case 11: switch (size) {
+                case 1: return FieldType::Array8;
+                case 2: return FieldType::Array32;
+                case 4: return FieldType::Array32;
+            }
+        case 12: return FieldType::NestedStruct;
     }
 
     return FieldType::Count;
@@ -244,7 +260,7 @@ static void GetHexS(char* buf, uint8_t byte)
     buf[2] = 0;
 }
 
-template<typename T>
+template <typename T>
 static void Serialize(uint8_t** bytes, T* val)
 {
     uint8_t* b = *bytes;
@@ -254,7 +270,8 @@ static void Serialize(uint8_t** bytes, T* val)
     *bytes = b + sizeof(T);
 }
 
-static void PrintString(int length, wchar_t* str) {
+static void PrintString(int length, wchar_t* str)
+{
     for (int i = 0; i < length && str[i]; i++) {
         printf(i > 0 ? " %04x" : "%04x", str[i]);
     }
@@ -263,144 +280,140 @@ static void PrintString(int length, wchar_t* str) {
 static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_t indent)
 {
     switch (field) {
-    case FieldType::AgentId: {
-        PrintIndent(indent);
-        uint32_t agent_id;
-        Serialize<uint32_t>(bytes, &agent_id);
-        printf("AgentId(%u)\n", agent_id);
-        break;
-    }
-    case FieldType::Float: {
-        PrintIndent(indent);
-        float f;
-        Serialize<float>(bytes, &f);
-        printf("Float(%f)\n", f);
-        break;
-    }
-    case FieldType::Vect2: {
-        PrintIndent(indent);
-        float x, y;
-        Serialize<float>(bytes, &x);
-        Serialize<float>(bytes, &y);
-        printf("Vect2(%f, %f)\n", x, y);
-        break;
-    }
-    case FieldType::Vect3: {
-        PrintIndent(indent);
-        float x, y, z;
-        Serialize<float>(bytes, &x);
-        Serialize<float>(bytes, &y);
-        Serialize<float>(bytes, &z);
-        printf("Vect3(%f, %f, %f)\n", x, y, z);
-        break;
-    }
-    case FieldType::Byte: {
-        PrintIndent(indent);
-        uint32_t val;
-        Serialize<uint32_t>(bytes, &val);
-        printf("Byte(%u)\n", val);
-        break;
-    }
-    case FieldType::Word: {
-        PrintIndent(indent);
-        uint32_t val;
-        Serialize<uint32_t>(bytes, &val);
-        printf("Word(%u)\n", val);
-        break;
-    }
-    case FieldType::Dword: {
-        PrintIndent(indent);
-        uint32_t val;
-        Serialize<uint32_t>(bytes, &val);
-        printf("Dword(%u)\n", val);
-        break;
-    }
-    case FieldType::Blob: {
-        PrintIndent(indent);
-        printf("Blob(%u) => ", count);
-        for (uint32_t i = 0; i < count; i++) {
-            char buf[3];
-            GetHexS(buf, **bytes);
-            printf("%s ", buf);
-            ++(*bytes);
+        case FieldType::AgentId: {
+            PrintIndent(indent);
+            uint32_t agent_id;
+            Serialize<uint32_t>(bytes, &agent_id);
+            printf("AgentId(%u)\n", agent_id);
+            break;
         }
-        printf("\n");
-        break;
-    }
-    case FieldType::String16: {
-        PrintIndent(indent);
-        wchar_t* str = reinterpret_cast<wchar_t*>(*bytes);
-        size_t length = wcsnlen(str, count);
-        printf("String(%zu) \"", length);
-        PrintString(length, str);
-        printf("\"\n");
-        *bytes += (count * 2);
-        break;
-    }
-    case FieldType::Array8: {
-        PrintIndent(indent);
-        uint32_t length;
-        uint8_t* end = *bytes + count;
-        Serialize<uint32_t>(bytes, &length);
-        printf("Array8(%u) {\n", length);
-        uint8_t val;
-        for (size_t i = 0; i < length; i++) {
-            Serialize<uint8_t>(bytes, &val);
-            PrintIndent(indent + 4);
-            printf("[%zu] => %u,\n", i, val);
+        case FieldType::Float: {
+            PrintIndent(indent);
+            float f;
+            Serialize<float>(bytes, &f);
+            printf("Float(%f)\n", f);
+            break;
         }
-        printf("}\n");
-        *bytes = end;
-        break;
-    }
-    case FieldType::Array16: {
-        PrintIndent(indent);
-        uint32_t length = count;
-        Serialize<uint32_t>(bytes, &length);
-        uint8_t* end = *bytes + (count * 2);
-        printf("Array16(%u of %u) {\n", length, count);
-        if (length < 64) {
-            uint16_t val;
-            for (size_t i = 0; i < length; i++) {
-                Serialize<uint16_t>(bytes, &val);
-                PrintIndent(indent + 4);
-                printf("[%zu] => %u,\n", i, val);
-            }
-
+        case FieldType::Vect2: {
+            PrintIndent(indent);
+            float x, y;
+            Serialize<float>(bytes, &x);
+            Serialize<float>(bytes, &y);
+            printf("Vect2(%f, %f)\n", x, y);
+            break;
         }
-        printf("}\n");
-        *bytes = end;
-        break;
-    }
-    case FieldType::Array32: {
-        PrintIndent(indent);
-        uint32_t length = count;
-        Serialize<uint32_t>(bytes, &length);
-        uint8_t* end = *bytes + (count * 4);
-        printf("Array32(%u of %u) {\n", length, count);
-        if (length < 128) {
+        case FieldType::Vect3: {
+            PrintIndent(indent);
+            float x, y, z;
+            Serialize<float>(bytes, &x);
+            Serialize<float>(bytes, &y);
+            Serialize<float>(bytes, &z);
+            printf("Vect3(%f, %f, %f)\n", x, y, z);
+            break;
+        }
+        case FieldType::Byte: {
+            PrintIndent(indent);
             uint32_t val;
+            Serialize<uint32_t>(bytes, &val);
+            printf("Byte(%u)\n", val);
+            break;
+        }
+        case FieldType::Word: {
+            PrintIndent(indent);
+            uint32_t val;
+            Serialize<uint32_t>(bytes, &val);
+            printf("Word(%u)\n", val);
+            break;
+        }
+        case FieldType::Dword: {
+            PrintIndent(indent);
+            uint32_t val;
+            Serialize<uint32_t>(bytes, &val);
+            printf("Dword(%u)\n", val);
+            break;
+        }
+        case FieldType::Blob: {
+            PrintIndent(indent);
+            printf("Blob(%u) => ", count);
+            for (uint32_t i = 0; i < count; i++) {
+                char buf[3];
+                GetHexS(buf, **bytes);
+                printf("%s ", buf);
+                ++(*bytes);
+            }
+            printf("\n");
+            break;
+        }
+        case FieldType::String16: {
+            PrintIndent(indent);
+            auto str = reinterpret_cast<wchar_t*>(*bytes);
+            size_t length = wcsnlen(str, count);
+            printf("String(%zu) \"", length);
+            PrintString(length, str);
+            printf("\"\n");
+            *bytes += (count * 2);
+            break;
+        }
+        case FieldType::Array8: {
+            PrintIndent(indent);
+            uint32_t length;
+            uint8_t* end = *bytes + count;
+            Serialize<uint32_t>(bytes, &length);
+            printf("Array8(%u) {\n", length);
+            uint8_t val;
             for (size_t i = 0; i < length; i++) {
-                Serialize<uint32_t>(bytes, &val);
+                Serialize<uint8_t>(bytes, &val);
                 PrintIndent(indent + 4);
                 printf("[%zu] => %u,\n", i, val);
             }
-
+            printf("}\n");
+            *bytes = end;
+            break;
         }
-        printf("}\n");
-        *bytes = end;
-        break;
-    }
-    default:
-        break;
+        case FieldType::Array16: {
+            PrintIndent(indent);
+            uint32_t length = count;
+            Serialize<uint32_t>(bytes, &length);
+            uint8_t* end = *bytes + (count * 2);
+            printf("Array16(%u of %u) {\n", length, count);
+            if (length < 64) {
+                uint16_t val;
+                for (size_t i = 0; i < length; i++) {
+                    Serialize<uint16_t>(bytes, &val);
+                    PrintIndent(indent + 4);
+                    printf("[%zu] => %u,\n", i, val);
+                }
+            }
+            printf("}\n");
+            *bytes = end;
+            break;
+        }
+        case FieldType::Array32: {
+            PrintIndent(indent);
+            uint32_t length = count;
+            Serialize<uint32_t>(bytes, &length);
+            uint8_t* end = *bytes + (count * 4);
+            printf("Array32(%u of %u) {\n", length, count);
+            if (length < 128) {
+                uint32_t val;
+                for (size_t i = 0; i < length; i++) {
+                    Serialize<uint32_t>(bytes, &val);
+                    PrintIndent(indent + 4);
+                    printf("[%zu] => %u,\n", i, val);
+                }
+            }
+            printf("}\n");
+            *bytes = end;
+            break;
+        }
+        default: break;
     }
 }
 
 static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
-    uint32_t repeat, uint8_t** bytes, uint32_t indent)
+                             uint32_t repeat, uint8_t** bytes, uint32_t indent)
 {
-    for (uint32_t rep = 0; rep < repeat; rep++)
-    {
+    for (uint32_t rep = 0; rep < repeat; rep++) {
         PrintIndent(indent);
         printf("[%u] => {\n", rep);
         for (uint32_t i = 0; i < n_fields; i++) {
@@ -428,7 +441,7 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
                 PrintIndent(indent + 4);
                 printf("NextedStruct(%u) {\n", struct_count);
                 PrintNestedField(fields + next_field_index,
-                    n_fields - next_field_index, struct_count, bytes, indent + 8);
+                                 n_fields - next_field_index, struct_count, bytes, indent + 8);
                 PrintIndent(indent + 4);
                 printf("}\n");
 
@@ -441,17 +454,20 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
     }
 }
 
-void PacketLoggerWindow::CtoSHandler(GW::HookStatus* status, void* packet) {
+void PacketLoggerWindow::CtoSHandler(GW::HookStatus* status, void* packet)
+{
     UNREFERENCED_PARAMETER(status);
-    if (!logger_enabled) return;
-    printf(PrefixTimestamp("CtoS packet(%u 0x%X) {\n").c_str(), *(uint32_t*)packet, *(uint32_t*)packet);
+    if (!logger_enabled)
+        return;
+    printf(PrefixTimestamp("CtoS packet(%u 0x%X) {\n").c_str(), *static_cast<uint32_t*>(packet), *static_cast<uint32_t*>(packet));
 }
 
 void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
 {
     if (blocked_packets[packet->header])
         status->blocked = true;
-    if (!logger_enabled) return;
+    if (!logger_enabled)
+        return;
     InitStoC();
     if (!game_server_handler)
         return;
@@ -464,13 +480,12 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
         return;
 
     StoCHandler handler = game_server_handler->at(packet->header);
-    uint8_t* packet_raw = reinterpret_cast<uint8_t*>(packet);
+    auto packet_raw = reinterpret_cast<uint8_t*>(packet);
 
     uint8_t** bytes = &packet_raw;
     uint32_t header;
     Serialize<uint32_t>(bytes, &header);
     ASSERT(packet->header == header);
-
 
     if (log_packet_content) {
         printf(PrefixTimestamp("StoC packet(%u 0x%X) {\n").c_str(), packet->header, packet->header);
@@ -482,82 +497,92 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
     }
 }
 
-std::string PacketLoggerWindow::PadLeft(std::string input, uint8_t count, char c) {
+std::string PacketLoggerWindow::PadLeft(std::string input, uint8_t count, char c)
+{
     input.insert(input.begin(), count - input.size(), c);
     return input;
 }
 
-std::string PacketLoggerWindow::PrefixTimestamp(std::string message) {
-    if (timestamp_type == TimestampType::TimestampType_None) return message;
+std::string PacketLoggerWindow::PrefixTimestamp(std::string message)
+{
+    if (timestamp_type == TimestampType_None)
+        return message;
 
     switch (timestamp_type) {
-    case TimestampType::TimestampType_Local: {
-        SYSTEMTIME time;
-        GetLocalTime(&time);
-        bool prependColon = false;
-        char t[4];
-        std::string time_s = "[";
-        if (timestamp_show_hours) {
-            snprintf(t, 4, "%02d", time.wHour);
-            time_s.append(t);
-            prependColon = true;
+        case TimestampType_Local: {
+            SYSTEMTIME time;
+            GetLocalTime(&time);
+            bool prependColon = false;
+            char t[4];
+            std::string time_s = "[";
+            if (timestamp_show_hours) {
+                snprintf(t, 4, "%02d", time.wHour);
+                time_s.append(t);
+                prependColon = true;
+            }
+            if (timestamp_show_minutes) {
+                if (prependColon)
+                    time_s.append(":");
+                snprintf(t, 4, "%02d", time.wMinute);
+                time_s.append(t);
+                prependColon = true;
+            }
+            if (timestamp_show_seconds) {
+                if (prependColon)
+                    time_s.append(":");
+                snprintf(t, 4, "%02d", time.wSecond);
+                time_s.append(t);
+                prependColon = true;
+            }
+            if (timestamp_show_milliseconds) {
+                if (prependColon)
+                    time_s.append(".");
+                snprintf(t, 4, "%03d", time.wMilliseconds);
+                time_s.append(t);
+            }
+            return time_s + "] " + message;
         }
-        if (timestamp_show_minutes) {
-            if (prependColon) time_s.append(":");
-            snprintf(t, 4, "%02d", time.wMinute);
-            time_s.append(t);
-            prependColon = true;
+        case TimestampType_Instance: {
+            auto ms = std::chrono::milliseconds(GW::Map::GetInstanceTime());
+            auto secs = std::chrono::duration_cast<std::chrono::seconds>(ms);
+            ms -= std::chrono::duration_cast<std::chrono::milliseconds>(secs);
+            auto mins = std::chrono::duration_cast<std::chrono::minutes>(secs);
+            secs -= std::chrono::duration_cast<std::chrono::seconds>(mins);
+            auto hours = std::chrono::duration_cast<std::chrono::hours>(mins);
+            mins -= std::chrono::duration_cast<std::chrono::minutes>(hours);
+            bool prependColon = false;
+            std::string time_s = "[";
+            if (timestamp_show_hours) {
+                time_s.append(PadLeft(std::to_string(hours.count()), 2, '0'));
+                prependColon = true;
+            }
+            if (timestamp_show_minutes) {
+                if (prependColon)
+                    time_s.append(":");
+                time_s.append(PadLeft(std::to_string(mins.count()), 2, '0'));
+                prependColon = true;
+            }
+            if (timestamp_show_seconds) {
+                if (prependColon)
+                    time_s.append(":");
+                time_s.append(PadLeft(std::to_string(secs.count()), 2, '0'));
+                prependColon = true;
+            }
+            if (timestamp_show_milliseconds) {
+                if (prependColon)
+                    time_s.append(".");
+                time_s.append(PadLeft(std::to_string(ms.count()), 3, '0'));
+            }
+            return time_s + "] " + message;
         }
-        if (timestamp_show_seconds) {
-            if (prependColon) time_s.append(":");
-            snprintf(t, 4, "%02d", time.wSecond);
-            time_s.append(t);
-            prependColon = true;
+        default: {
+            return message;
         }
-        if (timestamp_show_milliseconds) {
-            if (prependColon) time_s.append(".");
-            snprintf(t, 4, "%03d", time.wMilliseconds);
-            time_s.append(t);
-        }
-        return time_s + "] " + message;
-    }
-    case TimestampType::TimestampType_Instance: {
-        std::chrono::milliseconds ms = std::chrono::milliseconds(GW::Map::GetInstanceTime());
-        std::chrono::seconds secs = std::chrono::duration_cast<std::chrono::seconds>(ms);
-        ms -= std::chrono::duration_cast<std::chrono::milliseconds>(secs);
-        std::chrono::minutes mins = std::chrono::duration_cast<std::chrono::minutes>(secs);
-        secs -= std::chrono::duration_cast<std::chrono::seconds>(mins);
-        std::chrono::hours hours = std::chrono::duration_cast<std::chrono::hours>(mins);
-        mins -= std::chrono::duration_cast<std::chrono::minutes>(hours);
-        bool prependColon = false;
-        std::string time_s = "[";
-        if (timestamp_show_hours) {
-            time_s.append(PadLeft(std::to_string(hours.count()), 2, '0'));
-            prependColon = true;
-        }
-        if (timestamp_show_minutes) {
-            if (prependColon) time_s.append(":");
-            time_s.append(PadLeft(std::to_string(mins.count()), 2, '0'));
-            prependColon = true;
-        }
-        if (timestamp_show_seconds) {
-            if (prependColon) time_s.append(":");
-            time_s.append(PadLeft(std::to_string(secs.count()), 2, '0'));
-            prependColon = true;
-        }
-        if (timestamp_show_milliseconds) {
-            if (prependColon) time_s.append(".");
-            time_s.append(PadLeft(std::to_string(ms.count()), 3, '0'));
-        }
-        return time_s + "] " + message;
-    }
-    default: {
-        return message;
-    }
     }
 }
 
-void PacketLoggerWindow::AddMessageLog(const wchar_t* encoded) {
+void PacketLoggerWindow::AddMessageLog(const wchar_t* encoded)
+{
     const std::wstring encoded_ws(encoded);
     if (!encoded || message_log.contains(encoded_ws))
         return;
@@ -573,8 +598,7 @@ void PacketLoggerWindow::SaveMessageLog() const
     std::wofstream myFile(filename.bytes);
 
     // Send column names to the stream
-    for (const auto& it : message_log)
-    {
+    for (const auto& it : message_log) {
         if (!it.second || !it.second->length())
             continue;
         myFile << it.first.c_str();
@@ -586,14 +610,16 @@ void PacketLoggerWindow::SaveMessageLog() const
     myFile.close();
 }
 
-void PacketLoggerWindow::ClearMessageLog() {
+void PacketLoggerWindow::ClearMessageLog()
+{
     for (const auto& val : message_log | std::views::values) {
         delete val;
     }
     message_log.clear();
 }
 
-void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
+void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice)
+{
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible || !game_server_handler)
         return;
@@ -683,7 +709,8 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     return ImGui::End();
 }
 
-void PacketLoggerWindow::Initialize() {
+void PacketLoggerWindow::Initialize()
+{
     ToolboxWindow::Initialize();
     InitStoC();
     if (logger_enabled) {
@@ -700,39 +727,36 @@ void PacketLoggerWindow::Initialize() {
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_CHAT_MESSAGE_NPC, OnMessagePacket);
 }
 
-void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet) {
+void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
+{
     if (!log_npc_dialogs)
         return;
-    uint32_t* pak = (uint32_t*)packet;
+    auto pak = (uint32_t*)packet;
     uint32_t string_offset = 0;
     switch (pak[0]) {
-    case GAME_SMSG_DIALOG_BODY:
-    case GAME_SMSG_DOA_COMPLETE_ZONE:
-        string_offset = 1;
-        break;
-    case GAME_SMSG_SPEECH_BUBBLE:
-    case GAME_SMSG_DIALOG_BUTTON:
-    case GAME_SMSG_MISSION_OBJECTIVE_UPDATE_STRING:
-        string_offset = 2;
-        break;
-    case GAME_SMSG_MISSION_OBJECTIVE_ADD:
-        string_offset = 3;
-        break;
-    case GAME_SMSG_AGENT_DISPLAY_DIALOG:
-        string_offset = 19;
-        break;
-    case GAME_SMSG_CHAT_MESSAGE_NPC:
-        Instance().AddMessageLog(GetMessageCore());
-        break;
+        case GAME_SMSG_DIALOG_BODY:
+        case GAME_SMSG_DOA_COMPLETE_ZONE: string_offset = 1;
+            break;
+        case GAME_SMSG_SPEECH_BUBBLE:
+        case GAME_SMSG_DIALOG_BUTTON:
+        case GAME_SMSG_MISSION_OBJECTIVE_UPDATE_STRING: string_offset = 2;
+            break;
+        case GAME_SMSG_MISSION_OBJECTIVE_ADD: string_offset = 3;
+            break;
+        case GAME_SMSG_AGENT_DISPLAY_DIALOG: string_offset = 19;
+            break;
+        case GAME_SMSG_CHAT_MESSAGE_NPC: Instance().AddMessageLog(GetMessageCore());
+            break;
     }
     if (string_offset) {
         Instance().AddMessageLog((wchar_t*)(pak + string_offset));
     }
 }
 
-void PacketLoggerWindow::Update(float delta) {
+void PacketLoggerWindow::Update(float delta)
+{
     UNREFERENCED_PARAMETER(delta);
-    for (auto it = pending_translation.begin(); it != pending_translation.end(); it++) {
+    for (auto it = pending_translation.begin(); it != pending_translation.end(); ++it) {
         ForTranslation& t = *(*it);
         if (t.out.empty())
             continue;
@@ -743,7 +767,7 @@ void PacketLoggerWindow::Update(float delta) {
         }
         Log::LogW(enc_str);
         Log::LogW(t.out.c_str());
-        delete* it;
+        delete*it;
         pending_translation.erase(it);
         break;
     }
@@ -755,7 +779,8 @@ void PacketLoggerWindow::Update(float delta) {
     }
 }
 
-void PacketLoggerWindow::SaveSettings(ToolboxIni* ini) {
+void PacketLoggerWindow::SaveSettings(ToolboxIni* ini)
+{
     ToolboxWindow::SaveSettings(ini);
 
     ini->SetBoolValue(Name(), VAR_NAME(timestamp_type), timestamp_type);
@@ -772,10 +797,11 @@ void PacketLoggerWindow::SaveSettings(ToolboxIni* ini) {
     ClearMessageLog();
 }
 
-void PacketLoggerWindow::LoadSettings(ToolboxIni* ini) {
+void PacketLoggerWindow::LoadSettings(ToolboxIni* ini)
+{
     ToolboxWindow::LoadSettings(ini);
 
-    timestamp_type = ini->GetBoolValue(Name(), VAR_NAME(timestamp_type), TimestampType::TimestampType_None);
+    timestamp_type = ini->GetBoolValue(Name(), VAR_NAME(timestamp_type), TimestampType_None);
     timestamp_show_hours = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_hours), true);
     timestamp_show_seconds = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_seconds), true);
     timestamp_show_milliseconds = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_milliseconds), true);
@@ -789,8 +815,10 @@ void PacketLoggerWindow::LoadSettings(ToolboxIni* ini) {
     }
 }
 
-void PacketLoggerWindow::Disable() {
-    if (!logger_enabled || !game_server_handler) return;
+void PacketLoggerWindow::Disable()
+{
+    if (!logger_enabled || !game_server_handler)
+        return;
     for (size_t i = 0; i < game_server_handler->size(); i++) {
         GW::StoC::RemoveCallback(i, &hook_entry);
     }
@@ -800,8 +828,10 @@ void PacketLoggerWindow::Disable() {
     logger_enabled = false;
 }
 
-void PacketLoggerWindow::Enable() {
-    if (logger_enabled) return;
+void PacketLoggerWindow::Enable()
+{
+    if (logger_enabled)
+        return;
     for (size_t i = 0; i < game_server_handler->size(); i++) {
         GW::StoC::RegisterPacketCallback(
             &hook_entry, i, [this](GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) -> void {
@@ -819,13 +849,13 @@ void PacketLoggerWindow::Enable() {
     logger_enabled = true;
 }
 
-void PacketLoggerWindow::DrawSettingInternal() {
-    ImGui::RadioButton("No timestamp", &timestamp_type, TimestampType::TimestampType_None);
-    ImGui::RadioButton("Local timestmap", &timestamp_type, TimestampType::TimestampType_Local);
-    ImGui::RadioButton("Instance timestamp", &timestamp_type, TimestampType::TimestampType_Instance);
+void PacketLoggerWindow::DrawSettingInternal()
+{
+    ImGui::RadioButton("No timestamp", &timestamp_type, TimestampType_None);
+    ImGui::RadioButton("Local timestmap", &timestamp_type, TimestampType_Local);
+    ImGui::RadioButton("Instance timestamp", &timestamp_type, TimestampType_Instance);
     ImGui::Checkbox("Show hours", &timestamp_show_hours);
     ImGui::Checkbox("Show minutes", &timestamp_show_minutes);
     ImGui::Checkbox("Show seconds", &timestamp_show_seconds);
     ImGui::Checkbox("Show milliseconds", &timestamp_show_milliseconds);
 }
-

@@ -17,7 +17,7 @@ public:
     bool Alive() const;
 
     uint32_t GetExitCode() const;
-    void SetThreadName(const char *name);
+    void SetThreadName(const char* name);
 
 private:
     void *m_Handle;

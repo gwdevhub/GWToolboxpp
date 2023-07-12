@@ -4,9 +4,11 @@
 
 class ClockWidget : public ToolboxWidget {
     ClockWidget() = default;
-    ~ClockWidget() = default;
+    ~ClockWidget() override = default;
+
 public:
-    static ClockWidget& Instance() {
+    static ClockWidget& Instance()
+    {
         static ClockWidget instance;
         return instance;
     }

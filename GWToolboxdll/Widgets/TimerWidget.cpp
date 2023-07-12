@@ -22,8 +22,7 @@
 
 using namespace std::chrono;
 
-namespace
-{
+namespace {
     steady_clock::time_point now() { return steady_clock::now(); }
 
     bool instance_timer_valid = true;
@@ -31,7 +30,8 @@ namespace
     bool is_valid(const steady_clock::time_point& time) { return time.time_since_epoch().count(); }
 
     template <typename T>
-    void print_time(T duration, int decimals, unsigned int bufsize, char* buf) {
+    void print_time(T duration, int decimals, unsigned int bufsize, char* buf)
+    {
         auto time = duration_cast<milliseconds>(duration);
         long long secs = duration_cast<seconds>(time).count() % 60;
         int mins = duration_cast<minutes>(time).count() % 60;
@@ -49,20 +49,24 @@ namespace
         }
     }
 }
+
 // Called before map change
-void TimerWidget::OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*) {
+void TimerWidget::OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*)
+{
     if (print_time_zoning && in_explorable && !is_valid(run_completed)) {
         // do this here, before we actually reset it
         PrintTimer();
     }
     run_completed = now();
 }
+
 // Called just after map change
-void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak) {
+void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak)
+{
     cave_start = 0; // reset doa's cave timer
     instance_timer_valid = false;
-    std::chrono::steady_clock::time_point now_tp = now();
-    run_completed = std::chrono::steady_clock::time_point();
+    steady_clock::time_point now_tp = now();
+    run_completed = steady_clock::time_point();
 
     instance_started = now_tp;
 
@@ -73,52 +77,59 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
     }
 
     if (!never_reset) {
-        if (pak->is_explorable && !in_explorable) { // if zoning from outpost to explorable
+        if (pak->is_explorable && !in_explorable) {
+            // if zoning from outpost to explorable
             run_started = now_tp;
         }
-        else if (!pak->is_explorable) { // zoning back to outpost
+        else if (!pak->is_explorable) {
+            // zoning back to outpost
             run_started = now_tp;
         }
 
-        GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)pak->map_id);
+        GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(pak->map_id));
         if (info) {
             bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
 
-            if (new_in_dungeon && !in_dungeon) { // zoning from explorable to dungeon
+            if (new_in_dungeon && !in_dungeon) {
+                // zoning from explorable to dungeon
                 run_started = now_tp;
             }
 
             in_dungeon = new_in_dungeon;
         }
     }
-    if(!is_valid(run_started))
+    if (!is_valid(run_started))
         run_started = now_tp;
 
     in_explorable = pak->is_explorable;
 }
-void TimerWidget::Initialize() {
+
+void TimerWidget::Initialize()
+{
     ToolboxWidget::Initialize();
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) -> void {
-            if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) return;
-            if (packet->message[1] != 0x5765) return;
-            cave_start = GW::Map::GetInstanceTime();
-        });
+                                                                        [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) -> void {
+                                                                            if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish)
+                                                                                return;
+                                                                            if (packet->message[1] != 0x5765)
+                                                                                return;
+                                                                            cave_start = GW::Map::GetInstanceTime();
+                                                                        });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&PreGameSrvTransfer_Entry,
-        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
-        Instance().OnPreGameSrvTransfer(status, pak);
-        }, -0x10);
+                                                                        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
+                                                                            Instance().OnPreGameSrvTransfer(status, pak);
+                                                                        }, -0x10);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&PostGameSrvTransfer_Entry,
-        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
-            Instance().OnPostGameSrvTransfer(status, pak);
-        },0x5);
+                                                                        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
+                                                                            Instance().OnPostGameSrvTransfer(status, pak);
+                                                                        }, 0x5);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceTimer>(&InstanceTimer_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::InstanceTimer*) -> void {
-            instance_timer_valid = true;
-        },5);
+                                                                      [this](GW::HookStatus*, GW::Packet::StoC::InstanceTimer*) -> void {
+                                                                          instance_timer_valid = true;
+                                                                      }, 5);
     in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     GW::Chat::CreateCommand(L"resettimer", [this](const wchar_t*, int, LPWSTR*) {
         reset_next_loading_screen = true;
@@ -132,7 +143,8 @@ void TimerWidget::Initialize() {
 }
 
 
-void TimerWidget::LoadSettings(ToolboxIni *ini) {
+void TimerWidget::LoadSettings(ToolboxIni* ini)
+{
     ToolboxWidget::LoadSettings(ini);
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     use_instance_timer = ini->GetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
@@ -169,7 +181,8 @@ void TimerWidget::LoadSettings(ToolboxIni *ini) {
     }
 }
 
-void TimerWidget::SaveSettings(ToolboxIni *ini) {
+void TimerWidget::SaveSettings(ToolboxIni* ini)
+{
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
@@ -193,10 +206,12 @@ void TimerWidget::SaveSettings(ToolboxIni *ini) {
     }
 }
 
-void TimerWidget::DrawSettingInternal() {
+void TimerWidget::DrawSettingInternal()
+{
     ToolboxWidget::DrawSettingInternal();
 
-    ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::SameLine();
+    ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     if (ImGui::RadioButton("Instance timer", use_instance_timer)) {
         use_instance_timer = true;
     }
@@ -208,8 +223,8 @@ void TimerWidget::DrawSettingInternal() {
     ImGui::Indent();
     ImGui::Checkbox("Never reset", &never_reset);
     ImGui::ShowHelp(
-        "Don't reset when entering outposts, explorables (from outposts), and dungeons. \n" \
-        "Useful for timing longer runs.\n" \
+        "Don't reset when entering outposts, explorables (from outposts), and dungeons. \n"
+        "Useful for timing longer runs.\n"
         "Requires 'Use instance timer' above NOT ticked");
     ImGui::Checkbox("Stop at objective completion", &stop_at_objective_completion);
     ImGui::Checkbox("Also show instance timer", &also_show_instance_timer);
@@ -232,14 +247,14 @@ void TimerWidget::DrawSettingInternal() {
     ImGui::Indent();
 
     std::vector<std::pair<const char*, bool*>> timers = {
-        { "Deep aspects",&show_deep_timer},
-        { "DoA cave",&show_doa_timer},
-        { "Dhuum",&show_dhuum_timer},
-        { "Urgoz doors",&show_urgoz_timer},
-        { "Dungeon traps",&show_dungeon_traps_timer}
+        {"Deep aspects", &show_deep_timer},
+        {"DoA cave", &show_doa_timer},
+        {"Dhuum", &show_dhuum_timer},
+        {"Urgoz doors", &show_urgoz_timer},
+        {"Dungeon traps", &show_dungeon_traps_timer}
     };
     ImGui::StartSpacedElements(140.f);
-    for (size_t i = 0; i < timers.size();i++) {
+    for (size_t i = 0; i < timers.size(); i++) {
         ImGui::NextSpacedElement();
         ImGui::Checkbox(timers[i].first, timers[i].second);
     }
@@ -257,37 +272,42 @@ void TimerWidget::DrawSettingInternal() {
     }
 }
 
-std::chrono::milliseconds TimerWidget::GetMapTimeElapsed() {
+milliseconds TimerWidget::GetMapTimeElapsed()
+{
     if (!is_valid(instance_started)) {
         // Can happen if toolbox was started after map load
         instance_started = now() - milliseconds(GW::Map::GetInstanceTime());
     }
     return duration_cast<milliseconds>(now() - instance_started);
 }
-std::chrono::milliseconds TimerWidget::GetTimer() {
+
+milliseconds TimerWidget::GetTimer()
+{
     if (use_instance_timer) {
         return milliseconds(instance_timer_valid ? GW::Map::GetInstanceTime() : 0);
     }
     return GetRunTimeElapsed();
 }
-std::chrono::milliseconds TimerWidget::GetRunTimeElapsed()
+
+milliseconds TimerWidget::GetRunTimeElapsed()
 {
     if (!is_valid(run_started)) {
         return milliseconds(0);
-    } else if (is_valid(run_completed)) {
-        return duration_cast<milliseconds>(run_completed - run_started);
-
-    } else {
-        return duration_cast<milliseconds>(now() - run_started);
     }
+    if (is_valid(run_completed)) {
+        return duration_cast<milliseconds>(run_completed - run_started);
+    }
+    return duration_cast<milliseconds>(now() - run_started);
 }
+
 unsigned long TimerWidget::GetStartPoint() const
 {
     const auto time_point = use_instance_timer ? instance_started : run_started;
     if (!is_valid(time_point)) {
         return static_cast<unsigned long>(-1);
     }
-    return static_cast<unsigned long>(duration_cast<milliseconds>(time_point.time_since_epoch()).count());
+    const auto ms = duration_cast<milliseconds>(time_point.time_since_epoch());
+    return static_cast<unsigned long>(ms.count());
 }
 
 unsigned long TimerWidget::GetTimerMs() { return static_cast<unsigned long>(GetTimer().count()); }
@@ -312,14 +332,18 @@ void TimerWidget::PrintTimer()
     Log::Info("Time: %s", buf);
 }
 
-ImGuiWindowFlags TimerWidget::GetWinFlags(ImGuiWindowFlags flags, bool noinput_if_frozen) const {
+ImGuiWindowFlags TimerWidget::GetWinFlags(ImGuiWindowFlags flags, bool noinput_if_frozen) const
+{
     return ToolboxWidget::GetWinFlags(flags, noinput_if_frozen) | (lock_size ? ImGuiWindowFlags_AlwaysAutoResize : 0);
 }
 
-void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
+void TimerWidget::Draw(IDirect3DDevice9* pDevice)
+{
     UNREFERENCED_PARAMETER(pDevice);
-    if (!visible) return;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+    if (!visible)
+        return;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+        return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
 
@@ -327,22 +351,21 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
-
         // Main timer:
         print_time(GetTimer(), show_decimals, 32, timer_buffer);
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
+        ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
         ImGui::TextShadowed(timer_buffer, {2, 2});
         ImGui::PopFont();
 
         if (also_show_instance_timer) {
             print_time(milliseconds(GW::Map::GetInstanceTime()), show_decimals, 32, timer_buffer);
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_large));
+            ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
             ImGui::TextShadowed(timer_buffer, {2, 2});
             ImGui::PopFont();
         }
 
-        auto drawTimer = [](char* buffer, ImColor* extra_color = 0) {
-            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
+        auto drawTimer = [](char* buffer, ImColor* extra_color = nullptr) {
+            ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_label));
             ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
             ImGui::TextColored(ImColor(0, 0, 0), buffer);
@@ -383,28 +406,36 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     ImGui::End();
     ImGui::PopStyleColor();
 }
-bool TimerWidget::GetUrgozTimer() {
-    if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren) return false;
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return false;
+
+bool TimerWidget::GetUrgozTimer()
+{
+    if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren)
+        return false;
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+        return false;
     unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    unsigned long  temp = (time - 1) % 25;
+    unsigned long temp = (time - 1) % 25;
     if (temp < 15) {
         snprintf(extra_buffer, 32, "Open - %lu", 15u - temp);
         extra_color = ImColor(0, 255, 0);
-    } else {
+    }
+    else {
         snprintf(extra_buffer, 32, "Closed - %lu", 25u - temp);
         extra_color = ImColor(255, 0, 0);
     }
     return true;
 }
 
-bool TimerWidget::GetSpiritTimer() {
+bool TimerWidget::GetSpiritTimer()
+{
     using namespace GW::Constants;
 
-    if (!show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
+    if (!show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable)
+        return false;
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) return false;
+    if (!effects)
+        return false;
 
     int offset = 0;
     for (auto& effect : *effects) {
@@ -422,27 +453,29 @@ bool TimerWidget::GetSpiritTimer() {
     return true;
 }
 
-bool TimerWidget::GetDeepTimer() {
+bool TimerWidget::GetDeepTimer()
+{
     using namespace GW::Constants;
 
-    if (GW::Map::GetMapID() != MapID::The_Deep) return false;
-    if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
+    if (GW::Map::GetMapID() != MapID::The_Deep)
+        return false;
+    if (GW::Map::GetInstanceType() != InstanceType::Explorable)
+        return false;
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) return false;
+    if (!effects)
+        return false;
 
     static clock_t start = -1;
-    SkillID skill = SkillID::No_Skill;
+    auto skill = SkillID::No_Skill;
     for (auto& effect : *effects) {
-        SkillID effect_id = (SkillID)effect.skill_id;
+        auto effect_id = effect.skill_id;
         switch (effect_id) {
-        case SkillID::Aspect_of_Exhaustion:
-        case SkillID::Aspect_of_Depletion_energy_loss:
-        case SkillID::Scorpion_Aspect:
-            skill = effect_id;
-            break;
-        default:
-            break;
+            case SkillID::Aspect_of_Exhaustion:
+            case SkillID::Aspect_of_Depletion_energy_loss:
+            case SkillID::Scorpion_Aspect: skill = effect_id;
+                break;
+            default: break;
         }
         if (skill != SkillID::No_Skill)
             break;
@@ -458,38 +491,38 @@ bool TimerWidget::GetDeepTimer() {
 
     clock_t diff = TIMER_DIFF(start) / 1000;
 
-
     // a 30s timer starts when you enter the aspect
     // a 30s timer starts 100s after you enter the aspect
     // a 30s timer starts 200s after you enter the aspect
     long timer = 30 - (diff % 30);
-    if (diff > 100) timer = std::min(timer, 30 - ((diff - 100) % 30));
-    if (diff > 200) timer = std::min(timer, 30 - ((diff - 200) % 30));
+    if (diff > 100)
+        timer = std::min(timer, 30 - ((diff - 100) % 30));
+    if (diff > 200)
+        timer = std::min(timer, 30 - ((diff - 200) % 30));
     switch (skill) {
-    case SkillID::Aspect_of_Exhaustion:
-        snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
-        break;
-    case SkillID::Aspect_of_Depletion_energy_loss:
-        snprintf(extra_buffer, 32, "Depletion: %lu", timer);
-        break;
-    case SkillID::Scorpion_Aspect:
-        snprintf(extra_buffer, 32, "Scorpion: %lu", timer);
-        break;
-    default:
-        break;
+        case SkillID::Aspect_of_Exhaustion: snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
+            break;
+        case SkillID::Aspect_of_Depletion_energy_loss: snprintf(extra_buffer, 32, "Depletion: %lu", timer);
+            break;
+        case SkillID::Scorpion_Aspect: snprintf(extra_buffer, 32, "Scorpion: %lu", timer);
+            break;
+        default: break;
     }
     extra_color = ImColor(255, 255, 255);
     return true;
 }
 
-bool TimerWidget::GetDhuumTimer() {
+bool TimerWidget::GetDhuumTimer()
+{
     // todo: implement
     return false;
 }
 
-bool TimerWidget::GetTrapTimer() {
+bool TimerWidget::GetTrapTimer()
+{
     using namespace GW::Constants;
-    if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
+    if (GW::Map::GetInstanceType() != InstanceType::Explorable)
+        return false;
 
     unsigned long time = GW::Map::GetInstanceTime() / 1000;
     unsigned long temp = time % 20;
@@ -497,62 +530,58 @@ bool TimerWidget::GetTrapTimer() {
     if (temp < 10) {
         timer = 10u - temp;
         extra_color = ImColor(0, 255, 0);
-    } else {
+    }
+    else {
         timer = 20u - temp;
         extra_color = ImColor(255, 0, 0);
     }
 
     switch (GW::Map::GetMapID()) {
-    case MapID::Catacombs_of_Kathandrax_Level_1:
-    case MapID::Catacombs_of_Kathandrax_Level_2:
-    case MapID::Catacombs_of_Kathandrax_Level_3:
-    case MapID::Bloodstone_Caves_Level_1:
-    case MapID::Arachnis_Haunt_Level_2:
-    case MapID::Oolas_Lab_Level_2:
-        snprintf(extra_buffer, 32, "Fire Jet: %lu", timer);
-        return true;
-    case MapID::Heart_of_the_Shiverpeaks_Level_3:
-        snprintf(extra_buffer, 32, "Fire Spout: %lu", timer);
-        return true;
-    case MapID::Shards_of_Orr_Level_3:
-    case MapID::Cathedral_of_Flames_Level_3:
-        snprintf(extra_buffer, 32, "Fire Trap: %lu", timer);
-        return true;
-    case MapID::Sepulchre_of_Dragrimmar_Level_1:
-    case MapID::Ravens_Point_Level_1:
-    case MapID::Ravens_Point_Level_2:
-    case MapID::Heart_of_the_Shiverpeaks_Level_1:
-    case MapID::Darkrime_Delves_Level_2:
-        snprintf(extra_buffer, 32, "Ice Jet: %lu", timer);
-        return true;
-    case MapID::Darkrime_Delves_Level_1:
-    case MapID::Secret_Lair_of_the_Snowmen:
-        snprintf(extra_buffer, 32, "Ice Spout: %lu", timer);
-        return true;
-    case MapID::Bogroot_Growths_Level_1:
-    case MapID::Arachnis_Haunt_Level_1:
-    case MapID::Shards_of_Orr_Level_1:
-    case MapID::Shards_of_Orr_Level_2:
-        snprintf(extra_buffer, 32, "Poison Jet: %lu", timer);
-        return true;
-    case MapID::Bloodstone_Caves_Level_2:
-        snprintf(extra_buffer, 32, "Poison Spout: %lu", timer);
-        return true;
-    case MapID::Cathedral_of_Flames_Level_2:
-    case MapID::Bloodstone_Caves_Level_3:
-        snprintf(extra_buffer, 32, "Poison Trap: %lu", timer);
-        return true;
-    default:
-        return false;
+        case MapID::Catacombs_of_Kathandrax_Level_1:
+        case MapID::Catacombs_of_Kathandrax_Level_2:
+        case MapID::Catacombs_of_Kathandrax_Level_3:
+        case MapID::Bloodstone_Caves_Level_1:
+        case MapID::Arachnis_Haunt_Level_2:
+        case MapID::Oolas_Lab_Level_2: snprintf(extra_buffer, 32, "Fire Jet: %lu", timer);
+            return true;
+        case MapID::Heart_of_the_Shiverpeaks_Level_3: snprintf(extra_buffer, 32, "Fire Spout: %lu", timer);
+            return true;
+        case MapID::Shards_of_Orr_Level_3:
+        case MapID::Cathedral_of_Flames_Level_3: snprintf(extra_buffer, 32, "Fire Trap: %lu", timer);
+            return true;
+        case MapID::Sepulchre_of_Dragrimmar_Level_1:
+        case MapID::Ravens_Point_Level_1:
+        case MapID::Ravens_Point_Level_2:
+        case MapID::Heart_of_the_Shiverpeaks_Level_1:
+        case MapID::Darkrime_Delves_Level_2: snprintf(extra_buffer, 32, "Ice Jet: %lu", timer);
+            return true;
+        case MapID::Darkrime_Delves_Level_1:
+        case MapID::Secret_Lair_of_the_Snowmen: snprintf(extra_buffer, 32, "Ice Spout: %lu", timer);
+            return true;
+        case MapID::Bogroot_Growths_Level_1:
+        case MapID::Arachnis_Haunt_Level_1:
+        case MapID::Shards_of_Orr_Level_1:
+        case MapID::Shards_of_Orr_Level_2: snprintf(extra_buffer, 32, "Poison Jet: %lu", timer);
+            return true;
+        case MapID::Bloodstone_Caves_Level_2: snprintf(extra_buffer, 32, "Poison Spout: %lu", timer);
+            return true;
+        case MapID::Cathedral_of_Flames_Level_2:
+        case MapID::Bloodstone_Caves_Level_3: snprintf(extra_buffer, 32, "Poison Trap: %lu", timer);
+            return true;
+        default: return false;
     }
 }
 
-bool TimerWidget::GetDoATimer() {
+bool TimerWidget::GetDoATimer()
+{
     using namespace GW::Constants;
 
-    if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
-    if (GW::Map::GetMapID() != MapID::Domain_of_Anguish) return false;
-    if (cave_start == 0) return false;
+    if (GW::Map::GetInstanceType() != InstanceType::Explorable)
+        return false;
+    if (GW::Map::GetMapID() != MapID::Domain_of_Anguish)
+        return false;
+    if (cave_start == 0)
+        return false;
 
     const uint32_t time = GW::Map::GetInstanceTime();
 

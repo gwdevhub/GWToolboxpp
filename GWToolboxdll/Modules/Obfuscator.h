@@ -4,7 +4,8 @@
 
 class Obfuscator : public ToolboxModule {
 public:
-    static Obfuscator& Instance() {
+    static Obfuscator& Instance()
+    {
         static Obfuscator instance;
         return instance;
     }

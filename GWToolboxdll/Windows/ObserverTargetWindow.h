@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <Windows/ObserverPlayerWindow.h>
@@ -7,10 +6,11 @@
 
 class ObserverTargetWindow : public ObserverPlayerWindow {
     ObserverTargetWindow() = default;
-    ~ObserverTargetWindow() = default;
+    ~ObserverTargetWindow() override = default;
 
 public:
-    static ObserverTargetWindow& Instance() {
+    static ObserverTargetWindow& Instance()
+    {
         static ObserverTargetWindow instance;
         return instance;
     }

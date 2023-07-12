@@ -6,24 +6,28 @@
 
 class DoorMonitorWindow : public ToolboxWindow {
     DoorMonitorWindow() = default;
-    ~DoorMonitorWindow() = default;
+    ~DoorMonitorWindow() override = default;
+
 public:
     class DoorObject {
     public:
-        DoorObject(uint32_t object_id_) : object_id(object_id_) {};
+        DoorObject(uint32_t object_id_)
+            : object_id(object_id_)
+        {
+        };
 
         uint32_t object_id = 0; // object_id
         uint32_t initial_state = 0;
         uint32_t animation_type = 0;
         uint32_t is_open = true;
-        time_t first_load = 0; // When did this door first get sent to the client?
-        time_t first_open = 0; // First time the door was opened
-        time_t last_open = 0; // Most recent time the door was opened
+        time_t first_load = 0;  // When did this door first get sent to the client?
+        time_t first_open = 0;  // First time the door was opened
+        time_t last_open = 0;   // Most recent time the door was opened
         time_t first_close = 0; // First time the door was closed
-        time_t last_close = 0; // Most recent time the door was closed
+        time_t last_close = 0;  // Most recent time the door was closed
     public:
-
-        static void DoorAnimation(uint32_t object_id, uint32_t animation_type, uint32_t animation_stage) {
+        static void DoorAnimation(uint32_t object_id, uint32_t animation_type, uint32_t animation_stage)
+        {
             if (animation_type != 16 && animation_type != 3)
                 return; // Not opening or closing door.
             DoorObject* d = GetDoor(object_id);
@@ -53,15 +57,18 @@ public:
         };
     };
 
-    static DoorMonitorWindow& Instance() {
+    static DoorMonitorWindow& Instance()
+    {
         static DoorMonitorWindow instance;
         return instance;
     }
-    static DoorObject* GetDoor(uint32_t object_id) {
-        std::map<uint32_t, DoorObject*>::iterator it = Instance().doors.find(object_id);
+
+    static DoorObject* GetDoor(uint32_t object_id)
+    {
+        auto it = Instance().doors.find(object_id);
         if (it != Instance().doors.end())
             return it->second;
-        DoorObject* d = new DoorObject(object_id);
+        auto d = new DoorObject(object_id);
         Instance().doors.emplace(object_id, d);
         return d;
     };

@@ -8,10 +8,11 @@
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class HotkeysWindow : public ToolboxWindow {
     HotkeysWindow() = default;
-    ~HotkeysWindow() = default;
+    ~HotkeysWindow() override = default;
 
 public:
-    static HotkeysWindow& Instance() {
+    static HotkeysWindow& Instance()
+    {
         static HotkeysWindow instance;
         return instance;
     }
@@ -39,10 +40,5 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
 
-
-
 private:
-
-
-
 };

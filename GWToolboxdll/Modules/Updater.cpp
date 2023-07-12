@@ -15,6 +15,7 @@ namespace {
         CheckAndAsk,
         CheckAndAutoUpdate
     };
+
     Mode mode = Mode::CheckAndAsk;
 
     // 0=checking, 1=asking, 2=downloading, 3=done
@@ -27,7 +28,8 @@ namespace {
         Success,
         Done
     };
-    Step step = Step::Checking;
+
+    Step step = Checking;
 
     bool notified = false;
     bool forced_ask = false;
@@ -39,13 +41,16 @@ namespace {
         std::string download_url;
         uintmax_t size = 0;
     };
+
     GWToolboxRelease latest_release;
     GWToolboxRelease current_release;
-    GWToolboxRelease* GetLatestRelease(GWToolboxRelease* release) {
+
+    GWToolboxRelease* GetLatestRelease(GWToolboxRelease* release)
+    {
         // Get list of releases
         std::string response;
         unsigned int tries = 0;
-        const char* url = "https://api.github.com/repos/HasKha/GWToolboxpp/releases";
+        auto url = "https://api.github.com/repos/HasKha/GWToolboxpp/releases";
         bool success = false;
         do {
             success = Resources::Instance().Download(url, response);
@@ -62,7 +67,7 @@ namespace {
         for (const auto& js : json) {
             if (!(js.contains("tag_name") && js["tag_name"].is_string()))
                 continue;
-            std::string tag_name = js["tag_name"].get<std::string>();
+            auto tag_name = js["tag_name"].get<std::string>();
             const size_t version_number_len = tag_name.find("_Release", 0);
             if (version_number_len == std::string::npos)
                 continue;
@@ -75,7 +80,7 @@ namespace {
                 if (!(asset.contains("name") && asset["name"].is_string())
                     || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string()))
                     continue;
-                std::string asset_name = asset["name"].get<std::string>();
+                auto asset_name = asset["name"].get<std::string>();
                 if (asset_name != "GWToolbox.dll" && asset_name != "GWToolboxdll.dll")
                     continue; // This release doesn't have a dll download.
                 release->download_url = asset["browser_download_url"].get<std::string>();
@@ -87,7 +92,9 @@ namespace {
         }
         return nullptr;
     }
-    GWToolboxRelease* GetCurrentVersionInfo(GWToolboxRelease* out) {
+
+    GWToolboxRelease* GetCurrentVersionInfo(GWToolboxRelease* out)
+    {
         // server and client versions match
         char path[MAX_PATH];
         if (GetModuleFileNameA(GWToolbox::GetDLLModule(), path, sizeof(path)) == 0)
@@ -99,13 +106,15 @@ namespace {
     }
 
     char update_available_text[128];
-    const char* UpdateAvailableText() {
+
+    const char* UpdateAvailableText()
+    {
         int written = 0;
         if (latest_release.version == current_release.version && latest_release.size != current_release.size) {
             // Version matches, but file size is different
-            written = snprintf(update_available_text, sizeof(update_available_text) - 1, "GWToolbox++ version %s (%.2f kb) is available! You have %s (%.2f kb)", 
-                latest_release.version.c_str(), latest_release.size > 0 ? latest_release.size / 1024.f : 0.f, 
-                current_release.version.c_str(), current_release.size > 0 ?  current_release.size / 1024.f : 0.f);
+            written = snprintf(update_available_text, sizeof(update_available_text) - 1, "GWToolbox++ version %s (%.2f kb) is available! You have %s (%.2f kb)",
+                               latest_release.version.c_str(), latest_release.size > 0 ? latest_release.size / 1024.f : 0.f,
+                               current_release.version.c_str(), current_release.size > 0 ? current_release.size / 1024.f : 0.f);
         }
         else {
             // Version mismatch
@@ -114,7 +123,9 @@ namespace {
         ASSERT(written > 0);
         return update_available_text;
     }
-    void DoUpdate() {
+
+    void DoUpdate()
+    {
         Log::Warning("Downloading update...");
 
         step = Downloading;
@@ -148,7 +159,6 @@ namespace {
             return;
         }
 
-
         // 1. rename toolbox dll
         const auto dllold = std::wstring(dllfile) + L".old";
         Log::Log("moving to %s\n", dllold.c_str());
@@ -162,33 +172,36 @@ namespace {
                 if (success) {
                     step = Success;
                     Log::WarningW(L"Update successful, please restart toolbox.");
-                } else {
-                    Log::ErrorW(L"Updated error - cannot download GWToolbox.dll\n%s",error.c_str());
+                }
+                else {
+                    Log::ErrorW(L"Updated error - cannot download GWToolbox.dll\n%s", error.c_str());
                     MoveFileW(dllold.c_str(), wdll.c_str());
                     step = Done;
                 }
             });
     }
-
-}
-const std::string& Updater::GetServerVersion() { 
-    return latest_release.version; 
 }
 
-void Updater::LoadSettings(ToolboxIni* ini) {
+const std::string& Updater::GetServerVersion()
+{
+    return latest_release.version;
+}
+
+void Updater::LoadSettings(ToolboxIni* ini)
+{
     ToolboxModule::LoadSettings(ini);
 #ifdef _DEBUG
-    mode = (Mode)0;
+    mode = static_cast<Mode>(0);
 #else
     mode = (Mode)ini->GetLongValue(Name(), "update_mode", (int)mode);
 #endif
     CheckForUpdate();
 }
 
-void Updater::SaveSettings(ToolboxIni* ini) {
+void Updater::SaveSettings(ToolboxIni* ini)
+{
     ToolboxModule::SaveSettings(ini);
 #ifdef _DEBUG
-    return;
 #else
     ini->SetLongValue(Name(), "update_mode", (int)mode);
     ini->SetValue(Name(), "dllversion", GWTOOLBOXDLL_VERSION);
@@ -200,20 +213,22 @@ void Updater::SaveSettings(ToolboxIni* ini) {
 #endif
 }
 
-void Updater::DrawSettingInternal() {
+void Updater::DrawSettingInternal()
+{
     ImGui::Text("Update mode:");
     const float btnWidth = 180.0f * ImGui::GetIO().FontGlobalScale;
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - btnWidth);
-    if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates",ImVec2(btnWidth,0)) && step != Checking) {
+    if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates", ImVec2(btnWidth, 0)) && step != Checking) {
         CheckForUpdate(true);
     }
-    ImGui::RadioButton("Do not check for updates", (int*) & mode, (int)Mode::DontCheckForUpdates);
-    ImGui::RadioButton("Check and display a message", (int*)&mode, (int)Mode::CheckAndWarn);
-    ImGui::RadioButton("Check and ask before updating", (int*)&mode, (int)Mode::CheckAndAsk);
-    ImGui::RadioButton("Check and automatically update", (int*)&mode, (int)Mode::CheckAndAutoUpdate);
+    ImGui::RadioButton("Do not check for updates", (int*)&mode, static_cast<int>(Mode::DontCheckForUpdates));
+    ImGui::RadioButton("Check and display a message", (int*)&mode, static_cast<int>(Mode::CheckAndWarn));
+    ImGui::RadioButton("Check and ask before updating", (int*)&mode, static_cast<int>(Mode::CheckAndAsk));
+    ImGui::RadioButton("Check and automatically update", (int*)&mode, static_cast<int>(Mode::CheckAndAutoUpdate));
 }
 
-void Updater::CheckForUpdate(const bool forced) {
+void Updater::CheckForUpdate(const bool forced)
+{
     if (!GetCurrentVersionInfo(&current_release)) {
         Log::Error("Failed to get current toolbox version info");
     }
@@ -237,7 +252,6 @@ void Updater::CheckForUpdate(const bool forced) {
             return;
         }
 
-
         if (latest_release.version == current_release.version) {
             // Version and size match
             step = Done;
@@ -253,83 +267,83 @@ void Updater::CheckForUpdate(const bool forced) {
             iMode = Mode::CheckAndAsk;
         }
         switch (iMode) {
-        case Mode::CheckAndAsk:
-            step = Step::CheckAndAsk;
-            break;
-        case Mode::CheckAndAutoUpdate:
-            step = Step::CheckAndAutoUpdate;
-            break;
-        case Mode::CheckAndWarn:
-            step = Step::CheckAndWarn;
-            break;
+            case Mode::CheckAndAsk: step = CheckAndAsk;
+                break;
+            case Mode::CheckAndAutoUpdate: step = CheckAndAutoUpdate;
+                break;
+            case Mode::CheckAndWarn: step = CheckAndWarn;
+                break;
         }
     });
 }
 
-void Updater::Draw(IDirect3DDevice9*) {
+void Updater::Draw(IDirect3DDevice9*)
+{
     switch (step) {
-    case CheckAndWarn:
-        Log::Warning(UpdateAvailableText());
-        step = Done;
-        break;
-    case CheckAndAsk: { // check and ask
-        if (!visible)
-            visible = true;
-        ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
-        ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
-        ImGui::Begin("Toolbox Update!", &visible);
-        ImGui::TextUnformatted(UpdateAvailableText());
-        ImGui::TextUnformatted("Changes:");
-        ImGui::TextUnformatted(latest_release.body.c_str());
-        ImGui::TextUnformatted("\nDo you want to update?");
-        if (ImGui::Button("Later###gwtoolbox_dont_update", ImVec2(100, 0))) {
+        case CheckAndWarn: Log::Warning(UpdateAvailableText());
             step = Done;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("OK###gwtoolbox_do_update", ImVec2(100, 0))) {
-            DoUpdate();
-        }
-        ImGui::End();
-        if (!visible) {
-            step = Done;
-        }
-    } break;
-    case CheckAndAutoUpdate:
-        DoUpdate();
-        break;
-    case Downloading: {
-        if (!visible)
             break;
-        ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
-        ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
-        ImGui::Begin("Toolbox Update!", &visible);
-        ImGui::TextUnformatted(UpdateAvailableText());
-        ImGui::TextUnformatted("Changes:");
-        ImGui::TextUnformatted(latest_release.body.c_str());
-        ImGui::Text("\nDownloading update...");
-        if (ImGui::Button("Hide", ImVec2(100, 0))) {
-            visible = false;
+        case CheckAndAsk: {
+            // check and ask
+            if (!visible)
+                visible = true;
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
+            ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
+            ImGui::Begin("Toolbox Update!", &visible);
+            ImGui::TextUnformatted(UpdateAvailableText());
+            ImGui::TextUnformatted("Changes:");
+            ImGui::TextUnformatted(latest_release.body.c_str());
+            ImGui::TextUnformatted("\nDo you want to update?");
+            if (ImGui::Button("Later###gwtoolbox_dont_update", ImVec2(100, 0))) {
+                step = Done;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("OK###gwtoolbox_do_update", ImVec2(100, 0))) {
+                DoUpdate();
+            }
+            ImGui::End();
+            if (!visible) {
+                step = Done;
+            }
         }
-        ImGui::End();
-    } break;
-    case Success: {
-        if (!visible)
+        break;
+        case CheckAndAutoUpdate: DoUpdate();
             break;
-        ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
-        ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
-        ImGui::Begin("Toolbox Update!", &visible);
-        ImGui::TextUnformatted(UpdateAvailableText());
-        ImGui::TextUnformatted("Changes:");
-        ImGui::TextUnformatted(latest_release.body.c_str());
-        ImGui::Text("\nUpdate successful, please restart toolbox.");
-        if (ImGui::Button("OK", ImVec2(100, 0))) {
-            visible = false;
+        case Downloading: {
+            if (!visible)
+                break;
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
+            ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
+            ImGui::Begin("Toolbox Update!", &visible);
+            ImGui::TextUnformatted(UpdateAvailableText());
+            ImGui::TextUnformatted("Changes:");
+            ImGui::TextUnformatted(latest_release.body.c_str());
+            ImGui::Text("\nDownloading update...");
+            if (ImGui::Button("Hide", ImVec2(100, 0))) {
+                visible = false;
+            }
+            ImGui::End();
         }
-        if (!visible) {
-            step = Done;
+        break;
+        case Success: {
+            if (!visible)
+                break;
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
+            ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
+            ImGui::Begin("Toolbox Update!", &visible);
+            ImGui::TextUnformatted(UpdateAvailableText());
+            ImGui::TextUnformatted("Changes:");
+            ImGui::TextUnformatted(latest_release.body.c_str());
+            ImGui::Text("\nUpdate successful, please restart toolbox.");
+            if (ImGui::Button("OK", ImVec2(100, 0))) {
+                visible = false;
+            }
+            if (!visible) {
+                step = Done;
+            }
+            ImGui::End();
         }
-        ImGui::End();
-    } break;
+        break;
     }
     // if step == Done do nothing
 }

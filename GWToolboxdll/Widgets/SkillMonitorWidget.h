@@ -11,10 +11,11 @@
 
 class SkillMonitorWidget : public ToolboxWidget {
     SkillMonitorWidget() = default;
-    ~SkillMonitorWidget() = default;
+    ~SkillMonitorWidget() override = default;
 
 public:
-    static SkillMonitorWidget& Instance() {
+    static SkillMonitorWidget& Instance()
+    {
         static SkillMonitorWidget instance;
         return instance;
     }
@@ -54,7 +55,8 @@ private:
     const float PARTY_MEMBER_PADDING_FIXED = 1.f;
     const float PARTY_HERO_INDENT_BASE = 22.f;
 
-    Color GetColor(SkillActivationStatus status) {
+    Color GetColor(SkillActivationStatus status)
+    {
         switch (status) {
             case CASTING: return status_color_casting;
             case COMPLETED: return status_color_completed;

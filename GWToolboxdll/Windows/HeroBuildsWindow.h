@@ -20,11 +20,13 @@ private:
     struct HeroBuild {
         HeroBuild(const char* n, const char* c, int index = -1, int panel = 0, uint32_t _behavior = 1)
             : hero_index(index)
-            , show_panel(panel)
-            , behavior(_behavior) {
+              , behavior(_behavior)
+              , show_panel(panel)
+        {
             GuiUtils::StrCopy(name, n, sizeof(name));
             GuiUtils::StrCopy(code, c, sizeof(code));
         }
+
         char name[BUFFER_SIZE];
         char code[BUFFER_SIZE];
         int hero_index;
@@ -34,10 +36,13 @@ private:
 
     struct TeamHeroBuild {
         static unsigned int cur_ui_id;
+
         TeamHeroBuild(const char* n)
-            : ui_id(++cur_ui_id) {
+            : ui_id(++cur_ui_id)
+        {
             GuiUtils::StrCopy(name, n, sizeof(name));
         }
+
         bool edit_open = false;
         int mode = 0; // 0=don't change, 1=normal mode, 2=hard mode
         char name[BUFFER_SIZE];
@@ -45,17 +50,21 @@ private:
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };
 
-    HeroBuildsWindow() {
+    HeroBuildsWindow()
+    {
         inifile = new ToolboxIni(false, false, false);
     }
-    ~HeroBuildsWindow() {
+
+    ~HeroBuildsWindow() override
+    {
         delete inifile;
     }
 
     GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
 
 public:
-    static HeroBuildsWindow& Instance() {
+    static HeroBuildsWindow& Instance()
+    {
         static HeroBuildsWindow instance;
         return instance;
     }
@@ -81,11 +90,11 @@ public:
 
     void Load(unsigned int idx);
     const char* BuildName(unsigned int idx) const;
-    inline unsigned int BuildCount() const { return teambuilds.size(); }
+    unsigned int BuildCount() const { return teambuilds.size(); }
 
     static void CmdHeroTeamBuild(const wchar_t* message, int argc, LPWSTR* argv);
-private:
 
+private:
     bool hide_when_entering_explorable = false;
     bool one_teambuild_at_a_time = false;
 
@@ -111,21 +120,24 @@ private:
             Load,
             Finished
         } stage = Add;
+
         char code[BUFFER_SIZE];
         size_t party_hero_index = 0xFFFFFFFF;
         GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
         int show_panel = 0;
         GW::HeroBehavior behavior = GW::HeroBehavior::Guard;
         clock_t started = 0;
-        CodeOnHero(const char *c = "", GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, int _show_panel = 0, uint32_t _behavior = 1)
+
+        CodeOnHero(const char* c = "", GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, int _show_panel = 0, uint32_t _behavior = 1)
             : heroid(i)
-            , show_panel(_show_panel)
-            , behavior((GW::HeroBehavior)_behavior)
+              , show_panel(_show_panel)
+              , behavior(static_cast<GW::HeroBehavior>(_behavior))
         {
             snprintf(code, BUFFER_SIZE, "%s", c);
             if (behavior > GW::HeroBehavior::AvoidCombat)
                 behavior = GW::HeroBehavior::Guard;
         }
+
         // True when processing is done
         bool Process();
     };

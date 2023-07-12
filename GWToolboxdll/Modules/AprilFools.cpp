@@ -15,7 +15,7 @@
 
 namespace {
     bool enabled = false;
-    
+
 
     std::map<uint32_t, GW::Agent*> player_agents;
 
@@ -24,38 +24,49 @@ namespace {
     GW::HookEntry GameSrvTransfer_Hook;
 
 
-
-    void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet) {
+    void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet)
+    {
         if (!enabled)
             return;
         if ((packet->agent_type & 0x30000000) != 0x30000000)
             return; // Not a player
         uint32_t player_number = packet->agent_type ^ 0x30000000;
-        GW::AgentLiving* agent = (GW::AgentLiving*)GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number));
+        auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number)));
         if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
             return; // Not a valid agent
         player_agents.emplace(agent->agent_id, agent);
     }
-    void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove* packet) {
+
+    void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove* packet)
+    {
         if (!enabled)
             return;
         auto found = player_agents.find(packet->agent_id);
         if (found != player_agents.end())
             player_agents.erase(found);
     }
-    void OnGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*) {
+
+    void OnGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*)
+    {
         player_agents.clear();
     }
+
     bool listeners_added = false;
-    void AddListeners() {
-        if (listeners_added) return;
-        GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Hook,OnAgentAdd);
-        GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Hook,OnAgentRemove);
-        GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Hook,OnGameSrvTransfer);
+
+    void AddListeners()
+    {
+        if (listeners_added)
+            return;
+        GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Hook, OnAgentAdd);
+        GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Hook, OnAgentRemove);
+        GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Hook, OnGameSrvTransfer);
         listeners_added = true;
     }
-    void RemoveListeners() {
-        if (!listeners_added) return;
+
+    void RemoveListeners()
+    {
+        if (!listeners_added)
+            return;
         GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Hook);
         GW::StoC::RemoveCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Hook);
         GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Hook);
@@ -83,28 +94,35 @@ static const wchar_t* af_2020_quotes[] = {
     L"I swear thats the last time I eat Canthan food again!"
 };
 static const int af_quotes_length = sizeof(af_2020_quotes) / 4;
-void AprilFools::Initialize() {
+
+void AprilFools::Initialize()
+{
     ToolboxModule::Initialize();
     GW::Chat::CreateCommand(L"aprilfools", [this](const wchar_t*, int, LPWSTR*) -> void {
         SetEnabled(!enabled);
     });
-    
-    time_t now = time(NULL);
+
+    time_t now = time(nullptr);
     struct tm* ltm = gmtime(&now);
     SetEnabled(ltm->tm_mon == 3 && ((ltm->tm_mday == 1 && ltm->tm_hour > 6) || (ltm->tm_mday == 2 && ltm->tm_hour < 7)));
 }
-void AprilFools::Terminate() {
+
+void AprilFools::Terminate()
+{
     ToolboxModule::Terminate();
     GW::Chat::DeleteCommand(L"aprilfools");
     RemoveListeners();
 }
-void AprilFools::SetEnabled(bool is_enabled) {
+
+void AprilFools::SetEnabled(bool is_enabled)
+{
     if (enabled == is_enabled)
         return;
     enabled = is_enabled;
     if (enabled) {
         GW::PlayerArray* players = GW::Agents::GetPlayerArray();
-        if (!players) return;
+        if (!players)
+            return;
         for (auto& player : *players) {
             auto agent = GW::Agents::GetAgentByID(player.agent_id);
             if (agent)
@@ -112,7 +130,6 @@ void AprilFools::SetEnabled(bool is_enabled) {
         }
         Log::Info("April Fools 2020 enabled. Type '/aprilfools' to disable it");
         AddListeners();
-
     }
     else {
         for (const auto& agent : player_agents) {
@@ -123,16 +140,18 @@ void AprilFools::SetEnabled(bool is_enabled) {
         RemoveListeners();
     }
 }
-void AprilFools::SetInfected(GW::Agent* agent,bool is_infected) {
+
+void AprilFools::SetInfected(GW::Agent* agent, bool is_infected)
+{
     uint32_t agent_id = agent->agent_id;
     if (!is_infected) {
         GW::GameThread::Enqueue([agent_id]() {
             GW::Packet::StoC::GenericValue packet;
             packet.agent_id = agent_id;
             packet.value_id = 7; // Remove effect
-            packet.value = 26; // Disease
+            packet.value = 26;   // Disease
             GW::StoC::EmulatePacket(&packet);
-            });
+        });
         return;
     }
     static bool infection_queued = false;
@@ -145,20 +164,22 @@ void AprilFools::SetInfected(GW::Agent* agent,bool is_infected) {
         GW::Packet::StoC::GenericValue packet;
         packet.agent_id = agent_id;
         packet.value_id = 6; // Add effect
-        packet.value = 26; // Disease
+        packet.value = 26;   // Disease
         GW::StoC::EmulatePacket(&packet);
         GW::Packet::StoC::SpeechBubble packet2;
         packet2.agent_id = agent_id;
-        int quote_idx = last_quote_idx; 
-        while(quote_idx == last_quote_idx)
+        int quote_idx = last_quote_idx;
+        while (quote_idx == last_quote_idx)
             quote_idx = rand() % af_quotes_length;
         last_quote_idx = quote_idx;
         swprintf(packet2.message, 122, L"\x108\x107%s\x1", af_2020_quotes[quote_idx]);
         GW::StoC::EmulatePacket(&packet2);
         infection_queued = false;
-        });
+    });
 }
-void AprilFools::Update(float delta) {
+
+void AprilFools::Update(float delta)
+{
     UNREFERENCED_PARAMETER(delta);
     if (!enabled)
         return;

@@ -21,18 +21,17 @@
 #include <Windows/ArmoryWindow.h>
 
 namespace GWArmory {
-
     struct PlayerArmor {
-        PlayerArmorPiece head = ItemSlot::ItemSlot_Head;
-        PlayerArmorPiece chest = ItemSlot::ItemSlot_Chest;
-        PlayerArmorPiece hands = ItemSlot::ItemSlot_Hands;
-        PlayerArmorPiece legs = ItemSlot::ItemSlot_Legs;
-        PlayerArmorPiece feets = ItemSlot::ItemSlot_Feet;
+        PlayerArmorPiece head = ItemSlot_Head;
+        PlayerArmorPiece chest = ItemSlot_Chest;
+        PlayerArmorPiece hands = ItemSlot_Hands;
+        PlayerArmorPiece legs = ItemSlot_Legs;
+        PlayerArmorPiece feets = ItemSlot_Feet;
     };
 
     PlayerArmor player_armor;
 
-    typedef void(__fastcall * SetItem_pt)(GW::Equipment * equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id);
+    using SetItem_pt = void(__fastcall *)(GW::Equipment* equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id);
     SetItem_pt SetItem_Func = nullptr;
     SetItem_pt SetItem_Ret = nullptr;
 
@@ -46,42 +45,47 @@ namespace GWArmory {
         uint32_t file_id_2;
         uint32_t unk2[5];
     };
+
     static_assert(sizeof(ItemModelInfo) == 0x30);
 
     GW::Array<ItemModelInfo>* item_model_info_array = nullptr;
 
     bool Reset();
 
-    GW::Equipment* GetPlayerEquipment() {
+    GW::Equipment* GetPlayerEquipment()
+    {
         const auto player = GW::Agents::GetPlayerAsAgentLiving();
         return player && player->equip && *player->equip ? *player->equip : nullptr;
     }
 
-    uint32_t GetEquipmentPieceItemId(ItemSlot slot) {
+    uint32_t GetEquipmentPieceItemId(ItemSlot slot)
+    {
         const auto equip = GetPlayerEquipment();
-        if (!equip) return 0;
-        switch (slot) {
-        case ItemSlot::ItemSlot_Chest: return equip->item_id_chest;
-        case ItemSlot::ItemSlot_Feet: return equip->item_id_feet;
-        case ItemSlot::ItemSlot_Hands: return equip->item_id_hands;
-        case ItemSlot::ItemSlot_Head: return equip->item_id_head;
-        case ItemSlot::ItemSlot_Legs: return equip->item_id_legs;
-        default:
+        if (!equip)
             return 0;
+        switch (slot) {
+            case ItemSlot_Chest: return equip->item_id_chest;
+            case ItemSlot_Feet: return equip->item_id_feet;
+            case ItemSlot_Hands: return equip->item_id_hands;
+            case ItemSlot_Head: return equip->item_id_head;
+            case ItemSlot_Legs: return equip->item_id_legs;
+            default: return 0;
         }
     }
 
 
-    uint32_t GetItemInteraction(ItemSlot slot) {
+    uint32_t GetItemInteraction(ItemSlot slot)
+    {
         const auto item = GW::Items::GetItemById(GetEquipmentPieceItemId(slot));
         return item ? item->interaction : 0;
     }
 
     ItemSlot GetItemSlot(uint32_t model_file_id);
 
-    void __fastcall OnSetItem(GW::Equipment* equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id) {
+    void __fastcall OnSetItem(GW::Equipment* equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id)
+    {
         GW::Hook::EnterHook();
-        
+
         SetItem_Ret(equip, edx, model_file_id, color, arg3, agent_id);
         const auto player_equip = GetPlayerEquipment();
         if (!gwarmory_setitem && (!player_equip || equip == player_equip)) {
@@ -105,42 +109,53 @@ namespace GWArmory {
     GW::Constants::Profession current_profession = GW::Constants::Profession::None;
     Campaign current_campaign = Campaign_All;
 
-    
 
-    Armor* GetArmorsPerProfession(GW::Constants::Profession prof, size_t * count)
+    Armor* GetArmorsPerProfession(GW::Constants::Profession prof, size_t* count)
     {
         switch (prof) {
-        case GW::Constants::Profession::Warrior: *count = _countof(warrior_armors); return warrior_armors;
-        case GW::Constants::Profession::Ranger: *count = _countof(ranger_armors); return ranger_armors;
-        case GW::Constants::Profession::Monk: *count = _countof(monk_armors); return monk_armors;
-        case GW::Constants::Profession::Necromancer: *count = _countof(necromancer_armors); return necromancer_armors;
-        case GW::Constants::Profession::Mesmer: *count = _countof(mesmer_armors); return mesmer_armors;
-        case GW::Constants::Profession::Elementalist: *count = _countof(elementalist_armors); return elementalist_armors;
-        case GW::Constants::Profession::Assassin: *count = _countof(assassin_armors); return assassin_armors;
-        case GW::Constants::Profession::Ritualist: *count = _countof(ritualist_armors); return ritualist_armors;
-        case GW::Constants::Profession::Paragon: *count = _countof(paragon_armors); return paragon_armors;
-        case GW::Constants::Profession::Dervish: *count = _countof(dervish_armors); return dervish_armors;
-        case GW::Constants::Profession::None:
-        default: *count = 0; return nullptr;
+            case GW::Constants::Profession::Warrior: *count = _countof(warrior_armors);
+                return warrior_armors;
+            case GW::Constants::Profession::Ranger: *count = _countof(ranger_armors);
+                return ranger_armors;
+            case GW::Constants::Profession::Monk: *count = _countof(monk_armors);
+                return monk_armors;
+            case GW::Constants::Profession::Necromancer: *count = _countof(necromancer_armors);
+                return necromancer_armors;
+            case GW::Constants::Profession::Mesmer: *count = _countof(mesmer_armors);
+                return mesmer_armors;
+            case GW::Constants::Profession::Elementalist: *count = _countof(elementalist_armors);
+                return elementalist_armors;
+            case GW::Constants::Profession::Assassin: *count = _countof(assassin_armors);
+                return assassin_armors;
+            case GW::Constants::Profession::Ritualist: *count = _countof(ritualist_armors);
+                return ritualist_armors;
+            case GW::Constants::Profession::Paragon: *count = _countof(paragon_armors);
+                return paragon_armors;
+            case GW::Constants::Profession::Dervish: *count = _countof(dervish_armors);
+                return dervish_armors;
+            case GW::Constants::Profession::None:
+            default: *count = 0;
+                return nullptr;
         }
     }
+
     DyeColor DyeColorFromInt(size_t color)
     {
         const auto col = static_cast<DyeColor>(color);
         switch (col) {
-        case DyeColor::Blue:
-        case DyeColor::Green:
-        case DyeColor::Purple:
-        case DyeColor::Red:
-        case DyeColor::Yellow:
-        case DyeColor::Brown:
-        case DyeColor::Orange:
-        case DyeColor::Silver:
-        case DyeColor::Black:
-        case DyeColor::Gray:
-        case DyeColor::White:
-        case DyeColor::Pink: return col;
-        default: return DyeColor::None;
+            case DyeColor::Blue:
+            case DyeColor::Green:
+            case DyeColor::Purple:
+            case DyeColor::Red:
+            case DyeColor::Yellow:
+            case DyeColor::Brown:
+            case DyeColor::Orange:
+            case DyeColor::Silver:
+            case DyeColor::Black:
+            case DyeColor::Gray:
+            case DyeColor::White:
+            case DyeColor::Pink: return col;
+            default: return DyeColor::None;
         }
     }
 
@@ -148,71 +163,78 @@ namespace GWArmory {
     {
         const uint32_t color_id = static_cast<uint32_t>(color) - static_cast<uint32_t>(DyeColor::Blue);
         switch (color) {
-        case DyeColor::Blue:
-        case DyeColor::Green:
-        case DyeColor::Purple:
-        case DyeColor::Red:
-        case DyeColor::Yellow:
-        case DyeColor::Brown:
-        case DyeColor::Orange:
-        case DyeColor::Silver:
-        case DyeColor::Black:
-        case DyeColor::Gray:
-        case DyeColor::White:
-        case DyeColor::Pink: assert(color_id < _countof(palette)); return palette[color_id];
-        default: return {};
+            case DyeColor::Blue:
+            case DyeColor::Green:
+            case DyeColor::Purple:
+            case DyeColor::Red:
+            case DyeColor::Yellow:
+            case DyeColor::Brown:
+            case DyeColor::Orange:
+            case DyeColor::Silver:
+            case DyeColor::Black:
+            case DyeColor::Gray:
+            case DyeColor::White:
+            case DyeColor::Pink: assert(color_id < _countof(palette));
+                return palette[color_id];
+            default: return {};
         }
     }
 
     const char* GetProfessionName(GW::Constants::Profession prof)
     {
         switch (prof) {
-        case GW::Constants::Profession::None: return "None";
-        case GW::Constants::Profession::Warrior: return "Warrior";
-        case GW::Constants::Profession::Ranger: return "Ranger";
-        case GW::Constants::Profession::Monk: return "Monk";
-        case GW::Constants::Profession::Necromancer: return "Necromancer";
-        case GW::Constants::Profession::Mesmer: return "Mesmer";
-        case GW::Constants::Profession::Elementalist: return "Elementalist";
-        case GW::Constants::Profession::Assassin: return "Assassin";
-        case GW::Constants::Profession::Ritualist: return "Ritualist";
-        case GW::Constants::Profession::Paragon: return "Paragon";
-        case GW::Constants::Profession::Dervish: return "Dervish";
-        default: return "Unknown Profession";
+            case GW::Constants::Profession::None: return "None";
+            case GW::Constants::Profession::Warrior: return "Warrior";
+            case GW::Constants::Profession::Ranger: return "Ranger";
+            case GW::Constants::Profession::Monk: return "Monk";
+            case GW::Constants::Profession::Necromancer: return "Necromancer";
+            case GW::Constants::Profession::Mesmer: return "Mesmer";
+            case GW::Constants::Profession::Elementalist: return "Elementalist";
+            case GW::Constants::Profession::Assassin: return "Assassin";
+            case GW::Constants::Profession::Ritualist: return "Ritualist";
+            case GW::Constants::Profession::Paragon: return "Paragon";
+            case GW::Constants::Profession::Dervish: return "Dervish";
+            default: return "Unknown Profession";
         }
     }
 
-    GW::Constants::Profession GetAgentProfession(GW::AgentLiving * agent)
+    GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent)
     {
         if (!agent)
             return GW::Constants::Profession::None;
         const auto primary = static_cast<GW::Constants::Profession>(agent->primary);
         switch (primary) {
-        case GW::Constants::Profession::None:
-        case GW::Constants::Profession::Warrior:
-        case GW::Constants::Profession::Ranger:
-        case GW::Constants::Profession::Monk:
-        case GW::Constants::Profession::Necromancer:
-        case GW::Constants::Profession::Mesmer:
-        case GW::Constants::Profession::Elementalist:
-        case GW::Constants::Profession::Assassin:
-        case GW::Constants::Profession::Ritualist:
-        case GW::Constants::Profession::Paragon:
-        case GW::Constants::Profession::Dervish: return primary;
-        default: return GW::Constants::Profession::None;
+            case GW::Constants::Profession::None:
+            case GW::Constants::Profession::Warrior:
+            case GW::Constants::Profession::Ranger:
+            case GW::Constants::Profession::Monk:
+            case GW::Constants::Profession::Necromancer:
+            case GW::Constants::Profession::Mesmer:
+            case GW::Constants::Profession::Elementalist:
+            case GW::Constants::Profession::Assassin:
+            case GW::Constants::Profession::Ritualist:
+            case GW::Constants::Profession::Paragon:
+            case GW::Constants::Profession::Dervish: return primary;
+            default: return GW::Constants::Profession::None;
         }
     }
 
     bool armor_filter_array_getter(void*, int idx, const char** out_text)
     {
         switch (idx) {
-        case Campaign_All: *out_text = "All"; break;
-        case Campaign_Core: *out_text = "Core"; break;
-        case Campaign_Prophecies: *out_text = "Prophecies"; break;
-        case Campaign_Factions: *out_text = "Factions"; break;
-        case Campaign_Nightfall: *out_text = "Nightfall"; break;
-        case Campaign_EotN: *out_text = "Eye of the North"; break;
-        default: return false;
+            case Campaign_All: *out_text = "All";
+                break;
+            case Campaign_Core: *out_text = "Core";
+                break;
+            case Campaign_Prophecies: *out_text = "Prophecies";
+                break;
+            case Campaign_Factions: *out_text = "Factions";
+                break;
+            case Campaign_Nightfall: *out_text = "Nightfall";
+                break;
+            case Campaign_EotN: *out_text = "Eye of the North";
+                break;
+            default: return false;
         }
         return true;
     }
@@ -236,50 +258,42 @@ namespace GWArmory {
         return composite;
     }
 
-    ItemModelInfo* GetItemModelInfo(uint32_t model_file_id) {
+    ItemModelInfo* GetItemModelInfo(uint32_t model_file_id)
+    {
         if (!(item_model_info_array && model_file_id && model_file_id < item_model_info_array->size()))
             return nullptr;
         return &item_model_info_array->m_buffer[model_file_id];
     }
-    ItemSlot GetItemSlot(uint32_t model_file_id) {
+
+    ItemSlot GetItemSlot(uint32_t model_file_id)
+    {
         if (!model_file_id)
-            return ItemSlot::ItemSlot_Unknown;
+            return ItemSlot_Unknown;
         const auto info = GetItemModelInfo(model_file_id);
         if (!info)
-            return ItemSlot::ItemSlot_Unknown;
+            return ItemSlot_Unknown;
         switch (info->class_flags >> 0x16) {
-        case 0:
-        case 1:
-        case 2:
-            return ItemSlot::ItemSlot_Unknown; // 8
-        case 3:
-        case 15:
-            return ItemSlot::ItemSlot_Chest;
-        case 4:
-        case 14:
-            return ItemSlot::ItemSlot_Feet;
-        case 5:
-        case 16:
-            return ItemSlot::ItemSlot_Hands;
-        case 6:
-        case 18:
-            return ItemSlot::ItemSlot_Legs;
-        case 7:
-        case 8:
-        case 9:
-            return ItemSlot::ItemSlot_Unknown; // 7
-        case 10:
-        case 11:
-            return ItemSlot::ItemSlot_Unknown; // 0
-        case 12:
-        case 13:
-            return ItemSlot::ItemSlot_Unknown; // 2
-        case 19:
-            return ItemSlot::ItemSlot_Head;
-        default:
-            return ItemSlot::ItemSlot_Unknown;
+            case 0:
+            case 1:
+            case 2: return ItemSlot_Unknown; // 8
+            case 3:
+            case 15: return ItemSlot_Chest;
+            case 4:
+            case 14: return ItemSlot_Feet;
+            case 5:
+            case 16: return ItemSlot_Hands;
+            case 6:
+            case 18: return ItemSlot_Legs;
+            case 7:
+            case 8:
+            case 9: return ItemSlot_Unknown; // 7
+            case 10:
+            case 11: return ItemSlot_Unknown; // 0
+            case 12:
+            case 13: return ItemSlot_Unknown; // 2
+            case 19: return ItemSlot_Head;
+            default: return ItemSlot_Unknown;
         }
-
     }
 
     void SetArmorItem(const PlayerArmorPiece* piece)
@@ -296,17 +310,14 @@ namespace GWArmory {
     }
 
 
-    bool IsEquipmentShowing(const GW::EquipmentType type) {
+    bool IsEquipmentShowing(const GW::EquipmentType type)
+    {
         const auto state = GW::Items::GetEquipmentVisibility(type);
         switch (state) {
-        case GW::EquipmentStatus::AlwaysShow:
-            return true;
-        case GW::EquipmentStatus::AlwaysHide:
-            return false;
-        case GW::EquipmentStatus::HideInCombatAreas:
-            return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable;
-        case GW::EquipmentStatus::HideInTownsAndOutposts:
-            return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost;
+            case GW::EquipmentStatus::AlwaysShow: return true;
+            case GW::EquipmentStatus::AlwaysHide: return false;
+            case GW::EquipmentStatus::HideInCombatAreas: return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable;
+            case GW::EquipmentStatus::HideInTownsAndOutposts: return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost;
         }
         return false;
     }
@@ -339,26 +350,21 @@ namespace GWArmory {
             PlayerArmorPiece* piece = nullptr;
 
             switch (armors[i].item_slot) {
-            case ItemSlot_Head:
-                state = &head;
-                piece = &player_armor.head;
-                break;
-            case ItemSlot_Chest:
-                state = &chest;
-                piece = &player_armor.chest;
-                break;
-            case ItemSlot_Hands:
-                state = &hands;
-                piece = &player_armor.hands;
-                break;
-            case ItemSlot_Legs:
-                state = &legs;
-                piece = &player_armor.legs;
-                break;
-            case ItemSlot_Feet:
-                state = &feets;
-                piece = &player_armor.feets;
-                break;
+                case ItemSlot_Head: state = &head;
+                    piece = &player_armor.head;
+                    break;
+                case ItemSlot_Chest: state = &chest;
+                    piece = &player_armor.chest;
+                    break;
+                case ItemSlot_Hands: state = &hands;
+                    piece = &player_armor.hands;
+                    break;
+                case ItemSlot_Legs: state = &legs;
+                    piece = &player_armor.legs;
+                    break;
+                case ItemSlot_Feet: state = &feets;
+                    piece = &player_armor.feets;
+                    break;
             }
 
             if (!(state && piece))
@@ -376,7 +382,7 @@ namespace GWArmory {
         }
     }
 
-    void InitItemPiece(PlayerArmorPiece * piece, const GW::Equipment::ItemData* item_data)
+    void InitItemPiece(PlayerArmorPiece* piece, const GW::Equipment::ItemData* item_data)
     {
         piece->model_file_id = item_data->model_file_id;
         piece->unknow1 = item_data->dye.dye_id;
@@ -386,7 +392,8 @@ namespace GWArmory {
         piece->color4 = DyeColorFromInt(item_data->dye.dye4);
     }
 
-    bool GetPlayerArmor(PlayerArmor& out) {
+    bool GetPlayerArmor(PlayerArmor& out)
+    {
         const auto player = static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer());
         if (!(player && player->equip && player->equip[0]))
             return false;
@@ -400,7 +407,8 @@ namespace GWArmory {
         return true;
     }
 
-    bool Reset() {
+    bool Reset()
+    {
         if (!GetPlayerArmor(player_armor))
             return false;
         SetArmorItem(&player_armor.head);
@@ -500,7 +508,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     if (pending_reset_equipment) {
         Reset();
         pending_reset_equipment = false;
-    }  
+    }
 
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
@@ -511,7 +519,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
         if (ImGui::Button("Reset"))
             pending_reset_equipment = true;
 
-        if (ImGui::MyCombo("##filter", "All", (int*) & current_campaign, armor_filter_array_getter, nullptr, 5))
+        if (ImGui::MyCombo("##filter", "All", (int*)&current_campaign, armor_filter_array_getter, nullptr, 5))
             UpdateArmorsFilter();
         bool showing_helm = !equip->costume_head.model_file_id && IsEquipmentShowing(GW::EquipmentType::Helm);
         bool showing_body = !equip->costume_body.model_file_id;
@@ -538,7 +546,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
                 GW::GameThread::Enqueue([]() {
                     GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
                     GW::Items::SetEquipmentVisibility(GW::EquipmentType::CostumeHeadpiece, GW::EquipmentStatus::AlwaysHide);
-                    });
+                });
             }
         }
         if (!showing_body) {
@@ -547,7 +555,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
             if (ImGui::SmallButton("Hide Costume")) {
                 GW::GameThread::Enqueue([]() {
                     GW::Items::SetEquipmentVisibility(GW::EquipmentType::CostumeBody, GW::EquipmentStatus::AlwaysHide);
-                    });
+                });
             }
         }
     }
@@ -558,15 +566,13 @@ void ArmoryWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-
     uintptr_t address = GW::Scanner::Find("\x8b\x04\xc7\x5f\xc1\xe8\x16", "xxxxxxx", -0x2c);
     address = GW::Scanner::FunctionFromNearCall(address); // GetModelItemInfo
-    
+
     if (address) {
         address += 0x27;
         item_model_info_array = *(GW::Array<ItemModelInfo>**)address;
     }
-    
 
     SetItem_Func = (SetItem_pt)GW::Scanner::Find("\x83\xC4\x04\x8B\x08\x8B\xC1\xC1", "xxxxxxxx", -0x24);
     if (SetItem_Func) {
@@ -585,10 +591,12 @@ void ArmoryWindow::Initialize()
 #endif
     pending_reset_equipment = true;
 }
-void ArmoryWindow::Terminate() {
+
+void ArmoryWindow::Terminate()
+{
     Reset(); // NB: We're on the game thread, so this is ok
     if (SetItem_Func) {
         GW::Hook::RemoveHook(SetItem_Func);
-        SetItem_Func = 0;
+        SetItem_Func = nullptr;
     }
 }

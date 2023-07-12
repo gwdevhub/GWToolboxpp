@@ -6,17 +6,20 @@
 #include <ToolboxModule.h>
 #include <minwindef.h>
 
-namespace GW {
-    namespace Chat {
-        struct ChatMessage;
-    }
+namespace GW::Chat {
+    struct ChatMessage;
 }
 
 class ChatLog : public ToolboxModule {
-    ChatLog() {};
-    ~ChatLog() {
+    ChatLog()
+    {
+    };
+
+    ~ChatLog() override
+    {
         Reset();
     };
+
 private:
     struct TBChatMessage {
         TBChatMessage* next;
@@ -24,26 +27,31 @@ private:
         std::wstring msg;
         uint32_t channel;
         FILETIME timestamp;
-        TBChatMessage(wchar_t* _message, uint32_t _channel, FILETIME _timestamp) {
+
+        TBChatMessage(wchar_t* _message, uint32_t _channel, FILETIME _timestamp)
+        {
             msg = _message;
             timestamp = _timestamp;
             channel = _channel;
         }
     };
+
     struct TBSentMessage {
         TBSentMessage* next;
         TBSentMessage* prev;
         std::wstring msg;
         uint32_t gw_message_address = 0; // Used to ensure that messages aren't logged twice
-        TBSentMessage(wchar_t* _message, uint32_t addr = 0) {
+        TBSentMessage(wchar_t* _message, uint32_t addr = 0)
+        {
             msg = _message;
             gw_message_address = addr ? addr : (uint32_t)_message;
         }
     };
-    TBChatMessage* recv_first = 0;
-    TBChatMessage* recv_last = 0;
-    TBSentMessage* sent_first = 0;
-    TBSentMessage* sent_last = 0;
+
+    TBChatMessage* recv_first = nullptr;
+    TBChatMessage* recv_last = nullptr;
+    TBSentMessage* sent_first = nullptr;
+    TBSentMessage* sent_last = nullptr;
     size_t recv_count = 0;
     size_t sent_count = 0;
     std::wstring account;
@@ -75,7 +83,8 @@ private:
     // Set up chat log, load from file if applicable. Returns true if initialised
     bool Init();
     // Check outgoing log to see if message has already been added
-    bool IsAdded(wchar_t* _message, uint32_t addr) {
+    bool IsAdded(wchar_t* _message, uint32_t addr)
+    {
         if (!addr)
             addr = (uint32_t)_message;
         TBSentMessage* sent = sent_last;
@@ -90,7 +99,7 @@ private:
         return false;
     }
 
-    
+
 #pragma warning(push)
 #pragma warning(disable: 4200)
     struct GWSentMessage {
@@ -106,18 +115,21 @@ private:
     };
 
     uintptr_t gw_sent_log_ptr = 0;
-    GWSentLog* GetSentLog() {
-        return gw_sent_log_ptr ? (GWSentLog*)(gw_sent_log_ptr - 0x4) : 0;
+
+    GWSentLog* GetSentLog()
+    {
+        return gw_sent_log_ptr ? (GWSentLog*)(gw_sent_log_ptr - 0x4) : nullptr;
     }
 
-    TBChatMessage* timestamp_override_message = 0;
+    TBChatMessage* timestamp_override_message = nullptr;
 
     GW::HookEntry PreAddToChatLog_entry;
     GW::HookEntry PostAddToChatLog_entry;
     GW::HookEntry UIMessage_Entry;
 
 public:
-    static ChatLog& Instance() {
+    static ChatLog& Instance()
+    {
         static ChatLog instance;
         return instance;
     }
@@ -136,6 +148,4 @@ public:
     static void OnPreAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage*);
     // After adding chat log message, also add it to tb chat log.
     static void OnPostAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage* logged_message);
-
-
 };

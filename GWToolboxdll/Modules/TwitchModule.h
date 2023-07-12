@@ -8,11 +8,18 @@
 #include <Color.h>
 
 class TwitchModule : public ToolboxModule {
-    TwitchModule() {};
+    TwitchModule()
+    {
+    };
     TwitchModule(const TwitchModule&) = delete;
-    ~TwitchModule() {};
+
+    ~TwitchModule() override
+    {
+    };
+
 public:
-    static TwitchModule& Instance() {
+    static TwitchModule& Instance()
+    {
         static TwitchModule instance;
         return instance;
     }
@@ -30,13 +37,13 @@ public:
     bool Connect();
     void Disconnect();
     // IRC details
-    std::string irc_server="irc.chat.twitch.tv";
+    std::string irc_server = "irc.chat.twitch.tv";
     int irc_port = 443; // Not 6667, just in case router blocks it.
     std::string irc_username = "";
     std::string irc_password = "oauth:<your_token_here>";
     std::string irc_channel = "";
     std::string irc_alias = "Twitch";
-    Color irc_chat_color = Colors::RGB(0xAD,0x83,0xFA);
+    Color irc_chat_color = Colors::RGB(0xAD, 0x83, 0xFA);
 
     bool show_messages = true;
     bool notify_on_user_leave = true;
@@ -44,6 +51,7 @@ public:
 
     bool isConnected() { return connected; };
     IRC* irc() { return &conn; };
+
 private:
     bool pending_connect = false;
     bool pending_disconnect = false;
@@ -52,9 +60,9 @@ private:
     bool twitch_enabled = true;
 
     void AddHooks();
-    bool hooked = 0;
+    bool hooked = false;
 
-    char message_buffer[1024] = { 0 };
+    char message_buffer[1024] = {0};
 
     IRC conn;
 

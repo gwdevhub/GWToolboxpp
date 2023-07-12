@@ -12,6 +12,7 @@ public:
         static LoginModule instance;
         return instance;
     }
+
     const char* Name() const override { return "Login Screen"; }
 
     bool HasSettings() override { return false; }

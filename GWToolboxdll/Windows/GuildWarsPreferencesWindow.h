@@ -4,9 +4,11 @@
 
 class GuildWarsPreferencesWindow : public ToolboxWindow {
     GuildWarsPreferencesWindow() = default;
-    ~GuildWarsPreferencesWindow() = default;
+    ~GuildWarsPreferencesWindow() override = default;
+
 public:
-    static GuildWarsPreferencesWindow& Instance() {
+    static GuildWarsPreferencesWindow& Instance()
+    {
         static GuildWarsPreferencesWindow instance;
         return instance;
     }

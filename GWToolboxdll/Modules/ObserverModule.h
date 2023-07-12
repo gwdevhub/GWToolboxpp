@@ -66,17 +66,19 @@ public:
     // Where an action can be a skill and/or attack
     struct TargetAction {
         TargetAction(const uint32_t caster_id,
-            const uint32_t target_id,
-            const bool is_attack,
-            const bool is_skill,
-            const GW::Constants::SkillID skill_id
+                     const uint32_t target_id,
+                     const bool is_attack,
+                     const bool is_skill,
+                     const GW::Constants::SkillID skill_id
         )
             : caster_id(caster_id)
-            , target_id(target_id)
-            , is_attack(is_attack)
-            , is_skill(is_skill)
-            , skill_id(skill_id)
-        {}
+              , target_id(target_id)
+              , is_attack(is_attack)
+              , is_skill(is_skill)
+              , skill_id(skill_id)
+        {
+        }
+
         const uint32_t caster_id;
         const uint32_t target_id;
         const bool is_attack;
@@ -109,7 +111,11 @@ public:
     // an agents statistics for an action (skill)
     struct ObservedSkill : ObservedAction {
     public:
-        ObservedSkill(const GW::Constants::SkillID skill_id) : skill_id(skill_id) {}
+        ObservedSkill(const GW::Constants::SkillID skill_id)
+            : skill_id(skill_id)
+        {
+        }
+
         const GW::Constants::SkillID skill_id;
     };
 
@@ -286,6 +292,7 @@ public:
 
         // stats:
         ObservableAgentStats stats;;
+
     public:
         // name fns with excessive caching & lazy loading
         std::string DisplayName();
@@ -339,16 +346,17 @@ public:
 
         const wchar_t* DecName() { return name_dec; }
         const bool HasExhaustion() { return gw_skill.special & 0x1; }
-        const bool IsMaintained() { return gw_skill.duration0 == 0x20000;  }
-        const bool IsPvE() { return (gw_skill.special & 0x80000) != 0;  }
+        const bool IsMaintained() { return gw_skill.duration0 == 0x20000; }
+        const bool IsPvE() { return (gw_skill.special & 0x80000) != 0; }
         const bool IsElite() { return (gw_skill.special & 0x4) != 0; }
         ObservableSkillStats stats = ObservableSkillStats();
 
         const std::string Name();
         const std::string DebugName();
+
     private:
-        wchar_t name_enc[64] = { 0 };
-        wchar_t name_dec[256] = { 0 };
+        wchar_t name_enc[64] = {0};
+        wchar_t name_dec[256] = {0};
 
         std::string _name = "";
     };
@@ -384,7 +392,8 @@ public:
         // agent_ids representing the players
         std::vector<uint32_t> agent_ids = {};
 
-        std::string DebugName() {
+        std::string DebugName()
+        {
             std::string _debug_name = "(" + std::to_string(party_id) + ") " + display_name;
             return _debug_name;
         }
@@ -405,8 +414,8 @@ public:
 
         std::string Name();
         std::string Description();
-        bool GetIsPvP()          const { return (flags & 0x1) != 0; }
-        bool GetIsGuildHall()    const { return (flags & 0x800000) != 0; }
+        bool GetIsPvP() const { return (flags & 0x1) != 0; }
+        bool GetIsGuildHall() const { return (flags & 0x800000) != 0; }
 
     private:
         std::string name = "";
@@ -428,11 +437,11 @@ public:
         enemy = 5,
     };
 
-    ~ObserverModule();
-
+    ~ObserverModule() override;
 
 public:
-    static ObserverModule& Instance() {
+    static ObserverModule& Instance()
+    {
         static ObserverModule instance;
         return instance;
     }
@@ -568,4 +577,3 @@ private:
     GW::HookEntry GenericValue_Entry;
     GW::HookEntry GenericFloat_Entry;
 };
-

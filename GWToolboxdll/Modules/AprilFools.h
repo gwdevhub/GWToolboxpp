@@ -8,10 +8,17 @@
 #include <ToolboxUIElement.h>
 
 class AprilFools : public ToolboxModule {
-    AprilFools() {};
-    ~AprilFools() {};
+    AprilFools()
+    {
+    };
+
+    ~AprilFools() override
+    {
+    };
+
 public:
-    static AprilFools& Instance() {
+    static AprilFools& Instance()
+    {
         static AprilFools instance;
         return instance;
     }

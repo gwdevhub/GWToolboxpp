@@ -6,7 +6,7 @@
 
 class MaterialsWindow : public ToolboxWindow {
     MaterialsWindow() = default;
-    ~MaterialsWindow() = default;
+    ~MaterialsWindow() override = default;
 
     enum Item {
         Essence,
@@ -16,27 +16,52 @@ class MaterialsWindow : public ToolboxWindow {
         ResScroll,
         Any
     };
-    enum Material {
-        BoltofCloth, Bone, ChitinFragment,
-        Feather, GraniteSlab, IronIngot,
-        PileofGlitteringDust, PlantFiber,
-        Scale, TannedHideSquare, WoodPlank,
 
-        AmberChunk, BoltofDamask, BoltofLinen,
-        BoltofSilk, DeldrimorSteelIngot,
-        Diamond, ElonianLeatherSquare, FurSquare,
-        GlobofEctoplasm, JadeiteShard, LeatherSquare,
-        LumpofCharcoal, MonstrousClaw, MonstrousEye,
-        MonstrousFang, ObsidianShard, OnyxGemstone,
-        RollofParchment, RollofVellum, Ruby,
-        Sapphire, SpiritwoodPlank, SteelIngot,
-        TemperedGlassVial, VialofInk,
+    enum Material {
+        BoltofCloth,
+        Bone,
+        ChitinFragment,
+        Feather,
+        GraniteSlab,
+        IronIngot,
+        PileofGlitteringDust,
+        PlantFiber,
+        Scale,
+        TannedHideSquare,
+        WoodPlank,
+
+        AmberChunk,
+        BoltofDamask,
+        BoltofLinen,
+        BoltofSilk,
+        DeldrimorSteelIngot,
+        Diamond,
+        ElonianLeatherSquare,
+        FurSquare,
+        GlobofEctoplasm,
+        JadeiteShard,
+        LeatherSquare,
+        LumpofCharcoal,
+        MonstrousClaw,
+        MonstrousEye,
+        MonstrousFang,
+        ObsidianShard,
+        OnyxGemstone,
+        RollofParchment,
+        RollofVellum,
+        Ruby,
+        Sapphire,
+        SpiritwoodPlank,
+        SteelIngot,
+        TemperedGlassVial,
+        VialofInk,
 
         N_MATS
     };
 
 public:
-    static MaterialsWindow& Instance() {
+    static MaterialsWindow& Instance()
+    {
         static MaterialsWindow instance;
         return instance;
     }
@@ -63,7 +88,7 @@ private:
     DWORD GetModelID(Material mat) const;
     Material GetMaterial(DWORD modelid);
     std::string GetPrice(Material mat1, float fac1,
-        Material mat2, float fac2, int extra) const;
+                         Material mat2, float fac2, int extra) const;
 
     void FullConsPriceTooltip() const;
 
@@ -85,19 +110,20 @@ private:
     int price[N_MATS] = {};
 
     // int max = 0;
-    GW::Item *GetMerchItem(Material mat) const;
-    GW::Item *GetBagItem(Material mat) const;
+    GW::Item* GetMerchItem(Material mat) const;
+    GW::Item* GetBagItem(Material mat) const;
 
     struct Transaction {
         enum Type { Sell, Buy, Quote };
-        Type     type;
+
+        Type type;
         uint32_t item_id;
         Material material;
 
         Transaction(Type t, Material mat)
             : type(t)
-            , item_id(0)
-            , material(mat)
+              , item_id(0)
+              , material(mat)
         {
         }
     };

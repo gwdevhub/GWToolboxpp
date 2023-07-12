@@ -8,7 +8,8 @@
 
 class ZrawDeepModule : public ToolboxModule {
 public:
-    static ZrawDeepModule& Instance() {
+    static ZrawDeepModule& Instance()
+    {
         static ZrawDeepModule instance;
         return instance;
     }

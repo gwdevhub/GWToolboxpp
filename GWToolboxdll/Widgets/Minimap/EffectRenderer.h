@@ -15,10 +15,7 @@
 class EffectRenderer : public VBuffer {
     friend class Minimap;
 
-
-
 public:
-
     void Render(IDirect3DDevice9* device) override;
 
     void Invalidate() override;

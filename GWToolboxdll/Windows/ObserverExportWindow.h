@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <ToolboxWindow.h>
@@ -6,9 +5,10 @@
 class ObserverExportWindow : public ToolboxWindow {
 public:
     ObserverExportWindow() = default;
-    ~ObserverExportWindow() = default;
+    ~ObserverExportWindow() override = default;
 
-    static ObserverExportWindow& Instance() {
+    static ObserverExportWindow& Instance()
+    {
         static ObserverExportWindow instance;
         return instance;
     }
@@ -33,8 +33,8 @@ public:
     void DrawSettingInternal() override;
 
 protected:
-    float text_long     = 0;
-    float text_medium   = 0;
-    float text_short    = 0;
-    float text_tiny     = 0;
+    float text_long = 0;
+    float text_medium = 0;
+    float text_short = 0;
+    float text_tiny = 0;
 };

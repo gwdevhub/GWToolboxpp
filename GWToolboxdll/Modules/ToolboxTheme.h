@@ -4,8 +4,10 @@
 
 class ToolboxTheme : public ToolboxUIElement {
     ToolboxTheme();
+
 public:
-    static ToolboxTheme& Instance() {
+    static ToolboxTheme& Instance()
+    {
         static ToolboxTheme instance;
         return instance;
     }
@@ -17,8 +19,14 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void Draw(IDirect3DDevice9* device) override;
-    void ShowVisibleRadio() override {}
-    void DrawSizeAndPositionSettings() override {}
+
+    void ShowVisibleRadio() override
+    {
+    }
+
+    void DrawSizeAndPositionSettings() override
+    {
+    }
 
     void SaveUILayout();
     void LoadUILayout();

@@ -4,10 +4,12 @@
 
 class HintsModule : public ToolboxModule {
 public:
-    static HintsModule& Instance() {
+    static HintsModule& Instance()
+    {
         static HintsModule instance;
         return instance;
     }
+
     const char* Icon() const override { return ICON_FA_LIGHTBULB; }
     const char* Name() const override { return "Hints"; }
     const char* SettingsName() const override { return "In-Game Hints"; }
@@ -17,6 +19,4 @@ public:
     void DrawSettingInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-
-
 };

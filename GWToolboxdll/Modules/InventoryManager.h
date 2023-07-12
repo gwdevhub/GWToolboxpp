@@ -7,17 +7,21 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <ToolboxWidget.h>
-namespace GW {
-    namespace Constants {
-        enum class Rarity : uint8_t {
-            White, Blue, Purple, Gold, Green
-        };
-    }
+
+namespace GW::Constants {
+    enum class Rarity : uint8_t {
+        White,
+        Blue,
+        Purple,
+        Gold,
+        Green
+    };
 }
 
 class InventoryManager : public ToolboxUIElement {
 public:
-    InventoryManager() {
+    InventoryManager()
+    {
         current_salvage_session.salvage_item_id = 0;
         is_movable = is_resizable = has_closebutton = can_show_in_main_window = false;
     }
@@ -29,6 +33,7 @@ public:
         PurpleAndLower,
         GoldAndLower
     };
+
     enum class IdentifyAllType : uint8_t {
         None,
         All,
@@ -37,7 +42,8 @@ public:
         Gold
     };
 
-    static InventoryManager& Instance() {
+    static InventoryManager& Instance()
+    {
         static InventoryManager instance;
         return instance;
     }
@@ -79,7 +85,9 @@ public:
     SalvageAllType salvage_all_type = SalvageAllType::None;
 
 protected:
-    void ShowVisibleRadio() override {};
+    void ShowVisibleRadio() override
+    {
+    };
 
 private:
     bool trade_whole_stacks = false;
@@ -101,10 +109,10 @@ private:
     bool right_click_context_menu_in_outpost = true;
 
     std::map<GW::Constants::Bag, bool> bags_to_salvage_from = {
-        { GW::Constants::Bag::Backpack,true },
-        { GW::Constants::Bag::Belt_Pouch,true },
-        { GW::Constants::Bag::Bag_1,true },
-        { GW::Constants::Bag::Bag_2,true }
+        {GW::Constants::Bag::Backpack, true},
+        {GW::Constants::Bag::Belt_Pouch, true},
+        {GW::Constants::Bag::Bag_1, true},
+        {GW::Constants::Bag::Bag_2, true}
     };
 
     std::map<uint32_t, std::string> hide_from_merchant_items{};
@@ -126,7 +134,7 @@ private:
     void FetchPotentialItems();
     void AttachSalvageListeners();
     void DetachSalvageListeners();
-    static void ClearSalvageSession(GW::HookStatus *status = nullptr, void * packet = nullptr);
+    static void ClearSalvageSession(GW::HookStatus* status = nullptr, void* packet = nullptr);
     void CancelSalvage();
     void CancelIdentify();
     void CancelAll();
@@ -156,43 +164,53 @@ public:
         bool IsOfferedInTrade();
         bool CanOfferToTrade();
 
-        [[nodiscard]] bool IsSparkly() const {
+        [[nodiscard]] bool IsSparkly() const
+        {
             return (interaction & 0x2000) == 0;
         }
 
-        [[nodiscard]] bool GetIsIdentified() const {
+        [[nodiscard]] bool GetIsIdentified() const
+        {
             return (interaction & 1) != 0;
         }
 
-        [[nodiscard]] bool IsStackable() const {
+        [[nodiscard]] bool IsStackable() const
+        {
             return (interaction & 0x80000) != 0;
         }
 
-        [[nodiscard]] bool IsUsable() const {
+        [[nodiscard]] bool IsUsable() const
+        {
             return (interaction & 0x1000000) != 0;
         }
 
-        [[nodiscard]] bool IsTradable() const {
+        [[nodiscard]] bool IsTradable() const
+        {
             return (interaction & 0x100) == 0;
         }
 
-        [[nodiscard]] bool IsInscription() const {
+        [[nodiscard]] bool IsInscription() const
+        {
             return (interaction & 0x25000000) == 0x25000000;
         }
 
-        [[nodiscard]] bool IsBlue() const {
+        [[nodiscard]] bool IsBlue() const
+        {
             return single_item_name && single_item_name[0] == 0xA3F;
         }
 
-        [[nodiscard]] bool IsPurple() const {
+        [[nodiscard]] bool IsPurple() const
+        {
             return (interaction & 0x400000) != 0;
         }
 
-        [[nodiscard]] bool IsGreen() const {
+        [[nodiscard]] bool IsGreen() const
+        {
             return (interaction & 0x10) != 0;
         }
 
-        [[nodiscard]] bool IsGold() const {
+        [[nodiscard]] bool IsGold() const
+        {
             return (interaction & 0x20000) != 0;
         }
     };
@@ -203,6 +221,7 @@ public:
     void Salvage(Item* item, Item* kit);
 
     uint32_t stack_prompt_item_id = 0;
+
 private:
     struct TransactItems {
         uint32_t type = 0;
@@ -215,6 +234,7 @@ private:
         uint32_t item_recv_ids[16]{};
         uint32_t item_recv_quantities[16]{};
     };
+
     struct CtoS_QuoteItem {
         uint32_t header = GAME_CMSG_REQUEST_QUOTE;
         uint32_t type = 0;
@@ -226,7 +246,9 @@ private:
         uint32_t item_recv_count = 0;
         uint32_t item_recv_ids[16]{};
     };
+
     static_assert(sizeof(CtoS_QuoteItem) == 0x9C);
+
     struct PendingTransaction {
         enum State : uint8_t {
             None,
@@ -236,31 +258,34 @@ private:
             Quoted,
             Transacting
         } state = None;
+
         uint32_t type = 0;
         uint32_t price = 0;
         uint32_t item_id = 0;
         clock_t state_timestamp = 0;
         uint8_t retries = 0;
-        void setState(State _state) {
+
+        void setState(State _state)
+        {
             state = _state;
             state_timestamp = clock();
         }
+
         CtoS_QuoteItem quote();
         TransactItems transact();
         Item* item();
-        bool in_progress() { return state > State::Prompt; }
+        bool in_progress() { return state > Prompt; }
         bool selling();
     };
 
 
     struct PendingItem {
-
         uint32_t item_id = 0;
         uint32_t slot = 0;
         GW::Constants::Bag bag = GW::Constants::Bag::None;
         uint32_t uses = 0;
         uint32_t quantity = 0;
-        bool set(Item *item = nullptr);
+        bool set(Item* item = nullptr);
         GuiUtils::EncString name;
         GuiUtils::EncString desc;
         GuiUtils::EncString wiki_name;
@@ -269,13 +294,16 @@ private:
         protected:
             void sanitise() override;
         };
+
         PluralEncString plural_item_name;
 
-        Item *item();
+        Item* item();
     };
+
     struct PotentialItem : PendingItem {
         bool proceed = true;
     };
+
     std::vector<PotentialItem*> potential_salvage_all_items{}; // List of items that would be processed if user confirms Salvage All
     void ClearPotentialItems();
     PendingItem pending_identify_item;

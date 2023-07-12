@@ -4,9 +4,11 @@
 
 class DupingWindow : public ToolboxWindow {
     DupingWindow() = default;
-    ~DupingWindow() = default;
+    ~DupingWindow() override = default;
+
 public:
-    static DupingWindow& Instance() {
+    static DupingWindow& Instance()
+    {
         static DupingWindow instance;
         return instance;
     }
@@ -18,7 +20,9 @@ public:
     void Terminate() override;
 
     // Update. Will always be called every frame.
-    void Update(float) override {}
+    void Update(float) override
+    {
+    }
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* device) override;

@@ -20,10 +20,9 @@ namespace GW {
 
     template <typename T>
     class Array;
-    namespace Packet {
-        namespace StoC {
-            struct PacketBase;
-        }
+
+    namespace Packet::StoC {
+        struct PacketBase;
     }
 }
 
@@ -54,13 +53,13 @@ namespace ToolboxUtils {
     const std::wstring GetSenderFromPacket(GW::Packet::StoC::PacketBase* packet);
 
     // Heros
-    
+
     GW::HeroInfo* GetHeroInfo(uint32_t hero_id);
     bool IsHenchman(uint32_t agent_id);
     bool IsHero(uint32_t agent_id, GW::HeroInfo** info_out = nullptr);
-   
+
     // Party related
-    
+
     // Find HenchmanPartyMember by agent_id, pass GW::PartyInfo** to also grab the party this henchman belongs to
     const GW::HenchmanPartyMember* GetHenchmanPartyMember(uint32_t, GW::PartyInfo** = nullptr);
     bool IsHenchmanInParty(uint32_t);
@@ -81,5 +80,4 @@ namespace ToolboxUtils {
     GW::Friend* GetFriend(wchar_t* account, wchar_t* playing, GW::FriendType type, GW::FriendStatus status);
 
     std::wstring ShorthandItemDescription(GW::Item* item);
-
 };

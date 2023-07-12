@@ -2,23 +2,23 @@
 
 #include <ToolboxUIElement.h>
 
-namespace GW {
-    namespace Constants {
-        enum class MapID;
-    }
+namespace GW::Constants {
+    enum class MapID;
 }
+
 class ToolboxSettings : public ToolboxUIElement {
     ToolboxSettings() = default;
-    ~ToolboxSettings() = default;
+    ~ToolboxSettings() override = default;
 
 public:
-    static ToolboxSettings& Instance() {
+    static ToolboxSettings& Instance()
+    {
         static ToolboxSettings instance;
         return instance;
     }
 
     const char* Name() const override { return "Toolbox Settings"; }
-    const char* Icon() const override { return ICON_FA_TOOLBOX;  }
+    const char* Icon() const override { return ICON_FA_TOOLBOX; }
 
     void LoadModules(ToolboxIni* ini);
 
@@ -28,10 +28,16 @@ public:
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
     void Draw(IDirect3DDevice9*) override;
-    void ShowVisibleRadio() override {};
+
+    void ShowVisibleRadio() override
+    {
+    };
 
     void DrawFreezeSetting();
-    void DrawSizeAndPositionSettings() override {}
+
+    void DrawSizeAndPositionSettings() override
+    {
+    }
 
     static bool move_all;
 

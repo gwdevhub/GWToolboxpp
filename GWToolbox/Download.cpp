@@ -25,7 +25,7 @@ public:
     }
 
 private: // From AsyncRestClient
-    void OnContent(const char *bytes, size_t count) override
+    void OnContent(const char* bytes, size_t count) override
     {
         AsyncRestClient::OnContent(bytes, count);
         m_DownloadLength += count;
@@ -34,7 +34,7 @@ private: // From AsyncRestClient
     std::atomic<size_t> m_DownloadLength;
 };
 
-bool Download(std::string& content, const char *url)
+bool Download(std::string& content, const char* url)
 {
     RestClient client;
     client.SetUrl(url);
@@ -53,7 +53,7 @@ bool Download(std::string& content, const char *url)
     return true;
 }
 
-void AsyncDownload(const char *url, AsyncFileDownloader *downloader)
+void AsyncDownload(const char* url, AsyncFileDownloader *downloader)
 {
     downloader->SetUrl(url);
     downloader->SetVerifyPeer(false);

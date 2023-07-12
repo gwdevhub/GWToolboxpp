@@ -1,8 +1,8 @@
 #pragma once
 
-#include <GWCA\Utilities\Hook.h>
+#include <GWCA/Utilities/Hook.h>
 
-#include <GWCA\Packets\StoC.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
@@ -10,10 +10,11 @@
 
 class InfoWindow : public ToolboxWindow {
     InfoWindow() = default;
-    ~InfoWindow() = default;
+    ~InfoWindow() override = default;
 
 public:
-    static InfoWindow& Instance() {
+    static InfoWindow& Instance()
+    {
         static InfoWindow instance;
         return instance;
     }

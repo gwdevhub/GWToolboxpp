@@ -5,11 +5,17 @@
 #include <ToolboxModule.h>
 
 class ChatFilter : public ToolboxModule {
-    ChatFilter() {};
-    ~ChatFilter() {};
+    ChatFilter()
+    {
+    };
+
+    ~ChatFilter() override
+    {
+    };
 
 public:
-    static ChatFilter& Instance() {
+    static ChatFilter& Instance()
+    {
         static ChatFilter instance;
         return instance;
     }

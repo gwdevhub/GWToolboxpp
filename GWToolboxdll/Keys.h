@@ -37,12 +37,14 @@
 #define VK_Y        0x59
 #define VK_Z        0x5A
 
-static int KeyName(long vkey, char* buf, int len) {
+static int KeyName(long vkey, char* buf, int len)
+{
     UINT scan_code = MapVirtualKey(vkey, MAPVK_VK_TO_VSC);
     return GetKeyNameTextA(MAKELPARAM(0x0001, scan_code), buf, len);
 }
 
-static const char* KeyName(long vkey) {
+static const char* KeyName(long vkey)
+{
     switch (vkey) {
         case 0: return "None";
         case VK_LBUTTON: return "Left mouse";
@@ -236,10 +238,9 @@ static const char* KeyName(long vkey) {
         case VK_OEM_MINUS: return "-";
         case VK_OEM_PERIOD: return ".";
         case VK_OEM_2: return "Oem 2";
-        case VK_OEM_3:
-            return "Oem 3";
-            // 0xC1-D7 -> reserved
-            // 0xD8-DA -> unassigned
+        case VK_OEM_3: return "Oem 3";
+        // 0xC1-D7 -> reserved
+        // 0xD8-DA -> unassigned
         case VK_OEM_4: return "Oem 4";
         case VK_OEM_5: return "Oem 5";
         case VK_OEM_6: return "Oem 6";
@@ -252,9 +253,8 @@ static const char* KeyName(long vkey) {
         case 0xE4: return "VK_0xE4"; // oem specific
         case VK_PROCESSKEY: return "IME Process";
         case 0xE6: return "VK_0xE6"; // oem specific
-        case VK_PACKET:
-            return "Packet";
-            // 0xE8 -> unassigned
+        case VK_PACKET: return "Packet";
+        // 0xE8 -> unassigned
         case 0xE9: return "VK_0xE9";
         case 0xEA: return "VK_0xEA";
         case 0xEB: return "VK_0xEB";
@@ -281,21 +281,22 @@ static const char* KeyName(long vkey) {
     }
 }
 
-typedef long Key;
+using Key = long;
 
 constexpr LONG ModKey_Shift = 0x10000;
 constexpr LONG ModKey_Control = 0x20000;
 constexpr LONG ModKey_Alt = 0x40000;
 
-inline int ModKeyName(char* buf, size_t bufsz, LONG mod, LONG vkey, const char* ifempty = "") {
+inline int ModKeyName(char* buf, size_t bufsz, LONG mod, LONG vkey, const char* ifempty = "")
+{
     char vkey_c[32];
     if (vkey > 0) {
         if (!KeyName(vkey, vkey_c, _countof(vkey_c)))
             snprintf(vkey_c, _countof(vkey_c), "%s", KeyName(vkey));
     }
     return snprintf(buf, bufsz, "%s%s%s%s",
-        (mod & ModKey_Control) ? "Control + " : "",
-        (mod & ModKey_Alt) ? "Alt + " : "",
-        (mod & ModKey_Shift) ? "Shift + " : "",
-        vkey > 0 ? vkey_c : ifempty);
+                    (mod & ModKey_Control) ? "Control + " : "",
+                    (mod & ModKey_Alt) ? "Alt + " : "",
+                    (mod & ModKey_Shift) ? "Shift + " : "",
+                    vkey > 0 ? vkey_c : ifempty);
 }

@@ -4,10 +4,8 @@
 
 #include <ToolboxWindow.h>
 
-namespace GW {
-    namespace Constants {
-        enum class QuestID : uint32_t;
-    }
+namespace GW::Constants {
+    enum class QuestID : uint32_t;
 }
 
 class DailyQuests : public ToolboxWindow {
@@ -15,7 +13,8 @@ class DailyQuests : public ToolboxWindow {
     ~DailyQuests() override = default;
 
 public:
-    static DailyQuests& Instance() {
+    static DailyQuests& Instance()
+    {
         static DailyQuests instance;
         return instance;
     }
@@ -41,13 +40,13 @@ public:
     static const size_t wbp_cnt = 6;
 
 private:
-    bool subscribed_zaishen_bounties[zb_cnt] = { 0 };
-    bool subscribed_zaishen_combats[zc_cnt] = { 0 };
-    bool subscribed_zaishen_missions[zm_cnt] = { 0 };
-    bool subscribed_zaishen_vanquishes[zv_cnt] = { 0 };
-    bool subscribed_wanted_quests[ws_cnt] = { 0 };
-    bool subscribed_weekly_bonus_pve[wbe_cnt] = { 0 };
-    bool subscribed_weekly_bonus_pvp[wbp_cnt] = { 0 };
+    bool subscribed_zaishen_bounties[zb_cnt] = {false};
+    bool subscribed_zaishen_combats[zc_cnt] = {false};
+    bool subscribed_zaishen_missions[zm_cnt] = {false};
+    bool subscribed_zaishen_vanquishes[zv_cnt] = {false};
+    bool subscribed_wanted_quests[ws_cnt] = {false};
+    bool subscribed_weekly_bonus_pve[wbe_cnt] = {false};
+    bool subscribed_weekly_bonus_pvp[wbp_cnt] = {false};
 
     bool show_zaishen_bounty_in_window = true;
     bool show_zaishen_combat_in_window = true;
@@ -64,13 +63,13 @@ private:
     int daily_quest_window_count = 90;
 
     static void CmdWeeklyBonus(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdWantedByShiningBlade(const wchar_t *message, int argc, LPWSTR *argv);
-    static void CmdZaishenBounty(const wchar_t *message, int argc, LPWSTR *argv);
-    static void CmdZaishenMission(const wchar_t *message, int argc, LPWSTR *argv);
-    static void CmdZaishenCombat(const wchar_t *message, int argc, LPWSTR *argv);
-    static void CmdZaishenVanquish(const wchar_t *message, int argc, LPWSTR *argv);
-    static void CmdVanguard(const wchar_t *message, int argc, LPWSTR *argv);
-    static void CmdNicholas(const wchar_t *message, int argc, LPWSTR *argv);
+    static void CmdWantedByShiningBlade(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdZaishenBounty(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdZaishenMission(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdZaishenCombat(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdZaishenVanquish(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdVanguard(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdNicholas(const wchar_t* message, int argc, LPWSTR* argv);
 
     class ZaishenMission {
         ZaishenMission(GW::Constants::QuestID _quest_id, GW::Constants::MapID _map_id);

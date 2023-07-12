@@ -9,7 +9,8 @@
 
 class ItemFilter : public ToolboxModule {
 public:
-    static ItemFilter& Instance() {
+    static ItemFilter& Instance()
+    {
         static ItemFilter instance;
         return instance;
     }
@@ -26,6 +27,4 @@ public:
     void DrawSettingInternal() override;
 
 private:
-
-    
 };

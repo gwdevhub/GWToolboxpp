@@ -12,36 +12,35 @@
 #include <Widgets/Minimap/RangeRenderer.h>
 #include <Widgets/Minimap/SymbolsRenderer.h>
 
-class Minimap final : public ToolboxWidget
-{
-    struct Vec2i
-    {
+class Minimap final : public ToolboxWidget {
+    struct Vec2i {
         Vec2i(int _x, int _y)
             : x(_x)
-            , y(_y)
+              , y(_y)
         {
         }
+
         Vec2i() = default;
         int x = 0;
         int y = 0;
     };
+
     Minimap()
     {
         is_resizable = false;
     };
-    ~Minimap() = default;
+    ~Minimap() override = default;
 
 public:
     Minimap(const Minimap&) = delete;
 
-    static Minimap &Instance()
+    static Minimap& Instance()
     {
         static Minimap instance;
         return instance;
     }
 
-    enum class MinimapModifierBehaviour : int
-    {
+    enum class MinimapModifierBehaviour : int {
         Disabled,
         Draw,
         Target,
@@ -62,8 +61,8 @@ public:
     void Initialize() override;
     void Terminate() override;
 
-    void Draw(IDirect3DDevice9 *device) override;
-    void RenderSetupProjection(IDirect3DDevice9 *device) const;
+    void Draw(IDirect3DDevice9* device) override;
+    void RenderSetupProjection(IDirect3DDevice9* device) const;
 
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
@@ -71,11 +70,11 @@ public:
     bool OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam);
-    static void OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv);
+    static void OnFlagHeroCmd(const wchar_t* message, int argc, LPWSTR* argv);
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void LoadSettings(ToolboxIni *ini) override;
-    void SaveSettings(ToolboxIni *ini) override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
 
     float GetMapRotation() const;
@@ -96,7 +95,6 @@ public:
     static void Render(IDirect3DDevice9* device);
 
 private:
-
     bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
     bool IsActive() const;
@@ -114,7 +112,7 @@ private:
     bool snap_to_compass = false;
 
     GW::Vec2f shadowstep_location = {0.f, 0.f};
-    RECT clipping = { 0 };
+    RECT clipping = {0};
 
     Vec2i drag_start;
     GW::Vec2f translation;

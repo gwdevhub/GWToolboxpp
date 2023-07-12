@@ -53,6 +53,7 @@ namespace {
         FlagState_Hero7,
         FlagState_None
     };
+
     enum CaptureMouseClickType : uint32_t {
         CaptureType_None = 0,
         CaptureType_FlagHero = 1,
@@ -60,67 +61,87 @@ namespace {
         CaptureType_SalvageMaterials = 12,
         CaptureType_Idenfify = 13
     };
+
     struct MouseClickCaptureData {
         struct sub1 {
             uint8_t pad0[0x3C];
+
             struct sub2 {
                 uint8_t pad1[0x14];
+
                 struct sub3 {
                     uint8_t pad2[0x24];
+
                     struct sub4 {
                         uint8_t pad3[0x2C];
+
                         struct sub5 {
                             uint8_t pad4[0x4];
                             FlaggingState* flagging_hero;
-                        } *sub5;
-                    } *sub4;
-                } *sub3;
-            } *sub2;
-        } *sub1;
-    } *MouseClickCaptureDataPtr = nullptr;
+                        } * sub5;
+                    } * sub4;
+                } * sub3;
+            } * sub2;
+        } * sub1;
+    }* MouseClickCaptureDataPtr = nullptr;
+
     uint32_t* GameCursorState = nullptr;
     CaptureMouseClickType* CaptureMouseClickTypePtr = nullptr;
 
     // Internal flagging state to workaround not being able to set the in-game cursor state.
-    FlaggingState minimap_flagging_state = FlaggingState::FlagState_None;
+    FlaggingState minimap_flagging_state = FlagState_None;
 
-    FlaggingState GetFlaggingState() {
+    FlaggingState GetFlaggingState()
+    {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
-            return FlaggingState::FlagState_None;
+            return FlagState_None;
         if (!CaptureMouseClickTypePtr || *CaptureMouseClickTypePtr != CaptureType_FlagHero || !MouseClickCaptureDataPtr || !MouseClickCaptureDataPtr->sub1)
-            return FlaggingState::FlagState_None;
+            return FlagState_None;
         return *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
     }
+
     bool compass_fix_pending = false;
-    bool SetFlaggingState(FlaggingState set_state) {
+
+    bool SetFlaggingState(FlaggingState set_state)
+    {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
             return false;
         // keep an internal flag for the minimap flagging until StartCaptureMouseClick_Func is working
         // minimap_flagging_state = set_state;
         if (GetFlaggingState() == set_state)
             return true;
-        if (set_state == FlaggingState::FlagState_None) {
+        if (set_state == FlagState_None) {
             set_state = GetFlaggingState();
         }
         GW::UI::ControlAction key = GW::UI::ControlAction_None;
         switch (set_state) {
-        case FlaggingState::FlagState_Hero1: key = GW::UI::ControlAction_CommandHero1; break;
-        case FlaggingState::FlagState_Hero2: key = GW::UI::ControlAction_CommandHero2; break;
-        case FlaggingState::FlagState_Hero3: key = GW::UI::ControlAction_CommandHero3; break;
-        case FlaggingState::FlagState_Hero4: key = GW::UI::ControlAction_CommandHero4; break;
-        case FlaggingState::FlagState_Hero5: key = GW::UI::ControlAction_CommandHero5; break;
-        case FlaggingState::FlagState_Hero6: key = GW::UI::ControlAction_CommandHero6; break;
-        case FlaggingState::FlagState_Hero7: key = GW::UI::ControlAction_CommandHero7; break;
-        case FlaggingState::FlagState_All: key = GW::UI::ControlAction_CommandParty; break;
-        default:
-            return false;
+            case FlagState_Hero1: key = GW::UI::ControlAction_CommandHero1;
+                break;
+            case FlagState_Hero2: key = GW::UI::ControlAction_CommandHero2;
+                break;
+            case FlagState_Hero3: key = GW::UI::ControlAction_CommandHero3;
+                break;
+            case FlagState_Hero4: key = GW::UI::ControlAction_CommandHero4;
+                break;
+            case FlagState_Hero5: key = GW::UI::ControlAction_CommandHero5;
+                break;
+            case FlagState_Hero6: key = GW::UI::ControlAction_CommandHero6;
+                break;
+            case FlagState_Hero7: key = GW::UI::ControlAction_CommandHero7;
+                break;
+            case FlagState_All: key = GW::UI::ControlAction_CommandParty;
+                break;
+            default: return false;
         }
-        return GW::UI::Keypress(key);
+        return Keypress(key);
     }
+
     // Same as GW::PartyMgr::GetPlayerIsLeader() but has an extra check to ignore disconnected people.
-    bool GetPlayerIsLeader() {
+    bool GetPlayerIsLeader()
+    {
         GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
-        if (!party || !party->players.size()) return false;
+        if (!party || !party->players.size())
+            return false;
         const uint32_t player_id = GW::PlayerMgr::GetPlayerNumber();
         for (auto& player : party->players) {
             if (!player.connected())
@@ -130,19 +151,22 @@ namespace {
         return false;
     }
 
-    GW::PartyInfo* GetPlayerParty() {
-        const GW::GameContext * gamectx = GW::GetGameContext();
+    GW::PartyInfo* GetPlayerParty()
+    {
+        const GW::GameContext* gamectx = GW::GetGameContext();
         if (!(gamectx && gamectx->party))
             return nullptr;
         return gamectx->party->player_party;
     }
-    GW::UI::WindowPosition* compass_frame = 0;
 
-    typedef uint32_t(__fastcall* DrawCompassAgentsByType_pt)(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags);
-    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = 0;
-    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Ret = 0;
+    GW::UI::WindowPosition* compass_frame = nullptr;
+
+    using DrawCompassAgentsByType_pt = uint32_t(__fastcall*)(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags);
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = nullptr;
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Ret = nullptr;
 
     bool hide_compass_agents = false;
+
     uint32_t __fastcall OnDrawCompassAgentsByType(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags)
     {
         GW::Hook::EnterHook();
@@ -156,7 +180,9 @@ namespace {
 
     bool hide_compass_quest_marker = false;
     GW::MemoryPatcher show_compass_quest_marker_patch;
-    void ToggleCompassQuestMarker(bool enable) {
+
+    void ToggleCompassQuestMarker(bool enable)
+    {
         if (enable == show_compass_quest_marker_patch.GetIsEnable())
             return;
         show_compass_quest_marker_patch.TogglePatch(enable);
@@ -176,21 +202,26 @@ namespace {
                 msg.map_to = quest->map_to;
                 msg.log_state = quest->log_state;
 
-                GW::UI::SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &msg);
+                SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &msg);
             }
         });
-
     }
 }
-void Minimap::DrawHelp() {
+
+void Minimap::DrawHelp()
+{
     if (!ImGui::TreeNodeEx("Minimap", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
         return;
 
-    ImGui::Bullet(); ImGui::Text("'/marktarget' highlights the current target on your minimap.");
-    ImGui::Bullet(); ImGui::Text("'/marktarget clear' removes the current target as a marked target on your minimap.");
-    ImGui::Bullet(); ImGui::Text("'/clearmarktarget clear' removes all marked target highlights on your minimap.");
+    ImGui::Bullet();
+    ImGui::Text("'/marktarget' highlights the current target on your minimap.");
+    ImGui::Bullet();
+    ImGui::Text("'/marktarget clear' removes the current target as a marked target on your minimap.");
+    ImGui::Bullet();
+    ImGui::Text("'/clearmarktarget clear' removes all marked target highlights on your minimap.");
     ImGui::TreePop();
 }
+
 void Minimap::Terminate()
 {
     ToolboxWidget::Terminate();
@@ -207,7 +238,7 @@ void Minimap::Initialize()
 {
     ToolboxWidget::Initialize();
 
-    uintptr_t address = GW::Scanner::Find("\x00\x74\x16\x6A\x27\x68\x80\x00\x00\x00\x6A\x00\x68", "xxxxxxxxxxxxx",-0x51);
+    uintptr_t address = GW::Scanner::Find("\x00\x74\x16\x6A\x27\x68\x80\x00\x00\x00\x6A\x00\x68", "xxxxxxxxxxxxx", -0x51);
     if (address) {
         address = *(uintptr_t*)address;
         MouseClickCaptureDataPtr = (MouseClickCaptureData*)address;
@@ -221,48 +252,47 @@ void Minimap::Initialize()
     GW::HookBase::CreateHook(DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
     GW::HookBase::EnableHooks(DrawCompassAgentsByType_Func);
 
-    address = GW::Scanner::Find("\xdd\xd8\x6a\x01\x52","xxxxx");
+    address = GW::Scanner::Find("\xdd\xd8\x6a\x01\x52", "xxxxx");
     if (address)
         show_compass_quest_marker_patch.SetPatch(address, "\xEB\xEC", 2);
     ToggleCompassQuestMarker(hide_compass_quest_marker);
 
-
-    GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus* ,uint32_t key) {
+    GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != GW::UI::ControlAction_ReverseCamera)
             return;
         camera_currently_reversed = true;
-        });
+    });
     GW::UI::RegisterKeyupCallback(&AgentPinged_Entry, [this](GW::HookStatus*, uint32_t key) {
         if (key != GW::UI::ControlAction_ReverseCamera)
             return;
         camera_currently_reversed = false;
-        });
+    });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry, [this](GW::HookStatus *, GW::Packet::StoC::AgentPinged *pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry, [this](GW::HookStatus*, GW::Packet::StoC::AgentPinged* pak) -> void {
         if (visible) {
             pingslines_renderer.P046Callback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CompassEvent>(&CompassEvent_Entry, [this](GW::HookStatus *, GW::Packet::StoC::CompassEvent *pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CompassEvent>(&CompassEvent_Entry, [this](GW::HookStatus*, GW::Packet::StoC::CompassEvent* pak) -> void {
         if (visible) {
             pingslines_renderer.P138Callback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&CompassEvent_Entry, [this](GW::HookStatus *status, GW::Packet::StoC::PlayEffect *pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&CompassEvent_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::PlayEffect* pak) -> void {
         UNREFERENCED_PARAMETER(status);
         if (visible) {
             if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
                 effect_renderer.PacketCallback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValueTarget_Entry, [this](GW::HookStatus *s, GW::Packet::StoC::GenericValue *pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValueTarget_Entry, [this](GW::HookStatus* s, GW::Packet::StoC::GenericValue* pak) -> void {
         UNREFERENCED_PARAMETER(s);
         if (visible) {
             if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
                 effect_renderer.PacketCallback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry, [this](GW::HookStatus *s, GW::Packet::StoC::GenericValueTarget *pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry, [this](GW::HookStatus* s, GW::Packet::StoC::GenericValueTarget* pak) -> void {
         UNREFERENCED_PARAMETER(s);
         if (visible) {
             pingslines_renderer.P153Callback(pak);
@@ -277,7 +307,7 @@ void Minimap::Initialize()
         GW::UI::UIMessage::kSkillActivated
     };
     for (const auto message_id : hook_messages) {
-        GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
+        RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
     }
 
     last_moved = TIMER_INIT();
@@ -286,40 +316,46 @@ void Minimap::Initialize()
 
     GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
 }
-void Minimap::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*) {
+
+void Minimap::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*)
+{
     auto& instance = Instance();
     switch (msgid) {
-    case GW::UI::UIMessage::kMapLoaded: {
-        instance.pmap_renderer.Invalidate();
-        instance.loading = false;
-        // Compass fix to allow hero flagging controls
-        const GW::UI::WindowPosition* compass_info = GW::UI::GetWindowPosition(GW::UI::WindowID_Compass);
-        if (compass_info && !compass_info->visible()) {
-            // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
-            compass_fix_pending = true;
-            GW::UI::SetWindowVisible(GW::UI::WindowID_Compass, true);
+        case GW::UI::UIMessage::kMapLoaded: {
+            instance.pmap_renderer.Invalidate();
+            instance.loading = false;
+            // Compass fix to allow hero flagging controls
+            const GW::UI::WindowPosition* compass_info = GetWindowPosition(GW::UI::WindowID_Compass);
+            if (compass_info && !compass_info->visible()) {
+                // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
+                compass_fix_pending = true;
+                SetWindowVisible(GW::UI::WindowID_Compass, true);
+            }
+            instance.is_observing = GW::Map::GetIsObserving();
         }
-        instance.is_observing = GW::Map::GetIsObserving();
-    } break;
-    case GW::UI::UIMessage::kSkillActivated: {
-        const struct Payload {
-            uint32_t agent_id;
-            GW::Constants::SkillID skill_id;
-        } *payload = static_cast<Payload*>(wParam);
-        if (payload->agent_id == GW::Agents::GetPlayerId()) {
-            if (payload->skill_id == GW::Constants::SkillID::Shadow_of_Haste || payload->skill_id == GW::Constants::SkillID::Shadow_Walk) {
-                instance.shadowstep_location = GW::Agents::GetPlayer()->pos;
+        break;
+        case GW::UI::UIMessage::kSkillActivated: {
+            const struct Payload {
+                uint32_t agent_id;
+                GW::Constants::SkillID skill_id;
+            }* payload = static_cast<Payload*>(wParam);
+            if (payload->agent_id == GW::Agents::GetPlayerId()) {
+                if (payload->skill_id == GW::Constants::SkillID::Shadow_of_Haste || payload->skill_id == GW::Constants::SkillID::Shadow_Walk) {
+                    instance.shadowstep_location = GW::Agents::GetPlayer()->pos;
+                }
             }
         }
-    } break;
-    case GW::UI::UIMessage::kMapChange: {
-        instance.loading = true;
-        instance.agent_renderer.auto_target_id = 0;
-    } break;
-    case GW::UI::UIMessage::kChangeTarget: {
-        const GW::UI::ChangeTargetUIMsg* msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
-        instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
-    } break;
+        break;
+        case GW::UI::UIMessage::kMapChange: {
+            instance.loading = true;
+            instance.agent_renderer.auto_target_id = 0;
+        }
+        break;
+        case GW::UI::UIMessage::kChangeTarget: {
+            const GW::UI::ChangeTargetUIMsg* msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
+            instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
+        }
+        break;
     }
 }
 
@@ -328,7 +364,7 @@ GW::Vec2f Minimap::ShadowstepLocation() const
     return shadowstep_location;
 }
 
-void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
+void Minimap::OnFlagHeroCmd(const wchar_t* message, int argc, LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
 
@@ -341,16 +377,17 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
     }
     const auto is_flagged = [](auto hero) -> bool {
         if (hero == 0) {
-            const GW::Vec3f &allflag = GW::GetGameContext()->world->all_flag;
+            const GW::Vec3f& allflag = GW::GetGameContext()->world->all_flag;
             if (allflag.x != 0 && allflag.y != 0 && (!std::isinf(allflag.x) || !std::isinf(allflag.y))) {
                 return true;
             }
-        } else {
-            const GW::HeroFlagArray &flags = GW::GetGameContext()->world->hero_flags;
+        }
+        else {
+            const GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags;
             if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size())
                 return false;
 
-            const GW::HeroFlag &flag = flags[hero - 1];
+            const GW::HeroFlag& flag = flags[hero - 1];
             if (!std::isinf(flag.flag.x) || !std::isinf(flag.flag.y)) {
                 return true;
             }
@@ -373,7 +410,8 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
             GW::PartyMgr::UnflagAll(); // "/flag 5 clear"
             return;
         }
-        if (arg2 == L"toggle") { // "/flag 5 toggle"
+        if (arg2 == L"toggle") {
+            // "/flag 5 toggle"
             if (is_flagged(0))
                 GW::PartyMgr::UnflagAll();
             else
@@ -414,7 +452,8 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
         GW::PartyMgr::UnflagHero(f_hero); // "/flag 5 clear"
         return;
     }
-    if (arg2 == L"toggle") { // "/flag 5 toggle"
+    if (arg2 == L"toggle") {
+        // "/flag 5 toggle"
         if (is_flagged(f_hero))
             GW::PartyMgr::UnflagHero(f_hero);
         else
@@ -430,7 +469,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
 
 void Minimap::DrawSettingInternal()
 {
-    constexpr const char* minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
+    constexpr auto minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
 
     if (snap_to_compass) {
         ImGui::NextSpacedElement();
@@ -492,10 +531,13 @@ void Minimap::DrawSettingInternal()
         ImGui::TreePop();
     }
     ImGui::StartSpacedElements(300.f);
-    ImGui::NextSpacedElement();  ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
-    ImGui::NextSpacedElement();  ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
     ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
-    ImGui::NextSpacedElement();  ImGui::Checkbox("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap);
     ImGui::ShowHelp("Show a star for NPCs that have quest progress available");
 
     ImGui::SliderInt("Agent Border thickness", reinterpret_cast<int*>(&agent_renderer.agent_border_thickness), 0, 50);
@@ -503,49 +545,54 @@ void Minimap::DrawSettingInternal()
     ImGui::Text("Allow mouse click-through in:");
     ImGui::Indent();
     ImGui::StartSpacedElements(200.f);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Explorable areas", &mouse_clickthrough_in_explorable);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Outposts", &mouse_clickthrough_in_outpost);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Explorable areas", &mouse_clickthrough_in_explorable);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Outposts", &mouse_clickthrough_in_outpost);
 
     ImGui::Unindent();
     ImGui::Text("Hold + Click modifiers");
     ImGui::ShowHelp("Define behaviour of holding keyboard keys and clicking the minimap.\n"
-                    "Draw: ping and draw on the compass.\n"
-                    "Target: click to target agent.\n"
-                    "Move: move the minimap outside of compass range.\n"
-                    "Walk: start walking character to selected location.\n");
+        "Draw: ping and draw on the compass.\n"
+        "Target: click to target agent.\n"
+        "Move: move the minimap outside of compass range.\n"
+        "Walk: start walking character to selected location.\n");
     ImGui::Combo("None", reinterpret_cast<int*>(&key_none_behavior), minimap_modifier_behavior_combo_str);
     ImGui::Combo("Control", reinterpret_cast<int*>(&key_ctrl_behavior), minimap_modifier_behavior_combo_str);
     ImGui::Combo("Shift", reinterpret_cast<int*>(&key_shift_behavior), minimap_modifier_behavior_combo_str);
     ImGui::Combo("Alt", reinterpret_cast<int*>(&key_alt_behavior), minimap_modifier_behavior_combo_str);
 
     ImGui::StartSpacedElements(256.f);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Map Rotation", &rotate_minimap);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Map Rotation", &rotate_minimap);
     ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Flip when reversed", &flip_on_reverse);
     ImGui::ShowHelp("Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
     ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Circular", &circular_map);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Circular", &circular_map);
     ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
 }
 
-void Minimap::LoadSettings(ToolboxIni *ini)
+void Minimap::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
     Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"),
-        "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
-        [](bool success, const std::wstring& error) {
-            if (success) {
-                Minimap::Instance().custom_renderer.LoadMarkers();
-            }
-            else {
-                Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
-            }
-
-        });
+                                "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
+                                [](bool success, const std::wstring& error) {
+                                    if (success) {
+                                        Instance().custom_renderer.LoadMarkers();
+                                    }
+                                    else {
+                                        Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
+                                    }
+                                });
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
     hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
     hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
@@ -576,7 +623,7 @@ void Minimap::LoadSettings(ToolboxIni *ini)
     effect_renderer.LoadSettings(ini, Name());
 }
 
-void Minimap::SaveSettings(ToolboxIni *ini)
+void Minimap::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
     ini->SetDoubleValue(Name(), VAR_NAME(scale), scale);
@@ -608,7 +655,7 @@ void Minimap::SaveSettings(ToolboxIni *ini)
     effect_renderer.SaveSettings(ini, Name());
 }
 
-size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes, bool* has_flags)
+size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags)
 {
     _player_heroes.clear();
     if (!party)
@@ -627,14 +674,14 @@ size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::Agen
     }
 
     _player_heroes.reserve(heroes.size());
-    for (const GW::HeroPartyMember &hero : heroes) {
+    for (const GW::HeroPartyMember& hero : heroes) {
         if (hero.owner_player_id == player_id)
             _player_heroes.push_back(hero.agent_id);
         else if (player_is_leader) {
             auto found = party_players_by_id.find(hero.owner_player_id);
             if (found == party_players_by_id.end() || found->second->connected())
                 continue;
-            if(has_flags)
+            if (has_flags)
                 *has_flags = true;
         }
     }
@@ -662,12 +709,12 @@ DirectX::XMFLOAT2 Minimap::GetGwinchScale() const
     return gwinch_scale;
 }
 
-void Minimap::Draw(IDirect3DDevice9 *)
+void Minimap::Draw(IDirect3DDevice9*)
 {
     if (!IsActive())
         return;
 
-    const GW::Agent *me = GW::Agents::GetPlayer();
+    const GW::Agent* me = GW::Agents::GetPlayer();
     if (me == nullptr)
         return;
 
@@ -681,7 +728,8 @@ void Minimap::Draw(IDirect3DDevice9 *)
             bool found = false;
             for (const auto& effect : *effects) {
                 found = effect.skill_id == GW::Constants::SkillID::Shadow_of_Haste || effect.skill_id == GW::Constants::SkillID::Shadow_Walk;
-                if (found) break;
+                if (found)
+                    break;
             }
             if (!found) {
                 shadowstep_location = GW::Vec2f();
@@ -694,10 +742,11 @@ void Minimap::Draw(IDirect3DDevice9 *)
         const GW::Vec2f v(translation.x, translation.y);
         const float speed = std::min((TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
         GW::Vec2f d = v;
-        d = GW::Normalize(d) * speed;
+        d = Normalize(d) * speed;
         if (std::abs(d.x) > std::abs(v.x)) {
             translation = GW::Vec2f(0, 0);
-        } else {
+        }
+        else {
             translation -= d;
         }
     }
@@ -715,35 +764,35 @@ void Minimap::Draw(IDirect3DDevice9 *)
         else {
             // @Cleanup: Don't do this every frame, only when compass is relocated.
             if (!compass_frame) {
-                compass_frame = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_Compass);
+                compass_frame = GetWindowPosition(GW::UI::WindowID::WindowID_Compass);
             }
             else {
                 const float multiplier = GuiUtils::GetGWScaleMultiplier();
                 float compass_width = compass_frame->width(multiplier);
                 float compass_height = compass_frame->height(multiplier);
                 float compass_padding = compass_width * .05f;
-                location = { static_cast<int>(compass_frame->left(multiplier) + compass_padding),static_cast<int>(compass_frame->top(multiplier) + compass_padding) };
-                size = { static_cast<int>(compass_width - (compass_padding * 2.f)) , static_cast<int>(compass_height - (compass_padding * 2.f)) };
+                location = {static_cast<int>(compass_frame->left(multiplier) + compass_padding), static_cast<int>(compass_frame->top(multiplier) + compass_padding)};
+                size = {static_cast<int>(compass_width - (compass_padding * 2.f)), static_cast<int>(compass_height - (compass_padding * 2.f))};
 
                 if (compass_width == 0 && location.x == 0 && location.y == 0) {
                     // In "Restore Defaults" state - replace with sane default values
                     // Default values for a multiplier of 1.0f
                     const int DEFAULT_WIDTH = 245;
                     const int DEFAULT_HEIGHT = 269;
-                    
+
                     compass_width = std::roundf(DEFAULT_WIDTH * multiplier);
                     compass_height = std::roundf(DEFAULT_HEIGHT * multiplier);
                     compass_padding = compass_width * .05f;
 
-                    int windowWidth = GW::UI::GetPreference(GW::UI::NumberPreference::WindowSizeX);
+                    int windowWidth = GetPreference(GW::UI::NumberPreference::WindowSizeX);
                     location.x = static_cast<int>(windowWidth - compass_width + compass_padding);
                     location.y = static_cast<int>(compass_padding);
                     size.x = static_cast<int>(compass_width - (compass_padding * 2.0f));
                     size.y = static_cast<int>(compass_height - (compass_padding * 2.0f));
                 }
 
-                ImGui::SetWindowPos({ static_cast<float>(location.x),static_cast<float>(location.y) });
-                ImGui::SetWindowSize({ static_cast<float>(size.x),static_cast<float>(size.y) });
+                ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
+                ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
             }
         }
 
@@ -758,7 +807,6 @@ void Minimap::Draw(IDirect3DDevice9 *)
     ImGui::PopStyleColor(2);
 
     if (hero_flag_controls_show && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-
         const GW::PartyInfo* playerparty = GetPlayerParty();
         bool has_flags = false;
         GetPlayerHeroes(playerparty, player_heroes, &has_flags);
@@ -770,11 +818,11 @@ void Minimap::Draw(IDirect3DDevice9 *)
             }
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background).Value);
             if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
-                static const char *flag_txt[] = {"All", "1", "2", "3", "4", "5", "6", "7", "8"};
+                static const char* flag_txt[] = {"All", "1", "2", "3", "4", "5", "6", "7", "8"};
                 GW::Vec3f allflag = GW::GetGameContext()->world->all_flag;
                 const unsigned int num_heroflags = player_heroes.size() + 1;
                 const float w_but = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * num_heroflags) /
-                    (num_heroflags + 1);
+                                    (num_heroflags + 1);
 
                 for (unsigned int i = 0; i < num_heroflags; ++i) {
                     if (i > 0)
@@ -785,7 +833,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
 
                     if (ImGui::Button(flag_txt[i], ImVec2(w_but, 0))) {
                         if (is_flagging)
-                            SetFlaggingState(FlaggingState::FlagState_None);
+                            SetFlaggingState(FlagState_None);
                         else
                             SetFlaggingState(static_cast<FlaggingState>(i));
                         //flagging[i] ^= 1;
@@ -797,7 +845,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
                         if (i == 0)
                             GW::PartyMgr::UnflagAll();
                         else
-                            GW::PartyMgr::FlagHeroAgent(player_heroes[i-1], GW::GamePos(HUGE_VALF, HUGE_VALF, 0));
+                            GW::PartyMgr::FlagHeroAgent(player_heroes[i - 1], GW::GamePos(HUGE_VALF, HUGE_VALF, 0));
                     }
                 }
                 ImGui::SameLine();
@@ -814,10 +862,11 @@ void Minimap::Draw(IDirect3DDevice9 *)
     }
 }
 
-void Minimap::Render(IDirect3DDevice9* device) {
+void Minimap::Render(IDirect3DDevice9* device)
+{
     if (compass_fix_pending) {
         // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
-        GW::UI::SetWindowVisible(GW::UI::WindowID_Compass, false);
+        SetWindowVisible(GW::UI::WindowID_Compass, false);
         compass_fix_pending = false;
     }
     auto& instance = Instance();
@@ -825,11 +874,13 @@ void Minimap::Render(IDirect3DDevice9* device) {
         return;
 
     const GW::Agent* me = GW::Agents::GetPlayer();
-    if (me == nullptr) return;
+    if (me == nullptr)
+        return;
 
     // Backup the DX9 state
     IDirect3DStateBlock9* d3d9_state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) return;
+    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
+        return;
 
     // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
     D3DMATRIX reset_world, reset_view, reset_projection;
@@ -875,17 +926,17 @@ void Minimap::Render(IDirect3DDevice9* device) {
     const auto FillCircle = [&device](
         const float x, const float y, const float radius, const Color clr, const int resolution = 192) {
         const auto res = std::min(resolution, 192);
-            D3DVertex vertices[193];
-            for (auto i = 0; i <= res; i++) {
-                const auto angle = i / static_cast<float>(res) * DirectX::XM_2PI;
-                vertices[i] = {
-                    x + radius * cos(angle),
-                    y + radius * sin(angle),
-                    0.0f,
-                    clr
-                };
-            }
-            device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, res, vertices, sizeof(D3DVertex));
+        D3DVertex vertices[193];
+        for (auto i = 0; i <= res; i++) {
+            const auto angle = i / static_cast<float>(res) * DirectX::XM_2PI;
+            vertices[i] = {
+                x + radius * cos(angle),
+                y + radius * sin(angle),
+                0.0f,
+                clr
+            };
+        }
+        device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, res, vertices, sizeof(D3DVertex));
     };
 
     instance.RenderSetupProjection(device);
@@ -904,8 +955,8 @@ void Minimap::Render(IDirect3DDevice9* device) {
         device->SetRenderState(D3DRS_STENCILREF, 1);
         device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer
-        FillCircle(0, 0, 5000.f, background); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
-        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
+        FillCircle(0, 0, 5000.f, background);                            // draw circle with chosen background color into stencil buffer, fills buffer with 1's
+        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);         // only draw where 1 is in the buffer
         device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
     }
@@ -923,7 +974,7 @@ void Minimap::Render(IDirect3DDevice9* device) {
     float current_gwinch_scale = static_cast<float>(instance.size.x) / 5000.0f / 2.f * instance.scale;
     if (current_gwinch_scale != gwinch_scale.x) {
         instance.range_renderer.Invalidate();
-        gwinch_scale = { current_gwinch_scale, current_gwinch_scale };
+        gwinch_scale = {current_gwinch_scale, current_gwinch_scale};
     }
 
     const auto view = translate_char * rotate_char * scaleM * translationM;
@@ -978,7 +1029,7 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
 GW::Vec2f Minimap::InterfaceToWorldPoint(Vec2i pos) const
 {
-    const GW::Agent *me = GW::Agents::GetPlayer();
+    const GW::Agent* me = GW::Agents::GetPlayer();
     if (me == nullptr)
         return {0, 0};
 
@@ -1035,7 +1086,8 @@ GW::Vec2f Minimap::InterfaceToWorldVector(Vec2i pos) const
 void Minimap::SelectTarget(const GW::Vec2f pos) const
 {
     const auto* agents = GW::Agents::GetAgentArray();
-    if (agents == nullptr) return;
+    if (agents == nullptr)
+        return;
     auto distance = 600.0f * 600.0f;
     const GW::Agent* closest = nullptr;
 
@@ -1051,7 +1103,7 @@ void Minimap::SelectTarget(const GW::Vec2f pos) const
             continue; // allow locked chests
         if (!GW::Agents::GetIsAgentTargettable(agent))
             continue; // block all useless minis
-        const float newDistance = GW::GetSquareDistance(pos, agent->pos);
+        const float newDistance = GetSquareDistance(pos, agent->pos);
         if (distance > newDistance) {
             distance = newDistance;
             closest = agent;
@@ -1082,25 +1134,22 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
             !IsKeyDown(MinimapModifierBehaviour::Move))
             return false;
     switch (Message) {
-        case WM_MOUSEMOVE:
-            return OnMouseMove(Message, wParam, lParam);
-        case WM_LBUTTONDOWN:
-            return OnMouseDown(Message, wParam, lParam);
-        case WM_MOUSEWHEEL:
-            return OnMouseWheel(Message, wParam, lParam);
-        case WM_LBUTTONDBLCLK:
-            return OnMouseDblClick(Message, wParam, lParam);
-        case WM_LBUTTONUP:
-            return OnMouseUp(Message, wParam, lParam);
-        default:
-            return false;
+        case WM_MOUSEMOVE: return OnMouseMove(Message, wParam, lParam);
+        case WM_LBUTTONDOWN: return OnMouseDown(Message, wParam, lParam);
+        case WM_MOUSEWHEEL: return OnMouseWheel(Message, wParam, lParam);
+        case WM_LBUTTONDBLCLK: return OnMouseDblClick(Message, wParam, lParam);
+        case WM_LBUTTONUP: return OnMouseUp(Message, wParam, lParam);
+        default: return false;
     }
 }
-bool Minimap::FlagHero(uint32_t idx) {
-    if (idx > FlaggingState::FlagState_None)
+
+bool Minimap::FlagHero(uint32_t idx)
+{
+    if (idx > FlagState_None)
         return false;
     return SetFlaggingState(static_cast<FlaggingState>(idx));
 }
+
 bool Minimap::FlagHeros(LPARAM lParam)
 {
     const int x = GET_X_LPARAM(lParam);
@@ -1113,22 +1162,20 @@ bool Minimap::FlagHeros(LPARAM lParam)
 
     const FlaggingState flag_state = GetFlaggingState();
     switch (flag_state) {
-    case FlaggingState::FlagState_None:
-        return false;
-    case FlaggingState::FlagState_All:
-        if (!has_flagall)
-            return false;
-        SetFlaggingState(FlaggingState::FlagState_None);
-        GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
-        return true;
-    default:
-        if (flag_state > player_heroes.size())
-            return false;
-        SetFlaggingState(FlaggingState::FlagState_None);
-        GW::PartyMgr::FlagHeroAgent(player_heroes[flag_state - 1], GW::GamePos(worldpos));
-        return true;
+        case FlagState_None: return false;
+        case FlagState_All: if (!has_flagall)
+                return false;
+            SetFlaggingState(FlagState_None);
+            GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
+            return true;
+        default: if (flag_state > player_heroes.size())
+                return false;
+            SetFlaggingState(FlagState_None);
+            GW::PartyMgr::FlagHeroAgent(player_heroes[flag_state - 1], GW::GamePos(worldpos));
+            return true;
     }
 }
+
 bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(Message);
@@ -1227,7 +1274,7 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam)
     }
 
     if (IsKeyDown(MinimapModifierBehaviour::Move)) {
-        const Vec2i diff = Vec2i(x - drag_start.x, y - drag_start.y);
+        const auto diff = Vec2i(x - drag_start.x, y - drag_start.y);
         translation += InterfaceToWorldVector(diff);
         drag_start = Vec2i(x, y);
         last_moved = TIMER_INIT();
@@ -1276,19 +1323,20 @@ bool Minimap::IsInside(int x, int y) const
     // if centered, use radar range
     if (translation.x == 0 && translation.y == 0) {
         const GW::Vec2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
-        const GW::Agent *me = GW::Agents::GetPlayer();
+        const GW::Agent* me = GW::Agents::GetPlayer();
         if (!me)
             return false;
-        const float sqrdst = GW::GetSquareDistance(me->pos, gamepos);
+        const float sqrdst = GetSquareDistance(me->pos, gamepos);
         return sqrdst < GW::Constants::SqrRange::Compass;
     }
     return true;
 }
+
 bool Minimap::IsActive() const
 {
     if (snap_to_compass) {
         if (!compass_frame) {
-            compass_frame = GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_Compass);
+            compass_frame = GetWindowPosition(GW::UI::WindowID::WindowID_Compass);
         }
         if (compass_frame && !compass_frame->visible()) {
             return false;
@@ -1296,14 +1344,14 @@ bool Minimap::IsActive() const
     }
 
     return visible
-        && !loading
-        && GW::Map::GetIsMapLoaded()
-        && !GW::UI::GetIsWorldMapShowing()
-        && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-        && GW::Agents::GetPlayerId() != 0;
+           && !loading
+           && GW::Map::GetIsMapLoaded()
+           && !GW::UI::GetIsWorldMapShowing()
+           && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
+           && GW::Agents::GetPlayerId() != 0;
 }
 
-void Minimap::RenderSetupProjection(IDirect3DDevice9 *device) const
+void Minimap::RenderSetupProjection(IDirect3DDevice9* device) const
 {
     D3DVIEWPORT9 viewport;
     device->GetViewport(&viewport);
@@ -1330,7 +1378,7 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9 *device) const
 bool Minimap::IsKeyDown(const MinimapModifierBehaviour mmb) const
 {
     return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiKey_ModCtrl) &&
-        !ImGui::IsKeyDown(ImGuiKey_ModShift) &&!ImGui::IsKeyDown(ImGuiKey_ModAlt)) ||
+            !ImGui::IsKeyDown(ImGuiKey_ModShift) && !ImGui::IsKeyDown(ImGuiKey_ModAlt)) ||
            (key_ctrl_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) ||
            (key_shift_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModShift)) ||
            (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModAlt));

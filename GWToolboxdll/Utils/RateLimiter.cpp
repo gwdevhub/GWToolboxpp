@@ -18,7 +18,6 @@ bool RateLimiter::AddTime(uint32_t cost_ms, uint32_t max_cost_ms)
     uint64_t new_time = m_time + cost_ms;
     if ((current_time >= new_time) ||
         (new_time - current_time) >= max_cost_ms) {
-
         return false;
     }
 

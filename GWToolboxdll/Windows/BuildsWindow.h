@@ -8,15 +8,13 @@
 #include <Timer.h>
 #include <ToolboxWindow.h>
 
-namespace GW {
-    namespace UI {
-        enum class UIMessage : uint32_t;
-    }
+namespace GW::UI {
+    enum class UIMessage : uint32_t;
 }
 
 class BuildsWindow : public ToolboxWindow {
     BuildsWindow() = default;
-    ~BuildsWindow() = default;
+    ~BuildsWindow() override = default;
 
     struct Build {
         Build(const char* n, const char* c);
@@ -29,12 +27,16 @@ class BuildsWindow : public ToolboxWindow {
         // Vector of pcons to use for this build, listed by ini name e.g. "cupcake"
         std::set<std::string> pcons;
     };
+
     struct TeamBuild {
         static unsigned int cur_ui_id;
+
         TeamBuild(const char* n)
-            : ui_id(++cur_ui_id) {
+            : ui_id(++cur_ui_id)
+        {
             GuiUtils::StrCopy(name, n, sizeof(name));
         }
+
         bool edit_open = false;
         int edit_pcons = -1;
         bool show_numbers = false;
@@ -44,10 +46,12 @@ class BuildsWindow : public ToolboxWindow {
     };
 
 public:
-    static BuildsWindow& Instance() {
+    static BuildsWindow& Instance()
+    {
         static BuildsWindow instance;
         return instance;
     }
+
     static void CmdLoad(const wchar_t* message, int argc, LPWSTR* argv);
 
     const char* Name() const override { return "Builds"; }
@@ -74,13 +78,14 @@ public:
 
     void Send(unsigned int idx);
     const char* BuildName(unsigned int idx) const;
-    inline unsigned int BuildCount() const { return teambuilds.size(); }
+    unsigned int BuildCount() const { return teambuilds.size(); }
+
 private:
     // Send a teambuild
     void Send(const TeamBuild& tbuild);
     // Send a specific build from a teambuild
     void Send(const TeamBuild& tbuild, unsigned int idx);
-    void SendPcons(const TeamBuild& tbuild, unsigned int idx, bool include_build_name=true);
+    void SendPcons(const TeamBuild& tbuild, unsigned int idx, bool include_build_name = true);
     // Load a specific build from a teambuild (and any applicable pcons)
     void Load(const TeamBuild& tbuild, unsigned int idx);
     // Toggle pcons for a specific build
@@ -116,7 +121,7 @@ private:
     bool preferred_skill_orders_visible = false;
     std::vector<Build> preferred_skill_order_builds;
     GuiUtils::EncString preferred_skill_order_tooltip;
-    char preferred_skill_order_code[128] = { 0 };
+    char preferred_skill_order_code[128] = {0};
     // Pass array of skills for a bar; if a preferred order is found, returns a new array of skills in order, otherwise nullptr.
     const GW::Constants::SkillID* GetPreferredSkillOrder(const GW::Constants::SkillID*, size_t* found_idx = nullptr);
     GW::HookEntry on_load_skills_entry;

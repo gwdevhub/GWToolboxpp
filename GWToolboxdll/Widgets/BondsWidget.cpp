@@ -25,16 +25,19 @@
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/BondsWidget.h>
 
-void BondsWidget::Initialize() {
+void BondsWidget::Initialize()
+{
     ToolboxWidget::Initialize();
-    party_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID_PartyWindow);
+    party_window_position = GetWindowPosition(GW::UI::WindowID_PartyWindow);
 }
 
-void BondsWidget::Terminate() {
+void BondsWidget::Terminate()
+{
     ToolboxWidget::Terminate();
 }
 
-void BondsWidget::Draw(IDirect3DDevice9* device) {
+void BondsWidget::Draw(IDirect3DDevice9* device)
+{
     UNREFERENCED_PARAMETER(device);
     if (!visible)
         return;
@@ -42,7 +45,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         return;
     const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     const GW::PlayerArray* players = info ? GW::Agents::GetPlayerArray() : nullptr;
-    if (!players) return;
+    if (!players)
+        return;
     // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
 
     // ==== Get bonds ====
@@ -76,7 +80,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         y *= uiscale_multiply;
         // Clamp
         ImVec4 rect(x.x, y.x, x.y, y.y);
-        ImVec4 viewport(0, 0, (float)GW::Render::GetViewportWidth(), (float)GW::Render::GetViewportHeight());
+        ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
         // GW Clamps windows to viewport; we need to do the same.
         GuiUtils::ClampRect(rect, viewport);
         // Left placement
@@ -87,7 +91,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         internal_offset *= uiscale_multiply;
         int user_offset_x = abs(user_offset);
         float offset_width = width;
-        ImVec2 calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
+        auto calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
         if (calculated_pos.x < 0 || user_offset < 0) {
             // Right placement
             internal_offset.x = 4.f * uiscale_multiply;
@@ -97,7 +101,6 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         ImGui::SetNextWindowPos(calculated_pos);
     }
 
-
     ImGui::SetNextWindowSize(ImVec2(width, height));
     if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !(click_to_cast || click_to_drop)))) {
         float win_x = ImGui::GetWindowPos().x;
@@ -106,12 +109,14 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         auto GetGridPos = [&](const size_t _x, const size_t _y, bool topleft) -> ImVec2 {
             size_t x = _x;
             size_t y = _y;
-            if (y >= allies_start) ++y;
+            if (y >= allies_start)
+                ++y;
             if (!topleft) {
-                ++x; ++y;
+                ++x;
+                ++y;
             }
             return ImVec2(win_x + x * img_size,
-                win_y + y * img_size);
+                          win_y + y * img_size);
         };
 
         bool handled_click = false;
@@ -144,14 +149,17 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             agent_effects_array != nullptr) {
             for (auto& agent_effects_it : *agent_effects_array) {
                 auto& agent_effects = agent_effects_it.effects;
-                if (!agent_effects.valid()) continue;
+                if (!agent_effects.valid())
+                    continue;
                 const auto agent_id = agent_effects_it.agent_id;
                 for (const GW::Effect& effect : agent_effects) {
                     const auto skill_id = static_cast<GW::Constants::SkillID>(effect.skill_id);
-                    if (!bond_map.contains(skill_id)) continue;
-                    
+                    if (!bond_map.contains(skill_id))
+                        continue;
+
                     const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-                    if (!skill_data || skill_data->duration0 == 0x20000) continue; // Maintained skill/enchantment
+                    if (!skill_data || skill_data->duration0 == 0x20000)
+                        continue; // Maintained skill/enchantment
                     const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
                     assert(agentAttributes);
                     agentAttributes = &agentAttributes[skill_data->attribute];
@@ -182,7 +190,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                         continue;
                     ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
                     if (ImGui::IsMouseReleased(0))
-                        UseBuff(party_list[y], (DWORD) bond_list[x]);
+                        UseBuff(party_list[y], static_cast<DWORD>(bond_list[x]));
                 }
             }
         }
@@ -192,21 +200,28 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     ImGui::PopStyleVar(3);
 }
 
-void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid)
+{
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+        return;
     if (GW::Map::GetIsObserving())
         return;
-    if (targetId == 0) return;
+    if (targetId == 0)
+        return;
 
     GW::Agent* target = GW::Agents::GetAgentByID(targetId);
-    if (target == nullptr) return;
+    if (target == nullptr)
+        return;
 
-    int islot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
-    if (islot < 0) return;
+    int islot = GW::SkillbarMgr::GetSkillSlot(static_cast<GW::Constants::SkillID>(buff_skillid));
+    if (islot < 0)
+        return;
     uint32_t slot = static_cast<uint32_t>(islot);
-    GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-    if (!skillbar || !skillbar->IsValid()) return;
-    if (skillbar->skills[slot].recharge != 0) return;
+    GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!skillbar || !skillbar->IsValid())
+        return;
+    if (skillbar->skills[slot].recharge != 0)
+        return;
 
     // capture by value!
     GW::GameThread::Enqueue([slot, targetId]() -> void {
@@ -214,7 +229,8 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
     });
 }
 
-void BondsWidget::LoadSettings(ToolboxIni* ini) {
+void BondsWidget::LoadSettings(ToolboxIni* ini)
+{
     ToolboxWidget::LoadSettings(ini);
     lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
 
@@ -230,7 +246,8 @@ void BondsWidget::LoadSettings(ToolboxIni* ini) {
     user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 }
 
-void BondsWidget::SaveSettings(ToolboxIni* ini) {
+void BondsWidget::SaveSettings(ToolboxIni* ini)
+{
     ToolboxWidget::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
     Colors::Save(ini, Name(), VAR_NAME(background), background);
@@ -245,8 +262,10 @@ void BondsWidget::SaveSettings(ToolboxIni* ini) {
     ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 }
 
-void BondsWidget::DrawSettingInternal() {
-    ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+void BondsWidget::DrawSettingInternal()
+{
+    ImGui::SameLine();
+    ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     if (bond_list.empty())
         ImGui::TextColored(ImVec4(0xFF, 0, 0, 0xFF), "Equip a maintainable enchantment or refrain to show bonds widget on-screen");
     ImGui::Checkbox("Attach to party window", &snap_to_party_window);
@@ -270,12 +289,13 @@ void BondsWidget::DrawSettingInternal() {
         ImGui::InputInt("Row Height", &row_height);
         ImGui::ShowHelp("Height of each row, leave 0 for default");
     }
-    if (row_height < 0) row_height = 0;
+    if (row_height < 0)
+        row_height = 0;
 }
 
 bool BondsWidget::FetchBondSkills()
 {
-    const GW::Skillbar *bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    const GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!bar || !bar->IsValid())
         return false;
     bond_list.clear();
@@ -289,22 +309,24 @@ bool BondsWidget::FetchBondSkills()
     }
     return true;
 }
+
 bool BondsWidget::FetchPartyInfo()
 {
-    const GW::PartyInfo *info = GW::PartyMgr::GetPartyInfo();
+    const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (!info)
         return false;
     party_list.clear();
     party_map.clear();
     allies_start = 255;
-    for (const GW::PlayerPartyMember &player : info->players) {
+    for (const GW::PlayerPartyMember& player : info->players) {
         DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
-        if (!id) continue;
+        if (!id)
+            continue;
         party_map[id] = party_list.size();
         party_list.push_back(id);
 
         if (info->heroes.valid()) {
-            for (const GW::HeroPartyMember &hero : info->heroes) {
+            for (const GW::HeroPartyMember& hero : info->heroes) {
                 if (hero.owner_player_id == player.login_number) {
                     party_map[hero.agent_id] = party_list.size();
                     party_list.push_back(hero.agent_id);
@@ -313,7 +335,7 @@ bool BondsWidget::FetchPartyInfo()
         }
     }
     if (info->henchmen.valid()) {
-        for (const GW::HenchmanPartyMember &hench : info->henchmen) {
+        for (const GW::HenchmanPartyMember& hench : info->henchmen) {
             party_list.push_back(hench.agent_id);
         }
     }

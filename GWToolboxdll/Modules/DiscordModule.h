@@ -17,6 +17,7 @@ struct Application {
     struct IDiscordNetworkManager* network;
     DiscordUserId user_id;
 };
+
 // Encoded/decoded when joining another player's game.
 struct DiscordJoinableParty {
     unsigned short map_id = 0;
@@ -26,6 +27,7 @@ struct DiscordJoinableParty {
     uint32_t ghkey[4];
     wchar_t player[32];
 };
+
 // Used to record current GH info
 struct CurrentGuildHall {
     wchar_t tag[8];
@@ -34,10 +36,17 @@ struct CurrentGuildHall {
 };
 
 class DiscordModule : public ToolboxModule {
-    DiscordModule() {};
-    ~DiscordModule() {};
+    DiscordModule()
+    {
+    };
+
+    ~DiscordModule() override
+    {
+    };
+
 public:
-    static DiscordModule& Instance() {
+    static DiscordModule& Instance()
+    {
         static DiscordModule instance;
         return instance;
     }
@@ -68,13 +77,13 @@ public:
 
 private:
     DiscordCreateParams params;
-    
+
     IDiscordUserEvents users_events;
     IDiscordActivityEvents activities_events;
     IDiscordRelationshipEvents relationships_events;
     IDiscordNetworkEvents network_events;
     IDiscordCoreEvents core_events;
-    
+
 
     // setting vars
     bool discord_enabled = true;
@@ -101,5 +110,4 @@ private:
     GW::HookEntry PartyUpdateSize_Callback;
     GW::HookEntry PartyPlayerAdd_Callback;
     GW::HookEntry InstanceLoadInfo_Callback;
-
 };

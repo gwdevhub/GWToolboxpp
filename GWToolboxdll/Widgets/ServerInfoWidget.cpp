@@ -18,34 +18,35 @@
 #define IPGEO_API_KEY "161f3834252a4ec6988e49bb75ccd902"
 
 namespace {
-    static char server_ip[32];
-    static char server_location[255];
-    static bool server_string_dirty = false;
+    char server_ip[32];
+    char server_location[255];
+    bool server_string_dirty = false;
 }
 
 static int
 sockaddr_sprint(char* s, size_t n, const sockaddr* host, bool inc_port = false)
 {
     if (host->sa_family == AF_INET) {
-        const sockaddr_in* in = (const sockaddr_in*)host;
-        uint8_t* addr = (uint8_t*) & in->sin_addr.s_addr;
-        if(inc_port)
+        auto in = (const sockaddr_in*)host;
+        auto addr = (uint8_t*)&in->sin_addr.s_addr;
+        if (inc_port)
             return snprintf(s, n, "%d.%d.%d.%d:%d", addr[0], addr[1], addr[2], addr[3], ntohs(in->sin_port));
         return snprintf(s, n, "%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3]);
     }
-    else if (host->sa_family == AF_INET6) {
-        const sockaddr_in6* in6 = (const sockaddr_in6*)host;
-        uint8_t* addr = (uint8_t*) & in6->sin6_addr;
+    if (host->sa_family == AF_INET6) {
+        auto in6 = (const sockaddr_in6*)host;
+        auto addr = (uint8_t*)&in6->sin6_addr;
         return snprintf(s, n, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
-            addr[0], addr[1], addr[2], addr[3],
-            addr[4], addr[5], addr[6], addr[7],
-            addr[8], addr[9], addr[10], addr[11],
-            addr[12], addr[13], addr[14], addr[15]);
+                        addr[0], addr[1], addr[2], addr[3],
+                        addr[4], addr[5], addr[6], addr[7],
+                        addr[8], addr[9], addr[10], addr[11],
+                        addr[12], addr[13], addr[14], addr[15]);
     }
     return 0;
 }
 
-void ServerInfoWidget::Initialize() {
+void ServerInfoWidget::Initialize()
+{
     ToolboxWidget::Initialize();
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
         &InstanceLoadInfo_HookEntry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo*) {
@@ -55,19 +56,23 @@ void ServerInfoWidget::Initialize() {
         });
     GetServerInfo();
 }
-ServerInfoWidget::ServerInfo* ServerInfoWidget::GetServerInfo() {
+
+ServerInfoWidget::ServerInfo* ServerInfoWidget::GetServerInfo()
+{
     if (current_server_info)
         return current_server_info;
     //if (!GW::Map::GetIsMapLoaded())
     //  return nullptr;
     GW::GameContext* g = GW::GetGameContext();
-    if (!g) return nullptr;
+    if (!g)
+        return nullptr;
     GW::CharContext* c = g->character;
-    if (!c) return nullptr;
-    char current_ip[32] = { 0 };
-    sockaddr_sprint(current_ip, 32, (const sockaddr*) &c->host, false);
+    if (!c)
+        return nullptr;
+    char current_ip[32] = {0};
+    sockaddr_sprint(current_ip, 32, (const sockaddr*)&c->host, false);
 
-    std::map<std::string, ServerInfo*>::iterator it = servers_by_ip.find(current_ip);
+    auto it = servers_by_ip.find(current_ip);
     if (it != servers_by_ip.end()) {
         current_server_info = it->second;
         return current_server_info;
@@ -76,7 +81,9 @@ ServerInfoWidget::ServerInfo* ServerInfoWidget::GetServerInfo() {
     servers_by_ip.emplace(current_server_info->ip, current_server_info);
     return current_server_info;
 }
-void ServerInfoWidget::Update(float) {
+
+void ServerInfoWidget::Update(float)
+{
     if (current_server_info && current_server_info->country.empty() && current_server_info->last_update < time(nullptr) - 60) {
         if (server_info_fetcher.joinable())
             server_info_fetcher.join(); // Wait for thread to end.
@@ -104,15 +111,19 @@ void ServerInfoWidget::Update(float) {
                     current_server_info->country = json["country_name"];
                 server_string_dirty = true;
             }
-            });
+        });
     }
 }
 
-void ServerInfoWidget::Draw(IDirect3DDevice9*) {
-    if (!visible) return;
-    if (!server_location && !server_ip) return;
+void ServerInfoWidget::Draw(IDirect3DDevice9*)
+{
+    if (!visible)
+        return;
+    if (!server_location && !server_ip)
+        return;
     if (!current_server_info) {
-        if (!GetServerInfo()) return;
+        if (!GetServerInfo())
+            return;
         server_string_dirty = true;
     }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
@@ -128,7 +139,7 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*) {
         snprintf(server_ip, sizeof(server_ip) - 1, "%s", current_server_info->ip.c_str());
     }
     static ImVec2 cur;
-    ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header1));
+    ImGui::PushFont(GetFont(GuiUtils::FontSize::header1));
     cur = ImGui::GetCursorPos();
     ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
     ImGui::TextColored(ImColor(0, 0, 0), server_ip);
@@ -148,14 +159,17 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*) {
     ImGui::PopStyleColor();
 }
 
-void ServerInfoWidget::DrawSettingInternal() {
+void ServerInfoWidget::DrawSettingInternal()
+{
     ImGui::Text("Displays current server IP Address and location if available");
 }
-void ServerInfoWidget::SaveSettings(ToolboxIni* ini) {
+
+void ServerInfoWidget::SaveSettings(ToolboxIni* ini)
+{
     ToolboxWidget::SaveSettings(ini);
-
-
 }
-void ServerInfoWidget::LoadSettings(ToolboxIni* ini) {
+
+void ServerInfoWidget::LoadSettings(ToolboxIni* ini)
+{
     ToolboxWidget::LoadSettings(ini);
 }

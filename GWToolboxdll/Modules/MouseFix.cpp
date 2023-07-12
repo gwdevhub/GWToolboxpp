@@ -14,8 +14,7 @@
 #include <hidusage.h>
 
 namespace OldCursorFix {
-
-    typedef BOOL(WINAPI* GetClipCursor_pt)(_Out_ LPRECT lpRect);
+    using GetClipCursor_pt = BOOL(WINAPI*)(_Out_ LPRECT lpRect);
 
     GetClipCursor_pt GetClipCursor_Func;
     GetClipCursor_pt RetGetClipCursor;
@@ -45,9 +44,9 @@ namespace OldCursorFix {
             GW::HookBase::RemoveHook(GetClipCursor_Func);
         }
     } // Collect the relative mouse position from raw input, instead of using the position passed into GW.
-} // namespace OldCursorFix
+}     // namespace OldCursorFix
 namespace {
-    typedef bool(__cdecl* OnProcessInput_pt)(uint32_t* wParam, uint32_t* lParam);
+    using OnProcessInput_pt = bool(__cdecl*)(uint32_t* wParam, uint32_t* lParam);
     OnProcessInput_pt ProcessInput_Func = nullptr;
     OnProcessInput_pt ProcessInput_Ret = nullptr;
 
@@ -60,11 +59,12 @@ namespace {
         int captured_x;
         int captured_y;
     };
+
     GwMouseMove* gw_mouse_move = nullptr;
     LONG rawInputRelativePosX = 0;
     LONG rawInputRelativePosY = 0;
     bool* HasRegisteredTrackMouseEvent = nullptr;
-    typedef void(__cdecl* SetCursorPosCenter_pt)(GwMouseMove* wParam);
+    using SetCursorPosCenter_pt = void(__cdecl*)(GwMouseMove* wParam);
     SetCursorPosCenter_pt SetCursorPosCenter_Func = nullptr;
     SetCursorPosCenter_pt SetCursorPosCenter_Ret = nullptr;
 
@@ -136,6 +136,7 @@ namespace {
             }
         }
     }
+
     bool CursorFixInitialise()
     {
         if (gw_mouse_move)
@@ -246,6 +247,7 @@ namespace {
     int cursor_size = 32;
     HCURSOR current_cursor = nullptr;
     bool cursor_size_hooked = false;
+
     HCURSOR ScaleCursor(HCURSOR cursor, const int targetSize)
     {
         ICONINFO icon_info;
@@ -276,15 +278,18 @@ namespace {
             DeleteObject(scaledMask);
         return new_cursor;
     }
+
     struct GWWindowUserData {
         uint8_t unk[0xc43];
         HCURSOR cursor; // h0c44
         uint8_t unk1[0xb0];
         HWND window_handle; // h0cf8
     };
-    typedef void(__cdecl* ChangeCursorIcon_pt)(GWWindowUserData*);
+
+    using ChangeCursorIcon_pt = void(__cdecl*)(GWWindowUserData*);
     ChangeCursorIcon_pt ChangeCursorIcon_Func = nullptr;
     ChangeCursorIcon_pt ChangeCursorIcon_Ret = nullptr;
+
     void OnChangeCursorIcon(GWWindowUserData* user_data)
     {
         GW::Hook::EnterHook();
@@ -313,6 +318,7 @@ namespace {
         current_cursor = new_cursor;
         GW::Hook::LeaveHook();
     }
+
     void RedrawCursorIcon()
     {
         GW::GameThread::Enqueue([] {
@@ -323,6 +329,7 @@ namespace {
                 OnChangeCursorIcon(user_data);
         });
     }
+
     void SetCursorSize(int new_size)
     {
         cursor_size = new_size;
@@ -349,6 +356,7 @@ void MouseFix::Initialize()
         GW::HookBase::CreateHook(ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
     }
 }
+
 void MouseFix::LoadSettings(ToolboxIni* ini)
 {
     enable_cursor_fix = ini->GetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
@@ -372,6 +380,7 @@ void MouseFix::Terminate()
     if (ChangeCursorIcon_Func)
         GW::HookBase::RemoveHook(ChangeCursorIcon_Func);
 }
+
 void MouseFix::DrawSettingInternal()
 {
     if (ImGui::Checkbox("Enable cursor fix", &enable_cursor_fix)) {
@@ -379,7 +388,7 @@ void MouseFix::DrawSettingInternal()
     }
     ImGui::SliderInt("Guild Wars cursor size", &cursor_size, 16, 64);
     ImGui::ShowHelp("Sizes other than 32 might lead the the cursor disappearing at random.\n"
-                    "Right click to make the cursor dis- and reappear for this to take effect.");
+        "Right click to make the cursor dis- and reappear for this to take effect.");
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         SetCursorSize(cursor_size);
         RedrawCursorIcon();

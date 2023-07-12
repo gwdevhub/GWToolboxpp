@@ -12,8 +12,8 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <Widgets/WorldMapWidget.h>
-namespace {
 
+namespace {
     GW::Packet::StoC::MapsUnlocked all_maps_unlocked_packet;
     GW::Packet::StoC::MapsUnlocked actual_maps_unlocked_packet;
 
@@ -26,7 +26,9 @@ namespace {
 
     bool drawn = false;
 }
-void WorldMapWidget::InitializeMapsUnlockedArrays() {
+
+void WorldMapWidget::InitializeMapsUnlockedArrays()
+{
     const GW::GameContext* g = GW::GetGameContext();
     if (!g)
         return;
@@ -68,7 +70,9 @@ void WorldMapWidget::InitializeMapsUnlockedArrays() {
     memset(&all_maps_unlocked_packet.unlocked_map, 0xff, sizeof(all_maps_unlocked_packet.unlocked_map));
     actual_maps_unlocked_initialised = true;
 }
-void WorldMapWidget::Initialize() {
+
+void WorldMapWidget::Initialize()
+{
     ToolboxWidget::Initialize();
     InitializeMapsUnlockedArrays();
 
@@ -76,15 +80,17 @@ void WorldMapWidget::Initialize() {
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapsUnlocked>(&e, [](GW::HookStatus*, GW::Packet::StoC::MapsUnlocked* packet) {
         UNREFERENCED_PARAMETER(packet);
         Instance().InitializeMapsUnlockedArrays();
-        });
+    });
 }
-void WorldMapWidget::ShowAllOutposts(bool show = showing_all_outposts) {
+
+void WorldMapWidget::ShowAllOutposts(bool show = showing_all_outposts)
+{
     static bool showing = false;
     //GW::WorldContext* world = GW::GetGameContext()->world;
     if (showing == show)
         return;
     ASSERT(actual_maps_unlocked_initialised);
-    if(show) {
+    if (show) {
         // Show all areas
         GW::StoC::EmulatePacket<GW::Packet::StoC::MapsUnlocked>(&all_maps_unlocked_packet);
     }
@@ -94,7 +100,9 @@ void WorldMapWidget::ShowAllOutposts(bool show = showing_all_outposts) {
     }
     showing = show;
 }
-void WorldMapWidget::Draw(IDirect3DDevice9 *pDevice) {
+
+void WorldMapWidget::Draw(IDirect3DDevice9* pDevice)
+{
     UNREFERENCED_PARAMETER(pDevice);
     if (!GW::UI::GetIsWorldMapShowing()) {
         //ShowAllOutposts(showing_all_outposts = false);
@@ -121,30 +129,32 @@ void WorldMapWidget::Draw(IDirect3DDevice9 *pDevice) {
     ImGui::PopStyleColor();
     drawn = true;
 }
-bool WorldMapWidget::WndProc(UINT Message, WPARAM, LPARAM lParam) {
+
+bool WorldMapWidget::WndProc(UINT Message, WPARAM, LPARAM lParam)
+{
     switch (Message) {
-    case WM_LBUTTONDOWN:
-        if (!drawn || !GW::UI::GetIsWorldMapShowing())
-            return false;
-        auto check_rect = [lParam](ImRect& rect) {
-            int x = GET_X_LPARAM(lParam);
-            int y = GET_Y_LPARAM(lParam);
-            return x > rect.Min.x && x < rect.Max.x && y > rect.Min.y && y < rect.Max.y;
-        };
-        if(check_rect(show_all_rect)) {
-            showing_all_outposts = !showing_all_outposts;
-            ShowAllOutposts(showing_all_outposts);
-            return true;
-        }
-        if (check_rect(hard_mode_rect)) {
-            GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
-            return true;
-        }
-        break;
+        case WM_LBUTTONDOWN: if (!drawn || !GW::UI::GetIsWorldMapShowing())
+                return false;
+            auto check_rect = [lParam](ImRect& rect) {
+                int x = GET_X_LPARAM(lParam);
+                int y = GET_Y_LPARAM(lParam);
+                return x > rect.Min.x && x < rect.Max.x && y > rect.Min.y && y < rect.Max.y;
+            };
+            if (check_rect(show_all_rect)) {
+                showing_all_outposts = !showing_all_outposts;
+                ShowAllOutposts(showing_all_outposts);
+                return true;
+            }
+            if (check_rect(hard_mode_rect)) {
+                GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
+                return true;
+            }
+            break;
     }
     return false;
 }
 
-void WorldMapWidget::DrawSettingInternal() {
+void WorldMapWidget::DrawSettingInternal()
+{
     ImGui::Text("Note: only visible in Hard Mode explorable areas.");
 }

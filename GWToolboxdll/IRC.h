@@ -36,31 +36,27 @@
 #define IRC_USER_HALFOP 2
 #define IRC_USER_OP     4
 
-struct irc_reply_data
-{
+struct irc_reply_data {
     char* nick;
     char* ident;
     char* host;
     char* target;
 };
 
-struct irc_command_hook
-{
+struct irc_command_hook {
     char* irc_command;
     int (*function)(const char*, irc_reply_data*, void*);
     irc_command_hook* next;
 };
 
-struct channel_user
-{
+struct channel_user {
     char* nick;
     char* channel;
     char flags;
     channel_user* next;
 };
 
-class IRC
-{
+class IRC {
 public:
     IRC();
     IRC(const IRC&) = delete;
@@ -101,7 +97,7 @@ private:
     void delete_irc_command_hook(irc_command_hook* cmd_hook);
     // int irc_socket; // This fails when using winsock2.h in Windows. Define as SOCKET to fix?
     SOCKET irc_socket;
-    char message_buffer[1024] = { 0 };
+    char message_buffer[1024] = {0};
     bool connected;
     bool pending_disconnect;
     bool sentnick;

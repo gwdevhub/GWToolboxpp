@@ -11,8 +11,10 @@
 
 class PartyWindowModule : public ToolboxModule {
     PartyWindowModule() = default;
+
 public:
-    static PartyWindowModule& Instance() {
+    static PartyWindowModule& Instance()
+    {
         static PartyWindowModule instance;
         return instance;
     }
@@ -29,5 +31,6 @@ public:
 
 private:
     void LoadDefaults();
+
 private:
 };

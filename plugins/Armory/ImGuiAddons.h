@@ -16,7 +16,7 @@ namespace ImGui {
 
     IMGUI_API bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");
 
-    IMGUI_API bool IconButton(const char *str_id, ImTextureID user_texture_id, const ImVec2 &size);
+    IMGUI_API bool IconButton(const char* str_id, ImTextureID user_texture_id, const ImVec2 &size);
 
     IMGUI_API bool ColorButtonPicker(const char*, ImU32*, ImGuiColorEditFlags = 0);
 

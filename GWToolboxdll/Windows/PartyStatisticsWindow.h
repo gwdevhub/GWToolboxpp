@@ -15,8 +15,8 @@
 
 class PartyStatisticsWindow : public ToolboxWindow {
 public:
-
-    static PartyStatisticsWindow& Instance() {
+    static PartyStatisticsWindow& Instance()
+    {
         static PartyStatisticsWindow instance;
         return instance;
     }

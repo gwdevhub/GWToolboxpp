@@ -7,7 +7,7 @@
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
-typedef uint32_t HomPoints;
+using HomPoints = uint32_t;
 
 enum class ResiliencePoints : HomPoints {
     AnyArmorStatue,
@@ -20,6 +20,7 @@ enum class ResiliencePoints : HomPoints {
     Count,
     TotalAvailable = 8
 };
+
 enum class ResilienceDetail {
     EliteCanthanArmor,
     EliteExoticArmor,
@@ -43,6 +44,7 @@ enum class ResilienceDetail {
     MarhansGrottoAscendedArmor,
     Count
 };
+
 enum class FellowshipPoints : HomPoints {
     AnyHeroStatue,
     AnyPetStatue,
@@ -54,6 +56,7 @@ enum class FellowshipPoints : HomPoints {
     Count,
     TotalAvailable = 8
 };
+
 enum class FellowshipDetail {
     Zenmai,
     Norgu,
@@ -87,6 +90,7 @@ enum class FellowshipDetail {
     MOX,
     Count
 };
+
 enum class HonorPoints : HomPoints {
     AccountsLinked,
     AnyStatue,
@@ -102,6 +106,7 @@ enum class HonorPoints : HomPoints {
     Count,
     TotalAvailable = 18
 };
+
 enum class HonorDetail {
     EternalChampion,
     EternalCommander,
@@ -159,6 +164,7 @@ enum class HonorDetail {
     EternalCodexDisciple,
     Count
 };
+
 enum class ValorPoints : HomPoints {
     AnyWeaponStatue,
     DestroyerWeaponStatue,
@@ -170,6 +176,7 @@ enum class ValorPoints : HomPoints {
     Count,
     TotalAvailable = 8
 };
+
 enum class ValorDetail {
     DestroyerAxe,
     DestroyerBow,
@@ -206,6 +213,7 @@ enum class ValorDetail {
     OppressorSword,
     Count
 };
+
 enum class DevotionPoints : HomPoints {
     AnyMiniatureStatue,
     RareMiniatureStatue,
@@ -217,6 +225,7 @@ enum class DevotionPoints : HomPoints {
     Count,
     TotalAvailable = 8
 };
+
 enum class DevotionDetail {
     Common,
     Uncommon,
@@ -224,71 +233,76 @@ enum class DevotionDetail {
     Unique,
     Count
 };
+
 struct HallOfMonumentsAchievements {
     std::wstring character_name;
+
     enum class State {
         Pending,
         Loading,
         Error,
         Done
     } state = State::Pending;
-    bool isReady() const { return state == State::Done;  }
+
+    bool isReady() const { return state == State::Done; }
     bool isPending() const { return state == State::Pending; }
     bool isLoading() const { return state == State::Loading; }
-    char hom_code[128] = { 0 };
+    char hom_code[128] = {0};
     void OpenInBrowser();
     // Details of which armors have or haven't been dedicated, indexed by ResilienceDetail
-    bool resilience_detail[(size_t)ResilienceDetail::Count] = { 0 };
+    bool resilience_detail[static_cast<size_t>(ResilienceDetail::Count)] = {false};
     // Details of which points have or haven't been earnt, indexed by ResiliencePoints
-    uint32_t resilience_points[(size_t)ResiliencePoints::Count] = { 0 };
+    uint32_t resilience_points[static_cast<size_t>(ResiliencePoints::Count)] = {0};
     // Total sum of armors dedicated
     uint32_t resilience_tally = 0;
     // Total sum of points achieved in resilience
     uint32_t resilience_points_total = 0;
 
     // Details of which companions have or haven't been dedicated, indexed by FellowshipDetail
-    bool fellowship_detail[(size_t)FellowshipDetail::Count] = { 0 };
+    bool fellowship_detail[static_cast<size_t>(FellowshipDetail::Count)] = {false};
     // Details of which points have or haven't been earnt, indexed by FellowshipPoints
-    uint32_t fellowship_points[(size_t)FellowshipPoints::Count] = { 0 };
+    uint32_t fellowship_points[static_cast<size_t>(FellowshipPoints::Count)] = {0};
     // Total sum of companions dedicated
     uint32_t fellowship_tally = 0;
     // Total sum of points achieved in fellowship
     uint32_t fellowship_points_total = 0;
 
     // Details of which titles have or haven't been dedicated, indexed by HonorDetail
-    bool honor_detail[(size_t)HonorDetail::Count] = { 0 };
+    bool honor_detail[static_cast<size_t>(HonorDetail::Count)] = {false};
     // Details of which points have or haven't been earnt, indexed by HonorPoints
-    uint32_t honor_points[(size_t)HonorPoints::Count] = { 0 };
+    uint32_t honor_points[static_cast<size_t>(HonorPoints::Count)] = {0};
     // Total sum of titles dedicated
     uint32_t honor_tally = 0;
     // Total sum of points achieved in honor
     uint32_t honor_points_total = 0;
 
     // Details of which weapons have or haven't been dedicated, indexed by ValorDetail
-    bool valor_detail[(size_t)ValorDetail::Count] = { 0 };
+    bool valor_detail[static_cast<size_t>(ValorDetail::Count)] = {false};
     // Details of which points have or haven't been earnt, indexed by ValorPoints
-    uint32_t valor_points[(size_t)ValorPoints::Count] = { 0 };
+    uint32_t valor_points[static_cast<size_t>(ValorPoints::Count)] = {0};
     // Total sum of weapons dedicated
     uint32_t valor_tally = 0;
     // Total sum of points achieved in valor
     uint32_t valor_points_total = 0;
 
     // Details of how many different types of minipet have or haven't been dedicated, indexed by DevotionDetail
-    uint32_t devotion_detail[(size_t)DevotionDetail::Count] = { 0 };
+    uint32_t devotion_detail[static_cast<size_t>(DevotionDetail::Count)] = {0};
     // Details of which points have or haven't been earnt, indexed by DevotionPoints
-    uint32_t devotion_points[(size_t)DevotionPoints::Count] = { 0 };
+    uint32_t devotion_points[static_cast<size_t>(DevotionPoints::Count)] = {0};
     // Total sum of minipets dedicated
     uint32_t devotion_tally = 0;
     // Total sum of points achieved in devotion
     uint32_t devotion_points_total = 0;
 };
 
-typedef void(OnAchievementsLoadedCallback)(HallOfMonumentsAchievements* result);
+using OnAchievementsLoadedCallback = void(HallOfMonumentsAchievements* result);
 
 class HallOfMonumentsModule : public ToolboxModule {
     HallOfMonumentsModule() = default;
+
 public:
-    static HallOfMonumentsModule& Instance() {
+    static HallOfMonumentsModule& Instance()
+    {
         static HallOfMonumentsModule instance;
         return instance;
     }
@@ -297,13 +311,14 @@ public:
 
     bool HasSettings() override { return false; }
 
-    const char* GetDevotionPointsDescription(DevotionPoints id) {
+    const char* GetDevotionPointsDescription(DevotionPoints id)
+    {
         switch (id) {
-        case DevotionPoints::AnyMiniatureStatue: return "Any Miniature Statue";
-        case DevotionPoints::RareMiniatureStatue: return "Rare Miniature Statue";
-        case DevotionPoints::TwentyMiniatureStatues: return "20 Miniature Statues";
-        case DevotionPoints::ThirtyMiniatureStatues: return "30 Miniature Statues";
-        case DevotionPoints::FourtyMiniatureStatues: return "40 Miniature Statues";
+            case DevotionPoints::AnyMiniatureStatue: return "Any Miniature Statue";
+            case DevotionPoints::RareMiniatureStatue: return "Rare Miniature Statue";
+            case DevotionPoints::TwentyMiniatureStatues: return "20 Miniature Statues";
+            case DevotionPoints::ThirtyMiniatureStatues: return "30 Miniature Statues";
+            case DevotionPoints::FourtyMiniatureStatues: return "40 Miniature Statues";
         }
         return "";
     }

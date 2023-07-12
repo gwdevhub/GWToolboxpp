@@ -3,12 +3,15 @@
 #include <ToolboxWindow.h>
 
 class SettingsWindow : public ToolboxWindow {
-    SettingsWindow() {
+    SettingsWindow()
+    {
         show_menubutton = true;
     };
-    ~SettingsWindow() = default;
+    ~SettingsWindow() override = default;
+
 public:
-    static SettingsWindow& Instance() {
+    static SettingsWindow& Instance()
+    {
         static SettingsWindow instance;
         return instance;
     }
@@ -27,6 +30,7 @@ public:
     size_t sep_modules = 0;
     size_t sep_windows = 0;
     size_t sep_widgets = 0;
+
 private:
     std::map<std::string, bool> drawn_settings{};
     bool hide_when_entering_explorable = false;

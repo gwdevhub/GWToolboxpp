@@ -17,9 +17,13 @@
 #include <Windows/DupingWindow.h>
 
 #include <Timer.h>
+
 namespace {
     struct DupeInfo {
-        DupeInfo(GW::AgentID agent_id) : agent_id(agent_id) {};
+        DupeInfo(GW::AgentID agent_id)
+            : agent_id(agent_id)
+        {
+        };
 
 
         GW::AgentID agent_id;
@@ -27,12 +31,14 @@ namespace {
         size_t dupe_count = 0;
     };
 
-    GW::AgentLiving* GetAgentLivingByID(uint32_t agent_id) {
+    GW::AgentLiving* GetAgentLivingByID(uint32_t agent_id)
+    {
         const auto a = GW::Agents::GetAgentByID(agent_id);
         return a ? a->GetAsAgentLiving() : nullptr;
     }
 
-    uint32_t GetAgentMaxHP(const GW::AgentLiving* agent) {
+    uint32_t GetAgentMaxHP(const GW::AgentLiving* agent)
+    {
         if (!agent)
             return 0; // Invalid agent
         if (agent->max_hp)
@@ -43,13 +49,13 @@ namespace {
             case GW::Constants::ModelID::DoA::WaterTormentor:
             case GW::Constants::ModelID::DoA::VeilWaterTormentor:
             case GW::Constants::ModelID::DoA::MindTormentor:
-            case GW::Constants::ModelID::DoA::VeilMindTormentor:
-                return GW::PartyMgr::GetIsPartyInHardMode() ? 1080 : 840;
+            case GW::Constants::ModelID::DoA::VeilMindTormentor: return GW::PartyMgr::GetIsPartyInHardMode() ? 1080 : 840;
         }
         return 0;
     }
 
-    int GetHealthRegenPips(const GW::AgentLiving* agent) {
+    int GetHealthRegenPips(const GW::AgentLiving* agent)
+    {
         const auto max_hp = GetAgentMaxHP(agent);
         if (!(max_hp && agent->hp_pips != .0f))
             return 0; // Invalid agent, unknown max HP, or no regen or degen
@@ -58,11 +64,13 @@ namespace {
         return static_cast<int>(pips);
     }
 
-    bool OrderDupeInfo(DupeInfo& a, DupeInfo& b) {
+    bool OrderDupeInfo(DupeInfo& a, DupeInfo& b)
+    {
         const auto agentA = GetAgentLivingByID(a.agent_id);
         const auto agentB = agentA ? GetAgentLivingByID(b.agent_id) : nullptr;
 
-        if (!agentB) return false;
+        if (!agentB)
+            return false;
 
         if (agentA->hp > 0.35f && agentB->hp > 0.35f) {
             return agentA->hp_pips > agentB->hp_pips;
@@ -70,13 +78,15 @@ namespace {
 
         return agentA->hp > agentB->hp;
     }
-    void DrawDuping(const char* label, const std::vector<DupeInfo>& vec) {
-        if (vec.empty()) return;
+
+    void DrawDuping(const char* label, const std::vector<DupeInfo>& vec)
+    {
+        if (vec.empty())
+            return;
 
         ImGui::Spacing();
         ImGui::Text(label);
         if (ImGui::BeginTable(label, 5)) {
-
             ImGui::TableSetupColumn("Selection", ImGuiTableColumnFlags_WidthFixed, 0, 0);
             ImGui::TableSetupColumn("HP", ImGuiTableColumnFlags_WidthStretch, -1, 0);
             ImGui::TableSetupColumn("Regen", ImGuiTableColumnFlags_WidthFixed, 70, 1);
@@ -100,7 +110,7 @@ namespace {
                     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
                         GW::GameThread::Enqueue([living] {
                             GW::Agents::ChangeTarget(living);
-                            });
+                        });
                     }
                 }
 
@@ -110,7 +120,7 @@ namespace {
                 ImGui::TableSetColumnIndex(2);
                 const auto pips = GetHealthRegenPips(living);
                 if (pips > 0 && pips < 11) {
-                    ImGui::Text("%.*s",pips > 0 && pips < 11 ? pips : 0,">>>>>>>>>>");
+                    ImGui::Text("%.*s", pips > 0 && pips < 11 ? pips : 0, ">>>>>>>>>>");
                 }
 
                 ImGui::TableSetColumnIndex(3);
@@ -149,7 +159,8 @@ namespace {
     std::set<GW::AgentID> all_waters;
     std::set<GW::AgentID> all_minds;
 
-    void ClearDupes() {
+    void ClearDupes()
+    {
         souls.clear();
         waters.clear();
         minds.clear();
@@ -168,17 +179,19 @@ namespace {
     float minds_threshhold = 0.0f;
 }
 
-void DupingWindow::Terminate() {
+void DupingWindow::Terminate()
+{
     ToolboxWindow::Terminate();
     ClearDupes();
 }
 
-void DupingWindow::Draw(IDirect3DDevice9* device) {
+void DupingWindow::Draw(IDirect3DDevice9* device)
+{
     UNREFERENCED_PARAMETER(device);
-    if (!visible) 
+    if (!visible)
         return;
     const bool is_in_doa = (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable);
-    if (hide_when_nothing && !is_in_doa) 
+    if (hide_when_nothing && !is_in_doa)
         return;
 
     const float sqr_range = range * range;
@@ -188,7 +201,7 @@ void DupingWindow::Draw(IDirect3DDevice9* device) {
     float threshold = .0f;
     std::set<GW::AgentID>* all_agents_of_type = nullptr;
     std::vector<DupeInfo>* duped_agents_of_type = nullptr;
-    const GW::AgentArray* agents = nullptr; 
+    const GW::AgentArray* agents = nullptr;
     const GW::Agent* player = nullptr;
 
     // ==== Calculate the data ====
@@ -203,43 +216,37 @@ void DupingWindow::Draw(IDirect3DDevice9* device) {
 
     agents = GW::Agents::GetAgentArray();
     player = agents ? GW::Agents::GetPlayer() : nullptr;
-    
+
     if (!player)
         goto done_calculation;
 
     for (auto* agent : *agents) {
         const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
 
-        if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive() || GW::GetSquareDistance(player->pos, living->pos) > sqr_range)
+        if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive() || GetSquareDistance(player->pos, living->pos) > sqr_range)
             continue;
 
         switch (living->player_number) {
             case GW::Constants::ModelID::DoA::SoulTormentor:
-            case GW::Constants::ModelID::DoA::VeilSoulTormentor:
-                all_agents_of_type = &all_souls;
+            case GW::Constants::ModelID::DoA::VeilSoulTormentor: all_agents_of_type = &all_souls;
                 duped_agents_of_type = &souls;
                 threshold = souls_threshhold;
                 soul_count++;
                 break;
             case GW::Constants::ModelID::DoA::WaterTormentor:
-            case GW::Constants::ModelID::DoA::VeilWaterTormentor:
-                all_agents_of_type = &all_waters;
+            case GW::Constants::ModelID::DoA::VeilWaterTormentor: all_agents_of_type = &all_waters;
                 duped_agents_of_type = &waters;
                 threshold = waters_threshhold;
                 water_count++;
                 break;
             case GW::Constants::ModelID::DoA::MindTormentor:
-            case GW::Constants::ModelID::DoA::VeilMindTormentor:
-                all_agents_of_type = &all_minds;
+            case GW::Constants::ModelID::DoA::VeilMindTormentor: all_agents_of_type = &all_minds;
                 duped_agents_of_type = &minds;
                 threshold = minds_threshhold;
                 mind_count++;
                 break;
-            default:
-                continue;
+            default: continue;
         }
-
-        
 
         if (living->hp <= threshold) {
             all_agents_of_type->insert(living->agent_id);
@@ -268,7 +275,7 @@ void DupingWindow::Draw(IDirect3DDevice9* device) {
     std::ranges::sort(waters, &OrderDupeInfo);
     std::ranges::sort(minds, &OrderDupeInfo);
 
-    done_calculation:
+done_calculation:
 
     if (hide_when_nothing
         && !(show_souls_counter && soul_count > 0)
@@ -277,9 +284,8 @@ void DupingWindow::Draw(IDirect3DDevice9* device) {
         && waters.size() == 0
         && !(show_minds_counter && mind_count > 0)
         && minds.size() == 0
-    ) return;
-
-
+    )
+        return;
 
     // ==== Draw the window ====
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -328,16 +334,20 @@ void DupingWindow::Draw(IDirect3DDevice9* device) {
     ImGui::End();
 }
 
-void DupingWindow::DrawSettingInternal() {
+void DupingWindow::DrawSettingInternal()
+{
     ImGui::Checkbox("Hide when there is nothing to show", &hide_when_nothing);
     ImGui::DragFloat("Range", &range, 50, 0, 5000);
 
     ImGui::Separator();
     ImGui::Text("Enemy Counters:");
     ImGui::StartSpacedElements(275.f);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Show souls", &show_souls_counter);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Show waters", &show_waters_counter);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Show minds", &show_minds_counter);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show souls", &show_souls_counter);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show waters", &show_waters_counter);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show minds", &show_minds_counter);
 
     ImGui::Separator();
     ImGui::Text("Duping thresholds:");
@@ -348,7 +358,8 @@ void DupingWindow::DrawSettingInternal() {
     ImGui::DragFloat("Minds", &minds_threshhold, 0.01f, 0, 1);
 }
 
-void DupingWindow::LoadSettings(ToolboxIni* ini) {
+void DupingWindow::LoadSettings(ToolboxIni* ini)
+{
     ToolboxWindow::LoadSettings(ini);
     LOAD_BOOL(hide_when_nothing);
     LOAD_BOOL(show_souls_counter);
@@ -361,7 +372,8 @@ void DupingWindow::LoadSettings(ToolboxIni* ini) {
     LOAD_FLOAT(range);
 }
 
-void DupingWindow::SaveSettings(ToolboxIni* ini) {
+void DupingWindow::SaveSettings(ToolboxIni* ini)
+{
     ToolboxWindow::SaveSettings(ini);
     SAVE_BOOL(hide_when_nothing);
     SAVE_BOOL(show_souls_counter);

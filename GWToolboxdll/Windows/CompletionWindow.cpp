@@ -37,7 +37,6 @@ using namespace Missions;
 using namespace CompletionWindow_Constants;
 
 namespace {
-
     bool ArrayBoolAt(GW::Array<uint32_t>& array, uint32_t index)
     {
         uint32_t real_index = index / 32;
@@ -47,6 +46,7 @@ namespace {
         uint32_t flag = 1 << shift;
         return (array[real_index] & flag) != 0;
     }
+
     bool ArrayBoolAt(std::vector<uint32_t>& array, uint32_t index)
     {
         uint32_t real_index = index / 32;
@@ -56,13 +56,14 @@ namespace {
         uint32_t flag = 1 << shift;
         return (array[real_index] & flag) != 0;
     }
+
     void ArrayBoolSet(std::vector<uint32_t>& array, uint32_t index, bool is_set = true)
     {
-        uint32_t real_index = (uint32_t)index / 32;
+        uint32_t real_index = index / 32;
         if (real_index >= array.size()) {
             array.resize(real_index + 1, 0);
         }
-        uint32_t shift = (uint32_t)index % 32;
+        uint32_t shift = index % 32;
         uint32_t flag = 1u << shift;
         if (is_set) {
             array[real_index] |= flag;
@@ -72,12 +73,14 @@ namespace {
         }
     }
 
-    const wchar_t* GetAccountEmail() {
+    const wchar_t* GetAccountEmail()
+    {
         const auto c = GW::GetCharContext();
         return c && *c->player_email ? c->player_email : nullptr;
     }
 
-    const wchar_t* GetPlayerName() {
+    const wchar_t* GetPlayerName()
+    {
         auto c = GW::GetCharContext();
         return c && *c->player_name ? c->player_name : nullptr;
     }
@@ -101,8 +104,8 @@ namespace {
     bool hard_mode = false;
 
     bool IsHardMode() { return hard_mode; }
-    enum CompletionType : uint8_t
-    {
+
+    enum CompletionType : uint8_t {
         Skills,
         Mission,
         MissionBonus,
@@ -119,31 +122,34 @@ namespace {
     std::unordered_map<std::wstring, CharacterCompletion*> character_completion;
     GW::HookEntry skills_unlocked_stoc_entry;
 
-    std::map<GW::Constants::Campaign, std::vector<Missions::Mission*>> missions;
-    std::map<GW::Constants::Campaign, std::vector<Missions::Mission*>> vanquishes;
-    std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> elite_skills;
-    std::map<GW::Constants::Campaign, std::vector<Missions::PvESkill*>> pve_skills;
-    std::map<GW::Constants::Campaign, std::vector<Missions::HeroUnlock*>> heros;
-    std::vector<Missions::FestivalHat*> festival_hats;
-    std::vector<Missions::MinipetAchievement*> minipets;
-    std::vector<Missions::WeaponAchievement*> hom_weapons;
-    std::vector<Missions::ArmorAchievement*> hom_armor;
-    std::vector<Missions::CompanionAchievement*> hom_companions;
-    std::vector<Missions::HonorAchievement*> hom_titles;
+    std::map<Campaign, std::vector<Missions::Mission*>> missions;
+    std::map<Campaign, std::vector<Missions::Mission*>> vanquishes;
+    std::map<Campaign, std::vector<PvESkill*>> elite_skills;
+    std::map<Campaign, std::vector<PvESkill*>> pve_skills;
+    std::map<Campaign, std::vector<HeroUnlock*>> heros;
+    std::vector<FestivalHat*> festival_hats;
+    std::vector<MinipetAchievement*> minipets;
+    std::vector<WeaponAchievement*> hom_weapons;
+    std::vector<ArmorAchievement*> hom_armor;
+    std::vector<CompanionAchievement*> hom_companions;
+    std::vector<HonorAchievement*> hom_titles;
     bool minipets_sorted = false;
     HallOfMonumentsAchievements hom_achievements;
     int hom_achievements_status = 0xf;
 
-    CompletionWindow& Instance() {
+    CompletionWindow& Instance()
+    {
         return CompletionWindow::Instance();
     }
 
-    HallOfMonumentsAchievements* GetCharacterHom(const std::wstring& player_name) {
-        const auto cc = Instance().GetCharacterCompletion(player_name.c_str(),false);
+    HallOfMonumentsAchievements* GetCharacterHom(const std::wstring& player_name)
+    {
+        const auto cc = Instance().GetCharacterCompletion(player_name.c_str(), false);
         return cc ? &cc->hom_achievements : nullptr;
     }
 
-    void OnCycleDisplayedMinipetsButton(const GW::UI::DialogButtonInfo* button) {
+    void OnCycleDisplayedMinipetsButton(const GW::UI::DialogButtonInfo* button)
+    {
         if (wcsncmp(button->message, L"\x8102\x2B96\xA802\xD212\x380C", 5) != 0)
             return; // Not "Cycle displayed minipets"
         const wchar_t* dialog_body = DialogModule::Instance().GetDialogBody();
@@ -179,7 +185,9 @@ namespace {
         }
         Instance().CheckProgress();
     }
-    void OnFestivalHatButton(const GW::UI::DialogButtonInfo* button) {
+
+    void OnFestivalHatButton(const GW::UI::DialogButtonInfo* button)
+    {
         if (wcsncmp(button->message, L"\x8101\x62E2\xAD6D\x82EB\x4C26 ", 5) != 0)
             return; // Not "Lets talk about something else"
         const wchar_t* dialog_body = DialogModule::Instance().GetDialogBody();
@@ -190,7 +198,7 @@ namespace {
         auto cc = character_completion[GetPlayerName()];
         auto& unlocked = cc->festival_hats;
         for (const auto btn : buttons) {
-            for (size_t i = 0; i < _countof(encoded_festival_hat_names);i++) {
+            for (size_t i = 0; i < _countof(encoded_festival_hat_names); i++) {
                 if (wcsstr(btn->message, encoded_festival_hat_names[i])) {
                     ArrayBoolSet(unlocked, i, true);
                     break;
@@ -201,15 +209,17 @@ namespace {
     }
 
     // Check for "Cycle displayed minipets" button - if present, this is our hom dialog!
-    void OnDialogButton(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+    void OnDialogButton(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    {
         ASSERT(message_id == GW::UI::UIMessage::kDialogButton);
-        GW::UI::DialogButtonInfo* button = (GW::UI::DialogButtonInfo*)wparam;
+        auto button = static_cast<GW::UI::DialogButtonInfo*>(wparam);
         OnCycleDisplayedMinipetsButton(button);
         OnFestivalHatButton(button);
     }
 
     // Flag miniature as unlocked for current character when dedicated
-    void OnSendDialog(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+    void OnSendDialog(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    {
         ASSERT(message_id == GW::UI::UIMessage::kSendDialog);
         if (GW::Map::GetMapID() != MapID::Hall_of_Monuments)
             return;
@@ -236,42 +246,43 @@ namespace {
         }
     }
 
-	void LoadTextures(std::vector<MissionImage>& mission_images) {
-		Resources::EnsureFolderExists(Resources::GetPath(L"img", L"missions"));
-		for (auto& mission_image : mission_images) {
-			if (mission_image.texture)
-				continue;
-			Resources::Instance().LoadTexture(
-				&mission_image.texture,
-				Resources::GetPath(L"img/missions", mission_image.file_name),
-				(WORD)mission_image.resource_id
-			);
-		}
-	}
+    void LoadTextures(std::vector<MissionImage>& mission_images)
+    {
+        Resources::EnsureFolderExists(Resources::GetPath(L"img", L"missions"));
+        for (auto& mission_image : mission_images) {
+            if (mission_image.texture)
+                continue;
+            Resources::Instance().LoadTexture(
+                &mission_image.texture,
+                Resources::GetPath(L"img/missions", mission_image.file_name),
+                static_cast<WORD>(mission_image.resource_id)
+            );
+        }
+    }
 
-	void OnHomLoaded(HallOfMonumentsAchievements* result) {
-		if (result->state != HallOfMonumentsAchievements::State::Done) {
+    void OnHomLoaded(HallOfMonumentsAchievements* result)
+    {
+        if (result->state != HallOfMonumentsAchievements::State::Done) {
             Log::LogW(L"Failed to load Hall of Monuments achievements for %s", result->character_name.c_str());
             return;
-		}
+        }
         //Log::InfoW(L"Loaded Hom for %s", result->character_name);
         CompletionWindow::Instance().CheckProgress();
-	}
+    }
 
-	void FetchHom(HallOfMonumentsAchievements* out = nullptr) {
-        if (!out)
-        {
+    void FetchHom(HallOfMonumentsAchievements* out = nullptr)
+    {
+        if (!out) {
             const auto player_name = GetPlayerName();
             const auto cc = CompletionWindow::Instance().GetCharacterCompletion(player_name, true);
-            if (!cc) return;
+            if (!cc)
+                return;
             out = &cc->hom_achievements;
-		}
-        if (!out->isLoading())
-        {
+        }
+        if (!out->isLoading()) {
             HallOfMonumentsModule::AsyncGetAccountAchievements(out->character_name, out, OnHomLoaded);
-		}
-
-	}
+        }
+    }
 
     bool ParseCompletionBuffer(CompletionType type, wchar_t* character_name = nullptr, uint32_t* buffer = nullptr, size_t len = 0)
     {
@@ -289,56 +300,54 @@ namespace {
                 return false;
             character_name = c->player_name;
             switch (type) {
-                case CompletionType::Mission:
-                    buffer = w->missions_completed.m_buffer;
+                case Mission: buffer = w->missions_completed.m_buffer;
                     len = w->missions_completed.m_size;
                     break;
-                case CompletionType::MissionBonus:
-                    buffer = w->missions_bonus.m_buffer;
+                case MissionBonus: buffer = w->missions_bonus.m_buffer;
                     len = w->missions_bonus.m_size;
                     break;
-                case CompletionType::MissionHM:
-                    buffer = w->missions_completed_hm.m_buffer;
+                case MissionHM: buffer = w->missions_completed_hm.m_buffer;
                     len = w->missions_completed_hm.m_size;
                     break;
-                case CompletionType::MissionBonusHM:
-                    buffer = w->missions_bonus_hm.m_buffer;
+                case MissionBonusHM: buffer = w->missions_bonus_hm.m_buffer;
                     len = w->missions_bonus_hm.m_size;
                     break;
-                case CompletionType::Skills:
-                    buffer = w->unlocked_character_skills.m_buffer;
+                case Skills: buffer = w->unlocked_character_skills.m_buffer;
                     len = w->unlocked_character_skills.m_size;
                     break;
-                case CompletionType::Vanquishes:
-                    buffer = w->vanquished_areas.m_buffer;
+                case Vanquishes: buffer = w->vanquished_areas.m_buffer;
                     len = w->vanquished_areas.m_size;
                     break;
-                case CompletionType::Heroes:
-                    buffer = (uint32_t*)w->hero_info.m_buffer;
+                case Heroes: buffer = (uint32_t*)w->hero_info.m_buffer;
                     len = w->hero_info.m_size;
                     break;
-                case CompletionType::MapsUnlocked:
-                    buffer = (uint32_t*)w->unlocked_map.m_buffer;
+                case MapsUnlocked: buffer = w->unlocked_map.m_buffer;
                     len = w->unlocked_map.m_size;
                     break;
                 default: ASSERT("Invalid CompletionType" && false);
             }
         }
         const auto this_character_completion = Instance().GetCharacterCompletion(character_name, true);
-        std::vector<uint32_t>* write_buf = 0;
+        std::vector<uint32_t>* write_buf = nullptr;
         switch (type) {
-            case CompletionType::Mission: write_buf = &this_character_completion->mission; break;
-            case CompletionType::MissionBonus: write_buf = &this_character_completion->mission_bonus; break;
-            case CompletionType::MissionHM: write_buf = &this_character_completion->mission_hm; break;
-            case CompletionType::MissionBonusHM: write_buf = &this_character_completion->mission_bonus_hm; break;
-            case CompletionType::Skills: write_buf = &this_character_completion->skills; break;
-            case CompletionType::Vanquishes: write_buf = &this_character_completion->vanquishes; break;
-            case CompletionType::Heroes: {
+            case Mission: write_buf = &this_character_completion->mission;
+                break;
+            case MissionBonus: write_buf = &this_character_completion->mission_bonus;
+                break;
+            case MissionHM: write_buf = &this_character_completion->mission_hm;
+                break;
+            case MissionBonusHM: write_buf = &this_character_completion->mission_bonus_hm;
+                break;
+            case Skills: write_buf = &this_character_completion->skills;
+                break;
+            case Vanquishes: write_buf = &this_character_completion->vanquishes;
+                break;
+            case Heroes: {
                 write_buf = &this_character_completion->heroes;
                 if (from_game) {
                     // Writing from game memory, not from file
                     std::vector<uint32_t>& write = *write_buf;
-                    GW::HeroInfo* hero_arr = (GW::HeroInfo*)buffer;
+                    auto hero_arr = (GW::HeroInfo*)buffer;
                     if (write.size() < len) {
                         write.resize(len, 0);
                     }
@@ -347,10 +356,14 @@ namespace {
                     }
                     return true;
                 }
-            } break;
-            case CompletionType::MapsUnlocked: write_buf = &this_character_completion->maps_unlocked; break;
-            case CompletionType::MinipetsUnlocked: write_buf = &this_character_completion->minipets_unlocked; break;
-            case CompletionType::FestivalHats: write_buf = &this_character_completion->festival_hats; break;
+            }
+            break;
+            case MapsUnlocked: write_buf = &this_character_completion->maps_unlocked;
+                break;
+            case MinipetsUnlocked: write_buf = &this_character_completion->minipets_unlocked;
+                break;
+            case FestivalHats: write_buf = &this_character_completion->festival_hats;
+                break;
             default: ASSERT("Invalid CompletionType" && false);
         }
         std::vector<uint32_t>& write = *write_buf;
@@ -367,11 +380,14 @@ namespace {
         std::wstring email;
         std::vector<std::wstring> characters;
     };
+
     bool only_show_account_chars = true;
     // Check login screen; assign missing characters to email account
-    void RefreshAccountCharacters() {
+    void RefreshAccountCharacters()
+    {
         const auto email = GetAccountEmail();
-        if (!email) return;
+        if (!email)
+            return;
         const auto p = GW::GetPreGameContext();
         if (p) {
             for (const auto& character : p->chars) {
@@ -382,13 +398,14 @@ namespace {
         const auto pn = GetPlayerName();
         if (pn) {
             auto cc = CompletionWindow::Instance().GetCharacterCompletion(pn);
-            if (cc) cc->account = email;
+            if (cc)
+                cc->account = email;
         }
-
     }
 
-    void OnPostCheckUIState(GW::HookStatus* , GW::UI::UIMessage, void* , void* state) {
-        if(state && *(uint32_t*)state == 2)
+    void OnPostCheckUIState(GW::HookStatus*, GW::UI::UIMessage, void*, void* state)
+    {
+        if (state && *static_cast<uint32_t*>(state) == 2)
             RefreshAccountCharacters();
     }
 }
@@ -398,104 +415,106 @@ Mission::MissionImageList PropheciesMission::normal_mode_images({
     {L"MissionIconPrimary.png", IDB_Missions_MissionIconPrimary},
     {L"MissionIconBonus.png", IDB_Missions_MissionIconBonus},
     {L"MissionIcon.png", IDB_Missions_MissionIcon},
-    });
+});
 Mission::MissionImageList PropheciesMission::hard_mode_images({
     {L"HardModeMissionIconIncomplete.png", IDB_Missions_HardModeMissionIconIncomplete},
     {L"HardModeMissionIcon1.png", IDB_Missions_HardModeMissionIcon1},
     {L"HardModeMissionIcon1b.png", IDB_Missions_HardModeMissionIcon1b},
     {L"HardModeMissionIcon2.png", IDB_Missions_HardModeMissionIcon2},
-    });
+});
 
 Mission::MissionImageList FactionsMission::normal_mode_images({
     {L"FactionsMissionIconIncomplete.png", IDB_Missions_FactionsMissionIconIncomplete},
     {L"FactionsMissionIconPrimary.png", IDB_Missions_FactionsMissionIconPrimary},
     {L"FactionsMissionIconExpert.png", IDB_Missions_FactionsMissionIconExpert},
     {L"FactionsMissionIcon.png", IDB_Missions_FactionsMissionIcon},
-    });
+});
 Mission::MissionImageList FactionsMission::hard_mode_images({
     {L"HardModeMissionIconIncomplete.png", IDB_Missions_HardModeMissionIconIncomplete},
     {L"HardModeMissionIcon1.png", IDB_Missions_HardModeMissionIcon1},
     {L"HardModeMissionIcon2.png", IDB_Missions_HardModeMissionIcon2},
     {L"HardModeMissionIcon.png", IDB_Missions_HardModeMissionIcon},
-    });
+});
 
 Mission::MissionImageList NightfallMission::normal_mode_images({
     {L"NightfallMissionIconIncomplete.png", IDB_Missions_NightfallMissionIconIncomplete},
     {L"NightfallMissionIconPrimary.png", IDB_Missions_NightfallMissionIconPrimary},
     {L"NightfallMissionIconExpert.png", IDB_Missions_NightfallMissionIconExpert},
     {L"NightfallMissionIcon.png", IDB_Missions_NightfallMissionIcon},
-    });
+});
 Mission::MissionImageList NightfallMission::hard_mode_images({
     {L"HardModeMissionIconIncomplete.png", IDB_Missions_HardModeMissionIconIncomplete},
     {L"HardModeMissionIcon1.png", IDB_Missions_HardModeMissionIcon1},
     {L"HardModeMissionIcon2.png", IDB_Missions_HardModeMissionIcon2},
     {L"HardModeMissionIcon.png", IDB_Missions_HardModeMissionIcon},
-    });
+});
 
 Mission::MissionImageList TormentMission::normal_mode_images({
     {L"NightfallTormentMissionIconIncomplete.png", IDB_Missions_NightfallTormentMissionIconIncomplete},
     {L"NightfallTormentMissionIconPrimary.png", IDB_Missions_NightfallTormentMissionIconPrimary},
     {L"NightfallTormentMissionIconExpert.png", IDB_Missions_NightfallTormentMissionIconExpert},
     {L"NightfallTormentMissionIcon.png", IDB_Missions_NightfallTormentMissionIcon},
-    });
+});
 Mission::MissionImageList TormentMission::hard_mode_images({
     {L"HardModeMissionIconIncomplete.png", IDB_Missions_HardModeMissionIconIncomplete},
     {L"HardModeMissionIcon1.png", IDB_Missions_HardModeMissionIcon1},
     {L"HardModeMissionIcon2.png", IDB_Missions_HardModeMissionIcon2},
     {L"HardModeMissionIcon.png", IDB_Missions_HardModeMissionIcon},
-    });
+});
 
 Mission::MissionImageList EotNMission::normal_mode_images({
     {L"EOTNMissionIncomplete.png", IDB_Missions_EOTNMissionIncomplete},
     {L"EOTNMission.png", IDB_Missions_EOTNMission},
-    });
+});
 Mission::MissionImageList EotNMission::hard_mode_images({
     {L"EOTNHardModeMissionIncomplete.png", IDB_Missions_EOTNHardModeMissionIncomplete},
     {L"EOTNHardModeMission.png", IDB_Missions_EOTNHardModeMission},
-    });
+});
 
 Mission::MissionImageList Dungeon::normal_mode_images({
     {L"EOTNDungeonIncomplete.png", IDB_Missions_EOTNDungeonIncomplete},
     {L"EOTNDungeon.png", IDB_Missions_EOTNDungeon},
-    });
+});
 Mission::MissionImageList Dungeon::hard_mode_images({
     {L"EOTNHardModeDungeonIncomplete.png", IDB_Missions_EOTNHardModeDungeonIncomplete},
     {L"EOTNDungeon.png", IDB_Missions_EOTNDungeon},
-    });
+});
 Mission::MissionImageList Vanquish::hard_mode_images({
     {L"VanquishIncomplete.png", IDB_Missions_VanquishIncomplete},
     {L"Vanquish.png", IDB_Missions_Vanquish},
-    });
+});
 
 
 Color Mission::is_daily_bg_color = Colors::ARGB(102, 0, 255, 0);
 Color Mission::has_quest_bg_color = Colors::ARGB(102, 0, 150, 0);
-ImVec2 Mission::icon_size = { 48.0f, 48.0f };
-
+ImVec2 Mission::icon_size = {48.0f, 48.0f};
 
 
 Mission::Mission(MapID _outpost,
                  const MissionImageList& _normal_mode_images,
                  const MissionImageList& _hard_mode_images,
                  QuestID _zm_quest)
-    : outpost(_outpost), zm_quest(_zm_quest), normal_mode_textures(_normal_mode_images), hard_mode_textures(_hard_mode_images) {
+    : outpost(_outpost), zm_quest(_zm_quest), normal_mode_textures(_normal_mode_images), hard_mode_textures(_hard_mode_images)
+{
     map_to = outpost;
     GW::AreaInfo* map_info = GW::Map::GetMapInfo(outpost);
     if (map_info)
         name.reset(map_info->name_id);
-    };
+};
 
-MapID Mission::GetOutpost() {
+MapID Mission::GetOutpost()
+{
     return TravelWindow::GetNearestOutpost(map_to);
 }
-bool Mission::Draw(IDirect3DDevice9* )
+
+bool Mission::Draw(IDirect3DDevice9*)
 {
     const auto texture = GetMissionImage();
 
     const float scale = ImGui::GetIO().FontGlobalScale;
 
     ImVec2 s(icon_size.x * scale, icon_size.y * scale);
-    ImVec4 bg = ImVec4(0, 0, 0, 0);
+    auto bg = ImVec4(0, 0, 0, 0);
     if (IsDaily()) {
         bg = ImColor(is_daily_bg_color);
     }
@@ -503,31 +522,33 @@ bool Mission::Draw(IDirect3DDevice9* )
         bg = ImColor(has_quest_bg_color);
     }
     ImVec4 tint(1, 1, 1, 1);
-    ImVec2 uv0 = ImVec2(0, 0);
-    ImVec2 uv1 = ImVec2(1, 1);
+    auto uv0 = ImVec2(0, 0);
+    auto uv1 = ImVec2(1, 1);
 
     const ImVec2 cursor_pos = ImGui::GetCursorPos();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-    ImGui::PushID((int)outpost);
+    ImGui::PushID(static_cast<int>(outpost));
     if (show_as_list) {
         s.y /= 2.f;
         if (!map_unlocked) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
         }
-        bool clicked = ImGui::IconButton(Name(), (ImTextureID)texture, { s.x * 5.f, s.y }, 0, { s.x / 2.f, s.y });
+        bool clicked = ImGui::IconButton(Name(), texture, {s.x * 5.f, s.y}, 0, {s.x / 2.f, s.y});
         if (!map_unlocked) {
             ImGui::PopStyleColor();
         }
-        if(clicked) OnClick();
+        if (clicked)
+            OnClick();
     }
     else {
         if (texture) {
             uv1 = ImGui::CalculateUvCrop(texture, s);
         }
-        if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint))
+        if (ImGui::ImageButton(texture, s, uv0, uv1, -1, bg, tint))
             OnClick();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip(Name());
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(Name());
     }
     ImGui::PopID();
     ImGui::PopStyleColor();
@@ -535,7 +556,7 @@ bool Mission::Draw(IDirect3DDevice9* )
 
     if (is_completed && bonus && show_as_list) {
         const ImVec2 cursor_pos2 = ImGui::GetCursorPos();
-        ImVec2 icon_size_scaled = { icon_size.x * ImGui::GetIO().FontGlobalScale,icon_size.y * ImGui::GetIO().FontGlobalScale };
+        ImVec2 icon_size_scaled = {icon_size.x * ImGui::GetIO().FontGlobalScale, icon_size.y * ImGui::GetIO().FontGlobalScale};
         if (show_as_list) {
             icon_size_scaled.x /= 2.f;
             icon_size_scaled.y /= 2.f;
@@ -545,21 +566,25 @@ bool Mission::Draw(IDirect3DDevice9* )
         const ImColor completed_text = IM_COL32(0xE5, 0xFF, 0xCC, 255);
         ImGui::SetCursorPos(cursor_pos);
         const ImVec2 screen_pos = ImGui::GetCursorScreenPos();
-        ImGui::RenderFrame(screen_pos, { screen_pos.x + icon_size_scaled.x, screen_pos.y + icon_size_scaled.y }, completed_bg, false, 0.f);
+        ImGui::RenderFrame(screen_pos, {screen_pos.x + icon_size_scaled.x, screen_pos.y + icon_size_scaled.y}, completed_bg, false, 0.f);
 
         ImGui::SetCursorPos(cursor_pos);
 
-        const ImVec2 check_size = ImGui::CalcTextSize(reinterpret_cast<const char*>(ICON_FA_CHECK));
-        ImGui::GetWindowDrawList()->AddText({ screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2) },
-            completed_text, reinterpret_cast<const char*>(ICON_FA_CHECK));
+        const ImVec2 check_size = ImGui::CalcTextSize(ICON_FA_CHECK);
+        ImGui::GetWindowDrawList()->AddText({screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2)},
+                                            completed_text, ICON_FA_CHECK);
         ImGui::SetCursorPos(cursor_pos2);
     }
     return true;
 }
-const char* Mission::Name() {
+
+const char* Mission::Name()
+{
     return name.string().c_str();
 }
-void Mission::OnClick() {
+
+void Mission::OnClick()
+{
     MapID travel_to = GetOutpost();
     if (chosen_player_name != GetPlayerName()) {
         RerollWindow::Instance().Reroll(chosen_player_name.data(), travel_to);
@@ -572,7 +597,9 @@ void Mission::OnClick() {
         TravelWindow::Instance().Travel(travel_to, District::Current, 0);
     }
 }
-void Mission::CheckProgress(const std::wstring& player_name) {
+
+void Mission::CheckProgress(const std::wstring& player_name)
+{
     is_completed = bonus = false;
     const auto& completion = character_completion;
     if (!completion.contains(player_name))
@@ -588,6 +615,7 @@ void Mission::CheckProgress(const std::wstring& player_name) {
     is_completed = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost));
     bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
 }
+
 IDirect3DTexture9* Mission::GetMissionImage()
 {
     auto* texture_list = &normal_mode_textures;
@@ -599,10 +627,12 @@ IDirect3DTexture9* Mission::GetMissionImage()
 
     return texture_list->at(index).texture;
 }
+
 bool Mission::IsDaily()
 {
     return false;
 }
+
 bool Mission::HasQuest()
 {
     return GW::QuestMgr::GetQuest(zm_quest) != nullptr;
@@ -612,6 +642,7 @@ bool Dungeon::IsDaily()
 {
     return false;
 }
+
 bool Dungeon::HasQuest()
 {
     for (auto& zb : zb_quests) {
@@ -624,10 +655,13 @@ bool Dungeon::HasQuest()
 
 
 HeroUnlock::HeroUnlock(HeroID _hero_id)
-	: PvESkill(SkillID::No_Skill) {
-	skill_id = (SkillID)_hero_id;
+    : PvESkill(SkillID::No_Skill)
+{
+    skill_id = static_cast<SkillID>(_hero_id);
 }
-void HeroUnlock::CheckProgress(const std::wstring& player_name) {
+
+void HeroUnlock::CheckProgress(const std::wstring& player_name)
+{
     is_completed = false;
     const auto& skills = character_completion;
     if (!skills.contains(player_name))
@@ -635,41 +669,50 @@ void HeroUnlock::CheckProgress(const std::wstring& player_name) {
     auto& heroes = skills.at(player_name)->heroes;
     is_completed = bonus = std::ranges::find(heroes, static_cast<uint32_t>(skill_id)) != heroes.end();
 }
-const char* HeroUnlock::Name() {
-    return hero_names[(uint32_t)skill_id];
+
+const char* HeroUnlock::Name()
+{
+    return hero_names[static_cast<uint32_t>(skill_id)];
 }
+
 IDirect3DTexture9* HeroUnlock::GetMissionImage()
 {
-	if (!image) {
-		image = new IDirect3DTexture9*;
+    if (!image) {
+        image = new IDirect3DTexture9*;
         *image = nullptr;
-		const auto path = Resources::GetPath(L"img/heros");
-		Resources::EnsureFolderExists(path);
-		wchar_t local_image[MAX_PATH];
-		swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
-		char remote_image[128];
-		snprintf(remote_image, _countof(remote_image), "https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
-		Resources::Instance().LoadTexture(image, local_image, remote_image);
-	}
-	return *image;
+        const auto path = Resources::GetPath(L"img/heros");
+        Resources::EnsureFolderExists(path);
+        wchar_t local_image[MAX_PATH];
+        swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
+        char remote_image[128];
+        snprintf(remote_image, _countof(remote_image), "https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
+        Resources::Instance().LoadTexture(image, local_image, remote_image);
+    }
+    return *image;
 }
-void HeroUnlock::OnClick() {
+
+void HeroUnlock::OnClick()
+{
     wchar_t buf[128];
     swprintf(buf, 128, L"Game_link:Hero_%d", skill_id);
     GW::GameThread::Enqueue([buf]() {
         GuiUtils::OpenWiki(buf);
-        });
+    });
 }
 
 ItemAchievement::ItemAchievement(size_t _encoded_name_index, const wchar_t* encoded_name)
-	: PvESkill(SkillID::No_Skill) {
-	encoded_name_index = _encoded_name_index;
-    name.language(GW::Constants::TextLanguage::English);
-	name.reset(encoded_name);
+    : PvESkill(SkillID::No_Skill)
+{
+    encoded_name_index = _encoded_name_index;
+    name.language(TextLanguage::English);
+    name.reset(encoded_name);
 }
-const char* ItemAchievement::Name() {
+
+const char* ItemAchievement::Name()
+{
     return name.string().c_str();
 }
+
 IDirect3DTexture9* ItemAchievement::GetMissionImage()
 {
     if (!name.wstring().empty()) {
@@ -689,7 +732,9 @@ IDirect3DTexture9* ItemAchievement::GetMissionImage()
     }
     return nullptr;
 }
-void ItemAchievement::OnClick() {
+
+void ItemAchievement::OnClick()
+{
     GW::GameThread::Enqueue([url = name.wstring()] {
         GuiUtils::OpenWiki(url);
     });
@@ -697,34 +742,40 @@ void ItemAchievement::OnClick() {
 
 IDirect3DTexture9* PvESkill::GetMissionImage()
 {
-	if (!image)
-		image = Resources::GetSkillImage(skill_id);
-	return *image;
+    if (!image)
+        image = Resources::GetSkillImage(skill_id);
+    return *image;
 }
+
 PvESkill::PvESkill(SkillID _skill_id)
-	: Mission(MapID::None, dummy_var, dummy_var), skill_id(_skill_id) {
-	if (_skill_id != SkillID::No_Skill) {
+    : Mission(MapID::None, dummy_var, dummy_var), skill_id(_skill_id)
+{
+    if (_skill_id != SkillID::No_Skill) {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-		if (skill) {
-			name.reset(skill->name);
-			profession = skill->profession;
-		}
+        if (skill) {
+            name.reset(skill->name);
+            profession = skill->profession;
+        }
     }
 }
-void PvESkill::OnClick() {
+
+void PvESkill::OnClick()
+{
     const auto wtf = std::format(L"Game_link:Skill_{}", static_cast<std::underlying_type_t<SkillID>>(skill_id));
     // revert this dumb shit once Microsoft fixes the weird bug
     GW::GameThread::Enqueue([url = wtf] {
         GuiUtils::OpenWiki(url);
     });
 }
-bool PvESkill::Draw(IDirect3DDevice9* device) {
+
+bool PvESkill::Draw(IDirect3DDevice9* device)
+{
     const ImVec2 cursor_pos = ImGui::GetCursorPos();
     if (!Mission::Draw(device))
         return false;
     if (is_completed && !show_as_list) {
         const ImVec2 cursor_pos2 = ImGui::GetCursorPos();
-        ImVec2 icon_size_scaled = { icon_size.x * ImGui::GetIO().FontGlobalScale,icon_size.y * ImGui::GetIO().FontGlobalScale };
+        ImVec2 icon_size_scaled = {icon_size.x * ImGui::GetIO().FontGlobalScale, icon_size.y * ImGui::GetIO().FontGlobalScale};
         if (show_as_list) {
             icon_size_scaled.x /= 2.f;
             icon_size_scaled.y /= 2.f;
@@ -734,19 +785,21 @@ bool PvESkill::Draw(IDirect3DDevice9* device) {
         const ImColor completed_text = IM_COL32(0xE5, 0xFF, 0xCC, 255);
         ImGui::SetCursorPos(cursor_pos);
         const ImVec2 screen_pos = ImGui::GetCursorScreenPos();
-        ImGui::RenderFrame(screen_pos, { screen_pos.x + icon_size_scaled.x, screen_pos.y + icon_size_scaled.y }, completed_bg, false, 0.f);
+        ImGui::RenderFrame(screen_pos, {screen_pos.x + icon_size_scaled.x, screen_pos.y + icon_size_scaled.y}, completed_bg, false, 0.f);
 
         ImGui::SetCursorPos(cursor_pos);
 
         const ImVec2 check_size = ImGui::CalcTextSize(ICON_FA_CHECK);
         ImGui::GetWindowDrawList()->AddText({screen_pos.x + (icon_size_scaled.x - check_size.x) / 2.f,
-                                                screen_pos.y + (icon_size_scaled.y - check_size.y) / 2.f},
-                                                completed_text, ICON_FA_CHECK);
+                                             screen_pos.y + (icon_size_scaled.y - check_size.y) / 2.f},
+                                            completed_text, ICON_FA_CHECK);
         ImGui::SetCursorPos(cursor_pos2);
     }
     return true;
 }
-void PvESkill::CheckProgress(const std::wstring& player_name) {
+
+void PvESkill::CheckProgress(const std::wstring& player_name)
+{
     is_completed = false;
     const auto& skills = character_completion;
     if (!skills.contains(player_name))
@@ -756,32 +809,36 @@ void PvESkill::CheckProgress(const std::wstring& player_name) {
 }
 
 FactionsPvESkill::FactionsPvESkill(SkillID skill_id)
-    : PvESkill(skill_id) {
+    : PvESkill(skill_id)
+{
     GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skill_id);
     uint32_t faction_id = 0x6C3D;
-    if ((TitleID)s->title == TitleID::Luxon) {
+    if (static_cast<TitleID>(s->title) == TitleID::Luxon) {
         faction_id = 0x6C3E;
     }
     if (s) {
         std::wstring buf;
-        buf.resize(32,0);
+        buf.resize(32, 0);
         GW::UI::UInt32ToEncStr(s->name, buf.data(), buf.size());
         buf.resize(wcslen(buf.data()));
         buf += L"\x2\x108\x107 - \x1\x2";
         buf.resize(wcslen(buf.data()) + 4, 0);
         GW::UI::UInt32ToEncStr(faction_id, buf.data() + buf.size() - 4, 4);
-        buf.resize(wcslen(buf.data()) + 1,0);
+        buf.resize(wcslen(buf.data()) + 1, 0);
         name.reset(buf.c_str());
     }
 };
-bool FactionsPvESkill::Draw(IDirect3DDevice9* device) {
+
+bool FactionsPvESkill::Draw(IDirect3DDevice9* device)
+{
     //icon_size.y *= 2.f;
     bool drawn = PvESkill::Draw(device);
     //icon_size.y /= 2.f;
     return drawn;
 }
 
-void EotNMission::CheckProgress(const std::wstring& player_name) {
+void EotNMission::CheckProgress(const std::wstring& player_name)
+{
     is_completed = false;
     const auto& completion = character_completion;
     if (!completion.contains(player_name))
@@ -792,6 +849,7 @@ void EotNMission::CheckProgress(const std::wstring& player_name) {
     }
     is_completed = bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
 }
+
 IDirect3DTexture9* EotNMission::GetMissionImage()
 {
     auto* texture_list = &normal_mode_textures;
@@ -801,7 +859,8 @@ IDirect3DTexture9* EotNMission::GetMissionImage()
     return texture_list->at(is_completed ? 1 : 0).texture;
 }
 
-void Vanquish::CheckProgress(const std::wstring& player_name) {
+void Vanquish::CheckProgress(const std::wstring& player_name)
+{
     is_completed = false;
     const auto& completion = character_completion;
     if (!completion.contains(player_name))
@@ -809,6 +868,7 @@ void Vanquish::CheckProgress(const std::wstring& player_name) {
     auto& unlocked = completion.at(player_name)->vanquishes;
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
 }
+
 IDirect3DTexture9* Vanquish::GetMissionImage()
 {
     return hard_mode_textures.at(is_completed).texture;
@@ -821,39 +881,39 @@ void CompletionWindow::Initialize()
 
     //Resources::Instance().LoadTexture(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
 
-	missions = {
-		{Campaign::Prophecies, {} },
-		{Campaign::Factions, {} },
-		{Campaign::Nightfall, {} },
-		{Campaign::EyeOfTheNorth, {} },
-		{Campaign::BonusMissionPack, {} },
-	};
-	vanquishes = {
-		{Campaign::Prophecies, {} },
-		{Campaign::Factions, {} },
-		{Campaign::Nightfall, {} },
-		{Campaign::EyeOfTheNorth, {} },
-		{Campaign::BonusMissionPack, {} },
-	};
-	elite_skills = {
-		{Campaign::Prophecies, {} },
-		{Campaign::Factions, {} },
-		{Campaign::Nightfall, {} },
-		{Campaign::Core, {} },
-	};
+    missions = {
+        {Campaign::Prophecies, {}},
+        {Campaign::Factions, {}},
+        {Campaign::Nightfall, {}},
+        {Campaign::EyeOfTheNorth, {}},
+        {Campaign::BonusMissionPack, {}},
+    };
+    vanquishes = {
+        {Campaign::Prophecies, {}},
+        {Campaign::Factions, {}},
+        {Campaign::Nightfall, {}},
+        {Campaign::EyeOfTheNorth, {}},
+        {Campaign::BonusMissionPack, {}},
+    };
+    elite_skills = {
+        {Campaign::Prophecies, {}},
+        {Campaign::Factions, {}},
+        {Campaign::Nightfall, {}},
+        {Campaign::Core, {}},
+    };
     pve_skills = {
-        {Campaign::Factions, {} },
-        {Campaign::Nightfall, {} },
-        {Campaign::EyeOfTheNorth, {} },
-        {Campaign::Core, {} },
-	};
+        {Campaign::Factions, {}},
+        {Campaign::Nightfall, {}},
+        {Campaign::EyeOfTheNorth, {}},
+        {Campaign::Core, {}},
+    };
     heros = {
-        {Campaign::Factions, {} },
-        {Campaign::Nightfall, {} },
-        {Campaign::EyeOfTheNorth, {} }
+        {Campaign::Factions, {}},
+        {Campaign::Nightfall, {}},
+        {Campaign::EyeOfTheNorth, {}}
     };
     for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
-        minipets.push_back(new MinipetAchievement(i,encoded_minipet_names[i]));
+        minipets.push_back(new MinipetAchievement(i, encoded_minipet_names[i]));
     }
     for (size_t i = 0; i < _countof(encoded_festival_hat_names); i++) {
         festival_hats.push_back(new FestivalHat(i, encoded_festival_hat_names[i]));
@@ -862,7 +922,7 @@ void CompletionWindow::Initialize()
         hom_weapons.push_back(new WeaponAchievement(i, encoded_weapon_names[i]));
     }
 
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Canthan Armor\x1","Elementalist_Elite_Canthan_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Canthan Armor\x1", "Elementalist_Elite_Canthan_armor_m.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Exotic Armor\x1", "Assassin_Exotic_armor_m.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Kurzick Armor\x1", "Warrior_Elite_Kurzick_armor_m.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Luxon Armor\x1", "Monk_Elite_Luxon_armor_f.jpg"));
@@ -883,23 +943,23 @@ void CompletionWindow::Initialize()
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Exclusive Armor\x1", "Elementalist_Elite_Stormforged_armor_f.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Ascended Armor\x1", "Warrior_Elite_Templar_armor_m.jpg"));
 
-    ASSERT(hom_armor.size() == (size_t)ResilienceDetail::Count);
+    ASSERT(hom_armor.size() == static_cast<size_t>(ResilienceDetail::Count));
 
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zenmai\x1","Zenmai_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Norgu\x1","Norgu_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Goren\x1","Goren_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zhed Shadowhoof\x1","Zhed_Shadowhoof_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "General Morgahn\x1","General_Morgahn_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Margrid The Sly\x1","Margrid_the_Sly_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Tahlkora\x1","Tahlkora_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Razah\x1","Razah_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Master Of Whispers\x1","Master_of_Whispers_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Koss\x1","Koss_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Dunkoro\x1","Dunkoro_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Melonni\x1","Melonni_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Acolyte Jin\x1","Acolyte_Jin_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Acolyte Sousuke\x1","Acolyte_Sousuke_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Vekk\x1","Vekk_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zenmai\x1", "Zenmai_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Norgu\x1", "Norgu_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Goren\x1", "Goren_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zhed Shadowhoof\x1", "Zhed_Shadowhoof_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "General Morgahn\x1", "General_Morgahn_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Margrid The Sly\x1", "Margrid_the_Sly_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Tahlkora\x1", "Tahlkora_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Razah\x1", "Razah_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Master Of Whispers\x1", "Master_of_Whispers_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Koss\x1", "Koss_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Dunkoro\x1", "Dunkoro_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Melonni\x1", "Melonni_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Acolyte Jin\x1", "Acolyte_Jin_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Acolyte Sousuke\x1", "Acolyte_Sousuke_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Vekk\x1", "Vekk_statue.jpg"));
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Livia\x1", "Livia_statue.jpg"));
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Hayda\x1", "Hayda_statue.jpg"));
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Ogden Stonehealer\x1", "Ogden_Stonehealer_statue.jpg"));
@@ -916,65 +976,65 @@ void CompletionWindow::Initialize()
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Olias\x1", "Olias_statue.jpg"));
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "MOX\x1", "M.O.X._statue.jpg"));
 
-    ASSERT(hom_companions.size() == (size_t)FellowshipDetail::Count);
+    ASSERT(hom_companions.size() == static_cast<size_t>(FellowshipDetail::Count));
 
     size_t hom_titles_index = 0;
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Champion\x1","Eternal_Champion.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Commander\x1","Eternal_Commander.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Skillz\x1","Eternal_Skillz.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Gladiator\x1","Eternal_Gladiator.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero\x1","Eternal_Hero.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Lightbringer\x1","Eternal_Lightbringer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Bookah\x1","Eternal_Bookah.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Delver\x1","Eternal_Delver.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Slayer\x1","Eternal_Slayer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Ebon Vanguard Agent\x1","Eternal_Ebon_Vanguard_Agent.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Defender of Ascalon\x1","Eternal_Defender_of_Ascalon.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Cartographer\x1","Eternal_Tyrian_Cartographer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Tyria\x1","Eternal_Guardian_of_Tyria.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Tyria\x1","Eternal_Protector_of_Tyria.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Skill Hunter\x1","Eternal_Tyrian_Skill_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Vanquisher\x1","Eternal_Tyrian_Vanquisher.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Cartographer\x1","Eternal_Canthan_Cartographer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Cantha\x1","Eternal_Guardian_of_Cantha.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Cantha\x1","Eternal_Protector_of_Cantha.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Skill Hunter\x1","Eternal_Canthan_Skill_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Vanquisher\x1","Eternal_Canthan_Vanquisher.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Savior of the Kurzicks\x1","Eternal_Savior_of_the_Kurzicks.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Savior of the Luxons\x1","Eternal_Savior_of_the_Luxons.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Cartographer\x1","Eternal_Elonian_Cartographer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Elona\x1","Eternal_Guardian_of_Elona.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Elona\x1","Eternal_Protector_of_Elona.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Skill Hunter\x1","Eternal_Elonian_Skill_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Vanquisher\x1","Eternal_Elonian_Vanquisher.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Ale Hound\x1","Eternal_Ale_Hound.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Party Animal\x1","Eternal_Party_Animal.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Master of the North\x1","Eternal_Master_of_the_North.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Cartographer\x1","Eternal_Legendary_Cartographer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Guardian\x1","Eternal_Legendary_Guardian.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Skill Hunter\x1","Eternal_Legendary_Skill_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Vanquisher\x1","Eternal_Legendary_Vanquisher.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Fortune\x1","Eternal_Fortune.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Sweet Tooth\x1","Eternal_Sweet_Tooth.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Spearmarshal\x1","Eternal_Spearmarshal.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Survivor\x1","Eternal_Survivor.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Champion\x1", "Eternal_Champion.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Commander\x1", "Eternal_Commander.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Skillz\x1", "Eternal_Skillz.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Gladiator\x1", "Eternal_Gladiator.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero\x1", "Eternal_Hero.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Lightbringer\x1", "Eternal_Lightbringer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Bookah\x1", "Eternal_Bookah.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Delver\x1", "Eternal_Delver.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Slayer\x1", "Eternal_Slayer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Ebon Vanguard Agent\x1", "Eternal_Ebon_Vanguard_Agent.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Defender of Ascalon\x1", "Eternal_Defender_of_Ascalon.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Cartographer\x1", "Eternal_Tyrian_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Tyria\x1", "Eternal_Guardian_of_Tyria.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Tyria\x1", "Eternal_Protector_of_Tyria.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Skill Hunter\x1", "Eternal_Tyrian_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Vanquisher\x1", "Eternal_Tyrian_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Cartographer\x1", "Eternal_Canthan_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Cantha\x1", "Eternal_Guardian_of_Cantha.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Cantha\x1", "Eternal_Protector_of_Cantha.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Skill Hunter\x1", "Eternal_Canthan_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Vanquisher\x1", "Eternal_Canthan_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Savior of the Kurzicks\x1", "Eternal_Savior_of_the_Kurzicks.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Savior of the Luxons\x1", "Eternal_Savior_of_the_Luxons.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Cartographer\x1", "Eternal_Elonian_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Elona\x1", "Eternal_Guardian_of_Elona.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Elona\x1", "Eternal_Protector_of_Elona.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Skill Hunter\x1", "Eternal_Elonian_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Vanquisher\x1", "Eternal_Elonian_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Ale Hound\x1", "Eternal_Ale_Hound.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Party Animal\x1", "Eternal_Party_Animal.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Master of the North\x1", "Eternal_Master_of_the_North.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Cartographer\x1", "Eternal_Legendary_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Guardian\x1", "Eternal_Legendary_Guardian.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Skill Hunter\x1", "Eternal_Legendary_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Vanquisher\x1", "Eternal_Legendary_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Fortune\x1", "Eternal_Fortune.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Sweet Tooth\x1", "Eternal_Sweet_Tooth.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Spearmarshal\x1", "Eternal_Spearmarshal.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Survivor\x1", "Eternal_Survivor.jpg"));
     hom_titles_index++; // NB: This is the character based survivor title, which isn't used anymore.
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Treasure Hunter\x1","Eternal_Treasure_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Misfortune\x1","Eternal_Misfortune.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Source of Wisdom\x1","Eternal_Source_of_Wisdom.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Tyria\x1","Eternal_Hero_of_Tyria.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Cantha\x1","Eternal_Hero_of_Cantha.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Elona\x1","Eternal_Hero_of_Elona.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of Sorrow's Furnace\x1","Eternal_Conqueror_of_Sorrow's_Furnace.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Deep\x1","Eternal_Conqueror_of_the_Deep.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of Urgoz's Warren\x1","Eternal_Conqueror_of_Urgoz's_Warren.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Fissure of Woe\x1","Eternal_Conqueror_of_the Fissure of Woe.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Underworld\x1","Eternal_Conqueror_of_the Underworld.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Domain of Anguish\x1","Eternal_Conqueror_of_the_Domain_of_Anguish.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Zaishen Supporter\x1","Eternal_Zaishen_Supporter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Codex Disciple\x1","Eternal_Codex_Disciple.png"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Treasure Hunter\x1", "Eternal_Treasure_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Misfortune\x1", "Eternal_Misfortune.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Source of Wisdom\x1", "Eternal_Source_of_Wisdom.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Tyria\x1", "Eternal_Hero_of_Tyria.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Cantha\x1", "Eternal_Hero_of_Cantha.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Elona\x1", "Eternal_Hero_of_Elona.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of Sorrow's Furnace\x1", "Eternal_Conqueror_of_Sorrow's_Furnace.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Deep\x1", "Eternal_Conqueror_of_the_Deep.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of Urgoz's Warren\x1", "Eternal_Conqueror_of_Urgoz's_Warren.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Fissure of Woe\x1", "Eternal_Conqueror_of_the Fissure of Woe.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Underworld\x1", "Eternal_Conqueror_of_the Underworld.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Domain of Anguish\x1", "Eternal_Conqueror_of_the_Domain_of_Anguish.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Zaishen Supporter\x1", "Eternal_Zaishen_Supporter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Codex Disciple\x1", "Eternal_Codex_Disciple.png"));
 
-    ASSERT(hom_titles_index == (size_t)HonorDetail::Count);
+    ASSERT(hom_titles_index == static_cast<size_t>(HonorDetail::Count));
 
     Initialize_Prophecies();
     Initialize_Factions();
@@ -1048,82 +1108,82 @@ void CompletionWindow::Initialize()
 
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_MAPS_UNLOCKED, [](GW::HookStatus*, void*) {
         ParseCompletionBuffer(CompletionType::Mission);
-        ParseCompletionBuffer(CompletionType::MissionBonus);
-        ParseCompletionBuffer(CompletionType::MissionBonusHM);
-        ParseCompletionBuffer(CompletionType::MissionHM);
-        ParseCompletionBuffer(CompletionType::MapsUnlocked);
+        ParseCompletionBuffer(MissionBonus);
+        ParseCompletionBuffer(MissionBonusHM);
+        ParseCompletionBuffer(MissionHM);
+        ParseCompletionBuffer(MapsUnlocked);
         Instance().CheckProgress();
-        });
+    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_PROGRESS, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Vanquishes);
+        ParseCompletionBuffer(Vanquishes);
         Instance().CheckProgress();
-        });
+    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_COMPLETE, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Vanquishes);
+        ParseCompletionBuffer(Vanquishes);
         Instance().CheckProgress();
-        });
-
+    });
 
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILLS_UNLOCKED, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Skills);
-	    Instance().CheckProgress();
-	    });
+        ParseCompletionBuffer(Skills);
+        Instance().CheckProgress();
+    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
-	    uint32_t player_number = ((uint32_t*)pak)[1];
-	    const auto c = GW::GetCharContext();
+        uint32_t player_number = static_cast<uint32_t*>(pak)[1];
+        const auto c = GW::GetCharContext();
         if (!(c && player_number == c->player_number))
             return;
-		const auto me = GW::PlayerMgr::GetPlayerByID(c->player_number);
+        const auto me = GW::PlayerMgr::GetPlayerByID(c->player_number);
         if (!me)
             return;
         const auto comp = Instance().GetCharacterCompletion(c->player_name);
-		if (comp)
-			comp->profession = (Profession)me->primary;
-        ParseCompletionBuffer(CompletionType::Heroes);
-		Instance().CheckProgress();
-	    });
+        if (comp)
+            comp->profession = static_cast<Profession>(me->primary);
+        ParseCompletionBuffer(Heroes);
+        Instance().CheckProgress();
+    });
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Skills);
-	    Instance().CheckProgress();
-	    });
+        ParseCompletionBuffer(Skills);
+        Instance().CheckProgress();
+    });
     // Reset chosen player name to be current character on login
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_INSTANCE_LOADED, [&](GW::HookStatus*, void*) {
-	    if (wcscmp(GetPlayerName(), last_player_name) != 0) {
-		    wcscpy(last_player_name, GetPlayerName());
-		    chosen_player_name_s.clear();
-		    chosen_player_name.clear();
+        if (wcscmp(GetPlayerName(), last_player_name) != 0) {
+            wcscpy(last_player_name, GetPlayerName());
+            chosen_player_name_s.clear();
+            chosen_player_name.clear();
             FetchHom();
-	    }
-        ParseCompletionBuffer(CompletionType::Skills);
+        }
+        ParseCompletionBuffer(Skills);
         ParseCompletionBuffer(CompletionType::Mission);
-        ParseCompletionBuffer(CompletionType::MissionBonus);
-        ParseCompletionBuffer(CompletionType::MissionBonusHM);
-        ParseCompletionBuffer(CompletionType::MissionHM);
-        ParseCompletionBuffer(CompletionType::MapsUnlocked);
+        ParseCompletionBuffer(MissionBonus);
+        ParseCompletionBuffer(MissionBonusHM);
+        ParseCompletionBuffer(MissionHM);
+        ParseCompletionBuffer(MapsUnlocked);
         RefreshAccountCharacters();
-	    CheckProgress();
-	    });
+        CheckProgress();
+    });
 
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kDialogButton, OnDialogButton);
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kSendDialog, OnSendDialog);
 
     ParseCompletionBuffer(CompletionType::Mission);
-    ParseCompletionBuffer(CompletionType::MissionBonus);
-    ParseCompletionBuffer(CompletionType::MissionBonusHM);
-    ParseCompletionBuffer(CompletionType::MissionHM);
-    ParseCompletionBuffer(CompletionType::Skills);
-    ParseCompletionBuffer(CompletionType::Vanquishes);
-    ParseCompletionBuffer(CompletionType::Heroes);
-    ParseCompletionBuffer(CompletionType::MapsUnlocked);
+    ParseCompletionBuffer(MissionBonus);
+    ParseCompletionBuffer(MissionBonusHM);
+    ParseCompletionBuffer(MissionHM);
+    ParseCompletionBuffer(Skills);
+    ParseCompletionBuffer(Vanquishes);
+    ParseCompletionBuffer(Heroes);
+    ParseCompletionBuffer(MapsUnlocked);
     CheckProgress();
     const wchar_t* player_name = GetPlayerName();
-    if(player_name)
-        wcscpy(last_player_name,player_name);
+    if (player_name)
+        wcscpy(last_player_name, player_name);
 
-    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kCheckUIState, OnPostCheckUIState,0x8000);
+    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kCheckUIState, OnPostCheckUIState, 0x8000);
 
     RefreshAccountCharacters();
 }
+
 void CompletionWindow::Initialize_Prophecies()
 {
     LoadTextures(PropheciesMission::normal_mode_images);
@@ -1239,73 +1299,74 @@ void CompletionWindow::Initialize_Prophecies()
     prophecies_vanquishes.push_back(new Vanquish(MapID::Witmans_Folly));
     prophecies_vanquishes.push_back(new Vanquish(MapID::Perdition_Rock));
 
-	auto& eskills = elite_skills.at(Campaign::Prophecies);
-	eskills.push_back(new PvESkill(SkillID::Victory_Is_Mine));
-	eskills.push_back(new PvESkill(SkillID::Backbreaker));
-	eskills.push_back(new PvESkill(SkillID::Bulls_Charge));
-	eskills.push_back(new PvESkill(SkillID::Defy_Pain));
-	eskills.push_back(new PvESkill(SkillID::Dwarven_Battle_Stance));
-	eskills.push_back(new PvESkill(SkillID::Earth_Shaker));
-	eskills.push_back(new PvESkill(SkillID::Eviscerate));
-	eskills.push_back(new PvESkill(SkillID::Flourish));
-	eskills.push_back(new PvESkill(SkillID::Gladiators_Defense));
-	eskills.push_back(new PvESkill(SkillID::Skull_Crack));
-	eskills.push_back(new PvESkill(SkillID::Warriors_Endurance));
+    auto& eskills = elite_skills.at(Campaign::Prophecies);
+    eskills.push_back(new PvESkill(SkillID::Victory_Is_Mine));
+    eskills.push_back(new PvESkill(SkillID::Backbreaker));
+    eskills.push_back(new PvESkill(SkillID::Bulls_Charge));
+    eskills.push_back(new PvESkill(SkillID::Defy_Pain));
+    eskills.push_back(new PvESkill(SkillID::Dwarven_Battle_Stance));
+    eskills.push_back(new PvESkill(SkillID::Earth_Shaker));
+    eskills.push_back(new PvESkill(SkillID::Eviscerate));
+    eskills.push_back(new PvESkill(SkillID::Flourish));
+    eskills.push_back(new PvESkill(SkillID::Gladiators_Defense));
+    eskills.push_back(new PvESkill(SkillID::Skull_Crack));
+    eskills.push_back(new PvESkill(SkillID::Warriors_Endurance));
 
-	eskills.push_back(new PvESkill(SkillID::Crippling_Shot));
-	eskills.push_back(new PvESkill(SkillID::Greater_Conflagration));
-	eskills.push_back(new PvESkill(SkillID::Incendiary_Arrows));
-	eskills.push_back(new PvESkill(SkillID::Marksmans_Wager));
-	eskills.push_back(new PvESkill(SkillID::Melandrus_Arrows));
-	eskills.push_back(new PvESkill(SkillID::Melandrus_Resilience));
-	eskills.push_back(new PvESkill(SkillID::Oath_Shot));
-	eskills.push_back(new PvESkill(SkillID::Poison_Arrow));
-	eskills.push_back(new PvESkill(SkillID::Practiced_Stance));
-	eskills.push_back(new PvESkill(SkillID::Punishing_Shot));
+    eskills.push_back(new PvESkill(SkillID::Crippling_Shot));
+    eskills.push_back(new PvESkill(SkillID::Greater_Conflagration));
+    eskills.push_back(new PvESkill(SkillID::Incendiary_Arrows));
+    eskills.push_back(new PvESkill(SkillID::Marksmans_Wager));
+    eskills.push_back(new PvESkill(SkillID::Melandrus_Arrows));
+    eskills.push_back(new PvESkill(SkillID::Melandrus_Resilience));
+    eskills.push_back(new PvESkill(SkillID::Oath_Shot));
+    eskills.push_back(new PvESkill(SkillID::Poison_Arrow));
+    eskills.push_back(new PvESkill(SkillID::Practiced_Stance));
+    eskills.push_back(new PvESkill(SkillID::Punishing_Shot));
 
-	eskills.push_back(new PvESkill(SkillID::Aura_of_the_Lich));
-	eskills.push_back(new PvESkill(SkillID::Feast_of_Corruption));
-	eskills.push_back(new PvESkill(SkillID::Life_Transfer));
-	eskills.push_back(new PvESkill(SkillID::Offering_of_Blood));
-	eskills.push_back(new PvESkill(SkillID::Order_of_the_Vampire));
-	eskills.push_back(new PvESkill(SkillID::Soul_Leech));
-	eskills.push_back(new PvESkill(SkillID::Spiteful_Spirit));
-	eskills.push_back(new PvESkill(SkillID::Virulence));
-	eskills.push_back(new PvESkill(SkillID::Well_of_Power));
-	eskills.push_back(new PvESkill(SkillID::Wither));
+    eskills.push_back(new PvESkill(SkillID::Aura_of_the_Lich));
+    eskills.push_back(new PvESkill(SkillID::Feast_of_Corruption));
+    eskills.push_back(new PvESkill(SkillID::Life_Transfer));
+    eskills.push_back(new PvESkill(SkillID::Offering_of_Blood));
+    eskills.push_back(new PvESkill(SkillID::Order_of_the_Vampire));
+    eskills.push_back(new PvESkill(SkillID::Soul_Leech));
+    eskills.push_back(new PvESkill(SkillID::Spiteful_Spirit));
+    eskills.push_back(new PvESkill(SkillID::Virulence));
+    eskills.push_back(new PvESkill(SkillID::Well_of_Power));
+    eskills.push_back(new PvESkill(SkillID::Wither));
 
-	eskills.push_back(new PvESkill(SkillID::Amity));
-	eskills.push_back(new PvESkill(SkillID::Aura_of_Faith));
-	eskills.push_back(new PvESkill(SkillID::Healing_Hands));
-	eskills.push_back(new PvESkill(SkillID::Life_Barrier));
-	eskills.push_back(new PvESkill(SkillID::Mark_of_Protection));
-	eskills.push_back(new PvESkill(SkillID::Peace_and_Harmony));
-	eskills.push_back(new PvESkill(SkillID::Restore_Condition));
-	eskills.push_back(new PvESkill(SkillID::Shield_of_Deflection));
-	eskills.push_back(new PvESkill(SkillID::Shield_of_Judgment));
-	eskills.push_back(new PvESkill(SkillID::Unyielding_Aura));
+    eskills.push_back(new PvESkill(SkillID::Amity));
+    eskills.push_back(new PvESkill(SkillID::Aura_of_Faith));
+    eskills.push_back(new PvESkill(SkillID::Healing_Hands));
+    eskills.push_back(new PvESkill(SkillID::Life_Barrier));
+    eskills.push_back(new PvESkill(SkillID::Mark_of_Protection));
+    eskills.push_back(new PvESkill(SkillID::Peace_and_Harmony));
+    eskills.push_back(new PvESkill(SkillID::Restore_Condition));
+    eskills.push_back(new PvESkill(SkillID::Shield_of_Deflection));
+    eskills.push_back(new PvESkill(SkillID::Shield_of_Judgment));
+    eskills.push_back(new PvESkill(SkillID::Unyielding_Aura));
 
-	eskills.push_back(new PvESkill(SkillID::Fevered_Dreams));
-	eskills.push_back(new PvESkill(SkillID::Illusionary_Weaponry));
-	eskills.push_back(new PvESkill(SkillID::Ineptitude));
-	eskills.push_back(new PvESkill(SkillID::Keystone_Signet));
-	eskills.push_back(new PvESkill(SkillID::Mantra_of_Recall));
-	eskills.push_back(new PvESkill(SkillID::Migraine));
-	eskills.push_back(new PvESkill(SkillID::Panic));
-	eskills.push_back(new PvESkill(SkillID::Power_Block));
-	eskills.push_back(new PvESkill(SkillID::Signet_of_Midnight));
+    eskills.push_back(new PvESkill(SkillID::Fevered_Dreams));
+    eskills.push_back(new PvESkill(SkillID::Illusionary_Weaponry));
+    eskills.push_back(new PvESkill(SkillID::Ineptitude));
+    eskills.push_back(new PvESkill(SkillID::Keystone_Signet));
+    eskills.push_back(new PvESkill(SkillID::Mantra_of_Recall));
+    eskills.push_back(new PvESkill(SkillID::Migraine));
+    eskills.push_back(new PvESkill(SkillID::Panic));
+    eskills.push_back(new PvESkill(SkillID::Power_Block));
+    eskills.push_back(new PvESkill(SkillID::Signet_of_Midnight));
 
-	eskills.push_back(new PvESkill(SkillID::Ether_Prodigy));
-	eskills.push_back(new PvESkill(SkillID::Ether_Renewal));
-	eskills.push_back(new PvESkill(SkillID::Glimmering_Mark));
-	eskills.push_back(new PvESkill(SkillID::Glyph_of_Energy));
-	eskills.push_back(new PvESkill(SkillID::Glyph_of_Renewal));
-	eskills.push_back(new PvESkill(SkillID::Mind_Shock));
-	eskills.push_back(new PvESkill(SkillID::Mist_Form));
-	eskills.push_back(new PvESkill(SkillID::Thunderclap));
-	eskills.push_back(new PvESkill(SkillID::Ward_Against_Harm));
-	eskills.push_back(new PvESkill(SkillID::Water_Trident));
+    eskills.push_back(new PvESkill(SkillID::Ether_Prodigy));
+    eskills.push_back(new PvESkill(SkillID::Ether_Renewal));
+    eskills.push_back(new PvESkill(SkillID::Glimmering_Mark));
+    eskills.push_back(new PvESkill(SkillID::Glyph_of_Energy));
+    eskills.push_back(new PvESkill(SkillID::Glyph_of_Renewal));
+    eskills.push_back(new PvESkill(SkillID::Mind_Shock));
+    eskills.push_back(new PvESkill(SkillID::Mist_Form));
+    eskills.push_back(new PvESkill(SkillID::Thunderclap));
+    eskills.push_back(new PvESkill(SkillID::Ward_Against_Harm));
+    eskills.push_back(new PvESkill(SkillID::Water_Trident));
 }
+
 void CompletionWindow::Initialize_Factions()
 {
     LoadTextures(FactionsMission::normal_mode_images);
@@ -1346,7 +1407,7 @@ void CompletionWindow::Initialize_Factions()
     LoadTextures(Vanquish::hard_mode_images);
 
     auto& this_vanquishes = vanquishes.at(Campaign::Factions);
-    this_vanquishes.push_back(new Vanquish(MapID::Haiju_Lagoon,QuestID::ZaishenVanquish_Haiju_Lagoon));
+    this_vanquishes.push_back(new Vanquish(MapID::Haiju_Lagoon, QuestID::ZaishenVanquish_Haiju_Lagoon));
     this_vanquishes.push_back(new Vanquish(MapID::Jaya_Bluffs, QuestID::ZaishenVanquish_Jaya_Bluffs));
     this_vanquishes.push_back(new Vanquish(MapID::Kinya_Province, QuestID::ZaishenVanquish_Kinya_Province));
     this_vanquishes.push_back(new Vanquish(MapID::Minister_Chos_Estate_explorable, QuestID::ZaishenVanquish_Minister_Chos_Estate));
@@ -1411,109 +1472,110 @@ void CompletionWindow::Initialize_Factions()
     skills.push_back(new FactionsPvESkill(SkillID::Triple_Shot_kurzick));
     skills.push_back(new FactionsPvESkill(SkillID::Triple_Shot_luxon));
 
-	auto& eskills = elite_skills.at(Campaign::Factions);
-	eskills.push_back(new PvESkill(SkillID::Coward));
-	eskills.push_back(new PvESkill(SkillID::Auspicious_Parry));
-	eskills.push_back(new PvESkill(SkillID::Dragon_Slash));
-	eskills.push_back(new PvESkill(SkillID::Enraged_Smash));
-	eskills.push_back(new PvESkill(SkillID::Forceful_Blow));
-	eskills.push_back(new PvESkill(SkillID::Primal_Rage));
-	eskills.push_back(new PvESkill(SkillID::Quivering_Blade));
-	eskills.push_back(new PvESkill(SkillID::Shove));
-	eskills.push_back(new PvESkill(SkillID::Triple_Chop));
-	eskills.push_back(new PvESkill(SkillID::Whirling_Axe));
+    auto& eskills = elite_skills.at(Campaign::Factions);
+    eskills.push_back(new PvESkill(SkillID::Coward));
+    eskills.push_back(new PvESkill(SkillID::Auspicious_Parry));
+    eskills.push_back(new PvESkill(SkillID::Dragon_Slash));
+    eskills.push_back(new PvESkill(SkillID::Enraged_Smash));
+    eskills.push_back(new PvESkill(SkillID::Forceful_Blow));
+    eskills.push_back(new PvESkill(SkillID::Primal_Rage));
+    eskills.push_back(new PvESkill(SkillID::Quivering_Blade));
+    eskills.push_back(new PvESkill(SkillID::Shove));
+    eskills.push_back(new PvESkill(SkillID::Triple_Chop));
+    eskills.push_back(new PvESkill(SkillID::Whirling_Axe));
 
-	eskills.push_back(new PvESkill(SkillID::Archers_Signet));
-	eskills.push_back(new PvESkill(SkillID::Broad_Head_Arrow));
-	eskills.push_back(new PvESkill(SkillID::Enraged_Lunge));
-	eskills.push_back(new PvESkill(SkillID::Equinox));
-	eskills.push_back(new PvESkill(SkillID::Famine));
-	eskills.push_back(new PvESkill(SkillID::Glass_Arrows));
-	eskills.push_back(new PvESkill(SkillID::Heal_as_One));
-	eskills.push_back(new PvESkill(SkillID::Lacerate));
-	eskills.push_back(new PvESkill(SkillID::Melandrus_Shot));
-	eskills.push_back(new PvESkill(SkillID::Trappers_Focus));
+    eskills.push_back(new PvESkill(SkillID::Archers_Signet));
+    eskills.push_back(new PvESkill(SkillID::Broad_Head_Arrow));
+    eskills.push_back(new PvESkill(SkillID::Enraged_Lunge));
+    eskills.push_back(new PvESkill(SkillID::Equinox));
+    eskills.push_back(new PvESkill(SkillID::Famine));
+    eskills.push_back(new PvESkill(SkillID::Glass_Arrows));
+    eskills.push_back(new PvESkill(SkillID::Heal_as_One));
+    eskills.push_back(new PvESkill(SkillID::Lacerate));
+    eskills.push_back(new PvESkill(SkillID::Melandrus_Shot));
+    eskills.push_back(new PvESkill(SkillID::Trappers_Focus));
 
-	eskills.push_back(new PvESkill(SkillID::Animate_Flesh_Golem));
-	eskills.push_back(new PvESkill(SkillID::Cultists_Fervor));
-	eskills.push_back(new PvESkill(SkillID::Discord));
-	eskills.push_back(new PvESkill(SkillID::Icy_Veins));
-	eskills.push_back(new PvESkill(SkillID::Order_of_Apostasy));
-	eskills.push_back(new PvESkill(SkillID::Soul_Bind));
-	eskills.push_back(new PvESkill(SkillID::Spoil_Victor));
-	eskills.push_back(new PvESkill(SkillID::Vampiric_Spirit));
-	eskills.push_back(new PvESkill(SkillID::Wail_of_Doom));
-	eskills.push_back(new PvESkill(SkillID::Weaken_Knees));
+    eskills.push_back(new PvESkill(SkillID::Animate_Flesh_Golem));
+    eskills.push_back(new PvESkill(SkillID::Cultists_Fervor));
+    eskills.push_back(new PvESkill(SkillID::Discord));
+    eskills.push_back(new PvESkill(SkillID::Icy_Veins));
+    eskills.push_back(new PvESkill(SkillID::Order_of_Apostasy));
+    eskills.push_back(new PvESkill(SkillID::Soul_Bind));
+    eskills.push_back(new PvESkill(SkillID::Spoil_Victor));
+    eskills.push_back(new PvESkill(SkillID::Vampiric_Spirit));
+    eskills.push_back(new PvESkill(SkillID::Wail_of_Doom));
+    eskills.push_back(new PvESkill(SkillID::Weaken_Knees));
 
-	eskills.push_back(new PvESkill(SkillID::Air_of_Enchantment));
-	eskills.push_back(new PvESkill(SkillID::Blessed_Light));
-	eskills.push_back(new PvESkill(SkillID::Boon_Signet));
-	eskills.push_back(new PvESkill(SkillID::Empathic_Removal));
-	eskills.push_back(new PvESkill(SkillID::Healing_Burst));
-	eskills.push_back(new PvESkill(SkillID::Healing_Light));
-	eskills.push_back(new PvESkill(SkillID::Life_Sheath));
-	eskills.push_back(new PvESkill(SkillID::Ray_of_Judgment));
-	eskills.push_back(new PvESkill(SkillID::Withdraw_Hexes));
-	eskills.push_back(new PvESkill(SkillID::Word_of_Censure));
+    eskills.push_back(new PvESkill(SkillID::Air_of_Enchantment));
+    eskills.push_back(new PvESkill(SkillID::Blessed_Light));
+    eskills.push_back(new PvESkill(SkillID::Boon_Signet));
+    eskills.push_back(new PvESkill(SkillID::Empathic_Removal));
+    eskills.push_back(new PvESkill(SkillID::Healing_Burst));
+    eskills.push_back(new PvESkill(SkillID::Healing_Light));
+    eskills.push_back(new PvESkill(SkillID::Life_Sheath));
+    eskills.push_back(new PvESkill(SkillID::Ray_of_Judgment));
+    eskills.push_back(new PvESkill(SkillID::Withdraw_Hexes));
+    eskills.push_back(new PvESkill(SkillID::Word_of_Censure));
 
-	eskills.push_back(new PvESkill(SkillID::Arcane_Languor));
-	eskills.push_back(new PvESkill(SkillID::Expel_Hexes));
-	eskills.push_back(new PvESkill(SkillID::Lyssas_Aura));
-	eskills.push_back(new PvESkill(SkillID::Power_Leech));
-	eskills.push_back(new PvESkill(SkillID::Psychic_Distraction));
-	eskills.push_back(new PvESkill(SkillID::Psychic_Instability));
-	eskills.push_back(new PvESkill(SkillID::Recurring_Insecurity));
-	eskills.push_back(new PvESkill(SkillID::Shared_Burden));
-	eskills.push_back(new PvESkill(SkillID::Shatter_Storm));
-	eskills.push_back(new PvESkill(SkillID::Stolen_Speed));
+    eskills.push_back(new PvESkill(SkillID::Arcane_Languor));
+    eskills.push_back(new PvESkill(SkillID::Expel_Hexes));
+    eskills.push_back(new PvESkill(SkillID::Lyssas_Aura));
+    eskills.push_back(new PvESkill(SkillID::Power_Leech));
+    eskills.push_back(new PvESkill(SkillID::Psychic_Distraction));
+    eskills.push_back(new PvESkill(SkillID::Psychic_Instability));
+    eskills.push_back(new PvESkill(SkillID::Recurring_Insecurity));
+    eskills.push_back(new PvESkill(SkillID::Shared_Burden));
+    eskills.push_back(new PvESkill(SkillID::Shatter_Storm));
+    eskills.push_back(new PvESkill(SkillID::Stolen_Speed));
 
-	eskills.push_back(new PvESkill(SkillID::Double_Dragon));
-	eskills.push_back(new PvESkill(SkillID::Energy_Boon));
-	eskills.push_back(new PvESkill(SkillID::Gust));
-	eskills.push_back(new PvESkill(SkillID::Mirror_of_Ice));
-	eskills.push_back(new PvESkill(SkillID::Ride_the_Lightning));
-	eskills.push_back(new PvESkill(SkillID::Second_Wind));
-	eskills.push_back(new PvESkill(SkillID::Shatterstone));
-	eskills.push_back(new PvESkill(SkillID::Shockwave));
-	eskills.push_back(new PvESkill(SkillID::Star_Burst));
-	eskills.push_back(new PvESkill(SkillID::Unsteady_Ground));
+    eskills.push_back(new PvESkill(SkillID::Double_Dragon));
+    eskills.push_back(new PvESkill(SkillID::Energy_Boon));
+    eskills.push_back(new PvESkill(SkillID::Gust));
+    eskills.push_back(new PvESkill(SkillID::Mirror_of_Ice));
+    eskills.push_back(new PvESkill(SkillID::Ride_the_Lightning));
+    eskills.push_back(new PvESkill(SkillID::Second_Wind));
+    eskills.push_back(new PvESkill(SkillID::Shatterstone));
+    eskills.push_back(new PvESkill(SkillID::Shockwave));
+    eskills.push_back(new PvESkill(SkillID::Star_Burst));
+    eskills.push_back(new PvESkill(SkillID::Unsteady_Ground));
 
-	eskills.push_back(new PvESkill(SkillID::Assassins_Promise));
-	eskills.push_back(new PvESkill(SkillID::Aura_of_Displacement));
-	eskills.push_back(new PvESkill(SkillID::Beguiling_Haze));
-	eskills.push_back(new PvESkill(SkillID::Dark_Apostasy));
-	eskills.push_back(new PvESkill(SkillID::Flashing_Blades));
-	eskills.push_back(new PvESkill(SkillID::Locusts_Fury));
-	eskills.push_back(new PvESkill(SkillID::Moebius_Strike));
-	eskills.push_back(new PvESkill(SkillID::Palm_Strike));
-	eskills.push_back(new PvESkill(SkillID::Seeping_Wound));
-	eskills.push_back(new PvESkill(SkillID::Shadow_Form));
-	eskills.push_back(new PvESkill(SkillID::Shadow_Shroud));
-	eskills.push_back(new PvESkill(SkillID::Shroud_of_Silence));
-	eskills.push_back(new PvESkill(SkillID::Siphon_Strength));
-	eskills.push_back(new PvESkill(SkillID::Temple_Strike));
-	eskills.push_back(new PvESkill(SkillID::Way_of_the_Empty_Palm));
+    eskills.push_back(new PvESkill(SkillID::Assassins_Promise));
+    eskills.push_back(new PvESkill(SkillID::Aura_of_Displacement));
+    eskills.push_back(new PvESkill(SkillID::Beguiling_Haze));
+    eskills.push_back(new PvESkill(SkillID::Dark_Apostasy));
+    eskills.push_back(new PvESkill(SkillID::Flashing_Blades));
+    eskills.push_back(new PvESkill(SkillID::Locusts_Fury));
+    eskills.push_back(new PvESkill(SkillID::Moebius_Strike));
+    eskills.push_back(new PvESkill(SkillID::Palm_Strike));
+    eskills.push_back(new PvESkill(SkillID::Seeping_Wound));
+    eskills.push_back(new PvESkill(SkillID::Shadow_Form));
+    eskills.push_back(new PvESkill(SkillID::Shadow_Shroud));
+    eskills.push_back(new PvESkill(SkillID::Shroud_of_Silence));
+    eskills.push_back(new PvESkill(SkillID::Siphon_Strength));
+    eskills.push_back(new PvESkill(SkillID::Temple_Strike));
+    eskills.push_back(new PvESkill(SkillID::Way_of_the_Empty_Palm));
 
-	eskills.push_back(new PvESkill(SkillID::Attuned_Was_Songkai));
-	eskills.push_back(new PvESkill(SkillID::Clamor_of_Souls));
-	eskills.push_back(new PvESkill(SkillID::Consume_Soul));
-	eskills.push_back(new PvESkill(SkillID::Defiant_Was_Xinrae));
-	eskills.push_back(new PvESkill(SkillID::Grasping_Was_Kuurong));
-	eskills.push_back(new PvESkill(SkillID::Preservation));
-	eskills.push_back(new PvESkill(SkillID::Ritual_Lord));
-	eskills.push_back(new PvESkill(SkillID::Signet_of_Spirits));
-	eskills.push_back(new PvESkill(SkillID::Soul_Twisting));
-	eskills.push_back(new PvESkill(SkillID::Spirit_Channeling));
-	eskills.push_back(new PvESkill(SkillID::Spirit_Light_Weapon));
-	eskills.push_back(new PvESkill(SkillID::Tranquil_Was_Tanasen));
-	eskills.push_back(new PvESkill(SkillID::Vengeful_Was_Khanhei));
-	eskills.push_back(new PvESkill(SkillID::Wanderlust));
-	eskills.push_back(new PvESkill(SkillID::Weapon_of_Quickening));
+    eskills.push_back(new PvESkill(SkillID::Attuned_Was_Songkai));
+    eskills.push_back(new PvESkill(SkillID::Clamor_of_Souls));
+    eskills.push_back(new PvESkill(SkillID::Consume_Soul));
+    eskills.push_back(new PvESkill(SkillID::Defiant_Was_Xinrae));
+    eskills.push_back(new PvESkill(SkillID::Grasping_Was_Kuurong));
+    eskills.push_back(new PvESkill(SkillID::Preservation));
+    eskills.push_back(new PvESkill(SkillID::Ritual_Lord));
+    eskills.push_back(new PvESkill(SkillID::Signet_of_Spirits));
+    eskills.push_back(new PvESkill(SkillID::Soul_Twisting));
+    eskills.push_back(new PvESkill(SkillID::Spirit_Channeling));
+    eskills.push_back(new PvESkill(SkillID::Spirit_Light_Weapon));
+    eskills.push_back(new PvESkill(SkillID::Tranquil_Was_Tanasen));
+    eskills.push_back(new PvESkill(SkillID::Vengeful_Was_Khanhei));
+    eskills.push_back(new PvESkill(SkillID::Wanderlust));
+    eskills.push_back(new PvESkill(SkillID::Weapon_of_Quickening));
 
     auto& h = heros.at(Campaign::Factions);
     h.push_back(new HeroUnlock(Miku));
     h.push_back(new HeroUnlock(ZeiRi));
 }
+
 void CompletionWindow::Initialize_Nightfall()
 {
     LoadTextures(NightfallMission::normal_mode_images);
@@ -1601,141 +1663,141 @@ void CompletionWindow::Initialize_Nightfall()
     this_vanquishes.push_back(new Vanquish(MapID::The_Shattered_Ravines));
     this_vanquishes.push_back(new Vanquish(MapID::The_Sulfurous_Wastes));
 
-	auto& skills = pve_skills.at(Campaign::Nightfall);
-	skills.push_back(new PvESkill(SkillID::Theres_Nothing_to_Fear));
-	skills.push_back(new PvESkill(SkillID::Lightbringer_Signet));
-	skills.push_back(new PvESkill(SkillID::Lightbringers_Gaze));
-	skills.push_back(new PvESkill(SkillID::Critical_Agility));
-	skills.push_back(new PvESkill(SkillID::Cry_of_Pain));
-	skills.push_back(new PvESkill(SkillID::Eternal_Aura));
-	skills.push_back(new PvESkill(SkillID::Intensity));
-	skills.push_back(new PvESkill(SkillID::Necrosis));
-	skills.push_back(new PvESkill(SkillID::Never_Rampage_Alone));
-	skills.push_back(new PvESkill(SkillID::Seed_of_Life));
-	skills.push_back(new PvESkill(SkillID::Sunspear_Rebirth_Signet));
-	skills.push_back(new PvESkill(SkillID::Vampirism));
-	skills.push_back(new PvESkill(SkillID::Whirlwind_Attack));
+    auto& skills = pve_skills.at(Campaign::Nightfall);
+    skills.push_back(new PvESkill(SkillID::Theres_Nothing_to_Fear));
+    skills.push_back(new PvESkill(SkillID::Lightbringer_Signet));
+    skills.push_back(new PvESkill(SkillID::Lightbringers_Gaze));
+    skills.push_back(new PvESkill(SkillID::Critical_Agility));
+    skills.push_back(new PvESkill(SkillID::Cry_of_Pain));
+    skills.push_back(new PvESkill(SkillID::Eternal_Aura));
+    skills.push_back(new PvESkill(SkillID::Intensity));
+    skills.push_back(new PvESkill(SkillID::Necrosis));
+    skills.push_back(new PvESkill(SkillID::Never_Rampage_Alone));
+    skills.push_back(new PvESkill(SkillID::Seed_of_Life));
+    skills.push_back(new PvESkill(SkillID::Sunspear_Rebirth_Signet));
+    skills.push_back(new PvESkill(SkillID::Vampirism));
+    skills.push_back(new PvESkill(SkillID::Whirlwind_Attack));
 
-	auto& eskills = elite_skills.at(Campaign::Nightfall);
-	eskills.push_back(new PvESkill(SkillID::Youre_All_Alone));
-	eskills.push_back(new PvESkill(SkillID::Charging_Strike));
-	eskills.push_back(new PvESkill(SkillID::Crippling_Slash));
-	eskills.push_back(new PvESkill(SkillID::Decapitate));
-	eskills.push_back(new PvESkill(SkillID::Headbutt));
-	eskills.push_back(new PvESkill(SkillID::Magehunter_Strike));
-	eskills.push_back(new PvESkill(SkillID::Magehunters_Smash));
-	eskills.push_back(new PvESkill(SkillID::Rage_of_the_Ntouka));
-	eskills.push_back(new PvESkill(SkillID::Soldiers_Stance));
-	eskills.push_back(new PvESkill(SkillID::Steady_Stance));
+    auto& eskills = elite_skills.at(Campaign::Nightfall);
+    eskills.push_back(new PvESkill(SkillID::Youre_All_Alone));
+    eskills.push_back(new PvESkill(SkillID::Charging_Strike));
+    eskills.push_back(new PvESkill(SkillID::Crippling_Slash));
+    eskills.push_back(new PvESkill(SkillID::Decapitate));
+    eskills.push_back(new PvESkill(SkillID::Headbutt));
+    eskills.push_back(new PvESkill(SkillID::Magehunter_Strike));
+    eskills.push_back(new PvESkill(SkillID::Magehunters_Smash));
+    eskills.push_back(new PvESkill(SkillID::Rage_of_the_Ntouka));
+    eskills.push_back(new PvESkill(SkillID::Soldiers_Stance));
+    eskills.push_back(new PvESkill(SkillID::Steady_Stance));
 
-	eskills.push_back(new PvESkill(SkillID::Burning_Arrow));
-	eskills.push_back(new PvESkill(SkillID::Experts_Dexterity));
-	eskills.push_back(new PvESkill(SkillID::Infuriating_Heat));
-	eskills.push_back(new PvESkill(SkillID::Magebane_Shot));
-	eskills.push_back(new PvESkill(SkillID::Prepared_Shot));
-	eskills.push_back(new PvESkill(SkillID::Quicksand));
-	eskills.push_back(new PvESkill(SkillID::Rampage_as_One));
-	eskills.push_back(new PvESkill(SkillID::Scavengers_Focus));
-	eskills.push_back(new PvESkill(SkillID::Smoke_Trap));
-	eskills.push_back(new PvESkill(SkillID::Strike_as_One));
+    eskills.push_back(new PvESkill(SkillID::Burning_Arrow));
+    eskills.push_back(new PvESkill(SkillID::Experts_Dexterity));
+    eskills.push_back(new PvESkill(SkillID::Infuriating_Heat));
+    eskills.push_back(new PvESkill(SkillID::Magebane_Shot));
+    eskills.push_back(new PvESkill(SkillID::Prepared_Shot));
+    eskills.push_back(new PvESkill(SkillID::Quicksand));
+    eskills.push_back(new PvESkill(SkillID::Rampage_as_One));
+    eskills.push_back(new PvESkill(SkillID::Scavengers_Focus));
+    eskills.push_back(new PvESkill(SkillID::Smoke_Trap));
+    eskills.push_back(new PvESkill(SkillID::Strike_as_One));
 
-	eskills.push_back(new PvESkill(SkillID::Contagion));
-	eskills.push_back(new PvESkill(SkillID::Corrupt_Enchantment));
-	eskills.push_back(new PvESkill(SkillID::Depravity));
-	eskills.push_back(new PvESkill(SkillID::Jagged_Bones));
-	eskills.push_back(new PvESkill(SkillID::Order_of_Undeath));
-	eskills.push_back(new PvESkill(SkillID::Pain_of_Disenchantment));
-	eskills.push_back(new PvESkill(SkillID::Ravenous_Gaze));
-	eskills.push_back(new PvESkill(SkillID::Reapers_Mark));
-	eskills.push_back(new PvESkill(SkillID::Signet_of_Suffering));
-	eskills.push_back(new PvESkill(SkillID::Toxic_Chill));
+    eskills.push_back(new PvESkill(SkillID::Contagion));
+    eskills.push_back(new PvESkill(SkillID::Corrupt_Enchantment));
+    eskills.push_back(new PvESkill(SkillID::Depravity));
+    eskills.push_back(new PvESkill(SkillID::Jagged_Bones));
+    eskills.push_back(new PvESkill(SkillID::Order_of_Undeath));
+    eskills.push_back(new PvESkill(SkillID::Pain_of_Disenchantment));
+    eskills.push_back(new PvESkill(SkillID::Ravenous_Gaze));
+    eskills.push_back(new PvESkill(SkillID::Reapers_Mark));
+    eskills.push_back(new PvESkill(SkillID::Signet_of_Suffering));
+    eskills.push_back(new PvESkill(SkillID::Toxic_Chill));
 
-	eskills.push_back(new PvESkill(SkillID::Balthazars_Pendulum));
-	eskills.push_back(new PvESkill(SkillID::Defenders_Zeal));
-	eskills.push_back(new PvESkill(SkillID::Divert_Hexes));
-	eskills.push_back(new PvESkill(SkillID::Glimmer_of_Light));
-	eskills.push_back(new PvESkill(SkillID::Healers_Boon));
-	eskills.push_back(new PvESkill(SkillID::Healers_Covenant));
-	eskills.push_back(new PvESkill(SkillID::Light_of_Deliverance));
-	eskills.push_back(new PvESkill(SkillID::Scribes_Insight));
-	eskills.push_back(new PvESkill(SkillID::Signet_of_Removal));
-	eskills.push_back(new PvESkill(SkillID::Zealous_Benediction));
+    eskills.push_back(new PvESkill(SkillID::Balthazars_Pendulum));
+    eskills.push_back(new PvESkill(SkillID::Defenders_Zeal));
+    eskills.push_back(new PvESkill(SkillID::Divert_Hexes));
+    eskills.push_back(new PvESkill(SkillID::Glimmer_of_Light));
+    eskills.push_back(new PvESkill(SkillID::Healers_Boon));
+    eskills.push_back(new PvESkill(SkillID::Healers_Covenant));
+    eskills.push_back(new PvESkill(SkillID::Light_of_Deliverance));
+    eskills.push_back(new PvESkill(SkillID::Scribes_Insight));
+    eskills.push_back(new PvESkill(SkillID::Signet_of_Removal));
+    eskills.push_back(new PvESkill(SkillID::Zealous_Benediction));
 
-	eskills.push_back(new PvESkill(SkillID::Air_of_Disenchantment));
-	eskills.push_back(new PvESkill(SkillID::Enchanters_Conundrum));
-	eskills.push_back(new PvESkill(SkillID::Extend_Conditions));
-	eskills.push_back(new PvESkill(SkillID::Hex_Eater_Vortex));
-	eskills.push_back(new PvESkill(SkillID::Power_Flux));
-	eskills.push_back(new PvESkill(SkillID::Signet_of_Illusions));
-	eskills.push_back(new PvESkill(SkillID::Simple_Thievery));
-	eskills.push_back(new PvESkill(SkillID::Symbols_of_Inspiration));
-	eskills.push_back(new PvESkill(SkillID::Tease));
-	eskills.push_back(new PvESkill(SkillID::Visions_of_Regret));
+    eskills.push_back(new PvESkill(SkillID::Air_of_Disenchantment));
+    eskills.push_back(new PvESkill(SkillID::Enchanters_Conundrum));
+    eskills.push_back(new PvESkill(SkillID::Extend_Conditions));
+    eskills.push_back(new PvESkill(SkillID::Hex_Eater_Vortex));
+    eskills.push_back(new PvESkill(SkillID::Power_Flux));
+    eskills.push_back(new PvESkill(SkillID::Signet_of_Illusions));
+    eskills.push_back(new PvESkill(SkillID::Simple_Thievery));
+    eskills.push_back(new PvESkill(SkillID::Symbols_of_Inspiration));
+    eskills.push_back(new PvESkill(SkillID::Tease));
+    eskills.push_back(new PvESkill(SkillID::Visions_of_Regret));
 
-	eskills.push_back(new PvESkill(SkillID::Blinding_Surge));
-	eskills.push_back(new PvESkill(SkillID::Ether_Prism));
-	eskills.push_back(new PvESkill(SkillID::Icy_Shackles));
-	eskills.push_back(new PvESkill(SkillID::Invoke_Lightning));
-	eskills.push_back(new PvESkill(SkillID::Master_of_Magic));
-	eskills.push_back(new PvESkill(SkillID::Mind_Blast));
-	eskills.push_back(new PvESkill(SkillID::Sandstorm));
-	eskills.push_back(new PvESkill(SkillID::Savannah_Heat));
-	eskills.push_back(new PvESkill(SkillID::Searing_Flames));
-	eskills.push_back(new PvESkill(SkillID::Stone_Sheath));
+    eskills.push_back(new PvESkill(SkillID::Blinding_Surge));
+    eskills.push_back(new PvESkill(SkillID::Ether_Prism));
+    eskills.push_back(new PvESkill(SkillID::Icy_Shackles));
+    eskills.push_back(new PvESkill(SkillID::Invoke_Lightning));
+    eskills.push_back(new PvESkill(SkillID::Master_of_Magic));
+    eskills.push_back(new PvESkill(SkillID::Mind_Blast));
+    eskills.push_back(new PvESkill(SkillID::Sandstorm));
+    eskills.push_back(new PvESkill(SkillID::Savannah_Heat));
+    eskills.push_back(new PvESkill(SkillID::Searing_Flames));
+    eskills.push_back(new PvESkill(SkillID::Stone_Sheath));
 
-	eskills.push_back(new PvESkill(SkillID::Assault_Enchantments));
-	eskills.push_back(new PvESkill(SkillID::Foxs_Promise));
-	eskills.push_back(new PvESkill(SkillID::Golden_Skull_Strike));
-	eskills.push_back(new PvESkill(SkillID::Hidden_Caltrops));
-	eskills.push_back(new PvESkill(SkillID::Mark_of_Insecurity));
-	eskills.push_back(new PvESkill(SkillID::Shadow_Meld));
-	eskills.push_back(new PvESkill(SkillID::Shadow_Prison));
-	eskills.push_back(new PvESkill(SkillID::Shattering_Assault));
-	eskills.push_back(new PvESkill(SkillID::Wastrels_Collapse));
-	eskills.push_back(new PvESkill(SkillID::Way_of_the_Assassin));
+    eskills.push_back(new PvESkill(SkillID::Assault_Enchantments));
+    eskills.push_back(new PvESkill(SkillID::Foxs_Promise));
+    eskills.push_back(new PvESkill(SkillID::Golden_Skull_Strike));
+    eskills.push_back(new PvESkill(SkillID::Hidden_Caltrops));
+    eskills.push_back(new PvESkill(SkillID::Mark_of_Insecurity));
+    eskills.push_back(new PvESkill(SkillID::Shadow_Meld));
+    eskills.push_back(new PvESkill(SkillID::Shadow_Prison));
+    eskills.push_back(new PvESkill(SkillID::Shattering_Assault));
+    eskills.push_back(new PvESkill(SkillID::Wastrels_Collapse));
+    eskills.push_back(new PvESkill(SkillID::Way_of_the_Assassin));
 
-	eskills.push_back(new PvESkill(SkillID::Caretakers_Charge));
-	eskills.push_back(new PvESkill(SkillID::Destructive_Was_Glaive));
-	eskills.push_back(new PvESkill(SkillID::Offering_of_Spirit));
-	eskills.push_back(new PvESkill(SkillID::Reclaim_Essence));
-	eskills.push_back(new PvESkill(SkillID::Signet_of_Ghostly_Might));
-	eskills.push_back(new PvESkill(SkillID::Spirits_Strength));
-	eskills.push_back(new PvESkill(SkillID::Weapon_of_Fury));
-	eskills.push_back(new PvESkill(SkillID::Weapon_of_Remedy));
-	eskills.push_back(new PvESkill(SkillID::Wielders_Zeal));
-	eskills.push_back(new PvESkill(SkillID::Xinraes_Weapon));
+    eskills.push_back(new PvESkill(SkillID::Caretakers_Charge));
+    eskills.push_back(new PvESkill(SkillID::Destructive_Was_Glaive));
+    eskills.push_back(new PvESkill(SkillID::Offering_of_Spirit));
+    eskills.push_back(new PvESkill(SkillID::Reclaim_Essence));
+    eskills.push_back(new PvESkill(SkillID::Signet_of_Ghostly_Might));
+    eskills.push_back(new PvESkill(SkillID::Spirits_Strength));
+    eskills.push_back(new PvESkill(SkillID::Weapon_of_Fury));
+    eskills.push_back(new PvESkill(SkillID::Weapon_of_Remedy));
+    eskills.push_back(new PvESkill(SkillID::Wielders_Zeal));
+    eskills.push_back(new PvESkill(SkillID::Xinraes_Weapon));
 
-	eskills.push_back(new PvESkill(SkillID::Arcane_Zeal));
-	eskills.push_back(new PvESkill(SkillID::Avatar_of_Balthazar));
-	eskills.push_back(new PvESkill(SkillID::Avatar_of_Dwayna));
-	eskills.push_back(new PvESkill(SkillID::Avatar_of_Grenth));
-	eskills.push_back(new PvESkill(SkillID::Avatar_of_Lyssa));
-	eskills.push_back(new PvESkill(SkillID::Avatar_of_Melandru ));
-	eskills.push_back(new PvESkill(SkillID::Ebon_Dust_Aura));
-	eskills.push_back(new PvESkill(SkillID::Grenths_Grasp));
-	eskills.push_back(new PvESkill(SkillID::Onslaught));
-	eskills.push_back(new PvESkill(SkillID::Pious_Renewal));
-	eskills.push_back(new PvESkill(SkillID::Reapers_Sweep));
-	eskills.push_back(new PvESkill(SkillID::Vow_of_Silence));
-	eskills.push_back(new PvESkill(SkillID::Vow_of_Strength));
-	eskills.push_back(new PvESkill(SkillID::Wounding_Strike));
-	eskills.push_back(new PvESkill(SkillID::Zealous_Vow));
+    eskills.push_back(new PvESkill(SkillID::Arcane_Zeal));
+    eskills.push_back(new PvESkill(SkillID::Avatar_of_Balthazar));
+    eskills.push_back(new PvESkill(SkillID::Avatar_of_Dwayna));
+    eskills.push_back(new PvESkill(SkillID::Avatar_of_Grenth));
+    eskills.push_back(new PvESkill(SkillID::Avatar_of_Lyssa));
+    eskills.push_back(new PvESkill(SkillID::Avatar_of_Melandru));
+    eskills.push_back(new PvESkill(SkillID::Ebon_Dust_Aura));
+    eskills.push_back(new PvESkill(SkillID::Grenths_Grasp));
+    eskills.push_back(new PvESkill(SkillID::Onslaught));
+    eskills.push_back(new PvESkill(SkillID::Pious_Renewal));
+    eskills.push_back(new PvESkill(SkillID::Reapers_Sweep));
+    eskills.push_back(new PvESkill(SkillID::Vow_of_Silence));
+    eskills.push_back(new PvESkill(SkillID::Vow_of_Strength));
+    eskills.push_back(new PvESkill(SkillID::Wounding_Strike));
+    eskills.push_back(new PvESkill(SkillID::Zealous_Vow));
 
-	eskills.push_back(new PvESkill(SkillID::Incoming));
-	eskills.push_back(new PvESkill(SkillID::Its_Just_a_Flesh_Wound));
-	eskills.push_back(new PvESkill(SkillID::The_Power_Is_Yours));
-	eskills.push_back(new PvESkill(SkillID::Angelic_Bond));
-	eskills.push_back(new PvESkill(SkillID::Anthem_of_Fury));
-	eskills.push_back(new PvESkill(SkillID::Anthem_of_Guidance));
-	eskills.push_back(new PvESkill(SkillID::Cautery_Signet));
-	eskills.push_back(new PvESkill(SkillID::Crippling_Anthem));
-	eskills.push_back(new PvESkill(SkillID::Cruel_Spear));
-	eskills.push_back(new PvESkill(SkillID::Defensive_Anthem));
-	eskills.push_back(new PvESkill(SkillID::Focused_Anger));
-	eskills.push_back(new PvESkill(SkillID::Soldiers_Fury));
-	eskills.push_back(new PvESkill(SkillID::Song_of_Purification));
-	eskills.push_back(new PvESkill(SkillID::Song_of_Restoration));
-	eskills.push_back(new PvESkill(SkillID::Stunning_Strike));
+    eskills.push_back(new PvESkill(SkillID::Incoming));
+    eskills.push_back(new PvESkill(SkillID::Its_Just_a_Flesh_Wound));
+    eskills.push_back(new PvESkill(SkillID::The_Power_Is_Yours));
+    eskills.push_back(new PvESkill(SkillID::Angelic_Bond));
+    eskills.push_back(new PvESkill(SkillID::Anthem_of_Fury));
+    eskills.push_back(new PvESkill(SkillID::Anthem_of_Guidance));
+    eskills.push_back(new PvESkill(SkillID::Cautery_Signet));
+    eskills.push_back(new PvESkill(SkillID::Crippling_Anthem));
+    eskills.push_back(new PvESkill(SkillID::Cruel_Spear));
+    eskills.push_back(new PvESkill(SkillID::Defensive_Anthem));
+    eskills.push_back(new PvESkill(SkillID::Focused_Anger));
+    eskills.push_back(new PvESkill(SkillID::Soldiers_Fury));
+    eskills.push_back(new PvESkill(SkillID::Song_of_Purification));
+    eskills.push_back(new PvESkill(SkillID::Song_of_Restoration));
+    eskills.push_back(new PvESkill(SkillID::Stunning_Strike));
 
     auto& h = heros.at(Campaign::Nightfall);
     h.push_back(new HeroUnlock(AcolyteJin));
@@ -1755,6 +1817,7 @@ void CompletionWindow::Initialize_Nightfall()
     h.push_back(new HeroUnlock(Zenmai));
     h.push_back(new HeroUnlock(ZhedShadowhoof));
 }
+
 void CompletionWindow::Initialize_EotN()
 {
     LoadTextures(EotNMission::normal_mode_images);
@@ -1763,7 +1826,7 @@ void CompletionWindow::Initialize_EotN()
     // Asura
     eotn_missions.push_back(new EotNMission(MapID::Finding_the_Bloodstone_mission));
     eotn_missions.push_back(new EotNMission(MapID::The_Elusive_Golemancer_mission));
-    eotn_missions.push_back(new EotNMission(MapID::Genius_Operated_Living_Enchanted_Manifestation_mission,QuestID::ZaishenMission_G_O_L_E_M));
+    eotn_missions.push_back(new EotNMission(MapID::Genius_Operated_Living_Enchanted_Manifestation_mission, QuestID::ZaishenMission_G_O_L_E_M));
     // Vanguard
     eotn_missions.push_back(new EotNMission(MapID::Against_the_Charr_mission));
     eotn_missions.push_back(new EotNMission(MapID::Warband_of_brothers_mission));
@@ -1773,7 +1836,7 @@ void CompletionWindow::Initialize_EotN()
     eotn_missions.push_back(new EotNMission(MapID::A_Gate_Too_Far_mission, QuestID::ZaishenMission_A_Gate_Too_Far));
     eotn_missions.push_back(new EotNMission(MapID::Blood_Washes_Blood_mission));
     // Destroyers
-    eotn_missions.push_back(new EotNMission(MapID::Destructions_Depths_mission,QuestID::ZaishenMission_Destructions_Depths));
+    eotn_missions.push_back(new EotNMission(MapID::Destructions_Depths_mission, QuestID::ZaishenMission_Destructions_Depths));
     eotn_missions.push_back(new EotNMission(MapID::A_Time_for_Heroes_mission, QuestID::ZaishenMission_A_Time_for_Heroes));
 
     LoadTextures(Vanquish::hard_mode_images);
@@ -1795,60 +1858,60 @@ void CompletionWindow::Initialize_EotN()
     this_vanquishes.push_back(new Vanquish(MapID::Sparkfly_Swamp, QuestID::ZaishenVanquish_Sparkfly_Swamp));
     this_vanquishes.push_back(new Vanquish(MapID::Verdant_Cascades, QuestID::ZaishenVanquish_Verdant_Cascades));
 
-	auto& skills = pve_skills.at(Campaign::EyeOfTheNorth);
-	skills.push_back(new PvESkill(SkillID::Air_of_Superiority));
-	skills.push_back(new PvESkill(SkillID::Asuran_Scan));
-	skills.push_back(new PvESkill(SkillID::Mental_Block));
-	skills.push_back(new PvESkill(SkillID::Mindbender));
-	skills.push_back(new PvESkill(SkillID::Pain_Inverter));
-	skills.push_back(new PvESkill(SkillID::Radiation_Field));
-	skills.push_back(new PvESkill(SkillID::Smooth_Criminal));
-	skills.push_back(new PvESkill(SkillID::Summon_Ice_Imp));
-	skills.push_back(new PvESkill(SkillID::Summon_Mursaat));
-	skills.push_back(new PvESkill(SkillID::Summon_Naga_Shaman));
-	skills.push_back(new PvESkill(SkillID::Summon_Ruby_Djinn));
-	skills.push_back(new PvESkill(SkillID::Technobabble));
+    auto& skills = pve_skills.at(Campaign::EyeOfTheNorth);
+    skills.push_back(new PvESkill(SkillID::Air_of_Superiority));
+    skills.push_back(new PvESkill(SkillID::Asuran_Scan));
+    skills.push_back(new PvESkill(SkillID::Mental_Block));
+    skills.push_back(new PvESkill(SkillID::Mindbender));
+    skills.push_back(new PvESkill(SkillID::Pain_Inverter));
+    skills.push_back(new PvESkill(SkillID::Radiation_Field));
+    skills.push_back(new PvESkill(SkillID::Smooth_Criminal));
+    skills.push_back(new PvESkill(SkillID::Summon_Ice_Imp));
+    skills.push_back(new PvESkill(SkillID::Summon_Mursaat));
+    skills.push_back(new PvESkill(SkillID::Summon_Naga_Shaman));
+    skills.push_back(new PvESkill(SkillID::Summon_Ruby_Djinn));
+    skills.push_back(new PvESkill(SkillID::Technobabble));
 
-	skills.push_back(new PvESkill(SkillID::By_Urals_Hammer));
-	skills.push_back(new PvESkill(SkillID::Dont_Trip));
-	skills.push_back(new PvESkill(SkillID::Alkars_Alchemical_Acid));
-	skills.push_back(new PvESkill(SkillID::Black_Powder_Mine));
-	skills.push_back(new PvESkill(SkillID::Brawling_Headbutt ));
-	skills.push_back(new PvESkill(SkillID::Breath_of_the_Great_Dwarf));
-	skills.push_back(new PvESkill(SkillID::Drunken_Master));
-	skills.push_back(new PvESkill(SkillID::Dwarven_Stability));
-	skills.push_back(new PvESkill(SkillID::Ear_Bite));
-	skills.push_back(new PvESkill(SkillID::Great_Dwarf_Armor));
-	skills.push_back(new PvESkill(SkillID::Great_Dwarf_Weapon));
-	skills.push_back(new PvESkill(SkillID::Light_of_Deldrimor));
-	skills.push_back(new PvESkill(SkillID::Low_Blow));
-	skills.push_back(new PvESkill(SkillID::Snow_Storm));
+    skills.push_back(new PvESkill(SkillID::By_Urals_Hammer));
+    skills.push_back(new PvESkill(SkillID::Dont_Trip));
+    skills.push_back(new PvESkill(SkillID::Alkars_Alchemical_Acid));
+    skills.push_back(new PvESkill(SkillID::Black_Powder_Mine));
+    skills.push_back(new PvESkill(SkillID::Brawling_Headbutt));
+    skills.push_back(new PvESkill(SkillID::Breath_of_the_Great_Dwarf));
+    skills.push_back(new PvESkill(SkillID::Drunken_Master));
+    skills.push_back(new PvESkill(SkillID::Dwarven_Stability));
+    skills.push_back(new PvESkill(SkillID::Ear_Bite));
+    skills.push_back(new PvESkill(SkillID::Great_Dwarf_Armor));
+    skills.push_back(new PvESkill(SkillID::Great_Dwarf_Weapon));
+    skills.push_back(new PvESkill(SkillID::Light_of_Deldrimor));
+    skills.push_back(new PvESkill(SkillID::Low_Blow));
+    skills.push_back(new PvESkill(SkillID::Snow_Storm));
 
-	skills.push_back(new PvESkill(SkillID::Deft_Strike));
-	skills.push_back(new PvESkill(SkillID::Ebon_Battle_Standard_of_Courage));
-	skills.push_back(new PvESkill(SkillID::Ebon_Battle_Standard_of_Honor));
-	skills.push_back(new PvESkill(SkillID::Ebon_Battle_Standard_of_Wisdom));
-	skills.push_back(new PvESkill(SkillID::Ebon_Escape));
-	skills.push_back(new PvESkill(SkillID::Ebon_Vanguard_Assassin_Support));
-	skills.push_back(new PvESkill(SkillID::Ebon_Vanguard_Sniper_Support));
-	skills.push_back(new PvESkill(SkillID::Signet_of_Infection));
-	skills.push_back(new PvESkill(SkillID::Sneak_Attack));
-	skills.push_back(new PvESkill(SkillID::Tryptophan_Signet));
-	skills.push_back(new PvESkill(SkillID::Weakness_Trap));
-	skills.push_back(new PvESkill(SkillID::Winds));
+    skills.push_back(new PvESkill(SkillID::Deft_Strike));
+    skills.push_back(new PvESkill(SkillID::Ebon_Battle_Standard_of_Courage));
+    skills.push_back(new PvESkill(SkillID::Ebon_Battle_Standard_of_Honor));
+    skills.push_back(new PvESkill(SkillID::Ebon_Battle_Standard_of_Wisdom));
+    skills.push_back(new PvESkill(SkillID::Ebon_Escape));
+    skills.push_back(new PvESkill(SkillID::Ebon_Vanguard_Assassin_Support));
+    skills.push_back(new PvESkill(SkillID::Ebon_Vanguard_Sniper_Support));
+    skills.push_back(new PvESkill(SkillID::Signet_of_Infection));
+    skills.push_back(new PvESkill(SkillID::Sneak_Attack));
+    skills.push_back(new PvESkill(SkillID::Tryptophan_Signet));
+    skills.push_back(new PvESkill(SkillID::Weakness_Trap));
+    skills.push_back(new PvESkill(SkillID::Winds));
 
-	skills.push_back(new PvESkill(SkillID::Dodge_This));
-	skills.push_back(new PvESkill(SkillID::Finish_Him));
-	skills.push_back(new PvESkill(SkillID::I_Am_Unstoppable));
-	skills.push_back(new PvESkill(SkillID::I_Am_the_Strongest));
-	skills.push_back(new PvESkill(SkillID::You_Are_All_Weaklings));
-	skills.push_back(new PvESkill(SkillID::You_Move_Like_a_Dwarf));
-	skills.push_back(new PvESkill(SkillID::A_Touch_of_Guile));
-	skills.push_back(new PvESkill(SkillID::Club_of_a_Thousand_Bears));
-	skills.push_back(new PvESkill(SkillID::Feel_No_Pain));
-	skills.push_back(new PvESkill(SkillID::Raven_Blessing));
-	skills.push_back(new PvESkill(SkillID::Ursan_Blessing));
-	skills.push_back(new PvESkill(SkillID::Volfen_Blessing));
+    skills.push_back(new PvESkill(SkillID::Dodge_This));
+    skills.push_back(new PvESkill(SkillID::Finish_Him));
+    skills.push_back(new PvESkill(SkillID::I_Am_Unstoppable));
+    skills.push_back(new PvESkill(SkillID::I_Am_the_Strongest));
+    skills.push_back(new PvESkill(SkillID::You_Are_All_Weaklings));
+    skills.push_back(new PvESkill(SkillID::You_Move_Like_a_Dwarf));
+    skills.push_back(new PvESkill(SkillID::A_Touch_of_Guile));
+    skills.push_back(new PvESkill(SkillID::Club_of_a_Thousand_Bears));
+    skills.push_back(new PvESkill(SkillID::Feel_No_Pain));
+    skills.push_back(new PvESkill(SkillID::Raven_Blessing));
+    skills.push_back(new PvESkill(SkillID::Ursan_Blessing));
+    skills.push_back(new PvESkill(SkillID::Volfen_Blessing));
 
     auto& h = heros.at(Campaign::EyeOfTheNorth);
     h.push_back(new HeroUnlock(Anton));
@@ -1862,8 +1925,8 @@ void CompletionWindow::Initialize_EotN()
     h.push_back(new HeroUnlock(PyreFierceshot));
     h.push_back(new HeroUnlock(Vekk));
     h.push_back(new HeroUnlock(Xandra));
-
 }
+
 void CompletionWindow::Initialize_Dungeons()
 {
     LoadTextures(Dungeon::normal_mode_images);
@@ -1879,37 +1942,37 @@ void CompletionWindow::Initialize_Dungeons()
         MapID::Ooze_Pit_mission));
     dungeons.push_back(new Dungeon(
         MapID::Darkrime_Delves_Level_1));
-dungeons.push_back(new Dungeon(
-    MapID::Frostmaws_Burrows_Level_1));
-dungeons.push_back(new Dungeon(
-    MapID::Sepulchre_of_Dragrimmar_Level_1, QuestID::ZaishenBounty_Remnant_of_Antiquities));
-dungeons.push_back(new Dungeon(
-    MapID::Ravens_Point_Level_1, QuestID::ZaishenBounty_Plague_of_Destruction));
-dungeons.push_back(new Dungeon(
-    MapID::Vloxen_Excavations_Level_1, QuestID::ZaishenBounty_Zoldark_the_Unholy));
-dungeons.push_back(new Dungeon(
-    MapID::Bogroot_Growths_Level_1));
-dungeons.push_back(new Dungeon(
-    MapID::Bloodstone_Caves_Level_1));
-dungeons.push_back(new Dungeon(
-    MapID::Shards_of_Orr_Level_1, QuestID::ZaishenBounty_Fendi_Nin));
-dungeons.push_back(new Dungeon(
-    MapID::Oolas_Lab_Level_1, QuestID::ZaishenBounty_TPS_Regulator_Golem));
-dungeons.push_back(new Dungeon(
-    MapID::Arachnis_Haunt_Level_1, QuestID::ZaishenBounty_Arachni));
-dungeons.push_back(new Dungeon(
-    MapID::Slavers_Exile_Level_1, {
-        QuestID::ZaishenBounty_Forgewight,
-        QuestID::ZaishenBounty_Selvetarm,
-        QuestID::ZaishenBounty_Justiciar_Thommis,
-        QuestID::ZaishenBounty_Rand_Stormweaver,
-        QuestID::ZaishenBounty_Duncan_the_Black }));
-dungeons.push_back(new Dungeon(
-    MapID::Fronis_Irontoes_Lair_mission, {QuestID::ZaishenBounty_Fronis_Irontoe }));
-dungeons.push_back(new Dungeon(
-    MapID::Secret_Lair_of_the_Snowmen));
-dungeons.push_back(new Dungeon(
-    MapID::Heart_of_the_Shiverpeaks_Level_1, {QuestID::ZaishenBounty_Magmus }));
+    dungeons.push_back(new Dungeon(
+        MapID::Frostmaws_Burrows_Level_1));
+    dungeons.push_back(new Dungeon(
+        MapID::Sepulchre_of_Dragrimmar_Level_1, QuestID::ZaishenBounty_Remnant_of_Antiquities));
+    dungeons.push_back(new Dungeon(
+        MapID::Ravens_Point_Level_1, QuestID::ZaishenBounty_Plague_of_Destruction));
+    dungeons.push_back(new Dungeon(
+        MapID::Vloxen_Excavations_Level_1, QuestID::ZaishenBounty_Zoldark_the_Unholy));
+    dungeons.push_back(new Dungeon(
+        MapID::Bogroot_Growths_Level_1));
+    dungeons.push_back(new Dungeon(
+        MapID::Bloodstone_Caves_Level_1));
+    dungeons.push_back(new Dungeon(
+        MapID::Shards_of_Orr_Level_1, QuestID::ZaishenBounty_Fendi_Nin));
+    dungeons.push_back(new Dungeon(
+        MapID::Oolas_Lab_Level_1, QuestID::ZaishenBounty_TPS_Regulator_Golem));
+    dungeons.push_back(new Dungeon(
+        MapID::Arachnis_Haunt_Level_1, QuestID::ZaishenBounty_Arachni));
+    dungeons.push_back(new Dungeon(
+        MapID::Slavers_Exile_Level_1, {
+            QuestID::ZaishenBounty_Forgewight,
+            QuestID::ZaishenBounty_Selvetarm,
+            QuestID::ZaishenBounty_Justiciar_Thommis,
+            QuestID::ZaishenBounty_Rand_Stormweaver,
+            QuestID::ZaishenBounty_Duncan_the_Black}));
+    dungeons.push_back(new Dungeon(
+        MapID::Fronis_Irontoes_Lair_mission, {QuestID::ZaishenBounty_Fronis_Irontoe}));
+    dungeons.push_back(new Dungeon(
+        MapID::Secret_Lair_of_the_Snowmen));
+    dungeons.push_back(new Dungeon(
+        MapID::Heart_of_the_Shiverpeaks_Level_1, {QuestID::ZaishenBounty_Magmus}));
 }
 
 
@@ -1941,9 +2004,11 @@ void CompletionWindow::Terminate()
         delete camp.second;
     character_completion.clear();
 }
+
 void CompletionWindow::Draw(IDirect3DDevice9* device)
 {
-	if (!visible) return;
+    if (!visible)
+        return;
 
     // TODO Button at the top to go to current daily
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -1954,9 +2019,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         return;
     }
     constexpr float tabs_per_row = 4.f;
-    const ImVec2 tab_btn_size = { ImGui::GetContentRegionAvail().x / tabs_per_row, 0.f };
+    const ImVec2 tab_btn_size = {ImGui::GetContentRegionAvail().x / tabs_per_row, 0.f};
 
-    const std::wstring* sel = 0;
+    const std::wstring* sel = nullptr;
     if (chosen_player_name_s.empty()) {
         chosen_player_name = GetPlayerName();
         chosen_player_name_s = GuiUtils::WStringToString(chosen_player_name);
@@ -1970,7 +2035,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     if (ImGui::BeginCombo("##completion_character_select", chosen_player_name_s.c_str())) // The second parameter is the label previewed before opening the combo.
     {
         const auto email = GetAccountEmail();
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 2.f, 8.f });
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {2.f, 8.f});
         bool is_selected = false;
         for (auto& it : character_completion) {
             is_selected = false;
@@ -1982,22 +2047,21 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 continue; // Different account
             }
 
-			if (it.second->name_str.size() > 0 && ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
-				chosen_player_name = it.first;
-				chosen_player_name_s = it.second->name_str;
-				CheckProgress(true);
-			}
-		}
-		ImGui::PopStyleVar();
-		ImGui::EndCombo();
-	}
-	ImGui::PopItemWidth();
-
+            if (it.second->name_str.size() > 0 && ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
+                chosen_player_name = it.first;
+                chosen_player_name_s = it.second->name_str;
+                CheckProgress(true);
+            }
+        }
+        ImGui::PopStyleVar();
+        ImGui::EndCombo();
+    }
+    ImGui::PopItemWidth();
 
 #if 1
     ImGui::SameLine();
     if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0)
-        RerollWindow::Instance().Reroll(chosen_player_name.data(),false,false);
+        RerollWindow::Instance().Reroll(chosen_player_name.data(), false, false);
 #endif
     ImGui::SameLine();
     if (ImGui::Checkbox("This Account", &only_show_account_chars)) {
@@ -2007,7 +2071,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - (200.f * gscale));
     ImGui::Checkbox("View as list", &show_as_list);
     ImGui::SameLine();
-    if(ImGui::Checkbox("Hard mode", &hard_mode)) {
+    if (ImGui::Checkbox("Hard mode", &hard_mode)) {
         CheckProgress();
     }
     ImGui::Separator();
@@ -2015,15 +2079,15 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     float single_item_width = Mission::icon_size.x;
     if (show_as_list)
         single_item_width *= 5.f;
-    int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x)));
+    int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x))));
     const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
     auto draw_missions = [missions_per_row, device](auto& camp_missions, size_t end = 0) {
         if (end == 0) {
             end = camp_missions.size();
         }
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
-        size_t items_per_col = (size_t)ceil(end / static_cast<float>(missions_per_row));
+        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
+        size_t items_per_col = static_cast<size_t>(ceil(end / static_cast<float>(missions_per_row)));
         size_t col_count = 0;
         for (size_t i = 0; i < end; i++) {
             if (camp_missions[i]->Draw(device)) {
@@ -2054,10 +2118,10 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     };
     if (pending_sort) {
         bool sorted = true;
-        for (auto it = missions.begin(); sorted && it != missions.end(); it++) {
+        for (auto it = missions.begin(); sorted && it != missions.end(); ++it) {
             sorted = sort(it->second);
         }
-        for (auto it = vanquishes.begin(); sorted && it != vanquishes.end(); it++) {
+        for (auto it = vanquishes.begin(); sorted && it != vanquishes.end(); ++it) {
             sorted = sort(it->second);
         }
         /*for (auto it = pve_skills.begin(); sorted && it != pve_skills.end(); it++) {
@@ -2066,7 +2130,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         for (auto it = elite_skills.begin(); sorted && it != elite_skills.end(); it++) {
             sorted = sort(it->second);
         }*/
-        for (auto it = heros.begin(); sorted && it != heros.end(); it++) {
+        for (auto it = heros.begin(); sorted && it != heros.end(); ++it) {
             sorted = sort(it->second);
         }
         if (sorted)
@@ -2075,7 +2139,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 
     ImGui::Text("Missions");
     ImGui::SameLine(checkbox_offset);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
     ImGui::Checkbox("Hide completed missions", &hide_completed_missions);
     ImGui::PopStyleVar();
     for (auto& camp : missions) {
@@ -2091,14 +2155,14 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             filtered.push_back(camp_missions[i]);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
     }
     ImGui::Text("Vanquishes");
     ImGui::SameLine(checkbox_offset);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
     ImGui::Checkbox("Hide completed vanquishes", &hide_completed_vanquishes);
     ImGui::PopStyleVar();
     for (auto& camp : vanquishes) {
@@ -2116,12 +2180,12 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             filtered.push_back(camp_missions[i]);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f,
+                 camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
     }
-
 
     auto skills_title = [&, checkbox_offset](const char* title) {
         ImGui::PushID(title);
@@ -2129,7 +2193,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         ImGui::ShowHelp("Guild Wars only shows skills learned for the current primary/secondary profession.\n\n"
             "GWToolbox remembers skills learned for other professions,\nbut is only able to update this info when you switch to that profession.");
         ImGui::SameLine(checkbox_offset);
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
         ImGui::Checkbox("Hide learned skills", &hide_unlocked_skills);
         ImGui::PopStyleVar();
         ImGui::PopID();
@@ -2148,7 +2212,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             filtered.push_back(camp_missions[i]);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
@@ -2167,7 +2231,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             filtered.push_back(camp_missions[i]);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
@@ -2182,7 +2246,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             }
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_heros_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_heros_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(camp_missions);
         }
@@ -2200,7 +2264,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     size_t to_index = 0;
     const size_t cnt = festival_hats.size();
     char label[128];
-    std::vector<Missions::FestivalHat*> filtered;
+    std::vector<FestivalHat*> filtered;
     // Halloween hats
     completed = 0;
     to_index = wintersday_index;
@@ -2214,7 +2278,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         filtered.push_back(m);
     }
-    snprintf(label, _countof(label), "Halloween Hats (%d of %d collected) - %.0f%%###halloween_hats", completed, (to_index - offset), ((float)completed / (float)(to_index - offset)) * 100.f);
+    snprintf(label, _countof(label), "Halloween Hats (%d of %d collected) - %.0f%%###halloween_hats", completed, (to_index - offset), (static_cast<float>(completed) / static_cast<float>(to_index - offset)) * 100.f);
     if (ImGui::CollapsingHeader(label)) {
         draw_missions(filtered);
     }
@@ -2233,7 +2297,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         filtered.push_back(m);
     }
-    snprintf(label, _countof(label), "Wintersday Hats (%d of %d collected) - %.0f%%###wintersday_hats", completed, (to_index - offset), ((float)completed / (float)(to_index - offset)) * 100.f);
+    snprintf(label, _countof(label), "Wintersday Hats (%d of %d collected) - %.0f%%###wintersday_hats", completed, (to_index - offset), (static_cast<float>(completed) / static_cast<float>(to_index - offset)) * 100.f);
     if (ImGui::CollapsingHeader(label)) {
         draw_missions(filtered);
     }
@@ -2252,7 +2316,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         filtered.push_back(m);
     }
-    snprintf(label, _countof(label), "Dragon Festival Hats (%d of %d collected) - %.0f%%###dragon_festival_hats", completed, (to_index - offset), ((float)completed / (float)(to_index - offset)) * 100.f);
+    snprintf(label, _countof(label), "Dragon Festival Hats (%d of %d collected) - %.0f%%###dragon_festival_hats", completed, (to_index - offset), (static_cast<float>(completed) / static_cast<float>(to_index - offset)) * 100.f);
     if (ImGui::CollapsingHeader(label)) {
         draw_missions(filtered);
     }
@@ -2262,49 +2326,51 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::EndChild();
     ImGui::End();
 }
-void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device) {
-	float single_item_width = Mission::icon_size.x;
-	if (show_as_list)
-		single_item_width *= 5.f;
-	int missions_per_row = (int)std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x)));
-	const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
-	ImGui::Text("Hall of Monuments");
-	ImGui::SameLine(checkbox_offset);
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0,0 });
-	ImGui::Checkbox("Hide unlocked achievements", &hide_unlocked_achievements);
-	ImGui::PopStyleVar();
+
+void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
+{
+    float single_item_width = Mission::icon_size.x;
+    if (show_as_list)
+        single_item_width *= 5.f;
+    int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x))));
+    const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
+    ImGui::Text("Hall of Monuments");
+    ImGui::SameLine(checkbox_offset);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
+    ImGui::Checkbox("Hide unlocked achievements", &hide_unlocked_achievements);
+    ImGui::PopStyleVar();
     const auto hom = GetCharacterHom(chosen_player_name);
-	// Devotion
-	uint32_t completed = 0;
-	if (hom && hom->isReady()) {
-		for (size_t i = 0; i < _countof(hom->devotion_points); i++) {
-			completed += hom->devotion_points[i];
-		}
-	}
-	uint32_t dedicated = 0;
-	uint32_t drawn = 0;
-	for (auto m : minipets) {
-		if (m->is_completed) {
-			dedicated++;
-			if (hide_unlocked_achievements)
-				continue;
-		}
-		drawn++;
-	}
+    // Devotion
+    uint32_t completed = 0;
+    if (hom && hom->isReady()) {
+        for (size_t i = 0; i < _countof(hom->devotion_points); i++) {
+            completed += hom->devotion_points[i];
+        }
+    }
+    uint32_t dedicated = 0;
+    uint32_t drawn = 0;
+    for (auto m : minipets) {
+        if (m->is_completed) {
+            dedicated++;
+            if (hide_unlocked_achievements)
+                continue;
+        }
+        drawn++;
+    }
 
     char label[128];
     snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d minipets dedicated) - %.0f%%###devotion_points", "Devotion",
-        completed, DevotionPoints::TotalAvailable,
-        dedicated, minipets.size(),
-        (float)dedicated / (float)minipets.size() * 100.f);
+             completed, DevotionPoints::TotalAvailable,
+             dedicated, minipets.size(),
+             static_cast<float>(dedicated) / static_cast<float>(minipets.size()) * 100.f);
 
-	if (ImGui::CollapsingHeader(label)) {
-		ImGui::TextDisabled(R"(To update this list, talk to the "Devotion" pedestal in Eye of the North,
+    if (ImGui::CollapsingHeader(label)) {
+        ImGui::TextDisabled(R"(To update this list, talk to the "Devotion" pedestal in Eye of the North,
 then press "Examine the Monument to Devotion.")");
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
-		size_t col_count = 0;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
+        size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
+        size_t col_count = 0;
 
         if (!minipets_sorted) {
             bool ready = true;
@@ -2315,53 +2381,52 @@ then press "Examine the Monument to Devotion.")");
                 }
             }
             if (ready) {
-                std::sort(minipets.begin(), minipets.end(), [](MinipetAchievement* a, MinipetAchievement* b) { return strcmp(a->Name(), b->Name()) < 0;  });
+                std::sort(minipets.begin(), minipets.end(), [](MinipetAchievement* a, MinipetAchievement* b) { return strcmp(a->Name(), b->Name()) < 0; });
                 minipets_sorted = true;
             }
         }
 
-		for (const auto m : minipets) {
-			if (m->is_completed && hide_unlocked_achievements)
-				continue;
-			if (!m->Draw(device))
-				continue;
-			col_count++;
-			if (col_count == items_per_col) {
-				ImGui::NextColumn();
-				col_count = 0;
-			}
-		}
-		ImGui::Columns(1);
-		ImGui::PopStyleVar();
-	}
-	// Valor
-	completed = 0;
-	if (hom && hom->isReady()) {
-		for (size_t i = 0; i < _countof(hom->valor_points); i++) {
-			completed += hom->valor_points[i];
-		}
-	}
-	dedicated = 0;
-	drawn = 0;
-	for (auto m : hom_weapons) {
-		if (m->is_completed) {
-			dedicated++;
-			if (hide_unlocked_achievements)
-				continue;
-		}
-		drawn++;
-	}
-	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d weapons displayed) - %.0f%%###valor_points", "Valor",
-		completed, ValorPoints::TotalAvailable,
-		dedicated, hom_weapons.size(),
-		((float)dedicated / (float)hom_weapons.size()) * 100.f);
+        for (const auto m : minipets) {
+            if (m->is_completed && hide_unlocked_achievements)
+                continue;
+            if (!m->Draw(device))
+                continue;
+            col_count++;
+            if (col_count == items_per_col) {
+                ImGui::NextColumn();
+                col_count = 0;
+            }
+        }
+        ImGui::Columns(1);
+        ImGui::PopStyleVar();
+    }
+    // Valor
+    completed = 0;
+    if (hom && hom->isReady()) {
+        for (size_t i = 0; i < _countof(hom->valor_points); i++) {
+            completed += hom->valor_points[i];
+        }
+    }
+    dedicated = 0;
+    drawn = 0;
+    for (auto m : hom_weapons) {
+        if (m->is_completed) {
+            dedicated++;
+            if (hide_unlocked_achievements)
+                continue;
+        }
+        drawn++;
+    }
+    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d weapons displayed) - %.0f%%###valor_points", "Valor",
+             completed, ValorPoints::TotalAvailable,
+             dedicated, hom_weapons.size(),
+             (static_cast<float>(dedicated) / static_cast<float>(hom_weapons.size())) * 100.f);
 
-	if (ImGui::CollapsingHeader(label)) {
-
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
-		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
-		size_t col_count = 0;
+    if (ImGui::CollapsingHeader(label)) {
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
+        size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
+        size_t col_count = 0;
 
         for (auto m : hom_weapons) {
             if (m->is_completed && hide_unlocked_achievements)
@@ -2378,27 +2443,27 @@ then press "Examine the Monument to Devotion.")");
         ImGui::PopStyleVar();
     }
 
-	// Resilience
-	completed = 0;
+    // Resilience
+    completed = 0;
     if (hom && hom->isReady()) {
         for (size_t i = 0; i < _countof(hom->resilience_points); i++) {
             completed += hom->resilience_points[i];
         }
     }
-	dedicated = 0;
-	drawn = 0;
-	for (auto m : hom_armor) {
-		if (m->is_completed) {
-			dedicated++;
-			if (hide_unlocked_achievements)
-				continue;
-		}
-		drawn++;
-	}
-	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d armor sets displayed) - %.0f%%###resilience_points", "Resilience",
-		completed, ResiliencePoints::TotalAvailable,
-		dedicated, hom_armor.size(),
-		((float)dedicated / (float)hom_armor.size()) * 100.f);
+    dedicated = 0;
+    drawn = 0;
+    for (auto m : hom_armor) {
+        if (m->is_completed) {
+            dedicated++;
+            if (hide_unlocked_achievements)
+                continue;
+        }
+        drawn++;
+    }
+    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d armor sets displayed) - %.0f%%###resilience_points", "Resilience",
+             completed, ResiliencePoints::TotalAvailable,
+             dedicated, hom_armor.size(),
+             (static_cast<float>(dedicated) / static_cast<float>(hom_armor.size())) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -2406,107 +2471,108 @@ then press "Examine the Monument to Devotion.")");
         auto items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
         size_t col_count = 0;
 
-		for (auto m : hom_armor) {
-			if (m->is_completed && hide_unlocked_achievements)
-				continue;
-			if (!m->Draw(device))
-				continue;
-			col_count++;
-			if (col_count == items_per_col) {
-				ImGui::NextColumn();
-				col_count = 0;
-			}
-		}
-		ImGui::Columns(1);
-		ImGui::PopStyleVar();
-	}
+        for (auto m : hom_armor) {
+            if (m->is_completed && hide_unlocked_achievements)
+                continue;
+            if (!m->Draw(device))
+                continue;
+            col_count++;
+            if (col_count == items_per_col) {
+                ImGui::NextColumn();
+                col_count = 0;
+            }
+        }
+        ImGui::Columns(1);
+        ImGui::PopStyleVar();
+    }
 
-	// Fellowship
-	completed = 0;
+    // Fellowship
+    completed = 0;
     if (hom && hom->isReady()) {
         for (size_t i = 0; i < _countof(hom->fellowship_points); i++) {
             completed += hom->fellowship_points[i];
         }
     }
-	dedicated = 0;
-	drawn = 0;
-	for (auto m : hom_companions) {
-		if (m->is_completed) {
-			dedicated++;
-			if (hide_unlocked_achievements)
-				continue;
-		}
-		drawn++;
-	}
-	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d companions displayed) - %.0f%%###fellowship_points", "Fellowship",
-		completed, FellowshipPoints::TotalAvailable,
-		dedicated, hom_companions.size(),
-		((float)dedicated / (float)hom_companions.size()) * 100.f);
+    dedicated = 0;
+    drawn = 0;
+    for (auto m : hom_companions) {
+        if (m->is_completed) {
+            dedicated++;
+            if (hide_unlocked_achievements)
+                continue;
+        }
+        drawn++;
+    }
+    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d companions displayed) - %.0f%%###fellowship_points", "Fellowship",
+             completed, FellowshipPoints::TotalAvailable,
+             dedicated, hom_companions.size(),
+             (static_cast<float>(dedicated) / static_cast<float>(hom_companions.size())) * 100.f);
 
-	if (ImGui::CollapsingHeader(label)) {
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
-		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
-		size_t col_count = 0;
+    if (ImGui::CollapsingHeader(label)) {
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
+        size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
+        size_t col_count = 0;
 
-		for (auto m : hom_companions) {
-			if (m->is_completed && hide_unlocked_achievements)
-				continue;
-			if (!m->Draw(device))
-				continue;
-			col_count++;
-			if (col_count == items_per_col) {
-				ImGui::NextColumn();
-				col_count = 0;
-			}
-		}
-		ImGui::Columns(1);
-		ImGui::PopStyleVar();
-	}
+        for (auto m : hom_companions) {
+            if (m->is_completed && hide_unlocked_achievements)
+                continue;
+            if (!m->Draw(device))
+                continue;
+            col_count++;
+            if (col_count == items_per_col) {
+                ImGui::NextColumn();
+                col_count = 0;
+            }
+        }
+        ImGui::Columns(1);
+        ImGui::PopStyleVar();
+    }
 
-	// Honor
-	completed = 0;
+    // Honor
+    completed = 0;
     if (hom && hom->isReady()) {
         for (size_t i = 0; i < _countof(hom->honor_points); i++) {
             completed += hom->honor_points[i];
         }
     }
-	dedicated = 0;
-	drawn = 0;
-	for (auto m : hom_titles) {
-		if (m->is_completed) {
-			dedicated++;
-			if (hide_unlocked_achievements)
-				continue;
-		}
-		drawn++;
-	}
-	snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d titles achieved) - %.0f%%###honor_points", "Honor",
-		completed, HonorPoints::TotalAvailable,
-		dedicated, hom_titles.size(),
-		((float)dedicated / (float)hom_titles.size()) * 100.f);
+    dedicated = 0;
+    drawn = 0;
+    for (auto m : hom_titles) {
+        if (m->is_completed) {
+            dedicated++;
+            if (hide_unlocked_achievements)
+                continue;
+        }
+        drawn++;
+    }
+    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d titles achieved) - %.0f%%###honor_points", "Honor",
+             completed, HonorPoints::TotalAvailable,
+             dedicated, hom_titles.size(),
+             (static_cast<float>(dedicated) / static_cast<float>(hom_titles.size())) * 100.f);
 
-	if (ImGui::CollapsingHeader(label)) {
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		ImGui::Columns(static_cast<int>(missions_per_row), "###completion_section_cols", false);
-		size_t items_per_col = (size_t)ceil(drawn / static_cast<float>(missions_per_row));
-		size_t col_count = 0;
+    if (ImGui::CollapsingHeader(label)) {
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::Columns(missions_per_row, "###completion_section_cols", false);
+        size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
+        size_t col_count = 0;
 
-		for (auto m : hom_titles) {
-			if (m->is_completed && hide_unlocked_achievements)
-				continue;
-			if (!m->Draw(device))
-				continue;
-			col_count++;
-			if (col_count == items_per_col) {
-				ImGui::NextColumn();
-				col_count = 0;
-			}
-		}
-		ImGui::Columns(1);
-		ImGui::PopStyleVar();
-	}
+        for (auto m : hom_titles) {
+            if (m->is_completed && hide_unlocked_achievements)
+                continue;
+            if (!m->Draw(device))
+                continue;
+            col_count++;
+            if (col_count == items_per_col) {
+                ImGui::NextColumn();
+                col_count = 0;
+            }
+        }
+        ImGui::Columns(1);
+        ImGui::PopStyleVar();
+    }
 }
+
 void CompletionWindow::DrawSettingInternal()
 {
     ToolboxWindow::DrawSettingInternal();
@@ -2515,7 +2581,7 @@ void CompletionWindow::DrawSettingInternal()
 void CompletionWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    ToolboxIni* completion_ini = new ToolboxIni(false, false, false);
+    auto completion_ini = new ToolboxIni(false, false, false);
     completion_ini->LoadFile(Resources::GetPath(completion_ini_filename).c_str());
     std::string ini_str;
     std::wstring name_ws;
@@ -2551,80 +2617,79 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
         name_ws = GuiUtils::StringToWString(ini_section);
 
         read_ini_to_buf(CompletionType::Mission, "mission");
-        read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus");
-        read_ini_to_buf(CompletionType::MissionHM, "mission_hm");
-        read_ini_to_buf(CompletionType::MissionBonusHM, "mission_bonus_hm");
-        read_ini_to_buf(CompletionType::Skills, "skills");
-        read_ini_to_buf(CompletionType::Vanquishes, "vanquishes");
-        read_ini_to_buf(CompletionType::Heroes, "heros");
-        read_ini_to_buf(CompletionType::MapsUnlocked, "maps_unlocked");
-        read_ini_to_buf(CompletionType::MinipetsUnlocked, "minipets_unlocked");
-        read_ini_to_buf(CompletionType::FestivalHats, "festival_hats");
+        read_ini_to_buf(MissionBonus, "mission_bonus");
+        read_ini_to_buf(MissionHM, "mission_hm");
+        read_ini_to_buf(MissionBonusHM, "mission_bonus_hm");
+        read_ini_to_buf(Skills, "skills");
+        read_ini_to_buf(Vanquishes, "vanquishes");
+        read_ini_to_buf(Heroes, "heros");
+        read_ini_to_buf(MapsUnlocked, "maps_unlocked");
+        read_ini_to_buf(MinipetsUnlocked, "minipets_unlocked");
+        read_ini_to_buf(FestivalHats, "festival_hats");
 
-        auto c = GetCharacterCompletion(name_ws.data(),true);
-        c->profession = (Profession)completion_ini->GetLongValue(ini_section, "profession", 0);
+        auto c = GetCharacterCompletion(name_ws.data(), true);
+        c->profession = static_cast<Profession>(completion_ini->GetLongValue(ini_section, "profession", 0));
         c->account = GuiUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
     }
     CheckProgress();
 }
-CompletionWindow* CompletionWindow::CheckProgress(bool fetch_hom) {
-	for (auto& camp : pve_skills) {
-		for (auto& skill : camp.second) {
-			skill->CheckProgress(chosen_player_name);
-		}
-	}
-	for (auto& camp : elite_skills) {
-		for (auto& skill : camp.second) {
-			skill->CheckProgress(chosen_player_name);
-		}
-	}
-	for (auto& camp : missions) {
-		for (auto& skill : camp.second) {
-			skill->CheckProgress(chosen_player_name);
-		}
-	}
-	for (auto& camp : vanquishes) {
-		for (auto& skill : camp.second) {
-			skill->CheckProgress(chosen_player_name);
-		}
-	}
-	for (auto& camp : heros) {
-		for (auto& skill : camp.second) {
-			skill->CheckProgress(chosen_player_name);
-		}
-	}
+
+CompletionWindow* CompletionWindow::CheckProgress(bool fetch_hom)
+{
+    for (auto& camp : pve_skills) {
+        for (auto& skill : camp.second) {
+            skill->CheckProgress(chosen_player_name);
+        }
+    }
+    for (auto& camp : elite_skills) {
+        for (auto& skill : camp.second) {
+            skill->CheckProgress(chosen_player_name);
+        }
+    }
+    for (auto& camp : missions) {
+        for (auto& skill : camp.second) {
+            skill->CheckProgress(chosen_player_name);
+        }
+    }
+    for (auto& camp : vanquishes) {
+        for (auto& skill : camp.second) {
+            skill->CheckProgress(chosen_player_name);
+        }
+    }
+    for (auto& camp : heros) {
+        for (auto& skill : camp.second) {
+            skill->CheckProgress(chosen_player_name);
+        }
+    }
     for (auto achievement : festival_hats) {
         achievement->CheckProgress(chosen_player_name);
     }
-	for (auto achievement : minipets) {
-		achievement->CheckProgress(chosen_player_name);
-	}
-	for (auto achievement : hom_weapons) {
-		achievement->CheckProgress(chosen_player_name);
-	}
-    for (auto achievement : hom_armor)
-    {
+    for (auto achievement : minipets) {
         achievement->CheckProgress(chosen_player_name);
     }
-	for (auto achievement : hom_companions)
-	{
-		achievement->CheckProgress(chosen_player_name);
-	}
-	for (auto achievement : hom_titles)
-	{
-		achievement->CheckProgress(chosen_player_name);
-	}
-    if (fetch_hom)
-    {
+    for (auto achievement : hom_weapons) {
+        achievement->CheckProgress(chosen_player_name);
+    }
+    for (auto achievement : hom_armor) {
+        achievement->CheckProgress(chosen_player_name);
+    }
+    for (auto achievement : hom_companions) {
+        achievement->CheckProgress(chosen_player_name);
+    }
+    for (auto achievement : hom_titles) {
+        achievement->CheckProgress(chosen_player_name);
+    }
+    if (fetch_hom) {
         const auto cc = GetCharacterCompletion(chosen_player_name.c_str(), true);
         FetchHom(&cc->hom_achievements);
-	}
-	return this;
+    }
+    return this;
 }
+
 void CompletionWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ToolboxIni* completion_ini = new ToolboxIni(false, false, false);
+    auto completion_ini = new ToolboxIni(false, false, false);
     std::string ini_str;
     std::string* name;
     CharacterCompletion* char_comp = nullptr;
@@ -2637,7 +2702,7 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_collected_hats);
     SAVE_BOOL(only_show_account_chars);
 
-    auto write_buf_to_ini = [completion_ini](const char* section, std::vector<uint32_t>* read, std::string& ini_str,std::string* name) {
+    auto write_buf_to_ini = [completion_ini](const char* section, std::vector<uint32_t>* read, std::string& ini_str, std::string* name) {
         char ini_key_buf[64];
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
         completion_ini->SetLongValue(name->c_str(), ini_key_buf, read->size());
@@ -2647,10 +2712,9 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     };
 
     for (auto& char_unlocks : character_completion) {
-
         char_comp = char_unlocks.second;
         name = &char_comp->name_str;
-        completion_ini->SetLongValue(name->c_str(), "profession", (uint32_t)char_comp->profession);
+        completion_ini->SetLongValue(name->c_str(), "profession", static_cast<uint32_t>(char_comp->profession));
         completion_ini->SetValue(name->c_str(), "account", GuiUtils::WStringToString(char_comp->account).c_str());
         write_buf_to_ini("mission", &char_comp->mission, ini_str, name);
         write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, ini_str, name);
@@ -2669,19 +2733,20 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     delete completion_ini;
 }
 
-CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, bool create_if_not_found) {
+CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, bool create_if_not_found)
+{
     if (character_completion.contains(character_name)) {
         return character_completion.at(character_name);
     }
     CharacterCompletion* this_character_completion = nullptr;
-	if (create_if_not_found) {
+    if (create_if_not_found) {
         this_character_completion = new CharacterCompletion();
-		this_character_completion->name_str = GuiUtils::WStringToString(character_name);
+        this_character_completion->name_str = GuiUtils::WStringToString(character_name);
         this_character_completion->hom_achievements.character_name = character_name;
-		character_completion[character_name] = this_character_completion;
+        character_completion[character_name] = this_character_completion;
         FetchHom(&this_character_completion->hom_achievements);
-	}
-	return this_character_completion;
+    }
+    return this_character_completion;
 }
 
 
@@ -2694,61 +2759,68 @@ void MinipetAchievement::CheckProgress(const std::wstring& player_name)
     std::vector<uint32_t>& minipets_unlocked = cc.at(player_name)->minipets_unlocked;
     is_completed = bonus = ArrayBoolAt(minipets_unlocked, encoded_name_index);
 }
+
 void WeaponAchievement::CheckProgress(const std::wstring& player_name)
 {
-	is_completed = false;
-    const auto& cc = character_completion;
-	if (!cc.contains(player_name))
-		return;
-	const auto& hom = cc.at(player_name)->hom_achievements;
-	if (hom.state != HallOfMonumentsAchievements::State::Done)
-		return;
-	auto& unlocked = hom.valor_detail;
-	is_completed = bonus = unlocked[encoded_name_index] != 0;
-}
-
-IDirect3DTexture9* AchieventWithWikiFile::GetMissionImage()
-{
-	if (!img && !wiki_file_name.empty()) {
-		img = Resources::GetGuildWarsWikiImage(wiki_file_name.c_str(),64);
-	}
-	return img ? *img : nullptr;
-}
-void ArmorAchievement::CheckProgress(const std::wstring& player_name)
-{
-	is_completed = false;
+    is_completed = false;
     const auto& cc = character_completion;
     if (!cc.contains(player_name))
         return;
     const auto& hom = cc.at(player_name)->hom_achievements;
-    if (hom.state != HallOfMonumentsAchievements::State::Done) return;
-    const auto& unlocked = hom.resilience_detail;
-	is_completed = bonus = unlocked[encoded_name_index] != 0;
-}
-void CompanionAchievement::CheckProgress(const std::wstring& player_name)
-{
-	is_completed = false;
-    const auto& cc = character_completion;
-	if (!cc.contains(player_name))
-		return;
-	const auto& hom = cc.at(player_name)->hom_achievements;
-	if (hom.state != HallOfMonumentsAchievements::State::Done) return;
-	const auto& unlocked = hom.fellowship_detail;
-	is_completed = bonus = unlocked[encoded_name_index] != 0;
-}
-void HonorAchievement::CheckProgress(const std::wstring& player_name)
-{
-	is_completed = false;
-    const auto& cc = character_completion;
-	if (!cc.contains(player_name))
-		return;
-    const auto& hom = cc.at(player_name)->hom_achievements;
-	if (hom.state != HallOfMonumentsAchievements::State::Done) return;
-	const auto& unlocked = hom.honor_detail;
-	is_completed = bonus = unlocked[encoded_name_index] != 0;
+    if (hom.state != HallOfMonumentsAchievements::State::Done)
+        return;
+    auto& unlocked = hom.valor_detail;
+    is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
 
-void Missions::FestivalHat::CheckProgress(const std::wstring& player_name)
+IDirect3DTexture9* AchieventWithWikiFile::GetMissionImage()
+{
+    if (!img && !wiki_file_name.empty()) {
+        img = Resources::GetGuildWarsWikiImage(wiki_file_name.c_str(), 64);
+    }
+    return img ? *img : nullptr;
+}
+
+void ArmorAchievement::CheckProgress(const std::wstring& player_name)
+{
+    is_completed = false;
+    const auto& cc = character_completion;
+    if (!cc.contains(player_name))
+        return;
+    const auto& hom = cc.at(player_name)->hom_achievements;
+    if (hom.state != HallOfMonumentsAchievements::State::Done)
+        return;
+    const auto& unlocked = hom.resilience_detail;
+    is_completed = bonus = unlocked[encoded_name_index] != 0;
+}
+
+void CompanionAchievement::CheckProgress(const std::wstring& player_name)
+{
+    is_completed = false;
+    const auto& cc = character_completion;
+    if (!cc.contains(player_name))
+        return;
+    const auto& hom = cc.at(player_name)->hom_achievements;
+    if (hom.state != HallOfMonumentsAchievements::State::Done)
+        return;
+    const auto& unlocked = hom.fellowship_detail;
+    is_completed = bonus = unlocked[encoded_name_index] != 0;
+}
+
+void HonorAchievement::CheckProgress(const std::wstring& player_name)
+{
+    is_completed = false;
+    const auto& cc = character_completion;
+    if (!cc.contains(player_name))
+        return;
+    const auto& hom = cc.at(player_name)->hom_achievements;
+    if (hom.state != HallOfMonumentsAchievements::State::Done)
+        return;
+    const auto& unlocked = hom.honor_detail;
+    is_completed = bonus = unlocked[encoded_name_index] != 0;
+}
+
+void FestivalHat::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     auto& cc = character_completion;

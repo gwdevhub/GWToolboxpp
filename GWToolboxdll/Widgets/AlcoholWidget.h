@@ -8,7 +8,8 @@
 
 class AlcoholWidget : public ToolboxWidget {
     AlcoholWidget() = default;
-    ~AlcoholWidget() = default;
+    ~AlcoholWidget() override = default;
+
 private:
     DWORD alcohol_level = 0;
     time_t last_alcohol = 0;
@@ -17,10 +18,12 @@ private:
     uint32_t GetAlcoholTitlePointsGained(); // Returns amount of alcohol points gained since last check (or map load)
     uint32_t prev_alcohol_title_points = 0; // Used in GetAlcoholTitlePointsGained
     GW::Constants::MapID map_id = GW::Constants::MapID::None;
-    DWORD prev_packet_tint_6_level=0; // Record what last post processing packet was - for lunars check
+    DWORD prev_packet_tint_6_level = 0; // Record what last post processing packet was - for lunars check
     GW::HookEntry PostProcess_Entry;
+
 public:
-    static AlcoholWidget& Instance() {
+    static AlcoholWidget& Instance()
+    {
         static AlcoholWidget instance;
         return instance;
     }
@@ -34,7 +37,7 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     uint32_t GetAlcoholTitlePoints(); // Gets current alcohol title points.
-    static void AlcUpdate(GW::HookStatus *, GW::Packet::StoC::PostProcess *packet);
+    static void AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess* packet);
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;

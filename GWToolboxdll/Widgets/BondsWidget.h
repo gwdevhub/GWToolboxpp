@@ -9,9 +9,11 @@
 
 class BondsWidget : public ToolboxWidget {
     BondsWidget() = default;
-    ~BondsWidget() = default;
+    ~BondsWidget() override = default;
+
 public:
-    static BondsWidget& Instance() {
+    static BondsWidget& Instance()
+    {
         static BondsWidget instance;
         return instance;
     }
@@ -23,7 +25,9 @@ public:
     void Terminate() override;
 
     // Update. Will always be called every frame.
-    void Update(float) override {}
+    void Update(float) override
+    {
+    }
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* device) override;

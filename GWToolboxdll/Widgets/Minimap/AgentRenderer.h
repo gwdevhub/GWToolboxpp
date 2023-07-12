@@ -10,11 +10,14 @@ namespace GW {
     struct Agent;
     struct AgentLiving;
     struct MapProp;
+
     namespace UI {
         enum class UIMessage : uint32_t;
     }
 }
-typedef uint32_t Color;
+
+using Color = uint32_t;
+
 class AgentRenderer : public VBuffer {
     static constexpr int num_triangles = 32;
 
@@ -46,16 +49,22 @@ private:
     static AgentRenderer* instance;
 
     static constexpr size_t shape_size = 5;
+
     enum Shape_e { Tear, Circle, Quad, BigCircle, Star };
+
     enum Color_Modifier {
-        None, // rgb 0,0,0
-        Dark, // user defined
-        Light, // user defined
+        None,
+        // rgb 0,0,0
+        Dark,
+        // user defined
+        Light,
+        // user defined
         CircleCenter // alpha -50
     };
 
     class CustomAgent {
         static unsigned int cur_ui_id;
+
     public:
         enum class Operation {
             None,
@@ -74,7 +83,7 @@ private:
 
         // utility
         const unsigned int ui_id = 0; // to ensure UI consistency
-        size_t index = 0; // index in the array. Used for faster sorting.
+        size_t index = 0;             // index in the array. Used for faster sorting.
 
         // define the agent
         bool active = true;
@@ -95,18 +104,23 @@ private:
 
     struct Shape_Vertex : public GW::Vec2f {
         Shape_Vertex(float x, float y, Color_Modifier mod)
-            : GW::Vec2f(x, y), modifier(mod) {}
+            : Vec2f(x, y), modifier(mod)
+        {
+        }
+
         Color_Modifier modifier;
     };
+
     struct Shape_t {
         std::vector<Shape_Vertex> vertices;
         void AddVertex(float x, float y, Color_Modifier mod);
     };
+
     Shape_t shapes[shape_size];
 
     void Initialize(IDirect3DDevice9* device) override;
 
-    
+
     Color GetColor(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     float GetSize(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
     Shape_e GetShape(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
@@ -122,12 +136,12 @@ private:
     void Enqueue(Shape_e shape, const GW::MapProp* agent, float size, Color color);
     void Enqueue(Shape_e shape, const RenderPosition& pos, float size, Color color, Color modifier = 0);
 
-    std::vector<const AgentRenderer::CustomAgent*>* GetCustomAgentsToDraw(const GW::AgentLiving* agent);
+    std::vector<const CustomAgent*>* GetCustomAgentsToDraw(const GW::AgentLiving* agent);
 
-    D3DVertex* vertices = nullptr;  // vertices array
-    unsigned int vertices_count = 0;// count of vertices
-    unsigned int vertices_max = 0;  // max number of vertices to draw in one call
-    unsigned int max_shape_verts = 0;// max number of triangles in a single shape
+    D3DVertex* vertices = nullptr;    // vertices array
+    unsigned int vertices_count = 0;  // count of vertices
+    unsigned int vertices_max = 0;    // max number of vertices to draw in one call
+    unsigned int max_shape_verts = 0; // max number of triangles in a single shape
 
     Color color_agent_modifier = 0;
     Color color_agent_damaged_modifier = 0;

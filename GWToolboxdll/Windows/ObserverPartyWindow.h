@@ -6,10 +6,11 @@
 
 class ObserverPartyWindow : public ToolboxWindow {
     ObserverPartyWindow() = default;
-    ~ObserverPartyWindow() = default;
+    ~ObserverPartyWindow() override = default;
 
 public:
-    static ObserverPartyWindow& Instance() {
+    static ObserverPartyWindow& Instance()
+    {
         static ObserverPartyWindow instance;
         return instance;
     }
@@ -21,20 +22,19 @@ public:
 
     void DrawBlankPartyMember(float& offset);
     void DrawPartyMember(float& offset, ObserverModule::ObservableAgent& agent, const ObserverModule::ObservableGuild* guild,
-        const bool odd, const bool is_player, const bool is_target);
+                         bool odd, bool is_player, bool is_target);
     void DrawParty(float& offset, const ObserverModule::ObservableParty& party);
-    void DrawHeaders(const size_t party_count);
+    void DrawHeaders(size_t party_count);
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
 
-
 protected:
-    float text_long     = 0;
-    float text_medium   = 0;
-    float text_short    = 0;
-    float text_tiny     = 0;
+    float text_long = 0;
+    float text_medium = 0;
+    float text_short = 0;
+    float text_tiny = 0;
 
 
     bool show_player_number = true;
@@ -60,4 +60,3 @@ private:
     // ini
     ToolboxIni* inifile = nullptr;
 };
-

@@ -17,27 +17,30 @@
 #include <Windows/FactionLeaderboardWindow.h>
 
 
-void FactionLeaderboardWindow::Initialize() {
+void FactionLeaderboardWindow::Initialize()
+{
     ToolboxWindow::Initialize();
     leaderboard.resize(15);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TownAllianceObject>(&TownAlliance_Entry, 
-        [this](GW::HookStatus* status, GW::Packet::StoC::TownAllianceObject *pak) -> bool {
-            UNREFERENCED_PARAMETER(status);
-            LeaderboardEntry leaderboardEntry = {
-                pak->map_id,
-                pak->rank,
-                pak->allegiance,
-                pak->faction,
-                pak->name,
-                pak->tag
-            };
-            if (leaderboard.size() <= leaderboardEntry.rank)
-                leaderboard.resize(leaderboardEntry.rank + 1);
-            leaderboard.at(leaderboardEntry.rank) = leaderboardEntry;
-            return false;
-        });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TownAllianceObject>(&TownAlliance_Entry,
+                                                                           [this](GW::HookStatus* status, GW::Packet::StoC::TownAllianceObject* pak) -> bool {
+                                                                               UNREFERENCED_PARAMETER(status);
+                                                                               LeaderboardEntry leaderboardEntry = {
+                                                                                   pak->map_id,
+                                                                                   pak->rank,
+                                                                                   pak->allegiance,
+                                                                                   pak->faction,
+                                                                                   pak->name,
+                                                                                   pak->tag
+                                                                               };
+                                                                               if (leaderboard.size() <= leaderboardEntry.rank)
+                                                                                   leaderboard.resize(leaderboardEntry.rank + 1);
+                                                                               leaderboard.at(leaderboardEntry.rank) = leaderboardEntry;
+                                                                               return false;
+                                                                           });
 }
-void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice) {
+
+void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice)
+{
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible)
         return;
@@ -60,32 +63,32 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SameLine(offset += long_text_width);
     ImGui::Text("Guild");
     ImGui::Separator();
-    bool has_entries = 0;
+    bool has_entries = false;
     for (size_t i = 0; i < leaderboard.size(); i++) {
         LeaderboardEntry* e = &leaderboard[i];
         if (!e->initialised)
             continue;
-        has_entries = 1;
+        has_entries = true;
         offset = 0.0f;
         if (e->map_name[0] == 0) {
             // Try to load map name in.
-            GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)e->map_id);
+            GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(e->map_id));
             if (info && GW::UI::UInt32ToEncStr(info->name_id, e->map_name_enc, 256))
                 GW::UI::AsyncDecodeStr(e->map_name_enc, e->map_name, 256);
         }
-        ImGui::Text("%d",e->rank);
+        ImGui::Text("%d", e->rank);
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text(e->allegiance == 1 ? "Luxon" : "Kurzick");
         ImGui::SameLine(offset += short_text_width);
-        ImGui::Text("%d",e->faction);
+        ImGui::Text("%d", e->faction);
         ImGui::SameLine(offset += short_text_width);
         ImGui::Text(e->map_name);
         ImGui::SameLine(offset += long_text_width);
-        ImGui::Text("%s [%s]",e->guild_str,e->tag_str);
+        ImGui::Text("%s [%s]", e->guild_str, e->tag_str);
         ImGui::PushID(static_cast<int>(e->map_id));
         ImGui::SameLine(offset = avail_width - tiny_text_width);
-        if (ImGui::Button("Wiki",ImVec2(tiny_text_width,0))) {
-            ShellExecuteW(NULL, L"open", e->guild_wiki_url.c_str(), NULL, NULL, SW_SHOWNORMAL);
+        if (ImGui::Button("Wiki", ImVec2(tiny_text_width, 0))) {
+            ShellExecuteW(nullptr, L"open", e->guild_wiki_url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
         }
         ImGui::PopID();
     }

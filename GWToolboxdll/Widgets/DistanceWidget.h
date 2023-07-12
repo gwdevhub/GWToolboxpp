@@ -5,9 +5,11 @@
 
 class DistanceWidget : public ToolboxWidget {
     DistanceWidget() = default;
-    ~DistanceWidget() = default;
+    ~DistanceWidget() override = default;
+
 public:
-    static DistanceWidget& Instance() {
+    static DistanceWidget& Instance()
+    {
         static DistanceWidget instance;
         return instance;
     }

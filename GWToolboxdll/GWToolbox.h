@@ -17,14 +17,15 @@ class ToolboxModule;
 
 class GWToolbox {
 public:
-    static GWToolbox& Instance() {
+    static GWToolbox& Instance()
+    {
         static GWToolbox instance;
         return instance;
     }
 
     static HMODULE GetDLLModule();
     void Draw(IDirect3DDevice9* device);
-    void Update(GW::HookStatus *);
+    void Update(GW::HookStatus*);
 
     void Initialize();
     void Terminate();
@@ -35,7 +36,6 @@ public:
     std::filesystem::path LoadSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME, bool fresh = false);
 
     void StartSelfDestruct();
-
 
 
     //const std::vector<ToolboxModule*>& GetModules();

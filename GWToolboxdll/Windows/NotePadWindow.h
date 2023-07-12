@@ -4,10 +4,11 @@
 
 class NotePadWindow : public ToolboxWindow {
     NotePadWindow() = default;
-    ~NotePadWindow() = default;
+    ~NotePadWindow() override = default;
 
 public:
-    static NotePadWindow& Instance() {
+    static NotePadWindow& Instance()
+    {
         static NotePadWindow instance;
         return instance;
     }

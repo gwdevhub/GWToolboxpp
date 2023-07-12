@@ -5,11 +5,11 @@
 
 Mp3::Mp3()
 {
-    pigb = NULL;
-    pimc = NULL;
-    pimex = NULL;
-    piba = NULL;
-    pims = NULL;
+    pigb = nullptr;
+    pimc = nullptr;
+    pimex = nullptr;
+    piba = nullptr;
+    pims = nullptr;
     ready = false;
     duration = 0;
 }
@@ -24,34 +24,29 @@ void Mp3::Cleanup()
     if (pimc)
         pimc->Stop();
 
-    if (pigb)
-    {
+    if (pigb) {
         pigb->Release();
-        pigb = NULL;
+        pigb = nullptr;
     }
 
-    if (pimc)
-    {
+    if (pimc) {
         pimc->Release();
-        pimc = NULL;
+        pimc = nullptr;
     }
 
-    if (pimex)
-    {
+    if (pimex) {
         pimex->Release();
-        pimex = NULL;
+        pimex = nullptr;
     }
 
-    if (piba)
-    {
+    if (piba) {
         piba->Release();
-        piba = NULL;
+        piba = nullptr;
     }
 
-    if (pims)
-    {
+    if (pims) {
         pims->Release();
-        pims = NULL;
+        pims = nullptr;
     }
     ready = false;
 }
@@ -64,19 +59,16 @@ bool Mp3::Load(LPCWSTR szFile)
         NULL,
         CLSCTX_INPROC_SERVER,
         IID_IGraphBuilder,
-        (void**)&this->pigb)))
-    {
+        (void**)&this->pigb))) {
         pigb->QueryInterface(IID_IMediaControl, (void**)&pimc);
         pigb->QueryInterface(IID_IMediaEventEx, (void**)&pimex);
         pigb->QueryInterface(IID_IBasicAudio, (void**)&piba);
         pigb->QueryInterface(IID_IMediaSeeking, (void**)&pims);
 
-        HRESULT hr = pigb->RenderFile(szFile, NULL);
-        if (SUCCEEDED(hr))
-        {
+        HRESULT hr = pigb->RenderFile(szFile, nullptr);
+        if (SUCCEEDED(hr)) {
             ready = true;
-            if (pims)
-            {
+            if (pims) {
                 pims->SetTimeFormat(&TIME_FORMAT_MEDIA_TIME);
                 pims->GetDuration(&duration); // returns 10,000,000 for a second.
                 duration = duration;
@@ -88,8 +80,7 @@ bool Mp3::Load(LPCWSTR szFile)
 
 bool Mp3::Play()
 {
-    if (ready && pimc)
-    {
+    if (ready && pimc) {
         HRESULT hr = pimc->Run();
         return SUCCEEDED(hr);
     }
@@ -98,8 +89,7 @@ bool Mp3::Play()
 
 bool Mp3::Pause()
 {
-    if (ready && pimc)
-    {
+    if (ready && pimc) {
         HRESULT hr = pimc->Pause();
         return SUCCEEDED(hr);
     }
@@ -108,8 +98,7 @@ bool Mp3::Pause()
 
 bool Mp3::Stop()
 {
-    if (ready && pimc)
-    {
+    if (ready && pimc) {
         HRESULT hr = pimc->Stop();
         return SUCCEEDED(hr);
     }
@@ -119,8 +108,7 @@ bool Mp3::Stop()
 bool Mp3::WaitForCompletion(long msTimeout, long* EvCode)
 {
     // @Cleanup: Add some logging
-    if (ready && pimex)
-    {
+    if (ready && pimex) {
         HRESULT hr = pimex->WaitForCompletion(msTimeout, EvCode);
         if (FAILED(hr))
             return false;
@@ -132,8 +120,7 @@ bool Mp3::WaitForCompletion(long msTimeout, long* EvCode)
 
 bool Mp3::SetVolume(long vol)
 {
-    if (ready && piba)
-    {
+    if (ready && piba) {
         HRESULT hr = piba->put_Volume(vol);
         return SUCCEEDED(hr);
     }
@@ -142,8 +129,7 @@ bool Mp3::SetVolume(long vol)
 
 long Mp3::GetVolume()
 {
-    if (ready && piba)
-    {
+    if (ready && piba) {
         long vol = -1;
         HRESULT hr = piba->get_Volume(&vol);
 
@@ -161,8 +147,7 @@ __int64 Mp3::GetDuration()
 
 __int64 Mp3::GetCurrentPosition()
 {
-    if (ready && pims)
-    {
+    if (ready && pims) {
         __int64 curpos = -1;
         HRESULT hr = pims->GetCurrentPosition(&curpos);
 
@@ -175,8 +160,7 @@ __int64 Mp3::GetCurrentPosition()
 
 bool Mp3::SetPositions(__int64* pCurrent, __int64* pStop, bool bAbsolutePositioning)
 {
-    if (ready && pims)
-    {
+    if (ready && pims) {
         DWORD flags = 0;
         if (bAbsolutePositioning)
             flags = AM_SEEKING_AbsolutePositioning | AM_SEEKING_SeekToKeyFrame;
