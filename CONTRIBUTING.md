@@ -6,7 +6,10 @@ For crash reports, please attach the crash log you find in Documents/GWToolboxpp
 For feature requests, please describe the feature as simple as possible and explain your use case for it.
 
 ## As a developer:
-First of all make sure you take a look at the code and respect the somewhat consistent code conventions.
+
+### Unless there are specific reasons, pull requests should target the `dev` branch. 
+
+Please make sure you take a look at the code and respect the somewhat consistent code conventions.
 Create a new branch and commit the changes relevant to your contribution. Please make sure you don't commit unrelated lines.
 Finally submit a pull request and let us review your code. Stay updated in the pull request page for feedback and comments.
 
