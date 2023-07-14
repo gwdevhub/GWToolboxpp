@@ -17,7 +17,6 @@
         -- Eugene Hopkinson <slowriot at voxelstorm dot com>
 */
 
-#include "stdafx.h"
 #pragma warning(disable: 4310)
 
 #include "sha1.hpp"

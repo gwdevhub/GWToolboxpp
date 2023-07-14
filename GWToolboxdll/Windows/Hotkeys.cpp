@@ -603,8 +603,10 @@ bool TBHotkey::Draw(Op* op)
                 // we are looking for the key
                 BYTE keyboard_state[256]{};
                 if (GetKeyboardState(keyboard_state)) {
-                    for (auto i = 0; i < 256; i++) {
+                    for (auto i = 1; i < 256; i++) {
                         switch (i) {
+                            case VK_LBUTTON:
+                            case VK_RBUTTON:
                             case VK_CONTROL:
                             case VK_LCONTROL:
                             case VK_RCONTROL:
@@ -643,8 +645,7 @@ bool TBHotkey::Draw(Op* op)
             ImGui::Text("%s", newkey_buf);
             if (ImGui::Button("Clear")) {
                 *key_out = 0;
-                if (mod_out)
-                    *mod_out = 0;
+                *mod_out = 0;
                 newkey = 0;
                 ImGui::CloseCurrentPopup();
                 hotkey_changed = true;
