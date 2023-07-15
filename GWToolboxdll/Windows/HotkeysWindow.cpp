@@ -19,6 +19,7 @@
 #include <Modules/Resources.h>
 #include <Windows/HotkeysWindow.h>
 #include <GWCA/Utilities/Scanner.h>
+#include <Timer.h>
 
 
 namespace {

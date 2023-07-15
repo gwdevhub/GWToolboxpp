@@ -29,6 +29,8 @@
 
 #include <Modules/Resources.h>
 
+#include <resource.h>
+
 #include <Windows/RerollWindow.h>
 #include <Windows/CompletionWindow.h>
 #include <Windows/CompletionWindow_Constants.h>
@@ -521,7 +523,7 @@ Mission::Mission(MapID _outpost,
         name.reset(map_info->name_id);
     };
 
-MapID Mission::GetOutpost() {
+MapID Mission::GetOutpost() const {
     return TravelWindow::GetNearestOutpost(map_to);
 }
 bool Mission::Draw(IDirect3DDevice9* )

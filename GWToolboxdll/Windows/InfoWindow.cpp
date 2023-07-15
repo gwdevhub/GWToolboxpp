@@ -15,6 +15,7 @@
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Title.h>
+#include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -46,6 +47,7 @@
 #include <GWToolbox.h>
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Managers/QuestMgr.h>
+#include <Modules/HallOfMonumentsModule.h>
 
 namespace {
     enum class Status {

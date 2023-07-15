@@ -37,8 +37,8 @@ bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
 bool TBHotkey::hotkeys_changed = false;
 unsigned int TBHotkey::cur_ui_id = 0;
-WORD* TBHotkey::key_out = nullptr;
-DWORD* TBHotkey::mod_out = nullptr;
+LONG* TBHotkey::key_out = nullptr;
+LONG* TBHotkey::mod_out = nullptr;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
 std::vector<const char*> HotkeyGWKey::labels = {};
 std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey::control_labels = {
@@ -363,7 +363,7 @@ const char* TBHotkey::professions[] = {"Any",          "Warrior",     "Ranger",
                                     "Elementalist", "Assassin",    "Ritualist",
                                     "Paragon",      "Dervish"};
 const char* TBHotkey::instance_types[] = {"Any", "Outpost", "Explorable"};
-void TBHotkey::HotkeySelector(WORD* key, DWORD* modifier) {
+void TBHotkey::HotkeySelector(LONG* key, LONG* modifier) {
     key_out = key;
     mod_out = modifier;
     ImGui::OpenPopup("Select Hotkey");
@@ -575,7 +575,7 @@ bool TBHotkey::Draw(Op *op)
         char keybuf2[_countof(keybuf) + 8];
         snprintf(keybuf2, _countof(keybuf2), "Hotkey: %s", keybuf);
         if (ImGui::Button(keybuf2, ImVec2(-140.0f * scale, 0))) {
-            HotkeySelector((WORD*)&hotkey, (DWORD*)&modifier);
+            HotkeySelector(&hotkey, &modifier);
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Click to change hotkey");

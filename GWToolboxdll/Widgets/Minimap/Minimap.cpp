@@ -38,6 +38,7 @@
 #include <Modules/Resources.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Managers/QuestMgr.h>
+#include <Defines.h>
 
 namespace {
     DirectX::XMFLOAT2 gwinch_scale;
@@ -657,7 +658,7 @@ float Minimap::GetMapRotation() const
     return yaw;
 }
 
-DirectX::XMFLOAT2 Minimap::GetGwinchScale() const
+DirectX::XMFLOAT2 Minimap::GetGwinchScale()
 {
     return gwinch_scale;
 }
