@@ -14,8 +14,9 @@ private:
     Parameters p;
 
 public:
-    EmbeddedResource(int resource_id, const std::wstring& resource_class = L"RCDATA", HMODULE module = nullptr) {
-        hResource = FindResourceW(module, MAKEINTRESOURCEW(resource_id), resource_class.c_str());
+    EmbeddedResource(int resource_id, const std::wstring_view resource_class = L"RCDATA", HMODULE module = nullptr)
+    {
+        hResource = FindResourceW(module, MAKEINTRESOURCEW(resource_id), resource_class.data());
         if (!hResource) return;
         hMemory = LoadResource(module, hResource);
         if (!hMemory) return;
@@ -24,8 +25,9 @@ public:
         p.ptr = LockResource(hMemory);
     }
 
-    EmbeddedResource(int resource_id, const std::string& resource_class = "RCDATA", HMODULE module = nullptr) {
-        hResource = FindResourceA(module, MAKEINTRESOURCEA(resource_id), resource_class.c_str());
+    EmbeddedResource(int resource_id, const std::string_view resource_class = "RCDATA", HMODULE module = nullptr)
+    {
+        hResource = FindResourceA(module, MAKEINTRESOURCEA(resource_id), resource_class.data());
         if (!hResource) return;
         hMemory = LoadResource(module, hResource);
         if (!hMemory) return;
@@ -34,8 +36,9 @@ public:
         p.ptr = LockResource(hMemory);
     }
 
-    EmbeddedResource(LPCWSTR resource_id, const std::wstring& resource_class = L"RCDATA", HMODULE module = nullptr) {
-        hResource = FindResourceW(module, resource_id, resource_class.c_str());
+    EmbeddedResource(LPCWSTR resource_id, const std::wstring_view resource_class = L"RCDATA", HMODULE module = nullptr)
+    {
+        hResource = FindResourceW(module, resource_id, resource_class.data());
         if (!hResource) return;
         hMemory = LoadResource(module, hResource);
         if (!hMemory) return;
@@ -44,8 +47,8 @@ public:
         p.ptr = LockResource(hMemory);
     }
 
-    EmbeddedResource(LPCSTR resource_id, const std::string& resource_class = "RCDATA", HMODULE module = nullptr) {
-        hResource = FindResourceA(module, resource_id, resource_class.c_str());
+    EmbeddedResource(LPCSTR resource_id, const std::string_view resource_class = "RCDATA", HMODULE module = nullptr) {
+        hResource = FindResourceA(module, resource_id, resource_class.data());
         if (!hResource) return;
         hMemory = LoadResource(module, hResource);
         if (!hMemory) return;
