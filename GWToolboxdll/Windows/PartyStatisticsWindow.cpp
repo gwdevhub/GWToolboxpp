@@ -84,7 +84,6 @@ namespace {
 
     /* Internal data  */
     std::vector<PartyMember*> party_members;
-    size_t max_player_skills = 8;
     bool pending_party_members = true;
     bool in_explorable = false;
     PartyMember* player_party_member = nullptr;
@@ -193,7 +192,6 @@ namespace {
             snprintf(table_name, _countof(table_name), "###Table%d", party_member.party_idx);
 
             const float width = ImGui::GetContentRegionAvail().x;
-            float percentage = 0.f;
             if (party_member.skills.size() == 0)
                 return;
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
@@ -212,13 +210,11 @@ namespace {
                     if (skill.id == GW::Constants::SkillID::No_Skill)
                         continue; // Skip empty skill slots (for heroes and yourself)
                     ImGui::TableNextColumn();
-                    percentage = skill.count
-                                     ? static_cast<float>(skill.count) /
-                                       static_cast<float>(party_member.total_skills_used) * 100.f
-                                     : 0.f;
-                    auto* texture = GetSkillImage(skill.id);
-                    if (texture) {
-                        ImVec2 s(column_width, column_width);
+                    const float percentage = skill.count
+                                                 ? static_cast<float>(skill.count) /
+                                                   static_cast<float>(party_member.total_skills_used) * 100.f
+                                                 : 0.f;
+                    if (const auto texture = GetSkillImage(skill.id)) {
                         ImGui::ImageCropped(texture, icon_size);
                         if (ImGui::IsItemHovered()) {
                             ImGui::SetTooltip(skill.name->string().c_str());
@@ -259,8 +255,8 @@ namespace {
         }
         party_members.clear();
 
-        for (auto& [_, encoder] : skill_names) {
-            delete encoder;
+        for (const auto skill_name : skill_names | std::views::values) {
+            delete skill_name;
         }
         skill_names.clear();
     }
@@ -533,9 +529,9 @@ void PartyStatisticsWindow::Initialize()
 
             const uint32_t value_id = packet->value_id;
             const uint32_t caster_id = packet->agent_id;
-            const uint32_t target_id = 0U;
+            constexpr uint32_t target_id = 0U;
             const uint32_t value = packet->value;
-            const bool no_target = true;
+            constexpr bool no_target = true;
             SkillCallback(value_id, caster_id, target_id, value, no_target);
         });
 
@@ -548,7 +544,7 @@ void PartyStatisticsWindow::Initialize()
                                                                                const uint32_t caster_id = packet->caster;
                                                                                const uint32_t target_id = packet->target;
                                                                                const uint32_t value = packet->value;
-                                                                               const bool no_target = false;
+                                                                               constexpr bool no_target = false;
                                                                                SkillCallback(value_id, caster_id, target_id, value, no_target);
                                                                            });
 
@@ -564,8 +560,7 @@ void PartyStatisticsWindow::Update(float delta)
         pending_party_members = false;
     }
 
-    const float time_diff_threshold{600.0F};
-    if (!chat_queue.empty() && (TIMER_DIFF(send_timer) > time_diff_threshold)) {
+    if (constexpr auto time_diff_threshold = 600.0f; !chat_queue.empty() && (TIMER_DIFF(send_timer) > time_diff_threshold)) {
         send_timer = TIMER_INIT();
         if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType())
             return;

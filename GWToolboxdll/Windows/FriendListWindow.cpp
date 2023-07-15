@@ -816,14 +816,14 @@ ImGuiWindowFlags FriendListWindow::GetWinFlags(ImGuiWindowFlags flags) const
     return ToolboxWindow::GetWinFlags(flags);
 }
 
-const bool FriendListWindow::IsWidget() const
+bool FriendListWindow::IsWidget() const
 {
     return (explorable_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
            || (outpost_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
            || (loading_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading);
 }
 
-const bool FriendListWindow::IsWindow() const
+bool FriendListWindow::IsWindow() const
 {
     return (explorable_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
            || (outpost_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)

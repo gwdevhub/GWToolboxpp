@@ -3,7 +3,6 @@ add_library(GWToolboxdll SHARED)
 file(GLOB SOURCES
     "*.h"
     "*.cpp"
-    "*.cc"
     "GWToolbox.rc"
     "Modules/*.h"
     "Modules/*.cpp"

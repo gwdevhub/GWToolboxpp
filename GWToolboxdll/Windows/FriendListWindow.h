@@ -164,8 +164,8 @@ public:
     const char* Name() const override { return "Friend List"; }
     const char* Icon() const override { return ICON_FA_USER_FRIENDS; }
 
-    const bool IsWidget() const override;
-    const bool IsWindow() const override;
+    bool IsWidget() const override;
+    bool IsWindow() const override;
 
     static void CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR* argv);

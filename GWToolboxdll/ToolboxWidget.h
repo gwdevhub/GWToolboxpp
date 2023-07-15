@@ -4,7 +4,7 @@
 
 class ToolboxWidget : public ToolboxUIElement {
 public:
-    const bool IsWidget() const override { return true; }
+    bool IsWidget() const override { return true; }
     const char* TypeName() const override { return "widget"; }
 
     void LoadSettings(ToolboxIni* ini) override

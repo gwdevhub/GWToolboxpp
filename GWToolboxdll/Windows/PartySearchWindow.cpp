@@ -78,7 +78,7 @@ namespace {
         return GW::PlayerMgr::GetPlayerByID(party->players[0].login_number);
     }
 
-    GW::PartyInfo* GetPartyFromPlayer(uint32_t player_number)
+    [[maybe_unused]] GW::PartyInfo* GetPartyFromPlayer(uint32_t player_number)
     {
         const GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->party)
@@ -192,29 +192,26 @@ bool PartySearchWindow::TBParty::FromPlayerInMap(GW::Player* player)
 
 bool PartySearchWindow::TBParty::FromLocalParty(GW::PartyInfo* party)
 {
-#pragma warning (push)
-#pragma warning (disable: 4244)
     if (!party)
         return false;
     const GW::Player* player = GetPartyLeader(party);
     if (!player)
         return false;
     concat_party_id = IdFromLocalParty(party->party_id);
-    hero_count = party->heroes.valid() ? party->heroes.size() : 0;
-    hero_count += party->henchmen.valid() ? party->henchmen.size() : 0;
-    party_size = party->players.valid() ? party->players.size() : 0;
+    hero_count = static_cast<uint8_t>(party->heroes.valid() ? party->heroes.size() : 0);
+    hero_count += static_cast<uint8_t>(party->henchmen.valid() ? party->henchmen.size() : 0);
+    party_size = static_cast<uint8_t>(party->players.valid() ? party->players.size() : 0);
     party_size += hero_count;
     // TODO: Can we find out if the party is HM?
     map_id = static_cast<uint16_t>(GW::Map::GetMapID());
-    district = GW::Map::GetDistrict();
-    language = GW::Map::GetLanguage();
-    region_id = GW::Map::GetRegion();
-    primary = player->primary;
-    secondary = player->secondary;
+    district = static_cast<int8_t>(GW::Map::GetDistrict());
+    language = static_cast<int8_t>(GW::Map::GetLanguage());
+    region_id = static_cast<int8_t>(GW::Map::GetRegion());
+    primary = static_cast<uint8_t>(player->primary);
+    secondary = static_cast<uint8_t>(player->secondary);
     player_name = GuiUtils::WStringToString(player->name);
     Log::Log("Party %d updated\n", concat_party_id);
     return true;
-#pragma warning (pop)
 }
 
 void PartySearchWindow::Initialize()

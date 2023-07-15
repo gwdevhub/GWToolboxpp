@@ -6,7 +6,7 @@ class ToolboxUIElement : public ToolboxModule {
     friend class ToolboxSettings;
 
 public:
-    const bool IsUIElement() const override { return true; }
+    bool IsUIElement() const override { return true; }
 
     // Draw user interface. Will be called every frame if the element is visible
     virtual void Draw(IDirect3DDevice9*)
