@@ -8,6 +8,7 @@
 #include <Utils/GuiUtils.h>
 
 #include <Modules/CrashHandler.h>
+#include <Modules/Resources.h>
 
 namespace {
     FILE* logfile = nullptr;
