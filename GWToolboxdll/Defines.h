@@ -7,6 +7,13 @@
 
 #define GWTOOLBOX_INI_FILENAME L"GWToolbox.ini"
 
+#ifndef GWTOOLBOXDLL_VERSION
+#define GWTOOLBOXDLL_VERSION "6.10"
+#endif
+#ifndef GWTOOLBOX_MODULE_VERSION
+#define GWTOOLBOX_MODULE_VERSION 6,10,0,0
+#endif
+
 #define VAR_NAME(v) (#v)
 
 #define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);

@@ -449,8 +449,8 @@ void PartySearchWindow::Update(float delta)
     if (ws_window && ws_window->getReadyState() != WebSocket::CLOSED) {
         ws_window->poll();
     }
-    const bool maintain_socket = false; // (visible && !collapsed) || (print_game_chat && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0);
-    if (maintain_socket && !ws_window) {
+    constexpr bool maintain_socket = false; // (visible && !collapsed) || (print_game_chat && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0);
+    if constexpr (maintain_socket && !ws_window) {
         AsyncWindowConnect();
     }
     if (!maintain_socket && ws_window && ws_window->getReadyState() == WebSocket::OPEN) {

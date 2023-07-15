@@ -70,13 +70,13 @@ public:
     using AsyncLoadMbCallback = std::function<void(bool success, const std::string& response)>;
 
     // Load from file to D3DTexture, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback = nullptr);
+    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback = nullptr) const;
     // Load from compiled resource id to D3DTexture, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback = nullptr);
+    void LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback = nullptr) const;
     // Load from file to D3DTexture, fallback to resource id, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback = nullptr);
+    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback = nullptr) const;
     // Load from file to D3DTexture, fallback to remote location, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback = nullptr);
+    static void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback = nullptr);
 
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetProfessionIcon(GW::Constants::Profession p);
@@ -126,5 +126,5 @@ private:
     // Assign IDirect3DTexture9* from resource
     static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring& error);
     // Copy from compiled resource binary to file on local disk.
-    bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
+    static bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
 };

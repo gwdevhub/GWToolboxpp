@@ -7,21 +7,21 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include <EmbeddedResource.h>
 #include <Defines.h>
+#include <EmbeddedResource.h>
 #include <GWToolbox.h>
-#include <RestClient.h>
 #include <Logger.h>
 #include <Path.h>
+#include <RestClient.h>
 #include <Str.h>
 
-#include <Utils/GuiUtils.h>
 #include <GWCA/Constants/Constants.h>
 #include <Modules/Resources.h>
+#include <Utils/GuiUtils.h>
 
 #include <include/nfd.h>
-#include <nfd_common.h>
 #include <nfd_common.c>
+#include <nfd_common.h>
 #include <nfd_win.cpp>
 
 namespace {
@@ -33,25 +33,15 @@ namespace {
             case D3DERR_INVALIDCALL: return "D3DERR_INVALIDCALL";
             case E_OUTOFMEMORY: return "E_OUTOFMEMORY";
             case D3D_OK: return "D3D_OK";
-            default: static std::string str;
+            default:
+                static std::string str;
                 str = std::format("Unknown D3D error {:#08x}", code);
                 return str.c_str();
         }
     }
 
-    const char* profession_icon_urls[] = {
-        "",
-        "8/87/Warrior-tango-icon-48",
-        "e/e8/Ranger-tango-icon-48",
-        "5/53/Monk-tango-icon-48",
-        "b/b1/Necromancer-tango-icon-48",
-        "b/b1/Mesmer-tango-icon-48",
-        "4/47/Elementalist-tango-icon-48",
-        "2/2b/Assassin-tango-icon-48",
-        "5/5b/Ritualist-tango-icon-48",
-        "5/5e/Paragon-tango-icon-48",
-        "3/38/Dervish-tango-icon-48"
-    };
+    const char* profession_icon_urls[] = {"", "8/87/Warrior-tango-icon-48", "e/e8/Ranger-tango-icon-48", "5/53/Monk-tango-icon-48", "b/b1/Necromancer-tango-icon-48", "b/b1/Mesmer-tango-icon-48", "4/47/Elementalist-tango-icon-48",
+        "2/2b/Assassin-tango-icon-48", "5/5b/Ritualist-tango-icon-48", "5/5e/Paragon-tango-icon-48", "3/38/Dervish-tango-icon-48"};
     std::map<GW::Constants::SkillID, IDirect3DTexture9**> skill_images;
     std::map<std::wstring, IDirect3DTexture9**> item_images;
     std::map<std::string, IDirect3DTexture9**> guild_wars_wiki_images;
@@ -65,7 +55,6 @@ namespace {
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
     const wchar_t* ITEM_IMAGES_PATH = L"img\\items";
     const wchar_t* PROF_ICONS_PATH = L"img\\professions";
-
 
     std::recursive_mutex worker_mutex;
     std::recursive_mutex main_mutex;
@@ -101,7 +90,8 @@ namespace {
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kEnumPreference: if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize)
+            case GW::UI::UIMessage::kEnumPreference:
+                if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize)
                     Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
                 break;
         }
@@ -134,12 +124,9 @@ namespace {
         r->SetMethod(HttpMethod::Get);
         r->SetVerifyHost(false);
     }
-}
+} // namespace
 
-Resources::Resources()
-{
-    InitCurl();
-}
+Resources::Resources() { InitCurl(); }
 
 Resources::~Resources()
 {
@@ -184,7 +171,7 @@ void Resources::OpenFileDialog(std::function<void(const char*)> callback, const 
 {
     auto filterList_cpy = new std::string(filterList);
     auto defaultPath_cpy = new std::string(defaultPath);
-    EnqueueWorkerTask([callback, filterList_cpy,defaultPath_cpy]() {
+    EnqueueWorkerTask([callback, filterList_cpy, defaultPath_cpy]() {
         nfdchar_t* outPath = nullptr;
         const nfdresult_t result = NFD_OpenDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
         delete filterList_cpy;
@@ -193,8 +180,7 @@ void Resources::OpenFileDialog(std::function<void(const char*)> callback, const 
         switch (result) {
             case NFD_OKAY:
             case NFD_CANCEL: break;
-            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
-                break;
+            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError()); break;
         }
 
         callback(outPath);
@@ -208,19 +194,16 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
     auto filterList_cpy = new std::string(filterList);
     auto defaultPath_cpy = new std::string(defaultPath);
 
-    EnqueueWorkerTask([callback, filterList_cpy,defaultPath_cpy]() {
+    EnqueueWorkerTask([callback, filterList_cpy, defaultPath_cpy]() {
         nfdchar_t* outPath = nullptr;
         const nfdresult_t result = NFD_SaveDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
         delete filterList_cpy;
         delete defaultPath_cpy;
 
         switch (result) {
-            case NFD_OKAY: callback(outPath);
-                break;
-            case NFD_CANCEL: callback(nullptr);
-                break;
-            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
-                break;
+            case NFD_OKAY: callback(outPath); break;
+            case NFD_CANCEL: callback(nullptr); break;
+            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError()); break;
         }
         if (outPath)
             free(outPath);
@@ -230,18 +213,13 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
 float Resources::GetGWScaleMultiplier(bool force)
 {
     if (force || cached_ui_scale == .0f) {
-        const auto interfacesize =
-            static_cast<GW::Constants::InterfaceSize>(GetPreference(GW::UI::EnumPreference::InterfaceSize));
+        const auto interfacesize = static_cast<GW::Constants::InterfaceSize>(GetPreference(GW::UI::EnumPreference::InterfaceSize));
 
         switch (interfacesize) {
-            case GW::Constants::InterfaceSize::SMALL: cached_ui_scale = .9f;
-                break;
-            case GW::Constants::InterfaceSize::LARGE: cached_ui_scale = 1.166666f;
-                break;
-            case GW::Constants::InterfaceSize::LARGER: cached_ui_scale = 1.3333333f;
-                break;
-            default: cached_ui_scale = 1.f;
-                break;
+            case GW::Constants::InterfaceSize::SMALL: cached_ui_scale = .9f; break;
+            case GW::Constants::InterfaceSize::LARGE: cached_ui_scale = 1.166666f; break;
+            case GW::Constants::InterfaceSize::LARGER: cached_ui_scale = 1.3333333f; break;
+            default: cached_ui_scale = 1.f; break;
         }
     }
     return cached_ui_scale;
@@ -269,11 +247,7 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     WIN32_FIND_DATA wfd{};
 
     // Get a pointer to the IShellLink interface
-    hRes = CoCreateInstance(CLSID_ShellLink,
-                            nullptr,
-                            CLSCTX_INPROC_SERVER,
-                            IID_IShellLink,
-                            (void**)&psl);
+    hRes = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&psl);
     if (!SUCCEEDED(hRes)) {
         CoUninitialize();
         return hRes;
@@ -366,7 +340,9 @@ void Resources::Terminate()
 
 void Resources::EndLoading()
 {
-    EnqueueWorkerTask([this] { should_stop = true; });
+    EnqueueWorkerTask([this] {
+        should_stop = true;
+    });
 }
 
 std::filesystem::path Resources::GetSettingsFolderPath()
@@ -383,20 +359,11 @@ std::filesystem::path Resources::GetSettingsFolderPath()
     return docpath;
 }
 
-std::filesystem::path Resources::GetPath(const std::filesystem::path& file)
-{
-    return GetSettingsFolderPath() / file;
-}
+std::filesystem::path Resources::GetPath(const std::filesystem::path& file) { return GetSettingsFolderPath() / file; }
 
-std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, const std::filesystem::path& file)
-{
-    return GetSettingsFolderPath() / folder / file;
-}
+std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, const std::filesystem::path& file) { return GetSettingsFolderPath() / folder / file; }
 
-bool Resources::EnsureFolderExists(const std::filesystem::path& path)
-{
-    return exists(path) || create_directory(path);
-}
+bool Resources::EnsureFolderExists(const std::filesystem::path& path) { return exists(path) || create_directory(path); }
 
 utf8::string Resources::GetPathUtf8(const std::wstring& file)
 {
@@ -508,8 +475,7 @@ void Resources::Post(const std::string& url, const std::string& payload, AsyncLo
     });
 }
 
-void Resources::EnsureFileExists(
-    const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
+void Resources::EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
     if (exists(path_to_file)) {
         // if file exists, run the callback immediately in the same thread
@@ -551,15 +517,18 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
-        EmbeddedResource resource(id, "RCDATA"s, GWToolbox::GetDLLModule());
+        EmbeddedResource resource(id, "RCDATA", hSrcModule);
+        if (!resource.data()) {
+            StrSwprintf(error, L"Error loading resource for id %p, module %p - texture not found", id, hSrcModule);
+            return D3DERR_NOTFOUND;
+        }
         res = CreateWICTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()), resource.size(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
         if (res != S_OK) {
-            res = CreateDDSTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()),
-                                               resource.size(), 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
+            res = DirectX::CreateDDSTextureFromMemoryEx(device, static_cast<const uint8_t*>(resource.data()), resource.size(), 0, D3DPOOL_MANAGED, false, texture);
         }
     }
     if (res != D3D_OK) {
-        StrSwprintf(error, L"Error loading resource for id %p, module %p - Error is %S", id, hSrcModule, d3dErrorMessage(res));
+        StrSwprintf(error, L"Error loading resource for id %p, module %p - Error is %s", id, hSrcModule, d3dErrorMessage(res));
     }
     else if (!*texture) {
         res = D3DERR_NOTFOUND;
@@ -568,11 +537,12 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule
     return res;
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback)
+void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback) const
 {
     EnqueueDxTask([path_to_file, texture, callback](IDirect3DDevice9* device) {
         std::wstring error{};
-        const bool success = TryCreateTexture(device, path_to_file.c_str(), texture, error) == D3D_OK;
+        const HRESULT res = TryCreateTexture(device, path_to_file.c_str(), texture, error);
+        const bool success = res == D3D_OK;
         if (callback) {
             callback(success, error);
         }
@@ -582,7 +552,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
     });
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback)
+void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback) const
 {
     EnqueueDxTask([id, texture, callback](IDirect3DDevice9* device) {
         std::wstring error{};
@@ -598,7 +568,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallb
 
 void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
-    EnsureFileExists(path_to_file, url, [texture,path_to_file,callback](bool success, const std::wstring& error) {
+    EnsureFileExists(path_to_file, url, [texture, path_to_file, callback](bool success, const std::wstring& error) {
         if (success) {
             Instance().LoadTexture(texture, path_to_file, callback);
         }
@@ -613,7 +583,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
     });
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback)
+void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback) const
 {
     LoadTexture(texture, path_to_file, [texture, id, callback](bool success, const std::wstring& error) {
         if (!success) {
@@ -669,10 +639,7 @@ int Resources::LoadIniFromFile(const wchar_t* resource_path, ToolboxIni* inifile
 }
 
 // Load from absolute file path on disk with 3 retries
-int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile)
-{
-    return inifile->LoadFile(absolute_path);
-}
+int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile) { return inifile->LoadFile(absolute_path); }
 
 int Resources::SaveIniToFile(const wchar_t* resource_filename, const ToolboxIni* inifile)
 {
@@ -999,8 +966,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
                 return;
             }
             std::string html_item_name = GuiUtils::HtmlEncode(m[1].str());
-            snprintf(regex_str, sizeof(regex_str),
-                     R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", html_item_name.c_str());
+            snprintf(regex_str, sizeof(regex_str), R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", html_item_name.c_str());
             if (!std::regex_search(response, m, std::regex(regex_str))) {
                 trigger_failure_callback(callback, L"Failed to find image HTML for %s from wiki", item_name.c_str());
                 return;
