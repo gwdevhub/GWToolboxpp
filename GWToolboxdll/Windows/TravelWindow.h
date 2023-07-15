@@ -67,7 +67,7 @@ private:
 
     // ==== Favorites ====
     int fav_count = 0;
-    std::vector<int> fav_index;
+    std::vector<int> fav_index{};
 
     // ==== options ====
     bool close_on_travel = false;
@@ -591,9 +591,9 @@ private:
         "great temple of balthazar"
     };
 
-    std::vector<char*> searchable_explorable_areas;
-    std::vector<GuiUtils::EncString*> searchable_explorable_areas_decode;
-    std::vector<GW::Constants::MapID> searchable_explorable_area_ids;
+    std::vector<char*> searchable_explorable_areas{};
+    std::vector<GuiUtils::EncString*> searchable_explorable_areas_decode{};
+    std::vector<GW::Constants::MapID> searchable_explorable_area_ids{};
 
     enum FetchedMapNames : uint8_t {
         Pending,

@@ -111,11 +111,11 @@ namespace {
     };
 
     struct GWPreferences {
-        char name[128];
-        RECT window_rect;
+        char name[128]{};
+        RECT window_rect{};
         bool reordered = false;
-        std::vector<WindowPreference*> window_positions;
-        std::vector<StringPreference*> preferences;
+        std::vector<WindowPreference*> window_positions{};
+        std::vector<StringPreference*> preferences{};
         void Draw();
     };
 

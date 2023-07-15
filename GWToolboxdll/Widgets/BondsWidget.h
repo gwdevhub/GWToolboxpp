@@ -66,12 +66,12 @@ private:
     Color background = 0;
     Color low_attribute_overlay = 0;
 
-    std::vector<GW::Constants::SkillID> bond_list;               // index to skill id
-    std::unordered_map<GW::Constants::SkillID, size_t> bond_map; // skill id to index
+    std::vector<GW::Constants::SkillID> bond_list{};               // index to skill id
+    std::unordered_map<GW::Constants::SkillID, size_t> bond_map{}; // skill id to index
     bool FetchBondSkills();
 
-    std::vector<GW::AgentID> party_list;               // index to agent id
-    std::unordered_map<GW::AgentID, size_t> party_map; // agent id to index
+    std::vector<GW::AgentID> party_list{};               // index to agent id
+    std::unordered_map<GW::AgentID, size_t> party_map{}; // agent id to index
     size_t allies_start = 255;
     bool FetchPartyInfo();
 

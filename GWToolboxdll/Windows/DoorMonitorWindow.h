@@ -91,5 +91,5 @@ private:
     GW::HookEntry ManipulateMapObject_Callback;
 
 public:
-    std::map<uint32_t, DoorObject*> doors;
+    std::map<uint32_t, DoorObject*> doors{};
 };

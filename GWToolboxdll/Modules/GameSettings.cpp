@@ -318,7 +318,7 @@ namespace {
         ASSERT(message_id == GW::UI::UIMessage::kSendLoadSkillbar && wparam);
         const struct Pack {
             uint32_t agent_id = 0;
-            GW::Constants::SkillID skill_ids[8];
+            GW::Constants::SkillID skill_ids[8]{};
         }* packet = static_cast<Pack*>(wparam);
         // @Enhancement: may cause weird stuff if we load loads of builds at once; heros could get mixed up with player. Use a map.
         memcpy(skillbar_packet.skill_ids, packet->skill_ids, sizeof(skillbar_packet.skill_ids));

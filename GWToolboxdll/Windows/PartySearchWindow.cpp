@@ -131,7 +131,7 @@ uint32_t PartySearchWindow::TBParty::IdFromRegionParty(uint32_t party_id)
 {
 #pragma warning (push)
 #pragma warning (disable: 4244)
-    return static_cast<uint32_t>((uint16_t)0 << 16 | (uint16_t)party_id);
+    return static_cast<uint32_t>(static_cast<uint16_t>(0) << 16 | static_cast<uint16_t>(party_id));
 #pragma warning (pop)
 }
 
@@ -139,7 +139,7 @@ uint32_t PartySearchWindow::TBParty::IdFromLocalParty(uint32_t party_id)
 {
 #pragma warning (push)
 #pragma warning (disable: 4244)
-    return static_cast<uint32_t>((uint16_t)party_id << 16);
+    return static_cast<uint32_t>(static_cast<uint16_t>(party_id) << 16);
 #pragma warning (pop)
 }
 
@@ -272,7 +272,7 @@ void PartySearchWindow::FillParties()
     ClearParties();
     struct FakePacket : GW::Packet::StoC::PacketBase {
         uint32_t id;
-    } packet;
+    } packet{};
     packet.header = GAME_SMSG_UPDATE_AGENT_PARTYSIZE;
     const GW::PlayerArray* players = GW::PlayerMgr::GetPlayerArray();
     for (size_t i = 0; players && i < players->size(); i++) {

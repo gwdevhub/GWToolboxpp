@@ -33,7 +33,7 @@ class PingsLinesRenderer : public VBuffer {
 
         DWORD player;
         DWORD session;
-        std::deque<DrawingLine> lines;
+        std::deque<DrawingLine> lines{};
     };
 
     struct Ping {
@@ -158,9 +158,9 @@ private:
     void SendQueue();
 
     PingCircle ping_circle;
-    std::deque<Ping*> pings;
+    std::deque<Ping*> pings{};
 
-    std::map<DWORD, PlayerDrawing> drawings;
+    std::map<DWORD, PlayerDrawing> drawings{};
 
     // for pings and drawings
     const long show_interval = 10;
@@ -174,7 +174,7 @@ private:
     clock_t lastshown = 0;
     clock_t lastsent = 0;
     clock_t lastqueued = 0;
-    std::vector<GW::UI::CompassPoint> queue;
+    std::vector<GW::UI::CompassPoint> queue{};
 
     Color color_drawings = 0;
     Color color_shadowstep_line = Colors::ARGB(155, 128, 0, 128);

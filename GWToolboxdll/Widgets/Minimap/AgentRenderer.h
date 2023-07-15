@@ -87,7 +87,7 @@ private:
 
         // define the agent
         bool active = true;
-        char name[128];
+        char name[128]{};
         DWORD modelId = 0;
         DWORD mapId = 0; // 0 for 'any map'
 
@@ -112,7 +112,7 @@ private:
     };
 
     struct Shape_t {
-        std::vector<Shape_Vertex> vertices;
+        std::vector<Shape_Vertex> vertices{};
         void AddVertex(float x, float y, Color_Modifier mod);
     };
 
@@ -177,8 +177,8 @@ private:
         0xFF7777CC
     };
 
-    std::vector<CustomAgent*> custom_agents;
-    std::unordered_map<DWORD, std::vector<const CustomAgent*>> custom_agents_map;
+    std::vector<CustomAgent*> custom_agents{};
+    std::unordered_map<DWORD, std::vector<const CustomAgent*>> custom_agents_map{};
     void BuildCustomAgentsMap();
     //const CustomAgent* FindValidCustomAgent(DWORD modelid) const;
 

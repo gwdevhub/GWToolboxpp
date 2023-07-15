@@ -40,7 +40,7 @@ namespace {
     HRESULT CoInitializeEx_result = -1;*/
     MSG msg;
     HWND streaming_window_handle = nullptr;
-    std::default_random_engine dre = std::default_random_engine(static_cast<uint32_t>(time(0)));
+    std::default_random_engine dre = std::default_random_engine(static_cast<uint32_t>(time(nullptr)));
     GW::HookEntry stoc_hook;
     GW::HookEntry stoc_hook2;
     GW::HookEntry ctos_hook;

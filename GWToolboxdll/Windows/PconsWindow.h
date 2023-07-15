@@ -56,7 +56,7 @@ public:
     static void OnAddExternalBond(GW::HookStatus* status, GW::Packet::StoC::AddExternalBond* pak);
     static void CmdPcons(const wchar_t*, int argc, LPWSTR* argv);
 
-    std::vector<Pcon*> pcons;
+    std::vector<Pcon*> pcons{};
 
 private:
     PconAlcohol* pcon_alcohol = nullptr;

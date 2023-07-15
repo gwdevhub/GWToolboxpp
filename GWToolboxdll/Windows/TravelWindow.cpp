@@ -20,7 +20,6 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Utils/GuiUtils.h>
-#include <GWToolbox.h>
 
 #include <Modules/Resources.h>
 #include <Windows/TravelWindow.h>

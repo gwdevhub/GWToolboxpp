@@ -135,9 +135,9 @@ private:
     void EnqueuePurchase(Material material);
     void EnqueueSell(Material material);
 
-    std::vector<GW::ItemID> merch_items;
+    std::vector<GW::ItemID> merch_items{};
 
-    std::deque<Transaction> transactions;
+    std::deque<Transaction> transactions{};
     bool quote_pending = false;
     bool trans_pending = false;
     DWORD quote_pending_time = 0;

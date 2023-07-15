@@ -170,8 +170,8 @@ void BuildsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     teambuilds.clear();
-    if (inifile)
-        delete inifile;
+
+    delete inifile;
 }
 
 void BuildsWindow::DrawSettingInternal()
@@ -499,7 +499,7 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*)
 
 const char* BuildsWindow::AddPreferredBuild(const char* code)
 {
-    GW::SkillbarMgr::SkillTemplate templ;
+    GW::SkillbarMgr::SkillTemplate templ{};
     if (!DecodeSkillTemplate(&templ, code)) {
         return "Failed to decode skill template from build code";
     }
@@ -516,7 +516,7 @@ bool BuildsWindow::GetCurrentSkillBar(char* out, size_t out_len)
 {
     if (!(out && out_len))
         return false;
-    GW::SkillbarMgr::SkillTemplate templ;
+    GW::SkillbarMgr::SkillTemplate templ{};
     const GW::AgentLiving* agent = GW::Agents::GetPlayerAsAgentLiving();
     GW::Player* player = agent ? GW::PlayerMgr::GetPlayerByID(agent->player_number) : nullptr;
     const GW::Skillbar* player_skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
@@ -623,7 +623,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
 {
     if (!build_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
         return;
-    GW::SkillbarMgr::SkillTemplate t;
+    GW::SkillbarMgr::SkillTemplate t{};
     const auto prof = static_cast<GW::Constants::Profession>(GW::Agents::GetPlayerAsAgentLiving()->primary);
     const bool is_skill_template = DecodeSkillTemplate(&t, build_name);
     if (is_skill_template && t.primary != prof) {

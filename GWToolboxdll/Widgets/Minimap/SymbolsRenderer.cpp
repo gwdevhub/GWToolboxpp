@@ -130,7 +130,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     tau += (0.05f * 60.0f / std::max(fps, 1.0f));
     if (tau > 10 * PI)
         tau -= 10 * PI;
-    DirectX::XMMATRIX translate, world;
+    DirectX::XMMATRIX translate{}, world{};
 
     if (const GW::Quest* quest = GW::QuestMgr::GetActiveQuest()) {
         const GW::Vec2f qpos = {quest->marker.x, quest->marker.y};

@@ -423,8 +423,8 @@ public:
         std::wstring name_w = L"";
         std::string description = "";
         std::wstring description_w = L"";
-        wchar_t name_enc[8];
-        wchar_t description_enc[8];
+        wchar_t name_enc[8]{};
+        wchar_t description_enc[8]{};
     };
 
     // TODO: push this to GWCA
@@ -480,10 +480,10 @@ public:
 
     bool match_finished = false;
     uint32_t winning_party_id = NO_PARTY;
-    std::chrono::milliseconds match_duration_ms_total;
-    std::chrono::milliseconds match_duration_ms;
-    std::chrono::seconds match_duration_secs;
-    std::chrono::minutes match_duration_mins;
+    std::chrono::milliseconds match_duration_ms_total{};
+    std::chrono::milliseconds match_duration_ms{};
+    std::chrono::seconds match_duration_secs{};
+    std::chrono::minutes match_duration_mins{};
 
 private:
     ObservableGuild* CreateObservableGuild(const GW::Guild& guild);
@@ -547,7 +547,7 @@ private:
     void HandleMoraleBoost(ObservableParty* boosting_party);
     void HandleVictory(ObservableParty* winning_party);
 
-    ObservableMap* map;
+    ObservableMap* map{};
 
     // lazy loaded observed guilds
     std::unordered_map<uint32_t, ObservableGuild*> observable_guilds = {};

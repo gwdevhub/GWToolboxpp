@@ -4,9 +4,9 @@ using SectionDrawCallback = std::function<void(const std::string& section, bool 
 class ToolboxModule;
 
 struct SectionDrawCallbackInfo {
-    float weighting;
+    float weighting{};
     SectionDrawCallback callback;
-    ToolboxModule* module;
+    ToolboxModule* module{};
 };
 
 using SectionDrawCallbackList = std::vector<SectionDrawCallbackInfo>;
@@ -17,9 +17,9 @@ protected:
     virtual ~ToolboxModule() = default;
 
 public:
-    virtual const bool IsWidget() const { return false; }
-    virtual const bool IsWindow() const { return false; }
-    virtual const bool IsUIElement() const { return false; }
+    virtual bool IsWidget() const { return false; }
+    virtual bool IsWindow() const { return false; }
+    virtual bool IsUIElement() const { return false; }
 
     // name of the window and the ini section
     virtual const char* Name() const = 0;

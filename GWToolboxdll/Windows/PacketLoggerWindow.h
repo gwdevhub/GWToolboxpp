@@ -4,7 +4,6 @@
 
 #include <ToolboxWindow.h>
 
-
 class PacketLoggerWindow : public ToolboxWindow {
     PacketLoggerWindow() = default;
     ~PacketLoggerWindow() override { ClearMessageLog(); };
@@ -44,7 +43,7 @@ private:
         TimestampType_Instance,
     };
 
-    std::unordered_map<std::wstring, std::wstring*> message_log;
+    std::unordered_map<std::wstring, std::wstring*> message_log{};
     std::wstring* last_message_decoded = nullptr;
     uint32_t identifiers[512] = {0}; // Presume 512 is big enough for header size...
     GW::HookEntry hook_entry;
@@ -54,7 +53,7 @@ private:
         std::wstring out;
     };
 
-    std::vector<ForTranslation*> pending_translation;
+    std::vector<ForTranslation*> pending_translation{};
 
 
     GW::HookEntry DisplayDialogue_Entry;

@@ -27,7 +27,7 @@ public:
     };
 
 private:
-    std::map<std::string, ServerInfo*> servers_by_ip;
+    std::map<std::string, ServerInfo*> servers_by_ip{};
     ServerInfo* current_server_info = nullptr;
     std::thread server_info_fetcher;
     GW::HookEntry InstanceLoadInfo_HookEntry;

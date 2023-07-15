@@ -78,7 +78,7 @@ namespace {
         uint32_t total_skills_used = 0;
         uint32_t party_idx = 0;
         GuiUtils::EncString name;
-        std::vector<Skill> skills;
+        std::vector<Skill> skills{};
     };
 
 

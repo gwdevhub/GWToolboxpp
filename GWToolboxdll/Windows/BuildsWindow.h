@@ -18,14 +18,14 @@ class BuildsWindow : public ToolboxWindow {
 
     struct Build {
         Build(const char* n, const char* c);
-        char name[128];
-        char code[128];
+        char name[128]{};
+        char code[128]{};
         const GW::Constants::SkillID* skills();
         const GW::SkillbarMgr::SkillTemplate* decode();
         bool decoded() { return !(skill_template.primary == GW::Constants::Profession::None && skill_template.secondary == GW::Constants::Profession::None); }
-        GW::SkillbarMgr::SkillTemplate skill_template;
+        GW::SkillbarMgr::SkillTemplate skill_template{};
         // Vector of pcons to use for this build, listed by ini name e.g. "cupcake"
-        std::set<std::string> pcons;
+        std::set<std::string> pcons{};
     };
 
     struct TeamBuild {
@@ -40,8 +40,8 @@ class BuildsWindow : public ToolboxWindow {
         bool edit_open = false;
         int edit_pcons = -1;
         bool show_numbers = false;
-        char name[128];
-        std::vector<Build> builds;
+        char name[128]{};
+        std::vector<Build> builds{};
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };
 
@@ -102,7 +102,7 @@ private:
     void DrawBuildSection(TeamBuild& tbuild, unsigned int idx);
 
     bool builds_changed = false;
-    std::vector<TeamBuild> teambuilds;
+    std::vector<TeamBuild> teambuilds{};
     bool order_by_name = false;
     bool order_by_index = !order_by_name;
     bool auto_load_pcons = true;
@@ -113,13 +113,13 @@ private:
 
 
     clock_t send_timer = 0;
-    std::queue<std::string> queue;
+    std::queue<std::string> queue{};
 
     ToolboxIni* inifile = nullptr;
 
     // Preferred skill orders
     bool preferred_skill_orders_visible = false;
-    std::vector<Build> preferred_skill_order_builds;
+    std::vector<Build> preferred_skill_order_builds{};
     GuiUtils::EncString preferred_skill_order_tooltip;
     char preferred_skill_order_code[128] = {0};
     // Pass array of skills for a bar; if a preferred order is found, returns a new array of skills in order, otherwise nullptr.

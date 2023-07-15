@@ -8,14 +8,10 @@
 #include <Color.h>
 
 class TwitchModule : public ToolboxModule {
-    TwitchModule()
-    {
-    };
+    TwitchModule() = default;
     TwitchModule(const TwitchModule&) = delete;
 
-    ~TwitchModule() override
-    {
-    };
+    ~TwitchModule() override = default;
 
 public:
     static TwitchModule& Instance()

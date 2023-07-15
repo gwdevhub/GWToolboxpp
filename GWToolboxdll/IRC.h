@@ -96,7 +96,7 @@ private:
     void insert_irc_command_hook(irc_command_hook* hook, const char* cmd_name, int (*function_ptr)(const char*, irc_reply_data*, void*));
     void delete_irc_command_hook(irc_command_hook* cmd_hook);
     // int irc_socket; // This fails when using winsock2.h in Windows. Define as SOCKET to fix?
-    SOCKET irc_socket;
+    SOCKET irc_socket{};
     char message_buffer[1024] = {0};
     bool connected;
     bool pending_disconnect;
@@ -107,8 +107,8 @@ private:
     clock_t ping_sent = 0;
     clock_t pong_recieved = 0;
     char* cur_nick;
-    FILE* dataout;
-    FILE* datain;
+    FILE* dataout{};
+    FILE* datain{};
     channel_user* chan_users;
     irc_command_hook* hooks;
     std::thread t;

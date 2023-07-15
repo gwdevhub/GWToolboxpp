@@ -70,15 +70,15 @@ private:
     // damage values
     uint32_t total = 0;
     PlayerDamage damage[MAX_PLAYERS];
-    std::map<DWORD, uint32_t> hp_map;
-    std::map<DWORD, size_t> party_index;
+    std::map<DWORD, uint32_t> hp_map{};
+    std::map<DWORD, size_t> party_index{};
     size_t player_index = 0;
     GW::UI::WindowPosition* party_window_position = nullptr;
 
     // main routine variables
     bool in_explorable = false;
     clock_t send_timer = 0;
-    std::queue<std::wstring> send_queue;
+    std::queue<std::wstring> send_queue{};
 
     // ini
     ToolboxIni* inifile = nullptr;

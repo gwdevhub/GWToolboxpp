@@ -196,7 +196,7 @@ void TwitchModule::AddHooks()
             Log::Error("Failed to send message");
         }
         else {
-            irc_reply_data d;
+            irc_reply_data d{};
             d.nick = const_cast<char*>(irc_username.c_str());
             content.insert(0, ":");
             OnMessage(content.c_str(), &d, &conn);

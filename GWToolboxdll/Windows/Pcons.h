@@ -78,7 +78,7 @@ public:
     void LoadSettings(ToolboxIni* ini, const char* section);
     void SaveSettings(ToolboxIni* ini, const char* section);
 
-    bool* enabled; // This is a ptr to the current char's status if applicable.
+    bool* enabled{}; // This is a ptr to the current char's status if applicable.
     bool pcon_quantity_checked = false;
     bool refilling = false;        // Set when a refill is in progress. Dont touch.
     bool refill_attempted = false; // Set to true when refill thread has run for this map
@@ -102,7 +102,7 @@ protected:
     GW::AgentLiving* player = nullptr;
 
     // "default" is the fallback
-    std::map<std::wstring, bool*> settings_by_charname;
+    std::map<std::wstring, bool*> settings_by_charname{};
 
     GW::Constants::MapID mapid = GW::Constants::MapID::None;
     GW::Constants::InstanceType maptype = GW::Constants::InstanceType::Loading;

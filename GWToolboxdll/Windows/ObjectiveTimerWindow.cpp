@@ -1012,7 +1012,7 @@ void ObjectiveTimerWindow::SaveRuns()
         Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
         std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
         wchar_t filename[36];
-        struct tm* structtime;
+        tm* structtime;
         for (auto& os : instance.objective_sets) {
             if (os.second->from_disk)
                 continue; // No need to re-save a run.
@@ -1441,10 +1441,10 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const
 const char* ObjectiveTimerWindow::ObjectiveSet::GetStartTimeStr()
 {
     if (!cached_start[0]) {
-        struct tm timeinfo;
+        tm timeinfo{};
         GetStartTime(&timeinfo);
         const time_t now = time(nullptr);
-        const struct tm* nowinfo = localtime(&now);
+        const tm* nowinfo = localtime(&now);
         int cached_str_offset = 0;
         if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year) {
             const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -1485,10 +1485,10 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
 {
     char buf[256];
     if (!show_past_runs && from_disk) {
-        struct tm timeinfo;
+        tm timeinfo{};
         GetStartTime(&timeinfo);
         const time_t now = time(nullptr);
-        const struct tm* nowinfo = localtime(&now);
+        const tm* nowinfo = localtime(&now);
         if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year) {
             return true; // Hide this objective set; its from a previous day
         }
@@ -1518,7 +1518,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
     return true;
 }
 
-void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(struct tm* timeinfo)
+void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(tm* timeinfo)
 {
     const time_t ts = system_time;
     memcpy(timeinfo, localtime(&ts), sizeof(timeinfo[0]));

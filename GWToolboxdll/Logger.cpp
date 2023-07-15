@@ -116,7 +116,7 @@ static void PrintTimestamp()
     time_t rawtime;
     time(&rawtime);
 
-    struct tm timeinfo;
+    tm timeinfo{};
     localtime_s(&timeinfo, &rawtime);
 
     char buffer[16];

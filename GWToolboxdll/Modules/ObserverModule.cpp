@@ -89,8 +89,8 @@ namespace JumboMessageValue {
 // big red/green characters.
 // Things like moral boosts, flag captures, victory, defeat...
 struct JumboMessage : GW::Packet::StoC::Packet<JumboMessage> {
-    uint8_t type;   // JumboMessageType
-    uint32_t value; // JumboMessageValue
+    uint8_t type{};   // JumboMessageType
+    uint32_t value{}; // JumboMessageValue
 };
 
 const uint32_t GW::Packet::StoC::Packet<JumboMessage>::STATIC_HEADER = (0x18F); // 399
@@ -704,8 +704,8 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
         // and they may be activateable while using other skills (e.g. shouts/stances) so we don't clear the current action
         if (stage != ActionStage::Instant) {
             // delete the previous blocking action
-            if (caster->current_target_action)
-                delete caster->current_target_action;
+
+            delete caster->current_target_action;
 
             // store the new blocking action
             caster->current_target_action = new_action;
@@ -1080,8 +1080,8 @@ bool ObserverModule::InitializeObserverSession()
     }
 
     // initialise the map
-    if (map)
-        delete map;
+
+    delete map;
     map = new ObservableMap(*map_info);
 
     match_finished = false;
@@ -1887,8 +1887,7 @@ ObserverModule::ObservableAgent::ObservableAgent(ObserverModule& parent, const G
 // Destructor
 ObserverModule::ObservableAgent::~ObservableAgent()
 {
-    if (current_target_action)
-        delete current_target_action;
+    delete current_target_action;
 }
 
 

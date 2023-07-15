@@ -94,7 +94,7 @@ namespace GWArmory {
     };
 
     struct ComboListState {
-        std::vector<Armor*> pieces;
+        std::vector<Armor*> pieces{};
         int current_piece_index = -1;
         Armor* current_piece = nullptr;
     };

@@ -5,8 +5,10 @@
 #include <Utils/RateLimiter.h>
 
 class PartySearchWindow : public ToolboxWindow {
-    PartySearchWindow() = default;
+public:
     PartySearchWindow(const PartySearchWindow&) = delete;
+private:
+    PartySearchWindow() = default;
 
     ~PartySearchWindow() override
     {
@@ -70,7 +72,7 @@ private:
 
     GW::HookEntry OnMessageLocal_Entry;
 
-    std::unordered_map<std::wstring, TBParty*> party_advertisements;
+    std::unordered_map<std::wstring, TBParty*> party_advertisements{};
 
     WSAData wsaData = {0};
 
@@ -87,10 +89,10 @@ private:
     bool print_game_chat = false;
     bool filter_alerts = false;
     char search_buffer[256] = {0};
-    std::vector<std::string> alert_words;
-    std::vector<std::string> searched_words;
+    std::vector<std::string> alert_words{};
+    std::vector<std::string> searched_words{};
     // tasks to be done async by the worker thread
-    std::queue<std::function<void()>> thread_jobs;
+    std::queue<std::function<void()>> thread_jobs{};
     bool should_stop = false;
     std::thread worker;
     bool ws_window_connecting = false;

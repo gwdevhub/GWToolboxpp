@@ -12,7 +12,6 @@
 
 #include <Color.h>
 #include <Utils/GuiUtils.h>
-#include <Modules/ToolboxSettings.h>
 #include <Windows/DupingWindow.h>
 
 #include <Timer.h>
@@ -22,7 +21,7 @@ namespace {
         DupeInfo(GW::AgentID agent_id)
             : agent_id(agent_id)
         {
-        };
+        }
 
 
         GW::AgentID agent_id;
@@ -49,6 +48,7 @@ namespace {
             case GW::Constants::ModelID::DoA::VeilWaterTormentor:
             case GW::Constants::ModelID::DoA::MindTormentor:
             case GW::Constants::ModelID::DoA::VeilMindTormentor: return GW::PartyMgr::GetIsPartyInHardMode() ? 1080 : 840;
+            default: ;
         }
         return 0;
     }

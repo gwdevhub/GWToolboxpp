@@ -81,7 +81,7 @@ public:
         Character* current_char = nullptr;
         GuiUtils::EncString* current_map_name = nullptr;
         uint32_t current_map_id = 0;
-        std::unordered_map<std::wstring, Character> characters;
+        std::unordered_map<std::wstring, Character> characters{};
         GW::FriendStatus status = GW::FriendStatus::Offline;
         GW::FriendType type = GW::FriendType::Unknow;
         clock_t last_update = 0;

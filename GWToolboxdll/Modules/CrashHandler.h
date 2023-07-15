@@ -3,9 +3,7 @@
 #include <ToolboxModule.h>
 
 class CrashHandler : public ToolboxModule {
-    CrashHandler()
-    {
-    };
+    CrashHandler() = default;
     ~CrashHandler() override { Cleanup(); };
 
 public:

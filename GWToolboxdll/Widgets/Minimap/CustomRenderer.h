@@ -119,8 +119,8 @@ private:
 
     int show_polygon_details = -1;
     bool markers_changed = false;
-    std::vector<CustomLine> lines;
-    std::vector<CustomMarker> markers;
+    std::vector<CustomLine> lines{};
+    std::vector<CustomMarker> markers{};
     std::vector<CustomPolygon> polygons{};
 
     ToolboxIni* inifile = nullptr;

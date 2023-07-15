@@ -652,7 +652,7 @@ void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, int argc, LPWSTR* argv)
         Log::ErrorW(L"No hero build found for %s", argBuildname.c_str());
         return;
     }
-    const TeamHeroBuild& tbuild = *static_cast<const TeamHeroBuild*>(found);
+    const TeamHeroBuild& tbuild = *found;
     Instance().Load(tbuild);
 }
 

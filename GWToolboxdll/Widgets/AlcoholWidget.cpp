@@ -88,7 +88,7 @@ void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess* pa
         // if the player already had a drink going
         if (instance.alcohol_level) {
             // set remaining time
-            instance.alcohol_time = static_cast<int>((long)instance.alcohol_time + (long)instance.last_alcohol - (long)time(NULL));
+            instance.alcohol_time = static_cast<int>(instance.alcohol_time + static_cast<long>(instance.last_alcohol) - static_cast<long>(time(NULL)));
         }
         // add drink time
         instance.alcohol_time += 60 * static_cast<int>(packet->level - instance.alcohol_level);
@@ -115,7 +115,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice)
 
     long t = 0;
     if (alcohol_level != 0) {
-        t = static_cast<long>((int)last_alcohol + ((int)alcohol_time)) - static_cast<long>(time(NULL));
+        t = static_cast<long>(static_cast<int>(last_alcohol) + static_cast<int>(alcohol_time)) - static_cast<long>(time(nullptr));
         // NB: Sometimes the game won't send through the signal to remove post processing.
         if (t < 0)
             alcohol_level = 0;

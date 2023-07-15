@@ -48,7 +48,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 
 #define DISCORD_APP_ID 378706083788881961
 
-using DiscordCreate_pt = enum EDiscordResult(__cdecl*)(DiscordVersion version, struct DiscordCreateParams* params, struct IDiscordCore** result);
+using DiscordCreate_pt = EDiscordResult(__cdecl*)(DiscordVersion version, DiscordCreateParams* params, IDiscordCore** result);
 
 const char* region_assets[] = {
     "region_kryta",
@@ -167,19 +167,19 @@ time_t join_party_started_at = 0;
 time_t join_party_started = 0;
 time_t discord_connected_at = 0;
 
-static void UpdateActivityCallback(void* data, enum EDiscordResult result)
+static void UpdateActivityCallback(void* data, EDiscordResult result)
 {
     UNREFERENCED_PARAMETER(data);
     Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
 }
 
-static void OnJoinRequestReplyCallback(void* data, enum EDiscordResult result)
+static void OnJoinRequestReplyCallback(void* data, EDiscordResult result)
 {
     UNREFERENCED_PARAMETER(data);
     Log::Log(result == DiscordResult_Ok ? "Join request reply sent successfully.\n" : "Join request reply send FAILED!\n");
 }
 
-static void OnSendInviteCallback(void* data, enum EDiscordResult result)
+static void OnSendInviteCallback(void* data, EDiscordResult result)
 {
     UNREFERENCED_PARAMETER(data);
     Log::Log(result == DiscordResult_Ok ? "Invite sent successfully.\n" : "Invite send FAILED!\n");

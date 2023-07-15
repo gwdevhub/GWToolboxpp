@@ -44,7 +44,7 @@ private:
     struct SkillActivation {
         GW::Constants::SkillID id;
         SkillActivationStatus status;
-        clock_t last_update;
+        clock_t last_update{};
         clock_t cast_start = last_update;
         float cast_time = .0f;
     };
@@ -76,11 +76,11 @@ private:
     GW::HookEntry GenericValueTarget_Entry;
     GW::HookEntry GenericModifier_Entry;
 
-    std::unordered_map<GW::AgentID, std::vector<SkillActivation>> history;
-    std::unordered_map<GW::AgentID, float> casttime_map;
+    std::unordered_map<GW::AgentID, std::vector<SkillActivation>> history{};
+    std::unordered_map<GW::AgentID, float> casttime_map{};
 
-    std::unordered_map<GW::AgentID, size_t> party_map;
-    std::unordered_map<GW::AgentID, bool> party_map_indent;
+    std::unordered_map<GW::AgentID, size_t> party_map{};
+    std::unordered_map<GW::AgentID, bool> party_map_indent{};
     size_t allies_start = 255;
     bool FetchPartyInfo();
 

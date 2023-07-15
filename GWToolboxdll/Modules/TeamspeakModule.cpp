@@ -207,8 +207,8 @@ namespace {
         }
 
     cleanup:
-        if (server)
-            delete server;
+
+        delete server;
     }
 
     void GetServerInfo(std::function<void()> callback = nullptr)
@@ -273,7 +273,7 @@ namespace {
         res = inet_pton(AF_INET, teamspeak3_host, ptr);
         if (res != 1)
             return failed("Couldn't connect to teamspeak 3; inet_pton failure");
-        sockaddr_in addr;
+        sockaddr_in addr{};
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = ip;
         addr.sin_port = htons(port);

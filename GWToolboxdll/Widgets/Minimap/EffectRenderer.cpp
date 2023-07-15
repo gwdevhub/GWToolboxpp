@@ -33,8 +33,6 @@ namespace {
         Churning_earth = 994
     };
 
-    const float drawing_scale = 96.0f;
-
     class EffectCircle : public VBuffer {
         void Initialize(IDirect3DDevice9* device) override;
 
@@ -95,7 +93,7 @@ namespace {
         uint32_t triggered_effect_id = 0;
         uint32_t duration = 2000;
         float range = GW::Constants::Range::Nearby;
-        std::unordered_map<std::pair<float, float>, clock_t, pair_hash> triggers_handled;
+        std::unordered_map<std::pair<float, float>, clock_t, pair_hash> triggers_handled{};
 
         EffectTrigger(uint32_t _triggered_effect_id, uint32_t _duration, float _range)
             : triggered_effect_id(_triggered_effect_id), duration(_duration), range(_range)

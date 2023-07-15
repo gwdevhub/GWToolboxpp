@@ -102,21 +102,19 @@ void IRC::delete_irc_command_hook(irc_command_hook* cmd_hook)
 {
     if (cmd_hook->next)
         delete_irc_command_hook(cmd_hook->next);
-    if (cmd_hook->irc_command)
-        delete cmd_hook->irc_command;
+
+    delete cmd_hook->irc_command;
     delete cmd_hook;
 }
 
 int IRC::start(const char* server, int port, const char* nick, const char* user, const char* name, const char* pass)
 {
-    struct addrinfo hints,* servinfo;
+    addrinfo hints{}, * servinfo;
     if (connected) {
         printf("IRC::start called when already connected\n");
         return 1;
     }
     ping_sent = 0;
-    //Ensure that servinfo is clear
-    memset(&hints, 0, sizeof hints); //make sure the struct is empty
 
     //setup hints
     hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6 doesnt matter
@@ -308,7 +306,7 @@ void IRC::parse_irc_reply(const char* data)
     char* cmd;
     char* params;
     //char buffer[514];
-    irc_reply_data hostd_tmp;
+    irc_reply_data hostd_tmp{};
     channel_user* cup;
     char* p;
     char* chan_temp;
@@ -378,10 +376,10 @@ void IRC::parse_irc_reply(const char* data)
             if (d) {
                 if (d == chan_users) {
                     chan_users = d->next;
-                    if (d->channel)
-                        delete [] d->channel;
-                    if (d->nick)
-                        delete [] d->nick;
+
+                    delete [] d->channel;
+
+                    delete [] d->nick;
                     delete d;
                 }
                 else {
@@ -389,10 +387,10 @@ void IRC::parse_irc_reply(const char* data)
                         prev->next = d->next;
                     }
                     chan_users = d->next;
-                    if (d->channel)
-                        delete [] d->channel;
-                    if (d->nick)
-                        delete [] d->nick;
+
+                    delete [] d->channel;
+
+                    delete [] d->nick;
                     delete d;
                 }
             }
@@ -409,20 +407,20 @@ void IRC::parse_irc_reply(const char* data)
                     d = cup;
                     if (d == chan_users) {
                         chan_users = d->next;
-                        if (d->channel)
-                            delete [] d->channel;
-                        if (d->nick)
-                            delete [] d->nick;
+
+                        delete [] d->channel;
+
+                        delete [] d->nick;
                         delete d;
                     }
                     else {
                         if (prev) {
                             prev->next = d->next;
                         }
-                        if (d->channel)
-                            delete [] d->channel;
-                        if (d->nick)
-                            delete [] d->nick;
+
+                        delete [] d->channel;
+
+                        delete [] d->nick;
                         delete d;
                     }
                     break;

@@ -5,25 +5,25 @@
 #include <ToolboxModule.h>
 
 struct Application {
-    struct IDiscordCore* core;
-    struct IDiscordUserManager* users;
-    struct IDiscordAchievementManager* achievements;
-    struct IDiscordActivityManager* activities;
-    struct IDiscordRelationshipManager* relationships;
-    struct IDiscordApplicationManager* application;
-    struct IDiscordLobbyManager* lobbies;
-    struct IDiscordNetworkManager* network;
+    IDiscordCore* core;
+    IDiscordUserManager* users;
+    IDiscordAchievementManager* achievements;
+    IDiscordActivityManager* activities;
+    IDiscordRelationshipManager* relationships;
+    IDiscordApplicationManager* application;
+    IDiscordLobbyManager* lobbies;
+    IDiscordNetworkManager* network;
     DiscordUserId user_id;
 };
 
 // Encoded/decoded when joining another player's game.
 struct DiscordJoinableParty {
     unsigned short map_id = 0;
-    short district_id;
-    short region_id;
-    short language_id;
-    uint32_t ghkey[4];
-    wchar_t player[32];
+    short district_id{};
+    short region_id{};
+    short language_id{};
+    uint32_t ghkey[4]{};
+    wchar_t player[32]{};
 };
 
 // Used to record current GH info
@@ -34,13 +34,9 @@ struct CurrentGuildHall {
 };
 
 class DiscordModule : public ToolboxModule {
-    DiscordModule()
-    {
-    };
+    DiscordModule() = default;
 
-    ~DiscordModule() override
-    {
-    };
+    ~DiscordModule() override = default;
 
 public:
     static DiscordModule& Instance()
@@ -69,18 +65,18 @@ public:
     void JoinParty();
     bool IsInJoinablePartyMap();
 
-    Application app;
-    DiscordActivity activity;
-    DiscordActivity last_activity;
+    Application app{};
+    DiscordActivity activity{};
+    DiscordActivity last_activity{};
 
 private:
-    DiscordCreateParams params;
+    DiscordCreateParams params{};
 
-    IDiscordUserEvents users_events;
-    IDiscordActivityEvents activities_events;
-    IDiscordRelationshipEvents relationships_events;
-    IDiscordNetworkEvents network_events;
-    IDiscordCoreEvents core_events;
+    IDiscordUserEvents users_events{};
+    IDiscordActivityEvents activities_events{};
+    IDiscordRelationshipEvents relationships_events{};
+    IDiscordNetworkEvents network_events{};
+    IDiscordCoreEvents core_events{};
 
 
     // setting vars

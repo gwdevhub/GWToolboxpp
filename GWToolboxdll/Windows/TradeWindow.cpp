@@ -18,7 +18,6 @@
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
-#include <GWToolbox.h>
 
 #include <Modules/Resources.h>
 #include <Windows/TradeWindow.h>

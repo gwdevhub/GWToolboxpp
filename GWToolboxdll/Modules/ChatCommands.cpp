@@ -2003,7 +2003,7 @@ void ChatCommands::CmdPing(const wchar_t* message, int argc, LPWSTR* argv)
         }
 
         // If template file does not exist, skip
-        GW::SkillbarMgr::SkillTemplate skill_template;
+        GW::SkillbarMgr::SkillTemplate skill_template{};
         if (!DecodeSkillTemplate(&skill_template, temp)) {
             continue;
         }

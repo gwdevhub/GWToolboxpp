@@ -99,9 +99,9 @@ private:
     void MessageOnPartyChange();
 
 
-    std::vector<std::wstring> previous_party_names;
+    std::vector<std::wstring> previous_party_names{};
 
-    std::vector<uint32_t> available_dialog_ids;
+    std::vector<uint32_t> available_dialog_ids{};
 
     bool was_leading = true;
     bool hide_dungeon_chest_popup = false;

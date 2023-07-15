@@ -99,7 +99,7 @@ private:
         int indent = 0;
         int starting_completes_n_previous_objectives = 0; // use -1 for all
 
-        ObjectiveSet* parent;
+        ObjectiveSet* parent{};
 
         struct Event {
             EventType type;
@@ -107,9 +107,9 @@ private:
             uint32_t id2 = 0;
         };
 
-        std::vector<Event> start_events;
-        std::vector<Event> end_events;
-        std::vector<Objective*> children;
+        std::vector<Event> start_events{};
+        std::vector<Event> end_events{};
+        std::vector<Objective*> children{};
 
         DWORD start = 0;
         DWORD done = 0;
@@ -171,7 +171,7 @@ private:
         bool need_to_collapse = false;
         char name[256] = {0};
 
-        std::vector<Objective*> objectives;
+        std::vector<Objective*> objectives{};
 
         Objective* AddObjective(Objective* obj, int starting_completes_num_previous = 0)
         {
@@ -205,7 +205,7 @@ private:
         static ObjectiveSet* FromJson(const nlohmann::json& json);
         nlohmann::json ToJson();
         void Update();
-        void GetStartTime(struct tm* timeinfo);
+        void GetStartTime(tm* timeinfo);
 
         const unsigned int ui_id = 0; // an internal id to ensure interface consistency
 
@@ -215,7 +215,7 @@ private:
         char cached_time[16] = {0};
     };
 
-    std::map<DWORD, ObjectiveSet*> objective_sets;
+    std::map<DWORD, ObjectiveSet*> objective_sets{};
 
     ObjectiveSet* GetCurrentObjectiveSet();
     bool show_current_run_window = false;

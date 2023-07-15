@@ -291,7 +291,7 @@ namespace Missions {
 
     class Dungeon : public EotNMission {
     private:
-        std::vector<GW::Constants::QuestID> zb_quests;
+        std::vector<GW::Constants::QuestID> zb_quests{};
 
     public:
         static MissionImageList normal_mode_images;
@@ -315,18 +315,18 @@ struct CharacterCompletion {
     GW::Constants::Profession profession = static_cast<GW::Constants::Profession>(0);
     std::wstring account;
     std::string name_str;
-    std::vector<uint32_t> skills;
-    std::vector<uint32_t> mission;
-    std::vector<uint32_t> mission_bonus;
-    std::vector<uint32_t> mission_hm;
-    std::vector<uint32_t> mission_bonus_hm;
-    std::vector<uint32_t> vanquishes;
-    std::vector<uint32_t> heroes;
-    std::vector<uint32_t> maps_unlocked;
+    std::vector<uint32_t> skills{};
+    std::vector<uint32_t> mission{};
+    std::vector<uint32_t> mission_bonus{};
+    std::vector<uint32_t> mission_hm{};
+    std::vector<uint32_t> mission_bonus_hm{};
+    std::vector<uint32_t> vanquishes{};
+    std::vector<uint32_t> heroes{};
+    std::vector<uint32_t> maps_unlocked{};
     std::string hom_code;
     HallOfMonumentsAchievements hom_achievements;
-    std::vector<uint32_t> minipets_unlocked;
-    std::vector<uint32_t> festival_hats;
+    std::vector<uint32_t> minipets_unlocked{};
+    std::vector<uint32_t> festival_hats{};
 };
 
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed

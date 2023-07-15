@@ -220,11 +220,11 @@ namespace {
 
 
     struct PreferencesStruct {
-        std::vector<uint32_t> preference_values;
-        std::vector<uint32_t> preference_enums;
-        std::vector<uint32_t> preference_flags;
-        std::vector<uint32_t> key_mappings;
-        std::vector<GW::UI::WindowPosition> window_positions;
+        std::vector<uint32_t> preference_values{};
+        std::vector<uint32_t> preference_enums{};
+        std::vector<uint32_t> preference_flags{};
+        std::vector<uint32_t> key_mappings{};
+        std::vector<GW::UI::WindowPosition> window_positions{};
     };
 
     // Read preferences from in-game memory to a PreferencesStruct

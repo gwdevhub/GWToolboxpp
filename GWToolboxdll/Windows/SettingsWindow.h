@@ -6,7 +6,8 @@ class SettingsWindow : public ToolboxWindow {
     SettingsWindow()
     {
         show_menubutton = true;
-    };
+    }
+
     ~SettingsWindow() override = default;
 
 public:

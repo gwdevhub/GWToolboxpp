@@ -30,11 +30,11 @@ namespace {
     }
 
     struct MapInfo {
-        wchar_t enc_name[8];
+        wchar_t enc_name[8]{};
         std::wstring name;
-        wchar_t enc_desc[8];
+        wchar_t enc_desc[8]{};
         std::wstring description;
-        GW::AreaInfo* map_info;
+        GW::AreaInfo* map_info{};
 
         nlohmann::json ToJson()
         {
@@ -168,19 +168,19 @@ static void InitStoC()
         uint8_t h0000[8];
 
         struct {
-            uint8_t h0000[12];
+            uint8_t h0000[12]{};
 
             struct {
-                uint8_t h0000[12];
-                void* next;
-                uint8_t h0010[12];
-                uint32_t ClientCodecArray[4];
+                uint8_t h0000[12]{};
+                void* next{};
+                uint8_t h0010[12]{};
+                uint32_t ClientCodecArray[4]{};
                 StoCHandlerArray handlers;
-            } * ls_codec;
+            } * ls_codec{};
 
-            uint8_t h0010[12];
+            uint8_t h0010[12]{};
             // Client codec
-            uint32_t ClientCodecArray[4];
+            uint32_t ClientCodecArray[4]{};
             StoCHandlerArray handlers;
         } * gs_codec;
     };

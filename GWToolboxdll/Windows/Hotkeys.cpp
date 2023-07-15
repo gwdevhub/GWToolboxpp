@@ -2032,7 +2032,7 @@ namespace {
 HotkeyCommandPet::HotkeyCommandPet(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
-    behavior = ini ? static_cast<GW::HeroBehavior>(ini->GetLongValue(section, "behavior", (long)behavior)) : behavior;
+    behavior = ini ? static_cast<GW::HeroBehavior>(ini->GetLongValue(section, "behavior", static_cast<long>(behavior))) : behavior;
     if (!GetBehaviorDesc(behavior))
         behavior = GW::HeroBehavior::Fight;
 }

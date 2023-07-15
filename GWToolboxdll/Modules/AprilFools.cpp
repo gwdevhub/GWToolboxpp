@@ -104,7 +104,7 @@ void AprilFools::Initialize()
     });
 
     const time_t now = time(nullptr);
-    const struct tm* ltm = gmtime(&now);
+    const tm* ltm = gmtime(&now);
     SetEnabled(ltm->tm_mon == 3 && ((ltm->tm_mday == 1 && ltm->tm_hour > 6) || (ltm->tm_mday == 2 && ltm->tm_hour < 7)));
 }
 

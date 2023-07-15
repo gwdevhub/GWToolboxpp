@@ -10,9 +10,7 @@ namespace GW::Chat {
 }
 
 class ChatLog : public ToolboxModule {
-    ChatLog()
-    {
-    };
+    ChatLog() = default;
 
     ~ChatLog() override
     {
@@ -21,11 +19,11 @@ class ChatLog : public ToolboxModule {
 
 private:
     struct TBChatMessage {
-        TBChatMessage* next;
-        TBChatMessage* prev;
+        TBChatMessage* next{};
+        TBChatMessage* prev{};
         std::wstring msg;
         uint32_t channel;
-        FILETIME timestamp;
+        FILETIME timestamp{};
 
         TBChatMessage(wchar_t* _message, uint32_t _channel, FILETIME _timestamp)
         {
@@ -36,8 +34,8 @@ private:
     };
 
     struct TBSentMessage {
-        TBSentMessage* next;
-        TBSentMessage* prev;
+        TBSentMessage* next{};
+        TBSentMessage* prev{};
         std::wstring msg;
         uint32_t gw_message_address = 0; // Used to ensure that messages aren't logged twice
         TBSentMessage(wchar_t* _message, uint32_t addr = 0)

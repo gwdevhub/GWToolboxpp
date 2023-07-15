@@ -19,6 +19,8 @@ you can call Invalidate() to have the initialize be called again on render
 
 class VBuffer {
 public:
+    virtual ~VBuffer() = default;
+
     virtual void Invalidate()
     {
         if (buffer)

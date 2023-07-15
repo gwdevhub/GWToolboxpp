@@ -11,7 +11,6 @@
 constexpr size_t BUFFER_SIZE = 128;
 
 class HeroBuildsWindow : public ToolboxWindow {
-private:
     // hero_index is:
     // -2 for player (although it doesn't really matter),
     // -1 for 'choose hero',
@@ -27,8 +26,8 @@ private:
             GuiUtils::StrCopy(code, c, sizeof(code));
         }
 
-        char name[BUFFER_SIZE];
-        char code[BUFFER_SIZE];
+        char name[BUFFER_SIZE]{};
+        char code[BUFFER_SIZE]{};
         int hero_index;
         uint32_t behavior = 1;
         bool show_panel = false;
@@ -45,8 +44,8 @@ private:
 
         bool edit_open = false;
         int mode = 0; // 0=don't change, 1=normal mode, 2=hard mode
-        char name[BUFFER_SIZE];
-        std::vector<HeroBuild> builds;
+        char name[BUFFER_SIZE]{};
+        std::vector<HeroBuild> builds{};
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };
 
@@ -112,7 +111,7 @@ private:
     static GW::HeroPartyMember* GetPartyHeroByID(GW::Constants::HeroID hero_id, size_t* out_hero_index);
 
     bool builds_changed = false;
-    std::vector<TeamHeroBuild> teambuilds;
+    std::vector<TeamHeroBuild> teambuilds{};
 
     struct CodeOnHero {
         enum Stage : uint8_t {
@@ -121,7 +120,7 @@ private:
             Finished
         } stage = Add;
 
-        char code[BUFFER_SIZE];
+        char code[BUFFER_SIZE]{};
         size_t party_hero_index = 0xFFFFFFFF;
         GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
         int show_panel = 0;
@@ -145,8 +144,8 @@ private:
 
     clock_t send_timer = 0;
     clock_t kickall_timer = 0;
-    std::vector<CodeOnHero> pending_hero_loads;
-    std::queue<std::string> send_queue;
+    std::vector<CodeOnHero> pending_hero_loads{};
+    std::queue<std::string> send_queue{};
 
     ToolboxIni* inifile = nullptr;
 };

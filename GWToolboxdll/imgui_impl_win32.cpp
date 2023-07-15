@@ -80,15 +80,15 @@ typedef DWORD(WINAPI* PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 //  2016-11-12: Inputs: Only call Win32 ::SetCursor(NULL) when io.MouseDrawCursor is set.
 
 struct ImGui_ImplWin32_Data {
-    HWND hWnd;
-    HWND MouseHwnd;
-    bool MouseTracked;
-    int MouseButtonsDown;
-    INT64 Time;
-    INT64 TicksPerSecond;
-    ImGuiMouseCursor LastMouseCursor;
-    bool HasGamepad;
-    bool WantUpdateHasGamepad;
+    HWND hWnd{};
+    HWND MouseHwnd{};
+    bool MouseTracked{};
+    int MouseButtonsDown{};
+    INT64 Time{};
+    INT64 TicksPerSecond{};
+    ImGuiMouseCursor LastMouseCursor{};
+    bool HasGamepad{};
+    bool WantUpdateHasGamepad{};
 
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     HMODULE XInputDLL;

@@ -47,7 +47,7 @@ private:
     struct Skill {
         char cooldown[16] = {0};
         Color color{};
-        std::vector<Effect> effects;
+        std::vector<Effect> effects{};
     };
 
     std::array<Skill, 8> m_skills{};

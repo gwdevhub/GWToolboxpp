@@ -3,13 +3,9 @@
 #include <ToolboxModule.h>
 
 class ChatFilter : public ToolboxModule {
-    ChatFilter()
-    {
-    };
+    ChatFilter() = default;
 
-    ~ChatFilter() override
-    {
-    };
+    ~ChatFilter() override = default;
 
 public:
     static ChatFilter& Instance()

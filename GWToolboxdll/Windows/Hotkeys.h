@@ -54,8 +54,8 @@ public:
     bool trigger_on_gain_focus = false;        // Trigger when GW window is focussed
     bool can_trigger_on_map_change = true;     // Some hotkeys cant trigger on map change e.g. Guild Wars Key
 
-    std::vector<uint32_t> map_ids;
-    bool prof_ids[11];
+    std::vector<uint32_t> map_ids{};
+    bool prof_ids[11]{};
     int instance_type = -1;
     char player_name[20] = "";
     uint32_t in_range_of_npc_id = 0;
@@ -101,7 +101,7 @@ private:
 // hotkey to send a message in chat
 // can be used for anything that uses SendChat
 class HotkeySendChat : public TBHotkey {
-    char message[139];
+    char message[139]{};
     char channel = '/';
 
 public:
@@ -149,8 +149,8 @@ class HotkeyEquipItem : public TBHotkey {
     } equip_by = SLOT;
 
     GW::Item* item = nullptr;
-    std::chrono::time_point<std::chrono::steady_clock> start_time;
-    std::chrono::time_point<std::chrono::steady_clock> last_try;
+    std::chrono::time_point<std::chrono::steady_clock> start_time{};
+    std::chrono::time_point<std::chrono::steady_clock> last_try{};
     const wchar_t* item_name = L"";
 
 public:
@@ -175,7 +175,7 @@ public:
 // will use the item in explorable areas, and display a warning with given name if not found
 class HotkeyUseItem : public TBHotkey {
     UINT item_id = 0;
-    char name[140];
+    char name[140]{};
 
 public:
     static const char* IniSection() { return "UseItem"; }

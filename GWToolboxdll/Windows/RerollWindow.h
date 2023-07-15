@@ -12,8 +12,8 @@ class RerollWindow : public ToolboxWindow {
 
     ~RerollWindow() override
     {
-        for (const auto& it : account_characters) {
-            delete it.second;
+        for (const auto& char_name : account_characters | std::views::values) {
+            delete char_name;
         }
         account_characters.clear();
         if (guild_hall_uuid) {
