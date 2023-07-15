@@ -344,7 +344,7 @@ public:
 
 
     void Initialize() override;
-    void Initialize_Prophecies();
+    static void Initialize_Prophecies();
     void Initialize_Factions();
     void Initialize_Nightfall();
     void Initialize_EotN();

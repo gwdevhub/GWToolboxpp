@@ -2082,7 +2082,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const size_t items_per_col = static_cast<size_t>(ceil(end / static_cast<float>(missions_per_row)));
+        const auto items_per_col = static_cast<size_t>(ceil(end / static_cast<float>(missions_per_row)));
         size_t col_count = 0;
         for (size_t i = 0; i < end; i++) {
             if (camp_missions[i]->Draw(device)) {
@@ -2137,20 +2137,19 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
     ImGui::Checkbox("Hide completed missions", &hide_completed_missions);
     ImGui::PopStyleVar();
-    for (auto& camp : missions) {
-        auto& camp_missions = camp.second;
+    for (auto& [campaign, camp_missions] : missions) {
         size_t completed = 0;
         std::vector<Missions::Mission*> filtered;
-        for (size_t i = 0; i < camp_missions.size(); i++) {
-            if (camp_missions[i]->is_completed) {
+        for (const auto& camp_mission : camp_missions) {
+            if (camp_mission->is_completed && camp_mission->bonus) {
                 completed++;
                 if (hide_completed_missions)
                     continue;
             }
-            filtered.push_back(camp_missions[i]);
+            filtered.push_back(camp_mission);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(campaign), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, campaign);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
@@ -2160,23 +2159,22 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
     ImGui::Checkbox("Hide completed vanquishes", &hide_completed_vanquishes);
     ImGui::PopStyleVar();
-    for (auto& camp : vanquishes) {
-        auto& camp_missions = camp.second;
-        if (!camp_missions.size())
+    for (auto& [campaign, camp_missions] : vanquishes) {
+        if (camp_missions.empty())
             continue;
         size_t completed = 0;
         std::vector<Missions::Mission*> filtered;
-        for (size_t i = 0; i < camp_missions.size(); i++) {
-            if (camp_missions[i]->is_completed) {
+        for (const auto& camp_mission : camp_missions) {
+            if (camp_mission->is_completed) {
                 completed++;
                 if (hide_completed_vanquishes)
                     continue;
             }
-            filtered.push_back(camp_missions[i]);
+            filtered.push_back(camp_mission);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f,
-                 camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(campaign), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f,
+                 campaign);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
@@ -2194,54 +2192,54 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         ImGui::PopID();
     };
     skills_title("Elite Skills");
-    for (auto& camp : elite_skills) {
-        auto& camp_missions = camp.second;
+    for (auto& [campaign, skill] : elite_skills) {
+        auto& camp_missions = skill;
         size_t completed = 0;
         std::vector<Missions::Mission*> filtered;
-        for (size_t i = 0; i < camp_missions.size(); i++) {
-            if (camp_missions[i]->is_completed) {
+        for (const auto& camp_mission : camp_missions) {
+            if (camp_mission->is_completed) {
                 completed++;
                 if (hide_unlocked_skills)
                     continue;
             }
-            filtered.push_back(camp_missions[i]);
+            filtered.push_back(camp_mission);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(campaign), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, campaign);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
     }
     skills_title("PvE Skills");
-    for (auto& camp : pve_skills) {
-        auto& camp_missions = camp.second;
+    for (auto& [campaign, skill] : pve_skills) {
+        auto& camp_missions = skill;
         size_t completed = 0;
         std::vector<Missions::Mission*> filtered;
-        for (size_t i = 0; i < camp_missions.size(); i++) {
-            if (camp_missions[i]->is_completed) {
+        for (const auto& camp_mission : camp_missions) {
+            if (camp_mission->is_completed) {
                 completed++;
                 if (hide_unlocked_skills)
                     continue;
             }
-            filtered.push_back(camp_missions[i]);
+            filtered.push_back(camp_mission);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(campaign), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, campaign);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
     }
     ImGui::Text("Heroes");
-    for (auto& camp : heros) {
-        auto& camp_missions = camp.second;
+    for (auto& [campaign, hero_unlock] : heros) {
+        auto& camp_missions = hero_unlock;
         size_t completed = 0;
-        for (size_t i = 0; i < camp_missions.size(); i++) {
-            if (camp_missions[i]->is_completed) {
+        for (const auto& camp_mission : camp_missions) {
+            if (camp_mission->is_completed) {
                 completed++;
             }
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_heros_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_heros_%d", CampaignName(campaign), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, campaign);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(camp_missions);
         }
