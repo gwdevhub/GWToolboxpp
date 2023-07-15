@@ -404,7 +404,7 @@ namespace {
 
     bool IsInGH()
     {
-        auto* p = GW::GuildMgr::GetPlayerGuild();
+        const auto* p = GW::GuildMgr::GetPlayerGuild();
         return p && p == GW::GuildMgr::GetCurrentGH();
     }
 
@@ -454,7 +454,7 @@ namespace {
             }
             break;
             case GW::UI::UIMessage::kTravel: {
-                auto t = static_cast<MapStruct*>(wparam);
+                const auto t = static_cast<MapStruct*>(wparam);
                 if (t && t != &pending_map_travel)
                     pending_map_travel = *t;
             }
@@ -462,7 +462,7 @@ namespace {
             case GW::UI::UIMessage::kErrorMessage: {
                 if (!(retry_map_travel && pending_map_travel.map_id != GW::Constants::MapID::None))
                     break;
-                auto msg = static_cast<UIErrorMessage*>(wparam);
+                const auto msg = static_cast<UIErrorMessage*>(wparam);
                 if (msg && msg->message && *msg->message == 0xb25) {
                     // Travel failed, but we want to retry
                     // NB: 0xb25 = "That district is full. Please select another."
@@ -486,7 +486,7 @@ void TravelWindow::Initialize()
     GW::Chat::CreateCommand(L"to", &CmdTP);
     GW::Chat::CreateCommand(L"travel", &CmdTP);
 
-    for (auto message_id : messages_to_hook) {
+    for (const auto message_id : messages_to_hook) {
         RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
     }
 }
@@ -498,7 +498,7 @@ void TravelWindow::Terminate()
         delete[] it;
     }
     searchable_explorable_areas.clear();
-    for (auto message_id : messages_to_hook) {
+    for (const auto message_id : messages_to_hook) {
         (message_id);
         GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
     }
@@ -508,7 +508,7 @@ void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapI
 {
     if (x_idx != 0)
         ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - ImGui::GetStyle().WindowPadding.x;
+    const float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - ImGui::GetStyle().WindowPadding.x;
     bool clicked = false;
     switch (mapid) {
         case GW::Constants::MapID::The_Deep:
@@ -546,7 +546,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice)
             static int travelto_index = -1;
             if (ImGui::MyCombo(
                 "travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
-                GW::Constants::MapID id = IndexToOutpostID(travelto_index);
+                const GW::Constants::MapID id = IndexToOutpostID(travelto_index);
                 Travel(id, district, district_number);
                 travelto_index = -1;
                 if (close_on_travel)
@@ -643,7 +643,7 @@ void TravelWindow::Update(float delta)
     // Dynamically generate a list of all explorable areas that the game has rather than storing another massive const array.
     switch (fetched_searchable_explorable_areas) {
         case Pending: for (uint32_t i = 0; i < static_cast<uint32_t>(GW::Constants::MapID::Count); i++) {
-                GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
+                const GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
                 if (!map || !map->name_id || !map->GetIsOnWorldMap() || map->type != GW::RegionType::ExplorableZone)
                     continue;
                 searchable_explorable_area_ids.push_back(static_cast<GW::Constants::MapID>(i));
@@ -678,7 +678,7 @@ void TravelWindow::Update(float delta)
 GW::Constants::MapID TravelWindow::GetNearestOutpost(GW::Constants::MapID map_to)
 {
     GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
-    GW::AreaInfo* nearest = nullptr;
+    const GW::AreaInfo* nearest = nullptr;
     GW::AreaInfo* map_info = nullptr;
     float nearest_distance = FLT_MAX;
     auto nearest_map_id = GW::Constants::MapID::None;
@@ -718,7 +718,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(GW::Constants::MapID map_to
         //   continue; // e.g. "wrong" augury rock is map 119, no NPCs
         if (!GW::Map::GetIsMapUnlocked(static_cast<GW::Constants::MapID>(i)))
             continue;
-        float dist = GetDistance(this_pos, get_pos(map_info));
+        const float dist = GetDistance(this_pos, get_pos(map_info));
         if (dist < nearest_distance) {
             nearest_distance = dist;
             nearest = map_info;
@@ -754,7 +754,7 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
         return; // Checking too soon; still waiting for either a map travel or a countdown for it.
     }
 
-    GW::Constants::MapID map_id = GW::Map::GetMapID();
+    const GW::Constants::MapID map_id = GW::Map::GetMapID();
     if (scroll_to_outpost_id == GW::Constants::MapID::None) {
         scroll_to_outpost_id = outpost_id;
         scroll_from_outpost_id = map_id;
@@ -785,7 +785,7 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
         return; // Not in scrollable outpost, but we're not in the outpost we started from either - user has decided to travel somewhere else.
     }
 
-    GW::Item* scroll_to_use = GW::Items::GetItemByModelId(
+    const GW::Item* scroll_to_use = GW::Items::GetItemByModelId(
         scroll_model_id,
         static_cast<int>(GW::Constants::Bag::Backpack),
         static_cast<int>(GW::Constants::Bag::Storage_14));
@@ -810,7 +810,7 @@ bool TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _d
     if (!GW::Map::GetIsMapUnlocked(MapID)) {
         const GW::AreaInfo* map = GW::Map::GetMapInfo(MapID);
         wchar_t map_name_buf[8];
-        wchar_t err_message_buf[256] = L"[Error] Your character does not have that map unlocked";
+        const wchar_t err_message_buf[256] = L"[Error] Your character does not have that map unlocked";
         if (map && map->name_id && GW::UI::UInt32ToEncStr(map->name_id, map_name_buf, 8))
             Log::ErrorW(L"[Error] Your character does not have \x1\x2%s\x2\x108\x107 unlocked", map_name_buf);
         else
@@ -933,7 +933,7 @@ void TravelWindow::SaveSettings(ToolboxIni* ini)
     ToolboxWindow::SaveSettings(ini);
     ini->SetLongValue(Name(), VAR_NAME(fav_count), fav_count);
     for (int i = 0; i < fav_count; ++i) {
-        size_t ui = static_cast<size_t>(i);
+        const size_t ui = static_cast<size_t>(i);
         char key[32];
         snprintf(key, 32, "Fav%d", i);
         ini->SetLongValue(Name(), key, fav_index[ui]);
@@ -1143,7 +1143,7 @@ void TravelWindow::CmdTP(const wchar_t* message, int argc, LPWSTR* argv)
     uint32_t district_number = 0;
 
     std::wstring argOutpost = GuiUtils::ToLower(argv[1]);
-    std::wstring argDistrict = GuiUtils::ToLower(argv[argc - 1]);
+    const std::wstring argDistrict = GuiUtils::ToLower(argv[argc - 1]);
     // Guild hall
     if (argOutpost == L"gh") {
         if (IsInGH())
@@ -1154,7 +1154,7 @@ void TravelWindow::CmdTP(const wchar_t* message, int argc, LPWSTR* argv)
     }
     TravelWindow& instance = Instance();
     if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
-        std::wstring fav_s_num = argOutpost.substr(3, std::wstring::npos);
+        const std::wstring fav_s_num = argOutpost.substr(3, std::wstring::npos);
         if (fav_s_num.empty()) {
             instance.TravelFavorite(0);
             return;
@@ -1172,7 +1172,7 @@ void TravelWindow::CmdTP(const wchar_t* message, int argc, LPWSTR* argv)
         argOutpost.append(L" ");
         argOutpost.append(GuiUtils::ToLower(argv[i]));
     }
-    bool isValidDistrict = ParseDistrict(argDistrict, district, district_number);
+    const bool isValidDistrict = ParseDistrict(argDistrict, district, district_number);
     if (isValidDistrict && argc == 2) {
         // e.g. "/tp ae1"
         instance.Travel(outpost, district, district_number); // NOTE: ParseDistrict sets district and district_number vars by reference.
@@ -1184,7 +1184,7 @@ void TravelWindow::CmdTP(const wchar_t* message, int argc, LPWSTR* argv)
         argOutpost.append(argDistrict);
     }
     if (ParseOutpost(argOutpost, outpost, district, district_number)) {
-        wchar_t first_char_of_last_arg = *argv[argc - 1];
+        const wchar_t first_char_of_last_arg = *argv[argc - 1];
         switch (outpost) {
             case GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost:
             case GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost: if (first_char_of_last_arg == 'l') // - e.g. /tp viz local
@@ -1230,7 +1230,7 @@ bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& out
     std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
 
     // Shortcut words e.g "/tp doa" for domain of anguish
-    std::string first_word = compare.substr(0, compare.find(' '));
+    const std::string first_word = compare.substr(0, compare.find(' '));
     const auto& shorthand_outpost = instance.shorthand_outpost_names.find(first_word);
     if (shorthand_outpost != instance.shorthand_outpost_names.end()) {
         const OutpostAlias& outpost_info = shorthand_outpost->second;
@@ -1241,7 +1241,7 @@ bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& out
     }
 
     // Remove "the " from front of entered string
-    std::size_t found = compare.rfind("the ");
+    const std::size_t found = compare.rfind("the ");
     if (found == 0)
         compare.replace(found, 4, "");
 
@@ -1292,7 +1292,7 @@ bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& out
 bool TravelWindow::ParseDistrict(const std::wstring& s, GW::Constants::District& district, uint32_t& number)
 {
     std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
-    std::string first_word = compare.substr(0, compare.find(' '));
+    const std::string first_word = compare.substr(0, compare.find(' '));
 
     const std::regex district_regex("([a-z]{2,3})(\\d)?");
     std::smatch m;
@@ -1300,7 +1300,7 @@ bool TravelWindow::ParseDistrict(const std::wstring& s, GW::Constants::District&
         return false;
     }
     // Shortcut words e.g "/tp ae" for american english
-    TravelWindow& instance = Instance();
+    const TravelWindow& instance = Instance();
     const auto& shorthand_outpost = instance.shorthand_district_names.find(m[1].str());
     if (shorthand_outpost == instance.shorthand_district_names.end()) {
         return false;

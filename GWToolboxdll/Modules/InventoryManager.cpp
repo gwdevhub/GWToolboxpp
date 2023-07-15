@@ -56,8 +56,8 @@ namespace {
 
     bool GetIsProfessionUnlocked(GW::Constants::Profession prof)
     {
-        auto world = GW::GetWorldContext();
-        auto player = GW::PlayerMgr::GetPlayerByID();
+        const auto world = GW::GetWorldContext();
+        const auto player = GW::PlayerMgr::GetPlayerByID();
         if (!(world && player))
             return false;
         GW::Array<GW::ProfessionState>& profession_unlocks_array = world->party_profession_states;
@@ -1432,7 +1432,7 @@ std::pair<GW::Bag*, uint32_t> InventoryManager::GetAvailableInventorySlot(GW::It
     if (!bags)
         return {nullptr, 0};
     size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
-    auto im_item = static_cast<Item*>(like_item);
+    const auto im_item = static_cast<Item*>(like_item);
     if (im_item && (im_item->IsWeapon() || im_item->IsArmor()))
         end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
     for (size_t bag_idx = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_idx <= end_bag; bag_idx++) {
@@ -1617,7 +1617,7 @@ void InventoryManager::Update(float)
     }
 
     if (pending_item_move_for_trade) {
-        auto item = reinterpret_cast<Item*>(GW::Items::GetItemById(pending_item_move_for_trade));
+        const auto item = reinterpret_cast<Item*>(GW::Items::GetItemById(pending_item_move_for_trade));
         if (!item) {
             pending_item_move_for_trade = 0;
             return;
@@ -1887,7 +1887,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device)
 
 bool InventoryManager::DrawItemContextMenu(bool open)
 {
-    auto context_menu_id = "Item Context Menu";
+    const auto context_menu_id = "Item Context Menu";
     const auto has_context_menu = [&](Item* item) {
         if (!item)
             return false;
@@ -2293,7 +2293,7 @@ InventoryManager::Item* InventoryManager::PendingItem::item()
 {
     if (!item_id)
         return nullptr;
-    auto item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+    const auto item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
     return item && item->item_id == item_id ? item : nullptr;
 }
 

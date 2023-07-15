@@ -141,7 +141,7 @@ namespace {
     void OnAgentAdded(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet)
     {
         const auto agent_id = packet->agent_id;
-        auto marked_target = GetMarkedTarget(agent_id);
+        const auto marked_target = GetMarkedTarget(agent_id);
         if (!marked_target)
             return;
         const auto agent = GW::Agents::GetAgentByID(agent_id);
@@ -517,14 +517,14 @@ AgentRenderer::AgentRenderer()
     shapes[Quad].AddVertex(0.0f, 0.0f, Light);
 
     const size_t star_ntriangles = 16;
-    float star_size_small = 1.f;
-    float star_size_big = 1.5f;
+    const float star_size_small = 1.f;
+    const float star_size_big = 1.5f;
     for (unsigned int i = 0; i < star_ntriangles; ++i) {
-        float angle1 = 2 * (i + 0) * pi / star_ntriangles;
-        float angle2 = 2 * (i + 1) * pi / star_ntriangles;
+        const float angle1 = 2 * (i + 0) * pi / star_ntriangles;
+        const float angle2 = 2 * (i + 1) * pi / star_ntriangles;
 
-        float size1 = ((i + 0) % 2 == 0 ? star_size_small : star_size_big);
-        float size2 = ((i + 1) % 2 == 0 ? star_size_small : star_size_big);
+        const float size1 = ((i + 0) % 2 == 0 ? star_size_small : star_size_big);
+        const float size2 = ((i + 1) % 2 == 0 ? star_size_small : star_size_big);
         shapes[Star].AddVertex(std::cos(angle1) * size1, std::sin(angle1) * size1, None);
         shapes[Star].AddVertex(std::cos(angle2) * size2, std::sin(angle2) * size2, None);
         shapes[Star].AddVertex(0.0f, 0.0f, CircleCenter);
@@ -582,8 +582,8 @@ void AgentRenderer::Initialize(IDirect3DDevice9* device)
     type = D3DPT_TRIANGLELIST;
     vertices_max = max_shape_verts * 0x200; // support for up to 512 agents, should be enough
     vertices = nullptr;
-    HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
-                                            D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+    const HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
+                                                  D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     if (FAILED(hr))
         printf("AgentRenderer initialize error: HRESULT: 0x%lX\n", hr);
 
@@ -633,7 +633,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         initialized = true;
     }
 
-    HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
+    const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
     if (FAILED(res))
         printf("AgentRenderer Lock() HRESULT: 0x%lX\n", res);
 
@@ -665,7 +665,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
     for (GW::Agent* agent_ptr : *agents) {
         if (!agent_ptr)
             continue;
-        GW::AgentLiving* agent = agent_ptr->GetAsAgentLiving();
+        const GW::AgentLiving* agent = agent_ptr->GetAsAgentLiving();
         if (agent == nullptr)
             continue;
         if (agent->GetIsDead())
@@ -858,7 +858,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 
     // don't draw dead spirits
 
-    auto* npc = living->GetIsDead() && living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
+    const auto* npc = living->GetIsDead() && living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
     if (npc) {
         switch (npc->model_file_id) {
             case 0x22A34: // nature rituals
@@ -1081,7 +1081,7 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const Cus
         return ca->shape;
     }
 
-    auto* npc = living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
+    const auto* npc = living->IsNPC() ? GW::Agents::GetNPCByID(living->player_number) : nullptr;
     if (npc) {
         switch (npc->model_file_id) {
             case 0x22A34: // nature rituals
@@ -1100,14 +1100,14 @@ void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, C
     const auto alpha = color >> IM_COL32_A_SHIFT & 0xFFu;
     if (!alpha)
         return;
-    RenderPosition pos = {
+    const RenderPosition pos = {
         agent->rotation_cos,
         agent->rotation_sin,
         agent->pos
     };
     // NB: No border if BigCircle
     if (shape != BigCircle) {
-        bool is_target = (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id);
+        const bool is_target = (auto_target_id == agent->agent_id || GW::Agents::GetTargetId() == agent->agent_id);
         if (is_target && target_drawn)
             return; // Don't draw target twice
         // Add agent border if applicable
@@ -1126,7 +1126,7 @@ void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, C
 
 void AgentRenderer::Enqueue(Shape_e shape, const GW::MapProp* agent, float size, Color color)
 {
-    RenderPosition pos = {
+    const RenderPosition pos = {
         agent->rotation_cos,
         agent->rotation_sin,
         agent->position
@@ -1138,12 +1138,12 @@ void AgentRenderer::Enqueue(Shape_e shape, const RenderPosition& pos, float size
 {
     if ((color & IM_COL32_A_MASK) == 0)
         return;
-    size_t num_v = shapes[shape].vertices.size();
+    const size_t num_v = shapes[shape].vertices.size();
     ASSERT(vertices_count < vertices_max - num_v);
 
     for (size_t i = 0; i < num_v; ++i) {
         const Shape_Vertex& vert = shapes[shape].vertices[i];
-        GW::Vec2f calc_pos = (Rotate(vert, pos.rotation_cos, pos.rotation_sin) * size) + pos.position;
+        const GW::Vec2f calc_pos = (Rotate(vert, pos.rotation_cos, pos.rotation_sin) * size) + pos.position;
         switch (vert.modifier) {
             case Dark: vertices[i].color = Colors::Sub(color, modifier);
                 break;
@@ -1183,7 +1183,7 @@ AgentRenderer::CustomAgent::CustomAgent(ToolboxIni* ini, const char* section)
 
     color = Colors::Load(ini, section, VAR_NAME(color), color);
     color_text = Colors::Load(ini, section, VAR_NAME(color_text), color_text);
-    int s = ini->GetLongValue(section, VAR_NAME(shape), shape);
+    const int s = ini->GetLongValue(section, VAR_NAME(shape), shape);
     if (s >= 1 && s <= 4) {
         // this is a small hack because we used to have shape=0 -> default, now we just cast to Shape_e.
         // but shape=1 on file is still tear (which is Shape_e::Tear == 0).
@@ -1269,7 +1269,7 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("If this custom agent is active");
         ImGui::SameLine();
-        float x = ImGui::GetCursorPosX();
+        const float x = ImGui::GetCursorPosX();
         if (ImGui::InputText("Name", name, 128))
             changed = true;
         ImGui::ShowHelp("A name to help you remember what this is. Optional.");
@@ -1327,8 +1327,8 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         ImGui::Spacing();
 
         // === Move and delete buttons ===
-        float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-        float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
+        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+        const float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
         if (ImGui::Button("Move Up", ImVec2(width, 0))) {
             op = Operation::MoveUp;
         }

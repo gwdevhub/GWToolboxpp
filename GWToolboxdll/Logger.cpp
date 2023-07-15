@@ -168,7 +168,7 @@ static void _chatlog(LogType log_type, const wchar_t* message)
         default: color = GWTOOLBOX_INFO_COL;
             break;
     }
-    size_t len = 5 + wcslen(GWTOOLBOX_SENDER) + 4 + 13 + wcslen(message) + 4 + 1;
+    const size_t len = 5 + wcslen(GWTOOLBOX_SENDER) + 4 + 13 + wcslen(message) + 4 + 1;
     auto to_send = new wchar_t[len];
     swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", GWTOOLBOX_SENDER, color, message);
 
@@ -197,8 +197,8 @@ static void _vchatlogW(LogType log_type, const wchar_t* format, va_list argv)
 
 static void _vchatlog(LogType log_type, const char* format, va_list argv)
 {
-    size_t len = vsnprintf(nullptr, 0, format, argv);
-    auto buf = new char[len + 1];
+    const size_t len = vsnprintf(nullptr, 0, format, argv);
+    const auto buf = new char[len + 1];
     vsnprintf(buf, len + 1, format, argv);
     const std::wstring sbuf2 = GuiUtils::StringToWString(buf);
     delete[] buf;

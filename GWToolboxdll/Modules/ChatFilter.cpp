@@ -202,7 +202,7 @@ namespace {
     bool FullMatch(const wchar_t* s, const std::initializer_list<wchar_t>& msg)
     {
         int i = 0;
-        for (wchar_t b : msg) {
+        for (const wchar_t b : msg) {
             if (s[i++] != b)
                 return false;
         }
@@ -283,7 +283,7 @@ namespace {
                 // first segment describes the agent who dropped, second segment describes the item dropped
                 if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(message)))
                     return false;
-                bool rare = IsRare(Get2ndSegment(message));
+                const bool rare = IsRare(Get2ndSegment(message));
                 if (rare)
                     return self_drop_rare;
                 return self_drop_common;
@@ -293,9 +293,9 @@ namespace {
                 // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
                 // <monster> is wchar_t id of several wchars
                 // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-                GW::AgentLiving* me = GW::Agents::GetCharacter();
-                bool forplayer = (me && me->player_number == GetNumericSegment(message));
-                bool rare = IsRare(Get2ndSegment(message));
+                const GW::AgentLiving* me = GW::Agents::GetCharacter();
+                const bool forplayer = (me && me->player_number == GetNumericSegment(message));
+                const bool rare = IsRare(Get2ndSegment(message));
                 if (forplayer && rare)
                     return self_drop_rare;
                 if (forplayer && !rare)
@@ -537,19 +537,19 @@ namespace {
         const wchar_t* message = nullptr;
         switch (packet->header) {
             case GAME_SMSG_CHAT_MESSAGE_GLOBAL: {
-                auto p = static_cast<GW::Packet::StoC::MessageGlobal*>(packet);
+                const auto p = static_cast<GW::Packet::StoC::MessageGlobal*>(packet);
                 channel = p->channel;
                 message = ToolboxUtils::GetMessageCore();
             }
             break;
             case GAME_SMSG_CHAT_MESSAGE_SERVER: {
-                auto p = static_cast<GW::Packet::StoC::MessageServer*>(packet);
+                const auto p = static_cast<GW::Packet::StoC::MessageServer*>(packet);
                 channel = p->channel;
                 message = ToolboxUtils::GetMessageCore();
             }
             break;
             case GAME_SMSG_CHAT_MESSAGE_LOCAL: {
-                auto p = static_cast<GW::Packet::StoC::MessageLocal*>(packet);
+                const auto p = static_cast<GW::Packet::StoC::MessageLocal*>(packet);
                 channel = p->channel;
                 message = ToolboxUtils::GetMessageCore();
             }
@@ -924,7 +924,7 @@ void ChatFilter::DrawSettingInternal()
 void ChatFilter::Update(float delta)
 {
     UNREFERENCED_PARAMETER(delta);
-    uint32_t timestamp = GetTickCount();
+    const uint32_t timestamp = GetTickCount();
     if (timer_parse_filters && timer_parse_filters < timestamp) {
         timer_parse_filters = 0;
         ParseBuffer(bycontent_word_buf, bycontent_words);

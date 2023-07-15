@@ -44,12 +44,12 @@ namespace {
 
     int Base64ToBitString(const char* in, char* out, int out_len)
     {
-        int in_len = static_cast<int>(strlen(in));
+        const int in_len = static_cast<int>(strlen(in));
         ASSERT((in_len * 6) < out_len);
 
         int bitStrLen = 0;
         for (int i = 0; i < in_len; i++) {
-            int numeric_value = _Base64ToValue[in[i]];
+            const int numeric_value = _Base64ToValue[in[i]];
             if (numeric_value == -1) {
                 Log::Error("Unvalid base64 character '%c' in string '%s'\n", in[i], in);
                 return -1;
@@ -269,7 +269,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
                 callback(out);
             return;
         }
-        std::regex json_regex("legacy_bits\":\"([^\"]+)");
+        const std::regex json_regex("legacy_bits\":\"([^\"]+)");
         std::smatch m;
         if (!std::regex_search(response, m, json_regex)) {
             Log::Log("Failed to find regex code from %s", response.c_str());
@@ -278,7 +278,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
                 callback(out);
             return;
         }
-        std::string hom_code = m[1].str();
+        const std::string hom_code = m[1].str();
         if (!Instance().DecodeHomCode(hom_code.c_str(), out)) {
             Log::Log("Failed to DecodeHomCode from %s", m[1].str().c_str());
             out->state = HallOfMonumentsAchievements::State::Error;

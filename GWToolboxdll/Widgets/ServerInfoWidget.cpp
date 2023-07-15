@@ -27,15 +27,15 @@ static int
 sockaddr_sprint(char* s, size_t n, const sockaddr* host, bool inc_port = false)
 {
     if (host->sa_family == AF_INET) {
-        auto in = (const sockaddr_in*)host;
-        auto addr = (uint8_t*)&in->sin_addr.s_addr;
+        const auto in = (const sockaddr_in*)host;
+        const auto addr = (uint8_t*)&in->sin_addr.s_addr;
         if (inc_port)
             return snprintf(s, n, "%d.%d.%d.%d:%d", addr[0], addr[1], addr[2], addr[3], ntohs(in->sin_port));
         return snprintf(s, n, "%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3]);
     }
     if (host->sa_family == AF_INET6) {
-        auto in6 = (const sockaddr_in6*)host;
-        auto addr = (uint8_t*)&in6->sin6_addr;
+        const auto in6 = (const sockaddr_in6*)host;
+        const auto addr = (uint8_t*)&in6->sin6_addr;
         return snprintf(s, n, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
                         addr[0], addr[1], addr[2], addr[3],
                         addr[4], addr[5], addr[6], addr[7],
@@ -63,16 +63,16 @@ ServerInfoWidget::ServerInfo* ServerInfoWidget::GetServerInfo()
         return current_server_info;
     //if (!GW::Map::GetIsMapLoaded())
     //  return nullptr;
-    GW::GameContext* g = GW::GetGameContext();
+    const GW::GameContext* g = GW::GetGameContext();
     if (!g)
         return nullptr;
-    GW::CharContext* c = g->character;
+    const GW::CharContext* c = g->character;
     if (!c)
         return nullptr;
     char current_ip[32] = {0};
     sockaddr_sprint(current_ip, 32, (const sockaddr*)&c->host, false);
 
-    auto it = servers_by_ip.find(current_ip);
+    const auto it = servers_by_ip.find(current_ip);
     if (it != servers_by_ip.end()) {
         current_server_info = it->second;
         return current_server_info;

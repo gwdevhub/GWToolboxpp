@@ -29,8 +29,8 @@ void LatencyWidget::Update(float delta) { UNREFERENCED_PARAMETER(delta); }
 
 void LatencyWidget::OnServerPing(GW::HookStatus*, void* packet)
 {
-    auto packet_as_uint_array = static_cast<uint32_t*>(packet);
-    uint32_t ping = packet_as_uint_array[1];
+    const auto packet_as_uint_array = static_cast<uint32_t*>(packet);
+    const uint32_t ping = packet_as_uint_array[1];
     if (ping > 4999)
         return; // GW checks this too.
     if (ping_history[ping_index]) {
@@ -68,7 +68,7 @@ void LatencyWidget::Draw(IDirect3DDevice9* pDevice)
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_ModCtrl);
 
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
-        ImVec2 cur = ImGui::GetCursorPos();
+        const ImVec2 cur = ImGui::GetCursorPos();
         ImGui::PushFont(GetFont(static_cast<GuiUtils::FontSize>(font_size)));
         ImGui::SetCursorPos(cur);
         uint32_t ping = GetPing();
@@ -80,9 +80,9 @@ void LatencyWidget::Draw(IDirect3DDevice9* pDevice)
 
         ImGui::PopFont();
 
-        ImVec2 size = ImGui::GetWindowSize();
-        ImVec2 min = ImGui::GetWindowPos();
-        ImVec2 max(min.x + size.x, min.y + size.y);
+        const ImVec2 size = ImGui::GetWindowSize();
+        const ImVec2 min = ImGui::GetWindowPos();
+        const ImVec2 max(min.x + size.x, min.y + size.y);
         if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
             SendPing();
         }
@@ -136,9 +136,9 @@ void LatencyWidget::DrawSettingInternal()
 
 ImColor LatencyWidget::GetColorForPing(uint32_t ping)
 {
-    LatencyWidget& instance = Instance();
-    float x = ping / static_cast<float>(instance.red_threshold);
-    auto myColor = ImColor(2.0f * x, 2.0f * (1 - x), 0.0f);
+    const LatencyWidget& instance = Instance();
+    const float x = ping / static_cast<float>(instance.red_threshold);
+    const auto myColor = ImColor(2.0f * x, 2.0f * (1 - x), 0.0f);
     return myColor;
 }
 

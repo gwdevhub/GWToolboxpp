@@ -15,7 +15,7 @@ const unsigned char b64_decoding[128] =
 
 int b64_enc(void* in, unsigned size, char* out)
 {
-    auto it = static_cast<unsigned char*>(in);
+    const auto it = static_cast<unsigned char*>(in);
     unsigned i = 0;
     unsigned j = 0;
     unsigned k = 0;
@@ -47,11 +47,11 @@ int b64_enc(void* in, unsigned size, char* out)
 
 int b64_dec(const char* in, void* out)
 {
-    auto o = static_cast<unsigned char*>(out);
+    const auto o = static_cast<unsigned char*>(out);
     unsigned i = 0;
     unsigned j = 0;
     unsigned k = 0;
-    unsigned len = strlen(in);
+    const unsigned len = strlen(in);
 
     for (; i < len / 4; ++i) {
         o[k + 0] = (b64_decoding[in[j + 0]] << 2) | (((b64_decoding[in[j + 1]] & 0x30) >> 4));

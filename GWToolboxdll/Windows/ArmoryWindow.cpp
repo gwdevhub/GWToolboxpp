@@ -250,11 +250,11 @@ namespace GWArmory {
     {
         if (col1 == DyeColor::None && col2 == DyeColor::None && col3 == DyeColor::None && col4 == DyeColor::None)
             col1 = DyeColor::Gray;
-        uint32_t c1 = static_cast<uint32_t>(col1);
-        uint32_t c2 = static_cast<uint32_t>(col2);
-        uint32_t c3 = static_cast<uint32_t>(col3);
-        uint32_t c4 = static_cast<uint32_t>(col4);
-        uint32_t composite = c1 | (c2 << 4) | (c3 << 8) | (c4 << 12);
+        const uint32_t c1 = static_cast<uint32_t>(col1);
+        const uint32_t c2 = static_cast<uint32_t>(col2);
+        const uint32_t c3 = static_cast<uint32_t>(col3);
+        const uint32_t c4 = static_cast<uint32_t>(col4);
+        const uint32_t composite = c1 | (c2 << 4) | (c3 << 8) | (c4 << 12);
         return composite;
     }
 
@@ -301,7 +301,7 @@ namespace GWArmory {
         const auto equip = GetPlayerEquipment();
         const uint32_t color = CreateColor(piece->color1, piece->color2, piece->color3, piece->color4);
         // 0x60111109
-        uint32_t interaction = GetItemInteraction(piece->slot);
+        const uint32_t interaction = GetItemInteraction(piece->slot);
         if (GetItemModelInfo(piece->model_file_id) && interaction && SetItem_Func) {
             gwarmory_setitem = true;
             SetItem_Func(equip, nullptr, piece->model_file_id, color, interaction, piece->unknow1);
@@ -347,7 +347,7 @@ namespace GWArmory {
 
         for (size_t i = 0; i < count; i++) {
             ComboListState* state = nullptr;
-            PlayerArmorPiece* piece = nullptr;
+            const PlayerArmorPiece* piece = nullptr;
 
             switch (armors[i].item_slot) {
                 case ItemSlot_Head: state = &head;
@@ -521,8 +521,8 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
 
         if (ImGui::MyCombo("##filter", "All", (int*)&current_campaign, armor_filter_array_getter, nullptr, 5))
             UpdateArmorsFilter();
-        bool showing_helm = !equip->costume_head.model_file_id && IsEquipmentShowing(GW::EquipmentType::Helm);
-        bool showing_body = !equip->costume_body.model_file_id;
+        const bool showing_helm = !equip->costume_head.model_file_id && IsEquipmentShowing(GW::EquipmentType::Helm);
+        const bool showing_body = !equip->costume_body.model_file_id;
 
         if (showing_helm) {
             if (DrawArmorPiece("##head", &player_armor.head, &head))

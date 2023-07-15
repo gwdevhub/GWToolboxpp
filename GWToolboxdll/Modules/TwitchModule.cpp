@@ -12,7 +12,7 @@
 namespace {
     void WriteChat(const wchar_t* message, const char* nick = nullptr)
     {
-        TwitchModule& module = TwitchModule::Instance();
+        const TwitchModule& module = TwitchModule::Instance();
         char sender[128];
         if (nick) {
             snprintf(sender, sizeof(sender) / sizeof(*sender), "%s @ %s", nick, module.irc_alias.c_str());
@@ -23,8 +23,8 @@ namespace {
         std::wstring sender_ws = GuiUtils::StringToWString(sender);
         auto message_ws = new wchar_t[255];
         size_t message_len = 0;
-        size_t original_len = wcslen(message);
-        bool is_emote = wmemcmp(message, L"\x1" L"ACTION ", 7) == 0;
+        const size_t original_len = wcslen(message);
+        const bool is_emote = wmemcmp(message, L"\x1" L"ACTION ", 7) == 0;
         if (is_emote)
             message_ws[message_len++] = '*';
         for (size_t i = (is_emote ? 8 : 0); i < original_len; i++) {
@@ -55,7 +55,7 @@ namespace {
     int OnJoin(const char* params, irc_reply_data* hostd, void* conn)
     {
         UNREFERENCED_PARAMETER(conn);
-        TwitchModule* module = &TwitchModule::Instance();
+        const TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages)
             return 0; // Empty msg
         wchar_t buf[600];
@@ -78,7 +78,7 @@ namespace {
     int OnLeave(const char* params, irc_reply_data* hostd, void* conn)
     {
         UNREFERENCED_PARAMETER(conn);
-        TwitchModule* module = &TwitchModule::Instance();
+        const TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages || !module->notify_on_user_leave)
             return 0; // Empty msg
 
@@ -92,7 +92,7 @@ namespace {
     {
         UNREFERENCED_PARAMETER(hostd);
         TwitchModule* module = &TwitchModule::Instance();
-        auto irc_conn = static_cast<IRC*>(conn);
+        const auto irc_conn = static_cast<IRC*>(conn);
         // Set the username to be the connected name.
         module->irc_username = params;
         module->irc_username.erase(module->irc_username.find_first_of(' '));
@@ -109,10 +109,10 @@ namespace {
     int OnMessage(const char* params, irc_reply_data* hostd, void* conn)
     {
         UNREFERENCED_PARAMETER(conn);
-        TwitchModule* module = &TwitchModule::Instance();
+        const TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages)
             return 0; // Empty msg
-        std::wstring message_ws = GuiUtils::StringToWString(&params[1]);
+        const std::wstring message_ws = GuiUtils::StringToWString(&params[1]);
         WriteChat(message_ws.c_str(), hostd->nick);
         Log::Log("Message from %s: %s", hostd->nick, &params[1]);
         return 0;
@@ -170,7 +170,7 @@ void TwitchModule::AddHooks()
         wchar_t buf[128];
         if (!name)
             return false;
-        std::wstring walias = GuiUtils::StringToWString(Instance().irc_alias);
+        const std::wstring walias = GuiUtils::StringToWString(Instance().irc_alias);
         swprintf(buf, 128, L" @ %s", walias.c_str());
         if ((std::wstring(name)).find(buf) != std::wstring::npos) {
             wcscpy(name, walias.c_str());
@@ -184,10 +184,10 @@ void TwitchModule::AddHooks()
         wchar_t msgcpy[255];
         wcscpy(msgcpy, msg);
         std::string message = GuiUtils::WStringToString(msgcpy);
-        size_t sender_idx = message.find(',');
+        const size_t sender_idx = message.find(',');
         if (sender_idx == std::string::npos)
             return false; // Invalid sender
-        std::string to = message.substr(0, sender_idx);
+        const std::string to = message.substr(0, sender_idx);
         if (to.compare(irc_alias) != 0)
             return false;
         std::string content = message.substr(sender_idx + 1);
@@ -316,7 +316,7 @@ void TwitchModule::DrawSettingInternal()
         ImGui::Checkbox("Notify on user join", &notify_on_user_join);
         ImGui::ShowHelp("Receive a message in the chat window when a viewer joins the Twitch Channel");
 
-        float width = ImGui::GetContentRegionAvail().x / 2;
+        const float width = ImGui::GetContentRegionAvail().x / 2;
         ImGui::PushItemWidth(width);
         /*ImGui::InputText("Twitch Alias", const_cast<char*>(irc_alias.c_str()), 32);
         ImGui::ShowHelp("Sending a whisper to this name will send the message to Twitch.\nCannot contain spaces.");

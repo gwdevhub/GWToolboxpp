@@ -142,7 +142,7 @@ namespace {
             GuiUtils::StrCopy(buf, "--:--", size);
         }
         else {
-            DWORD sec = time / 1000;
+            const DWORD sec = time / 1000;
             if (show_ms && show_decimal) {
                 snprintf(buf, size, "%02lu:%02lu.%1lu", (sec / 60), sec % 60, (time / 100) % 10);
             }
@@ -155,7 +155,7 @@ namespace {
     void AsyncGetMapName(char* buffer, size_t n, GW::Constants::MapID mapID = GW::Map::GetMapID())
     {
         static wchar_t enc_str[16];
-        GW::AreaInfo* info = GW::Map::GetMapInfo(mapID);
+        const GW::AreaInfo* info = GW::Map::GetMapInfo(mapID);
         if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, n)) {
             buffer[0] = 0;
             return;
@@ -249,7 +249,7 @@ void ObjectiveTimerWindow::Initialize()
                 return; // we should always have this
 
             static bool in_dungeon = false;
-            bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
+            const bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
             if (in_dungeon && !new_in_dungeon) {
                 // moved from dungeon to outside
                 StopObjectives();
@@ -494,7 +494,7 @@ void ObjectiveTimerWindow::ObjectiveSet::StopObjectives()
 
 void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
 {
-    for (auto& cos : objective_sets) {
+    for (const auto& cos : objective_sets) {
         cos.second->StopObjectives();
         cos.second->need_to_collapse = true;
     }
@@ -506,7 +506,7 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
 
 void ObjectiveTimerWindow::AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels)
 {
-    auto os = new ObjectiveSet;
+    const auto os = new ObjectiveSet;
     AsyncGetMapName(os->name, sizeof(os->name));
     for (size_t i = 0; i < levels.size(); ++i) {
         char name[256];
@@ -533,7 +533,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
         double best_dist = GetDistance(spawn, mallyx_spawn);
         int starting_area = -1;
         for (int i = 0; i < n_areas; ++i) {
-            float dist = GetDistance(spawn, area_spawns[i]);
+            const float dist = GetDistance(spawn, area_spawns[i]);
             if (best_dist > dist) {
                 best_dist = dist;
                 starting_area = i;
@@ -545,10 +545,10 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
     if (starting_area == -1)
         return; // we're doing mallyx, not doa!
 
-    auto os = new ObjectiveSet;
+    const auto os = new ObjectiveSet;
     AsyncGetMapName(os->name, sizeof(os->name));
 
-    std::vector<std::function<void()>> add_doa_obj = {
+    const std::vector<std::function<void()>> add_doa_obj = {
         [&]() {
             Objective* parent = os->AddObjectiveAfterAll(new Objective("Foundry"))
                                   ->AddStartEvent(EventType::DoACompleteZone, Gloom)
@@ -642,7 +642,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn)
     };
 
     for (int i = 0; i < n_areas; ++i) {
-        int idx = (starting_area + i) % n_areas;
+        const int idx = (starting_area + i) % n_areas;
         add_doa_obj[idx]();
     }
 
@@ -666,7 +666,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet()
     // Urgoz = 3750
     // Objective for Urgoz = 357
 
-    auto os = new ObjectiveSet;
+    const auto os = new ObjectiveSet;
     AsyncGetMapName(os->name, sizeof(os->name));
     os->AddObjective(new Objective("Zone 1 | Weakness"))->SetStarted();
     os->AddObjectiveAfterAll(new Objective("Zone 2 | Life Drain"))->AddStartEvent(EventType::DoorOpen, 45420);
@@ -690,7 +690,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet()
 
 void ObjectiveTimerWindow::AddDeepObjectiveSet()
 {
-    auto os = new ObjectiveSet;
+    const auto os = new ObjectiveSet;
     AsyncGetMapName(os->name, sizeof(os->name));
     os->AddObjective(new Objective("Room 1 | Soothing"))
       ->SetStarted()
@@ -742,7 +742,7 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet()
 
 void ObjectiveTimerWindow::AddFoWObjectiveSet()
 {
-    auto os = new ObjectiveSet;
+    const auto os = new ObjectiveSet;
     AsyncGetMapName(os->name, sizeof(os->name));
 
     os->AddQuestObjective("ToC", 309);
@@ -761,7 +761,7 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet()
 
 void ObjectiveTimerWindow::AddUWObjectiveSet()
 {
-    auto os = new ObjectiveSet;
+    const auto os = new ObjectiveSet;
     AsyncGetMapName(os->name, sizeof(os->name));
     os->AddQuestObjective("Chamber", 146);
     os->AddQuestObjective("Restore", 147);
@@ -781,7 +781,7 @@ void ObjectiveTimerWindow::AddUWObjectiveSet()
 
 void ObjectiveTimerWindow::AddToPKObjectiveSet()
 {
-    auto os = new ObjectiveSet;
+    const auto os = new ObjectiveSet;
 
     // we could read out the name of the maps...
     os->AddObjective(new Objective("The Underworld"))
@@ -827,7 +827,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
             else {
                 for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); ++it) {
                     auto* os = (*it).second;
-                    bool show = os->Draw();
+                    const bool show = os->Draw();
                     if (!show) {
                         delete os;
                         objective_sets.erase(--(it.base()));
@@ -1216,7 +1216,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     }
     auto& style = ImGui::GetStyle();
     style.ButtonTextAlign.x = 0.0f;
-    float label_width = GetLabelWidth();
+    const float label_width = GetLabelWidth();
     for (int i = 0; i < indent; ++i) {
         ImGui::Indent();
     }
@@ -1228,7 +1228,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     style.ButtonTextAlign.x = 0.5f;
     ImGui::PopStyleColor();
 
-    float ts_width = GetTimestampWidth();
+    const float ts_width = GetTimestampWidth();
     float offset = style.ItemSpacing.x + label_width + style.ItemSpacing.x;
 
     ImGui::PushItemWidth(ts_width);
@@ -1371,7 +1371,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
 
 ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet()
 {
-    for (auto* obj : objectives) {
+    for (const auto* obj : objectives) {
         if (obj)
             delete obj;
     }
@@ -1380,10 +1380,10 @@ ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet()
 
 ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(const nlohmann::json& json)
 {
-    auto os = new ObjectiveSet;
+    const auto os = new ObjectiveSet;
     os->active = false;
     os->system_time = json.at("utc_start").get<DWORD>();
-    auto name = json.at("name").get<std::string>();
+    const auto name = json.at("name").get<std::string>();
     snprintf(os->name, sizeof(os->name), "%s", name.c_str());
     os->run_start_time_point = json.at("instance_start").get<DWORD>();
     if (json.contains("duration"))
@@ -1426,8 +1426,8 @@ nlohmann::json ObjectiveTimerWindow::Objective::ToJson()
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const nlohmann::json& json)
 {
-    auto name = json.at("name").get<std::string>();
-    auto obj = new Objective(name.c_str());
+    const auto name = json.at("name").get<std::string>();
+    const auto obj = new Objective(name.c_str());
     obj->status = json.at("status").get<Status>();
     obj->start = json.at("start").get<DWORD>();
     obj->done = json.at("done").get<DWORD>();
@@ -1443,8 +1443,8 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetStartTimeStr()
     if (!cached_start[0]) {
         struct tm timeinfo;
         GetStartTime(&timeinfo);
-        time_t now = time(nullptr);
-        struct tm* nowinfo = localtime(&now);
+        const time_t now = time(nullptr);
+        const struct tm* nowinfo = localtime(&now);
         int cached_str_offset = 0;
         if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year) {
             const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -1487,8 +1487,8 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
     if (!show_past_runs && from_disk) {
         struct tm timeinfo;
         GetStartTime(&timeinfo);
-        time_t now = time(nullptr);
-        struct tm* nowinfo = localtime(&now);
+        const time_t now = time(nullptr);
+        const struct tm* nowinfo = localtime(&now);
         if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year) {
             return true; // Hide this objective set; its from a previous day
         }
@@ -1501,7 +1501,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
     }
 
     bool is_open = true;
-    bool is_collapsed = !ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen);
+    const bool is_collapsed = !ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen);
     if (!is_open)
         return false;
     if (!is_collapsed) {
@@ -1520,6 +1520,6 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
 
 void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(struct tm* timeinfo)
 {
-    time_t ts = system_time;
+    const time_t ts = system_time;
     memcpy(timeinfo, localtime(&ts), sizeof(timeinfo[0]));
 }

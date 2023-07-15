@@ -85,7 +85,7 @@ void SkillListingWindow::ExportToJSON()
             continue;
         json[static_cast<uint32_t>(skills[i]->skill->skill_id)] = skills[i]->ToJson();
     }
-    auto file_location = Resources::GetPath(L"skills.json");
+    const auto file_location = Resources::GetPath(L"skills.json");
     if (exists(file_location)) {
         std::filesystem::remove(file_location);
     }
@@ -95,9 +95,9 @@ void SkillListingWindow::ExportToJSON()
     out.close();
     wchar_t file_location_wc[512];
     size_t msg_len = 0;
-    auto message = file_location.wstring();
+    const auto message = file_location.wstring();
 
-    size_t max_len = _countof(file_location_wc) - 1;
+    const size_t max_len = _countof(file_location_wc) - 1;
 
     for (size_t i = 0; i < message.length(); i++) {
         // Break on the end of the message

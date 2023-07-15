@@ -96,7 +96,7 @@ void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged* pak)
         for (Ping* ping : pings) {
             if (ping->GetAgentID() == pak->agent_id) {
                 // extend the duration to count for the current ping.
-                clock_t diff = TIMER_DIFF(ping->start);
+                const clock_t diff = TIMER_DIFF(ping->start);
                 ping->duration = 3000 + diff;
                 found = true;
                 break;
@@ -178,8 +178,8 @@ void PingsLinesRenderer::Initialize(IDirect3DDevice9* device)
 
     vertices = nullptr;
 
-    HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
-                                            D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+    const HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
+                                                  D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     if (FAILED(hr)) {
         printf("Error setting up PingsLinesRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
     }
@@ -194,7 +194,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device)
     DrawShadowstepMarker(device);
 
     vertices_count = 0;
-    HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
+    const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
     if (FAILED(res))
         printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
 
@@ -217,7 +217,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device)
 
 void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
 {
-    for (Ping* ping : pings) {
+    for (const Ping* ping : pings) {
         if (ping->GetScale() == 0)
             continue;
         if (TIMER_DIFF(ping->start) > ping->duration)
@@ -234,7 +234,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
         }
 
         int diff = TIMER_DIFF(ping->start);
-        bool first_loop = diff < 1000;
+        const bool first_loop = diff < 1000;
         diff = diff % 1000;
         diff *= first_loop ? 2 : 1;
 
@@ -274,8 +274,8 @@ void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device)
 
         if (vertices_count < vertices_max - 2) {
             for (const DrawingLine& line : lines) {
-                uint32_t max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-                uint32_t left = static_cast<uint32_t>(drawing_timeout - TIMER_DIFF(line.start));
+                const uint32_t max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
+                const uint32_t left = static_cast<uint32_t>(drawing_timeout - TIMER_DIFF(line.start));
                 // @Robustness:
                 // This is not safe, casting time to uint32_t is unsafe.
                 if (left > static_cast<uint32_t>(drawing_timeout))
@@ -283,7 +283,7 @@ void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device)
                 uint32_t alpha = left * max_alpha / 2000;
                 if (alpha > max_alpha)
                     alpha = max_alpha;
-                Color color = (color_drawings & 0x00FFFFFF) | (alpha << IM_COL32_A_SHIFT);
+                const Color color = (color_drawings & 0x00FFFFFF) | (alpha << IM_COL32_A_SHIFT);
                 EnqueueVertex(line.x1, line.y1, color);
                 EnqueueVertex(line.x2, line.y2, color);
 
@@ -321,7 +321,7 @@ void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9* device)
     if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f)
         return;
 
-    GW::Agent* player = GW::Agents::GetPlayer();
+    const GW::Agent* player = GW::Agents::GetPlayer();
     if (player == nullptr)
         return;
 
@@ -337,22 +337,22 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device)
     if ((color_shadowstep_line & IM_COL32_A_MASK) == 0)
         return;
 
-    GW::Buff* recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
-    GW::Agent* player = recall && recall->skill_id != GW::Constants::SkillID::No_Skill ? GW::Agents::GetPlayer() : nullptr;
-    GW::Agent* target = player ? GW::Agents::GetAgentByID(recall_target) : nullptr;
+    const GW::Buff* recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
+    const GW::Agent* player = recall && recall->skill_id != GW::Constants::SkillID::No_Skill ? GW::Agents::GetPlayer() : nullptr;
+    const GW::Agent* target = player ? GW::Agents::GetAgentByID(recall_target) : nullptr;
     if (target == nullptr) {
         // This can happen if you recall something that then despawns before you drop recall.
         recall_target = 0;
         return;
     }
-    float distance = GetDistance(target->pos, player->pos);
-    float distance_perc = distance / GW::Constants::Range::Compass;
+    const float distance = GetDistance(target->pos, player->pos);
+    const float distance_perc = distance / GW::Constants::Range::Compass;
     Color c;
     if (distance_perc < maxrange_interp_begin) {
         c = color_shadowstep_line;
     }
     else if (distance_perc < maxrange_interp_end && (maxrange_interp_end - maxrange_interp_begin > 0)) {
-        float t = (distance_perc - maxrange_interp_begin) / (maxrange_interp_end - maxrange_interp_begin);
+        const float t = (distance_perc - maxrange_interp_begin) / (maxrange_interp_end - maxrange_interp_begin);
         c = Colors::Slerp(color_shadowstep_line, color_shadowstep_line_maxrange, t);
     }
     else {
@@ -380,9 +380,9 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device)
 
     const float PI = 3.1415927f;
     for (size_t i = 0; i < count; ++i) {
-        float angle = i * (2 * PI / count);
-        bool outer = (i % 2 == 0);
-        float radius = outer ? 1.0f : 0.8f;
+        const float angle = i * (2 * PI / count);
+        const bool outer = (i % 2 == 0);
+        const float radius = outer ? 1.0f : 0.8f;
         _vertices[i].x = radius * std::cos(angle);
         _vertices[i].y = radius * std::sin(angle);
         _vertices[i].z = 0.0f;
@@ -398,7 +398,7 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device)
 {
     type = D3DPT_TRIANGLEFAN;
     count = 16; // polycount
-    unsigned int vertex_count = count + 2;
+    const unsigned int vertex_count = count + 2;
     D3DVertex* _vertices = nullptr;
 
     if (buffer)
@@ -414,7 +414,7 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device)
     _vertices[0].z = 0.0f;
     _vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
     for (size_t i = 1; i < vertex_count; ++i) {
-        float angle = (i - 1) * (2 * PI / count);
+        const float angle = (i - 1) * (2 * PI / count);
         _vertices[i].x = std::cos(angle);
         _vertices[i].y = std::sin(angle);
         _vertices[i].z = 0.0f;
@@ -426,7 +426,7 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device)
 
 float PingsLinesRenderer::AgentPing::GetX() const
 {
-    GW::Agent* agent = GW::Agents::GetAgentByID(id);
+    const GW::Agent* agent = GW::Agents::GetAgentByID(id);
     if (agent == nullptr)
         return 0.0f;
     return agent->pos.x;
@@ -434,7 +434,7 @@ float PingsLinesRenderer::AgentPing::GetX() const
 
 float PingsLinesRenderer::AgentPing::GetY() const
 {
-    GW::Agent* agent = GW::Agents::GetAgentByID(id);
+    const GW::Agent* agent = GW::Agents::GetAgentByID(id);
     if (agent == nullptr)
         return 0.0f;
     return agent->pos.y;
@@ -442,7 +442,7 @@ float PingsLinesRenderer::AgentPing::GetY() const
 
 float PingsLinesRenderer::AgentPing::GetScale() const
 {
-    GW::Agent* agent = GW::Agents::GetAgentByID(id);
+    const GW::Agent* agent = GW::Agents::GetAgentByID(id);
     if (agent == nullptr)
         return 0.0f;
     return 1.0f;
@@ -469,7 +469,7 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y)
     if (!mouse_down)
         return false;
 
-    GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     if (me == nullptr)
         return false;
 

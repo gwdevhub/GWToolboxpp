@@ -39,7 +39,7 @@
 
 static int KeyName(long vkey, char* buf, int len)
 {
-    UINT scan_code = MapVirtualKey(vkey, MAPVK_VK_TO_VSC);
+    const UINT scan_code = MapVirtualKey(vkey, MAPVK_VK_TO_VSC);
     return GetKeyNameTextA(MAKELPARAM(0x0001, scan_code), buf, len);
 }
 

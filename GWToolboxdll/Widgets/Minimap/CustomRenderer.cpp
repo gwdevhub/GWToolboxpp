@@ -80,7 +80,7 @@ void CustomRenderer::LoadMarkers()
     // then load new
     ToolboxIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
-    for (ToolboxIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         const char* section = entry.pItem;
         if (!section)
             continue;
@@ -147,7 +147,7 @@ void CustomRenderer::SaveMarkers() const
     if (markers_changed) {
         ToolboxIni::TNamesDepend entries;
         inifile->GetAllSections(entries);
-        for (ToolboxIni::Entry& entry : entries) {
+        for (const ToolboxIni::Entry& entry : entries) {
             const char* section = entry.pItem;
             if (strncmp(section, "customline", 10) == 0) {
                 inifile->Delete(section, nullptr);
@@ -410,11 +410,11 @@ void CustomRenderer::DrawPolygonSettings()
 {
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
     ImGui::PushID("polygons");
-    float input_item_width = (ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 8) / 8;
+    const float input_item_width = (ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 8) / 8;
     for (size_t i = 0; i < polygons.size(); ++i) {
         bool polygon_changed = false;
-        int signed_idx = static_cast<int>(i);
-        bool show_details = signed_idx == show_polygon_details;
+        const int signed_idx = static_cast<int>(i);
+        const bool show_details = signed_idx == show_polygon_details;
         CustomPolygon& polygon = polygons.at(i);
         ImGui::PushID(signed_idx);
         polygon_changed |= ImGui::Checkbox("##visible", &polygon.visible);

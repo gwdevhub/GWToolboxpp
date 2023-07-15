@@ -332,7 +332,7 @@ namespace {
         }
 
         for (size_t window_id = 0; window_id < prefs.window_positions.size(); window_id++) {
-            auto& window_pos = prefs.window_positions[window_id];
+            const auto& window_pos = prefs.window_positions[window_id];
             snprintf(key_buf, _countof(key_buf), "0x%02x_state", window_id);
             ini.SetLongValue(ini_label_windows, key_buf, window_pos.state);
             snprintf(key_buf, _countof(key_buf), "0x%02x_p1_x", window_id);
@@ -391,7 +391,7 @@ namespace {
             GetPreferences(current_prefs);
             ToolboxIni ini;
             SavePreferences(current_prefs, ini);
-            auto err = ini.SaveFile(filename_cpy->string().c_str());
+            const auto err = ini.SaveFile(filename_cpy->string().c_str());
             if (err == SI_OK) {
                 Log::Info("Preferences saved to %s", filename_cpy->filename().string().c_str());
             }
@@ -454,9 +454,9 @@ namespace {
     QuestEntryGroup* __fastcall OnGetOrCreateQuestEntryGroup(QuestEntryGroupContext* context, void* edx, wchar_t* quest_entry_group_name)
     {
         GW::Hook::EnterHook();
-        bool is_creating = GetQuestEntryGroup(quest_entry_group_name) == nullptr;
+        const bool is_creating = GetQuestEntryGroup(quest_entry_group_name) == nullptr;
         QuestEntryGroup* group = GetOrCreateQuestEntryGroup_Ret(context, edx, quest_entry_group_name);
-        auto current_quest_group = GetQuestEntryGroup(GW::QuestMgr::GetActiveQuestId());
+        const auto current_quest_group = GetQuestEntryGroup(GW::QuestMgr::GetActiveQuestId());
         if (!is_creating)
             goto ret;
 
@@ -482,8 +482,8 @@ namespace {
         GW::HookBase::EnterHook();
         if (wparam[1] == 0 && wparam[2] == 6) {
             // Player manually toggled visibility
-            bool is_visible = static_cast<bool>(wparam[3]);
-            auto quest_entry_group_name = (wchar_t*)(context[2]);
+            const bool is_visible = static_cast<bool>(wparam[3]);
+            const auto quest_entry_group_name = (wchar_t*)(context[2]);
             quest_entry_group_visibility[quest_entry_group_name] = is_visible;
             if (ImGui::IsKeyDown(ImGuiKey_LeftShift)) {
                 // Collapse or expand all
@@ -538,7 +538,7 @@ void GuildWarsSettingsModule::Update(float)
             pending_action = PendingAction::REFRESH_LOG;
             break;
         case PendingAction::REFRESH_LOG: {
-            auto window_pos = GetWindowPosition(GW::UI::WindowID_QuestLog);
+            const auto window_pos = GetWindowPosition(GW::UI::WindowID_QuestLog);
             if (window_pos && window_pos->visible()) {
                 Keypress(GW::UI::ControlAction_OpenQuestLog);
                 pending_action = PendingAction::OPEN_LOG;

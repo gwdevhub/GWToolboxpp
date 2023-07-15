@@ -56,7 +56,7 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
     type = D3DPT_TRIANGLELIST;
 
     D3DVertex* vertices = nullptr;
-    DWORD vertex_count = (star_ntriangles + arrow_ntriangles + north_ntriangles) * 3;
+    const DWORD vertex_count = (star_ntriangles + arrow_ntriangles + north_ntriangles) * 3;
     DWORD offset = 0;
 
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY,
@@ -76,15 +76,15 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
     // === Star ===
     star_offset = offset;
     const float PI = 3.1415927f;
-    float star_size_big = 300.0f;
-    float star_size_small = 150.0f;
+    const float star_size_big = 300.0f;
+    const float star_size_small = 150.0f;
     for (unsigned int i = 0; i < star_ntriangles; ++i) {
-        float angle1 = 2 * (i + 0) * PI / star_ntriangles;
-        float angle2 = 2 * (i + 1) * PI / star_ntriangles;
-        float size1 = ((i + 0) % 2 == 0 ? star_size_small : star_size_big);
-        float size2 = ((i + 1) % 2 == 0 ? star_size_small : star_size_big);
-        Color c1 = ((i + 0) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
-        Color c2 = ((i + 1) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
+        const float angle1 = 2 * (i + 0) * PI / star_ntriangles;
+        const float angle2 = 2 * (i + 1) * PI / star_ntriangles;
+        const float size1 = ((i + 0) % 2 == 0 ? star_size_small : star_size_big);
+        const float size2 = ((i + 1) % 2 == 0 ? star_size_small : star_size_big);
+        const Color c1 = ((i + 0) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
+        const Color c2 = ((i + 1) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
         AddVertex(std::cos(angle1) * size1, std::sin(angle1) * size1, c1);
         AddVertex(std::cos(angle2) * size2, std::sin(angle2) * size2, c2);
         AddVertex(0.0f, 0.0f, Colors::Add(color_quest, color_modifier));
@@ -115,7 +115,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 {
     Initialize(device);
 
-    GW::Agent* me = GW::Agents::GetPlayer();
+    const GW::Agent* me = GW::Agents::GetPlayer();
     if (me == nullptr)
         return;
 
@@ -124,7 +124,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 
     const float PI = 3.1415927f;
     static float tau = 0.0f;
-    float fps = ImGui::GetIO().Framerate;
+    const float fps = ImGui::GetIO().Framerate;
     // tau of += 0.05f is good for 60 fps, adapt that for any
     // note: framerate is a moving average of the last 120 frames, so it won't adapt quickly.
     // when the framerate changes a lot, the quest marker may speed up or down for a bit.
@@ -145,14 +145,14 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
         device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
         device->DrawPrimitive(type, star_offset, star_ntriangles);
 
-        GW::Vec2f mypos = me->pos;
+        const GW::Vec2f mypos = me->pos;
         GW::Vec2f v = qpos - mypos;
         const float max_quest_range = (GW::Constants::Range::Compass - 250.0f) / compass_scale;
         const float max_quest_range_sqr = max_quest_range * max_quest_range;
         if (GetSquaredNorm(v) > max_quest_range_sqr) {
             v = Normalize(v) * max_quest_range;
 
-            float angle = std::atan2(v.y, v.x);
+            const float angle = std::atan2(v.y, v.x);
             rotate = DirectX::XMMatrixRotationZ(angle - DirectX::XM_PIDIV2);
             scale = DirectX::XMMatrixScaling(marker_scale + std::sin(tau) * 0.3f * marker_scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, 1.0f);
             translate = DirectX::XMMatrixTranslation(me->pos.x + v.x, me->pos.y + v.y, 0);

@@ -33,7 +33,7 @@ public:
             DoorObject* d = GetDoor(object_id);
             d->animation_type = animation_type;
             d->is_open = animation_type == 16;
-            time_t now = time(nullptr);
+            const time_t now = time(nullptr);
             if (!d->initial_state) {
                 // First load of this door.
                 d->initial_state = animation_stage;
@@ -65,7 +65,7 @@ public:
 
     static DoorObject* GetDoor(uint32_t object_id)
     {
-        auto it = Instance().doors.find(object_id);
+        const auto it = Instance().doors.find(object_id);
         if (it != Instance().doors.end())
             return it->second;
         auto d = new DoorObject(object_id);

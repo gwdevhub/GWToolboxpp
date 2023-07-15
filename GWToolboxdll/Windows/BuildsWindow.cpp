@@ -65,7 +65,7 @@ const GW::Constants::SkillID* BuildsWindow::GetPreferredSkillOrder(const GW::Con
         for (size_t i = 0; skills && i < 8; i++) {
             found = false;
             for (size_t j = 0; !found && j < 8; j++) {
-                auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_ids[j]);
+                const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_ids[j]);
                 found = skill && (skill->skill_id == skills[i] || skill->skill_id_pvp == skills[i]);
             }
             if (!found) {
@@ -124,13 +124,13 @@ void BuildsWindow::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv)
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
         return;
     if (argc > 2) {
-        std::string build_name = GuiUtils::WStringToString(argv[2]);
-        std::string team_build_name = GuiUtils::WStringToString(argv[1]);
+        const std::string build_name = GuiUtils::WStringToString(argv[2]);
+        const std::string team_build_name = GuiUtils::WStringToString(argv[1]);
         Instance().Load(team_build_name.c_str(), build_name.c_str());
         return;
     }
     if (argc > 1) {
-        std::string build_name = GuiUtils::WStringToString(argv[1]);
+        const std::string build_name = GuiUtils::WStringToString(argv[1]);
         Instance().Load(build_name.c_str());
         return;
     }
@@ -231,7 +231,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j)
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip(!build.pcons.empty() ? "Click to load build template and pcons" : "Click to load build template");
     ImGui::SameLine(0, spacing);
-    bool pcons_editing = tbuild.edit_pcons == static_cast<int>(j);
+    const bool pcons_editing = tbuild.edit_pcons == static_cast<int>(j);
     if (pcons_editing)
         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
     if (build.pcons.empty())
@@ -283,7 +283,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j)
     const auto& pcons = PconsWindow::Instance().pcons;
 
     float pos_x = 0;
-    float third_w = ImGui::GetContentRegionAvail().x / 3;
+    const float third_w = ImGui::GetContentRegionAvail().x / 3;
     unsigned int offset = 0;
     for (size_t i = 0; i < pcons.size(); i++) {
         const auto pcon = pcons[i];
@@ -315,7 +315,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
     DrawPreferredSkillOrders(pDevice);
     // @Cleanup: Use the BuildsWindow instance, not a static variable
     static auto last_instance_type = GW::Constants::InstanceType::Loading;
-    GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+    const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 
     if (instance_type != last_instance_type) {
         // Run tasks on map change without an StoC hook
@@ -476,7 +476,7 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*)
     ImGui::Separator();
     ImGui::InputText("Build code###preferred_skill_order_code", preferred_skill_order_code, sizeof(preferred_skill_order_code));
     ImGui::SameLine();
-    bool add_current = ImGui::Button(ICON_FA_COPY "###use_current_build_code");
+    const bool add_current = ImGui::Button(ICON_FA_COPY "###use_current_build_code");
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Copy current build");
     }
@@ -517,9 +517,9 @@ bool BuildsWindow::GetCurrentSkillBar(char* out, size_t out_len)
     if (!(out && out_len))
         return false;
     GW::SkillbarMgr::SkillTemplate templ;
-    GW::AgentLiving* agent = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* agent = GW::Agents::GetPlayerAsAgentLiving();
     GW::Player* player = agent ? GW::PlayerMgr::GetPlayerByID(agent->player_number) : nullptr;
-    GW::Skillbar* player_skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+    const GW::Skillbar* player_skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!(player && player_skillbar))
         return false;
     templ.primary = static_cast<GW::Constants::Profession>(player->primary);
@@ -624,14 +624,14 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
     if (!build_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
         return;
     GW::SkillbarMgr::SkillTemplate t;
-    auto prof = static_cast<GW::Constants::Profession>(GW::Agents::GetPlayerAsAgentLiving()->primary);
-    bool is_skill_template = DecodeSkillTemplate(&t, build_name);
+    const auto prof = static_cast<GW::Constants::Profession>(GW::Agents::GetPlayerAsAgentLiving()->primary);
+    const bool is_skill_template = DecodeSkillTemplate(&t, build_name);
     if (is_skill_template && t.primary != prof) {
         Log::Error("Invalid profession for %s (%s)", build_name, GetProfessionAcronym(t.primary).c_str());
         return;
     }
-    std::string tbuild_ws = tbuild_name ? GuiUtils::ToLower(tbuild_name) : "";
-    std::string build_ws = GuiUtils::ToLower(build_name);
+    const std::string tbuild_ws = tbuild_name ? GuiUtils::ToLower(tbuild_name) : "";
+    const std::string build_ws = GuiUtils::ToLower(build_name);
 
     std::vector<std::pair<TeamBuild, size_t>> local_teambuilds;
     for (auto& tb : teambuilds) {
@@ -685,9 +685,9 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx)
         return;
     std::vector<Pcon*> pcons_loaded;
     std::vector<Pcon*> pcons_not_visible;
-    PconsWindow* pcw = &PconsWindow::Instance();
+    const PconsWindow* pcw = &PconsWindow::Instance();
     for (auto pcon : pcw->pcons) {
-        bool enable = build.pcons.contains(pcon->ini);
+        const bool enable = build.pcons.contains(pcon->ini);
         if (enable) {
             if (!pcon->IsVisible()) {
                 // Don't enable pcons that the user cant see!
@@ -784,7 +784,7 @@ void BuildsWindow::Update(float delta)
     static bool old_visible = false;
     bool cur_visible = false;
     cur_visible |= visible;
-    for (TeamBuild& tbuild : teambuilds) {
+    for (const TeamBuild& tbuild : teambuilds) {
         cur_visible |= tbuild.edit_open;
     }
 
@@ -838,10 +838,10 @@ bool BuildsWindow::MoveOldBuilds(ToolboxIni* ini)
     bool found_old_build = false;
     ToolboxIni::TNamesDepend oldentries;
     ini->GetAllSections(oldentries);
-    for (ToolboxIni::Entry& oldentry : oldentries) {
+    for (const ToolboxIni::Entry& oldentry : oldentries) {
         const char* section = oldentry.pItem;
         if (strncmp(section, "builds", 6) == 0) {
-            int count = ini->GetLongValue(section, "count", 12);
+            const int count = ini->GetLongValue(section, "count", 12);
             teambuilds.push_back(TeamBuild(ini->GetValue(section, "buildname", "")));
             TeamBuild& tbuild = teambuilds.back();
             tbuild.show_numbers = ini->GetBoolValue(section, "showNumbers", true);
@@ -880,18 +880,18 @@ void BuildsWindow::LoadFromFile()
     preferred_skill_order_builds.clear();
     ToolboxIni::TNamesDepend entries;
     inifile->GetAllKeys("preferred_skill_orders", entries);
-    for (ToolboxIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         AddPreferredBuild(entry.pItem);
     }
 
     entries.clear();
     inifile->GetAllSections(entries);
-    for (ToolboxIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         if (memcmp(entry.pItem, "builds", 6) != 0) {
             continue;
         }
         const char* section = entry.pItem;
-        int count = inifile->GetLongValue(section, "count", 12);
+        const int count = inifile->GetLongValue(section, "count", 12);
         teambuilds.push_back(TeamBuild(inifile->GetValue(section, "buildname", "")));
         TeamBuild& tbuild = teambuilds.back();
         tbuild.show_numbers = inifile->GetBoolValue(section, "showNumbers", true);
@@ -940,7 +940,7 @@ void BuildsWindow::SaveToFile()
 
         for (unsigned int i = 0; i < preferred_skill_order_builds.size(); ++i) {
             const Build& tbuild = preferred_skill_order_builds[i];
-            auto section = "preferred_skill_orders";
+            const auto section = "preferred_skill_orders";
             inifile->SetValue(section, tbuild.code, tbuild.code);
         }
 

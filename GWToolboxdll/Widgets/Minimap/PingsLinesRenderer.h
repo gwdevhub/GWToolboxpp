@@ -115,7 +115,7 @@ public:
     {
         VBuffer::Invalidate();
         ping_circle.Invalidate();
-        for (Ping* p : pings)
+        for (const Ping* p : pings)
             delete p;
         pings.clear();
     }

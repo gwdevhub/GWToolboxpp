@@ -39,7 +39,7 @@ namespace Missions {
     public:
         Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, GW::Constants::QuestID = static_cast<GW::Constants::QuestID>(0));
         static ImVec2 icon_size;
-        GW::Constants::MapID GetOutpost();
+        GW::Constants::MapID GetOutpost() const;
 
         bool is_completed = false;
         bool bonus = false;
@@ -353,7 +353,7 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawHallOfMonuments(IDirect3DDevice9* device);
 
-    CharacterCompletion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
+    static CharacterCompletion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
 
     void DrawSettingInternal() override;
     void LoadSettings(ToolboxIni* ini) override;

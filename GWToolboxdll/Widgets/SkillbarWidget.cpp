@@ -329,16 +329,16 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
 
         ImVec2 pos1 = base;
 
-        bool first_half = (layout == Layout::Rows && std::floor(skill_idx / 4) == 0) || (layout == Layout::Columns && skill_idx % 2 == 0);
+        const bool first_half = (layout == Layout::Rows && std::floor(skill_idx / 4) == 0) || (layout == Layout::Columns && skill_idx % 2 == 0);
         bool flip_order = effects_flip_order;
 
-        bool shift_offset = (effects_symmetric && first_half) || effects_flip_direction;
+        const bool shift_offset = (effects_symmetric && first_half) || effects_flip_direction;
 
         if (effects_symmetric && !first_half) {
             flip_order = !flip_order;
         }
 
-        size_t index = flip_order ? i : skill.effects.size() - i - 1;
+        const size_t index = flip_order ? i : skill.effects.size() - i - 1;
 
         if (layout == Layout::Row || layout == Layout::Rows) {
             pos1.y += size.y * index;

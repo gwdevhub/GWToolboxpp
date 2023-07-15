@@ -40,7 +40,7 @@ namespace {
 
     GW::SkillbarSkill* GetPlayerSkillbarSkill(GW::Constants::SkillID skill_id)
     {
-        auto skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+        const auto skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (!skillbar)
             return nullptr;
         return skillbar->GetSkillById(skill_id);
@@ -143,7 +143,7 @@ namespace {
 
     void OnObjectiveComplete_UIMessage(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
     {
-        uint32_t objective_id = *static_cast<uint32_t*>(wparam);
+        const uint32_t objective_id = *static_cast<uint32_t*>(wparam);
         if (objective_id == 150
             && GW::Map::GetMapID() == GW::Constants::MapID::The_Underworld
             && GetPlayerSkillbarSkill(GW::Constants::SkillID::Charm_Animal)
@@ -161,7 +161,7 @@ namespace {
 
     void OnShowHint_UIMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
     {
-        auto msg = static_cast<HintUIMessage*>(wparam);
+        const auto msg = static_cast<HintUIMessage*>(wparam);
         if (std::ranges::find(hints_shown, msg->message_id) != hints_shown.end()) {
             if (only_show_hints_once)
                 status->blocked = true;
@@ -181,7 +181,7 @@ namespace {
                     || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost))
                     break;
                 wchar_t out[256];
-                uint32_t campaign = static_cast<uint32_t>(GetCharacterCampaign());
+                const uint32_t campaign = static_cast<uint32_t>(GetCharacterCampaign());
                 swprintf(out, 256, EMBARK_WITHOUT_HOMELAND.message, embark_beach_campaign_npcs[campaign]);
                 HintUIMessage(out, 30000, EMBARK_WITHOUT_HOMELAND.message_id | campaign).Show();
             }
@@ -207,7 +207,7 @@ namespace {
 
     void OnWriteToChatLog_UIMessage(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
     {
-        auto msg = static_cast<GW::UI::UIChatMessage*>(wparam);
+        const auto msg = static_cast<GW::UI::UIChatMessage*>(wparam);
         if (msg->channel == GW::Chat::Channel::CHANNEL_GLOBAL && wcsncmp(msg->message, L"\x8101\x4793\xfda0\xe8e2\x6844", 5) == 0) {
             HintUIMessage(HINT_HERO_EXP).Show();
         }
@@ -215,7 +215,7 @@ namespace {
 
     void OnShowXunlaiChest_UIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
-        GW::AgentLiving* chest = GW::Agents::GetTargetAsAgentLiving();
+        const GW::AgentLiving* chest = GW::Agents::GetTargetAsAgentLiving();
         if (chest && chest->player_number == 5001 && GetDistance(GW::Agents::GetPlayer()->pos, chest->pos) < GW::Constants::Range::Nearby) {
             HintUIMessage(CHEST_CMD).Show();
         }
@@ -223,7 +223,7 @@ namespace {
 
     void OnQuestAdded_UIMessage(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
     {
-        uint32_t quest_id = *static_cast<uint32_t*>(wparam); // NB: wParam is just a pointer to packet content for QuestAdded
+        const uint32_t quest_id = *static_cast<uint32_t*>(wparam); // NB: wParam is just a pointer to packet content for QuestAdded
         switch (quest_id) {
             case 56: // Adventure with an ally
                 HintUIMessage(QUEST_HINT_ADVENTURE_WITH_AN_ALLY).Show();
@@ -233,8 +233,8 @@ namespace {
 
     void OnQuotedItemPrice_UIMessage(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
     {
-        clock_t _now = clock();
-        auto q = static_cast<LastQuote*>(wparam);
+        const clock_t _now = clock();
+        const auto q = static_cast<LastQuote*>(wparam);
         if (last_quote.item_id == q->item_id && _now - last_quoted_item_timestamp < 5 * CLOCKS_PER_SEC) {
             HintUIMessage(BULK_BUY).Show();
         }
@@ -268,7 +268,7 @@ void HintsModule::Update(float)
     if (!delayed_hints.empty()
         && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
         && GW::Agents::GetPlayer()) {
-        clock_t _now = clock();
+        const clock_t _now = clock();
         for (auto it = delayed_hints.begin(); it != delayed_hints.end(); ++it) {
             if (it->first < _now) {
                 it->second->Show();
@@ -304,7 +304,7 @@ void HintsModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     only_show_hints_once = ini->GetBoolValue(Name(), VAR_NAME(only_show_hints_once), only_show_hints_once);
-    std::string ini_str = ini->GetValue(Name(), VAR_NAME(hints_shown), "");
+    const std::string ini_str = ini->GetValue(Name(), VAR_NAME(hints_shown), "");
     if (!ini_str.empty()) {
         hints_shown.resize((ini_str.size() + 1) / 9);
         ASSERT(GuiUtils::IniToArray(ini_str, hints_shown.data(), hints_shown.size()));

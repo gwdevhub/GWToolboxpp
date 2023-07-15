@@ -166,8 +166,8 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice)
     ObserverModule& om = ObserverModule::Instance();
 
     Prepare();
-    uint32_t tracking_agent_id = GetTracking();
-    uint32_t comparison_agent_id = GetComparison();
+    const uint32_t tracking_agent_id = GetTracking();
+    const uint32_t comparison_agent_id = GetComparison();
 
     ObserverModule::ObservableAgent* tracking = om.GetObservableAgentById(tracking_agent_id);
     ObserverModule::ObservableAgent* compared = om.GetObservableAgentById(comparison_agent_id);
@@ -175,7 +175,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice)
     if (tracking) {
         ImGui::Text(tracking->DisplayName().c_str());
 
-        float global = ImGui::GetIO().FontGlobalScale;
+        const float global = ImGui::GetIO().FontGlobalScale;
         text_long = 220.0f * global;
         text_medium = 150.0f * global;
         text_short = 80.0f * global;
@@ -196,8 +196,8 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice)
             ImGui::Text((std::string("Skills used on: ") + compared->DisplayName()).c_str());
             DrawHeaders();
             ImGui::Separator();
-            auto it_used_on_agent_skills = tracking->stats.skills_used_on_agents.find(compared->agent_id);
-            auto it_used_on_agent_skill_ids = tracking->stats.skill_ids_used_on_agents.find(compared->agent_id);
+            const auto it_used_on_agent_skills = tracking->stats.skills_used_on_agents.find(compared->agent_id);
+            const auto it_used_on_agent_skill_ids = tracking->stats.skill_ids_used_on_agents.find(compared->agent_id);
             if ((it_used_on_agent_skills != tracking->stats.skills_used_on_agents.end()) &&
                 (it_used_on_agent_skill_ids != tracking->stats.skill_ids_used_on_agents.end())) {
                 DrawSkills(it_used_on_agent_skills->second, it_used_on_agent_skill_ids->second);

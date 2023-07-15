@@ -33,9 +33,9 @@ namespace {
     void print_time(T duration, int decimals, unsigned int bufsize, char* buf)
     {
         auto time = duration_cast<milliseconds>(duration);
-        long long secs = duration_cast<seconds>(time).count() % 60;
-        int mins = duration_cast<minutes>(time).count() % 60;
-        int hrs = duration_cast<hours>(time).count();
+        const long long secs = duration_cast<seconds>(time).count() % 60;
+        const int mins = duration_cast<minutes>(time).count() % 60;
+        const int hrs = duration_cast<hours>(time).count();
         switch (decimals) {
             case 1: snprintf(buf, bufsize, "%d:%02d:%02lld.%01lld", hrs, mins, secs, time.count() / 100 % 10);
                 break;
@@ -65,7 +65,7 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
 {
     cave_start = 0; // reset doa's cave timer
     instance_timer_valid = false;
-    steady_clock::time_point now_tp = now();
+    const steady_clock::time_point now_tp = now();
     run_completed = steady_clock::time_point();
 
     instance_started = now_tp;
@@ -86,9 +86,9 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
             run_started = now_tp;
         }
 
-        GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(pak->map_id));
+        const GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(pak->map_id));
         if (info) {
-            bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
+            const bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
 
             if (new_in_dungeon && !in_dungeon) {
                 // zoning from explorable to dungeon
@@ -157,7 +157,7 @@ void TimerWidget::LoadSettings(ToolboxIni* ini)
     click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     print_time_zoning = ini->GetBoolValue(Name(), VAR_NAME(print_time_zoning), print_time_zoning);
     print_time_objective = ini->GetBoolValue(Name(), VAR_NAME(print_time_objective), print_time_objective);
-    bool show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), true);
+    const bool show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), true);
     if (!show_extra_timers) {
         // Legacy
         show_deep_timer = false;
@@ -246,7 +246,7 @@ void TimerWidget::DrawSettingInternal()
     ImGui::Text("Show extra timers:");
     ImGui::Indent();
 
-    std::vector<std::pair<const char*, bool*>> timers = {
+    const std::vector<std::pair<const char*, bool*>> timers = {
         {"Deep aspects", &show_deep_timer},
         {"DoA cave", &show_doa_timer},
         {"Dhuum", &show_dhuum_timer},
@@ -366,7 +366,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice)
 
         auto drawTimer = [](char* buffer, ImColor* extra_color = nullptr) {
             ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_label));
-            ImVec2 cur2 = ImGui::GetCursorPos();
+            const ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
             ImGui::TextColored(ImColor(0, 0, 0), buffer);
             ImGui::SetCursorPos(cur2);
@@ -392,9 +392,9 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice)
             drawTimer(spirits_buffer);
 
         if (click_to_print_time) {
-            ImVec2 size = ImGui::GetWindowSize();
-            ImVec2 min = ImGui::GetWindowPos();
-            ImVec2 max(min.x + size.x, min.y + size.y);
+            const ImVec2 size = ImGui::GetWindowSize();
+            const ImVec2 min = ImGui::GetWindowPos();
+            const ImVec2 max(min.x + size.x, min.y + size.y);
             if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
                 if (!GameSettings::GetSettingBool("auto_age2_on_age")) {
                     PrintTimer();
@@ -413,8 +413,8 @@ bool TimerWidget::GetUrgozTimer()
         return false;
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
         return false;
-    unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    unsigned long temp = (time - 1) % 25;
+    const unsigned long time = GW::Map::GetInstanceTime() / 1000;
+    const unsigned long temp = (time - 1) % 25;
     if (temp < 15) {
         snprintf(extra_buffer, 32, "Open - %lu", 15u - temp);
         extra_color = ImColor(0, 255, 0);
@@ -468,8 +468,8 @@ bool TimerWidget::GetDeepTimer()
 
     static clock_t start = -1;
     auto skill = SkillID::No_Skill;
-    for (auto& effect : *effects) {
-        auto effect_id = effect.skill_id;
+    for (const auto& effect : *effects) {
+        const auto effect_id = effect.skill_id;
         switch (effect_id) {
             case SkillID::Aspect_of_Exhaustion:
             case SkillID::Aspect_of_Depletion_energy_loss:
@@ -489,7 +489,7 @@ bool TimerWidget::GetDeepTimer()
         start = TIMER_INIT();
     }
 
-    clock_t diff = TIMER_DIFF(start) / 1000;
+    const clock_t diff = TIMER_DIFF(start) / 1000;
 
     // a 30s timer starts when you enter the aspect
     // a 30s timer starts 100s after you enter the aspect
@@ -524,8 +524,8 @@ bool TimerWidget::GetTrapTimer()
     if (GW::Map::GetInstanceType() != InstanceType::Explorable)
         return false;
 
-    unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    unsigned long temp = time % 20;
+    const unsigned long time = GW::Map::GetInstanceTime() / 1000;
+    const unsigned long temp = time % 20;
     unsigned long timer;
     if (temp < 10) {
         timer = 10u - temp;

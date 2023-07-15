@@ -51,7 +51,7 @@ void ChatLog::Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp)
         return;
     if (!(((size_t)_message & 3) == 0 && _message[0]))
         return; // Empty message
-    auto new_message = new TBChatMessage(_message, _channel, _timestamp);
+    const auto new_message = new TBChatMessage(_message, _channel, _timestamp);
     TBChatMessage* inject = recv_last;
     if (!recv_first) {
         // No first element; log is empty.
@@ -110,7 +110,7 @@ void ChatLog::AddSent(wchar_t* _message, uint32_t addr)
     if (injecting || IsAdded(_message, addr))
         return;
 
-    auto new_message = new TBSentMessage(_message, addr);
+    const auto new_message = new TBSentMessage(_message, addr);
     TBSentMessage* inject = sent_last;
     if (!sent_first) {
         // No first element; log is empty.
@@ -169,7 +169,7 @@ void ChatLog::Fetch()
 {
     if (!enabled)
         return;
-    GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+    const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
     for (size_t i = 0; log && i < GW::Chat::CHAT_LOG_LENGTH; i++) {
         if (log->messages[i])
             Add(log->messages[i]);
@@ -198,7 +198,7 @@ void ChatLog::Save()
     auto inifile = new ToolboxIni(false, false, false);
     std::string msg_buf;
     char addr_buf[8];
-    TBChatMessage* recv = recv_first;
+    const TBChatMessage* recv = recv_first;
     size_t i = 0;
     std::string datetime_str;
     while (recv) {
@@ -224,7 +224,7 @@ void ChatLog::Save()
 
     // Sent log FIFO
     inifile = new ToolboxIni(false, false, false);
-    TBSentMessage* sent = sent_first;
+    const TBSentMessage* sent = sent_first;
     i = 0;
     while (sent) {
         snprintf(addr_buf, 8, "%03x", i++);
@@ -277,11 +277,11 @@ void ChatLog::Load(const std::wstring& _account)
     FILETIME t;
     uint32_t channel = 0;
     uint32_t addr = 0;
-    for (ToolboxIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         std::string message = inifile.GetValue(entry.pItem, "message", "");
         if (message.empty())
             continue;
-        size_t written = GuiUtils::IniToArray(message, buf);
+        const size_t written = GuiUtils::IniToArray(message, buf);
         if (!written)
             continue;
         t.dwLowDateTime = inifile.GetLongValue(entry.pItem, "dwLowDateTime", 0);
@@ -295,11 +295,11 @@ void ChatLog::Load(const std::wstring& _account)
     ASSERT(inifile.LoadIfExists(LogPath(L"sent")) == SI_OK);
     entries.clear();
     inifile.GetAllSections(entries);
-    for (ToolboxIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         std::string message = inifile.GetValue(entry.pItem, "message", "");
         if (message.empty())
             continue;
-        size_t written = GuiUtils::IniToArray(message, buf);
+        const size_t written = GuiUtils::IniToArray(message, buf);
         if (!written)
             continue;
         addr = inifile.GetLongValue(entry.pItem, "addr", 0);
@@ -316,7 +316,7 @@ void ChatLog::Inject()
     TBChatMessage* recv = recv_first;
     if (recv) {
         ClearChatLog_Func();
-        GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+        const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
         ASSERT(!log);
         InitChatLog_Func();
         log = GW::Chat::GetChatLog();
@@ -381,10 +381,10 @@ bool ChatLog::Init()
 {
     if (!enabled)
         return false;
-    auto c = GW::GetCharContext();
+    const auto c = GW::GetCharContext();
     if (!c)
         return false;
-    std::wstring this_account = c->player_email;
+    const std::wstring this_account = c->player_email;
     if (this_account == account)
         return false;
     // GW Account changed, save this log and start fresh.
@@ -456,12 +456,12 @@ void ChatLog::OnAddToSentLog(wchar_t* message)
         GW::HookBase::LeaveHook();
         return;
     }
-    GWSentLog* log = Instance().GetSentLog();
+    const GWSentLog* log = Instance().GetSentLog();
     if (!log || !log->count || Instance().Init()) {
         Instance().InjectSent();
         log = Instance().GetSentLog();
     }
-    GWSentMessage* lastest_message = log ? log->prev : nullptr;
+    const GWSentMessage* lastest_message = log ? log->prev : nullptr;
     RetAddToSentLog(message);
     log = Instance().GetSentLog();
     if (log && log->prev != lastest_message)

@@ -15,7 +15,7 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, unsigned line
 {
     __try {
         __debugbreak();
-        size_t len = snprintf(nullptr, 0, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
+        const size_t len = snprintf(nullptr, 0, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
         Instance().tb_exception_message = new char[len + 1];
         snprintf(Instance().tb_exception_message, len + 1, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
         throw std::runtime_error(Instance().tb_exception_message);
@@ -65,8 +65,8 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     const char* failure_message = nullptr;
     wchar_t error_info[512];
 
-    DWORD ProcessId = GetCurrentProcessId();
-    DWORD ThreadId = GetCurrentThreadId();
+    const DWORD ProcessId = GetCurrentProcessId();
+    const DWORD ThreadId = GetCurrentThreadId();
 
     // Instead of writing to Crash.dmp, write to gwtoolboxpp/crashes
     SYSTEMTIME stLocalTime;
@@ -106,7 +106,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     }
     if (extra_info) {
         UserStreamParam = new MINIDUMP_USER_STREAM_INFORMATION();
-        auto s = new MINIDUMP_USER_STREAM();
+        const auto s = new MINIDUMP_USER_STREAM();
         s->Type = CommentStreamA;
         s->Buffer = extra_info;
         s->BufferSize = (strlen(extra_info) + 1) * sizeof(extra_info[0]);

@@ -60,7 +60,7 @@ namespace {
         if (!maps.empty())
             return;
         for (uint32_t map_id = 1; map_id < static_cast<uint32_t>(GW::Constants::MapID::Count); map_id++) {
-            auto map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
+            const auto map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
             if (!map_info)
                 continue;
             auto map = new MapInfo();
@@ -82,7 +82,7 @@ namespace {
             delete it.second;
         }
         maps.clear();
-        std::wstring file_location = Resources::GetPath(L"maps.json");
+        const std::wstring file_location = Resources::GetPath(L"maps.json");
         if (PathFileExistsW(file_location.c_str())) {
             DeleteFileW(file_location.c_str());
         }
@@ -187,10 +187,10 @@ static void InitStoC()
     };
 
     uintptr_t StoCHandler_Addr;
-    uintptr_t address = GW::Scanner::Find("\x75\x04\x33\xC0\x5D\xC3\x8B\x41\x08\xA8\x01\x75", "xxxxxxxxxxxx", -6);
+    const uintptr_t address = GW::Scanner::Find("\x75\x04\x33\xC0\x5D\xC3\x8B\x41\x08\xA8\x01\x75", "xxxxxxxxxxxx", -6);
     StoCHandler_Addr = *(uintptr_t*)address;
 
-    auto addr = (GameServer* *)StoCHandler_Addr;
+    const auto addr = (GameServer* *)StoCHandler_Addr;
     if (!(addr && *addr))
         return;
 
@@ -247,8 +247,8 @@ static void PrintIndent(uint32_t indent)
 
 static void GetHexS(char* buf, uint8_t byte)
 {
-    uint8_t h = (byte >> 4) & 0xfu;
-    uint8_t l = (byte >> 0) & 0xfu;
+    const uint8_t h = (byte >> 4) & 0xfu;
+    const uint8_t l = (byte >> 0) & 0xfu;
     if (h < 10)
         buf[0] = h + '0';
     else
@@ -346,8 +346,8 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
         }
         case FieldType::String16: {
             PrintIndent(indent);
-            auto str = reinterpret_cast<wchar_t*>(*bytes);
-            size_t length = wcsnlen(str, count);
+            const auto str = reinterpret_cast<wchar_t*>(*bytes);
+            const size_t length = wcsnlen(str, count);
             printf("String(%zu) \"", length);
             PrintString(length, str);
             printf("\"\n");
@@ -417,13 +417,13 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
         PrintIndent(indent);
         printf("[%u] => {\n", rep);
         for (uint32_t i = 0; i < n_fields; i++) {
-            uint32_t field = fields[i];
-            uint32_t type = (field >> 0) & 0xF;
-            uint32_t size = (field >> 4) & 0xF;
-            uint32_t count = (field >> 8) & 0xFFFF;
+            const uint32_t field = fields[i];
+            const uint32_t type = (field >> 0) & 0xF;
+            const uint32_t size = (field >> 4) & 0xF;
+            const uint32_t count = (field >> 8) & 0xFFFF;
 
             // Just to make it easier to print
-            FieldType field_type = GetField(type, size, count);
+            const FieldType field_type = GetField(type, size, count);
 
             // Used to skip field that are not printable, for instance the array end
             if (field_type == FieldType::Ignore)
@@ -433,7 +433,7 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
                 PrintField(field_type, count, bytes, indent + 4);
             }
             else {
-                uint32_t next_field_index = i + 1;
+                const uint32_t next_field_index = i + 1;
 
                 uint32_t struct_count;
                 Serialize<uint32_t>(bytes, &struct_count);
@@ -479,7 +479,7 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
     if (ignored_packets[packet->header])
         return;
 
-    StoCHandler handler = game_server_handler->at(packet->header);
+    const StoCHandler handler = game_server_handler->at(packet->header);
     auto packet_raw = reinterpret_cast<uint8_t*>(packet);
 
     uint8_t** bytes = &packet_raw;
@@ -548,7 +548,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message)
             ms -= std::chrono::duration_cast<std::chrono::milliseconds>(secs);
             auto mins = std::chrono::duration_cast<std::chrono::minutes>(secs);
             secs -= std::chrono::duration_cast<std::chrono::seconds>(mins);
-            auto hours = std::chrono::duration_cast<std::chrono::hours>(mins);
+            const auto hours = std::chrono::duration_cast<std::chrono::hours>(mins);
             mins -= std::chrono::duration_cast<std::chrono::minutes>(hours);
             bool prependColon = false;
             std::string time_s = "[";
@@ -731,7 +731,7 @@ void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::Pack
 {
     if (!log_npc_dialogs)
         return;
-    auto pak = (uint32_t*)packet;
+    const auto pak = (uint32_t*)packet;
     uint32_t string_offset = 0;
     switch (pak[0]) {
         case GAME_SMSG_DIALOG_BODY:
@@ -809,7 +809,7 @@ void PacketLoggerWindow::LoadSettings(ToolboxIni* ini)
     const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
     if (strcmp(ignored_packets_bits, "-") == 0)
         return;
-    std::bitset<packet_max> ignored_packets_bitset(ignored_packets_bits);
+    const std::bitset<packet_max> ignored_packets_bitset(ignored_packets_bits);
     for (size_t i = 0; i < packet_max; ++i) {
         ignored_packets[i] = ignored_packets_bitset[i] == 1;
     }

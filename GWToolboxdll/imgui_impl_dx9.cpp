@@ -83,12 +83,12 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
     // Being agnostic of whether <d3dx9.h> or <DirectXMath.h> can be used, we aren't relying on D3DXMatrixIdentity()/D3DXMatrixOrthoOffCenterLH() or DirectX::XMMatrixIdentity()/DirectX::XMMatrixOrthographicOffCenterLH()
     {
-        float L = draw_data->DisplayPos.x + 0.5f;
-        float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x + 0.5f;
-        float T = draw_data->DisplayPos.y + 0.5f;
-        float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y + 0.5f;
-        D3DMATRIX mat_identity = {{{1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f}}};
-        D3DMATRIX mat_projection =
+        const float L = draw_data->DisplayPos.x + 0.5f;
+        const float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x + 0.5f;
+        const float T = draw_data->DisplayPos.y + 0.5f;
+        const float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y + 0.5f;
+        const D3DMATRIX mat_identity = {{{1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f}}};
+        const D3DMATRIX mat_projection =
         {{{
             2.0f / (R - L), 0.0f, 0.0f, 0.0f,
             0.0f, 2.0f / (T - B), 0.0f, 0.0f,
@@ -176,7 +176,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
-    ImVec2 clip_off = draw_data->DisplayPos;
+    const ImVec2 clip_off = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++) {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++) {
@@ -238,7 +238,7 @@ void ImGui_ImplDX9_Shutdown()
 static bool ImGui_ImplDX9_CreateFontsTexture()
 {
     // Build texture atlas
-    ImGuiIO& io = ImGui::GetIO();
+    const ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height, bytes_per_pixel;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);

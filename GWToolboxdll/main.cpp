@@ -23,7 +23,7 @@ extern "C" __declspec(dllexport) void __cdecl Terminate()
         GWToolbox::Instance().StartSelfDestruct();
     }
     // Wait up to 5000 ms for toolbox to clean up after itself; after that, bomb out
-    uint32_t timeout = 5000 / 16;
+    const uint32_t timeout = 5000 / 16;
     for (uint32_t i = 0; i < timeout && thread_running; i++) {
         Sleep(16);
     }
@@ -64,7 +64,7 @@ BOOL WINAPI DllMain(_In_ HMODULE _HDllHandle, _In_ DWORD _Reason, _In_opt_ LPVOI
         case DLL_PROCESS_ATTACH: {
             dllmodule = _HDllHandle;
             __try {
-                HANDLE hThread = CreateThread(
+                const HANDLE hThread = CreateThread(
                     nullptr,
                     0,
                     (LPTHREAD_START_ROUTINE)Init,

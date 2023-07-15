@@ -83,7 +83,7 @@ void MainWindow::Draw(IDirect3DDevice9* device)
             if (drawn)
                 ImGui::Separator();
             drawn = true;
-            auto& ui_module = modules_to_draw[i].second;
+            const auto& ui_module = modules_to_draw[i].second;
             if (ui_module->DrawTabButton(device, show_icons, true, center_align_text)) {
                 if (one_panel_at_time_only && ui_module->visible && ui_module->IsWindow()) {
                     for (const auto& ui_module2 : modules_to_draw) {

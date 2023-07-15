@@ -190,13 +190,13 @@ void EffectRenderer::DrawSettings()
 
 void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos)
 {
-    auto it1 = aoe_effect_triggers.find(effect_id);
+    const auto it1 = aoe_effect_triggers.find(effect_id);
     if (it1 == aoe_effect_triggers.end())
         return;
-    auto trigger = it1->second;
-    auto settings = aoe_effect_settings.find(trigger->triggered_effect_id)->second;
+    const auto trigger = it1->second;
+    const auto settings = aoe_effect_settings.find(trigger->triggered_effect_id)->second;
     std::pair<float, float> posp = {pos->x, pos->y};
-    auto trap_handled = trigger->triggers_handled.find(posp);
+    const auto trap_handled = trigger->triggers_handled.find(posp);
     if (trap_handled != trigger->triggers_handled.end() && TIMER_DIFF(trap_handled->second) < 5000) {
         return; // Already handled this trap, e.g. Spike Trap triggers 3 times over 2 seconds; we only care about the first.
     }
@@ -210,7 +210,7 @@ void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos)
         if (!effect || effect->effect_id != settings->effect_id)
             continue;
         // Need to estimate position; player may have moved on cast slightly.
-        float newDistance = GetSquareDistance(*pos, effect->pos);
+        const float newDistance = GetSquareDistance(*pos, effect->pos);
         if (newDistance > closestDistance)
             continue;
         closest_idx = i;
@@ -231,7 +231,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak)
         return;
     if (pak->value_id != 21) // Effect on agent
         return;
-    auto it = aoe_effect_settings.find(pak->value);
+    const auto it = aoe_effect_settings.find(pak->value);
     if (it == aoe_effect_settings.end())
         return;
     const auto settings = it->second;
@@ -249,18 +249,18 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak)
         return;
     if (pak->Value_id != 20) // Effect on target
         return;
-    auto it = aoe_effect_settings.find(pak->value);
+    const auto it = aoe_effect_settings.find(pak->value);
     if (it == aoe_effect_settings.end())
         return;
-    auto settings = it->second;
+    const auto settings = it->second;
     if (settings->stoc_header && settings->stoc_header != pak->header)
         return;
     if (pak->caster == pak->target)
         return;
-    auto caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->caster));
+    const auto caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->caster));
     if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy)
         return;
-    GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
+    const GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
     if (!target)
         return;
     aoe_effects.push_back(new Effect(pak->value, target->pos.x, target->pos.y, settings->duration, settings->range, &settings->color));
@@ -273,13 +273,13 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak)
     // TODO: Fire storm and Meteor shower have no caster!
     // Need to record GenericValueTarget with value_id matching these skills, then roughly match the coords after.
     RemoveTriggeredEffect(pak->effect_id, &pak->coords);
-    auto it = aoe_effect_settings.find(pak->effect_id);
+    const auto it = aoe_effect_settings.find(pak->effect_id);
     if (it == aoe_effect_settings.end())
         return;
-    auto settings = it->second;
+    const auto settings = it->second;
     if (settings->stoc_header && settings->stoc_header != pak->header)
         return;
-    auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
+    const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
     if (!a || a->allegiance != GW::Constants::Allegiance::Enemy)
         return;
     aoe_effects.push_back(new Effect(pak->effect_id, pak->coords.x, pak->coords.y, settings->duration, settings->range, &settings->color));
@@ -292,8 +292,8 @@ void EffectRenderer::Initialize(IDirect3DDevice9* device)
     initialized = true;
     type = D3DPT_LINELIST;
 
-    HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
-                                            D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+    const HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
+                                                  D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     if (FAILED(hr)) {
         printf("Error setting up PingsLinesRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
     }
@@ -352,7 +352,7 @@ void EffectCircle::Initialize(IDirect3DDevice9* device)
                  (VOID**)&vertices, D3DLOCK_DISCARD);
 
     for (size_t i = 0; i < count; ++i) {
-        float angle = i * (DirectX::XM_2PI / count);
+        const float angle = i * (DirectX::XM_2PI / count);
         vertices[i].x = std::cos(angle);
         vertices[i].y = std::sin(angle);
         vertices[i].z = 0.0f;

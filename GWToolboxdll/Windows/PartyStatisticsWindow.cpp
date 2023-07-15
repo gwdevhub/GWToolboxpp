@@ -147,8 +147,8 @@ namespace {
     int GetSkillString(const std::wstring& agent_name, const std::wstring& skill_name,
                        const uint32_t skill_count, wchar_t* out, size_t len)
     {
-        int written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.",
-                               agent_name.c_str(), skill_name.c_str(), skill_count);
+        const int written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.",
+                                     agent_name.c_str(), skill_name.c_str(), skill_count);
         ASSERT(written != -1);
         return written;
     }
@@ -254,7 +254,7 @@ namespace {
 
     void UnsetPartyStatistics()
     {
-        for (auto entry : party_members) {
+        for (const auto entry : party_members) {
             delete entry;
         }
         party_members.clear();
@@ -276,7 +276,7 @@ namespace {
         if (info == nullptr)
             return false;
 
-        uint32_t my_player_id = GW::Agents::GetPlayerId();
+        const uint32_t my_player_id = GW::Agents::GetPlayerId();
         const GW::Skillbar* my_skillbar = GetAgentSkillbar(my_player_id);
         if (!my_skillbar) {
             return false;
@@ -306,14 +306,14 @@ namespace {
         };
         auto set_member_skill = [](PartyMember* party_member, GW::Constants::SkillID skill_id) {
             auto& existing_skills = party_member->skills;
-            for (auto& skill : existing_skills) {
+            for (const auto& skill : existing_skills) {
                 if (skill.id == skill_id)
                     return;
             }
             existing_skills.push_back(skill_id);
         };
 
-        for (GW::PlayerPartyMember& player : info->players) {
+        for (const GW::PlayerPartyMember& player : info->players) {
             const auto agent_id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
 
             auto party_member = set_party_member(agent_id);
@@ -325,7 +325,7 @@ namespace {
             }
             if (!info->heroes.valid())
                 continue;
-            for (GW::HeroPartyMember& hero : info->heroes) {
+            for (const GW::HeroPartyMember& hero : info->heroes) {
                 if (hero.owner_player_id != player.login_number)
                     continue;
 
@@ -343,7 +343,7 @@ namespace {
             }
         }
         if (info->henchmen.valid()) {
-            for (GW::HenchmanPartyMember& hench : info->henchmen) {
+            for (const GW::HenchmanPartyMember& hench : info->henchmen) {
                 set_party_member(hench.agent_id);
             }
         }
@@ -493,7 +493,7 @@ namespace {
             return;
 
         Skill* found_skill = nullptr;
-        auto party_member = GetPartyMemberByAgentId(agent_id);
+        const auto party_member = GetPartyMemberByAgentId(agent_id);
         if (!party_member)
             return;
         for (auto& skill : party_member->skills) {

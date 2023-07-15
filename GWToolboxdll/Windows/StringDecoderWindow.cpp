@@ -52,7 +52,7 @@ void StringDecoderWindow::Draw(IDirect3DDevice9* pDevice)
     }
     ImGui::InputInt("Map ID:", &map_id);
     if (ImGui::Button("Decode Map Name")) {
-        GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
+        const GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
         if (map) {
             wchar_t buf[8] = {0};
             if (GW::UI::UInt32ToEncStr(map->name_id, buf, 8)) {
@@ -96,8 +96,8 @@ void StringDecoderWindow::Send()
 std::wstring StringDecoderWindow::GetEncodedString()
 {
     std::istringstream iss(encoded);
-    std::vector<std::string> results((std::istream_iterator<std::string>(iss)),
-                                     std::istream_iterator<std::string>());
+    const std::vector<std::string> results((std::istream_iterator<std::string>(iss)),
+                                           std::istream_iterator<std::string>());
 
     std::wstring encodedW(results.size() + 1, 0);
     size_t i = 0;
@@ -105,7 +105,7 @@ std::wstring StringDecoderWindow::GetEncodedString()
         Log::Log("%s\n", results[i].c_str());
         wchar_t c;
         unsigned int lval = 0;
-        int base = results[i].rfind("0x", 0) == 0 ? 0 : 16;
+        const int base = results[i].rfind("0x", 0) == 0 ? 0 : 16;
         if (!(GuiUtils::ParseUInt(results[i].c_str(), &lval, base) && lval < 0xffff)) {
             Log::Error("Failed to ParseUInt %s", results[i].c_str());
             return L"";

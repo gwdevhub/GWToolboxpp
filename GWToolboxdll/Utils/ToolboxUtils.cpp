@@ -48,7 +48,7 @@ namespace ToolboxUtils {
     {
         if (!_name)
             return nullptr;
-        std::wstring name = GuiUtils::SanitizePlayerName(_name);
+        const std::wstring name = GuiUtils::SanitizePlayerName(_name);
         GW::PlayerArray* players = GW::PlayerMgr::GetPlayerArray();
         if (!players)
             return nullptr;
@@ -63,12 +63,12 @@ namespace ToolboxUtils {
 
     std::wstring GetPlayerName(uint32_t player_number)
     {
-        GW::Player* player = nullptr;
+        const GW::Player* player = nullptr;
         if (!player_number) {
             player = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
             if (!player || !player->name) {
                 // Map not loaded; try to get from character context
-                auto c = GW::GetCharContext();
+                const auto c = GW::GetCharContext();
                 return c ? c->player_name : L"";
             }
         }
@@ -103,7 +103,7 @@ namespace ToolboxUtils {
     {
         switch (packet->header) {
             case GAME_SMSG_CHAT_MESSAGE_GLOBAL: {
-                auto p = static_cast<GW::Packet::StoC::MessageGlobal*>(packet);
+                const auto p = static_cast<GW::Packet::StoC::MessageGlobal*>(packet);
                 return p->sender_name;
             }
             break;
@@ -125,7 +125,7 @@ namespace ToolboxUtils {
 
     GW::HeroInfo* GetHeroInfo(uint32_t hero_id)
     {
-        auto w = GW::GetWorldContext();
+        const auto w = GW::GetWorldContext();
         if (!(w && w->hero_info.size()))
             return nullptr;
         for (auto& a : w->hero_info) {
@@ -140,10 +140,10 @@ namespace ToolboxUtils {
         if (!IsOutpost()) {
             return IsHenchmanInParty(agent_id);
         }
-        auto w = GW::GetWorldContext();
+        const auto w = GW::GetWorldContext();
         if (!(w && w->henchmen_agent_ids.size()))
             return false;
-        for (auto a : w->henchmen_agent_ids) {
+        for (const auto a : w->henchmen_agent_ids) {
             if (a == agent_id)
                 return true;
         }
@@ -156,7 +156,7 @@ namespace ToolboxUtils {
             // NB: HeroInfo array is only populated in outposts
             return IsHeroInParty(agent_id);
         }
-        auto w = GW::GetWorldContext();
+        const auto w = GW::GetWorldContext();
         if (!(w && w->hero_info.size()))
             return false;
         for (auto& a : w->hero_info) {

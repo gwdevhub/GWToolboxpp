@@ -19,8 +19,8 @@ static const DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 
 GW::Item* MaterialsWindow::GetMerchItem(Material mat) const
 {
-    uint32_t model_id = GetModelID(mat);
-    for (uint32_t item_id : merch_items) {
+    const uint32_t model_id = GetModelID(mat);
+    for (const uint32_t item_id : merch_items) {
         GW::Item* item = GW::Items::GetItemById(item_id);
         if (item && item->model_id == model_id)
             return item;
@@ -30,13 +30,13 @@ GW::Item* MaterialsWindow::GetMerchItem(Material mat) const
 
 GW::Item* MaterialsWindow::GetBagItem(Material mat) const
 {
-    uint32_t model_id = GetModelID(mat);
-    int min_qty = mat <= WoodPlank ? 10 : 1; // 10 if common, 1 if rare
+    const uint32_t model_id = GetModelID(mat);
+    const int min_qty = mat <= WoodPlank ? 10 : 1; // 10 if common, 1 if rare
     GW::Bag** bags = GW::Items::GetBagArray();
     if (!bags)
         return nullptr;
-    size_t bag_i = static_cast<size_t>(GW::Constants::Bag::Backpack);
-    size_t bag_n = static_cast<size_t>(GW::Constants::Bag::Bag_2);
+    const size_t bag_i = static_cast<size_t>(GW::Constants::Bag::Backpack);
+    const size_t bag_n = static_cast<size_t>(GW::Constants::Bag::Bag_2);
     for (size_t i = bag_i; i <= bag_n; i++) {
         GW::Bag* bag = bags[i];
         if (!bag)
@@ -107,13 +107,13 @@ void MaterialsWindow::Initialize()
                                                                             // printf("Received price %d for %d (item %d)\n", pak->price, item->ModelId, pak->itemid);
                                                                             if (transactions.empty())
                                                                                 return;
-                                                                            Transaction& trans = transactions.front();
+                                                                            const Transaction& trans = transactions.front();
                                                                             if (cancelled || (trans.item_id != pak->itemid)) {
                                                                                 quote_pending = false;
                                                                                 return;
                                                                             }
 
-                                                                            auto gold_character = GW::Items::GetGoldAmountOnCharacter();
+                                                                            const auto gold_character = GW::Items::GetGoldAmountOnCharacter();
                                                                             if (trans.type == Transaction::Quote) {
                                                                                 price[trans.material] = static_cast<int>(pak->price);
                                                                                 Dequeue();
@@ -256,10 +256,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##essence", ImVec2(100.0f, 0))) {
-            int featherStock = GW::Items::CountItemByModelId(GetModelID(Feather), stockStart, stockEnd);
-            int dustStock = GW::Items::CountItemByModelId(GetModelID(PileofGlitteringDust), stockStart, stockEnd);
+            const int featherStock = GW::Items::CountItemByModelId(GetModelID(Feather), stockStart, stockEnd);
+            const int dustStock = GW::Items::CountItemByModelId(GetModelID(PileofGlitteringDust), stockStart, stockEnd);
 
-            int qty = 5 * qty_essence;
+            const int qty = 5 * qty_essence;
             for (int i = 0; i < qty; ++i) {
                 if (!use_stock || i < qty - featherStock / 10) {
                     EnqueuePurchase(Feather);
@@ -297,10 +297,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##grail", ImVec2(100.0f, 0))) {
-            int ironStock = GW::Items::CountItemByModelId(GetModelID(IronIngot), stockStart, stockEnd);
-            int dustStock = GW::Items::CountItemByModelId(GetModelID(PileofGlitteringDust), stockStart, stockEnd);
+            const int ironStock = GW::Items::CountItemByModelId(GetModelID(IronIngot), stockStart, stockEnd);
+            const int dustStock = GW::Items::CountItemByModelId(GetModelID(PileofGlitteringDust), stockStart, stockEnd);
 
-            int qty = 5 * qty_grail;
+            const int qty = 5 * qty_grail;
             for (int i = 0; i < qty; ++i) {
                 if (!use_stock || i < qty - ironStock / 10) {
                     EnqueuePurchase(IronIngot);
@@ -338,10 +338,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##armor", ImVec2(100.0f, 0))) {
-            int ironStock = GW::Items::CountItemByModelId(GetModelID(IronIngot), stockStart, stockEnd);
-            int boneStock = GW::Items::CountItemByModelId(GetModelID(Bone), stockStart, stockEnd);
+            const int ironStock = GW::Items::CountItemByModelId(GetModelID(IronIngot), stockStart, stockEnd);
+            const int boneStock = GW::Items::CountItemByModelId(GetModelID(Bone), stockStart, stockEnd);
 
-            int qty = 5 * qty_armor;
+            const int qty = 5 * qty_armor;
             for (int i = 0; i < qty; ++i) {
                 if (!use_stock || i < qty - ironStock / 10) {
                     EnqueuePurchase(IronIngot);
@@ -378,10 +378,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##pstone", ImVec2(100.0f, 0))) {
-            int graniteStock = GW::Items::CountItemByModelId(GetModelID(GraniteSlab), stockStart, stockEnd);
-            int dustStock = GW::Items::CountItemByModelId(GetModelID(PileofGlitteringDust), stockStart, stockEnd);
+            const int graniteStock = GW::Items::CountItemByModelId(GetModelID(GraniteSlab), stockStart, stockEnd);
+            const int dustStock = GW::Items::CountItemByModelId(GetModelID(PileofGlitteringDust), stockStart, stockEnd);
 
-            int qty = 10 * qty_pstone;
+            const int qty = 10 * qty_pstone;
             for (int i = 0; i < qty; ++i) {
                 if (!use_stock || i < qty - graniteStock / 10) {
                     EnqueuePurchase(GraniteSlab);
@@ -418,10 +418,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##resscroll", ImVec2(100.0f, 0))) {
-            int fiberStock = GW::Items::CountItemByModelId(GetModelID(PlantFiber), stockStart, stockEnd);
-            int boneStock = GW::Items::CountItemByModelId(GetModelID(Bone), stockStart, stockEnd);
+            const int fiberStock = GW::Items::CountItemByModelId(GetModelID(PlantFiber), stockStart, stockEnd);
+            const int boneStock = GW::Items::CountItemByModelId(GetModelID(Bone), stockStart, stockEnd);
 
-            float qty = 2.5f * qty_resscroll;
+            const float qty = 2.5f * qty_resscroll;
             for (int i = 0; i < static_cast<int>(std::ceil(qty)); ++i) {
                 if (!use_stock || i < qty - fiberStock / 10) {
                     EnqueuePurchase(PlantFiber);
@@ -434,8 +434,8 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
 
         ImGui::Separator();
 
-        float width2 = 100.0f;
-        float width1 = (ImGui::GetContentRegionAvail().x - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2);
+        const float width2 = 100.0f;
+        const float width1 = (ImGui::GetContentRegionAvail().x - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2);
 
         // === generic materials ===
         static int common_idx = 0;
@@ -464,7 +464,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
             common_qty = 1;
         ImGui::SameLine();
         if (ImGui::Button("Buy##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            int materialStock = GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(common_idx)), stockStart, stockEnd);
+            const int materialStock = GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(common_idx)), stockStart, stockEnd);
 
             for (int i = 0; i < common_qty - (use_stock ? std::floor(materialStock / 10) : 0); ++i) {
                 EnqueuePurchase(static_cast<Material>(common_idx));
@@ -517,7 +517,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
             rare_qty = 1;
         ImGui::SameLine();
         if (ImGui::Button("Buy##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            int materialStock = GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(rare_idx + AmberChunk)), stockStart, stockEnd);
+            const int materialStock = GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(rare_idx + AmberChunk)), stockStart, stockEnd);
 
             for (int i = 0; i < rare_qty - (use_stock ? materialStock : 0); ++i) {
                 EnqueuePurchase(static_cast<Material>(rare_idx + AmberChunk));
@@ -629,8 +629,8 @@ DWORD MaterialsWindow::RequestSellQuote(Material material)
 std::string MaterialsWindow::GetPrice(Material mat1, float fac1,
                                       Material mat2, float fac2, int extra) const
 {
-    int p1 = price[mat1];
-    int p2 = price[mat2];
+    const int p1 = price[mat1];
+    const int p2 = price[mat2];
     if (p1 == PRICE_NOT_AVAILABLE || p2 == PRICE_NOT_AVAILABLE) {
         return "Price: (Material not available)";
     }
@@ -665,8 +665,8 @@ void MaterialsWindow::FullConsPriceTooltip() const
             strcpy_s(buf, "Full Conset Price: -");
         }
         else {
-            int p = price[IronIngot] * 10 + price[PileofGlitteringDust] * 10 +
-                    price[Bone] * 5 + price[Feather] * 5 + 750;
+            const int p = price[IronIngot] * 10 + price[PileofGlitteringDust] * 10 +
+                          price[Bone] * 5 + price[Feather] * 5 + 750;
             snprintf(buf, 256, "Full Conset Price: %g k", p / 1000.0f);
         }
         ImGui::SetTooltip(buf);

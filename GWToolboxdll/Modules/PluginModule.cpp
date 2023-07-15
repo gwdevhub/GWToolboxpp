@@ -138,7 +138,7 @@ void PluginModule::DrawSettingInternal()
 {
     ImGui::PushID("Plugins");
 
-    for (auto plugin : plugins) {
+    for (const auto plugin : plugins) {
         ImGui::PushID(plugin);
         auto& style = ImGui::GetStyle();
         const auto origin_header_col = style.Colors[ImGuiCol_Header];
@@ -213,7 +213,7 @@ void PluginModule::Draw(IDirect3DDevice9* device)
                   L"GWToolbox++");
         message_displayed = true;
     }
-    for (auto plugin : loaded_plugins) {
+    for (const auto plugin : loaded_plugins) {
         if (!InitializePlugin(plugin))
             continue;
         if (!plugin->active)
@@ -231,7 +231,7 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
         for (const auto& entry : dlls_to_load) {
             std::filesystem::path path = entry.pItem;
             const auto filename = path.filename();
-            bool is_active = ini->GetBoolValue(plugins_enabled_section, entry.pItem, false);
+            const bool is_active = ini->GetBoolValue(plugins_enabled_section, entry.pItem, false);
             auto matching_plugins = std::views::filter(plugins, [filename](auto plugin) {
                 return plugin->path.filename() == filename;
             });
@@ -278,7 +278,7 @@ void PluginModule::SignalTerminate()
 {
     ToolboxUIElement::SignalTerminate();
     auto plugins_cpy = loaded_plugins;
-    for (auto p : std::views::reverse(plugins_cpy)) {
+    for (const auto p : std::views::reverse(plugins_cpy)) {
         UnloadPlugin(p);
     }
 }
@@ -288,6 +288,6 @@ void PluginModule::Terminate()
     ToolboxUIElement::Terminate();
     SignalTerminate();
     ASSERT(loaded_plugins.empty());
-    for (auto p : plugins)
+    for (const auto p : plugins)
         delete p;
 }

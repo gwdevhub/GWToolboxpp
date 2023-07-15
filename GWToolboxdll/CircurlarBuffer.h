@@ -43,7 +43,7 @@ struct CircularBuffer {
     {
         ASSERT(index < count);
         ASSERT(cursor == count || count == allocated);
-        size_t first = cursor % count;
+        const size_t first = cursor % count;
         size_t i = (first + index) % count;
         return buffer[i];
     }

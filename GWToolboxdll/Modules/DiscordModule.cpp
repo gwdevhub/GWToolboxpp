@@ -233,7 +233,7 @@ DWORD GetProcId(const char* ProcName)
     PROCESSENTRY32 pe32;
     HANDLE hSnapshot = nullptr;
     uint32_t pid = 0;
-    uint32_t len = strlen(ProcName);
+    const uint32_t len = strlen(ProcName);
     pe32.dwSize = sizeof(PROCESSENTRY32);
     hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
@@ -309,12 +309,12 @@ void DiscordModule::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Callback,
                                                                        [this](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd* packet) -> void {
                                                                            UNREFERENCED_PARAMETER(status);
-                                                                           GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
+                                                                           const GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
                                                                            if (player_agent && packet->player_id == player_agent->player_number) {
                                                                                pending_activity_update = true; // Update if this is me
                                                                                return;
                                                                            }
-                                                                           GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
+                                                                           const GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
                                                                            if (p && packet->party_id == p->party_id)
                                                                                pending_activity_update = true; // Update if this is my party
                                                                        });
@@ -362,7 +362,7 @@ bool DiscordModule::IsInJoinablePartyMap()
         return false;
     if (join_in_progress.ghkey[0]) {
         // If ghkey is set, we need to be in a guild hall
-        GW::Guild* g = GW::GuildMgr::GetCurrentGH();
+        const GW::Guild* g = GW::GuildMgr::GetCurrentGH();
         if (!g)
             return false;
         for (size_t i = 0; i < 4; i++) {
@@ -417,7 +417,7 @@ void DiscordModule::JoinParty()
     wchar_t buf[128] = {0};
     swprintf(buf, 128, L"invite %s", join_in_progress.player);
     GW::Chat::SendChat('/', buf);
-    HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+    const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
     SetForegroundWindow(hwnd);
     ShowWindow(hwnd, SW_RESTORE);
     Log::Log("Join process complete\n");
@@ -445,7 +445,7 @@ bool DiscordModule::Connect()
     ConnectCanary(); // Sets env var to attach to canary if its open.
 #endif
     SetLastError(0);
-    int result = discordCreate(DISCORD_VERSION, &params, &app.core);
+    const int result = discordCreate(DISCORD_VERSION, &params, &app.core);
     if (result != DiscordResult_Ok) {
 #ifdef _DEBUG
         Log::ErrorW(L"Failed to create discord connection; error code %d, last error %d", result, GetLastError());
@@ -466,8 +466,8 @@ bool DiscordModule::Connect()
 // Sets DISCORD_INSTANCE_ID to match DiscordCanary.exe if its open. debug only.
 void DiscordModule::ConnectCanary()
 {
-    uint32_t discord_pid = GetProcId("Discord.exe");
-    uint32_t discord_canary_pid = GetProcId("DiscordCanary.exe");
+    const uint32_t discord_pid = GetProcId("Discord.exe");
+    const uint32_t discord_canary_pid = GetProcId("DiscordCanary.exe");
     uint32_t discord_env = 0;
     // Prefer canary over vanilla. To use vanilla, just close canary...
     if (discord_canary_pid && discord_pid) {
@@ -491,7 +491,7 @@ bool DiscordModule::LoadDll()
 {
     if (discordCreate)
         return true; // Already loaded.
-    HINSTANCE hGetProcIDDLL = LoadLibraryW(dll_location.c_str());
+    const HINSTANCE hGetProcIDDLL = LoadLibraryW(dll_location.c_str());
     if (!hGetProcIDDLL) {
         Log::LogW(L"Failed to LoadLibraryW %s\n", dll_location.c_str());
         return false;
@@ -509,7 +509,7 @@ bool DiscordModule::LoadDll()
 
 bool DiscordModule::UnloadDll()
 {
-    HINSTANCE hGetProcIDDLL = GetModuleHandleW(dll_location.c_str());
+    const HINSTANCE hGetProcIDDLL = GetModuleHandleW(dll_location.c_str());
     return !hGetProcIDDLL || FreeLibrary(hGetProcIDDLL);
 }
 
@@ -601,20 +601,20 @@ void DiscordModule::UpdateActivity()
     if (!GW::Map::GetIsMapLoaded())
         return;
     GW::Guild* g = nullptr;
-    GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
-    GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
-    GW::AgentLiving* a = GW::Agents::GetCharacter();
-    GW::CharContext* c = GW::GetGameContext()->character;
-    GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+    const GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
+    const GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
+    const GW::AgentLiving* a = GW::Agents::GetCharacter();
+    const GW::CharContext* c = GW::GetGameContext()->character;
+    const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (!p || !m || !a || !c)
         return;
-    bool is_guild_hall = m->type == GW::RegionType::GuildHall;
+    const bool is_guild_hall = m->type == GW::RegionType::GuildHall;
     if (is_guild_hall) {
         g = GW::GuildMgr::GetCurrentGH();
         if (!g)
             return; // Current gh not found - guild array not loaded yet
     }
-    bool show_activity = !hide_activity_when_offline || GW::FriendListMgr::GetMyStatus() != GW::FriendStatus::Offline;
+    const bool show_activity = !hide_activity_when_offline || GW::FriendListMgr::GetMyStatus() != GW::FriendStatus::Offline;
     if (!show_activity) {
         Disconnect(); // Disconnect from discord if we're set to offline
         return;
@@ -635,10 +635,10 @@ void DiscordModule::UpdateActivity()
     // Only update info if we're allowed
 
     if (show_activity) {
-        unsigned short map_id = static_cast<unsigned short>(GW::Map::GetMapID());
+        const unsigned short map_id = static_cast<unsigned short>(GW::Map::GetMapID());
         short map_region = static_cast<short>(GW::Map::GetRegion());
-        short map_language = static_cast<short>(GW::Map::GetLanguage());
-        short map_district = static_cast<short>(GW::Map::GetDistrict());
+        const short map_language = static_cast<short>(GW::Map::GetLanguage());
+        const short map_district = static_cast<short>(GW::Map::GetDistrict());
         char party_id[128];
         if (show_party_info) {
             // Party ID needs to be consistent across maps

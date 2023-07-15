@@ -412,7 +412,7 @@ namespace {
         const auto& options = getPrefCommandOptions();
         if (argc > 1 && wcscmp(argv[1], L"list") == 0) {
             const size_t buf_size = 16 * options.size(); // Roughly 16 chars per option label
-            auto buffer = new wchar_t[buf_size];
+            const auto buffer = new wchar_t[buf_size];
             int offset = 0;
             for (auto it = options.begin(); it != options.end(); ++it) {
                 const int written = swprintf(&buffer[offset], offset - buf_size, offset > 0 ? L", %s" : L"%s", it->first.c_str());
@@ -618,7 +618,7 @@ void ChatCommands::DrawHelp()
     ImGui::Text(fps_syntax);
     ImGui::Bullet();
     ImGui::Text("'/hero [avoid|guard|attack]' to set your hero behavior in an explorable area.");
-    auto toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
+    const auto toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
     ImGui::Bullet();
     ImGui::Text("'/hide <name>' closes the window, in-game feature or widget titled <name>.");
     ImGui::ShowHelp(toggle_hint);
@@ -665,7 +665,7 @@ void ChatCommands::DrawHelp()
     ImGui::Text("'/tb reset' moves Toolbox and Settings window to the top-left corner.");
     ImGui::Bullet();
     ImGui::Text("'/tb quit' or '/tb exit' completely closes toolbox and all its windows.");
-    auto transmo_hint = "<npc_name> options: eye, zhu, kuunavang, beetle, polar, celepig, \n"
+    const auto transmo_hint = "<npc_name> options: eye, zhu, kuunavang, beetle, polar, celepig, \n"
         "  destroyer, koss, bonedragon, smite, kanaxai, skeletonic, moa";
     ImGui::Bullet();
     ImGui::Text("'/transmo <npc_name> [size (6-255)]' to change your appearance into an NPC.\n"
@@ -1327,7 +1327,7 @@ void ChatCommands::CmdDialog(const wchar_t*, int argc, LPWSTR* argv)
 {
     if (!IsMapReady())
         return;
-    auto syntax = "Syntax: '/dialog [dialog_id]' (e.g. '/dialog 0x184')\nSyntax: '/dialog take' (to take first available quest)";
+    const auto syntax = "Syntax: '/dialog [dialog_id]' (e.g. '/dialog 0x184')\nSyntax: '/dialog take' (to take first available quest)";
     if (argc <= 1) {
         Log::Error(syntax);
         return;
@@ -1738,7 +1738,7 @@ void ChatCommands::CmdTarget(const wchar_t* message, int argc, LPWSTR* argv)
     if (argc < 2)
         return Log::ErrorW(L"Missing argument for /%s", argv[0]);
 
-    auto zero_w = L"0";
+    const auto zero_w = L"0";
 
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
     if (arg1 == L"ee") // /target ee
@@ -2660,7 +2660,7 @@ void ChatCommands::CmdSetNormalMode(const wchar_t*, int, LPWSTR*)
 
 void ChatCommands::CmdAnimation(const wchar_t*, int argc, LPWSTR* argv)
 {
-    auto syntax = "Syntax: '/animation [me|target] [animation_id (1-2076)]'";
+    const auto syntax = "Syntax: '/animation [me|target] [animation_id (1-2076)]'";
 
     if (argc < 3)
         return Log::Error(syntax);

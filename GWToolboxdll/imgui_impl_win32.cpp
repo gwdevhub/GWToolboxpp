@@ -179,11 +179,11 @@ void ImGui_ImplWin32_Shutdown()
 
 static bool ImGui_ImplWin32_UpdateMouseCursor()
 {
-    ImGuiIO& io = ImGui::GetIO();
+    const ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
         return false;
 
-    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+    const ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor) {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
         SetCursor(nullptr);
@@ -253,7 +253,7 @@ static void ImGui_ImplWin32_UpdateKeyModifiers()
 
 static void ImGui_ImplWin32_UpdateMouseData()
 {
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    const ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(bd->hWnd != 0);
 
@@ -363,7 +363,7 @@ void ImGui_ImplWin32_NewFrame()
     ImGui_ImplWin32_ProcessKeyEventsWorkarounds();
 
     // Update OS mouse cursor with the cursor requested by imgui
-    ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    const ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
     if (bd->LastMouseCursor != mouse_cursor) {
         bd->LastMouseCursor = mouse_cursor;
         ImGui_ImplWin32_UpdateMouseCursor();
@@ -691,7 +691,7 @@ static BOOL _IsWindowsVersionOrGreater(WORD major, WORD minor, WORD)
     using PFN_RtlVerifyVersionInfo = LONG(WINAPI *)(OSVERSIONINFOEXW*, ULONG, ULONGLONG);
     static PFN_RtlVerifyVersionInfo RtlVerifyVersionInfoFn = nullptr;
     if (RtlVerifyVersionInfoFn == nullptr)
-        if (HMODULE ntdllModule = GetModuleHandleA("ntdll.dll"))
+        if (const HMODULE ntdllModule = GetModuleHandleA("ntdll.dll"))
             RtlVerifyVersionInfoFn = (PFN_RtlVerifyVersionInfo)GetProcAddress(ntdllModule, "RtlVerifyVersionInfo");
     if (RtlVerifyVersionInfoFn == nullptr)
         return FALSE;
@@ -748,7 +748,7 @@ void ImGui_ImplWin32_EnableDpiAwareness()
 {
     if (_IsWindows10OrGreater()) {
         static HINSTANCE user32_dll = LoadLibraryA("user32.dll"); // Reference counted per-process
-        if (auto SetThreadDpiAwarenessContextFn =
+        if (const auto SetThreadDpiAwarenessContextFn =
             (PFN_SetThreadDpiAwarenessContext)GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext")) {
             SetThreadDpiAwarenessContextFn(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
             return;
@@ -756,7 +756,7 @@ void ImGui_ImplWin32_EnableDpiAwareness()
     }
     if (_IsWindows8Point1OrGreater()) {
         static HINSTANCE shcore_dll = LoadLibraryA("shcore.dll"); // Reference counted per-process
-        if (auto SetProcessDpiAwarenessFn =
+        if (const auto SetProcessDpiAwarenessFn =
             (PFN_SetProcessDpiAwareness)GetProcAddress(shcore_dll, "SetProcessDpiAwareness")) {
             SetProcessDpiAwarenessFn(PROCESS_PER_MONITOR_DPI_AWARE);
             return;
@@ -797,7 +797,7 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
 
 float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
 {
-    HMONITOR monitor = MonitorFromWindow(static_cast<HWND>(hwnd), MONITOR_DEFAULTTONEAREST);
+    const HMONITOR monitor = MonitorFromWindow(static_cast<HWND>(hwnd), MONITOR_DEFAULTTONEAREST);
     return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
 }
 
@@ -824,7 +824,7 @@ void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
     BOOL opaque;
     DWORD color;
     if (_IsWindows8OrGreater() || (SUCCEEDED(::DwmGetColorizationColor(&color, &opaque)) && !opaque)) {
-        HRGN region = CreateRectRgn(0, 0, -1, -1);
+        const HRGN region = CreateRectRgn(0, 0, -1, -1);
         DWM_BLURBEHIND bb = {};
         bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
         bb.hRgnBlur = region;

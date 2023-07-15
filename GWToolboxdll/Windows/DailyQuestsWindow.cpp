@@ -1009,7 +1009,7 @@ namespace {
 
     const wchar_t* DateString(time_t* unix)
     {
-        std::tm* now = std::localtime(unix);
+        const std::tm* now = std::localtime(unix);
         static wchar_t buf[12];
         swprintf(buf, sizeof(buf), L"%d-%02d-%02d", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday);
         return buf;
@@ -1047,7 +1047,7 @@ namespace {
 
     void PrintDaily(const wchar_t* label, const char* value, time_t unix, bool as_wiki_link = true)
     {
-        bool show_date = unix != time(nullptr);
+        const bool show_date = unix != time(nullptr);
         wchar_t buf[139];
         if (show_date) {
             swprintf(buf, _countof(buf), as_wiki_link ? L"%s, %s: <a=1>\x200B%S</a>" : L"%s, %s: <a=1>%S</a>", label, DateString(&unix), value);
@@ -1073,25 +1073,25 @@ time_t GetNextWeeklyRotationTime()
 
 const char* GetNicholasSandfordLocation(time_t* unix)
 {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1239260400) / 86400 % 52);
+    const uint32_t cycle_index = static_cast<uint32_t>((*unix - 1239260400) / 86400 % 52);
     return nicholas_sandford_cycles[cycle_index];
 }
 
 uint32_t GetNicholasItemQuantity(time_t* unix)
 {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
+    const uint32_t cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
     return nicholas_quantity_cycles[cycle_index];
 }
 
 const char* GetNicholasLocation(time_t* unix)
 {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
+    const uint32_t cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
     return nicholas_location_cycles[cycle_index];
 }
 
 const char* GetNicholasItemName(time_t* unix)
 {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
+    const uint32_t cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
     return nicholas_item_cycles[cycle_index];
 }
 
@@ -1102,13 +1102,13 @@ uint32_t GetWantedByShiningBlade(time_t* unix)
 
 const char* GetVanguardQuest(time_t* unix)
 {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1299168000) / 86400 % 9);
+    const uint32_t cycle_index = static_cast<uint32_t>((*unix - 1299168000) / 86400 % 9);
     return vanguard_cycles[cycle_index];
 }
 
 bool GetIsPreSearing()
 {
-    GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
+    const GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
     return i && i->region == GW::Region::Region_Presearing;
 }
 
@@ -1171,8 +1171,8 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     ImGui::BeginChild("dailies_scroll", ImVec2(0, (-1 * (20.0f * ImGui::GetIO().FontGlobalScale)) - ImGui::GetStyle().ItemInnerSpacing.y));
     time_t unix = time(nullptr);
     uint32_t idx = 0;
-    ImColor sCol(102, 187, 238, 255);
-    ImColor wCol(255, 255, 255, 255);
+    const ImColor sCol(102, 187, 238, 255);
+    const ImColor wCol(255, 255, 255, 255);
     for (size_t i = 0; i < static_cast<size_t>(daily_quest_window_count); i++) {
         offset = 0.0f;
         switch (i) {
@@ -1327,43 +1327,43 @@ void DailyQuests::LoadSettings(ToolboxIni* ini)
     show_weekly_bonus_pvp_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_weekly_bonus_pvp_in_window), show_weekly_bonus_pvp_in_window);
 
     const char* zms = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_missions), "0");
-    std::bitset<zm_cnt> zmb(zms);
+    const std::bitset<zm_cnt> zmb(zms);
     for (unsigned int i = 0; i < zmb.size(); ++i) {
         subscribed_zaishen_missions[i] = zmb[i] == 1;
     }
 
     const char* zbs = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_bounties), "0");
-    std::bitset<zb_cnt> zbb(zbs);
+    const std::bitset<zb_cnt> zbb(zbs);
     for (unsigned int i = 0; i < zbb.size(); ++i) {
         subscribed_zaishen_bounties[i] = zbb[i] == 1;
     }
 
     const char* zcs = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_combats), "0");
-    std::bitset<zc_cnt> zcb(zcs);
+    const std::bitset<zc_cnt> zcb(zcs);
     for (unsigned int i = 0; i < zcb.size(); ++i) {
         subscribed_zaishen_combats[i] = zcb[i] == 1;
     }
 
     const char* zvs = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_vanquishes), "0");
-    std::bitset<zv_cnt> zvb(zvs);
+    const std::bitset<zv_cnt> zvb(zvs);
     for (unsigned int i = 0; i < zvb.size(); ++i) {
         subscribed_zaishen_vanquishes[i] = zvb[i] == 1;
     }
 
     const char* wss = ini->GetValue(Name(), VAR_NAME(subscribed_wanted_quests), "0");
-    std::bitset<ws_cnt> wsb(wss);
+    const std::bitset<ws_cnt> wsb(wss);
     for (unsigned int i = 0; i < wsb.size(); ++i) {
         subscribed_wanted_quests[i] = wsb[i] == 1;
     }
 
     const char* wbes = ini->GetValue(Name(), VAR_NAME(subscribed_weekly_bonus_pve), "0");
-    std::bitset<wbe_cnt> wbeb(wbes);
+    const std::bitset<wbe_cnt> wbeb(wbes);
     for (unsigned int i = 0; i < wbeb.size(); ++i) {
         subscribed_weekly_bonus_pve[i] = wbeb[i] == 1;
     }
 
     const char* wbps = ini->GetValue(Name(), VAR_NAME(subscribed_weekly_bonus_pvp), "0");
-    std::bitset<wbp_cnt> wbpb(wbps);
+    const std::bitset<wbp_cnt> wbpb(wbps);
     for (unsigned int i = 0; i < wbpb.size(); ++i) {
         subscribed_weekly_bonus_pvp[i] = wbpb[i] == 1;
     }

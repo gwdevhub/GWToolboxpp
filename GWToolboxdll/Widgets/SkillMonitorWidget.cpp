@@ -100,14 +100,14 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
         y *= uiscale_multiply;
         // Clamp
         ImVec4 rect(x.x, y.x, x.y, y.y);
-        ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
+        const ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
         // GW Clamps windows to viewport; we need to do the same.
         GuiUtils::ClampRect(rect, viewport);
         // Left placement
         GW::Vec2f internal_offset(
             7.f, GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f);
         internal_offset *= uiscale_multiply;
-        int user_offset_x = abs(user_offset);
+        const int user_offset_x = abs(user_offset);
         float offset_width = width;
         auto calculated_pos =
             ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
@@ -141,7 +141,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
             if (++party_index > num_rows)
                 continue;
             auto& skill_history = history[agent_id];
-            size_t y = party_slot;
+            const size_t y = party_slot;
 
             for (size_t i = 0; i < skill_history.size(); i++) {
                 const auto& skill_activation = skill_history.at(i);
@@ -423,7 +423,7 @@ bool SkillMonitorWidget::FetchPartyInfo()
     if (info->others.valid()) {
         for (const DWORD ally_id : info->others) {
             GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
-            GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
+            const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
             if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
                 if (allies_start == 255)
                     allies_start = party_map.size();

@@ -69,9 +69,9 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
 
-    float width = bond_list.size() * img_size;
+    const float width = bond_list.size() * img_size;
     if (snap_to_party_window && party_window_position) {
-        float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
+        const float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
         // NB: Use case to define GW::Vec4f ?
         GW::Vec2f x = party_window_position->xAxis();
         GW::Vec2f y = party_window_position->yAxis();
@@ -80,7 +80,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
         y *= uiscale_multiply;
         // Clamp
         ImVec4 rect(x.x, y.x, x.y, y.y);
-        ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
+        const ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
         // GW Clamps windows to viewport; we need to do the same.
         GuiUtils::ClampRect(rect, viewport);
         // Left placement
@@ -89,7 +89,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
             GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f
         );
         internal_offset *= uiscale_multiply;
-        int user_offset_x = abs(user_offset);
+        const int user_offset_x = abs(user_offset);
         float offset_width = width;
         auto calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
         if (calculated_pos.x < 0 || user_offset < 0) {
@@ -103,8 +103,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
 
     ImGui::SetNextWindowSize(ImVec2(width, height));
     if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !(click_to_cast || click_to_drop)))) {
-        float win_x = ImGui::GetWindowPos().x;
-        float win_y = ImGui::GetWindowPos().y;
+        const float win_x = ImGui::GetWindowPos().x;
+        const float win_y = ImGui::GetWindowPos().y;
 
         auto GetGridPos = [&](const size_t _x, const size_t _y, bool topleft) -> ImVec2 {
             size_t x = _x;
@@ -129,8 +129,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
                     continue; // bond target not in party
                 if (!bond_map.contains(skill))
                     continue; // bond with a skill not in skillbar
-                size_t y = party_map[agent];
-                size_t x = bond_map[skill];
+                const size_t y = party_map[agent];
+                const size_t x = bond_map[skill];
                 const auto texture = *Resources::GetSkillImage(buff.skill_id);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
@@ -165,8 +165,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
                     agentAttributes = &agentAttributes[skill_data->attribute];
                     const bool overlay = effect.attribute_level < agentAttributes->level;
 
-                    size_t y = party_map[agent_id];
-                    size_t x = bond_map[skill_id];
+                    const size_t y = party_map[agent_id];
+                    const size_t x = bond_map[skill_id];
 
                     const auto texture = *Resources::GetSkillImage(skill_id);
                     ImVec2 tl = GetGridPos(x, y, true);
@@ -209,15 +209,15 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid)
     if (targetId == 0)
         return;
 
-    GW::Agent* target = GW::Agents::GetAgentByID(targetId);
+    const GW::Agent* target = GW::Agents::GetAgentByID(targetId);
     if (target == nullptr)
         return;
 
-    int islot = GW::SkillbarMgr::GetSkillSlot(static_cast<GW::Constants::SkillID>(buff_skillid));
+    const int islot = GW::SkillbarMgr::GetSkillSlot(static_cast<GW::Constants::SkillID>(buff_skillid));
     if (islot < 0)
         return;
     uint32_t slot = static_cast<uint32_t>(islot);
-    GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+    const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!skillbar || !skillbar->IsValid())
         return;
     if (skillbar->skills[slot].recharge != 0)
@@ -319,7 +319,7 @@ bool BondsWidget::FetchPartyInfo()
     party_map.clear();
     allies_start = 255;
     for (const GW::PlayerPartyMember& player : info->players) {
-        DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
+        const DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
         if (!id)
             continue;
         party_map[id] = party_list.size();

@@ -84,7 +84,7 @@ namespace {
         if (!response.starts_with("error"))
             return false;
         auto id_offset = response.find("id=");
-        auto msg_offset = response.find(" msg=");
+        const auto msg_offset = response.find(" msg=");
         if (id_offset == std::string::npos || msg_offset == std::string::npos)
             return false;
         id_offset += 3;
@@ -180,7 +180,7 @@ namespace {
 
             auto replace_all = [](std::string& subject, const std::string& find, const std::string& replace) {
                 while (true) {
-                    auto found = subject.find(find);
+                    const auto found = subject.find(find);
                     if (found == std::string::npos)
                         break;
                     subject.replace(found, find.size(), replace);
@@ -226,8 +226,8 @@ namespace {
             if (user_invoked && format) {
                 va_list vl;
                 va_start(vl, format);
-                size_t len = vsnprintf(nullptr, 0, format, vl);
-                auto buf = new char[len + 1];
+                const size_t len = vsnprintf(nullptr, 0, format, vl);
+                const auto buf = new char[len + 1];
                 vsnprintf(buf, len + 1, format, vl);
                 va_end(vl);
                 Log::Error(buf);
@@ -259,7 +259,7 @@ namespace {
         if (server_socket == INVALID_SOCKET)
             return failed("Couldn't connect to teamspeak 3; socket failure");
 
-        DWORD timeout = 500;
+        const DWORD timeout = 500;
         res = setsockopt(server_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof timeout);
         if (res == SOCKET_ERROR)
             return failed("Couldn't connect to teamspeak 3; setsockopt failure");
@@ -268,7 +268,7 @@ namespace {
             return failed("Couldn't connect to teamspeak 3; setsockopt failure");
 
         u_long ip = 0;
-        u_short port = teamspeak3_port;
+        const u_short port = teamspeak3_port;
         u_long* ptr = &ip;
         res = inet_pton(AF_INET, teamspeak3_host, ptr);
         if (res != 1)
@@ -288,7 +288,7 @@ namespace {
         Log::Log("Teamspeak 3 welcome message:\n%s", response->content.c_str());
 
         // Send auth message
-        std::string to_send = std::format("auth apikey={}\r\n", teamspeak3_api_key);
+        const std::string to_send = std::format("auth apikey={}\r\n", teamspeak3_api_key);
         response = PollSocket(to_send);
         if (!response)
             return failed("Couldn't connect to teamspeak 3; auth failure or empty response");
@@ -309,7 +309,7 @@ namespace {
     bool Connect(bool user_invoked = false, std::function<void(bool)> callback = nullptr)
     {
         Resources::EnqueueWorkerTask([user_invoked,callback]() {
-            bool success = ConnectBlocking(user_invoked);
+            const bool success = ConnectBlocking(user_invoked);
             if (callback)
                 callback(success);
         });
@@ -318,7 +318,7 @@ namespace {
 
     bool GetValue(const nlohmann::json& content, const char* key, std::string* out)
     {
-        auto found = content.find(key);
+        const auto found = content.find(key);
         if (!(found != content.end() && found->is_string()))
             return false;
         *out = *found;
@@ -352,7 +352,7 @@ namespace {
                 Log::Error("Failed to get teamspeak invite link (3)");
                 return;
             }
-            std::string url = std::format("https://tmspk.gg/{}", invite_id);
+            const std::string url = std::format("https://tmspk.gg/{}", invite_id);
             callback(url);
         });
     }
@@ -482,7 +482,7 @@ void TeamspeakModule::DrawSettingInternal()
             ImGui::Indent();
             ImGui::TextUnformatted("Server:");
             ImGui::SameLine();
-            auto teamspeak_server = GetCurrentServer();
+            const auto teamspeak_server = GetCurrentServer();
             if (!teamspeak_server) {
                 ImGui::TextDisabled("Not Connected");
             }

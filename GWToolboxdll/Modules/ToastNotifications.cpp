@@ -88,7 +88,7 @@ namespace {
 
     uint32_t GetPartyId()
     {
-        auto p = GW::PartyMgr::GetPartyInfo();
+        const auto p = GW::PartyMgr::GetPartyInfo();
         return p ? p->party_id : static_cast<uint32_t>(-1);
     }
 
@@ -124,14 +124,14 @@ namespace {
         if (toast->callback)
             toast->callback(toast, result);
         // naughty but idc
-        auto nonconst = (ToastNotifications::Toast*)toast;
+        const auto nonconst = (ToastNotifications::Toast*)toast;
         nonconst->callback = nullptr;
         nonconst->dismiss();
     }
 
     void OnToastMessageDecoded(void* callback_param, wchar_t* decoded)
     {
-        auto title = static_cast<wchar_t*>(callback_param);
+        const auto title = static_cast<wchar_t*>(callback_param);
         ToastNotifications::SendToast(title, decoded, OnGenericToastActivated);
         delete[] title;
     }
@@ -140,7 +140,7 @@ namespace {
     {
         if (!(encoded_message && encoded_message[0]))
             return;
-        auto title_copy = new wchar_t[wcslen(title) + 1];
+        const auto title_copy = new wchar_t[wcslen(title) + 1];
         wcscpy(title_copy, title);
         GW::UI::AsyncDecodeStr(encoded_message, OnToastMessageDecoded, title_copy);
     }
@@ -165,7 +165,7 @@ namespace {
             return;
         const wchar_t* message_encoded = ToolboxUtils::GetMessageCore();
         const size_t msg_len = wcslen(packet->sender_name) + wcslen(packet->sender_guild) + wcslen(message_encoded) + 10;
-        auto message_including_sender = new wchar_t[msg_len];
+        const auto message_including_sender = new wchar_t[msg_len];
         int written = -1;
         if (packet->sender_guild[0])
             written = swprintf(message_including_sender, msg_len, L"\x108\x107%s [%s]: \x1\x2%s", packet->sender_name, packet->sender_guild, message_encoded);

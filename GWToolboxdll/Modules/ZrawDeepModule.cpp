@@ -78,7 +78,7 @@ namespace {
 
     const bool IsKanaxai(GW::Agent* agent)
     {
-        GW::AgentLiving* a = agent ? agent->GetAsAgentLiving() : nullptr;
+        const GW::AgentLiving* a = agent ? agent->GetAsAgentLiving() : nullptr;
         return a && IsKanaxai(a->player_number);
     }
 
@@ -88,7 +88,7 @@ namespace {
     {
         if (!kanaxai_agent_id)
             return false;
-        auto kanaxai = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(kanaxai_agent_id));
+        const auto kanaxai = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(kanaxai_agent_id));
         if (!IsKanaxai(kanaxai))
             return false;
         return (kanaxai->transmog_npc_id ^ 0x20000000) == GW::Constants::ModelID::Minipet::Gwen;
@@ -100,13 +100,13 @@ namespace {
         GW::PlayerArray* players = p ? GW::Agents::GetPlayerArray() : nullptr;
         if (!players)
             return false;
-        for (auto& player : p->players) {
+        for (const auto& player : p->players) {
             if (!player.login_number || player.login_number >= players->size())
                 continue;
-            GW::Player* p2 = &players->at(player.login_number);
+            const GW::Player* p2 = &players->at(player.login_number);
             if (!p2)
                 continue;
-            auto pa = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(p2->agent_id));
+            const auto pa = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(p2->agent_id));
             if (pa && pa->GetIsLivingType() && (pa->transmog_npc_id ^ 0x20000000) != GW::Constants::ModelID::Minipet::Kanaxai)
                 return false;
         }
@@ -164,7 +164,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled)
                                                                         [this](GW::HookStatus* status, GW::Packet::StoC::DisplayCape* packet) -> void {
                                                                             if (!enabled)
                                                                                 return;
-                                                                            auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
+                                                                            const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
                                                                             if (!a || !a->GetIsLivingType())
                                                                                 return;
                                                                             if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
@@ -176,7 +176,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled)
                                                                        [this](GW::HookStatus* status, GW::Packet::StoC::AgentModel* packet) -> void {
                                                                            if (!enabled)
                                                                                return;
-                                                                           auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
+                                                                           const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
                                                                            if (!a || !a->GetIsLivingType())
                                                                                return;
                                                                            if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {

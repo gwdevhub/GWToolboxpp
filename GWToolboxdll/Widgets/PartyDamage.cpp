@@ -203,7 +203,7 @@ void PartyDamage::CreatePartyIndexMap()
     const GW::PartyInfo* const info = GW::PartyMgr::GetPartyInfo();
     size_t index = 0;
     for (const GW::PlayerPartyMember& player : info->players) {
-        uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
+        const uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
         if (id == GW::Agents::GetPlayerId())
             player_index = index;
         party_index[id] = index++;
@@ -260,7 +260,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device)
         y *= uiscale_multiply;
         // Clamp
         ImVec4 rect(x.x, y.x, x.y, y.y);
-        ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
+        const ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
         // GW Clamps windows to viewport; we need to do the same.
         GuiUtils::ClampRect(rect, viewport);
         // Left placement
@@ -454,7 +454,7 @@ void PartyDamage::LoadSettings(ToolboxIni* ini)
         if (GuiUtils::ParseInt(key.pItem, &lkey)) {
             if (lkey <= 0)
                 continue;
-            long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
+            const long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
             if (lval <= 0)
                 continue;
             hp_map[static_cast<size_t>(lkey)] = static_cast<uint32_t>(lval);

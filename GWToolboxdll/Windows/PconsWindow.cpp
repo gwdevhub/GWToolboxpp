@@ -177,7 +177,7 @@ void PconsWindow::OnAddExternalBond(GW::HookStatus* status, GW::Packet::StoC::Ad
 void PconsWindow::OnPostProcessEffect(GW::HookStatus* status, GW::Packet::StoC::PostProcess* pak)
 {
     PconAlcohol::alcohol_level = pak->level;
-    PconsWindow& instance = Instance();
+    const PconsWindow& instance = Instance();
     // printf("Level = %d, tint = %d\n", pak->level, pak->tint);
     if (instance.enabled)
         instance.pcon_alcohol->Update();
@@ -354,16 +354,16 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv)
                 argPcon.append(L" ");
                 argPcon.append(GuiUtils::ToLower(argv[i]));
             }
-            std::vector<Pcon*>& pcons = Instance().pcons;
-            std::string compare = GuiUtils::WStringToString(argPcon);
-            unsigned int compareLength = compare.length();
+            const std::vector<Pcon*>& pcons = Instance().pcons;
+            const std::string compare = GuiUtils::WStringToString(argPcon);
+            const unsigned int compareLength = compare.length();
             Pcon* bestMatch = nullptr;
             unsigned int bestMatchLength = 0;
             for (size_t i = 0; i < pcons.size(); ++i) {
                 Pcon* pcon = pcons[i];
-                std::string pconName(pcon->chat);
+                const std::string pconName(pcon->chat);
                 std::string pconNameSanitized = GuiUtils::ToLower(pconName);
-                unsigned int pconNameLength = pconNameSanitized.length();
+                const unsigned int pconNameLength = pconNameSanitized.length();
                 if (compareLength > pconNameLength)
                     continue;
                 if (pconNameSanitized.rfind(compare) == std::string::npos)
@@ -398,7 +398,7 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv)
 
 bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text)
 {
-    bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text, center_align_text);
+    const bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text, center_align_text);
 
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -527,8 +527,8 @@ bool PconsWindow::SetEnabled(bool b)
         case InstanceType::Explorable: {
             if (HotkeysWindow::CurrentHotkey() && !HotkeysWindow::CurrentHotkey()->show_message_in_emote_channel)
                 break; // Selected hotkey doesn't allow a message.
-            ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
-            ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
+            const ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
+            const ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
             if ((pcon == nullptr || pcon->Collapsed || !visible) && (main == nullptr || main->Collapsed || !MainWindow::Instance().visible)) {
                 Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
             }
@@ -608,7 +608,7 @@ void PconsWindow::CheckBossRangeAutoDisable()
         return; // No boss location to check for this map, player ptr not loaded, or checked recently already.
     }
     elite_area_check_timer = TIMER_INIT();
-    float d = GetDistance(GW::Vec2f(player->pos), current_final_room_location);
+    const float d = GetDistance(GW::Vec2f(player->pos), current_final_room_location);
     if (d > 0 && d <= Range::Spirit) {
         elite_area_disable_triggered = true;
         SetEnabled(false);

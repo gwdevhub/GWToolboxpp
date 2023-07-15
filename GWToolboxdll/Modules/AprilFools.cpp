@@ -30,7 +30,7 @@ namespace {
             return;
         if ((packet->agent_type & 0x30000000) != 0x30000000)
             return; // Not a player
-        uint32_t player_number = packet->agent_type ^ 0x30000000;
+        const uint32_t player_number = packet->agent_type ^ 0x30000000;
         auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number)));
         if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
             return; // Not a valid agent
@@ -41,7 +41,7 @@ namespace {
     {
         if (!enabled)
             return;
-        auto found = player_agents.find(packet->agent_id);
+        const auto found = player_agents.find(packet->agent_id);
         if (found != player_agents.end())
             player_agents.erase(found);
     }
@@ -102,8 +102,8 @@ void AprilFools::Initialize()
         SetEnabled(!enabled);
     });
 
-    time_t now = time(nullptr);
-    struct tm* ltm = gmtime(&now);
+    const time_t now = time(nullptr);
+    const struct tm* ltm = gmtime(&now);
     SetEnabled(ltm->tm_mon == 3 && ((ltm->tm_mday == 1 && ltm->tm_hour > 6) || (ltm->tm_mday == 2 && ltm->tm_hour < 7)));
 }
 

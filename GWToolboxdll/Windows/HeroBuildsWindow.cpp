@@ -92,16 +92,16 @@ namespace {
     const size_t GetPlayerHeroCount()
     {
         size_t ret = 0;
-        GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
+        const GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
         if (!party_info)
             return ret;
         const GW::HeroPartyMemberArray& party_heros = party_info->heroes;
         if (!party_heros.valid())
             return ret;
-        GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+        const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
         if (!me)
             return ret;
-        uint32_t my_player_id = me->login_number;
+        const uint32_t my_player_id = me->login_number;
         for (size_t i = 0; i < party_heros.size(); i++) {
             if (party_heros[i].owner_player_id == my_player_id)
                 ret++;
@@ -133,10 +133,10 @@ GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(HeroID hero_id, size_t* 
     GW::HeroPartyMemberArray& party_heros = party_info->heroes;
     if (!party_heros.valid())
         return nullptr;
-    GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     if (!me)
         return nullptr;
-    uint32_t my_player_id = me->login_number;
+    const uint32_t my_player_id = me->login_number;
     for (size_t i = 0; i < party_heros.size(); i++) {
         if (party_heros[i].owner_player_id == my_player_id &&
             party_heros[i].hero_id == hero_id) {
@@ -219,7 +219,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
             if (ImGui::Button("Copy##1", ImVec2(60.0f, 0))) {
                 TeamHeroBuild new_tb = teambuilds[selectedTeambuild];
-                std::string copy_name = std::string(new_tb.name) + " (Copy)";
+                const std::string copy_name = std::string(new_tb.name) + " (Copy)";
                 GuiUtils::StrCopy(new_tb.name, copy_name.c_str(), sizeof(new_tb.name));
                 builds_changed = true;
                 teambuilds.push_back(new_tb);
@@ -278,15 +278,15 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                                                return false;
                                            if (idx >= hero_count)
                                                return false;
-                                           auto id = HeroIndexToID[idx];
+                                           const auto id = HeroIndexToID[idx];
                                            if (id < HeroID::Merc1 || id > HeroID::Merc8) {
                                                *out_text = HeroName[HeroIndexToID[idx]];
                                                return true;
                                            }
                                            bool match = false;
-                                           auto ctx = GW::GetGameContext();
+                                           const auto ctx = GW::GetGameContext();
                                            auto& hero_array = ctx->world->hero_info;
-                                           for (auto& hero : hero_array) {
+                                           for (const auto& hero : hero_array) {
                                                if (hero.hero_id == id) {
                                                    match = true;
                                                    wcstombs(MercHeroNames[id - HeroID::Merc1], hero.name, 20);
@@ -481,7 +481,7 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, size_t idx, st
     const std::string code(build.code);
     constexpr int buffer_size = 128;
     char buffer[buffer_size];
-    auto id = idx > 0 && build.hero_index > 0 ? HeroIndexToID[build.hero_index] : 0;
+    const auto id = idx > 0 && build.hero_index > 0 ? HeroIndexToID[build.hero_index] : 0;
     if (name.empty() && code.empty() && id == HeroID::NoHero) {
         return; // nothing to do here
     }
@@ -491,9 +491,9 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, size_t idx, st
     }
     else if (idx > 0) {
         bool match = false;
-        auto ctx = GW::GetGameContext();
+        const auto ctx = GW::GetGameContext();
         auto& hero_array = ctx->world->hero_info;
-        for (auto& hero : hero_array) {
+        for (const auto& hero : hero_array) {
             if (hero.hero_id != id)
                 continue;
             wcstombs(MercHeroNames[id - HeroID::Merc1], hero.name, 20);
@@ -619,7 +619,7 @@ void HeroBuildsWindow::Update(float)
     static bool old_visible = false;
     bool cur_visible = false;
     cur_visible |= visible;
-    for (TeamHeroBuild& tbuild : teambuilds) {
+    for (const TeamHeroBuild& tbuild : teambuilds) {
         cur_visible |= tbuild.edit_open;
     }
 
@@ -647,7 +647,7 @@ void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, int argc, LPWSTR* argv)
         argBuildname.append(argv[i]);
     }
     std::string argBuildName_s = GuiUtils::WStringToString(argBuildname);
-    TeamHeroBuild* found = Instance().GetTeambuildByName(argBuildName_s);
+    const TeamHeroBuild* found = Instance().GetTeambuildByName(argBuildName_s);
     if (!found) {
         Log::ErrorW(L"No hero build found for %s", argBuildname.c_str());
         return;
@@ -689,7 +689,7 @@ void HeroBuildsWindow::LoadFromFile()
     // then load
     ToolboxIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
-    for (ToolboxIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         const char* section = entry.pItem;
 
         TeamHeroBuild tb(inifile->GetValue(section, "buildname", ""));
@@ -714,8 +714,8 @@ void HeroBuildsWindow::LoadFromFile()
             if (hero_index < -2) {
                 hero_index = -1; // can happen due to an old bug
             }
-            int show_panel = inifile->GetLongValue(section, showpanelkey, 0);
-            uint32_t behavior = static_cast<uint32_t>(inifile->GetLongValue(section, behaviorkey, 1));
+            const int show_panel = inifile->GetLongValue(section, showpanelkey, 0);
+            const uint32_t behavior = static_cast<uint32_t>(inifile->GetLongValue(section, behaviorkey, 1));
             HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0, behavior);
             tb.builds.push_back(build);
         }
@@ -804,7 +804,7 @@ bool HeroBuildsWindow::CodeOnHero::Process()
 
 HeroBuildsWindow::TeamHeroBuild* HeroBuildsWindow::GetTeambuildByName(std::string& build_name_search)
 {
-    std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(build_name_search));
+    const std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(build_name_search));
     for (auto& tb : teambuilds) {
         std::string name = GuiUtils::ToLower(GuiUtils::RemovePunctuation(tb.name));
         if (name.length() < compare.length())

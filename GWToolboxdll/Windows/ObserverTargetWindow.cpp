@@ -27,8 +27,8 @@ void ObserverTargetWindow::Prepare()
     if (compare_agent)
         compare_living = compare_agent->GetAsAgentLiving();
 
-    uint32_t next_compare_id = compare_living ? compare_living->agent_id : previously_compared_agent_id;
-    uint32_t next_tracked_id = tracking_living ? tracking_living->agent_id : previously_tracked_agent_id;
+    const uint32_t next_compare_id = compare_living ? compare_living->agent_id : previously_compared_agent_id;
+    const uint32_t next_tracked_id = tracking_living ? tracking_living->agent_id : previously_tracked_agent_id;
 
     // tracking & comparing the same agent is left up to the Player window, not the Target window
     if (next_compare_id == next_tracked_id) {

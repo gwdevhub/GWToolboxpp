@@ -13,7 +13,7 @@ void KeyboardLanguageFix::Initialize()
 {
     ToolboxModule::Initialize();
 
-    auto en_us_keyboard_name = "00000409";
+    const auto en_us_keyboard_name = "00000409";
 
     HKL* address = *(HKL**)GW::Scanner::Find("\x81\xe6\xff\xff\xff\x7f\x85\xc0", "xxxxxxxx", -0x4);
     if (!address) {
@@ -27,7 +27,7 @@ void KeyboardLanguageFix::Initialize()
     }
 
     HKL loaded_languages[0xff];
-    int keyboard_languages_count = GetKeyboardLayoutList(_countof(loaded_languages), loaded_languages);
+    const int keyboard_languages_count = GetKeyboardLayoutList(_countof(loaded_languages), loaded_languages);
     if (!keyboard_languages_count) {
         Log::Error("Failed to GetKeyboardLayoutList, GetLastError = %#08x", GetLastError());
         return;

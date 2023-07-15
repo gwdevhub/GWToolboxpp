@@ -88,7 +88,7 @@ namespace {
         std::wstring out;
         va_list vl;
         va_start(vl, format);
-        int written = StrVswprintf(out, format, vl);
+        const int written = StrVswprintf(out, format, vl);
         va_end(vl);
         ASSERT(written != -1);
         callback(false, out);
@@ -186,7 +186,7 @@ void Resources::OpenFileDialog(std::function<void(const char*)> callback, const 
     auto defaultPath_cpy = new std::string(defaultPath);
     EnqueueWorkerTask([callback, filterList_cpy,defaultPath_cpy]() {
         nfdchar_t* outPath = nullptr;
-        nfdresult_t result = NFD_OpenDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
+        const nfdresult_t result = NFD_OpenDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
         delete filterList_cpy;
         delete defaultPath_cpy;
 
@@ -210,7 +210,7 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
 
     EnqueueWorkerTask([callback, filterList_cpy,defaultPath_cpy]() {
         nfdchar_t* outPath = nullptr;
-        nfdresult_t result = NFD_SaveDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
+        const nfdresult_t result = NFD_SaveDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
         delete filterList_cpy;
         delete defaultPath_cpy;
 
@@ -526,7 +526,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
-    auto ext = path_to_file.extension();
+    const auto ext = path_to_file.extension();
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
         if (ext == ".dds")
             res = DirectX::CreateDDSTextureFromFileEx(device, path_to_file.c_str(), 0, D3DPOOL_MANAGED, true, texture);
@@ -628,25 +628,25 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
 bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error)
 {
     // otherwise try to install it from resource
-    HRSRC hResInfo = FindResourceA(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
+    const HRSRC hResInfo = FindResourceA(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
     if (!hResInfo) {
         StrSwprintf(error, L"Error calling FindResourceA on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
-    HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
+    const HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
     if (!hRes) {
         StrSwprintf(error, L"Error calling LoadResource on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
-    DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
+    const DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
     if (!size) {
         StrSwprintf(error, L"Error calling SizeofResource on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
     // write to file so the user can customize his icons
-    HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    const HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     DWORD bytesWritten;
-    BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, nullptr);
+    const BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, nullptr);
     if (wfRes != TRUE) {
         StrSwprintf(error, L"Error writing file %s - Error is %lu", path_to_file.filename().wstring().c_str(), GetLastError());
         return false;

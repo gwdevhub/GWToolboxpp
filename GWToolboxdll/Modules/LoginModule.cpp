@@ -26,7 +26,7 @@ namespace {
 
     bool IsCharSelectReady()
     {
-        GW::PreGameContext* pgc = GW::GetPreGameContext();
+        const GW::PreGameContext* pgc = GW::GetPreGameContext();
         if (!pgc || !pgc->chars.valid())
             return false;
         uint32_t ui_state = 10;
@@ -163,7 +163,7 @@ void LoginModule::Update(float)
             const auto pgc = GW::GetPreGameContext();
             if (pgc->index_1 == reroll_index_current)
                 return; // Not moved yet
-            HWND h = GW::MemoryMgr::GetGWWindowHandle();
+            const HWND h = GW::MemoryMgr::GetGWWindowHandle();
             if (pgc->index_1 == reroll_index_needed) {
                 // We're on the character that was asked for
                 state = LoginState::Idle;

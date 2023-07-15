@@ -201,7 +201,7 @@ int IRC::message_fetch()
     if (!connected)
         return 1;
     message_buffer[0] = '\0';
-    int ret_len = recv(irc_socket, message_buffer, 1023, 0);
+    const int ret_len = recv(irc_socket, message_buffer, 1023, 0);
     if (ret_len == SOCKET_ERROR) {
         printf("IRC::message_fetch recv failed, %d\n", WSAGetLastError());
         connected = false;
@@ -226,7 +226,7 @@ int IRC::ping()
     if (pong_recieved > ping_sent)
         ping_sent = 0;
     const clock_t timeout = 60 * CLOCKS_PER_SEC;
-    clock_t now = clock();
+    const clock_t now = clock();
     if (!ping_sent && (!pong_recieved || now - pong_recieved > timeout)) {
         raw("PING\r\n");
         ping_sent = now;
@@ -736,7 +736,7 @@ int IRC::privmsg(const char* fmt, ...)
     va_list args;
     va_start(args, fmt);
     raw("PRIVMSG %s :", fmt);
-    int ok = raw(va_arg(args, char*), args);
+    const int ok = raw(va_arg(args, char*), args);
     va_end(args);
     return ok;
 }
@@ -765,7 +765,7 @@ int IRC::raw(const char* fmt, ...)
     char buffer[600];
     va_list args;
     va_start(args, fmt);
-    int len = vsnprintf(buffer, 599, fmt, args) + 1;
+    const int len = vsnprintf(buffer, 599, fmt, args) + 1;
     va_end(args);
     if (len < 1) {
         printf("IRC::raw, no message bytes or failure\n");
@@ -778,7 +778,7 @@ int IRC::raw(const char* fmt, ...)
         buffer[len + 2] = '\0';
     }
     printf("IRC::raw sending %s\n", buffer);
-    int sent_bytes = send(irc_socket, buffer, static_cast<int>(strlen(buffer)), NULL);
+    const int sent_bytes = send(irc_socket, buffer, static_cast<int>(strlen(buffer)), NULL);
     if (sent_bytes == SOCKET_ERROR) {
         printf("IRC::raw send() failed, %d\n", WSAGetLastError());
         return 1;

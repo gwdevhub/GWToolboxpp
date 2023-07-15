@@ -123,7 +123,7 @@ namespace GuiUtils {
 
     void FocusWindow()
     {
-        HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+        const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
         if (!hwnd)
             return;
         SetForegroundWindow(hwnd);
@@ -141,7 +141,7 @@ namespace GuiUtils {
         if (url_path.empty())
             return GetWikiPrefix();
         char cmd[256];
-        std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(url_path)), '_');
+        const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(url_path)), '_');
         snprintf(cmd, _countof(cmd), "%s%s", GetWikiPrefix(), encoded.c_str());
         return cmd;
     }
@@ -151,7 +151,7 @@ namespace GuiUtils {
         if (term.empty())
             return;
         char cmd[256];
-        std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
+        const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
         ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
         SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
     }
@@ -177,7 +177,7 @@ namespace GuiUtils {
         std::thread t([] {
             printf("Loading fonts\n");
 
-            ImGuiIO& io = ImGui::GetIO();
+            const ImGuiIO& io = ImGui::GetIO();
 
             std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk;
             fonts_on_disk.emplace_back(L"Font.ttf", io.Fonts->GetGlyphRangesDefault());
@@ -194,7 +194,7 @@ namespace GuiUtils {
             std::vector<FontData> fonts;
             for (size_t i = 0; i < fonts_on_disk.size(); ++i) {
                 const auto& f = fonts_on_disk[i];
-                utf8::string utf8path = Resources::GetPathUtf8(f.first);
+                const utf8::string utf8path = Resources::GetPathUtf8(f.first);
                 size_t size;
                 void* data = ImFileLoadToMemory(utf8path.bytes, "rb", &size, 0);
                 if (data) {
@@ -460,7 +460,7 @@ namespace GuiUtils {
         if (s.empty())
             return "";
         // NB: GW uses code page 0 (CP_ACP)
-        int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &s[0], static_cast<int>(s.size()), nullptr, 0, nullptr, nullptr);
+        const int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &s[0], static_cast<int>(s.size()), nullptr, 0, nullptr, nullptr);
         ASSERT(size_needed != 0);
         std::string strTo(size_needed, 0);
         ASSERT(WideCharToMultiByte(CP_UTF8, 0, &s[0], static_cast<int>(s.size()), &strTo[0], size_needed, NULL, NULL));
@@ -471,7 +471,7 @@ namespace GuiUtils {
     // https://docs.microsoft.com/en-gb/windows/win32/fileio/naming-a-file
     std::string SanitiseFilename(const std::string& str)
     {
-        auto invalid_chars = "<>:\"/\\|?*";
+        const auto invalid_chars = "<>:\"/\\|?*";
         size_t len = 0;
         std::string out;
         out.resize(str.length());
@@ -487,7 +487,7 @@ namespace GuiUtils {
 
     std::wstring SanitiseFilename(const std::wstring& str)
     {
-        auto invalid_chars = L"<>:\"/\\|?*";
+        const auto invalid_chars = L"<>:\"/\\|?*";
         size_t len = 0;
         std::wstring out;
         out.resize(str.length());
@@ -579,7 +579,7 @@ namespace GuiUtils {
             *start_pos_out = start;
         if (end_pos_out)
             *end_pos_out = end;
-        std::wstring name(start, end);
+        const std::wstring name(start, end);
         return SanitizePlayerName(name);
     }
 
@@ -653,7 +653,7 @@ namespace GuiUtils {
         while (true) {
             if (!(found && *found))
                 break;
-            auto next_token = (char*)strchr(found, separator);
+            const auto next_token = (char*)strchr(found, separator);
             if (next_token)
                 *next_token = 0;
             out.push_back(found);
@@ -693,11 +693,11 @@ namespace GuiUtils {
 
     size_t TimeToString(time_t utc_timestamp, std::string& out)
     {
-        tm* timeinfo = localtime(&utc_timestamp);
+        const tm* timeinfo = localtime(&utc_timestamp);
         if (!timeinfo)
             return 0;
-        time_t now = time(nullptr);
-        tm* nowinfo = localtime(&now);
+        const time_t now = time(nullptr);
+        const tm* nowinfo = localtime(&now);
         if (!nowinfo)
             return 0;
         out.resize(64);
@@ -733,7 +733,7 @@ namespace GuiUtils {
 
     bool ArrayToIni(const std::wstring& in, std::string* out)
     {
-        size_t len = in.size();
+        const size_t len = in.size();
         if (!len) {
             out->clear();
             return true;
@@ -802,7 +802,7 @@ namespace GuiUtils {
     size_t wcstostr(char* dest, const wchar_t* src, size_t n)
     {
         size_t i;
-        auto d = (unsigned char*)dest;
+        const auto d = (unsigned char*)dest;
         for (i = 0; i < n; i++) {
             if (src[i] & ~0x7f)
                 return 0;
@@ -823,7 +823,7 @@ namespace GuiUtils {
     void EncString::reset(const uint32_t _enc_string_id, bool sanitise)
     {
         if (_enc_string_id && encoded_ws.length()) {
-            uint32_t this_id = GW::UI::EncStrToUInt32(encoded_ws.c_str());
+            const uint32_t this_id = GW::UI::EncStrToUInt32(encoded_ws.c_str());
             if (this_id == _enc_string_id)
                 return;
         }
@@ -879,7 +879,7 @@ namespace GuiUtils {
 
     void EncString::OnStringDecoded(void* param, wchar_t* decoded)
     {
-        auto context = static_cast<EncString*>(param);
+        const auto context = static_cast<EncString*>(param);
         if (!(context && context->decoding && !context->decoded))
             return; // Not expecting a decoded string; may have been reset() before response was received.
         if (decoded && decoded[0])

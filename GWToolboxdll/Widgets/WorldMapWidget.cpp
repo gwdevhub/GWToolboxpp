@@ -36,7 +36,7 @@ void WorldMapWidget::InitializeMapsUnlockedArrays()
     if (!w)
         return;
     actual_maps_unlocked_packet.missions_bonus_length = 0;
-    GW::Array<uint32_t>* arr = &w->missions_bonus;
+    const GW::Array<uint32_t>* arr = &w->missions_bonus;
     if (arr->valid()) {
         actual_maps_unlocked_packet.missions_bonus_length = arr->size();
         memcpy(&actual_maps_unlocked_packet.missions_bonus, arr->m_buffer, sizeof(actual_maps_unlocked_packet.missions_bonus));
@@ -117,7 +117,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9* pDevice)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowPos(ImVec2(16.f, 16.f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
-        GW::WorldContext* world = GW::GetGameContext()->world;
+        const GW::WorldContext* world = GW::GetGameContext()->world;
         UNREFERENCED_PARAMETER(world);
         ImGui::Checkbox("Show all areas", &showing_all_outposts);
         show_all_rect = ImGui::GetCurrentContext()->LastItemData.Rect;
@@ -136,8 +136,8 @@ bool WorldMapWidget::WndProc(UINT Message, WPARAM, LPARAM lParam)
         case WM_LBUTTONDOWN: if (!drawn || !GW::UI::GetIsWorldMapShowing())
                 return false;
             auto check_rect = [lParam](ImRect& rect) {
-                int x = GET_X_LPARAM(lParam);
-                int y = GET_Y_LPARAM(lParam);
+                const int x = GET_X_LPARAM(lParam);
+                const int y = GET_Y_LPARAM(lParam);
                 return x > rect.Min.x && x < rect.Max.x && y > rect.Min.y && y < rect.Max.y;
             };
             if (check_rect(show_all_rect)) {

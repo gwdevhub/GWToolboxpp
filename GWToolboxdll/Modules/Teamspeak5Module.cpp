@@ -71,7 +71,7 @@ namespace {
 
     bool GetValue(const json& content, const char* key, uint32_t* out)
     {
-        auto found = content.find(key);
+        const auto found = content.find(key);
         if (!(found != content.end() && found->is_number_unsigned()))
             return false;
         *out = *found;
@@ -80,7 +80,7 @@ namespace {
 
     bool GetValue(const json& content, const char* key, std::string* out)
     {
-        auto found = content.find(key);
+        const auto found = content.find(key);
         if (!(found != content.end() && found->is_string()))
             return false;
         *out = *found;
@@ -89,7 +89,7 @@ namespace {
 
     bool GetValue(const json& content, const char* key, bool* out)
     {
-        auto found = content.find(key);
+        const auto found = content.find(key);
         if (!(found != content.end() && found->is_boolean()))
             return false;
         *out = *found;
@@ -98,7 +98,7 @@ namespace {
 
     bool GetValue(const json& content, const char* key, json* out)
     {
-        auto found = content.find(key);
+        const auto found = content.find(key);
         if (!(found != content.end() && found->is_object()))
             return false;
         *out = *found;
@@ -107,7 +107,7 @@ namespace {
 
     bool GetValue(const json& content, const char* key, json_vec* out)
     {
-        auto found = content.find(key);
+        const auto found = content.find(key);
         if (!(found != content.end() && found->is_array()))
             return false;
         *out = found->get<json_vec>();
@@ -178,7 +178,7 @@ namespace {
                 Log::Error("Failed to get teamspeak invite link (3)");
                 return;
             }
-            std::string url = std::format("https://tmspk.gg/{}", invite_id);
+            const std::string url = std::format("https://tmspk.gg/{}", invite_id);
             callback(url);
         });
     }
@@ -289,7 +289,7 @@ namespace {
     {
         const auto found = connected_servers.find(connection_id);
         if (found != connected_servers.end()) {
-            auto server = found->second;
+            const auto server = found->second;
             connected_servers.erase(found);
             delete server;
         }
@@ -358,7 +358,7 @@ namespace {
             return false;
         if (!GetValue(payload, "status", &status))
             return false;
-        auto server = GetServer(connection_id);
+        const auto server = GetServer(connection_id);
         if (server) {
             GetValue(payload, "clientId", &server->my_client_id);
         }

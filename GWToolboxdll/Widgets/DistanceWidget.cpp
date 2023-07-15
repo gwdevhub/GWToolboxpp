@@ -70,13 +70,13 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-        GW::Agent* me = GW::Agents::GetPlayer();
-        GW::Agent* target = GW::Agents::GetTarget();
+        const GW::Agent* me = GW::Agents::GetPlayer();
+        const GW::Agent* target = GW::Agents::GetTarget();
         if (me && target && me != target) {
             constexpr size_t buffer_size = 32;
             static char dist_perc[buffer_size];
             static char dist_abs[buffer_size];
-            float dist = GetDistance(me->pos, target->pos);
+            const float dist = GetDistance(me->pos, target->pos);
             if (show_perc_value)
                 snprintf(dist_perc, buffer_size, "%2.0f %s", dist * 100 / GW::Constants::Range::Compass, "%%");
             if (show_abs_value)
@@ -105,7 +105,7 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice)
                 color = ImColor(color_compass);
             }
 
-            auto background = ImColor(Colors::Black());
+            const auto background = ImColor(Colors::Black());
             // 'distance'
             ImGui::PushFont(GetFont(GuiUtils::FontSize::header1));
             ImVec2 cur = ImGui::GetCursorPos();

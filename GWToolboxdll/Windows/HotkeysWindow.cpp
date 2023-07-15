@@ -100,17 +100,17 @@ namespace {
     // Used because its not necessary to check these vars on every keystroke, only when they change
     bool CheckSetValidHotkeys()
     {
-        auto c = GW::GetCharContext();
+        const auto c = GW::GetCharContext();
         if (!c)
             return false;
         GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
         if (!me)
             return false;
-        std::string player_name = GuiUtils::WStringToString(c->player_name);
-        GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
-        GW::Constants::MapID map_id = GW::Map::GetMapID();
-        auto primary = static_cast<GW::Constants::Profession>(me->primary);
-        bool is_pvp = IsPvPCharacter();
+        const std::string player_name = GuiUtils::WStringToString(c->player_name);
+        const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+        const GW::Constants::MapID map_id = GW::Map::GetMapID();
+        const auto primary = static_cast<GW::Constants::Profession>(me->primary);
+        const bool is_pvp = IsPvPCharacter();
         valid_hotkeys.clear();
         by_profession.clear();
         by_map.clear();
@@ -128,7 +128,7 @@ namespace {
                     by_profession[i] = std::vector<TBHotkey*>();
                 by_profession[i].push_back(hotkey);
             }
-            for (auto h_map_id : hotkey->map_ids) {
+            for (const auto h_map_id : hotkey->map_ids) {
                 if (!by_map.contains(h_map_id))
                     by_map[h_map_id] = std::vector<TBHotkey*>();
                 by_map[h_map_id].push_back(hotkey);
@@ -154,7 +154,7 @@ namespace {
             return false;
         if (!GW::Agents::GetPlayerAsAgentLiving())
             return false;
-        GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
+        const GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
         if (mt == GW::Constants::InstanceType::Loading)
             return false;
         if (!CheckSetValidHotkeys())
@@ -216,7 +216,7 @@ const TBHotkey* HotkeysWindow::CurrentHotkey()
 void HotkeysWindow::Terminate()
 {
     ToolboxWindow::Terminate();
-    for (TBHotkey* hotkey : hotkeys) {
+    for (const TBHotkey* hotkey : hotkeys) {
         delete hotkey;
     }
     hotkeys.clear();
@@ -470,7 +470,7 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini)
     TBHotkey::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);
 
     // clear hotkeys from toolbox
-    for (TBHotkey* hotkey : hotkeys) {
+    for (const TBHotkey* hotkey : hotkeys) {
         delete hotkey;
     }
     hotkeys.clear();
@@ -478,7 +478,7 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini)
     // then load again
     ToolboxIni::TNamesDepend entries;
     ini->GetAllSections(entries);
-    for (ToolboxIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
         if (hk)
             hotkeys.push_back(hk);
@@ -497,7 +497,7 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
         // clear hotkeys from ini
         ToolboxIni::TNamesDepend entries;
         ini->GetAllSections(entries);
-        for (ToolboxIni::Entry& entry : entries) {
+        for (const ToolboxIni::Entry& entry : entries) {
             if (strncmp(entry.pItem, "hotkey-", 7) == 0) {
                 ini->Delete(entry.pItem, nullptr);
             }

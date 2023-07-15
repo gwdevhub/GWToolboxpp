@@ -439,7 +439,7 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice)
 
     int max_party_size = 0;
     const std::vector<uint32_t>& party_ids = observer_module.GetObservablePartyIds();
-    size_t party_count = party_ids.size();
+    const size_t party_count = party_ids.size();
     std::vector<const ObserverModule::ObservableParty*> parties;
     size_t actual_party_count = 0;
     for (const uint32_t party_id : party_ids) {
@@ -448,12 +448,12 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice)
             continue;
         parties.push_back(party);
         actual_party_count += 1;
-        int size = party->agent_ids.size();
+        const int size = party->agent_ids.size();
         if (size > max_party_size)
             max_party_size = size;
     }
 
-    float global = ImGui::GetIO().FontGlobalScale;
+    const float global = ImGui::GetIO().FontGlobalScale;
     text_long = 200.0f * global;
     text_medium = 150.0f * global;
     text_short = 55.0f * global;
@@ -515,7 +515,7 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice)
                 continue;
             }
 
-            uint32_t party_member_id = party->agent_ids[party_member_index];
+            const uint32_t party_member_id = party->agent_ids[party_member_index];
 
             // no party_member
             if (party_member_id == NO_AGENT) {

@@ -57,13 +57,13 @@ namespace {
     // This value won't be obfuscated to is always safe to check against
     const wchar_t* getPlayerName()
     {
-        GW::CharContext* c = GW::GetCharContext();
+        const GW::CharContext* c = GW::GetCharContext();
         return c ? c->player_name : nullptr;
     }
 
     const wchar_t* getGuildPlayerName()
     {
-        GW::GuildContext* g = GW::GetGuildContext();
+        const GW::GuildContext* g = GW::GetGuildContext();
         return g ? g->player_name : nullptr;
     }
 
@@ -344,8 +344,8 @@ namespace {
         if (_obfuscated_name.empty()) {
             return false;
         }
-        std::wstring obfuscated_name = GuiUtils::SanitizePlayerName(_obfuscated_name);
-        auto found = obfuscated_by_obfuscation.find(obfuscated_name);
+        const std::wstring obfuscated_name = GuiUtils::SanitizePlayerName(_obfuscated_name);
+        const auto found = obfuscated_by_obfuscation.find(obfuscated_name);
         if (found == obfuscated_by_obfuscation.end())
             return false;
         out.assign(found->second);
@@ -436,7 +436,7 @@ namespace {
         GW::GuildRoster& roster = g->player_roster;
         if (!roster.valid())
             return player_guild_invited_name;
-        for (GW::GuildPlayer* player : roster) {
+        for (const GW::GuildPlayer* player : roster) {
             if (player && wcscmp(player->current_name, player_guild_name) == 0) {
                 player_guild_invited_name = player->invited_name;
                 break;
@@ -461,7 +461,7 @@ namespace {
             Log::Log("Tried to obfuscate guild, but no valid roster");
             return false;
         }
-        std::wstring& invited_name = getPlayerInvitedName();
+        const std::wstring& invited_name = getPlayerInvitedName();
         if (invited_name.empty()) {
             Log::Log("Tried to obfuscate guild, failed to find current player in roster");
             return false;
@@ -533,7 +533,7 @@ namespace {
     void Reset()
     {
         ObfuscateGuildRoster(false);
-        auto c = GW::GetCharContext();
+        const auto c = GW::GetCharContext();
         if (!c || c->player_email != player_email) {
             player_guild_invited_name.clear();
             if (c && c->player_email) {
@@ -565,7 +565,7 @@ namespace {
             return;
         switch (msg_id) {
             case GW::UI::UIMessage::kShowMapEntryMessage: {
-                auto packet_actual = static_cast<GW::UI::MapEntryMessage*>(wParam);
+                const auto packet_actual = static_cast<GW::UI::MapEntryMessage*>(wParam);
                 if (packet_actual->subtitle && ObfuscateMessage(packet_actual->subtitle, ui_message_temp_message)) {
                     packet_actual->subtitle = ui_message_temp_message.data();
                 }
@@ -573,14 +573,14 @@ namespace {
             break;
             case GW::UI::UIMessage::kDialogBody: {
                 // Dialog body
-                auto packet_actual = static_cast<GW::UI::DialogBodyInfo*>(wParam);
+                const auto packet_actual = static_cast<GW::UI::DialogBodyInfo*>(wParam);
                 if (packet_actual->message_enc && ObfuscateMessage(packet_actual->message_enc, ui_message_temp_message)) {
                     packet_actual->message_enc = ui_message_temp_message.data();
                 }
             }
             break;
             case GW::UI::UIMessage::kWriteToChatLog: {
-                auto packet_actual = static_cast<GW::UI::UIChatMessage*>(wParam);
+                const auto packet_actual = static_cast<GW::UI::UIChatMessage*>(wParam);
                 // Because we've already obfuscated the player name in-game, the name in the message will be obfuscated. Unobfuscate it here, and re-obfuscate it later.
                 // This allows the player to toggle obfuscate on/off between map loads and it won't bork up the message log.
                 if (packet_actual->message && UnobfuscateMessage(packet_actual->message, ui_message_temp_message)) {
@@ -598,7 +598,7 @@ namespace {
             case GAME_SMSG_CHAT_MESSAGE_CORE: {
                 if (!IsObfuscatorEnabled())
                     break;
-                auto packet_actual = static_cast<GW::Packet::StoC::MessageCore*>(packet);
+                const auto packet_actual = static_cast<GW::Packet::StoC::MessageCore*>(packet);
                 static bool obfuscated = false;
                 if (wmemcmp(packet_actual->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0) {
                     // This hook is called twice - once before resign log module, once after.
@@ -642,7 +642,7 @@ namespace {
             case GAME_SMSG_AGENT_CREATE_PLAYER: {
                 if (!IsObfuscatorEnabled())
                     break;
-                auto packet_actual = static_cast<GW::Packet::StoC::PlayerJoinInstance*>(packet);
+                const auto packet_actual = static_cast<GW::Packet::StoC::PlayerJoinInstance*>(packet);
                 if (ObfuscateName(packet_actual->player_name, ui_message_temp_message)) {
                     wcscpy(packet_actual->player_name, ui_message_temp_message.c_str());
                 }
@@ -652,7 +652,7 @@ namespace {
             case GAME_SMSG_MERCENARY_INFO: {
                 if (!IsObfuscatorEnabled())
                     break;
-                auto packet_actual = static_cast<GW::Packet::StoC::MercenaryHeroInfo*>(packet);
+                const auto packet_actual = static_cast<GW::Packet::StoC::MercenaryHeroInfo*>(packet);
                 if (ObfuscateName(packet_actual->name, ui_message_temp_message, true)) {
                     wcscpy(packet_actual->name, ui_message_temp_message.c_str());
                 }
@@ -662,13 +662,13 @@ namespace {
             case GAME_SMSG_AGENT_UPDATE_NPC_NAME: {
                 if (!IsObfuscatorEnabled())
                     break;
-                auto packet_actual = static_cast<GW::Packet::StoC::AgentName*>(packet);
+                const auto packet_actual = static_cast<GW::Packet::StoC::AgentName*>(packet);
                 if (wcsstr(packet_actual->name_enc, L"\x108\x107") != packet_actual->name_enc)
                     return; // Not a mercenary name
-                auto end_pos = wcschr(packet_actual->name_enc, '\x1');
+                const auto end_pos = wcschr(packet_actual->name_enc, '\x1');
                 ASSERT(end_pos);
                 *end_pos = 0;
-                std::wstring tmp(&packet_actual->name_enc[2]);
+                const std::wstring tmp(&packet_actual->name_enc[2]);
                 *end_pos = '\x1';
                 if (ObfuscateName(tmp, ui_message_temp_message, true)) {
                     swprintf(packet_actual->name_enc, _countof(packet_actual->name_enc), L"\x108\x107%s\x1", ui_message_temp_message.c_str());
@@ -701,8 +701,8 @@ namespace {
             case GAME_SMSG_DIALOG_BODY: {
                 if (!IsObfuscatorEnabled())
                     break;
-                auto packet_actual = static_cast<GW::Packet::StoC::DialogBody*>(packet);
-                wchar_t* player_name_start = wcsstr(packet_actual->message, L"\xBA9\x107");
+                const auto packet_actual = static_cast<GW::Packet::StoC::DialogBody*>(packet);
+                const wchar_t* player_name_start = wcsstr(packet_actual->message, L"\xBA9\x107");
                 if (player_name_start && ObfuscateMessage(packet_actual->message, ui_message_temp_message)) {
                     wcscpy(packet_actual->message, ui_message_temp_message.c_str());
                 }
@@ -724,8 +724,8 @@ namespace {
         const wchar_t* whisper_separator = wcschr(message, ',');
         if (!whisper_separator)
             return;
-        size_t len = (whisper_separator - message);
-        std::wstring recipient_obfuscated(message, len);
+        const size_t len = (whisper_separator - message);
+        const std::wstring recipient_obfuscated(message, len);
         std::wstring recipient_unobfuscated;
         if (UnobfuscateName(recipient_obfuscated.c_str(), recipient_unobfuscated)) {
             // NB: Block and send a copy with the new message content; current wchar_t* may not have enough allocated memory to just replace the content.
@@ -832,7 +832,7 @@ void Obfuscator::Initialize()
     ToolboxModule::Initialize();
     Reset();
 
-    uintptr_t GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)");
+    const uintptr_t GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)");
     if (GetCharacterSummary_Assertion) {
         // Hook to override character names on login screen
         GetCharacterSummary_Func = (GetCharacterSummary_pt)(GetCharacterSummary_Assertion - 0x4F);
@@ -842,7 +842,7 @@ void Obfuscator::Initialize()
         GetCharacterSummary_AssertionPatch.SetPatch(GetCharacterSummary_Assertion - 0x7, "\xEB", 1);
         GetCharacterSummary_AssertionPatch.TogglePatch(true);
     }
-    uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", -0x30);
+    const uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", -0x30);
     GetAccountData_Func = (GetAccountData_pt)GW::Scanner::FunctionFromNearCall(address);
     if (GetAccountData_Func) {
         GW::HookBase::CreateHook(GetAccountData_Func, OnGetAccountInfo, (void**)&GetAccountData_Ret);
@@ -865,13 +865,13 @@ void Obfuscator::Initialize()
         GAME_SMSG_CHAT_MESSAGE_CORE, // Pre resignlog hook
         GAME_SMSG_CINEMATIC_TEXT
     };
-    for (auto header : pre_hook_headers) {
+    for (const auto header : pre_hook_headers) {
         GW::StoC::RegisterPacketCallback(&stoc_hook, header, OnStoCPacket, pre_hook_altitude);
     }
     const int post_hook_headers[] = {
         GAME_SMSG_CHAT_MESSAGE_CORE // Post resignlog hook
     };
-    for (auto header : post_hook_headers) {
+    for (const auto header : post_hook_headers) {
         GW::StoC::RegisterPacketCallback(&stoc_hook, header, OnStoCPacket, post_hook_altitude);
     }
     const GW::UI::UIMessage pre_hook_ui_messages[] = {
@@ -879,14 +879,14 @@ void Obfuscator::Initialize()
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kWriteToChatLog
     };
-    for (auto header : pre_hook_ui_messages) {
+    for (const auto header : pre_hook_ui_messages) {
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, pre_hook_altitude);
     }
     const GW::UI::UIMessage post_gw_ui_messages[] = {
         GW::UI::UIMessage::kLogout,
         GW::UI::UIMessage::kWriteToChatLog
     };
-    for (auto header : post_gw_ui_messages) {
+    for (const auto header : post_gw_ui_messages) {
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, post_gw_altitude);
     }
 

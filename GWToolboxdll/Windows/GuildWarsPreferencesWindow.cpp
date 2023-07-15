@@ -182,7 +182,7 @@ void GWPreferences::Draw()
         ImGui::Text(" ");
         ImGui::SameLine(name_width);
         ImGui::Text("Value");
-        for (auto* pref : current_preferences.preferences) {
+        for (const auto* pref : current_preferences.preferences) {
             offset = 0.f;
             ImGui::Text("find the name for this!");
             ImGui::SameLine(name_width);

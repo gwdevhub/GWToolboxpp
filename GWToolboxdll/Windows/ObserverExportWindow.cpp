@@ -53,7 +53,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
             nlohmann::json json_party;
             json_party["party_id"] = party->party_id;
             json_party["stats"] = shared_stats_to_json(party->stats);
-            for (uint32_t agent_id : party->agent_ids) {
+            for (const uint32_t agent_id : party->agent_ids) {
                 // parties -> party -> agents
                 ObserverModule::ObservableAgent* agent = observer_module.GetObservableAgentById(agent_id);
                 if (!agent) {
@@ -73,7 +73,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
                     json_agent["secondary"] = agent->secondary;
                     json_agent["profession"] = agent->profession;
                     json_agent["stats"] = shared_stats_to_json(agent->stats);
-                    for (auto skill_id : agent->stats.skill_ids_used) {
+                    for (const auto skill_id : agent->stats.skill_ids_used) {
                         // parties -> party -> agents -> agent -> skills
                         ObserverModule::ObservableSkill* skill = ObserverModule::Instance().GetObservableSkillById(skill_id);
                         if (!skill) {

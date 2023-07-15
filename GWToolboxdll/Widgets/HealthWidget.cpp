@@ -42,13 +42,13 @@ void HealthWidget::LoadSettings(ToolboxIni* ini)
     }
 
     if (thresholds.empty()) {
-        auto thresholdFh = new Threshold("\"Finish Him!\"", Colors::RGB(255, 255, 0), 50);
+        const auto thresholdFh = new Threshold("\"Finish Him!\"", Colors::RGB(255, 255, 0), 50);
         thresholdFh->skillId = static_cast<int>(GW::Constants::SkillID::Finish_Him);
         thresholdFh->active = false;
         thresholds.push_back(thresholdFh);
         thresholds.back()->index = thresholds.size() - 1;
 
-        auto thresholdEoe = new Threshold("Edge of Extinction", Colors::RGB(0, 255, 0), 90);
+        const auto thresholdEoe = new Threshold("Edge of Extinction", Colors::RGB(0, 255, 0), 90);
         thresholdEoe->active = false;
         thresholds.push_back(thresholdEoe);
         thresholds.back()->index = thresholds.size() - 1;
@@ -165,7 +165,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice)
             }
             if (show_abs_value) {
                 if (target->max_hp > 0) {
-                    float abs = target->hp * target->max_hp;
+                    const float abs = target->hp * target->max_hp;
                     snprintf(health_abs, buffer_size, "%.0f / %d", abs, target->max_hp);
                 }
                 else {
@@ -175,7 +175,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice)
 
             ImVec2 cur;
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-            auto background = ImColor(Colors::Black());
+            const auto background = ImColor(Colors::Black());
 
             for (size_t i = 0; i < thresholds.size(); ++i) {
                 Threshold* threshold = thresholds[i];
@@ -190,7 +190,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice)
                     GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
                     if (!(skillbar && skillbar->IsValid()))
                         continue;
-                    GW::SkillbarSkill* skill = skillbar->GetSkillById(static_cast<GW::Constants::SkillID>(threshold->skillId));
+                    const GW::SkillbarSkill* skill = skillbar->GetSkillById(static_cast<GW::Constants::SkillID>(threshold->skillId));
                     if (!skill)
                         continue;
                 }
@@ -290,7 +290,7 @@ bool HealthWidget::Threshold::DrawHeader()
     }
 
     ImGui::SameLine(0, 18);
-    bool changed = ImGui::Checkbox("##active", &active);
+    const bool changed = ImGui::Checkbox("##active", &active);
     ImGui::SameLine();
     ImGui::ColorButton("", ImColor(color));
     ImGui::SameLine();

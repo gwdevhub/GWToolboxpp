@@ -119,7 +119,7 @@ namespace {
 
     bool IsPvE()
     {
-        GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
+        const GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
         if (!map)
             return false;
         switch (map->type) {
@@ -162,7 +162,7 @@ namespace {
 
     bool SetAgentName(const uint32_t agent_id, const wchar_t* name)
     {
-        auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        const auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
         if (!a || !name)
             return false;
         const wchar_t* current_name = GW::Agents::GetAgentEncName(a);
@@ -180,7 +180,7 @@ namespace {
 
     bool IsPvP()
     {
-        GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
+        const GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
         if (!i)
             return false;
         switch (i->type) {
@@ -241,8 +241,8 @@ namespace {
             return false; // Not an NPC
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
             return false; // Not in an explorable area
-        GW::Constants::MapID map_id = GW::Map::GetMapID();
-        uint32_t player_number = (agent_type ^ 0x20000000);
+        const GW::Constants::MapID map_id = GW::Map::GetMapID();
+        const uint32_t player_number = (agent_type ^ 0x20000000);
         const auto it = user_defined_npcs_by_model_id.find(player_number);
         if (it == user_defined_npcs_by_model_id.end())
             return false;
@@ -253,7 +253,7 @@ namespace {
 
     bool ShouldAddAgentToPartyWindow(GW::Agent* _a)
     {
-        GW::AgentLiving* a = _a ? _a->GetAsAgentLiving() : nullptr;
+        const GW::AgentLiving* a = _a ? _a->GetAsAgentLiving() : nullptr;
         if (!a || !a->IsNPC())
             return false;
         if (a->GetIsDead() || a->GetIsDeadByTypeMap() || a->allegiance == GW::Constants::Allegiance::Enemy)
@@ -281,7 +281,7 @@ namespace {
                 pending_remove.push(ally_id);
                 continue;
             }
-            GW::AgentLiving* a = agents[ally_id] ? agents[ally_id]->GetAsAgentLiving() : nullptr;
+            const GW::AgentLiving* a = agents[ally_id] ? agents[ally_id]->GetAsAgentLiving() : nullptr;
             if (!a || !a->IsNPC()) {
                 pending_remove.push(ally_id);
                 continue;
@@ -301,10 +301,10 @@ namespace {
 
     bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id)
     {
-        auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        const auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
         if (!a || !a->GetIsLivingType() || !(a->type_map & 0x20000))
             return false; // Not in party window
-        for (unsigned int i : allies_added_to_party) {
+        for (const unsigned int i : allies_added_to_party) {
             if (a->agent_id != i)
                 continue;
             // Ally turned enemy, or is dead.
@@ -325,7 +325,7 @@ namespace {
         packet.header = GW::Packet::StoC::PartyRemoveAlly::STATIC_HEADER;
         packet.agent_id = agent_id;
 
-        auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        const auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
         float prev_hp = 0.0f;
         wchar_t prev_name[8] = {0};
         if (a) {
@@ -344,7 +344,7 @@ namespace {
     {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
             return;
-        GW::AgentLiving* a = p.GetAgent();
+        const GW::AgentLiving* a = p.GetAgent();
         if (!a || a->GetIsDead() || a->GetIsDeadByTypeMap())
             return;
         float prev_hp = a->hp;
@@ -374,7 +374,7 @@ namespace {
         auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
         if (!a || !a->GetIsLivingType() || a->player_number != player_number || a->allegiance == GW::Constants::Allegiance::Enemy)
             return nullptr;
-        GW::NPC* npc = GW::Agents::GetNPCByID(player_number);
+        const GW::NPC* npc = GW::Agents::GetNPCByID(player_number);
         if (!npc)
             return nullptr;
         return a;
@@ -387,7 +387,7 @@ namespace {
         decode_pending = true;
         if (map_id != GW::Constants::MapID::None) {
             GW::GameThread::Enqueue([this]() {
-                GW::AreaInfo* info = GW::Map::GetMapInfo(map_id);
+                const GW::AreaInfo* info = GW::Map::GetMapInfo(map_id);
                 if (!info)
                     return;
                 static wchar_t enc_str[16];
@@ -496,8 +496,8 @@ void PartyWindowModule::Initialize()
                 return;
             if (pak->type != 1)
                 return; // Not a living agent.
-            uint32_t player_number = (pak->agent_type ^ 0x20000000);
-            auto summon_elite = summon_elites.find(player_number);
+            const uint32_t player_number = (pak->agent_type ^ 0x20000000);
+            const auto summon_elite = summon_elites.find(player_number);
             if (summon_elite == summon_elites.end())
                 return;
             if (summon_elite->second == GW::Constants::SkillID::No_Skill)
@@ -515,9 +515,9 @@ void PartyWindowModule::Initialize()
                 const uint32_t agent_id = summon.agent_id;
                 const GW::Constants::SkillID skill_id = summon.skill_id;
 
-                GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                const GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
 
-                GW::AgentLiving* agentLiving = skill ? static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(summon.agent_id)) : nullptr;
+                const GW::AgentLiving* agentLiving = skill ? static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(summon.agent_id)) : nullptr;
                 if (!agentLiving)
                     return;
 
@@ -593,8 +593,8 @@ void PartyWindowModule::DrawSettingInternal()
     if (!add_npcs_to_party_window)
         return;
     ImGui::TextDisabled("Only works in an explorable area. Only works on NPCs; not enemies, minions or spirits.");
-    float fontScale = ImGui::GetIO().FontGlobalScale;
-    float cols[3] = {256.0f * fontScale, 352.0f * fontScale, 448.0f * fontScale};
+    const float fontScale = ImGui::GetIO().FontGlobalScale;
+    const float cols[3] = {256.0f * fontScale, 352.0f * fontScale, 448.0f * fontScale};
 
     ImGui::Text("Name");
     ImGui::SameLine(cols[0]);
@@ -615,7 +615,7 @@ void PartyWindowModule::DrawSettingInternal()
         ImGui::SameLine(cols[1]);
         ImGui::Text("%ls", npc->GetMapName()->c_str());
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - (48.0f * fontScale));
-        bool clicked = ImGui::Button(" X ");
+        const bool clicked = ImGui::Button(" X ");
         ImGui::PopID();
         if (clicked) {
             Log::Info("Removed special NPC %s (%d)", npc->alias.c_str(), npc->model_id);
@@ -637,7 +637,7 @@ void PartyWindowModule::DrawSettingInternal()
             return Log::Error("Invalid model id");
         if (new_npc_map_id < 0 || new_npc_map_id > static_cast<int>(GW::Constants::MapID::Count))
             return Log::Error("Invalid map id");
-        std::string alias_str(new_npc_alias);
+        const std::string alias_str(new_npc_alias);
         if (alias_str.empty())
             return Log::Error("Empty value for Name");
         const auto it = user_defined_npcs_by_model_id.find(static_cast<uint32_t>(new_npc_model_id));
@@ -694,7 +694,7 @@ void PartyWindowModule::LoadSettings(ToolboxIni* ini)
         std::string value(ini->GetValue(Name(), key.pItem, ""));
         if (value.empty())
             continue;
-        size_t name_end_pos = value.find("\x1");
+        const size_t name_end_pos = value.find("\x1");
         if (name_end_pos == std::string::npos)
             continue;
         std::string alias(value.substr(0, name_end_pos));

@@ -87,7 +87,7 @@ private:
     {
         if (!addr)
             addr = (uint32_t)_message;
-        TBSentMessage* sent = sent_last;
+        const TBSentMessage* sent = sent_last;
         while (sent) {
             // NB: GW uses TList in memory which means the only time the address will be nuked is when the log is cleared anyway
             if (sent->gw_message_address == addr && wcscmp(sent->msg.c_str(), _message) == 0)

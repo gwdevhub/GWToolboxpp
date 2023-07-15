@@ -65,7 +65,7 @@ bool Mp3::Load(LPCWSTR szFile)
         pigb->QueryInterface(IID_IBasicAudio, (void**)&piba);
         pigb->QueryInterface(IID_IMediaSeeking, (void**)&pims);
 
-        HRESULT hr = pigb->RenderFile(szFile, nullptr);
+        const HRESULT hr = pigb->RenderFile(szFile, nullptr);
         if (SUCCEEDED(hr)) {
             ready = true;
             if (pims) {
@@ -81,7 +81,7 @@ bool Mp3::Load(LPCWSTR szFile)
 bool Mp3::Play()
 {
     if (ready && pimc) {
-        HRESULT hr = pimc->Run();
+        const HRESULT hr = pimc->Run();
         return SUCCEEDED(hr);
     }
     return false;
@@ -90,7 +90,7 @@ bool Mp3::Play()
 bool Mp3::Pause()
 {
     if (ready && pimc) {
-        HRESULT hr = pimc->Pause();
+        const HRESULT hr = pimc->Pause();
         return SUCCEEDED(hr);
     }
     return false;
@@ -99,7 +99,7 @@ bool Mp3::Pause()
 bool Mp3::Stop()
 {
     if (ready && pimc) {
-        HRESULT hr = pimc->Stop();
+        const HRESULT hr = pimc->Stop();
         return SUCCEEDED(hr);
     }
     return false;
@@ -109,7 +109,7 @@ bool Mp3::WaitForCompletion(long msTimeout, long* EvCode)
 {
     // @Cleanup: Add some logging
     if (ready && pimex) {
-        HRESULT hr = pimex->WaitForCompletion(msTimeout, EvCode);
+        const HRESULT hr = pimex->WaitForCompletion(msTimeout, EvCode);
         if (FAILED(hr))
             return false;
         return *EvCode > 0;
@@ -121,7 +121,7 @@ bool Mp3::WaitForCompletion(long msTimeout, long* EvCode)
 bool Mp3::SetVolume(long vol)
 {
     if (ready && piba) {
-        HRESULT hr = piba->put_Volume(vol);
+        const HRESULT hr = piba->put_Volume(vol);
         return SUCCEEDED(hr);
     }
     return false;
@@ -131,7 +131,7 @@ long Mp3::GetVolume()
 {
     if (ready && piba) {
         long vol = -1;
-        HRESULT hr = piba->get_Volume(&vol);
+        const HRESULT hr = piba->get_Volume(&vol);
 
         if (SUCCEEDED(hr))
             return vol;
@@ -149,7 +149,7 @@ __int64 Mp3::GetCurrentPosition()
 {
     if (ready && pims) {
         __int64 curpos = -1;
-        HRESULT hr = pims->GetCurrentPosition(&curpos);
+        const HRESULT hr = pims->GetCurrentPosition(&curpos);
 
         if (SUCCEEDED(hr))
             return curpos;
@@ -167,7 +167,7 @@ bool Mp3::SetPositions(__int64* pCurrent, __int64* pStop, bool bAbsolutePosition
         else
             flags = AM_SEEKING_RelativePositioning | AM_SEEKING_SeekToKeyFrame;
 
-        HRESULT hr = pims->SetPositions(pCurrent, flags, pStop, flags);
+        const HRESULT hr = pims->SetPositions(pCurrent, flags, pStop, flags);
 
         if (SUCCEEDED(hr))
             return true;

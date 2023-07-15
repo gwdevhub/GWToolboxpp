@@ -29,7 +29,7 @@ void AlcoholWidget::Initialize()
 
 uint32_t AlcoholWidget::GetAlcoholTitlePoints()
 {
-    GW::GameContext* gameContext = GW::GetGameContext();
+    const GW::GameContext* gameContext = GW::GetGameContext();
     if (!gameContext || !gameContext->world || !gameContext->world->titles.valid())
         return 0; // Sanity checks; context not ready.
     if (gameContext->world->titles.size() < 8)
@@ -39,8 +39,8 @@ uint32_t AlcoholWidget::GetAlcoholTitlePoints()
 
 uint32_t AlcoholWidget::GetAlcoholTitlePointsGained()
 {
-    uint32_t current_title_points = GetAlcoholTitlePoints();
-    uint32_t points_gained = current_title_points - prev_alcohol_title_points;
+    const uint32_t current_title_points = GetAlcoholTitlePoints();
+    const uint32_t points_gained = current_title_points - prev_alcohol_title_points;
     prev_alcohol_title_points = current_title_points; // Update previous variable.
     return points_gained <= 0 ? 0 : points_gained;
 }
@@ -68,7 +68,7 @@ void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess* pa
     AlcoholWidget& instance = Instance();
     if (packet->tint == 8 && packet->level == 5)
         return; // Pahnai salad
-    uint32_t pts_gained = instance.GetAlcoholTitlePointsGained();
+    const uint32_t pts_gained = instance.GetAlcoholTitlePointsGained();
 
     if (packet->tint == 6) {
         // Tint 6, level 5 - the trouble zone for lunars!

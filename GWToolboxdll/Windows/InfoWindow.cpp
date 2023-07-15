@@ -553,7 +553,7 @@ namespace {
     bool RequestQuestInfo(GW::Constants::QuestID quest_id)
     {
         if (!RequestQuestInfo_Func) {
-            uintptr_t address = GW::Scanner::Find("\x68\x4a\x01\x00\x10\xff\x77\x04", "xxxxxxxx", 0x7a);
+            const uintptr_t address = GW::Scanner::Find("\x68\x4a\x01\x00\x10\xff\x77\x04", "xxxxxxxx", 0x7a);
             RequestQuestInfo_Func = (GetQuestInfo_pt)GW::Scanner::FunctionFromNearCall(address);
         }
         return RequestQuestInfo_Func ? RequestQuestInfo_Func(quest_id), true : false;
@@ -561,7 +561,7 @@ namespace {
 
     bool GetQuestEntryGroupName(GW::Constants::QuestID quest_id, wchar_t* out, size_t out_len)
     {
-        auto quest = GW::QuestMgr::GetQuest(quest_id);
+        const auto quest = GW::QuestMgr::GetQuest(quest_id);
         switch (quest->log_state & 0xf0) {
             case 0x20: return swprintf(out, out_len, L"\x564") != -1;
             case 0x40: return quest->location && swprintf(out, out_len, L"\x8102\x1978\x10A%s\x1", quest->location) != -1;
@@ -775,7 +775,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
             ImGui::Text("Quests missing info: %d", quests_missing_info.size());
             ImGui::SameLine();
             if (ImGui::SmallButton("Request quest info")) {
-                for (auto& quest : quests_missing_info) {
+                for (const auto& quest : quests_missing_info) {
                     RequestQuestInfo(quest->quest_id);
                 }
             }
@@ -829,18 +829,18 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
     ImGui::End();
 #ifdef _DEBUG
     // For debugging changes to flags/arrays etc
-    GW::GameContext* g = GW::GetGameContext();
-    GW::GuildContext* gu = g->guild;
-    GW::CharContext* c = g->character;
-    GW::WorldContext* w = g->world;
-    GW::PartyContext* p = g->party;
-    GW::MapContext* m = g->map;
-    GW::AccountContext* acc = g->account;
-    GW::ItemContext* i = g->items;
-    GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-    GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
-    GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
+    const GW::GameContext* g = GW::GetGameContext();
+    const GW::GuildContext* gu = g->guild;
+    const GW::CharContext* c = g->character;
+    const GW::WorldContext* w = g->world;
+    const GW::PartyContext* p = g->party;
+    const GW::MapContext* m = g->map;
+    const GW::AccountContext* acc = g->account;
+    const GW::ItemContext* i = g->items;
+    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
+    const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+    const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
     (g || c || w || p || m || i || me || me_player || log || gu || ai || acc);
 #endif
 }

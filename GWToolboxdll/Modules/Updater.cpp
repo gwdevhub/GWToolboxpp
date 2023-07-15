@@ -50,7 +50,7 @@ namespace {
         // Get list of releases
         std::string response;
         unsigned int tries = 0;
-        auto url = "https://api.github.com/repos/HasKha/GWToolboxpp/releases";
+        const auto url = "https://api.github.com/repos/HasKha/GWToolboxpp/releases";
         bool success = false;
         do {
             success = Resources::Instance().Download(url, response);
@@ -131,9 +131,9 @@ namespace {
         step = Downloading;
 
         // 0. find toolbox dll path
-        HMODULE module = GWToolbox::GetDLLModule();
+        const HMODULE module = GWToolbox::GetDLLModule();
         WCHAR dllfile[MAX_PATH];
-        DWORD size = GetModuleFileNameW(module, dllfile, MAX_PATH);
+        const DWORD size = GetModuleFileNameW(module, dllfile, MAX_PATH);
         if (size == 0) {
             Log::Error("Updater error - cannot find GWToolbox.dll path");
             step = Done;
@@ -142,14 +142,14 @@ namespace {
         Log::Log("dll file name is %s\n", dllfile);
 
         // Get name of dll from path
-        std::wstring dll_path(dllfile);
+        const std::wstring dll_path(dllfile);
         std::wstring dll_name;
         wchar_t sep = '/';
 #ifdef _WIN32
         sep = '\\';
 #endif
 
-        size_t i = dll_path.rfind(sep, dll_path.length());
+        const size_t i = dll_path.rfind(sep, dll_path.length());
         if (i != std::wstring::npos) {
             dll_name = dll_path.substr(i + 1, dll_path.length() - i);
         }

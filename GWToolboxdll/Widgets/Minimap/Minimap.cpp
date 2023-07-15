@@ -784,7 +784,7 @@ void Minimap::Draw(IDirect3DDevice9*)
                     compass_height = std::roundf(DEFAULT_HEIGHT * multiplier);
                     compass_padding = compass_width * .05f;
 
-                    int windowWidth = GetPreference(GW::UI::NumberPreference::WindowSizeX);
+                    const int windowWidth = GetPreference(GW::UI::NumberPreference::WindowSizeX);
                     location.x = static_cast<int>(windowWidth - compass_width + compass_padding);
                     location.y = static_cast<int>(compass_padding);
                     size.x = static_cast<int>(compass_width - (compass_padding * 2.0f));
