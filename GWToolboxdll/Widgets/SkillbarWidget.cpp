@@ -10,6 +10,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <Defines.h>
 #include "SkillbarWidget.h"
 
 /*

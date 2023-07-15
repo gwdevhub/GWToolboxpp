@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include <GWCA/Utilities/Hook.h>
 
 #include <GWCA/Managers/UIMgr.h>

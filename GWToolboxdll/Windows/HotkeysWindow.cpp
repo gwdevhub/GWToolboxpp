@@ -6,7 +6,6 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
 
-#include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -15,8 +14,8 @@
 
 #include <Utils/GuiUtils.h>
 #include <Keys.h>
+#include <Timer.h>
 
-#include <Modules/Resources.h>
 #include <Windows/HotkeysWindow.h>
 #include <GWCA/Utilities/Scanner.h>
 

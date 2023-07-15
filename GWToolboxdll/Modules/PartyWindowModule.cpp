@@ -10,7 +10,9 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -22,7 +24,8 @@
 
 #include <ImGuiAddons.h>
 #include <Logger.h>
-
+#include <Timer.h>
+#include <Defines.h>
 #include <Modules/PartyWindowModule.h>
 
 namespace {

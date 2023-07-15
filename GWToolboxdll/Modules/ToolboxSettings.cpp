@@ -5,7 +5,6 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
-#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 

@@ -10,7 +10,6 @@
 
 #include <GWCA/GameEntities/Map.h>
 
-#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/UIMgr.h>

@@ -1,14 +1,13 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-
 #include <GWCA/Packets/Opcodes.h>
-
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
 #include <Utils/GuiUtils.h>
+#include <Defines.h>
 
 #include <Widgets/LatencyWidget.h>
 

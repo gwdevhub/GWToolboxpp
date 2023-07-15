@@ -23,6 +23,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Friendslist.h>
+#include <GWCA/GameEntities/Guild.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GuildMgr.h>

@@ -3,24 +3,25 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
+// ReSharper disable once CppUnusedIncludeDirective - false positive
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
+// ReSharper disable once CppUnusedIncludeDirective - false positive
+#include <GWCA/GameEntities/Party.h>
 #include <GWCA/Utilities/Hook.h>
 
 #include <ToolboxModule.h>
-
 #include <Timer.h>
 
-#define NO_AGENT 0
-#define NO_PARTY 0
-#define NO_SKILL (GW::Constants::SkillID)0
-#define NO_TEAM 0
-#define NO_GUILD 0
-#define NO_RATING 0
-#define NO_RANK 0
+constexpr auto NO_SKILL = static_cast<GW::Constants::SkillID>(0);
+constexpr auto NO_AGENT = 0;
+constexpr auto NO_TEAM = 0;
+constexpr auto NO_PARTY = 0;
+constexpr auto NO_GUILD = 0;
+constexpr auto NO_RANK = 0;
+constexpr auto NO_RATING = 0;
 
 namespace ObserverLabel {
     extern const char* Profession;

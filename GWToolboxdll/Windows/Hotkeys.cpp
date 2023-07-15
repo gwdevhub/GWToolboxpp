@@ -30,7 +30,6 @@
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/Hotkeys.h>
 #include <Windows/PconsWindow.h>
-#include <Modules/Resources.h>
 
 
 bool TBHotkey::show_active_in_header = true;

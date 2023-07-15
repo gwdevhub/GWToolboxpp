@@ -1,6 +1,5 @@
 #pragma once
 #include <IconsFontAwesome5.h>
-#include <SimpleIni.h>
 
 #include <ToolboxModule.h>
 

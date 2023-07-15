@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "PluginModule.h"
+#include "../plugins/Base/ToolboxPlugin.h"
 
 #include <GWToolbox.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -16,7 +17,7 @@ namespace {
 
     struct Plugin {
         Plugin(std::filesystem::path _path)
-            : path(_path)
+            : path(std::move(_path))
         {
         };
         std::filesystem::path path;

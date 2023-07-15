@@ -21,7 +21,6 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/CrashHandler.h>
 #include <Modules/DialogModule.h>
-#include <Modules/MouseFix.h>
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>

@@ -3,6 +3,7 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>

@@ -12,10 +12,9 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
+#include <Defines.h>
 #include <Utils/GuiUtils.h>
-
 #include <Modules/Resources.h>
-#include <Modules/ToolboxSettings.h>
 #include <Widgets/HealthWidget.h>
 
 constexpr const wchar_t* HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";

@@ -1,10 +1,8 @@
 #pragma once
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/GameEntities/Guild.h>
 
 #include <ToolboxModule.h>
-#include <ToolboxUIElement.h>
 
 struct Application {
     struct IDiscordCore* core;

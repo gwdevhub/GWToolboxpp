@@ -7,8 +7,6 @@
 
 #include <Windows/ObserverPartyWindow.h>
 
-#include <Modules/Resources.h>
-
 #define NO_AGENT 0
 
 void ObserverPartyWindow::Initialize()
@@ -476,9 +474,8 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice)
             ImGui::Separator();
         }
         // force new line for each player
-        else
-            if (party_member_index > 0)
-                ImGui::Text("");
+        else if (party_member_index > 0)
+            ImGui::Text("");
         // else if (party_member_index > 0) ImGui::Separator();
 
         // line offset

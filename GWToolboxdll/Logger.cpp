@@ -1,15 +1,12 @@
 #include "stdafx.h"
 
 #include <GWCA/Utilities/Debug.h>
-#include <GWCA/GameContainers/Array.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <Defines.h>
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
-#include <Modules/Resources.h>
 #include <Modules/CrashHandler.h>
 
 namespace {

@@ -13,8 +13,8 @@
 #include <GWCA/Managers/StoCMgr.h>
 
 #include <Utils/GuiUtils.h>
-
 #include <Widgets/AlcoholWidget.h>
+#include <Defines.h>
 
 void AlcoholWidget::Initialize()
 {

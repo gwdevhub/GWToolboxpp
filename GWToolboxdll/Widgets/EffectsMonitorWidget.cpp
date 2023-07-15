@@ -20,6 +20,7 @@
 
 #include <Utils/GuiUtils.h>
 #include <Color.h>
+#include <Defines.h>
 #include "EffectsMonitorWidget.h"
 
 

@@ -7,7 +7,6 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include <Defines.h>
 #include <EmbeddedResource.h>
 #include <GWToolbox.h>
 #include <Logger.h>
@@ -21,7 +20,6 @@
 
 #include <include/nfd.h>
 #include <nfd_common.c>
-#include <nfd_common.h>
 #include <nfd_win.cpp>
 
 namespace {
@@ -33,15 +31,14 @@ namespace {
             case D3DERR_INVALIDCALL: return "D3DERR_INVALIDCALL";
             case E_OUTOFMEMORY: return "E_OUTOFMEMORY";
             case D3D_OK: return "D3D_OK";
-            default:
-                static std::string str;
+            default: static std::string str;
                 str = std::format("Unknown D3D error {:#08x}", code);
                 return str.c_str();
         }
     }
 
     const char* profession_icon_urls[] = {"", "8/87/Warrior-tango-icon-48", "e/e8/Ranger-tango-icon-48", "5/53/Monk-tango-icon-48", "b/b1/Necromancer-tango-icon-48", "b/b1/Mesmer-tango-icon-48", "4/47/Elementalist-tango-icon-48",
-        "2/2b/Assassin-tango-icon-48", "5/5b/Ritualist-tango-icon-48", "5/5e/Paragon-tango-icon-48", "3/38/Dervish-tango-icon-48"};
+                                          "2/2b/Assassin-tango-icon-48", "5/5b/Ritualist-tango-icon-48", "5/5e/Paragon-tango-icon-48", "3/38/Dervish-tango-icon-48"};
     std::map<GW::Constants::SkillID, IDirect3DTexture9**> skill_images;
     std::map<std::wstring, IDirect3DTexture9**> item_images;
     std::map<std::string, IDirect3DTexture9**> guild_wars_wiki_images;
@@ -90,8 +87,7 @@ namespace {
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kEnumPreference:
-                if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize)
+            case GW::UI::UIMessage::kEnumPreference: if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize)
                     Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
                 break;
         }
@@ -180,7 +176,8 @@ void Resources::OpenFileDialog(std::function<void(const char*)> callback, const 
         switch (result) {
             case NFD_OKAY:
             case NFD_CANCEL: break;
-            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError()); break;
+            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+                break;
         }
 
         callback(outPath);
@@ -201,9 +198,12 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
         delete defaultPath_cpy;
 
         switch (result) {
-            case NFD_OKAY: callback(outPath); break;
-            case NFD_CANCEL: callback(nullptr); break;
-            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError()); break;
+            case NFD_OKAY: callback(outPath);
+                break;
+            case NFD_CANCEL: callback(nullptr);
+                break;
+            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+                break;
         }
         if (outPath)
             free(outPath);
@@ -216,10 +216,14 @@ float Resources::GetGWScaleMultiplier(bool force)
         const auto interfacesize = static_cast<GW::Constants::InterfaceSize>(GetPreference(GW::UI::EnumPreference::InterfaceSize));
 
         switch (interfacesize) {
-            case GW::Constants::InterfaceSize::SMALL: cached_ui_scale = .9f; break;
-            case GW::Constants::InterfaceSize::LARGE: cached_ui_scale = 1.166666f; break;
-            case GW::Constants::InterfaceSize::LARGER: cached_ui_scale = 1.3333333f; break;
-            default: cached_ui_scale = 1.f; break;
+            case GW::Constants::InterfaceSize::SMALL: cached_ui_scale = .9f;
+                break;
+            case GW::Constants::InterfaceSize::LARGE: cached_ui_scale = 1.166666f;
+                break;
+            case GW::Constants::InterfaceSize::LARGER: cached_ui_scale = 1.3333333f;
+                break;
+            default: cached_ui_scale = 1.f;
+                break;
         }
     }
     return cached_ui_scale;

@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>

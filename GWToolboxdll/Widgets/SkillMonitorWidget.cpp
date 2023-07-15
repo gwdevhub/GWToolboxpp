@@ -15,6 +15,7 @@
 
 #include <GWCA/Packets/StoC.h>
 
+#include <Defines.h>
 #include <Modules/Resources.h>
 #include <Widgets/SkillMonitorWidget.h>
 

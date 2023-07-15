@@ -13,8 +13,6 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Hook.h>
@@ -22,7 +20,6 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <Utils/GuiUtils.h>
-#include <Utils/ToolboxUtils.h>
 
 #include <Logger.h>
 #include <ImGuiAddons.h>

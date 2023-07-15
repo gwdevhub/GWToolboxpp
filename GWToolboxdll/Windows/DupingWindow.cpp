@@ -12,7 +12,6 @@
 
 #include <Color.h>
 #include <Utils/GuiUtils.h>
-#include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
 #include <Windows/DupingWindow.h>
 

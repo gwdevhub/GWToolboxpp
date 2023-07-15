@@ -1,7 +1,6 @@
 #pragma once
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <ToolboxModule.h>
 #include <minwindef.h>

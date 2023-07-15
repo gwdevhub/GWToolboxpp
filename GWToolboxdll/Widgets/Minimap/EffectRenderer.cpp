@@ -12,6 +12,8 @@
 
 #include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/EffectRenderer.h>
+#include <Timer.h>
+#include <Color.h>
 
 namespace {
     enum SkillEffect {

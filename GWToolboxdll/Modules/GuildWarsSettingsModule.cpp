@@ -4,8 +4,6 @@
 
 #include <GWCA/Context/CharContext.h>
 
-#include <GWCA/GameEntities/Quest.h>
-
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 
@@ -16,13 +14,10 @@
 #include "GuildWarsSettingsModule.h"
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 
 #include <GWCA/GameContainers/List.h>
 #include <GWCA/Constants/QuestIDs.h>
 #include <GWCA/Utilities/Hooker.h>
-
-#include <GWCA/Packets/Opcodes.h>
 
 namespace {
     uint32_t* key_mappings_array = nullptr;

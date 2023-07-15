@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Timer.h>
 #include <ToolboxWindow.h>
 
 #include <Windows/Hotkeys.h>

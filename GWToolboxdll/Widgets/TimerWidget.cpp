@@ -16,6 +16,7 @@
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
 #include <Timer.h>
+#include <Defines.h>
 
 #include <Modules/GameSettings.h>
 #include <Widgets/TimerWidget.h>

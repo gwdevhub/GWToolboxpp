@@ -1,10 +1,6 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-#include <GWCA/Packets/StoC.h>
-
 #include <ToolboxModule.h>
-#include <GWCA/Utilities/MemoryPatcher.h>
 
 class CrashHandler : public ToolboxModule {
     CrashHandler()

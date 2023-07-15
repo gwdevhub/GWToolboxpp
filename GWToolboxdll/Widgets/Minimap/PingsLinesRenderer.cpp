@@ -14,6 +14,7 @@
 
 #include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <Defines.h>
 
 void PingsLinesRenderer::LoadSettings(ToolboxIni* ini, const char* section)
 {

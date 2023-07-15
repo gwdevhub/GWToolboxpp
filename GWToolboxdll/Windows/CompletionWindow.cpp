@@ -1,19 +1,19 @@
 #include "stdafx.h"
 
-
 #include <GWCA/Packets/Opcodes.h>
 
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/PreGameContext.h>
 
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Hero.h>
 
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
@@ -29,8 +29,7 @@
 
 #include <Color.h>
 #include <Modules/DialogModule.h>
-#include <GWCA/Context/PreGameContext.h>
-#include <GWCA/Managers/QuestMgr.h>
+#include <resource.h>
 
 using namespace GW::Constants;
 using namespace Missions;

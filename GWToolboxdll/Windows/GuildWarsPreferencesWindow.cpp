@@ -1,12 +1,9 @@
 #include "stdafx.h"
 
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
 #include <Utils/GuiUtils.h>
-#include <GWToolbox.h>
 #include <Logger.h>
 
 #include <Windows/GuildWarsPreferencesWindow.h>

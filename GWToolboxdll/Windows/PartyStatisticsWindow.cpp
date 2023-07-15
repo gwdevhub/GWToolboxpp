@@ -19,8 +19,8 @@
 
 #include <Modules/Resources.h>
 #include <Utils/GuiUtils.h>
+#include <Timer.h>
 #include <Windows/PartyStatisticsWindow.h>
-#include <Utils/ToolboxUtils.h>
 
 /*************************/
 /* Static Helper Methods */

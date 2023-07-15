@@ -4,6 +4,7 @@
 
 #include <Widgets/ClockWidget.h>
 #include <Modules/ToolboxSettings.h>
+#include <Defines.h>
 
 void ClockWidget::Draw(IDirect3DDevice9* pDevice)
 {

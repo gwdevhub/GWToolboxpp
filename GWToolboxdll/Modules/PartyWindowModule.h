@@ -1,13 +1,6 @@
 #pragma once
 
-#include <GWCA/Constants/Maps.h>
-#include <GWCA/Utilities/Hook.h>
-#include <GWCA/Packets/StoC.h>
-#include <GWCA/GameEntities/Agent.h>
-
 #include <ToolboxModule.h>
-#include <ToolboxUIElement.h>
-#include <Timer.h>
 
 class PartyWindowModule : public ToolboxModule {
     PartyWindowModule() = default;

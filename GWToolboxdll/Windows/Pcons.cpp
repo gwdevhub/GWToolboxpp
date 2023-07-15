@@ -3,7 +3,6 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
-#include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
 
 #include <GWCA/GameContainers/Array.h>
@@ -313,7 +312,7 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem)
     if (!emptyBag)
         return nullptr;
     const auto item = new GW::Item(); // Create a "fake" item...
-    item->bag = emptyBag;       // ...that belongs in the empty bag/slot we found...
+    item->bag = emptyBag;             // ...that belongs in the empty bag/slot we found...
     item->slot = static_cast<uint8_t>(emptySlotIdx);
     item->quantity = 0; // ...with 250 available slots.
     item->item_id = 0;  // item_id to 0 for comparison

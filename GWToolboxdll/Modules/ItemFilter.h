@@ -1,9 +1,5 @@
 #pragma once
 
-#include <vector>
-
-#include <GWCA/GameEntities/Item.h>
-#include <GWCA/Packets/StoC.h>
 #include <ToolboxModule.h>
 
 

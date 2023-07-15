@@ -5,7 +5,6 @@
 #include <d3d9.h>
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/Utilities/Hook.h>
 #include <Color.h>
 
 #include <Modules/HallOfMonumentsModule.h>

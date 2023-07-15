@@ -13,7 +13,6 @@
 
 #include <Utils/GuiUtils.h>
 
-#include <Modules/Resources.h>
 #include <Windows/FactionLeaderboardWindow.h>
 
 

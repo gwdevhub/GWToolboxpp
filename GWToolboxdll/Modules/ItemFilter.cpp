@@ -1,8 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/ItemContext.h>
+#include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>

@@ -6,9 +6,8 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
+#include <Defines.h>
 #include <Utils/GuiUtils.h>
-
-#include <Modules/ToolboxSettings.h>
 #include <Widgets/DistanceWidget.h>
 
 void DistanceWidget::DrawSettingInternal()

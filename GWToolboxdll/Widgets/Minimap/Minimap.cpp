@@ -33,6 +33,7 @@
 #include <Utils/GuiUtils.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
+#include <Defines.h>
 
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/Resources.h>

@@ -1,12 +1,6 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-
-#include <GWCA/Packets/StoC.h>
-
-#include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
-#include <Modules/HallOfMonumentsModule.h>
 
 class InfoWindow : public ToolboxWindow {
     InfoWindow() = default;

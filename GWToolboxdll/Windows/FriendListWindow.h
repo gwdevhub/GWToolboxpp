@@ -6,7 +6,6 @@
 #include <GWCA/GameEntities/Friendslist.h>
 
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>

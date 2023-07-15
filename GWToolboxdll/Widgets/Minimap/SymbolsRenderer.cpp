@@ -7,7 +7,6 @@
 #include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 
 #include <ImGuiAddons.h>
 

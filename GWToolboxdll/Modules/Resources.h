@@ -1,8 +1,5 @@
 #pragma once
 
-#include <RestClient.h>
-
-#include <resource.h>
 #include <ToolboxModule.h>
 #include <Utf8.h>
 

@@ -5,10 +5,6 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/Packets/StoC.h>
-#include <GWCA/Managers/UIMgr.h>
-
-#include <Color.h>
-#include <Timer.h>
 
 #include <Widgets/Minimap/VBuffer.h>
 

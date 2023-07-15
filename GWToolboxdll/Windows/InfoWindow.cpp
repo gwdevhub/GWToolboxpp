@@ -4,6 +4,7 @@
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Camera.h>
 
 #include <GWCA/GameEntities/Party.h>
@@ -43,6 +44,7 @@
 
 #include <Modules/ToolboxSettings.h>
 #include <Modules/DialogModule.h>
+#include <Modules/HallOfMonumentsModule.h>
 #include <GWToolbox.h>
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Managers/QuestMgr.h>

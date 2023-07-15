@@ -466,8 +466,7 @@ void PartySearchWindow::Update(float delta)
         max_party_size = 0;
     }
     if (!max_party_size) {
-        const GW::AreaInfo* this_map = GW::Map::GetCurrentMapInfo();
-        if (this_map) {
+        if (const GW::AreaInfo* this_map = GW::Map::GetCurrentMapInfo()) {
             max_party_size = this_map->max_party_size;
         }
     }

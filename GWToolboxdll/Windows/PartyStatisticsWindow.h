@@ -1,16 +1,5 @@
 #pragma once
 
-#include <map>
-#include <queue>
-#include <string>
-
-#include <GWCA/Constants/Constants.h>
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Skill.h>
-#include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Packets/StoC.h>
-
-#include <Timer.h>
 #include <ToolboxWindow.h>
 
 class PartyStatisticsWindow : public ToolboxWindow {

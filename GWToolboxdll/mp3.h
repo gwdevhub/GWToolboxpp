@@ -2,7 +2,6 @@
 
 // Windows Header Files:
 #include <windows.h>
-#include <mmsystem.h>
 #include <strmif.h>
 #include <control.h>
 

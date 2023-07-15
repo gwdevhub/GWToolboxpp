@@ -1,6 +1,5 @@
 #pragma once
 
-#include <../plugins/Base/ToolboxPlugin.h>
 #include <ToolboxUIElement.h>
 
 class PluginModule final : public ToolboxUIElement {
