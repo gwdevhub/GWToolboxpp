@@ -9,7 +9,6 @@
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/GuildContext.h>
-#include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameContainers/Array.h>
@@ -76,7 +75,7 @@ namespace {
     GW::MemoryPatcher item_description_patch2;
     GW::MemoryPatcher skill_description_patch;
 
-    void SetWindowTitle(bool enabled)
+    void SetWindowTitle(const bool enabled)
     {
         if (!enabled)
             return;
@@ -88,7 +87,7 @@ namespace {
             SetWindowTextW(hwnd, title.c_str());
     }
 
-    void SaveChannelColor(ToolboxIni* ini, const char* section, const char* chanstr, GW::Chat::Channel chan)
+    void SaveChannelColor(ToolboxIni* ini, const char* section, const char* chanstr, const GW::Chat::Channel chan)
     {
         char key[128];
         GW::Chat::Color sender, message;
@@ -100,7 +99,7 @@ namespace {
         Colors::Save(ini, section, key, message);
     }
 
-    void LoadChannelColor(ToolboxIni* ini, const char* section, const char* chanstr, GW::Chat::Channel chan)
+    void LoadChannelColor(ToolboxIni* ini, const char* section, const char* chanstr, const GW::Chat::Channel chan)
     {
         char key[128];
         GW::Chat::Color sender, message;
@@ -227,7 +226,7 @@ namespace {
         uint32_t call_target = 0;
         bool cast_next_frame = false;
 
-        void reset(uint32_t _slot = 0, uint32_t _target_id = 0, uint32_t _call_target = 0)
+        void reset(const uint32_t _slot = 0, const uint32_t _target_id = 0, const uint32_t _call_target = 0)
         {
             slot = _slot;
             target_id = _target_id;
@@ -235,13 +234,13 @@ namespace {
             cast_next_frame = false;
         }
 
-        const GW::AgentLiving* GetTarget() const
+        [[nodiscard]] const GW::AgentLiving* GetTarget() const
         {
             const GW::AgentLiving* target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(target_id));
             return target && target->GetIsLivingType() ? target : nullptr;
         }
 
-        GW::Constants::SkillID GetSkill() const
+        [[nodiscard]] GW::Constants::SkillID GetSkill() const
         {
             const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
             return skillbar && skillbar->IsValid() ? skillbar->skills[slot].skill_id : GW::Constants::SkillID::No_Skill;
@@ -313,7 +312,7 @@ namespace {
     } skillbar_packet;
 
     // Before the game loads the skill bar you want, copy the data over for checking once the bar is loaded.
-    void OnPreLoadSkillBar(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    void OnPreLoadSkillBar(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendLoadSkillbar && wparam);
         const struct Pack {
@@ -329,7 +328,7 @@ namespace {
     bool FixLoadSkillData(GW::Constants::SkillID* skill_ids)
     {
         auto find_skill = [](const GW::Constants::SkillID* skill_ids, const GW::Constants::SkillID skill_id) {
-            for (int i = 0; i < 8; i++) {
+            for (auto i = 0; i < 8; i++) {
                 if (skill_ids[i] == skill_id)
                     return i;
             }
@@ -389,7 +388,7 @@ namespace {
                 const uint32_t kurzick_rank = kurzick_title ? kurzick_title->points_needed_current_rank : 0;
                 const auto luxon_title = GW::PlayerMgr::GetTitleTrack(GW::Constants::TitleID::Luxon);
                 const uint32_t luxon_rank = luxon_title ? luxon_title->points_needed_current_rank : 0;
-                const int skillbar_index = std::max(found_first, found_second);
+                const auto skillbar_index = std::max(found_first, found_second);
                 ASSERT(skillbar_index >= 0 && skillbar_index < 8);
                 if (kurzick_rank > luxon_rank) {
                     skill_ids[skillbar_index] = kurzick_skill;
@@ -425,7 +424,7 @@ namespace {
     using ShowAgentFactionGain_pt = void(__cdecl*)(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained);
     ShowAgentFactionGain_pt ShowAgentFactionGain_Func = nullptr, ShowAgentFactionGain_Ret = nullptr;
     // Block overhead faction gain numbers
-    void OnShowAgentFactionGain(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained)
+    void OnShowAgentFactionGain(const uint32_t agent_id, const uint32_t stat_type, const uint32_t amount_gained)
     {
         GW::Hook::EnterHook();
         if (!block_faction_gain)
@@ -436,7 +435,7 @@ namespace {
     using ShowAgentExperienceGain_pt = void(__cdecl*)(uint32_t agent_id, uint32_t amount_gained);
     ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = nullptr, ShowAgentExperienceGain_Ret = nullptr;
     // Block overhead experience gain numbers
-    void OnShowAgentExperienceGain(uint32_t agent_id, uint32_t amount_gained)
+    void OnShowAgentExperienceGain(const uint32_t agent_id, const uint32_t amount_gained)
     {
         GW::Hook::EnterHook();
         const bool blocked = (block_experience_gain || (block_zero_experience_gain && amount_gained == 0));
@@ -452,7 +451,7 @@ namespace {
     using GetItemDescription_pt = void(__cdecl*)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
     GetItemDescription_pt GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
     // Block full item descriptions
-    void OnGetItemDescription(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** name_out, wchar_t** description_out)
+    void OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** name_out, wchar_t** description_out)
     {
         GW::Hook::EnterHook();
         bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
@@ -470,7 +469,7 @@ namespace {
     using CreateCodedTextLabel_pt = void(__cdecl*)(uint32_t frame_id, const wchar_t* encoded_string);
     CreateCodedTextLabel_pt CreateEncodedTextLabel_Func = nullptr;
     // Hide skill description in tooltip; called by GW to add the description of the skill to a skill tooltip
-    void CreateCodedTextLabel_SkillDescription(uint32_t frame_id, const wchar_t* encoded_string)
+    void CreateCodedTextLabel_SkillDescription(const uint32_t frame_id, const wchar_t* encoded_string)
     {
         GW::Hook::EnterHook();
         bool block_description = disable_skill_descriptions_in_outpost && IsOutpost() || disable_skill_descriptions_in_explorable && IsExplorable();
@@ -527,7 +526,7 @@ namespace {
 
     uint32_t current_party_target_id = 0;
     // Record current party target - this isn't always the same as the compass target.
-    void OnPartyTargetChanged(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    void OnPartyTargetChanged(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         const struct Packet {
             uint32_t source;
@@ -569,7 +568,7 @@ namespace {
 
         time_t start_ts = 0;
 
-        void reset(uint32_t _agent_id = 0)
+        void reset(const uint32_t _agent_id = 0)
         {
             identifier = _agent_id;
             stage = identifier ? Stage::Kick : Stage::None;
@@ -817,7 +816,8 @@ namespace {
     void OnKeyDownAction(GW::HookStatus*, uint32_t key)
     {
         switch (static_cast<GW::UI::ControlAction>(key)) {
-            case GW::UI::ControlAction_TargetNearestItem: if (lazy_chest_looting) {
+            case GW::UI::ControlAction_TargetNearestItem:
+                if (lazy_chest_looting) {
                     targeting_nearest_item = true;
                     GW::Agents::ChangeTarget(static_cast<uint32_t>(0)); // To ensure OnChangeTarget is triggered
                 }
@@ -828,7 +828,8 @@ namespace {
     void OnKeyUpAction(GW::HookStatus*, uint32_t key)
     {
         switch (static_cast<GW::UI::ControlAction>(key)) {
-            case GW::UI::ControlAction_TargetNearestItem: targeting_nearest_item = false;
+            case GW::UI::ControlAction_TargetNearestItem:
+                targeting_nearest_item = false;
                 break;
         }
     }
@@ -892,12 +893,13 @@ namespace {
         }
     }
 
-    bool IsOnline(GW::FriendStatus status)
+    bool IsOnline(const GW::FriendStatus status)
     {
         switch (status) {
             case GW::FriendStatus::Away:
             case GW::FriendStatus::DND:
-            case GW::FriendStatus::Online: return true;
+            case GW::FriendStatus::Online:
+                return true;
         }
         return false;
     }
@@ -986,14 +988,16 @@ namespace {
 
     GW::HookEntry OnQuestUIMessage_HookEntry;
 
-    void OnPostQuestUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void*, void*)
+    void OnPostQuestUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void*, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kSendSetActiveQuest: if (status->blocked)
+            case GW::UI::UIMessage::kSendSetActiveQuest:
+                if (status->blocked)
                     break;
                 player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
                 break;
-            case GW::UI::UIMessage::kQuestAdded: if (status->blocked)
+            case GW::UI::UIMessage::kQuestAdded:
+                if (status->blocked)
                     break;
                 if (GW::QuestMgr::GetActiveQuestId() == player_requested_active_quest_id)
                     break;
@@ -1033,7 +1037,7 @@ bool GameSettings::GetSettingBool(const char* setting)
     return false;
 }
 
-void GameSettings::PingItem(GW::Item* item, uint32_t parts)
+void GameSettings::PingItem(GW::Item* item, const uint32_t parts)
 {
     if (!(item && GW::PlayerMgr::GetPlayerByID()))
         return;
@@ -1063,12 +1067,12 @@ void GameSettings::PingItem(GW::Item* item, uint32_t parts)
         ChatSettings::AddPendingMessage(m);
 }
 
-void GameSettings::PingItem(uint32_t item_id, uint32_t parts)
+void GameSettings::PingItem(const uint32_t item_id, const uint32_t parts)
 {
     return PingItem(GW::Items::GetItemById(item_id), parts);
 }
 
-PendingChatMessage::PendingChatMessage(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender)
+PendingChatMessage::PendingChatMessage(const GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender)
     : channel(channel)
 {
     invalid = !enc_message || !enc_sender;
@@ -1079,7 +1083,7 @@ PendingChatMessage::PendingChatMessage(GW::Chat::Channel channel, const wchar_t*
     }
 }
 
-PendingChatMessage* PendingChatMessage::queueSend(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender)
+PendingChatMessage* PendingChatMessage::queueSend(const GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender)
 {
     const auto m = new PendingChatMessage(channel, enc_message, enc_sender);
     if (m->invalid) {
@@ -1090,7 +1094,7 @@ PendingChatMessage* PendingChatMessage::queueSend(GW::Chat::Channel channel, con
     return m;
 }
 
-PendingChatMessage* PendingChatMessage::queuePrint(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender)
+PendingChatMessage* PendingChatMessage::queuePrint(const GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender)
 {
     const auto m = new PendingChatMessage(channel, enc_message, enc_sender);
     if (m->invalid) {
@@ -1183,12 +1187,14 @@ bool PendingChatMessage::PrintMessage()
         return true; // Already printed.
     wchar_t buffer[512];
     switch (channel) {
-        case GW::Chat::Channel::CHANNEL_EMOTE: GW::Chat::Color dummy, messageCol;     // Needed for GW::Chat::GetChannelColors
+        case GW::Chat::Channel::CHANNEL_EMOTE:
+            GW::Chat::Color dummy, messageCol;                                        // Needed for GW::Chat::GetChannelColors
             GetChannelColors(GW::Chat::Channel::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
             swprintf(buffer, 512, L"<a=2>%ls</a>: <c=#%06X>%ls</c>", output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
             WriteChat(channel, buffer);
             break;
-        default: swprintf(buffer, 512, L"<a=2>%ls</a>: %ls", output_sender.c_str(), output_message.c_str());
+        default:
+            swprintf(buffer, 512, L"<a=2>%ls</a>: %ls", output_sender.c_str(), output_message.c_str());
             WriteChat(channel, buffer);
             break;
     }
@@ -1288,13 +1294,16 @@ void GameSettings::Initialize()
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, bind_member(this, &GameSettings::OnPartyDefeated));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
         switch (packet->value_id) {
-            case 11: OnAgentMarker(status, packet);
-            case 21: OnAgentEffect(status, packet);
+            case 11:
+                OnAgentMarker(status, packet);
+            case 21:
+                OnAgentEffect(status, packet);
                 break;
             case 22:
                 //OnAgentAnimation(status, packet);
                 break;
-            case 28: OnAgentLoopingAnimation(status, packet);
+            case 28:
+                OnAgentLoopingAnimation(status, packet);
                 break;
         }
     });
@@ -1383,7 +1392,7 @@ void GameSettings::Initialize()
 #endif
 }
 
-void GameSettings::OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) const
+void GameSettings::OnDialogUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*) const
 {
     switch (message_id) {
         case GW::UI::UIMessage::kDialogButton: {
@@ -1577,14 +1586,14 @@ void GameSettings::RegisterSettingsContent()
 {
     ToolboxModule::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent("Inventory Settings", ICON_FA_BOXES,
-                                           [this](const std::string&, bool is_showing) {
+                                           [this](const std::string&, const bool is_showing) {
                                                if (!is_showing)
                                                    return;
                                                DrawInventorySettings();
                                            }, 0.9f);
 
     ToolboxModule::RegisterSettingsContent("Party Settings", ICON_FA_USERS,
-                                           [this](const std::string&, bool is_showing) {
+                                           [this](const std::string&, const bool is_showing) {
                                                if (!is_showing)
                                                    return;
                                                DrawPartySettings();
@@ -1592,7 +1601,7 @@ void GameSettings::RegisterSettingsContent()
 
     ToolboxModule::RegisterSettingsContent(
         "Notifications", ICON_FA_BULLHORN,
-        [this](const std::string&, bool is_showing) {
+        [this](const std::string&, const bool is_showing) {
             if (is_showing)
                 DrawNotificationsSettings();
         },
@@ -1959,7 +1968,8 @@ void GameSettings::FactionEarnedCheckAndWarn()
                 Log::Warning("Luxon faction earned is greater than Kurzick");
             }
             break;
-        default: break;
+        default:
+            break;
     }
 }
 
@@ -2047,7 +2057,7 @@ void GameSettings::Update(float)
     }
 }
 
-bool GameSettings::WndProc(UINT Message, WPARAM, LPARAM)
+bool GameSettings::WndProc(const UINT Message, WPARAM, LPARAM)
 {
     // I don't know what would be the best solution here, but the way we capture every messages as a sign of activity can be bad.
     // Added that because when someone was typing "/afk message" he was put online directly, because "enter-up" was captured.
@@ -2068,7 +2078,7 @@ bool GameSettings::WndProc(UINT Message, WPARAM, LPARAM)
 }
 
 // Show weapon description/mods when pinged
-void GameSettings::OnPingWeaponSet(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) const
+void GameSettings::OnPingWeaponSet(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*) const
 {
     ASSERT(message_id == GW::UI::UIMessage::kSendPingWeaponSet && wparam);
     if (!shorthand_item_ping)
@@ -2165,20 +2175,25 @@ void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::Gener
 {
     if (pak->agent_id != GW::Agents::GetPlayerId()) {
         switch (pak->value) {
-            case 905: status->blocked = block_snowman_summoner;
+            case 905:
+                status->blocked = block_snowman_summoner;
                 break;
-            case 1688: status->blocked = block_bottle_rockets;
+            case 1688:
+                status->blocked = block_bottle_rockets;
                 break;
-            case 1689: status->blocked = block_party_poppers;
+            case 1689:
+                status->blocked = block_party_poppers;
                 break;
             case 758:  // Chocolate bunny
             case 2063: // e.g. Fruitcake, sugary blue drink
             case 1176: // e.g. Delicious cake
                 status->blocked = block_sugar_rush_effect;
                 break;
-            case 1491: status->blocked = block_transmogrify_effect;
+            case 1491:
+                status->blocked = block_transmogrify_effect;
                 break;
-            default: break;
+            default:
+                break;
         }
     }
 }
@@ -2248,9 +2263,11 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::Ge
             case GW::Constants::Profession::Assassin:
             case GW::Constants::Profession::Ritualist:
             case GW::Constants::Profession::Dervish:
-            case GW::Constants::Profession::Paragon: pak2.value = 14; // Collectors edition Nightfall/Factions
+            case GW::Constants::Profession::Paragon:
+                pak2.value = 14; // Collectors edition Nightfall/Factions
                 break;
-            default: break;
+            default:
+                break;
         }
     }
     GW::StoC::EmulatePacket(&pak2);
@@ -2259,7 +2276,7 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::Ge
 // Skip char name entry dialog when donating faction
 void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) const
 {
-    const uint32_t dialog_id = (uint32_t)wparam;
+    const auto dialog_id = (uint32_t)wparam;
     if (!(dialog_id == 0x87 && skip_entering_name_for_faction_donate))
         return;
     uint32_t allegiance = 2;
@@ -2469,7 +2486,7 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
     WriteChatEnc(static_cast<GW::Chat::Channel>(msg->channel), new_message);
     // Copy file to clipboard
 
-    const int size = sizeof(DROPFILES) + (file_path_len + 2) * sizeof(wchar_t);
+    const auto size = sizeof(DROPFILES) + (file_path_len + 2) * sizeof(wchar_t);
     const HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
     ASSERT(hGlobal != nullptr);
     const auto df = static_cast<DROPFILES*>(GlobalLock(hGlobal));
@@ -2507,7 +2524,7 @@ void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wP
 };
 
 // Redirect /wiki commands to go to useful pages
-void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) const
+void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wParam, void*) const
 {
     const std::string url = ToLower(static_cast<char*>(wParam));
     if (strstr(url.c_str(), "/wiki/main_page")) {
@@ -2542,7 +2559,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, GW::UI::UIMessage message_
     }
 }
 
-void GameSettings::OnCast(GW::HookStatus*, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t /* call_target */) const
+void GameSettings::OnCast(GW::HookStatus*, const uint32_t agent_id, const uint32_t slot, const uint32_t target_id, uint32_t /* call_target */) const
 {
     if (!(target_id && agent_id == GW::Agents::GetPlayerId()))
         return;
@@ -2576,25 +2593,32 @@ void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet)
 }
 
 // Default colour for agent name tags
-void GameSettings::OnAgentNameTag(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*) const
+void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*) const
 {
     if (msgid != GW::UI::UIMessage::kShowAgentNameTag && msgid != GW::UI::UIMessage::kSetAgentNameTagAttribs)
         return;
     const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
     switch (static_cast<DEFAULT_NAMETAG_COLOR>(tag->text_color)) {
-        case DEFAULT_NAMETAG_COLOR::NPC: tag->text_color = nametag_color_npc;
+        case DEFAULT_NAMETAG_COLOR::NPC:
+            tag->text_color = nametag_color_npc;
             break;
-        case DEFAULT_NAMETAG_COLOR::ENEMY: tag->text_color = nametag_color_enemy;
+        case DEFAULT_NAMETAG_COLOR::ENEMY:
+            tag->text_color = nametag_color_enemy;
             break;
-        case DEFAULT_NAMETAG_COLOR::GADGET: tag->text_color = nametag_color_gadget;
+        case DEFAULT_NAMETAG_COLOR::GADGET:
+            tag->text_color = nametag_color_gadget;
             break;
-        case DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY: tag->text_color = nametag_color_player_in_party;
+        case DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY:
+            tag->text_color = nametag_color_player_in_party;
             break;
-        case DEFAULT_NAMETAG_COLOR::PLAYER_OTHER: tag->text_color = nametag_color_player_other;
+        case DEFAULT_NAMETAG_COLOR::PLAYER_OTHER:
+            tag->text_color = nametag_color_player_other;
             break;
-        case DEFAULT_NAMETAG_COLOR::PLAYER_SELF: tag->text_color = nametag_color_player_self;
+        case DEFAULT_NAMETAG_COLOR::PLAYER_SELF:
+            tag->text_color = nametag_color_player_self;
             break;
-        case DEFAULT_NAMETAG_COLOR::ITEM: tag->text_color = nametag_color_item;
+        case DEFAULT_NAMETAG_COLOR::ITEM:
+            tag->text_color = nametag_color_item;
             break;
     }
 }

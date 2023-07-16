@@ -14,8 +14,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Chat Filter"; }
-    const char* SettingsName() const override { return "Chat Settings"; }
+    [[nodiscard]] const char* Name() const override { return "Chat Filter"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Chat Settings"; }
 
     void Initialize() override;
     void LoadSettings(ToolboxIni* ini) override;

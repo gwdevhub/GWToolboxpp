@@ -13,8 +13,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Info"; }
-    const char* Icon() const override { return ICON_FA_INFO_CIRCLE; }
+    [[nodiscard]] const char* Name() const override { return "Info"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_INFO_CIRCLE; }
 
     void Initialize() override;
     void Terminate() override;

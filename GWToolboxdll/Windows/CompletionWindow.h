@@ -38,7 +38,7 @@ namespace Missions {
     public:
         Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, GW::Constants::QuestID = static_cast<GW::Constants::QuestID>(0));
         static ImVec2 icon_size;
-        GW::Constants::MapID GetOutpost() const;
+        [[nodiscard]] GW::Constants::MapID GetOutpost() const;
 
         bool is_completed = false;
         bool bonus = false;
@@ -103,7 +103,7 @@ namespace Missions {
 
     class FestivalHat : public ItemAchievement {
     public:
-        FestivalHat(size_t _encoded_name_index, const wchar_t* encoded_name)
+        FestivalHat(const size_t _encoded_name_index, const wchar_t* encoded_name)
             : ItemAchievement(_encoded_name_index, encoded_name)
         {
         }
@@ -113,7 +113,7 @@ namespace Missions {
 
     class MinipetAchievement : public ItemAchievement {
     public:
-        MinipetAchievement(size_t hom_achievement_index, const wchar_t* encoded_name)
+        MinipetAchievement(const size_t hom_achievement_index, const wchar_t* encoded_name)
             : ItemAchievement(hom_achievement_index, encoded_name)
         {
         }
@@ -123,7 +123,7 @@ namespace Missions {
 
     class WeaponAchievement : public ItemAchievement {
     public:
-        WeaponAchievement(size_t _encoded_name_index, const wchar_t* encoded_name)
+        WeaponAchievement(const size_t _encoded_name_index, const wchar_t* encoded_name)
             : ItemAchievement(_encoded_name_index, encoded_name)
         {
         }
@@ -137,7 +137,7 @@ namespace Missions {
         IDirect3DTexture9** img = nullptr;
 
     public:
-        AchieventWithWikiFile(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr)
+        AchieventWithWikiFile(const size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr)
             : ItemAchievement(hom_achievement_index, encoded_name)
         {
             if (_wiki_file_name) {
@@ -150,7 +150,7 @@ namespace Missions {
 
     class ArmorAchievement : public AchieventWithWikiFile {
     public:
-        ArmorAchievement(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr)
+        ArmorAchievement(const size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr)
             : AchieventWithWikiFile(hom_achievement_index, encoded_name, _wiki_file_name)
         {
         };
@@ -159,7 +159,7 @@ namespace Missions {
 
     class CompanionAchievement : public AchieventWithWikiFile {
     public:
-        CompanionAchievement(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr)
+        CompanionAchievement(const size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr)
             : AchieventWithWikiFile(hom_achievement_index, encoded_name, _wiki_file_name)
         {
         };
@@ -168,7 +168,7 @@ namespace Missions {
 
     class HonorAchievement : public AchieventWithWikiFile {
     public:
-        HonorAchievement(size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr)
+        HonorAchievement(const size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr)
             : AchieventWithWikiFile(hom_achievement_index, encoded_name, _wiki_file_name)
         {
         };
@@ -186,7 +186,7 @@ namespace Missions {
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
 
-        PropheciesMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
+        PropheciesMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest)
         {
         }
@@ -201,7 +201,7 @@ namespace Missions {
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
 
-        FactionsMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
+        FactionsMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest)
         {
         }
@@ -213,10 +213,10 @@ namespace Missions {
 
 
     protected:
-        NightfallMission(GW::Constants::MapID _outpost,
+        NightfallMission(const GW::Constants::MapID _outpost,
                          const MissionImageList& _normal_mode_images,
                          const MissionImageList& _hard_mode_images,
-                         GW::Constants::QuestID _zm_quest)
+                         const GW::Constants::QuestID _zm_quest)
             : Mission(_outpost, _normal_mode_images, _hard_mode_images, _zm_quest)
         {
         }
@@ -225,7 +225,7 @@ namespace Missions {
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
 
-        NightfallMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
+        NightfallMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest)
         {
         }
@@ -240,7 +240,7 @@ namespace Missions {
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
 
-        TormentMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
+        TormentMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
             : NightfallMission(_outpost, normal_mode_images, hard_mode_images, _zm_quest)
         {
         }
@@ -250,7 +250,7 @@ namespace Missions {
     public:
         static MissionImageList hard_mode_images;
 
-        Vanquish(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
+        Vanquish(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
             : Mission(_outpost, hard_mode_images, hard_mode_images, _zm_quest)
         {
         }
@@ -266,10 +266,10 @@ namespace Missions {
         std::string name;
 
     protected:
-        EotNMission(GW::Constants::MapID _outpost,
+        EotNMission(const GW::Constants::MapID _outpost,
                     const MissionImageList& _normal_mode_images,
                     const MissionImageList& _hard_mode_images,
-                    GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
+                    const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
             : Mission(_outpost, _normal_mode_images, _hard_mode_images, _zm_quest)
         {
         }
@@ -278,7 +278,7 @@ namespace Missions {
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
 
-        EotNMission(GW::Constants::MapID _outpost, GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
+        EotNMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
             : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest)
         {
         }
@@ -297,12 +297,12 @@ namespace Missions {
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
 
-        Dungeon(GW::Constants::MapID _outpost, std::vector<GW::Constants::QuestID> _zb_quests)
+        Dungeon(const GW::Constants::MapID _outpost, std::vector<GW::Constants::QuestID> _zb_quests)
             : EotNMission(_outpost, normal_mode_images, hard_mode_images), zb_quests(_zb_quests)
         {
         }
 
-        Dungeon(GW::Constants::MapID _outpost, GW::Constants::QuestID _zb_quest = static_cast<GW::Constants::QuestID>(0))
+        Dungeon(const GW::Constants::MapID _outpost, GW::Constants::QuestID _zb_quest = static_cast<GW::Constants::QuestID>(0))
             : EotNMission(_outpost, normal_mode_images, hard_mode_images), zb_quests({_zb_quest})
         {
         }
@@ -338,8 +338,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Completion"; }
-    const char* Icon() const override { return ICON_FA_BOOK; }
+    [[nodiscard]] const char* Name() const override { return "Completion"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_BOOK; }
 
 
     void Initialize() override;

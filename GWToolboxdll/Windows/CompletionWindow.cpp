@@ -36,7 +36,7 @@ using namespace Missions;
 using namespace CompletionWindow_Constants;
 
 namespace {
-    bool ArrayBoolAt(GW::Array<uint32_t>& array, uint32_t index)
+    bool ArrayBoolAt(const std::vector<uint32_t>& array, const uint32_t index)
     {
         const uint32_t real_index = index / 32;
         if (real_index >= array.size())
@@ -46,17 +46,7 @@ namespace {
         return (array[real_index] & flag) != 0;
     }
 
-    bool ArrayBoolAt(std::vector<uint32_t>& array, uint32_t index)
-    {
-        const uint32_t real_index = index / 32;
-        if (real_index >= array.size())
-            return false;
-        const uint32_t shift = index % 32;
-        const uint32_t flag = 1 << shift;
-        return (array[real_index] & flag) != 0;
-    }
-
-    void ArrayBoolSet(std::vector<uint32_t>& array, uint32_t index, bool is_set = true)
+    void ArrayBoolSet(std::vector<uint32_t>& array, const uint32_t index, const bool is_set = true)
     {
         const uint32_t real_index = index / 32;
         if (real_index >= array.size()) {
@@ -206,7 +196,7 @@ namespace {
     }
 
     // Check for "Cycle displayed minipets" button - if present, this is our hom dialog!
-    void OnDialogButton(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    void OnDialogButton(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         ASSERT(message_id == GW::UI::UIMessage::kDialogButton);
         const auto button = static_cast<GW::UI::DialogButtonInfo*>(wparam);
@@ -220,7 +210,7 @@ namespace {
         ASSERT(message_id == GW::UI::UIMessage::kSendDialog);
         if (GW::Map::GetMapID() != MapID::Hall_of_Monuments)
             return;
-        uint32_t dialog_id = (uint32_t)wparam;
+        auto dialog_id = (uint32_t)wparam;
         const auto& available_dialogs = DialogModule::Instance().GetDialogButtons();
         const auto this_dialog_button = std::ranges::find_if(available_dialogs, [dialog_id](auto d) { return d->dialog_id == dialog_id; });
         if (this_dialog_button == available_dialogs.end())
@@ -281,7 +271,7 @@ namespace {
         }
     }
 
-    bool ParseCompletionBuffer(CompletionType type, wchar_t* character_name = nullptr, uint32_t* buffer = nullptr, size_t len = 0)
+    bool ParseCompletionBuffer(const CompletionType type, wchar_t* character_name = nullptr, uint32_t* buffer = nullptr, size_t len = 0)
     {
         bool from_game = false;
         if (!character_name) {
@@ -297,28 +287,36 @@ namespace {
                 return false;
             character_name = c->player_name;
             switch (type) {
-                case Mission: buffer = w->missions_completed.m_buffer;
+                case Mission:
+                    buffer = w->missions_completed.m_buffer;
                     len = w->missions_completed.m_size;
                     break;
-                case MissionBonus: buffer = w->missions_bonus.m_buffer;
+                case MissionBonus:
+                    buffer = w->missions_bonus.m_buffer;
                     len = w->missions_bonus.m_size;
                     break;
-                case MissionHM: buffer = w->missions_completed_hm.m_buffer;
+                case MissionHM:
+                    buffer = w->missions_completed_hm.m_buffer;
                     len = w->missions_completed_hm.m_size;
                     break;
-                case MissionBonusHM: buffer = w->missions_bonus_hm.m_buffer;
+                case MissionBonusHM:
+                    buffer = w->missions_bonus_hm.m_buffer;
                     len = w->missions_bonus_hm.m_size;
                     break;
-                case Skills: buffer = w->unlocked_character_skills.m_buffer;
+                case Skills:
+                    buffer = w->unlocked_character_skills.m_buffer;
                     len = w->unlocked_character_skills.m_size;
                     break;
-                case Vanquishes: buffer = w->vanquished_areas.m_buffer;
+                case Vanquishes:
+                    buffer = w->vanquished_areas.m_buffer;
                     len = w->vanquished_areas.m_size;
                     break;
-                case Heroes: buffer = (uint32_t*)w->hero_info.m_buffer;
+                case Heroes:
+                    buffer = (uint32_t*)w->hero_info.m_buffer;
                     len = w->hero_info.m_size;
                     break;
-                case MapsUnlocked: buffer = w->unlocked_map.m_buffer;
+                case MapsUnlocked:
+                    buffer = w->unlocked_map.m_buffer;
                     len = w->unlocked_map.m_size;
                     break;
                 default: ASSERT("Invalid CompletionType" && false);
@@ -327,17 +325,23 @@ namespace {
         const auto this_character_completion = CompletionWindow::GetCharacterCompletion(character_name, true);
         std::vector<uint32_t>* write_buf = nullptr;
         switch (type) {
-            case Mission: write_buf = &this_character_completion->mission;
+            case Mission:
+                write_buf = &this_character_completion->mission;
                 break;
-            case MissionBonus: write_buf = &this_character_completion->mission_bonus;
+            case MissionBonus:
+                write_buf = &this_character_completion->mission_bonus;
                 break;
-            case MissionHM: write_buf = &this_character_completion->mission_hm;
+            case MissionHM:
+                write_buf = &this_character_completion->mission_hm;
                 break;
-            case MissionBonusHM: write_buf = &this_character_completion->mission_bonus_hm;
+            case MissionBonusHM:
+                write_buf = &this_character_completion->mission_bonus_hm;
                 break;
-            case Skills: write_buf = &this_character_completion->skills;
+            case Skills:
+                write_buf = &this_character_completion->skills;
                 break;
-            case Vanquishes: write_buf = &this_character_completion->vanquishes;
+            case Vanquishes:
+                write_buf = &this_character_completion->vanquishes;
                 break;
             case Heroes: {
                 write_buf = &this_character_completion->heroes;
@@ -355,11 +359,14 @@ namespace {
                 }
             }
             break;
-            case MapsUnlocked: write_buf = &this_character_completion->maps_unlocked;
+            case MapsUnlocked:
+                write_buf = &this_character_completion->maps_unlocked;
                 break;
-            case MinipetsUnlocked: write_buf = &this_character_completion->minipets_unlocked;
+            case MinipetsUnlocked:
+                write_buf = &this_character_completion->minipets_unlocked;
                 break;
-            case FestivalHats: write_buf = &this_character_completion->festival_hats;
+            case FestivalHats:
+                write_buf = &this_character_completion->festival_hats;
                 break;
             default: ASSERT("Invalid CompletionType" && false);
         }
@@ -484,10 +491,10 @@ Color Mission::has_quest_bg_color = Colors::ARGB(102, 0, 150, 0);
 ImVec2 Mission::icon_size = {48.0f, 48.0f};
 
 
-Mission::Mission(MapID _outpost,
+Mission::Mission(const MapID _outpost,
                  const MissionImageList& _normal_mode_images,
                  const MissionImageList& _hard_mode_images,
-                 QuestID _zm_quest)
+                 const QuestID _zm_quest)
     : outpost(_outpost), zm_quest(_zm_quest), normal_mode_textures(_normal_mode_images), hard_mode_textures(_hard_mode_images)
 {
     map_to = outpost;
@@ -694,7 +701,7 @@ void HeroUnlock::OnClick()
     });
 }
 
-ItemAchievement::ItemAchievement(size_t _encoded_name_index, const wchar_t* encoded_name)
+ItemAchievement::ItemAchievement(const size_t _encoded_name_index, const wchar_t* encoded_name)
     : PvESkill(SkillID::No_Skill)
 {
     encoded_name_index = _encoded_name_index;
@@ -741,7 +748,7 @@ IDirect3DTexture9* PvESkill::GetMissionImage()
     return *image;
 }
 
-PvESkill::PvESkill(SkillID _skill_id)
+PvESkill::PvESkill(const SkillID _skill_id)
     : Mission(MapID::None, dummy_var, dummy_var), skill_id(_skill_id)
 {
     if (_skill_id != SkillID::No_Skill) {
@@ -802,7 +809,7 @@ void PvESkill::CheckProgress(const std::wstring& player_name)
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id));
 }
 
-FactionsPvESkill::FactionsPvESkill(SkillID skill_id)
+FactionsPvESkill::FactionsPvESkill(const SkillID skill_id)
     : PvESkill(skill_id)
 {
     GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skill_id);
@@ -2324,7 +2331,7 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
     float single_item_width = Mission::icon_size.x;
     if (show_as_list)
         single_item_width *= 5.f;
-    const int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x))));
+    const auto missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x))));
     const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
     ImGui::Text("Hall of Monuments");
     ImGui::SameLine(checkbox_offset);
@@ -2361,7 +2368,7 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
 then press "Examine the Monument to Devotion.")");
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
+        const auto items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
         size_t col_count = 0;
 
         if (!minipets_sorted) {
@@ -2417,7 +2424,7 @@ then press "Examine the Monument to Devotion.")");
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
+        const auto items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
         size_t col_count = 0;
 
         for (const auto m : hom_weapons) {
@@ -2503,7 +2510,7 @@ then press "Examine the Monument to Devotion.")");
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
+        const auto items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
         size_t col_count = 0;
 
         for (const auto m : hom_companions) {
@@ -2546,7 +2553,7 @@ then press "Examine the Monument to Devotion.")");
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::Columns(missions_per_row, "###completion_section_cols", false);
-        const size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
+        const auto items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
         size_t col_count = 0;
 
         for (const auto m : hom_titles) {
@@ -2587,10 +2594,10 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_collected_hats);
     LOAD_BOOL(only_show_account_chars);
 
-    auto read_ini_to_buf = [&](CompletionType type, const char* section) {
+    auto read_ini_to_buf = [&](const CompletionType type, const char* section) {
         char ini_key_buf[64];
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
-        const int len = completion_ini->GetLongValue(ini_section, ini_key_buf, 0);
+        const auto len = completion_ini->GetLongValue(ini_section, ini_key_buf, 0);
         if (len < 1)
             return;
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
@@ -2626,7 +2633,7 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     CheckProgress();
 }
 
-CompletionWindow* CompletionWindow::CheckProgress(bool fetch_hom)
+CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
 {
     for (auto& camp : pve_skills) {
         for (const auto& skill : camp.second) {
@@ -2725,7 +2732,7 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     delete completion_ini;
 }
 
-CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, bool create_if_not_found)
+CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, const bool create_if_not_found)
 {
     if (character_completion.contains(character_name)) {
         return character_completion.at(character_name);

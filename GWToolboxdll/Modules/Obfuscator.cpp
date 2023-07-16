@@ -300,7 +300,7 @@ namespace {
         return *player_name_start_p && *player_name_end_p;
     }
 
-    bool ObfuscateName(const std::wstring& _original_name, std::wstring& out, bool force = false)
+    bool ObfuscateName(const std::wstring& _original_name, std::wstring& out, const bool force = false)
     {
         std::wstring original_name = GuiUtils::SanitizePlayerName(_original_name);
         if (_original_name.empty()) {
@@ -349,7 +349,7 @@ namespace {
         return true;
     }
 
-    bool ObfuscateMessage(const wchar_t* message, std::wstring& out, bool obfuscate = true)
+    bool ObfuscateMessage(const wchar_t* message, std::wstring& out, const bool obfuscate = true)
     {
         const wchar_t* player_name_start = nullptr;
         const wchar_t* player_name_end = nullptr;
@@ -402,7 +402,7 @@ namespace {
     }
 
     // We do this here instead of in PreGameContext to intercept without rewriting memory (it would also mess up logging in)
-    void __fastcall OnGetCharacterSummary(void* ctx, uint32_t edx, wchar_t* character_name)
+    void __fastcall OnGetCharacterSummary(void* ctx, const uint32_t edx, wchar_t* character_name)
     {
         GW::HookBase::EnterHook();
         if (edx != 2 && edx != 3) {
@@ -444,7 +444,7 @@ namespace {
 
     bool obfuscating_guild_roster = false;
     // Hide or show guild member names. Note that the guild roster persists across map changes so be careful with it
-    bool ObfuscateGuildRoster(bool obfuscate = true)
+    bool ObfuscateGuildRoster(const bool obfuscate = true)
     {
         if (obfuscate == guild_roster_obfuscated)
             return true;
@@ -550,7 +550,7 @@ namespace {
         pending_guild_obfuscate = IsObfuscatorEnabled();
     }
 
-    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msg_id, void* wParam, void*)
+    void OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msg_id, void* wParam, void*)
     {
         switch (msg_id) {
             case GW::UI::UIMessage::kLogout: {
@@ -708,7 +708,7 @@ namespace {
         }
     }
 
-    void OnSendChat(GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* message)
+    void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, wchar_t* message)
     {
         if (channel != GW::Chat::Channel::CHANNEL_WHISPER)
             return;
@@ -789,7 +789,7 @@ namespace {
 #endif
 }
 
-void Obfuscator::Obfuscate(bool obfuscate)
+void Obfuscator::Obfuscate(const bool obfuscate)
 {
     if (obfuscate == (pending_state == ObfuscatorState::Enabled))
         return;
@@ -846,11 +846,11 @@ void Obfuscator::Initialize()
         GW::HookBase::EnableHooks(GetAccountData_Func);
     }
 
-    const int pre_hook_altitude = -0x9000;  // Hooks that run before other RegisterPacketCallback hooks
-    const int post_hook_altitude = -0x7000; // Hooks that run after other RegisterPacketCallback hooks, but BEFORE the game processes the packet
-    const int post_gw_altitude = 0x8000;    // Hooks that run after gw has processed the event
+    const auto pre_hook_altitude = -0x9000;  // Hooks that run before other RegisterPacketCallback hooks
+    const auto post_hook_altitude = -0x7000; // Hooks that run after other RegisterPacketCallback hooks, but BEFORE the game processes the packet
+    const auto post_gw_altitude = 0x8000;    // Hooks that run after gw has processed the event
 
-    const int pre_hook_headers[] = {
+    const uint32_t pre_hook_headers[] = {
         GAME_SMSG_AGENT_CREATE_PLAYER,
         GAME_SMSG_MERCENARY_INFO,
         GAME_SMSG_AGENT_UPDATE_NPC_NAME,
@@ -865,7 +865,7 @@ void Obfuscator::Initialize()
     for (const auto header : pre_hook_headers) {
         GW::StoC::RegisterPacketCallback(&stoc_hook, header, OnStoCPacket, pre_hook_altitude);
     }
-    const int post_hook_headers[] = {
+    const uint32_t post_hook_headers[] = {
         GAME_SMSG_CHAT_MESSAGE_CORE // Post resignlog hook
     };
     for (const auto header : post_hook_headers) {

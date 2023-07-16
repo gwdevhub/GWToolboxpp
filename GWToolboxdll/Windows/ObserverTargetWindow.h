@@ -19,8 +19,8 @@ public:
     uint32_t GetTracking() override;
     uint32_t GetComparison() override;
 
-    const char* Name() const override { return "Observer Target"; }
-    const char* Icon() const override { return ICON_FA_EYE; }
+    [[nodiscard]] const char* Name() const override { return "Observer Target"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
 
 protected:
     uint32_t current_tracked_agent_id = NO_AGENT;

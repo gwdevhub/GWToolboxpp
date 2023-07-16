@@ -26,7 +26,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Resources"; }
+    [[nodiscard]] const char* Name() const override { return "Resources"; }
     bool HasSettings() override { return false; }
 
     void Initialize() override;

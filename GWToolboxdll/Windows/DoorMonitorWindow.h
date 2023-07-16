@@ -11,7 +11,7 @@ class DoorMonitorWindow : public ToolboxWindow {
 public:
     class DoorObject {
     public:
-        DoorObject(uint32_t object_id_)
+        DoorObject(const uint32_t object_id_)
             : object_id(object_id_)
         {
         };
@@ -26,7 +26,7 @@ public:
         time_t first_close = 0; // First time the door was closed
         time_t last_close = 0;  // Most recent time the door was closed
     public:
-        static void DoorAnimation(uint32_t object_id, uint32_t animation_type, uint32_t animation_stage)
+        static void DoorAnimation(const uint32_t object_id, const uint32_t animation_type, const uint32_t animation_stage)
         {
             if (animation_type != 16 && animation_type != 3)
                 return; // Not opening or closing door.
@@ -72,8 +72,8 @@ public:
         Instance().doors.emplace(object_id, d);
         return d;
     };
-    const char* Name() const override { return "Door Monitor"; }
-    const char* Icon() const override { return ICON_FA_DOOR_OPEN; }
+    [[nodiscard]] const char* Name() const override { return "Door Monitor"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_DOOR_OPEN; }
 
     void Initialize() override;
 

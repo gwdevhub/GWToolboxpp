@@ -23,7 +23,7 @@ public:
         return "Skillbar";
     }
 
-    const char* Icon() const override { return ICON_FA_HISTORY; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_HISTORY; }
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
@@ -100,7 +100,7 @@ private:
     bool snap_to_skillbar = true;
 
     // Internal utils
-    Color UptimeToColor(uint32_t uptime) const;
+    [[nodiscard]] Color UptimeToColor(uint32_t uptime) const;
     static std::vector<Effect> get_effects(GW::Constants::SkillID skillId);
     static Effect get_longest_effect(GW::Constants::SkillID skillId);
     void skill_cooldown_to_string(char arr[16], uint32_t cd) const;

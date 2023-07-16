@@ -10,9 +10,9 @@ public:
         return instance;
     }
 
-    const char* Icon() const override { return ICON_FA_LIGHTBULB; }
-    const char* Name() const override { return "Hints"; }
-    const char* SettingsName() const override { return "In-Game Hints"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_LIGHTBULB; }
+    [[nodiscard]] const char* Name() const override { return "Hints"; }
+    [[nodiscard]] const char* SettingsName() const override { return "In-Game Hints"; }
 
     void Initialize() override;
     void Update(float) override;

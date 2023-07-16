@@ -31,8 +31,8 @@ public:
     void DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,
                     const std::vector<GW::Constants::SkillID>& skill_ids);
 
-    const char* Name() const override { return "Observer Player"; }
-    const char* Icon() const override { return ICON_FA_EYE; }
+    [[nodiscard]] const char* Name() const override { return "Observer Player"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
 

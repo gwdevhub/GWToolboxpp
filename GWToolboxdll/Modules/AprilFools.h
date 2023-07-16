@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "April Fools"; }
+    [[nodiscard]] const char* Name() const override { return "April Fools"; }
     bool HasSettings() override { return false; }
 
     void Initialize() override;

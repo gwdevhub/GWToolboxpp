@@ -16,8 +16,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Hotkeys"; }
-    const char* Icon() const override { return ICON_FA_KEYBOARD; }
+    [[nodiscard]] const char* Name() const override { return "Hotkeys"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_KEYBOARD; }
 
     void Initialize() override;
     void Terminate() override;

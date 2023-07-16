@@ -98,8 +98,8 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device)
     type = D3DPT_LINELIST;
 
     // populate vertex buffer
-    for (int k = 0; k < (shadow_show ? 2 : 1); ++k) {
-        for (size_t i = 0; i < path_map.size(); ++i) {
+    for (autok = 0; k < (shadow_show ? 2 : 1); ++k) {
+        for (size_t i = 0; i < path_map.size(); i++) {
             GW::PathingMap pmap = path_map[i];
             for (size_t j = 0; j < pmap.trapezoid_count; ++j) {
                 GW::PathingTrapezoid& trap = pmap.trapezoids[j];
@@ -148,7 +148,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device)
 #endif
 
     vertices = vertices_begin;
-    for (unsigned int i = 0; i < total_vert_count_; ++i) {
+    for (auto i = 0u; i < total_vert_count_; i++) {
         vertices[i].z = 0.0f;
         if (shadow_show && i < vert_count_) {
             vertices[i].color = color_mapshadow;

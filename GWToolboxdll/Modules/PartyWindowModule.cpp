@@ -53,7 +53,7 @@ namespace {
     };
 
     struct PendingAddToParty {
-        PendingAddToParty(uint32_t _agent_id, uint32_t _allegiance_bits, uint32_t _player_number)
+        PendingAddToParty(const uint32_t _agent_id, const uint32_t _allegiance_bits, const uint32_t _player_number)
             : agent_id(_agent_id)
               , player_number(_player_number)
               , allegiance_bits(_allegiance_bits)
@@ -69,7 +69,7 @@ namespace {
     };
 
     struct SpecialNPCToAdd {
-        SpecialNPCToAdd(const char* _alias, int _model_id, GW::Constants::MapID _map_id)
+        SpecialNPCToAdd(const char* _alias, const int _model_id, const GW::Constants::MapID _map_id)
             : alias(_alias)
               , model_id(static_cast<uint32_t>(_model_id))
               , map_id(_map_id)
@@ -132,8 +132,10 @@ namespace {
             case GW::RegionType::CompetitiveMission:
             case GW::RegionType::ZaishenBattle:
             case GW::RegionType::HeroesAscent:
-            case GW::RegionType::HeroBattleArea: return false;
-            default: return true;
+            case GW::RegionType::HeroBattleArea:
+                return false;
+            default:
+                return true;
         }
     }
 
@@ -144,7 +146,7 @@ namespace {
         }
     };
 
-    PartyInfo* GetPartyInfo(uint32_t party_id = 0)
+    PartyInfo* GetPartyInfo(const uint32_t party_id = 0)
     {
         if (!party_id)
             return static_cast<PartyInfo*>(GW::PartyMgr::GetPartyInfo());
@@ -154,7 +156,7 @@ namespace {
         return static_cast<PartyInfo*>(p->parties[party_id]);
     }
 
-    void SetPlayerNumber(wchar_t* player_name, uint32_t player_number)
+    void SetPlayerNumber(wchar_t* player_name, const uint32_t player_number)
     {
         wchar_t buf[32] = {0};
         swprintf(buf, 32, L"%s (%d)", player_name, player_number);
@@ -193,8 +195,10 @@ namespace {
             case GW::RegionType::GuildBattleArea:
             case GW::RegionType::HeroBattleArea:
             case GW::RegionType::HeroesAscent:
-            case GW::RegionType::ZaishenBattle: return true;
-            default: return false;
+            case GW::RegionType::ZaishenBattle:
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -205,7 +209,7 @@ namespace {
         user_defined_npcs_by_model_id.emplace(npc.model_id, new_npc);
     }
 
-    void RemoveSpecialNPC(uint32_t model_id)
+    void RemoveSpecialNPC(const uint32_t model_id)
     {
         user_defined_npcs_by_model_id.erase(model_id);
         for (auto& user_defined_npc : user_defined_npcs) {
@@ -233,12 +237,12 @@ namespace {
 
     void ClearAddedAllies()
     {
-        for (unsigned int& ally_id : allies_added_to_party) {
+        for (const auto ally_id : allies_added_to_party) {
             pending_remove.push(ally_id);
         }
     }
 
-    bool ShouldAddAgentToPartyWindow(uint32_t agent_type)
+    bool ShouldAddAgentToPartyWindow(const uint32_t agent_type)
     {
         if ((agent_type & 0x20000000) == 0)
             return false; // Not an NPC
@@ -279,7 +283,7 @@ namespace {
         if (!agents_ptr)
             return;
         GW::AgentArray& agents = *agents_ptr;
-        for (const unsigned int& ally_id : allies_added_to_party) {
+        for (const auto ally_id : allies_added_to_party) {
             if (ally_id >= agents.size()) {
                 pending_remove.push(ally_id);
                 continue;
@@ -302,7 +306,7 @@ namespace {
         }
     }
 
-    bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id)
+    bool ShouldRemoveAgentFromPartyWindow(const uint32_t agent_id)
     {
         const auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
         if (!a || !a->GetIsLivingType() || !(a->type_map & 0x20000))
@@ -316,7 +320,7 @@ namespace {
         return false;
     }
 
-    void RemoveAllyActual(uint32_t agent_id)
+    void RemoveAllyActual(const uint32_t agent_id)
     {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             const auto it = std::ranges::find(allies_added_to_party, agent_id);

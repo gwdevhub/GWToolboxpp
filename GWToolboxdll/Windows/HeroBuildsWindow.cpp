@@ -72,7 +72,7 @@ namespace {
         HeroID::Merc8
     };
 
-    const int hero_count = _countof(HeroIndexToID);
+    const auto hero_count = _countof(HeroIndexToID);
 
     const char* HeroName[] = {
         "No Hero", "Norgu", "Goren", "Tahlkora",
@@ -109,7 +109,7 @@ namespace {
         return ret;
     }
 
-    const GW::HeroFlag* GetHeroFlagInfo(uint32_t hero_id)
+    const GW::HeroFlag* GetHeroFlagInfo(const uint32_t hero_id)
     {
         const GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->world)
@@ -125,7 +125,7 @@ namespace {
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
-GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(HeroID hero_id, size_t* out_hero_index)
+GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const HeroID hero_id, size_t* out_hero_index)
 {
     GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
     if (!party_info)
@@ -197,7 +197,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 auto tb = TeamHeroBuild("");
                 tb.builds.reserve(8); // at this point why don't we use a static array ??
                 tb.builds.push_back(HeroBuild("", "", -2));
-                for (int i = 0; i < 7; ++i) {
+                for (auto i = 0; i < 7; i++) {
                     tb.builds.push_back(HeroBuild("", ""));
                 }
 
@@ -211,7 +211,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                                    names.begin(),
                                    [](const TeamHeroBuild& tb) { return tb.name; }
             );
-            const int num_elements = names.size();
+            const auto num_elements = names.size();
             static int selectedTeambuild = 0;
             ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
             ImGui::Combo("###teamBuildCombo", &selectedTeambuild, names.data(), num_elements);
@@ -228,7 +228,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
         ImGui::End();
     }
 
-    for (size_t i = 0; i < teambuilds.size(); ++i) {
+    for (size_t i = 0; i < teambuilds.size(); i++) {
         if (!teambuilds[i].edit_open)
             continue;
         TeamHeroBuild& tbuild = teambuilds[i];
@@ -273,7 +273,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 }
                 else {
                     if (ImGui::MyCombo("###heroid", "Choose Hero", &build.hero_index,
-                                       [](void*, int idx, const char** out_text) -> bool {
+                                       [](void*, const int idx, const char** out_text) -> bool {
                                            if (idx < 0)
                                                return false;
                                            if (idx >= hero_count)
@@ -313,10 +313,12 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     auto hero_stance_icon = ICON_FA_SHIELD_ALT;
                     auto hero_stance_tooltip = "Hero behaviour: Guard";
                     switch (build.behavior) {
-                        case 2: hero_stance_icon = reinterpret_cast<const char*>(ICON_FA_DOVE);
+                        case 2:
+                            hero_stance_icon = reinterpret_cast<const char*>(ICON_FA_DOVE);
                             hero_stance_tooltip = "Hero behaviour: Avoid Combat";
                             break;
-                        case 0: hero_stance_icon = reinterpret_cast<const char*>(ICON_FA_FIST_RAISED);
+                        case 0:
+                            hero_stance_icon = reinterpret_cast<const char*>(ICON_FA_FIST_RAISED);
                             hero_stance_tooltip = "Hero behaviour: Fight";
                             break;
                     }
@@ -404,7 +406,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
     }
 }
 
-void HeroBuildsWindow::View(const TeamHeroBuild& tbuild, size_t idx)
+void HeroBuildsWindow::View(const TeamHeroBuild& tbuild, const size_t idx)
 {
     if (idx >= tbuild.builds.size())
         return;
@@ -436,7 +438,7 @@ void HeroBuildsWindow::Send(const TeamHeroBuild& tbuild)
     if (!std::string(tbuild.name).empty()) {
         send_queue.push(tbuild.name);
     }
-    for (size_t i = 0; i < tbuild.builds.size(); ++i) {
+    for (size_t i = 0; i < tbuild.builds.size(); i++) {
         if (i == 0) {
             const HeroBuild& build = tbuild.builds[i];
             if (build.code[0] == 0 && build.name[0] == 0)
@@ -446,7 +448,7 @@ void HeroBuildsWindow::Send(const TeamHeroBuild& tbuild)
     }
 }
 
-void HeroBuildsWindow::Send(const TeamHeroBuild& tbuild, size_t idx)
+void HeroBuildsWindow::Send(const TeamHeroBuild& tbuild, const size_t idx)
 {
     if (idx >= tbuild.builds.size())
         return;
@@ -472,7 +474,7 @@ void HeroBuildsWindow::Send(const TeamHeroBuild& tbuild, size_t idx)
         send_queue.push(buffer);
 }
 
-void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, size_t idx, std::string* out)
+void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, const size_t idx, std::string* out)
 {
     if (idx >= tbuild.builds.size())
         return;
@@ -514,7 +516,7 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, size_t idx, st
         out->assign(buffer);
 }
 
-const char* HeroBuildsWindow::BuildName(size_t idx) const
+const char* HeroBuildsWindow::BuildName(const size_t idx) const
 {
     if (idx < teambuilds.size()) {
         return teambuilds[idx].name;
@@ -522,7 +524,7 @@ const char* HeroBuildsWindow::BuildName(size_t idx) const
     return nullptr;
 }
 
-void HeroBuildsWindow::Load(size_t idx)
+void HeroBuildsWindow::Load(const size_t idx)
 {
     if (idx < teambuilds.size()) {
         Load(teambuilds[idx]);
@@ -540,13 +542,13 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild)
     if (tbuild.mode > 0) {
         GW::PartyMgr::SetHardMode(tbuild.mode == 2);
     }
-    for (size_t i = 0; i < tbuild.builds.size(); ++i) {
+    for (size_t i = 0; i < tbuild.builds.size(); i++) {
         Load(tbuild, i);
     }
     send_timer = TIMER_INIT(); // give GW time to update the hero structs after adding them.
 }
 
-void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, size_t idx)
+void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, const size_t idx)
 {
     if (idx >= tbuild.builds.size())
         return;
@@ -635,14 +637,14 @@ void HeroBuildsWindow::Update(float)
     last_instance_type = instance_type;
 }
 
-void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, int argc, LPWSTR* argv)
+void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, const int argc, LPWSTR* argv)
 {
     if (argc < 2) {
         Log::ErrorW(L"Syntax: /%s [hero_build_name]", argv[0]);
         return;
     }
     std::wstring argBuildname = argv[1];
-    for (int i = 2; i < argc; i++) {
+    for (auto i = 2; i < argc; i++) {
         argBuildname.append(L" ");
         argBuildname.append(argv[i]);
     }
@@ -697,7 +699,7 @@ void HeroBuildsWindow::LoadFromFile()
         tb.builds.reserve(8);
 
         constexpr size_t buffer_size = 16;
-        for (int i = 0; i < 8; ++i) {
+        for (auto i = 0; i < 8; i++) {
             char namekey[buffer_size];
             char templatekey[buffer_size];
             char heroindexkey[buffer_size];
@@ -714,7 +716,7 @@ void HeroBuildsWindow::LoadFromFile()
             if (hero_index < -2) {
                 hero_index = -1; // can happen due to an old bug
             }
-            const int show_panel = inifile->GetLongValue(section, showpanelkey, 0);
+            const auto show_panel = inifile->GetLongValue(section, showpanelkey, 0);
             const uint32_t behavior = static_cast<uint32_t>(inifile->GetLongValue(section, behaviorkey, 1));
             HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0, behavior);
             tb.builds.push_back(build);
@@ -737,7 +739,7 @@ void HeroBuildsWindow::SaveToFile()
         inifile->Reset();
 
         // then save
-        for (size_t i = 0; i < teambuilds.size(); ++i) {
+        for (size_t i = 0; i < teambuilds.size(); i++) {
             const TeamHeroBuild& tbuild = teambuilds[i];
             char section[buffer_size];
             snprintf(section, buffer_size, "builds%03d", i);

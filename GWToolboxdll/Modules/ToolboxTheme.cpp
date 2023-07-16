@@ -107,7 +107,7 @@ void ToolboxTheme::LoadSettings(ToolboxIni* ini)
     ini_style.WindowTitleAlign.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowTitleAlignY", ini_style.WindowTitleAlign.y));
     ini_style.ButtonTextAlign.x = static_cast<float>(inifile->GetDoubleValue(IniSection, "ButtonTextAlignX", ini_style.ButtonTextAlign.x));
     ini_style.ButtonTextAlign.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "ButtonTextAlignY", ini_style.ButtonTextAlign.y));
-    for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+    for (auto i = 0; i < ImGuiCol_COUNT; i++) {
         const char* name = ImGui::GetStyleColorName(i);
         const Color color = Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i]));
         ini_style.Colors[i] = ImColor(color);
@@ -215,7 +215,7 @@ void ToolboxTheme::SaveSettings(ToolboxIni* ini)
     inifile->SetDoubleValue(IniSection, "WindowTitleAlignY", style.WindowTitleAlign.y);
     inifile->SetDoubleValue(IniSection, "ButtonTextAlignX", style.ButtonTextAlign.x);
     inifile->SetDoubleValue(IniSection, "ButtonTextAlignY", style.ButtonTextAlign.y);
-    for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+    for (auto i = 0; i < ImGuiCol_COUNT; i++) {
         const char* name = ImGui::GetStyleColorName(i);
         const Color color = ImColor(style.Colors[i]);
         Colors::Save(inifile, IniSection, name, color);
@@ -259,7 +259,7 @@ void ToolboxTheme::DrawSettingInternal()
     ImGui::SliderFloat2("Window Title Align", reinterpret_cast<float*>(&style.WindowTitleAlign), 0.0f, 1.0f, "%.2f");
     ImGui::SliderFloat2("Button Text Align", reinterpret_cast<float*>(&style.ButtonTextAlign), 0.0f, 1.0f, "%.2f");
     ImGui::Text("Colors");
-    for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+    for (auto i = 0; i < ImGuiCol_COUNT; i++) {
         const char* name = ImGui::GetStyleColorName(i);
         ImGui::PushID(i);
         ImGui::ColorEdit4(name, reinterpret_cast<float*>(&style.Colors[i]));

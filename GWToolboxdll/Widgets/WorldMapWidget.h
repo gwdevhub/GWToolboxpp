@@ -19,11 +19,11 @@ public:
     {
     };
 
-    bool ShowOnWorldMap() const override { return true; }
+    [[nodiscard]] bool ShowOnWorldMap() const override { return true; }
 
-    const char* Name() const override { return "World Map"; }
+    [[nodiscard]] const char* Name() const override { return "World Map"; }
 
-    const char* Icon() const override { return ICON_FA_GLOBE; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
     void Draw(IDirect3DDevice9* pDevice) override;
 

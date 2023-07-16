@@ -49,7 +49,7 @@ namespace {
         return buff ? buff->begin() : nullptr;
     }
 
-    GW::PartySearch* GetRegionParty(uint32_t party_id)
+    GW::PartySearch* GetRegionParty(const uint32_t party_id)
     {
         const GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->party)
@@ -60,7 +60,7 @@ namespace {
         return parties[party_id];
     }
 
-    GW::PartyInfo* GetLocalParty(uint32_t party_id)
+    GW::PartyInfo* GetLocalParty(const uint32_t party_id)
     {
         const GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->party)
@@ -78,7 +78,7 @@ namespace {
         return GW::PlayerMgr::GetPlayerByID(party->players[0].login_number);
     }
 
-    [[maybe_unused]] GW::PartyInfo* GetPartyFromPlayer(uint32_t player_number)
+    [[maybe_unused]] GW::PartyInfo* GetPartyFromPlayer(const uint32_t player_number)
     {
         const GW::GameContext* g = GW::GetGameContext();
         if (!g || !g->party)
@@ -109,25 +109,38 @@ namespace {
     const char* DistrictAbbr(int32_t region, int32_t language)
     {
         switch (static_cast<GW::Constants::MapRegion>(region)) {
-            case GW::Constants::MapRegion::International: return "INT";
-            case GW::Constants::MapRegion::American: return "AE";
-            case GW::Constants::MapRegion::Korean: return "KR";
-            case GW::Constants::MapRegion::Chinese: return "CN";
-            case GW::Constants::MapRegion::Japanese: return "JP";
-            default: switch (static_cast<GW::Constants::MapLanguage>(language)) {
-                    case GW::Constants::MapLanguage::French: return "FR";
-                    case GW::Constants::MapLanguage::German: return "DE";
-                    case GW::Constants::MapLanguage::Italian: return "IT";
-                    case GW::Constants::MapLanguage::Spanish: return "ES";
-                    case GW::Constants::MapLanguage::Polish: return "PL";
-                    case GW::Constants::MapLanguage::Russian: return "RU";
-                    default: return "EN";
+            case GW::Constants::MapRegion::International:
+                return "INT";
+            case GW::Constants::MapRegion::American:
+                return "AE";
+            case GW::Constants::MapRegion::Korean:
+                return "KR";
+            case GW::Constants::MapRegion::Chinese:
+                return "CN";
+            case GW::Constants::MapRegion::Japanese:
+                return "JP";
+            default:
+                switch (static_cast<GW::Constants::MapLanguage>(language)) {
+                    case GW::Constants::MapLanguage::French:
+                        return "FR";
+                    case GW::Constants::MapLanguage::German:
+                        return "DE";
+                    case GW::Constants::MapLanguage::Italian:
+                        return "IT";
+                    case GW::Constants::MapLanguage::Spanish:
+                        return "ES";
+                    case GW::Constants::MapLanguage::Polish:
+                        return "PL";
+                    case GW::Constants::MapLanguage::Russian:
+                        return "RU";
+                    default:
+                        return "EN";
                 }
         }
     }
 }
 
-uint32_t PartySearchWindow::TBParty::IdFromRegionParty(uint32_t party_id)
+uint32_t PartySearchWindow::TBParty::IdFromRegionParty(const uint32_t party_id)
 {
 #pragma warning (push)
 #pragma warning (disable: 4244)
@@ -135,7 +148,7 @@ uint32_t PartySearchWindow::TBParty::IdFromRegionParty(uint32_t party_id)
 #pragma warning (pop)
 }
 
-uint32_t PartySearchWindow::TBParty::IdFromLocalParty(uint32_t party_id)
+uint32_t PartySearchWindow::TBParty::IdFromLocalParty(const uint32_t party_id)
 {
 #pragma warning (push)
 #pragma warning (disable: 4244)
@@ -299,7 +312,7 @@ void PartySearchWindow::FillParties()
     }
 }
 
-PartySearchWindow::TBParty* PartySearchWindow::GetParty(uint32_t party_id, wchar_t** leader_out)
+PartySearchWindow::TBParty* PartySearchWindow::GetParty(const uint32_t party_id, wchar_t** leader_out)
 {
     for (const auto& party : party_advertisements) {
         if (!party.second)
@@ -436,7 +449,7 @@ void PartySearchWindow::SignalTerminate()
         WSACleanup();
 }
 
-void PartySearchWindow::Update(float delta)
+void PartySearchWindow::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
@@ -533,7 +546,7 @@ bool PartySearchWindow::IsLfpAlert(std::string& message)
                 return true;
         }
         else {
-            auto found = std::ranges::search(message, word, [](char c1, char c2) -> bool { return tolower(c1) == c2; }).begin();
+            auto found = std::ranges::search(message, word, [](const char c1, const char c2) -> bool { return tolower(c1) == c2; }).begin();
             if (found != message.end())
                 return true;
         }
@@ -626,7 +639,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device)
         const ImVec4 white(0xff, 0xff, 0xff, 0xff);
         const int32_t language = GW::Map::GetLanguage();
         const int32_t district = GW::Map::GetDistrict();
-        const uint32_t map = static_cast<uint32_t>(GW::Map::GetMapID());
+        const auto map = static_cast<uint32_t>(GW::Map::GetMapID());
         //auto& parties = party_ctx->party_search;
         for (const auto& it : party_advertisements) {
             auto* party = it.second;
@@ -752,13 +765,13 @@ void PartySearchWindow::ParseBuffer(const char* text, std::vector<std::string>& 
     std::istringstream stream(text);
     std::string word;
     while (std::getline(stream, word)) {
-        for (size_t i = 0; i < word.length(); i++)
-            word[i] = static_cast<char>(tolower(word[i]));
+        for (char& i : word)
+            i = static_cast<char>(tolower(i));
         words.push_back(word);
     }
 }
 
-void PartySearchWindow::AsyncWindowConnect(bool force)
+void PartySearchWindow::AsyncWindowConnect(const bool force)
 {
     if (ws_window)
         return;

@@ -112,7 +112,7 @@ namespace {
 }
 
 void DialogModule::OnPreUIMessage(
-    GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
+    GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
 {
     switch (message_id) {
         case GW::UI::UIMessage::kDialogBody: {
@@ -137,7 +137,7 @@ void DialogModule::OnPreUIMessage(
     }
 }
 
-void DialogModule::OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
+void DialogModule::OnPostUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
 {
     if (status->blocked) {
         // Blocked elsewhere.
@@ -174,8 +174,10 @@ void DialogModule::OnDialogSent(const uint32_t dialog_id)
         const auto quest_id = GetQuestID(dialog_id);
         switch (GetQuestDialogType(dialog_id)) {
             case QuestDialogType::TAKE:
-            case QuestDialogType::REWARD: break;
-            default: return;
+            case QuestDialogType::REWARD:
+                break;
+            default:
+                return;
         }
         for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end();) {
             const auto other_dialog_id = it->first;
@@ -238,7 +240,8 @@ void DialogModule::SendDialog(const uint32_t dialog_id, clock_t time)
                 queued_dialogs_to_send[GetDialogIDForQuestDialogType(quest_id, QuestDialogType::ENQUIRE_NEXT)] = time;
                 queued_dialogs_to_send[GetDialogIDForQuestDialogType(quest_id, QuestDialogType::ENQUIRE_REWARD)] = time;
                 break;
-            default: return;
+            default:
+                return;
         }
     }
 
@@ -257,12 +260,12 @@ void DialogModule::SendDialog(const uint32_t dialog_id, clock_t time)
     }
 }
 
-void DialogModule::SendDialog(uint32_t dialog_id)
+void DialogModule::SendDialog(const uint32_t dialog_id)
 {
     SendDialog(dialog_id, TIMER_INIT());
 }
 
-void DialogModule::SendDialogs(std::initializer_list<uint32_t> dialog_ids)
+void DialogModule::SendDialogs(const std::initializer_list<uint32_t> dialog_ids)
 {
     const auto timestamp = TIMER_INIT();
     for (const auto dialog_id : dialog_ids) {
@@ -319,9 +322,11 @@ uint32_t DialogModule::AcceptFirstAvailableQuest()
             case QuestDialogType::ENQUIRE:
             case QuestDialogType::ENQUIRE_NEXT:
             case QuestDialogType::ENQUIRE_REWARD:
-            case QuestDialogType::REWARD: available_quests.push_back(quest_id);
+            case QuestDialogType::REWARD:
+                available_quests.push_back(quest_id);
                 break;
-            default: break;
+            default:
+                break;
         }
     }
 

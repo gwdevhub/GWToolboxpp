@@ -93,7 +93,7 @@ namespace {
         const char* name;
         bool enabled;
 
-        ModuleToggle(ToolboxModule& m, bool _enabled = true)
+        ModuleToggle(ToolboxModule& m, const bool _enabled = true)
             : toolbox_module(&m), name(m.Name()), enabled(_enabled)
         {
         };
@@ -105,7 +105,7 @@ namespace {
         const char* name;
         bool enabled;
 
-        WidgetToggle(ToolboxWidget& m, bool _enabled = true)
+        WidgetToggle(ToolboxWidget& m, const bool _enabled = true)
             : toolbox_module(&m), name(m.Name()), enabled(_enabled)
         {
         };
@@ -117,7 +117,7 @@ namespace {
         const char* name;
         bool enabled;
 
-        WindowToggle(ToolboxWindow& m, bool _enabled = true)
+        WindowToggle(ToolboxWindow& m, const bool _enabled = true)
             : toolbox_module(&m), name(m.Name()), enabled(_enabled)
         {
         };
@@ -387,17 +387,23 @@ void ToolboxSettings::Update(float delta)
 
                 std::wstring map_string;
                 switch (current) {
-                    case GW::Constants::MapID::Domain_of_Anguish: map_string = L"DoA";
+                    case GW::Constants::MapID::Domain_of_Anguish:
+                        map_string = L"DoA";
                         break;
-                    case GW::Constants::MapID::Urgozs_Warren: map_string = L"Urgoz";
+                    case GW::Constants::MapID::Urgozs_Warren:
+                        map_string = L"Urgoz";
                         break;
-                    case GW::Constants::MapID::The_Deep: map_string = L"Deep";
+                    case GW::Constants::MapID::The_Deep:
+                        map_string = L"Deep";
                         break;
-                    case GW::Constants::MapID::The_Underworld: map_string = L"UW";
+                    case GW::Constants::MapID::The_Underworld:
+                        map_string = L"UW";
                         break;
-                    case GW::Constants::MapID::The_Fissure_of_Woe: map_string = L"FoW";
+                    case GW::Constants::MapID::The_Fissure_of_Woe:
+                        map_string = L"FoW";
                         break;
-                    default: map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
+                    default:
+                        map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
                 }
 
                 std::wstring prof_string;

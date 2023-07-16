@@ -35,8 +35,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Objectives"; }
-    const char* Icon() const override { return ICON_FA_BULLSEYE; }
+    [[nodiscard]] const char* Name() const override { return "Objectives"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_BULLSEYE; }
 
     void Initialize() override;
 
@@ -140,8 +140,8 @@ private:
         static Objective* FromJson(const nlohmann::json& json);
         nlohmann::json ToJson();
 
-        bool IsStarted() const;
-        bool IsDone() const;
+        [[nodiscard]] bool IsStarted() const;
+        [[nodiscard]] bool IsDone() const;
         void Draw();
         void Update();
 
@@ -173,7 +173,7 @@ private:
 
         std::vector<Objective*> objectives{};
 
-        Objective* AddObjective(Objective* obj, int starting_completes_num_previous = 0)
+        Objective* AddObjective(Objective* obj, const int starting_completes_num_previous = 0)
         {
             obj->starting_completes_n_previous_objectives = starting_completes_num_previous;
             obj->parent = this;
@@ -191,7 +191,7 @@ private:
             return AddObjective(obj, -1);
         }
 
-        void AddQuestObjective(const char* obj_name, uint32_t id)
+        void AddQuestObjective(const char* obj_name, const uint32_t id)
         {
             AddObjective(new Objective(obj_name))
                 ->AddStartEvent(EventType::ObjectiveStarted, id)

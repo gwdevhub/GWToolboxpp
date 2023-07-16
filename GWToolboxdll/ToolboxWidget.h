@@ -4,8 +4,8 @@
 
 class ToolboxWidget : public ToolboxUIElement {
 public:
-    bool IsWidget() const override { return true; }
-    const char* TypeName() const override { return "widget"; }
+    [[nodiscard]] bool IsWidget() const override { return true; }
+    [[nodiscard]] const char* TypeName() const override { return "widget"; }
 
     void LoadSettings(ToolboxIni* ini) override
     {
@@ -15,6 +15,6 @@ public:
     }
 
 
-    virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0,
-                                         bool noinput_if_frozen = true) const;
+    [[nodiscard]] virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0,
+                                                       bool noinput_if_frozen = true) const;
 };

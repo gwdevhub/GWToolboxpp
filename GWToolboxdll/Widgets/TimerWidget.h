@@ -24,14 +24,14 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Timer"; }
-    const char* Icon() const override { return ICON_FA_STOPWATCH; }
+    [[nodiscard]] const char* Name() const override { return "Timer"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
     void Initialize() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
-    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const override;
+    [[nodiscard]] ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const override;
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -46,7 +46,7 @@ public:
     unsigned long GetTimerMs(); // time in milliseconds
     unsigned long GetMapTimeElapsedMs();
     unsigned long GetRunTimeElapsedMs();
-    unsigned long GetStartPoint() const;
+    [[nodiscard]] unsigned long GetStartPoint() const;
     void PrintTimer(); // prints current timer to chat
 
     void OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);

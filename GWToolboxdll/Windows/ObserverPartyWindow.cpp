@@ -6,8 +6,7 @@
 #include <Modules/ObserverModule.h>
 
 #include <Windows/ObserverPartyWindow.h>
-
-#define NO_AGENT 0
+using namespace std::string_literals;
 
 void ObserverPartyWindow::Initialize()
 {
@@ -417,9 +416,8 @@ void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::Observa
 
 
 // Draw everything
-void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice)
+void ObserverPartyWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
     if (!visible)
         return;
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -435,7 +433,7 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice)
 
     // this should work with both 2/3(+?) parties, with preference on 2
 
-    int max_party_size = 0;
+    auto max_party_size = 0u;
     const std::vector<uint32_t>& party_ids = observer_module.GetObservablePartyIds();
     const size_t party_count = party_ids.size();
     std::vector<const ObserverModule::ObservableParty*> parties;
@@ -446,7 +444,7 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice)
             continue;
         parties.push_back(party);
         actual_party_count += 1;
-        const int size = party->agent_ids.size();
+        const auto size = party->agent_ids.size();
         if (size > max_party_size)
             max_party_size = size;
     }
@@ -462,7 +460,7 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice)
     // ImGui::Separator();
 
     // iterate through each party member
-    for (int party_member_index = -1; party_member_index < max_party_size; party_member_index += 1) {
+    for (auto party_member_index = -1; party_member_index < static_cast<int>(max_party_size); party_member_index += 1) {
         // `party_member_offset == -1` is the party info
         // `party_member_offset == 0` is player 1
         // put a separator before player 1
@@ -482,12 +480,12 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9* pDevice)
         float offset = 0;
 
         // iterate through each party
-        for (size_t party_index = 0; party_index < party_count; party_index += 1) {
+        for (auto party_index = 0u; party_index < party_count; party_index += 1) {
             // party member #
             if (show_player_number && party_index == 0) {
                 // print #1. <player> for players, not the party
                 if (party_member_index != -1) {
-                    ImGui::Text((std::string("# ") + std::to_string(party_member_index + 1) + ".").c_str());
+                    ImGui::Text(("# "s + std::to_string(party_member_index + 1) + ".").c_str());
                 }
                 else {
                     ImGui::Text("");
@@ -594,71 +592,71 @@ void ObserverPartyWindow::DrawSettingInternal()
 {
     ImGui::Text("Make sure the Observer Module is enabled.");
     ImGui::Checkbox("Show player number (#)", &show_player_number);
-    ImGui::Checkbox((std::string("Show professions (")
+    ImGui::Checkbox(("Show professions ("s
                      + ObserverLabel::Profession
                      + ")").c_str(), &show_profession);
 
-    ImGui::Checkbox((std::string("Show Player Guild Tags (")
+    ImGui::Checkbox(("Show Player Guild Tags ("s
                      + ObserverLabel::PlayerGuildTag
                      + ")").c_str(), &show_player_guild_tag);
 
-    ImGui::Checkbox((std::string("Show Player Guild Rating (")
+    ImGui::Checkbox(("Show Player Guild Rating ("s
                      + ObserverLabel::PlayerGuildRating
                      + ")").c_str(), &show_player_guild_rating);
 
-    ImGui::Checkbox((std::string("Show Player Guild Rank (")
+    ImGui::Checkbox(("Show Player Guild Rank ("s
                      + ObserverLabel::PlayerGuildRank
                      + ")").c_str(), &show_player_guild_rank);
 
-    ImGui::Checkbox((std::string("Show kills (")
+    ImGui::Checkbox(("Show kills ("s
                      + ObserverLabel::Kills
                      + ")").c_str(), &show_kills);
 
-    ImGui::Checkbox((std::string("Show deaths (")
+    ImGui::Checkbox(("Show deaths ("s
                      + ObserverLabel::Deaths
                      + ")").c_str(), &show_deaths);
 
-    ImGui::Checkbox((std::string("Show KDR (")
+    ImGui::Checkbox(("Show KDR ("s
                      + ObserverLabel::KDR
                      + ")").c_str(), &show_kdr);
 
-    ImGui::Checkbox((std::string("Show cancels (")
+    ImGui::Checkbox(("Show cancels ("s
                      + ObserverLabel::Cancels
                      + ")").c_str(), &show_cancels);
 
-    ImGui::Checkbox((std::string("Show interrupts (")
+    ImGui::Checkbox(("Show interrupts ("s
                      + ObserverLabel::Interrupts
                      + ")").c_str(), &show_interrupts);
 
-    ImGui::Checkbox((std::string("Show knockdowns (")
+    ImGui::Checkbox(("Show knockdowns ("s
                      + ObserverLabel::Knockdowns + ")").c_str(), &show_knockdowns);
 
-    ImGui::Checkbox((std::string("Show attacks from other parties (")
+    ImGui::Checkbox(("Show attacks from other parties ("s
                      + ObserverLabel::AttacksReceivedFromOtherParties
                      + ")").c_str(), &show_received_party_attacks);
 
-    ImGui::Checkbox((std::string("Show attacks to other parties (")
+    ImGui::Checkbox(("Show attacks to other parties ("s
                      + ObserverLabel::AttacksDealtToOtherParties
                      + ")").c_str(), &show_dealt_party_attacks);
 
-    ImGui::Checkbox((std::string("Show crits from other parties (")
+    ImGui::Checkbox(("Show crits from other parties ("s
                      + ObserverLabel::CritsReceivedFromOtherParties
                      + ")").c_str(), &show_received_party_crits);
 
-    ImGui::Checkbox((std::string("Show crits to other parties (")
+    ImGui::Checkbox(("Show crits to other parties ("s
                      + ObserverLabel::CritsDealToOtherParties
                      + ")").c_str(), &show_dealt_party_crits);
 
-    ImGui::Checkbox((std::string("Show skills from other parties (")
+    ImGui::Checkbox(("Show skills from other parties ("s
                      + ObserverLabel::SkillsReceivedFromOtherParties
                      + ")").c_str(),
                     &show_received_party_skills);
 
-    ImGui::Checkbox((std::string("Show skills used on other parties (")
+    ImGui::Checkbox(("Show skills used on other parties ("s
                      + ObserverLabel::SkillsUsedOnOtherParties
                      + ")").c_str(), &show_dealt_party_skills);
 
-    ImGui::Checkbox((std::string("Show skills used (")
+    ImGui::Checkbox(("Show skills used ("s
                      + ObserverLabel::SkillsUsed
                      + ")").c_str(), &show_skills_used);
 }

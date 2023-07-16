@@ -106,7 +106,7 @@ class HotkeySendChat : public TBHotkey {
 
 public:
     static const char* IniSection() { return "SendChat"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeySendChat(ToolboxIni* ini, const char* section);
 
@@ -156,7 +156,7 @@ class HotkeyEquipItem : public TBHotkey {
 public:
     HotkeyEquipItemAttributes item_attributes;
     static const char* IniSection() { return "EquipItem"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyEquipItem(ToolboxIni* ini, const char* section);
 
@@ -179,7 +179,7 @@ class HotkeyUseItem : public TBHotkey {
 
 public:
     static const char* IniSection() { return "UseItem"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyUseItem(ToolboxIni* ini, const char* section);
 
@@ -203,13 +203,13 @@ class HotkeyDropUseBuff : public TBHotkey {
     };
 
     static bool GetText(void* data, int idx, const char** out_text);
-    SkillIndex GetIndex() const;
+    [[nodiscard]] SkillIndex GetIndex() const;
 
 public:
     GW::Constants::SkillID id;
 
     static const char* IniSection() { return "DropUseBuff"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyDropUseBuff(ToolboxIni* ini, const char* section);
 
@@ -235,7 +235,7 @@ class HotkeyToggle : public TBHotkey {
 public:
     static bool IsValid(ToolboxIni* ini, const char* section);
     static const char* IniSection() { return "Toggle"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyToggle(ToolboxIni* ini, const char* section);
     ~HotkeyToggle() override;
@@ -248,7 +248,7 @@ public:
     bool IsToggled(bool force = false);
 
 private:
-    bool HasInterval() const { return target == Clicker || target == CoinDrop; };
+    [[nodiscard]] bool HasInterval() const { return target == Clicker || target == CoinDrop; };
     WORD togglekey = VK_LBUTTON;
     bool is_key_down = false;
     clock_t last_use = 0;
@@ -274,7 +274,7 @@ public:
     Action action;
 
     static const char* IniSection() { return "Action"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyAction(ToolboxIni* ini, const char* section);
 
@@ -304,7 +304,7 @@ class HotkeyTarget : public TBHotkey {
 
 public:
     static const char* IniSection() { return "Target"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyTarget(ToolboxIni* ini, const char* section);
 
@@ -331,7 +331,7 @@ public:
     char name[140]{};
 
     static const char* IniSection() { return "Move"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyMove(ToolboxIni* ini, const char* section);
 
@@ -348,7 +348,7 @@ public:
     char name[140]{};
 
     static const char* IniSection() { return "Dialog"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyDialog(ToolboxIni* ini, const char* section);
 
@@ -366,7 +366,7 @@ public:
     size_t index = 0;
 
     static const char* IniSection() { return "PingBuild"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyPingBuild(ToolboxIni* ini, const char* section);
 
@@ -384,7 +384,7 @@ public:
     size_t index = 0;
 
     static const char* IniSection() { return "HeroTeamBuild"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyHeroTeamBuild(ToolboxIni* ini, const char* section);
 
@@ -406,7 +406,7 @@ public:
         return "FlagHero";
     }
 
-    const char* Name() const override
+    [[nodiscard]] const char* Name() const override
     {
         return IniSection();
     }
@@ -430,7 +430,7 @@ public:
     static std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> control_labels;
 
     static const char* IniSection() { return "GWHotkey"; }
-    const char* Name() const override { return IniSection(); }
+    [[nodiscard]] const char* Name() const override { return IniSection(); }
 
     HotkeyGWKey(ToolboxIni* ini, const char* section);
 
@@ -450,7 +450,7 @@ public:
         return "CommandPet";
     }
 
-    const char* Name() const override
+    [[nodiscard]] const char* Name() const override
     {
         return IniSection();
     }

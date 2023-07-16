@@ -19,8 +19,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Daily Quests"; }
-    const char* Icon() const override { return ICON_FA_CALENDAR_ALT; }
+    [[nodiscard]] const char* Name() const override { return "Daily Quests"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_CALENDAR_ALT; }
 
     void Initialize() override;
     void LoadSettings(ToolboxIni* ini) override;

@@ -37,7 +37,7 @@ void MainWindow::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent(
         SettingsName(),
         Icon(),
-        [this](const std::string&, bool is_showing) {
+        [this](const std::string&, const bool is_showing) {
             // ShowVisibleRadio();
             if (!is_showing)
                 return;

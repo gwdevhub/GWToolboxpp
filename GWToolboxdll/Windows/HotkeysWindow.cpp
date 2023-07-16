@@ -175,7 +175,7 @@ namespace {
     }
 
     // Called in Update loop after WM_ACTIVATE has been received via WndProc
-    bool OnWindowActivated(bool activated)
+    bool OnWindowActivated(const bool activated)
     {
         if (!IsMapReady())
             return false;
@@ -330,11 +330,12 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice)
         block_hotkeys = false;
         const auto draw_hotkeys_vec = [&](std::vector<TBHotkey*>& in) -> bool {
             bool these_hotkeys_changed = false;
-            for (unsigned int i = 0; i < in.size(); ++i) {
+            for (auto i = 0u; i < in.size(); i++) {
                 TBHotkey::Op op = TBHotkey::Op_None;
                 these_hotkeys_changed |= in[i]->Draw(&op);
                 switch (op) {
-                    case TBHotkey::Op_None: break;
+                    case TBHotkey::Op_None:
+                        break;
                     case TBHotkey::Op_MoveUp: {
                         const auto it = std::ranges::find(hotkeys, in[i]);
                         if (it != hotkeys.end() && it != hotkeys.begin()) {
@@ -362,15 +363,18 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice)
                         }
                     }
                     break;
-                    case TBHotkey::Op_BlockInput: block_hotkeys = true;
+                    case TBHotkey::Op_BlockInput:
+                        block_hotkeys = true;
                         break;
-                    default: break;
+                    default:
+                        break;
                 }
             }
             return these_hotkeys_changed;
         };
         switch (group_by) {
-            case GroupBy::Group: for (auto& it : by_group) {
+            case GroupBy::Group:
+                for (auto& it : by_group) {
                     if (it.first == "") {
                         // No collapsing header for hotkeys without a group.
                         if (draw_hotkeys_vec(it.second)) {
@@ -389,7 +393,8 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice)
                     }
                 }
                 break;
-            case GroupBy::Profession: for (auto& it : by_profession) {
+            case GroupBy::Profession:
+                for (auto& it : by_profession) {
                     if (ImGui::CollapsingHeader(TBHotkey::professions[it.first])) {
                         ImGui::Indent();
                         if (draw_hotkeys_vec(it.second)) {
@@ -441,7 +446,8 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice)
                 }
             }
             break;
-            default: hotkeys_changed |= draw_hotkeys_vec(hotkeys);
+            default:
+                hotkeys_changed |= draw_hotkeys_vec(hotkeys);
                 break;
         }
     }
@@ -504,14 +510,14 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
 
         // then save again
         char buf[256];
-        for (unsigned int i = 0; i < hotkeys.size(); ++i) {
+        for (auto i = 0u; i < hotkeys.size(); i++) {
             snprintf(buf, 256, "hotkey-%03d:%s", i, hotkeys[i]->Name());
             hotkeys[i]->Save(ini, buf);
         }
     }
 }
 
-bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM)
+bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
 {
     if (Message == WM_ACTIVATE) {
         OnWindowActivated(wParam != WA_INACTIVE);
@@ -526,10 +532,12 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM)
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
         case WM_KEYUP:
-        case WM_SYSKEYUP: keyData = static_cast<int>(wParam);
+        case WM_SYSKEYUP:
+            keyData = static_cast<int>(wParam);
             break;
         case WM_XBUTTONDOWN:
-        case WM_MBUTTONDOWN: if (LOWORD(wParam) & MK_MBUTTON)
+        case WM_MBUTTONDOWN:
+            if (LOWORD(wParam) & MK_MBUTTON)
                 keyData = VK_MBUTTON;
             if (LOWORD(wParam) & MK_XBUTTON1)
                 keyData = VK_XBUTTON1;
@@ -540,7 +548,8 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM)
         case WM_MBUTTONUP:
             // leave keydata to none, need to handle special case below
             break;
-        default: break;
+        default:
+            break;
     }
 
     switch (Message) {
@@ -576,29 +585,33 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM)
         }
 
         case WM_KEYUP:
-        case WM_SYSKEYUP: for (TBHotkey* hk : hotkeys) {
+        case WM_SYSKEYUP:
+            for (TBHotkey* hk : hotkeys) {
                 if (hk->pressed && keyData == hk->hotkey) {
                     hk->pressed = false;
                 }
             }
             return false;
 
-        case WM_XBUTTONUP: for (TBHotkey* hk : hotkeys) {
+        case WM_XBUTTONUP:
+            for (TBHotkey* hk : hotkeys) {
                 if (hk->pressed && (hk->hotkey == VK_XBUTTON1 || hk->hotkey == VK_XBUTTON2)) {
                     hk->pressed = false;
                 }
             }
             return false;
-        case WM_MBUTTONUP: for (TBHotkey* hk : hotkeys) {
+        case WM_MBUTTONUP:
+            for (TBHotkey* hk : hotkeys) {
                 if (hk->pressed && hk->hotkey == VK_MBUTTON) {
                     hk->pressed = false;
                 }
             }
-        default: return false;
+        default:
+            return false;
     }
 }
 
-void HotkeysWindow::Update(float delta)
+void HotkeysWindow::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
@@ -609,7 +622,7 @@ void HotkeysWindow::Update(float delta)
     if (!map_change_triggered)
         map_change_triggered = OnMapChanged();
 
-    for (unsigned int i = 0; i < hotkeys.size(); ++i) {
+    for (auto i = 0u; i < hotkeys.size(); i++) {
         if (hotkeys[i]->ongoing)
             hotkeys[i]->Execute();
     }

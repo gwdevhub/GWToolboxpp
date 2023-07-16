@@ -53,7 +53,7 @@ namespace {
 
 
     struct Skill {
-        Skill(GW::Constants::SkillID _id)
+        Skill(const GW::Constants::SkillID _id)
             : id(_id)
         {
             name = GetSkillName(id);
@@ -66,7 +66,7 @@ namespace {
     };
 
     struct PartyMember {
-        PartyMember(const wchar_t* _name_enc, uint32_t _agent_id, uint32_t _party_idx)
+        PartyMember(const wchar_t* _name_enc, const uint32_t _agent_id, const uint32_t _party_idx)
             : name_enc(_name_enc), agent_id(_agent_id), party_idx(_party_idx)
         {
             name.reset(name_enc.c_str());
@@ -144,9 +144,9 @@ namespace {
     }
 
     int GetSkillString(const std::wstring& agent_name, const std::wstring& skill_name,
-                       const uint32_t skill_count, wchar_t* out, size_t len)
+                       const uint32_t skill_count, wchar_t* out, const size_t len)
     {
-        const int written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.",
+        const auto written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.",
                                      agent_name.c_str(), skill_name.c_str(), skill_count);
         ASSERT(written != -1);
         return written;
@@ -283,7 +283,7 @@ namespace {
 
         std::vector<PartyMember*> valid_party_members;
 
-        auto set_party_member = [&valid_party_members,&party_idx](uint32_t agent_id) {
+        auto set_party_member = [&valid_party_members,&party_idx](const uint32_t agent_id) {
             const wchar_t* agent_name = GW::Agents::GetAgentEncName(agent_id);
             if (!agent_name)
                 return static_cast<PartyMember*>(nullptr); // Can fail if game hasn't got all the goodies yet
@@ -300,7 +300,7 @@ namespace {
             party_idx++;
             return party_member;
         };
-        auto set_member_skill = [](PartyMember* party_member, GW::Constants::SkillID skill_id) {
+        auto set_member_skill = [](PartyMember* party_member, const GW::Constants::SkillID skill_id) {
             auto& existing_skills = party_member->skills;
             for (const auto& skill : existing_skills) {
                 if (skill.id == skill_id)
@@ -391,7 +391,7 @@ namespace {
         }
     }
 
-    void CmdSkillStatistics(const wchar_t* message, int argc, LPWSTR* argv)
+    void CmdSkillStatistics(const wchar_t* message, const int argc, LPWSTR* argv)
     {
         UNREFERENCED_PARAMETER(message);
 
@@ -552,7 +552,7 @@ void PartyStatisticsWindow::Initialize()
     pending_party_members = true;
 }
 
-void PartyStatisticsWindow::Update(float delta)
+void PartyStatisticsWindow::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
 

@@ -17,20 +17,20 @@
 
 namespace {
     enum SkillEffect {
-        Chaos_storm = 131,
-        Meteor_Shower = 341,
-        Savannah_heat = 346,
-        Lava_font = 347,
-        Breath_of_fire = 351,
-        Maelstrom = 381,
-        Barbed_Trap = 772,
+        Chaos_storm          = 131,
+        Meteor_Shower        = 341,
+        Savannah_heat        = 346,
+        Lava_font            = 347,
+        Breath_of_fire       = 351,
+        Maelstrom            = 381,
+        Barbed_Trap          = 772,
         Barbed_Trap_Activate = 773,
-        Flame_Trap = 774,
-        Flame_Trap_Activate = 775,
-        Spike_Trap = 777,
-        Spike_Trap_Activate = 778,
-        Bed_of_coals = 875,
-        Churning_earth = 994
+        Flame_Trap           = 774,
+        Flame_Trap_Activate  = 775,
+        Spike_Trap           = 777,
+        Spike_Trap_Activate  = 778,
+        Bed_of_coals         = 875,
+        Churning_earth       = 994
     };
 
     class EffectCircle : public VBuffer {
@@ -42,8 +42,8 @@ namespace {
     };
 
     struct Effect {
-        Effect(uint32_t _effect_id, float _x, float _y, uint32_t _duration,
-               float range, Color* _color)
+        Effect(const uint32_t _effect_id, const float _x, const float _y, const uint32_t _duration,
+               const float range, Color* _color)
             : start(TIMER_INIT())
               , effect_id(_effect_id)
               , pos(_x, _y)
@@ -79,7 +79,7 @@ namespace {
         uint32_t stoc_header = 0;
         uint32_t duration = 10000;
 
-        EffectSettings(const char* _name, uint32_t _effect_id, float _range, uint32_t _duration, uint32_t _stoc_header = 0)
+        EffectSettings(const char* _name, const uint32_t _effect_id, const float _range, const uint32_t _duration, const uint32_t _stoc_header = 0)
             : name(_name)
               , effect_id(_effect_id)
               , range(_range)
@@ -95,7 +95,7 @@ namespace {
         float range = GW::Constants::Range::Nearby;
         std::unordered_map<std::pair<float, float>, clock_t, pair_hash> triggers_handled{};
 
-        EffectTrigger(uint32_t _triggered_effect_id, uint32_t _duration, float _range)
+        EffectTrigger(const uint32_t _triggered_effect_id, const uint32_t _duration, const float _range)
             : triggered_effect_id(_triggered_effect_id), duration(_duration), range(_range)
         {
         };
@@ -188,7 +188,7 @@ void EffectRenderer::DrawSettings()
     }
 }
 
-void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos)
+void EffectRenderer::RemoveTriggeredEffect(const uint32_t effect_id, GW::Vec2f* pos)
 {
     const auto it1 = aoe_effect_triggers.find(effect_id);
     if (it1 == aoe_effect_triggers.end())
@@ -351,7 +351,7 @@ void EffectCircle::Initialize(IDirect3DDevice9* device)
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
                  (VOID**)&vertices, D3DLOCK_DISCARD);
 
-    for (size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; i++) {
         const float angle = i * (DirectX::XM_2PI / count);
         vertices[i].x = std::cos(angle);
         vertices[i].y = std::sin(angle);

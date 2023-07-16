@@ -20,8 +20,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Skill Monitor"; }
-    const char* Icon() const override { return ICON_FA_HISTORY; }
+    [[nodiscard]] const char* Name() const override { return "Skill Monitor"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_HISTORY; }
 
     void Initialize() override;
     void Terminate() override;
@@ -55,13 +55,17 @@ private:
     const float PARTY_MEMBER_PADDING_FIXED = 1.f;
     const float PARTY_HERO_INDENT_BASE = 22.f;
 
-    Color GetColor(SkillActivationStatus status)
+    Color GetColor(const SkillActivationStatus status)
     {
         switch (status) {
-            case CASTING: return status_color_casting;
-            case COMPLETED: return status_color_completed;
-            case CANCELLED: return status_color_cancelled;
-            case INTERRUPTED: return status_color_interrupted;
+            case CASTING:
+                return status_color_casting;
+            case COMPLETED:
+                return status_color_completed;
+            case CANCELLED:
+                return status_color_cancelled;
+            case INTERRUPTED:
+                return status_color_interrupted;
         }
         return Colors::Empty();
     }

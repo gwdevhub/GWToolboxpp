@@ -239,9 +239,9 @@ struct HallOfMonumentsAchievements {
         Done
     } state = State::Pending;
 
-    bool isReady() const { return state == State::Done; }
-    bool isPending() const { return state == State::Pending; }
-    bool isLoading() const { return state == State::Loading; }
+    [[nodiscard]] bool isReady() const { return state == State::Done; }
+    [[nodiscard]] bool isPending() const { return state == State::Pending; }
+    [[nodiscard]] bool isLoading() const { return state == State::Loading; }
     char hom_code[128] = {0};
     void OpenInBrowser();
     // Details of which armors have or haven't been dedicated, indexed by ResilienceDetail
@@ -302,18 +302,23 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Hall of Monuments"; }
+    [[nodiscard]] const char* Name() const override { return "Hall of Monuments"; }
 
     bool HasSettings() override { return false; }
 
-    const char* GetDevotionPointsDescription(DevotionPoints id)
+    const char* GetDevotionPointsDescription(const DevotionPoints id)
     {
         switch (id) {
-            case DevotionPoints::AnyMiniatureStatue: return "Any Miniature Statue";
-            case DevotionPoints::RareMiniatureStatue: return "Rare Miniature Statue";
-            case DevotionPoints::TwentyMiniatureStatues: return "20 Miniature Statues";
-            case DevotionPoints::ThirtyMiniatureStatues: return "30 Miniature Statues";
-            case DevotionPoints::FourtyMiniatureStatues: return "40 Miniature Statues";
+            case DevotionPoints::AnyMiniatureStatue:
+                return "Any Miniature Statue";
+            case DevotionPoints::RareMiniatureStatue:
+                return "Rare Miniature Statue";
+            case DevotionPoints::TwentyMiniatureStatues:
+                return "20 Miniature Statues";
+            case DevotionPoints::ThirtyMiniatureStatues:
+                return "30 Miniature Statues";
+            case DevotionPoints::FourtyMiniatureStatues:
+                return "40 Miniature Statues";
         }
         return "";
     }

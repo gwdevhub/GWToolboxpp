@@ -10,8 +10,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Obfuscator"; }
-    const char* SettingsName() const override { return "Game Settings"; }
+    [[nodiscard]] const char* Name() const override { return "Obfuscator"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Game Settings"; }
 
     void Initialize() override;
     void Update(float) override;

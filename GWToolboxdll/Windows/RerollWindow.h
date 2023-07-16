@@ -29,8 +29,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Reroll"; }
-    const char* Icon() const override { return ICON_FA_USERS; }
+    [[nodiscard]] const char* Name() const override { return "Reroll"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_USERS; }
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;

@@ -120,7 +120,7 @@ namespace {
     }
 }
 
-void ZrawDeepModule::SetEnabled(bool _enabled)
+void ZrawDeepModule::SetEnabled(const bool _enabled)
 {
     if (!terminating)
         enabled = _enabled;
@@ -322,7 +322,7 @@ void ZrawDeepModule::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet)
         SetToRandomKanaxaiString(packet->message);
 }
 
-void ZrawDeepModule::PlayKanaxaiDialog(uint8_t idx)
+void ZrawDeepModule::PlayKanaxaiDialog(const uint8_t idx)
 {
     if (!mp3)
         mp3 = new Mp3();

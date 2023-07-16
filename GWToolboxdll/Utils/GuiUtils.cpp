@@ -39,7 +39,7 @@ namespace {
         return "https://wiki.guildwars.com/wiki/";
     }
 
-    int safe_ispunct(char c)
+    int safe_ispunct(const char c)
     {
         if (c >= -1 && c <= 255)
             return ispunct(c);
@@ -106,7 +106,7 @@ namespace {
 }
 
 namespace GuiUtils {
-    void FlashWindow(bool force)
+    void FlashWindow(const bool force)
     {
         FLASHWINFO flashInfo = {0};
         flashInfo.cbSize = sizeof(FLASHWINFO);
@@ -177,7 +177,7 @@ namespace GuiUtils {
         std::thread t([] {
             printf("Loading fonts\n");
 
-            const ImGuiIO& io = ImGui::GetIO();
+            const auto&io = ImGui::GetIO();
 
             std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk;
             fonts_on_disk.emplace_back(L"Font.ttf", io.Fonts->GetGlyphRangesDefault());
@@ -192,7 +192,7 @@ namespace GuiUtils {
                 void* data = nullptr;
             };
             std::vector<FontData> fonts;
-            for (size_t i = 0; i < fonts_on_disk.size(); ++i) {
+            for (size_t i = 0; i < fonts_on_disk.size(); i++) {
                 const auto& f = fonts_on_disk[i];
                 const utf8::string utf8path = Resources::GetPathUtf8(f.first);
                 size_t size;
@@ -276,17 +276,24 @@ namespace GuiUtils {
         t.detach();
     }
 
-    ImFont* GetFont(FontSize size)
+    ImFont* GetFont(const FontSize size)
     {
-        ImFont* font = [](FontSize size) -> ImFont* {
+        ImFont* font = [](const FontSize size) -> ImFont* {
             switch (size) {
-                case FontSize::widget_large: return font_widget_large;
-                case FontSize::widget_small: return font_widget_small;
-                case FontSize::widget_label: return font_widget_label;
-                case FontSize::header1: return font_header1;
-                case FontSize::header2: return font_header2;
-                case FontSize::text: return font_text;
-                default: return nullptr;
+                case FontSize::widget_large:
+                    return font_widget_large;
+                case FontSize::widget_small:
+                    return font_widget_small;
+                case FontSize::widget_label:
+                    return font_widget_label;
+                case FontSize::header1:
+                    return font_header1;
+                case FontSize::header2:
+                    return font_header2;
+                case FontSize::text:
+                    return font_text;
+                default:
+                    return nullptr;
             }
         }(size);
 
@@ -297,7 +304,7 @@ namespace GuiUtils {
         return ImGui::GetIO().Fonts->Fonts[0];
     }
 
-    float GetGWScaleMultiplier(bool force)
+    float GetGWScaleMultiplier(const bool force)
     {
         return Resources::GetGWScaleMultiplier(force);
     }
@@ -335,18 +342,23 @@ namespace GuiUtils {
         const auto interfacesize =
             static_cast<GW::Constants::InterfaceSize>(GetPreference(GW::UI::EnumPreference::InterfaceSize));
         switch (interfacesize) {
-            case GW::Constants::InterfaceSize::SMALL: return GW::Constants::HealthbarHeight::Small;
-            case GW::Constants::InterfaceSize::NORMAL: return GW::Constants::HealthbarHeight::Normal;
-            case GW::Constants::InterfaceSize::LARGE: return GW::Constants::HealthbarHeight::Large;
-            case GW::Constants::InterfaceSize::LARGER: return GW::Constants::HealthbarHeight::Larger;
-            default: return GW::Constants::HealthbarHeight::Normal;
+            case GW::Constants::InterfaceSize::SMALL:
+                return GW::Constants::HealthbarHeight::Small;
+            case GW::Constants::InterfaceSize::NORMAL:
+                return GW::Constants::HealthbarHeight::Normal;
+            case GW::Constants::InterfaceSize::LARGE:
+                return GW::Constants::HealthbarHeight::Large;
+            case GW::Constants::InterfaceSize::LARGER:
+                return GW::Constants::HealthbarHeight::Larger;
+            default:
+                return GW::Constants::HealthbarHeight::Normal;
         }
     }
 
     std::string ToSlug(std::string s)
     {
         s = RemovePunctuation(s);
-        std::ranges::transform(s, s.begin(), [](char c) -> char {
+        std::ranges::transform(s, s.begin(), [](const char c) -> char {
             if (c == ' ')
                 return '_';
             return static_cast<char>(tolower(c));
@@ -357,7 +369,7 @@ namespace GuiUtils {
     std::wstring ToSlug(std::wstring s)
     {
         s = RemovePunctuation(s);
-        std::ranges::transform(s, s.begin(), [](wchar_t c) -> wchar_t {
+        std::ranges::transform(s, s.begin(), [](const wchar_t c) -> wchar_t {
             if (c == ' ')
                 return '_';
             return static_cast<wchar_t>(tolower(c));
@@ -367,7 +379,7 @@ namespace GuiUtils {
 
     std::string ToLower(std::string s)
     {
-        std::ranges::transform(s, s.begin(), [](char c) -> char {
+        std::ranges::transform(s, s.begin(), [](const char c) -> char {
             return static_cast<char>(tolower(c));
         });
         return s;
@@ -375,7 +387,7 @@ namespace GuiUtils {
 
     std::wstring ToLower(std::wstring s)
     {
-        std::ranges::transform(s, s.begin(), [](wchar_t c) -> wchar_t {
+        std::ranges::transform(s, s.begin(), [](const wchar_t c) -> wchar_t {
             return static_cast<wchar_t>(tolower(c));
         });
         return s;
@@ -394,8 +406,10 @@ namespace GuiUtils {
                     case '"':
                     case '&':
                     case '>':
-                    case '<': break;
-                    default: entities[i] = i;
+                    case '<':
+                        break;
+                    default:
+                        entities[i] = i;
                 }
             }
             initialised = true;
@@ -408,7 +422,7 @@ namespace GuiUtils {
                 out[len++] = entities[in[i]];
             }
             else {
-                const int written = snprintf(&out[len], 255 - len, "&#%d;", in[i]);
+                const auto written = snprintf(&out[len], 255 - len, "&#%d;", in[i]);
                 if (written < 0)
                     return ""; // @Cleanup; how to gracefully fail?
                 len += written;
@@ -443,7 +457,7 @@ namespace GuiUtils {
                 out[len++] = html5[in[i]];
             }
             else {
-                const int written = snprintf(&out[len], 255 - len, "%%%02X", in[i]);
+                const auto written = snprintf(&out[len], 255 - len, "%%%02X", in[i]);
                 if (written < 0)
                     return ""; // @Cleanup; how to gracefully fail?
                 len += written;
@@ -460,7 +474,7 @@ namespace GuiUtils {
         if (s.empty())
             return "";
         // NB: GW uses code page 0 (CP_ACP)
-        const int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &s[0], static_cast<int>(s.size()), nullptr, 0, nullptr, nullptr);
+        const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &s[0], static_cast<int>(s.size()), nullptr, 0, nullptr, nullptr);
         ASSERT(size_needed != 0);
         std::string strTo(size_needed, 0);
         ASSERT(WideCharToMultiByte(CP_UTF8, 0, &s[0], static_cast<int>(s.size()), &strTo[0], size_needed, NULL, NULL));
@@ -475,10 +489,10 @@ namespace GuiUtils {
         size_t len = 0;
         std::string out;
         out.resize(str.length());
-        for (size_t i = 0; i < str.length(); i++) {
-            if (strchr(invalid_chars, str[i]))
+        for (char i : str) {
+            if (strchr(invalid_chars, i))
                 continue;
-            out[len] = str[i];
+            out[len] = i;
             len++;
         }
         out.resize(len);
@@ -491,10 +505,10 @@ namespace GuiUtils {
         size_t len = 0;
         std::wstring out;
         out.resize(str.length());
-        for (size_t i = 0; i < str.length(); i++) {
-            if (wcschr(invalid_chars, str[i]))
+        for (wchar_t i : str) {
+            if (wcschr(invalid_chars, i))
                 continue;
-            out[len] = str[i];
+            out[len] = i;
             len++;
         }
         out.resize(len);
@@ -512,7 +526,7 @@ namespace GuiUtils {
             }
         }
         std::wstring out(s.length(), L'\0');
-        std::ranges::transform(s, out.begin(), [&](wchar_t wc) -> wchar_t {
+        std::ranges::transform(s, out.begin(), [&](const wchar_t wc) -> wchar_t {
             if (wc < 0x7f)
                 return wc;
             const auto it = diacritics_charmap.find(wc);
@@ -528,7 +542,7 @@ namespace GuiUtils {
         if (str.empty())
             return {};
         // NB: GW uses code page 0 (CP_ACP)
-        const int size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
+        const auto size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
         ASSERT(size_needed != 0);
         std::wstring wstrTo(size_needed, 0);
         ASSERT(MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), wstrTo.data(), size_needed));
@@ -595,7 +609,7 @@ namespace GuiUtils {
         return s;
     }
 
-    bool ParseInt(const char* str, int* val, int base)
+    bool ParseInt(const char* str, int* val, const int base)
     {
         char* end;
         *val = strtol(str, &end, base);
@@ -605,7 +619,7 @@ namespace GuiUtils {
         return true;
     }
 
-    bool ParseInt(const wchar_t* str, int* val, int base)
+    bool ParseInt(const wchar_t* str, int* val, const int base)
     {
         wchar_t* end;
         *val = wcstol(str, &end, base);
@@ -672,7 +686,7 @@ namespace GuiUtils {
         return out.size();
     }
 
-    size_t IniToArray(const std::string& in, uint32_t* out, size_t out_len)
+    size_t IniToArray(const std::string& in, uint32_t* out, const size_t out_len)
     {
         if ((in.size() + 1) / 9 > out_len)
             return 0;
@@ -691,7 +705,7 @@ namespace GuiUtils {
         return offset;
     }
 
-    size_t TimeToString(time_t utc_timestamp, std::string& out)
+    size_t TimeToString(const time_t utc_timestamp, std::string& out)
     {
         const tm* timeinfo = localtime(&utc_timestamp);
         if (!timeinfo)
@@ -715,12 +729,12 @@ namespace GuiUtils {
         return out.size();
     }
 
-    size_t TimeToString(uint32_t utc_timestamp, std::string& out)
+    size_t TimeToString(const uint32_t utc_timestamp, std::string& out)
     {
         return TimeToString(static_cast<time_t>(utc_timestamp), out);
     }
 
-    size_t TimeToString(FILETIME utc_timestamp, std::string& out)
+    size_t TimeToString(const FILETIME utc_timestamp, std::string& out)
     {
         return TimeToString(filetime_to_timet(utc_timestamp), out);
     }
@@ -749,7 +763,7 @@ namespace GuiUtils {
         return true;
     }
 
-    bool ArrayToIni(const uint32_t* in, size_t in_len, std::string* out)
+    bool ArrayToIni(const uint32_t* in, const size_t in_len, std::string* out)
     {
         if (!in_len) {
             out->clear();
@@ -766,7 +780,7 @@ namespace GuiUtils {
         return true;
     }
 
-    bool ParseUInt(const char* str, unsigned int* val, int base)
+    bool ParseUInt(const char* str, unsigned int* val, const int base)
     {
         char* end;
         if (!str)
@@ -777,7 +791,7 @@ namespace GuiUtils {
         return true;
     }
 
-    bool ParseUInt(const wchar_t* str, unsigned int* val, int base)
+    bool ParseUInt(const wchar_t* str, unsigned int* val, const int base)
     {
         wchar_t* end;
         if (!str)
@@ -793,13 +807,13 @@ namespace GuiUtils {
         // @Cleanup: No error handling whatsoever
         if (str.empty())
             return {};
-        const int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), nullptr, 0);
+        const auto size_needed = MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), nullptr, 0);
         std::wstring wstrTo(size_needed, 0);
         MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), wstrTo.data(), size_needed);
         return wstrTo;
     }
 
-    size_t wcstostr(char* dest, const wchar_t* src, size_t n)
+    size_t wcstostr(char* dest, const wchar_t* src, const size_t n)
     {
         size_t i;
         const auto d = (unsigned char*)dest;
@@ -813,14 +827,14 @@ namespace GuiUtils {
         return i;
     }
 
-    char* StrCopy(char* dest, const char* src, size_t dest_size)
+    char* StrCopy(char* dest, const char* src, const size_t dest_size)
     {
         strncpy(dest, src, dest_size - 1);
         dest[dest_size - 1] = 0;
         return dest;
     }
 
-    void EncString::reset(const uint32_t _enc_string_id, bool sanitise)
+    void EncString::reset(const uint32_t _enc_string_id, const bool sanitise)
     {
         if (_enc_string_id && encoded_ws.length()) {
             const uint32_t this_id = GW::UI::EncStrToUInt32(encoded_ws.c_str());
@@ -836,7 +850,7 @@ namespace GuiUtils {
         }
     }
 
-    EncString* EncString::language(GW::Constants::TextLanguage l)
+    EncString* EncString::language(const GW::Constants::TextLanguage l)
     {
         if (language_id == l)
             return this;
@@ -845,7 +859,7 @@ namespace GuiUtils {
         return this;
     }
 
-    void EncString::reset(const wchar_t* _enc_string, bool sanitise)
+    void EncString::reset(const wchar_t* _enc_string, const bool sanitise)
     {
         if (_enc_string && wcscmp(_enc_string, encoded_ws.c_str()) == 0)
             return;

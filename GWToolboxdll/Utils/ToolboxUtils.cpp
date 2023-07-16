@@ -61,7 +61,7 @@ namespace ToolboxUtils {
         return nullptr;
     }
 
-    std::wstring GetPlayerName(uint32_t player_number)
+    std::wstring GetPlayerName(const uint32_t player_number)
     {
         const GW::Player* player = nullptr;
         if (!player_number) {
@@ -108,12 +108,13 @@ namespace ToolboxUtils {
             }
             break;
             case GAME_SMSG_CHAT_MESSAGE_LOCAL:
-            case GAME_SMSG_TRADE_REQUEST: return GetPlayerName(((uint32_t*)packet)[1]);
+            case GAME_SMSG_TRADE_REQUEST:
+                return GetPlayerName(((uint32_t*)packet)[1]);
         }
         return L"";
     }
 
-    GW::Player* GetPlayerByAgentId(uint32_t agent_id, GW::AgentLiving** info_out)
+    GW::Player* GetPlayerByAgentId(const uint32_t agent_id, GW::AgentLiving** info_out)
     {
         const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
         if (!(agent && agent->GetIsLivingType() && agent->IsPlayer()))
@@ -123,7 +124,7 @@ namespace ToolboxUtils {
         return GW::PlayerMgr::GetPlayerByID(agent->login_number);
     }
 
-    GW::HeroInfo* GetHeroInfo(uint32_t hero_id)
+    GW::HeroInfo* GetHeroInfo(const uint32_t hero_id)
     {
         const auto w = GW::GetWorldContext();
         if (!(w && w->hero_info.size()))
@@ -135,7 +136,7 @@ namespace ToolboxUtils {
         return nullptr;
     }
 
-    bool IsHenchman(uint32_t agent_id)
+    bool IsHenchman(const uint32_t agent_id)
     {
         if (!IsOutpost()) {
             return IsHenchmanInParty(agent_id);
@@ -150,7 +151,7 @@ namespace ToolboxUtils {
         return false;
     }
 
-    bool IsHero(uint32_t agent_id, GW::HeroInfo** info_out)
+    bool IsHero(const uint32_t agent_id, GW::HeroInfo** info_out)
     {
         if (!IsOutpost()) {
             // NB: HeroInfo array is only populated in outposts
@@ -176,7 +177,7 @@ namespace ToolboxUtils {
         return p ? &p->parties : nullptr;
     }
 
-    const GW::HenchmanPartyMember* GetHenchmanPartyMember(uint32_t agent_id, GW::PartyInfo** party_out)
+    const GW::HenchmanPartyMember* GetHenchmanPartyMember(const uint32_t agent_id, GW::PartyInfo** party_out)
     {
         const auto* parties = GetParties();
         if (!parties)
@@ -195,13 +196,13 @@ namespace ToolboxUtils {
         return nullptr;
     }
 
-    bool IsHenchmanInParty(uint32_t agent_id)
+    bool IsHenchmanInParty(const uint32_t agent_id)
     {
         GW::PartyInfo* party = nullptr;
         return GetHenchmanPartyMember(agent_id, &party) && party == GW::PartyMgr::GetPartyInfo();
     }
 
-    const GW::HeroPartyMember* GetHeroPartyMember(uint32_t agent_id, GW::PartyInfo** party_out)
+    const GW::HeroPartyMember* GetHeroPartyMember(const uint32_t agent_id, GW::PartyInfo** party_out)
     {
         const auto* parties = GetParties();
         if (!parties)
@@ -220,13 +221,13 @@ namespace ToolboxUtils {
         return nullptr;
     }
 
-    bool IsHeroInParty(uint32_t agent_id)
+    bool IsHeroInParty(const uint32_t agent_id)
     {
         GW::PartyInfo* party = nullptr;
         return GetHeroPartyMember(agent_id, &party) && party == GW::PartyMgr::GetPartyInfo();
     }
 
-    const GW::PlayerPartyMember* GetPlayerPartyMember(uint32_t login_number, GW::PartyInfo** party_out)
+    const GW::PlayerPartyMember* GetPlayerPartyMember(const uint32_t login_number, GW::PartyInfo** party_out)
     {
         const auto* parties = GetParties();
         if (!parties)
@@ -245,13 +246,13 @@ namespace ToolboxUtils {
         return nullptr;
     }
 
-    bool IsPlayerInParty(uint32_t login_number)
+    bool IsPlayerInParty(const uint32_t login_number)
     {
         GW::PartyInfo* party = nullptr;
         return GetPlayerPartyMember(login_number, &party) && party == GW::PartyMgr::GetPartyInfo();
     }
 
-    bool IsAgentInParty(uint32_t agent_id)
+    bool IsAgentInParty(const uint32_t agent_id)
     {
         const auto* party = GW::PartyMgr::GetPartyInfo();
         if (!party)
@@ -262,7 +263,7 @@ namespace ToolboxUtils {
         return player && IsPlayerInParty(player->player_number);
     }
 
-    float GetSkillRange(GW::Constants::SkillID skill_id)
+    float GetSkillRange(const GW::Constants::SkillID skill_id)
     {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
         if (!skill)
@@ -275,7 +276,7 @@ namespace ToolboxUtils {
     }
 
     // Helper function; avoids doing string checks on offline friends.
-    GW::Friend* GetFriend(wchar_t* account, wchar_t* playing, GW::FriendType type, GW::FriendStatus status)
+    GW::Friend* GetFriend(wchar_t* account, wchar_t* playing, const GW::FriendType type, const GW::FriendStatus status)
     {
         if (!(account || playing))
             return nullptr;
@@ -331,7 +332,8 @@ namespace ToolboxUtils {
                     original += L"\x2\x102\x2\xAC9";
                 return original;
             }
-            default: break;
+            default:
+                break;
         }
 
         // Replace "Requires 9 Divine Favor" > "q9 Divine Favor"

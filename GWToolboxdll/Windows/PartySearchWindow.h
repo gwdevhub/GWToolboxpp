@@ -7,6 +7,7 @@
 class PartySearchWindow : public ToolboxWindow {
 public:
     PartySearchWindow(const PartySearchWindow&) = delete;
+
 private:
     PartySearchWindow() = default;
 
@@ -22,8 +23,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Party Search"; }
-    const char* Icon() const override { return ICON_FA_PEOPLE_ARROWS; }
+    [[nodiscard]] const char* Name() const override { return "Party Search"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_PEOPLE_ARROWS; }
 
     void Initialize() override;
 

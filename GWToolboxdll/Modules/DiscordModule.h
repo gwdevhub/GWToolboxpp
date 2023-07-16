@@ -45,11 +45,11 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Discord"; }
-    const char* Description() const override { return "Show better 'Now Playing' info in Discord from Guild Wars"; }
-    const char* Icon() const override { return ICON_FA_HEADSET; }
+    [[nodiscard]] const char* Name() const override { return "Discord"; }
+    [[nodiscard]] const char* Description() const override { return "Show better 'Now Playing' info in Discord from Guild Wars"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_HEADSET; }
 
-    const char* SettingsName() const override { return "Third Party Integration"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Third Party Integration"; }
 
     void Initialize() override;
     void Terminate() override;

@@ -42,10 +42,10 @@ void PartyDamage::Initialize()
                                                                       return MapLoadedCallback(status, packet);
                                                                   });
 
-    for (size_t i = 0; i < MAX_PLAYERS; ++i) {
-        damage[i].damage = 0;
-        damage[i].recent_damage = 0;
-        damage[i].last_damage = TIMER_INIT();
+    for (auto& i : damage) {
+        i.damage = 0;
+        i.recent_damage = 0;
+        i.last_damage = TIMER_INIT();
     }
     party_window_position = GetWindowPosition(GW::UI::WindowID_PartyWindow);
 }
@@ -64,16 +64,19 @@ void PartyDamage::MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded
 {
     UNREFERENCED_PARAMETER(packet);
     switch (GW::Map::GetInstanceType()) {
-        case GW::Constants::InstanceType::Outpost: in_explorable = false;
+        case GW::Constants::InstanceType::Outpost:
+            in_explorable = false;
             break;
-        case GW::Constants::InstanceType::Explorable: party_index.clear();
+        case GW::Constants::InstanceType::Explorable:
+            party_index.clear();
             if (!in_explorable) {
                 in_explorable = true;
                 ResetDamage();
             }
             break;
         case GW::Constants::InstanceType::Loading:
-        default: break;
+        default:
+            break;
     }
 }
 
@@ -83,8 +86,10 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, GW::Packet::StoC::Generi
     switch (packet->type) {
         case GW::Packet::StoC::P156_Type::damage:
         case GW::Packet::StoC::P156_Type::critical:
-        case GW::Packet::StoC::P156_Type::armorignoring: break;
-        default: return;
+        case GW::Packet::StoC::P156_Type::armorignoring:
+            break;
+        default:
+            return;
     }
 
     // ignore heals
@@ -100,7 +105,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, GW::Packet::StoC::Generi
         return;
     if (!agents[packet->cause_id])
         return;
-    const GW::AgentLiving* const cause = agents[packet->cause_id]->GetAsAgentLiving();
+    const auto cause = agents[packet->cause_id]->GetAsAgentLiving();
 
     if (cause == nullptr)
         return;
@@ -115,7 +120,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, GW::Packet::StoC::Generi
         return;
     if (!agents[packet->target_id])
         return;
-    const GW::AgentLiving* const target = agents[packet->target_id]->GetAsAgentLiving();
+    const auto target = agents[packet->target_id]->GetAsAgentLiving();
     if (target == nullptr)
         return;
     if (target->login_number != 0)
@@ -144,7 +149,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, GW::Packet::StoC::Generi
         }
     }
 
-    const uint32_t dmg = static_cast<uint32_t>(ldmg);
+    const auto dmg = static_cast<uint32_t>(ldmg);
 
     const size_t index = cause_it->second;
     if (index >= MAX_PLAYERS)
@@ -172,7 +177,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, GW::Packet::StoC::Generi
     }
 }
 
-void PartyDamage::Update(float delta)
+void PartyDamage::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
@@ -189,9 +194,9 @@ void PartyDamage::Update(float delta)
     }
 
     // reset recent if needed
-    for (size_t i = 0; i < MAX_PLAYERS; ++i) {
-        if (TIMER_DIFF(damage[i].last_damage) > recent_max_time) {
-            damage[i].recent_damage = 0;
+    for (auto& i : damage) {
+        if (TIMER_DIFF(i.last_damage) > recent_max_time) {
+            i.recent_damage = 0;
         }
     }
 }
@@ -200,9 +205,9 @@ void PartyDamage::CreatePartyIndexMap()
 {
     if (!GW::PartyMgr::GetIsPartyLoaded())
         return;
-    const GW::PartyInfo* const info = GW::PartyMgr::GetPartyInfo();
+    const auto info = GW::PartyMgr::GetPartyInfo();
     size_t index = 0;
-    for (const GW::PlayerPartyMember& player : info->players) {
+    for (const auto& player : info->players) {
         const uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
         if (id == GW::Agents::GetPlayerId())
             player_index = index;
@@ -269,7 +274,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device)
             GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f
         );
         internal_offset *= uiscale_multiply;
-        const int user_offset_x = abs(user_offset);
+        const auto user_offset_x = abs(user_offset);
         float offset_width = width;
         auto calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
         if (calculated_pos.x < 0 || user_offset < 0) {
@@ -296,7 +301,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device)
         float part_of_max = 0.0f, part_of_recent = 0.0f,
               bar_left = 0.0f, bar_right = 0.0f, recent_left = 0.0f,
               recent_right = 0.0f, perc_of_total = 0.0f;
-        for (size_t i = 0; i < size; ++i) {
+        for (size_t i = 0; i < size; i++) {
             const float& damage_float = static_cast<float>(damage[i].damage);
 
             part_of_max = max > 0 ? damage_float / max : 0;
@@ -370,13 +375,13 @@ float PartyDamage::GetPartOfTotal(const uint32_t dmg) const
 void PartyDamage::WritePartyDamage()
 {
     std::vector<size_t> idx(MAX_PLAYERS);
-    for (size_t i = 0; i < MAX_PLAYERS; ++i)
+    for (size_t i = 0; i < MAX_PLAYERS; i++)
         idx[i] = i;
-    sort(idx.begin(), idx.end(), [this](size_t i1, size_t i2) {
+    sort(idx.begin(), idx.end(), [this](const size_t i1, const size_t i2) {
         return damage[i1].damage > damage[i2].damage;
     });
 
-    for (size_t i = 0; i < idx.size(); ++i) {
+    for (size_t i = 0; i < idx.size(); i++) {
         WriteDamageOf(idx[i], i + 1);
     }
     send_queue.push(L"Total ~ 100 % ~ " + std::to_wstring(total));
@@ -391,7 +396,7 @@ void PartyDamage::WriteDamageOf(const size_t index, uint32_t rank)
 
     if (rank == 0) {
         rank = 1; // start at 1, add 1 for each player with higher damage
-        for (size_t i = 0; i < MAX_PLAYERS; ++i) {
+        for (size_t i = 0; i < MAX_PLAYERS; i++) {
             if (i == index)
                 continue;
             if (damage[i].agent_id == 0)
@@ -423,8 +428,8 @@ void PartyDamage::WriteOwnDamage()
 void PartyDamage::ResetDamage()
 {
     total = 0;
-    for (size_t i = 0; i < MAX_PLAYERS; ++i) {
-        damage[i].Reset();
+    for (auto& i : damage) {
+        i.Reset();
     }
 }
 

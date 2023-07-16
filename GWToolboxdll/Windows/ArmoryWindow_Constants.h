@@ -4,19 +4,19 @@
 
 namespace GWArmory {
     enum class DyeColor {
-        None = 0,
-        Blue = 2,
-        Green = 3,
+        None   = 0,
+        Blue   = 2,
+        Green  = 3,
         Purple = 4,
-        Red = 5,
+        Red    = 5,
         Yellow = 6,
-        Brown = 7,
+        Brown  = 7,
         Orange = 8,
         Silver = 9,
-        Black = 10,
-        Gray = 11,
-        White = 12,
-        Pink = 13
+        Black  = 10,
+        Gray   = 11,
+        White  = 12,
+        Pink   = 13
     };
 
     // Arg3:
@@ -61,7 +61,7 @@ namespace GWArmory {
     };
 
     struct PlayerArmorPiece {
-        PlayerArmorPiece(ItemSlot _slot)
+        PlayerArmorPiece(const ItemSlot _slot)
             : slot(_slot)
         {
         };

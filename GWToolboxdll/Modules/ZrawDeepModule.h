@@ -14,7 +14,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "24h Deep Mode"; }
+    [[nodiscard]] const char* Name() const override { return "24h Deep Mode"; }
     void Initialize() override;
     void Terminate() override;
     void SignalTerminate() override;

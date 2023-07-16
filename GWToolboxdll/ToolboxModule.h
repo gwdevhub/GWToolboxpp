@@ -17,24 +17,24 @@ protected:
     virtual ~ToolboxModule() = default;
 
 public:
-    virtual bool IsWidget() const { return false; }
-    virtual bool IsWindow() const { return false; }
-    virtual bool IsUIElement() const { return false; }
+    [[nodiscard]] virtual bool IsWidget() const { return false; }
+    [[nodiscard]] virtual bool IsWindow() const { return false; }
+    [[nodiscard]] virtual bool IsUIElement() const { return false; }
 
     // name of the window and the ini section
-    virtual const char* Name() const = 0;
+    [[nodiscard]] virtual const char* Name() const = 0;
 
     // something to make sense of this module to actual human beings that don't have time to read source code
-    virtual const char* Description() const { return nullptr; }
+    [[nodiscard]] virtual const char* Description() const { return nullptr; }
 
     // Icon for this module (if any).
-    virtual const char* Icon() const { return nullptr; }
+    [[nodiscard]] virtual const char* Icon() const { return nullptr; }
 
     // name of the setting section
-    virtual const char* SettingsName() const { return Name(); }
+    [[nodiscard]] virtual const char* SettingsName() const { return Name(); }
 
     // Type of module
-    virtual const char* TypeName() const { return "module"; }
+    [[nodiscard]] virtual const char* TypeName() const { return "module"; }
 
     // register settings callbacks. Override this to add your settings into different sections.
     virtual void RegisterSettingsContent();

@@ -10,7 +10,7 @@
 #include <GWToolbox.h>
 #include <Defines.h>
 
-void CrashHandler::FatalAssert(const char* expr, const char* file, unsigned line)
+void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigned line)
 {
     __try {
         __debugbreak();
@@ -28,13 +28,13 @@ void CrashHandler::GWCAPanicHandler(
     void*,
     const char* expr,
     const char* file,
-    unsigned int line,
+    const unsigned int line,
     const char*)
 {
     FatalAssert(expr, file, line);
 }
 
-void CrashHandler::OnGWCrash(GWDebugInfo* details, uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line)
+void CrashHandler::OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, const uint32_t exception_line)
 {
     GW::HookBase::EnterHook();
     if (!Instance().gw_debug_info)
@@ -71,7 +71,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     SYSTEMTIME stLocalTime;
     GetLocalTime(&stLocalTime);
     wchar_t szFileName[MAX_PATH];
-    const int fn_print = swprintf(szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
+    const auto fn_print = swprintf(szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
                                   crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth,
                                   stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond, ProcessId, ThreadId);
 

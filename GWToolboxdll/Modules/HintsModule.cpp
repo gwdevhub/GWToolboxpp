@@ -38,7 +38,7 @@ namespace {
         return GW::Constants::Campaign::Factions;
     }
 
-    GW::SkillbarSkill* GetPlayerSkillbarSkill(GW::Constants::SkillID skill_id)
+    GW::SkillbarSkill* GetPlayerSkillbarSkill(const GW::Constants::SkillID skill_id)
     {
         const auto skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (!skillbar)
@@ -56,7 +56,7 @@ namespace {
         uint32_t image_file_id = 0; // e.g. mouse imaage, light bulb, exclamation mark
         uint32_t message_timeout_ms = 15000;
         uint32_t style_bitmap = 0x12; // 0x18 = hint with left padding
-        HintUIMessage(const wchar_t* message, uint32_t duration = 30000, uint32_t _message_id = 0)
+        HintUIMessage(const wchar_t* message, const uint32_t duration = 30000, uint32_t _message_id = 0)
         {
             size_t strlen = (wcslen(message) + 1) * sizeof(wchar_t);
             if (message[0] == 0x108) {
@@ -90,7 +90,7 @@ namespace {
             SendUIMessage(GW::UI::UIMessage::kShowHint, this);
         }
 
-        void Delay(clock_t delay_ms)
+        void Delay(const clock_t delay_ms)
         {
             delayed_hints.push_back(std::pair(clock() + delay_ms, new HintUIMessage(message_encoded, message_timeout_ms, message_id)));
         }
@@ -181,18 +181,22 @@ namespace {
                     || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost))
                     break;
                 wchar_t out[256];
-                const uint32_t campaign = static_cast<uint32_t>(GetCharacterCampaign());
+                const auto campaign = static_cast<uint32_t>(GetCharacterCampaign());
                 swprintf(out, 256, EMBARK_WITHOUT_HOMELAND.message, embark_beach_campaign_npcs[campaign]);
                 HintUIMessage(out, 30000, EMBARK_WITHOUT_HOMELAND.message_id | campaign).Show();
             }
             break;
-            case GW::Constants::MapID::Droknars_Forge_cinematic: endgame_msg_idx = 1;
+            case GW::Constants::MapID::Droknars_Forge_cinematic:
+                endgame_msg_idx = 1;
                 break;
-            case GW::Constants::MapID::Divine_Path: endgame_msg_idx = 2;
+            case GW::Constants::MapID::Divine_Path:
+                endgame_msg_idx = 2;
                 break;
-            case GW::Constants::MapID::Throne_of_Secrets: endgame_msg_idx = 3;
+            case GW::Constants::MapID::Throne_of_Secrets:
+                endgame_msg_idx = 3;
                 break;
-            case GW::Constants::MapID::Epilogue: endgame_msg_idx = 4;
+            case GW::Constants::MapID::Epilogue:
+                endgame_msg_idx = 4;
                 break;
         }
         if (endgame_msg_idx) {

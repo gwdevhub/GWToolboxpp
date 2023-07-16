@@ -10,7 +10,7 @@ class RangeRenderer : public VBuffer {
 
 public:
     void Render(IDirect3DDevice9* device) override;
-    void SetDrawCenter(bool b) { draw_center_ = b; }
+    void SetDrawCenter(const bool b) { draw_center_ = b; }
 
     void DrawSettings();
     void LoadSettings(ToolboxIni* ini, const char* section);

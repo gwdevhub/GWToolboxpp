@@ -9,7 +9,7 @@ RateLimiter::RateLimiter()
     m_time = GetTickCount();
 }
 
-bool RateLimiter::AddTime(uint32_t cost_ms, uint32_t max_cost_ms)
+bool RateLimiter::AddTime(const uint32_t cost_ms, const uint32_t max_cost_ms)
 {
     const uint64_t current_time = GetTickCount();
     if (current_time > m_time)

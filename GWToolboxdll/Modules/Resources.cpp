@@ -26,12 +26,18 @@ namespace {
     const char* d3dErrorMessage(HRESULT code)
     {
         switch (code) {
-            case D3DERR_NOTAVAILABLE: return "D3DERR_NOTAVAILABLE";
-            case D3DERR_OUTOFVIDEOMEMORY: return "D3DERR_OUTOFVIDEOMEMORY";
-            case D3DERR_INVALIDCALL: return "D3DERR_INVALIDCALL";
-            case E_OUTOFMEMORY: return "E_OUTOFMEMORY";
-            case D3D_OK: return "D3D_OK";
-            default: static std::string str;
+            case D3DERR_NOTAVAILABLE:
+                return "D3DERR_NOTAVAILABLE";
+            case D3DERR_OUTOFVIDEOMEMORY:
+                return "D3DERR_OUTOFVIDEOMEMORY";
+            case D3DERR_INVALIDCALL:
+                return "D3DERR_INVALIDCALL";
+            case E_OUTOFMEMORY:
+                return "E_OUTOFMEMORY";
+            case D3D_OK:
+                return "D3D_OK";
+            default:
+                static std::string str;
                 str = std::format("Unknown D3D error {:#08x}", code);
                 return str.c_str();
         }
@@ -74,7 +80,7 @@ namespace {
         std::wstring out;
         va_list vl;
         va_start(vl, format);
-        const int written = StrVswprintf(out, format, vl);
+        const auto written = StrVswprintf(out, format, vl);
         va_end(vl);
         ASSERT(written != -1);
         callback(false, out);
@@ -84,10 +90,11 @@ namespace {
 
     GW::HookEntry OnUIMessage_Hook;
 
-    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    void OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kEnumPreference: if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize)
+            case GW::UI::UIMessage::kEnumPreference:
+                if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize)
                     Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
                 break;
         }
@@ -175,8 +182,10 @@ void Resources::OpenFileDialog(std::function<void(const char*)> callback, const 
 
         switch (result) {
             case NFD_OKAY:
-            case NFD_CANCEL: break;
-            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+            case NFD_CANCEL:
+                break;
+            default:
+                Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
                 break;
         }
 
@@ -198,11 +207,14 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
         delete defaultPath_cpy;
 
         switch (result) {
-            case NFD_OKAY: callback(outPath);
+            case NFD_OKAY:
+                callback(outPath);
                 break;
-            case NFD_CANCEL: callback(nullptr);
+            case NFD_CANCEL:
+                callback(nullptr);
                 break;
-            default: Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+            default:
+                Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
                 break;
         }
         if (outPath)
@@ -210,19 +222,23 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
     });
 }
 
-float Resources::GetGWScaleMultiplier(bool force)
+float Resources::GetGWScaleMultiplier(const bool force)
 {
     if (force || cached_ui_scale == .0f) {
         const auto interfacesize = static_cast<GW::Constants::InterfaceSize>(GetPreference(GW::UI::EnumPreference::InterfaceSize));
 
         switch (interfacesize) {
-            case GW::Constants::InterfaceSize::SMALL: cached_ui_scale = .9f;
+            case GW::Constants::InterfaceSize::SMALL:
+                cached_ui_scale = .9f;
                 break;
-            case GW::Constants::InterfaceSize::LARGE: cached_ui_scale = 1.166666f;
+            case GW::Constants::InterfaceSize::LARGE:
+                cached_ui_scale = 1.166666f;
                 break;
-            case GW::Constants::InterfaceSize::LARGER: cached_ui_scale = 1.3333333f;
+            case GW::Constants::InterfaceSize::LARGER:
+                cached_ui_scale = 1.3333333f;
                 break;
-            default: cached_ui_scale = 1.f;
+            default:
+                cached_ui_scale = 1.f;
                 break;
         }
     }
@@ -397,7 +413,7 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
     if (!fp) {
         return StrSwprintf(response, L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
-    const int written = fwrite(content.data(), content.size() + 1, 1, fp);
+    const auto written = fwrite(content.data(), content.size() + 1, 1, fp);
     fclose(fp);
     if (written != 1) {
         return StrSwprintf(response, L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
@@ -514,10 +530,9 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     return res;
 }
 
-HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, HMODULE hSrcModule, LPCSTR id, IDirect3DTexture9** texture, std::wstring& error)
+HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const HMODULE hSrcModule, const LPCSTR id, IDirect3DTexture9** texture, std::wstring& error)
 {
     // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
-    using namespace std::string_literals;
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
@@ -572,7 +587,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallb
 
 void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
-    EnsureFileExists(path_to_file, url, [texture, path_to_file, callback](bool success, const std::wstring& error) {
+    EnsureFileExists(path_to_file, url, [texture, path_to_file, callback](const bool success, const std::wstring& error) {
         if (success) {
             Instance().LoadTexture(texture, path_to_file, callback);
         }
@@ -589,7 +604,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
 
 void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback) const
 {
-    LoadTexture(texture, path_to_file, [texture, id, callback](bool success, const std::wstring& error) {
+    LoadTexture(texture, path_to_file, [texture, id, callback](const bool success, const std::wstring& error) {
         if (!success) {
             Instance().LoadTexture(texture, id, callback);
         }
@@ -599,7 +614,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
     });
 }
 
-bool Resources::ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error)
+bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_to_file, std::wstring& error)
 {
     // otherwise try to install it from resource
     const HRSRC hResInfo = FindResourceA(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
@@ -712,7 +727,7 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p)
         swprintf(local_image, _countof(local_image), L"%s\\%d.png", path.c_str(), p);
         char remote_image[128];
         snprintf(remote_image, _countof(remote_image), "https://wiki.guildwars.com/images/%s.png", profession_icon_urls[prof_id]);
-        Instance().LoadTexture(texture, local_image, remote_image, [prof_id](bool success, const std::wstring& error) {
+        Instance().LoadTexture(texture, local_image, remote_image, [prof_id](const bool success, const std::wstring& error) {
             if (!success) {
                 Log::ErrorW(L"Failed to load icon for profession %d\n%s", prof_id, error.c_str());
             }
@@ -735,7 +750,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     if (guild_wars_wiki_images.contains(filename_sanitised)) {
         return guild_wars_wiki_images.at(filename_sanitised);
     }
-    const auto callback = [filename_sanitised](bool success, const std::wstring& error) {
+    const auto callback = [filename_sanitised](const bool success, const std::wstring& error) {
         if (!success) {
             Log::ErrorW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised.c_str(), error.c_str());
         }
@@ -761,7 +776,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     // No local file found; download from wiki via skill link URL
     std::string wiki_url = "https://wiki.guildwars.com/wiki/File:";
     wiki_url.append(GuiUtils::UrlEncode(filename, '_'));
-    Instance().Download(wiki_url.c_str(), [texture, filename_sanitised, callback, width](bool ok, const std::string& response) {
+    Instance().Download(wiki_url.c_str(), [texture, filename_sanitised, callback, width](const bool ok, const std::string& response) {
         if (!ok) {
             callback(ok, GuiUtils::StringToWString(response));
             return; // Already logged whatever errors
@@ -806,7 +821,7 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
     if (skill_images.contains(skill_id)) {
         return skill_images.at(skill_id);
     }
-    const auto callback = [skill_id](bool success, const std::wstring& error) {
+    const auto callback = [skill_id](const bool success, const std::wstring& error) {
         if (!success) {
             Log::ErrorW(L"Failed to load skill image %d\n%s", skill_id, error.c_str());
         }
@@ -840,7 +855,7 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
     // No local file found; download from wiki via skill link URL
     char url[128];
     snprintf(url, _countof(url), "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skill_id);
-    Instance().Download(url, [texture, skill_id, callback](bool ok, const std::string& response) {
+    Instance().Download(url, [texture, skill_id, callback](const bool ok, const std::string& response) {
         if (!ok) {
             callback(ok, GuiUtils::StringToWString(response));
             return; // Already logged whatever errors
@@ -893,7 +908,7 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
     return texture;
 }
 
-GuiUtils::EncString* Resources::GetMapName(GW::Constants::MapID map_id)
+GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
 {
     const auto found = map_names.find(map_id);
     if (found != map_names.end()) {
@@ -906,7 +921,7 @@ GuiUtils::EncString* Resources::GetMapName(GW::Constants::MapID map_id)
     return ret;
 }
 
-GuiUtils::EncString* Resources::DecodeStringId(uint32_t enc_str_id)
+GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id)
 {
     const auto found = encoded_string_ids.find(enc_str_id);
     if (found != encoded_string_ids.end()) {
@@ -925,7 +940,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     if (item_images.contains(item_name)) {
         return item_images.at(item_name);
     }
-    const auto callback = [item_name](bool success, const std::wstring& error) {
+    const auto callback = [item_name](const bool success, const std::wstring& error) {
         if (!success) {
             Log::ErrorW(L"Failed to load item image %s\n%s", item_name.c_str(), error.c_str());
         }

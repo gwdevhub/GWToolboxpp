@@ -20,7 +20,7 @@ public:
     }
 
     struct PendingTransmo {
-        PendingTransmo(DWORD _npcid = 0, DWORD _scale = 0x64000000, DWORD _npcmfid = 0, DWORD _npcmfd = 0, DWORD _flags = 0)
+        PendingTransmo(const DWORD _npcid = 0, const DWORD _scale = 0x64000000, const DWORD _npcmfid = 0, const DWORD _npcmfd = 0, const DWORD _flags = 0)
             : npc_id(_npcid)
               , scale(_scale)
               , npc_model_file_id(_npcmfid)
@@ -45,8 +45,8 @@ public:
         Ally
     };
 
-    const char* Name() const override { return "Chat Commands"; }
-    const char* SettingsName() const override { return "Game Settings"; }
+    [[nodiscard]] const char* Name() const override { return "Chat Commands"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Game Settings"; }
 
     void Initialize() override;
     void Terminate() override;

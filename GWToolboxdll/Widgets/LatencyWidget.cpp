@@ -24,7 +24,7 @@ void LatencyWidget::Initialize()
     GW::Chat::CreateCommand(L"ping", SendPing);
 }
 
-void LatencyWidget::Update(float delta) { UNREFERENCED_PARAMETER(delta); }
+void LatencyWidget::Update(const float delta) { UNREFERENCED_PARAMETER(delta); }
 
 void LatencyWidget::OnServerPing(GW::HookStatus*, void* packet)
 {
@@ -102,8 +102,10 @@ void LatencyWidget::LoadSettings(ToolboxIni* ini)
     switch (font_size) {
         case static_cast<int>(GuiUtils::FontSize::widget_label):
         case static_cast<int>(GuiUtils::FontSize::widget_small):
-        case static_cast<int>(GuiUtils::FontSize::widget_large): break;
-        default: font_size = static_cast<int>(GuiUtils::FontSize::widget_small);
+        case static_cast<int>(GuiUtils::FontSize::widget_large):
+            break;
+        default:
+            font_size = static_cast<int>(GuiUtils::FontSize::widget_small);
             break;
     }
 }
@@ -133,7 +135,7 @@ void LatencyWidget::DrawSettingInternal()
     ImGui::Unindent();
 }
 
-ImColor LatencyWidget::GetColorForPing(uint32_t ping)
+ImColor LatencyWidget::GetColorForPing(const uint32_t ping)
 {
     const LatencyWidget& instance = Instance();
     const float x = ping / static_cast<float>(instance.red_threshold);

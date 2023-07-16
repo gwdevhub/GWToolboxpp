@@ -78,13 +78,13 @@ void TradeWindow::OnMessageLocal(GW::HookStatus* status, GW::Packet::StoC::Messa
         status->blocked = true;
 }
 
-void TradeWindow::CmdPricecheck(const wchar_t*, int argc, LPWSTR* argv)
+void TradeWindow::CmdPricecheck(const wchar_t*, const int argc, LPWSTR* argv)
 {
     if (argc < 2)
         return Log::Error("Try '/pc <item>'");
 
     std::string item_to_search;
-    for (int i = 1; i < argc; i++) {
+    for (auto i = 1; i < argc; i++) {
         if (i > 1)
             item_to_search += " ";
         item_to_search += GuiUtils::WStringToString(argv[i]);
@@ -142,29 +142,33 @@ void TradeWindow::SignalTerminate()
         WSACleanup();
 }
 
-bool TradeWindow::GetInKamadanAE1(bool check_district)
+bool TradeWindow::GetInKamadanAE1(const bool check_district)
 {
     using namespace GW::Constants;
     switch (GW::Map::GetMapID()) {
         case MapID::Kamadan_Jewel_of_Istan_outpost:
         case MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
         case MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
-        case MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost: return !check_district || (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == Region::America);
-        default: return false;
+        case MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost:
+            return !check_district || (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == Region::America);
+        default:
+            return false;
     }
 }
 
-bool TradeWindow::GetInAscalonAE1(bool check_district)
+bool TradeWindow::GetInAscalonAE1(const bool check_district)
 {
     using namespace GW::Constants;
     switch (GW::Map::GetMapID()) {
-        case MapID::Ascalon_City_pre_searing: return !check_district ||
-                                                     (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == Region::America);
-        default: return false;
+        case MapID::Ascalon_City_pre_searing:
+            return !check_district ||
+                   (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == Region::America);
+        default:
+            return false;
     }
 }
 
-void TradeWindow::Update(float delta)
+void TradeWindow::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
@@ -295,7 +299,7 @@ void TradeWindow::fetch()
             add_to_window = true;
             std::string input(msg.message);
             std::ranges::transform(input, input.begin(),
-                                   [](char c) -> char {
+                                   [](const char c) -> char {
                                        return static_cast<char>(tolower(c));
                                    });
             for (auto& term : searched_words) {
@@ -340,7 +344,7 @@ bool TradeWindow::IsTradeAlert(std::string& message)
                 return true;
         }
         else {
-            auto found = std::ranges::search(message, word, [](char c1, char c2) -> bool { return tolower(c1) == c2; }).begin();
+            auto found = std::ranges::search(message, word, [](const char c1, const char c2) -> bool { return tolower(c1) == c2; }).begin();
             if (found != message.end())
                 return true;
         }
@@ -348,7 +352,7 @@ bool TradeWindow::IsTradeAlert(std::string& message)
     return false;
 }
 
-void TradeWindow::search(std::string query, bool print_results_in_chat)
+void TradeWindow::search(std::string query, const bool print_results_in_chat)
 {
     pending_query_string = query.empty() ? " " : query;
     print_search_results = print_results_in_chat;
@@ -521,28 +525,28 @@ void TradeWindow::Draw(IDirect3DDevice9* device)
         const float message_left = playername_left + playernamewidth + innerspacing;
 
         const size_t n_messages = messages.size();
-        for (int i = static_cast<int>(n_messages - 1); i >= 0; i--) {
+        for (auto i = static_cast<int>(n_messages - 1); i >= 0; i--) {
             Message& msg = messages[i];
             ImGui::PushID(i);
 
             // ==== time elapsed column ====
             if (show_time) {
                 // negative numbers have came from this before, it is probably just server client desync
-                const int time_since_message = static_cast<int>(now) - static_cast<int>(msg.timestamp);
+                const auto time_since_message = static_cast<int>(now) - static_cast<int>(msg.timestamp);
 
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
 
                 // decide if days, hours, minutes, seconds...
                 if (time_since_message / (60 * 60 * 24)) {
-                    const int days = time_since_message / (60 * 60 * 24);
+                    const auto days = time_since_message / (60 * 60 * 24);
                     _snprintf(timetext, 128, "%d %s ago", days, days > 1 ? "days" : "day");
                 }
                 else if (time_since_message / (60 * 60)) {
-                    const int hours = time_since_message / (60 * 60);
+                    const auto hours = time_since_message / (60 * 60);
                     _snprintf(timetext, 128, "%d %s ago", hours, hours > 1 ? "hours" : "hour");
                 }
                 else if (time_since_message / 60) {
-                    const int minutes = time_since_message / 60;
+                    const auto minutes = time_since_message / 60;
                     _snprintf(timetext, 128, "%d %s ago", minutes, minutes > 1 ? "minutes" : "minute");
                 }
                 else {
@@ -592,7 +596,7 @@ void TradeWindow::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent(
         "Chat Settings",
         nullptr,
-        [this](const std::string&, bool is_showing) {
+        [this](const std::string&, const bool is_showing) {
             if (!is_showing)
                 return;
             DrawChatSettings();
@@ -618,7 +622,7 @@ void TradeWindow::DrawAlertsWindowContent(bool)
     DrawChatSettings(true);
 }
 
-void TradeWindow::DrawChatSettings(bool ownwindow)
+void TradeWindow::DrawChatSettings(const bool ownwindow)
 {
     ImGui::Checkbox("Apply trade alerts to local trade messages", &filter_local_trade);
     ImGui::ShowHelp("If enabled, only trade messages matching your alerts will be shown in chat");
@@ -681,8 +685,8 @@ void TradeWindow::ParseBuffer(const char* text, std::vector<std::string>& words)
     std::istringstream stream(text);
     std::string word;
     while (std::getline(stream, word)) {
-        for (size_t i = 0; i < word.length(); i++)
-            word[i] = static_cast<char>(tolower(word[i]));
+        for (char& i : word)
+            i = static_cast<char>(tolower(i));
         words.push_back(word);
     }
 }
@@ -692,13 +696,13 @@ void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& wor
     words.clear();
     std::string word;
     while (std::getline(stream, word)) {
-        for (size_t i = 0; i < word.length(); i++)
-            word[i] = static_cast<char>(tolower(word[i]));
+        for (char& i : word)
+            i = static_cast<char>(tolower(i));
         words.push_back(word);
     }
 }
 
-void TradeWindow::AsyncWindowConnect(bool force)
+void TradeWindow::AsyncWindowConnect(const bool force)
 {
     if (ws_window)
         return;

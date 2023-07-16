@@ -33,7 +33,7 @@ public:
 
     bool CanTerminate();
 
-    std::filesystem::path SaveSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME) const;
+    [[nodiscard]] std::filesystem::path SaveSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME) const;
     std::filesystem::path LoadSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME, bool fresh = false);
 
     void StartSelfDestruct();
@@ -52,7 +52,7 @@ public:
 
     bool right_mouse_down = false;
 
-    bool IsInitialized() const;
+    static bool IsInitialized();
 
     static bool ToggleModule(ToolboxWidget& m, bool enable = true);
     static bool ToggleModule(ToolboxWindow& m, bool enable = true);

@@ -265,7 +265,7 @@ private:
         clock_t state_timestamp = 0;
         uint8_t retries = 0;
 
-        void setState(State _state)
+        void setState(const State _state)
         {
             state = _state;
             state_timestamp = clock();

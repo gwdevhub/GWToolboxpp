@@ -397,7 +397,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
     return json;
 }
 
-std::string ObserverExportWindow::PadLeft(std::string input, uint8_t count, char c)
+std::string ObserverExportWindow::PadLeft(std::string input, const uint8_t count, const char c)
 {
     input.insert(input.begin(), count - input.size(), c);
     return input;
@@ -446,7 +446,7 @@ void ObserverExportWindow::ExportToJSON(Version version)
             // remove quotation marks (come in from json.dump())
             std::erase(name, '"');
             // replace spaces with _
-            std::ranges::transform(name, name.begin(), [](unsigned char c) {
+            std::ranges::transform(name, name.begin(), [](const unsigned char c) {
                 return static_cast<unsigned char>(c == ' ' ? '_' : c);
             });
             // replace non-alphanumeric with "x" to make simply FS safe, but also show something is missing
@@ -475,16 +475,16 @@ void ObserverExportWindow::ExportToJSON(Version version)
 
     size_t max_len = _countof(file_location_wc) - 1;
 
-    for (size_t i = 0; i < message.length(); i++) {
+    for (wchar_t i : message) {
         // Break on the end of the message
-        if (!message[i])
+        if (!i)
             break;
         // Double escape backsashes
-        if (message[i] == '\\')
-            file_location_wc[msg_len++] = message[i];
+        if (i == '\\')
+            file_location_wc[msg_len++] = i;
         if (msg_len >= max_len)
             break;
-        file_location_wc[msg_len++] = message[i];
+        file_location_wc[msg_len++] = i;
     }
     file_location_wc[msg_len] = 0;
     wchar_t chat_message[1024];

@@ -56,11 +56,11 @@ namespace {
     };
 
     enum CaptureMouseClickType : uint32_t {
-        CaptureType_None = 0,
-        CaptureType_FlagHero = 1,
+        CaptureType_None                = 0,
+        CaptureType_FlagHero            = 1,
         CaptureType_SalvageWithUpgrades = 11,
-        CaptureType_SalvageMaterials = 12,
-        CaptureType_Idenfify = 13
+        CaptureType_SalvageMaterials    = 12,
+        CaptureType_Idenfify            = 13
     };
 
     struct MouseClickCaptureData {
@@ -116,23 +116,32 @@ namespace {
         }
         GW::UI::ControlAction key = GW::UI::ControlAction_None;
         switch (set_state) {
-            case FlagState_Hero1: key = GW::UI::ControlAction_CommandHero1;
+            case FlagState_Hero1:
+                key = GW::UI::ControlAction_CommandHero1;
                 break;
-            case FlagState_Hero2: key = GW::UI::ControlAction_CommandHero2;
+            case FlagState_Hero2:
+                key = GW::UI::ControlAction_CommandHero2;
                 break;
-            case FlagState_Hero3: key = GW::UI::ControlAction_CommandHero3;
+            case FlagState_Hero3:
+                key = GW::UI::ControlAction_CommandHero3;
                 break;
-            case FlagState_Hero4: key = GW::UI::ControlAction_CommandHero4;
+            case FlagState_Hero4:
+                key = GW::UI::ControlAction_CommandHero4;
                 break;
-            case FlagState_Hero5: key = GW::UI::ControlAction_CommandHero5;
+            case FlagState_Hero5:
+                key = GW::UI::ControlAction_CommandHero5;
                 break;
-            case FlagState_Hero6: key = GW::UI::ControlAction_CommandHero6;
+            case FlagState_Hero6:
+                key = GW::UI::ControlAction_CommandHero6;
                 break;
-            case FlagState_Hero7: key = GW::UI::ControlAction_CommandHero7;
+            case FlagState_Hero7:
+                key = GW::UI::ControlAction_CommandHero7;
                 break;
-            case FlagState_All: key = GW::UI::ControlAction_CommandParty;
+            case FlagState_All:
+                key = GW::UI::ControlAction_CommandParty;
                 break;
-            default: return false;
+            default:
+                return false;
         }
         return Keypress(key);
     }
@@ -168,7 +177,7 @@ namespace {
 
     bool hide_compass_agents = false;
 
-    uint32_t __fastcall OnDrawCompassAgentsByType(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags)
+    uint32_t __fastcall OnDrawCompassAgentsByType(void* ecx, void* edx, const uint32_t param_1, const uint32_t param_2, const uint32_t flags)
     {
         GW::Hook::EnterHook();
         uint32_t result = 0;
@@ -182,7 +191,7 @@ namespace {
     bool hide_compass_quest_marker = false;
     GW::MemoryPatcher show_compass_quest_marker_patch;
 
-    void ToggleCompassQuestMarker(bool enable)
+    void ToggleCompassQuestMarker(const bool enable)
     {
         if (enable == show_compass_quest_marker_patch.GetIsEnable())
             return;
@@ -258,12 +267,12 @@ void Minimap::Initialize()
         show_compass_quest_marker_patch.SetPatch(address, "\xEB\xEC", 2);
     ToggleCompassQuestMarker(hide_compass_quest_marker);
 
-    GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus*, uint32_t key) {
+    GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus*, const uint32_t key) {
         if (key != GW::UI::ControlAction_ReverseCamera)
             return;
         camera_currently_reversed = true;
     });
-    GW::UI::RegisterKeyupCallback(&AgentPinged_Entry, [this](GW::HookStatus*, uint32_t key) {
+    GW::UI::RegisterKeyupCallback(&AgentPinged_Entry, [this](GW::HookStatus*, const uint32_t key) {
         if (key != GW::UI::ControlAction_ReverseCamera)
             return;
         camera_currently_reversed = false;
@@ -318,7 +327,7 @@ void Minimap::Initialize()
     GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
 }
 
-void Minimap::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msgid, void* wParam, void*)
+void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
 {
     auto& instance = Instance();
     switch (msgid) {
@@ -365,7 +374,7 @@ GW::Vec2f Minimap::ShadowstepLocation() const
     return shadowstep_location;
 }
 
-void Minimap::OnFlagHeroCmd(const wchar_t* message, int argc, LPWSTR* argv)
+void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
 
@@ -434,7 +443,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, int argc, LPWSTR* argv)
         return; // Player has no heroes, so no need to continue.
     }
     if (arg1 == L"clear") {
-        for (unsigned int i = 1; i <= n_heros; ++i) {
+        for (unsigned int i = 1; i <= n_heros; i++) {
             GW::PartyMgr::UnflagHero(i);
         }
         GW::PartyMgr::UnflagAll(); // "/flag clear"
@@ -586,7 +595,7 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     ToolboxWidget::LoadSettings(ini);
     Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"),
                                 "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
-                                [](bool success, const std::wstring& error) {
+                                [](const bool success, const std::wstring& error) {
                                     if (success) {
                                         Instance().custom_renderer.LoadMarkers();
                                     }
@@ -778,14 +787,14 @@ void Minimap::Draw(IDirect3DDevice9*)
                 if (compass_width == 0 && location.x == 0 && location.y == 0) {
                     // In "Restore Defaults" state - replace with sane default values
                     // Default values for a multiplier of 1.0f
-                    const int DEFAULT_WIDTH = 245;
-                    const int DEFAULT_HEIGHT = 269;
+                    const auto DEFAULT_WIDTH = 245;
+                    const auto DEFAULT_HEIGHT = 269;
 
                     compass_width = std::roundf(DEFAULT_WIDTH * multiplier);
                     compass_height = std::roundf(DEFAULT_HEIGHT * multiplier);
                     compass_padding = compass_width * .05f;
 
-                    const int windowWidth = GetPreference(GW::UI::NumberPreference::WindowSizeX);
+                    const auto windowWidth = GetPreference(GW::UI::NumberPreference::WindowSizeX);
                     location.x = static_cast<int>(windowWidth - compass_width + compass_padding);
                     location.y = static_cast<int>(compass_padding);
                     size.x = static_cast<int>(compass_width - (compass_padding * 2.0f));
@@ -825,7 +834,7 @@ void Minimap::Draw(IDirect3DDevice9*)
                 const float w_but = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * num_heroflags) /
                                     (num_heroflags + 1);
 
-                for (unsigned int i = 0; i < num_heroflags; ++i) {
+                for (auto i = 0u; i < num_heroflags; i++) {
                     if (i > 0)
                         ImGui::SameLine();
                     const bool is_flagging = GetFlaggingState() == i;
@@ -924,7 +933,7 @@ void Minimap::Render(IDirect3DDevice9* device)
     };
 
     // we MUST draw this for the stencil test, even if alpha is 0
-    const auto FillCircle = [&device](
+    const auto fill_circle = [&device](
         const float x, const float y, const float radius, const Color clr, const int resolution = 192) {
         const auto res = std::min(resolution, 192);
         D3DVertex vertices[193];
@@ -956,7 +965,7 @@ void Minimap::Render(IDirect3DDevice9* device)
         device->SetRenderState(D3DRS_STENCILREF, 1);
         device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer
-        FillCircle(0, 0, 5000.f, background);                            // draw circle with chosen background color into stencil buffer, fills buffer with 1's
+        fill_circle(0, 0, 5000.f, background);                            // draw circle with chosen background color into stencil buffer, fills buffer with 1's
         device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);         // only draw where 1 is in the buffer
         device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
@@ -1028,7 +1037,7 @@ void Minimap::Render(IDirect3DDevice9* device)
     d3d9_state_block->Release();
 }
 
-GW::Vec2f Minimap::InterfaceToWorldPoint(Vec2i pos) const
+GW::Vec2f Minimap::InterfaceToWorldPoint(const Vec2i pos) const
 {
     const GW::Agent* me = GW::Agents::GetPlayer();
     if (me == nullptr)
@@ -1066,7 +1075,7 @@ GW::Vec2f Minimap::InterfaceToWorldPoint(Vec2i pos) const
     return v;
 }
 
-GW::Vec2f Minimap::InterfaceToWorldVector(Vec2i pos) const
+GW::Vec2f Minimap::InterfaceToWorldVector(const Vec2i pos) const
 {
     GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
 
@@ -1116,7 +1125,7 @@ void Minimap::SelectTarget(const GW::Vec2f pos) const
     }
 }
 
-bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
+bool Minimap::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
     if (!GetKeyState(VK_LBUTTON) && mousedown) // fix left button being released outside of gw window
         mousedown = false;
@@ -1135,12 +1144,18 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
             !IsKeyDown(MinimapModifierBehaviour::Move))
             return false;
     switch (Message) {
-        case WM_MOUSEMOVE: return OnMouseMove(Message, wParam, lParam);
-        case WM_LBUTTONDOWN: return OnMouseDown(Message, wParam, lParam);
-        case WM_MOUSEWHEEL: return OnMouseWheel(Message, wParam, lParam);
-        case WM_LBUTTONDBLCLK: return OnMouseDblClick(Message, wParam, lParam);
-        case WM_LBUTTONUP: return OnMouseUp(Message, wParam, lParam);
-        default: return false;
+        case WM_MOUSEMOVE:
+            return OnMouseMove(Message, wParam, lParam);
+        case WM_LBUTTONDOWN:
+            return OnMouseDown(Message, wParam, lParam);
+        case WM_MOUSEWHEEL:
+            return OnMouseWheel(Message, wParam, lParam);
+        case WM_LBUTTONDBLCLK:
+            return OnMouseDblClick(Message, wParam, lParam);
+        case WM_LBUTTONUP:
+            return OnMouseUp(Message, wParam, lParam);
+        default:
+            return false;
     }
 }
 
@@ -1151,10 +1166,10 @@ bool Minimap::FlagHero(uint32_t idx)
     return SetFlaggingState(static_cast<FlaggingState>(idx));
 }
 
-bool Minimap::FlagHeros(LPARAM lParam)
+bool Minimap::FlagHeros(const LPARAM lParam)
 {
-    const int x = GET_X_LPARAM(lParam);
-    const int y = GET_Y_LPARAM(lParam);
+    const auto x = GET_X_LPARAM(lParam);
+    const auto y = GET_Y_LPARAM(lParam);
     if (!IsInside(x, y))
         return false;
     bool has_flagall = false;
@@ -1163,13 +1178,16 @@ bool Minimap::FlagHeros(LPARAM lParam)
 
     const FlaggingState flag_state = GetFlaggingState();
     switch (flag_state) {
-        case FlagState_None: return false;
-        case FlagState_All: if (!has_flagall)
+        case FlagState_None:
+            return false;
+        case FlagState_All:
+            if (!has_flagall)
                 return false;
             SetFlaggingState(FlagState_None);
             GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
             return true;
-        default: if (flag_state > player_heroes.size())
+        default:
+            if (flag_state > player_heroes.size())
                 return false;
             SetFlaggingState(FlagState_None);
             GW::PartyMgr::FlagHeroAgent(player_heroes[flag_state - 1], GW::GamePos(worldpos));
@@ -1177,7 +1195,7 @@ bool Minimap::FlagHeros(LPARAM lParam)
     }
 }
 
-bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam)
+bool Minimap::OnMouseDown(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
@@ -1185,8 +1203,8 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam)
         return false;
     if (FlagHeros(lParam))
         return true;
-    const int x = GET_X_LPARAM(lParam);
-    const int y = GET_Y_LPARAM(lParam);
+    const auto x = GET_X_LPARAM(lParam);
+    const auto y = GET_Y_LPARAM(lParam);
     if (!IsInside(x, y))
         return false;
 
@@ -1218,15 +1236,15 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam)
     return true;
 }
 
-bool Minimap::OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam)
+bool Minimap::OnMouseDblClick(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
     if (!IsActive())
         return false;
 
-    const int x = GET_X_LPARAM(lParam);
-    const int y = GET_Y_LPARAM(lParam);
+    const auto x = GET_X_LPARAM(lParam);
+    const auto y = GET_Y_LPARAM(lParam);
     if (!IsInside(x, y))
         return false;
 
@@ -1238,7 +1256,7 @@ bool Minimap::OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam)
     return true;
 }
 
-bool Minimap::OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam)
+bool Minimap::OnMouseUp(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
@@ -1254,7 +1272,7 @@ bool Minimap::OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam)
     return pingslines_renderer.OnMouseUp();
 }
 
-bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam)
+bool Minimap::OnMouseMove(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
@@ -1265,8 +1283,8 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam)
     if (!mousedown)
         return false;
 
-    const int x = GET_X_LPARAM(lParam);
-    const int y = GET_Y_LPARAM(lParam);
+    const auto x = GET_X_LPARAM(lParam);
+    const auto y = GET_Y_LPARAM(lParam);
     // if (!IsInside(x, y)) return false;
 
     if (IsKeyDown(MinimapModifierBehaviour::Target)) {
@@ -1286,7 +1304,7 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam)
     return pingslines_renderer.OnMouseMove(v.x, v.y);
 }
 
-bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam)
+bool Minimap::OnMouseWheel(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(lParam);
@@ -1309,7 +1327,7 @@ bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam)
     return false;
 }
 
-bool Minimap::IsInside(int x, int y) const
+bool Minimap::IsInside(const int x, const int y) const
 {
     // if outside square, return false
     if (x < location.x)

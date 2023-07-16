@@ -19,7 +19,7 @@ namespace OldCursorFix {
     GetClipCursor_pt GetClipCursor_Func;
     GetClipCursor_pt RetGetClipCursor;
 
-    BOOL WINAPI fnGetClipCursor(LPRECT lpRect) { return GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), lpRect); }
+    BOOL WINAPI fnGetClipCursor(const LPRECT lpRect) { return GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), lpRect); }
 
     void InstallCursorFix()
     {
@@ -113,7 +113,7 @@ namespace {
         return ProcessInput_Ret(wParam, lParam);
     }
 
-    void CursorFixWndProc(UINT Message, WPARAM wParam, LPARAM lParam)
+    void CursorFixWndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
     {
         if (!(Message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam))
             return; // Not raw input
@@ -192,7 +192,7 @@ namespace {
     /*
      *  Logic for scaling gw cursor up or down
      */
-    HBITMAP ScaleBitmap(HBITMAP inBitmap, int inWidth, int inHeight, int outWidth, int outHeight)
+    HBITMAP ScaleBitmap(const HBITMAP inBitmap, const int inWidth, const int inHeight, const int outWidth, const int outHeight)
     {
         // NB: We could use GDIPlus for this logic which has better image res handling etc, but no need
         HDC destDC = nullptr, srcDC = nullptr;
@@ -248,7 +248,7 @@ namespace {
     HCURSOR current_cursor = nullptr;
     bool cursor_size_hooked = false;
 
-    HCURSOR ScaleCursor(HCURSOR cursor, const int targetSize)
+    HCURSOR ScaleCursor(const HCURSOR cursor, const int targetSize)
     {
         ICONINFO icon_info;
         HCURSOR new_cursor = nullptr;
@@ -330,7 +330,7 @@ namespace {
         });
     }
 
-    void SetCursorSize(int new_size)
+    void SetCursorSize(const int new_size)
     {
         cursor_size = new_size;
         if (cursor_size != 32) {
@@ -400,7 +400,7 @@ void MouseFix::DrawSettingInternal()
     }
 }
 
-bool MouseFix::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
+bool MouseFix::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
     if (!enable_cursor_fix)
         return false;

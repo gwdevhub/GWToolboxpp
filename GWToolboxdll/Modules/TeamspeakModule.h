@@ -10,11 +10,11 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Teamspeak 3"; }
-    const char* Description() const override { return "Enables /teamspeak command to send current teamspeak 3 server info to chat"; }
-    const char* Icon() const override { return ICON_FA_HEADSET; }
+    [[nodiscard]] const char* Name() const override { return "Teamspeak 3"; }
+    [[nodiscard]] const char* Description() const override { return "Enables /teamspeak command to send current teamspeak 3 server info to chat"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_HEADSET; }
 
-    const char* SettingsName() const override { return "Third Party Integration"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Third Party Integration"; }
 
     void Initialize() override;
     void Terminate() override;

@@ -109,7 +109,7 @@ void IRC::delete_irc_command_hook(irc_command_hook* cmd_hook)
 
 int IRC::start(const char* server, int port, const char* nick, const char* user, const char* name, const char* pass)
 {
-    addrinfo hints{}, * servinfo;
+    addrinfo hints{},* servinfo;
     if (connected) {
         printf("IRC::start called when already connected\n");
         return 1;
@@ -182,7 +182,7 @@ void IRC::disconnect()
     t.~thread();
 }
 
-void IRC::error(int err)
+void IRC::error(const int err)
 {
     printf("Error: %d\n", err);
 }
@@ -199,7 +199,7 @@ int IRC::message_fetch()
     if (!connected)
         return 1;
     message_buffer[0] = '\0';
-    const int ret_len = recv(irc_socket, message_buffer, 1023, 0);
+    const auto ret_len = recv(irc_socket, message_buffer, 1023, 0);
     if (ret_len == SOCKET_ERROR) {
         printf("IRC::message_fetch recv failed, %d\n", WSAGetLastError());
         connected = false;
@@ -456,11 +456,14 @@ void IRC::parse_irc_reply(const char* data)
             plus = false;
             for (i = 0; i < static_cast<signed>(strlen(changevars)); i++) {
                 switch (changevars[i]) {
-                    case '+': plus = true;
+                    case '+':
+                        plus = true;
                         break;
-                    case '-': plus = false;
+                    case '-':
+                        plus = false;
                         break;
-                    case 'o': tmp = strchr(params, ' ');
+                    case 'o':
+                        tmp = strchr(params, ' ');
                         if (tmp) {
                             *tmp = '\0';
                             tmp++;
@@ -500,7 +503,8 @@ void IRC::parse_irc_reply(const char* data)
                         }
                         params = tmp;
                         break;
-                    case 'v': tmp = strchr(params, ' ');
+                    case 'v':
+                        tmp = strchr(params, ' ');
                         if (tmp) {
                             *tmp = '\0';
                             tmp++;
@@ -537,7 +541,8 @@ void IRC::parse_irc_reply(const char* data)
                         }
                         params = tmp;
                         break;
-                    default: return;
+                    default:
+                        return;
                         break;
                 }
                 // ------------ END OF MODE ---------------
@@ -734,7 +739,7 @@ int IRC::privmsg(const char* fmt, ...)
     va_list args;
     va_start(args, fmt);
     raw("PRIVMSG %s :", fmt);
-    const int ok = raw(va_arg(args, char*), args);
+    const auto ok = raw(va_arg(args, char*), args);
     va_end(args);
     return ok;
 }
@@ -763,7 +768,7 @@ int IRC::raw(const char* fmt, ...)
     char buffer[600];
     va_list args;
     va_start(args, fmt);
-    const int len = vsnprintf(buffer, 599, fmt, args) + 1;
+    const auto len = vsnprintf(buffer, 599, fmt, args) + 1;
     va_end(args);
     if (len < 1) {
         printf("IRC::raw, no message bytes or failure\n");
@@ -776,7 +781,7 @@ int IRC::raw(const char* fmt, ...)
         buffer[len + 2] = '\0';
     }
     printf("IRC::raw sending %s\n", buffer);
-    const int sent_bytes = send(irc_socket, buffer, static_cast<int>(strlen(buffer)), NULL);
+    const auto sent_bytes = send(irc_socket, buffer, static_cast<int>(strlen(buffer)), NULL);
     if (sent_bytes == SOCKET_ERROR) {
         printf("IRC::raw send() failed, %d\n", WSAGetLastError());
         return 1;

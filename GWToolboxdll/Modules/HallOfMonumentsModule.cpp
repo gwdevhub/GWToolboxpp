@@ -24,32 +24,32 @@ namespace {
     const unsigned char _Base64Table[65] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    int _WriteBits(int val, char* buff, int count = 6)
+    int _WriteBits(const int val, char* buff, const int count = 6)
     {
-        for (int i = 0; i < count; i++) {
+        for (auto i = 0; i < count; i++) {
             buff[i] = ((val >> i) & 1);
         }
         return count;
     }
 
-    int _ReadBits(char** str, int n)
+    int _ReadBits(char** str, const int n)
     {
         int val = 0;
         char* s = *str;
-        for (int i = 0; i < n; i++)
+        for (auto i = 0; i < n; i++)
             val |= (*s++ << i);
         *str = s;
         return val;
     }
 
-    int Base64ToBitString(const char* in, char* out, int out_len)
+    int Base64ToBitString(const char* in, char* out, const int out_len)
     {
-        const int in_len = static_cast<int>(strlen(in));
+        const auto in_len = static_cast<int>(strlen(in));
         ASSERT((in_len * 6) < out_len);
 
-        int bitStrLen = 0;
-        for (int i = 0; i < in_len; i++) {
-            const int numeric_value = _Base64ToValue[in[i]];
+        auto bitStrLen = 0;
+        for (auto i = 0; i < in_len; i++) {
+            const auto numeric_value = _Base64ToValue[in[i]];
             if (numeric_value == -1) {
                 Log::Error("Unvalid base64 character '%c' in string '%s'\n", in[i], in);
                 return -1;
@@ -69,7 +69,7 @@ bool HallOfMonumentsModule::DecodeHomCode(const char* in, HallOfMonumentsAchieve
 
 bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
 {
-    const int bufSize = 1024;
+    const auto bufSize = 1024;
     char bitStr[bufSize]; // @Cleanup: Confirm that the buffer is alway big enough.
     const int bitStrLen = Base64ToBitString(out->hom_code, bitStr, bufSize);
     if (bitStrLen == -1) {
@@ -95,11 +95,14 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
 
         switch (static_cast<ResilienceDetail>(i)) {
             case ResilienceDetail::EliteKurzickArmor:
-            case ResilienceDetail::EliteLuxonArmor: out->resilience_points[static_cast<size_t>(ResiliencePoints::KurzickOrLuxonArmorStatue)] = 1;
+            case ResilienceDetail::EliteLuxonArmor:
+                out->resilience_points[static_cast<size_t>(ResiliencePoints::KurzickOrLuxonArmorStatue)] = 1;
                 break;
-            case ResilienceDetail::VabbianArmor: out->resilience_points[static_cast<size_t>(ResiliencePoints::VabbianArmorStatue)] = 1;
+            case ResilienceDetail::VabbianArmor:
+                out->resilience_points[static_cast<size_t>(ResiliencePoints::VabbianArmorStatue)] = 1;
                 break;
-            case ResilienceDetail::ObsidianArmor: out->resilience_points[static_cast<size_t>(ResiliencePoints::ObsidianArmorStatue)] = 1;
+            case ResilienceDetail::ObsidianArmor:
+                out->resilience_points[static_cast<size_t>(ResiliencePoints::ObsidianArmorStatue)] = 1;
                 break;
         }
     }
@@ -125,14 +128,17 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
         if (out->fellowship_tally == 30)
             out->fellowship_points[static_cast<size_t>(FellowshipPoints::ThirtyCompanionStatues)] = 1;
         switch (static_cast<FellowshipDetail>(i)) {
-            case FellowshipDetail::AnimalCompanion: out->fellowship_points[static_cast<size_t>(FellowshipPoints::AnyPetStatue)] = 1;
+            case FellowshipDetail::AnimalCompanion:
+                out->fellowship_points[static_cast<size_t>(FellowshipPoints::AnyPetStatue)] = 1;
                 break;
             case FellowshipDetail::BlackMoa:
             case FellowshipDetail::BlackWidowSpider:
-            case FellowshipDetail::ImperialPhoenix: out->fellowship_points[static_cast<size_t>(FellowshipPoints::AnyPetStatue)] = 1;
+            case FellowshipDetail::ImperialPhoenix:
+                out->fellowship_points[static_cast<size_t>(FellowshipPoints::AnyPetStatue)] = 1;
                 out->fellowship_points[static_cast<size_t>(FellowshipPoints::AnyRarePetStatue)] = 1;
                 break;
-            default: out->fellowship_points[static_cast<size_t>(FellowshipPoints::AnyHeroStatue)] = 1;
+            default:
+                out->fellowship_points[static_cast<size_t>(FellowshipPoints::AnyHeroStatue)] = 1;
                 break;
         }
     }
@@ -175,7 +181,8 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
             case HonorDetail::EternalCommander:
             case HonorDetail::EternalGladiator:
             case HonorDetail::EternalHero:
-            case HonorDetail::EternalZaishenSupporter: out->honor_points[static_cast<size_t>(HonorPoints::OnePvpStatue)] = 3;
+            case HonorDetail::EternalZaishenSupporter:
+                out->honor_points[static_cast<size_t>(HonorPoints::OnePvpStatue)] = 3;
                 break;
         }
     }
@@ -232,9 +239,11 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
             out->devotion_points[static_cast<size_t>(DevotionPoints::FiftyMiniatureStatues)] = 1;
 
         switch (static_cast<DevotionDetail>(i)) {
-            case DevotionDetail::Rare: out->devotion_points[static_cast<size_t>(DevotionPoints::RareMiniatureStatue)] = 1;
+            case DevotionDetail::Rare:
+                out->devotion_points[static_cast<size_t>(DevotionPoints::RareMiniatureStatue)] = 1;
                 break;
-            case DevotionDetail::Unique: out->devotion_points[static_cast<size_t>(DevotionPoints::UniqueMiniatureStatue)] = 1;
+            case DevotionDetail::Unique:
+                out->devotion_points[static_cast<size_t>(DevotionPoints::UniqueMiniatureStatue)] = 1;
                 break;
         }
     }
@@ -261,7 +270,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
     EscapeUrl(char_name_escaped, character_name_s.c_str());
     const auto url_str = std::format("https://hom.guildwars2.com/character/{}", char_name_escaped);
 
-    Resources::Instance().Download(url_str, [out, callback](bool success, const std::string& response) {
+    Resources::Instance().Download(url_str, [out, callback](const bool success, const std::string& response) {
         if (!success) {
             Log::Log("Failed to load account hom code %s\n%s", out->character_name.c_str(), response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;

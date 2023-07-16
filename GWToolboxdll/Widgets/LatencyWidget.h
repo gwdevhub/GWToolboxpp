@@ -22,8 +22,8 @@ public:
     }
 
 
-    const char* Name() const override { return "Latency"; }
-    const char* Icon() const override { return ICON_FA_STOPWATCH; }
+    [[nodiscard]] const char* Name() const override { return "Latency"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
     void Initialize() override;
     void Update(float delta) override;

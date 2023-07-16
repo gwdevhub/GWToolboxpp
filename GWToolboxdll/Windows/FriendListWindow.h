@@ -36,7 +36,7 @@ protected:
             return name_str;
         }
 
-        const std::wstring& getNameW() const
+        [[nodiscard]] const std::wstring& getNameW() const
         {
             return name;
         }
@@ -101,7 +101,7 @@ public:
             return status == GW::FriendStatus::Offline;
         };
 
-        [[nodiscard]] bool NeedToUpdate(clock_t now) const
+        [[nodiscard]] bool NeedToUpdate(const clock_t now) const
         {
             return (now - last_update) > 10000; // 10 Second stale.
         }
@@ -161,11 +161,11 @@ public:
     static void OnPostTradePacket(GW::HookStatus* status, GW::Packet::StoC::TradeStart* pak);
     static void AddFriendAliasToMessage(wchar_t** message_ptr);
 
-    const char* Name() const override { return "Friend List"; }
-    const char* Icon() const override { return ICON_FA_USER_FRIENDS; }
+    [[nodiscard]] const char* Name() const override { return "Friend List"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_USER_FRIENDS; }
 
-    bool IsWidget() const override;
-    bool IsWindow() const override;
+    [[nodiscard]] bool IsWidget() const override;
+    [[nodiscard]] bool IsWindow() const override;
 
     static void CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR* argv);
@@ -176,7 +176,7 @@ public:
     void Terminate() override;
     void DrawHelp() override;
     void RegisterSettingsContent() override;
-    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const override;
+    [[nodiscard]] ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const override;
 
     // Update. Will always be called every frame.
     void Update(float delta) override;

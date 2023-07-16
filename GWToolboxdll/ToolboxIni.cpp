@@ -21,7 +21,7 @@ SI_Error ToolboxIni::LoadFile(const std::filesystem::path& a_pwszFile)
 {
     int res = -1;
     // 3 tries to load from disk
-    for (int i = 0; i < 3 && res != SI_OK; i++) {
+    for (auto i = 0; i < 3 && res != SI_OK; i++) {
         res = CSimpleIni::LoadFile(a_pwszFile.wstring().c_str());
     }
     if (res == SI_OK) {

@@ -78,7 +78,7 @@ void RangeRenderer::DrawSettings()
         Invalidate();
 }
 
-size_t RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD color) const
+size_t RangeRenderer::CreateCircle(D3DVertex* vertices, const float radius, const DWORD color) const
 {
     const auto scale = Minimap::Instance().GetGwinchScale();
     const auto xdiff = static_cast<float>(line_thickness) / scale.x;
@@ -172,18 +172,22 @@ void RangeRenderer::Render(IDirect3DDevice9* device)
     Initialize(device);
 
     switch (GW::Map::GetInstanceType()) {
-        case GW::Constants::InstanceType::Explorable: if (checkforhos_) {
+        case GW::Constants::InstanceType::Explorable:
+            if (checkforhos_) {
                 checkforhos_ = false;
                 havehos_ = HaveHos();
             }
             break;
-        case GW::Constants::InstanceType::Outpost: checkforhos_ = true;
+        case GW::Constants::InstanceType::Outpost:
+            checkforhos_ = true;
             havehos_ = HaveHos();
             break;
-        case GW::Constants::InstanceType::Loading: havehos_ = false;
+        case GW::Constants::InstanceType::Loading:
+            havehos_ = false;
             checkforhos_ = true;
             break;
-        default: break;
+        default:
+            break;
     }
 
     device->SetFVF(D3DFVF_CUSTOMVERTEX);

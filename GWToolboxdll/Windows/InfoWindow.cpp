@@ -111,24 +111,30 @@ namespace {
         return ImGui::InputTextEx(label, nullptr, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
     }
 
-    const char* GetStatusStr(Status _status)
+    const char* GetStatusStr(const Status _status)
     {
         switch (_status) {
-            case Status::Unknown: return "Unknown";
-            case Status::NotYetConnected: return "Not connected";
-            case Status::Connected: return "Connected";
-            case Status::Resigned: return "Resigned";
-            case Status::Left: return "Left";
-            default: return "";
+            case Status::Unknown:
+                return "Unknown";
+            case Status::NotYetConnected:
+                return "Not connected";
+            case Status::Connected:
+                return "Connected";
+            case Status::Resigned:
+                return "Resigned";
+            case Status::Left:
+                return "Left";
+            default:
+                return "";
         }
     }
 
-    const Status GetResignStatus(size_t index)
+    const Status GetResignStatus(const size_t index)
     {
         return index < resign_statuses.size() ? resign_statuses[index] : Status::Unknown;
     }
 
-    int PrintResignStatus(wchar_t* buffer, size_t size, size_t index, const wchar_t* player_name)
+    int PrintResignStatus(wchar_t* buffer, const size_t size, const size_t index, const wchar_t* player_name)
     {
         if (!player_name)
             return 0;
@@ -141,7 +147,7 @@ namespace {
                             : status_str);
     }
 
-    const size_t GetPartyPlayerIndex(uint32_t login_number)
+    const size_t GetPartyPlayerIndex(const uint32_t login_number)
     {
         const auto party = GW::PartyMgr::GetPartyInfo();
         for (size_t i = 0; party && i < party->players.size(); i++) {
@@ -221,7 +227,7 @@ namespace {
         CheckAndWarnIfNotResigned();
     }
 
-    void CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv)
+    void CmdResignLog(const wchar_t* cmd, const int argc, wchar_t** argv)
     {
         UNREFERENCED_PARAMETER(cmd);
         UNREFERENCED_PARAMETER(argc);
@@ -235,7 +241,7 @@ namespace {
         if (!partymembers.valid())
             return;
         const size_t index_max = std::min<size_t>(resign_statuses.size(), partymembers.size());
-        for (size_t i = 0; i < index_max; ++i) {
+        for (size_t i = 0; i < index_max; i++) {
             const GW::PlayerPartyMember& partymember = partymembers[i];
             wchar_t buffer[256];
             if (resign_statuses[i] != Status::Connected)
@@ -250,19 +256,19 @@ namespace {
     {
         quoted_item_id = 0;
         mapfile = packet->map_fileID;
-        for (unsigned i = 0; i < resign_statuses.size(); ++i) {
+        for (unsigned i = 0; i < resign_statuses.size(); i++) {
             resign_statuses[i] = Status::NotYetConnected;
             timestamp[i] = 0;
         }
     }
 
-    void GetIdsFromFileId(uint32_t param_1, short* param_2)
+    void GetIdsFromFileId(const uint32_t param_1, short* param_2)
     {
         param_2[1] = static_cast<short>((param_1 - 1) / 0xff00) + 0x100;
         *param_2 = static_cast<short>((param_1 - 1) % 0xff00) + 0x100;
     }
 
-    void DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, bool force_advanced = false)
+    void DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, const bool force_advanced = false)
     {
         if (!skill)
             return;
@@ -332,7 +338,7 @@ namespace {
         }
     }
 
-    void DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool force_advanced = false)
+    void DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, const bool force_advanced = false)
     {
         if (!item)
             return;
@@ -521,7 +527,7 @@ namespace {
         GW::PlayerPartyMemberArray& partymembers = info->players;
         if (!partymembers.valid())
             return;
-        for (size_t i = 0; i < partymembers.size(); ++i) {
+        for (size_t i = 0; i < partymembers.size(); i++) {
             const GW::PlayerPartyMember& partymember = partymembers[i];
             wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymember.login_number);
             if (!player_name)
@@ -552,7 +558,7 @@ namespace {
     using GetQuestInfo_pt = void(__cdecl*)(GW::Constants::QuestID);
     GetQuestInfo_pt RequestQuestInfo_Func = nullptr;
 
-    bool RequestQuestInfo(GW::Constants::QuestID quest_id)
+    bool RequestQuestInfo(const GW::Constants::QuestID quest_id)
     {
         if (!RequestQuestInfo_Func) {
             const uintptr_t address = GW::Scanner::Find("\x68\x4a\x01\x00\x10\xff\x77\x04", "xxxxxxxx", 0x7a);
@@ -561,13 +567,16 @@ namespace {
         return RequestQuestInfo_Func ? RequestQuestInfo_Func(quest_id), true : false;
     }
 
-    bool GetQuestEntryGroupName(GW::Constants::QuestID quest_id, wchar_t* out, size_t out_len)
+    bool GetQuestEntryGroupName(const GW::Constants::QuestID quest_id, wchar_t* out, const size_t out_len)
     {
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
         switch (quest->log_state & 0xf0) {
-            case 0x20: return swprintf(out, out_len, L"\x564") != -1;
-            case 0x40: return quest->location && swprintf(out, out_len, L"\x8102\x1978\x10A%s\x1", quest->location) != -1;
-            case 0: return quest->location && swprintf(out, out_len, L"\x565\x10A%s\x1", quest->location) != -1;
+            case 0x20:
+                return swprintf(out, out_len, L"\x564") != -1;
+            case 0x40:
+                return quest->location && swprintf(out, out_len, L"\x8102\x1978\x10A%s\x1", quest->location) != -1;
+            case 0:
+                return quest->location && swprintf(out, out_len, L"\x565\x10A%s\x1", quest->location) != -1;
             case 0x10:
                 // Unknown, maybe current mission quest, but this type of quest isn't in the quest log.
                 break;
@@ -611,7 +620,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
             const unsigned cols = static_cast<unsigned>(ceil(ImGui::GetWindowSize().x / 200.f));
             ImGui::PushID("info_enable_widget_items");
             ImGui::Columns(static_cast<int>(cols), "info_enable_widgets", false);
-            const size_t items_per_col = static_cast<size_t>(ceil(static_cast<float>(widgets.size()) / cols));
+            const auto items_per_col = static_cast<size_t>(ceil(static_cast<float>(widgets.size()) / cols));
             size_t col_count = 0u;
             for (const auto widget : widgets) {
                 ImGui::Checkbox(widget->Name(), &widget->visible);
@@ -655,11 +664,14 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
             ImGui::PushID("map_info");
             auto type = "";
             switch (GW::Map::GetInstanceType()) {
-                case GW::Constants::InstanceType::Outpost: type = "Outpost\0\0\0";
+                case GW::Constants::InstanceType::Outpost:
+                    type = "Outpost\0\0\0";
                     break;
-                case GW::Constants::InstanceType::Explorable: type = "Explorable";
+                case GW::Constants::InstanceType::Explorable:
+                    type = "Explorable";
                     break;
-                case GW::Constants::InstanceType::Loading: type = "Loading\0\0\0";
+                case GW::Constants::InstanceType::Loading:
+                    type = "Loading\0\0\0";
                     break;
             }
             InfoField("Map ID", "%d", GW::Map::GetMapID());
@@ -847,7 +859,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
 #endif
 }
 
-void InfoWindow::Update(float delta)
+void InfoWindow::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
@@ -869,7 +881,7 @@ void InfoWindow::Update(float delta)
                 timestamp.resize(partymembers.size(), 0);
             }
         }
-        for (unsigned i = 0; i < partymembers.size(); ++i) {
+        for (unsigned i = 0; i < partymembers.size(); i++) {
             GW::PlayerPartyMember& partymember = partymembers[i];
             if (partymember.connected()) {
                 if (resign_statuses[i] == Status::NotYetConnected || resign_statuses[i] == Status::Unknown) {
@@ -952,7 +964,7 @@ void InfoWindow::RegisterSettingsContent()
     ToolboxWindow::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
         "Game Settings", ICON_FA_GAMEPAD,
-        [this](const std::string&, bool is_showing) {
+        [this](const std::string&, const bool is_showing) {
             if (is_showing)
                 DrawGameSettings();
         },

@@ -17,7 +17,6 @@
 namespace {
     bool enabled = false;
 
-
     std::map<uint32_t, GW::Agent*> player_agents;
 
     GW::HookEntry AgentAdd_Hook;
@@ -31,7 +30,7 @@ namespace {
             return;
         if ((packet->agent_type & 0x30000000) != 0x30000000)
             return; // Not a player
-        const uint32_t player_number = packet->agent_type ^ 0x30000000;
+        const auto player_number = packet->agent_type ^ 0x30000000;
         auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number)));
         if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
             return; // Not a valid agent
@@ -94,7 +93,7 @@ static const wchar_t* af_2020_quotes[] = {
     L"Knew I should have put shares into the paracetamol stock market this year",
     L"I swear thats the last time I eat Canthan food again!"
 };
-static const int af_quotes_length = sizeof(af_2020_quotes) / 4;
+const auto af_quotes_length = sizeof(af_2020_quotes) / 4;
 
 void AprilFools::Initialize()
 {
@@ -103,8 +102,8 @@ void AprilFools::Initialize()
         SetEnabled(!enabled);
     });
 
-    const time_t now = time(nullptr);
-    const tm* ltm = gmtime(&now);
+    const auto now = time(nullptr);
+    const auto ltm = gmtime(&now);
     SetEnabled(ltm->tm_mon == 3 && ((ltm->tm_mday == 1 && ltm->tm_hour > 6) || (ltm->tm_mday == 2 && ltm->tm_hour < 7)));
 }
 
@@ -115,7 +114,7 @@ void AprilFools::Terminate()
     RemoveListeners();
 }
 
-void AprilFools::SetEnabled(bool is_enabled)
+void AprilFools::SetEnabled(const bool is_enabled)
 {
     if (enabled == is_enabled)
         return;
@@ -142,9 +141,9 @@ void AprilFools::SetEnabled(bool is_enabled)
     }
 }
 
-void AprilFools::SetInfected(GW::Agent* agent, bool is_infected)
+void AprilFools::SetInfected(GW::Agent* agent, const bool is_infected)
 {
-    uint32_t agent_id = agent->agent_id;
+    auto agent_id = agent->agent_id;
     if (!is_infected) {
         GW::GameThread::Enqueue([agent_id]() {
             GW::Packet::StoC::GenericValue packet;
@@ -160,7 +159,7 @@ void AprilFools::SetInfected(GW::Agent* agent, bool is_infected)
         return;
     infection_queued = true;
     SetInfected(agent, false);
-    static int last_quote_idx = -1;
+    static auto last_quote_idx = -1;
     GW::GameThread::Enqueue([agent_id]() {
         GW::Packet::StoC::GenericValue packet;
         packet.agent_id = agent_id;
@@ -169,7 +168,7 @@ void AprilFools::SetInfected(GW::Agent* agent, bool is_infected)
         GW::StoC::EmulatePacket(&packet);
         GW::Packet::StoC::SpeechBubble packet2;
         packet2.agent_id = agent_id;
-        int quote_idx = last_quote_idx;
+        auto quote_idx = last_quote_idx;
         while (quote_idx == last_quote_idx)
             quote_idx = rand() % af_quotes_length;
         last_quote_idx = quote_idx;
@@ -179,14 +178,14 @@ void AprilFools::SetInfected(GW::Agent* agent, bool is_infected)
     });
 }
 
-void AprilFools::Update(float delta)
+void AprilFools::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (!enabled)
         return;
     // @Cleanup: This is why you have an object, don't use static here.
     static clock_t next_infection = 0;
-    static GW::Constants::InstanceType last_instance_type = GW::Map::GetInstanceType();
+    static auto last_instance_type = GW::Map::GetInstanceType();
     if (GW::Map::GetInstanceType() != last_instance_type) {
         next_infection = clock() + 5000;
         last_instance_type = GW::Map::GetInstanceType();

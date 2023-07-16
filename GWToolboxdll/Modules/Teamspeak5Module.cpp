@@ -128,7 +128,7 @@ namespace {
         websocket = nullptr;
     }
 
-    TS3Server* GetServer(uint32_t connection_id)
+    TS3Server* GetServer(const uint32_t connection_id)
     {
         const auto& found = connected_servers.find(connection_id);
         return found == connected_servers.end() ? nullptr : found->second;
@@ -139,7 +139,7 @@ namespace {
         return GetServer(current_server);
     }
 
-    const std::string& GetWebsocketHost(bool force = false)
+    const std::string& GetWebsocketHost(const bool force = false)
     {
         if (!(ws_host.size() && !force)) {
             ws_host = std::format("ws://localhost:{}", ws_port);
@@ -162,7 +162,7 @@ namespace {
         packet["channel_name"] = channel_id;
         packet["expires_in_days"] = 1;
 
-        Resources::Post("https://invites.teamspeak.com/servers/create", packet.dump(), [callback](bool success, const std::string& response) {
+        Resources::Post("https://invites.teamspeak.com/servers/create", packet.dump(), [callback](const bool success, const std::string& response) {
             if (!success) {
                 Log::Error("Failed to get teamspeak invite link (1)");
                 Log::Log("%s", response.c_str());
@@ -269,7 +269,7 @@ namespace {
     }
 
 
-    TS3Server* UpsertServer(const json& props_json, uint32_t connection_id)
+    TS3Server* UpsertServer(const json& props_json, const uint32_t connection_id)
     {
         if (!props_json.is_object())
             return nullptr;
@@ -285,7 +285,7 @@ namespace {
         return teamspeak_server;
     }
 
-    void RemoveServer(uint32_t connection_id)
+    void RemoveServer(const uint32_t connection_id)
     {
         const auto found = connected_servers.find(connection_id);
         if (found != connected_servers.end()) {
@@ -500,14 +500,17 @@ void Teamspeak5Module::Update(float)
     }
     if (websocket) {
         switch (websocket->getReadyState()) {
-            case WebSocket::OPEN: if (pending_connect) {
+            case WebSocket::OPEN:
+                if (pending_connect) {
                     pending_connect = pending_disconnect = false;
                     return;
                 }
             case WebSocket::CLOSING:
-            case WebSocket::CONNECTING: websocket->poll();
+            case WebSocket::CONNECTING:
+                websocket->poll();
                 break;
-            case WebSocket::CLOSED: delete websocket;
+            case WebSocket::CLOSED:
+                delete websocket;
                 websocket = nullptr;
                 pending_connect = pending_disconnect = false;
                 return;

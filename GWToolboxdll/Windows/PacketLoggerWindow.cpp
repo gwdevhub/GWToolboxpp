@@ -148,7 +148,7 @@ static bool ignored_packets[packet_max] = {false};
 static bool blocked_packets[packet_max] = {false};
 GW::HookEntry hook_entry;
 
-static void printchar(wchar_t c)
+static void printchar(const wchar_t c)
 {
     if (c >= L' ' && c <= L'~') {
         printf("%lc", c);
@@ -176,7 +176,7 @@ static void InitStoC()
                 uint8_t h0010[12]{};
                 uint32_t ClientCodecArray[4]{};
                 StoCHandlerArray handlers;
-            } * ls_codec{};
+            }* ls_codec{};
 
             uint8_t h0010[12]{};
             // Client codec
@@ -204,47 +204,63 @@ static void InitStoC()
     ignored_packets[242] = true;
 }
 
-static FieldType GetField(uint32_t type, uint32_t size, uint32_t count)
+static FieldType GetField(const uint32_t type, const uint32_t size, const uint32_t count)
 {
     switch (type) {
-        case 0: return FieldType::AgentId;
-        case 1: return FieldType::Float;
-        case 2: return FieldType::Vect2;
-        case 3: return FieldType::Vect3;
+        case 0:
+            return FieldType::AgentId;
+        case 1:
+            return FieldType::Float;
+        case 2:
+            return FieldType::Vect2;
+        case 3:
+            return FieldType::Vect3;
         case 4:
-        case 8: switch (count) {
-                case 1: return FieldType::Byte;
-                case 2: return FieldType::Word;
-                case 4: return FieldType::Dword;
+        case 8:
+            switch (count) {
+                case 1:
+                    return FieldType::Byte;
+                case 2:
+                    return FieldType::Word;
+                case 4:
+                    return FieldType::Dword;
             }
         case 5:
-        case 9: return FieldType::Blob;
+        case 9:
+            return FieldType::Blob;
         case 6:
-        case 10: return FieldType::Ignore;
-        case 7: return FieldType::String16;
-        case 11: switch (size) {
-                case 1: return FieldType::Array8;
-                case 2: return FieldType::Array32;
-                case 4: return FieldType::Array32;
+        case 10:
+            return FieldType::Ignore;
+        case 7:
+            return FieldType::String16;
+        case 11:
+            switch (size) {
+                case 1:
+                    return FieldType::Array8;
+                case 2:
+                    return FieldType::Array32;
+                case 4:
+                    return FieldType::Array32;
             }
-        case 12: return FieldType::NestedStruct;
+        case 12:
+            return FieldType::NestedStruct;
     }
 
     return FieldType::Count;
 }
 
-static void PrintIndent(uint32_t indent)
+static void PrintIndent(const uint32_t indent)
 {
     char buffer[64];
     ASSERT(indent <= sizeof(buffer) - 1);
-    for (uint32_t i = 0; i < indent; i++) {
+    for (auto i = 0u; i < indent; i++) {
         buffer[i] = ' ';
     }
     buffer[indent] = 0;
     printf("%s", buffer);
 }
 
-static void GetHexS(char* buf, uint8_t byte)
+static void GetHexS(char* buf, const uint8_t byte)
 {
     const uint8_t h = (byte >> 4) & 0xfu;
     const uint8_t l = (byte >> 0) & 0xfu;
@@ -269,14 +285,14 @@ static void Serialize(uint8_t** bytes, T* val)
     *bytes = b + sizeof(T);
 }
 
-static void PrintString(int length, wchar_t* str)
+static void PrintString(const int length, wchar_t* str)
 {
-    for (int i = 0; i < length && str[i]; i++) {
+    for (auto i = 0; i < length && str[i]; i++) {
         printf(i > 0 ? " %04x" : "%04x", str[i]);
     }
 }
 
-static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_t indent)
+static void PrintField(const FieldType field, const uint32_t count, uint8_t** bytes, const uint32_t indent)
 {
     switch (field) {
         case FieldType::AgentId: {
@@ -334,7 +350,7 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
         case FieldType::Blob: {
             PrintIndent(indent);
             printf("Blob(%u) => ", count);
-            for (uint32_t i = 0; i < count; i++) {
+            for (auto i = 0u; i < count; i++) {
                 char buf[3];
                 GetHexS(buf, **bytes);
                 printf("%s ", buf);
@@ -405,17 +421,18 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
             *bytes = end;
             break;
         }
-        default: break;
+        default:
+            break;
     }
 }
 
-static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
-                             uint32_t repeat, uint8_t** bytes, uint32_t indent)
+static void PrintNestedField(uint32_t* fields, const uint32_t n_fields,
+                             const uint32_t repeat, uint8_t** bytes, const uint32_t indent)
 {
     for (uint32_t rep = 0; rep < repeat; rep++) {
         PrintIndent(indent);
         printf("[%u] => {\n", rep);
-        for (uint32_t i = 0; i < n_fields; i++) {
+        for (auto i = 0u; i < n_fields; i++) {
             const uint32_t field = fields[i];
             const uint32_t type = (field >> 0) & 0xF;
             const uint32_t size = (field >> 4) & 0xF;
@@ -496,7 +513,7 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
     }
 }
 
-std::string PacketLoggerWindow::PadLeft(std::string input, uint8_t count, char c)
+std::string PacketLoggerWindow::PadLeft(std::string input, const uint8_t count, const char c)
 {
     input.insert(input.begin(), count - input.size(), c);
     return input;
@@ -734,17 +751,22 @@ void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::Pack
     uint32_t string_offset = 0;
     switch (pak[0]) {
         case GAME_SMSG_DIALOG_BODY:
-        case GAME_SMSG_DOA_COMPLETE_ZONE: string_offset = 1;
+        case GAME_SMSG_DOA_COMPLETE_ZONE:
+            string_offset = 1;
             break;
         case GAME_SMSG_SPEECH_BUBBLE:
         case GAME_SMSG_DIALOG_BUTTON:
-        case GAME_SMSG_MISSION_OBJECTIVE_UPDATE_STRING: string_offset = 2;
+        case GAME_SMSG_MISSION_OBJECTIVE_UPDATE_STRING:
+            string_offset = 2;
             break;
-        case GAME_SMSG_MISSION_OBJECTIVE_ADD: string_offset = 3;
+        case GAME_SMSG_MISSION_OBJECTIVE_ADD:
+            string_offset = 3;
             break;
-        case GAME_SMSG_AGENT_DISPLAY_DIALOG: string_offset = 19;
+        case GAME_SMSG_AGENT_DISPLAY_DIALOG:
+            string_offset = 19;
             break;
-        case GAME_SMSG_CHAT_MESSAGE_NPC: Instance().AddMessageLog(GetMessageCore());
+        case GAME_SMSG_CHAT_MESSAGE_NPC:
+            Instance().AddMessageLog(GetMessageCore());
             break;
     }
     if (string_offset) {
@@ -752,7 +774,7 @@ void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::Pack
     }
 }
 
-void PacketLoggerWindow::Update(float delta)
+void PacketLoggerWindow::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     for (auto it = pending_translation.begin(); it != pending_translation.end(); ++it) {
@@ -761,7 +783,7 @@ void PacketLoggerWindow::Update(float delta)
             continue;
         wchar_t enc_str[1024];
         int len = 0;
-        for (size_t i = 0; i < t.in.size(); ++i) {
+        for (size_t i = 0; i < t.in.size(); i++) {
             len += swprintf(&enc_str[len], _countof(enc_str) - len, L"0x%X ", t.in[i]);
         }
         Log::LogW(enc_str);
@@ -788,7 +810,7 @@ void PacketLoggerWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(timestamp_show_milliseconds), timestamp_show_milliseconds);
 
     std::bitset<packet_max> ignored_packets_bitset;
-    for (size_t i = 0; i < packet_max; ++i) {
+    for (size_t i = 0; i < packet_max; i++) {
         ignored_packets_bitset[i] = ignored_packets[i] ? 1 : 0;
     }
     ini->SetValue(Name(), VAR_NAME(ignored_packets), ignored_packets_bitset.to_string().c_str());
@@ -809,7 +831,7 @@ void PacketLoggerWindow::LoadSettings(ToolboxIni* ini)
     if (strcmp(ignored_packets_bits, "-") == 0)
         return;
     const std::bitset<packet_max> ignored_packets_bitset(ignored_packets_bits);
-    for (size_t i = 0; i < packet_max; ++i) {
+    for (size_t i = 0; i < packet_max; i++) {
         ignored_packets[i] = ignored_packets_bitset[i] == 1;
     }
 }

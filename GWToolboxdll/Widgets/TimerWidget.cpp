@@ -31,18 +31,21 @@ namespace {
     bool is_valid(const steady_clock::time_point& time) { return time.time_since_epoch().count(); }
 
     template <typename T>
-    void print_time(T duration, int decimals, unsigned int bufsize, char* buf)
+    void print_time(T duration, const int decimals, const unsigned int bufsize, char* buf)
     {
         auto time = duration_cast<milliseconds>(duration);
         const long long secs = duration_cast<seconds>(time).count() % 60;
-        const int mins = duration_cast<minutes>(time).count() % 60;
-        const int hrs = duration_cast<hours>(time).count();
+        const auto mins = duration_cast<minutes>(time).count() % 60;
+        const auto hrs = duration_cast<hours>(time).count();
         switch (decimals) {
-            case 1: snprintf(buf, bufsize, "%d:%02d:%02lld.%01lld", hrs, mins, secs, time.count() / 100 % 10);
+            case 1:
+                snprintf(buf, bufsize, "%d:%02d:%02lld.%01lld", hrs, mins, secs, time.count() / 100 % 10);
                 break;
-            case 2: snprintf(buf, bufsize, "%d:%02d:%02lld.%02lld", hrs, mins, secs, time.count() / 10 % 100);
+            case 2:
+                snprintf(buf, bufsize, "%d:%02d:%02lld.%02lld", hrs, mins, secs, time.count() / 10 % 100);
                 break;
-            case 3: snprintf(buf, bufsize, "%d:%02d:%02lld.%03lld", hrs, mins, secs, time.count() % 1000);
+            case 3:
+                snprintf(buf, bufsize, "%d:%02d:%02lld.%03lld", hrs, mins, secs, time.count() % 1000);
                 break;
             default: // and 0
                 snprintf(buf, bufsize, "%d:%02d:%02lld", hrs, mins, secs);
@@ -333,7 +336,7 @@ void TimerWidget::PrintTimer()
     Log::Info("Time: %s", buf);
 }
 
-ImGuiWindowFlags TimerWidget::GetWinFlags(ImGuiWindowFlags flags, bool noinput_if_frozen) const
+ImGuiWindowFlags TimerWidget::GetWinFlags(const ImGuiWindowFlags flags, const bool noinput_if_frozen) const
 {
     return ToolboxWidget::GetWinFlags(flags, noinput_if_frozen) | (lock_size ? ImGuiWindowFlags_AlwaysAutoResize : 0);
 }
@@ -474,9 +477,11 @@ bool TimerWidget::GetDeepTimer()
         switch (effect_id) {
             case SkillID::Aspect_of_Exhaustion:
             case SkillID::Aspect_of_Depletion_energy_loss:
-            case SkillID::Scorpion_Aspect: skill = effect_id;
+            case SkillID::Scorpion_Aspect:
+                skill = effect_id;
                 break;
-            default: break;
+            default:
+                break;
         }
         if (skill != SkillID::No_Skill)
             break;
@@ -501,13 +506,17 @@ bool TimerWidget::GetDeepTimer()
     if (diff > 200)
         timer = std::min(timer, 30 - ((diff - 200) % 30));
     switch (skill) {
-        case SkillID::Aspect_of_Exhaustion: snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
+        case SkillID::Aspect_of_Exhaustion:
+            snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
             break;
-        case SkillID::Aspect_of_Depletion_energy_loss: snprintf(extra_buffer, 32, "Depletion: %lu", timer);
+        case SkillID::Aspect_of_Depletion_energy_loss:
+            snprintf(extra_buffer, 32, "Depletion: %lu", timer);
             break;
-        case SkillID::Scorpion_Aspect: snprintf(extra_buffer, 32, "Scorpion: %lu", timer);
+        case SkillID::Scorpion_Aspect:
+            snprintf(extra_buffer, 32, "Scorpion: %lu", timer);
             break;
-        default: break;
+        default:
+            break;
     }
     extra_color = ImColor(255, 255, 255);
     return true;
@@ -543,33 +552,42 @@ bool TimerWidget::GetTrapTimer()
         case MapID::Catacombs_of_Kathandrax_Level_3:
         case MapID::Bloodstone_Caves_Level_1:
         case MapID::Arachnis_Haunt_Level_2:
-        case MapID::Oolas_Lab_Level_2: snprintf(extra_buffer, 32, "Fire Jet: %lu", timer);
+        case MapID::Oolas_Lab_Level_2:
+            snprintf(extra_buffer, 32, "Fire Jet: %lu", timer);
             return true;
-        case MapID::Heart_of_the_Shiverpeaks_Level_3: snprintf(extra_buffer, 32, "Fire Spout: %lu", timer);
+        case MapID::Heart_of_the_Shiverpeaks_Level_3:
+            snprintf(extra_buffer, 32, "Fire Spout: %lu", timer);
             return true;
         case MapID::Shards_of_Orr_Level_3:
-        case MapID::Cathedral_of_Flames_Level_3: snprintf(extra_buffer, 32, "Fire Trap: %lu", timer);
+        case MapID::Cathedral_of_Flames_Level_3:
+            snprintf(extra_buffer, 32, "Fire Trap: %lu", timer);
             return true;
         case MapID::Sepulchre_of_Dragrimmar_Level_1:
         case MapID::Ravens_Point_Level_1:
         case MapID::Ravens_Point_Level_2:
         case MapID::Heart_of_the_Shiverpeaks_Level_1:
-        case MapID::Darkrime_Delves_Level_2: snprintf(extra_buffer, 32, "Ice Jet: %lu", timer);
+        case MapID::Darkrime_Delves_Level_2:
+            snprintf(extra_buffer, 32, "Ice Jet: %lu", timer);
             return true;
         case MapID::Darkrime_Delves_Level_1:
-        case MapID::Secret_Lair_of_the_Snowmen: snprintf(extra_buffer, 32, "Ice Spout: %lu", timer);
+        case MapID::Secret_Lair_of_the_Snowmen:
+            snprintf(extra_buffer, 32, "Ice Spout: %lu", timer);
             return true;
         case MapID::Bogroot_Growths_Level_1:
         case MapID::Arachnis_Haunt_Level_1:
         case MapID::Shards_of_Orr_Level_1:
-        case MapID::Shards_of_Orr_Level_2: snprintf(extra_buffer, 32, "Poison Jet: %lu", timer);
+        case MapID::Shards_of_Orr_Level_2:
+            snprintf(extra_buffer, 32, "Poison Jet: %lu", timer);
             return true;
-        case MapID::Bloodstone_Caves_Level_2: snprintf(extra_buffer, 32, "Poison Spout: %lu", timer);
+        case MapID::Bloodstone_Caves_Level_2:
+            snprintf(extra_buffer, 32, "Poison Spout: %lu", timer);
             return true;
         case MapID::Cathedral_of_Flames_Level_2:
-        case MapID::Bloodstone_Caves_Level_3: snprintf(extra_buffer, 32, "Poison Trap: %lu", timer);
+        case MapID::Bloodstone_Caves_Level_3:
+            snprintf(extra_buffer, 32, "Poison Trap: %lu", timer);
             return true;
-        default: return false;
+        default:
+            return false;
     }
 }
 

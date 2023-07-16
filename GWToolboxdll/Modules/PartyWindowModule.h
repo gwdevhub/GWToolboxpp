@@ -12,8 +12,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Party Window"; }
-    const char* SettingsName() const override { return "Party Settings"; }
+    [[nodiscard]] const char* Name() const override { return "Party Window"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Party Settings"; }
     void Initialize() override;
     void Terminate() override;
     void SignalTerminate() override;

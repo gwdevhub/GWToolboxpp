@@ -53,7 +53,7 @@ namespace {
     constexpr float chat_colors_grid_x[] = {0, 100, 160, 240};
     std::vector<PendingChatMessage*> pending_messages;
 
-    void PrintTime(wchar_t* buffer, size_t n, DWORD time_sec)
+    void PrintTime(wchar_t* buffer, const size_t n, const DWORD time_sec)
     {
         const DWORD secs = time_sec % 60;
         const DWORD minutes = (time_sec / 60) % 60;
@@ -80,7 +80,7 @@ namespace {
         }
     }
 
-    void DrawChannelColor(const char* name, GW::Chat::Channel chan)
+    void DrawChannelColor(const char* name, const GW::Chat::Channel chan)
     {
         ImGui::PushID(chan);
         ImGui::Text(name);
@@ -208,7 +208,7 @@ namespace {
     }
 
     // Disable native timestamps
-    void OnCheckboxPreferenceChanged(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void* lParam)
+    void OnCheckboxPreferenceChanged(GW::HookStatus* status, const GW::UI::UIMessage msgid, void* wParam, void* lParam)
     {
         UNREFERENCED_PARAMETER(lParam);
         if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam))
@@ -224,7 +224,7 @@ namespace {
     }
 
     // Turn /wiki into /wiki <location>
-    void OnSendChat(GW::HookStatus*, GW::Chat::Channel chan, wchar_t* msg)
+    void OnSendChat(GW::HookStatus*, const GW::Chat::Channel chan, wchar_t* msg)
     {
         if (!auto_url || !msg)
             return;
@@ -478,7 +478,7 @@ void ChatSettings::SaveSettings(ToolboxIni* ini)
     Colors::Save(ini, Name(), VAR_NAME(timestamps_color), timestamps_color);
 }
 
-bool ChatSettings::WndProc(UINT Message, WPARAM wParam, LPARAM)
+bool ChatSettings::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
 {
     // Open Whisper to targeted player with Ctrl + Enter
     if (Message == WM_KEYDOWN && wParam == VK_RETURN && !ctrl_enter_whisper && ImGui::GetIO().KeyCtrl && !GW::Chat::GetIsTyping()) {

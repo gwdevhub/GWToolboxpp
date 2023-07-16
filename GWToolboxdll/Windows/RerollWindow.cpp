@@ -111,28 +111,33 @@ namespace {
         return ui_state == 2;
     }
 
-    GW::Constants::MapID GetScrollableOutpostForEliteArea(GW::Constants::MapID elite_area)
+    GW::Constants::MapID GetScrollableOutpostForEliteArea(const GW::Constants::MapID elite_area)
     {
         auto map_id = GW::Constants::MapID::Embark_Beach;
         switch (elite_area) {
-            case GW::Constants::MapID::The_Deep: map_id = GW::Constants::MapID::Cavalon_outpost;
+            case GW::Constants::MapID::The_Deep:
+                map_id = GW::Constants::MapID::Cavalon_outpost;
                 break;
-            case GW::Constants::MapID::Urgozs_Warren: map_id = GW::Constants::MapID::House_zu_Heltzer_outpost;
+            case GW::Constants::MapID::Urgozs_Warren:
+                map_id = GW::Constants::MapID::House_zu_Heltzer_outpost;
                 break;
-            default: return GW::Constants::MapID::None;
+            default:
+                return GW::Constants::MapID::None;
         }
         if (!GW::Map::GetIsMapUnlocked(map_id))
             map_id = GW::Constants::MapID::Embark_Beach;
         return map_id;
     }
 
-    GW::Item* GetScrollItemForEliteArea(GW::Constants::MapID elite_area)
+    GW::Item* GetScrollItemForEliteArea(const GW::Constants::MapID elite_area)
     {
         uint32_t scroll_model_id = 0;
         switch (elite_area) {
-            case GW::Constants::MapID::The_Deep: scroll_model_id = 22279;
+            case GW::Constants::MapID::The_Deep:
+                scroll_model_id = 22279;
                 break;
-            case GW::Constants::MapID::Urgozs_Warren: scroll_model_id = 3256;
+            case GW::Constants::MapID::Urgozs_Warren:
+                scroll_model_id = 3256;
                 break;
         }
         if (!scroll_model_id)
@@ -144,10 +149,10 @@ namespace {
             static_cast<int>(GW::Constants::Bag::Storage_14));
     }
 
-    const wchar_t* GetRemainingArgsWstr(const wchar_t* message, int argc_start)
+    const wchar_t* GetRemainingArgsWstr(const wchar_t* message, const int argc_start)
     {
         const wchar_t* out = message;
-        for (int i = 0; i < argc_start && out; i++) {
+        for (auto i = 0; i < argc_start && out; i++) {
             out = wcschr(out, ' ');
             if (out)
                 out++;
@@ -278,7 +283,7 @@ std::vector<std::wstring>* RerollWindow::GetAvailableChars()
     return email ? account_characters[email] : nullptr;
 }
 
-void RerollWindow::CmdReroll(const wchar_t* message, int argc, LPWSTR*)
+void RerollWindow::CmdReroll(const wchar_t* message, const int argc, LPWSTR*)
 {
     if (argc < 2) {
         Log::Error("Incorrect syntax: /reroll [profession|character_name]");
@@ -343,7 +348,7 @@ void RerollWindow::OnSetStatus(GW::FriendStatus status)
     GW::Hook::LeaveHook();
 }
 
-void RerollWindow::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msg_id, void*, void*)
+void RerollWindow::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msg_id, void*, void*)
 {
     if (msg_id == GW::UI::UIMessage::kCheckUIState)
         Instance().check_available_chars = true;
@@ -536,7 +541,8 @@ void RerollWindow::Update(float)
             }
             RerollSuccess();
             return;
-        case WaitForEmptyParty: GW::PartyInfo* player_party = GetPlayerParty();
+        case WaitForEmptyParty:
+            GW::PartyInfo* player_party = GetPlayerParty();
             if (player_party && player_party->GetPartySize() > 1)
                 return;
             wchar_t msg_buf[32];
@@ -558,7 +564,7 @@ void RerollWindow::AddAvailableCharacter(const wchar_t* email, const wchar_t* ch
     account_characters[email]->push_back(charname);
 }
 
-bool RerollWindow::IsInMap(bool include_district)
+bool RerollWindow::IsInMap(const bool include_district)
 {
     if (guild_hall_uuid) {
         const GW::Guild* current_location = GW::GuildMgr::GetCurrentGH();
@@ -606,7 +612,7 @@ void RerollWindow::RerollFailed(const wchar_t* reason)
     reroll_stage = PendingLogout;
 }
 
-bool RerollWindow::Reroll(wchar_t* character_name, GW::Constants::MapID _map_id)
+bool RerollWindow::Reroll(wchar_t* character_name, const GW::Constants::MapID _map_id)
 {
     if (!Reroll(character_name, true, false))
         return false;
@@ -619,7 +625,7 @@ bool RerollWindow::Reroll(wchar_t* character_name, GW::Constants::MapID _map_id)
     return true;
 }
 
-bool RerollWindow::Reroll(wchar_t* character_name, bool _same_map, bool _same_party)
+bool RerollWindow::Reroll(wchar_t* character_name, bool _same_map, const bool _same_party)
 {
     reroll_stage = None;
     reverting_reroll = false;

@@ -17,7 +17,7 @@ class HeroBuildsWindow : public ToolboxWindow {
     // 0 for 'no hero',
     // and 1+ for heroes, order is in HeroIndexToID array
     struct HeroBuild {
-        HeroBuild(const char* n, const char* c, int index = -1, int panel = 0, uint32_t _behavior = 1)
+        HeroBuild(const char* n, const char* c, const int index = -1, const int panel = 0, const uint32_t _behavior = 1)
             : hero_index(index)
               , behavior(_behavior)
               , show_panel(panel)
@@ -68,8 +68,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Hero Builds"; }
-    const char* Icon() const override { return ICON_FA_USERS; }
+    [[nodiscard]] const char* Name() const override { return "Hero Builds"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_USERS; }
 
     void Initialize() override;
     void Terminate() override;
@@ -88,8 +88,8 @@ public:
     void SaveToFile();
 
     void Load(unsigned int idx);
-    const char* BuildName(unsigned int idx) const;
-    unsigned int BuildCount() const { return teambuilds.size(); }
+    [[nodiscard]] const char* BuildName(unsigned int idx) const;
+    [[nodiscard]] unsigned int BuildCount() const { return teambuilds.size(); }
 
     static void CmdHeroTeamBuild(const wchar_t* message, int argc, LPWSTR* argv);
 
@@ -127,7 +127,7 @@ private:
         GW::HeroBehavior behavior = GW::HeroBehavior::Guard;
         clock_t started = 0;
 
-        CodeOnHero(const char* c = "", GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, int _show_panel = 0, uint32_t _behavior = 1)
+        CodeOnHero(const char* c = "", const GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, const int _show_panel = 0, uint32_t _behavior = 1)
             : heroid(i)
               , show_panel(_show_panel)
               , behavior(static_cast<GW::HeroBehavior>(_behavior))

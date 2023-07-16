@@ -2,8 +2,6 @@
 
 #include <ToolboxWindow.h>
 
-#define NO_AGENT 0
-
 class ObserverPartyWindow : public ToolboxWindow {
     ObserverPartyWindow() = default;
     ~ObserverPartyWindow() override = default;
@@ -15,8 +13,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Observer Parties"; }
-    const char* Icon() const override { return ICON_FA_EYE; }
+    [[nodiscard]] const char* Name() const override { return "Observer Parties"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
 

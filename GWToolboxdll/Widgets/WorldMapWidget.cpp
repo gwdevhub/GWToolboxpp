@@ -83,7 +83,7 @@ void WorldMapWidget::Initialize()
     });
 }
 
-void WorldMapWidget::ShowAllOutposts(bool show = showing_all_outposts)
+void WorldMapWidget::ShowAllOutposts(const bool show = showing_all_outposts)
 {
     static bool showing = false;
     //GW::WorldContext* world = GW::GetGameContext()->world;
@@ -130,14 +130,15 @@ void WorldMapWidget::Draw(IDirect3DDevice9* pDevice)
     drawn = true;
 }
 
-bool WorldMapWidget::WndProc(UINT Message, WPARAM, LPARAM lParam)
+bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 {
     switch (Message) {
-        case WM_LBUTTONDOWN: if (!drawn || !GW::UI::GetIsWorldMapShowing())
+        case WM_LBUTTONDOWN:
+            if (!drawn || !GW::UI::GetIsWorldMapShowing())
                 return false;
             auto check_rect = [lParam](ImRect& rect) {
-                const int x = GET_X_LPARAM(lParam);
-                const int y = GET_Y_LPARAM(lParam);
+                const auto x = GET_X_LPARAM(lParam);
+                const auto y = GET_Y_LPARAM(lParam);
                 return x > rect.Min.x && x < rect.Max.x && y > rect.Min.y && y < rect.Max.y;
             };
             if (check_rect(show_all_rect)) {

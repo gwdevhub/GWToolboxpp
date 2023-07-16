@@ -67,12 +67,18 @@ namespace {
             return Rarity::Unknown;
 
         switch (item.complete_name_enc[0]) {
-            case 2621: return Rarity::White;
-            case 2623: return Rarity::Blue;
-            case 2626: return Rarity::Purple;
-            case 2624: return Rarity::Gold;
-            case 2627: return Rarity::Green;
-            default: return Rarity::Unknown;
+            case 2621:
+                return Rarity::White;
+            case 2623:
+                return Rarity::Blue;
+            case 2626:
+                return Rarity::Purple;
+            case 2624:
+                return Rarity::Gold;
+            case 2627:
+                return Rarity::Green;
+            default:
+                return Rarity::Unknown;
         }
     }
 
@@ -205,10 +211,14 @@ namespace {
     {
         using GW::Constants::ItemType;
         switch (static_cast<ItemType>(item.type)) {
-            case ItemType::Bundle: return false;
-            case ItemType::Quest_Item: return false;
-            case ItemType::Minipet: return false;
-            default: break;
+            case ItemType::Bundle:
+                return false;
+            case ItemType::Quest_Item:
+                return false;
+            case ItemType::Minipet:
+                return false;
+            default:
+                break;
         }
 
         const auto rarity = GetRarity(item);
@@ -218,12 +228,18 @@ namespace {
                 return false;
 
             switch (rarity) {
-                case Rarity::White: return hide_player_white;
-                case Rarity::Blue: return hide_player_blue;
-                case Rarity::Purple: return hide_player_purple;
-                case Rarity::Gold: return hide_player_gold;
-                case Rarity::Green: return hide_player_green;
-                case Rarity::Unknown: return false;
+                case Rarity::White:
+                    return hide_player_white;
+                case Rarity::Blue:
+                    return hide_player_blue;
+                case Rarity::Purple:
+                    return hide_player_purple;
+                case Rarity::Gold:
+                    return hide_player_gold;
+                case Rarity::Green:
+                    return hide_player_green;
+                case Rarity::Unknown:
+                    return false;
             }
         }
 
@@ -231,12 +247,18 @@ namespace {
             return false;
 
         switch (rarity) {
-            case Rarity::White: return hide_party_white;
-            case Rarity::Blue: return hide_party_blue;
-            case Rarity::Purple: return hide_party_purple;
-            case Rarity::Gold: return hide_party_gold;
-            case Rarity::Green: return hide_party_green;
-            case Rarity::Unknown: return false;
+            case Rarity::White:
+                return hide_party_white;
+            case Rarity::Blue:
+                return hide_party_blue;
+            case Rarity::Purple:
+                return hide_party_purple;
+            case Rarity::Gold:
+                return hide_party_gold;
+            case Rarity::Green:
+                return hide_party_green;
+            case Rarity::Unknown:
+                return false;
         }
 
         return false;

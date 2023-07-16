@@ -45,40 +45,40 @@ class PingsLinesRenderer : public VBuffer {
         virtual ~Ping() = default;
         clock_t start;
         int duration = 3000;
-        virtual float GetX() const = 0;
-        virtual float GetY() const = 0;
-        virtual float GetScale() const { return 1.0f; }
-        virtual bool ShowInner() const { return true; }
-        virtual DWORD GetAgentID() const { return 0; }
+        [[nodiscard]] virtual float GetX() const = 0;
+        [[nodiscard]] virtual float GetY() const = 0;
+        [[nodiscard]] virtual float GetScale() const { return 1.0f; }
+        [[nodiscard]] virtual bool ShowInner() const { return true; }
+        [[nodiscard]] virtual DWORD GetAgentID() const { return 0; }
     };
 
     struct TerrainPing : Ping {
-        TerrainPing(float _x, float _y)
+        TerrainPing(const float _x, const float _y)
             : Ping(), x(_x), y(_y)
         {
         }
 
         const float x, y;
-        float GetX() const override { return x; }
-        float GetY() const override { return y; }
-        float GetScale() const override { return 2.0f; }
+        [[nodiscard]] float GetX() const override { return x; }
+        [[nodiscard]] float GetY() const override { return y; }
+        [[nodiscard]] float GetScale() const override { return 2.0f; }
     };
 
     struct AgentPing : Ping {
-        AgentPing(DWORD _id)
+        AgentPing(const DWORD _id)
             : Ping(), id(_id)
         {
         }
 
         DWORD id;
-        float GetX() const override;
-        float GetY() const override;
-        float GetScale() const override;
-        DWORD GetAgentID() const override { return id; }
+        [[nodiscard]] float GetX() const override;
+        [[nodiscard]] float GetY() const override;
+        [[nodiscard]] float GetScale() const override;
+        [[nodiscard]] DWORD GetAgentID() const override { return id; }
     };
 
     struct ClickPing : Ping {
-        ClickPing(float _x, float _y)
+        ClickPing(const float _x, const float _y)
             : Ping(), x(_x), y(_y)
         {
             start = TIMER_INIT() - 200;
@@ -86,10 +86,10 @@ class PingsLinesRenderer : public VBuffer {
         }
 
         const float x, y;
-        float GetX() const override { return x; }
-        float GetY() const override { return y; }
-        float GetScale() const override { return 0.08f; }
-        bool ShowInner() const override { return false; }
+        [[nodiscard]] float GetX() const override { return x; }
+        [[nodiscard]] float GetY() const override { return y; }
+        [[nodiscard]] float GetScale() const override { return 0.08f; }
+        [[nodiscard]] bool ShowInner() const override { return false; }
     };
 
     class PingCircle : public VBuffer {
@@ -144,7 +144,7 @@ private:
     void DrawDrawings(IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
 
-    short ToShortPos(float n)
+    short ToShortPos(const float n)
     {
         return static_cast<short>(std::lroundf(n / drawing_scale));
     }

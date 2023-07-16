@@ -178,7 +178,7 @@ void TwitchModule::AddHooks()
         return false;
     });
     // When sending a whisper to "<irc_channel>", redirect it to send message via IRC
-    GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, [&](GW::HookStatus* status, GW::Chat::Channel chan, wchar_t* msg) -> bool {
+    GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, [&](GW::HookStatus* status, const GW::Chat::Channel chan, wchar_t* msg) -> bool {
         if (chan != GW::Chat::Channel::CHANNEL_WHISPER || !connected)
             return false;
         wchar_t msgcpy[255];
@@ -241,13 +241,13 @@ bool TwitchModule::Connect()
     }*/
     // Sanitise strings to lower case
     std::ranges::transform(irc_server, irc_server.begin(),
-                           [](char c) -> char {
+                           [](const char c) -> char {
                                return static_cast<char>(tolower(c));
                            });
     /*std::transform(irc_username.begin(), irc_username.end(), irc_username.begin(),
         [](unsigned char c) { return std::tolower(c); });*/
     std::ranges::transform(irc_channel, irc_channel.begin(),
-                           [](char c) -> char {
+                           [](const char c) -> char {
                                return static_cast<char>(tolower(c));
                            });
 
@@ -265,7 +265,7 @@ bool TwitchModule::Connect()
     return connected = conn.is_connected();
 }
 
-void TwitchModule::Update(float delta)
+void TwitchModule::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     connected = conn.is_connected();

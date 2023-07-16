@@ -48,7 +48,7 @@ Pcon::Pcon(const char* chatname,
            const char* abbrevname,
            const char* ininame,
            const wchar_t* filename_,
-           ImVec2 uv0_, ImVec2 uv1_, int threshold_,
+           const ImVec2 uv0_, const ImVec2 uv1_, const int threshold_,
            const char* desc_)
     : threshold(threshold_)
       , filename(filename_)
@@ -83,7 +83,7 @@ void Pcon::ResetCounts()
     }
 }
 
-void Pcon::SetEnabled(bool b)
+void Pcon::SetEnabled(const bool b)
 {
     if (*enabled == b)
         return;
@@ -179,7 +179,7 @@ void Pcon::Update(int delay)
         return;
     // Check pcon count in inventory
     if (!pcon_quantity_checked) {
-        const int qty = CheckInventory();
+        const auto qty = CheckInventory();
         if (qty < 0)
             return; // Inventory pointers not ready
         quantity = qty;
@@ -210,13 +210,13 @@ void Pcon::Update(int delay)
             && CanUseByInstanceType()
             && CanUseByEffect()) {
             bool used = false;
-            const int qty = CheckInventory(&used);
+            const auto qty = CheckInventory(&used);
             AfterUsed(used, qty);
         }
     }
 }
 
-bool Pcon::ReserveSlotForMove(size_t bagIndex, size_t slot)
+bool Pcon::ReserveSlotForMove(const size_t bagIndex, const size_t slot)
 {
     if (IsSlotReservedForMove(bagIndex, slot))
         return false;
@@ -224,19 +224,19 @@ bool Pcon::ReserveSlotForMove(size_t bagIndex, size_t slot)
     return true;
 }
 
-bool Pcon::UnreserveSlotForMove(size_t bagIndex, size_t slot)
+bool Pcon::UnreserveSlotForMove(const size_t bagIndex, const size_t slot)
 {
     reserved_bag_slots.at(bagIndex).at(slot) = 0;
     return true;
 }
 
-bool Pcon::IsSlotReservedForMove(size_t bagIndex, size_t slot)
+bool Pcon::IsSlotReservedForMove(const size_t bagIndex, const size_t slot)
 {
     const clock_t slot_reserved_at = reserved_bag_slots.at(bagIndex).at(slot);
     return slot_reserved_at && TIMER_DIFF(slot_reserved_at) < 3000; // 1000ms is reasonable for CtoS then StoC
 }
 
-void Pcon::AfterUsed(bool used, int qty)
+void Pcon::AfterUsed(const bool used, const int qty)
 {
     if (qty >= 0) {
         // if not, bag was undefined and we just ignore everything
@@ -273,10 +273,10 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem)
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr)
         return nullptr;
-    size_t emptySlotIdx = static_cast<size_t>(-1);
+    auto emptySlotIdx = static_cast<size_t>(-1);
     GW::Bag* emptyBag = nullptr;
 
-    for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) {
+    for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) {
         // Work from last bag to first; pcons at bottom of inventory
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr)
@@ -319,7 +319,7 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem)
     return item;
 }
 
-uint32_t Pcon::MoveItem(GW::Item* item, GW::Bag* bag, size_t slot, size_t quantity)
+uint32_t Pcon::MoveItem(GW::Item* item, GW::Bag* bag, const size_t slot, size_t quantity)
 {
     if (!item || !bag)
         return 0;
@@ -338,7 +338,7 @@ uint32_t Pcon::MoveItem(GW::Item* item, GW::Bag* bag, size_t slot, size_t quanti
     return quantity;
 }
 
-void Pcon::Refill(bool do_refill)
+void Pcon::Refill(const bool do_refill)
 {
     if (refilling == do_refill)
         return;
@@ -376,15 +376,14 @@ void Pcon::UpdateRefill()
         return;
     }
     quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
-    const int points_needed = threshold - quantity; // quantity is actually points e.g. 20 grog = 60 quantity
-    size_t quantity_to_move = 0;
+    const auto points_needed = threshold - quantity; // quantity is actually points e.g. 20 grog = 60 quantity
     GW::Bag** bags = GW::Items::GetBagArray();
     if (points_needed < 1 || bags == nullptr) {
         Refill(false);
         pcon_quantity_checked = false;
         return;
     }
-    for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
+    for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
         GW::Bag* storageBag = bags[bagIndex];
         if (storageBag == nullptr)
             continue; // No bag, skip
@@ -405,7 +404,7 @@ void Pcon::UpdateRefill()
                 pcon_quantity_checked = false;
                 return;
             }
-            quantity_to_move = static_cast<size_t>(ceil(static_cast<float>(points_needed) / static_cast<float>(points_per_item)));
+            auto quantity_to_move = static_cast<size_t>(ceil(static_cast<float>(points_needed) / static_cast<float>(points_per_item)));
             if (quantity_to_move > storageItem->quantity)
                 quantity_to_move = storageItem->quantity;
             const size_t slot_to = inventoryItem->slot;
@@ -420,8 +419,8 @@ void Pcon::UpdateRefill()
     }
 }
 
-int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, size_t from_bag,
-                         size_t to_bag) const
+int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag,
+                         const size_t to_bag) const
 {
     size_t count = 0;
     size_t used_qty = 0;
@@ -594,7 +593,7 @@ bool PconCons::CanUseByEffect() const
         return false;
 
     const size_t n_players = GW::Agents::GetAmountOfPlayersInInstance();
-    for (size_t i = 1; i <= n_players; ++i) {
+    for (size_t i = 1; i <= n_players; i++) {
         const DWORD currentPlayerAgID = GW::Agents::GetAgentIdByLoginNumber(i);
         if (currentPlayerAgID <= 0)
             return false;
@@ -664,8 +663,10 @@ size_t PconCity::QuantityForEach(const GW::Item* item) const
         case ItemID::RedBeanCake:
         case ItemID::JarOfHoney:
         case ItemID::KrytalLokum:
-        case ItemID::MandragorRootCake: return 1;
-        default: return 0;
+        case ItemID::MandragorRootCake:
+            return 1;
+        default:
+            return 0;
     }
 }
 
@@ -686,13 +687,15 @@ size_t PconAlcohol::QuantityForEach(const GW::Item* item) const
         case ItemID::WitchsBrew:
         case ItemID::Ricewine:
         case ItemID::ShamrockAle:
-        case ItemID::Cider: return 1;
+        case ItemID::Cider:
+            return 1;
         case ItemID::Grog:
         case ItemID::SpikedEggnog:
         case ItemID::AgedDwarvenAle:
         case ItemID::AgedHuntersAle:
         case ItemID::FlaskOfFirewater:
-        case ItemID::KrytanBrandy: return 5;
+        case ItemID::KrytanBrandy:
+            return 5;
         case ItemID::Keg: {
             const GW::ItemModifier* mod = item->mod_struct;
             if (mod == nullptr)
@@ -706,7 +709,8 @@ size_t PconAlcohol::QuantityForEach(const GW::Item* item) const
             }
             return 5; // this should never happen, but we keep it as a fallback
         }
-        default: return 0;
+        default:
+            return 0;
     }
 }
 
@@ -728,7 +732,7 @@ void PconAlcohol::ForceUse()
 }
 
 // ================================================
-void PconLunar::Update(int delay)
+void PconLunar::Update(const int delay)
 {
     UNREFERENCED_PARAMETER(delay);
     Pcon::Update(lunar_delay);
@@ -749,8 +753,10 @@ size_t PconLunar::QuantityForEach(const GW::Item* item) const
         case ItemID::LunarSnake:
         case ItemID::LunarMonkey:
         case ItemID::LunarRooster:
-        case ItemID::LunarDog: return 1;
-        default: return 0;
+        case ItemID::LunarDog:
+            return 1;
+        default:
+            return 0;
     }
 }
 

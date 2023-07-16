@@ -5,7 +5,7 @@
 #include <Modules/ToolboxSettings.h>
 
 ImGuiWindowFlags ToolboxWidget::GetWinFlags(
-    ImGuiWindowFlags flags, bool noinput_if_frozen) const
+    ImGuiWindowFlags flags, const bool noinput_if_frozen) const
 {
     flags |= ImGuiWindowFlags_NoTitleBar;
     flags |= ImGuiWindowFlags_NoScrollbar;

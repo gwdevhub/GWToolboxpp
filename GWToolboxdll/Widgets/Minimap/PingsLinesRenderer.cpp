@@ -130,7 +130,7 @@ void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent* pak)
     }
 
     if (new_session) {
-        for (unsigned int i = 0; i < pak->NumberPts - 1; ++i) {
+        for (auto i = 0u; i < pak->NumberPts - 1; i++) {
             DrawingLine l;
             l.x1 = pak->points[i + 0].x * drawing_scale;
             l.y1 = pak->points[i + 0].y * drawing_scale;
@@ -142,7 +142,7 @@ void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent* pak)
     else {
         if (drawings[pak->Player].lines.empty())
             return;
-        for (unsigned int i = 0; i < pak->NumberPts; ++i) {
+        for (auto i = 0u; i < pak->NumberPts; i++) {
             DrawingLine l;
             if (i == 0) {
                 l.x1 = drawings[pak->Player].lines.back().x2;
@@ -253,7 +253,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device)
     }
 }
 
-void PingsLinesRenderer::EnqueueVertex(float x, float y, Color color)
+void PingsLinesRenderer::EnqueueVertex(const float x, const float y, const Color color)
 {
     if (vertices_count == vertices_max)
         return;
@@ -380,7 +380,7 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device)
                  D3DLOCK_DISCARD);
 
     const float PI = 3.1415927f;
-    for (size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; i++) {
         const float angle = i * (2 * PI / count);
         const bool outer = (i % 2 == 0);
         const float radius = outer ? 1.0f : 0.8f;
@@ -414,7 +414,7 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device)
     _vertices[0].y = 0.0f;
     _vertices[0].z = 0.0f;
     _vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
-    for (size_t i = 1; i < vertex_count; ++i) {
+    for (size_t i = 1; i < vertex_count; i++) {
         const float angle = (i - 1) * (2 * PI / count);
         _vertices[i].x = std::cos(angle);
         _vertices[i].y = std::sin(angle);
@@ -449,7 +449,7 @@ float PingsLinesRenderer::AgentPing::GetScale() const
     return 1.0f;
 }
 
-bool PingsLinesRenderer::OnMouseDown(float x, float y)
+bool PingsLinesRenderer::OnMouseDown(const float x, const float y)
 {
     mouse_down = true;
     mouse_moved = false;
@@ -460,12 +460,12 @@ bool PingsLinesRenderer::OnMouseDown(float x, float y)
     return true;
 }
 
-void PingsLinesRenderer::AddMouseClickPing(GW::Vec2f pos)
+void PingsLinesRenderer::AddMouseClickPing(const GW::Vec2f pos)
 {
     pings.push_front(new ClickPing(pos.x, pos.y));
 }
 
-bool PingsLinesRenderer::OnMouseMove(float x, float y)
+bool PingsLinesRenderer::OnMouseMove(const float x, const float y)
 {
     if (!mouse_down)
         return false;
@@ -534,7 +534,7 @@ void PingsLinesRenderer::SendQueue()
 {
     if (queue.size() > 0 && queue.size() < 8) {
         GW::UI::CompassPoint pts[8];
-        for (unsigned int i = 0; i < queue.size(); ++i) {
+        for (auto i = 0u; i < queue.size(); i++) {
             pts[i] = queue[i];
         }
         DrawOnCompass(static_cast<size_t>(session_id), queue.size(), pts);

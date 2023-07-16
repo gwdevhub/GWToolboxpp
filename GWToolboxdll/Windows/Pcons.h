@@ -36,7 +36,7 @@ protected:
          ImVec2 uv0, ImVec2 uv1, int threshold,
          const char* desc = nullptr);
 
-    Pcon(const wchar_t* file, int threshold = 20)
+    Pcon(const wchar_t* file, const int threshold = 20)
         : Pcon(nullptr, nullptr, nullptr, file, {0, 0}, {1, 1}, threshold)
     {
     }
@@ -70,7 +70,7 @@ public:
     void Refill(bool do_refill = true);
     void SetEnabled(bool enabled);
     const bool IsEnabled() { return IsVisible() && *enabled; }
-    virtual bool IsVisible() const;
+    [[nodiscard]] virtual bool IsVisible() const;
     void AfterUsed(bool used, int qty);
     void Toggle() { SetEnabled(!IsEnabled()); }
     // Resets pcon counters so it needs to recalc number and refill.
@@ -115,8 +115,8 @@ protected:
         size_t from_bag = static_cast<size_t>(GW::Constants::Bag::Backpack),
         size_t to_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2)) const;
 
-    virtual bool CanUseByInstanceType() const;
-    virtual bool CanUseByEffect() const = 0;
+    [[nodiscard]] virtual bool CanUseByInstanceType() const;
+    [[nodiscard]] virtual bool CanUseByEffect() const = 0;
     virtual void OnButtonClick() { Toggle(); }
     virtual size_t QuantityForEach(const GW::Item* item) const = 0;
 
@@ -129,7 +129,7 @@ private:
 // A generic Pcon has an item_id and effect_id
 class PconGeneric : public Pcon {
 public:
-    PconGeneric(const wchar_t* file, DWORD item, GW::Constants::SkillID effect, int threshold = 20)
+    PconGeneric(const wchar_t* file, const DWORD item, const GW::Constants::SkillID effect, const int threshold = 20)
         : Pcon(file, threshold),
           itemID(item), effectID(effect)
     {
@@ -139,9 +139,9 @@ public:
                 const char* abbrev,
                 const char* ini,
                 const wchar_t* file,
-                ImVec2 uv0, ImVec2 uv1,
-                DWORD item, GW::Constants::SkillID effect,
-                int threshold,
+                const ImVec2 uv0, const ImVec2 uv1,
+                const DWORD item, const GW::Constants::SkillID effect,
+                const int threshold,
                 const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc),
           itemID(item), effectID(effect)
@@ -151,7 +151,7 @@ public:
     PconGeneric(const PconGeneric&) = delete;
 
 protected:
-    bool CanUseByEffect() const override;
+    [[nodiscard]] bool CanUseByEffect() const override;
     size_t QuantityForEach(const GW::Item* item) const override;
     void OnButtonClick() override;
 
@@ -167,9 +167,9 @@ public:
              const char* abbrev,
              const char* ini,
              const wchar_t* file,
-             ImVec2 uv0, ImVec2 uv1,
-             DWORD item, GW::Constants::SkillID effect,
-             int threshold,
+             const ImVec2 uv0, const ImVec2 uv1,
+             const DWORD item, const GW::Constants::SkillID effect,
+             const int threshold,
              const char* desc = nullptr)
         : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effect, threshold, desc)
     {
@@ -177,7 +177,7 @@ public:
 
     PconCons(const PconCons&) = delete;
 
-    bool CanUseByEffect() const override;
+    [[nodiscard]] bool CanUseByEffect() const override;
 };
 
 class PconCity : public Pcon {
@@ -186,8 +186,8 @@ public:
              const char* abbrev,
              const char* ini,
              const wchar_t* file,
-             ImVec2 uv0, ImVec2 uv1,
-             int threshold,
+             const ImVec2 uv0, const ImVec2 uv1,
+             const int threshold,
              const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc)
     {
@@ -195,16 +195,16 @@ public:
 
     PconCity(const PconCity&) = delete;
 
-    bool CanUseByInstanceType() const override;
-    bool IsVisible() const override;
-    bool CanUseByEffect() const override;
+    [[nodiscard]] bool CanUseByInstanceType() const override;
+    [[nodiscard]] bool IsVisible() const override;
+    [[nodiscard]] bool CanUseByEffect() const override;
     size_t QuantityForEach(const GW::Item* item) const override;
 };
 
 // Used only in outposts for refilling
 class PconRefiller : public PconCity {
 public:
-    PconRefiller(const wchar_t* file, DWORD item, int threshold = 250)
+    PconRefiller(const wchar_t* file, const DWORD item, const int threshold = 250)
         : PconRefiller(nullptr, nullptr, nullptr, file, {0, 0}, {1, 1}, item, threshold)
     {
         visible = false;
@@ -214,9 +214,9 @@ public:
                  const char* abbrev,
                  const char* ini,
                  const wchar_t* file,
-                 ImVec2 uv0, ImVec2 uv1,
-                 DWORD item,
-                 int threshold,
+                 const ImVec2 uv0, const ImVec2 uv1,
+                 const DWORD item,
+                 const int threshold,
                  const char* desc_ = nullptr)
         : PconCity(chat, abbrev, ini, file, uv0, uv1, threshold, desc_), itemID(item)
     {
@@ -227,9 +227,9 @@ public:
 
     PconRefiller(const PconRefiller&) = delete;
 
-    bool CanUseByInstanceType() const override { return false; }
-    bool CanUseByEffect() const override { return false; }
-    bool IsVisible() const override { return visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
+    [[nodiscard]] bool CanUseByInstanceType() const override { return false; }
+    [[nodiscard]] bool CanUseByEffect() const override { return false; }
+    [[nodiscard]] bool IsVisible() const override { return visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
     void Draw(IDirect3DDevice9* device) override;
     size_t QuantityForEach(const GW::Item* item) const override { return item->model_id == itemID ? 1u : 0u; }
 
@@ -243,8 +243,8 @@ public:
                 const char* abbrev,
                 const char* ini,
                 const wchar_t* file,
-                ImVec2 uv0, ImVec2 uv1,
-                int threshold,
+                const ImVec2 uv0, const ImVec2 uv1,
+                const int threshold,
                 const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc)
     {
@@ -252,7 +252,7 @@ public:
 
     PconAlcohol(const PconAlcohol&) = delete;
 
-    bool CanUseByEffect() const override;
+    [[nodiscard]] bool CanUseByEffect() const override;
     size_t QuantityForEach(const GW::Item* item) const override;
     void ForceUse();
 };
@@ -263,8 +263,8 @@ public:
               const char* abbrev,
               const char* ini,
               const wchar_t* file,
-              ImVec2 uv0, ImVec2 uv1,
-              int threshold,
+              const ImVec2 uv0, const ImVec2 uv1,
+              const int threshold,
               const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc)
     {
@@ -273,6 +273,6 @@ public:
     PconLunar(const PconLunar&) = delete;
 
     void Update(int delay = -1) override;
-    bool CanUseByEffect() const override;
+    [[nodiscard]] bool CanUseByEffect() const override;
     size_t QuantityForEach(const GW::Item* item) const override;
 };

@@ -25,7 +25,7 @@ private:
         uint32_t channel;
         FILETIME timestamp{};
 
-        TBChatMessage(wchar_t* _message, uint32_t _channel, FILETIME _timestamp)
+        TBChatMessage(wchar_t* _message, const uint32_t _channel, const FILETIME _timestamp)
         {
             msg = _message;
             timestamp = _timestamp;
@@ -38,7 +38,7 @@ private:
         TBSentMessage* prev{};
         std::wstring msg;
         uint32_t gw_message_address = 0; // Used to ensure that messages aren't logged twice
-        TBSentMessage(wchar_t* _message, uint32_t addr = 0)
+        TBSentMessage(wchar_t* _message, const uint32_t addr = 0)
         {
             msg = _message;
             gw_message_address = addr ? addr : (uint32_t)_message;
@@ -131,9 +131,9 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Chat Log"; }
-    const char* Description() const override { return "Guild Wars doesn't save your chat history or sent messages if you log out of the game.\nTurn this feature on to let GWToolbox keep better track of your chat history between logins"; }
-    const char* SettingsName() const override { return "Chat Settings"; }
+    [[nodiscard]] const char* Name() const override { return "Chat Log"; }
+    [[nodiscard]] const char* Description() const override { return "Guild Wars doesn't save your chat history or sent messages if you log out of the game.\nTurn this feature on to let GWToolbox keep better track of your chat history between logins"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Chat Settings"; }
 
     void Initialize() override;
     void RegisterSettingsContent() override;

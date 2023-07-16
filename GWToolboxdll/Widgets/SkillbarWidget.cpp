@@ -99,27 +99,27 @@ void SkillbarWidget::Update(float)
         has_sf = skillbar->skills[i].skill_id == GW::Constants::SkillID::Shadow_Form;
     }
 
-    for (size_t idx = 0u; idx < 8; idx++) {
-        skill_cooldown_to_string(m_skills[idx].cooldown, skillbar->skills[idx].GetRecharge());
+    for (auto i = 0; i < _countof(skillbar->skills); i++) {
+        skill_cooldown_to_string(m_skills[i].cooldown, skillbar->skills[i].GetRecharge());
         if (!display_skill_overlay && !display_effect_monitor)
             continue;
-        const GW::Constants::SkillID& skill_id = skillbar->skills[idx].skill_id;
+        const GW::Constants::SkillID& skill_id = skillbar->skills[i].skill_id;
         const Effect& effect = get_longest_effect(skill_id);
-        m_skills[idx].color = UptimeToColor(effect.remaining);
+        m_skills[i].color = UptimeToColor(effect.remaining);
         if (display_effect_monitor) {
             const auto* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
             if (!skill_data)
                 continue;
-            m_skills[idx].effects.clear();
+            m_skills[i].effects.clear();
             if (display_multiple_effects && has_sf && skill_data->profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) && skill_data->type == GW::Constants::SkillType::Enchantment) {
-                m_skills[idx].effects = get_effects(skill_id);
-                std::ranges::sort(m_skills[idx].effects, [](const Effect& a, const Effect& b) { return a.remaining > b.remaining; });
+                m_skills[i].effects = get_effects(skill_id);
+                std::ranges::sort(m_skills[i].effects, [](const Effect& a, const Effect& b) { return a.remaining > b.remaining; });
             }
             else if (effect.remaining > 0) {
-                m_skills[idx].effects.push_back(effect);
+                m_skills[i].effects.push_back(effect);
             }
 
-            for (auto& e : m_skills[idx].effects) {
+            for (auto& e : m_skills[i].effects) {
                 skill_cooldown_to_string(e.text, e.remaining);
                 e.color = UptimeToColor(e.remaining);
             }
@@ -171,11 +171,14 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             }
         }
         switch (layout) {
-            case Layout::Columns: skillsize.x = width / 2.f;
+            case Layout::Columns:
+                skillsize.x = width / 2.f;
                 break;
-            case Layout::Row: skillsize.x = width / 8.f;
+            case Layout::Row:
+                skillsize.x = width / 8.f;
                 break;
-            case Layout::Rows: skillsize.x = width / 4.f;
+            case Layout::Rows:
+                skillsize.x = width / 4.f;
                 break;
         }
         m_skill_width = m_skill_height = skillsize.y = skillsize.x;
@@ -207,7 +210,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
     ImGui::Begin(Name(), nullptr, window_flags);
     const ImVec2 winpos = ImGui::GetWindowPos();
-    for (size_t i = 0; i < m_skills.size(); ++i) {
+    for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
 
         // position of this skill
@@ -280,7 +283,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     ImGui::PopFont();
 }
 
-void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
+void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 {
     ImGui::PushFont(GetFont(font_effects));
 
@@ -325,7 +328,7 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
         size.y = effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size;
     }
 
-    for (size_t i = 0; i < skill.effects.size(); ++i) {
+    for (size_t i = 0; i < skill.effects.size(); i++) {
         const Effect& effect = skill.effects[i];
 
         ImVec2 pos1 = base;

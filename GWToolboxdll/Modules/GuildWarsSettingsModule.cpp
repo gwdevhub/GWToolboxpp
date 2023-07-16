@@ -210,7 +210,7 @@ namespace {
         return found == std::ranges::end(quest_entries) ? nullptr : &*found;
     }
 
-    QuestEntryGroup* GetQuestEntryGroup(GW::Constants::QuestID quest_id)
+    QuestEntryGroup* GetQuestEntryGroup(const GW::Constants::QuestID quest_id)
     {
         if (quest_id == static_cast<GW::Constants::QuestID>(0))
             return nullptr;
@@ -231,23 +231,23 @@ namespace {
     void GetPreferences(PreferencesStruct& out)
     {
         out.preference_values.resize(static_cast<uint32_t>(GW::UI::NumberPreference::Count), 0);
-        for (uint32_t i = 0; i < static_cast<uint32_t>(GW::UI::NumberPreference::Count); i++) {
+        for (auto i = 0u; i < static_cast<uint32_t>(GW::UI::NumberPreference::Count); i++) {
             out.preference_values[i] = GetPreference(static_cast<GW::UI::NumberPreference>(i));
         }
         out.preference_enums.resize(static_cast<uint32_t>(GW::UI::EnumPreference::Count), 0);
-        for (uint32_t i = 0; i < static_cast<uint32_t>(GW::UI::EnumPreference::Count); i++) {
+        for (auto i = 0u; i < static_cast<uint32_t>(GW::UI::EnumPreference::Count); i++) {
             out.preference_enums[i] = GetPreference(static_cast<GW::UI::EnumPreference>(i));
         }
         out.preference_flags.resize(static_cast<uint32_t>(GW::UI::FlagPreference::Count), 0);
-        for (uint32_t i = 0; i < static_cast<uint32_t>(GW::UI::FlagPreference::Count); i++) {
+        for (auto i = 0u; i < static_cast<uint32_t>(GW::UI::FlagPreference::Count); i++) {
             out.preference_flags[i] = GetPreference(static_cast<GW::UI::FlagPreference>(i));
         }
         out.window_positions.resize(GW::UI::WindowID::WindowID_Count, {0});
-        for (uint32_t i = 0; i < static_cast<uint32_t>(GW::UI::WindowID::WindowID_Count); i++) {
+        for (auto i = 0u; i < static_cast<uint32_t>(GW::UI::WindowID::WindowID_Count); i++) {
             out.window_positions[i] = *GetWindowPosition(static_cast<GW::UI::WindowID>(i));
         }
         out.key_mappings.resize(key_mappings_array_length, 0);
-        for (uint32_t i = 0; key_mappings_array && i < key_mappings_array_length; i++) {
+        for (auto i = 0u; key_mappings_array && i < key_mappings_array_length; i++) {
             out.key_mappings[i] = key_mappings_array[i];
         }
     }
@@ -255,19 +255,19 @@ namespace {
     // Write preferences to the game from a PreferencesStruct. Run this on the game thread.
     void SetPreferences(PreferencesStruct& in)
     {
-        for (uint32_t i = 0; i < in.preference_values.size() && i < static_cast<uint32_t>(GW::UI::NumberPreference::Count); i++) {
+        for (auto i = 0u; i < in.preference_values.size() && i < static_cast<uint32_t>(GW::UI::NumberPreference::Count); i++) {
             SetPreference(static_cast<GW::UI::NumberPreference>(i), in.preference_values[i]);
         }
-        for (uint32_t i = 0; i < in.preference_enums.size() && i < static_cast<uint32_t>(GW::UI::EnumPreference::Count); i++) {
+        for (auto i = 0u; i < in.preference_enums.size() && i < static_cast<uint32_t>(GW::UI::EnumPreference::Count); i++) {
             SetPreference(static_cast<GW::UI::EnumPreference>(i), in.preference_enums[i]);
         }
-        for (uint32_t i = 0; i < in.preference_flags.size() && i < static_cast<uint32_t>(GW::UI::FlagPreference::Count); i++) {
+        for (auto i = 0u; i < in.preference_flags.size() && i < static_cast<uint32_t>(GW::UI::FlagPreference::Count); i++) {
             SetPreference(static_cast<GW::UI::FlagPreference>(i), in.preference_flags[i]);
         }
-        for (uint32_t i = 0; i < in.window_positions.size() && i < static_cast<uint32_t>(GW::UI::WindowID::WindowID_Count); i++) {
+        for (auto i = 0u; i < in.window_positions.size() && i < static_cast<uint32_t>(GW::UI::WindowID::WindowID_Count); i++) {
             SetWindowPosition(static_cast<GW::UI::WindowID>(i), &in.window_positions[i]);
         }
-        for (uint32_t i = 0; i < in.key_mappings.size() && i < key_mappings_array_length; i++) {
+        for (auto i = 0u; i < in.key_mappings.size() && i < key_mappings_array_length; i++) {
             key_mappings_array[i] = in.key_mappings[i];
         }
     }
@@ -397,7 +397,7 @@ namespace {
         });
     }
 
-    void CmdSave(const wchar_t*, int argc, LPWSTR* argv)
+    void CmdSave(const wchar_t*, const int argc, LPWSTR* argv)
     {
         std::filesystem::path filename = GetDefaultFilename();
         if (argc > 1)
@@ -410,7 +410,7 @@ namespace {
         OnPreferencesSaveFileChosen(filename.string().c_str());
     }
 
-    void CmdLoad(const wchar_t*, int argc, LPWSTR* argv)
+    void CmdLoad(const wchar_t*, const int argc, LPWSTR* argv)
     {
         std::filesystem::path filename = GetDefaultFilename();
         if (argc > 1)
@@ -432,7 +432,7 @@ namespace {
         OPEN_LOG
     } pending_action = PendingAction::NONE;
 
-    void ToggleQuestEntrySection(QuestEntryGroup* entry, bool is_visible, bool refresh_log = true)
+    void ToggleQuestEntrySection(QuestEntryGroup* entry, const bool is_visible, const bool refresh_log = true)
     {
         if (!(entry && entry->is_visible != is_visible))
             return;
@@ -540,10 +540,12 @@ void GuildWarsSettingsModule::Update(float)
             }
         }
         break;
-        case PendingAction::OPEN_LOG: Keypress(GW::UI::ControlAction_OpenQuestLog);
+        case PendingAction::OPEN_LOG:
+            Keypress(GW::UI::ControlAction_OpenQuestLog);
             pending_action = PendingAction::NONE;
             break;
-        case PendingAction::EXPAND_ALL: if (quest_entry_group_context) {
+        case PendingAction::EXPAND_ALL:
+            if (quest_entry_group_context) {
                 auto& quest_entries = quest_entry_group_context->quest_entries;
                 for (auto& entry : quest_entries) {
                     ToggleQuestEntrySection(&entry, true);
@@ -551,7 +553,8 @@ void GuildWarsSettingsModule::Update(float)
             }
             pending_action = PendingAction::REFRESH_LOG;
             break;
-        case PendingAction::COLLAPSE_ALL: if (quest_entry_group_context) {
+        case PendingAction::COLLAPSE_ALL:
+            if (quest_entry_group_context) {
                 auto& quest_entries = quest_entry_group_context->quest_entries;
                 for (auto& entry : quest_entries) {
                     ToggleQuestEntrySection(&entry, false);

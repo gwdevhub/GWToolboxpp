@@ -101,7 +101,7 @@ namespace {
         return w ? w->morale : 100;
     }
 
-    uint32_t GetMorale(uint32_t agent_id)
+    uint32_t GetMorale(const uint32_t agent_id)
     {
         const auto w = GW::GetWorldContext();
         if (!(w && w->party_morale_related.size()))
@@ -114,7 +114,7 @@ namespace {
     }
 
     // Get matching effect from gwtoolbox overlay
-    const GW::Effect* GetEffect(uint32_t effect_id)
+    const GW::Effect* GetEffect(const uint32_t effect_id)
     {
         const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
         if (!effects)
@@ -127,7 +127,7 @@ namespace {
     }
 
     // Get matching effect from gwtoolbox overlay
-    const GW::Effect* GetLongestEffectBySkillId(GW::Constants::SkillID skill_id)
+    const GW::Effect* GetLongestEffectBySkillId(const GW::Constants::SkillID skill_id)
     {
         const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
         if (!effects)
@@ -142,25 +142,37 @@ namespace {
     }
 
     // Find the drawing order of the skill based on the gw effect monitor
-    uint32_t GetEffectSortOrder(GW::Constants::SkillID skill_id)
+    uint32_t GetEffectSortOrder(const GW::Constants::SkillID skill_id)
     {
         switch (skill_id) {
-            case GW::Constants::SkillID::Hard_mode: return 0;
-            case GW::Constants::SkillID::No_Skill: return 1; // Morale boost from ui message 0x10000047
+            case GW::Constants::SkillID::Hard_mode:
+                return 0;
+            case GW::Constants::SkillID::No_Skill:
+                return 1; // Morale boost from ui message 0x10000047
         }
         const GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
         // Lifted from GmEffect::ActivateEffect(), removed assertion and instead whack everything else into 0xd
         switch (skill->type) {
-            case GW::Constants::SkillType::Stance: return 9;
-            case GW::Constants::SkillType::Hex: return 5;
-            case GW::Constants::SkillType::Spell: return 7;
-            case GW::Constants::SkillType::Enchantment: return 0xc;
-            case GW::Constants::SkillType::Condition: return 4;
-            case GW::Constants::SkillType::Skill: return 8;
-            case GW::Constants::SkillType::Glyph: return 0xb;
-            case GW::Constants::SkillType::Preparation: return 10;
-            case GW::Constants::SkillType::Ritual: return 6;
-            default: return 0xd;
+            case GW::Constants::SkillType::Stance:
+                return 9;
+            case GW::Constants::SkillType::Hex:
+                return 5;
+            case GW::Constants::SkillType::Spell:
+                return 7;
+            case GW::Constants::SkillType::Enchantment:
+                return 0xc;
+            case GW::Constants::SkillType::Condition:
+                return 4;
+            case GW::Constants::SkillType::Skill:
+                return 8;
+            case GW::Constants::SkillType::Glyph:
+                return 0xb;
+            case GW::Constants::SkillType::Preparation:
+                return 10;
+            case GW::Constants::SkillType::Ritual:
+                return 6;
+            default:
+                return 0xd;
         }
     }
 
@@ -228,7 +240,7 @@ namespace {
     }
 
     // Find index of active effect from gwtoolbox overlay
-    size_t GetEffectIndex(const std::vector<GW::Effect>& arr, GW::Constants::SkillID skill_id)
+    size_t GetEffectIndex(const std::vector<GW::Effect>& arr, const GW::Constants::SkillID skill_id)
     {
         for (size_t i = 0; i < arr.size(); i++) {
             if (arr[i].skill_id == skill_id)
@@ -277,7 +289,7 @@ namespace {
     }
 
     // Remove effect from gwtoolbox overlay. Will only remove if the game has also removed it, otherwise false.
-    bool RemoveEffect(uint32_t effect_id)
+    bool RemoveEffect(const uint32_t effect_id)
     {
         if (GetEffect(effect_id))
             return false; // Game hasn't removed the effect yet.
@@ -307,10 +319,12 @@ namespace {
         switch (effect.skill_id) {
             case GW::Constants::SkillID::Aspect_of_Exhaustion:
             case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
-            case GW::Constants::SkillID::Scorpion_Aspect: effect.duration = 30.f;
+            case GW::Constants::SkillID::Scorpion_Aspect:
+                effect.duration = 30.f;
                 effect.timestamp = timer;
                 return false;
-            default: break;
+            default:
+                break;
         }
         if (effect.duration == 0.f)
             return true;
@@ -346,7 +360,7 @@ namespace {
     }
 
     // Static handler for GW UI Message events. Updates ongoing effects and refreshes UI position.
-    void OnEffectUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*)
+    void OnEffectUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wParam, void*)
     {
         switch (message_id) {
             case GW::UI::UIMessage::kMinionCountUpdated: {
@@ -401,7 +415,8 @@ namespace {
             case GW::UI::UIMessage::kUIPositionChanged: // Refresh GW UI element position
                 RefreshPosition();
                 break;
-            default: break;
+            default:
+                break;
         }
     }
 }
@@ -457,7 +472,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     int row_skills_drawn = 0;
     constexpr int row_idx = 1;
     int draw = 0;
-    const auto next_effect = [&](std::string_view str = "") {
+    const auto next_effect = [&](const std::string_view str = "") {
         row_skills_drawn++;
         if (!str.empty()) {
             const ImVec2 label_size = ImGui::CalcTextSize(str.data());

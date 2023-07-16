@@ -75,8 +75,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Guild Wars Skill List"; }
-    const char* Icon() const override { return ICON_FA_LIST; }
+    [[nodiscard]] const char* Name() const override { return "Guild Wars Skill List"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_LIST; }
 
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;

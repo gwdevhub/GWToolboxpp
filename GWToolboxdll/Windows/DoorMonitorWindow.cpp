@@ -80,11 +80,14 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice)
             packet.header = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER;
             packet.animation_stage = 3;
             switch (o.animation_type) {
-                case 3: packet.animation_type = 9;
+                case 3:
+                    packet.animation_type = 9;
                     break;
-                case 9: packet.animation_type = 16;
+                case 9:
+                    packet.animation_type = 16;
                     break;
-                case 16: packet.animation_type = 3;
+                case 16:
+                    packet.animation_type = 3;
                     break;
             }
             packet.object_id = o.object_id;

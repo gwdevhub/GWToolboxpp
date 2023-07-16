@@ -67,7 +67,7 @@ void HealthWidget::SaveSettings(ToolboxIni* ini)
 
         constexpr size_t buffer_size = 32;
         char buf[buffer_size];
-        for (size_t i = 0; i < thresholds.size(); ++i) {
+        for (size_t i = 0; i < thresholds.size(); i++) {
             snprintf(buf, sizeof(buf), "threshold%03zu", i);
             thresholds[i]->SaveSettings(inifile, buf);
         }
@@ -93,7 +93,7 @@ void HealthWidget::DrawSettingInternal()
         ImGui::SetTooltip("The first matching threshold will be used.");
     if (thresholdsNode) {
         bool changed = false;
-        for (size_t i = 0; i < thresholds.size(); ++i) {
+        for (size_t i = 0; i < thresholds.size(); i++) {
             Threshold* threshold = thresholds[i];
 
             if (!threshold)
@@ -105,16 +105,20 @@ void HealthWidget::DrawSettingInternal()
             changed |= threshold->DrawSettings(op);
 
             switch (op) {
-                case Threshold::Operation::None: break;
-                case Threshold::Operation::MoveUp: if (i > 0) {
+                case Threshold::Operation::None:
+                    break;
+                case Threshold::Operation::MoveUp:
+                    if (i > 0) {
                         std::swap(thresholds[i], thresholds[i - 1]);
                     }
                     break;
-                case Threshold::Operation::MoveDown: if (i + 1 < thresholds.size()) {
+                case Threshold::Operation::MoveDown:
+                    if (i + 1 < thresholds.size()) {
                         std::swap(thresholds[i], thresholds[i + 1]);
                     }
                     break;
-                case Threshold::Operation::Delete: thresholds.erase(thresholds.begin() + static_cast<int>(i));
+                case Threshold::Operation::Delete:
+                    thresholds.erase(thresholds.begin() + static_cast<int>(i));
                     delete threshold;
                     threshold = nullptr;
                     --i;
@@ -176,7 +180,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice)
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
             const auto background = ImColor(Colors::Black());
 
-            for (size_t i = 0; i < thresholds.size(); ++i) {
+            for (size_t i = 0; i < thresholds.size(); i++) {
                 Threshold* threshold = thresholds[i];
 
                 if (!threshold)
@@ -242,7 +246,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice)
                         if (agent_name_ping.size()) {
                             char buffer[512];
                             const std::string agent_name_str = GuiUtils::WStringToString(agent_name_ping);
-                            const int current_hp = static_cast<int>(target->hp * target->max_hp);
+                            const auto current_hp = static_cast<int>(target->hp * target->max_hp);
                             snprintf(buffer, sizeof(buffer), "%s's Health is %d of %d. (%.0f %%)", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', buffer);
                         }
@@ -269,7 +273,7 @@ HealthWidget::Threshold::Threshold(ToolboxIni* ini, const char* section)
     color = Colors::Load(ini, section, VAR_NAME(color), color);
 }
 
-HealthWidget::Threshold::Threshold(const char* _name, Color _color, int _value)
+HealthWidget::Threshold::Threshold(const char* _name, const Color _color, const int _value)
     : ui_id(++cur_ui_id)
       , value(_value)
       , color(_color)

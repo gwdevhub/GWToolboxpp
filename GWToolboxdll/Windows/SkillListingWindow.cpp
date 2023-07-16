@@ -14,7 +14,7 @@
 
 static uintptr_t skill_array_addr;
 
-static void printchar(wchar_t c)
+static void printchar(const wchar_t c)
 {
     if (c >= L' ' && c <= L'~') {
         printf("%lc", c);
@@ -243,48 +243,82 @@ const std::wstring SkillListingWindow::Skill::GetSkillType()
 {
     std::wstring str(IsElite() ? L"Elite " : L"");
     switch (static_cast<uint32_t>(skill->type)) {
-        case 3: return str += L"Stance", str;
-        case 4: return str += L"Hex Spell", str;
-        case 5: return str += L"Spell", str;
-        case 6: if (skill->special & 0x800000)
+        case 3:
+            return str += L"Stance", str;
+        case 4:
+            return str += L"Hex Spell", str;
+        case 5:
+            return str += L"Spell", str;
+        case 6:
+            if (skill->special & 0x800000)
                 str += L"Flash ";
             return str += L"Enchantment Spell", str;
-        case 7: return str += L"Signet", str;
-        case 9: return str += L"Well Spell", str;
-        case 10: return str += L"Touch Skill", str;
-        case 11: return str += L"Ward Spell", str;
-        case 12: return str += L"Glyph", str;
-        case 14: switch (skill->weapon_req) {
-                case 1: return str += L"Axe Attack", str;
-                case 2: return str += L"Bow Attack", str;
-                case 8: switch (skill->combo) {
-                        case 1: return str += L"Lead Attack", str;
-                        case 2: return str += L"Off-Hand Attack", str;
-                        case 3: return str += L"Dual Attack", str;
+        case 7:
+            return str += L"Signet", str;
+        case 9:
+            return str += L"Well Spell", str;
+        case 10:
+            return str += L"Touch Skill", str;
+        case 11:
+            return str += L"Ward Spell", str;
+        case 12:
+            return str += L"Glyph", str;
+        case 14:
+            switch (skill->weapon_req) {
+                case 1:
+                    return str += L"Axe Attack", str;
+                case 2:
+                    return str += L"Bow Attack", str;
+                case 8:
+                    switch (skill->combo) {
+                        case 1:
+                            return str += L"Lead Attack", str;
+                        case 2:
+                            return str += L"Off-Hand Attack", str;
+                        case 3:
+                            return str += L"Dual Attack", str;
                     }
                     return str += L"Dagger Attack", str;
-                case 16: return str += L"Hammer Attack", str;
-                case 32: return str += L"Scythe Attack", str;
-                case 64: return str += L"Spear Attack", str;
-                case 70: return str += L"Ranged Attack", str;
-                case 128: return str += L"Sword Attack", str;
+                case 16:
+                    return str += L"Hammer Attack", str;
+                case 32:
+                    return str += L"Scythe Attack", str;
+                case 64:
+                    return str += L"Spear Attack", str;
+                case 70:
+                    return str += L"Ranged Attack", str;
+                case 128:
+                    return str += L"Sword Attack", str;
             }
             return str += L"Melee Attack", str;
-        case 15: return str += L"Shout", str;
-        case 19: return str += L"Preparation", str;
-        case 20: return str += L"Pet Attack", str;
-        case 21: return str += L"Trap", str;
-        case 22: switch (skill->profession) {
-                case 8: return str += L"Binding Ritual", str;
-                case 2: return str += L"Nature Ritual", str;
+        case 15:
+            return str += L"Shout", str;
+        case 19:
+            return str += L"Preparation", str;
+        case 20:
+            return str += L"Pet Attack", str;
+        case 21:
+            return str += L"Trap", str;
+        case 22:
+            switch (skill->profession) {
+                case 8:
+                    return str += L"Binding Ritual", str;
+                case 2:
+                    return str += L"Nature Ritual", str;
             }
             return str += L"Ebon Vanguard Ritual", str;
-        case 24: return str += L"Item Spell", str;
-        case 25: return str += L"Weapon Spell", str;
-        case 26: return str += L"Form", str;
-        case 27: return str += L"Chant", str;
-        case 28: return str += L"Echo", str;
-        default: return str += L"Skill", str;
+        case 24:
+            return str += L"Item Spell", str;
+        case 25:
+            return str += L"Weapon Spell", str;
+        case 26:
+            return str += L"Form", str;
+        case 27:
+            return str += L"Chant", str;
+        case 28:
+            return str += L"Echo", str;
+        default:
+            return str += L"Skill", str;
     }
 }
 

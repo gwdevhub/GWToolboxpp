@@ -27,13 +27,13 @@ void KeyboardLanguageFix::Initialize()
     }
 
     HKL loaded_languages[0xff];
-    const int keyboard_languages_count = GetKeyboardLayoutList(_countof(loaded_languages), loaded_languages);
+    const auto keyboard_languages_count = GetKeyboardLayoutList(_countof(loaded_languages), loaded_languages);
     if (!keyboard_languages_count) {
         Log::Error("Failed to GetKeyboardLayoutList, GetLastError = %#08x", GetLastError());
         return;
     }
     char layout_name[KL_NAMELENGTH];
-    for (int i = 0; i < keyboard_languages_count; i++) {
+    for (auto i = 0; i < keyboard_languages_count; i++) {
         if (!ActivateKeyboardLayout(loaded_languages[i], 0)) {
             Log::Error("Failed to ActivateKeyboardLayout, GetLastError = %#08x", GetLastError());
             return;

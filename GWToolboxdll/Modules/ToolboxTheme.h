@@ -12,8 +12,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Theme"; }
-    const char* Icon() const override { return ICON_FA_PALETTE; }
+    [[nodiscard]] const char* Name() const override { return "Theme"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_PALETTE; }
 
     void Terminate() override;
     void LoadSettings(ToolboxIni* ini) override;

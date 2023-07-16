@@ -81,7 +81,7 @@ const GW::Constants::SkillID* BuildsWindow::GetPreferredSkillOrder(const GW::Con
     return nullptr;
 }
 
-void BuildsWindow::OnSkillbarLoad(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*)
+void BuildsWindow::OnSkillbarLoad(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wParam, void*)
 {
     if (message_id != GW::UI::UIMessage::kSendLoadSkillbar)
         return;
@@ -118,7 +118,7 @@ void BuildsWindow::DrawHelp()
     ImGui::TreePop();
 }
 
-void BuildsWindow::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv)
+void BuildsWindow::CmdLoad(const wchar_t* message, const int argc, LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
@@ -137,7 +137,7 @@ void BuildsWindow::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv)
     Log::Error("Not enough arguments. See Help for chat commands");
 }
 
-bool BuildsWindow::BuildSkillTemplateString(const TeamBuild& tbuild, unsigned int idx, char* out, unsigned int out_len)
+bool BuildsWindow::BuildSkillTemplateString(const TeamBuild& tbuild, const unsigned int idx, char* out, const unsigned int out_len)
 {
     if (!out || idx >= tbuild.builds.size())
         return false;
@@ -199,7 +199,7 @@ void BuildsWindow::DrawSettingInternal()
     }
 }
 
-void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j)
+void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, const unsigned int j)
 {
     Build& build = tbuild.builds[j];
     const float font_scale = ImGui::GetIO().FontGlobalScale;
@@ -360,7 +360,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::End();
     }
 
-    for (unsigned int i = 0; i < teambuilds.size(); ++i) {
+    for (auto i = 0u; i < teambuilds.size(); i++) {
         if (!teambuilds[i].edit_open)
             continue;
         TeamBuild& tbuild = teambuilds[i];
@@ -512,7 +512,7 @@ const char* BuildsWindow::AddPreferredBuild(const char* code)
     return nullptr;
 }
 
-bool BuildsWindow::GetCurrentSkillBar(char* out, size_t out_len)
+bool BuildsWindow::GetCurrentSkillBar(char* out, const size_t out_len)
 {
     if (!(out && out_len))
         return false;
@@ -553,7 +553,7 @@ bool BuildsWindow::GetCurrentSkillBar(char* out, size_t out_len)
     return EncodeSkillTemplate(templ, out, out_len) && DecodeSkillTemplate(&templ, out);
 }
 
-const char* BuildsWindow::BuildName(unsigned int idx) const
+const char* BuildsWindow::BuildName(const unsigned int idx) const
 {
     if (idx < teambuilds.size()) {
         return teambuilds[idx].name;
@@ -561,7 +561,7 @@ const char* BuildsWindow::BuildName(unsigned int idx) const
     return nullptr;
 }
 
-void BuildsWindow::Send(unsigned int idx)
+void BuildsWindow::Send(const unsigned int idx)
 {
     if (idx < teambuilds.size()) {
         Send(teambuilds[idx]);
@@ -573,12 +573,12 @@ void BuildsWindow::Send(const TeamBuild& tbuild)
     if (!std::string(tbuild.name).empty()) {
         queue.push(tbuild.name);
     }
-    for (unsigned int i = 0; i < tbuild.builds.size(); ++i) {
+    for (auto i = 0u; i < tbuild.builds.size(); i++) {
         Send(tbuild, i);
     }
 }
 
-void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx)
+void BuildsWindow::View(const TeamBuild& tbuild, const unsigned int idx)
 {
     if (idx >= tbuild.builds.size())
         return;
@@ -597,7 +597,7 @@ void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx)
     });
 }
 
-void BuildsWindow::Load(const TeamBuild& tbuild, unsigned int idx)
+void BuildsWindow::Load(const TeamBuild& tbuild, const unsigned int idx)
 {
     if (idx >= tbuild.builds.size())
         return;
@@ -676,7 +676,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
     Load(teambuild_it->first, teambuild_it->second);
 }
 
-void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx)
+void BuildsWindow::LoadPcons(const TeamBuild& tbuild, const unsigned int idx)
 {
     if (idx >= tbuild.builds.size())
         return;
@@ -725,7 +725,7 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx)
     }
 }
 
-void BuildsWindow::SendPcons(const TeamBuild& tbuild, unsigned int idx, bool include_build_name)
+void BuildsWindow::SendPcons(const TeamBuild& tbuild, const unsigned int idx, const bool include_build_name)
 {
     if (idx >= tbuild.builds.size())
         return;
@@ -755,7 +755,7 @@ void BuildsWindow::SendPcons(const TeamBuild& tbuild, unsigned int idx, bool inc
         queue.push(pconsStr.c_str());
 }
 
-void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx)
+void BuildsWindow::Send(const TeamBuild& tbuild, const unsigned int idx)
 {
     char buf[192] = {0};
     if (!BuildSkillTemplateString(tbuild, idx, buf, 192))
@@ -765,7 +765,7 @@ void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx)
         SendPcons(tbuild, idx, false);
 }
 
-void BuildsWindow::Update(float delta)
+void BuildsWindow::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (!queue.empty() && TIMER_DIFF(send_timer) > 600) {
@@ -841,11 +841,11 @@ bool BuildsWindow::MoveOldBuilds(ToolboxIni* ini)
     for (const ToolboxIni::Entry& oldentry : oldentries) {
         const char* section = oldentry.pItem;
         if (strncmp(section, "builds", 6) == 0) {
-            const int count = ini->GetLongValue(section, "count", 12);
+            const auto count = ini->GetLongValue(section, "count", 12);
             teambuilds.push_back(TeamBuild(ini->GetValue(section, "buildname", "")));
             TeamBuild& tbuild = teambuilds.back();
             tbuild.show_numbers = ini->GetBoolValue(section, "showNumbers", true);
-            for (int i = 0; i < count; ++i) {
+            for (auto i = 0; i < count; i++) {
                 char namekey[16];
                 char templatekey[16];
                 snprintf(namekey, 16, "name%d", i);
@@ -891,11 +891,11 @@ void BuildsWindow::LoadFromFile()
             continue;
         }
         const char* section = entry.pItem;
-        const int count = inifile->GetLongValue(section, "count", 12);
+        const auto count = inifile->GetLongValue(section, "count", 12);
         teambuilds.push_back(TeamBuild(inifile->GetValue(section, "buildname", "")));
         TeamBuild& tbuild = teambuilds.back();
         tbuild.show_numbers = inifile->GetBoolValue(section, "showNumbers", true);
-        for (int i = 0; i < count; ++i) {
+        for (auto i = 0; i < count; i++) {
             char namekey[16];
             char templatekey[16];
             char pconskey[16];
@@ -938,14 +938,14 @@ void BuildsWindow::SaveToFile()
         // clear builds from ini
         inifile->Reset();
 
-        for (unsigned int i = 0; i < preferred_skill_order_builds.size(); ++i) {
+        for (auto i = 0u; i < preferred_skill_order_builds.size(); i++) {
             const Build& tbuild = preferred_skill_order_builds[i];
             const auto section = "preferred_skill_orders";
             inifile->SetValue(section, tbuild.code, tbuild.code);
         }
 
         // then save
-        for (unsigned int i = 0; i < teambuilds.size(); ++i) {
+        for (auto i = 0u; i < teambuilds.size(); i++) {
             const TeamBuild& tbuild = teambuilds[i];
             char section[16];
             snprintf(section, 16, "builds%03d", i);

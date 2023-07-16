@@ -23,8 +23,8 @@ public:
     nlohmann::json ToJSON_V_1_0();
     void ExportToJSON(Version version);
 
-    const char* Name() const override { return "Observer Export"; };
-    const char* Icon() const override { return ICON_FA_EYE; }
+    [[nodiscard]] const char* Name() const override { return "Observer Export"; };
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
 

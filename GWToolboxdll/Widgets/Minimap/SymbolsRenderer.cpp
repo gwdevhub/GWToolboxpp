@@ -63,7 +63,7 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
                  (VOID**)&vertices, D3DLOCK_DISCARD);
 
-    auto AddVertex = [&vertices, &offset](float x, float y, Color color) -> void {
+    auto AddVertex = [&vertices, &offset](const float x, const float y, const Color color) -> void {
         vertices[0].x = x;
         vertices[0].y = y;
         vertices[0].z = 0.0f;
@@ -77,7 +77,7 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
     const float PI = 3.1415927f;
     const float star_size_big = 300.0f;
     const float star_size_small = 150.0f;
-    for (unsigned int i = 0; i < star_ntriangles; ++i) {
+    for (auto i = 0u; i < star_ntriangles; i++) {
         const float angle1 = 2 * (i + 0) * PI / star_ntriangles;
         const float angle2 = 2 * (i + 1) * PI / star_ntriangles;
         const float size1 = ((i + 0) % 2 == 0 ? star_size_small : star_size_big);

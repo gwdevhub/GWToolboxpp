@@ -353,7 +353,7 @@ public:
         ObservableSkillStats stats = ObservableSkillStats();
 
         const std::string Name();
-        const std::string DebugName();
+        std::string DebugName();
 
     private:
         wchar_t name_enc[64] = {0};
@@ -415,8 +415,8 @@ public:
 
         std::string Name();
         std::string Description();
-        bool GetIsPvP() const { return (flags & 0x1) != 0; }
-        bool GetIsGuildHall() const { return (flags & 0x800000) != 0; }
+        [[nodiscard]] bool GetIsPvP() const { return (flags & 0x1) != 0; }
+        [[nodiscard]] bool GetIsGuildHall() const { return (flags & 0x800000) != 0; }
 
     private:
         std::string name = "";
@@ -431,11 +431,11 @@ public:
     // applies to skill.target
     enum class TargetType {
         no_target = 0,
-        anyone = 1,
+        anyone    = 1,
         // 2?
-        ally = 3,
+        ally       = 3,
         other_ally = 4,
-        enemy = 5,
+        enemy      = 5,
     };
 
     ~ObserverModule() override;
@@ -450,8 +450,8 @@ public:
     const bool IsActive();
     bool is_enabled = false;
 
-    const char* Name() const override { return "Observer Module"; }
-    const char* Icon() const override { return ICON_FA_EYE; }
+    [[nodiscard]] const char* Name() const override { return "Observer Module"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
 
     void Initialize() override;
     void Terminate() override;

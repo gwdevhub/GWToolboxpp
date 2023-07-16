@@ -13,7 +13,7 @@ private:
     struct LeaderboardEntry {
         LeaderboardEntry() = default;
 
-        LeaderboardEntry(uint32_t m, uint32_t r, uint32_t a, uint32_t f, const wchar_t* n, const wchar_t* t)
+        LeaderboardEntry(const uint32_t m, const uint32_t r, const uint32_t a, const uint32_t f, const wchar_t* n, const wchar_t* t)
             : map_id(m), rank(r), allegiance(a), faction(f)
         {
             wcscpy(guild_wstr, n); // Copy the string to avoid read errors later.
@@ -23,7 +23,7 @@ private:
             strcpy(tag_str, GuiUtils::WStringToString(tag_wstr).c_str());
             guild_wiki_url = guild_wstr;
             std::ranges::transform(guild_wiki_url, guild_wiki_url.begin(),
-                                   [](wchar_t ch) -> wchar_t {
+                                   [](const wchar_t ch) -> wchar_t {
                                        return ch == ' ' ? L'_' : ch;
                                    });
             guild_wiki_url = L"https://wiki.guildwars.com/wiki/Guild:" + guild_wiki_url;
@@ -51,8 +51,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Faction Leaderboard"; }
-    const char* Icon() const override { return ICON_FA_GLOBE; }
+    [[nodiscard]] const char* Name() const override { return "Faction Leaderboard"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
     void Initialize() override;
 

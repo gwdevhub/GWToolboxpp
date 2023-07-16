@@ -21,11 +21,11 @@
 
 #include <Color.h>
 
-#define IniFilename L"Markers.ini"
-
 using namespace std::string_literals;
 
-CustomRenderer::CustomLine::CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n)
+constexpr auto ini_filename = L"Markers.ini";
+
+CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* n)
     : p1(x1, y1)
       , p2(x2, y2)
       , map(m)
@@ -50,7 +50,7 @@ CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const f
         GuiUtils::StrCopy(name, "marker", sizeof(name));
 };
 
-CustomRenderer::CustomPolygon::CustomPolygon(GW::Constants::MapID m, const char* n)
+CustomRenderer::CustomPolygon::CustomPolygon(const GW::Constants::MapID m, const char* n)
     : map(m), shape()
 {
     if (n)
@@ -75,7 +75,7 @@ void CustomRenderer::LoadMarkers()
 
     if (inifile == nullptr)
         inifile = new ToolboxIni(false, false, false);
-    inifile->LoadFile(Resources::GetPath(IniFilename).c_str());
+    inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
 
     // then load new
     ToolboxIni::TNamesDepend entries;
@@ -113,9 +113,9 @@ void CustomRenderer::LoadMarkers()
             for (auto i = 0; i < CustomPolygon::max_points; i++) {
                 GW::Vec2f vec;
                 vec.x = static_cast<float>(
-                    inifile->GetDoubleValue(section, (std::string("point[") + std::to_string(i) + "].x").c_str(), 0.f));
+                    inifile->GetDoubleValue(section, ("point["s + std::to_string(i) + "].x").c_str(), 0.f));
                 vec.y = static_cast<float>(
-                    inifile->GetDoubleValue(section, (std::string("point[") + std::to_string(i) + "].y").c_str(), 0.f));
+                    inifile->GetDoubleValue(section, ("point["s + std::to_string(i) + "].y").c_str(), 0.f));
                 if (vec.x != 0.f || vec.y != 0.f)
                     polygon.points.emplace_back(vec);
                 else
@@ -191,9 +191,9 @@ void CustomRenderer::SaveMarkers() const
             snprintf(section, 32, "custompolygon%03d", i);
             for (auto j = 0u; j < polygon.points.size(); j++) {
                 inifile->SetDoubleValue(
-                    section, (std::string("point[") + std::to_string(j) + "].x").c_str(), polygon.points.at(j).x);
+                    section, ("point["s + std::to_string(j) + "].x").c_str(), polygon.points.at(j).x);
                 inifile->SetDoubleValue(
-                    section, (std::string("point[") + std::to_string(j) + "].y").c_str(), polygon.points.at(j).y);
+                    section, ("point["s + std::to_string(j) + "].y").c_str(), polygon.points.at(j).y);
             }
             Colors::Save(inifile, section, "color", polygon.color);
             Colors::Save(inifile, section, "color_sub", polygon.color_sub);
@@ -203,7 +203,7 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetBoolValue(section, "filled", polygon.filled);
         }
 
-        inifile->SaveFile(Resources::GetPath(IniFilename).c_str());
+        inifile->SaveFile(Resources::GetPath(ini_filename).c_str());
     }
 }
 
@@ -244,7 +244,7 @@ void CustomRenderer::DrawLineSettings()
         Invalidate();
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
     ImGui::PushID("lines");
-    for (size_t i = 0; i < lines.size(); ++i) {
+    for (size_t i = 0; i < lines.size(); i++) {
         CustomLine& line = lines[i];
         ImGui::PushID(static_cast<int>(i));
         markers_changed |= ImGui::Checkbox("##visible", &line.visible);
@@ -315,7 +315,7 @@ void CustomRenderer::DrawMarkerSettings()
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
     ImGui::PushID("markers");
     const auto input_item_width = (ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 8) / 8;
-    for (size_t i = 0; i < markers.size(); ++i) {
+    for (size_t i = 0; i < markers.size(); i++) {
         CustomMarker& marker = markers[i];
         bool marker_changed = false;
         ImGui::PushID(static_cast<int>(i));
@@ -395,7 +395,7 @@ void CustomRenderer::DrawMarkerSettings()
 CustomRenderer::CustomMarker::CustomMarker(const char* n)
     : CustomMarker(0, 0, 100.0f, Shape::LineCircle, GW::Map::GetMapID(), n)
 {
-    if (const auto* const player = GW::Agents::GetPlayerAsAgentLiving()) {
+    if (const auto player = GW::Agents::GetPlayerAsAgentLiving()) {
         pos.x = player->pos.x;
         pos.y = player->pos.y;
     }
@@ -411,9 +411,9 @@ void CustomRenderer::DrawPolygonSettings()
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
     ImGui::PushID("polygons");
     const float input_item_width = (ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 8) / 8;
-    for (size_t i = 0; i < polygons.size(); ++i) {
+    for (size_t i = 0; i < polygons.size(); i++) {
         bool polygon_changed = false;
-        const int signed_idx = static_cast<int>(i);
+        const auto signed_idx = static_cast<int>(i);
         const bool show_details = signed_idx == show_polygon_details;
         CustomPolygon& polygon = polygons.at(i);
         ImGui::PushID(signed_idx);
@@ -468,17 +468,17 @@ void CustomRenderer::DrawPolygonSettings()
         if (show_details) {
             ImGui::Indent();
             if (polygon.points.size() < CustomPolygon::max_points && ImGui::Button("Add Polygon Point##add")) {
-                if (const auto* const player = GW::Agents::GetPlayerAsAgentLiving()) {
+                if (const auto player = GW::Agents::GetPlayerAsAgentLiving()) {
                     polygon.points.emplace_back(player->pos.x, player->pos.y);
                     polygon_changed = true;
                 }
             }
             int remove_point = -1;
             for (auto j = 0u; j < polygon.points.size(); j++) {
-                polygon_changed |= ImGui::InputFloat2((std::string("##point") + std::to_string(j)).c_str(),
+                polygon_changed |= ImGui::InputFloat2(("##point"s + std::to_string(j)).c_str(),
                                                       reinterpret_cast<float*>(&polygon.points.at(j)), "%.0f");
                 ImGui::SameLine();
-                if (ImGui::Button((std::string("x##") + std::to_string(j)).c_str()))
+                if (ImGui::Button(("x##"s + std::to_string(j)).c_str()))
                     remove_point = j;
             }
             if (remove_point > -1) {
@@ -648,7 +648,7 @@ void CustomRenderer::CustomMarker::Initialize(IDirect3DDevice9* device)
         _vertices[0].y = 0.0f;
         _vertices[0].z = 0.0f;
         _vertices[0].color = Colors::Sub(colour, Colors::ARGB(50, 0, 0, 0));
-        for (auto i = 1u; i < vertex_count; ++i) {
+        for (auto i = 1u; i < vertex_count; i++) {
             constexpr auto pi = DirectX::XM_PI;
             const float angle = (i - 1) * (2 * pi / static_cast<float>(count));
             _vertices[i].x = std::cos(angle);
@@ -671,7 +671,7 @@ void CustomRenderer::CustomMarker::Initialize(IDirect3DDevice9* device)
             sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
         buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
 
-        for (auto i = 0u; i < count; ++i) {
+        for (auto i = 0u; i < count; i++) {
             constexpr auto pi = DirectX::XM_PI;
             const float angle = i * (2 * pi / (count + 1));
             _vertices[i].x = std::cos(angle);
@@ -718,7 +718,7 @@ void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device)
         sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
 
-    for (size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; i++) {
         const float angle = i * (DirectX::XM_2PI / (count + 1));
         _vertices[i].x = std::cos(angle);
         _vertices[i].y = std::sin(angle);
@@ -797,7 +797,7 @@ void CustomRenderer::DrawCustomLines(IDirect3DDevice9* device)
     }
 }
 
-void CustomRenderer::EnqueueVertex(float x, float y, Color _color)
+void CustomRenderer::EnqueueVertex(const float x, const float y, const Color _color)
 {
     if (vertices_count == vertices_max)
         return;

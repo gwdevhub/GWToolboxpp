@@ -54,8 +54,8 @@ public:
 
     static void CmdLoad(const wchar_t* message, int argc, LPWSTR* argv);
 
-    const char* Name() const override { return "Builds"; }
-    const char* Icon() const override { return ICON_FA_LIST; }
+    [[nodiscard]] const char* Name() const override { return "Builds"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_LIST; }
 
     void Initialize() override;
     void Terminate() override;
@@ -77,8 +77,8 @@ public:
     bool MoveOldBuilds(ToolboxIni* ini);
 
     void Send(unsigned int idx);
-    const char* BuildName(unsigned int idx) const;
-    unsigned int BuildCount() const { return teambuilds.size(); }
+    [[nodiscard]] const char* BuildName(unsigned int idx) const;
+    [[nodiscard]] unsigned int BuildCount() const { return teambuilds.size(); }
 
 private:
     // Send a teambuild

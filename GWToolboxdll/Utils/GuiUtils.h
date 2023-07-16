@@ -160,17 +160,17 @@ namespace GuiUtils {
         std::wstring& wstring();
         std::string& string();
 
-        const std::wstring& encoded() const
+        [[nodiscard]] const std::wstring& encoded() const
         {
             return encoded_ws;
         };
 
-        EncString(const wchar_t* _enc_string = nullptr, bool sanitise = true)
+        EncString(const wchar_t* _enc_string = nullptr, const bool sanitise = true)
         {
             reset(_enc_string, sanitise);
         }
 
-        EncString(const uint32_t _enc_string, bool sanitise = true)
+        EncString(const uint32_t _enc_string, const bool sanitise = true)
         {
             reset(_enc_string, sanitise);
         }

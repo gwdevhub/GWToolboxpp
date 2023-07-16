@@ -17,8 +17,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Settings"; }
-    const char* Icon() const override { return ICON_FA_COGS; }
+    [[nodiscard]] const char* Name() const override { return "Settings"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_COGS; }
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;

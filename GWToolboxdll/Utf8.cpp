@@ -6,7 +6,7 @@
 utf8::string Unicode16ToUtf8(const wchar_t* str)
 {
     utf8::string res;
-    const int isize = WideCharToMultiByte(CP_UTF8, 0, str, -1, nullptr, 0, nullptr, nullptr);
+    const auto isize = WideCharToMultiByte(CP_UTF8, 0, str, -1, nullptr, 0, nullptr, nullptr);
     if (isize < 0)
         return res;
     const auto size = static_cast<size_t>(isize);
@@ -20,7 +20,7 @@ utf8::string Unicode16ToUtf8(const wchar_t* str)
 utf8::string Unicode16ToUtf8(const wchar_t* start, const wchar_t* end)
 {
     utf8::string res;
-    const int isize = WideCharToMultiByte(CP_UTF8, 0, start, end - start, nullptr, 0,
+    const auto isize = WideCharToMultiByte(CP_UTF8, 0, start, end - start, nullptr, 0,
                                           nullptr, nullptr);
     if (isize < 0)
         return res;
@@ -34,10 +34,10 @@ utf8::string Unicode16ToUtf8(const wchar_t* start, const wchar_t* end)
     return res;
 }
 
-utf8::string Unicode16ToUtf8(char* buffer, size_t n_buffer, const wchar_t* start, const wchar_t* end)
+utf8::string Unicode16ToUtf8(char* buffer, const size_t n_buffer, const wchar_t* start, const wchar_t* end)
 {
     utf8::string res;
-    const int isize = WideCharToMultiByte(CP_UTF8, 0, start, end - start, buffer,
+    const auto isize = WideCharToMultiByte(CP_UTF8, 0, start, end - start, buffer,
                                           static_cast<int>(n_buffer), nullptr, nullptr);
     if (isize < 0)
         return res;
@@ -49,9 +49,9 @@ utf8::string Unicode16ToUtf8(char* buffer, size_t n_buffer, const wchar_t* start
     return res;
 }
 
-size_t Utf8ToUnicode(const char* str, wchar_t* buffer, size_t count)
+size_t Utf8ToUnicode(const char* str, wchar_t* buffer, const size_t count)
 {
-    const int iret = MultiByteToWideChar(CP_UTF8, 0, str, -1, buffer, static_cast<int>(count));
+    const auto iret = MultiByteToWideChar(CP_UTF8, 0, str, -1, buffer, static_cast<int>(count));
     if (iret < 0)
         return 0;
     return static_cast<size_t>(iret);

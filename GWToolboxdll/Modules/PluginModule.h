@@ -13,8 +13,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Plugins"; }
-    const char* Icon() const override { return ICON_FA_PUZZLE_PIECE; }
+    [[nodiscard]] const char* Name() const override { return "Plugins"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_PUZZLE_PIECE; }
 
     void Initialize() override;
 

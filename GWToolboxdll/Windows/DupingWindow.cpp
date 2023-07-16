@@ -18,7 +18,7 @@
 
 namespace {
     struct DupeInfo {
-        DupeInfo(GW::AgentID agent_id)
+        DupeInfo(const GW::AgentID agent_id)
             : agent_id(agent_id)
         {
         }
@@ -29,7 +29,7 @@ namespace {
         size_t dupe_count = 0;
     };
 
-    GW::AgentLiving* GetAgentLivingByID(uint32_t agent_id)
+    GW::AgentLiving* GetAgentLivingByID(const uint32_t agent_id)
     {
         const auto a = GW::Agents::GetAgentByID(agent_id);
         return a ? a->GetAsAgentLiving() : nullptr;
@@ -47,7 +47,8 @@ namespace {
             case GW::Constants::ModelID::DoA::WaterTormentor:
             case GW::Constants::ModelID::DoA::VeilWaterTormentor:
             case GW::Constants::ModelID::DoA::MindTormentor:
-            case GW::Constants::ModelID::DoA::VeilMindTormentor: return GW::PartyMgr::GetIsPartyInHardMode() ? 1080 : 840;
+            case GW::Constants::ModelID::DoA::VeilMindTormentor:
+                return GW::PartyMgr::GetIsPartyInHardMode() ? 1080 : 840;
             default: ;
         }
         return 0;
@@ -127,7 +128,7 @@ namespace {
 
                 ImGui::TableSetColumnIndex(4);
                 if (dupe_info.last_duped > 0) {
-                    const int seconds_ago = static_cast<int>((TIMER_DIFF(dupe_info.last_duped) / CLOCKS_PER_SEC));
+                    const auto seconds_ago = static_cast<int>((TIMER_DIFF(dupe_info.last_duped) / CLOCKS_PER_SEC));
                     if (seconds_ago < 5) {
                         ImGui::PushStyleColor(ImGuiCol_Text, Colors::ARGB(205, 102, 153, 230));
                     }
@@ -227,24 +228,28 @@ void DupingWindow::Draw(IDirect3DDevice9* device)
 
         switch (living->player_number) {
             case GW::Constants::ModelID::DoA::SoulTormentor:
-            case GW::Constants::ModelID::DoA::VeilSoulTormentor: all_agents_of_type = &all_souls;
+            case GW::Constants::ModelID::DoA::VeilSoulTormentor:
+                all_agents_of_type = &all_souls;
                 duped_agents_of_type = &souls;
                 threshold = souls_threshhold;
                 soul_count++;
                 break;
             case GW::Constants::ModelID::DoA::WaterTormentor:
-            case GW::Constants::ModelID::DoA::VeilWaterTormentor: all_agents_of_type = &all_waters;
+            case GW::Constants::ModelID::DoA::VeilWaterTormentor:
+                all_agents_of_type = &all_waters;
                 duped_agents_of_type = &waters;
                 threshold = waters_threshhold;
                 water_count++;
                 break;
             case GW::Constants::ModelID::DoA::MindTormentor:
-            case GW::Constants::ModelID::DoA::VeilMindTormentor: all_agents_of_type = &all_minds;
+            case GW::Constants::ModelID::DoA::VeilMindTormentor:
+                all_agents_of_type = &all_minds;
                 duped_agents_of_type = &minds;
                 threshold = minds_threshhold;
                 mind_count++;
                 break;
-            default: continue;
+            default:
+                continue;
         }
 
         if (living->hp <= threshold) {

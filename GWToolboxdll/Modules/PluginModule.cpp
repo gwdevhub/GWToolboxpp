@@ -264,7 +264,7 @@ void PluginModule::SaveSettings(ToolboxIni* ini)
     }
 }
 
-void PluginModule::Update(float delta)
+void PluginModule::Update(const float delta)
 {
     for (const auto plugin : loaded_plugins) {
         plugin->instance->Update(delta);

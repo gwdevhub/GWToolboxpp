@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Updater"; }
+    [[nodiscard]] const char* Name() const override { return "Updater"; }
     // DrawSettingInternal() called via ToolboxSettings; don't draw it again
     bool HasSettings() override { return false; }
 

@@ -9,7 +9,7 @@
 #include <Modules/ObserverModule.h>
 #include <Windows/ObserverPlayerWindow.h>
 
-#define NO_AGENT 0
+using namespace std::string_literals;
 
 void ObserverPlayerWindow::Initialize()
 {
@@ -136,9 +136,9 @@ void ObserverPlayerWindow::DrawAction(const std::string& name, const ObserverMod
 void ObserverPlayerWindow::DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,
                                       const std::vector<GW::Constants::SkillID>& skill_ids)
 {
-    float offset = 0;
-    size_t i = 0;
+    auto i = 0u;
     for (auto skill_id : skill_ids) {
+        float offset = 0;
         i += 1;
         offset = 0;
         ObserverModule::ObservableSkill* skill = ObserverModule::Instance().GetObservableSkillById(skill_id);
@@ -193,7 +193,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice)
         if (show_comparison && compared && !(!show_skills_used_on_self && tracking && compared->agent_id == tracking->agent_id)) {
             // skills
             ImGui::Text(""); // new line
-            ImGui::Text((std::string("Skills used on: ") + compared->DisplayName()).c_str());
+            ImGui::Text(("Skills used on: "s + compared->DisplayName()).c_str());
             DrawHeaders();
             ImGui::Separator();
             const auto it_used_on_agent_skills = tracking->stats.skills_used_on_agents.find(compared->agent_id);
@@ -246,9 +246,9 @@ void ObserverPlayerWindow::DrawSettingInternal()
     ImGui::Checkbox("Show tracking player", &show_tracking);
     ImGui::Checkbox("Show player comparison", &show_comparison);
     ImGui::Checkbox("Show skills used on self", &show_skills_used_on_self);
-    ImGui::Checkbox((std::string("Show attempts (") + ObserverLabel::Attempts + ")").c_str(), &show_attempts);
-    ImGui::Checkbox((std::string("Show cancels (") + ObserverLabel::Cancels + ")").c_str(), &show_cancels);
-    ImGui::Checkbox((std::string("Show interrupts (") + ObserverLabel::Interrupts + ")").c_str(), &show_interrupts);
-    ImGui::Checkbox((std::string("Show finishes (") + ObserverLabel::Finishes + ")").c_str(), &show_finishes);
-    ImGui::Checkbox((std::string("Show integrity (") + ObserverLabel::Integrity + ")").c_str(), &show_integrity);
+    ImGui::Checkbox(("Show attempts ("s + ObserverLabel::Attempts + ")").c_str(), &show_attempts);
+    ImGui::Checkbox(("Show cancels ("s + ObserverLabel::Cancels + ")").c_str(), &show_cancels);
+    ImGui::Checkbox(("Show interrupts ("s + ObserverLabel::Interrupts + ")").c_str(), &show_interrupts);
+    ImGui::Checkbox(("Show finishes ("s + ObserverLabel::Finishes + ")").c_str(), &show_finishes);
+    ImGui::Checkbox(("Show integrity ("s + ObserverLabel::Integrity + ")").c_str(), &show_integrity);
 }

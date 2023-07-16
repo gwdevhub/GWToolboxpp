@@ -2,7 +2,7 @@
 
 template <typename T>
 struct CircularBuffer {
-    CircularBuffer(size_t size)
+    CircularBuffer(const size_t size)
         : buffer(new T[size])
           , allocated(size)
     {
@@ -39,7 +39,7 @@ struct CircularBuffer {
         }
     }
 
-    T& operator[](size_t index)
+    T& operator[](const size_t index)
     {
         ASSERT(index < count);
         ASSERT(cursor == count || count == allocated);

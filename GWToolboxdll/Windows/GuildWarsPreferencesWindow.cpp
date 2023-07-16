@@ -10,46 +10,81 @@
 
 
 namespace {
-    uint32_t GetWindowNameID(GW::UI::WindowID window_id)
+    uint32_t GetWindowNameID(const GW::UI::WindowID window_id)
     {
         using namespace GW::UI;
         switch (window_id) {
-            case WindowID_Dialogue1: return 0x2db;
-            case WindowID_Dialogue2: return 0x2dc;
-            case WindowID_MissionGoals: return 0x2dd;
-            case WindowID_DropBundle: return 0x2de;
-            case WindowID_Compass: return 0x2df;
-            case WindowID_EffectsMonitor: return 0x2e1;
-            case WindowID_EnergyBar: return 0x2e2;
-            case WindowID_ExperienceBar: return 0x2e3;
-            case WindowID_HealthBar: return 0x2e4;
-            case WindowID_Hints: return 0x2e5;
-            case WindowID_MissionProgress: return 0x2e6;
-            case WindowID_Skillbar: return 0x2e9;
-            case WindowID_SkillMonitor: return 0x2ea;
-            case WindowID_SkillWarmup: return 0x2eb;
-            case WindowID_UpkeepMonitor: return 0x2ec;
-            case WindowID_Menu: return 0x2ed;
-            case WindowID_TargetDisplay: return 0x2ee;
-            case WindowID_WeaponBar: return 0x2f0;
-            case WindowID_PartySearch: return 0xcc2a;
-            case WindowID_InventoryBags: return 0x34b;
-            case WindowID_Hero: return 0x34c;
-            case WindowID_Chat: return 0x34d;
-            case WindowID_Friends: return 0x34f;
-            case WindowID_Guild: return 0x350;
-            case WindowID_Inventory: return 0x351;
-            case WindowID_MissionMap: return 0x353;
-            case WindowID_Observe: return 0x354;
-            case WindowID_Options: return 0x356;
-            case WindowID_PartyWindow: return 0x357;
-            case WindowID_QuestLog: return 0x358;
-            case WindowID_TradeButton: return 0x99c8;
-            case WindowID_VaultBox: return 0x31b;
-            case WindowID_Merchant: return 0xbdf; // Game uses NPC name, default to "Merchant"
-            case WindowID_InGameClock: return 0x13418;
+            case WindowID_Dialogue1:
+                return 0x2db;
+            case WindowID_Dialogue2:
+                return 0x2dc;
+            case WindowID_MissionGoals:
+                return 0x2dd;
+            case WindowID_DropBundle:
+                return 0x2de;
+            case WindowID_Compass:
+                return 0x2df;
+            case WindowID_EffectsMonitor:
+                return 0x2e1;
+            case WindowID_EnergyBar:
+                return 0x2e2;
+            case WindowID_ExperienceBar:
+                return 0x2e3;
+            case WindowID_HealthBar:
+                return 0x2e4;
+            case WindowID_Hints:
+                return 0x2e5;
+            case WindowID_MissionProgress:
+                return 0x2e6;
+            case WindowID_Skillbar:
+                return 0x2e9;
+            case WindowID_SkillMonitor:
+                return 0x2ea;
+            case WindowID_SkillWarmup:
+                return 0x2eb;
+            case WindowID_UpkeepMonitor:
+                return 0x2ec;
+            case WindowID_Menu:
+                return 0x2ed;
+            case WindowID_TargetDisplay:
+                return 0x2ee;
+            case WindowID_WeaponBar:
+                return 0x2f0;
+            case WindowID_PartySearch:
+                return 0xcc2a;
+            case WindowID_InventoryBags:
+                return 0x34b;
+            case WindowID_Hero:
+                return 0x34c;
+            case WindowID_Chat:
+                return 0x34d;
+            case WindowID_Friends:
+                return 0x34f;
+            case WindowID_Guild:
+                return 0x350;
+            case WindowID_Inventory:
+                return 0x351;
+            case WindowID_MissionMap:
+                return 0x353;
+            case WindowID_Observe:
+                return 0x354;
+            case WindowID_Options:
+                return 0x356;
+            case WindowID_PartyWindow:
+                return 0x357;
+            case WindowID_QuestLog:
+                return 0x358;
+            case WindowID_TradeButton:
+                return 0x99c8;
+            case WindowID_VaultBox:
+                return 0x31b;
+            case WindowID_Merchant:
+                return 0xbdf; // Game uses NPC name, default to "Merchant"
+            case WindowID_InGameClock:
+                return 0x13418;
 
-            default: return 0;
+            default:
+                return 0;
         }
     }
 
@@ -93,7 +128,7 @@ namespace {
         GW::UI::WindowPosition position;
         GuiUtils::EncString name;
 
-        WindowPreference(GW::UI::WindowID _window_id, GW::UI::WindowPosition* _position)
+        WindowPreference(const GW::UI::WindowID _window_id, GW::UI::WindowPosition* _position)
             : window_id(_window_id), position(*_position)
         {
             name.reset(GetWindowNameID(window_id));
@@ -104,7 +139,7 @@ namespace {
         GW::UI::StringPreference pref_id;
         std::wstring value;
 
-        StringPreference(GW::UI::StringPreference _pref_id, wchar_t* _value)
+        StringPreference(const GW::UI::StringPreference _pref_id, wchar_t* _value)
             : pref_id(_pref_id), value(_value)
         {
         };

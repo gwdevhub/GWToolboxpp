@@ -24,7 +24,7 @@ namespace {
 }
 
 static int
-sockaddr_sprint(char* s, size_t n, const sockaddr* host, bool inc_port = false)
+sockaddr_sprint(char* s, const size_t n, const sockaddr* host, const bool inc_port = false)
 {
     if (host->sa_family == AF_INET) {
         const auto in = (const sockaddr_in*)host;

@@ -324,7 +324,7 @@ void PconsWindow::OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::Vanquish
     Log::Info("Cons auto-disabled on completion");
 }
 
-void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv)
+void PconsWindow::CmdPcons(const wchar_t*, const int argc, LPWSTR* argv)
 {
     if (argc <= 1) {
         Instance().ToggleEnable();
@@ -350,7 +350,7 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv)
         }
         else {
             std::wstring argPcon = GuiUtils::ToLower(argv[2]);
-            for (int i = 3; i < argc; i++) {
+            for (auto i = 3; i < argc; i++) {
                 argPcon.append(L" ");
                 argPcon.append(GuiUtils::ToLower(argv[i]));
             }
@@ -359,7 +359,7 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv)
             const unsigned int compareLength = compare.length();
             Pcon* bestMatch = nullptr;
             unsigned int bestMatchLength = 0;
-            for (size_t i = 0; i < pcons.size(); ++i) {
+            for (size_t i = 0; i < pcons.size(); i++) {
                 Pcon* pcon = pcons[i];
                 const std::string pconName(pcon->chat);
                 std::string pconNameSanitized = GuiUtils::ToLower(pconName);
@@ -396,7 +396,7 @@ void PconsWindow::CmdPcons(const wchar_t*, int argc, LPWSTR* argv)
     }
 }
 
-bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text)
+bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, const bool show_icon, const bool show_text, const bool center_align_text)
 {
     const bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text, center_align_text);
 
@@ -425,7 +425,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
         ImGui::PopStyleColor();
     }
     int j = 0;
-    for (unsigned int i = 0; i < pcons.size(); ++i) {
+    for (auto i = 0u; i < pcons.size(); i++) {
         if (pcons[i]->IsVisible()) {
             if (j++ % items_per_row > 0) {
                 ImGui::SameLine(0, 2.0f);
@@ -453,7 +453,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
     ImGui::End();
 }
 
-void PconsWindow::Update(float delta)
+void PconsWindow::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID())
@@ -503,7 +503,7 @@ void PconsWindow::MapChanged()
     }
 }
 
-void PconsWindow::Refill(bool do_refill)
+void PconsWindow::Refill(const bool do_refill)
 {
     for (Pcon* pcon : pcons) {
         pcon->Refill(do_refill && pcon->IsEnabled());
@@ -515,14 +515,15 @@ bool PconsWindow::GetEnabled()
     return enabled;
 }
 
-bool PconsWindow::SetEnabled(bool b)
+bool PconsWindow::SetEnabled(const bool b)
 {
     if (enabled == b)
         return enabled; // Do nothing - already enabled/disabled.
     enabled = b;
     Refill(enabled);
     switch (GW::Map::GetInstanceType()) {
-        case InstanceType::Outpost: if (tick_with_pcons)
+        case InstanceType::Outpost:
+            if (tick_with_pcons)
                 GW::PartyMgr::Tick(enabled);
         case InstanceType::Explorable: {
             if (HotkeysWindow::CurrentHotkey() && !HotkeysWindow::CurrentHotkey()->show_message_in_emote_channel)
@@ -534,7 +535,8 @@ bool PconsWindow::SetEnabled(bool b)
             }
             break;
         }
-        default: break;
+        default:
+            break;
     }
     return enabled;
 }
@@ -544,7 +546,7 @@ void PconsWindow::RegisterSettingsContent()
     ToolboxUIElement::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
         "Game Settings", nullptr,
-        [this](const std::string&, bool is_showing) {
+        [this](const std::string&, const bool is_showing) {
             if (!is_showing)
                 return;
             DrawLunarsAndAlcoholSettings();

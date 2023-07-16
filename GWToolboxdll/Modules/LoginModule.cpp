@@ -42,7 +42,7 @@ namespace {
     // Prefilling it ensures that auto login can work without -charname argument being given.
     wchar_t* original_charname_parameter = nullptr;
 
-    wchar_t* OnGetStringParameter(uint32_t param_id_plus_0x27)
+    wchar_t* OnGetStringParameter(const uint32_t param_id_plus_0x27)
     {
         GW::Hook::EnterHook();
         wchar_t* parameter_value = GetStringParameter_Ret(param_id_plus_0x27);
@@ -61,7 +61,7 @@ namespace {
     PortalAccountLogin_pt PortalAccountLogin_Ret = nullptr;
 
     // Ensure we're asking for a valid character on login if given as a parameter
-    void OnPortalAccountLogin(uint32_t transaction_id, uint32_t* user_id, uint32_t* session_id, wchar_t* preselect_character)
+    void OnPortalAccountLogin(const uint32_t transaction_id, uint32_t* user_id, uint32_t* session_id, wchar_t* preselect_character)
     {
         GW::Hook::EnterHook();
         // Don't pre-select the character yet; we'll do this in the Update() loop after sucessful login
@@ -120,7 +120,8 @@ void LoginModule::Update(float)
     // If they have, then we use the user interface to manually navigate to a character
     // This is because the Portal login above would usually do it, but it overrides any reconnect dialogs.
     switch (state) {
-        case LoginState::Idle: return;
+        case LoginState::Idle:
+            return;
         case LoginState::PendingLogin: {
             // No charname to switch to
             if (TIMER_DIFF(state_timestamp) > 5000) {

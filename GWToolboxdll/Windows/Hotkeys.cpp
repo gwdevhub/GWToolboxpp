@@ -252,7 +252,7 @@ TBHotkey::TBHotkey(ToolboxIni* ini, const char* section)
         GuiUtils::IniToArray(ini_str, map_ids);
         if (map_ids.empty()) {
             // Legacy
-            const int map_id = ini->GetLongValue(section, "map_id", 0);
+            const auto map_id = ini->GetLongValue(section, "map_id", 0);
             if (map_id > 0)
                 map_ids.push_back(map_id);
         }
@@ -269,7 +269,7 @@ TBHotkey::TBHotkey(ToolboxIni* ini, const char* section)
         }
         else {
             // Legacy
-            const int prof_id = ini->GetLongValue(section, "prof_id", 0);
+            const auto prof_id = ini->GetLongValue(section, "prof_id", 0);
             if (prof_id > 0 && prof_id < _countof(prof_ids))
                 prof_ids[prof_id] = true;
         }
@@ -311,7 +311,7 @@ size_t TBHotkey::HasProfession()
     return out;
 }
 
-bool TBHotkey::IsValid(const char* _player_name, GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, bool is_pvp_character)
+bool TBHotkey::IsValid(const char* _player_name, const GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, const bool is_pvp_character)
 {
     return active
            && (!is_pvp_character || trigger_on_pvp_character)
@@ -418,12 +418,14 @@ bool TBHotkey::Draw(Op* op)
     int written = 0;
     written += Description(&header[written], _countof(header) - written);
     switch (HasProfession()) {
-        case 1: for (size_t i = 1; i < _countof(prof_ids); i++) {
+        case 1:
+            for (size_t i = 1; i < _countof(prof_ids); i++) {
                 if (prof_ids[i])
                     written += snprintf(&header[written], _countof(header) - written, " [%s]", professions[i]);
             }
             break;
-        case 0: break;
+        case 0:
+            break;
         default: {
             char prof_ids_buf[128];
             int prof_ids_written = 0;
@@ -440,13 +442,16 @@ bool TBHotkey::Draw(Op* op)
         break;
     }
     switch (map_ids.size()) {
-        case 1: if (map_ids[0] < _countof(GW::Constants::NAME_FROM_ID))
+        case 1:
+            if (map_ids[0] < _countof(GW::Constants::NAME_FROM_ID))
                 written += snprintf(&header[written], _countof(header) - written, " [%s]", GW::Constants::NAME_FROM_ID[map_ids[0]]);
             else
                 written += snprintf(&header[written], _countof(header) - written, " [Map %d]", map_ids[0]);
             break;
-        case 0: break;
-        default: written += snprintf(&header[written], _countof(header) - written, " [%d Maps]", map_ids.size());
+        case 0:
+            break;
+        default:
+            written += snprintf(&header[written], _countof(header) - written, " [%d Maps]", map_ids.size());
             break;
     }
 
@@ -510,7 +515,7 @@ bool TBHotkey::Draw(Op* op)
             if (map_ids.empty()) {
                 ImGui::Text("    This hotkey will trigger in any map - add a map ID below to limit to a map");
             }
-            for (int i = 0; i < static_cast<int>(map_ids.size()); i++) {
+            for (auto i = 0; i < static_cast<int>(map_ids.size()); i++) {
                 ImGui::PushID(i);
                 ImGui::Text("%d", map_ids[i]);
                 ImGui::SameLine(indent_offset + map_id_w);
@@ -548,10 +553,10 @@ bool TBHotkey::Draw(Op* op)
         if (ImGui::CollapsingHeader("Professions")) {
             ImGui::Indent();
             const float prof_w = 140.f * scale;
-            const int per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / prof_w));
+            const auto per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / prof_w));
             ImGui::TextDisabled("Only trigger when player is one of these professions");
-            for (int i = 1; i < _countof(prof_ids); i++) {
-                const int offset = ((i - 1) % per_row);
+            for (auto i = 1; i < _countof(prof_ids); i++) {
+                const auto offset = ((i - 1) % per_row);
                 if (i > 1 && offset != 0)
                     ImGui::SameLine(prof_w * offset + indent_offset);
                 hotkey_changed |= ImGui::Checkbox(professions[i], &prof_ids[i]);
@@ -742,7 +747,7 @@ void HotkeySendChat::Save(ToolboxIni* ini, const char* section) const
     ini->SetValue(section, "channel", buf);
 }
 
-int HotkeySendChat::Description(char* buf, size_t bufsz)
+int HotkeySendChat::Description(char* buf, const size_t bufsz)
 {
     return snprintf(buf, bufsz, "Send chat '%c%s'", channel, message);
 }
@@ -752,19 +757,26 @@ bool HotkeySendChat::Draw()
     bool hotkey_changed = false;
     int index = 0;
     switch (channel) {
-        case '/': index = 0;
+        case '/':
+            index = 0;
             break;
-        case '!': index = 1;
+        case '!':
+            index = 1;
             break;
-        case '@': index = 2;
+        case '@':
+            index = 2;
             break;
-        case '#': index = 3;
+        case '#':
+            index = 3;
             break;
-        case '$': index = 4;
+        case '$':
+            index = 4;
             break;
-        case '%': index = 5;
+        case '%':
+            index = 5;
             break;
-        case '"': index = 6;
+        case '"':
+            index = 6;
             break;
     }
     static const char* channels[] = {"/ Commands", "! All", "@ Guild",
@@ -772,21 +784,29 @@ bool HotkeySendChat::Draw()
                                      "\" Whisper"};
     if (ImGui::Combo("Channel", &index, channels, 7)) {
         switch (index) {
-            case 0: channel = '/';
+            case 0:
+                channel = '/';
                 break;
-            case 1: channel = '!';
+            case 1:
+                channel = '!';
                 break;
-            case 2: channel = '@';
+            case 2:
+                channel = '@';
                 break;
-            case 3: channel = '#';
+            case 3:
+                channel = '#';
                 break;
-            case 4: channel = '$';
+            case 4:
+                channel = '$';
                 break;
-            case 5: channel = '%';
+            case 5:
+                channel = '%';
                 break;
-            case 6: channel = '"';
+            case 6:
+                channel = '"';
                 break;
-            default: channel = '/';
+            default:
+                channel = '/';
                 break;
         }
         show_message_in_emote_channel = channel == '/' &&
@@ -822,7 +842,7 @@ void HotkeyUseItem::Save(ToolboxIni* ini, const char* section) const
     ini->SetValue(section, "ItemName", name);
 }
 
-int HotkeyUseItem::Description(char* buf, size_t bufsz)
+int HotkeyUseItem::Description(char* buf, const size_t bufsz)
 {
     if (!name[0])
         return snprintf(buf, bufsz, "Use #%d", item_id);
@@ -874,12 +894,12 @@ HotkeyEquipItemAttributes::~HotkeyEquipItemAttributes()
     }
 }
 
-HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, size_t _mod_struct_size)
+HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(const uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, const size_t _mod_struct_size)
 {
     set(_model_id, _name_enc, _info_string, _mod_struct, _mod_struct_size);
 }
 
-HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, size_t _mod_struct_size)
+HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(const uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, const size_t _mod_struct_size)
 {
     model_id = _model_id;
     enc_name.reset(_name_enc);
@@ -962,7 +982,7 @@ void HotkeyEquipItem::Save(ToolboxIni* ini, const char* section) const
     }
 }
 
-int HotkeyEquipItem::Description(char* buf, size_t bufsz)
+int HotkeyEquipItem::Description(char* buf, const size_t bufsz)
 {
     if (equip_by == SLOT)
         return snprintf(buf, bufsz, "Equip Item in bag %d slot %d", bag_idx, slot_idx);
@@ -1003,14 +1023,14 @@ bool HotkeyEquipItem::Draw()
         if (ImGui::BeginPopupModal("Choose Item to Equip", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (need_to_fetch_bag_items) {
                 // Free available_items ptrs
-                for (auto i = available_items.begin(); i != available_items.end(); ++i) {
+                for (auto i = available_items.begin(); i != available_items.end(); i++) {
                     for (auto j = i->begin(); j != i->end(); ++j) {
                         delete*j;
                     }
                 }
                 available_items.clear();
                 available_items.resize(bags_size);
-                for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size; i++) {
+                for (auto i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size; i++) {
                     GW::Bag* bag = GW::Items::GetBag(i);
                     if (!bag)
                         continue;
@@ -1026,7 +1046,7 @@ bool HotkeyEquipItem::Draw()
             }
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
-            for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size; i++) {
+            for (auto i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size; i++) {
                 auto& items = available_items[i];
                 if (items.empty())
                     continue;
@@ -1083,8 +1103,10 @@ bool HotkeyEquipItem::IsEquippable(const GW::Item* _item)
         case GW::Constants::ItemType::Scythe:
         case GW::Constants::ItemType::Spear:
         case GW::Constants::ItemType::Costume_Headpiece:
-        case GW::Constants::ItemType::Costume: break;
-        default: return false;
+        case GW::Constants::ItemType::Costume:
+            break;
+        default:
+            return false;
             break;
     }
     return true;
@@ -1098,7 +1120,7 @@ bool HotkeyEquipItem::IsEquippable(const GW::Item* _item)
            wcscmp(c->player_name, _item->customized) == 0;*/
 }
 
-GW::Item* HotkeyEquipItem::FindMatchingItem(GW::Constants::Bag _bag_idx)
+GW::Item* HotkeyEquipItem::FindMatchingItem(const GW::Constants::Bag _bag_idx)
 {
     GW::Bag* bag = GW::Items::GetBag(_bag_idx);
     if (!bag)
@@ -1139,7 +1161,7 @@ void HotkeyEquipItem::Execute()
         else {
             item = FindMatchingItem(GW::Constants::Bag::Equipped_Items);
             constexpr size_t bags_size = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack) + 1;
-            for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size && !item; i++) {
+            for (auto i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size && !item; i++) {
                 item = FindMatchingItem(static_cast<GW::Constants::Bag>(i));
             }
             if (!item) {
@@ -1224,13 +1246,17 @@ bool HotkeyDropUseBuff::GetText(void* data, int idx, const char* * out_text)
 {
     static char other_buf[64];
     switch (static_cast<SkillIndex>(idx)) {
-        case Recall: *out_text = "Recall";
+        case Recall:
+            *out_text = "Recall";
             break;
-        case UA: *out_text = "UA";
+        case UA:
+            *out_text = "UA";
             break;
-        case HolyVeil: *out_text = "Holy Veil";
+        case HolyVeil:
+            *out_text = "Holy Veil";
             break;
-        default: snprintf(other_buf, 64, "Skill#%d", (int)data);
+        default:
+            snprintf(other_buf, 64, "Skill#%d", (int)data);
             *out_text = other_buf;
             break;
     }
@@ -1240,10 +1266,14 @@ bool HotkeyDropUseBuff::GetText(void* data, int idx, const char* * out_text)
 HotkeyDropUseBuff::SkillIndex HotkeyDropUseBuff::GetIndex() const
 {
     switch (id) {
-        case GW::Constants::SkillID::Recall: return Recall;
-        case GW::Constants::SkillID::Unyielding_Aura: return UA;
-        case GW::Constants::SkillID::Holy_Veil: return HolyVeil;
-        default: return Other;
+        case GW::Constants::SkillID::Recall:
+            return Recall;
+        case GW::Constants::SkillID::Unyielding_Aura:
+            return UA;
+        case GW::Constants::SkillID::Holy_Veil:
+            return HolyVeil;
+        default:
+            return Other;
     }
 }
 
@@ -1260,7 +1290,7 @@ void HotkeyDropUseBuff::Save(ToolboxIni* ini, const char* section) const
     ini->SetLongValue(section, "SkillID", static_cast<long>(id));
 }
 
-int HotkeyDropUseBuff::Description(char* buf, size_t bufsz)
+int HotkeyDropUseBuff::Description(char* buf, const size_t bufsz)
 {
     const char* skillname;
     GetText((void*)id, GetIndex(), &skillname);
@@ -1274,15 +1304,20 @@ bool HotkeyDropUseBuff::Draw()
     if (ImGui::Combo("Skill", (int*)&index,
                      "Recall\0Unyielding Aura\0Holy Veil\0Other", 4)) {
         switch (index) {
-            case Recall: id = GW::Constants::SkillID::Recall;
+            case Recall:
+                id = GW::Constants::SkillID::Recall;
                 break;
-            case UA: id = GW::Constants::SkillID::Unyielding_Aura;
+            case UA:
+                id = GW::Constants::SkillID::Unyielding_Aura;
                 break;
-            case HolyVeil: id = GW::Constants::SkillID::Holy_Veil;
+            case HolyVeil:
+                id = GW::Constants::SkillID::Holy_Veil;
                 break;
-            case Other: id = static_cast<GW::Constants::SkillID>(0);
+            case Other:
+                id = static_cast<GW::Constants::SkillID>(0);
                 break;
-            default: break;
+            default:
+                break;
         }
         hotkey_changed = true;
     }
@@ -1303,9 +1338,9 @@ void HotkeyDropUseBuff::Execute()
         GW::Effects::DropBuff(buff->buff_id);
     }
     else {
-        const int islot = GW::SkillbarMgr::GetSkillSlot(id);
+        const auto islot = GW::SkillbarMgr::GetSkillSlot(id);
         if (islot >= 0) {
-            uint32_t slot = static_cast<uint32_t>(islot);
+            auto slot = static_cast<uint32_t>(islot);
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
                 GW::GameThread::Enqueue([slot]() -> void {
                     GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(),
@@ -1319,15 +1354,20 @@ void HotkeyDropUseBuff::Execute()
 bool HotkeyToggle::GetText(void*, int idx, const char* * out_text)
 {
     switch (static_cast<ToggleTarget>(idx)) {
-        case Clicker: *out_text = "Clicker";
+        case Clicker:
+            *out_text = "Clicker";
             return true;
-        case Pcons: *out_text = "Pcons";
+        case Pcons:
+            *out_text = "Pcons";
             return true;
-        case CoinDrop: *out_text = "Coin Drop";
+        case CoinDrop:
+            *out_text = "Coin Drop";
             return true;
-        case Tick: *out_text = "Tick";
+        case Tick:
+            *out_text = "Tick";
             return true;
-        default: return false;
+        default:
+            return false;
     }
 }
 
@@ -1346,9 +1386,11 @@ HotkeyToggle::HotkeyToggle(ToolboxIni* ini, const char* section)
         toggled.reserve(512);
     initialised = true;
     switch (target) {
-        case Clicker: interval = 7;
+        case Clicker:
+            interval = 7;
             break;
-        case CoinDrop: interval = 500;
+        case CoinDrop:
+            interval = 500;
             break;
     }
 }
@@ -1359,7 +1401,7 @@ void HotkeyToggle::Save(ToolboxIni* ini, const char* section) const
     ini->SetLongValue(section, "ToggleID", target);
 }
 
-int HotkeyToggle::Description(char* buf, size_t bufsz)
+int HotkeyToggle::Description(char* buf, const size_t bufsz)
 {
     const char* name{};
     GetText(nullptr, target, &name);
@@ -1393,15 +1435,17 @@ void HotkeyToggle::Toggle()
     last_use = 0;
     if (ongoing || (!ongoing && !toggled[togglekey])) {
         switch (target) {
-            case Clicker: Log::Info("Clicker is %s", ongoing ? "active" : "disabled");
+            case Clicker:
+                Log::Info("Clicker is %s", ongoing ? "active" : "disabled");
                 break;
-            case CoinDrop: Log::Info("Coindrop is %s", ongoing ? "active" : "disabled");
+            case CoinDrop:
+                Log::Info("Coindrop is %s", ongoing ? "active" : "disabled");
                 break;
         }
     }
 }
 
-bool HotkeyToggle::IsToggled(bool force)
+bool HotkeyToggle::IsToggled(const bool force)
 {
     if (force) {
         const auto found = toggled.find(togglekey);
@@ -1429,23 +1473,27 @@ void HotkeyToggle::Execute()
     }
 
     switch (target) {
-        case Clicker: INPUT input;
+        case Clicker:
+            INPUT input;
             memset(&input, 0, sizeof(INPUT));
             input.type = INPUT_MOUSE;
             input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP;
             SendInput(1, &input, sizeof(INPUT));
             break;
-        case Pcons: PconsWindow::Instance().ToggleEnable();
+        case Pcons:
+            PconsWindow::Instance().ToggleEnable();
             ongoing = false;
         // writing to chat is done by ToggleActive if needed
             break;
-        case CoinDrop: if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+        case CoinDrop:
+            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
                 Toggle();
                 return;
             }
             GW::Items::DropGold(1);
             break;
-        case Tick: const auto ticked = GW::PartyMgr::GetIsPlayerTicked();
+        case Tick:
+            const auto ticked = GW::PartyMgr::GetIsPlayerTicked();
             GW::PartyMgr::Tick(!ticked);
             ongoing = false;
             break;
@@ -1456,17 +1504,23 @@ void HotkeyToggle::Execute()
 bool HotkeyAction::GetText(void*, int idx, const char* * out_text)
 {
     switch (static_cast<Action>(idx)) {
-        case OpenXunlaiChest: *out_text = "Open Xunlai Chest";
+        case OpenXunlaiChest:
+            *out_text = "Open Xunlai Chest";
             return true;
-        case OpenLockedChest: *out_text = "Open Locked Chest";
+        case OpenLockedChest:
+            *out_text = "Open Locked Chest";
             return true;
-        case DropGoldCoin: *out_text = "Drop Gold Coin";
+        case DropGoldCoin:
+            *out_text = "Drop Gold Coin";
             return true;
-        case ReapplyTitle: *out_text = "Reapply appropriate Title";
+        case ReapplyTitle:
+            *out_text = "Reapply appropriate Title";
             return true;
-        case EnterChallenge: *out_text = "Enter Challenge";
+        case EnterChallenge:
+            *out_text = "Enter Challenge";
             return true;
-        default: return false;
+        default:
+            return false;
     }
 }
 
@@ -1482,7 +1536,7 @@ void HotkeyAction::Save(ToolboxIni* ini, const char* section) const
     ini->SetLongValue(section, "ActionID", action);
 }
 
-int HotkeyAction::Description(char* buf, size_t bufsz)
+int HotkeyAction::Description(char* buf, const size_t bufsz)
 {
     const char* name{};
     GetText(nullptr, action, &name);
@@ -1500,7 +1554,8 @@ void HotkeyAction::Execute()
     if (!CanUse())
         return;
     switch (action) {
-        case OpenXunlaiChest: if (isOutpost()) {
+        case OpenXunlaiChest:
+            if (isOutpost()) {
                 GW::GameThread::Enqueue([]() {
                     GW::Items::OpenXunlaiWindow();
                 });
@@ -1516,7 +1571,8 @@ void HotkeyAction::Execute()
             }
             break;
         }
-        case DropGoldCoin: if (isExplorable()) {
+        case DropGoldCoin:
+            if (isExplorable()) {
                 GW::Items::DropGold(1);
             }
             break;
@@ -1524,7 +1580,8 @@ void HotkeyAction::Execute()
             GW::Chat::SendChat('/', L"title");
             break;
         }
-        case EnterChallenge: GW::Chat::SendChat('/', L"enter");
+        case EnterChallenge:
+            GW::Chat::SendChat('/', L"enter");
             break;
     }
 }
@@ -1559,7 +1616,7 @@ void HotkeyTarget::Save(ToolboxIni* ini, const char* section) const
     ini->SetValue(section, "TargetName", name);
 }
 
-int HotkeyTarget::Description(char* buf, size_t bufsz)
+int HotkeyTarget::Description(char* buf, const size_t bufsz)
 {
     if (!name[0])
         return snprintf(buf, bufsz, "Target %s %s", type_labels[type], id);
@@ -1592,13 +1649,17 @@ void HotkeyTarget::Execute()
     auto message = new wchar_t[len];
     message[0] = 0;
     switch (type) {
-        case Item: swprintf(message, len, L"target item %S", id);
+        case Item:
+            swprintf(message, len, L"target item %S", id);
             break;
-        case NPC: swprintf(message, len, L"target npc %S", id);
+        case NPC:
+            swprintf(message, len, L"target npc %S", id);
             break;
-        case Signpost: swprintf(message, len, L"target gadget %S", id);
+        case Signpost:
+            swprintf(message, len, L"target gadget %S", id);
             break;
-        default: Log::ErrorW(L"Unknown target type %d", type);
+        default:
+            Log::ErrorW(L"Unknown target type %d", type);
             delete[] message;
             return;
     }
@@ -1637,13 +1698,15 @@ void HotkeyMove::Save(ToolboxIni* ini, const char* section) const
     ini->SetDoubleValue(section, "distance_from_location", distance_from_location);
 }
 
-int HotkeyMove::Description(char* buf, size_t bufsz)
+int HotkeyMove::Description(char* buf, const size_t bufsz)
 {
     if (name[0])
         return snprintf(buf, bufsz, "Move to %s", name);
     switch (type) {
-        case MoveType::Target: return snprintf(buf, bufsz, "Move to current target");
-        default: return snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
+        case MoveType::Target:
+            return snprintf(buf, bufsz, "Move to current target");
+        default:
+            return snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
     }
 }
 
@@ -1722,7 +1785,7 @@ void HotkeyDialog::Save(ToolboxIni* ini, const char* section) const
     ini->SetValue(section, "DialogName", name);
 }
 
-int HotkeyDialog::Description(char* buf, size_t bufsz)
+int HotkeyDialog::Description(char* buf, const size_t bufsz)
 {
     if (!name[0])
         return snprintf(buf, bufsz, "Dialog #%zu", id);
@@ -1755,7 +1818,7 @@ void HotkeyDialog::Execute()
         Log::Info("Sent dialog %s (%d)", name, id);
 }
 
-bool HotkeyPingBuild::GetText(void*, int idx, const char* * out_text)
+bool HotkeyPingBuild::GetText(void*, const int idx, const char* * out_text)
 {
     if (idx >= static_cast<int>(BuildsWindow::Instance().BuildCount()))
         return false;
@@ -1775,7 +1838,7 @@ void HotkeyPingBuild::Save(ToolboxIni* ini, const char* section) const
     ini->SetLongValue(section, "BuildIndex", index);
 }
 
-int HotkeyPingBuild::Description(char* buf, size_t bufsz)
+int HotkeyPingBuild::Description(char* buf, const size_t bufsz)
 {
     const char* buildname = BuildsWindow::Instance().BuildName(index);
     if (buildname == nullptr)
@@ -1786,7 +1849,7 @@ int HotkeyPingBuild::Description(char* buf, size_t bufsz)
 bool HotkeyPingBuild::Draw()
 {
     bool hotkey_changed = false;
-    const int icount = static_cast<int>(BuildsWindow::Instance().BuildCount());
+    const auto icount = static_cast<int>(BuildsWindow::Instance().BuildCount());
     int iindex = static_cast<int>(index);
     if (ImGui::Combo("Build", &iindex, GetText, nullptr, icount)) {
         if (0 <= iindex)
@@ -1804,11 +1867,11 @@ void HotkeyPingBuild::Execute()
     BuildsWindow::Instance().Send(index);
 }
 
-bool HotkeyHeroTeamBuild::GetText(void*, int idx, const char* * out_text)
+bool HotkeyHeroTeamBuild::GetText(void*, const int idx, const char* * out_text)
 {
     if (idx >= static_cast<int>(HeroBuildsWindow::Instance().BuildCount()))
         return false;
-    const size_t index = static_cast<size_t>(idx);
+    const auto index = static_cast<size_t>(idx);
     *out_text = HeroBuildsWindow::Instance().BuildName(index);
     return true;
 }
@@ -1825,7 +1888,7 @@ void HotkeyHeroTeamBuild::Save(ToolboxIni* ini, const char* section) const
     ini->SetLongValue(section, "BuildIndex", index);
 }
 
-int HotkeyHeroTeamBuild::Description(char* buf, size_t bufsz)
+int HotkeyHeroTeamBuild::Description(char* buf, const size_t bufsz)
 {
     const char* buildname = HeroBuildsWindow::Instance().BuildName(index);
     if (buildname == nullptr)
@@ -1836,7 +1899,7 @@ int HotkeyHeroTeamBuild::Description(char* buf, size_t bufsz)
 bool HotkeyHeroTeamBuild::Draw()
 {
     bool hotkey_changed = false;
-    const int icount = static_cast<int>(HeroBuildsWindow::Instance().BuildCount());
+    const auto icount = static_cast<int>(HeroBuildsWindow::Instance().BuildCount());
     int iindex = static_cast<int>(index);
     if (ImGui::Combo("Build", &iindex, GetText, nullptr, icount)) {
         if (0 <= iindex)
@@ -1873,7 +1936,7 @@ void HotkeyFlagHero::Save(ToolboxIni* ini, const char* section) const
     ini->SetLongValue(section, "hero", hero);
 }
 
-int HotkeyFlagHero::Description(char* buf, size_t bufsz)
+int HotkeyFlagHero::Description(char* buf, const size_t bufsz)
 {
     if (hero == 0)
         return snprintf(buf, bufsz, "Flag All Heroes");
@@ -1964,7 +2027,7 @@ HotkeyGWKey::HotkeyGWKey(ToolboxIni* ini, const char* section)
 {
     can_trigger_on_map_change = trigger_on_explorable = trigger_on_outpost = false;
     action = static_cast<GW::UI::ControlAction>(ini->GetLongValue(section, "ActionID", action));
-    const auto found = std::ranges::find_if(control_labels, [&](std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
+    const auto found = std::ranges::find_if(control_labels, [&](const std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
         return action == in.first;
     });
     if (found != control_labels.end()) {
@@ -1978,7 +2041,7 @@ void HotkeyGWKey::Save(ToolboxIni* ini, const char* section) const
     ini->SetLongValue(section, "ActionID", action);
 }
 
-int HotkeyGWKey::Description(char* buf, size_t bufsz)
+int HotkeyGWKey::Description(char* buf, const size_t bufsz)
 {
     if (action_idx < 0 || action_idx >= static_cast<int>(control_labels.size())) {
         return snprintf(buf, bufsz, "Guild Wars Key: Unknown Action %d", action_idx);
@@ -2043,7 +2106,7 @@ void HotkeyCommandPet::Save(ToolboxIni* ini, const char* section) const
     ini->SetLongValue(section, "behavior", static_cast<long>(behavior));
 }
 
-int HotkeyCommandPet::Description(char* buf, size_t bufsz)
+int HotkeyCommandPet::Description(char* buf, const size_t bufsz)
 {
     return snprintf(buf, bufsz, "Command Pet: %s", GetBehaviorDesc(behavior));
 }

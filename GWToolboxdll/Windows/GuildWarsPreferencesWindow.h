@@ -13,8 +13,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Guild Wars Preferences"; }
-    const char* Icon() const override { return ICON_FA_COGS; }
+    [[nodiscard]] const char* Name() const override { return "Guild Wars Preferences"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_COGS; }
 
     void Initialize() override;
 

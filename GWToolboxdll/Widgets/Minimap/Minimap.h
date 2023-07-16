@@ -14,7 +14,7 @@
 
 class Minimap final : public ToolboxWidget {
     struct Vec2i {
-        Vec2i(int _x, int _y)
+        Vec2i(const int _x, const int _y)
             : x(_x)
               , y(_y)
         {
@@ -52,10 +52,10 @@ public:
     const float acceleration = 0.5f;
     const float max_speed = 15.0f; // game units per frame
 
-    const char* Name() const override { return "Minimap"; }
-    const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
+    [[nodiscard]] const char* Name() const override { return "Minimap"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
 
-    float Scale() const { return scale; }
+    [[nodiscard]] float Scale() const { return scale; }
 
     void DrawHelp() override;
     void Initialize() override;
@@ -77,9 +77,9 @@ public:
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
 
-    float GetMapRotation() const;
-    DirectX::XMFLOAT2 GetGwinchScale() const;
-    GW::Vec2f ShadowstepLocation() const;
+    [[nodiscard]] float GetMapRotation() const;
+    [[nodiscard]] DirectX::XMFLOAT2 GetGwinchScale() const;
+    [[nodiscard]] GW::Vec2f ShadowstepLocation() const;
 
     // 0 is 'all' flag, 1 to 7 is each hero
     bool FlagHero(uint32_t idx);
@@ -95,14 +95,14 @@ public:
     static void Render(IDirect3DDevice9* device);
 
 private:
-    bool IsInside(int x, int y) const;
+    [[nodiscard]] bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
-    bool IsActive() const;
+    [[nodiscard]] bool IsActive() const;
 
-    GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
-    GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
+    [[nodiscard]] GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
+    [[nodiscard]] GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
     void SelectTarget(GW::Vec2f pos) const;
-    bool IsKeyDown(MinimapModifierBehaviour mmb) const;
+    [[nodiscard]] bool IsKeyDown(MinimapModifierBehaviour mmb) const;
 
     bool mousedown = false;
     bool camera_currently_reversed = false;

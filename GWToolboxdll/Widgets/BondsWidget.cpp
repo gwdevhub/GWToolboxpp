@@ -89,7 +89,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
             GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f
         );
         internal_offset *= uiscale_multiply;
-        const int user_offset_x = abs(user_offset);
+        const auto user_offset_x = abs(user_offset);
         float offset_width = width;
         auto calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
         if (calculated_pos.x < 0 || user_offset < 0) {
@@ -106,7 +106,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
         const float win_x = ImGui::GetWindowPos().x;
         const float win_y = ImGui::GetWindowPos().y;
 
-        auto GetGridPos = [&](const size_t _x, const size_t _y, bool topleft) -> ImVec2 {
+        auto GetGridPos = [&](const size_t _x, const size_t _y, const bool topleft) -> ImVec2 {
             size_t x = _x;
             size_t y = _y;
             if (y >= allies_start)
@@ -213,10 +213,10 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid)
     if (target == nullptr)
         return;
 
-    const int islot = GW::SkillbarMgr::GetSkillSlot(static_cast<GW::Constants::SkillID>(buff_skillid));
+    const auto islot = GW::SkillbarMgr::GetSkillSlot(static_cast<GW::Constants::SkillID>(buff_skillid));
     if (islot < 0)
         return;
-    uint32_t slot = static_cast<uint32_t>(islot);
+    auto slot = static_cast<uint32_t>(islot);
     const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!skillbar || !skillbar->IsValid())
         return;

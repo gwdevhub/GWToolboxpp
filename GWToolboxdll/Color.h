@@ -9,7 +9,7 @@
 using Color = ImU32;
 
 namespace Colors {
-    static Color ARGB(int a, int r, int g, int b)
+    static Color ARGB(const int a, const int r, const int g, const int b)
     {
         return (static_cast<Color>(a) << IM_COL32_A_SHIFT) |
                (static_cast<Color>(r) << IM_COL32_R_SHIFT) |
@@ -17,7 +17,7 @@ namespace Colors {
                (static_cast<Color>(b) << IM_COL32_B_SHIFT);
     }
 
-    static Color RGB(int r, int g, int b)
+    static Color RGB(const int r, const int g, const int b)
     {
         return (0xFFu << IM_COL32_A_SHIFT) |
                (static_cast<Color>(r) << IM_COL32_R_SHIFT) |
@@ -39,7 +39,7 @@ namespace Colors {
     static Color Yellow() { return RGB(0xFF, 0xFF, 0x0); }
     static Color Blue() { return RGB(0x0, 0x0, 0xFF); }
 
-    static Color Load(ToolboxIni* ini, const char* section, const char* key, Color def)
+    static Color Load(ToolboxIni* ini, const char* section, const char* key, const Color def)
     {
         const char* wc = ini->GetValue(section, key, nullptr);
         if (wc == nullptr)
@@ -50,14 +50,14 @@ namespace Colors {
         return def;
     }
 
-    static void Save(ToolboxIni* ini, const char* section, const char* key, Color val)
+    static void Save(ToolboxIni* ini, const char* section, const char* key, const Color val)
     {
         char buf[11];
         snprintf(buf, sizeof(buf), "0x%X", val);
         ini->SetValue(section, key, buf);
     }
 
-    static void ConvertU32ToInt4(Color color, int* i)
+    static void ConvertU32ToInt4(const Color color, int* i)
     {
         i[0] = static_cast<int>((color >> IM_COL32_A_SHIFT) & 0xFF);
         i[1] = static_cast<int>((color >> IM_COL32_R_SHIFT) & 0xFF);
@@ -73,7 +73,7 @@ namespace Colors {
                static_cast<Color>((i[3] & 0xFF) << IM_COL32_B_SHIFT);
     }
 
-    static bool DrawSettingHueWheel(const char* text, Color* color, ImGuiColorEditFlags flags = 0)
+    static bool DrawSettingHueWheel(const char* text, Color* color, const ImGuiColorEditFlags flags = 0)
     {
         // ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel) {
         ImVec4 col = ImGui::ColorConvertU32ToFloat4(*color);
@@ -84,14 +84,14 @@ namespace Colors {
         return false;
     }
 
-    static bool DrawSetting(const char* text, Color* color, bool alpha = true)
+    static bool DrawSetting(const char* text, Color* color, const bool alpha = true)
     {
         int i[4];
         ConvertU32ToInt4(*color, i);
 
         const ImGuiStyle& style = ImGui::GetStyle();
 
-        const int n_components = alpha ? 4 : 4;
+        const auto n_components = alpha ? 4 : 4;
 
         bool value_changed = false;
 
@@ -158,7 +158,7 @@ namespace Colors {
 
     static void Clamp(int c[4])
     {
-        for (int i = 0; i < 4; ++i) {
+        for (auto i = 0; i < 4; i++) {
             if (c[i] < 0)
                 c[i] = 0;
             if (c[i] > 0xFF)
@@ -173,7 +173,7 @@ namespace Colors {
         int i3[4]{};
         ConvertU32ToInt4(c1, i1);
         ConvertU32ToInt4(c2, i2);
-        for (int i = 0; i < 4; ++i) {
+        for (auto i = 0; i < 4; i++) {
             i3[i] = i1[i] + i2[i];
         }
         Clamp(i3);
@@ -187,21 +187,21 @@ namespace Colors {
         int i3[4]{};
         ConvertU32ToInt4(c1, i1);
         ConvertU32ToInt4(c2, i2);
-        for (int i = 0; i < 4; ++i) {
+        for (auto i = 0; i < 4; i++) {
             i3[i] = i1[i] - i2[i];
         }
         Clamp(i3);
         return ConvertInt4ToU32(i3);
     }
 
-    static Color Slerp(const Color& c1, const Color& c2, float t)
+    static Color Slerp(const Color& c1, const Color& c2, const float t)
     {
         int i1[4];
         int i2[4];
         int i3[4]{};
         ConvertU32ToInt4(c1, i1);
         ConvertU32ToInt4(c2, i2);
-        for (int i = 0; i < 4; ++i) {
+        for (auto i = 0; i < 4; i++) {
             i3[i] = static_cast<int>(i1[i] + (i2[i] - i1[i]) * t);
         }
         return ConvertInt4ToU32(i3);

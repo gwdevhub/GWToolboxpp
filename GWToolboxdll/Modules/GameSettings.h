@@ -8,13 +8,13 @@
 #include <ToolboxModule.h>
 
 enum class DEFAULT_NAMETAG_COLOR : Color {
-    NPC = 0xFFA0FF00,
-    PLAYER_SELF = 0xFF40FF40,
-    PLAYER_OTHER = 0xFF9BBEFF,
+    NPC             = 0xFFA0FF00,
+    PLAYER_SELF     = 0xFF40FF40,
+    PLAYER_OTHER    = 0xFF9BBEFF,
     PLAYER_IN_PARTY = 0xFF6060FF,
-    GADGET = 0xFFFFFF00,
-    ENEMY = 0xFFFF0000,
-    ITEM = 0x0,
+    GADGET          = 0xFFFFFF00,
+    ENEMY           = 0xFFFF0000,
+    ITEM            = 0x0,
 };
 
 namespace GW {
@@ -42,8 +42,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Game Settings"; }
-    const char* Icon() const override { return ICON_FA_GAMEPAD; }
+    [[nodiscard]] const char* Name() const override { return "Game Settings"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_GAMEPAD; }
     static void PingItem(GW::Item* item, uint32_t parts = 3);
     static void PingItem(uint32_t item_id, uint32_t parts = 3);
 

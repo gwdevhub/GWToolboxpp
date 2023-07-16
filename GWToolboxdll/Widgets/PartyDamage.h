@@ -38,8 +38,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Damage"; }
-    const char* Icon() const override { return ICON_FA_BARS; }
+    [[nodiscard]] const char* Name() const override { return "Damage"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_BARS; }
 
     void Initialize() override;
     void Terminate() override;
@@ -64,8 +64,8 @@ private:
 
     void CreatePartyIndexMap();
 
-    float GetPartOfTotal(uint32_t dmg) const;
-    float GetPercentageOfTotal(const uint32_t dmg) const { return GetPartOfTotal(dmg) * 100.0f; }
+    [[nodiscard]] float GetPartOfTotal(uint32_t dmg) const;
+    [[nodiscard]] float GetPercentageOfTotal(const uint32_t dmg) const { return GetPartOfTotal(dmg) * 100.0f; }
 
     // damage values
     uint32_t total = 0;

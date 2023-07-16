@@ -47,7 +47,7 @@ void ToolboxUIElement::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent(
         SettingsName(),
         Icon(),
-        [this](const std::string&, bool is_showing) {
+        [this](const std::string&, const bool is_showing) {
             ShowVisibleRadio();
             if (!is_showing)
                 return;
@@ -121,7 +121,7 @@ void ToolboxUIElement::ShowVisibleRadio()
 }
 
 bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
-                                     bool show_icon, bool show_text, bool center_align_text)
+                                     const bool show_icon, const bool show_text, const bool center_align_text)
 {
     ImGui::PushStyleColor(ImGuiCol_Button, visible ? ImGui::GetStyle().Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));
     const ImVec2 pos = ImGui::GetCursorScreenPos();

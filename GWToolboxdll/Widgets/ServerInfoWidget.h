@@ -40,7 +40,7 @@ public:
     }
 
     ServerInfo* GetServerInfo();
-    const char* Name() const override { return "Server Info"; }
+    [[nodiscard]] const char* Name() const override { return "Server Info"; }
 
     void Initialize() override;
     void Update(float delta) override;

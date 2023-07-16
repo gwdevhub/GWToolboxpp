@@ -45,7 +45,7 @@ uint32_t AlcoholWidget::GetAlcoholTitlePointsGained()
     return points_gained <= 0 ? 0 : points_gained;
 }
 
-void AlcoholWidget::Update(float delta)
+void AlcoholWidget::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (map_id != GW::Map::GetMapID()) {
@@ -88,7 +88,7 @@ void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess* pa
         // if the player already had a drink going
         if (instance.alcohol_level) {
             // set remaining time
-            instance.alcohol_time = static_cast<int>(instance.alcohol_time + static_cast<long>(instance.last_alcohol) - static_cast<long>(time(NULL)));
+            instance.alcohol_time = static_cast<int>(instance.alcohol_time + static_cast<long>(instance.last_alcohol) - static_cast<long>(time(nullptr)));
         }
         // add drink time
         instance.alcohol_time += 60 * static_cast<int>(packet->level - instance.alcohol_level);

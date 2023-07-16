@@ -13,14 +13,14 @@ const unsigned char b64_decoding[128] =
 };
 
 
-int b64_enc(void* in, unsigned size, char* out)
+int b64_enc(void* in, const unsigned size, char* out)
 {
     const auto it = static_cast<unsigned char*>(in);
     unsigned i = 0;
     unsigned j = 0;
     unsigned k = 0;
 
-    for (; i < size / 3; ++i) {
+    for (; i < size / 3; i++) {
         out[k + 0] = b64_encoding[((it[j + 0] & (~0x03)) >> 2)];
         out[k + 1] = b64_encoding[((it[j + 0] & 0x03) << 4) | ((it[j + 1] & (~0x0f)) >> 4)];
         out[k + 2] = b64_encoding[((it[j + 1] & 0x0f) << 2) | ((it[j + 2] & (~0x3f)) >> 6)];
@@ -31,11 +31,13 @@ int b64_enc(void* in, unsigned size, char* out)
 
     i = size % 3;
     switch (i) {
-        case 2: out[k + 0] = b64_encoding[((it[j + 0] & (~0x03)) >> 2)];
+        case 2:
+            out[k + 0] = b64_encoding[((it[j + 0] & (~0x03)) >> 2)];
             out[k + 1] = b64_encoding[((it[j + 0] & 0x03) << 4) | ((it[j + 1] & (~0x0f)) >> 4)];
             out[k + 2] = b64_encoding[((it[j + 1] & 0x0f) << 2)];
             break;
-        case 1: out[k + 0] = b64_encoding[((it[j + 0] & (~0x03)) >> 2)];
+        case 1:
+            out[k + 0] = b64_encoding[((it[j + 0] & (~0x03)) >> 2)];
             out[k + 1] = b64_encoding[((it[j + 0] & 0x03) << 4)];
             break;
     }
@@ -53,7 +55,7 @@ int b64_dec(const char* in, void* out)
     unsigned k = 0;
     const unsigned len = strlen(in);
 
-    for (; i < len / 4; ++i) {
+    for (; i < len / 4; i++) {
         o[k + 0] = (b64_decoding[in[j + 0]] << 2) | (((b64_decoding[in[j + 1]] & 0x30) >> 4));
         o[k + 1] = ((b64_decoding[in[j + 1]] & 0x0f) << 4) | ((b64_decoding[in[j + 2]] & 0x3C) >> 2);
         o[k + 2] = ((b64_decoding[in[j + 2]] & 0x03) << 6) | b64_decoding[in[j + 3]];
@@ -63,14 +65,17 @@ int b64_dec(const char* in, void* out)
 
     i = len % 4;
     switch (i) {
-        case 3: o[k + 0] = (b64_decoding[in[j + 0]] << 2) | (((b64_decoding[in[j + 1]] & 0x30) >> 4));
+        case 3:
+            o[k + 0] = (b64_decoding[in[j + 0]] << 2) | (((b64_decoding[in[j + 1]] & 0x30) >> 4));
             o[k + 1] = ((b64_decoding[in[j + 1]] & 0x0f) << 4) | ((b64_decoding[in[j + 2]] & 0x3C) >> 2);
             o[k + 2] = ((b64_decoding[in[j + 2]] & 0x03) << 6);
             break;
-        case 2: o[k + 0] = (b64_decoding[in[j + 0]] << 2) | (((b64_decoding[in[j + 1]] & 0x30) >> 4));
+        case 2:
+            o[k + 0] = (b64_decoding[in[j + 0]] << 2) | (((b64_decoding[in[j + 1]] & 0x30) >> 4));
             o[k + 1] = ((b64_decoding[in[j + 1]] & 0x0f) << 4);
             break;
-        case 1: o[k + 0] = (b64_decoding[in[j + 0]] << 2);
+        case 1:
+            o[k + 0] = (b64_decoding[in[j + 0]] << 2);
             break;
     }
     k += i;

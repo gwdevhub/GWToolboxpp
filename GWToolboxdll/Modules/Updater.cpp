@@ -168,7 +168,7 @@ namespace {
         // 2. download new dll
         Resources::Instance().Download(
             dllfile, latest_release.download_url,
-            [wdll = std::wstring(dllfile), dllold](bool success, const std::wstring& error) -> void {
+            [wdll = std::wstring(dllfile), dllold](const bool success, const std::wstring& error) -> void {
                 if (success) {
                     step = Success;
                     Log::WarningW(L"Update successful, please restart toolbox.");
@@ -267,11 +267,14 @@ void Updater::CheckForUpdate(const bool forced)
             iMode = Mode::CheckAndAsk;
         }
         switch (iMode) {
-            case Mode::CheckAndAsk: step = CheckAndAsk;
+            case Mode::CheckAndAsk:
+                step = CheckAndAsk;
                 break;
-            case Mode::CheckAndAutoUpdate: step = CheckAndAutoUpdate;
+            case Mode::CheckAndAutoUpdate:
+                step = CheckAndAutoUpdate;
                 break;
-            case Mode::CheckAndWarn: step = CheckAndWarn;
+            case Mode::CheckAndWarn:
+                step = CheckAndWarn;
                 break;
         }
     });
@@ -280,7 +283,8 @@ void Updater::CheckForUpdate(const bool forced)
 void Updater::Draw(IDirect3DDevice9*)
 {
     switch (step) {
-        case CheckAndWarn: Log::Warning(UpdateAvailableText());
+        case CheckAndWarn:
+            Log::Warning(UpdateAvailableText());
             step = Done;
             break;
         case CheckAndAsk: {
@@ -307,7 +311,8 @@ void Updater::Draw(IDirect3DDevice9*)
             }
         }
         break;
-        case CheckAndAutoUpdate: DoUpdate();
+        case CheckAndAutoUpdate:
+            DoUpdate();
             break;
         case Downloading: {
             if (!visible)

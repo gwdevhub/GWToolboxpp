@@ -11,7 +11,7 @@
 
 #include <Windows/StringDecoderWindow.h>
 
-static void printchar(wchar_t c)
+static void printchar(const wchar_t c)
 {
     if (c >= L' ' && c <= L'~') {
         printf("%lc", c);
@@ -105,7 +105,7 @@ std::wstring StringDecoderWindow::GetEncodedString()
         Log::Log("%s\n", results[i].c_str());
         wchar_t c;
         unsigned int lval = 0;
-        const int base = results[i].rfind("0x", 0) == 0 ? 0 : 16;
+        const auto base = results[i].rfind("0x", 0) == 0 ? 0 : 16;
         if (!(GuiUtils::ParseUInt(results[i].c_str(), &lval, base) && lval < 0xffff)) {
             Log::Error("Failed to ParseUInt %s", results[i].c_str());
             return L"";

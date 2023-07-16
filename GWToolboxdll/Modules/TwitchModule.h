@@ -20,9 +20,9 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Twitch"; }
-    const char* Description() const override { return " - Show the live chat from a running Twitch stream directly in chat.\n - Send a whisper to 'Twitch' to send a message to Twitch from GW"; }
-    const char* SettingsName() const override { return "Third Party Integration"; }
+    [[nodiscard]] const char* Name() const override { return "Twitch"; }
+    [[nodiscard]] const char* Description() const override { return " - Show the live chat from a running Twitch stream directly in chat.\n - Send a whisper to 'Twitch' to send a message to Twitch from GW"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Third Party Integration"; }
 
     void Initialize() override;
     void Terminate() override;

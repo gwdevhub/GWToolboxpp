@@ -154,7 +154,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
 
         // Set vertex buffer data z value to 0.0f, then copy it over.
-        for (int i = 0; i < cmd_list->VtxBuffer.Size; ++i) {
+        for (int i = 0; i < cmd_list->VtxBuffer.Size; i++) {
             cmd_list->VtxBuffer.Data[i].z = 0.0f;
         }
         memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(CUSTOMVERTEX));

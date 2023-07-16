@@ -271,10 +271,12 @@ void ObserverModule::HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::
 void ObserverModule::HandleJumboMessage(const uint8_t type, const uint32_t value)
 {
     switch (type) {
-        case JumboMessageType::MORALE_BOOST: HandleMoraleBoost(GetObservablePartyById(JumboMessageValueToPartyId(value)));
+        case JumboMessageType::MORALE_BOOST:
+            HandleMoraleBoost(GetObservablePartyById(JumboMessageValueToPartyId(value)));
             break;
         case JumboMessageType::VICTORY:
-        case JumboMessageType::FLAWLESS_VICTORY: HandleVictory(GetObservablePartyById(JumboMessageValueToPartyId(value)));
+        case JumboMessageType::FLAWLESS_VICTORY:
+            HandleVictory(GetObservablePartyById(JumboMessageValueToPartyId(value)));
             break;
     }
 }
@@ -287,16 +289,20 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
     UNREFERENCED_PARAMETER(no_target);
 
     switch (value_id) {
-        case GW::Packet::StoC::GenericValueID::damage: HandleDamageDone(caster_id, target_id, value, false);
+        case GW::Packet::StoC::GenericValueID::damage:
+            HandleDamageDone(caster_id, target_id, value, false);
             break;
 
-        case GW::Packet::StoC::GenericValueID::critical: HandleDamageDone(caster_id, target_id, value, true);
+        case GW::Packet::StoC::GenericValueID::critical:
+            HandleDamageDone(caster_id, target_id, value, true);
             break;
 
-        case GW::Packet::StoC::GenericValueID::armorignoring: HandleDamageDone(caster_id, target_id, value, false);
+        case GW::Packet::StoC::GenericValueID::armorignoring:
+            HandleDamageDone(caster_id, target_id, value, false);
             break;
 
-        case GW::Packet::StoC::GenericValueID::knocked_down: HandleKnockedDown(caster_id, value);
+        case GW::Packet::StoC::GenericValueID::knocked_down:
+            HandleKnockedDown(caster_id, value);
             break;
     }
 }
@@ -306,10 +312,12 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
                                          const uint32_t target_id, const uint32_t value, const bool no_target)
 {
     switch (value_id) {
-        case GW::Packet::StoC::GenericValueID::melee_attack_finished: HandleAttackFinished(caster_id);
+        case GW::Packet::StoC::GenericValueID::melee_attack_finished:
+            HandleAttackFinished(caster_id);
             break;
 
-        case GW::Packet::StoC::GenericValueID::attack_stopped: HandleAttackStopped(caster_id);
+        case GW::Packet::StoC::GenericValueID::attack_stopped:
+            HandleAttackStopped(caster_id);
             break;
 
         case GW::Packet::StoC::GenericValueID::attack_started: {
@@ -332,16 +340,20 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             break;
         }
 
-        case GW::Packet::StoC::GenericValueID::interrupted: HandleInterrupted(caster_id);
+        case GW::Packet::StoC::GenericValueID::interrupted:
+            HandleInterrupted(caster_id);
             break;
 
-        case GW::Packet::StoC::GenericValueID::attack_skill_finished: HandleAttackSkillFinished(caster_id);
+        case GW::Packet::StoC::GenericValueID::attack_skill_finished:
+            HandleAttackSkillFinished(caster_id);
             break;
 
-        case GW::Packet::StoC::GenericValueID::instant_skill_activated: HandleInstantSkillActivated(caster_id, target_id, static_cast<GW::Constants::SkillID>(value));
+        case GW::Packet::StoC::GenericValueID::instant_skill_activated:
+            HandleInstantSkillActivated(caster_id, target_id, static_cast<GW::Constants::SkillID>(value));
             break;
 
-        case GW::Packet::StoC::GenericValueID::attack_skill_stopped: HandleAttackSkillStopped(caster_id);
+        case GW::Packet::StoC::GenericValueID::attack_skill_stopped:
+            HandleAttackSkillStopped(caster_id);
             break;
 
         case GW::Packet::StoC::GenericValueID::attack_skill_activated: {
@@ -364,10 +376,12 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             break;
         }
 
-        case GW::Packet::StoC::GenericValueID::skill_finished: HandleSkillFinished(caster_id);
+        case GW::Packet::StoC::GenericValueID::skill_finished:
+            HandleSkillFinished(caster_id);
             break;
 
-        case GW::Packet::StoC::GenericValueID::skill_stopped: HandleSkillStopped(caster_id);
+        case GW::Packet::StoC::GenericValueID::skill_stopped:
+            HandleSkillStopped(caster_id);
             break;
 
         case GW::Packet::StoC::GenericValueID::skill_activated: {
@@ -592,7 +606,7 @@ void ObserverModule::HandleSkillStopped(const uint32_t agent_id)
 
 
 // Handle SkillActivated Packet
-void ObserverModule::HandleSkillActivated(const uint32_t caster_id, const uint32_t target_id, GW::Constants::SkillID skill_id)
+void ObserverModule::HandleSkillActivated(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id)
 {
     const auto action = new TargetAction(caster_id, target_id, false, true, skill_id);
     if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Started, action))
@@ -624,9 +638,12 @@ uint32_t ObserverModule::JumboMessageValueToPartyId(const uint32_t value)
 {
     // TODO: handle maps with 3 parties where the JumboMessageValue's are different
     switch (value) {
-        case JumboMessageValue::PARTY_ONE: return 1;
-        case JumboMessageValue::PARTY_TWO: return 2;
-        default: return NO_PARTY;
+        case JumboMessageValue::PARTY_ONE:
+            return 1;
+        case JumboMessageValue::PARTY_TWO:
+            return 2;
+        default:
+            return NO_PARTY;
     }
 }
 
@@ -684,7 +701,7 @@ void ObserverModule::HandleVictory(ObservableParty* winning_party)
 }
 
 
-bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, TargetAction* new_action)
+bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage stage, TargetAction* new_action)
 {
     // if the action ends up owned by the caster, the observermodule is responsible for garbage collecting the action
     // if the action ends up NOT owned by the caster, the caller is responsible for garbage collecting the action
@@ -1155,7 +1172,7 @@ void ObserverModule::DrawSettingInternal()
 }
 
 
-void ObserverModule::Update(float delta)
+void ObserverModule::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (party_sync_timer == 0)
@@ -1257,7 +1274,7 @@ ObserverModule::ObservableAgent* ObserverModule::CreateObservableAgent(const GW:
 
 
 // Lazy load an ObservableSkill using a skill_id
-ObserverModule::ObservableSkill* ObserverModule::GetObservableSkillById(GW::Constants::SkillID skill_id)
+ObserverModule::ObservableSkill* ObserverModule::GetObservableSkillById(const GW::Constants::SkillID skill_id)
 {
     // short circuit for skill_id = 0
     if (skill_id == NO_SKILL)
@@ -1373,10 +1390,12 @@ void ObserverModule::ObservedAction::Reduce(const TargetAction* action, const Ac
         return;
 
     switch (stage) {
-        case ActionStage::Instant: started += 1;
+        case ActionStage::Instant:
+            started += 1;
             finished += 1;
             break;
-        case ActionStage::Started: started += 1;
+        case ActionStage::Started:
+            started += 1;
             break;
         case ActionStage::Stopped:
             // nothing to do if the action was already finished
@@ -1396,7 +1415,8 @@ void ObserverModule::ObservedAction::Reduce(const TargetAction* action, const Ac
                 interrupted += 1;
             }
             break;
-        case ActionStage::Finished: finished += 1;
+        case ActionStage::Finished:
+            finished += 1;
             break;
     }
 
@@ -1832,9 +1852,10 @@ const std::string ObserverModule::ObservableSkill::Name()
 
 
 // Name + skill_id of the Skill
-const std::string ObserverModule::ObservableSkill::DebugName()
+std::string ObserverModule::ObservableSkill::DebugName()
 {
-    return std::string("(") + std::to_string(static_cast<uint32_t>(skill_id)) + ") \"" + GuiUtils::WStringToString(DecName()) + "\"";
+    using namespace std::string_literals;
+    return "("s + std::to_string(static_cast<uint32_t>(skill_id)) + "s \"" + GuiUtils::WStringToString(DecName()) + "\"";
 }
 
 

@@ -8,7 +8,6 @@
 #include <Utils/GuiUtils.h>
 
 #include <Modules/CrashHandler.h>
-#include <Modules/Resources.h>
 
 namespace {
     FILE* logfile = nullptr;
@@ -26,10 +25,10 @@ namespace {
 
 static void GWCALogHandler(
     void* context,
-    GW::LogLevel level,
+    const GW::LogLevel level,
     const char* msg,
     const char* file,
-    unsigned int line,
+    const unsigned int line,
     const char* function)
 {
     UNREFERENCED_PARAMETER(context);
@@ -41,12 +40,12 @@ static void GWCALogHandler(
     Log::Log("[GWCA] %s", msg);
 }
 
-void Log::FatalAssert(const char* expr, const char* file, unsigned line)
+void Log::FatalAssert(const char* expr, const char* file, const unsigned line)
 {
     return CrashHandler::FatalAssert(expr, file, line);
 }
 
-BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
+BOOL WINAPI ConsoleCtrlHandler(const DWORD dwCtrlType)
 {
     switch (dwCtrlType) {
         case CTRL_CLOSE_EVENT:
@@ -58,7 +57,8 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
             Sleep(10000);
 
             return TRUE;
-        default: break;
+        default:
+            break;
     }
     return FALSE;
 }
@@ -155,15 +155,18 @@ void Log::LogW(const wchar_t* msg, ...)
 }
 
 // === Game chat logging ===
-static void _chatlog(LogType log_type, const wchar_t* message)
+static void _chatlog(const LogType log_type, const wchar_t* message)
 {
     uint32_t color;
     switch (log_type) {
-        case LogType_Error: color = GWTOOLBOX_ERROR_COL;
+        case LogType_Error:
+            color = GWTOOLBOX_ERROR_COL;
             break;
-        case LogType_Warning: color = GWTOOLBOX_WARNING_COL;
+        case LogType_Warning:
+            color = GWTOOLBOX_WARNING_COL;
             break;
-        default: color = GWTOOLBOX_INFO_COL;
+        default:
+            color = GWTOOLBOX_INFO_COL;
             break;
     }
     const size_t len = 5 + wcslen(GWTOOLBOX_SENDER) + 4 + 13 + wcslen(message) + 4 + 1;
@@ -175,25 +178,29 @@ static void _chatlog(LogType log_type, const wchar_t* message)
         delete[] to_send;
     });
 
-    const wchar_t* c = [](LogType log_type) -> const wchar_t* {
+    const wchar_t* c = [](const LogType log_type) -> const wchar_t* {
         switch (log_type) {
-            case LogType_Info: return L"Info";
-            case LogType_Warning: return L"Warning";
-            case LogType_Error: return L"Error";
-            default: return L"";
+            case LogType_Info:
+                return L"Info";
+            case LogType_Warning:
+                return L"Warning";
+            case LogType_Error:
+                return L"Error";
+            default:
+                return L"";
         }
     }(log_type);
     Log::LogW(L"[%s] %s\n", c, message);
 }
 
-static void _vchatlogW(LogType log_type, const wchar_t* format, va_list argv)
+static void _vchatlogW(const LogType log_type, const wchar_t* format, const va_list argv)
 {
     wchar_t buf1[512];
     vswprintf(buf1, 512, format, argv);
     _chatlog(log_type, buf1);
 }
 
-static void _vchatlog(LogType log_type, const char* format, va_list argv)
+static void _vchatlog(const LogType log_type, const char* format, const va_list argv)
 {
     const size_t len = vsnprintf(nullptr, 0, format, argv);
     const auto buf = new char[len + 1];

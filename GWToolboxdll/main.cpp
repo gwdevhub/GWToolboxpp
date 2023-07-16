@@ -24,7 +24,7 @@ extern "C" __declspec(dllexport) void __cdecl Terminate()
     }
     // Wait up to 5000 ms for toolbox to clean up after itself; after that, bomb out
     const uint32_t timeout = 5000 / 16;
-    for (uint32_t i = 0; i < timeout && thread_running; i++) {
+    for (auto i = 0u; i < timeout && thread_running; i++) {
         Sleep(16);
     }
     Sleep(16);
@@ -56,7 +56,7 @@ leave:
 }
 
 // DLL entry point, dont do things in this thread unless you know what you are doing.
-BOOL WINAPI DllMain(_In_ HMODULE _HDllHandle, _In_ DWORD _Reason, _In_opt_ LPVOID _Reserved)
+BOOL WINAPI DllMain(_In_ const HMODULE _HDllHandle, _In_ const DWORD _Reason, _In_opt_ const LPVOID _Reserved)
 {
     UNREFERENCED_PARAMETER(_Reserved);
     DisableThreadLibraryCalls(_HDllHandle);

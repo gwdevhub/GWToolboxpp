@@ -281,9 +281,9 @@ std::string SHA1::final()
 
     /* Hex std::string */
     std::ostringstream result;
-    for (size_t i = 0; i < sizeof(digest) / sizeof(digest[0]); i++) {
+    for (unsigned int& i : digest) {
         result << std::hex << std::setfill('0') << std::setw(8);
-        result << digest[i];
+        result << i;
     }
 
     /* Reset for next run */

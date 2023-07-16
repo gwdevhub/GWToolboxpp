@@ -108,7 +108,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
         GW::Vec2f internal_offset(
             7.f, GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f);
         internal_offset *= uiscale_multiply;
-        const int user_offset_x = abs(user_offset);
+        const auto user_offset_x = abs(user_offset);
         float offset_width = width;
         auto calculated_pos =
             ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
@@ -125,7 +125,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
     if (ImGui::Begin(Name(), &visible, GetWinFlags(0))) {
         const float win_x = ImGui::GetWindowPos().x;
         const float win_y = ImGui::GetWindowPos().y;
-        auto GetGridPos = [&](const size_t _x, const size_t _y, bool topleft) -> ImVec2 {
+        auto GetGridPos = [&](const size_t _x, const size_t _y, const bool topleft) -> ImVec2 {
             size_t x = _x;
             size_t y = _y;
             if (y >= allies_start)
@@ -200,7 +200,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
     ImGui::PopStyleVar(3);
 }
 
-void SkillMonitorWidget::Update(float delta)
+void SkillMonitorWidget::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     for (auto& [agent_id, skill_history] : history) {
@@ -381,7 +381,8 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
             cancelled->last_update = TIMER_INIT();
             break;
         }
-        default: return;
+        default:
+            return;
     }
 }
 

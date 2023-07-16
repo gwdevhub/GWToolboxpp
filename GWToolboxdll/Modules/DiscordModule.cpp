@@ -167,25 +167,25 @@ time_t join_party_started_at = 0;
 time_t join_party_started = 0;
 time_t discord_connected_at = 0;
 
-static void UpdateActivityCallback(void* data, EDiscordResult result)
+static void UpdateActivityCallback(void* data, const EDiscordResult result)
 {
     UNREFERENCED_PARAMETER(data);
     Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
 }
 
-static void OnJoinRequestReplyCallback(void* data, EDiscordResult result)
+static void OnJoinRequestReplyCallback(void* data, const EDiscordResult result)
 {
     UNREFERENCED_PARAMETER(data);
     Log::Log(result == DiscordResult_Ok ? "Join request reply sent successfully.\n" : "Join request reply send FAILED!\n");
 }
 
-static void OnSendInviteCallback(void* data, EDiscordResult result)
+static void OnSendInviteCallback(void* data, const EDiscordResult result)
 {
     UNREFERENCED_PARAMETER(data);
     Log::Log(result == DiscordResult_Ok ? "Invite sent successfully.\n" : "Invite send FAILED!\n");
 }
 
-static void OnNetworkMessage(void* event_data, DiscordNetworkPeerId peer_id, DiscordNetworkChannelId channel_id, uint8_t* data, uint32_t data_length)
+static void OnNetworkMessage(void* event_data, const DiscordNetworkPeerId peer_id, const DiscordNetworkChannelId channel_id, uint8_t* data, const uint32_t data_length)
 {
     UNREFERENCED_PARAMETER(event_data);
     UNREFERENCED_PARAMETER(peer_id);
@@ -212,7 +212,7 @@ static void OnJoinRequest(void* data, DiscordUser* user)
     app->activities->send_request_reply(app->activities, user->id, DiscordActivityJoinRequestReply_Yes, app, OnJoinRequestReplyCallback);
 }
 
-static void OnPartyInvite(void* event_data, EDiscordActivityActionType type, DiscordUser* user, DiscordActivity* activity)
+static void OnPartyInvite(void* event_data, const EDiscordActivityActionType type, DiscordUser* user, DiscordActivity* activity)
 {
     UNREFERENCED_PARAMETER(event_data);
     UNREFERENCED_PARAMETER(type);
@@ -220,7 +220,7 @@ static void OnPartyInvite(void* event_data, EDiscordActivityActionType type, Dis
     Log::Log("Party invite received from %s\n", user->username);
 }
 
-static void OnDiscordLog(void* data, EDiscordLogLevel level, const char* message)
+static void OnDiscordLog(void* data, const EDiscordLogLevel level, const char* message)
 {
     UNREFERENCED_PARAMETER(data);
     UNREFERENCED_PARAMETER(level);
@@ -348,7 +348,7 @@ void DiscordModule::Initialize()
     // NOTE: We're using the one we know matches our API version, not checking for any other discord dll on the machine.
     Resources::EnsureFileExists(dll_location,
                                 "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/discord_game_sdk.dll",
-                                [&](bool success, const std::wstring& error) {
+                                [&](const bool success, const std::wstring& error) {
                                     if (!success || !LoadDll()) {
                                         Log::LogW(L"Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%s", error.c_str());
                                         return;
@@ -446,7 +446,7 @@ bool DiscordModule::Connect()
     ConnectCanary(); // Sets env var to attach to canary if its open.
 #endif
     SetLastError(0);
-    const int result = discordCreate(DISCORD_VERSION, &params, &app.core);
+    const auto result = discordCreate(DISCORD_VERSION, &params, &app.core);
     if (result != DiscordResult_Ok) {
 #ifdef _DEBUG
         Log::ErrorW(L"Failed to create discord connection; error code %d, last error %d", result, GetLastError());
@@ -572,7 +572,7 @@ void DiscordModule::LoadSettings(ToolboxIni* ini)
     show_party_info = ini->GetBoolValue(Name(), VAR_NAME(show_party_info), show_party_info);
 }
 
-void DiscordModule::Update(float delta)
+void DiscordModule::Update(const float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     if (!discord_enabled && discord_connected)
@@ -636,10 +636,10 @@ void DiscordModule::UpdateActivity()
     // Only update info if we're allowed
 
     if (show_activity) {
-        const unsigned short map_id = static_cast<unsigned short>(GW::Map::GetMapID());
-        short map_region = static_cast<short>(GW::Map::GetRegion());
-        const short map_language = static_cast<short>(GW::Map::GetLanguage());
-        const short map_district = static_cast<short>(GW::Map::GetDistrict());
+        const auto map_id = static_cast<unsigned short>(GW::Map::GetMapID());
+        auto map_region = static_cast<short>(GW::Map::GetRegion());
+        const auto map_language = static_cast<short>(GW::Map::GetLanguage());
+        const auto map_district = static_cast<short>(GW::Map::GetDistrict());
         char party_id[128];
         if (show_party_info) {
             // Party ID needs to be consistent across maps
@@ -692,13 +692,16 @@ void DiscordModule::UpdateActivity()
             char region_info[32] = {0};
             if (instance_type == GW::Constants::InstanceType::Outpost && !is_guild_hall) {
                 switch (static_cast<GW::Constants::MapRegion>(GW::Map::GetRegion())) {
-                    case GW::Constants::MapRegion::International: sprintf(region_info, "International %d", GW::Map::GetDistrict());
+                    case GW::Constants::MapRegion::International:
+                        sprintf(region_info, "International %d", GW::Map::GetDistrict());
                         break;
                     case GW::Constants::MapRegion::Chinese:
                     case GW::Constants::MapRegion::Korean:
-                    case GW::Constants::MapRegion::Japanese: sprintf(region_info, "%s %d", region_abbreviations[GW::Map::GetRegion()], GW::Map::GetDistrict());
+                    case GW::Constants::MapRegion::Japanese:
+                        sprintf(region_info, "%s %d", region_abbreviations[GW::Map::GetRegion()], GW::Map::GetDistrict());
                         break;
-                    default: sprintf(region_info, "%s %s %d", region_abbreviations[GW::Map::GetRegion()], map_languages[GW::Map::GetLanguage()], GW::Map::GetDistrict());
+                    default:
+                        sprintf(region_info, "%s %s %d", region_abbreviations[GW::Map::GetRegion()], map_languages[GW::Map::GetLanguage()], GW::Map::GetDistrict());
                         break;
                 }
             }

@@ -71,9 +71,11 @@ namespace {
         const auto instance_type = GW::Map::GetInstanceType();
 
         switch (instance_type) {
-            case GW::Constants::InstanceType::Explorable: show_toast = show_notifications_when_in_explorable;
+            case GW::Constants::InstanceType::Explorable:
+                show_toast = show_notifications_when_in_explorable;
                 break;
-            case GW::Constants::InstanceType::Outpost: show_toast = show_notifications_when_in_outpost;
+            case GW::Constants::InstanceType::Outpost:
+                show_toast = show_notifications_when_in_outpost;
                 break;
         }
 
@@ -92,7 +94,7 @@ namespace {
         return p ? p->party_id : static_cast<uint32_t>(-1);
     }
 
-    void OnWhisperToastActivated(const ToastNotifications::Toast* toast, bool activated)
+    void OnWhisperToastActivated(const ToastNotifications::Toast* toast, const bool activated)
     {
         if (!activated)
             return; // dismissed
@@ -102,7 +104,7 @@ namespace {
         });
     }
 
-    void OnGenericToastActivated(const ToastNotifications::Toast*, bool activated)
+    void OnGenericToastActivated(const ToastNotifications::Toast*, const bool activated)
     {
         if (!activated)
             return; // dismissed
@@ -119,7 +121,7 @@ namespace {
             FlashWindow();
     }
 
-    void TriggerToastCallback(const ToastNotifications::Toast* toast, bool result)
+    void TriggerToastCallback(const ToastNotifications::Toast* toast, const bool result)
     {
         if (toast->callback)
             toast->callback(toast, result);
@@ -150,12 +152,14 @@ namespace {
         const wchar_t* title = nullptr;
         const auto packet = static_cast<GW::Packet::StoC::MessageGlobal*>(base);
         switch (packet->channel) {
-            case GW::Chat::Channel::CHANNEL_GUILD: if (show_notifications_on_guild_chat)
+            case GW::Chat::Channel::CHANNEL_GUILD:
+                if (show_notifications_on_guild_chat)
                     title = L"Guild Chat";
                 if (flash_window_on_guild_chat)
                     FlashWindow();
                 break;
-            case GW::Chat::Channel::CHANNEL_ALLIANCE: if (show_notifications_on_ally_chat)
+            case GW::Chat::Channel::CHANNEL_ALLIANCE:
+                if (show_notifications_on_ally_chat)
                     title = L"Alliance Chat";
                 if (flash_window_on_ally_chat)
                     FlashWindow();
@@ -224,7 +228,7 @@ namespace {
         GW::StoC::PacketCallback cb;
         GW::HookEntry hook_entry;
 
-        StoC_Callback(uint32_t _header, GW::StoC::PacketCallback _cb)
+        StoC_Callback(const uint32_t _header, GW::StoC::PacketCallback _cb)
             : header(_header), cb(_cb)
         {
         }
@@ -308,7 +312,7 @@ bool ToastNotifications::DismissToast(const wchar_t* title)
     return true;
 }
 
-ToastNotifications::Toast* ToastNotifications::SendToast(const wchar_t* title, const wchar_t* message, OnToastCallback callback, void* extra_args)
+ToastNotifications::Toast* ToastNotifications::SendToast(const wchar_t* title, const wchar_t* message, const OnToastCallback callback, void* extra_args)
 {
     if (!IsCompatible())
         return nullptr;

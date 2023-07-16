@@ -45,7 +45,7 @@ void ChatLog::Add(GW::Chat::ChatMessage* in)
     Add(in->message, in->channel, in->timestamp);
 }
 
-void ChatLog::Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp)
+void ChatLog::Add(wchar_t* _message, const uint32_t _channel, const FILETIME _timestamp)
 {
     if (injecting || !enabled)
         return;
@@ -103,7 +103,7 @@ trim_log:
     }
 }
 
-void ChatLog::AddSent(wchar_t* _message, uint32_t addr)
+void ChatLog::AddSent(wchar_t* _message, const uint32_t addr)
 {
     if (!(((size_t)_message & 3) == 0 && _message[0]))
         return; // Empty message
@@ -367,7 +367,7 @@ void ChatLog::InjectSent()
     injecting = false;
 }
 
-void ChatLog::SetEnabled(bool _enabled)
+void ChatLog::SetEnabled(const bool _enabled)
 {
     if (enabled == _enabled)
         return;
@@ -439,7 +439,7 @@ void ChatLog::RegisterSettingsContent()
 {
     ToolboxModule::RegisterSettingsContent(
         "Chat Settings", ICON_FA_COMMENTS,
-        [this](const std::string&, bool is_showing) {
+        [this](const std::string&, const bool is_showing) {
             if (!is_showing)
                 return;
             ImGui::Checkbox("Enable GWToolbox chat log", &Instance().enabled);

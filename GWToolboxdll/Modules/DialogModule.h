@@ -25,7 +25,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Dialogs"; }
+    [[nodiscard]] const char* Name() const override { return "Dialogs"; }
     bool HasSettings() override { return false; }
 
     void Initialize() override;
@@ -87,8 +87,10 @@ private:
             case GW::Constants::DialogID::UwTelePools:
             case GW::Constants::DialogID::UwTelePlanes:
             case GW::Constants::DialogID::UwTeleWastes:
-            case GW::Constants::DialogID::UwTeleMnt: return true;
-            default: return false;
+            case GW::Constants::DialogID::UwTeleMnt:
+                return true;
+            default:
+                return false;
         }
     }
 

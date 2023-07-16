@@ -16,8 +16,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Travel"; }
-    const char* Icon() const override { return ICON_FA_GLOBE_EUROPE; }
+    [[nodiscard]] const char* Name() const override { return "Travel"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE_EUROPE; }
 
     void Initialize() override;
 
@@ -108,7 +108,7 @@ private:
     };  */
 
     struct OutpostAlias {
-        OutpostAlias(GW::Constants::MapID m, GW::Constants::District d = GW::Constants::District::Current, uint8_t n = 0)
+        OutpostAlias(const GW::Constants::MapID m, const GW::Constants::District d = GW::Constants::District::Current, const uint8_t n = 0)
             : map_id(m)
               , district(d)
               , district_number(n)
@@ -120,7 +120,7 @@ private:
     };
 
     struct DistrictAlias {
-        DistrictAlias(GW::Constants::District d, uint8_t n = 0)
+        DistrictAlias(const GW::Constants::District d, const uint8_t n = 0)
             : district(d)
               , district_number(n)
         {
