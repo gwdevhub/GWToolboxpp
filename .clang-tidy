@@ -1,4 +1,4 @@
-Checks:          '*'
+Checks:          '*, -performance-no-int-to-ptr'
 WarningsAsErrors: true
 CheckOptions:
   - key:             bugprone-unhandled-self-assignment.WarnOnlyIfThisHasSuspiciousField
