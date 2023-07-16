@@ -689,7 +689,7 @@ void GWToolbox::Update(GW::HookStatus*)
     // Improve precision with QueryPerformanceCounter
     const auto tick = GetTickCount();
     const auto delta = tick - last_tick_count;
-    const auto delta_f = static_cast<double>(delta) / 1000.f;
+    const auto delta_f = static_cast<float>(delta) / 1000.f;
 
     if (initialized
         && imgui_initialized
