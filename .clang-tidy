@@ -1,0 +1,13 @@
+Checks:          '*'
+WarningsAsErrors: true
+CheckOptions:
+  - key:             bugprone-unhandled-self-assignment.WarnOnlyIfThisHasSuspiciousField
+    value:           '0'
+  - key:             modernize-loop-convert.MaxCopySize
+    value:           '8'
+  - key:             modernize-loop-convert.MinConfidence
+    value:           safe
+  - key:             modernize-use-auto.MinTypeNameLength
+    value:           0
+  - key:             modernize-use-auto.RemoveStars
+    value:           1
