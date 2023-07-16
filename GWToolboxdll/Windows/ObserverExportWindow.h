@@ -18,8 +18,8 @@ public:
         V_1_0
     };
 
-    std::string PadLeft(std::string input, uint8_t count, char c);
-    nlohmann::json ToJSON_V_0_1();
+    static std::string PadLeft(std::string input, uint8_t count, char c);
+    static nlohmann::json ToJSON_V_0_1();
     nlohmann::json ToJSON_V_1_0();
     void ExportToJSON(Version version);
 

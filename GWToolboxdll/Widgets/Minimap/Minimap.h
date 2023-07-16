@@ -78,11 +78,11 @@ public:
     void DrawSettingInternal() override;
 
     [[nodiscard]] float GetMapRotation() const;
-    [[nodiscard]] DirectX::XMFLOAT2 GetGwinchScale() const;
+    [[nodiscard]] static DirectX::XMFLOAT2 GetGwinchScale();
     [[nodiscard]] GW::Vec2f ShadowstepLocation() const;
 
     // 0 is 'all' flag, 1 to 7 is each hero
-    bool FlagHero(uint32_t idx);
+    static bool FlagHero(uint32_t idx);
 
     RangeRenderer range_renderer;
     PmapRenderer pmap_renderer;
@@ -140,7 +140,7 @@ private:
     Color hero_flag_window_background = 0;
     std::vector<GW::AgentID> player_heroes{};
 
-    size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
+    static size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 
     GW::HookEntry AgentPinged_Entry;
     GW::HookEntry CompassEvent_Entry;

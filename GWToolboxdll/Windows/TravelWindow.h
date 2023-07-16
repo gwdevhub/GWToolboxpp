@@ -38,7 +38,7 @@ public:
         GW::Constants::District district = GW::Constants::District::Current,
         uint32_t district_number = 0);
 
-    bool IsWaitingForMapTravel();
+    static bool IsWaitingForMapTravel();
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -57,7 +57,7 @@ public:
 private:
     // ==== Helpers ====
     void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);
-    GW::Constants::MapID IndexToOutpostID(int index);
+    static GW::Constants::MapID IndexToOutpostID(int index);
     static bool ParseDistrict(const std::wstring& s, GW::Constants::District& district, uint32_t& number);
     static bool ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, uint32_t& number);
 

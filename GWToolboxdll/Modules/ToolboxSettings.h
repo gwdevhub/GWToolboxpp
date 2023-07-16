@@ -33,7 +33,7 @@ public:
     {
     };
 
-    void DrawFreezeSetting();
+    static void DrawFreezeSetting();
 
     void DrawSizeAndPositionSettings() override
     {

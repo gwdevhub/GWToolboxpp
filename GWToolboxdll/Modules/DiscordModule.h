@@ -61,9 +61,9 @@ public:
     void UpdateActivity();
 
     void InviteUser(DiscordUser* user);
-    void FailedJoin(const char* error_msg);
+    static void FailedJoin(const char* error_msg);
     void JoinParty();
-    bool IsInJoinablePartyMap();
+    static bool IsInJoinablePartyMap();
 
     Application app{};
     DiscordActivity activity{};
@@ -97,7 +97,7 @@ private:
     bool LoadDll();
     bool UnloadDll();
     bool Connect();
-    void ConnectCanary();
+    static void ConnectCanary();
     void Disconnect();
 
     GW::HookEntry ErrorMessage_Callback;

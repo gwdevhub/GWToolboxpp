@@ -22,7 +22,7 @@ public:
         ToolboxModule::RegisterSettingsContent();
     }
 
-    void CheckForUpdate(bool forced = false);
+    static void CheckForUpdate(bool forced = false);
 
     void Draw(IDirect3DDevice9* device) override;
 

@@ -164,7 +164,7 @@ void EffectRenderer::LoadSettings(ToolboxIni* ini, const char* section)
     }
 }
 
-void EffectRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
+void EffectRenderer::SaveSettings(ToolboxIni* ini, const char* section)
 {
     for (const auto& settings : aoe_effect_settings) {
         char color_buf[64];

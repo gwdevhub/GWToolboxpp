@@ -714,7 +714,7 @@ float Minimap::GetMapRotation() const
     return yaw;
 }
 
-DirectX::XMFLOAT2 Minimap::GetGwinchScale() const
+DirectX::XMFLOAT2 Minimap::GetGwinchScale()
 {
     return gwinch_scale;
 }

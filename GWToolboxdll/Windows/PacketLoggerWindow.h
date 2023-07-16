@@ -33,7 +33,7 @@ public:
     void ClearMessageLog();
     void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet);
     void CtoSHandler(GW::HookStatus* status, void* packet);
-    std::string PadLeft(std::string input, uint8_t count, char c);
+    static std::string PadLeft(std::string input, uint8_t count, char c);
     std::string PrefixTimestamp(std::string message);
 
 private:

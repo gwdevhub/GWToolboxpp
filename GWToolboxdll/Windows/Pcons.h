@@ -98,7 +98,7 @@ public:
 protected:
     std::string desc;
     // Cycles through character's inventory to find a matching (incomplete) stack, or an empty pane.
-    GW::Item* FindVacantStackOrSlotInInventory(GW::Item* likeItem = nullptr);
+    static GW::Item* FindVacantStackOrSlotInInventory(GW::Item* likeItem = nullptr);
     GW::AgentLiving* player = nullptr;
 
     // "default" is the fallback

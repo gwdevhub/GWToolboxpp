@@ -36,7 +36,7 @@ public:
     uint32_t GetAlcoholLevel();
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    uint32_t GetAlcoholTitlePoints(); // Gets current alcohol title points.
+    static uint32_t GetAlcoholTitlePoints(); // Gets current alcohol title points.
     static void AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess* packet);
 
     // Draw user interface. Will be called every frame if the element is visible

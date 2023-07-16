@@ -344,10 +344,10 @@ public:
 
     void Initialize() override;
     static void Initialize_Prophecies();
-    void Initialize_Factions();
-    void Initialize_Nightfall();
-    void Initialize_EotN();
-    void Initialize_Dungeons();
+    static void Initialize_Factions();
+    static void Initialize_Nightfall();
+    static void Initialize_EotN();
+    static void Initialize_Dungeons();
     void Terminate() override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawHallOfMonuments(IDirect3DDevice9* device);

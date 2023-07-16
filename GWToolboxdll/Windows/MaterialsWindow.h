@@ -85,8 +85,8 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
 private:
-    [[nodiscard]] DWORD GetModelID(Material mat) const;
-    Material GetMaterial(DWORD modelid);
+    [[nodiscard]] static DWORD GetModelID(Material mat);
+    static Material GetMaterial(DWORD modelid);
     [[nodiscard]] std::string GetPrice(Material mat1, float fac1,
                                        Material mat2, float fac2, int extra) const;
 

@@ -143,7 +143,7 @@ private:
         [[nodiscard]] bool IsStarted() const;
         [[nodiscard]] bool IsDone() const;
         void Draw();
-        void Update();
+        static void Update();
 
     private:
         char cached_done[16] = "";

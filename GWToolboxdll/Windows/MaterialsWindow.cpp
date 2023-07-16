@@ -765,7 +765,7 @@ MaterialsWindow::Material MaterialsWindow::GetMaterial(const DWORD modelid)
     }
 }
 
-DWORD MaterialsWindow::GetModelID(const Material mat) const
+DWORD MaterialsWindow::GetModelID(const Material mat)
 {
     switch (mat) {
         case BoltofCloth:

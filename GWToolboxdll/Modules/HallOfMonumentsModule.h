@@ -306,7 +306,7 @@ public:
 
     bool HasSettings() override { return false; }
 
-    const char* GetDevotionPointsDescription(const DevotionPoints id)
+    static const char* GetDevotionPointsDescription(const DevotionPoints id)
     {
         switch (id) {
             case DevotionPoints::AnyMiniatureStatue:
@@ -326,7 +326,7 @@ public:
     // Decode a zero terminated base64 encoded hom code
     bool DecodeHomCode(const char* in, HallOfMonumentsAchievements* out);
     // Decode a zero terminated base64 encoded hom code
-    bool DecodeHomCode(HallOfMonumentsAchievements* out);
+    static bool DecodeHomCode(HallOfMonumentsAchievements* out);
     // Get the account achiemenets for the current player
     static void AsyncGetAccountAchievements(const std::wstring& character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback = nullptr);
 };

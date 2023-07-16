@@ -45,7 +45,7 @@ public:
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
     void RegisterSettingsContent() override;
-    void DrawLunarsAndAlcoholSettings();
+    static void DrawLunarsAndAlcoholSettings();
 
     static void OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::VanquishComplete*);
     static void OnObjectiveDone(GW::HookStatus*, GW::Packet::StoC::ObjectiveDone* packet);

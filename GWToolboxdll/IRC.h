@@ -88,13 +88,13 @@ public:
     bool is_connected();
 
 private:
-    void error(int err);
+    static void error(int err);
     void call_hook(const char* irc_command, const char* params, irc_reply_data* hostd);
     /*void call_the_hook(irc_command_hook* hook, char* irc_command, char*params, irc_host_data* hostd);*/
     void parse_irc_reply(const char* data);
     void split_to_replies(const char* data);
-    void insert_irc_command_hook(irc_command_hook* hook, const char* cmd_name, int (*function_ptr)(const char*, irc_reply_data*, void*));
-    void delete_irc_command_hook(irc_command_hook* cmd_hook);
+    static void insert_irc_command_hook(irc_command_hook* hook, const char* cmd_name, int (*function_ptr)(const char*, irc_reply_data*, void*));
+    static void delete_irc_command_hook(irc_command_hook* cmd_hook);
     // int irc_socket; // This fails when using winsock2.h in Windows. Define as SOCKET to fix?
     SOCKET irc_socket{};
     char message_buffer[1024] = {0};

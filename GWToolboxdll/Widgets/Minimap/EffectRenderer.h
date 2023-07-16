@@ -20,10 +20,10 @@ public:
     void PacketCallback(GW::Packet::StoC::GenericValueTarget* pak);
     void PacketCallback(GW::Packet::StoC::PlayEffect* pak);
 
-    void LoadDefaults();
+    static void LoadDefaults();
     void DrawSettings();
     void LoadSettings(ToolboxIni* ini, const char* section);
-    void SaveSettings(ToolboxIni* ini, const char* section) const;
+    static void SaveSettings(ToolboxIni* ini, const char* section);
 
 private:
     void Initialize(IDirect3DDevice9* device) override;

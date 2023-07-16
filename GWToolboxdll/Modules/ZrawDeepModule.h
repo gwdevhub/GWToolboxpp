@@ -29,7 +29,7 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
 
     void SetTransmogs();
-    bool IsEnabled();
+    static bool IsEnabled();
 
     GW::HookEntry ZrawDeepModule_StoCs;
 };

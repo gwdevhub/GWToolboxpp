@@ -104,7 +104,7 @@ private:
     void Send(const TeamHeroBuild& tbuild, size_t idx);
     void Send(const TeamHeroBuild& tbuild);
     void View(const TeamHeroBuild& tbuild, unsigned int idx);
-    void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
+    static void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
     TeamHeroBuild* GetTeambuildByName(std::string& argBuildname);
 
     // Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.

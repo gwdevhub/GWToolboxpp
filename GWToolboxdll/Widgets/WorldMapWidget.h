@@ -34,5 +34,5 @@ public:
     bool WndProc(UINT, WPARAM, LPARAM) override;
 
 private:
-    void InitializeMapsUnlockedArrays();
+    static void InitializeMapsUnlockedArrays();
 };

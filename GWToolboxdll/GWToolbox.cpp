@@ -540,6 +540,7 @@ std::filesystem::path GWToolbox::LoadSettings(const std::filesystem::path& confi
     return ini->location_on_disk;
 }
 
+// ReSharper disable once CppMemberFunctionMayBeConst
 std::filesystem::path GWToolbox::SaveSettings(const std::filesystem::path& config)
 {
     const auto ini = OpenSettingsFile(config, false);
@@ -557,7 +558,7 @@ std::filesystem::path GWToolbox::SaveSettings(const std::filesystem::path& confi
     return ini->location_on_disk;
 }
 
-void GWToolbox::StartSelfDestruct()
+void GWToolbox::StartSelfDestruct() const
 {
     if (must_self_destruct)
         return;
@@ -686,9 +687,9 @@ void GWToolbox::Update(GW::HookStatus*)
 
     // @Enhancement:
     // Improve precision with QueryPerformanceCounter
-    const DWORD tick = GetTickCount();
-    const DWORD delta = tick - last_tick_count;
-    const float delta_f = delta / 1000.f;
+    const auto tick = GetTickCount();
+    const auto delta = tick - last_tick_count;
+    const auto delta_f = static_cast<double>(delta) / 1000.f;
 
     if (initialized
         && imgui_initialized

@@ -61,7 +61,7 @@ private:
         GW::Constants::SkillID::Aggressive_Refrain,
     };
 
-    void UseBuff(GW::AgentID target, DWORD buff_skillid);
+    static void UseBuff(GW::AgentID target, DWORD buff_skillid);
 
     Color background = 0;
     Color low_attribute_overlay = 0;

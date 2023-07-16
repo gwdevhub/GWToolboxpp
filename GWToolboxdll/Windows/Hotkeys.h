@@ -166,7 +166,7 @@ public:
     int Description(char* buf, size_t bufsz) override;
     void Execute() override;
 
-    bool IsEquippable(const GW::Item* item);
+    static bool IsEquippable(const GW::Item* item);
 
     GW::Item* FindMatchingItem(GW::Constants::Bag bag_idx);
 };

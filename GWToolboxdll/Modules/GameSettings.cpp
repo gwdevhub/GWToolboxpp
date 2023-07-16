@@ -2171,7 +2171,7 @@ void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue
 }
 
 // Block annoying tonic sounds/effects from other players
-void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) const
+void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak)
 {
     if (pak->agent_id != GW::Agents::GetPlayerId()) {
         switch (pak->value) {
@@ -2332,7 +2332,7 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, GW::Packet::StoC::Play
 }
 
 // Automatically return to outpost on defeat
-void GameSettings::OnPartyDefeated(GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) const
+void GameSettings::OnPartyDefeated(GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*)
 {
     UNREFERENCED_PARAMETER(status);
     if (!auto_return_on_defeat || !GW::PartyMgr::GetIsLeader())
@@ -2447,7 +2447,7 @@ void GameSettings::OnMapTravel(GW::HookStatus* status, GW::Packet::StoC::GameSrv
         FocusWindow();
 }
 
-void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*) const
+void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*)
 {
     pending_reinvite.reset(current_party_target_id);
 }
@@ -2506,7 +2506,7 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
 }
 
 // Auto-drop UA when recasting
-void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*) const
+void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
 {
     if (!(wParam && drop_ua_on_cast))
         return;
@@ -2575,7 +2575,7 @@ void GameSettings::OnCast(GW::HookStatus*, const uint32_t agent_id, const uint32
 }
 
 // Set window title to player name on map load
-void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) const
+void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
 {
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(set_window_title_as_charname);
@@ -2593,7 +2593,7 @@ void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet)
 }
 
 // Default colour for agent name tags
-void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*) const
+void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
 {
     if (msgid != GW::UI::UIMessage::kShowAgentNameTag && msgid != GW::UI::UIMessage::kSetAgentNameTagAttribs)
         return;

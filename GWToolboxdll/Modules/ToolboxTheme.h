@@ -37,7 +37,7 @@ public:
     ToolboxIni* GetThemeIni(bool reload = true);
 
 private:
-    ImGuiStyle DefaultTheme();
+    static ImGuiStyle DefaultTheme();
 
     float font_global_scale = 1.0;
     ImGuiStyle ini_style;

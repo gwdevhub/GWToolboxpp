@@ -30,8 +30,8 @@ public:
 
     static void OnServerPing(GW::HookStatus*, void* packet);
 
-    uint32_t GetPing();
-    uint32_t GetAveragePing();
+    static uint32_t GetPing();
+    static uint32_t GetAveragePing();
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;

@@ -543,8 +543,8 @@ private:
     // return false means action was not assigned and may need freeing by the caller
     bool ReduceAction(ObservableAgent* caster, ActionStage stage, TargetAction* new_action = nullptr);
 
-    uint32_t JumboMessageValueToPartyId(uint32_t value);
-    void HandleMoraleBoost(ObservableParty* boosting_party);
+    static uint32_t JumboMessageValueToPartyId(uint32_t value);
+    static void HandleMoraleBoost(ObservableParty* boosting_party);
     void HandleVictory(ObservableParty* winning_party);
 
     ObservableMap* map{};

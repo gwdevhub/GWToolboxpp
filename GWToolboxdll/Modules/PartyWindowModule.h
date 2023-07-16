@@ -23,7 +23,7 @@ public:
     void DrawSettingInternal() override;
 
 private:
-    void LoadDefaults();
+    static void LoadDefaults();
 
 private:
 };
