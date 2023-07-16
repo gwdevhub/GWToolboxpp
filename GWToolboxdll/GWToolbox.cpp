@@ -540,7 +540,7 @@ std::filesystem::path GWToolbox::LoadSettings(const std::filesystem::path& confi
     return ini->location_on_disk;
 }
 
-std::filesystem::path GWToolbox::SaveSettings(const std::filesystem::path& config) const
+std::filesystem::path GWToolbox::SaveSettings(const std::filesystem::path& config)
 {
     const auto ini = OpenSettingsFile(config, false);
     for (const auto m : modules_enabled) {

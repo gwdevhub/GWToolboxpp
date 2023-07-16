@@ -33,7 +33,8 @@ public:
 
     bool CanTerminate();
 
-    [[nodiscard]] std::filesystem::path SaveSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME) const;
+    // ReSharper disable once CppMemberFunctionMayBeConst
+    std::filesystem::path SaveSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME);
     std::filesystem::path LoadSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME, bool fresh = false);
 
     void StartSelfDestruct();

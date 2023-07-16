@@ -8,11 +8,13 @@
 #include <Utils/GuiUtils.h>
 
 #include <Modules/CrashHandler.h>
+// ReSharper disable once CppUnusedIncludeDirective
+#include <Modules/Resources.h>
 
 namespace {
     FILE* logfile = nullptr;
-    FILE* stdout_file = nullptr;
-    FILE* stderr_file = nullptr;
+    [[maybe_unused]] FILE* stdout_file = nullptr;
+    [[maybe_unused]] FILE* stderr_file = nullptr;
 
     enum LogType : uint8_t {
         LogType_Info,
@@ -20,7 +22,7 @@ namespace {
         LogType_Error
     };
 
-    bool crash_dumped = false;
+    [[maybe_unused]] bool crash_dumped = false;
 }
 
 static void GWCALogHandler(
