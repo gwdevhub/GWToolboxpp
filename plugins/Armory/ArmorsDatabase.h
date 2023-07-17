@@ -20,7 +20,7 @@ enum Campaign {
 };
 
 struct Armor {
-    const char *label;
+    const char* label;
     uint32_t model_file_id;
     GW::Constants::Profession profession;
     ItemSlot item_slot;

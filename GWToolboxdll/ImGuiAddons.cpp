@@ -4,17 +4,19 @@
 #include <ImGuiAddons.h>
 #include <string>
 
-using namespace std::string_literals;
-
 namespace ImGui {
     float element_spacing_width = 0.f;
     int element_spacing_cols = 1;
     int element_spacing_col_idx = 0;
-    float* element_spacing_indent = 0;
-    const float& FontScale() {
+    float* element_spacing_indent = nullptr;
+
+    const float& FontScale()
+    {
         return GetIO().FontGlobalScale;
     }
-    void StartSpacedElements(float width, bool include_font_scaling) {
+
+    void StartSpacedElements(const float width, const bool include_font_scaling)
+    {
         element_spacing_width = width;
         if (include_font_scaling)
             element_spacing_width *= FontScale();
@@ -22,7 +24,9 @@ namespace ImGui {
         element_spacing_col_idx = 0;
         element_spacing_indent = &(GetCurrentWindow()->DC.Indent.x);
     }
-    void NextSpacedElement() {
+
+    void NextSpacedElement()
+    {
         if (element_spacing_col_idx) {
             if (element_spacing_col_idx < element_spacing_cols) {
                 SameLine((element_spacing_width * element_spacing_col_idx) + *element_spacing_indent);
@@ -35,25 +39,32 @@ namespace ImGui {
     }
 
 
-    void ShowHelp(const char* help) {
+    void ShowHelp(const char* help)
+    {
         SameLine();
-        TextDisabled("%s","(?)");
+        TextDisabled("%s", "(?)");
         if (IsItemHovered()) {
-            SetTooltip("%s",help);
+            SetTooltip("%s", help);
         }
     }
-    void TextShadowed(const char* label, ImVec2 offset, ImVec4 shadow_color) {
+
+    void TextShadowed(const char* label, const ImVec2 offset, ImVec4 shadow_color)
+    {
         const ImVec2 pos = GetCursorPos();
         SetCursorPos(ImVec2(pos.x + offset.x, pos.y + offset.y));
         TextColored(shadow_color, "%s", label);
         SetCursorPos(pos);
         TextUnformatted(label);
     }
-    void SetNextWindowCenter(ImGuiWindowFlags flags) {
+
+    void SetNextWindowCenter(const ImGuiWindowFlags flags)
+    {
         const auto& io = GetIO();
         SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), flags, ImVec2(0.5f, 0.5f));
     }
-    bool SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content) {
+
+    bool SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)
+    {
         static char id_buf[128];
         snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, confirm_bool);
         if (SmallButton(label)) {
@@ -73,7 +84,9 @@ namespace ImGui {
         }
         return *confirm_bool;
     }
-    bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content) {
+
+    bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)
+    {
         static char id_buf[128];
         snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, confirm_bool);
         if (Button(label)) {
@@ -94,7 +107,7 @@ namespace ImGui {
         return *confirm_bool;
     }
 
-    bool IconButton(const char* label, ImTextureID icon, const ImVec2& size, ImGuiButtonFlags flags, const ImVec2& icon_size)
+    bool IconButton(const char* label, const ImTextureID icon, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size)
     {
         char button_id[128];
         sprintf(button_id, "###icon_button_%s", label);
@@ -105,7 +118,7 @@ namespace ImGui {
         const ImVec2& button_size = GetItemRectSize();
         ImVec2 img_size = icon_size;
         if (!icon) {
-            img_size = { 0.f, 0.f };
+            img_size = {0.f, 0.f};
         }
         else {
             if (icon_size.x > 0.f)
@@ -129,21 +142,23 @@ namespace ImGui {
         const float text_x = img_x + img_size.x + 3.f;
         const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
         if (img_size.x) {
-            ImGui::AddImageCropped(icon, ImVec2(img_x, img_y), ImVec2(img_x + img_size.x, img_y + img_size.y));
+            AddImageCropped(icon, ImVec2(img_x, img_y), ImVec2(img_x + img_size.x, img_y + img_size.y));
         }
         if (label)
             GetWindowDrawList()->AddText(ImVec2(text_x, text_y), ImColor(GetStyle().Colors[ImGuiCol_Text]), label);
         return clicked;
     }
+
     bool ColorButtonPicker(const char* label, Color* imcol, const ImGuiColorEditFlags flags)
     {
         return Colors::DrawSettingHueWheel(label, imcol,
-            flags | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel |
-            ImGuiColorEditFlags_NoInputs);
+                                           flags | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel |
+                                           ImGuiColorEditFlags_NoInputs);
     }
-    bool MyCombo(const char* label, const char* preview_text, int* current_item, bool(*items_getter)(void*, int, const char**),
-        void* data, int items_count) {
 
+    bool MyCombo(const char* label, const char* preview_text, int* current_item, bool (*items_getter)(void*, int, const char**),
+                 void* data, const int items_count)
+    {
         ImGuiContext& g = *GImGui;
         constexpr float word_building_delay = .5f; // after this many seconds, typing will make a new search
 
@@ -166,22 +181,23 @@ namespace ImGui {
         static float time_since_last_update = 0.0f;
         time_since_last_update += g.IO.DeltaTime;
         bool update_keyboard_match = false;
-        for (int n = 0; n < g.IO.InputQueueCharacters.size() && g.IO.InputQueueCharacters[n]; n++) {
+        for (auto n = 0; n < g.IO.InputQueueCharacters.size() && g.IO.InputQueueCharacters[n]; n++) {
             if (const auto c = static_cast<unsigned int>(g.IO.InputQueueCharacters[n])) {
                 if (c == ' '
                     || (c >= '0' && c <= '9')
                     || (c >= 'A' && c <= 'Z')
                     || (c >= 'a' && c <= 'z')) {
-
                     // build temporary word
-                    if (time_since_last_update < word_building_delay) { // append
+                    if (time_since_last_update < word_building_delay) {
+                        // append
                         const size_t i = strnlen(word, 64);
                         if (i + 1 < 64) {
                             word[i] = static_cast<char>(c);
                             word[i + 1] = '\0';
                         }
                     }
-                    else { // reset
+                    else {
+                        // reset
                         word[0] = static_cast<char>(c);
                         word[1] = '\0';
                     }
@@ -195,7 +211,7 @@ namespace ImGui {
         int best = -1;
         bool keyboard_selected_now = false;
         if (update_keyboard_match) {
-            for (int i = 0; i < items_count; ++i) {
+            for (auto i = 0; i < items_count; i++) {
                 const char* item_text;
                 if (items_getter(data, i, &item_text)) {
                     int j = 0;
@@ -229,7 +245,7 @@ namespace ImGui {
 
         // Display items
         bool value_changed = false;
-        for (int i = 0; i < items_count; i++) {
+        for (auto i = 0; i < items_count; i++) {
             PushID(reinterpret_cast<void*>(i));
             const bool item_selected = (i == *current_item);
             const bool item_keyboard_selected = (i == keyboard_selected);
@@ -255,8 +271,9 @@ namespace ImGui {
         return value_changed;
     }
 
-    ImVec2 CalculateUvCrop(ImTextureID user_texture_id, const ImVec2& size) {
-        ImVec2 uv1 = { 1.f,1.f };
+    ImVec2 CalculateUvCrop(const ImTextureID user_texture_id, const ImVec2& size)
+    {
+        ImVec2 uv1 = {1.f, 1.f};
         if (user_texture_id) {
             const auto texture = static_cast<IDirect3DTexture9*>(user_texture_id);
             D3DSURFACE_DESC desc;
@@ -277,14 +294,18 @@ namespace ImGui {
         return uv1;
     }
 
-    void ImageCropped(ImTextureID user_texture_id, const ImVec2& size) {
-        ImGui::Image(user_texture_id, size, { 0,0 }, CalculateUvCrop(user_texture_id,size));
+    void ImageCropped(const ImTextureID user_texture_id, const ImVec2& size)
+    {
+        Image(user_texture_id, size, {0, 0}, CalculateUvCrop(user_texture_id, size));
     }
-    void AddImageCropped(ImTextureID user_texture_id, const ImVec2& top_left, const ImVec2& bottom_right) {
-        const ImVec2 size = { bottom_right.x - top_left.x, bottom_right.y - top_left.y };
-        ImGui::GetWindowDrawList()->AddImage(user_texture_id, top_left, bottom_right, { 0,0 }, CalculateUvCrop(user_texture_id, size));
+
+    void AddImageCropped(const ImTextureID user_texture_id, const ImVec2& top_left, const ImVec2& bottom_right)
+    {
+        const ImVec2 size = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};
+        GetWindowDrawList()->AddImage(user_texture_id, top_left, bottom_right, {0, 0}, CalculateUvCrop(user_texture_id, size));
     }
-    bool ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags)
+
+    bool ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, const size_t count, const size_t max_per_line, const ImGuiColorEditFlags flags)
     {
         PushID(label);
         BeginGroup();
@@ -298,7 +319,7 @@ namespace ImGui {
             }
             PopID();
             if (((i + 1) % max_per_line) != 0)
-                ImGui::SameLine();
+                SameLine();
         }
 
         if (flags & ImGuiColorEditFlags_AlphaPreview) {

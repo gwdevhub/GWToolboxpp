@@ -4,51 +4,48 @@
 
 #include <Widgets/Minimap/VBuffer.h>
 
-namespace GW {
-    namespace Constants {
-        enum class MapID;
-    }
-}
-typedef uint32_t Color;
-namespace mapbox // enable mapbox::earcut to work with GW::Vec2f as Point
-{
-    namespace util
-    {
-        template <>
-        struct nth<0, GW::Vec2f>
-        {
-            static auto get(const GW::Vec2f& t) { return t.x; };
-        };
-        template <>
-        struct nth<1, GW::Vec2f>
-        {
-            static auto get(const GW::Vec2f& t) { return t.y; };
-        };
-    }
+namespace GW::Constants {
+    enum class MapID;
 }
 
-class CustomRenderer : public VBuffer
-{
+using Color = uint32_t;
+
+namespace mapbox::util {
+    template <>
+    struct nth<0, GW::Vec2f> {
+        static auto get(const GW::Vec2f& t) { return t.x; };
+    };
+
+    template <>
+    struct nth<1, GW::Vec2f> {
+        static auto get(const GW::Vec2f& t) { return t.y; };
+    };
+}
+
+class CustomRenderer : public VBuffer {
     friend class AgentRenderer;
-    struct CustomLine
-    {
+
+    struct CustomLine {
         CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n);
+
         CustomLine(const char* n)
-            : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n){};
+            : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n)
+        {
+        };
         GW::Vec2f p1;
         GW::Vec2f p2;
         GW::Constants::MapID map;
-        Color color{ 0xFFFFFFFF };
+        Color color{0xFFFFFFFF};
         bool visible;
         char name[128]{};
     };
-    enum class Shape
-    {
+
+    enum class Shape {
         LineCircle,
         FullCircle
     };
-    struct CustomMarker final : VBuffer
-    {
+
+    struct CustomMarker final : VBuffer {
         CustomMarker(float x, float y, float s, Shape sh, GW::Constants::MapID m, const char* n);
         explicit CustomMarker(const char* n);
         GW::Vec2f pos;
@@ -65,8 +62,7 @@ class CustomRenderer : public VBuffer
         void Initialize(IDirect3DDevice9* device) override;
     };
 
-    struct CustomPolygon final : VBuffer
-    {
+    struct CustomPolygon final : VBuffer {
         CustomPolygon(GW::Constants::MapID m, const char* n);
         CustomPolygon(const char* n);
 
@@ -104,14 +100,14 @@ private:
     void DrawCustomLines(IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
     void SetTooltipMapID(const GW::Constants::MapID& map_id);
+
     struct MapTooltip {
         GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
         std::wstring map_name_ws;
         char tooltip_str[128]{};
     } map_id_tooltip;
 
-    class LineCircle : public VBuffer
-    {
+    class LineCircle : public VBuffer {
         void Initialize(IDirect3DDevice9* device) override;
     } linecircle;
 
@@ -123,8 +119,8 @@ private:
 
     int show_polygon_details = -1;
     bool markers_changed = false;
-    std::vector<CustomLine> lines;
-    std::vector<CustomMarker> markers;
+    std::vector<CustomLine> lines{};
+    std::vector<CustomMarker> markers{};
     std::vector<CustomPolygon> polygons{};
 
     ToolboxIni* inifile = nullptr;

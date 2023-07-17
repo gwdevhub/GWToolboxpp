@@ -10,8 +10,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Armory"; }
-    const char* Icon() const override { return ICON_FA_VEST; }
+    [[nodiscard]] const char* Name() const override { return "Armory"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_VEST; }
 
     void Initialize() override;
     void Terminate() override;

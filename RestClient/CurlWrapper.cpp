@@ -8,7 +8,7 @@
 # define CHECK_CURL_EASY_SETOPT(handle, ...) CurlEasy::HandleOptionError(handle, curl_easy_setopt(handle->m_Handle, __VA_ARGS__), __FILE__, __LINE__)
 #endif
 
-static bool StartsWith(const char *str, const char *prefix)
+static bool StartsWith(const char* str, const char* prefix)
 {
     for (; *prefix != 0; ++prefix, ++str) {
         if (*prefix != *str)
@@ -17,7 +17,7 @@ static bool StartsWith(const char *str, const char *prefix)
     return true;
 }
 
-static bool EndsWith(const std::string& str, const char *suffix)
+static bool EndsWith(const std::string& str, const char* suffix)
 {
     size_t suffix_len = strlen(suffix);
     if (str.size() < suffix_len)
@@ -85,9 +85,9 @@ CurlEasy::~CurlEasy()
     curl_easy_cleanup(m_Handle);
 }
 
-void CurlEasy::SetUrl(Protocol proto, const char *url)
+void CurlEasy::SetUrl(Protocol proto, const char* url)
 {
-    const char *prefix = GetProtocolPrefix(proto);
+    const char* prefix = GetProtocolPrefix(proto);
     if (StartsWith(url, prefix))
         return SetUrl(url);
     // @Enhancement: Replace by proper string builder.
@@ -97,7 +97,7 @@ void CurlEasy::SetUrl(Protocol proto, const char *url)
     return SetUrl(temp.c_str());
 }
 
-void CurlEasy::SetUrl(const char *url)
+void CurlEasy::SetUrl(const char* url)
 {
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_URL, url);
 }
@@ -107,7 +107,7 @@ void CurlEasy::SetPort(uint16_t port)
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_PORT, static_cast<long>(port));
 }
 
-void CurlEasy::SetMethod(const char *method)
+void CurlEasy::SetMethod(const char* method)
 {
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_CUSTOMREQUEST, method);
 }
@@ -128,16 +128,16 @@ void CurlEasy::SetMethod(HttpMethod method)
     }
 }
 
-void CurlEasy::SetHeader(const char *field)
+void CurlEasy::SetHeader(const char* field)
 {
     assert(field != nullptr);
-    struct curl_slist *temp = curl_slist_append(m_Headers, field);
+    curl_slist* temp = curl_slist_append(m_Headers, field);
     assert(temp != nullptr);
     if (temp)
         m_Headers = temp;
 }
 
-void CurlEasy::SetHeader(const char *name, const char *value)
+void CurlEasy::SetHeader(const char* name, const char* value)
 {
     assert(name && value);
 
@@ -155,7 +155,7 @@ void CurlEasy::SetHeaders(std::initializer_list<ParamField> headers)
         SetHeader(header.first, header.second);
 }
 
-void CurlEasy::SetUserAgent(const char *user_agent)
+void CurlEasy::SetUserAgent(const char* user_agent)
 {
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_USERAGENT, user_agent);
 }
@@ -205,18 +205,18 @@ void CurlEasy::SetFollowLocation(bool enable)
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_FOLLOWLOCATION, static_cast<long>(enable));
 }
 
-void CurlEasy::SetProxy(const char *url)
+void CurlEasy::SetProxy(const char* url)
 {
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_PROXY, url);
 }
 
-void CurlEasy::SetProxy(const char *url, uint16_t port)
+void CurlEasy::SetProxy(const char* url, uint16_t port)
 {
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_PROXY, url);
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_PROXYPORT, static_cast<long>(port));
 }
 
-void CurlEasy::SetProxyAuth(const char *username, const char *password)
+void CurlEasy::SetProxyAuth(const char* username, const char* password)
 {
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_PROXYUSERNAME, username);
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_PROXYPASSWORD, password);
@@ -233,7 +233,7 @@ void CurlEasy::SetPostContent(std::string& content, ContentFlag flag)
     return SetPostContent(content.c_str(), content.size(), flag);
 }
 
-void CurlEasy::SetPostContent(const char *content, size_t Size, ContentFlag flag)
+void CurlEasy::SetPostContent(const char* content, size_t Size, ContentFlag flag)
 {
     assert(content != nullptr);
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_POST, 1L);
@@ -251,7 +251,7 @@ void CurlEasy::SetUploadBuffer(std::string& content, ContentFlag flag)
     return SetUploadBuffer(content.c_str(), content.size(), flag);
 }
 
-void CurlEasy::SetUploadBuffer(const char *content, size_t size, ContentFlag flag)
+void CurlEasy::SetUploadBuffer(const char* content, size_t size, ContentFlag flag)
 {
     assert(content && size);
     if (flag == ContentFlag::Copy) {
@@ -287,7 +287,7 @@ void CurlEasy::SetUploadFile(FILE *file, size_t size)
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_INFILESIZE_LARGE, static_cast<curl_off_t>(size));
 }
 
-void CurlEasy::SetUploadFile(const char *path)
+void CurlEasy::SetUploadFile(const char* path)
 {
     if (fopen_s(&m_File, path, "rb") != 0)
         SetUploadFile(m_File);
@@ -409,12 +409,12 @@ const char* CurlEasy::GetHttpMethodName(HttpMethod method)
     }
 }
 
-void CurlEasy::OnHeader(const char *bytes, size_t count)
+void CurlEasy::OnHeader(const char* bytes, size_t count)
 {
     m_Header.append(bytes, count);
 }
 
-void CurlEasy::OnContent(const char *bytes, size_t count)
+void CurlEasy::OnContent(const char* bytes, size_t count)
 {
     m_Content.append(bytes, count);
 }
@@ -457,7 +457,7 @@ size_t CurlEasy::ReadBufferCallback(char *buffer, size_t size, size_t nitems, vo
     return bytes;
 }
 
-void CurlEasy::HandleOptionError(CurlEasy *easy, int code, const char *file, unsigned line)
+void CurlEasy::HandleOptionError(CurlEasy *easy, int code, const char* file, unsigned line)
 {
     if (code != CURLE_OK) {
         file = file ? file : "<file>";

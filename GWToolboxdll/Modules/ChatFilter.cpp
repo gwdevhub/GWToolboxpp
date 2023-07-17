@@ -26,7 +26,6 @@
 //#define PRINT_CHAT_PACKETS
 
 namespace {
-
     bool guild_announcement = false;
     bool self_drop_rare = false;
     bool self_drop_common = false;
@@ -57,7 +56,7 @@ namespace {
     bool opening_chest_messages = false;
     bool inventory_is_full = false;
     bool item_cannot_be_used = false; // Includes other error messages, see ChatFilter.cpp.
-    bool not_enough_energy = false; // Includes other error messages, see ChatFilter.cpp.
+    bool not_enough_energy = false;   // Includes other error messages, see ChatFilter.cpp.
     bool item_already_identified = false;
 
     bool messagebycontent = false;
@@ -69,7 +68,7 @@ namespace {
     bool filter_channel_alliance = false;
     bool filter_channel_emotes = false;
 
-    constexpr size_t FILTER_BUF_SIZE = 1024*16;
+    constexpr size_t FILTER_BUF_SIZE = 1024 * 16;
 
     // @Remark:
     // The text buffer will only be parsed if there was no modification within this period of time.
@@ -110,7 +109,8 @@ namespace {
     GW::HookEntry ClearIfApplicable_Entry;
 
 
-    void ParseBuffer(const char *text, std::vector<std::wstring> &words) {
+    void ParseBuffer(const char* text, std::vector<std::wstring>& words)
+    {
         using namespace GuiUtils;
         words.clear();
         const auto text_ws = RemoveDiacritics(ToLower(StringToWString(text)));
@@ -122,7 +122,9 @@ namespace {
             words.push_back(word);
         }
     }
-    void ParseBuffer(const char *text, std::vector<std::wregex> &regex) {
+
+    void ParseBuffer(const char* text, std::vector<std::wregex>& regex)
+    {
         using namespace GuiUtils;
         regex.clear();
         const auto text_ws = RemoveDiacritics(StringToWString(text));
@@ -139,34 +141,35 @@ namespace {
                     auto regex_flags = std::regex_constants::optimize;
                     for (const auto chr : flags) {
                         switch (chr) {
-                        case 'i':
-                            regex_flags |= std::regex_constants::icase;
-                            break;
-                        case 'c':
-                            regex_flags |= std::regex_constants::collate;
-                            break;
-                        case 'n':
-                            regex_flags |= std::regex_constants::nosubs;
-                            break;
-                        case 's':
-                            regex_flags |= std::regex_constants::ECMAScript;
-                            break;
-                        case 'b':
-                            regex_flags |= std::regex_constants::basic;
-                            break;
-                        case 'x':
-                            regex_flags |= std::regex_constants::extended;
-                            break;
-                        case 'a':
-                            regex_flags |= std::regex_constants::awk;
-                            break;
-                        case 'g':
-                            regex_flags |= std::regex_constants::grep;
-                            break;
-                        case 'e':
-                            regex_flags |= std::regex_constants::egrep;
-                            break;
-                        default: break;
+                            case 'i':
+                                regex_flags |= std::regex_constants::icase;
+                                break;
+                            case 'c':
+                                regex_flags |= std::regex_constants::collate;
+                                break;
+                            case 'n':
+                                regex_flags |= std::regex_constants::nosubs;
+                                break;
+                            case 's':
+                                regex_flags |= std::regex_constants::ECMAScript;
+                                break;
+                            case 'b':
+                                regex_flags |= std::regex_constants::basic;
+                                break;
+                            case 'x':
+                                regex_flags |= std::regex_constants::extended;
+                                break;
+                            case 'a':
+                                regex_flags |= std::regex_constants::awk;
+                                break;
+                            case 'g':
+                                regex_flags |= std::regex_constants::grep;
+                                break;
+                            case 'e':
+                                regex_flags |= std::regex_constants::egrep;
+                                break;
+                            default:
+                                break;
                         }
                     }
                     regex.emplace_back(regex_str, regex_flags);
@@ -177,235 +180,350 @@ namespace {
                 Log::Warning("Cannot parse regular expression '%s'", word.c_str());
             }
         }
-
     }
-    const wchar_t* Get1stSegment(const wchar_t *message) {
-        for (size_t i = 0; message[i] != 0; ++i) {
-            if (message[i] == 0x10A) return message + i + 1;
+
+    const wchar_t* Get1stSegment(const wchar_t* message)
+    {
+        for (size_t i = 0; message[i] != 0; i++) {
+            if (message[i] == 0x10A)
+                return message + i + 1;
         }
         return nullptr;
     };
 
-    const wchar_t* Get2ndSegment(const wchar_t *message) {
-        for (size_t i = 0; message[i] != 0; ++i) {
-            if (message[i] == 0x10B) return message + i + 1;
+    const wchar_t* Get2ndSegment(const wchar_t* message)
+    {
+        for (size_t i = 0; message[i] != 0; i++) {
+            if (message[i] == 0x10B)
+                return message + i + 1;
         }
         return nullptr;
     }
 
-    DWORD GetNumericSegment(const wchar_t *message) {
-        for (size_t i = 0; message[i] != 0; ++i) {
+    DWORD GetNumericSegment(const wchar_t* message)
+    {
+        for (size_t i = 0; message[i] != 0; i++) {
             if ((0x100 < message[i] && message[i] < 0x107) || (0x10D < message[i] && message[i] < 0x110))
                 return (message[i + 1] - 0x100u);
         }
         return 0;
     }
 
-    bool FullMatch(const wchar_t* s, const std::initializer_list<wchar_t>& msg) {
-        int i = 0;
-        for (wchar_t b : msg) {
-            if (s[i++] != b) return false;
+    bool FullMatch(const wchar_t* s, const std::initializer_list<wchar_t>& msg)
+    {
+        auto i = 0;
+        for (const wchar_t b : msg) {
+            if (s[i++] != b)
+                return false;
         }
         return true;
     }
-    bool IsRare(const wchar_t* item_segment) {
-        if (item_segment == nullptr) return false;      // something went wrong, don't ignore
-        if (item_segment[0] == 0xA40) return true;      // don't ignore gold items
-        if (FullMatch(item_segment, { 0x108, 0x10A, 0x22D9, 0xE7B8, 0xE9DD, 0x2322 }))
-            return true;    // don't ignore ectos
-        if (FullMatch(item_segment, { 0x108, 0x10A, 0x22EA, 0xFDA9, 0xDE53, 0x2D16 } ))
+
+    bool IsRare(const wchar_t* item_segment)
+    {
+        if (item_segment == nullptr)
+            return false; // something went wrong, don't ignore
+        if (item_segment[0] == 0xA40)
+            return true; // don't ignore gold items
+        if (FullMatch(item_segment, {0x108, 0x10A, 0x22D9, 0xE7B8, 0xE9DD, 0x2322}))
+            return true; // don't ignore ectos
+        if (FullMatch(item_segment, {0x108, 0x10A, 0x22EA, 0xFDA9, 0xDE53, 0x2D16}))
             return true; // don't ignore obby shards
-        if (FullMatch(item_segment, { 0x108, 0x10A, 0x8101, 0x730E }))
+        if (FullMatch(item_segment, {0x108, 0x10A, 0x8101, 0x730E}))
             return true; // don't ignore lockpicks
         return false;
     }
-    bool IsInChallengeMission() {
+
+    bool IsInChallengeMission()
+    {
         const GW::AreaInfo* a = GW::Map::GetCurrentMapInfo();
         return a && a->type == GW::RegionType::Challenge;
     }
-    bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) {
-        if (agent_segment == nullptr) return false;     // something went wrong, don't ignore
-        if (agent_segment[0] == 0xBA9 && agent_segment[1] == 0x107) return false;
+
+    bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment)
+    {
+        if (agent_segment == nullptr)
+            return false; // something went wrong, don't ignore
+        if (agent_segment[0] == 0xBA9 && agent_segment[1] == 0x107)
+            return false;
         return true;
     }
+
     // Should this message be ignored by encoded string?
-    bool ShouldIgnore(const wchar_t *message)
+    bool ShouldIgnore(const wchar_t* message)
     {
         if (!message)
             return false;
 
         switch (message[0]) {
             // ==== Messages not ignored ====
-        case 0x108: return false; // player message
-        case 0x2AFC: return false; // <agent name> hands you <quantity> <item name>
-        case 0x0314: return guild_announcement; // Guild Announcement by X: X
-        case 0x4C32: return item_cannot_be_used; // Item can only be used in towns or outposts.
-        case 0x76D: return false; // whisper received.
-        case 0x76E: return false; // whisper sended.
-        case 0x777: return false; // I'm level x and x% of the way earning my next skill point  (author is not part of the message)
-        case 0x778: return false; // I'm following x            (author is not part of the message)
-        case 0x77B: return false; // I'm talking to x           (author is not part of the message)
-        case 0x77C: return false; // I'm wielding x         (author is not part of the message)
-        case 0x77D: return false; // I'm wielding x and y       (author is not part of the message)
-        case 0x781: return false; // I'm targeting x            (author is not part of the message)
-        case 0x783: return false; // I'm targeting myself!  (author is not part of the message)
-        case 0x791: return false; // emote agree
-        case 0x792: return false; // emote attention
-        case 0x793: return false; // emote beckon
-        case 0x794: return false; // emote beg
-        case 0x795: return false; // emote boo
+            case 0x108:
+                return false; // player message
+            case 0x2AFC:
+                return false; // <agent name> hands you <quantity> <item name>
+            case 0x0314:
+                return guild_announcement; // Guild Announcement by X: X
+            case 0x4C32:
+                return item_cannot_be_used; // Item can only be used in towns or outposts.
+            case 0x76D:
+                return false; // whisper received.
+            case 0x76E:
+                return false; // whisper sended.
+            case 0x777:
+                return false; // I'm level x and x% of the way earning my next skill point  (author is not part of the message)
+            case 0x778:
+                return false; // I'm following x            (author is not part of the message)
+            case 0x77B:
+                return false; // I'm talking to x           (author is not part of the message)
+            case 0x77C:
+                return false; // I'm wielding x         (author is not part of the message)
+            case 0x77D:
+                return false; // I'm wielding x and y       (author is not part of the message)
+            case 0x781:
+                return false; // I'm targeting x            (author is not part of the message)
+            case 0x783:
+                return false; // I'm targeting myself!  (author is not part of the message)
+            case 0x791:
+                return false; // emote agree
+            case 0x792:
+                return false; // emote attention
+            case 0x793:
+                return false; // emote beckon
+            case 0x794:
+                return false; // emote beg
+            case 0x795:
+                return false; // emote boo
             // all other emotes, in alphabetical order
-        case 0x7BE: return false; // emote yawn
-        case 0x7BF: return false; // emote yes
-        case 0x7C8: return false; // Quest Reward Accepted: <quest name>
-        case 0x7C9: return false; // Quest Updated: <quest name>
-        case 0x7CB: return false; // You gain (message[5] - 100) experience
-        case 0x7CC:
-            if (FullMatch(&message[1], { 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return lunars; // you receive 100 gold
-            break;
-        case 0x7CD: return false; // You receive <quantity> <item name>
-        case 0x7E0: return ally_pickup_common; // party shares gold
-        case 0x7ED: return false; // opening the chest reveals x, which your party reserves for y
-        case 0x7DF: return ally_pickup_common; // party shares gold ?
-        case 0x7F0: { // monster/player x drops item y (no assignment)
-            // first segment describes the agent who dropped, second segment describes the item dropped
-            if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(message))) return false;
-            bool rare = IsRare(Get2ndSegment(message));
-            if (rare) return self_drop_rare;
-            else return self_drop_common;
-        }
-        case 0x7F1: { // monster x drops item y, your party assigns to player z
-            // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
-            // <monster> is wchar_t id of several wchars
-            // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-            GW::AgentLiving* me = GW::Agents::GetCharacter();
-            bool forplayer = (me && me->player_number == GetNumericSegment(message));
-            bool rare = IsRare(Get2ndSegment(message));
-            if (forplayer && rare) return self_drop_rare;
-            if (forplayer && !rare) return self_drop_common;
-            if (!forplayer && rare) return ally_drop_rare;
-            if (!forplayer && !rare) return ally_drop_common;
-            return false;
-        }
-        case 0x7F2: return false; // you drop item x
-        case 0x7F6: // player x picks up item y (note: item can be unassigned gold)
-            return IsRare(Get1stSegment(message)) ? ally_pickup_rare : ally_pickup_common;
-        case 0x7FC: // you pick up item y (note: item can be unassigned gold)
-            return IsRare(Get1stSegment(message)) ? player_pickup_rare : player_pickup_common;
-        case 0x807: return false; // player joined the game
-        case 0x816: return skill_points; // you gain a skill point
-        case 0x817: return skill_points; // player x gained a skill point
-        case 0x846: return false; // 'Screenshot saved as <path>'.
-        case 0x87B: return noonehearsyou; // 'no one hears you.' (outpost)
-        case 0x87C: return noonehearsyou; // 'no one hears you... ' (explorable)
-        case 0x87D: return away; // 'Player <name> might not reply...' (Away)
-        case 0x87F: return false; // 'Failed to send whisper to player <name>...' (Do not disturb)
-        case 0x880: return false; // 'Player name <name> is invalid.'. (Anyone actually saw it ig ?)
-        case 0x881: return false; // 'Player <name> is not online.' (Offline)
-        case 0x88E: return invalid_target; // Invalid attack target.
-        case 0x89B: return item_cannot_be_used; // Item cannot be used in towns or outposts.
-        case 0x89C: return opening_chest_messages; // Chest is being used.
-        case 0x89D: return opening_chest_messages; // The chest is empty.
-        case 0x89E: return opening_chest_messages; // The chest is locked. You must have the correct key or a lockpick.
-        case 0x8A0: return opening_chest_messages; // Already used that chest
-        case 0x8A5: return invalid_target; // Target is immune to bleeding (no flesh.)
-        case 0x8A6: return invalid_target; // Target is immune to disease (no flesh.)
-        case 0x8A7: return invalid_target; // Target is immune to poison (no flesh.)
-        case 0x8A8: return not_enough_energy; // Not enough adrenaline
-        case 0x8A9: return not_enough_energy; // Not enough energy.
-        case 0x8AA: return inventory_is_full; // Inventory is full.
-        case 0x8AB: return invalid_target; // Your view of the target is obstructed.
-        case 0x8C1: return invalid_target; // That skill requires a different weapon type.
-        case 0x8C2: return invalid_target; // Invalid spell target.
-        case 0x8C3: return invalid_target; // Target is out of range.
-        case 0x52C3: // 0x52C3 0xDE9C 0xCD2F 0x78E4 0x101 0x100 - Hold-out bonus: +(message[5] - 0x100) points
-            return FullMatch(&message[1], { 0xDE9C, 0xCD2F, 0x78E4, 0x101 }) && challenge_mission_messages;
-        case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
-            if (!FullMatch(&message[1], { 0x866F, 0xB8D2, 0x5A20, 0x101 })) break;
-            return faction_gain || challenge_mission_messages && IsInChallengeMission();
-        case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
-            if (!FullMatch(&message[1], { 0xDD4E, 0xB502, 0x71CE, 0x101 })) break;
-            return faction_gain || challenge_mission_messages && IsInChallengeMission();
-        case 0x7BF4: return you_have_been_playing_for; // You have been playing for x time.
-        case 0x7BF5: return you_have_been_playing_for; // You have been playinf for x time. Please take a break.
-        case 0x8101:
-            switch (message[1]) {
-                // nine rings
-            case 0x1867: // stay where you are, nine rings is about to begin
-            case 0x1868: // teilah takes 10 festival tickets
-            case 0x1869: // big winner! 55 tickets
-            case 0x186A: // you win 40 tickets
-            case 0x186B: // you win 25 festival tickets
-            case 0x186C: // you win 15 festival tickets
-            case 0x186D: // did not win 9rings
-                // rings of fortune
-            case 0x1526: // The rings of fortune did not favor you this time. Stay in the area to try again.
-            case 0x1529: // Pan takes 2 festival tickets
-            case 0x152A: // stay right were you are! rings of fortune is about to begin!
-            case 0x152B: // you win 12 festival tickets
-            case 0x152C: // You win 3 festival tickets
-                return ninerings;
-            case 0x39CD: // you have a special item available: <special item reward>
-                return ninerings;
-            case 0x3E3: // Spell failed. Spirits are not affected by this spell.
-                return invalid_target;
-            case 0x679C: return false;  // You cannot use a <profession> tome because you are not a <profession> (Elite == message[5] == 0x6725)
-            case 0x72EB: return opening_chest_messages;   // The chest is locked. You must use a lockpick to open it.
-            case 0x7B91:    // x minutes of favor of the gods remaining. Note: full message is 0x8101 0x7B91 0xC686 0xE490 0x6922 0x101 0x100+value
-            case 0x7B92:    // x more achievements must be performed to earn the favor of the gods. // 0x8101 0x7B92 0x8B0A 0x8DB5 0x5135 0x101 0x100+value
-                return favor;
-            case 0x7C3E:    // This item cannot be used here.
-                return item_cannot_be_used;
+            case 0x7BE:
+                return false; // emote yawn
+            case 0x7BF:
+                return false; // emote yes
+            case 0x7C8:
+                return false; // Quest Reward Accepted: <quest name>
+            case 0x7C9:
+                return false; // Quest Updated: <quest name>
+            case 0x7CB:
+                return false; // You gain (message[5] - 100) experience
+            case 0x7CC:
+                if (FullMatch(&message[1], {0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1}))
+                    return lunars; // you receive 100 gold
+                break;
+            case 0x7CD:
+                return false; // You receive <quantity> <item name>
+            case 0x7E0:
+                return ally_pickup_common; // party shares gold
+            case 0x7ED:
+                return false; // opening the chest reveals x, which your party reserves for y
+            case 0x7DF:
+                return ally_pickup_common; // party shares gold ?
+            case 0x7F0: {
+                // monster/player x drops item y (no assignment)
+                // first segment describes the agent who dropped, second segment describes the item dropped
+                if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(message)))
+                    return false;
+                const bool rare = IsRare(Get2ndSegment(message));
+                if (rare)
+                    return self_drop_rare;
+                return self_drop_common;
             }
-            if (FullMatch(&message[1], { 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return lunars; // you will celebrate a festive new year (rocket or popper)
-            if (FullMatch(&message[1], { 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return lunars; // something special is in your future! (lucky aura)
-            if (FullMatch(&message[1], { 0x6648, 0xB765, 0xBC0D, 0x1F73 })) return lunars; // you will have a prosperous new year! (gain 100 gold)
-            if (FullMatch(&message[1], { 0x664C, 0xD634, 0x91F8, 0x76EF })) return lunars; // your new year will be a blessed one (lunar blessing)
-            if (FullMatch(&message[1], { 0x664A, 0xEFB8, 0xDE25, 0x363 })) return lunars; // You will find bad luck in this new year... or bad luck will find you
-            break;
+            case 0x7F1: {
+                // monster x drops item y, your party assigns to player z
+                // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
+                // <monster> is wchar_t id of several wchars
+                // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
+                const GW::AgentLiving* me = GW::Agents::GetCharacter();
+                const bool forplayer = (me && me->player_number == GetNumericSegment(message));
+                const bool rare = IsRare(Get2ndSegment(message));
+                if (forplayer && rare)
+                    return self_drop_rare;
+                if (forplayer && !rare)
+                    return self_drop_common;
+                if (!forplayer && rare)
+                    return ally_drop_rare;
+                if (!forplayer && !rare)
+                    return ally_drop_common;
+                return false;
+            }
+            case 0x7F2:
+                return false; // you drop item x
+            case 0x7F6:       // player x picks up item y (note: item can be unassigned gold)
+                return IsRare(Get1stSegment(message)) ? ally_pickup_rare : ally_pickup_common;
+            case 0x7FC: // you pick up item y (note: item can be unassigned gold)
+                return IsRare(Get1stSegment(message)) ? player_pickup_rare : player_pickup_common;
+            case 0x807:
+                return false; // player joined the game
+            case 0x816:
+                return skill_points; // you gain a skill point
+            case 0x817:
+                return skill_points; // player x gained a skill point
+            case 0x846:
+                return false; // 'Screenshot saved as <path>'.
+            case 0x87B:
+                return noonehearsyou; // 'no one hears you.' (outpost)
+            case 0x87C:
+                return noonehearsyou; // 'no one hears you... ' (explorable)
+            case 0x87D:
+                return away; // 'Player <name> might not reply...' (Away)
+            case 0x87F:
+                return false; // 'Failed to send whisper to player <name>...' (Do not disturb)
+            case 0x880:
+                return false; // 'Player name <name> is invalid.'. (Anyone actually saw it ig ?)
+            case 0x881:
+                return false; // 'Player <name> is not online.' (Offline)
+            case 0x88E:
+                return invalid_target; // Invalid attack target.
+            case 0x89B:
+                return item_cannot_be_used; // Item cannot be used in towns or outposts.
+            case 0x89C:
+                return opening_chest_messages; // Chest is being used.
+            case 0x89D:
+                return opening_chest_messages; // The chest is empty.
+            case 0x89E:
+                return opening_chest_messages; // The chest is locked. You must have the correct key or a lockpick.
+            case 0x8A0:
+                return opening_chest_messages; // Already used that chest
+            case 0x8A5:
+                return invalid_target; // Target is immune to bleeding (no flesh.)
+            case 0x8A6:
+                return invalid_target; // Target is immune to disease (no flesh.)
+            case 0x8A7:
+                return invalid_target; // Target is immune to poison (no flesh.)
+            case 0x8A8:
+                return not_enough_energy; // Not enough adrenaline
+            case 0x8A9:
+                return not_enough_energy; // Not enough energy.
+            case 0x8AA:
+                return inventory_is_full; // Inventory is full.
+            case 0x8AB:
+                return invalid_target; // Your view of the target is obstructed.
+            case 0x8C1:
+                return invalid_target; // That skill requires a different weapon type.
+            case 0x8C2:
+                return invalid_target; // Invalid spell target.
+            case 0x8C3:
+                return invalid_target; // Target is out of range.
+            case 0x52C3:               // 0x52C3 0xDE9C 0xCD2F 0x78E4 0x101 0x100 - Hold-out bonus: +(message[5] - 0x100) points
+                return FullMatch(&message[1], {0xDE9C, 0xCD2F, 0x78E4, 0x101}) && challenge_mission_messages;
+            case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
+                if (!FullMatch(&message[1], {0x866F, 0xB8D2, 0x5A20, 0x101}))
+                    break;
+                return faction_gain || challenge_mission_messages && IsInChallengeMission();
+            case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
+                if (!FullMatch(&message[1], {0xDD4E, 0xB502, 0x71CE, 0x101}))
+                    break;
+                return faction_gain || challenge_mission_messages && IsInChallengeMission();
+            case 0x7BF4:
+                return you_have_been_playing_for; // You have been playing for x time.
+            case 0x7BF5:
+                return you_have_been_playing_for; // You have been playinf for x time. Please take a break.
+            case 0x8101:
+                switch (message[1]) {
+                    // nine rings
+                    case 0x1867: // stay where you are, nine rings is about to begin
+                    case 0x1868: // teilah takes 10 festival tickets
+                    case 0x1869: // big winner! 55 tickets
+                    case 0x186A: // you win 40 tickets
+                    case 0x186B: // you win 25 festival tickets
+                    case 0x186C: // you win 15 festival tickets
+                    case 0x186D: // did not win 9rings
+                    // rings of fortune
+                    case 0x1526: // The rings of fortune did not favor you this time. Stay in the area to try again.
+                    case 0x1529: // Pan takes 2 festival tickets
+                    case 0x152A: // stay right were you are! rings of fortune is about to begin!
+                    case 0x152B: // you win 12 festival tickets
+                    case 0x152C: // You win 3 festival tickets
+                        return ninerings;
+                    case 0x39CD: // you have a special item available: <special item reward>
+                        return ninerings;
+                    case 0x3E3: // Spell failed. Spirits are not affected by this spell.
+                        return invalid_target;
+                    case 0x679C:
+                        return false; // You cannot use a <profession> tome because you are not a <profession> (Elite == message[5] == 0x6725)
+                    case 0x72EB:
+                        return opening_chest_messages; // The chest is locked. You must use a lockpick to open it.
+                    case 0x7B91:                       // x minutes of favor of the gods remaining. Note: full message is 0x8101 0x7B91 0xC686 0xE490 0x6922 0x101 0x100+value
+                    case 0x7B92:                       // x more achievements must be performed to earn the favor of the gods. // 0x8101 0x7B92 0x8B0A 0x8DB5 0x5135 0x101 0x100+value
+                        return favor;
+                    case 0x7C3E: // This item cannot be used here.
+                        return item_cannot_be_used;
+                }
+                if (FullMatch(&message[1], {0x6649, 0xA2F9, 0xBBFA, 0x3C27}))
+                    return lunars; // you will celebrate a festive new year (rocket or popper)
+                if (FullMatch(&message[1], {0x664B, 0xDBAB, 0x9F4C, 0x6742}))
+                    return lunars; // something special is in your future! (lucky aura)
+                if (FullMatch(&message[1], {0x6648, 0xB765, 0xBC0D, 0x1F73}))
+                    return lunars; // you will have a prosperous new year! (gain 100 gold)
+                if (FullMatch(&message[1], {0x664C, 0xD634, 0x91F8, 0x76EF}))
+                    return lunars; // your new year will be a blessed one (lunar blessing)
+                if (FullMatch(&message[1], {0x664A, 0xEFB8, 0xDE25, 0x363}))
+                    return lunars; // You will find bad luck in this new year... or bad luck will find you
+                break;
 
-        case 0x8102:
-            switch (message[1]) {
-                // 0xEFE is a player message
-            case 0x1443: return player_has_achieved_title; // Player has achieved the title...
-            case 0x4650: return pvp_messages; // skill has been updated for pvp
-            case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
-            case 0x223F: return false; // "x minutes of favor of the gods remaining" as a result of /favor command
-            case 0x223B: return hoh_messages; // a party won hall of heroes
-            case 0x23E2: return player_has_achieved_title; // Player has achieved... The gods have blessed the world with their favor.
-            case 0x23E3: return favor; // The gods have blessed the world
-            case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
-            case 0x23E5: return player_has_achieved_title; // Player has achieved... The gods have extended their blessings
-            case 0x23E6: return player_has_achieved_title; // Player has achieved... N more achievements will earn favor of the gods
-            case 0x29F1: return item_cannot_be_used; // Cannot use this item when no party members are dead.
-            case 0x3772: return false; // I'm under the effect of x
-            case 0x3DCA: return item_cannot_be_used; // This item can only be used in a guild hall
-            case 0x4684: return item_cannot_be_used; // There is already an ally from a summoning stone present in this instance.
-            case 0x4685: return item_cannot_be_used; // You have already used a summoning stone within the last 10 minutes.
-            }
-            break;
-        case 0x8103:
-            switch (message[1]) {
-            case 0x9CD: return item_cannot_be_used; // You must wait before using another tonic.
-            }
-        case 0xAD2: return item_already_identified; // That item is already identified
-        case 0xAD7: return salvage_messages; // You salvaged <number> <item name(s)> from the <item name>
-        case 0xADD: return item_cannot_be_used; // That item has no uses remaining
+            case 0x8102:
+                switch (message[1]) {
+                    // 0xEFE is a player message
+                    case 0x1443:
+                        return player_has_achieved_title; // Player has achieved the title...
+                    case 0x4650:
+                        return pvp_messages; // skill has been updated for pvp
+                    case 0x4651:
+                        return pvp_messages; // a hero skill has been updated for pvp
+                    case 0x223F:
+                        return false; // "x minutes of favor of the gods remaining" as a result of /favor command
+                    case 0x223B:
+                        return hoh_messages; // a party won hall of heroes
+                    case 0x23E2:
+                        return player_has_achieved_title; // Player has achieved... The gods have blessed the world with their favor.
+                    case 0x23E3:
+                        return favor; // The gods have blessed the world
+                    case 0x23E4:
+                        return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
+                    case 0x23E5:
+                        return player_has_achieved_title; // Player has achieved... The gods have extended their blessings
+                    case 0x23E6:
+                        return player_has_achieved_title; // Player has achieved... N more achievements will earn favor of the gods
+                    case 0x29F1:
+                        return item_cannot_be_used; // Cannot use this item when no party members are dead.
+                    case 0x3772:
+                        return false; // I'm under the effect of x
+                    case 0x3DCA:
+                        return item_cannot_be_used; // This item can only be used in a guild hall
+                    case 0x4684:
+                        return item_cannot_be_used; // There is already an ally from a summoning stone present in this instance.
+                    case 0x4685:
+                        return item_cannot_be_used; // You have already used a summoning stone within the last 10 minutes.
+                }
+                break;
+            case 0x8103:
+                switch (message[1]) {
+                    case 0x9CD:
+                        return item_cannot_be_used; // You must wait before using another tonic.
+                }
+            case 0xAD2:
+                return item_already_identified; // That item is already identified
+            case 0xAD7:
+                return salvage_messages; // You salvaged <number> <item name(s)> from the <item name>
+            case 0xADD:
+                return item_cannot_be_used; // That item has no uses remaining
             //default:
-            //  for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
+            //  for (size_t i = 0; pak->message[i] != 0; i++) printf(" 0x%X", pak->message[i]);
             //  printf("\n");
             //  return false;
         }
 
         return false;
     }
+
     // Should this message be ignored by content?
-    bool ShouldIgnoreByContent(const wchar_t *message) 
+    bool ShouldIgnoreByContent(const wchar_t* message)
     {
-        if (!messagebycontent) return false;
-        if (!message) return false;
+        if (!messagebycontent)
+            return false;
+        if (!message)
+            return false;
         if (!(message[0] == 0x108 && message[1] == 0x107)
-            && !(message[0] == 0x8102 && message[1] == 0xEFE && message[2] == 0x107)) return false;
+            && !(message[0] == 0x8102 && message[1] == 0xEFE && message[2] == 0x107))
+            return false;
         const wchar_t* start = nullptr;
         const wchar_t* end = nullptr;
         size_t i = 0;
@@ -414,13 +532,15 @@ namespace {
                 start = &message[i + 1];
             i++;
         }
-        if (start == nullptr) return false; // no string segment in this packet
+        if (start == nullptr)
+            return false; // no string segment in this packet
         while (end == nullptr && message[i]) {
             if (message[i] == 0x1)
                 end = &message[i];
             i++;
         }
-        if (end == nullptr) end = &message[i];
+        if (end == nullptr)
+            end = &message[i];
 
         using namespace GuiUtils;
         const auto str = std::wstring(start, end);
@@ -438,49 +558,57 @@ namespace {
         }
         return false;
     }
+
     // Should this channel be checked for ignored messages?
-    bool ShouldFilterByChannel(uint32_t channel) 
+    bool ShouldFilterByChannel(const uint32_t channel)
     {
         switch (channel) {
-        case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALL):        return filter_channel_local;
-        case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GUILD):      return filter_channel_guild;
-        case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP):      return filter_channel_team;
-        case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_TRADE):      return filter_channel_trade;
-        case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALLIANCE):   return filter_channel_alliance;
-        case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_EMOTE):      return filter_channel_emotes;
+            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALL):
+                return filter_channel_local;
+            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GUILD):
+                return filter_channel_guild;
+            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP):
+                return filter_channel_team;
+            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_TRADE):
+                return filter_channel_trade;
+            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALLIANCE):
+                return filter_channel_alliance;
+            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_EMOTE):
+                return filter_channel_emotes;
         }
         return false;
     }
+
     // Should this channel be blocked altogether?
-    bool ShouldBlockByChannel(uint32_t channel) 
+    bool ShouldBlockByChannel(uint32_t channel)
     {
         if (!block_messages_from_inactive_channels)
             return false;
         // Don't log chat messages if the channel is turned off - avoids hitting the chat log limit
         auto prefCheck = static_cast<GW::UI::FlagPreference>(0xffff);
         switch (static_cast<GW::Chat::Channel>(channel)) {
-        case GW::Chat::Channel::CHANNEL_ALL:
-            prefCheck = GW::UI::FlagPreference::ChannelLocal;
-            break;
-        case GW::Chat::Channel::CHANNEL_GROUP:
-        case GW::Chat::Channel::CHANNEL_ALLIES:
-            prefCheck = GW::UI::FlagPreference::ChannelGroup;
-            break;
-        case GW::Chat::Channel::CHANNEL_EMOTE:
-            prefCheck = GW::UI::FlagPreference::ChannelEmotes;
-            break;
-        case GW::Chat::Channel::CHANNEL_GUILD:
-            prefCheck = GW::UI::FlagPreference::ChannelGuild;
-            break;
-        case GW::Chat::Channel::CHANNEL_ALLIANCE:
-            prefCheck = GW::UI::FlagPreference::ChannelAlliance;
-            break;
-        case GW::Chat::Channel::CHANNEL_TRADE:
-            prefCheck = GW::UI::FlagPreference::ChannelTrade;
-            break;
+            case GW::Chat::Channel::CHANNEL_ALL:
+                prefCheck = GW::UI::FlagPreference::ChannelLocal;
+                break;
+            case GW::Chat::Channel::CHANNEL_GROUP:
+            case GW::Chat::Channel::CHANNEL_ALLIES:
+                prefCheck = GW::UI::FlagPreference::ChannelGroup;
+                break;
+            case GW::Chat::Channel::CHANNEL_EMOTE:
+                prefCheck = GW::UI::FlagPreference::ChannelEmotes;
+                break;
+            case GW::Chat::Channel::CHANNEL_GUILD:
+                prefCheck = GW::UI::FlagPreference::ChannelGuild;
+                break;
+            case GW::Chat::Channel::CHANNEL_ALLIANCE:
+                prefCheck = GW::UI::FlagPreference::ChannelAlliance;
+                break;
+            case GW::Chat::Channel::CHANNEL_TRADE:
+                prefCheck = GW::UI::FlagPreference::ChannelTrade;
+                break;
         }
         if (prefCheck != static_cast<GW::UI::FlagPreference>(0xffff)
-            && GW::UI::GetPreference(prefCheck) == 1) {
+            && GetPreference(prefCheck) == 1) {
             return true;
         }
         return false;
@@ -490,9 +618,9 @@ namespace {
     {
         return GW::FriendListMgr::GetFriend(nullptr, sender.c_str(), GW::FriendType::Ignore) != nullptr;
     }
-    
+
     // Should this message for this channel be ignored either by encoded string or content?
-    bool ShouldIgnore(const wchar_t* message, uint32_t channel)
+    bool ShouldIgnore(const wchar_t* message, const uint32_t channel)
     {
         if (ShouldBlockByChannel(channel))
             return true;
@@ -502,30 +630,35 @@ namespace {
             return false;
         return ShouldIgnoreByContent(message);
     }
+
     // Sets HookStatus to blocked if packet has content that hits the filter.
-    void BlockIfApplicable(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) {
+    void BlockIfApplicable(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
+    {
         if (status->blocked)
             return;
         uint32_t channel = 0;
         const wchar_t* message = nullptr;
         switch (packet->header) {
-        case GAME_SMSG_CHAT_MESSAGE_GLOBAL: {
-            auto p = (GW::Packet::StoC::MessageGlobal*)packet;
-            channel = p->channel;
-            message = ToolboxUtils::GetMessageCore();
-        } break;
-        case GAME_SMSG_CHAT_MESSAGE_SERVER: {
-            auto p = (GW::Packet::StoC::MessageServer*)packet;
-            channel = p->channel;
-            message = ToolboxUtils::GetMessageCore();
-        } break;
-        case GAME_SMSG_CHAT_MESSAGE_LOCAL: {
-            auto p = (GW::Packet::StoC::MessageLocal*)packet;
-            channel = p->channel;
-            message = ToolboxUtils::GetMessageCore();
-        } break;
-        default:
-            return;
+            case GAME_SMSG_CHAT_MESSAGE_GLOBAL: {
+                const auto p = static_cast<GW::Packet::StoC::MessageGlobal*>(packet);
+                channel = p->channel;
+                message = ToolboxUtils::GetMessageCore();
+            }
+            break;
+            case GAME_SMSG_CHAT_MESSAGE_SERVER: {
+                const auto p = static_cast<GW::Packet::StoC::MessageServer*>(packet);
+                channel = p->channel;
+                message = ToolboxUtils::GetMessageCore();
+            }
+            break;
+            case GAME_SMSG_CHAT_MESSAGE_LOCAL: {
+                const auto p = static_cast<GW::Packet::StoC::MessageLocal*>(packet);
+                channel = p->channel;
+                message = ToolboxUtils::GetMessageCore();
+            }
+            break;
+            default:
+                return;
         }
         if (ShouldIgnore(message, channel)) {
             // Message channel is hidden, or message content is blocked
@@ -536,14 +669,17 @@ namespace {
             status->blocked = true;
         }
     }
+
     // Ensure the message buffer is cleared if this packet has been blocked
-    void ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*) {
+    void ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*)
+    {
         if (status->blocked)
             ToolboxUtils::ClearMessageCore();
     }
 }
 
-void ChatFilter::Initialize() {
+void ChatFilter::Initialize()
+{
     ToolboxModule::Initialize();
 
     GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_SERVER, BlockIfApplicable);
@@ -554,14 +690,15 @@ void ChatFilter::Initialize() {
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, ClearMessageBufferIfBlocked);
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, ClearMessageBufferIfBlocked);
 
-    GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry, [](GW::HookStatus* status, int channel, wchar_t* message) {
+    GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry, [](GW::HookStatus* status, const int channel, wchar_t* message) {
         if (ShouldIgnore(message, static_cast<uint32_t>(channel))) {
             status->blocked = true;
         }
-        });
+    });
 }
 
-void ChatFilter::LoadSettings(ToolboxIni* ini) {
+void ChatFilter::LoadSettings(ToolboxIni* ini)
+{
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(self_drop_rare);
     LOAD_BOOL(self_drop_common);
@@ -641,7 +778,8 @@ void ChatFilter::LoadSettings(ToolboxIni* ini) {
 #endif
 }
 
-void ChatFilter::SaveSettings(ToolboxIni* ini) {
+void ChatFilter::SaveSettings(ToolboxIni* ini)
+{
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(self_drop_rare);
     SAVE_BOOL(self_drop_common);
@@ -729,35 +867,51 @@ void ChatFilter::SaveSettings(ToolboxIni* ini) {
 #endif
 }
 
-void ChatFilter::DrawSettingInternal() {
+void ChatFilter::DrawSettingInternal()
+{
     ImGui::Text("Block the following messages:");
     ImGui::Separator();
     ImGui::Text("Drops");
     ImGui::SameLine();
     ImGui::TextDisabled("('Rare' stands for Gold item, Ecto, Obby shard or Lockpick)");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
-    ImGui::NextSpacedElement(); ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("A common item drops for you", &self_drop_common);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("You pick up a rare item", &player_pickup_rare);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("You pick up a common item", &player_pickup_common);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("A common item drops for you", &self_drop_common);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("You pick up a rare item", &player_pickup_rare);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("You pick up a common item", &player_pickup_common);
 
     ImGui::Separator();
     ImGui::Text("Announcements");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Guild Announcement", &guild_announcement);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Hall of Heroes winners", &hoh_messages);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Favor of the Gods announcements", &favor);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("'You gain x faction'", &faction_gain);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Guild Announcement", &guild_announcement);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Hall of Heroes winners", &hoh_messages);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Favor of the Gods announcements", &favor);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("'You gain x faction'", &faction_gain);
     ImGui::Separator();
     ImGui::Text("Warnings");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
     ImGui::ShowHelp("'Item can only/cannot be used in towns or outposts.'\n\
 'This item cannot be used here.'\n\
 'Cannot use this item when no party members are dead.'\n\
@@ -766,36 +920,49 @@ void ChatFilter::DrawSettingInternal() {
 'That item has no uses remaining.'\n\
 'You must wait before using another tonic.'\n\
 'This item can only be used in a guild hall'");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Invalid target", &invalid_target);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Invalid target", &invalid_target);
     ImGui::ShowHelp("'Invalid spell/attack target.'\n\
 'Spell failed. Spirits are not affected by this spell.'\n\
 'Your view of the target is obstructed.'\n\
 'That skill requires a different weapon type.'\n\
 'Target is out of range.'\n\
 'Target is immune to bleeding/disease/poison (no flesh.)'");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Opening chests", &opening_chest_messages);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Opening chests", &opening_chest_messages);
     ImGui::ShowHelp("'Chest is being used'\n\
 'The chest is locked. You must use a lockpick to open it.'\n\
 'The chest is locked. You must have the correct key or a lockpick.'\n\
 'The chest is empty.'");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Item already identified", &item_already_identified);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Not enough Adrenaline/Energy", &not_enough_energy);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Item already identified", &item_already_identified);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Not enough Adrenaline/Energy", &not_enough_energy);
 
     ImGui::Separator();
     ImGui::Text("Others");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Earning skill points", &skill_points);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("PvP messages", &pvp_messages);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Earning skill points", &skill_points);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("PvP messages", &pvp_messages);
     ImGui::ShowHelp("Such as 'A skill was updated for pvp!'");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("9 Rings messages", &ninerings);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Lunar fortunes messages", &lunars);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Challenge mission messages", &challenge_mission_messages);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("9 Rings messages", &ninerings);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Lunar fortunes messages", &lunars);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Challenge mission messages", &challenge_mission_messages);
     ImGui::ShowHelp("Such as 'Hold-out bonus: +2 points'");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
-    ImGui::NextSpacedElement(); ImGui::Checkbox("'Player x might not reply...", &away);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("'Player x might not reply...", &away);
     ImGui::ShowHelp("...because his / her status is set to away'");
-    ImGui::NextSpacedElement(); ImGui::Checkbox("Salvaging messages", &salvage_messages);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Salvaging messages", &salvage_messages);
 
     ImGui::Separator();
     ImGui::Checkbox("Block messages from inactive chat channels", &block_messages_from_inactive_channels);
@@ -819,27 +986,27 @@ void ChatFilter::DrawSettingInternal() {
     ImGui::Checkbox("Emotes", &filter_channel_emotes);
 
     if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf,
-        FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+                                  FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
         timer_parse_filters = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
     }
     ImGui::Text("And messages matching regular expressions:");
     ImGui::ShowHelp("Regular expressions allow you to specify wildcards and express more.\n"
-                    "The default syntax is described at www.cplusplus.com/reference/regex/ECMAScript\n"
-                    "If you wish to only block if the entire message is matched, use the ^...$ syntax (^ for start, $ for end).\n"
-                    "You can apply flags to your regexes by using the form /^...$/ics\n"
-                    "i (icase) for case-insensitive\n"
-                    "c (collate) for locale sensitive character ranges\n"
-                    "n (nosubs) for non marking sub expressions\n"
-                    "s (ECMAScript) for modified ECMAScript syntax (default)\n"
-                    "b (basic) for BASIC regex syntax\n"
-                    "x (extended) for extended POSIX regex syntax\n"
-                    "a (awk) for awk grep syntax\n"
-                    "g (grep) for grep syntax\n"
-                    "e (egrep) for egrep synax\n"
-                    "You must supply at most one syntax flag.\n"
-                    "See https://en.cppreference.com/w/cpp/regex/syntax_option_type for further documentation.");
+        "The default syntax is described at www.cplusplus.com/reference/regex/ECMAScript\n"
+        "If you wish to only block if the entire message is matched, use the ^...$ syntax (^ for start, $ for end).\n"
+        "You can apply flags to your regexes by using the form /^...$/ics\n"
+        "i (icase) for case-insensitive\n"
+        "c (collate) for locale sensitive character ranges\n"
+        "n (nosubs) for non marking sub expressions\n"
+        "s (ECMAScript) for modified ECMAScript syntax (default)\n"
+        "b (basic) for BASIC regex syntax\n"
+        "x (extended) for extended POSIX regex syntax\n"
+        "a (awk) for awk grep syntax\n"
+        "g (grep) for grep syntax\n"
+        "e (egrep) for egrep synax\n"
+        "You must supply at most one syntax flag.\n"
+        "See https://en.cppreference.com/w/cpp/regex/syntax_option_type for further documentation.");
     if (ImGui::InputTextMultiline("##bycontentfilter_regex", bycontent_regex_buf,
-        FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
+                                  FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
         timer_parse_regexes = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
     }
     ImGui::Unindent();
@@ -858,9 +1025,10 @@ void ChatFilter::DrawSettingInternal() {
 #endif // EXTENDED_IGNORE_LIST
 }
 
-void ChatFilter::Update(float delta) {
+void ChatFilter::Update(const float delta)
+{
     UNREFERENCED_PARAMETER(delta);
-    uint32_t timestamp = GetTickCount();
+    const uint32_t timestamp = GetTickCount();
     if (timer_parse_filters && timer_parse_filters < timestamp) {
         timer_parse_filters = 0;
         ParseBuffer(bycontent_word_buf, bycontent_words);

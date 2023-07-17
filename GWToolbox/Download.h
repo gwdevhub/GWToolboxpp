@@ -16,7 +16,7 @@ public:
 
     bool Create();
     static bool DownloadAllFiles();
-    void SetChangelog(const char *str, size_t length) const;
+    void SetChangelog(const char* str, size_t length) const;
 
 private:
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;

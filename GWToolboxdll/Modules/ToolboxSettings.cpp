@@ -5,7 +5,6 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
-#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 
@@ -86,7 +85,6 @@
 #include "ToolboxSettings.h"
 
 namespace {
-
     ToolboxIni* inifile = nullptr;
 
     class ModuleToggle {
@@ -94,21 +92,35 @@ namespace {
         ToolboxModule* toolbox_module;
         const char* name;
         bool enabled;
-        ModuleToggle(ToolboxModule& m, bool _enabled = true) : name(m.Name()),toolbox_module(&m),enabled(_enabled) {};
+
+        ModuleToggle(ToolboxModule& m, const bool _enabled = true)
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled)
+        {
+        };
     };
+
     class WidgetToggle {
     public:
         ToolboxWidget* toolbox_module;
         const char* name;
         bool enabled;
-        WidgetToggle(ToolboxWidget& m, bool _enabled = true) : name(m.Name()),toolbox_module(&m),enabled(_enabled) {};
+
+        WidgetToggle(ToolboxWidget& m, const bool _enabled = true)
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled)
+        {
+        };
     };
+
     class WindowToggle {
     public:
         ToolboxWindow* toolbox_module;
         const char* name;
         bool enabled;
-        WindowToggle(ToolboxWindow& m, bool _enabled = true) : name(m.Name()),toolbox_module(&m),enabled(_enabled) {};
+
+        WindowToggle(ToolboxWindow& m, const bool _enabled = true)
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled)
+        {
+        };
     };
 
     const char* modules_ini_section = "Toolbox Modules";
@@ -181,10 +193,11 @@ namespace {
 
 bool ToolboxSettings::move_all = false;
 
-void ToolboxSettings::LoadModules(ToolboxIni* ini) {
+void ToolboxSettings::LoadModules(ToolboxIni* ini)
+{
     if (!modules_sorted) {
         modules_sorted = true;
-        auto sort = [](const auto& a, const  auto& b) {
+        auto sort = [](const auto& a, const auto& b) {
             return strcmp(a.toolbox_module->Name(), b.toolbox_module->Name()) < 0;
         };
         std::ranges::sort(optional_modules, sort);
@@ -224,11 +237,10 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini) {
     for (const auto& m : optional_widgets) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
     }
-
-
 }
 
-void ToolboxSettings::DrawSettingInternal() {
+void ToolboxSettings::DrawSettingInternal()
+{
     DrawFreezeSetting();
     ImGui::Separator();
 
@@ -243,7 +255,7 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::PushID("global_enable");
     ImGui::Text("Enable the following features:");
     ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
-    
+
     ImGui::Text("Modules");
     auto items_per_col = static_cast<size_t>(ceil(optional_modules.size() / static_cast<float>(cols)));
     size_t col_count = 0;
@@ -313,12 +325,14 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::PopID();
 }
 
-void ToolboxSettings::DrawFreezeSetting() {
+void ToolboxSettings::DrawFreezeSetting()
+{
     ImGui::Checkbox("Unlock Move All", &move_all);
     ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
 }
 
-void ToolboxSettings::LoadSettings(ToolboxIni* ini) {
+void ToolboxSettings::LoadSettings(ToolboxIni* ini)
+{
     ToolboxModule::LoadSettings(ini);
     inifile = ini; // Keep this to load module info
 
@@ -335,9 +349,11 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini) {
     }
 }
 
-void ToolboxSettings::SaveSettings(ToolboxIni* ini) {
+void ToolboxSettings::SaveSettings(ToolboxIni* ini)
+{
     ToolboxModule::SaveSettings(ini);
-    if (location_file.is_open()) location_file.close();
+    if (location_file.is_open())
+        location_file.close();
 
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -350,11 +366,13 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini) {
     }
 }
 
-void ToolboxSettings::Draw(IDirect3DDevice9*) {
+void ToolboxSettings::Draw(IDirect3DDevice9*)
+{
     ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
 }
 
-void ToolboxSettings::Update(float delta) {
+void ToolboxSettings::Update(float delta)
+{
     UNREFERENCED_PARAMETER(delta);
 
     // save location data
@@ -369,45 +387,45 @@ void ToolboxSettings::Update(float delta) {
 
                 std::wstring map_string;
                 switch (current) {
-                case GW::Constants::MapID::Domain_of_Anguish:
-                    map_string = L"DoA";
-                    break;
-                case GW::Constants::MapID::Urgozs_Warren:
-                    map_string = L"Urgoz";
-                    break;
-                case GW::Constants::MapID::The_Deep:
-                    map_string = L"Deep";
-                    break;
-                case GW::Constants::MapID::The_Underworld:
-                    map_string = L"UW";
-                    break;
-                case GW::Constants::MapID::The_Fissure_of_Woe:
-                    map_string = L"FoW";
-                    break;
-                default:
-                    map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
+                    case GW::Constants::MapID::Domain_of_Anguish:
+                        map_string = L"DoA";
+                        break;
+                    case GW::Constants::MapID::Urgozs_Warren:
+                        map_string = L"Urgoz";
+                        break;
+                    case GW::Constants::MapID::The_Deep:
+                        map_string = L"Deep";
+                        break;
+                    case GW::Constants::MapID::The_Underworld:
+                        map_string = L"UW";
+                        break;
+                    case GW::Constants::MapID::The_Fissure_of_Woe:
+                        map_string = L"FoW";
+                        break;
+                    default:
+                        map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
                 }
 
                 std::wstring prof_string;
                 GW::AgentLiving* me = GW::Agents::GetCharacter();
                 if (me) {
                     prof_string += L" - ";
-                    prof_string += GW::Constants::GetWProfessionAcronym(
+                    prof_string += GetWProfessionAcronym(
                         static_cast<GW::Constants::Profession>(me->primary));
                     prof_string += L"-";
-                    prof_string += GW::Constants::GetWProfessionAcronym(
+                    prof_string += GetWProfessionAcronym(
                         static_cast<GW::Constants::Profession>(me->secondary));
                 }
 
                 SYSTEMTIME localtime;
                 GetLocalTime(&localtime);
                 std::wstring filename = std::to_wstring(localtime.wYear)
-                    + L"-" + std::to_wstring(localtime.wMonth)
-                    + L"-" + std::to_wstring(localtime.wDay)
-                    + L" - " + std::to_wstring(localtime.wHour)
-                    + L"-" + std::to_wstring(localtime.wMinute)
-                    + L"-" + std::to_wstring(localtime.wSecond)
-                    + L" - " + map_string + prof_string + L".log";
+                                        + L"-" + std::to_wstring(localtime.wMonth)
+                                        + L"-" + std::to_wstring(localtime.wDay)
+                                        + L" - " + std::to_wstring(localtime.wHour)
+                                        + L"-" + std::to_wstring(localtime.wMinute)
+                                        + L"-" + std::to_wstring(localtime.wSecond)
+                                        + L" - " + map_string + prof_string + L".log";
 
                 if (location_file && location_file.is_open()) {
                     location_file.close();
@@ -423,10 +441,10 @@ void ToolboxSettings::Update(float delta) {
                 location_file << " Y=" << me->pos.y;
                 location_file << "\n";
             }
-        } else {
+        }
+        else {
             location_current_map = GW::Constants::MapID::None;
             location_file.close();
         }
     }
 }
-

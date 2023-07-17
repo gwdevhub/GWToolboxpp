@@ -9,21 +9,25 @@
 
 class BondsWidget : public ToolboxWidget {
     BondsWidget() = default;
-    ~BondsWidget() = default;
+    ~BondsWidget() override = default;
+
 public:
-    static BondsWidget& Instance() {
+    static BondsWidget& Instance()
+    {
         static BondsWidget instance;
         return instance;
     }
 
-    const char* Name() const override { return "Bonds"; }
-    const char* Icon() const override { return ICON_FA_BARS; }
+    [[nodiscard]] const char* Name() const override { return "Bonds"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_BARS; }
 
     void Initialize() override;
     void Terminate() override;
 
     // Update. Will always be called every frame.
-    void Update(float) override {}
+    void Update(float) override
+    {
+    }
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* device) override;
@@ -57,17 +61,17 @@ private:
         GW::Constants::SkillID::Aggressive_Refrain,
     };
 
-    void UseBuff(GW::AgentID target, DWORD buff_skillid);
+    static void UseBuff(GW::AgentID target, DWORD buff_skillid);
 
     Color background = 0;
     Color low_attribute_overlay = 0;
 
-    std::vector<GW::Constants::SkillID> bond_list;               // index to skill id
-    std::unordered_map<GW::Constants::SkillID, size_t> bond_map; // skill id to index
+    std::vector<GW::Constants::SkillID> bond_list{};               // index to skill id
+    std::unordered_map<GW::Constants::SkillID, size_t> bond_map{}; // skill id to index
     bool FetchBondSkills();
 
-    std::vector<GW::AgentID> party_list;               // index to agent id
-    std::unordered_map<GW::AgentID, size_t> party_map; // agent id to index
+    std::vector<GW::AgentID> party_list{};               // index to agent id
+    std::unordered_map<GW::AgentID, size_t> party_map{}; // agent id to index
     size_t allies_start = 255;
     bool FetchPartyInfo();
 

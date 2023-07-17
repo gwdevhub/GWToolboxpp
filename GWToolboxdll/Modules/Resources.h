@@ -1,21 +1,18 @@
 #pragma once
 
-#include <RestClient.h>
-
-#include <resource.h>
 #include <ToolboxModule.h>
 #include <Utf8.h>
 
 namespace GuiUtils {
     class EncString;
 }
-namespace GW {
-    namespace Constants {
-        enum class Profession;
-        enum class MapID;
-        enum class SkillID : uint32_t;
-    }
+
+namespace GW::Constants {
+    enum class Profession;
+    enum class MapID;
+    enum class SkillID : uint32_t;
 }
+
 class Resources : public ToolboxModule {
     Resources();
     ~Resources() override;
@@ -23,12 +20,13 @@ class Resources : public ToolboxModule {
 public:
     Resources(const Resources&) = delete;
 
-    static Resources& Instance() {
+    static Resources& Instance()
+    {
         static Resources instance;
         return instance;
     }
 
-    const char* Name() const override { return "Resources"; }
+    [[nodiscard]] const char* Name() const override { return "Resources"; }
     bool HasSettings() override { return false; }
 
     void Initialize() override;
@@ -64,18 +62,18 @@ public:
     static float GetGWScaleMultiplier(bool force = false);
 
     // Generic callback used when loading async functions. If success is false, any error details are held in response.
-    typedef std::function<void(bool success, const std::wstring& response)> AsyncLoadCallback;
+    using AsyncLoadCallback = std::function<void(bool success, const std::wstring& response)>;
     // Callback for binary, usually only curl stuff; try to stick to wstrings where possible
-    typedef std::function<void(bool success, const std::string& response)> AsyncLoadMbCallback;
+    using AsyncLoadMbCallback = std::function<void(bool success, const std::string& response)>;
 
     // Load from file to D3DTexture, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback = 0);
+    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback = nullptr) const;
     // Load from compiled resource id to D3DTexture, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback = 0);
+    void LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback = nullptr) const;
     // Load from file to D3DTexture, fallback to resource id, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback = 0);
+    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback = nullptr) const;
     // Load from file to D3DTexture, fallback to remote location, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback = 0);
+    static void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback = nullptr);
 
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetProfessionIcon(GW::Constants::Profession p);
@@ -117,13 +115,13 @@ public:
 
     // Stops the worker thread once it's done with the current jobs.
     void EndLoading();
-private:
 
-    void Cleanup();
+private:
+    static void Cleanup();
     // Assign IDirect3DTexture9* from file
     static HRESULT TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring& error);
     // Assign IDirect3DTexture9* from resource
     static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring& error);
     // Copy from compiled resource binary to file on local disk.
-    bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
+    static bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
 };

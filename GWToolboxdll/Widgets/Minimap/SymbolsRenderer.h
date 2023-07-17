@@ -13,7 +13,6 @@ public:
     void SaveSettings(ToolboxIni* ini, const char* section) const;
 
 private:
-
     void Initialize(IDirect3DDevice9* device) override;
 
     Color color_quest = 0;

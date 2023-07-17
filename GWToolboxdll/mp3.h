@@ -2,14 +2,12 @@
 
 // Windows Header Files:
 #include <windows.h>
-#include <mmsystem.h>
 #include <strmif.h>
 #include <control.h>
 
 #pragma comment(lib, "strmiids.lib")
 
-class Mp3
-{
+class Mp3 {
 public:
     Mp3();
     ~Mp3();
@@ -58,8 +56,7 @@ private:
     IMediaEventEx* pimex;
     IBasicAudio* piba;
     IMediaSeeking* pims;
-    bool    ready;
+    bool ready;
     // Duration of the MP3.
     __int64 duration;
-
 };

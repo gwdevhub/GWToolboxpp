@@ -1,13 +1,10 @@
 #pragma once
 
-#include <../plugins/Base/ToolboxPlugin.h>
 #include <ToolboxUIElement.h>
 
 class PluginModule final : public ToolboxUIElement {
-
-
     PluginModule();
-    ~PluginModule() = default;
+    ~PluginModule() override = default;
 
 public:
     static PluginModule& Instance()
@@ -16,8 +13,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Plugins"; }
-    const char* Icon() const override { return ICON_FA_PUZZLE_PIECE; }
+    [[nodiscard]] const char* Name() const override { return "Plugins"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_PUZZLE_PIECE; }
 
     void Initialize() override;
 
@@ -30,11 +27,13 @@ public:
     void Terminate() override;
     bool CanTerminate() override;
 
-    void ShowVisibleRadio() override {}
-    void DrawSizeAndPositionSettings() override {}
+    void ShowVisibleRadio() override
+    {
+    }
 
-
+    void DrawSizeAndPositionSettings() override
+    {
+    }
 
 private:
-
 };

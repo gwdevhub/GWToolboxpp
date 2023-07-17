@@ -10,6 +10,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <Defines.h>
 #include "SkillbarWidget.h"
 
 /*
@@ -22,7 +23,8 @@ void SkillbarWidget::skill_cooldown_to_string(char arr[16], uint32_t cd) const
         arr[0] = 0;
     }
     else if (cd >= static_cast<uint32_t>(decimal_threshold)) {
-        if (round_up) cd += 1000;
+        if (round_up)
+            cd += 1000;
         snprintf(arr, 16, "%d", cd / 1000);
     }
     else {
@@ -34,9 +36,11 @@ std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const GW::Consta
 {
     std::vector<Effect> ret;
     auto* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) return ret;
+    if (!effects)
+        return ret;
     const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skillId);
-    if (skill_data && skill_data->type == GW::Constants::SkillType::Hex) return ret;
+    if (skill_data && skill_data->type == GW::Constants::SkillType::Hex)
+        return ret;
     for (const GW::Effect& effect : *effects) {
         if (effect.skill_id == skillId) {
             Effect e;
@@ -55,11 +59,13 @@ std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const GW::Consta
 
 SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const GW::Constants::SkillID skillId)
 {
-    SkillbarWidget::Effect ret;
+    Effect ret;
     auto* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) return ret;
+    if (!effects)
+        return ret;
     const auto& skill_data = GW::SkillbarMgr::GetSkillConstantData(skillId);
-    if (skill_data && skill_data->type == GW::Constants::SkillType::Hex) return ret;
+    if (skill_data && skill_data->type == GW::Constants::SkillType::Hex)
+        return ret;
     for (const GW::Effect& effect : *effects) {
         if (effect.skill_id == skillId) {
             const auto remaining = effect.GetTimeRemaining();
@@ -79,36 +85,41 @@ SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const GW::Constants::S
 
 void SkillbarWidget::Update(float)
 {
-    if (!visible) return;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+    if (!visible)
+        return;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+        return;
 
     const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-    if (skillbar == nullptr) return;
+    if (skillbar == nullptr)
+        return;
 
     bool has_sf = false;
     for (size_t i = 0; i < 8 && !has_sf; i++) {
         has_sf = skillbar->skills[i].skill_id == GW::Constants::SkillID::Shadow_Form;
     }
 
-    for (size_t idx = 0u; idx < 8; idx++) {
-        skill_cooldown_to_string(m_skills[idx].cooldown, skillbar->skills[idx].GetRecharge());
-        if (!display_skill_overlay && !display_effect_monitor) continue;
-        const GW::Constants::SkillID& skill_id = skillbar->skills[idx].skill_id;
+    for (auto i = 0; i < _countof(skillbar->skills); i++) {
+        skill_cooldown_to_string(m_skills[i].cooldown, skillbar->skills[i].GetRecharge());
+        if (!display_skill_overlay && !display_effect_monitor)
+            continue;
+        const GW::Constants::SkillID& skill_id = skillbar->skills[i].skill_id;
         const Effect& effect = get_longest_effect(skill_id);
-        m_skills[idx].color = UptimeToColor(effect.remaining);
+        m_skills[i].color = UptimeToColor(effect.remaining);
         if (display_effect_monitor) {
             const auto* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-            if (!skill_data) continue;
-            m_skills[idx].effects.clear();
+            if (!skill_data)
+                continue;
+            m_skills[i].effects.clear();
             if (display_multiple_effects && has_sf && skill_data->profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) && skill_data->type == GW::Constants::SkillType::Enchantment) {
-                m_skills[idx].effects = get_effects(skill_id);
-                std::ranges::sort(m_skills[idx].effects, [](const Effect& a, const Effect& b) { return a.remaining > b.remaining; });
+                m_skills[i].effects = get_effects(skill_id);
+                std::ranges::sort(m_skills[i].effects, [](const Effect& a, const Effect& b) { return a.remaining > b.remaining; });
             }
             else if (effect.remaining > 0) {
-                m_skills[idx].effects.push_back(effect);
+                m_skills[i].effects.push_back(effect);
             }
 
-            for (auto& e : m_skills[idx].effects) {
+            for (auto& e : m_skills[i].effects) {
                 skill_cooldown_to_string(e.text, e.remaining);
                 e.color = UptimeToColor(e.remaining);
             }
@@ -118,15 +129,17 @@ void SkillbarWidget::Update(float)
 
 void SkillbarWidget::Draw(IDirect3DDevice9*)
 {
-    if (!visible) return;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+    if (!visible)
+        return;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+        return;
 
     const auto window_flags = GetWinFlags();
     const Color col_border = (window_flags & ImGuiWindowFlags_NoMove) ? color_border : Colors::White();
 
-    ImGui::PushFont(GuiUtils::GetFont(font_recharge));
+    ImGui::PushFont(GetFont(font_recharge));
 
-    GW::UI::WindowPosition* pos = GW::UI::GetWindowPosition(GW::UI::WindowID_Skillbar);
+    GW::UI::WindowPosition* pos = GetWindowPosition(GW::UI::WindowID_Skillbar);
     ImVec2 skillsize(m_skill_width, m_skill_height);
     ImVec2 winsize;
     if (snap_to_skillbar && pos) {
@@ -158,9 +171,15 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             }
         }
         switch (layout) {
-            case Layout::Columns: skillsize.x = width / 2.f; break;
-            case Layout::Row: skillsize.x = width / 8.f; break;
-            case Layout::Rows: skillsize.x = width / 4.f; break;
+            case Layout::Columns:
+                skillsize.x = width / 2.f;
+                break;
+            case Layout::Row:
+                skillsize.x = width / 8.f;
+                break;
+            case Layout::Rows:
+                skillsize.x = width / 4.f;
+                break;
         }
         m_skill_width = m_skill_height = skillsize.y = skillsize.x;
         // NB: Skillbar is 1px off on x axis
@@ -191,7 +210,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
     ImGui::Begin(Name(), nullptr, window_flags);
     const ImVec2 winpos = ImGui::GetWindowPos();
-    for (size_t i = 0; i < m_skills.size(); ++i) {
+    for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
 
         // position of this skill
@@ -212,7 +231,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             pos1.y += (std::floor(i / 2.f) * skillsize.y);
         }
 
-        ImVec2 pos2 = ImVec2(pos1.x + skillsize.x, pos1.y + skillsize.y);
+        auto pos2 = ImVec2(pos1.x + skillsize.x, pos1.y + skillsize.y);
 
         // draw overlay
         if (display_skill_overlay) {
@@ -264,9 +283,9 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     ImGui::PopFont();
 }
 
-void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
+void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 {
-    ImGui::PushFont(GuiUtils::GetFont(font_effects));
+    ImGui::PushFont(GetFont(font_effects));
 
     const Skill& skill = m_skills[skill_idx];
 
@@ -309,21 +328,21 @@ void SkillbarWidget::DrawEffect(int skill_idx, const ImVec2& pos) const
         size.y = effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size;
     }
 
-    for (size_t i = 0; i < skill.effects.size(); ++i) {
+    for (size_t i = 0; i < skill.effects.size(); i++) {
         const Effect& effect = skill.effects[i];
 
         ImVec2 pos1 = base;
 
-        bool first_half = (layout == Layout::Rows && std::floor(skill_idx / 4) == 0) || (layout == Layout::Columns && skill_idx % 2 == 0);
+        const bool first_half = (layout == Layout::Rows && std::floor(skill_idx / 4) == 0) || (layout == Layout::Columns && skill_idx % 2 == 0);
         bool flip_order = effects_flip_order;
 
-        bool shift_offset = (effects_symmetric && first_half) || effects_flip_direction;
+        const bool shift_offset = (effects_symmetric && first_half) || effects_flip_direction;
 
         if (effects_symmetric && !first_half) {
             flip_order = !flip_order;
         }
 
-        size_t index = flip_order ? i : skill.effects.size() - i - 1;
+        const size_t index = flip_order ? i : skill.effects.size() - i - 1;
 
         if (layout == Layout::Row || layout == Layout::Rows) {
             pos1.y += size.y * index;
@@ -557,9 +576,11 @@ void SkillbarWidget::DrawSettingInternal()
             DrawDurationThresholds();
         }
         ImGui::Combo("Text size", reinterpret_cast<int*>(&font_effects), font_sizes, 6);
-        if (!effect_text_color) Colors::DrawSettingHueWheel("Text color", &color_text_effects);
+        if (!effect_text_color)
+            Colors::DrawSettingHueWheel("Text color", &color_text_effects);
         Colors::DrawSettingHueWheel("Background color", &color_effect_background);
-        if (!effect_progress_bar_color) Colors::DrawSettingHueWheel("Progress bar color", &color_effect_progress);
+        if (!effect_progress_bar_color)
+            Colors::DrawSettingHueWheel("Progress bar color", &color_effect_progress);
         Colors::DrawSettingHueWheel("Border color", &color_effect_border);
     }
     ImGui::PopID();

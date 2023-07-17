@@ -1,22 +1,19 @@
 #pragma once
-#include <GWCA/Constants/Constants.h>
-
-#include <GWCA/Utilities/Hook.h>
-#include <GWCA/GameEntities/Agent.h>
 
 #include <ToolboxModule.h>
-#include <ToolboxUIElement.h>
 
 class AprilFools : public ToolboxModule {
-    AprilFools() {};
-    ~AprilFools() {};
+    AprilFools() = default;
+    ~AprilFools() override = default;
+
 public:
-    static AprilFools& Instance() {
+    static AprilFools& Instance()
+    {
         static AprilFools instance;
         return instance;
     }
 
-    const char* Name() const override { return "April Fools"; }
+    [[nodiscard]] const char* Name() const override { return "April Fools"; }
     bool HasSettings() override { return false; }
 
     void Initialize() override;

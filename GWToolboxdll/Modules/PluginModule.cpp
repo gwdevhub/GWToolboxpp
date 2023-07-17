@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "PluginModule.h"
+#include "../plugins/Base/ToolboxPlugin.h"
 
 #include <GWToolbox.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -15,7 +16,10 @@ namespace {
     const char* plugins_enabled_section = "Plugins Enabled";
 
     struct Plugin {
-        Plugin(std::filesystem::path _path) : path(_path) {};
+        Plugin(std::filesystem::path _path)
+            : path(std::move(_path))
+        {
+        };
         std::filesystem::path path;
         HMODULE dll = nullptr;
         ToolboxPlugin* instance = nullptr;
@@ -28,28 +32,31 @@ namespace {
 
     std::vector<Plugin*> loaded_plugins;
 
-    bool UnloadPlugin(Plugin* plugin_ptr) {
+    bool UnloadPlugin(Plugin* plugin_ptr)
+    {
         auto& plugin = *plugin_ptr;
         if (!plugin.terminating) {
-            if(plugin.instance)
+            if (plugin.instance)
                 plugin.instance->SignalTerminate();
             plugin.terminating = true;
         }
         if (plugin.instance && !plugin.instance->CanTerminate())
             return false; // Pending
-        
-        if (plugin.instance) 
+
+        if (plugin.instance)
             plugin.instance->Terminate();
         plugin.initialized = false;
         plugin.terminating = false;
         plugin.instance = nullptr;
-        if(plugin.dll)
+        if (plugin.dll)
             ASSERT(FreeLibrary(plugin.dll));
         plugin.dll = nullptr;
         std::erase_if(loaded_plugins, [plugin_ptr](auto p) { return p == plugin_ptr; });
-        return true; 
+        return true;
     }
-    bool LoadPlugin(Plugin* plugin_ptr) {
+
+    bool LoadPlugin(Plugin* plugin_ptr)
+    {
         auto& plugin = *plugin_ptr;
         if (plugin.instance)
             return true;
@@ -72,7 +79,9 @@ namespace {
         loaded_plugins.push_back(plugin_ptr);
         return true;
     }
-    bool InitializePlugin(Plugin* plugin_ptr) {
+
+    bool InitializePlugin(Plugin* plugin_ptr)
+    {
         auto& plugin = *plugin_ptr;
         if (plugin.terminating || !plugin.instance)
             return false;
@@ -111,13 +120,12 @@ namespace {
             if (ext == ".dll") {
                 auto found = std::ranges::find_if(plugins, [file_path](const auto plugin) {
                     return plugin->path == file_path;
-                    });
-                if(found == plugins.end())
+                });
+                if (found == plugins.end())
                     plugins.push_back(new Plugin(file_path));
             }
         }
     }
-    
 }
 
 PluginModule::PluginModule()
@@ -127,12 +135,11 @@ PluginModule::PluginModule()
 }
 
 
-
 void PluginModule::DrawSettingInternal()
 {
     ImGui::PushID("Plugins");
 
-    for (auto plugin : plugins) {
+    for (const auto plugin : plugins) {
         ImGui::PushID(plugin);
         auto& style = ImGui::GetStyle();
         const auto origin_header_col = style.Colors[ImGuiCol_Header];
@@ -156,10 +163,10 @@ void PluginModule::DrawSettingInternal()
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::GetTextLineHeight() - ImGui::GetStyle().FramePadding.x - 128.f);
         snprintf(buf, _countof(buf), "%s###load_unload", plugin->instance ? "Unload" : "Load");
         if (ImGui::Button(buf)) {
-            if(!plugin->instance)
+            if (!plugin->instance)
                 LoadPlugin(plugin);
             else {
-                UnloadPlugin(plugin);  
+                UnloadPlugin(plugin);
             }
         }
         if (plugin->instance) {
@@ -168,7 +175,6 @@ void PluginModule::DrawSettingInternal()
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Active");
         }
-
 
         if (is_showing && plugin->active && InitializePlugin(plugin)) {
             plugin->instance->DrawSettings();
@@ -201,14 +207,14 @@ void PluginModule::Draw(IDirect3DDevice9* device)
 {
     static bool message_displayed = false;
     if (!loaded_plugins.empty() && !message_displayed) {
-        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA2,
-            L"<c=#FF0000>Plugins detected, these may be unsafe to use and are not officially supported by GWToolbox++ developers.\n"
-            "Use at your own risk if you trust the author.\n"
-            "Do not report bugs that occur while you play with plugins.</c>",
-            L"GWToolbox++");
+        WriteChat(GW::Chat::Channel::CHANNEL_GWCA2,
+                  L"<c=#FF0000>Plugins detected, these may be unsafe to use and are not officially supported by GWToolbox++ developers.\n"
+                  "Use at your own risk if you trust the author.\n"
+                  "Do not report bugs that occur while you play with plugins.</c>",
+                  L"GWToolbox++");
         message_displayed = true;
     }
-    for (auto plugin : loaded_plugins) {
+    for (const auto plugin : loaded_plugins) {
         if (!InitializePlugin(plugin))
             continue;
         if (!plugin->active)
@@ -226,10 +232,10 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
         for (const auto& entry : dlls_to_load) {
             std::filesystem::path path = entry.pItem;
             const auto filename = path.filename();
-            bool is_active = ini->GetBoolValue(plugins_enabled_section, entry.pItem, false);
+            const bool is_active = ini->GetBoolValue(plugins_enabled_section, entry.pItem, false);
             auto matching_plugins = std::views::filter(plugins, [filename](auto plugin) {
                 return plugin->path.filename() == filename;
-                });
+            });
             // Find any matching plugins and load them
             for (auto plugin : matching_plugins) {
                 if (!LoadPlugin(plugin))
@@ -243,7 +249,7 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
     // Find any plugins that are currently loaded but not supposed to be
     auto to_unload = std::views::filter(loaded_plugins, [&](auto plugin) {
         return std::ranges::find(plugins_loaded_from_ini, plugin) == plugins_loaded_from_ini.end();
-        });
+    });
     for (const auto plugin : std::views::reverse(to_unload)) {
         UnloadPlugin(plugin);
     }
@@ -251,21 +257,21 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
 
 void PluginModule::SaveSettings(ToolboxIni* ini)
 {
-    ini->Delete(plugins_enabled_section,NULL);
+    ini->Delete(plugins_enabled_section, nullptr);
     for (const auto plugin : loaded_plugins) {
         plugin->instance->SaveSettings(pluginsfoldername);
         ini->SetBoolValue(plugins_enabled_section, plugin->path.filename().string().c_str(), plugin->active);
     }
 }
 
-void PluginModule::Update(float delta)
+void PluginModule::Update(const float delta)
 {
     for (const auto plugin : loaded_plugins) {
         plugin->instance->Update(delta);
         if (plugin->terminating) {
             if (UnloadPlugin(plugin))
                 break; // loaded_plugins vector changed, skip a frame
-        } 
+        }
     }
 }
 
@@ -273,15 +279,16 @@ void PluginModule::SignalTerminate()
 {
     ToolboxUIElement::SignalTerminate();
     auto plugins_cpy = loaded_plugins;
-    for (auto p : std::views::reverse(plugins_cpy)) {
+    for (const auto p : std::views::reverse(plugins_cpy)) {
         UnloadPlugin(p);
     }
 }
 
-void PluginModule::Terminate() { 
+void PluginModule::Terminate()
+{
     ToolboxUIElement::Terminate();
     SignalTerminate();
     ASSERT(loaded_plugins.empty());
-    for (auto p : plugins)
+    for (const auto p : plugins)
         delete p;
 }

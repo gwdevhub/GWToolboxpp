@@ -2,25 +2,24 @@
 #include <GWCA/Constants/Constants.h>
 
 namespace CompletionWindow_Constants {
-
     using namespace GW::Constants;
 
     const char* campaign_names[] = {"Core", "Prophecies", "Factions", "Nightfall", "Eye Of The North", "Dungeons"};
 
     const char* CampaignName(const Campaign camp) { return campaign_names[static_cast<uint8_t>(camp)]; }
     const char* hero_names[] = {"", "Norgu", "Goren", "Tahlkora", "Master of Whispers", "Acolyte Jin", "Koss", "Dunkoro", "Acolyte Sousuke", "Melonni", "Zhed Shadowhoof", "General Morgahn", "Margrid the Sly", "Zenmai", "Olias", "Razah", "M.O.X.",
-        "Keiran Thackeray", "Jora", "Pyre Fierceshot", "Anton", "Livia", "Hayda", "Kahmu", "Gwen", "Xandra", "Vekk", "Ogden Stonehealer", "", "", "", "", "", "", "", "", "Miku", "Zei Ri"};
+                                "Keiran Thackeray", "Jora", "Pyre Fierceshot", "Anton", "Livia", "Hayda", "Kahmu", "Gwen", "Xandra", "Vekk", "Ogden Stonehealer", "", "", "", "", "", "", "", "", "Miku", "Zei Ri"};
 
     const wchar_t* encoded_festival_hat_names[] = {
         // Halloween
         L"\x8102\x5C2B\xB7F4\xC976\x5CE1", // Charr hat
         L"\x8101\x5EBF\xE584\x8367\x5830", // Furious pumpkin crown
         L"\x8102\x6E5B\x9CE4\xF433\x7437", // Furrocious ears
-        L"\x8102\x34F7\xD06F\x9B03\x1D89",        // Mummy mask
-        L"\x8102\x34F6\x9A67\xE2B0\x19A6",       // Lupine mask
+        L"\x8102\x34F7\xD06F\x9B03\x1D89", // Mummy mask
+        L"\x8102\x34F6\x9A67\xE2B0\x19A6", // Lupine mask
         L"\x245D\xCD3B\xC2E1\x2AC3",       // Pumpkin crown
         L"\x8102\x7F39\xEDE6\xF160\x552",  // Reapers hood
-        L"\x8102\x34F8\xE9FE\x9F4D\x4B4A",    // Scarecrow Mask
+        L"\x8102\x34F8\xE9FE\x9F4D\x4B4A", // Scarecrow Mask
         L"\x8102\x5C2A\xBF3B\x9294\x717F", // Skeleton face paint
         L"\x8102\x6E5C\xE744\xE51D\x549D", // Spectercles
         L"\x8102\x7F3A\xD2B3\xE31C\x8F1",  // Tricorne
@@ -32,28 +31,28 @@ namespace CompletionWindow_Constants {
         L"\x8103\x1E6\xCA8E\xFEBE\x13F1",  // Festive winter hood
         L"\x8101\x60FF\xD57C\xEE89\x1B58", // Freezie crown
         L"\x8101\x6100\xE654\xF2D6\x4A8",  // Great horns of grenth
-        L"\x8102\x34F3\xA758\x90C4\x16B6",       // Grentch Cap
+        L"\x8102\x34F3\xA758\x90C4\x16B6", // Grentch Cap
         L"\x2481\x821F\xD73C\x4CD2",       // Horns of Grenth
-        L"\x8102\x34F1\xDF5B\xCBEB\x51B3",         // Ice crown
+        L"\x8102\x34F1\xDF5B\xCBEB\x51B3", // Ice crown
         L"\x8102\x5EA2\xF571\xCFCB\x35A6", // Ice shard crest
-        L"\x8101\x60FE\xDE91\x9A0C\x158B",       // Jesters cap
-        L"\x8102\x34F4\xB9A7\x8ED1\x23ED",         // Rudi mask
+        L"\x8101\x60FE\xDE91\x9A0C\x158B", // Jesters cap
+        L"\x8102\x34F4\xB9A7\x8ED1\x23ED", // Rudi mask
         L"\x8102\x5EA3\xBF84\xA60F\xC33",  // Snow crystal crest
         L"\x8103\x1E9\xDD16\x9987\x490C",  // Stylish black scarf
         L"\x8103\x1E7\xDD75\xA264\x4968",  // Stylish red striped scarf
         L"\x8103\x1E8\xDBFA\xB129\x3687",  // Stylish white striped scarf
         L"\x8101\x6101\xCAC9\xC13F\x5086", // Stylish yule cap
-        L"\x8102\x34F2\xBED1\xD377\x12A0",      // Wreath crown
+        L"\x8102\x34F2\xBED1\xD377\x12A0", // Wreath crown
         L"\x2482\x81E2\xEE52\x471F",       // Yule cap
         // Dragon Festival
-        L"\x8102\x216A\xF512\xCE87\x46F",     // Demon mask
-        L"\x8101\x151F\x918F\xB47E\x36CA",  // Dragon mask
-        L"\x8102\x4669\xAC2E\xFF9A\x29A4",        // Grasping mask
-        L"\x8102\x5A95\xB979\xA70E\x1639",    // Imperial dragon mask
-        L"\x8101\x66FE\xE888\xCFB3\x1F77",    // Lion mask
+        L"\x8102\x216A\xF512\xCE87\x46F",  // Demon mask
+        L"\x8101\x151F\x918F\xB47E\x36CA", // Dragon mask
+        L"\x8102\x4669\xAC2E\xFF9A\x29A4", // Grasping mask
+        L"\x8102\x5A95\xB979\xA70E\x1639", // Imperial dragon mask
+        L"\x8101\x66FE\xE888\xCFB3\x1F77", // Lion mask
         L"\x8102\x7699\x94D7\xAEA5\x2431", // Mirthful dragon mask
-        L"\x8102\x6901\x8F3A\xC47B\x4E1A",  // Sinister dragon mask
-        L"\x8101\x3DE\xE3E9\xAFAA\x152"  // Tengu mask
+        L"\x8102\x6901\x8F3A\xC47B\x4E1A", // Sinister dragon mask
+        L"\x8101\x3DE\xE3E9\xAFAA\x152"    // Tengu mask
     };
     constexpr size_t wintersday_index = 13;      // Index in the encoded_festival_hat_names array where wintersday hats start
     constexpr size_t dragon_festival_index = 31; // Index in the encoded_festival_hat_names array where wintersday hats start
@@ -102,7 +101,7 @@ namespace CompletionWindow_Constants {
         L"\x108\x107"
         "Marhan's Grotto Ascended Armor\x1", // Marhans Grotto Ascended Armor
     };
-    static_assert(_countof(encoded_armor_names) == (size_t)ResilienceDetail::Count);
+    static_assert(_countof(encoded_armor_names) == static_cast<size_t>(ResilienceDetail::Count));
 
     // This array is keyed in the order of weapons listed in HallOfMonumentsModule::Detail enum
     // i.e. index 0 is Destroyer Axe.
@@ -153,7 +152,7 @@ namespace CompletionWindow_Constants {
         L"\x8102\x6B62\xB5BE\xA6EE\x2937", // Oppressor's Staff
         L"\x8102\x6B63\x9222\xF8D1\x5715", // Oppressor's Sword
     };
-    static_assert(_countof(encoded_weapon_names) == (size_t)ValorDetail::Count);
+    static_assert(_countof(encoded_weapon_names) == static_cast<size_t>(ValorDetail::Count));
 
     // NOTE: Do NOT try to reorder this list; the keys are used to identify which minipet is which in the tracker across saves.
     const wchar_t* encoded_minipet_names[] = {

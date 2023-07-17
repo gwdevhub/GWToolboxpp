@@ -3,23 +3,22 @@
 #include <GWCA/Constants/Constants.h>
 
 namespace GWArmory {
-
-    enum class DyeColor
-    {
-        None = 0,
-        Blue = 2,
-        Green = 3,
+    enum class DyeColor {
+        None   = 0,
+        Blue   = 2,
+        Green  = 3,
         Purple = 4,
-        Red = 5,
+        Red    = 5,
         Yellow = 6,
-        Brown = 7,
+        Brown  = 7,
         Orange = 8,
         Silver = 9,
-        Black = 10,
-        Gray = 11,
-        White = 12,
-        Pink = 13
+        Black  = 10,
+        Gray   = 11,
+        White  = 12,
+        Pink   = 13
     };
+
     // Arg3:
     //  - Costume = 0x20000006
     //  - Armor =   0x20110007 (3)
@@ -40,8 +39,7 @@ namespace GWArmory {
         {0.95f, 0.5f, 0.95f, 0.f},  // Pink
     };
 
-    enum ItemSlot
-    {
+    enum ItemSlot {
         ItemSlot_Chest,
         ItemSlot_Legs,
         ItemSlot_CostumeHead,
@@ -50,6 +48,7 @@ namespace GWArmory {
         ItemSlot_Head,
         ItemSlot_Unknown
     };
+
     enum class ArmorComponentType {
         Unk,
         Head,
@@ -60,9 +59,13 @@ namespace GWArmory {
         Feet,
         Unknown
     };
+
     struct PlayerArmorPiece {
-        PlayerArmorPiece(ItemSlot _slot) : slot(_slot) {};
-        ItemSlot slot = ItemSlot::ItemSlot_Unknown;
+        PlayerArmorPiece(const ItemSlot _slot)
+            : slot(_slot)
+        {
+        };
+        ItemSlot slot = ItemSlot_Unknown;
         uint32_t model_file_id = 0;
         uint32_t unknow1 = 0;
         DyeColor color1 = DyeColor::None;
@@ -72,10 +75,7 @@ namespace GWArmory {
     };
 
 
-
-
-    enum Campaign : int
-    {
+    enum Campaign : int {
         Campaign_All,
         Campaign_Core,
         Campaign_Prophecies,
@@ -94,7 +94,7 @@ namespace GWArmory {
     };
 
     struct ComboListState {
-        std::vector<Armor*> pieces;
+        std::vector<Armor*> pieces{};
         int current_piece_index = -1;
         Armor* current_piece = nullptr;
     };
@@ -1464,5 +1464,4 @@ namespace GWArmory {
         // None
         {"0xC9A", 0xC9A, GW::Constants::Profession::Dervish, ItemSlot_Head, Campaign_All, 8},
     };
-
 }

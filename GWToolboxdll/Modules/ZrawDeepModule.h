@@ -8,12 +8,13 @@
 
 class ZrawDeepModule : public ToolboxModule {
 public:
-    static ZrawDeepModule& Instance() {
+    static ZrawDeepModule& Instance()
+    {
         static ZrawDeepModule instance;
         return instance;
     }
 
-    const char* Name() const override { return "24h Deep Mode"; }
+    [[nodiscard]] const char* Name() const override { return "24h Deep Mode"; }
     void Initialize() override;
     void Terminate() override;
     void SignalTerminate() override;
@@ -28,7 +29,7 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
 
     void SetTransmogs();
-    bool IsEnabled();
+    static bool IsEnabled();
 
     GW::HookEntry ZrawDeepModule_StoCs;
 };

@@ -8,22 +8,24 @@
 #include <ToolboxModule.h>
 
 enum class DEFAULT_NAMETAG_COLOR : Color {
-    NPC = 0xFFA0FF00,
-    PLAYER_SELF = 0xFF40FF40,
-    PLAYER_OTHER = 0xFF9BBEFF,
+    NPC             = 0xFFA0FF00,
+    PLAYER_SELF     = 0xFF40FF40,
+    PLAYER_OTHER    = 0xFF9BBEFF,
     PLAYER_IN_PARTY = 0xFF6060FF,
-    GADGET = 0xFFFFFF00,
-    ENEMY = 0xFFFF0000,
-    ITEM = 0x0,
+    GADGET          = 0xFFFFFF00,
+    ENEMY           = 0xFFFF0000,
+    ITEM            = 0x0,
 };
 
 namespace GW {
     struct Item;
     struct Friend;
     enum class FriendStatus : uint32_t;
+
     namespace Constants {
         enum class SkillID : uint32_t;
     }
+
     namespace UI {
         enum class UIMessage : uint32_t;
     }
@@ -34,12 +36,14 @@ class GameSettings : public ToolboxModule {
     ~GameSettings() override = default;
 
 public:
-    static GameSettings& Instance() {
+    static GameSettings& Instance()
+    {
         static GameSettings instance;
         return instance;
     }
-    const char* Name() const override { return "Game Settings"; }
-    const char* Icon() const override { return ICON_FA_GAMEPAD; }
+
+    [[nodiscard]] const char* Name() const override { return "Game Settings"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_GAMEPAD; }
     static void PingItem(GW::Item* item, uint32_t parts = 3);
     static void PingItem(uint32_t item_id, uint32_t parts = 3);
 
@@ -49,8 +53,8 @@ public:
     void RegisterSettingsContent() override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingInternal() override;
-    void DrawInventorySettings();
-    void DrawPartySettings();
+    static void DrawInventorySettings();
+    static void DrawPartySettings();
 
     static bool GetSettingBool(const char* setting);
 
@@ -61,12 +65,12 @@ public:
     void OnPingWeaponSet(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
     void OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue*) const;
     void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) const;
-    void OnAgentEffect(GW::HookStatus*, GW::Packet::StoC::GenericValue*) const;
+    static void OnAgentEffect(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
     void OnFactionDonate(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
-    void OnPartyDefeated(GW::HookStatus*, GW::Packet::StoC::PartyDefeated*) const;
+    static void OnPartyDefeated(GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
     void OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::VanquishComplete*) const;
     void OnDungeonReward(GW::HookStatus*, GW::Packet::StoC::DungeonReward*) const;
-    void OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) const;
+    static void OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
     void OnCinematic(GW::HookStatus*, GW::Packet::StoC::CinematicPlay*) const;
     void OnMapTravel(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*) const;
     void OnTradeStarted(GW::HookStatus*, GW::Packet::StoC::TradeStart*) const;
@@ -78,16 +82,15 @@ public:
     void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*) const;
     void OnScreenShake(GW::HookStatus*, void* packet) const;
     void OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*) const;
-    void OnAgentStartCast(GW::HookStatus* status, GW::UI::UIMessage, void*, void*) const;
+    static void OnAgentStartCast(GW::HookStatus* status, GW::UI::UIMessage, void*, void*);
     void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
-    void OnCast(GW::HookStatus *, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target) const;
+    void OnCast(GW::HookStatus*, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target) const;
     void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) const;
     void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet) const;
-    void OnUpdateSkillCount(GW::HookStatus*, void* packet);
-    void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*) const;
+    static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
+    static void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
     void OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
-    void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv) const;
-
+    static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
 private:
     void FactionEarnedCheckAndWarn();
@@ -96,9 +99,9 @@ private:
     void MessageOnPartyChange();
 
 
-    std::vector<std::wstring> previous_party_names;
+    std::vector<std::wstring> previous_party_names{};
 
-    std::vector<uint32_t> available_dialog_ids;
+    std::vector<uint32_t> available_dialog_ids{};
 
     bool was_leading = true;
     bool hide_dungeon_chest_popup = false;
@@ -109,7 +112,7 @@ private:
     bool improve_move_to_cast = false;
     bool check_message_on_party_change = true;
 
-    bool is_prompting_hard_mode_mission = 0;
+    bool is_prompting_hard_mode_mission = false;
 
     GW::HookEntry VanquishComplete_Entry;
     GW::HookEntry ItemClickCallback_Entry;

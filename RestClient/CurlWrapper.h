@@ -54,7 +54,7 @@ enum class ResponseStatus
     Aborted,
 };
 
-typedef std::pair<const char *, const char *> ParamField;
+typedef std::pair<const char* , const char* > ParamField;
 class CurlEasy
 {
     friend class CurlMulti;
@@ -62,15 +62,15 @@ public:
     CurlEasy();
     virtual ~CurlEasy();
 
-    void SetUrl(const char *url);
-    void SetUrl(Protocol proto, const char *url);
+    void SetUrl(const char* url);
+    void SetUrl(Protocol proto, const char* url);
     void SetPort(uint16_t port);
-    void SetMethod(const char *method);
+    void SetMethod(const char* method);
     void SetMethod(HttpMethod method);
-    void SetHeader(const char *field); // Format is "Name: Value"
-    void SetHeader(const char *name, const char *value);
+    void SetHeader(const char* field); // Format is "Name: Value"
+    void SetHeader(const char* name, const char* value);
     void SetHeaders(std::initializer_list<ParamField> headers);
-    void SetUserAgent(const char *user_agent);
+    void SetUserAgent(const char* user_agent);
     void SetTimeoutMs(int timeout_ms);
     void SetTimeoutSec(int timeout_sec);
     // Transfer aborted if slower than MinBytes/sec during TimeSec seconds,
@@ -82,17 +82,17 @@ public:
     void SetVerifyPeer(bool enable);
     void SetVerifyHost(bool enable);
     void SetFollowLocation(bool enable);
-    void SetProxy(const char *url);
-    void SetProxy(const char *url, uint16_t port);
-    void SetProxyAuth(const char *username, const char *password);
+    void SetProxy(const char* url);
+    void SetProxy(const char* url, uint16_t port);
+    void SetProxyAuth(const char* username, const char* password);
     void SetBufferSize(size_t size);
     void SetPostContent(std::string& content, ContentFlag flag);
-    void SetPostContent(const char *content, size_t size, ContentFlag flag);
+    void SetPostContent(const char* content, size_t size, ContentFlag flag);
     void SetUploadBuffer(std::string& content, ContentFlag flag);
-    void SetUploadBuffer(const char *content, size_t size, ContentFlag flag);
+    void SetUploadBuffer(const char* content, size_t size, ContentFlag flag);
     void SetUploadFile(FILE *file);
     void SetUploadFile(FILE *file, size_t size);
-    void SetUploadFile(const char *path);
+    void SetUploadFile(const char* path);
 
     // Clear the response data and status flag
     void Clear();
@@ -132,8 +132,8 @@ protected:
     // A sub-class can call those callback if they want to keep in memory
     // the body content and header content in the CurlEasy object.
     // This come with a performance penality caused by the dynamic allocation.
-    virtual void OnHeader(const char *bytes, size_t count);
-    virtual void OnContent(const char *bytes, size_t count);
+    virtual void OnHeader(const char* bytes, size_t count);
+    virtual void OnContent(const char* bytes, size_t count);
 
 private:
     static size_t WriteCallback(char *buffer, size_t size, size_t nitems, void *userdata);
@@ -146,7 +146,7 @@ private:
     // case represent the use cases of having a lot of hardcoded value where
     // an assert will catch all errors. Hence, we don't need to properly deal
     // with those errors in release.
-    static void HandleOptionError(CurlEasy *Handle, int Code, const char *File, unsigned Line);
+    static void HandleOptionError(CurlEasy *Handle, int Code, const char* File, unsigned Line);
 
     CurlEasy& operator=(const CurlEasy&) = delete;
 

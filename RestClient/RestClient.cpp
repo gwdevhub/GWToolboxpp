@@ -64,7 +64,7 @@ private:
                 m_Multi.Perform();
 
                 int MsgsLeft;
-                struct CURLMsg *pMsg = curl_multi_info_read(m_Multi.GetHandle(), &MsgsLeft);
+                CURLMsg *pMsg = curl_multi_info_read(m_Multi.GetHandle(), &MsgsLeft);
                 while (pMsg)
                 {
                     AsyncRestClient* pClient = SearchPop(pMsg->easy_handle);

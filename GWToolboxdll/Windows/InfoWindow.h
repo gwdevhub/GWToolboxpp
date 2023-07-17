@@ -1,25 +1,20 @@
 #pragma once
 
-#include <GWCA\Utilities\Hook.h>
-
-#include <GWCA\Packets\StoC.h>
-
-#include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
-#include <Modules/HallOfMonumentsModule.h>
 
 class InfoWindow : public ToolboxWindow {
     InfoWindow() = default;
-    ~InfoWindow() = default;
+    ~InfoWindow() override = default;
 
 public:
-    static InfoWindow& Instance() {
+    static InfoWindow& Instance()
+    {
         static InfoWindow instance;
         return instance;
     }
 
-    const char* Name() const override { return "Info"; }
-    const char* Icon() const override { return ICON_FA_INFO_CIRCLE; }
+    [[nodiscard]] const char* Name() const override { return "Info"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_INFO_CIRCLE; }
 
     void Initialize() override;
     void Terminate() override;

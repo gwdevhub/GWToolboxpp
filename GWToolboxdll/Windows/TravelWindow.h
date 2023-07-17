@@ -1,22 +1,23 @@
 #pragma once
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\Constants\Maps.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
 
 #include <ToolboxWindow.h>
 
 class TravelWindow : public ToolboxWindow {
     TravelWindow() = default;
-    ~TravelWindow() = default;
+    ~TravelWindow() override = default;
 
 public:
-    static TravelWindow& Instance() {
+    static TravelWindow& Instance()
+    {
         static TravelWindow instance;
         return instance;
     }
 
-    const char* Name() const override { return "Travel"; }
-    const char* Icon() const override { return ICON_FA_GLOBE_EUROPE; }
+    [[nodiscard]] const char* Name() const override { return "Travel"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE_EUROPE; }
 
     void Initialize() override;
 
@@ -37,7 +38,7 @@ public:
         GW::Constants::District district = GW::Constants::District::Current,
         uint32_t district_number = 0);
 
-    bool IsWaitingForMapTravel();
+    static bool IsWaitingForMapTravel();
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -51,14 +52,14 @@ public:
     static int LanguageFromDistrict(GW::Constants::District district);
     static GW::Constants::MapID GetNearestOutpost(GW::Constants::MapID map_to);
 
-    static void CmdTP(const wchar_t *message, int argc, LPWSTR *argv);
+    static void CmdTP(const wchar_t* message, int argc, LPWSTR* argv);
 
 private:
     // ==== Helpers ====
     void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);
-    GW::Constants::MapID IndexToOutpostID(int index);
-    static bool ParseDistrict(const std::wstring &s, GW::Constants::District &district, uint32_t &number);
-    static bool ParseOutpost(const std::wstring &s, GW::Constants::MapID &outpost, GW::Constants::District &district, uint32_t &number);
+    static GW::Constants::MapID IndexToOutpostID(int index);
+    static bool ParseDistrict(const std::wstring& s, GW::Constants::District& district, uint32_t& number);
+    static bool ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, uint32_t& number);
 
     // ==== Travel variables ====
     GW::Constants::District district = GW::Constants::District::Current;
@@ -66,14 +67,14 @@ private:
 
     // ==== Favorites ====
     int fav_count = 0;
-    std::vector<int> fav_index;
+    std::vector<int> fav_index{};
 
     // ==== options ====
     bool close_on_travel = false;
 
     // ==== scroll to outpost ====
-    GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;     // Which outpost do we want to end up in?
-    GW::Constants::MapID scroll_from_outpost_id = GW::Constants::MapID::None;   // Which outpost did we start from?
+    GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;   // Which outpost do we want to end up in?
+    GW::Constants::MapID scroll_from_outpost_id = GW::Constants::MapID::None; // Which outpost did we start from?
 
     bool map_travel_countdown_started = false;
     bool pending_map_travel = false;
@@ -106,24 +107,28 @@ private:
         error_B38, // The merged party would be too large.
     };  */
 
-    struct OutpostAlias
-    {
-        OutpostAlias(GW::Constants::MapID m, GW::Constants::District d = GW::Constants::District::Current, uint8_t n = 0)
+    struct OutpostAlias {
+        OutpostAlias(const GW::Constants::MapID m, const GW::Constants::District d = GW::Constants::District::Current, const uint8_t n = 0)
             : map_id(m)
-            , district(d)
-            , district_number(n){};
+              , district(d)
+              , district_number(n)
+        {
+        };
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
         GW::Constants::District district = GW::Constants::District::Current;
         uint8_t district_number = 0;
     };
-    struct DistrictAlias
-    {
-        DistrictAlias(GW::Constants::District d, uint8_t n = 0)
+
+    struct DistrictAlias {
+        DistrictAlias(const GW::Constants::District d, const uint8_t n = 0)
             : district(d)
-            , district_number(n){};
+              , district_number(n)
+        {
+        };
         GW::Constants::District district = GW::Constants::District::Current;
         uint8_t district_number = 0;
     };
+
     // List of shorthand outpost names. This is checked for an exact match first.
     const std::map<const std::string, const OutpostAlias> shorthand_outpost_names = {
         {"bestarea", {GW::Constants::MapID::The_Deep}},
@@ -396,7 +401,7 @@ private:
         "bogroot growths",
         "sorrows furnace"
     };
-    const char* searchable_map_names[187] {
+    const char* searchable_map_names[187]{
         "abaddons gate",
         "abaddons mouth",
         "altrumm ruins",
@@ -586,9 +591,10 @@ private:
         "great temple of balthazar"
     };
 
-    std::vector<char*> searchable_explorable_areas;
-    std::vector<GuiUtils::EncString*> searchable_explorable_areas_decode;
-    std::vector<GW::Constants::MapID> searchable_explorable_area_ids;
+    std::vector<char*> searchable_explorable_areas{};
+    std::vector<GuiUtils::EncString*> searchable_explorable_areas_decode{};
+    std::vector<GW::Constants::MapID> searchable_explorable_area_ids{};
+
     enum FetchedMapNames : uint8_t {
         Pending,
         Decoding,

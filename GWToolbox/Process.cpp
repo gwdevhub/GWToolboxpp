@@ -327,7 +327,7 @@ ProcessScanner::~ProcessScanner()
         delete[] m_buffer;
 }
 
-uintptr_t ProcessScanner::FindPattern(const char *pattern, const char *mask, int offset)
+uintptr_t ProcessScanner::FindPattern(const char* pattern, const char* mask, int offset)
 {
     uintptr_t rva;
     if (FindPatternRva(pattern, mask, offset, &rva)) {
@@ -337,7 +337,7 @@ uintptr_t ProcessScanner::FindPattern(const char *pattern, const char *mask, int
     }
 }
 
-bool ProcessScanner::FindPatternRva(const char *pattern, const char *mask, int offset, uintptr_t *rva)
+bool ProcessScanner::FindPatternRva(const char* pattern, const char* mask, int offset, uintptr_t *rva)
 {
     size_t length = strlen(mask);
     const uint8_t *upattern = reinterpret_cast<const uint8_t *>(pattern);

@@ -48,8 +48,8 @@ public:
     ProcessScanner(const ProcessScanner&) = delete;
     ~ProcessScanner();
 
-    uintptr_t FindPattern(const char *pattern, const char *mask, int Offset);
-    bool FindPatternRva(const char *pattern, const char *mask, int offset, uintptr_t *rva);
+    uintptr_t FindPattern(const char* pattern, const char* mask, int Offset);
+    bool FindPatternRva(const char* pattern, const char* mask, int offset, uintptr_t *rva);
 
 private:
     uintptr_t m_base = 0;
