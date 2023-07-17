@@ -1,17 +1,22 @@
 #include "stdafx.h"
 
+#include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/Packets/Opcodes.h>
 
+#include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/ItemContext.h>
+#include <GWCA/Context/AccountContext.h>
 
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Item.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -19,6 +24,8 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 #include <Modules/Resources.h>
 
@@ -29,8 +36,8 @@
 
 #include <Color.h>
 #include <Modules/DialogModule.h>
-#include <GWCA/Context/PreGameContext.h>
-#include <GWCA/Managers/QuestMgr.h>
+
+
 
 using namespace GW::Constants;
 using namespace Missions;
@@ -38,7 +45,16 @@ using namespace CompletionWindow_Constants;
 
 namespace {
 
-    bool ArrayBoolAt(GW::Array<uint32_t>& array, uint32_t index)
+
+    bool ArrayBoolAt(GW::Array<uint32_t>& array, uint32_t index) {
+        uint32_t real_index = index >> 5;
+        if (real_index >= array.size())
+            return false;
+        uint32_t shift = ((byte)index & 0x1f);
+        uint32_t flag = 1 << shift;
+        return (array[real_index] & flag) != 0;
+    }
+   /* bool ArrayBoolAt(GW::Array<uint32_t>& array, uint32_t index)
     {
         uint32_t real_index = index / 32;
         if (real_index >= array.size())
@@ -46,7 +62,7 @@ namespace {
         uint32_t shift = index % 32;
         uint32_t flag = 1 << shift;
         return (array[real_index] & flag) != 0;
-    }
+    }*/
     bool ArrayBoolAt(std::vector<uint32_t>& array, uint32_t index)
     {
         uint32_t real_index = index / 32;
@@ -130,9 +146,20 @@ namespace {
     std::vector<Missions::ArmorAchievement*> hom_armor;
     std::vector<Missions::CompanionAchievement*> hom_companions;
     std::vector<Missions::HonorAchievement*> hom_titles;
+    std::map<uint32_t, std::vector<Missions::UnlockedPvPItemUpgrade*>> unlocked_pvp_items;
     bool minipets_sorted = false;
     HallOfMonumentsAchievements hom_achievements;
     int hom_achievements_status = 0xf;
+
+    const char* PvPItemUpgradeTypeName(uint32_t pvp_upgrade_item_id) {
+        const auto& info = GW::Items::GetPvPItemUpgrade(pvp_upgrade_item_id);
+        if (info) {
+            const auto found = std::ranges::find_if(item_upgrades_by_file_id, [file_id = info->file_id](auto& check) { return check.file_id == file_id; });
+            if (found != item_upgrades_by_file_id.end())
+                return found->completion_category;
+        }
+        return "Unknown Upgrades";
+    }
 
     CompletionWindow& Instance() {
         return CompletionWindow::Instance();
@@ -391,6 +418,15 @@ namespace {
         if(state && *(uint32_t*)state == 2)
             RefreshAccountCharacters();
     }
+
+    std::wstring& ReplaceString(std::wstring& subject, const std::wstring& search, const std::wstring& replace) {
+        size_t pos = 0;
+        while ((pos = subject.find(search, pos)) != std::string::npos) {
+            subject.replace(pos, search.length(), replace);
+            pos += replace.length();
+        }
+        return subject;
+    }
 }
 
 Mission::MissionImageList PropheciesMission::normal_mode_images({
@@ -509,7 +545,7 @@ bool Mission::Draw(IDirect3DDevice9* )
     const ImVec2 cursor_pos = ImGui::GetCursorPos();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-    ImGui::PushID((int)outpost);
+    ImGui::PushID(this);
     if (show_as_list) {
         s.y /= 2.f;
         if (!map_unlocked) {
@@ -861,6 +897,35 @@ void CompletionWindow::Initialize()
     for (size_t i = 0; i < _countof(encoded_weapon_names); i++) {
         hom_weapons.push_back(new WeaponAchievement(i, encoded_weapon_names[i]));
     }
+    /*auto address = GW::Scanner::FindAssertion("p:\\code\\gw\\const\\constitempvp.cpp", "unlockIndex < ITEM_PVP_UNLOCK_COUNT");
+    if (address) {
+        unlocked_pvp_item_array_buffer = *(PvPItemInfo**)(address + 0x15);
+        unlocked_pvp_item_array_size = *(size_t*)(address - 0xb);
+    }
+    for (size_t i = 0; i < unlocked_pvp_item_array_size; i++) {
+        unlocked_pvp_items.push_back(new UnlockedPvPItem(i));
+    }*/
+
+    /*auto address = GW::Scanner::FindAssertion("p:\\code\\gw\\const\\constitempvp.cpp", "index < ITEM_PVP_ITEM_COUNT");
+    if (address) {
+        unlocked_pvp_item_array_buffer = *(PvPItemInfo**)(address + 0x15);
+        unlocked_pvp_item_array_size = *(size_t*)(address - 0xb);
+    }*/
+
+    const auto& unlocked_pvp_item_upgrade_array = GW::Items::GetPvPItemUpgradesArray();
+
+    for (const auto& it : item_upgrades_by_file_id) {
+        // GW::Array<something> unlocked_pvp_item_upgrade_array
+        for (size_t i = 0; i < unlocked_pvp_item_upgrade_array.size(); i++) {
+            const auto& deets = unlocked_pvp_item_upgrade_array[i];
+            if (deets.file_id != it.file_id)
+                continue;
+            if (deets.is_dev)
+                continue;
+            unlocked_pvp_items[(uint32_t)PvPItemUpgradeTypeName(i)].push_back(new UnlockedPvPItemUpgrade(i));
+        }
+    }
+
 
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Canthan Armor\x1","Elementalist_Elite_Canthan_armor_m.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Exotic Armor\x1", "Assassin_Exotic_armor_m.jpg"));
@@ -1123,6 +1188,9 @@ void CompletionWindow::Initialize()
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kCheckUIState, OnPostCheckUIState,0x8000);
 
     RefreshAccountCharacters();
+
+
+
 }
 void CompletionWindow::Initialize_Prophecies()
 {
@@ -1933,6 +2001,8 @@ void CompletionWindow::Terminate()
     clear_vec(pve_skills);
     clear_vec(elite_skills);
     clear_vec(heros);
+    clear_vec(unlocked_pvp_items);
+
     for (auto c : minipets)
         delete c;
     minipets.clear();
@@ -2183,6 +2253,21 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_heros_%d", CampaignName(camp.first), completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
+        if (ImGui::CollapsingHeader(label)) {
+            draw_missions(camp_missions);
+        }
+    }
+    ImGui::Text("Unlocked Item Upgrades");
+    for (auto& camp : unlocked_pvp_items) {
+        auto& camp_missions = camp.second;
+        size_t completed = 0;
+        for (size_t i = 0; i < camp_missions.size(); i++) {
+            if (camp_missions[i]->is_completed) {
+                completed++;
+            }
+        }
+        char label[128];
+        snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###unlocked_pvp_items_%d", (const char*)camp.first, completed, camp_missions.size(), ((float)completed / (float)camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(camp_missions);
         }
@@ -2593,6 +2678,11 @@ CompletionWindow* CompletionWindow::CheckProgress(bool fetch_hom) {
 			skill->CheckProgress(chosen_player_name);
 		}
 	}
+    for (auto& camp : unlocked_pvp_items) {
+        for (auto& skill : camp.second) {
+            skill->CheckProgress(chosen_player_name);
+        }
+    }
     for (auto achievement : festival_hats) {
         achievement->CheckProgress(chosen_player_name);
     }
@@ -2756,4 +2846,53 @@ void Missions::FestivalHat::CheckProgress(const std::wstring& player_name)
         return;
     std::vector<uint32_t>& unlocked = cc.at(player_name)->festival_hats;
     is_completed = bonus = ArrayBoolAt(unlocked, encoded_name_index);
+}
+
+IDirect3DTexture9* Missions::UnlockedPvPItemUpgrade::GetMissionImage()
+{
+    if (image)
+        return *image;
+    const auto info = GW::Items::GetPvPItemUpgrade(encoded_name_index);
+    if (!info)
+        return nullptr;
+    const auto found = std::ranges::find_if(item_upgrades_by_file_id, [file_id = info->file_id](auto& check) { return check.file_id == file_id; });
+    if(found == item_upgrades_by_file_id.end())
+        return nullptr;
+    image = Resources::GetGuildWarsWikiImage(found->wiki_filename);
+    return *image;
+}
+
+void Missions::UnlockedPvPItemUpgrade::CheckProgress(const std::wstring&)
+{
+    auto acc = GW::GetAccountContext();
+    is_completed = false;
+    if (acc) {
+        is_completed = bonus = ArrayBoolAt(acc->unlocked_pvp_items, encoded_name_index);
+    }
+}
+
+void Missions::UnlockedPvPItemUpgrade::LoadStrings() {
+    auto info = GW::Items::GetPvPItemUpgrade(encoded_name_index);
+    if (!info)
+        return;
+    if (name.encoded().empty()) {
+        wchar_t* tmp;
+        if (GW::Items::GetPvPItemUpgradeEncodedName(encoded_name_index, &tmp)) {
+            name.reset(tmp);
+            name.wstring();
+        }
+    }
+    if (single_item_name.encoded().empty()) {
+        single_item_name.reset(info->name_id);
+        single_item_name.wstring();
+    }
+}
+
+const char* Missions::UnlockedPvPItemUpgrade::Name() {
+    LoadStrings();
+    return ItemAchievement::Name();
+}
+void Missions::UnlockedPvPItemUpgrade::OnClick() {
+    const auto info = GW::Items::GetPvPItemUpgrade(encoded_name_index);
+    Log::Info("Index: %d,  File: %p, Interation: %p, Type: %p (%s)", encoded_name_index, info->file_id, info->interaction, info->upgrade_type, PvPItemUpgradeTypeName(encoded_name_index));
 }

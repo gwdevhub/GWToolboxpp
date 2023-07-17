@@ -292,4 +292,142 @@ namespace CompletionWindow_Constants {
         L"\x8103\xA3B\xEEC0\xD3AD\x6648", // World-Famous Racing Beetle
         L"\x8101\x6730",                  // Ghostly Hero (need)
     };
+
+    // Mapping of file_id => gww file name for image
+    struct ItemUpgradeInfo {
+        uint32_t file_id = 0;
+        const char* wiki_filename;
+        const char* completion_category;
+    };
+    const char* completion_category_weapon_upgrades = "Weapon Upgrades";
+    const char* completion_category_runes_insignias = "Runes & Insignias";
+    const char* completion_category_inscriptions = "Inscriptions";
+    std::vector<ItemUpgradeInfo> item_upgrades_by_file_id = {
+        // Warrior
+        {0x40e8b, "Knight's Insignia.png",completion_category_runes_insignias},
+        {0x40e8c, "Lieutenant's Insignia.png",completion_category_runes_insignias},
+        {0x40e8d, "Stonefist Insignia.png",completion_category_runes_insignias},
+        {0x40e8e, "Dreadnought Insignia.png",completion_category_runes_insignias},
+        {0x40e8f, "Sentinel's Insignia.png",completion_category_runes_insignias},
+        {0x5c8b, "Rune Warrior Minor.png",completion_category_runes_insignias},
+        {0x2514b, "Rune Warrior Major.png",completion_category_runes_insignias},
+        {0x2514c, "Rune Warrior Sup.png",completion_category_runes_insignias},
+
+        // Ranger
+        {0x40e90, "Frostbound Insignia.png",completion_category_runes_insignias},
+        {0x40e92, "Pyrebound Insignia.png",completion_category_runes_insignias},
+        {0x40e93, "Stormbound Insignia.png",completion_category_runes_insignias},
+        {0x40e95, "Scout's Insignia.png",completion_category_runes_insignias},
+        {0x40e91, "Earthbound Insignia.png",completion_category_runes_insignias},
+        {0x40e94, "Beastmaster's Insignia.png",completion_category_runes_insignias},
+        {0x5c90, "Rune Ranger Minor.png",completion_category_runes_insignias},
+        {0x25151, "Rune Ranger Major.png",completion_category_runes_insignias},
+        {0x25152, "Rune Ranger Sup.png",completion_category_runes_insignias},
+
+        // Monk
+        {0x40e88, "Wanderer's Insignia.png",completion_category_runes_insignias},
+        {0x40e89, "Disciple's Insignia.png",completion_category_runes_insignias},
+        {0x40e8a, "Anchorite's Insignia.png",completion_category_runes_insignias},
+        {0x5c86, "Rune Monk Minor.png",completion_category_runes_insignias},
+        {0x25145, "Rune Monk Major.png",completion_category_runes_insignias},
+        {0x25146, "Rune Monk Sup.png",completion_category_runes_insignias},
+
+        // Necromancer
+        {0x40e7d, "Bloodstained Insignia.png",completion_category_runes_insignias},
+        {0x40e7e, "Tormentor's Insignia.png",completion_category_runes_insignias},
+        {0x40e80, "Bonelace Insignia.png",completion_category_runes_insignias},
+        {0x40e81, "Minion Master's Insignia.png",completion_category_runes_insignias},
+        {0x40e82, "Blighter's Insignia.png",completion_category_runes_insignias},
+        {0x40e7f, "Undertaker's Insignia.png",completion_category_runes_insignias},
+        {0x5c7c, "Rune Necromancer Minor.png",completion_category_runes_insignias},
+        {0x25139, "Rune Necromancer Major.png",completion_category_runes_insignias},
+        {0x2513a, "Rune Necromancer Sup.png",completion_category_runes_insignias},
+
+        // Mesmer
+        {0x40e75, "Virtuoso's Insignia.png",completion_category_runes_insignias},
+        {0x40e73, "Artificer's Insignia.png",completion_category_runes_insignias},
+        {0x40e74, "Prodigy's Insignia.png",completion_category_runes_insignias},
+        {0x5c77, "Rune Mesmer Minor.png",completion_category_runes_insignias},
+        {0x25133, "Rune Mesmer Major.png",completion_category_runes_insignias},
+        {0x25134, "Rune Mesmer Sup.png",completion_category_runes_insignias},
+
+        // Elementalist
+        {0x40e84, "Hydromancer Insignia.png",completion_category_runes_insignias},
+        {0x40e85, "Geomancer Insignia.png",completion_category_runes_insignias},
+        {0x40e86, "Pyromancer Insignia.png",completion_category_runes_insignias},
+        {0x40e87, "Aeromancer Insignia.png",completion_category_runes_insignias},
+        {0x40e82, "Blighter's Insignia.png",completion_category_runes_insignias},
+        {0x5c81, "Rune Elementalist Minor.png",completion_category_runes_insignias},
+        {0x2513f, "Rune Elementalist Major.png",completion_category_runes_insignias},
+        {0x25140, "Rune Elementalist Sup.png",completion_category_runes_insignias},
+
+        // Assassin
+        {0x40e6f, "Vanguard's Insignia.png",completion_category_runes_insignias},
+        {0x40e70, "Infiltrator's Insignia.png",completion_category_runes_insignias},
+        {0x40e71, "Saboteur's Insignia.png",completion_category_runes_insignias},
+        {0x40e72, "Nightstalker's Insignia.png",completion_category_runes_insignias},
+        {0x283ea, "Rune Assassin Minor.png",completion_category_runes_insignias},
+        {0x283eb, "Rune Assassin Major.png",completion_category_runes_insignias},
+        {0x283ec, "Rune Assassin Sup.png",completion_category_runes_insignias},
+
+        // Ritualist
+        {0x40e98, "Shaman's Insignia.png",completion_category_runes_insignias},
+        {0x40e99, "Ghost Forge Insignia.png",completion_category_runes_insignias},
+        {0x40e9a, "Mystic's Insignia.png",completion_category_runes_insignias},
+        {0x283f1, "Rune Ritualist Minor.png",completion_category_runes_insignias},
+        {0x283f2, "Rune Ritualist Major.png",completion_category_runes_insignias},
+        {0x283f3, "Rune Ritualist Sup.png",completion_category_runes_insignias},
+
+        // Dervish
+        {0x40e96, "Windwalker Insignia.png",completion_category_runes_insignias},
+        {0x40e97, "Forsaken Insignia.png",completion_category_runes_insignias},
+        {0x3244d, "Rune Dervish Minor.png",completion_category_runes_insignias},
+        {0x32452, "Rune Dervish Major.png",completion_category_runes_insignias},
+        {0x32453, "Rune Dervish Sup.png",completion_category_runes_insignias},
+
+        // Paragon
+        {0x40e9b, "Centurion's Insignia.png",completion_category_runes_insignias},
+        {0x32454, "Rune Paragon Minor.png",completion_category_runes_insignias},
+        {0x32455, "Rune Paragon Major.png",completion_category_runes_insignias},
+        {0x32456, "Rune Paragon Sup.png",completion_category_runes_insignias},
+
+        // All
+        {0x40e77, "Survivor Insignia.png",completion_category_runes_insignias},
+        {0x40e76, "Radiant Insignia.png",completion_category_runes_insignias},
+        {0x40e78, "Stalwart Insignia.png",completion_category_runes_insignias},
+        {0x40e79, "Brawler's Insignia.png",completion_category_runes_insignias},
+        {0x40e79, "Blessed Insignia.png",completion_category_runes_insignias},
+        {0x40e7b, "Herald's Insignia.png",completion_category_runes_insignias},
+        {0x40e7c, "Sentry's Insignia.png",completion_category_runes_insignias},
+        {0x40e7a, "Blessed Insignia.png",completion_category_runes_insignias},
+        {0x2512c, "Rune All Minor.png",completion_category_runes_insignias},
+        {0x2512d, "Rune All Major.png",completion_category_runes_insignias},
+        {0x2512e, "Rune All Sup.png",completion_category_runes_insignias},
+
+        // Inscriptions
+        {0x32442, "Inscription martial weapons.png",completion_category_inscriptions},
+        {0x32441, "Inscription spellcasting weapons.png",completion_category_inscriptions},
+        {0x32444, "Inscription weapons.png",completion_category_inscriptions},
+        {0x32443, "Inscription focus items or shields.png",completion_category_inscriptions},
+
+        // Weapons
+        {0x16602, "Axe Grip.png",completion_category_weapon_upgrades},
+        {0x4da0, "Axe Haft.png",completion_category_weapon_upgrades},
+        {0x16605, "Bow Grip.png",completion_category_weapon_upgrades},
+        {0x16607, "Bow String.png",completion_category_weapon_upgrades},
+        {0x16606, "Hammer Grip.png",completion_category_weapon_upgrades},
+        {0x4da1, "Hammer Haft.png",completion_category_weapon_upgrades},
+        {0x16608, "Sword Pommel.png",completion_category_weapon_upgrades},
+        {0x4e2f, "Sword Hilt.png",completion_category_weapon_upgrades},
+        {0x32459, "Focus Core.png",completion_category_weapon_upgrades},
+        {0x3245c, "Wand Wrapping.png",completion_category_weapon_upgrades},
+        {0x32460, "Shield Handle.png",completion_category_weapon_upgrades},
+        {0x283bb, "Staff Head.png",completion_category_weapon_upgrades},
+        {0x283bc, "Staff Wrapping.png",completion_category_weapon_upgrades},
+        {0x3245d, "Scythe Grip.png",completion_category_weapon_upgrades},
+        {0x32447, "Scythe Snathe.png",completion_category_weapon_upgrades},
+        {0x32461, "Spear Grip.png",completion_category_weapon_upgrades},
+        {0x32448, "Spearhead.png",completion_category_weapon_upgrades},
+        {0x283e5, "Dagger Tang.png",completion_category_weapon_upgrades},
+    };
 }

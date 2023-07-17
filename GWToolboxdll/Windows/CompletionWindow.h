@@ -104,6 +104,21 @@ namespace Missions {
             ItemAchievement(_encoded_name_index, encoded_name) {}
         void CheckProgress(const std::wstring& player_name) override;
     };
+    class UnlockedPvPItemUpgrade : public ItemAchievement {
+    public:
+        UnlockedPvPItemUpgrade(size_t _encoded_name_index) : ItemAchievement(_encoded_name_index, nullptr) {}
+        void CheckProgress(const std::wstring& player_name) override;
+        IDirect3DTexture9* GetMissionImage() override;
+        const char* Name() override;
+
+        void OnClick() override;
+
+    protected:
+        void LoadStrings();
+        GuiUtils::EncString single_item_name;
+        bool sanitised_single_item_name = false;
+
+    };
 
     class MinipetAchievement : public ItemAchievement {
     public:
