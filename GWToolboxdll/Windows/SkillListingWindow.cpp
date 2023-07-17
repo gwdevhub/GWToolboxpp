@@ -167,7 +167,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::SameLine(offset += long_text_width);
         ImGui::Text("%d", skills[i]->skill->attribute);
         ImGui::SameLine(offset += tiny_text_width);
-        ImGui::Text("%s", GW::Constants::GetProfessionAcronym((GW::Constants::Profession)skills[i]->skill->profession).c_str());
+        ImGui::Text("%s", GW::Constants::GetProfessionAcronym((GW::Constants::Profession)skills[i]->skill->profession));
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%d", skills[i]->skill->type);
         ImGui::SameLine();

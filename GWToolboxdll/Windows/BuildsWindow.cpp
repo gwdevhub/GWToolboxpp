@@ -572,7 +572,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
     GW::Constants::Profession prof = (GW::Constants::Profession)GW::Agents::GetPlayerAsAgentLiving()->primary;
     bool is_skill_template = GW::SkillbarMgr::DecodeSkillTemplate(&t, build_name);
     if (is_skill_template && t.primary != prof) {
-        Log::Error("Invalid profession for %s (%s)", build_name, GW::Constants::GetProfessionAcronym(t.primary).c_str());
+        Log::Error("Invalid profession for %s (%s)", build_name, GW::Constants::GetProfessionAcronym(t.primary));
         return;
     }
     std::string tbuild_ws = tbuild_name ? GuiUtils::ToLower(tbuild_name) : "";

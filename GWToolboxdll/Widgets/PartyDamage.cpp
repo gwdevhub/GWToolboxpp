@@ -371,8 +371,8 @@ void PartyDamage::WriteDamageOf(const size_t index, uint32_t rank) {
     swprintf_s(buffer, buffer_size, L"#%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
         rank,
         GetPercentageOfTotal(damage[index].damage),
-        GW::Constants::GetWProfessionAcronym(damage[index].primary).c_str(),
-        GW::Constants::GetWProfessionAcronym(damage[index].secondary).c_str(),
+        GW::Constants::GetWProfessionAcronym(damage[index].primary),
+        GW::Constants::GetWProfessionAcronym(damage[index].secondary),
         damage[index].name.c_str(),
         damage[index].damage);
 

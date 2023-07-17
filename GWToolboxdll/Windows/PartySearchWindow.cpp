@@ -610,13 +610,13 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
             char label[64];
             if (party->secondary) {
                 snprintf(label, 64, "%s/%s %s",
-                    GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)).c_str(),
-                    GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->secondary)).c_str(),
+                    GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)),
+                    GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->secondary)),
                     party->player_name.c_str());
             }
             else {
                 snprintf(label, 64, "%s %s",
-                    GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)).c_str(),
+                    GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)),
                     party->player_name.c_str());
             }
 

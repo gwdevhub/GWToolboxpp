@@ -426,7 +426,7 @@ bool TBHotkey::Draw(Op *op)
             const char* format = ", %s";
             if (!prof_ids_written)
                 format = "%s";
-            prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(i)).c_str());
+            prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(i)));
         }
         written += snprintf(&header[written], _countof(header) - written, " [%s]", prof_ids_buf);
     } break;
