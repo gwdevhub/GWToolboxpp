@@ -2155,7 +2155,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         size_t completed = 0;
         std::vector<Missions::Mission*> filtered;
         for (size_t i = 0; i < camp_missions.size(); i++) {
-            if (camp_missions[i]->is_completed) {
+            if (camp_missions[i]->is_completed && camp_missions[i]->bonus) {
                 completed++;
                 if (hide_completed_missions)
                     continue;
