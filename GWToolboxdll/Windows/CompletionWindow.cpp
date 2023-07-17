@@ -2895,6 +2895,17 @@ const char* Missions::UnlockedPvPItemUpgrade::Name() {
     return ItemAchievement::Name();
 }
 void Missions::UnlockedPvPItemUpgrade::OnClick() {
-    const auto info = GW::Items::GetPvPItemUpgrade(encoded_name_index);
-    Log::Info("Index: %d,  File: %p, Interation: %p, Type: %p (%s)", encoded_name_index, info->file_id, info->interaction, info->upgrade_type, PvPItemUpgradeTypeName(encoded_name_index));
+    const auto category = (void*)PvPItemUpgradeTypeName(encoded_name_index);
+    const wchar_t* wiki_url = nullptr;
+    if (category == completion_category_weapon_upgrades)
+        wiki_url = L"Upgrade component";
+    if (category == completion_category_inscriptions)
+        wiki_url = L"Inscription";
+    if (category == completion_category_runes_insignias)
+        wiki_url = L"Rune";
+    if (wiki_url) {
+        GW::GameThread::Enqueue([wiki_url] {
+            GuiUtils::OpenWiki(wiki_url);
+            });
+    }
 }
