@@ -114,7 +114,7 @@ namespace {
 
     std::wstring last_whisper;
 
-    std::wstring ParsePlayerName(const int argc, LPWSTR* argv)
+    std::wstring ParsePlayerName(const int argc, const LPWSTR* argv)
     {
         std::wstring player_name;
         for (auto i = 0; i < argc; i++) {
@@ -569,7 +569,7 @@ FriendListWindow::Friend* FriendListWindow::GetFriendByUUID(const std::string& u
     return it == friends.end() ? nullptr : it->second;
 }
 
-bool FriendListWindow::RemoveFriend(Friend* f)
+bool FriendListWindow::RemoveFriend(const Friend* f)
 {
     if (!f)
         return false;
@@ -702,7 +702,7 @@ void FriendListWindow::OnPostTradePacket(GW::HookStatus*, GW::Packet::StoC::Trad
 }
 
 // Record a friend's character profession when they join your map
-void FriendListWindow::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak)
+void FriendListWindow::OnPlayerJoinInstance(const GW::HookStatus* status, const GW::Packet::StoC::PlayerJoinInstance* pak)
 {
     UNREFERENCED_PARAMETER(status);
     const auto player_name = GuiUtils::SanitizePlayerName(pak->player_name);

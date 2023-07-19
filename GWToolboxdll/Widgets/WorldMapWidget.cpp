@@ -32,7 +32,7 @@ void WorldMapWidget::InitializeMapsUnlockedArrays()
     const GW::GameContext* g = GW::GetGameContext();
     if (!g)
         return;
-    GW::WorldContext* w = g->world;
+    const GW::WorldContext* w = g->world;
     if (!w)
         return;
     actual_maps_unlocked_packet.missions_bonus_length = 0;
@@ -77,7 +77,7 @@ void WorldMapWidget::Initialize()
     InitializeMapsUnlockedArrays();
 
     static GW::HookEntry e;
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapsUnlocked>(&e, [](GW::HookStatus*, GW::Packet::StoC::MapsUnlocked* packet) {
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapsUnlocked>(&e, [](GW::HookStatus*, const GW::Packet::StoC::MapsUnlocked* packet) {
         UNREFERENCED_PARAMETER(packet);
         Instance().InitializeMapsUnlockedArrays();
     });
@@ -136,7 +136,7 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
         case WM_LBUTTONDOWN:
             if (!drawn || !GW::UI::GetIsWorldMapShowing())
                 return false;
-            auto check_rect = [lParam](ImRect& rect) {
+            auto check_rect = [lParam](const ImRect& rect) {
                 const auto x = GET_X_LPARAM(lParam);
                 const auto y = GET_Y_LPARAM(lParam);
                 return x > rect.Min.x && x < rect.Max.x && y > rect.Min.y && y < rect.Max.y;

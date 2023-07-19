@@ -273,7 +273,7 @@ namespace {
     }
 
     // Read preferences from an ini file to a PreferencesStruct
-    void LoadPreferences(PreferencesStruct& prefs, ToolboxIni& ini)
+    void LoadPreferences(PreferencesStruct& prefs, const ToolboxIni& ini)
     {
         GetPreferences(prefs); // Use current settings as a default
 
@@ -307,7 +307,7 @@ namespace {
     }
 
     // Write preferences to an ini file from a PreferencesStruct
-    void SavePreferences(PreferencesStruct& prefs, ToolboxIni& ini)
+    void SavePreferences(const PreferencesStruct& prefs, ToolboxIni& ini)
     {
         std::string tmp;
 
@@ -397,7 +397,7 @@ namespace {
         });
     }
 
-    void CmdSave(const wchar_t*, const int argc, LPWSTR* argv)
+    void CmdSave(const wchar_t*, const int argc, const LPWSTR* argv)
     {
         std::filesystem::path filename = GetDefaultFilename();
         if (argc > 1)
@@ -410,7 +410,7 @@ namespace {
         OnPreferencesSaveFileChosen(filename.string().c_str());
     }
 
-    void CmdLoad(const wchar_t*, const int argc, LPWSTR* argv)
+    void CmdLoad(const wchar_t*, const int argc, const LPWSTR* argv)
     {
         std::filesystem::path filename = GetDefaultFilename();
         if (argc > 1)

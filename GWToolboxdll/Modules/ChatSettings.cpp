@@ -124,7 +124,7 @@ namespace {
     }
 
     // Redirect NPC messages from team chat to emote chat (emulate speech bubble instead)
-    void OnNPCChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageNPC* pak)
+    void OnNPCChatMessage(GW::HookStatus* status, const GW::Packet::StoC::MessageNPC* pak)
     {
         if (!redirect_npc_messages_to_emote_chat || !pak->sender_name)
             return; // Disabled or message pending
@@ -145,7 +145,7 @@ namespace {
     }
 
     // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
-    void OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak)
+    void OnLocalChatMessage(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak)
     {
         if (status->blocked)
             return; // Sender blocked, packet handled.
@@ -180,7 +180,7 @@ namespace {
     }
 
     // Print NPC speech bubbles to emote chat.
-    void OnSpeechBubble(GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* pak)
+    void OnSpeechBubble(const GW::HookStatus* status, const GW::Packet::StoC::SpeechBubble* pak)
     {
         UNREFERENCED_PARAMETER(status);
         if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id)
@@ -199,7 +199,7 @@ namespace {
     }
 
     // NPC dialog messages to emote chat
-    void OnSpeechDialogue(GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* pak)
+    void OnSpeechDialogue(GW::HookStatus* status, const GW::Packet::StoC::DisplayDialogue* pak)
     {
         if (!redirect_npc_messages_to_emote_chat)
             return; // Disabled or message pending
@@ -208,7 +208,7 @@ namespace {
     }
 
     // Disable native timestamps
-    void OnCheckboxPreferenceChanged(GW::HookStatus* status, const GW::UI::UIMessage msgid, void* wParam, void* lParam)
+    void OnCheckboxPreferenceChanged(GW::HookStatus* status, const GW::UI::UIMessage msgid, void* wParam, const void* lParam)
     {
         UNREFERENCED_PARAMETER(lParam);
         if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam))

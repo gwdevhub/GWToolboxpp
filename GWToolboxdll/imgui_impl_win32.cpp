@@ -225,9 +225,9 @@ static bool ImGui_ImplWin32_UpdateMouseCursor()
     return true;
 }
 
-static bool IsVkDown(int vk) { return (GetKeyState(vk) & 0x8000) != 0; }
+static bool IsVkDown(const int vk) { return (GetKeyState(vk) & 0x8000) != 0; }
 
-static void ImGui_ImplWin32_AddKeyEvent(ImGuiKey key, bool down, int native_keycode, int native_scancode = -1)
+static void ImGui_ImplWin32_AddKeyEvent(const ImGuiKey key, const bool down, const int native_keycode, const int native_scancode = -1)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.AddKeyEvent(key, down);
@@ -393,7 +393,7 @@ void ImGui_ImplWin32_NewFrame()
 #define IM_VK_KEYPAD_ENTER (VK_RETURN + 256)
 
 // Map VK_xxx to ImGuiKey_xxx.
-ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam)
+ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(const WPARAM wParam)
 {
     switch (wParam) {
         case VK_TAB:
@@ -805,7 +805,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
 
 // Perform our own check with RtlVerifyVersionInfo() instead of using functions from <VersionHelpers.h> as they
 // require a manifest to be functional for checks above 8.1. See https://github.com/ocornut/imgui/issues/4200
-static BOOL _IsWindowsVersionOrGreater(WORD major, WORD minor, WORD)
+static BOOL _IsWindowsVersionOrGreater(const WORD major, const WORD minor, WORD)
 {
     using PFN_RtlVerifyVersionInfo = LONG(WINAPI *)(OSVERSIONINFOEXW*, ULONG, ULONGLONG);
     static PFN_RtlVerifyVersionInfo RtlVerifyVersionInfoFn = nullptr;

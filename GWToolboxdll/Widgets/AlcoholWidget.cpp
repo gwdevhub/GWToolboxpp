@@ -63,7 +63,7 @@ uint32_t AlcoholWidget::GetAlcoholLevel()
     return alcohol_level;
 }
 
-void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess* packet)
+void AlcoholWidget::AlcUpdate(GW::HookStatus*, const GW::Packet::StoC::PostProcess* packet)
 {
     AlcoholWidget& instance = Instance();
     if (packet->tint == 8 && packet->level == 5)

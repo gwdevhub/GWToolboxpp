@@ -97,7 +97,7 @@ public:
 private:
     void Initialize(IDirect3DDevice9* device) override;
     void DrawCustomMarkers(IDirect3DDevice9* device);
-    void DrawCustomLines(IDirect3DDevice9* device);
+    void DrawCustomLines(const IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
     void SetTooltipMapID(const GW::Constants::MapID& map_id);
 

@@ -31,14 +31,14 @@ void SkillMonitorWidget::Initialize()
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(
-        &GenericModifier_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericModifier* packet) -> void {
+        &GenericModifier_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericModifier* packet) -> void {
             UNREFERENCED_PARAMETER(status);
 
             CasttimeCallback(packet->type, packet->target_id, packet->value);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
-        &GenericValueSelf_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) -> void {
+        &GenericValueSelf_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValue* packet) -> void {
             UNREFERENCED_PARAMETER(status);
 
             const uint32_t value_id = packet->value_id;
@@ -49,7 +49,7 @@ void SkillMonitorWidget::Initialize()
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
-                                                                           [this](GW::HookStatus* status, GW::Packet::StoC::GenericValueTarget* packet) -> void {
+                                                                           [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
                                                                                UNREFERENCED_PARAMETER(status);
                                                                                using namespace GW::Packet::StoC::GenericValueID;
 

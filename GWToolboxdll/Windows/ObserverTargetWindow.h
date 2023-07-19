@@ -2,8 +2,6 @@
 
 #include <Windows/ObserverPlayerWindow.h>
 
-#define NO_AGENT 0
-
 class ObserverTargetWindow : public ObserverPlayerWindow {
     ObserverTargetWindow() = default;
     ~ObserverTargetWindow() override = default;

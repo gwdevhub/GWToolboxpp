@@ -127,31 +127,31 @@ void ZrawDeepModule::SetEnabled(const bool _enabled)
     if (_enabled) {
         can_terminate = false;
         GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs,
-                                                                            [this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
+                                                                            [this](const GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
                                                                                 UNREFERENCED_PARAMETER(status);
                                                                                 DisplayDialogue(packet);
                                                                             });
         GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&ZrawDeepModule_StoCs,
-                                                                         [this](GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* packet) -> void {
+                                                                         [this](const GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* packet) -> void {
                                                                              UNREFERENCED_PARAMETER(status);
                                                                              if (!rewrite_npc_dialogs)
                                                                                  return;
                                                                              SetToRandomKanaxaiString(packet->message);
                                                                          });
         GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogBody>(&ZrawDeepModule_StoCs,
-                                                                       [this](GW::HookStatus* status, GW::Packet::StoC::DialogBody* packet) -> void {
+                                                                       [this](const GW::HookStatus* status, GW::Packet::StoC::DialogBody* packet) -> void {
                                                                            UNREFERENCED_PARAMETER(status);
                                                                            if (!rewrite_npc_dialogs)
                                                                                return;
                                                                            SetToRandomKanaxaiString(packet->message);
                                                                        });
         GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&ZrawDeepModule_StoCs,
-                                                                            [this](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer*) -> void {
+                                                                            [this](const GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer*) -> void {
                                                                                 UNREFERENCED_PARAMETER(status);
                                                                                 kanaxai_agent_id = 0;
                                                                             });
         GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs,
-                                                                     [this](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
+                                                                     [this](const GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet) -> void {
                                                                          UNREFERENCED_PARAMETER(status);
                                                                          if (!enabled)
                                                                              return;
@@ -161,7 +161,7 @@ void ZrawDeepModule::SetEnabled(const bool _enabled)
                                                                          }
                                                                      });
         GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs,
-                                                                        [this](GW::HookStatus* status, GW::Packet::StoC::DisplayCape* packet) -> void {
+                                                                        [this](GW::HookStatus* status, const GW::Packet::StoC::DisplayCape* packet) -> void {
                                                                             if (!enabled)
                                                                                 return;
                                                                             const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
@@ -173,7 +173,7 @@ void ZrawDeepModule::SetEnabled(const bool _enabled)
                                                                             }
                                                                         });
         GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs,
-                                                                       [this](GW::HookStatus* status, GW::Packet::StoC::AgentModel* packet) -> void {
+                                                                       [this](GW::HookStatus* status, const GW::Packet::StoC::AgentModel* packet) -> void {
                                                                            if (!enabled)
                                                                                return;
                                                                            const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));

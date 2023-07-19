@@ -625,7 +625,7 @@ bool RerollWindow::Reroll(wchar_t* character_name, const GW::Constants::MapID _m
     return true;
 }
 
-bool RerollWindow::Reroll(wchar_t* character_name, bool _same_map, const bool _same_party)
+bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const bool _same_party)
 {
     reroll_stage = None;
     reverting_reroll = false;

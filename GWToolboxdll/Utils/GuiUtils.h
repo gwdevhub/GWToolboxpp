@@ -124,7 +124,7 @@ namespace GuiUtils {
     char* StrCopy(char* dest, const char* src, size_t dest_size);
 
     size_t wcstostr(char* dest, const wchar_t* src, size_t n);
-    std::wstring ToWstr(std::string& str);
+    std::wstring ToWstr(const std::string& str);
 
     // Will flash GW Window if not already in focus. Pass force = true to flash regardless of focus.
     void FlashWindow(bool force = false);

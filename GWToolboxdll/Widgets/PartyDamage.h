@@ -59,8 +59,8 @@ public:
     void ResetDamage();
 
 private:
-    void DamagePacketCallback(GW::HookStatus*, GW::Packet::StoC::GenericModifier* packet);
-    void MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded* packet);
+    void DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet);
+    void MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded* packet);
 
     void CreatePartyIndexMap();
 

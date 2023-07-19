@@ -24,8 +24,8 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BALANCE_SCALE; }
 
     void Initialize() override;
-    static void CmdPricecheck(const wchar_t* message, int argc, LPWSTR* argv);
-    static void OnMessageLocal(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak);
+    static void CmdPricecheck(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void OnMessageLocal(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak);
 
     bool IsTradeAlert(std::string& message);
     void Update(float delta) override;
@@ -72,8 +72,8 @@ private:
     // if enabled, will also apply the trade alerts filter to incoming local trade chat messages.
     bool filter_local_trade = false;
 
-#define ALERT_BUF_SIZE 1024 * 16
-    char alert_buf[ALERT_BUF_SIZE] = "";
+static constexpr auto  ALERT_BUF_SIZE = 1024 * 16;
+    char alert_buf[ALERT_BUF_SIZE]{};
     // set when the alert_buf was modified
     bool alertfile_dirty = false;
 

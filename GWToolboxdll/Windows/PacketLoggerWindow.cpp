@@ -285,7 +285,7 @@ static void Serialize(uint8_t** bytes, T* val)
     *bytes = b + sizeof(T);
 }
 
-static void PrintString(const int length, wchar_t* str)
+static void PrintString(const int length, const wchar_t* str)
 {
     for (auto i = 0; i < length && str[i]; i++) {
         printf(i > 0 ? " %04x" : "%04x", str[i]);
@@ -470,7 +470,7 @@ static void PrintNestedField(uint32_t* fields, const uint32_t n_fields,
     }
 }
 
-void PacketLoggerWindow::CtoSHandler(GW::HookStatus* status, void* packet)
+void PacketLoggerWindow::CtoSHandler(const GW::HookStatus* status, void* packet)
 {
     UNREFERENCED_PARAMETER(status);
     if (!logger_enabled)

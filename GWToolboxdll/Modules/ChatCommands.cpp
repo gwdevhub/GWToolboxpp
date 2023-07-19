@@ -59,9 +59,8 @@
 #include <GWCA/Managers/QuestMgr.h>
 
 
-#define F_PI 3.14159265358979323846f
-#define CMDTITLE_KEEP_CURRENT 0xfffe
-#define CMDTITLE_REMOVE_CURRENT 0xffff
+constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
+constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
 
 namespace {
     const wchar_t* next_word(const wchar_t* str)
@@ -80,19 +79,19 @@ namespace {
 
     bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
 
-    float GetAngle(GW::GamePos pos)
+    float GetAngle(const GW::GamePos& pos)
     {
         constexpr float pi = DirectX::XM_PI;
         float tan_angle = 0.0f;
         if (pos.x == 0.0f) {
             if (pos.y >= 0.0f)
-                tan_angle = F_PI / 2;
+                tan_angle = pi / 2;
             else
                 tan_angle = (pi / 2) * -1.0f;
         }
         else if (pos.x < 0.0f) {
             if (pos.y >= 0.0f)
-                tan_angle = atan(pos.y / pos.x) + F_PI;
+                tan_angle = atan(pos.y / pos.x) + pi;
             else
                 tan_angle = atan(pos.y / pos.x) - pi;
         }
@@ -111,7 +110,7 @@ namespace {
         if (me == nullptr)
             return;
 
-        const auto wanted_angle = (me->rotation_angle * 180.0f / F_PI);
+        const auto wanted_angle = me->rotation_angle * 180.0f / DirectX::XM_PI;
         constexpr auto max_angle_diff = 22.5f; // Acceptable angle for vipers
         float max_distance = GW::Constants::SqrRange::Spellcast;
 
@@ -143,7 +142,7 @@ namespace {
         if (me == nullptr)
             return;
 
-        const auto facing_angle = (me->rotation_angle * 180.0f / F_PI);
+        const auto facing_angle = me->rotation_angle * 180.0f / DirectX::XM_PI;
         const auto wanted_angle = facing_angle > 0.0f ? facing_angle - 180.0f : facing_angle + 180.0f;
         const auto max_angle_diff = 22.5f; // Acceptable angle for ebon escape
         const auto max_distance = GW::Constants::SqrRange::Spellcast;
@@ -209,7 +208,7 @@ namespace {
     // '/chat [all|guild|team|trade|alliance|whisper|close]'
     const char* chat_tab_syntax = "'/chat [all|guild|team|trade|alliance|whisper]' open chat channel.";
 
-    void CmdChatTab(const wchar_t*, const int argc, LPWSTR* argv)
+    void CmdChatTab(const wchar_t*, const int argc, const LPWSTR* argv)
     {
         if (argc < 1)
             return Log::Error(chat_tab_syntax);
@@ -258,7 +257,7 @@ namespace {
 
     bool* is_muted = nullptr;
 
-    void CmdSkillImage(const wchar_t*, int, LPWSTR* argv)
+    void CmdSkillImage(const wchar_t*, int, const LPWSTR* argv)
     {
         uint32_t skill_id = 0;
         GuiUtils::ParseUInt(argv[1], &skill_id);
@@ -283,7 +282,7 @@ namespace {
 
     const char* fps_syntax = "'/fps [limit (15-400)]' sets a hard frame limit for Guild Wars. Pass '0' to remove the limit.\n'/fps' shows current frame limit";
 
-    void CmdFps(const wchar_t*, const int argc, LPWSTR* argv)
+    void CmdFps(const wchar_t*, const int argc, const LPWSTR* argv)
     {
         if (argc < 2) {
             const auto current_limit = GW::UI::GetFrameLimit();
@@ -450,7 +449,7 @@ namespace {
 
     GW::HookEntry OnSentChat_HookEntry;
 
-    void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, wchar_t* message)
+    void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, const wchar_t* message)
     {
         if (channel != GW::Chat::CHANNEL_COMMAND || status->blocked)
             return;
@@ -1278,7 +1277,7 @@ bool ChatCommands::ReadTemplateFile(std::wstring path, char* buff, const size_t 
     return true;
 }
 
-void ChatCommands::CmdEnterMission(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdEnterMission(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     const auto error_use_from_outpost = "Use '/enter' to start a mission or elite area from an outpost";
     const auto error_fow_uw_syntax = "Use '/enter fow' or '/enter uw' to trigger entry";
@@ -1334,7 +1333,7 @@ void ChatCommands::CmdAge2(const wchar_t*, int, LPWSTR*)
     TimerWidget::Instance().PrintTimer();
 }
 
-void ChatCommands::CmdDialog(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdDialog(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (!IsMapReady())
         return;
@@ -1466,7 +1465,7 @@ void ChatCommands::CmdTB(const wchar_t* message, const int argc, LPWSTR* argv)
     }
 }
 
-GW::UI::WindowID ChatCommands::MatchingGWWindow(const wchar_t*, const int argc, LPWSTR* argv)
+GW::UI::WindowID ChatCommands::MatchingGWWindow(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     const std::map<GW::UI::WindowID, const wchar_t*> gw_windows = {
         {GW::UI::WindowID_Compass, L"compass"},
@@ -1487,7 +1486,7 @@ GW::UI::WindowID ChatCommands::MatchingGWWindow(const wchar_t*, const int argc, 
     return GW::UI::WindowID_Count;
 };
 
-std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t*, const int argc, LPWSTR* argv)
+std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     std::vector<ToolboxUIElement*> ret;
     if (argc <= 1) {
@@ -1616,7 +1615,7 @@ void ChatCommands::CmdToggle(const wchar_t* message, const int argc, LPWSTR* arg
 }
 
 
-void ChatCommands::CmdZoom(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdZoom(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     if (argc <= 1) {
@@ -1638,7 +1637,7 @@ void ChatCommands::CmdZoom(const wchar_t* message, const int argc, LPWSTR* argv)
     }
 }
 
-void ChatCommands::CmdCamera(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdCamera(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     if (argc == 1) {
@@ -1693,7 +1692,7 @@ void ChatCommands::CmdCamera(const wchar_t* message, const int argc, LPWSTR* arg
 }
 
 
-void ChatCommands::CmdObserverReset(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdObserverReset(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     UNREFERENCED_PARAMETER(argc);
@@ -1702,7 +1701,7 @@ void ChatCommands::CmdObserverReset(const wchar_t* message, const int argc, LPWS
 }
 
 
-void ChatCommands::CmdDamage(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdDamage(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     if (argc <= 1) {
@@ -1728,7 +1727,7 @@ void ChatCommands::CmdDamage(const wchar_t* message, const int argc, LPWSTR* arg
     }
 }
 
-void ChatCommands::CmdAfk(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdAfk(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(argv);
     GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
@@ -1752,7 +1751,7 @@ const wchar_t* ChatCommands::GetRemainingArgsWstr(const wchar_t* message, const 
     return out;
 };
 
-void ChatCommands::CmdTarget(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdTarget(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     if (argc < 2)
         return Log::ErrorW(L"Missing argument for /%s", argv[0]);
@@ -1902,7 +1901,7 @@ void ChatCommands::CmdTarget(const wchar_t* message, const int argc, LPWSTR* arg
     return TargetNearest(GetRemainingArgsWstr(message, 1), Npc);
 }
 
-void ChatCommands::CmdUseSkill(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdUseSkill(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (!IsMapReady())
         return;
@@ -1922,7 +1921,7 @@ void ChatCommands::CmdUseSkill(const wchar_t*, const int argc, LPWSTR* argv)
     skill_to_use.skill_usage_delay = .0f;
 }
 
-void ChatCommands::CmdSCWiki(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdSCWiki(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     const auto res = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
@@ -1944,7 +1943,7 @@ void ChatCommands::CmdSCWiki(const wchar_t* message, const int argc, LPWSTR* arg
     }
 }
 
-void ChatCommands::CmdLoad(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdLoad(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     // We will & should move that to GWCA.
@@ -1988,7 +1987,7 @@ void ChatCommands::CmdLoad(const wchar_t* message, const int argc, LPWSTR* argv)
     }
 }
 
-void ChatCommands::CmdPing(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdPing(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     // We will & should move that to GWCA.
@@ -2033,7 +2032,7 @@ void ChatCommands::CmdPing(const wchar_t* message, const int argc, LPWSTR* argv)
     }
 }
 
-void ChatCommands::CmdPingEquipment(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdPingEquipment(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     if (!IsMapReady())
@@ -2077,7 +2076,7 @@ void ChatCommands::CmdPingEquipment(const wchar_t* message, const int argc, LPWS
     }
 }
 
-void ChatCommands::CmdTransmoParty(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdTransmoParty(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     GW::PartyInfo* pInfo = GW::PartyMgr::GetPartyInfo();
     if (!pInfo)
@@ -2132,7 +2131,7 @@ bool ChatCommands::ParseScale(const int scale, PendingTransmo& transmo)
     return true;
 }
 
-void ChatCommands::CmdTransmoTarget(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdTransmoTarget(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     const auto target = GW::Agents::GetTargetAsAgentLiving();
     if (argc < 2) {
@@ -2164,7 +2163,7 @@ void ChatCommands::CmdTransmoTarget(const wchar_t*, const int argc, LPWSTR* argv
 }
 
 
-void GetAchievements(std::wstring& player_name)
+void GetAchievements(const std::wstring& player_name)
 {
     if (!(player_name.size() && player_name.size() < 20)) {
         return Log::Error("Invalid player name for hall of monuments command");
@@ -2198,7 +2197,7 @@ void ChatCommands::CmdHom(const wchar_t* message, const int argc, LPWSTR*)
 }
 
 // /withdraw quantity model_id1 [model_id2 ...]
-void ChatCommands::CmdWithdraw(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdWithdraw(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     const auto syntax_error = []() {
         Log::Error("Incorrect syntax:");
@@ -2225,7 +2224,7 @@ void ChatCommands::CmdWithdraw(const wchar_t*, const int argc, LPWSTR* argv)
     InventoryManager::Instance().RefillUpToQuantity(to_move, model_ids);
 }
 
-void ChatCommands::CmdTransmo(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdTransmo(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     PendingTransmo transmo;
 
@@ -2384,7 +2383,7 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, const TargetTy
         GW::Agents::ChangeTarget(closest);
 }
 
-void ChatCommands::CmdTransmoAgent(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdTransmoAgent(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (argc < 3)
         return Log::Error("Missing /transmoagent argument");
@@ -2412,7 +2411,7 @@ void ChatCommands::CmdTransmoAgent(const wchar_t*, const int argc, LPWSTR* argv)
     TransmoAgent(agent_id, transmo);
 }
 
-void ChatCommands::CmdResize(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdResize(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     if (argc != 3) {
@@ -2430,7 +2429,7 @@ void ChatCommands::CmdResize(const wchar_t* message, const int argc, LPWSTR* arg
     MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
 }
 
-void ChatCommands::CmdReapplyTitle(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdReapplyTitle(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     uint32_t title_id = Instance().default_title_id;
@@ -2593,7 +2592,7 @@ apply:
     }
 }
 
-void ChatCommands::CmdHeroBehaviour(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdHeroBehaviour(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return;
@@ -2625,7 +2624,7 @@ void ChatCommands::CmdHeroBehaviour(const wchar_t*, const int argc, LPWSTR* argv
     }
 }
 
-void ChatCommands::CmdVolume(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdVolume(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     const auto syntax = "Syntax: '/volume [master|music|background|effects|dialog|ui] [amount (0-100)]'";
     wchar_t* value;
@@ -2686,7 +2685,7 @@ void ChatCommands::CmdSetNormalMode(const wchar_t*, int, LPWSTR*)
     GW::PartyMgr::SetHardMode(false);
 }
 
-void ChatCommands::CmdAnimation(const wchar_t*, const int argc, LPWSTR* argv)
+void ChatCommands::CmdAnimation(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     const auto syntax = "Syntax: '/animation [me|target] [animation_id (1-2076)]'";
 

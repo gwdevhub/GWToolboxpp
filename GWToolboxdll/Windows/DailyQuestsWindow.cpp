@@ -1007,7 +1007,7 @@ namespace {
     bool checked_subscriptions = false;
     time_t start_time;
 
-    const wchar_t* DateString(time_t* unix)
+    const wchar_t* DateString(const time_t* unix)
     {
         const std::tm* now = std::localtime(unix);
         static wchar_t buf[12];
@@ -1015,37 +1015,37 @@ namespace {
         return buf;
     }
 
-    uint32_t GetZaishenBounty(time_t* unix)
+    uint32_t GetZaishenBounty(const time_t* unix)
     {
         return static_cast<uint32_t>((*unix - 1244736000) / 86400 % 66);
     }
 
-    uint32_t GetWeeklyBonusPvE(time_t* unix)
+    uint32_t GetWeeklyBonusPvE(const time_t* unix)
     {
         return static_cast<uint32_t>((*unix - 1368457200) / 604800 % 9);
     }
 
-    uint32_t GetWeeklyBonusPvP(time_t* unix)
+    uint32_t GetWeeklyBonusPvP(const time_t* unix)
     {
         return static_cast<uint32_t>((*unix - 1368457200) / 604800 % 6);
     }
 
-    uint32_t GetZaishenCombat(time_t* unix)
+    uint32_t GetZaishenCombat(const time_t* unix)
     {
         return static_cast<uint32_t>((*unix - 1256227200) / 86400 % 28);
     }
 
-    uint32_t GetZaishenMission(time_t* unix)
+    uint32_t GetZaishenMission(const time_t* unix)
     {
         return static_cast<uint32_t>((*unix - 1299168000) / 86400 % 69);
     }
 
-    uint32_t GetZaishenVanquish(time_t* unix)
+    uint32_t GetZaishenVanquish(const time_t* unix)
     {
         return static_cast<uint32_t>((*unix - 1299168000) / 86400 % 136);
     }
 
-    void PrintDaily(const wchar_t* label, const char* value, time_t unix, const bool as_wiki_link = true)
+    void PrintDaily(const wchar_t* label, const char* value, const time_t unix, const bool as_wiki_link = true)
     {
         const bool show_date = unix != time(nullptr);
         wchar_t buf[139];
@@ -1060,7 +1060,7 @@ namespace {
 }
 
 // Find the "week start" for this timestamp.
-time_t GetWeeklyRotationTime(time_t* unix)
+time_t GetWeeklyRotationTime(const time_t* unix)
 {
     return static_cast<time_t>(floor((*unix - 1368457200) / 604800) * 604800) + 1368457200;
 }
@@ -1071,36 +1071,36 @@ time_t GetNextWeeklyRotationTime()
     return GetWeeklyRotationTime(&unix) + 604800;
 }
 
-const char* GetNicholasSandfordLocation(time_t* unix)
+const char* GetNicholasSandfordLocation(const time_t* unix)
 {
     const auto cycle_index = static_cast<uint32_t>((*unix - 1239260400) / 86400 % 52);
     return nicholas_sandford_cycles[cycle_index];
 }
 
-uint32_t GetNicholasItemQuantity(time_t* unix)
+uint32_t GetNicholasItemQuantity(const time_t* unix)
 {
     const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
     return nicholas_quantity_cycles[cycle_index];
 }
 
-const char* GetNicholasLocation(time_t* unix)
+const char* GetNicholasLocation(const time_t* unix)
 {
     const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
     return nicholas_location_cycles[cycle_index];
 }
 
-const char* GetNicholasItemName(time_t* unix)
+const char* GetNicholasItemName(const time_t* unix)
 {
     const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
     return nicholas_item_cycles[cycle_index];
 }
 
-uint32_t GetWantedByShiningBlade(time_t* unix)
+uint32_t GetWantedByShiningBlade(const time_t* unix)
 {
     return static_cast<uint32_t>((*unix - 1276012800) / 86400 % 21);
 }
 
-const char* GetVanguardQuest(time_t* unix)
+const char* GetVanguardQuest(const time_t* unix)
 {
     const auto cycle_index = static_cast<uint32_t>((*unix - 1299168000) / 86400 % 9);
     return vanguard_cycles[cycle_index];
@@ -1439,7 +1439,7 @@ void DailyQuests::Initialize()
     GW::Chat::CreateCommand(L"wanted", CmdWantedByShiningBlade);
     GW::Chat::CreateCommand(L"nicholas", CmdNicholas);
     GW::Chat::CreateCommand(L"weekly", CmdWeeklyBonus);
-    GW::Chat::CreateCommand(L"today", [](const wchar_t* message, const int argc, LPWSTR* argv) -> void {
+    GW::Chat::CreateCommand(L"today", [](const wchar_t* message, const int argc, const LPWSTR* argv) -> void {
         UNREFERENCED_PARAMETER(message);
         UNREFERENCED_PARAMETER(argc);
         UNREFERENCED_PARAMETER(argv);
@@ -1456,19 +1456,19 @@ void DailyQuests::Initialize()
         GW::Chat::SendChat('/', "nicholas");
         GW::Chat::SendChat('/', "weekly");
     });
-    GW::Chat::CreateCommand(L"daily", [](const wchar_t* message, const int argc, LPWSTR* argv) -> void {
+    GW::Chat::CreateCommand(L"daily", [](const wchar_t* message, const int argc, const LPWSTR* argv) -> void {
         UNREFERENCED_PARAMETER(message);
         UNREFERENCED_PARAMETER(argc);
         UNREFERENCED_PARAMETER(argv);
         GW::Chat::SendChat('/', "today");
     });
-    GW::Chat::CreateCommand(L"dailies", [](const wchar_t* message, const int argc, LPWSTR* argv) -> void {
+    GW::Chat::CreateCommand(L"dailies", [](const wchar_t* message, const int argc, const LPWSTR* argv) -> void {
         UNREFERENCED_PARAMETER(message);
         UNREFERENCED_PARAMETER(argc);
         UNREFERENCED_PARAMETER(argv);
         GW::Chat::SendChat('/', "today");
     });
-    GW::Chat::CreateCommand(L"tomorrow", [](const wchar_t* message, const int argc, LPWSTR* argv) -> void {
+    GW::Chat::CreateCommand(L"tomorrow", [](const wchar_t* message, const int argc, const LPWSTR* argv) -> void {
         UNREFERENCED_PARAMETER(message);
         UNREFERENCED_PARAMETER(argc);
         UNREFERENCED_PARAMETER(argv);
@@ -1549,7 +1549,7 @@ void DailyQuests::Update(const float delta)
     }
 }
 
-void DailyQuests::CmdWeeklyBonus(const wchar_t*, const int argc, LPWSTR* argv)
+void DailyQuests::CmdWeeklyBonus(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     time_t now = time(nullptr);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
@@ -1558,7 +1558,7 @@ void DailyQuests::CmdWeeklyBonus(const wchar_t*, const int argc, LPWSTR* argv)
     PrintDaily(L"Weekly Bonus PvP", pvp_weekly_bonus_cycles[GetWeeklyBonusPvP(&now)], now);
 }
 
-void DailyQuests::CmdZaishenBounty(const wchar_t*, const int argc, LPWSTR* argv)
+void DailyQuests::CmdZaishenBounty(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     time_t now = time(nullptr);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
@@ -1566,7 +1566,7 @@ void DailyQuests::CmdZaishenBounty(const wchar_t*, const int argc, LPWSTR* argv)
     PrintDaily(L"Zaishen Bounty", zaishen_bounty_cycles[GetZaishenBounty(&now)], now);
 }
 
-void DailyQuests::CmdZaishenMission(const wchar_t*, const int argc, LPWSTR* argv)
+void DailyQuests::CmdZaishenMission(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     time_t now = time(nullptr);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
@@ -1574,7 +1574,7 @@ void DailyQuests::CmdZaishenMission(const wchar_t*, const int argc, LPWSTR* argv
     PrintDaily(L"Zaishen Mission", zaishen_mission_cycles[GetZaishenMission(&now)], now);
 }
 
-void DailyQuests::CmdZaishenVanquish(const wchar_t*, const int argc, LPWSTR* argv)
+void DailyQuests::CmdZaishenVanquish(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     time_t now = time(nullptr);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
@@ -1582,7 +1582,7 @@ void DailyQuests::CmdZaishenVanquish(const wchar_t*, const int argc, LPWSTR* arg
     PrintDaily(L"Zaishen Vanquish", zaishen_vanquish_cycles[GetZaishenVanquish(&now)], now);
 }
 
-void DailyQuests::CmdZaishenCombat(const wchar_t*, const int argc, LPWSTR* argv)
+void DailyQuests::CmdZaishenCombat(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     time_t now = time(nullptr);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
@@ -1590,7 +1590,7 @@ void DailyQuests::CmdZaishenCombat(const wchar_t*, const int argc, LPWSTR* argv)
     PrintDaily(L"Zaishen Combat", zaishen_combat_cycles[GetZaishenCombat(&now)], now);
 }
 
-void DailyQuests::CmdWantedByShiningBlade(const wchar_t*, const int argc, LPWSTR* argv)
+void DailyQuests::CmdWantedByShiningBlade(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     time_t now = time(nullptr);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
@@ -1598,7 +1598,7 @@ void DailyQuests::CmdWantedByShiningBlade(const wchar_t*, const int argc, LPWSTR
     PrintDaily(L"Wanted", wanted_by_shining_blade_cycles[GetWantedByShiningBlade(&now)], now);
 }
 
-void DailyQuests::CmdVanguard(const wchar_t*, const int argc, LPWSTR* argv)
+void DailyQuests::CmdVanguard(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     time_t now = time(nullptr);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
@@ -1606,7 +1606,7 @@ void DailyQuests::CmdVanguard(const wchar_t*, const int argc, LPWSTR* argv)
     PrintDaily(L"Vanguard Quest", GetVanguardQuest(&now), now);
 }
 
-void DailyQuests::CmdNicholas(const wchar_t*, const int argc, LPWSTR* argv)
+void DailyQuests::CmdNicholas(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     time_t now = time(nullptr);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))

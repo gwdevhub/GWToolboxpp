@@ -46,7 +46,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <Modules/Resources.h>
 #include <Windows/TravelWindow.h>
 
-#define DISCORD_APP_ID 378706083788881961
+constexpr auto DISCORD_APP_ID = 378706083788881961;
 
 using DiscordCreate_pt = EDiscordResult(__cdecl*)(DiscordVersion version, DiscordCreateParams* params, IDiscordCore** result);
 
@@ -185,7 +185,7 @@ static void OnSendInviteCallback(void* data, const EDiscordResult result)
     Log::Log(result == DiscordResult_Ok ? "Invite sent successfully.\n" : "Invite send FAILED!\n");
 }
 
-static void OnNetworkMessage(void* event_data, const DiscordNetworkPeerId peer_id, const DiscordNetworkChannelId channel_id, uint8_t* data, const uint32_t data_length)
+static void OnNetworkMessage(void* event_data, DiscordNetworkPeerId peer_id, DiscordNetworkChannelId channel_id, uint8_t* data, const uint32_t data_length)
 {
     UNREFERENCED_PARAMETER(event_data);
     UNREFERENCED_PARAMETER(peer_id);
@@ -212,7 +212,7 @@ static void OnJoinRequest(void* data, DiscordUser* user)
     app->activities->send_request_reply(app->activities, user->id, DiscordActivityJoinRequestReply_Yes, app, OnJoinRequestReplyCallback);
 }
 
-static void OnPartyInvite(void* event_data, const EDiscordActivityActionType type, DiscordUser* user, DiscordActivity* activity)
+static void OnPartyInvite(void* event_data, EDiscordActivityActionType type, DiscordUser* user, DiscordActivity* activity)
 {
     UNREFERENCED_PARAMETER(event_data);
     UNREFERENCED_PARAMETER(type);
@@ -251,7 +251,7 @@ DWORD GetProcId(const char* ProcName)
     return pid;
 }
 
-void DiscordModule::InviteUser(DiscordUser* user)
+void DiscordModule::InviteUser(const DiscordUser* user)
 {
     char invite_str[128];
     sprintf(invite_str, "%s, %s", activity.details, activity.state);
@@ -298,7 +298,7 @@ void DiscordModule::Initialize()
     map_name_decoded.language(GW::Constants::TextLanguage::English);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Callback,
-                                                                         [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
+                                                                         [this](const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
                                                                              UNREFERENCED_PARAMETER(status);
                                                                              UNREFERENCED_PARAMETER(packet);
                                                                              zone_entered_time = time(nullptr); // Because you cant rely on instance time at this point.
@@ -308,7 +308,7 @@ void DiscordModule::Initialize()
                                                                              join_party_next_action = time(nullptr) + 2; // 2 seconds for other packets to be received e.g. players, guild info
                                                                          });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Callback,
-                                                                       [this](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd* packet) -> void {
+                                                                       [this](const GW::HookStatus* status, const GW::Packet::StoC::PartyPlayerAdd* packet) -> void {
                                                                            UNREFERENCED_PARAMETER(status);
                                                                            const GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
                                                                            if (player_agent && packet->player_id == player_agent->player_number) {
@@ -320,14 +320,14 @@ void DiscordModule::Initialize()
                                                                                pending_activity_update = true; // Update if this is my party
                                                                        });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyUpdateSize>(&PartyUpdateSize_Callback,
-                                                                        [this](GW::HookStatus* status, GW::Packet::StoC::PartyUpdateSize* packet) -> void {
+                                                                        [this](const GW::HookStatus* status, const GW::Packet::StoC::PartyUpdateSize* packet) -> void {
                                                                             UNREFERENCED_PARAMETER(status);
                                                                             GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
                                                                             if (p && packet->player_id == p->players[0].login_number)
                                                                                 pending_activity_update = true; // Update if this is my leader
                                                                         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ErrorMessage>(&ErrorMessage_Callback,
-                                                                     [this](GW::HookStatus* status, GW::Packet::StoC::ErrorMessage* packet) -> void {
+                                                                     [this](const GW::HookStatus* status, const GW::Packet::StoC::ErrorMessage* packet) -> void {
                                                                          UNREFERENCED_PARAMETER(status);
                                                                          if (!join_in_progress.map_id)
                                                                              return;

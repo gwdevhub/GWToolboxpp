@@ -24,7 +24,7 @@ namespace {
     GW::HookEntry GameSrvTransfer_Hook;
 
 
-    void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet)
+    void OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd* packet)
     {
         if (!enabled)
             return;
@@ -37,7 +37,7 @@ namespace {
         player_agents.emplace(agent->agent_id, agent);
     }
 
-    void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove* packet)
+    void OnAgentRemove(GW::HookStatus*, const GW::Packet::StoC::AgentRemove* packet)
     {
         if (!enabled)
             return;

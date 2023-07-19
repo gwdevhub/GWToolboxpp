@@ -66,7 +66,7 @@ namespace {
     clock_t send_timer = 0;
     uint32_t last_hovered_item_id = 0;
     uint32_t quoted_item_id = 0;
-    GW::Constants::SkillID last_hovered_skill_id = (GW::Constants::SkillID)0;
+    GW::Constants::SkillID last_hovered_skill_id = static_cast<GW::Constants::SkillID>(0);
 
     bool show_widgets = true;
     bool show_open_chest = true;
@@ -108,7 +108,7 @@ namespace {
         return ImGui::InputTextEx(label, NULL, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
     }
 
-    const char* GetStatusStr(Status _status) {
+    const char* GetStatusStr(const Status _status) {
         switch (_status) {
         case Status::Unknown: return "Unknown";
         case Status::NotYetConnected: return "Not connected";
@@ -119,11 +119,11 @@ namespace {
         }
     }
 
-    const Status GetResignStatus(size_t index) {
+    const Status GetResignStatus(const size_t index) {
         return index < resign_statuses.size() ? resign_statuses[index] : Status::Unknown;
     }
 
-    int PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name) {
+    int PrintResignStatus(wchar_t *buffer, const size_t size, const size_t index, const wchar_t *player_name) {
         if (!player_name) return 0;
         const auto player_status = GetResignStatus(index);
         const char* status_str = GetStatusStr(GetResignStatus(index));
@@ -132,7 +132,7 @@ namespace {
                 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
             ? "Connected (not resigned)" : status_str);
     }
-    const size_t GetPartyPlayerIndex(uint32_t login_number) {
+    const size_t GetPartyPlayerIndex(const uint32_t login_number) {
         const auto party = GW::PartyMgr::GetPartyInfo();
         for (size_t i = 0;party && i < party->players.size(); i++) {
             if (party->players[i].login_number == login_number)
@@ -201,7 +201,7 @@ namespace {
         CheckAndWarnIfNotResigned();
     }
 
-    void CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv)
+    void CmdResignLog(const wchar_t* cmd, const int argc, wchar_t** argv)
     {
         UNREFERENCED_PARAMETER(cmd);
         UNREFERENCED_PARAMETER(argc);
@@ -226,7 +226,7 @@ namespace {
         CheckAndWarnIfNotResigned();
     }
 
-    void OnInstanceLoad(GW::HookStatus*, GW::Packet::StoC::InstanceLoadFile* packet)
+    void OnInstanceLoad(GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile* packet)
     {
         quoted_item_id = 0;
         mapfile = packet->map_fileID;
@@ -236,13 +236,13 @@ namespace {
         }
     }
 
-    void GetIdsFromFileId(uint32_t param_1,short *param_2) {
-        param_2[1] = (short)((param_1 - 1) / 0xff00) + 0x100;
-        *param_2 = (short)((param_1 - 1) % 0xff00) + 0x100;
+    void GetIdsFromFileId(const uint32_t param_1,short *param_2) {
+        param_2[1] = static_cast<short>((param_1 - 1) / 0xff00) + 0x100;
+        *param_2 = static_cast<short>((param_1 - 1) % 0xff00) + 0x100;
         return;
     }
 
-    void DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, bool force_advanced = false)
+    void DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, const bool force_advanced = false)
     {
         if (!skill)
             return;
@@ -310,7 +310,7 @@ namespace {
             ImGui::TreePop();
         }
     }
-    void DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, bool force_advanced = false)
+    void DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, const bool force_advanced = false)
     {
         if (!item)
             return;
@@ -368,7 +368,7 @@ namespace {
         if (player && living->tags->guild_id) {
             GW::GuildArray* guilds = GW::GuildMgr::GetGuildArray();
             if (guilds && living->tags->guild_id < guilds->size())
-                guild = guilds->at((uint32_t)living->tags->guild_id);
+                guild = guilds->at(living->tags->guild_id);
         }
 
         InfoField("Agent ID", "%d", agent->agent_id);
@@ -439,7 +439,7 @@ namespace {
             InfoField("Height", "%f", agent->height1);
             InfoField("Rotation", "%f", agent->rotation_angle);
             InfoField("NameProperties", "0x%X", agent->name_properties);
-            InfoField("Distance", "%.2f", me ? GW::GetDistance(me->pos, agent->pos) : 0.f);
+            InfoField("Distance", "%.2f", me ? GetDistance(me->pos, agent->pos) : 0.f);
             InfoField("Visual effects", "0x%X", agent->visual_effects);
             if (item_actual) {
                 InfoField("Owner", "%d", item->owner);
@@ -527,16 +527,16 @@ namespace {
     typedef void(__cdecl* GetQuestInfo_pt)(GW::Constants::QuestID);
     GetQuestInfo_pt RequestQuestInfo_Func = nullptr;
 
-    bool RequestQuestInfo(GW::Constants::QuestID quest_id) {
+    bool RequestQuestInfo(const GW::Constants::QuestID quest_id) {
         if (!RequestQuestInfo_Func) {
-            uintptr_t address = GW::Scanner::Find("\x68\x4a\x01\x00\x10\xff\x77\x04", "xxxxxxxx", 0x7a);
+            const uintptr_t address = GW::Scanner::Find("\x68\x4a\x01\x00\x10\xff\x77\x04", "xxxxxxxx", 0x7a);
             RequestQuestInfo_Func = (GetQuestInfo_pt)GW::Scanner::FunctionFromNearCall(address);
         }
         return RequestQuestInfo_Func ? RequestQuestInfo_Func(quest_id), true : false;
     }
 
-    bool GetQuestEntryGroupName(GW::Constants::QuestID quest_id, wchar_t* out, size_t out_len) {
-        auto quest = GW::QuestMgr::GetQuest(quest_id);
+    bool GetQuestEntryGroupName(const GW::Constants::QuestID quest_id, wchar_t* out, const size_t out_len) {
+        const auto quest = GW::QuestMgr::GetQuest(quest_id);
         switch (quest->log_state & 0xf0) {
         case 0x20:
             return swprintf(out, out_len, L"\x564") != -1;
@@ -564,7 +564,7 @@ void InfoWindow::Initialize() {
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&MessageCore_Entry,OnMessageCore);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) -> void {
+        [this](GW::HookStatus*, const GW::Packet::StoC::QuotedItemPrice* packet) -> void {
             quoted_item_id = packet->itemid;
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,OnInstanceLoad);
@@ -648,15 +648,15 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     InfoField("Instance Info Type", "%d", GW::Map::GetMapTypeInstanceInfo(map_info->type)->request_instance_map_type);
                     InfoField("Flags", "0x%X", map_info->flags);
                     InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
-                    GW::Vec2f pos = { (float)map_info->x,(float)map_info->y };
+                    GW::Vec2f pos = { static_cast<float>(map_info->x),static_cast<float>(map_info->y) };
                     InfoField("Map Pos", "%.2f, %.2f", pos.x, pos.y);
                     if (!pos.x) {
-                        pos.x = (float)(map_info->icon_start_x + (map_info->icon_end_x - map_info->icon_start_x) / 2);
-                        pos.y = (float)(map_info->icon_start_y + (map_info->icon_end_y - map_info->icon_start_y) / 2);
+                        pos.x = static_cast<float>(map_info->icon_start_x + (map_info->icon_end_x - map_info->icon_start_x) / 2);
+                        pos.y = static_cast<float>(map_info->icon_start_y + (map_info->icon_end_y - map_info->icon_start_y) / 2);
                     }
                     if (!pos.x) {
-                        pos.x = (float)(map_info->icon_start_x_dupe + (map_info->icon_end_x_dupe - map_info->icon_start_x_dupe) / 2);
-                        pos.y = (float)(map_info->icon_start_y_dupe + (map_info->icon_end_y_dupe - map_info->icon_start_y_dupe) / 2);
+                        pos.x = static_cast<float>(map_info->icon_start_x_dupe + (map_info->icon_end_x_dupe - map_info->icon_start_x_dupe) / 2);
+                        pos.y = static_cast<float>(map_info->icon_start_y_dupe + (map_info->icon_end_y_dupe - map_info->icon_start_y_dupe) / 2);
                     }
                     InfoField("Calculated Pos", "%.2f, %.2f", pos.x,pos.y);
                     static wchar_t name_enc[8];
@@ -747,7 +747,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::Text("Quests missing info: %d", quests_missing_info.size());
             ImGui::SameLine();
             if (ImGui::SmallButton("Request quest info")) {
-                for (auto& quest : quests_missing_info) {
+                for (const auto& quest : quests_missing_info) {
                     RequestQuestInfo(quest->quest_id);
                 }
             }
@@ -770,7 +770,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     const GW::AgentLiving* agent = a ? a->GetAsAgentLiving() : nullptr;
                     if (!(agent && agent->allegiance == GW::Constants::Allegiance::Enemy)) continue; // ignore non-hostiles
                     if (agent->GetIsDead()) continue; // ignore dead
-                    const float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
+                    const float sqrd = GetSquareDistance(player->pos, agent->pos);
                     if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor
                         || agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
                         if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
@@ -799,23 +799,23 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::End();
 #ifdef _DEBUG
     // For debugging changes to flags/arrays etc
-    GW::GameContext* g = GW::GetGameContext();
-    GW::GuildContext* gu = g->guild;
-    GW::CharContext* c = g->character;
-    GW::WorldContext* w = g->world;
-    GW::PartyContext* p = g->party;
-    GW::MapContext* m = g->map;
-    GW::AccountContext* acc = g->account;
-    GW::ItemContext* i = g->items;
-    GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-    GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
-    GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
+    const GW::GameContext* g = GW::GetGameContext();
+    const GW::GuildContext* gu = g->guild;
+    const GW::CharContext* c = g->character;
+    const GW::WorldContext* w = g->world;
+    const GW::PartyContext* p = g->party;
+    const GW::MapContext* m = g->map;
+    const GW::AccountContext* acc = g->account;
+    const GW::ItemContext* i = g->items;
+    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
+    const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+    const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
     (g || c || w || p || m || i || me || me_player || log || gu || ai || acc);
 #endif
 }
 
-void InfoWindow::Update(float delta) {
+void InfoWindow::Update(const float delta) {
     UNREFERENCED_PARAMETER(delta);
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         send_timer = TIMER_INIT();
@@ -906,7 +906,7 @@ void InfoWindow::RegisterSettingsContent()
     ToolboxWindow::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
         "Game Settings", ICON_FA_GAMEPAD,
-        [this](const std::string&, bool is_showing) {
+        [this](const std::string&, const bool is_showing) {
             if (is_showing)
                 DrawGameSettings();
         },

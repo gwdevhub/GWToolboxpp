@@ -174,7 +174,7 @@ void MaterialsWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TransactionDone>(
         &TransactionDone_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::TransactionDone* pak) -> void {
+        [this](GW::HookStatus*, const GW::Packet::StoC::TransactionDone* pak) -> void {
             UNREFERENCED_PARAMETER(pak);
             if (transactions.empty())
                 return;
@@ -184,7 +184,7 @@ void MaterialsWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemStreamEnd>(
         &ItemStreamEnd_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::ItemStreamEnd* pak) -> void {
+        [this](GW::HookStatus*, const GW::Packet::StoC::ItemStreamEnd* pak) -> void {
             // @Remark: unk1 = 13 means "selling" tab
             if (pak->unk1 != 12)
                 return;

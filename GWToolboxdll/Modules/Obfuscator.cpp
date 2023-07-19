@@ -27,8 +27,8 @@
 #include <random>
 #include <Modules/Obfuscator.h>
 
-#define ONLY_CURRENT_PLAYER 1;
-// #define DETECT_STREAMING_APPLICATION 1;
+constexpr auto ONLY_CURRENT_PLAYER = 1;
+constexpr auto DETECT_STREAMING_APPLICATION = 1;
 #ifdef DETECT_STREAMING_APPLICATION
 #include <Psapi.h>
 #endif
@@ -300,7 +300,7 @@ namespace {
         return *player_name_start_p && *player_name_end_p;
     }
 
-    bool ObfuscateName(const std::wstring& _original_name, std::wstring& out, const bool force = false)
+    bool ObfuscateName(const std::wstring& _original_name, std::wstring& out, [[maybe_unused]] const bool force = false)
     {
         std::wstring original_name = GuiUtils::SanitizePlayerName(_original_name);
         if (_original_name.empty()) {

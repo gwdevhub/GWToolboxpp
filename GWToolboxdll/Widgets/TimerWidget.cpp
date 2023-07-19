@@ -113,7 +113,7 @@ void TimerWidget::Initialize()
     ToolboxWidget::Initialize();
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
-                                                                        [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) -> void {
+                                                                        [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) -> void {
                                                                             if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish)
                                                                                 return;
                                                                             if (packet->message[1] != 0x5765)
@@ -368,7 +368,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice)
             ImGui::PopFont();
         }
 
-        auto drawTimer = [](char* buffer, ImColor* extra_color = nullptr) {
+        auto drawTimer = [](const char* buffer, const ImColor* extra_color = nullptr) {
             ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_label));
             const ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));

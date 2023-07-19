@@ -391,7 +391,7 @@ namespace {
         }
     }
 
-    void CmdSkillStatistics(const wchar_t* message, const int argc, LPWSTR* argv)
+    void CmdSkillStatistics(const wchar_t* message, const int argc, const LPWSTR* argv)
     {
         UNREFERENCED_PARAMETER(message);
 
@@ -524,7 +524,7 @@ void PartyStatisticsWindow::Initialize()
 
     /* Skill on self or party player */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
-        &GenericValueSelf_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) -> void {
+        &GenericValueSelf_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValue* packet) -> void {
             UNREFERENCED_PARAMETER(status);
 
             const uint32_t value_id = packet->value_id;
@@ -537,7 +537,7 @@ void PartyStatisticsWindow::Initialize()
 
     /* Skill on enemy player */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
-                                                                           [this](GW::HookStatus* status, GW::Packet::StoC::GenericValueTarget* packet) -> void {
+                                                                           [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
                                                                                UNREFERENCED_PARAMETER(status);
 
                                                                                const uint32_t value_id = packet->Value_id;

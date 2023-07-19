@@ -138,7 +138,7 @@ namespace {
         delete[] title;
     }
 
-    void SendEncodedToastMessage(const wchar_t* title, const wchar_t* encoded_message)
+    void SendEncodedToastMessage(const wchar_t* title, wchar_t* encoded_message)
     {
         if (!(encoded_message && encoded_message[0]))
             return;

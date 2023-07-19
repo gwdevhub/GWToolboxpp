@@ -24,8 +24,8 @@
 #include <Modules/Resources.h>
 #include <Windows/TravelWindow.h>
 
-#define N_OUTPOSTS 180
-#define N_DISTRICTS 14
+constexpr auto N_OUTPOSTS = 180;
+constexpr auto N_DISTRICTS = 14;
 
 namespace {
     bool outpost_name_array_getter(void* data, int idx, const char** out_text);
@@ -881,7 +881,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
     float nearest_distance = FLT_MAX;
     auto nearest_map_id = GW::Constants::MapID::None;
 
-    auto get_pos = [](GW::AreaInfo* map) {
+    auto get_pos = [](const GW::AreaInfo* map) {
         GW::Vec2f pos = {static_cast<float>(map->x), static_cast<float>(map->y)};
         if (!pos.x) {
             pos.x = static_cast<float>(map->icon_start_x + (map->icon_end_x - map->icon_start_x) / 2);
@@ -1532,7 +1532,7 @@ GW::Constants::MapID TravelWindow::IndexToOutpostID(const int index)
     }
 }
 
-void TravelWindow::CmdTP(const wchar_t* message, const int argc, LPWSTR* argv)
+void TravelWindow::CmdTP(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     UNREFERENCED_PARAMETER(message);
     // zero argument error
@@ -1622,7 +1622,7 @@ void TravelWindow::CmdTP(const wchar_t* message, const int argc, LPWSTR* argv)
     Log::Error("[Error] Did not recognize outpost '%ls'", argOutpost.c_str());
 }
 
-bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, uint32_t& number)
+bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t& number)
 {
     UNREFERENCED_PARAMETER(number);
     // By Map ID e.g. "/tp 77" for house zu heltzer

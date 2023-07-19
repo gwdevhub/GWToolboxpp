@@ -62,14 +62,14 @@ private:
     float text_width = 200.0f;
     int daily_quest_window_count = 90;
 
-    static void CmdWeeklyBonus(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdWantedByShiningBlade(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdZaishenBounty(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdZaishenMission(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdZaishenCombat(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdZaishenVanquish(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdVanguard(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdNicholas(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdWeeklyBonus(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdWantedByShiningBlade(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdZaishenBounty(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdZaishenMission(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdZaishenCombat(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdZaishenVanquish(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdVanguard(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdNicholas(const wchar_t* message, int argc, const LPWSTR* argv);
 
     class ZaishenMission {
         ZaishenMission(GW::Constants::QuestID _quest_id, GW::Constants::MapID _map_id);

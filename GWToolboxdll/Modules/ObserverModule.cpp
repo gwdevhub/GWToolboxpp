@@ -26,8 +26,8 @@
 
 #include <Logger.h>
 
-#define INI_FILENAME L"observerlog.ini"
-#define IniSection "observer"
+constexpr auto INI_FILENAME = L"observerlog.ini";
+constexpr auto IniSection = "observer";
 
 
 namespace ObserverLabel {
@@ -116,7 +116,7 @@ void ObserverModule::Initialize()
         });
 
     GW::StoC::RegisterPacketCallback<JumboMessage>(
-        &JumboMessage_Entry, [this](GW::HookStatus* status, JumboMessage* packet) -> void {
+        &JumboMessage_Entry, [this](const GW::HookStatus* status, const JumboMessage* packet) -> void {
             UNREFERENCED_PARAMETER(status);
             UNREFERENCED_PARAMETER(packet);
             if (!IsActive())
@@ -127,7 +127,7 @@ void ObserverModule::Initialize()
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(
-        &AgentState_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::AgentState* packet) -> void {
+        &AgentState_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::AgentState* packet) -> void {
             UNREFERENCED_PARAMETER(status);
             if (!IsActive())
                 return;
@@ -138,7 +138,7 @@ void ObserverModule::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(
         &AgentAdd_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
+        [this](const GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet) -> void {
             UNREFERENCED_PARAMETER(status);
             if (!IsActive())
                 return;
@@ -149,7 +149,7 @@ void ObserverModule::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentProjectileLaunched>(
         &AgentProjectileLaunched_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::AgentProjectileLaunched* packet) -> void {
+        [this](const GW::HookStatus* status, const GW::Packet::StoC::AgentProjectileLaunched* packet) -> void {
             UNREFERENCED_PARAMETER(status);
             if (!IsActive())
                 return;
@@ -160,7 +160,7 @@ void ObserverModule::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(
         &GenericModifier_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::GenericModifier* packet) -> void {
+        [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericModifier* packet) -> void {
             UNREFERENCED_PARAMETER(status);
             if (!IsActive())
                 return;
@@ -177,7 +177,7 @@ void ObserverModule::Initialize()
     );
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
-                                                                           [this](GW::HookStatus* status, GW::Packet::StoC::GenericValueTarget* packet) -> void {
+                                                                           [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
                                                                                UNREFERENCED_PARAMETER(status);
                                                                                if (!IsActive())
                                                                                    return;
@@ -193,7 +193,7 @@ void ObserverModule::Initialize()
                                                                            });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry,
-                                                                     [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) -> void {
+                                                                     [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValue* packet) -> void {
                                                                          UNREFERENCED_PARAMETER(status);
                                                                          if (!IsActive())
                                                                              return;
@@ -209,7 +209,7 @@ void ObserverModule::Initialize()
                                                                      });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericFloat>(
-        &GenericFloat_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericFloat* packet) -> void {
+        &GenericFloat_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericFloat* packet) -> void {
             UNREFERENCED_PARAMETER(status);
             if (!IsActive())
                 return;
@@ -246,7 +246,7 @@ const bool ObserverModule::IsActive()
 
 
 // Handle InstanceLoadInfo Packet
-void ObserverModule::HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet)
+void ObserverModule::HandleInstanceLoadInfo(const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* packet)
 {
     UNREFERENCED_PARAMETER(status);
     UNREFERENCED_PARAMETER(packet);

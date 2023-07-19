@@ -91,7 +91,7 @@ public:
     [[nodiscard]] const char* BuildName(unsigned int idx) const;
     [[nodiscard]] unsigned int BuildCount() const { return teambuilds.size(); }
 
-    static void CmdHeroTeamBuild(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdHeroTeamBuild(const wchar_t* message, int argc, const LPWSTR* argv);
 
 private:
     bool hide_when_entering_explorable = false;
@@ -105,7 +105,7 @@ private:
     void Send(const TeamHeroBuild& tbuild);
     void View(const TeamHeroBuild& tbuild, unsigned int idx);
     static void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
-    TeamHeroBuild* GetTeambuildByName(std::string& argBuildname);
+    TeamHeroBuild* GetTeambuildByName(const std::string& argBuildname);
 
     // Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.
     static GW::HeroPartyMember* GetPartyHeroByID(GW::Constants::HeroID hero_id, size_t* out_hero_index);

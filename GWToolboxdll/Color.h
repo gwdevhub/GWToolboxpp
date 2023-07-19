@@ -39,7 +39,7 @@ namespace Colors {
     static Color Yellow() { return RGB(0xFF, 0xFF, 0x0); }
     static Color Blue() { return RGB(0x0, 0x0, 0xFF); }
 
-    static Color Load(ToolboxIni* ini, const char* section, const char* key, const Color def)
+    static Color Load(const ToolboxIni* ini, const char* section, const char* key, const Color def)
     {
         const char* wc = ini->GetValue(section, key, nullptr);
         if (wc == nullptr)

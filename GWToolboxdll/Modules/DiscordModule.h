@@ -60,7 +60,7 @@ public:
 
     void UpdateActivity();
 
-    void InviteUser(DiscordUser* user);
+    void InviteUser(const DiscordUser* user);
     static void FailedJoin(const char* error_msg);
     void JoinParty();
     static bool IsInJoinablePartyMap();

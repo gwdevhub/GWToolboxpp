@@ -29,8 +29,6 @@
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
 
-#define countof(arr) (sizeof(arr) / sizeof(arr[0]))
-
 constexpr uint32_t TIME_UNKNOWN(static_cast<uint32_t>(-1));
 unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
 
@@ -224,19 +222,19 @@ void ObjectiveTimerWindow::Initialize()
     // e.g. InstanceLoadInfo comes in before InstanceTimer which means the run start is whacked out
     // keep track of the packets and only trigger relevent events when the needed packets are in.
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
-                                                                             [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo* packet) {
+                                                                             [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet) {
                                                                                  InstanceLoadInfo = new GW::Packet::StoC::InstanceLoadInfo;
                                                                                  memcpy(InstanceLoadInfo, packet, sizeof(GW::Packet::StoC::InstanceLoadInfo));
                                                                                  CheckIsMapLoaded();
                                                                              });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
-        &InstanceLoadFile_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadFile* packet) {
+        &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile* packet) {
             InstanceLoadFile = new GW::Packet::StoC::InstanceLoadFile;
             memcpy(InstanceLoadFile, packet, sizeof(GW::Packet::StoC::InstanceLoadFile));
             CheckIsMapLoaded();
         });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceTimer>(
-        &InstanceLoadFile_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceTimer* packet) {
+        &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceTimer* packet) {
             InstanceTimer = new GW::Packet::StoC::InstanceTimer;
             memcpy(InstanceTimer, packet, sizeof(GW::Packet::StoC::InstanceTimer));
             CheckIsMapLoaded();
@@ -286,12 +284,12 @@ void ObjectiveTimerWindow::Initialize()
                                                                           Event(EventType::ServerMessage, wcslen(msg), msg);
                                                                       });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
-                                                                        [this](GW::HookStatus*, GW::Packet::StoC::DisplayDialogue* packet) {
+                                                                        [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
                                                                             // NB: All GW strings are null terminated, use wcslen to avoid having to check all 122 chars
                                                                             Event(EventType::DisplayDialogue, wcslen(packet->message), packet->message);
                                                                         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
-        &ManipulateMapObject_Entry, [this](GW::HookStatus*, GW::Packet::StoC::ManipulateMapObject* packet) {
+        &ManipulateMapObject_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ManipulateMapObject* packet) {
             if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
                 if (packet->animation_type == 16 && packet->animation_stage == 2) {
                     Event(EventType::DoorOpen, packet->object_id);
@@ -303,15 +301,15 @@ void ObjectiveTimerWindow::Initialize()
             }
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(
-        &ObjectiveUpdateName_Entry, [this](GW::HookStatus*, GW::Packet::StoC::ObjectiveUpdateName* packet) {
+        &ObjectiveUpdateName_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveUpdateName* packet) {
             Event(EventType::ObjectiveStarted, packet->objective_id);
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(
-        &ObjectiveDone_Entry, [this](GW::HookStatus*, GW::Packet::StoC::ObjectiveDone* packet) {
+        &ObjectiveDone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* packet) {
             Event(EventType::ObjectiveDone, packet->objective_id);
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
-        &AgentUpdateAllegiance_Entry, [this](GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance* packet) {
+        &AgentUpdateAllegiance_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::AgentUpdateAllegiance* packet) {
             if (const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id)) {
                 if (const GW::AgentLiving* agentliving = agent->GetAsAgentLiving()) {
                     Event(EventType::AgentUpdateAllegiance, agentliving->player_number, packet->allegiance_bits);
@@ -319,7 +317,7 @@ void ObjectiveTimerWindow::Initialize()
             }
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(
-        &DoACompleteZone_Entry, [this](GW::HookStatus*, GW::Packet::StoC::DoACompleteZone* packet) {
+        &DoACompleteZone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DoACompleteZone* packet) {
             if (packet->message[0] == 0x8101) {
                 Event(EventType::DoACompleteZone, packet->message[1]);
             }
@@ -1294,7 +1292,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Update()
     if (!active)
         return;
 
-    for (Objective* obj : objectives) {
+    for (const Objective* obj : objectives) {
         obj->Update();
     }
 }

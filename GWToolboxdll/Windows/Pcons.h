@@ -63,7 +63,7 @@ public:
     virtual void Update(int delay = -1);
     // Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.
     // Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
-    static uint32_t MoveItem(GW::Item* item, GW::Bag* bag, size_t slot,
+    static uint32_t MoveItem(const GW::Item* item, GW::Bag* bag, size_t slot,
                              size_t quantity = 0);
     wchar_t* SetPlayerName();
     // Pass true to start refill, or false to stop.
@@ -75,7 +75,7 @@ public:
     void Toggle() { SetEnabled(!IsEnabled()); }
     // Resets pcon counters so it needs to recalc number and refill.
     void ResetCounts();
-    void LoadSettings(ToolboxIni* ini, const char* section);
+    void LoadSettings(const ToolboxIni* ini, const char* section);
     void SaveSettings(ToolboxIni* ini, const char* section);
 
     bool* enabled{}; // This is a ptr to the current char's status if applicable.
@@ -98,7 +98,7 @@ public:
 protected:
     std::string desc;
     // Cycles through character's inventory to find a matching (incomplete) stack, or an empty pane.
-    static GW::Item* FindVacantStackOrSlotInInventory(GW::Item* likeItem = nullptr);
+    static GW::Item* FindVacantStackOrSlotInInventory(const GW::Item* likeItem = nullptr);
     GW::AgentLiving* player = nullptr;
 
     // "default" is the fallback

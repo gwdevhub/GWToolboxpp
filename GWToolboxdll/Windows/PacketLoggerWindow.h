@@ -32,7 +32,7 @@ public:
     void SaveMessageLog() const;
     void ClearMessageLog();
     void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet);
-    void CtoSHandler(GW::HookStatus* status, void* packet);
+    void CtoSHandler(const GW::HookStatus* status, void* packet);
     static std::string PadLeft(std::string input, uint8_t count, char c);
     std::string PrefixTimestamp(std::string message);
 

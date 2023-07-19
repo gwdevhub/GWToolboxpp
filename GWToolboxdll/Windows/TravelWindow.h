@@ -52,14 +52,14 @@ public:
     static int LanguageFromDistrict(GW::Constants::District district);
     static GW::Constants::MapID GetNearestOutpost(GW::Constants::MapID map_to);
 
-    static void CmdTP(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdTP(const wchar_t* message, int argc, const LPWSTR* argv);
 
 private:
     // ==== Helpers ====
     void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);
     static GW::Constants::MapID IndexToOutpostID(int index);
     static bool ParseDistrict(const std::wstring& s, GW::Constants::District& district, uint32_t& number);
-    static bool ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, uint32_t& number);
+    static bool ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t& number);
 
     // ==== Travel variables ====
     GW::Constants::District district = GW::Constants::District::Current;

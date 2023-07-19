@@ -76,7 +76,7 @@ public:
     // Checks model info and struct info to make sure item is the same.
     static bool IsSameItem(const GW::Item* item1, const GW::Item* item2);
 
-    static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
+    static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, const GW::Bag* bag);
     static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
     static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
 
@@ -215,8 +215,8 @@ public:
         }
     };
 
-    Item* GetNextUnsalvagedItem(Item* salvage_kit = nullptr, Item* start_after_item = nullptr);
-    Item* GetNextUnidentifiedItem(Item* start_after_item = nullptr);
+    Item* GetNextUnsalvagedItem(Item* salvage_kit = nullptr, const Item* start_after_item = nullptr);
+    Item* GetNextUnidentifiedItem(const Item* start_after_item = nullptr);
     void Identify(Item* item, Item* kit);
     void Salvage(Item* item, Item* kit);
 

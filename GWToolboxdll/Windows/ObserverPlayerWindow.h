@@ -4,8 +4,6 @@
 
 #include <ToolboxWindow.h>
 
-#define NO_AGENT 0
-
 class ObserverPlayerWindow : public ToolboxWindow {
 protected:
     ObserverPlayerWindow() = default;

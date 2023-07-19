@@ -16,8 +16,8 @@ public:
 
     void Invalidate() override;
     void Terminate() override;
-    void PacketCallback(GW::Packet::StoC::GenericValue* pak);
-    void PacketCallback(GW::Packet::StoC::GenericValueTarget* pak);
+    void PacketCallback(const GW::Packet::StoC::GenericValue* pak);
+    void PacketCallback(const GW::Packet::StoC::GenericValueTarget* pak);
     void PacketCallback(GW::Packet::StoC::PlayEffect* pak);
 
     static void LoadDefaults();

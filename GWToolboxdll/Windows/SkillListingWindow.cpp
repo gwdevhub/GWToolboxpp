@@ -14,7 +14,7 @@
 
 static uintptr_t skill_array_addr;
 
-static void printchar(wchar_t c) {
+static void printchar(const wchar_t c) {
     if (c >= L' ' && c <= L'~') {
         printf("%lc", c);
     }
@@ -74,10 +74,10 @@ void SkillListingWindow::ExportToJSON() {
     nlohmann::json json;
     for (size_t i = 0; i < skills.size(); i++) {
         if (!skills[i]) continue;
-        json[(uint32_t)skills[i]->skill->skill_id] = skills[i]->ToJson();
+        json[static_cast<uint32_t>(skills[i]->skill->skill_id)] = skills[i]->ToJson();
     }
-    auto file_location = Resources::GetPath(L"skills.json");
-    if (std::filesystem::exists(file_location)) {
+    const auto file_location = Resources::GetPath(L"skills.json");
+    if (exists(file_location)) {
         std::filesystem::remove(file_location);
     }
 
@@ -86,9 +86,9 @@ void SkillListingWindow::ExportToJSON() {
     out.close();
     wchar_t file_location_wc[512];
     size_t msg_len = 0;
-    auto message = file_location.wstring();
+    const auto message = file_location.wstring();
 
-    size_t max_len = _countof(file_location_wc) - 1;
+    const size_t max_len = _countof(file_location_wc) - 1;
 
     for (size_t i = 0; i < message.length(); i++) {
         // Break on the end of the message
@@ -104,14 +104,14 @@ void SkillListingWindow::ExportToJSON() {
     file_location_wc[msg_len] = 0;
     wchar_t chat_message[1024];
     swprintf(chat_message, _countof(chat_message), L"Skills exported to <a=1>\x200C%s</a>", file_location_wc);
-    GW::Chat::WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
+    WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 void SkillListingWindow::Initialize() {
     ToolboxWindow::Initialize();
-    skills.resize((size_t)GW::Constants::SkillID::Count,0);
+    skills.resize(static_cast<size_t>(GW::Constants::SkillID::Count),0);
     for (size_t i = 0; i < skills.size(); i++) {
-        GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)i);
-        if (!s || s->skill_id == (GW::Constants::SkillID)0) continue;
+        GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(i));
+        if (!s || s->skill_id == static_cast<GW::Constants::SkillID>(0)) continue;
         skills[i] = new Skill(s);
     }
 }
@@ -167,7 +167,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::SameLine(offset += long_text_width);
         ImGui::Text("%d", skills[i]->skill->attribute);
         ImGui::SameLine(offset += tiny_text_width);
-        ImGui::Text("%s", GW::Constants::GetProfessionAcronym((GW::Constants::Profession)skills[i]->skill->profession));
+        ImGui::Text("%s", GetProfessionAcronym(static_cast<GW::Constants::Profession>(skills[i]->skill->profession)));
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%d", skills[i]->skill->type);
         ImGui::SameLine();
@@ -177,7 +177,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
             char* url = new char[128];
             snprintf(url, 128, "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skills[i]->skill->skill_id);
             GW::GameThread::Enqueue([url]() {
-                GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, url);
+                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, url);
                 delete[] url;
                 });
         }
@@ -221,7 +221,7 @@ nlohmann::json SkillListingWindow::Skill::ToJson() {
 }
 const std::wstring SkillListingWindow::Skill::GetSkillType() {
     std::wstring str(IsElite() ? L"Elite " : L"");
-    switch ((uint32_t)skill->type) {
+    switch (static_cast<uint32_t>(skill->type)) {
         case 3:
             return str += L"Stance", str;
         case 4:

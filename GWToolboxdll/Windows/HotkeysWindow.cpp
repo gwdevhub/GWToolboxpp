@@ -95,15 +95,15 @@ namespace {
     // Repopulates applicable_hotkeys based on current character/map context.
     // Used because its not necessary to check these vars on every keystroke, only when they change
     bool CheckSetValidHotkeys() {
-        auto c = GW::GetCharContext();
+        const auto c = GW::GetCharContext();
         if (!c) return false;
         GW::Player* me = GW::PlayerMgr::GetPlayerByID(c->player_number);
         if (!me) return false;
-        std::string player_name = GuiUtils::WStringToString(c->player_name);
-        GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
-        GW::Constants::MapID map_id = GW::Map::GetMapID();
-        GW::Constants::Profession primary = (GW::Constants::Profession)me->primary;
-        bool is_pvp = IsPvPCharacter();
+        const std::string player_name = GuiUtils::WStringToString(c->player_name);
+        const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+        const GW::Constants::MapID map_id = GW::Map::GetMapID();
+        const GW::Constants::Profession primary = static_cast<GW::Constants::Profession>(me->primary);
+        const bool is_pvp = IsPvPCharacter();
         valid_hotkeys.clear();
         by_profession.clear();
         by_map.clear();
@@ -121,7 +121,7 @@ namespace {
                     by_profession[i] = std::vector<TBHotkey*>();
                 by_profession[i].push_back(hotkey);
             }
-            for (auto h_map_id : hotkey->map_ids) {
+            for (const auto h_map_id : hotkey->map_ids) {
                 if (!by_map.contains(h_map_id))
                     by_map[h_map_id] = std::vector<TBHotkey*>();
                 by_map[h_map_id].push_back(hotkey);
@@ -145,7 +145,7 @@ namespace {
             return false;
         if (!GW::Agents::GetPlayerAsAgentLiving())
             return false;
-        GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
+        const GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
         if (mt == GW::Constants::InstanceType::Loading)
             return false;
         if (!CheckSetValidHotkeys())
@@ -168,7 +168,7 @@ namespace {
     }
     
     // Called in Update loop after WM_ACTIVATE has been received via WndProc
-    bool OnWindowActivated(bool activated) {
+    bool OnWindowActivated(const bool activated) {
         if (!IsMapReady())
             return false;
         if (!GW::Agents::GetPlayerAsAgentLiving())
@@ -205,7 +205,7 @@ const TBHotkey* HotkeysWindow::CurrentHotkey() {
 
 void HotkeysWindow::Terminate() {
     ToolboxWindow::Terminate();
-    for (TBHotkey* hotkey : hotkeys) {
+    for (const TBHotkey* hotkey : hotkeys) {
         delete hotkey;
     }
     hotkeys.clear();
@@ -301,7 +301,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 
         // === each hotkey ===
         block_hotkeys = false;
-        const auto draw_hotkeys_vec = [&](std::vector<TBHotkey*>& in) -> bool {
+        const auto draw_hotkeys_vec = [&](const std::vector<TBHotkey*>& in) -> bool {
             bool these_hotkeys_changed = false;
             for (unsigned int i = 0; i < in.size(); ++i) {
                 TBHotkey::Op op = TBHotkey::Op_None;
@@ -444,7 +444,7 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini) {
     TBHotkey::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);
 
     // clear hotkeys from toolbox
-    for (TBHotkey* hotkey : hotkeys) {
+    for (const TBHotkey* hotkey : hotkeys) {
         delete hotkey;
     }
     hotkeys.clear();
@@ -452,7 +452,7 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini) {
     // then load again
     ToolboxIni::TNamesDepend entries;
     ini->GetAllSections(entries);
-    for (ToolboxIni::Entry& entry : entries) {
+    for (const ToolboxIni::Entry& entry : entries) {
         TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
         if (hk) hotkeys.push_back(hk);
     }
@@ -468,7 +468,7 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini) {
         // clear hotkeys from ini
         ToolboxIni::TNamesDepend entries;
         ini->GetAllSections(entries);
-        for (ToolboxIni::Entry& entry : entries) {
+        for (const ToolboxIni::Entry& entry : entries) {
             if (strncmp(entry.pItem, "hotkey-", 7) == 0) {
                 ini->Delete(entry.pItem, nullptr);
             }
@@ -483,7 +483,7 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini) {
     }
 }
 
-bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM) {
+bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM) {
     if (Message == WM_ACTIVATE) {
         OnWindowActivated(wParam != WA_INACTIVE);
         return false;
@@ -574,7 +574,7 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM) {
     }
 }
 
-void HotkeysWindow::Update(float delta) {
+void HotkeysWindow::Update(const float delta) {
     UNREFERENCED_PARAMETER(delta);
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         if (map_change_triggered)

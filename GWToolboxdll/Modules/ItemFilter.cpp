@@ -44,7 +44,7 @@ namespace {
     std::map<ItemModelID, std::string> dont_hide_for_player{};
     std::map<ItemModelID, std::string> dont_hide_for_party{};
 
-    void OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd*);
+    void OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd*);
     void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove*);
     void OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
     void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID*);
@@ -264,7 +264,7 @@ namespace {
         return false;
     }
 
-    void OnAgentAdd(GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet)
+    void OnAgentAdd(GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet)
     {
         const auto* item = GetItemFromPacket(*packet);
         if (!item)

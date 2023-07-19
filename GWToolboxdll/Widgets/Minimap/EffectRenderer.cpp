@@ -225,7 +225,7 @@ void EffectRenderer::RemoveTriggeredEffect(const uint32_t effect_id, GW::Vec2f* 
     }
 }
 
-void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak)
+void EffectRenderer::PacketCallback(const GW::Packet::StoC::GenericValue* pak)
 {
     if (!initialized)
         return;
@@ -243,7 +243,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak)
     aoe_effects.push_back(new Effect(pak->value, caster->pos.x, caster->pos.y, settings->duration, settings->range, &settings->color));
 }
 
-void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak)
+void EffectRenderer::PacketCallback(const GW::Packet::StoC::GenericValueTarget* pak)
 {
     if (!initialized)
         return;

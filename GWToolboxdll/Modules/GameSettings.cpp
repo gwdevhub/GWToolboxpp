@@ -584,11 +584,11 @@ namespace {
         if (!IsOutpost()) {
             return pending_reinvite.reset();
         }
-        if (TIMER_DIFF(pending_reinvite.start_ts) > 2000) {
+        if (TIMER_DIFF(static_cast<clock_t>(pending_reinvite.start_ts)) > 2000) {
             // Timeout (map change etc)
             return pending_reinvite.reset();
         }
-        GW::Player* first_player = nullptr;
+        const GW::Player* first_player = nullptr;
         const GW::Player* next_player = nullptr;
         const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
         if (!me) {
@@ -988,7 +988,7 @@ namespace {
 
     GW::HookEntry OnQuestUIMessage_HookEntry;
 
-    void OnPostQuestUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void*, void*)
+    void OnPostQuestUIMessage(const GW::HookStatus* status, const GW::UI::UIMessage message_id, void*, void*)
     {
         switch (message_id) {
             case GW::UI::UIMessage::kSendSetActiveQuest:
@@ -1329,7 +1329,7 @@ void GameSettings::Initialize()
     // Trigger for message on party change
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(
         &PartyPlayerRemove_Entry,
-        [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerRemove*) {
+        [&](const GW::HookStatus* status, GW::Packet::StoC::PartyPlayerRemove*) {
             UNREFERENCED_PARAMETER(status);
             check_message_on_party_change = true;
         });
@@ -2116,7 +2116,7 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::Playe
 }
 
 // Auto accept invitations, flash window on received party invite
-void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* packet) const
+void GameSettings::OnPartyInviteReceived(const GW::HookStatus* status, const GW::Packet::StoC::PartyInviteReceived_Create* packet) const
 {
     UNREFERENCED_PARAMETER(status);
     if (status->blocked)
@@ -2141,7 +2141,7 @@ void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::Sto
 }
 
 // Flash window on player added
-void GameSettings::OnPartyPlayerJoined(GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd* packet)
+void GameSettings::OnPartyPlayerJoined(const GW::HookStatus* status, const GW::Packet::StoC::PartyPlayerAdd* packet)
 {
     UNREFERENCED_PARAMETER(status);
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
@@ -2171,7 +2171,7 @@ void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue
 }
 
 // Block annoying tonic sounds/effects from other players
-void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak)
+void GameSettings::OnAgentEffect(GW::HookStatus* status, const GW::Packet::StoC::GenericValue* pak)
 {
     if (pak->agent_id != GW::Agents::GetPlayerId()) {
         switch (pak->value) {
@@ -2200,7 +2200,7 @@ void GameSettings::OnAgentEffect(GW::HookStatus* status, GW::Packet::StoC::Gener
 
 // Block Ghost in the box spawn animation & sound
 // Block sparkly item animation
-void GameSettings::OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet) const
+void GameSettings::OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd* packet) const
 {
     if (block_sparkly_drops_effect && packet->type == 4 && packet->agent_type < 0xFFFFFF) {
         GW::Item* item = GW::Items::GetItemById(packet->agent_type);
@@ -2222,7 +2222,7 @@ void GameSettings::OnAgentAdd(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packe
 }
 
 // Block ghost in the box death animation & sound
-void GameSettings::OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet) const
+void GameSettings::OnUpdateAgentState(GW::HookStatus* status, const GW::Packet::StoC::AgentState* packet) const
 {
     // @Cleanup: Not found an elegent way to do this; prematurely destroying the agent will crash the client when the id it recycled. Disable for now, here for reference.
     if (packet->state == 0x10 && false) {
@@ -2249,7 +2249,7 @@ void GameSettings::OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::
 }
 
 // Apply Collector's Edition animations on player dancing,
-void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak) const
+void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak) const
 {
     if (!(pak->agent_id == GW::Agents::GetPlayerId() && collectors_edition_emotes))
         return;
@@ -2311,7 +2311,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
 }
 
 // Show a message when player leaves the outpost
-void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, GW::Packet::StoC::PlayerLeaveInstance* pak) const
+void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC::PlayerLeaveInstance* pak) const
 {
     if (!notify_when_players_leave_outpost && !notify_when_friends_leave_outpost)
         return; // Dont notify about player leaving
@@ -2332,7 +2332,7 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, GW::Packet::StoC::Play
 }
 
 // Automatically return to outpost on defeat
-void GameSettings::OnPartyDefeated(GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*)
+void GameSettings::OnPartyDefeated(const GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*)
 {
     UNREFERENCED_PARAMETER(status);
     if (!auto_return_on_defeat || !GW::PartyMgr::GetIsLeader())
@@ -2341,7 +2341,7 @@ void GameSettings::OnPartyDefeated(GW::HookStatus* status, GW::Packet::StoC::Par
 }
 
 // Automatically send /age2 on /age.
-void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) const
+void GameSettings::OnServerMessage(const GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) const
 {
     UNREFERENCED_PARAMETER(status);
     if (!auto_age2_on_age || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL)
@@ -2356,7 +2356,7 @@ void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
 
 
 // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
-void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) const
+void GameSettings::OnLocalChatMessage(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak) const
 {
     if (status->blocked)
         return; // Sender blocked, packet handled.
@@ -2392,7 +2392,7 @@ void GameSettings::OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::
 }
 
 // Automatic /age on vanquish
-void GameSettings::OnVanquishComplete(GW::HookStatus* status, GW::Packet::StoC::VanquishComplete*) const
+void GameSettings::OnVanquishComplete(const GW::HookStatus* status, GW::Packet::StoC::VanquishComplete*) const
 {
     UNREFERENCED_PARAMETER(status);
     if (!auto_age_on_vanquish)
@@ -2407,7 +2407,7 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 }
 
 // Flash/focus window on trade
-void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::TradeStart*) const
+void GameSettings::OnTradeStarted(const GW::HookStatus* status, GW::Packet::StoC::TradeStart*) const
 {
     if (status->blocked)
         return;
@@ -2418,7 +2418,7 @@ void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::Trad
 }
 
 // Stop screen shake from aftershock etc
-void GameSettings::OnScreenShake(GW::HookStatus* status, void* packet) const
+void GameSettings::OnScreenShake(GW::HookStatus* status, const void* packet) const
 {
     UNREFERENCED_PARAMETER(packet);
     if (stop_screen_shake)
@@ -2426,7 +2426,7 @@ void GameSettings::OnScreenShake(GW::HookStatus* status, void* packet) const
 }
 
 // Automatically skip cinematics, flash window on cinematic
-void GameSettings::OnCinematic(GW::HookStatus* status, GW::Packet::StoC::CinematicPlay* packet) const
+void GameSettings::OnCinematic(const GW::HookStatus* status, const GW::Packet::StoC::CinematicPlay* packet) const
 {
     UNREFERENCED_PARAMETER(status);
     if (packet->play && auto_skip_cinematic) {
@@ -2438,7 +2438,7 @@ void GameSettings::OnCinematic(GW::HookStatus* status, GW::Packet::StoC::Cinemat
 }
 
 // Flash/focus window on zoning
-void GameSettings::OnMapTravel(GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) const
+void GameSettings::OnMapTravel(const GW::HookStatus* status, const GW::Packet::StoC::GameSrvTransfer* pak) const
 {
     UNREFERENCED_PARAMETER(status);
     if (flash_window_on_zoning)

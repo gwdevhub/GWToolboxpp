@@ -46,7 +46,7 @@ void PartyDamage::Initialize() {
         damage[i].recent_damage = 0;
         damage[i].last_damage = TIMER_INIT();
     }
-    party_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID_PartyWindow);
+    party_window_position = GetWindowPosition(GW::UI::WindowID_PartyWindow);
 }
 
 void PartyDamage::Terminate() {
@@ -58,7 +58,7 @@ void PartyDamage::Terminate() {
     }
 }
 
-void PartyDamage::MapLoadedCallback(GW::HookStatus *, GW::Packet::StoC::MapLoaded *packet) {
+void PartyDamage::MapLoadedCallback(GW::HookStatus *, const GW::Packet::StoC::MapLoaded *packet) {
     UNREFERENCED_PARAMETER(packet);
     switch (GW::Map::GetInstanceType()) {
     case GW::Constants::InstanceType::Outpost:
@@ -77,7 +77,7 @@ void PartyDamage::MapLoadedCallback(GW::HookStatus *, GW::Packet::StoC::MapLoade
     }
 }
 
-void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::GenericModifier* packet) {
+void PartyDamage::DamagePacketCallback(GW::HookStatus *, const GW::Packet::StoC::GenericModifier* packet) {
     // ignore non-damage packets
     switch (packet->type) {
     case GW::Packet::StoC::P156_Type::damage:
@@ -158,7 +158,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
     }
 }
 
-void PartyDamage::Update(float delta) {
+void PartyDamage::Update(const float delta) {
     UNREFERENCED_PARAMETER(delta);
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         send_timer = TIMER_INIT();
@@ -186,7 +186,7 @@ void PartyDamage::CreatePartyIndexMap() {
     const GW::PartyInfo* const info = GW::PartyMgr::GetPartyInfo();
     size_t index = 0;
     for (const GW::PlayerPartyMember& player : info->players) {
-        uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
+        const uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
         if (id == GW::Agents::GetPlayerId()) player_index = index;
         party_index[id] = index++;
 
@@ -238,7 +238,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
         y *= uiscale_multiply;
         // Clamp
         ImVec4 rect(x.x, y.x, x.y, y.y);
-        ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
+        const ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
         // GW Clamps windows to viewport; we need to do the same.
         GuiUtils::ClampRect(rect, viewport);
         // Left placement
@@ -259,7 +259,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
         ImGui::SetNextWindowPos(calculated_pos);
     }
 
-    ImGui::SetNextWindowSize(ImVec2(width, static_cast<float>(size * line_height)));
+    ImGui::SetNextWindowSize(ImVec2(width, size * line_height));
     if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
         const float &x = ImGui::GetWindowPos().x;
         const float &y = ImGui::GetWindowPos().y;
@@ -343,7 +343,7 @@ float PartyDamage::GetPartOfTotal(const uint32_t dmg) const {
 void PartyDamage::WritePartyDamage() {
     std::vector<size_t> idx(MAX_PLAYERS);
     for (size_t i = 0; i < MAX_PLAYERS; ++i) idx[i] = i;
-    sort(idx.begin(), idx.end(), [this](size_t i1, size_t i2) {
+    sort(idx.begin(), idx.end(), [this](const size_t i1, const size_t i2) {
         return damage[i1].damage > damage[i2].damage;
     });
 
@@ -371,8 +371,8 @@ void PartyDamage::WriteDamageOf(const size_t index, uint32_t rank) {
     swprintf_s(buffer, buffer_size, L"#%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
         rank,
         GetPercentageOfTotal(damage[index].damage),
-        GW::Constants::GetWProfessionAcronym(damage[index].primary),
-        GW::Constants::GetWProfessionAcronym(damage[index].secondary),
+        GetWProfessionAcronym(damage[index].primary),
+        GetWProfessionAcronym(damage[index].secondary),
         damage[index].name.c_str(),
         damage[index].damage);
 
@@ -414,7 +414,7 @@ void PartyDamage::LoadSettings(ToolboxIni* ini) {
         int lkey;
         if (GuiUtils::ParseInt(key.pItem, &lkey)) {
             if (lkey <= 0) continue;
-            long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
+            const long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
             if (lval <= 0) continue;
             hp_map[static_cast<size_t>(lkey)] = static_cast<uint32_t>(lval);
         }

@@ -267,7 +267,7 @@ void Pcon::AfterUsed(const bool used, const int qty)
     }
 }
 
-GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem)
+GW::Item* Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem)
 {
     // Scan bags, find an incomplete stack, or otherwise an empty slot.
     GW::Bag** bags = GW::Items::GetBagArray();
@@ -319,7 +319,7 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem)
     return item;
 }
 
-uint32_t Pcon::MoveItem(GW::Item* item, GW::Bag* bag, const size_t slot, size_t quantity)
+uint32_t Pcon::MoveItem(const GW::Item* item, GW::Bag* bag, const size_t slot, size_t quantity)
 {
     if (!item || !bag)
         return 0;
@@ -468,7 +468,7 @@ bool* Pcon::GetSettingsByName(const wchar_t* name)
     return settings_by_charname[name];
 }
 
-void Pcon::LoadSettings(ToolboxIni* inifile, const char* section)
+void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
 {
     char buf_active[256];
     char buf_threshold[256];

@@ -21,7 +21,7 @@ void FactionLeaderboardWindow::Initialize()
     ToolboxWindow::Initialize();
     leaderboard.resize(15);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TownAllianceObject>(&TownAlliance_Entry,
-                                                                           [this](GW::HookStatus* status, GW::Packet::StoC::TownAllianceObject* pak) -> bool {
+                                                                           [this](const GW::HookStatus* status, GW::Packet::StoC::TownAllianceObject* pak) -> bool {
                                                                                UNREFERENCED_PARAMETER(status);
                                                                                const LeaderboardEntry leaderboardEntry = {
                                                                                    pak->map_id,

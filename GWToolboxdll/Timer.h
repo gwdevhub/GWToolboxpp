@@ -12,5 +12,12 @@ create a timer with TIMER_INIT()
 find the difference in milliseconds with TIMER_DIFF(clock_t timer)
 */
 
-#define TIMER_INIT() (clock())
-#define TIMER_DIFF(t) (clock() - t)
+inline clock_t TIMER_INIT()
+{
+    return clock();
+}
+
+inline clock_t TIMER_DIFF(const clock_t t)
+{
+    return clock() - t;
+}

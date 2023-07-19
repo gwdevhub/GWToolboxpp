@@ -5,10 +5,10 @@
 #include <Modules/Resources.h>
 #include <Modules/ToolboxTheme.h>
 
-#define IniFilename L"Theme.ini"
+constexpr auto IniFilename = L"Theme.ini";
 // @Enhancement: Allow users to save different layouts by changing this variable in settings
-#define WindowPositionsFilename L"Layout.ini"
-#define IniSection "Theme"
+constexpr auto WindowPositionsFilename = L"Layout.ini";
+constexpr auto IniSection = "Theme";
 
 namespace {
     ToolboxIni* LoadIni(ToolboxIni** out, const wchar_t* filename, bool reload_from_disk = false)

@@ -128,7 +128,7 @@ namespace {
         GW::UI::WindowPosition position;
         GuiUtils::EncString name;
 
-        WindowPreference(const GW::UI::WindowID _window_id, GW::UI::WindowPosition* _position)
+        WindowPreference(const GW::UI::WindowID _window_id, const GW::UI::WindowPosition* _position)
             : window_id(_window_id), position(*_position)
         {
             name.reset(GetWindowNameID(window_id));
@@ -139,7 +139,7 @@ namespace {
         GW::UI::StringPreference pref_id;
         std::wstring value;
 
-        StringPreference(const GW::UI::StringPreference _pref_id, wchar_t* _value)
+        StringPreference(const GW::UI::StringPreference _pref_id, const wchar_t* _value)
             : pref_id(_pref_id), value(_value)
         {
         };

@@ -112,7 +112,7 @@ namespace Missions {
     };
     class UnlockedPvPItemUpgrade : public ItemAchievement {
     public:
-        UnlockedPvPItemUpgrade(size_t _encoded_name_index) : ItemAchievement(_encoded_name_index, nullptr) {}
+        UnlockedPvPItemUpgrade(const size_t _encoded_name_index) : ItemAchievement(_encoded_name_index, nullptr) {}
         void CheckProgress(const std::wstring& player_name) override;
         IDirect3DTexture9* GetMissionImage() override;
         const char* Name() override;

@@ -65,7 +65,7 @@ public:
     long modifier = 0;
 
     // Create hotkey, load from file if 'ini' is not null
-    TBHotkey(ToolboxIni* ini, const char* section);
+    TBHotkey(const ToolboxIni* ini, const char* section);
     virtual ~TBHotkey() = default;
 
     virtual bool CanUse();
@@ -127,7 +127,7 @@ public:
 
     HotkeyEquipItemAttributes& operator=(const HotkeyEquipItemAttributes& other) = delete;
 
-    bool check(GW::Item* item = nullptr);
+    bool check(const GW::Item* item = nullptr);
     uint32_t model_id = 0;
     GuiUtils::EncString enc_name;
     GuiUtils::EncString enc_desc;
@@ -233,7 +233,7 @@ class HotkeyToggle : public TBHotkey {
     static bool GetText(void*, int idx, const char** out_text);
 
 public:
-    static bool IsValid(ToolboxIni* ini, const char* section);
+    static bool IsValid(const ToolboxIni* ini, const char* section);
     static const char* IniSection() { return "Toggle"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 

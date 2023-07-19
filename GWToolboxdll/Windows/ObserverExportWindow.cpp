@@ -9,8 +9,6 @@
 
 #include <Windows/ObserverExportWindow.h>
 
-#define NO_AGENT 0
-
 void ObserverExportWindow::Initialize()
 {
     ToolboxWindow::Initialize();

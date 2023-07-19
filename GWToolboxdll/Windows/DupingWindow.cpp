@@ -64,7 +64,7 @@ namespace {
         return static_cast<int>(pips);
     }
 
-    bool OrderDupeInfo(DupeInfo& a, DupeInfo& b)
+    bool OrderDupeInfo(const DupeInfo& a, const DupeInfo& b)
     {
         const auto agentA = GetAgentLivingByID(a.agent_id);
         const auto agentB = agentA ? GetAgentLivingByID(b.agent_id) : nullptr;

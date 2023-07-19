@@ -3,7 +3,7 @@
 #include <Modules/Resources.h>
 #include <Windows/NotePadWindow.h>
 
-#define TEXT_SIZE 2024 * 16
+constexpr auto TEXT_SIZE = 2024 * 16;
 
 void NotePadWindow::Draw(IDirect3DDevice9* pDevice)
 {

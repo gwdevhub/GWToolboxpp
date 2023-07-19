@@ -145,7 +145,7 @@ void PconsWindow::Initialize()
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
     Resources::Instance().LoadTexture(&button_texture, Resources::GetPath(L"img/icons", L"cupcake.png"));
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentSetPlayer>(&AgentSetPlayer_Entry, [](GW::HookStatus*, GW::Packet::StoC::AgentSetPlayer* pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentSetPlayer>(&AgentSetPlayer_Entry, [](GW::HookStatus*, const GW::Packet::StoC::AgentSetPlayer* pak) -> void {
         Pcon::player_id = pak->unk1;
     });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AddExternalBond>(&AddExternalBond_Entry, &OnAddExternalBond);
@@ -166,7 +166,7 @@ void PconsWindow::Terminate()
     }
 }
 
-void PconsWindow::OnAddExternalBond(GW::HookStatus* status, GW::Packet::StoC::AddExternalBond* pak)
+void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::StoC::AddExternalBond* pak)
 {
     if (PconAlcohol::suppress_lunar_skills && pak->caster_id == GW::Agents::GetPlayerId() && pak->receiver_id == 0 && (pak->skill_id == static_cast<DWORD>(SkillID::Spiritual_Possession) || pak->skill_id == static_cast<DWORD>(SkillID::Lucky_Aura))) {
         // printf("blocked skill %d\n", pak->skill_id);
@@ -174,7 +174,7 @@ void PconsWindow::OnAddExternalBond(GW::HookStatus* status, GW::Packet::StoC::Ad
     }
 }
 
-void PconsWindow::OnPostProcessEffect(GW::HookStatus* status, GW::Packet::StoC::PostProcess* pak)
+void PconsWindow::OnPostProcessEffect(GW::HookStatus* status, const GW::Packet::StoC::PostProcess* pak)
 {
     PconAlcohol::alcohol_level = pak->level;
     const PconsWindow& instance = Instance();
@@ -209,7 +209,7 @@ void PconsWindow::OnAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* pa
     }
 }
 
-void PconsWindow::OnSpeechBubble(GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* pak)
+void PconsWindow::OnSpeechBubble(GW::HookStatus* status, const GW::Packet::StoC::SpeechBubble* pak)
 {
     if (!PconAlcohol::suppress_drunk_text || status->blocked)
         return;
@@ -308,7 +308,7 @@ void PconsWindow::OnSpeechBubble(GW::HookStatus* status, GW::Packet::StoC::Speec
     // printf("\\x%X\\x%X\\x%X\\x%X\n", m[0], m[1], m[2], m[3]);
 }
 
-void PconsWindow::OnObjectiveDone(GW::HookStatus*, GW::Packet::StoC::ObjectiveDone* packet)
+void PconsWindow::OnObjectiveDone(GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* packet)
 {
     PconsWindow& instance = Instance();
     instance.objectives_complete.push_back(packet->objective_id);
@@ -324,7 +324,7 @@ void PconsWindow::OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::Vanquish
     Log::Info("Cons auto-disabled on completion");
 }
 
-void PconsWindow::CmdPcons(const wchar_t*, const int argc, LPWSTR* argv)
+void PconsWindow::CmdPcons(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (argc <= 1) {
         Instance().ToggleEnable();

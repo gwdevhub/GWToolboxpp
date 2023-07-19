@@ -52,9 +52,9 @@ private:
 
         static uint32_t IdFromRegionParty(uint32_t party_id);
         static uint32_t IdFromLocalParty(uint32_t party_id);
-        bool FromRegionParty(GW::PartySearch*);
+        bool FromRegionParty(const GW::PartySearch*);
         bool FromLocalParty(GW::PartyInfo*);
-        bool FromPlayerInMap(GW::Player* player);
+        bool FromPlayerInMap(const GW::Player* player);
         uint32_t concat_party_id = 0;
         uint32_t player_id = 0; // Leader
         uint8_t party_size = 0;
@@ -83,8 +83,8 @@ private:
     // Window could be visible but collapsed - use this var to check it.
     bool collapsed = false;
 
-#define ALERT_BUF_SIZE 1024 * 16
-    char alert_buf[ALERT_BUF_SIZE] = "";
+static constexpr auto  ALERT_BUF_SIZE = 1024 * 16;
+    char alert_buf[ALERT_BUF_SIZE]{};
     // set when the alert_buf was modified
     bool alertfile_dirty = false;
     bool print_game_chat = false;

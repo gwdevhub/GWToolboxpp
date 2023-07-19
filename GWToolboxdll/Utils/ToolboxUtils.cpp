@@ -27,7 +27,7 @@
 #include "ToolboxUtils.h"
 
 namespace {
-    bool IsInfused(GW::Item* item)
+    bool IsInfused(const GW::Item* item)
     {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
     }
@@ -276,7 +276,7 @@ namespace ToolboxUtils {
     }
 
     // Helper function; avoids doing string checks on offline friends.
-    GW::Friend* GetFriend(wchar_t* account, wchar_t* playing, const GW::FriendType type, const GW::FriendStatus status)
+    GW::Friend* GetFriend(const wchar_t* account, const wchar_t* playing, const GW::FriendType type, const GW::FriendStatus status)
     {
         if (!(account || playing))
             return nullptr;

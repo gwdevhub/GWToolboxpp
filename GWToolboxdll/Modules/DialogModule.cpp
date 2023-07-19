@@ -30,7 +30,7 @@ namespace {
 
     std::map<uint32_t, clock_t> queued_dialogs_to_send;
 
-    void OnDialogButtonAdded(GW::UI::DialogButtonInfo* wparam)
+    void OnDialogButtonAdded(const GW::UI::DialogButtonInfo* wparam)
     {
         const auto button_info = new GW::UI::DialogButtonInfo();
         memcpy(button_info, wparam, sizeof(*button_info));
@@ -137,7 +137,7 @@ void DialogModule::OnPreUIMessage(
     }
 }
 
-void DialogModule::OnPostUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
+void DialogModule::OnPostUIMessage(const GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
 {
     if (status->blocked) {
         // Blocked elsewhere.

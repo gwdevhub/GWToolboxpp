@@ -507,7 +507,7 @@ private:
 
     // packet handlers
 
-    void HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet);
+    void HandleInstanceLoadInfo(const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* packet);
     void HandleJumboMessage(uint8_t type, uint32_t value);
     void HandleAgentProjectileLaunched(const GW::Packet::StoC::AgentProjectileLaunched* packet);
 

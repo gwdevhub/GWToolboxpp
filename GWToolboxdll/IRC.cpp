@@ -98,7 +98,7 @@ void IRC::hook_irc_command(const char* cmd_name, int (*function_ptr)(const char*
     }
 }
 
-void IRC::delete_irc_command_hook(irc_command_hook* cmd_hook)
+void IRC::delete_irc_command_hook(const irc_command_hook* cmd_hook)
 {
     if (cmd_hook->next)
         delete_irc_command_hook(cmd_hook->next);

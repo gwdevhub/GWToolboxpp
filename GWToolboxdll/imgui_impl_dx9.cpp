@@ -45,7 +45,7 @@ struct CUSTOMVERTEX {
 
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
-static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
+static void ImGui_ImplDX9_SetupRenderState(const ImDrawData* draw_data)
 {
     // Setup viewport
     D3DVIEWPORT9 vp;

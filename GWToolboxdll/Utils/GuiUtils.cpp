@@ -489,7 +489,7 @@ namespace GuiUtils {
         size_t len = 0;
         std::string out;
         out.resize(str.length());
-        for (char i : str) {
+        for (const char i : str) {
             if (strchr(invalid_chars, i))
                 continue;
             out[len] = i;
@@ -505,7 +505,7 @@ namespace GuiUtils {
         size_t len = 0;
         std::wstring out;
         out.resize(str.length());
-        for (wchar_t i : str) {
+        for (const wchar_t i : str) {
             if (wcschr(invalid_chars, i))
                 continue;
             out[len] = i;
@@ -802,7 +802,7 @@ namespace GuiUtils {
         return true;
     }
 
-    std::wstring ToWstr(std::string& str)
+    std::wstring ToWstr(const std::string& str)
     {
         // @Cleanup: No error handling whatsoever
         if (str.empty())

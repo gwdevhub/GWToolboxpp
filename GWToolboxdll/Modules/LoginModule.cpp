@@ -24,11 +24,11 @@ namespace {
     uint32_t reroll_index_current = 0;
 
     bool IsCharSelectReady() {
-        GW::PreGameContext* pgc = GW::GetPreGameContext();
+        const GW::PreGameContext* pgc = GW::GetPreGameContext();
         if (!pgc || !pgc->chars.valid())
             return false;
         uint32_t ui_state = 10;
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kCheckUIState, 0, &ui_state);
+        SendUIMessage(GW::UI::UIMessage::kCheckUIState, 0, &ui_state);
         return ui_state == 2;
     }
 
@@ -39,7 +39,7 @@ namespace {
     // Always ensure character name has been pre-filled; this isn't actually used in practice as the security character feature is deprecated.
     // Prefilling it ensures that auto login can work without -charname argument being given.
     wchar_t* original_charname_parameter = nullptr;
-    wchar_t* OnGetStringParameter(uint32_t param_id_plus_0x27) {
+    wchar_t* OnGetStringParameter(const uint32_t param_id_plus_0x27) {
         GW::Hook::EnterHook();
         wchar_t* parameter_value = GetStringParameter_Ret(param_id_plus_0x27);
         if (param_id_plus_0x27 == 0x26) {
@@ -57,7 +57,7 @@ namespace {
     PortalAccountLogin_pt PortalAccountLogin_Ret = 0;
 
     // Ensure we're asking for a valid character on login if given as a parameter
-    void OnPortalAccountLogin(uint32_t transaction_id, uint32_t* user_id, uint32_t* session_id, wchar_t* preselect_character) {
+    void OnPortalAccountLogin(const uint32_t transaction_id, uint32_t* user_id, uint32_t* session_id, wchar_t* preselect_character) {
         GW::Hook::EnterHook();
         // Don't pre-select the character yet; we'll do this in the Update() loop after sucessful login
         preselect_character[0] = 0;
@@ -150,7 +150,7 @@ void LoginModule::Update(float) {
         const auto pgc = GW::GetPreGameContext();
         if (pgc->index_1 == reroll_index_current)
             return; // Not moved yet
-        HWND h = GW::MemoryMgr::GetGWWindowHandle();
+        const HWND h = GW::MemoryMgr::GetGWWindowHandle();
         if (pgc->index_1 == reroll_index_needed) {
             // We're on the character that was asked for
             state = LoginState::Idle;

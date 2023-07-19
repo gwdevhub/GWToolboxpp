@@ -416,7 +416,7 @@ void PartyWindowModule::Initialize()
     // Remove certain NPCs from party window when dead
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(
         &AgentState_Entry,
-        [&](GW::HookStatus* status, GW::Packet::StoC::AgentState* pak) -> void {
+        [&](const GW::HookStatus* status, const GW::Packet::StoC::AgentState* pak) -> void {
             UNREFERENCED_PARAMETER(status);
             if (!add_npcs_to_party_window || pak->state != 16)
                 return; // Not dead.
@@ -427,7 +427,7 @@ void PartyWindowModule::Initialize()
     // Remove certain NPCs from party window when despawned
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(
         &AgentRemove_Entry,
-        [&](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* pak) -> void {
+        [&](const GW::HookStatus* status, const GW::Packet::StoC::AgentRemove* pak) -> void {
             UNREFERENCED_PARAMETER(status);
             if (remove_dead_imperials) {
                 if (const auto* agent = GW::Agents::GetAgentByID(pak->agent_id); agent && agent->GetAsAgentLiving() && agent->GetAsAgentLiving()->GetIsDead()) {
@@ -452,7 +452,7 @@ void PartyWindowModule::Initialize()
     // Add certain NPCs to party window when spawned
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(
         &AgentAdd_Entry,
-        [&](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* pak) -> void {
+        [&](const GW::HookStatus* status, GW::Packet::StoC::AgentAdd* pak) -> void {
             UNREFERENCED_PARAMETER(status);
             if (!add_npcs_to_party_window)
                 return;
@@ -465,7 +465,7 @@ void PartyWindowModule::Initialize()
     // Flash/focus window on zoning (and a bit of housekeeping)
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
         &GameSrvTransfer_Entry,
-        [&](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* pak) -> void {
+        [&](const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* pak) -> void {
             UNREFERENCED_PARAMETER(status);
             allies_added_to_party.clear();
             removed_canthans.clear();
@@ -476,7 +476,7 @@ void PartyWindowModule::Initialize()
     // Player numbers in party window
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(
         &GameSrvTransfer_Entry,
-        [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
+        [&](const GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
             UNREFERENCED_PARAMETER(status);
             if (!add_player_numbers_to_party_window || !is_explorable || IsPvP())
                 return;
@@ -498,7 +498,7 @@ void PartyWindowModule::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(
         &Summon_AgentAdd_Entry,
-        [&](GW::HookStatus*, GW::Packet::StoC::AgentAdd* pak) -> void {
+        [&](GW::HookStatus*, const GW::Packet::StoC::AgentAdd* pak) -> void {
             if (!add_elite_skill_to_summons)
                 return;
             if (pak->type != 1)

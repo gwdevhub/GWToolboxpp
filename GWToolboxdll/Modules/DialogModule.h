@@ -95,6 +95,6 @@ private:
     }
 
     static void OnDialogSent(uint32_t dialog_id);
-    static void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*);
+    static void OnPostUIMessage(const GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*);
     static void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*);
 };

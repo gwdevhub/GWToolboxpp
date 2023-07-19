@@ -61,48 +61,48 @@ public:
     // Update. Will always be called every frame.
     void Update(float delta) override;
 
-    static void CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdReapplyTitle(const wchar_t* message, int argc, const LPWSTR* argv);
 
 private:
     static bool ReadTemplateFile(std::wstring path, char* buff, size_t buffSize);
 
     static bool IsLuxon();
 
-    static void CmdEnterMission(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdEnterMission(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdAge2(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdDialog(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdDialog(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdTB(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdDamage(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdObserverReset(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdDamage(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdObserverReset(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdChest(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdAfk(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdTarget(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdUseSkill(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdAfk(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdTarget(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdUseSkill(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdShow(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdHide(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdToggle(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdZoom(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdCamera(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdSCWiki(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdLoad(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdPing(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdTransmo(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdResize(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdHeroBehaviour(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdZoom(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdCamera(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdSCWiki(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdLoad(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdPing(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdTransmo(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdResize(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdPingEquipment(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdTransmoTarget(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdTransmoParty(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdTransmoAgent(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdHeroBehaviour(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdPingQuest(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdMorale(const wchar_t*, int argc, LPWSTR* argv);
-    static void CmdVolume(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdVolume(const wchar_t*, int argc, const LPWSTR* argv);
     static void CmdSetHardMode(const wchar_t*, int argc, LPWSTR* argv);
     static void CmdSetNormalMode(const wchar_t*, int argc, LPWSTR* argv);
-    static void CmdAnimation(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdAnimation(const wchar_t*, int argc, const LPWSTR* argv);
     static void CmdMute(const wchar_t*, int argc, LPWSTR* argv);
     // Trigger hall of monuments info for current target or given player name
     static void CmdHom(const wchar_t*, int argc, LPWSTR* argv);
-    static void CmdWithdraw(const wchar_t*, int argc, LPWSTR* argv);
+    static void CmdWithdraw(const wchar_t*, int argc, const LPWSTR* argv);
 
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string& name, PendingTransmo& transmo);
@@ -112,8 +112,8 @@ private:
     static void TargetNearest(const wchar_t* model_id_or_name, TargetType type);
     static const wchar_t* GetRemainingArgsWstr(const wchar_t* message, int argc_start);
 
-    static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t* message, int argc, LPWSTR* argv);
-    static GW::UI::WindowID MatchingGWWindow(const wchar_t*, int argc, LPWSTR* argv);
+    static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t* message, int argc, const LPWSTR* argv);
+    static GW::UI::WindowID MatchingGWWindow(const wchar_t*, int argc, const LPWSTR* argv);
 
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;

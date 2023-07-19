@@ -671,7 +671,7 @@ namespace {
     }
 
     // Ensure the message buffer is cleared if this packet has been blocked
-    void ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*)
+    void ClearMessageBufferIfBlocked(const GW::HookStatus* status, GW::Packet::StoC::PacketBase*)
     {
         if (status->blocked)
             ToolboxUtils::ClearMessageCore();
@@ -690,7 +690,7 @@ void ChatFilter::Initialize()
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, ClearMessageBufferIfBlocked);
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, ClearMessageBufferIfBlocked);
 
-    GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry, [](GW::HookStatus* status, const int channel, wchar_t* message) {
+    GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry, [](GW::HookStatus* status, const int channel, const wchar_t* message) {
         if (ShouldIgnore(message, static_cast<uint32_t>(channel))) {
             status->blocked = true;
         }

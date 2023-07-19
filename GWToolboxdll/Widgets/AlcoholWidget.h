@@ -37,7 +37,7 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     static uint32_t GetAlcoholTitlePoints(); // Gets current alcohol title points.
-    static void AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess* packet);
+    static void AlcUpdate(GW::HookStatus*, const GW::Packet::StoC::PostProcess* packet);
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;

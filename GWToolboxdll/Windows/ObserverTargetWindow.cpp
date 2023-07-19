@@ -7,8 +7,6 @@
 #include <Modules/ObserverModule.h>
 #include <Windows/ObserverTargetWindow.h>
 
-#define NO_AGENT 0
-
 void ObserverTargetWindow::Prepare()
 {
     // do not change the state if not active

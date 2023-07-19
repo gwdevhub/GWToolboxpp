@@ -133,7 +133,7 @@ trim_log:
     }
 }
 
-void ChatLog::Remove(TBChatMessage* message)
+void ChatLog::Remove(const TBChatMessage* message)
 {
     if (message == recv_first)
         recv_first = message->next;
@@ -149,7 +149,7 @@ void ChatLog::Remove(TBChatMessage* message)
     delete message;
 }
 
-void ChatLog::RemoveSent(TBSentMessage* message)
+void ChatLog::RemoveSent(const TBSentMessage* message)
 {
     if (message == sent_first)
         sent_first = message->next;

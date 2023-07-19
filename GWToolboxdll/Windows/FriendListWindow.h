@@ -143,10 +143,10 @@ public:
     Friend* GetFriend(const GW::Friend*);
     Friend* GetFriendByUUID(const std::string&);
     Friend* GetFriend(const uint8_t*);
-    bool RemoveFriend(Friend* f);
+    bool RemoveFriend(const Friend* f);
 
     // Callback functions
-    static void OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak);
+    static void OnPlayerJoinInstance(const GW::HookStatus* status, const GW::Packet::StoC::PlayerJoinInstance* pak);
     // Handle friend updated (map change, char change, online status change, added or removed from fl)
     static void OnFriendUpdated(GW::HookStatus*, const GW::Friend* old_state, const GW::Friend* new_state);
     static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);

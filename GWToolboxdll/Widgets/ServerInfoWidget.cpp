@@ -14,8 +14,7 @@
 #include <Modules/Resources.h>
 #include <Widgets/ServerInfoWidget.h>
 
-//#define IPGEO_API_KEY "144de1673b1c473d9bab94f528acc214"
-#define IPGEO_API_KEY "161f3834252a4ec6988e49bb75ccd902"
+constexpr auto IPGEO_API_KEY = "161f3834252a4ec6988e49bb75ccd902";
 
 namespace {
     char server_ip[32];
@@ -90,7 +89,8 @@ void ServerInfoWidget::Update(float)
         current_server_info->last_update = time(nullptr);
         server_info_fetcher = std::thread([this]() {
             // Need to check details
-            const std::string url = "https://api.ipgeolocation.io/ipgeo?apiKey=" IPGEO_API_KEY "&ip=" + current_server_info->ip;
+            using namespace std::string_literals;
+            const std::string url = "https://api.ipgeolocation.io/ipgeo?apiKey="s + IPGEO_API_KEY + "&ip=" + current_server_info->ip;
             int tries = 0;
             std::string response;
             bool success = false;

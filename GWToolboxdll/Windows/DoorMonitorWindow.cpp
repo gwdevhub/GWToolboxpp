@@ -109,7 +109,7 @@ void DoorMonitorWindow::Initialize()
     }
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Callback,
-                                                                         [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+                                                                         [this](const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
                                                                              UNREFERENCED_PARAMETER(status);
                                                                              if (!packet->is_explorable)
                                                                                  return in_zone = false, false;
@@ -118,7 +118,7 @@ void DoorMonitorWindow::Initialize()
                                                                          });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Callback,
-                                                                            [this](GW::HookStatus* status, GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
+                                                                            [this](const GW::HookStatus* status, const GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
                                                                                 UNREFERENCED_PARAMETER(status);
                                                                                 if (!in_zone)
                                                                                     return false;

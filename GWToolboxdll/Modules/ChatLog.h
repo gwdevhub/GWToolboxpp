@@ -25,7 +25,7 @@ private:
         uint32_t channel;
         FILETIME timestamp{};
 
-        TBChatMessage(wchar_t* _message, const uint32_t _channel, const FILETIME _timestamp)
+        TBChatMessage(const wchar_t* _message, const uint32_t _channel, const FILETIME _timestamp)
         {
             msg = _message;
             timestamp = _timestamp;
@@ -60,13 +60,13 @@ private:
     // Collect current in-game logs and combine them with the tb logs
     void Fetch();
     // Remove message from incoming log
-    void Remove(TBChatMessage* message);
+    void Remove(const TBChatMessage* message);
     // Add message to incoming log
     void Add(GW::Chat::ChatMessage* in);
     // Add message to outgoing log
     void AddSent(wchar_t* _message, uint32_t addr = 0);
     // Remove message from outgoing log
-    void RemoveSent(TBSentMessage* message);
+    void RemoveSent(const TBSentMessage* message);
     // Add message to incoming log
     void Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp);
     void Save();

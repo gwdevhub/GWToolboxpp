@@ -24,7 +24,7 @@
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/AgentRenderer.h>
 
-#define AGENTCOLOR_INIFILENAME L"AgentColors.ini"
+constexpr auto AGENTCOLOR_INIFILENAME = L"AgentColors.ini";
 
 namespace {
     unsigned int GetAgentProfession(const GW::AgentLiving* agent)
@@ -121,7 +121,7 @@ namespace {
         return true;
     }
 
-    void CmdMarkTarget(const wchar_t*, const int argc, LPWSTR* argv)
+    void CmdMarkTarget(const wchar_t*, const int argc, const LPWSTR* argv)
     {
         const auto agent = GW::Agents::GetTarget();
         if (!agent)
@@ -141,7 +141,7 @@ namespace {
 
     GW::HookEntry OnAgentAdded_HookEntry;
 
-    void OnAgentAdded(GW::HookStatus*, GW::Packet::StoC::AgentAdd* packet)
+    void OnAgentAdded(GW::HookStatus*, const GW::Packet::StoC::AgentAdd* packet)
     {
         const auto agent_id = packet->agent_id;
         const auto marked_target = GetMarkedTarget(agent_id);

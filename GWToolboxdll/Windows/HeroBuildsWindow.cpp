@@ -637,7 +637,7 @@ void HeroBuildsWindow::Update(float)
     last_instance_type = instance_type;
 }
 
-void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, const int argc, LPWSTR* argv)
+void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (argc < 2) {
         Log::ErrorW(L"Syntax: /%s [hero_build_name]", argv[0]);
@@ -804,7 +804,7 @@ bool HeroBuildsWindow::CodeOnHero::Process()
     return false;
 }
 
-HeroBuildsWindow::TeamHeroBuild* HeroBuildsWindow::GetTeambuildByName(std::string& build_name_search)
+HeroBuildsWindow::TeamHeroBuild* HeroBuildsWindow::GetTeambuildByName(const std::string& build_name_search)
 {
     const std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(build_name_search));
     for (auto& tb : teambuilds) {

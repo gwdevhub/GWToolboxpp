@@ -77,7 +77,7 @@ namespace ToolboxUtils {
     float GetSkillRange(GW::Constants::SkillID skill_id);
 
     // Friends
-    GW::Friend* GetFriend(wchar_t* account, wchar_t* playing, GW::FriendType type, GW::FriendStatus status);
+    GW::Friend* GetFriend(const wchar_t* account, const wchar_t* playing, GW::FriendType type, GW::FriendStatus status);
 
     std::wstring ShorthandItemDescription(GW::Item* item);
 };
