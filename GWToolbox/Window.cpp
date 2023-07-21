@@ -4,34 +4,34 @@
 
 LRESULT CALLBACK Window::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    Window *window = nullptr;
+    Window* window = nullptr;
 
     if (uMsg == WM_CREATE) {
-        LPCREATESTRUCTW param = reinterpret_cast<LPCREATESTRUCTW>(lParam);
-        window = static_cast<Window *>(param->lpCreateParams);
+        const auto param = reinterpret_cast<LPCREATESTRUCTW>(lParam);
+        window = static_cast<Window*>(param->lpCreateParams);
         SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG>(window));
-    } else {
-        LONG_PTR ud = GetWindowLongPtrW(hWnd, GWLP_USERDATA);
-        window = reinterpret_cast<Window *>(ud);
+    }
+    else {
+        const LONG_PTR ud = GetWindowLongPtrW(hWnd, GWLP_USERDATA);
+        window = reinterpret_cast<Window*>(ud);
     }
 
     if (window != nullptr) {
         return window->WndProc(hWnd, uMsg, wParam, lParam);
-    } else {
-        return DefWindowProcW(hWnd, uMsg, wParam, lParam);
     }
+    return DefWindowProcW(hWnd, uMsg, wParam, lParam);
 }
 
 Window::Window()
     : m_hWnd(nullptr)
-    , m_hFont(nullptr)
-    , m_hIcon(nullptr)
-    , m_hEvent(nullptr)
-    , m_WindowName(nullptr)
-    , m_X(CW_USEDEFAULT)
-    , m_Y(CW_USEDEFAULT)
-    , m_Width(CW_USEDEFAULT)
-    , m_Height(CW_USEDEFAULT)
+      , m_hFont(nullptr)
+      , m_hIcon(nullptr)
+      , m_hEvent(nullptr)
+      , m_WindowName(nullptr)
+      , m_X(CW_USEDEFAULT)
+      , m_Y(CW_USEDEFAULT)
+      , m_Width(CW_USEDEFAULT)
+      , m_Height(CW_USEDEFAULT)
 {
     m_hInstance = GetModuleHandleW(nullptr);
 }
@@ -46,31 +46,27 @@ Window::~Window()
 
 bool Window::Create()
 {
-    m_hEvent = CreateEventW(0, FALSE, FALSE, nullptr);
-    if (m_hEvent == nullptr)
-    {
+    m_hEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if (m_hEvent == nullptr) {
         fprintf(stderr, "CreateEventW failed (%lu)\n", GetLastError());
         return false;
     }
 
     NONCLIENTMETRICSW metrics = {0};
     metrics.cbSize = sizeof(metrics);
-    if (!SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0))
-    {
+    if (!SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0)) {
         fprintf(stderr, "SystemParametersInfoW failed (%lu)", GetLastError());
         return false;
     }
 
     m_hFont = CreateFontIndirectW(&metrics.lfMessageFont);
-    if (m_hFont == nullptr)
-    {
+    if (m_hFont == nullptr) {
         fprintf(stderr, "CreateFontIndirectW failed\n");
         return false;
     }
 
     m_hIcon = LoadIconW(m_hInstance, MAKEINTRESOURCEW(IDI_ICON1));
-    if (m_hIcon == nullptr)
-    {
+    if (m_hIcon == nullptr) {
         fprintf(stderr, "LoadIconW failed (%lu)\n", GetLastError());
         return false;
     }
@@ -81,11 +77,9 @@ bool Window::Create()
     wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
     wc.lpszClassName = L"GWToolbox-Window-Class";
 
-    if (!RegisterClassW(&wc))
-    {
+    if (!RegisterClassW(&wc)) {
         DWORD LastError = GetLastError();
-        if (LastError != ERROR_CLASS_ALREADY_EXISTS)
-        {
+        if (LastError != ERROR_CLASS_ALREADY_EXISTS) {
             fprintf(stderr, "RegisterClassW failed (%lu)\n", LastError);
             return false;
         }
@@ -109,8 +103,7 @@ bool Window::Create()
 
     ShowWindow(m_hWnd, SW_SHOW);
 
-    if (m_hWnd == nullptr)
-    {
+    if (m_hWnd == nullptr) {
         fprintf(stderr, "CreateWindowW failed (%lu)\n", GetLastError());
         return false;
     }
@@ -121,9 +114,8 @@ bool Window::Create()
 bool Window::WaitMessages()
 {
     MSG msg;
-    for (;;)
-    {
-        DWORD dwRet = MsgWaitForMultipleObjects(
+    for (;;) {
+        const DWORD dwRet = MsgWaitForMultipleObjects(
             1,
             &m_hEvent,
             FALSE,
@@ -133,14 +125,12 @@ bool Window::WaitMessages()
         if (dwRet == WAIT_OBJECT_0)
             break;
 
-        if (dwRet == WAIT_FAILED)
-        {
+        if (dwRet == WAIT_FAILED) {
             fprintf(stderr, "MsgWaitForMultipleObjects failed (%lu)\n", GetLastError());
             return false;
         }
 
-        while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
-        {
+        while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
@@ -153,7 +143,7 @@ bool Window::PollMessages(uint32_t TimeoutMs)
 {
     MSG msg;
 
-    DWORD dwRet = MsgWaitForMultipleObjects(
+    const DWORD dwRet = MsgWaitForMultipleObjects(
         1,
         &m_hEvent,
         FALSE,
@@ -163,14 +153,12 @@ bool Window::PollMessages(uint32_t TimeoutMs)
     if (dwRet == WAIT_OBJECT_0 || dwRet == WAIT_TIMEOUT)
         return true;
 
-    if (dwRet == WAIT_FAILED)
-    {
+    if (dwRet == WAIT_FAILED) {
         fprintf(stderr, "MsgWaitForMultipleObjects failed (%lu)\n", GetLastError());
         return false;
     }
 
-    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
-    {
+    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
     }
@@ -182,8 +170,7 @@ bool Window::ProcessMessages()
 {
     MSG msg;
 
-    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
-    {
+    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
     }
@@ -198,7 +185,7 @@ void Window::SignalStop()
 
 bool Window::ShouldClose()
 {
-    DWORD dwReason = WaitForSingleObject(m_hEvent, 0);
+    const DWORD dwReason = WaitForSingleObject(m_hEvent, 0);
 
     if (dwReason == WAIT_TIMEOUT)
         return false;

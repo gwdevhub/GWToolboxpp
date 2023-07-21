@@ -249,7 +249,7 @@ class _RealWebSocket : public easywsclient::WebSocket
             FD_ZERO(&rfds);
             FD_ZERO(&wfds);
             FD_SET(ptConnCtx->sockfd, &rfds);
-            if (txbuf.size()) { FD_SET(ptConnCtx->sockfd, &wfds); }
+            if (!txbuf.empty()) { FD_SET(ptConnCtx->sockfd, &wfds); }
             select(ptConnCtx->sockfd + 1, &rfds, &wfds, NULL, &tv);
         }
         while (true) {
@@ -257,7 +257,7 @@ class _RealWebSocket : public easywsclient::WebSocket
             int N = rxbuf.size();
             ssize_t ret;
             rxbuf.resize(N + 1500);
-            ret = kRead(ptConnCtx, (char*)&rxbuf[0] + N, 1500, 0);
+            ret = kRead(ptConnCtx, (char*)rxbuf.data() + N, 1500, 0);
             if (false) { }
             else if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
                 rxbuf.resize(N);
@@ -274,12 +274,12 @@ class _RealWebSocket : public easywsclient::WebSocket
                 rxbuf.resize(N + ret);
             }
         }
-        while (txbuf.size()) {
+        while (!txbuf.empty()) {
 			if (readyState == CLOSED) {
 				txbuf.clear();
 				break;
 			}
-            int ret = kWrite(ptConnCtx, (char*)&txbuf[0], txbuf.size(), 0);
+            int ret = kWrite(ptConnCtx, (char*)txbuf.data(), txbuf.size(), 0);
             if (false) { }
             else if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
                 break;
@@ -294,7 +294,7 @@ class _RealWebSocket : public easywsclient::WebSocket
                 txbuf.erase(txbuf.begin(), txbuf.begin() + ret);
             }
         }
-        if (!txbuf.size() && readyState == CLOSING) {
+        if (txbuf.empty() && readyState == CLOSING) {
             klose(ptConnCtx);
             readyState = CLOSED;
         }
@@ -310,7 +310,7 @@ class _RealWebSocket : public easywsclient::WebSocket
         while (true) {
             wsheader_type ws;
             if (rxbuf.size() < 2) { return; /* Need at least 2 */ }
-            const uint8_t * data = (uint8_t *) &rxbuf[0]; // peek, but don't consume
+            const uint8_t * data = (uint8_t *)rxbuf.data(); // peek, but don't consume
             ws.fin = (data[0] & 0x80) == 0x80;
             ws.opcode = (wsheader_type::opcode_type) (data[0] & 0x0f);
             ws.mask = (data[1] & 0x80) == 0x80;

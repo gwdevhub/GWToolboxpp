@@ -364,7 +364,7 @@ namespace {
             return;
         }
         const auto teamspeak_server = GetCurrentServer();
-        if (!(teamspeak_server && teamspeak_server->host.size())) {
+        if (!(teamspeak_server && !teamspeak_server->host.empty())) {
             Log::Error("Teamspeak 3 isn't connected to a server");
             return;
         }

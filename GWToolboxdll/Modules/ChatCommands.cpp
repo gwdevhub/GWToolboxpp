@@ -1477,7 +1477,7 @@ GW::UI::WindowID ChatCommands::MatchingGWWindow(const wchar_t*, const int argc, 
     if (argc < 2)
         return GW::UI::WindowID_Count;
     const std::wstring arg = GuiUtils::ToLower(argv[1]);
-    if (arg.size() && arg != L"all") {
+    if (!arg.empty() && arg != L"all") {
         for (const auto& it : gw_windows) {
             if (wcscmp(it.second, arg.c_str()) == 0)
                 return it.first;
@@ -1499,7 +1499,7 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t*, con
                 ret.push_back(window);
             }
         }
-        else if (arg.size()) {
+        else if (!arg.empty()) {
             const std::string name = GuiUtils::WStringToString(arg);
             for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
                 if (GuiUtils::ToLower(window->Name()).find(name) == 0) {
@@ -2165,7 +2165,7 @@ void ChatCommands::CmdTransmoTarget(const wchar_t*, const int argc, const LPWSTR
 
 void GetAchievements(const std::wstring& player_name)
 {
-    if (!(player_name.size() && player_name.size() < 20)) {
+    if (!(!player_name.empty() && player_name.size() < 20)) {
         return Log::Error("Invalid player name for hall of monuments command");
     }
     memset(&hom_achievements, 0, sizeof(hom_achievements));

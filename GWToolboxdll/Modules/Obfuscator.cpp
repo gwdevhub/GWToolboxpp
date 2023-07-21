@@ -378,7 +378,7 @@ namespace {
         } while (found);
         tmp_out.append(offset);
         out = std::move(tmp_out);
-        return out.size();
+        return !out.empty();
     }
 
     bool UnobfuscateMessage(const wchar_t* message, std::wstring& out)

@@ -141,7 +141,7 @@ namespace {
 
     const std::string& GetWebsocketHost(const bool force = false)
     {
-        if (!(ws_host.size() && !force)) {
+        if (!(!ws_host.empty() && !force)) {
             ws_host = std::format("ws://localhost:{}", ws_port);
         }
         return ws_host;
@@ -190,7 +190,7 @@ namespace {
             return;
         }
         const auto teamspeak_server = GetCurrentServer();
-        if (!(teamspeak_server && teamspeak_server->host.size())) {
+        if (!(teamspeak_server && !teamspeak_server->host.empty())) {
             Log::Error("Teamspeak 5 isn't connected to a server");
             return;
         }

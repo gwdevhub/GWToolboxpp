@@ -474,10 +474,10 @@ namespace GuiUtils {
         if (s.empty())
             return "";
         // NB: GW uses code page 0 (CP_ACP)
-        const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &s[0], static_cast<int>(s.size()), nullptr, 0, nullptr, nullptr);
+        const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, s.data(), static_cast<int>(s.size()), nullptr, 0, nullptr, nullptr);
         ASSERT(size_needed != 0);
         std::string strTo(size_needed, 0);
-        ASSERT(WideCharToMultiByte(CP_UTF8, 0, &s[0], static_cast<int>(s.size()), &strTo[0], size_needed, NULL, NULL));
+        ASSERT(WideCharToMultiByte(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), strTo.data(), size_needed, NULL, NULL));
         return std::move(strTo);
     }
 

@@ -6,7 +6,7 @@
 
 namespace fs = std::filesystem;
 
-bool GetFileSize(const wchar_t *path, uint64_t *file_size)
+bool GetFileSize(const wchar_t* path, uint64_t* file_size)
 {
     const HANDLE hFile = CreateFileW(
         path,
@@ -132,7 +132,7 @@ bool Install(bool quiet)
     }
 
     if (!quiet) {
-        MessageBoxW(0, L"Installation successful", L"Installation", 0);
+        MessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
     }
 
     return true;
@@ -176,8 +176,10 @@ bool IsInstalled()
     }
     const fs::path computerpath = dllpath / computername;
 
-    if (!fs::exists(dllpath / L"GWToolboxdll.dll")) return false;
-    if (!fs::exists(dllpath / L"GWToolbox.exe")) return false;
+    if (!exists(dllpath / L"GWToolboxdll.dll"))
+        return false;
+    if (!exists(dllpath / L"GWToolbox.exe"))
+        return false;
 
     return true;
 }

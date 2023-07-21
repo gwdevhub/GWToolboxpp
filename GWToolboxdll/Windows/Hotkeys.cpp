@@ -911,12 +911,12 @@ HotkeyEquipItem::HotkeyEquipItem(ToolboxIni *ini, const char *section)
         uint32_t model_id = ini->GetLongValue(section, "ModelId", 0);
         std::string in = ini->GetValue(section, "EncodedName", "");
         std::wstring enc_name;
-        if (in.size()) {
+        if (!in.empty()) {
             ASSERT(GuiUtils::IniToArray(in, enc_name));
         }
         in = ini->GetValue(section, "EncodedDesc", "");
         std::wstring enc_desc;
-        if (in.size()) {
+        if (!in.empty()) {
             ASSERT(GuiUtils::IniToArray(in, enc_desc));
         }
         in = ini->GetValue(section, "ModStruct", "");

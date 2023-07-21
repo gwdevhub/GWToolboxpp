@@ -1,7 +1,6 @@
 #pragma once
 
-class Window
-{
+class Window {
 private:
     static LRESULT CALLBACK MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 

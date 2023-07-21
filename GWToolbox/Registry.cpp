@@ -4,11 +4,10 @@
 
 bool OpenSettingsKey(PHKEY phkResult)
 {
-    LSTATUS status;
     DWORD Disposition;
 
-    LPCWSTR lpSubKey = L"Software\\GWToolbox";
-    status = RegCreateKeyExW(
+    const auto lpSubKey = L"Software\\GWToolbox";
+    const LSTATUS status = RegCreateKeyExW(
         HKEY_CURRENT_USER,
         lpSubKey,
         0,
@@ -19,8 +18,7 @@ bool OpenSettingsKey(PHKEY phkResult)
         phkResult,
         &Disposition);
 
-    if (status != ERROR_SUCCESS)
-    {
+    if (status != ERROR_SUCCESS) {
         fprintf(stderr, "RegCreateKeyExW failed: {status:0x%lX, lpSubKey:'%ls'}\n", status, lpSubKey);
         phkResult = nullptr;
         return false;
@@ -31,13 +29,12 @@ bool OpenSettingsKey(PHKEY phkResult)
 
 bool DeleteSettingsKey()
 {
-    LPCWSTR lpSubKey = L"Software\\GWToolbox";
-    LSTATUS status = RegDeleteKeyW(
+    const auto lpSubKey = L"Software\\GWToolbox";
+    const LSTATUS status = RegDeleteKeyW(
         HKEY_CURRENT_USER,
         lpSubKey);
 
-    if (status != ERROR_SUCCESS)
-    {
+    if (status != ERROR_SUCCESS) {
         fprintf(stderr, "RegDeleteKeyW failed: {status:0x%lX, lpSubKey:'%ls'}\n", status, lpSubKey);
         return false;
     }
@@ -47,17 +44,16 @@ bool DeleteSettingsKey()
 
 bool RegWriteStr(HKEY hKey, LPCWSTR KeyName, LPCWSTR Value)
 {
-    size_t ValueSize = wcslen(Value) * 2;
-    LSTATUS status = RegSetValueExW(
+    const size_t ValueSize = wcslen(Value) * 2;
+    const LSTATUS status = RegSetValueExW(
         hKey,
         KeyName,
         0,
         REG_SZ,
-        reinterpret_cast<const BYTE *>(Value),
+        reinterpret_cast<const BYTE*>(Value),
         ValueSize);
 
-    if (status != ERROR_SUCCESS)
-    {
+    if (status != ERROR_SUCCESS) {
         fprintf(stderr, "RegSetValueExW failed: {status:0x%lX, KeyName:'%ls', Value:'%ls'}\n",
                 status, KeyName, Value);
         return false;
@@ -68,16 +64,15 @@ bool RegWriteStr(HKEY hKey, LPCWSTR KeyName, LPCWSTR Value)
 
 bool RegWriteDWORD(HKEY hKey, LPCWSTR KeyName, DWORD Value)
 {
-    LSTATUS status = RegSetValueExW(
+    const LSTATUS status = RegSetValueExW(
         hKey,
         KeyName,
         0,
         REG_DWORD,
-        reinterpret_cast<const BYTE *>(&Value),
+        reinterpret_cast<const BYTE*>(&Value),
         sizeof(4));
 
-    if (status != ERROR_SUCCESS)
-    {
+    if (status != ERROR_SUCCESS) {
         fprintf(stderr, "RegSetValueExW failed: {status:0x%lX, KeyName:'%ls', Value:%lu}\n",
                 status, KeyName, Value);
         return false;
@@ -91,7 +86,7 @@ bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferLength)
     assert(BufferLength > 0);
 
     DWORD cbData = static_cast<DWORD>(BufferLength - 1) * sizeof(WCHAR);
-    LSTATUS status = RegGetValueW(
+    const LSTATUS status = RegGetValueW(
         hKey,
         L"",
         KeyName,
@@ -100,8 +95,7 @@ bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferLength)
         Buffer,
         &cbData);
 
-    if (status != ERROR_SUCCESS)
-    {
+    if (status != ERROR_SUCCESS) {
         fprintf(stderr, "RegGetValueW failed: {status:0x%lX, KeyName:'%ls'}\n",
                 status, KeyName);
         return false;
@@ -114,7 +108,7 @@ bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferLength)
 bool RegReadDWORD(HKEY hKey, LPCWSTR KeyName, PDWORD dwDword)
 {
     DWORD cbData = sizeof(*dwDword);
-    LSTATUS status = RegGetValueW(
+    const LSTATUS status = RegGetValueW(
         hKey,
         L"",
         KeyName,
@@ -123,8 +117,7 @@ bool RegReadDWORD(HKEY hKey, LPCWSTR KeyName, PDWORD dwDword)
         dwDword,
         &cbData);
 
-    if (status != ERROR_SUCCESS)
-    {
+    if (status != ERROR_SUCCESS) {
         fprintf(stderr, "RegGetValueW failed: {status:0x%lX, KeyName:'%ls'}\n",
                 status, KeyName);
         return false;

@@ -220,7 +220,7 @@ public:
                  const char* desc_ = nullptr)
         : PconCity(chat, abbrev, ini, file, uv0, uv1, threshold, desc_), itemID(item)
     {
-        if (desc.size())
+        if (!desc.empty())
             desc += "\n";
         desc += "Enable in an outpost to refill your inventory.";
     }

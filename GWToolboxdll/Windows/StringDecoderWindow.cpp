@@ -64,7 +64,7 @@ void StringDecoderWindow::Draw(IDirect3DDevice9* pDevice)
             }
         }
     }
-    if (decoded.size()) {
+    if (!decoded.empty()) {
         // std::wstring str = GuiUtils::StringToWString(encoded);
         Log::LogW(L"%d %ls\n",
                   GW::UI::EncStrToUInt32(GetEncodedString().c_str()),

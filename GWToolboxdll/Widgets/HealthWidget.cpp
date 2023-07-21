@@ -243,7 +243,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice)
                 if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsWindowHovered()) {
                     if (target) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
-                        if (agent_name_ping.size()) {
+                        if (!agent_name_ping.empty()) {
                             char buffer[512];
                             const std::string agent_name_str = GuiUtils::WStringToString(agent_name_ping);
                             const auto current_hp = static_cast<int>(target->hp * target->max_hp);
