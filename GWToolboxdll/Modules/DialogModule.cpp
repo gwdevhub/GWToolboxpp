@@ -78,6 +78,7 @@ namespace {
             delete d;
         }
         dialog_button_messages.clear();
+        dialog_body.reset(nullptr);
     }
 
     void OnNPCDialogUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
@@ -105,7 +106,7 @@ namespace {
 
     bool IsDialogButtonAvailable(uint32_t dialog_id)
     {
-        return std::ranges::any_of(dialog_buttons, [dialog_id](const GW::UI::DialogButtonInfo* d) {
+        return !dialog_body.encoded().empty() && std::ranges::any_of(dialog_buttons, [dialog_id](const GW::UI::DialogButtonInfo* d) {
             return d->dialog_id == dialog_id;
         });
     }

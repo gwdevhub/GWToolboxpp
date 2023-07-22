@@ -200,6 +200,7 @@ namespace {
     bool auto_age_on_vanquish = false;
 
     bool auto_open_locked_chest = false;
+    bool auto_open_locked_chest_with_key = false;
 
     bool keep_current_quest_when_new_quest_added = false;
 
@@ -1397,7 +1398,10 @@ void GameSettings::OnDialogUIMessage(GW::HookStatus*, const GW::UI::UIMessage me
     switch (message_id) {
         case GW::UI::UIMessage::kDialogButton: {
             const auto info = static_cast<GW::UI::DialogButtonInfo*>(wparam);
-            // 8101 7f88 010a 8101 730e 0001
+            if (auto_open_locked_chest_with_key && wcscmp(info->message, L"\x8101\x7F88\x10A\x8101\x13BE\x1") == 0) {
+                // Auto use key
+                DialogModule::SendDialog(info->dialog_id);
+            }
             if (auto_open_locked_chest && wcscmp(info->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
                 // Auto use lockpick
                 DialogModule::SendDialog(info->dialog_id);
@@ -1537,6 +1541,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     block_sparkly_drops_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
     limit_signets_of_capture = ini->GetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
     auto_open_locked_chest = ini->GetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
+    auto_open_locked_chest_with_key = ini->GetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest_with_key);
     block_faction_gain = ini->GetBoolValue(Name(), VAR_NAME(block_faction_gain), block_faction_gain);
     block_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(block_experience_gain), block_experience_gain);
     block_zero_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(block_zero_experience_gain), block_zero_experience_gain);
@@ -1686,6 +1691,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
     ini->SetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
     ini->SetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
+    ini->SetBoolValue(Name(), VAR_NAME(auto_open_locked_chest_with_key), auto_open_locked_chest_with_key);
 
     ini->SetBoolValue(Name(), VAR_NAME(block_faction_gain), block_faction_gain);
     ini->SetBoolValue(Name(), VAR_NAME(block_experience_gain), block_experience_gain);
@@ -1834,6 +1840,7 @@ void GameSettings::DrawSettingInternal()
     ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
     ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
     ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting", &drop_ua_on_cast);
+    ImGui::Checkbox("Auto use available keys when interacting with locked chest", &auto_open_locked_chest_with_key);
     ImGui::Checkbox("Auto use lockpick when interacting with locked chest", &auto_open_locked_chest);
     ImGui::Checkbox("Keep current quest when accepting a new one", &keep_current_quest_when_new_quest_added);
 
