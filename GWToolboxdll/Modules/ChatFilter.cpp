@@ -49,6 +49,7 @@ namespace {
     bool faction_gain = false;
     bool challenge_mission_messages = false;
     bool block_messages_from_inactive_channels = false;
+    bool ashes_dropped = false;
 
 
     // Error messages on-screen
@@ -232,6 +233,42 @@ namespace {
         if (FullMatch(item_segment, {0x108, 0x10A, 0x8101, 0x730E}))
             return true; // don't ignore lockpicks
         return false;
+    } 
+
+    bool IsAshes(const wchar_t* item_segment)
+    {
+        if (item_segment == nullptr)
+            return false; // something went wrong, don't ignore
+        if (item_segment[0] == 0x0108 && item_segment[1] == 0x010A)
+        {
+            if (item_segment[2] >= 0x6C1F && item_segment[2] <= 0x6C2C)
+            {
+                // Factions ashes.  0x6C20 is unused content "Ashes of Li".
+                return true;
+            }
+            
+            if (item_segment[2] == 0x8101)
+            {
+                if (item_segment[3] == 0x45D1)
+                    return true; // Ashes of Vocal Sogolon
+                if (item_segment[3] == 0x45D2)
+                    return true; // Destructive Was Glaive
+                if (item_segment[3] == 0x6B78)
+                    return true; // Ashes of Energetic Lee Sa
+                if (item_segment[3] == 0x7325)
+                    return true; // Ashes of Pure Li Ming
+            }
+
+            if (item_segment[2] == 0x8102 && item_segment[3] == 0x5F7F)
+                return true; // Destructive Was Glaive (PvP)
+
+            // Saidra's Ashes omitted as it's a special bundle item found in the world
+            
+            // if (FullMatch(item_segment + 2, {0x8102, 0x29F4, 0xB953, 0xBF16, 0x4154}))
+            //    return true; // Saidra's Ashes
+        }
+
+        return false;
     }
 
     bool IsInChallengeMission()
@@ -324,6 +361,9 @@ namespace {
                 const bool rare = IsRare(Get2ndSegment(message));
                 if (rare)
                     return self_drop_rare;
+                const bool ashes = IsAshes(Get2ndSegment(message));
+                if (ashes)
+                    return ashes_dropped;
                 return self_drop_common;
             }
             case 0x7F1: {
@@ -344,8 +384,12 @@ namespace {
                     return ally_drop_common;
                 return false;
             }
-            case 0x7F2:
+            case 0x7F2: {
+                const bool ashes = IsAshes(Get1stSegment(message));
+                if (ashes)
+                    return ashes_dropped;
                 return false; // you drop item x
+            }
             case 0x7F6:       // player x picks up item y (note: item can be unassigned gold)
                 return IsRare(Get1stSegment(message)) ? ally_pickup_rare : ally_pickup_common;
             case 0x7FC: // you pick up item y (note: item can be unassigned gold)
@@ -708,6 +752,7 @@ void ChatFilter::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(ally_pickup_common);
     LOAD_BOOL(player_pickup_common);
     LOAD_BOOL(player_pickup_rare);
+    LOAD_BOOL(ashes_dropped);
     LOAD_BOOL(salvage_messages);
 
     LOAD_BOOL(skill_points);
@@ -789,6 +834,7 @@ void ChatFilter::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(ally_pickup_common);
     SAVE_BOOL(player_pickup_rare);
     SAVE_BOOL(player_pickup_common);
+    SAVE_BOOL(ashes_dropped);
     SAVE_BOOL(salvage_messages);
 
     SAVE_BOOL(skill_points);
@@ -963,6 +1009,8 @@ void ChatFilter::DrawSettingInternal()
     ImGui::ShowHelp("...because his / her status is set to away'");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Salvaging messages", &salvage_messages);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Ashes dropped messages", &ashes_dropped);
 
     ImGui::Separator();
     ImGui::Checkbox("Block messages from inactive chat channels", &block_messages_from_inactive_channels);
