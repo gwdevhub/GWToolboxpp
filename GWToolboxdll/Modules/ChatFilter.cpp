@@ -26,6 +26,9 @@
 //#define PRINT_CHAT_PACKETS
 
 namespace {
+
+    using namespace ToolboxUtils::EncodedStrings;
+
     bool guild_announcement = false;
     bool self_drop_rare = false;
     bool self_drop_common = false;
@@ -183,48 +186,6 @@ namespace {
         }
     }
 
-    const wchar_t* GetEncodedStringSegment(const wchar_t* message, wchar_t segment_key, size_t* segment_length_out = nullptr)
-    {
-        if (!message) return nullptr;
-        for (size_t i = 0; message[i] != 0; i++) {
-            if (message[i] != segment_key)
-                continue;
-            const wchar_t* argument_start_pos = message + i + 1;
-            if (segment_length_out) {
-                const auto argument_end_pos = wcschr(argument_start_pos, 0x1);
-                if (argument_end_pos) {
-                    *segment_length_out = argument_end_pos - argument_start_pos;
-                }
-                else {
-                    *segment_length_out = wcslen(argument_start_pos);
-                }
-            }
-            return argument_start_pos;
-        }
-        return nullptr;
-    };
-
-
-    const wchar_t* Get1stSegment(const wchar_t* message, size_t* segment_length_out = nullptr)
-    {
-        return GetEncodedStringSegment(message, 0x10A, segment_length_out);
-    };
-
-    const wchar_t* Get2ndSegment(const wchar_t* message, size_t* segment_length_out = nullptr)
-    {
-        return GetEncodedStringSegment(message, 0x10B, segment_length_out);
-    }
-
-    DWORD GetNumericSegment(const wchar_t* message)
-    {
-        if (!message) return 0;
-        for (size_t i = 0; message[i] != 0; i++) {
-            if ((0x100 < message[i] && message[i] < 0x107) || (0x10D < message[i] && message[i] < 0x110))
-                return (message[i + 1] - 0x100u);
-        }
-        return 0;
-    }
-
     bool FullMatch(const wchar_t* s, const std::initializer_list<wchar_t>& msg)
     {
         auto i = 0;
@@ -247,7 +208,7 @@ namespace {
         if (encoded_string[0] == 0xA40)
             return true; // don't ignore gold items
         size_t item_name_len = 0;
-        const auto item_name = Get1stSegment(encoded_string,&item_name_len);
+        const auto item_name = Get1stSegment(encoded_string,nullptr,&item_name_len);
         if (!item_name)
             return false;
         for (const auto cmp : rare_item_names) {
@@ -280,8 +241,9 @@ namespace {
 
     bool IsAshes(const wchar_t* encoded_string)
     {
+        if (!encoded_string) return false;
         size_t item_name_len = 0;
-        const auto item_name = Get1stSegment(encoded_string,&item_name_len);
+        const auto item_name = Get1stSegment(encoded_string,nullptr,&item_name_len);
         if (!item_name)
             return false;
         for (const auto cmp : encoded_ashes_names) {
@@ -376,14 +338,14 @@ namespace {
             case 0x7F0: {
                 // monster/player x drops item y (no assignment)
                 // first segment describes the agent who dropped, second segment describes the item dropped
-                if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(message)))
+                const auto agent_name = Get1stSegment(message);
+                if (!ShouldIgnoreByAgentThatDropped(agent_name))
                     return false;
-                const bool rare = IsRare(Get2ndSegment(message));
-                if (rare)
-                    return self_drop_rare;
-                const bool ashes = IsAshes(Get2ndSegment(message));
-                if (ashes)
-                    return ashes_dropped;
+                const auto item_argument = Get2ndSegment(message);
+                if (self_drop_rare && IsRare(item_argument))
+                    return true;
+                if (ashes_dropped && IsAshes(item_argument))
+                    return true;
                 return self_drop_common;
             }
             case 0x7F1: {
@@ -405,9 +367,8 @@ namespace {
                 return false;
             }
             case 0x7F2: {
-                const bool ashes = IsAshes(Get1stSegment(message));
-                if (ashes)
-                    return ashes_dropped;
+                if (ashes_dropped && IsAshes(Get1stSegment(message)))
+                    return true;
                 return false; // you drop item x
             }
             case 0x7F6:       // player x picks up item y (note: item can be unassigned gold)
@@ -471,11 +432,11 @@ namespace {
             case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
                 if (!FullMatch(&message[1], {0x866F, 0xB8D2, 0x5A20, 0x101}))
                     break;
-                return faction_gain || challenge_mission_messages && IsInChallengeMission();
+                return faction_gain || (challenge_mission_messages && IsInChallengeMission());
             case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
                 if (!FullMatch(&message[1], {0xDD4E, 0xB502, 0x71CE, 0x101}))
                     break;
-                return faction_gain || challenge_mission_messages && IsInChallengeMission();
+                return faction_gain || (challenge_mission_messages && IsInChallengeMission());
             case 0x7BF4:
                 return you_have_been_playing_for; // You have been playing for x time.
             case 0x7BF5:

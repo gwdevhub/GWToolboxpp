@@ -28,8 +28,9 @@ public:
     void Decode();
     void DecodeFromMapId();
     void Send();
-    static void PrintEncStr(const wchar_t* enc_str);
     std::wstring GetEncodedString();
+
+    static void PrintEncStr(const wchar_t* enc_str);
 
 private:
     int encoded_id = 0;

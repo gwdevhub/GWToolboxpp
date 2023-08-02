@@ -1058,10 +1058,6 @@ void GameSettings::PingItem(GW::Item* item, const uint32_t parts)
             out += L"\x2\x102\x2";
         out += ShorthandItemDescription(item);
     }
-#ifdef _DEBUG
-    printf("Pinged item:\n");
-    StringDecoderWindow::PrintEncStr(out.c_str());
-#endif
 
     PendingChatMessage* m = PendingChatMessage::queueSend(GW::Chat::Channel::CHANNEL_GROUP, out.c_str(), GW::PlayerMgr::GetPlayerByID()->name_enc);
     if (m)
