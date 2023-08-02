@@ -233,9 +233,17 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
         // NB: Use case to define GW::Vec4f ?
         GW::Vec2f x = party_window_position->xAxis();
         GW::Vec2f y = party_window_position->yAxis();
+
+        // If in an outpost and hard mode unlocked, push the interface down past the buttons
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && GW::PartyMgr::GetIsHardModeUnlocked()) {
+            const int HARD_MODE_BUTTONS_HEIGHT = 30;
+            y.x += HARD_MODE_BUTTONS_HEIGHT;
+        }
+
         // Do the uiscale multiplier
         x *= uiscale_multiply;
         y *= uiscale_multiply;
+
         // Clamp
         ImVec4 rect(x.x, y.x, x.y, y.y);
         const ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
