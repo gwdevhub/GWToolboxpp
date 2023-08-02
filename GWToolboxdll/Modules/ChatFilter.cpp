@@ -250,39 +250,37 @@ namespace {
         return false;
     } 
 
-    bool IsAshes(const wchar_t* item_segment)
+    const wchar_t* encoded_ashes_names[] = {
+        L"\x6C1F", // Factions ashes.  0x6C20 is unused content "Ashes of Li".
+        L"\x6C21",
+        L"\x6C22",
+        L"\x6C23",
+        L"\x6C24",
+        L"\x6C25",
+        L"\x6C26",
+        L"\x6C27",
+        L"\x6C28",
+        L"\x6C29",
+        L"\x6C2A",
+        L"\x6C2B",
+        L"\x6C2C",
+        L"\x8101\x45D1", // Ashes of Vocal Sogolon
+        L"\x8101\x45D2", // Destructive Was Glaive
+        L"\x8101\x6B78", // Ashes of Energetic Lee Sa
+        L"\x8101\x7325", // Ashes of Pure Li Ming
+        L"\x8102\x5F7F", // Destructive was Glaive (PvP)
+    };
+
+    bool IsAshes(const wchar_t* encoded_string)
     {
-        if (item_segment == nullptr)
-            return false; // something went wrong, don't ignore
-        if (item_segment[0] == 0x0108 && item_segment[1] == 0x010A)
-        {
-            if (item_segment[2] >= 0x6C1F && item_segment[2] <= 0x6C2C)
-            {
-                // Factions ashes.  0x6C20 is unused content "Ashes of Li".
+        size_t item_name_len = 0;
+        const auto item_name = Get1stSegment(encoded_string,&item_name_len);
+        if (!item_name)
+            return false;
+        for (const auto cmp : encoded_ashes_names) {
+            if (wcsncmp(item_name, cmp, item_name_len) == 0)
                 return true;
-            }
-            
-            if (item_segment[2] == 0x8101)
-            {
-                if (item_segment[3] == 0x45D1)
-                    return true; // Ashes of Vocal Sogolon
-                if (item_segment[3] == 0x45D2)
-                    return true; // Destructive Was Glaive
-                if (item_segment[3] == 0x6B78)
-                    return true; // Ashes of Energetic Lee Sa
-                if (item_segment[3] == 0x7325)
-                    return true; // Ashes of Pure Li Ming
-            }
-
-            if (item_segment[2] == 0x8102 && item_segment[3] == 0x5F7F)
-                return true; // Destructive Was Glaive (PvP)
-
-            // Saidra's Ashes omitted as it's a special bundle item found in the world
-            
-            // if (FullMatch(item_segment + 2, {0x8102, 0x29F4, 0xB953, 0xBF16, 0x4154}))
-            //    return true; // Saidra's Ashes
         }
-
         return false;
     }
 
