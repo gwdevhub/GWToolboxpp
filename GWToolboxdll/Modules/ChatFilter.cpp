@@ -183,26 +183,41 @@ namespace {
         }
     }
 
-    const wchar_t* Get1stSegment(const wchar_t* message)
+    const wchar_t* GetEncodedStringSegment(const wchar_t* message, wchar_t segment_key, size_t* segment_length_out = nullptr)
     {
+        if (!message) return nullptr;
         for (size_t i = 0; message[i] != 0; i++) {
-            if (message[i] == 0x10A)
-                return message + i + 1;
+            if (message[i] != segment_key)
+                continue;
+            const wchar_t* argument_start_pos = message + i + 1;
+            if (segment_length_out) {
+                const auto argument_end_pos = wcschr(argument_start_pos, 0x1);
+                if (argument_end_pos) {
+                    *segment_length_out = argument_end_pos - argument_start_pos;
+                }
+                else {
+                    *segment_length_out = wcslen(argument_start_pos);
+                }
+            }
+            return argument_start_pos;
         }
         return nullptr;
     };
 
-    const wchar_t* Get2ndSegment(const wchar_t* message)
+
+    const wchar_t* Get1stSegment(const wchar_t* message, size_t* segment_length_out = nullptr)
     {
-        for (size_t i = 0; message[i] != 0; i++) {
-            if (message[i] == 0x10B)
-                return message + i + 1;
-        }
-        return nullptr;
+        return GetEncodedStringSegment(message, 0x10A, segment_length_out);
+    };
+
+    const wchar_t* Get2ndSegment(const wchar_t* message, size_t* segment_length_out = nullptr)
+    {
+        return GetEncodedStringSegment(message, 0x10B, segment_length_out);
     }
 
     DWORD GetNumericSegment(const wchar_t* message)
     {
+        if (!message) return 0;
         for (size_t i = 0; message[i] != 0; i++) {
             if ((0x100 < message[i] && message[i] < 0x107) || (0x10D < message[i] && message[i] < 0x110))
                 return (message[i + 1] - 0x100u);
