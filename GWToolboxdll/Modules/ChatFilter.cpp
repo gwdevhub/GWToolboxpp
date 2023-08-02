@@ -235,20 +235,27 @@ namespace {
         return true;
     }
 
-    bool IsRare(const wchar_t* item_segment)
+    const wchar_t* rare_item_names[] = {
+        L"\x22D9\xE7B8\xE9DD\x2322", // Glob of ectoplasm
+        L"\x22EA\xFDA9\xDE53\x2D16", // Obsidian shard
+        L"\x8101\x730E" // Lockpick
+    };
+
+    bool IsRare(const wchar_t* encoded_string)
     {
-        if (item_segment == nullptr)
-            return false; // something went wrong, don't ignore
-        if (item_segment[0] == 0xA40)
+        if (!encoded_string) return false;
+        if (encoded_string[0] == 0xA40)
             return true; // don't ignore gold items
-        if (FullMatch(item_segment, {0x108, 0x10A, 0x22D9, 0xE7B8, 0xE9DD, 0x2322}))
-            return true; // don't ignore ectos
-        if (FullMatch(item_segment, {0x108, 0x10A, 0x22EA, 0xFDA9, 0xDE53, 0x2D16}))
-            return true; // don't ignore obby shards
-        if (FullMatch(item_segment, {0x108, 0x10A, 0x8101, 0x730E}))
-            return true; // don't ignore lockpicks
+        size_t item_name_len = 0;
+        const auto item_name = Get1stSegment(encoded_string,&item_name_len);
+        if (!item_name)
+            return false;
+        for (const auto cmp : rare_item_names) {
+            if (wcsncmp(item_name, cmp, item_name_len) == 0)
+                return true;
+        }
         return false;
-    } 
+    }
 
     const wchar_t* encoded_ashes_names[] = {
         L"\x6C1F", // Factions ashes.  0x6C20 is unused content "Ashes of Li".
