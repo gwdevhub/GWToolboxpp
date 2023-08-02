@@ -55,7 +55,6 @@ target_link_libraries(GWToolboxdll PRIVATE
     directxtex
     gwca
     earcut
-    utf8proc
     easywsclient
     discord_game_sdk
     nlohmann_json::nlohmann_json

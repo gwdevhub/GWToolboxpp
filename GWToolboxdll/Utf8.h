@@ -46,9 +46,3 @@ utf8::string Unicode16ToUtf8(const wchar_t* start, const wchar_t* end);
 utf8::string Unicode16ToUtf8(char* buffer, size_t n_buffer, const wchar_t* start, const wchar_t* end);
 
 size_t Utf8ToUnicode(const char* str, wchar_t* buffer, size_t count);
-
-// Custom normalization that returns a allocated buffer (malloc) and that do:
-//  - change to lower case
-//  - remove accent
-//  - remove non-printable character (e.g. zero-width spaces)
-utf8::string Utf8Normalize(const char* str);
