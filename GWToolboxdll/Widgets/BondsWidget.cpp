@@ -26,46 +26,49 @@
 #include <Widgets/BondsWidget.h>
 
 namespace {
-
     struct AvailableBond {
         GW::Constants::SkillID skill_id = GW::Constants::SkillID::No_Skill;
         GuiUtils::EncString skill_name;
         bool enabled = true;
-        AvailableBond(GW::Constants::SkillID _skill_id, bool _enabled = true) : skill_id(_skill_id), enabled(_enabled) { };
-        void Initialize() {
+
+        AvailableBond(GW::Constants::SkillID _skill_id, bool _enabled = true)
+            : skill_id(_skill_id), enabled(_enabled) { };
+
+        void Initialize()
+        {
             // Because AvialableBond is used statically in toolbox, we need to explicitly call this function in the render loop - otherwise GetSkillConstantData won't be called at the right time.
-            const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-            if(skill)
+            if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id))
                 skill_name.reset(skill->name);
         }
     };
 
     // Skill ID => enabled by default
     AvailableBond available_bonds[] = {
-        { GW::Constants::SkillID::Balthazars_Spirit,true},
-        { GW::Constants::SkillID::Essence_Bond,true},
-        { GW::Constants::SkillID::Holy_Veil,true},
-        { GW::Constants::SkillID::Life_Attunement,true},
-        { GW::Constants::SkillID::Life_Barrier,true},
-        { GW::Constants::SkillID::Life_Bond,true},
-        { GW::Constants::SkillID::Live_Vicariously,true},
-        { GW::Constants::SkillID::Mending,true},
-        { GW::Constants::SkillID::Protective_Bond,true},
-        { GW::Constants::SkillID::Purifying_Veil,true},
-        { GW::Constants::SkillID::Retribution,true},
-        { GW::Constants::SkillID::Strength_of_Honor,true},
-        { GW::Constants::SkillID::Succor,true},
-        { GW::Constants::SkillID::Vital_Blessing,true},
-        { GW::Constants::SkillID::Watchful_Spirit,true},
-        { GW::Constants::SkillID::Heroic_Refrain,true},
-        { GW::Constants::SkillID::Burning_Refrain,true},
-        { GW::Constants::SkillID::Mending_Refrain,true},
-        { GW::Constants::SkillID::Bladeturn_Refrain,true},
-        { GW::Constants::SkillID::Hasty_Refrain,true},
-        { GW::Constants::SkillID::Aggressive_Refrain,false}
+        {GW::Constants::SkillID::Balthazars_Spirit, true},
+        {GW::Constants::SkillID::Essence_Bond, true},
+        {GW::Constants::SkillID::Holy_Veil, true},
+        {GW::Constants::SkillID::Life_Attunement, true},
+        {GW::Constants::SkillID::Life_Barrier, true},
+        {GW::Constants::SkillID::Life_Bond, true},
+        {GW::Constants::SkillID::Live_Vicariously, true},
+        {GW::Constants::SkillID::Mending, true},
+        {GW::Constants::SkillID::Protective_Bond, true},
+        {GW::Constants::SkillID::Purifying_Veil, true},
+        {GW::Constants::SkillID::Retribution, true},
+        {GW::Constants::SkillID::Strength_of_Honor, true},
+        {GW::Constants::SkillID::Succor, true},
+        {GW::Constants::SkillID::Vital_Blessing, true},
+        {GW::Constants::SkillID::Watchful_Spirit, true},
+        {GW::Constants::SkillID::Heroic_Refrain, true},
+        {GW::Constants::SkillID::Burning_Refrain, true},
+        {GW::Constants::SkillID::Mending_Refrain, true},
+        {GW::Constants::SkillID::Bladeturn_Refrain, true},
+        {GW::Constants::SkillID::Hasty_Refrain, true},
+        {GW::Constants::SkillID::Aggressive_Refrain, false}
     };
 
-    AvailableBond* GetAvailableBond(const GW::Constants::SkillID skill_id) {
+    AvailableBond* GetAvailableBond(const GW::Constants::SkillID skill_id)
+    {
         for (auto& b : available_bonds) {
             if (b.skill_id == skill_id)
                 return &b;
@@ -114,7 +117,7 @@ namespace {
         // capture by value!
         GW::GameThread::Enqueue([slot, targetId]() -> void {
             GW::SkillbarMgr::UseSkill(slot, targetId);
-            });
+        });
     }
 
     Color background = 0;
@@ -131,8 +134,7 @@ namespace {
         bond_map.clear();
         for (const auto& skill : bar->skills) {
             auto skill_id = static_cast<GW::Constants::SkillID>(skill.skill_id);
-            auto found = GetAvailableBond(skill_id);
-            if (found && found->enabled) {
+            if (const auto found = GetAvailableBond(skill_id); found && found->enabled) {
                 bond_map[skill_id] = bond_list.size();
                 bond_list.push_back(skill_id);
             }
@@ -143,6 +145,7 @@ namespace {
     std::vector<GW::AgentID> party_list{};               // index to agent id
     std::unordered_map<GW::AgentID, size_t> party_map{}; // agent id to index
     size_t allies_start = 255;
+
     bool FetchPartyInfo()
     {
         const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
@@ -185,7 +188,6 @@ namespace {
         }
         return true;
     }
-
 }
 
 void BondsWidget::Initialize()
@@ -195,11 +197,6 @@ void BondsWidget::Initialize()
     for (auto& b : available_bonds) {
         b.Initialize();
     }
-}
-
-void BondsWidget::Terminate()
-{
-    ToolboxWidget::Terminate();
 }
 
 void BondsWidget::Draw(IDirect3DDevice9* device)
@@ -227,8 +224,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
         return;
 
     // ==== Draw ====
-    const float img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
-    const float height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
+    const auto img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
+    const auto height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -281,8 +278,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
                 ++x;
                 ++y;
             }
-            return ImVec2(win_x + x * img_size,
-                          win_y + y * img_size);
+            return {win_x + img_size * x,
+                    win_y + img_size * y};
         };
 
         bool handled_click = false;
@@ -413,10 +410,11 @@ void BondsWidget::DrawSettingInternal()
     ImGui::TextUnformatted("Skills enabled for bond monitor:");
     ImGui::Indent();
     ImGui::StartSpacedElements(180.f);
-    char label_buf[128];
     for (auto& bond : available_bonds) {
+        char label_buf[128];
         ImGui::NextSpacedElement();
-        snprintf(label_buf, sizeof(label_buf), "%s##available_bond_%p", bond.skill_name.string().c_str(), &bond);
+        const auto written = snprintf(label_buf, sizeof(label_buf), "%s##available_bond_%p", bond.skill_name.string().c_str(), &bond);
+        ASSERT(written != -1);
         if (ImGui::Checkbox(label_buf, &bond.enabled))
             FetchBondSkills();
     }

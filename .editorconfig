@@ -5,3 +5,13 @@ end_of_line = lf
 insert_final_newline = true
 charset = utf-8
 indent_style = space
+
+# ReSharper properties
+resharper_anonymous_method_declaration_braces = end_of_line
+resharper_case_block_braces = end_of_line
+resharper_empty_block_style = together_same_line
+resharper_export_declaration_braces = end_of_line
+resharper_invocable_declaration_braces = end_of_line
+resharper_other_braces = end_of_line
+resharper_simple_block_style = line_break
+resharper_type_declaration_braces = end_of_line
