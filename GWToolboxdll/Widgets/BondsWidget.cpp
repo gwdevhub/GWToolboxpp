@@ -367,34 +367,48 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
 void BondsWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
-
     background = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
-    click_to_cast = ini->GetBoolValue(Name(), VAR_NAME(click_to_cast), click_to_cast);
-    click_to_drop = ini->GetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
-    show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
-    flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
-    row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
     low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(low_attribute_overlay), Colors::ARGB(76, 0, 0, 0));
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
+
+    LOAD_BOOL(lock_move);
+    LOAD_BOOL(click_to_cast);
+    LOAD_BOOL(click_to_drop);
+    LOAD_BOOL(show_allies);
+    LOAD_BOOL(flip_bonds);
+    LOAD_BOOL(hide_in_outpost);
+    LOAD_BOOL(snap_to_party_window);
+    LOAD_UINT(row_height);
+    LOAD_UINT(user_offset);
+
+    for (auto& b : available_bonds) {
+        char buf[128];
+        const int written = snprintf(buf, sizeof(buf), "bond_enabled_%d", b.skill_id);
+        ASSERT(written != -1);
+        b.enabled = ini->GetBoolValue(Name(), buf, b.enabled);
+    }
 }
 
 void BondsWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
     Colors::Save(ini, Name(), VAR_NAME(background), background);
-    ini->SetBoolValue(Name(), VAR_NAME(click_to_cast), click_to_cast);
-    ini->SetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
-    ini->SetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
-    ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
-    ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
     Colors::Save(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
+    SAVE_BOOL(lock_move);
+    SAVE_BOOL(click_to_cast);
+    SAVE_BOOL(click_to_drop);
+    SAVE_BOOL(show_allies);
+    SAVE_BOOL(flip_bonds);
+    SAVE_BOOL(hide_in_outpost);
+    SAVE_BOOL(snap_to_party_window);
+    SAVE_UINT(row_height);
+    SAVE_UINT(user_offset);
+
+    for (auto& b : available_bonds) {
+        char buf[128];
+        const int written = snprintf(buf, sizeof(buf), "bond_enabled_%d", b.skill_id);
+        ASSERT(written != -1);
+        ini->SetBoolValue(Name(), buf, b.enabled);
+    }
 }
 
 void BondsWidget::DrawSettingInternal()
