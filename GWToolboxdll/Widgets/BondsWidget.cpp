@@ -59,6 +59,7 @@ namespace {
         {GW::Constants::SkillID::Succor, true},
         {GW::Constants::SkillID::Vital_Blessing, true},
         {GW::Constants::SkillID::Watchful_Spirit, true},
+        {GW::Constants::SkillID::Watchful_Intervention, false},
         {GW::Constants::SkillID::Heroic_Refrain, true},
         {GW::Constants::SkillID::Burning_Refrain, true},
         {GW::Constants::SkillID::Mending_Refrain, true},
