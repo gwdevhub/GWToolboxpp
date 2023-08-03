@@ -39,10 +39,8 @@ namespace {
     IWbemLocator* pLoc = 0;
     HRESULT CoInitializeEx_result = -1;*/
     MSG msg;
-    HWND streaming_window_handle = nullptr;
     std::default_random_engine dre = std::default_random_engine(static_cast<uint32_t>(time(nullptr)));
     GW::HookEntry stoc_hook;
-    GW::HookEntry stoc_hook2;
     GW::HookEntry ctos_hook;
     bool running = false;
 
@@ -336,12 +334,12 @@ namespace {
         return true;
     }
 
-    bool UnobfuscateName(const std::wstring& _obfuscated_name, std::wstring& out)
+    bool UnobfuscateName(std::wstring_view _obfuscated_name, std::wstring& out)
     {
         if (_obfuscated_name.empty()) {
             return false;
         }
-        const std::wstring obfuscated_name = GuiUtils::SanitizePlayerName(_obfuscated_name);
+        const auto obfuscated_name = GuiUtils::SanitizePlayerName(std::wstring(_obfuscated_name));
         const auto found = obfuscated_by_obfuscation.find(obfuscated_name);
         if (found == obfuscated_by_obfuscation.end())
             return false;
@@ -354,24 +352,23 @@ namespace {
         const wchar_t* player_name_start = nullptr;
         const wchar_t* player_name_end = nullptr;
         const wchar_t* offset = message;
-        size_t player_name_len = 0;
         bool found = FindPlayerNameInMessage(offset, &player_name_start, &player_name_end);
         if (!found)
             return false;
         std::wstring tmp_name;
         std::wstring tmp_out;
         do {
-            player_name_len = player_name_end - player_name_start;
+            const size_t player_name_len = player_name_end - player_name_start;
             tmp_out.append(offset, (player_name_start - offset));
             offset = player_name_start + player_name_len;
             tmp_name.assign(player_name_start, player_name_len);
             if (tmp_name.empty())
                 break;
             if (obfuscate) {
-                ObfuscateName(tmp_name.c_str(), tmp_name, true);
+                ObfuscateName(tmp_name, tmp_name, true);
             }
             else {
-                UnobfuscateName(tmp_name.c_str(), tmp_name);
+                UnobfuscateName(tmp_name, tmp_name);
             }
             tmp_out.append(tmp_name);
             found = FindPlayerNameInMessage(offset, &player_name_start, &player_name_end);
@@ -517,14 +514,9 @@ namespace {
         return true;
     }
 
-    bool UnobfuscateGuildRoster()
-    {
-        return ObfuscateGuildRoster(false);
-    }
-
     void CmdObfuscate(const wchar_t*, int, wchar_t**)
     {
-        Obfuscator::Obfuscate(!(pending_state == ObfuscatorState::Enabled));
+        Obfuscator::Obfuscate(pending_state != ObfuscatorState::Enabled);
     }
 
     void Reset()
@@ -537,7 +529,7 @@ namespace {
                 player_email = c->player_email;
             }
         }
-        std::shuffle(std::begin(obfuscated_name_pool), std::end(obfuscated_name_pool), dre);
+        std::ranges::shuffle(obfuscated_name_pool, dre);
         pool_index = 0;
         obfuscated_by_obfuscation.clear();
         obfuscated_by_original.clear();
@@ -708,7 +700,7 @@ namespace {
         }
     }
 
-    void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, wchar_t* message)
+    [[maybe_unused]] void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, wchar_t* message)
     {
         if (channel != GW::Chat::Channel::CHANNEL_WHISPER)
             return;
@@ -721,10 +713,10 @@ namespace {
         const wchar_t* whisper_separator = wcschr(message, ',');
         if (!whisper_separator)
             return;
-        const size_t len = (whisper_separator - message);
+        const size_t len = whisper_separator - message;
         const std::wstring recipient_obfuscated(message, len);
         std::wstring recipient_unobfuscated;
-        if (UnobfuscateName(recipient_obfuscated.c_str(), recipient_unobfuscated)) {
+        if (UnobfuscateName(recipient_obfuscated, recipient_unobfuscated)) {
             // NB: Block and send a copy with the new message content; current wchar_t* may not have enough allocated memory to just replace the content.
             status->blocked = true;
             processing = true;
@@ -829,28 +821,28 @@ void Obfuscator::Initialize()
     ToolboxModule::Initialize();
     Reset();
 
-    const uintptr_t GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)");
+    const auto GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)");
     if (GetCharacterSummary_Assertion) {
         // Hook to override character names on login screen
-        GetCharacterSummary_Func = (GetCharacterSummary_pt)(GetCharacterSummary_Assertion - 0x4F);
-        GW::HookBase::CreateHook(GetCharacterSummary_Func, OnGetCharacterSummary, (void**)&RetGetCharacterSummary);
+        GetCharacterSummary_Func = reinterpret_cast<GetCharacterSummary_pt>(GetCharacterSummary_Assertion - 0x4F);
+        GW::HookBase::CreateHook(GetCharacterSummary_Func, OnGetCharacterSummary, reinterpret_cast<void**>(&RetGetCharacterSummary));
         GW::HookBase::EnableHooks(GetCharacterSummary_Func);
         // Patch to allow missing character summary
         GetCharacterSummary_AssertionPatch.SetPatch(GetCharacterSummary_Assertion - 0x7, "\xEB", 1);
         GetCharacterSummary_AssertionPatch.TogglePatch(true);
     }
     const uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", -0x30);
-    GetAccountData_Func = (GetAccountData_pt)GW::Scanner::FunctionFromNearCall(address);
+    GetAccountData_Func = reinterpret_cast<GetAccountData_pt>(GW::Scanner::FunctionFromNearCall(address));
     if (GetAccountData_Func) {
-        GW::HookBase::CreateHook(GetAccountData_Func, OnGetAccountInfo, (void**)&GetAccountData_Ret);
+        GW::HookBase::CreateHook(GetAccountData_Func, OnGetAccountInfo, reinterpret_cast<void**>(&GetAccountData_Ret));
         GW::HookBase::EnableHooks(GetAccountData_Func);
     }
 
-    const auto pre_hook_altitude = -0x9000;  // Hooks that run before other RegisterPacketCallback hooks
-    const auto post_hook_altitude = -0x7000; // Hooks that run after other RegisterPacketCallback hooks, but BEFORE the game processes the packet
-    const auto post_gw_altitude = 0x8000;    // Hooks that run after gw has processed the event
+    constexpr auto pre_hook_altitude = -0x9000;      // Hooks that run before other RegisterPacketCallback hooks
+    constexpr auto post_hook_altitude = -0x7000; // Hooks that run after other RegisterPacketCallback hooks, but BEFORE the game processes the packet
+    constexpr auto post_gw_altitude = 0x8000;    // Hooks that run after gw has processed the event
 
-    const uint32_t pre_hook_headers[] = {
+    constexpr uint32_t pre_hook_headers[] = {
         GAME_SMSG_AGENT_CREATE_PLAYER,
         GAME_SMSG_MERCENARY_INFO,
         GAME_SMSG_AGENT_UPDATE_NPC_NAME,
@@ -865,13 +857,13 @@ void Obfuscator::Initialize()
     for (const auto header : pre_hook_headers) {
         GW::StoC::RegisterPacketCallback(&stoc_hook, header, OnStoCPacket, pre_hook_altitude);
     }
-    const uint32_t post_hook_headers[] = {
+    constexpr uint32_t post_hook_headers[] = {
         GAME_SMSG_CHAT_MESSAGE_CORE // Post resignlog hook
     };
     for (const auto header : post_hook_headers) {
         GW::StoC::RegisterPacketCallback(&stoc_hook, header, OnStoCPacket, post_hook_altitude);
     }
-    const GW::UI::UIMessage pre_hook_ui_messages[] = {
+    constexpr GW::UI::UIMessage pre_hook_ui_messages[] = {
         GW::UI::UIMessage::kShowMapEntryMessage,
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kWriteToChatLog
@@ -879,7 +871,7 @@ void Obfuscator::Initialize()
     for (const auto header : pre_hook_ui_messages) {
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, pre_hook_altitude);
     }
-    const GW::UI::UIMessage post_gw_ui_messages[] = {
+    constexpr GW::UI::UIMessage post_gw_ui_messages[] = {
         GW::UI::UIMessage::kLogout,
         GW::UI::UIMessage::kWriteToChatLog
     };
