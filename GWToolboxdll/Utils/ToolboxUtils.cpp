@@ -34,6 +34,103 @@ namespace {
 }
 
 namespace ToolboxUtils {
+
+    namespace EncodedStrings {
+        bool IsNumericFlag(const wchar_t check) {
+            switch (check) {
+            case 0x101:
+            case 0x103:
+            case 0x104:
+            case 0x105:
+            case 0x106:
+            case 0x107:
+                return true;
+            }
+            return false;
+        }
+        bool IsArgumentFlag(const wchar_t check) {
+            if (IsNumericFlag(check))
+                return true;
+            switch (check) {
+            case 0x10a:
+            case 0x10b:
+            case 0x10c:
+            case 0x10d:
+            case 0x10e:
+            case 0x10f:
+                return true;
+            }
+            return false;
+        }
+
+        const size_t GetSegmentLength(const wchar_t* message) {
+            if (!message) return 0;
+            if (IsNumericFlag(*message))
+                return 1;
+            size_t i = 0;
+            for (i = 0; message[i] > 0x2; i++) {
+                if (IsNumericFlag(message[i])) {
+                    i += 1;
+                }
+                else if (IsArgumentFlag(message[i])) {
+                    i += GetSegmentLength(&message[i]) + 1;
+                }
+            }
+            return i;
+        }
+        const size_t GetIdentifierLength(const wchar_t* message)
+        {
+            if (!message) return 0;
+            size_t i = 0;
+            for (i = 0; message[i] > 0x2; i++) {
+                if (IsArgumentFlag(message[i]))
+                    break;
+            }
+            return i;
+        }
+        const wchar_t* GetSegmentArgument(const wchar_t* message, wchar_t segment_key, size_t* segment_length_out, size_t* identifier_length_out)
+        {
+            if (!message) return nullptr;
+            for (size_t i = 0; message[i] > 0x2; i++) {
+                if (!IsArgumentFlag(message[i]))
+                    continue;
+                if (message[i] == segment_key) {
+                    const wchar_t* argument_start_pos = message + i + 1;
+                    if (segment_length_out) {
+                        *segment_length_out = GetSegmentLength(argument_start_pos);
+                    }
+                    if (identifier_length_out) {
+                        *identifier_length_out = IsNumericFlag(message[i]) ? 1 : GetIdentifierLength(argument_start_pos);
+                    }
+                    return argument_start_pos;
+                }
+                if (message[i] > segment_key) {
+                    return nullptr; // Encoded strings have arguments in order.
+                }
+            }
+            return nullptr;
+        }
+
+
+        const wchar_t* Get1stSegment(const wchar_t* message, size_t* segment_length_out, size_t* identifier_length_out)
+        {
+            return GetSegmentArgument(message, 0x10A, segment_length_out, identifier_length_out);
+        }
+
+        const wchar_t* Get2ndSegment(const wchar_t* message, size_t* segment_length_out, size_t* identifier_length_out)
+        {
+            return GetSegmentArgument(message, 0x10B, segment_length_out, identifier_length_out);
+        }
+
+        DWORD GetNumericSegment(const wchar_t* message)
+        {
+            if (!message) return 0;
+            const wchar_t* found = GetSegmentArgument(message, 0x101);
+            if (found && *found)
+                return *found - 0x100;
+            return 0;
+        }
+    }
     bool IsOutpost()
     {
         return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;

@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <Utf8.h>
-#include <utf8proc.h>
 
 utf8::string Unicode16ToUtf8(const wchar_t* str)
 {
@@ -55,15 +54,4 @@ size_t Utf8ToUnicode(const char* str, wchar_t* buffer, const size_t count)
     if (iret < 0)
         return 0;
     return static_cast<size_t>(iret);
-}
-
-utf8::string Utf8Normalize(const char* str)
-{
-    constexpr int flags = UTF8PROC_NULLTERM | UTF8PROC_STABLE |
-                          UTF8PROC_COMPOSE | UTF8PROC_COMPAT | UTF8PROC_CASEFOLD | UTF8PROC_IGNORE | UTF8PROC_STRIPMARK;
-    utf8::string res;
-    utf8proc_map((utf8proc_uint8_t*)str, 0, (utf8proc_uint8_t**)&res.bytes, static_cast<utf8proc_option_t>(flags));
-    res.count = res.bytes ? strlen(res.bytes) : 0;
-    res.allocated = true;
-    return res;
 }

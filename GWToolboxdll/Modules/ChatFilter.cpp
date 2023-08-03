@@ -26,6 +26,9 @@
 //#define PRINT_CHAT_PACKETS
 
 namespace {
+
+    using namespace ToolboxUtils::EncodedStrings;
+
     bool guild_announcement = false;
     bool self_drop_rare = false;
     bool self_drop_common = false;
@@ -49,6 +52,7 @@ namespace {
     bool faction_gain = false;
     bool challenge_mission_messages = false;
     bool block_messages_from_inactive_channels = false;
+    bool ashes_dropped = false;
 
 
     // Error messages on-screen
@@ -182,33 +186,6 @@ namespace {
         }
     }
 
-    const wchar_t* Get1stSegment(const wchar_t* message)
-    {
-        for (size_t i = 0; message[i] != 0; i++) {
-            if (message[i] == 0x10A)
-                return message + i + 1;
-        }
-        return nullptr;
-    };
-
-    const wchar_t* Get2ndSegment(const wchar_t* message)
-    {
-        for (size_t i = 0; message[i] != 0; i++) {
-            if (message[i] == 0x10B)
-                return message + i + 1;
-        }
-        return nullptr;
-    }
-
-    DWORD GetNumericSegment(const wchar_t* message)
-    {
-        for (size_t i = 0; message[i] != 0; i++) {
-            if ((0x100 < message[i] && message[i] < 0x107) || (0x10D < message[i] && message[i] < 0x110))
-                return (message[i + 1] - 0x100u);
-        }
-        return 0;
-    }
-
     bool FullMatch(const wchar_t* s, const std::initializer_list<wchar_t>& msg)
     {
         auto i = 0;
@@ -219,18 +196,60 @@ namespace {
         return true;
     }
 
-    bool IsRare(const wchar_t* item_segment)
+    const wchar_t* rare_item_names[] = {
+        L"\x22D9\xE7B8\xE9DD\x2322", // Glob of ectoplasm
+        L"\x22EA\xFDA9\xDE53\x2D16", // Obsidian shard
+        L"\x8101\x730E" // Lockpick
+    };
+
+    bool IsRare(const wchar_t* encoded_string)
     {
-        if (item_segment == nullptr)
-            return false; // something went wrong, don't ignore
-        if (item_segment[0] == 0xA40)
+        if (!encoded_string) return false;
+        if (encoded_string[0] == 0xA40)
             return true; // don't ignore gold items
-        if (FullMatch(item_segment, {0x108, 0x10A, 0x22D9, 0xE7B8, 0xE9DD, 0x2322}))
-            return true; // don't ignore ectos
-        if (FullMatch(item_segment, {0x108, 0x10A, 0x22EA, 0xFDA9, 0xDE53, 0x2D16}))
-            return true; // don't ignore obby shards
-        if (FullMatch(item_segment, {0x108, 0x10A, 0x8101, 0x730E}))
-            return true; // don't ignore lockpicks
+        size_t item_name_len = 0;
+        const auto item_name = Get1stSegment(encoded_string,nullptr,&item_name_len);
+        if (!item_name)
+            return false;
+        for (const auto cmp : rare_item_names) {
+            if (wcsncmp(item_name, cmp, item_name_len) == 0)
+                return true;
+        }
+        return false;
+    }
+
+    const wchar_t* encoded_ashes_names[] = {
+        L"\x6C1F", // Factions ashes.  0x6C20 is unused content "Ashes of Li".
+        L"\x6C21",
+        L"\x6C22",
+        L"\x6C23",
+        L"\x6C24",
+        L"\x6C25",
+        L"\x6C26",
+        L"\x6C27",
+        L"\x6C28",
+        L"\x6C29",
+        L"\x6C2A",
+        L"\x6C2B",
+        L"\x6C2C",
+        L"\x8101\x45D1", // Ashes of Vocal Sogolon
+        L"\x8101\x45D2", // Destructive Was Glaive
+        L"\x8101\x6B78", // Ashes of Energetic Lee Sa
+        L"\x8101\x7325", // Ashes of Pure Li Ming
+        L"\x8102\x5F7F", // Destructive was Glaive (PvP)
+    };
+
+    bool IsAshes(const wchar_t* encoded_string)
+    {
+        if (!encoded_string) return false;
+        size_t item_name_len = 0;
+        const auto item_name = Get1stSegment(encoded_string,nullptr,&item_name_len);
+        if (!item_name)
+            return false;
+        for (const auto cmp : encoded_ashes_names) {
+            if (wcsncmp(item_name, cmp, item_name_len) == 0)
+                return true;
+        }
         return false;
     }
 
@@ -319,11 +338,14 @@ namespace {
             case 0x7F0: {
                 // monster/player x drops item y (no assignment)
                 // first segment describes the agent who dropped, second segment describes the item dropped
-                if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(message)))
+                const auto agent_name = Get1stSegment(message);
+                if (!ShouldIgnoreByAgentThatDropped(agent_name))
                     return false;
-                const bool rare = IsRare(Get2ndSegment(message));
-                if (rare)
-                    return self_drop_rare;
+                const auto item_argument = Get2ndSegment(message);
+                if (self_drop_rare && IsRare(item_argument))
+                    return true;
+                if (ashes_dropped && IsAshes(item_argument))
+                    return true;
                 return self_drop_common;
             }
             case 0x7F1: {
@@ -344,8 +366,11 @@ namespace {
                     return ally_drop_common;
                 return false;
             }
-            case 0x7F2:
+            case 0x7F2: {
+                if (ashes_dropped && IsAshes(Get1stSegment(message)))
+                    return true;
                 return false; // you drop item x
+            }
             case 0x7F6:       // player x picks up item y (note: item can be unassigned gold)
                 return IsRare(Get1stSegment(message)) ? ally_pickup_rare : ally_pickup_common;
             case 0x7FC: // you pick up item y (note: item can be unassigned gold)
@@ -407,11 +432,11 @@ namespace {
             case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
                 if (!FullMatch(&message[1], {0x866F, 0xB8D2, 0x5A20, 0x101}))
                     break;
-                return faction_gain || challenge_mission_messages && IsInChallengeMission();
+                return faction_gain || (challenge_mission_messages && IsInChallengeMission());
             case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
                 if (!FullMatch(&message[1], {0xDD4E, 0xB502, 0x71CE, 0x101}))
                     break;
-                return faction_gain || challenge_mission_messages && IsInChallengeMission();
+                return faction_gain || (challenge_mission_messages && IsInChallengeMission());
             case 0x7BF4:
                 return you_have_been_playing_for; // You have been playing for x time.
             case 0x7BF5:
@@ -708,6 +733,7 @@ void ChatFilter::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(ally_pickup_common);
     LOAD_BOOL(player_pickup_common);
     LOAD_BOOL(player_pickup_rare);
+    LOAD_BOOL(ashes_dropped);
     LOAD_BOOL(salvage_messages);
 
     LOAD_BOOL(skill_points);
@@ -789,6 +815,7 @@ void ChatFilter::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(ally_pickup_common);
     SAVE_BOOL(player_pickup_rare);
     SAVE_BOOL(player_pickup_common);
+    SAVE_BOOL(ashes_dropped);
     SAVE_BOOL(salvage_messages);
 
     SAVE_BOOL(skill_points);
@@ -963,6 +990,8 @@ void ChatFilter::DrawSettingsInternal()
     ImGui::ShowHelp("...because his / her status is set to away'");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Salvaging messages", &salvage_messages);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Ashes dropped messages", &ashes_dropped);
 
     ImGui::Separator();
     ImGui::Checkbox("Block messages from inactive chat channels", &block_messages_from_inactive_channels);

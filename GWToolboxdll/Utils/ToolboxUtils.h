@@ -27,6 +27,15 @@ namespace GW {
 }
 
 namespace ToolboxUtils {
+    namespace EncodedStrings {
+        const size_t GetSegmentLength(const wchar_t* message);
+        const size_t GetIdentifierLength(const wchar_t* message);
+        const wchar_t* GetSegmentArgument(const wchar_t* message, wchar_t segment_key, size_t* segment_length_out = nullptr, size_t* identifier_length_out = nullptr);
+        const wchar_t* Get1stSegment(const wchar_t* message, size_t* segment_length_out = nullptr, size_t* identifier_length_out = nullptr);
+        const wchar_t* Get2ndSegment(const wchar_t* message, size_t* segment_length_out = nullptr, size_t* identifier_length_out = nullptr);
+        DWORD GetNumericSegment(const wchar_t* message);
+    }
+
     // Map
 
     bool IsOutpost();

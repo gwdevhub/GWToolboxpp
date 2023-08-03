@@ -25,15 +25,179 @@
 #include <Modules/Resources.h>
 #include <Widgets/BondsWidget.h>
 
+namespace {
+    struct AvailableBond {
+        GW::Constants::SkillID skill_id = GW::Constants::SkillID::No_Skill;
+        GuiUtils::EncString skill_name;
+        bool enabled = true;
+
+        AvailableBond(GW::Constants::SkillID _skill_id, bool _enabled = true)
+            : skill_id(_skill_id), enabled(_enabled) { };
+
+        void Initialize()
+        {
+            // Because AvialableBond is used statically in toolbox, we need to explicitly call this function in the render loop - otherwise GetSkillConstantData won't be called at the right time.
+            if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id))
+                skill_name.reset(skill->name);
+        }
+    };
+
+    // Skill ID => enabled by default
+    AvailableBond available_bonds[] = {
+        {GW::Constants::SkillID::Balthazars_Spirit, true},
+        {GW::Constants::SkillID::Essence_Bond, true},
+        {GW::Constants::SkillID::Holy_Veil, true},
+        {GW::Constants::SkillID::Life_Attunement, true},
+        {GW::Constants::SkillID::Life_Barrier, true},
+        {GW::Constants::SkillID::Life_Bond, true},
+        {GW::Constants::SkillID::Live_Vicariously, true},
+        {GW::Constants::SkillID::Mending, true},
+        {GW::Constants::SkillID::Protective_Bond, true},
+        {GW::Constants::SkillID::Purifying_Veil, true},
+        {GW::Constants::SkillID::Retribution, true},
+        {GW::Constants::SkillID::Strength_of_Honor, true},
+        {GW::Constants::SkillID::Succor, true},
+        {GW::Constants::SkillID::Vital_Blessing, true},
+        {GW::Constants::SkillID::Watchful_Spirit, true},
+        {GW::Constants::SkillID::Watchful_Intervention, false},
+        {GW::Constants::SkillID::Heroic_Refrain, true},
+        {GW::Constants::SkillID::Burning_Refrain, true},
+        {GW::Constants::SkillID::Mending_Refrain, true},
+        {GW::Constants::SkillID::Bladeturn_Refrain, true},
+        {GW::Constants::SkillID::Hasty_Refrain, true},
+        {GW::Constants::SkillID::Aggressive_Refrain, false}
+    };
+
+    AvailableBond* GetAvailableBond(const GW::Constants::SkillID skill_id)
+    {
+        for (auto& b : available_bonds) {
+            if (b.skill_id == skill_id)
+                return &b;
+        }
+        return nullptr;
+    }
+
+
+    // settings
+    bool hide_in_outpost = false;
+    bool click_to_cast = true;
+    bool click_to_drop = true;
+    bool show_allies = true;
+    bool flip_bonds = false;
+    int row_height = 64;
+
+    bool snap_to_party_window = true;
+    // Distance away from the party window on the x axis; used with snap to party window
+    int user_offset = 64;
+
+    GW::UI::WindowPosition* party_window_position = nullptr;
+
+    void UseBuff(GW::AgentID targetId, DWORD buff_skillid)
+    {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+            return;
+        if (GW::Map::GetIsObserving())
+            return;
+        if (targetId == 0)
+            return;
+
+        const GW::Agent* target = GW::Agents::GetAgentByID(targetId);
+        if (target == nullptr)
+            return;
+
+        const auto islot = GW::SkillbarMgr::GetSkillSlot(static_cast<GW::Constants::SkillID>(buff_skillid));
+        if (islot < 0)
+            return;
+        auto slot = static_cast<uint32_t>(islot);
+        const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+        if (!skillbar || !skillbar->IsValid())
+            return;
+        if (skillbar->skills[slot].recharge != 0)
+            return;
+
+        // capture by value!
+        GW::GameThread::Enqueue([slot, targetId]() -> void {
+            GW::SkillbarMgr::UseSkill(slot, targetId);
+        });
+    }
+
+    Color background = 0;
+    Color low_attribute_overlay = 0;
+
+    std::vector<GW::Constants::SkillID> bond_list{};               // index to skill id
+    std::unordered_map<GW::Constants::SkillID, size_t> bond_map{}; // skill id to index
+    bool FetchBondSkills()
+    {
+        const GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
+        if (!bar || !bar->IsValid())
+            return false;
+        bond_list.clear();
+        bond_map.clear();
+        for (const auto& skill : bar->skills) {
+            auto skill_id = static_cast<GW::Constants::SkillID>(skill.skill_id);
+            if (const auto found = GetAvailableBond(skill_id); found && found->enabled) {
+                bond_map[skill_id] = bond_list.size();
+                bond_list.push_back(skill_id);
+            }
+        }
+        return true;
+    }
+
+    std::vector<GW::AgentID> party_list{};               // index to agent id
+    std::unordered_map<GW::AgentID, size_t> party_map{}; // agent id to index
+    size_t allies_start = 255;
+
+    bool FetchPartyInfo()
+    {
+        const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+        if (!info)
+            return false;
+        party_list.clear();
+        party_map.clear();
+        allies_start = 255;
+        for (const GW::PlayerPartyMember& player : info->players) {
+            const DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
+            if (!id)
+                continue;
+            party_map[id] = party_list.size();
+            party_list.push_back(id);
+
+            if (info->heroes.valid()) {
+                for (const GW::HeroPartyMember& hero : info->heroes) {
+                    if (hero.owner_player_id == player.login_number) {
+                        party_map[hero.agent_id] = party_list.size();
+                        party_list.push_back(hero.agent_id);
+                    }
+                }
+            }
+        }
+        if (info->henchmen.valid()) {
+            for (const GW::HenchmanPartyMember& hench : info->henchmen) {
+                party_list.push_back(hench.agent_id);
+            }
+        }
+        if (show_allies && info->others.valid()) {
+            for (const DWORD ally_id : info->others) {
+                GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
+                const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
+                if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
+                    if (allies_start == 255)
+                        allies_start = party_map.size();
+                    party_map[ally_id] = party_map.size();
+                }
+            }
+        }
+        return true;
+    }
+}
+
 void BondsWidget::Initialize()
 {
     ToolboxWidget::Initialize();
     party_window_position = GetWindowPosition(GW::UI::WindowID_PartyWindow);
-}
-
-void BondsWidget::Terminate()
-{
-    ToolboxWidget::Terminate();
+    for (auto& b : available_bonds) {
+        b.Initialize();
+    }
 }
 
 void BondsWidget::Draw(IDirect3DDevice9* device)
@@ -61,8 +225,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
         return;
 
     // ==== Draw ====
-    const float img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
-    const float height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
+    const auto img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
+    const auto height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -115,8 +279,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
                 ++x;
                 ++y;
             }
-            return ImVec2(win_x + x * img_size,
-                          win_y + y * img_size);
+            return {win_x + img_size * x,
+                    win_y + img_size * y};
         };
 
         bool handled_click = false;
@@ -200,66 +364,51 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
     ImGui::PopStyleVar(3);
 }
 
-void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid)
-{
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
-        return;
-    if (GW::Map::GetIsObserving())
-        return;
-    if (targetId == 0)
-        return;
-
-    const GW::Agent* target = GW::Agents::GetAgentByID(targetId);
-    if (target == nullptr)
-        return;
-
-    const auto islot = GW::SkillbarMgr::GetSkillSlot(static_cast<GW::Constants::SkillID>(buff_skillid));
-    if (islot < 0)
-        return;
-    auto slot = static_cast<uint32_t>(islot);
-    const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-    if (!skillbar || !skillbar->IsValid())
-        return;
-    if (skillbar->skills[slot].recharge != 0)
-        return;
-
-    // capture by value!
-    GW::GameThread::Enqueue([slot, targetId]() -> void {
-        GW::SkillbarMgr::UseSkill(slot, targetId);
-    });
-}
-
 void BondsWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
-
     background = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
-    click_to_cast = ini->GetBoolValue(Name(), VAR_NAME(click_to_cast), click_to_cast);
-    click_to_drop = ini->GetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
-    show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
-    flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
-    row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
     low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(low_attribute_overlay), Colors::ARGB(76, 0, 0, 0));
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
+
+    LOAD_BOOL(lock_move);
+    LOAD_BOOL(click_to_cast);
+    LOAD_BOOL(click_to_drop);
+    LOAD_BOOL(show_allies);
+    LOAD_BOOL(flip_bonds);
+    LOAD_BOOL(hide_in_outpost);
+    LOAD_BOOL(snap_to_party_window);
+    LOAD_UINT(row_height);
+    LOAD_UINT(user_offset);
+
+    for (auto& b : available_bonds) {
+        char buf[128];
+        const int written = snprintf(buf, sizeof(buf), "bond_enabled_%d", b.skill_id);
+        ASSERT(written != -1);
+        b.enabled = ini->GetBoolValue(Name(), buf, b.enabled);
+    }
 }
 
 void BondsWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
     Colors::Save(ini, Name(), VAR_NAME(background), background);
-    ini->SetBoolValue(Name(), VAR_NAME(click_to_cast), click_to_cast);
-    ini->SetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
-    ini->SetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
-    ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
-    ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
     Colors::Save(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
+    SAVE_BOOL(lock_move);
+    SAVE_BOOL(click_to_cast);
+    SAVE_BOOL(click_to_drop);
+    SAVE_BOOL(show_allies);
+    SAVE_BOOL(flip_bonds);
+    SAVE_BOOL(hide_in_outpost);
+    SAVE_BOOL(snap_to_party_window);
+    SAVE_UINT(row_height);
+    SAVE_UINT(user_offset);
+
+    for (auto& b : available_bonds) {
+        char buf[128];
+        const int written = snprintf(buf, sizeof(buf), "bond_enabled_%d", b.skill_id);
+        ASSERT(written != -1);
+        ini->SetBoolValue(Name(), buf, b.enabled);
+    }
 }
 
 void BondsWidget::DrawSettingsInternal()
@@ -273,6 +422,19 @@ void BondsWidget::DrawSettingsInternal()
         ImGui::InputInt("Party window offset", &user_offset);
         ImGui::ShowHelp("Distance away from the party window");
     }
+    ImGui::TextUnformatted("Skills enabled for bond monitor:");
+    ImGui::Indent();
+    ImGui::StartSpacedElements(180.f);
+    for (auto& bond : available_bonds) {
+        char label_buf[128];
+        ImGui::NextSpacedElement();
+        const auto written = snprintf(label_buf, sizeof(label_buf), "%s##available_bond_%p", bond.skill_name.string().c_str(), &bond);
+        ASSERT(written != -1);
+        if (ImGui::Checkbox(label_buf, &bond.enabled))
+            FetchBondSkills();
+    }
+    ImGui::Unindent();
+
     Colors::DrawSettingHueWheel("Background", &background, 0);
     ImGui::Checkbox("Click to cast bond", &click_to_cast);
     ImGui::Checkbox("Click to cancel bond", &click_to_drop);
@@ -291,64 +453,4 @@ void BondsWidget::DrawSettingsInternal()
     }
     if (row_height < 0)
         row_height = 0;
-}
-
-bool BondsWidget::FetchBondSkills()
-{
-    const GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
-    if (!bar || !bar->IsValid())
-        return false;
-    bond_list.clear();
-    bond_map.clear();
-    for (const auto& skill : bar->skills) {
-        auto skill_id = static_cast<GW::Constants::SkillID>(skill.skill_id);
-        if (std::ranges::find(skills, skill_id) != skills.end()) {
-            bond_map[skill_id] = bond_list.size();
-            bond_list.push_back(skill_id);
-        }
-    }
-    return true;
-}
-
-bool BondsWidget::FetchPartyInfo()
-{
-    const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-    if (!info)
-        return false;
-    party_list.clear();
-    party_map.clear();
-    allies_start = 255;
-    for (const GW::PlayerPartyMember& player : info->players) {
-        const DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
-        if (!id)
-            continue;
-        party_map[id] = party_list.size();
-        party_list.push_back(id);
-
-        if (info->heroes.valid()) {
-            for (const GW::HeroPartyMember& hero : info->heroes) {
-                if (hero.owner_player_id == player.login_number) {
-                    party_map[hero.agent_id] = party_list.size();
-                    party_list.push_back(hero.agent_id);
-                }
-            }
-        }
-    }
-    if (info->henchmen.valid()) {
-        for (const GW::HenchmanPartyMember& hench : info->henchmen) {
-            party_list.push_back(hench.agent_id);
-        }
-    }
-    if (show_allies && info->others.valid()) {
-        for (const DWORD ally_id : info->others) {
-            GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
-            const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
-            if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
-                if (allies_start == 255)
-                    allies_start = party_map.size();
-                party_map[ally_id] = party_map.size();
-            }
-        }
-    }
-    return true;
 }
