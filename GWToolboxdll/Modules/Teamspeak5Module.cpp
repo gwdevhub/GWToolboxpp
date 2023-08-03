@@ -519,7 +519,7 @@ void Teamspeak5Module::Update(float)
     }
 }
 
-void Teamspeak5Module::DrawSettingInternal()
+void Teamspeak5Module::DrawSettingsInternal()
 {
     ImGui::PushID("Teamspeak5Module");
     if (ImGui::Checkbox("Enable Teamspeak 5 integration", &enabled)) {

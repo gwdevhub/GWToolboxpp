@@ -60,7 +60,7 @@ void ClockWidget::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(show_seconds), show_seconds);
 }
 
-void ClockWidget::DrawSettingInternal()
+void ClockWidget::DrawSettingsInternal()
 {
     ImGui::Checkbox("Use 24h clock", &use_24h_clock);
     ImGui::Checkbox("Show seconds", &show_seconds);

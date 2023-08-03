@@ -118,7 +118,7 @@ void LatencyWidget::SaveSettings(ToolboxIni* ini)
     ini->SetLongValue(Name(), VAR_NAME(font_size), font_size);
 }
 
-void LatencyWidget::DrawSettingInternal()
+void LatencyWidget::DrawSettingsInternal()
 {
     ImGui::SliderInt("Red ping threshold", &red_threshold, 0, 1000);
     ImGui::Checkbox("Show average ping", &show_avg_ping);

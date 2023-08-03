@@ -429,7 +429,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t *message, const int argc, const LPWSTR
     GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(x, y, 0)); // "/flag 5 -2913.41 3004.78"
 }
 
-void Minimap::DrawSettingInternal()
+void Minimap::DrawSettingsInternal()
 {
     constexpr const char* minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
 
@@ -731,7 +731,7 @@ void Minimap::Draw(IDirect3DDevice9 *)
                     // Default values for a multiplier of 1.0f
                     const int DEFAULT_WIDTH = 245;
                     const int DEFAULT_HEIGHT = 269;
-                    
+
                     compass_width = std::roundf(DEFAULT_WIDTH * multiplier);
                     compass_height = std::roundf(DEFAULT_HEIGHT * multiplier);
                     compass_padding = compass_width * .05f;

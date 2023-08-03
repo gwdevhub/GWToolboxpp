@@ -213,7 +213,7 @@ void Updater::SaveSettings(ToolboxIni* ini)
 #endif
 }
 
-void Updater::DrawSettingInternal()
+void Updater::DrawSettingsInternal()
 {
     ImGui::Text("Update mode:");
     const float btnWidth = 180.0f * ImGui::GetIO().FontGlobalScale;

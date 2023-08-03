@@ -21,7 +21,7 @@ public:
 
     void Initialize() override;
     void Terminate() override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni*) override;
     void SaveSettings(ToolboxIni*) override;
 

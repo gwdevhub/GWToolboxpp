@@ -894,7 +894,7 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet
     return current_objective_set;
 }
 
-void ObjectiveTimerWindow::DrawSettingInternal()
+void ObjectiveTimerWindow::DrawSettingsInternal()
 {
     ImGui::Separator();
     ImGui::StartSpacedElements(275.f);

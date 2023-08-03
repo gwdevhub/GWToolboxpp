@@ -230,7 +230,7 @@ void ZrawDeepModule::Initialize()
     GW::Chat::CreateCommand(L"24hdeep", CmdDeep24h);
 }
 
-void ZrawDeepModule::DrawSettingInternal()
+void ZrawDeepModule::DrawSettingsInternal()
 {
     ImGui::TextDisabled("Use chat command /deep24h to toggle this module on or off at any time");
     if (ImGui::Checkbox("Kanaxai makes you and your team stunningly attractive", &transmo_team))

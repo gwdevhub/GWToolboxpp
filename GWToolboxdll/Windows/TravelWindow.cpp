@@ -1117,7 +1117,7 @@ bool TravelWindow::TravelFavorite(const unsigned int idx)
     return true;
 }
 
-void TravelWindow::DrawSettingInternal()
+void TravelWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Close on travel", &close_on_travel);
     ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");

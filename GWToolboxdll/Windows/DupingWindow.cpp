@@ -338,7 +338,7 @@ done_calculation:
     ImGui::End();
 }
 
-void DupingWindow::DrawSettingInternal()
+void DupingWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Hide when there is nothing to show", &hide_when_nothing);
     ImGui::DragFloat("Range", &range, 50, 0, 5000);

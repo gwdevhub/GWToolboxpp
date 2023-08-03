@@ -30,7 +30,7 @@ public:
     void Initialize() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     [[nodiscard]] ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const override;
 
     // Draw user interface. Will be called every frame if the element is visible

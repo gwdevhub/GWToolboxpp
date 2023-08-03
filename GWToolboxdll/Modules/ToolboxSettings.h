@@ -26,7 +26,7 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void Draw(IDirect3DDevice9*) override;
 
     void ShowVisibleRadio() override

@@ -588,7 +588,7 @@ void ObserverPartyWindow::SaveSettings(ToolboxIni* ini)
 }
 
 // Draw settings
-void ObserverPartyWindow::DrawSettingInternal()
+void ObserverPartyWindow::DrawSettingsInternal()
 {
     ImGui::Text("Make sure the Observer Module is enabled.");
     ImGui::Checkbox("Show player number (#)", &show_player_number);

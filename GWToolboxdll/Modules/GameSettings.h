@@ -52,7 +52,7 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void RegisterSettingsContent() override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     static void DrawInventorySettings();
     static void DrawPartySettings();
 

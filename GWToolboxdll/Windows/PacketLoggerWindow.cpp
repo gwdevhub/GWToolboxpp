@@ -870,7 +870,7 @@ void PacketLoggerWindow::Enable()
     logger_enabled = true;
 }
 
-void PacketLoggerWindow::DrawSettingInternal()
+void PacketLoggerWindow::DrawSettingsInternal()
 {
     ImGui::RadioButton("No timestamp", &timestamp_type, TimestampType_None);
     ImGui::RadioButton("Local timestmap", &timestamp_type, TimestampType_Local);

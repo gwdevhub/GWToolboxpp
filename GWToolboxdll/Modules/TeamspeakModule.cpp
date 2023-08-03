@@ -448,7 +448,7 @@ void TeamspeakModule::Update(float)
     check_interval = 0;
 }
 
-void TeamspeakModule::DrawSettingInternal()
+void TeamspeakModule::DrawSettingsInternal()
 {
     check_interval = 5000;
     ImGui::PushID("TeamspeakModule");

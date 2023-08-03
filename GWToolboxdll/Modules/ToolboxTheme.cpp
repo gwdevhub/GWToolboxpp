@@ -232,7 +232,7 @@ void ToolboxTheme::Draw(IDirect3DDevice9*)
         LoadUILayout();
 }
 
-void ToolboxTheme::DrawSettingInternal()
+void ToolboxTheme::DrawSettingsInternal()
 {
     ImGuiStyle& style = ImGui::GetStyle();
     if (ImGui::SmallButton("Restore Default")) {

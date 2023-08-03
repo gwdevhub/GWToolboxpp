@@ -666,7 +666,7 @@ void HeroBuildsWindow::LoadSettings(ToolboxIni* ini)
     LoadFromFile();
 }
 
-void HeroBuildsWindow::DrawSettingInternal()
+void HeroBuildsWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Hide Hero Build windows when entering explorable area", &hide_when_entering_explorable);
     ImGui::Checkbox("Only show one teambuild window at a time", &one_teambuild_at_a_time);

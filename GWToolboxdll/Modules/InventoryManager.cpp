@@ -56,7 +56,7 @@ namespace {
     bool GetIsProfessionUnlocked(GW::Constants::Profession prof) {
         const auto world = GW::GetWorldContext();
         const auto player = GW::PlayerMgr::GetPlayerByID();
-        if (!(world && player)) 
+        if (!(world && player))
             return false;
         GW::Array< GW::ProfessionState>& profession_unlocks_array = world->party_profession_states;
         const GW::ProfessionState* found = nullptr;
@@ -1419,7 +1419,7 @@ bool InventoryManager::IsPendingSalvage() {
         return true;
     return false;
 }
-void InventoryManager::DrawSettingInternal() {
+void InventoryManager::DrawSettingsInternal() {
     ImGui::TextDisabled("This module is responsible for extra item functions via ctrl+click, right click or double click");
     ImGui::Checkbox("Hide unsellable items from merchant window", &hide_unsellable_items);
     ImGui::Checkbox("Move whole stacks into trade by default", &trade_whole_stacks);
@@ -1962,8 +1962,8 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
         im.show_item_context_menu = true;
         status->blocked = true;
         return;
-    } else if (type == 7 
-        && ImGui::IsKeyDown(ImGuiKey_ModCtrl) 
+    } else if (type == 7
+        && ImGui::IsKeyDown(ImGuiKey_ModCtrl)
         && GameSettings::GetSettingBool("move_item_on_ctrl_click")
         && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         // Move item on ctrl click

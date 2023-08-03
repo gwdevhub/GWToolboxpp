@@ -268,7 +268,7 @@ void SkillMonitorWidget::SaveSettings(ToolboxIni* ini)
     ini->SetLongValue(Name(), VAR_NAME(history_timeout), history_timeout);
 }
 
-void SkillMonitorWidget::DrawSettingInternal()
+void SkillMonitorWidget::DrawSettingsInternal()
 {
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);

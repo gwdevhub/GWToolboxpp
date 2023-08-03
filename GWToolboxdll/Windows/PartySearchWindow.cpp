@@ -677,7 +677,7 @@ void PartySearchWindow::DrawAlertsWindowContent(bool) {
     }
 }
 
-void PartySearchWindow::DrawSettingInternal() {
+void PartySearchWindow::DrawSettingsInternal() {
     DrawAlertsWindowContent(false);
 }
 

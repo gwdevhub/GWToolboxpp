@@ -47,7 +47,7 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     static int RegionFromDistrict(GW::Constants::District district);
     static int LanguageFromDistrict(GW::Constants::District district);
     static GW::Constants::MapID GetNearestOutpost(GW::Constants::MapID map_to);

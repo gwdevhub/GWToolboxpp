@@ -10,7 +10,7 @@
 #include <Utils/GuiUtils.h>
 #include <Widgets/DistanceWidget.h>
 
-void DistanceWidget::DrawSettingInternal()
+void DistanceWidget::DrawSettingsInternal()
 {
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);

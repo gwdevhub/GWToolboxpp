@@ -75,7 +75,7 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     [[nodiscard]] float GetMapRotation() const;
     [[nodiscard]] static DirectX::XMFLOAT2 GetGwinchScale();

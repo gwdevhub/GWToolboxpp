@@ -19,7 +19,7 @@ public:
     void Initialize() override;
     void Terminate() override;
     void Update(float) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;

@@ -583,9 +583,9 @@ void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)
     Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
 }
 
-void EffectsMonitorWidget::DrawSettingInternal()
+void EffectsMonitorWidget::DrawSettingsInternal()
 {
-    ToolboxWidget::DrawSettingInternal();
+    ToolboxWidget::DrawSettingsInternal();
 
     constexpr const char* font_sizes[] = {"16", "18", "20", "24", "42", "48"};
 

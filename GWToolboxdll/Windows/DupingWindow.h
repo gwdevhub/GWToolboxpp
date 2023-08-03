@@ -27,7 +27,7 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* device) override;
 
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
 };

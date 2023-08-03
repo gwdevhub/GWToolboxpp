@@ -520,7 +520,7 @@ namespace {
         }
     }
 
-    void DrawGameSettings() { 
+    void DrawGameSettings() {
         ImGui::Checkbox("Show message in chat when you're the last player to resign", &show_last_to_resign_message);
     }
 
@@ -854,7 +854,7 @@ void InfoWindow::Update(const float delta) {
     }
 }
 
-void InfoWindow::DrawSettingInternal() {
+void InfoWindow::DrawSettingsInternal() {
     ImGui::Separator();
     ImGui::StartSpacedElements(250.f);
     ImGui::NextSpacedElement(); ImGui::Checkbox("Show widget toggles", &show_widgets);
@@ -881,7 +881,7 @@ void InfoWindow::LoadSettings(ToolboxIni* ini) {
     LOAD_BOOL(show_quest);
     LOAD_BOOL(show_mobcount);
     LOAD_BOOL(show_resignlog);
-    
+
     LOAD_BOOL(show_last_to_resign_message);
 }
 

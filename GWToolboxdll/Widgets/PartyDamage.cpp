@@ -446,7 +446,7 @@ void PartyDamage::SaveSettings(ToolboxIni* ini) {
     inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
 }
 
-void PartyDamage::DrawSettingInternal() {
+void PartyDamage::DrawSettingsInternal() {
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     ImGui::Checkbox("Print Player Damage by Ctrl + Click", &print_by_click);

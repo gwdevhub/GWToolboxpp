@@ -2628,9 +2628,9 @@ then press "Examine the Monument to Devotion.")");
         ImGui::PopStyleVar();
     }
 }
-void CompletionWindow::DrawSettingInternal()
+void CompletionWindow::DrawSettingsInternal()
 {
-    ToolboxWindow::DrawSettingInternal();
+    ToolboxWindow::DrawSettingsInternal();
 }
 
 void CompletionWindow::LoadSettings(ToolboxIni* ini)

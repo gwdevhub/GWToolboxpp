@@ -384,9 +384,9 @@ void ChatSettings::Update(float)
     }
 }
 
-void ChatSettings::DrawSettingInternal()
+void ChatSettings::DrawSettingsInternal()
 {
-    ToolboxModule::DrawSettingInternal();
+    ToolboxModule::DrawSettingsInternal();
 
     const ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
     if (ImGui::TreeNodeEx("Chat Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {

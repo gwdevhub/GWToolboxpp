@@ -929,7 +929,7 @@ void Obfuscator::LoadSettings(ToolboxIni* ini)
     }
 }
 
-void Obfuscator::DrawSettingInternal()
+void Obfuscator::DrawSettingsInternal()
 {
     bool enabled = pending_state == ObfuscatorState::Enabled;
     if (ImGui::Checkbox("Hide my character names on-screen", &enabled)) {

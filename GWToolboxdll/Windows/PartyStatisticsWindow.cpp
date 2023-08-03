@@ -609,7 +609,7 @@ void PartyStatisticsWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(print_by_click), print_by_click);
 }
 
-void PartyStatisticsWindow::DrawSettingInternal()
+void PartyStatisticsWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Show the absolute skill count", &show_abs_values);
     ImGui::SameLine();

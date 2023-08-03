@@ -497,12 +497,12 @@ void SkillbarWidget::DrawDurationThresholds()
     ImGui::Unindent();
 }
 
-void SkillbarWidget::DrawSettingInternal()
+void SkillbarWidget::DrawSettingsInternal()
 {
     if (ImGui::Checkbox("Attach to skill bar", &snap_to_skillbar)) {
         is_movable = is_resizable = !snap_to_skillbar;
     }
-    ToolboxWidget::DrawSettingInternal();
+    ToolboxWidget::DrawSettingsInternal();
     ImGui::ShowHelp("Skill overlay will match your skillbar position and orientation");
     if (snap_to_skillbar) {
         // TODO: Offsets, rely on user values for now

@@ -35,7 +35,7 @@ public:
 
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
 

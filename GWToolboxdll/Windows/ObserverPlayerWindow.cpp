@@ -240,7 +240,7 @@ void ObserverPlayerWindow::SaveSettings(ToolboxIni* ini)
 }
 
 // Draw settings
-void ObserverPlayerWindow::DrawSettingInternal()
+void ObserverPlayerWindow::DrawSettingsInternal()
 {
     ImGui::Text("Make sure the Observer Module is enabled.");
     ImGui::Checkbox("Show tracking player", &show_tracking);

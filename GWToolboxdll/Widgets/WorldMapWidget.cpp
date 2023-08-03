@@ -155,7 +155,7 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
     return false;
 }
 
-void WorldMapWidget::DrawSettingInternal()
+void WorldMapWidget::DrawSettingsInternal()
 {
     ImGui::Text("Note: only visible in Hard Mode explorable areas.");
 }

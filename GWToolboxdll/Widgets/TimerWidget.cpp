@@ -210,9 +210,9 @@ void TimerWidget::SaveSettings(ToolboxIni* ini)
     }
 }
 
-void TimerWidget::DrawSettingInternal()
+void TimerWidget::DrawSettingsInternal()
 {
-    ToolboxWidget::DrawSettingInternal();
+    ToolboxWidget::DrawSettingsInternal();
 
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);

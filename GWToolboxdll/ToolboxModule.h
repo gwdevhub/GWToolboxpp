@@ -88,7 +88,7 @@ public:
 
     // Draw settings interface. Will be called if the setting panel is visible, calls DrawSettingsInternal()
     //virtual void DrawSettings();
-    virtual void DrawSettingInternal()
+    virtual void DrawSettingsInternal()
     {
     }
 

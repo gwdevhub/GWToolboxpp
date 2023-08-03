@@ -19,5 +19,5 @@ public:
 
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 };

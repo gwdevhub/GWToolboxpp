@@ -987,7 +987,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice)
     ImGui::End();
 }
 
-void FriendListWindow::DrawSettingInternal()
+void FriendListWindow::DrawSettingsInternal()
 {
     bool edited = false;
     edited |= ImGui::Checkbox("Lock size as widget", &lock_size_as_widget);

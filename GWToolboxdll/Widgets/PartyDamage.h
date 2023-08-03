@@ -51,7 +51,7 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     void WritePartyDamage();
     void WriteDamageOf(size_t index, uint32_t rank = 0); // party index from 0 to 12

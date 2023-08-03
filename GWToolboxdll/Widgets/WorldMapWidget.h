@@ -29,7 +29,7 @@ public:
 
     void ShowAllOutposts(bool show);
 
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     bool WndProc(UINT, WPARAM, LPARAM) override;
 

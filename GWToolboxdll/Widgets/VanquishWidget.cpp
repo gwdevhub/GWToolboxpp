@@ -67,7 +67,7 @@ void VanquishWidget::Draw(IDirect3DDevice9* pDevice)
     ImGui::PopStyleColor();
 }
 
-void VanquishWidget::DrawSettingInternal()
+void VanquishWidget::DrawSettingsInternal()
 {
     ImGui::Text("Note: only visible in Hard Mode explorable areas.");
 }

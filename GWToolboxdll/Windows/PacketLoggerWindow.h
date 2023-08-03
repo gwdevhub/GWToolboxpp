@@ -19,7 +19,7 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BOX; };
 
     void Draw(IDirect3DDevice9* pDevice) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     void Initialize() override;
     void SaveSettings(ToolboxIni* ini) override;

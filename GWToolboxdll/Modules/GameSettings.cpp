@@ -1784,7 +1784,7 @@ void GameSettings::DrawPartySettings()
     ImGui::Checkbox("Automatically flag your pet to fight when calling a target", &automatically_flag_pet_to_fight_called_target);
 }
 
-void GameSettings::DrawSettingInternal()
+void GameSettings::DrawSettingsInternal()
 {
     ImGui::Checkbox("Hide email address on login screen", &hide_email_address);
     ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);

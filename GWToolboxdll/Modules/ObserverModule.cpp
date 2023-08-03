@@ -1162,7 +1162,7 @@ void ObserverModule::SaveSettings(ToolboxIni* ini)
 
 
 // Draw internal settings
-void ObserverModule::DrawSettingInternal()
+void ObserverModule::DrawSettingsInternal()
 {
     ImGui::Text("Enable data collection in Observer Mode.");
     ImGui::Text("Disable if not using this feature to avoid using extra CPU and memory in Observer Mode.");

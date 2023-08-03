@@ -239,12 +239,12 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     }
 }
 
-void ToolboxSettings::DrawSettingInternal()
+void ToolboxSettings::DrawSettingsInternal()
 {
     DrawFreezeSetting();
     ImGui::Separator();
 
-    Updater::Instance().DrawSettingInternal();
+    Updater::Instance().DrawSettingsInternal();
     ImGui::Separator();
 
     ImGui::Checkbox("Save Location Data", &save_location_data);

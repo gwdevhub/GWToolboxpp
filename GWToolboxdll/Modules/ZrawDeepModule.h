@@ -22,7 +22,7 @@ public:
     bool HasSettings() override;
     void SetEnabled(bool enabled);
     void Update(float delta) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
     void PlayKanaxaiDialog(uint8_t idx);
     void SaveSettings(ToolboxIni* ini) override;

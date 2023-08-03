@@ -284,7 +284,7 @@ void HintsModule::Update(float)
     }
 }
 
-void HintsModule::DrawSettingInternal()
+void HintsModule::DrawSettingsInternal()
 {
     ImGui::Checkbox("Only show hints once", &only_show_hints_once);
     ImGui::ShowHelp("GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");

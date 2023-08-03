@@ -35,7 +35,7 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void DrawChatSettings(bool ownwindow = false);
 
     static void FindPlayerPartySearch(GW::HookStatus* status = nullptr, void* packet = nullptr);

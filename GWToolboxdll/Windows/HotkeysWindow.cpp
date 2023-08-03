@@ -23,7 +23,7 @@
 
 
 namespace {
-    
+
     std::vector<TBHotkey*> hotkeys;             // list of hotkeys
     // Subset of hotkeys that are valid to current character/map combo
     std::vector<TBHotkey*> valid_hotkeys;
@@ -43,7 +43,7 @@ namespace {
     std::unordered_map<std::string, std::vector<TBHotkey*>> by_player_name;
     std::unordered_map<std::string, std::vector<TBHotkey*>> by_group;
     bool need_to_check_valid_hotkeys = true;
-    
+
 
     long max_id_ = 0;
     bool block_hotkeys = false;
@@ -166,7 +166,7 @@ namespace {
         }
         return true;
     }
-    
+
     // Called in Update loop after WM_ACTIVATE has been received via WndProc
     bool OnWindowActivated(const bool activated) {
         if (!IsMapReady())
@@ -177,7 +177,7 @@ namespace {
             return false;
         // NB: CheckSetValidHotkeys() has already checked validity of char/map etc
         for (TBHotkey* hk : valid_hotkeys) {
-            if (!block_hotkeys && !hk->pressed 
+            if (!block_hotkeys && !hk->pressed
                 && ((activated && hk->trigger_on_gain_focus)
                 || (!activated && hk->trigger_on_lose_focus))) {
                 hk->pressed = true;
@@ -430,8 +430,8 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::End();
 }
 
-void HotkeysWindow::DrawSettingInternal() {
-    ToolboxWindow::DrawSettingInternal();
+void HotkeysWindow::DrawSettingsInternal() {
+    ToolboxWindow::DrawSettingsInternal();
     ImGui::Checkbox("Show 'Active' checkbox in header", &TBHotkey::show_active_in_header);
     ImGui::Checkbox("Show 'Run' button in header", &TBHotkey::show_run_in_header);
 }

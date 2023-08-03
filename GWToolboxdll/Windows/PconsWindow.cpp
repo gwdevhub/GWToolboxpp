@@ -713,7 +713,7 @@ void PconsWindow::SaveSettings(ToolboxIni* ini)
     ini->SetValue(Name(), "order", str.c_str());
 }
 
-void PconsWindow::DrawSettingInternal()
+void PconsWindow::DrawSettingsInternal()
 {
     ImGui::Separator();
     ImGui::Text("Functionality:");

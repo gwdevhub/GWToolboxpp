@@ -366,9 +366,9 @@ void ToastNotifications::Terminate()
     toasts.clear();
 }
 
-void ToastNotifications::DrawSettingInternal()
+void ToastNotifications::DrawSettingsInternal()
 {
-    ToolboxModule::DrawSettingInternal();
+    ToolboxModule::DrawSettingsInternal();
     ImGui::TextDisabled("GWToolbox++ can send notifications and flash the taskbar on certain in-game triggers.");
 
     constexpr float checkbox_w = 150.f;

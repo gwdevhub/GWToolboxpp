@@ -77,9 +77,9 @@ void HealthWidget::SaveSettings(ToolboxIni* ini)
     }
 }
 
-void HealthWidget::DrawSettingInternal()
+void HealthWidget::DrawSettingsInternal()
 {
-    ToolboxWidget::DrawSettingInternal();
+    ToolboxWidget::DrawSettingsInternal();
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     ImGui::SameLine();

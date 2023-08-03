@@ -155,7 +155,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice)
     ImGui::PopStyleColor();
 }
 
-void AlcoholWidget::DrawSettingInternal()
+void AlcoholWidget::DrawSettingsInternal()
 {
     ImGui::Checkbox("Only show when drunk", &only_show_when_drunk);
     ImGui::ShowHelp("Hides widget when not using alcohol");

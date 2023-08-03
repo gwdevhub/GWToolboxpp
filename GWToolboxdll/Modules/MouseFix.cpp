@@ -381,7 +381,7 @@ void MouseFix::Terminate()
         GW::HookBase::RemoveHook(ChangeCursorIcon_Func);
 }
 
-void MouseFix::DrawSettingInternal()
+void MouseFix::DrawSettingsInternal()
 {
     if (ImGui::Checkbox("Enable cursor fix", &enable_cursor_fix)) {
         CursorFixEnable(enable_cursor_fix);

@@ -40,7 +40,7 @@ public:
 
     void SaveSettings(ToolboxIni* ini) override;
 
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     static ImColor GetColorForPing(uint32_t ping);
     static void SendPing(const wchar_t* = nullptr, int argc = 0, LPWSTR* argv = nullptr);

@@ -31,7 +31,7 @@ public:
     void SaveUILayout();
     void LoadUILayout();
 
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     ToolboxIni* GetLayoutIni(bool reload = true);
     ToolboxIni* GetThemeIni(bool reload = true);

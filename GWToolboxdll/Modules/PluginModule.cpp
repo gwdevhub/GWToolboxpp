@@ -135,7 +135,7 @@ PluginModule::PluginModule()
 }
 
 
-void PluginModule::DrawSettingInternal()
+void PluginModule::DrawSettingsInternal()
 {
     ImGui::PushID("Plugins");
 

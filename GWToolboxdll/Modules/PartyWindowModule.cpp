@@ -586,7 +586,7 @@ void PartyWindowModule::LoadDefaults()
     AddSpecialNPC({"Ben Wolfson Pre-Searing", 1512, GW::Constants::MapID::None});
 }
 
-void PartyWindowModule::DrawSettingInternal()
+void PartyWindowModule::DrawSettingsInternal()
 {
     ImGui::Checkbox("Add player numbers to party window", &add_player_numbers_to_party_window);
     ImGui::ShowHelp("Will update on next map");

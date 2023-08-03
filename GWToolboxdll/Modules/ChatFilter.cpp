@@ -867,7 +867,7 @@ void ChatFilter::SaveSettings(ToolboxIni* ini)
 #endif
 }
 
-void ChatFilter::DrawSettingInternal()
+void ChatFilter::DrawSettingsInternal()
 {
     ImGui::Text("Block the following messages:");
     ImGui::Separator();

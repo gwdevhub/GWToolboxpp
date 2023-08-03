@@ -609,7 +609,7 @@ void TradeWindow::DrawChatSettings(const bool ownwindow)
     }
 }
 
-void TradeWindow::DrawSettingInternal() {
+void TradeWindow::DrawSettingsInternal() {
     DrawAlertsWindowContent(false);
 }
 

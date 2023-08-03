@@ -527,7 +527,7 @@ void ObserverExportWindow::SaveSettings(ToolboxIni* ini)
 }
 
 // Draw settings
-void ObserverExportWindow::DrawSettingInternal()
+void ObserverExportWindow::DrawSettingsInternal()
 {
     // No internal settings yet
 }

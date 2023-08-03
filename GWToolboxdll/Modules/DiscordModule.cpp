@@ -514,7 +514,7 @@ bool DiscordModule::UnloadDll()
     return !hGetProcIDDLL || FreeLibrary(hGetProcIDDLL);
 }
 
-void DiscordModule::DrawSettingInternal()
+void DiscordModule::DrawSettingsInternal()
 {
     bool edited = false;
     edited |= ImGui::Checkbox("Enable Discord integration", &discord_enabled);

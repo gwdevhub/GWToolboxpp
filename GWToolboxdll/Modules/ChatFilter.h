@@ -20,7 +20,7 @@ public:
     void Initialize() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     void Update(float delta) override;
 };

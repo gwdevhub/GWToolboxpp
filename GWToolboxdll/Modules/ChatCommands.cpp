@@ -697,7 +697,7 @@ void ChatCommands::DrawHelp()
     ImGui::TreePop();
 }
 
-void ChatCommands::DrawSettingInternal()
+void ChatCommands::DrawSettingsInternal()
 {
     ImGui::Text("'/cam unlock' options");
     ImGui::Indent();

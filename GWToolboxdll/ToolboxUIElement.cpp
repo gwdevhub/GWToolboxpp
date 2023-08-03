@@ -52,7 +52,7 @@ void ToolboxUIElement::RegisterSettingsContent()
             if (!is_showing)
                 return;
             DrawSizeAndPositionSettings();
-            DrawSettingInternal();
+            DrawSettingsInternal();
         },
         SettingsWeighting());
 }

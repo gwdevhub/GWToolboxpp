@@ -1287,9 +1287,9 @@ void DailyQuests::DrawHelp()
     ImGui::TreePop();
 }
 
-void DailyQuests::DrawSettingInternal()
+void DailyQuests::DrawSettingsInternal()
 {
-    ToolboxWindow::DrawSettingInternal();
+    ToolboxWindow::DrawSettingsInternal();
     ImGui::PushItemWidth(200.f * ImGui::FontScale());
     ImGui::InputInt("Show daily quests for the next N days", &daily_quest_window_count);
     ImGui::PopItemWidth();

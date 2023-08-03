@@ -19,7 +19,7 @@ public:
     void Initialize() override;
 
     void Draw(IDirect3DDevice9*) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni*) override;
     void SaveSettings(ToolboxIni*) override;
     void Update(float) override;

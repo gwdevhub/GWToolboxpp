@@ -48,5 +48,5 @@ public:
     void SaveSettings(ToolboxIni* ini) override;
 
     void Draw(IDirect3DDevice9* pDevice) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 };

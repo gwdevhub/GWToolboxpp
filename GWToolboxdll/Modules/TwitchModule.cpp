@@ -281,7 +281,7 @@ void TwitchModule::Update(const float delta)
         conn.ping();
 }
 
-void TwitchModule::DrawSettingInternal()
+void TwitchModule::DrawSettingsInternal()
 {
     bool edited = false;
     ImGui::PushID("twitch_settings");

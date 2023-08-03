@@ -43,7 +43,7 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void RegisterSettingsContent() override;
     static void DrawLunarsAndAlcoholSettings();
 

@@ -22,5 +22,5 @@ public:
     void Initialize() override;
     void Terminate() override;
     bool WndProc(UINT, WPARAM, LPARAM) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 };

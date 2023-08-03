@@ -414,7 +414,7 @@ void ItemFilter::SaveSettings(ToolboxIni* ini)
     GuiUtils::MapToIni(ini, Name(), "dont_hide_for_party", dont_hide_for_party);
 }
 
-void ItemFilter::DrawSettingInternal()
+void ItemFilter::DrawSettingsInternal()
 {
     ImGui::Text("Block the following item drops:");
     ImGui::Separator();

@@ -159,7 +159,7 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*)
     ImGui::PopStyleColor();
 }
 
-void ServerInfoWidget::DrawSettingInternal()
+void ServerInfoWidget::DrawSettingsInternal()
 {
     ImGui::Text("Displays current server IP Address and location if available");
 }

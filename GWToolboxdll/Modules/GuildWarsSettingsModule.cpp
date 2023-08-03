@@ -612,7 +612,7 @@ void GuildWarsSettingsModule::Terminate()
     }
 }
 
-void GuildWarsSettingsModule::DrawSettingInternal()
+void GuildWarsSettingsModule::DrawSettingsInternal()
 {
     ImGui::TextUnformatted("Choose a file from your computer to load Guild Wars settings");
     if (ImGui::Button("Load from disk...")) {

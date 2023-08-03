@@ -458,7 +458,7 @@ public:
     void Update(float delta) override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     bool InitializeObserverSession();
     void Reset();

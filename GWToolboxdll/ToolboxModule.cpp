@@ -52,7 +52,7 @@ void ToolboxModule::RegisterSettingsContent()
         SettingsName(), Icon(),
         [this](const std::string&, const bool is_showing) {
             if (is_showing)
-                DrawSettingInternal();
+                DrawSettingsInternal();
         },
         SettingsWeighting());
 }

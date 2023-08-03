@@ -23,7 +23,7 @@ void MainWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(center_align_text), center_align_text);
 }
 
-void MainWindow::DrawSettingInternal()
+void MainWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Close other windows when opening a new one", &one_panel_at_time_only);
     ImGui::ShowHelp("Only affects windows (with a title bar), not widgets");
@@ -44,7 +44,7 @@ void MainWindow::RegisterSettingsContent()
             ImGui::Text("Main Window Visibility");
             ShowVisibleRadio();
             DrawSizeAndPositionSettings();
-            DrawSettingInternal();
+            DrawSettingsInternal();
         }, SettingsWeighting());
 }
 
