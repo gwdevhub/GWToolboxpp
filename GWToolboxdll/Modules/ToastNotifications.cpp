@@ -6,8 +6,10 @@
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Packets/StoC.h>
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
 
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -36,12 +38,14 @@ namespace {
     bool show_notifications_on_ally_chat = false;
     bool show_notifications_on_last_to_ready = false;
     bool show_notifications_on_everyone_ready = false;
+    bool show_notifications_on_self_resurrected = false;
 
     bool flash_window_on_whisper = true;
     bool flash_window_on_guild_chat = false;
     bool flash_window_on_ally_chat = false;
     bool flash_window_on_last_to_ready = false;
     bool flash_window_on_everyone_ready = false;
+    bool flash_window_on_self_resurrected = false;
 
     const wchar_t* party_ready_toast_title = L"Party Ready";
 
@@ -223,6 +227,31 @@ namespace {
         ToastNotifications::DismissToast(party_ready_toast_title);
     }
 
+    void OnAgentUpdateEffects(GW::HookStatus*, GW::Packet::StoC::PacketBase* base)
+    {
+        const auto packet = static_cast<GW::Packet::StoC::AgentState*>(base);
+        const GW::AgentLiving* currentCharacter = GW::Agents::GetCharacter();
+
+        const int AGENT_UPDATE_STATE_DEAD = 0x10;
+        const int AGENT_LIVING_TYPE_MAP_DEAD = 0x8;
+
+        if (packet->agent_id == currentCharacter->agent_id)
+        {
+            if ((packet->state & AGENT_UPDATE_STATE_DEAD) == 0 && (currentCharacter->type_map & AGENT_LIVING_TYPE_MAP_DEAD) != 0)
+            {
+                if (show_notifications_on_self_resurrected)
+                {
+                    ToastNotifications::SendToast(L"Resurrected", L"You have been resurrected!", OnGenericToastActivated);
+                }
+
+                if (flash_window_on_self_resurrected)
+                {
+                    FlashWindow();
+                }
+            }
+        }
+    }
+
     struct StoC_Callback {
         uint32_t header = 0;
         GW::StoC::PacketCallback cb;
@@ -237,7 +266,8 @@ namespace {
     std::vector<StoC_Callback> stoc_callbacks = {
         {GAME_SMSG_CHAT_MESSAGE_GLOBAL, OnMessageGlobal},
         {GAME_SMSG_PARTY_PLAYER_READY, OnPartyPlayerReady},
-        {GAME_SMSG_INSTANCE_LOADED, OnMapChange}
+        {GAME_SMSG_INSTANCE_LOADED, OnMapChange},
+        {GAME_SMSG_AGENT_UPDATE_EFFECTS, OnAgentUpdateEffects}
     };
 } // namespace
 ToastNotifications::Toast::Toast(std::wstring _title, std::wstring _message)
@@ -387,6 +417,8 @@ void ToastNotifications::DrawSettingsInternal()
     ImGui::Checkbox("Last to Tick", &show_notifications_on_last_to_ready);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Everyone Ticked", &show_notifications_on_everyone_ready);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Resurrection", &show_notifications_on_self_resurrected);
     ImGui::Unindent();
     ImGui::PopID();
 
@@ -404,6 +436,8 @@ void ToastNotifications::DrawSettingsInternal()
     ImGui::Checkbox("Last to Tick", &flash_window_on_last_to_ready);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Everyone Ticked", &flash_window_on_everyone_ready);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Resurrection", &flash_window_on_self_resurrected);
     ImGui::Unindent();
     ImGui::PopID();
 
@@ -438,12 +472,14 @@ void ToastNotifications::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_notifications_on_ally_chat);
     LOAD_BOOL(show_notifications_on_last_to_ready);
     LOAD_BOOL(show_notifications_on_everyone_ready);
+    LOAD_BOOL(show_notifications_on_self_resurrected);
 
     LOAD_BOOL(flash_window_on_whisper);
     LOAD_BOOL(flash_window_on_guild_chat);
     LOAD_BOOL(flash_window_on_ally_chat);
     LOAD_BOOL(flash_window_on_last_to_ready);
     LOAD_BOOL(flash_window_on_everyone_ready);
+    LOAD_BOOL(flash_window_on_self_resurrected);
 }
 
 void ToastNotifications::SaveSettings(ToolboxIni* ini)
@@ -461,10 +497,12 @@ void ToastNotifications::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_notifications_on_ally_chat);
     SAVE_BOOL(show_notifications_on_last_to_ready);
     SAVE_BOOL(show_notifications_on_everyone_ready);
+    SAVE_BOOL(show_notifications_on_self_resurrected);
 
     SAVE_BOOL(flash_window_on_whisper);
     SAVE_BOOL(flash_window_on_guild_chat);
     SAVE_BOOL(flash_window_on_ally_chat);
     SAVE_BOOL(flash_window_on_last_to_ready);
     SAVE_BOOL(flash_window_on_everyone_ready);
+    SAVE_BOOL(flash_window_on_self_resurrected);
 }
