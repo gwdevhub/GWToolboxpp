@@ -324,7 +324,7 @@ ToastNotifications::Toast* ToastNotifications::SendToast(const wchar_t* title, c
         toast = new Toast(title, message);
         toasts[toast->title] = toast;
     }
-    if (toast->message == message)
+    else if (toast->message == message)
         return toast; // Avoid spamming desktop notifications
     toast->message = message;
     toast->callback = callback;
