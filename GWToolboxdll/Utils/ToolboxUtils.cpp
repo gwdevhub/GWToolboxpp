@@ -345,8 +345,15 @@ namespace ToolboxUtils {
 
     bool IsPlayerInParty(const uint32_t login_number)
     {
-        GW::PartyInfo* party = nullptr;
-        return GetPlayerPartyMember(login_number, &party) && party == GW::PartyMgr::GetPartyInfo();
+        GW::PartyContext* partyContext = GW::GetPartyContext();
+        GW::PartyInfo* playerParty = partyContext->player_party;
+
+        for (const auto& player : playerParty->players) {
+            if (player.login_number == login_number)
+                return true;
+        }
+
+        return false;
     }
 
     bool IsAgentInParty(const uint32_t agent_id)
