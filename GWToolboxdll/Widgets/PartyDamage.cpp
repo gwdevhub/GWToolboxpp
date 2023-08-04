@@ -236,7 +236,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 
         // If in an outpost and hard mode unlocked, push the interface down past the buttons
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && GW::PartyMgr::GetIsHardModeUnlocked()) {
-            const int HARD_MODE_BUTTONS_HEIGHT = 30;
+            constexpr int HARD_MODE_BUTTONS_HEIGHT = 30;
             y.x += HARD_MODE_BUTTONS_HEIGHT;
         }
 

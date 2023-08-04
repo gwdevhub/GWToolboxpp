@@ -1,10 +1,5 @@
 #pragma once
 
-#include <GWCA/Constants/Skills.h>
-
-#include <GWCA/Managers/UIMgr.h>
-
-#include <Color.h>
 #include <ToolboxWidget.h>
 
 class BondsWidget : public ToolboxWidget {

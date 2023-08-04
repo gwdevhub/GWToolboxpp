@@ -96,6 +96,12 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
         // NB: Use case to define GW::Vec4f ?
         GW::Vec2f x = party_window_position->xAxis();
         GW::Vec2f y = party_window_position->yAxis();
+
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && GW::PartyMgr::GetIsHardModeUnlocked()) {
+            constexpr int HARD_MODE_BUTTONS_HEIGHT = 30;
+            y.x += HARD_MODE_BUTTONS_HEIGHT;
+        }
+
         // Do the uiscale multiplier
         x *= uiscale_multiply;
         y *= uiscale_multiply;
