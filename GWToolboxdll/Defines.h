@@ -8,20 +8,20 @@
 #define GWTOOLBOX_INI_FILENAME L"GWToolbox.ini"
 
 #ifndef GWTOOLBOXDLL_VERSION
-#define GWTOOLBOXDLL_VERSION "6.10"
+#define GWTOOLBOXDLL_VERSION "6.0"
 #endif
 #ifndef GWTOOLBOX_MODULE_VERSION
-#define GWTOOLBOX_MODULE_VERSION 6,10,0,0
+#define GWTOOLBOX_MODULE_VERSION 6,0,0,0
 #endif
 
 #define VAR_NAME(v) (#v)
 
 #define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
 #define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
-#define LOAD_FLOAT(var) var = (float)ini->GetDoubleValue(Name(), #var, (double)var);
-#define SAVE_FLOAT(var) ini->SetDoubleValue(Name(), #var, (double)var);
-#define LOAD_UINT(var) var = (unsigned int)ini->GetLongValue(Name(), #var, (long)var);
-#define SAVE_UINT(var) ini->SetLongValue(Name(), #var, (long)var);
+#define LOAD_FLOAT(var) var = static_cast<float>(ini->GetDoubleValue(Name(), #var, static_cast<double>(var)));
+#define SAVE_FLOAT(var) ini->SetDoubleValue(Name(), #var, static_cast<double>(var));
+#define LOAD_UINT(var) var = static_cast<unsigned int>(ini->GetLongValue(Name(), #var, static_cast<long>(var)));
+#define SAVE_UINT(var) ini->SetLongValue(Name(), #var, static_cast<long>(var));
 
 /*
 Notes:
