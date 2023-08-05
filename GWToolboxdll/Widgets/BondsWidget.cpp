@@ -278,17 +278,15 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
         const float win_x = ImGui::GetWindowPos().x;
         const float win_y = ImGui::GetWindowPos().y;
 
-        auto GetGridPos = [&](const size_t _x, const size_t _y, const bool topleft) -> ImVec2 {
-            size_t x = _x;
-            size_t y = _y;
+        const auto get_grid_pos = [&](size_t x, size_t y, const bool topleft) -> ImVec2 {
             if (y >= allies_start)
                 ++y;
             if (!topleft) {
                 ++x;
                 ++y;
             }
-            return {win_x + img_size * x,
-                    win_y + img_size * y};
+            return {win_x + img_size * static_cast<float>(x),
+                    win_y + img_size * static_cast<float>(y)};
         };
 
         bool handled_click = false;
@@ -304,8 +302,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
                 const size_t y = party_map[agent];
                 const size_t x = bond_map[skill];
                 const auto texture = *Resources::GetSkillImage(buff.skill_id);
-                ImVec2 tl = GetGridPos(x, y, true);
-                ImVec2 br = GetGridPos(x, y, false);
+                ImVec2 tl = get_grid_pos(x, y, true);
+                ImVec2 br = get_grid_pos(x, y, false);
                 if (texture) {
                     ImGui::AddImageCropped(texture, tl, br);
                 }
@@ -341,8 +339,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
                     const size_t x = bond_map[skill_id];
 
                     const auto texture = *Resources::GetSkillImage(skill_id);
-                    ImVec2 tl = GetGridPos(x, y, true);
-                    ImVec2 br = GetGridPos(x, y, false);
+                    ImVec2 tl = get_grid_pos(x, y, true);
+                    ImVec2 br = get_grid_pos(x, y, false);
                     if (texture) {
                         ImGui::AddImageCropped(texture, tl, br);
                     }
@@ -356,8 +354,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
         if (click_to_cast && !handled_click) {
             for (unsigned int y = 0; y < party_list.size(); ++y) {
                 for (unsigned int x = 0; x < bond_list.size(); ++x) {
-                    ImVec2 tl = GetGridPos(x, y, true);
-                    ImVec2 br = GetGridPos(x, y, false);
+                    ImVec2 tl = get_grid_pos(x, y, true);
+                    ImVec2 br = get_grid_pos(x, y, false);
                     if (!ImGui::IsMouseHoveringRect(tl, br))
                         continue;
                     ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
@@ -378,7 +376,6 @@ void BondsWidget::LoadSettings(ToolboxIni* ini)
     background = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
     low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(low_attribute_overlay), Colors::ARGB(76, 0, 0, 0));
 
-    LOAD_BOOL(lock_move);
     LOAD_BOOL(click_to_cast);
     LOAD_BOOL(click_to_drop);
     LOAD_BOOL(show_allies);
@@ -401,7 +398,6 @@ void BondsWidget::SaveSettings(ToolboxIni* ini)
     ToolboxWidget::SaveSettings(ini);
     Colors::Save(ini, Name(), VAR_NAME(background), background);
     Colors::Save(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
-    SAVE_BOOL(lock_move);
     SAVE_BOOL(click_to_cast);
     SAVE_BOOL(click_to_drop);
     SAVE_BOOL(show_allies);
@@ -411,7 +407,7 @@ void BondsWidget::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(row_height);
     SAVE_UINT(user_offset);
 
-    for (auto& b : available_bonds) {
+    for (const auto& b : available_bonds) {
         char buf[128];
         const int written = snprintf(buf, sizeof(buf), "bond_enabled_%d", b.skill_id);
         ASSERT(written != -1);

@@ -401,7 +401,6 @@ void PartyDamage::ResetDamage() {
 
 void PartyDamage::LoadSettings(ToolboxIni* ini) {
     ToolboxWidget::LoadSettings(ini);
-    lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
     width = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(width), 100.0f));
     bars_left = ini->GetBoolValue(Name(), VAR_NAME(bars_left), true);
     row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), 0);
