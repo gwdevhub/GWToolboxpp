@@ -25,31 +25,35 @@
 constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
 constexpr const char* IniSection = "health";
 
-void PartyDamage::Initialize() {
+void PartyDamage::Initialize()
+{
     ToolboxWidget::Initialize();
 
     total = 0;
     send_timer = TIMER_INIT();
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(&GenericModifier_Entry,
-    [this] (GW::HookStatus *status, GW::Packet::StoC::GenericModifier *packet) -> void {
-        return DamagePacketCallback(status, packet);
-    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(
+        &GenericModifier_Entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::GenericModifier* packet) -> void {
+            return DamagePacketCallback(status, packet);
+        });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry,
-    [this] (GW::HookStatus *status, GW::Packet::StoC::MapLoaded *packet) -> void {
-        return MapLoadedCallback(status, packet);
-    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(
+        &MapLoaded_Entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::MapLoaded* packet) -> void {
+            return MapLoadedCallback(status, packet);
+        });
 
-    for (size_t i = 0; i < MAX_PLAYERS; ++i) {
-        damage[i].damage= 0;
-        damage[i].recent_damage = 0;
-        damage[i].last_damage = TIMER_INIT();
+    for (auto& player_damage : damage) {
+        player_damage.damage = 0;
+        player_damage.recent_damage = 0;
+        player_damage.last_damage = TIMER_INIT();
     }
     party_window_position = GetWindowPosition(GW::UI::WindowID_PartyWindow);
 }
 
-void PartyDamage::Terminate() {
+void PartyDamage::Terminate()
+{
     ToolboxWidget::Terminate();
     if (inifile) {
         inifile->Reset();
@@ -58,34 +62,36 @@ void PartyDamage::Terminate() {
     }
 }
 
-void PartyDamage::MapLoadedCallback(GW::HookStatus *, const GW::Packet::StoC::MapLoaded *packet) {
+void PartyDamage::MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded* packet)
+{
     UNREFERENCED_PARAMETER(packet);
     switch (GW::Map::GetInstanceType()) {
-    case GW::Constants::InstanceType::Outpost:
-        in_explorable = false;
-        break;
-    case GW::Constants::InstanceType::Explorable:
-        party_index.clear();
-        if (!in_explorable) {
-            in_explorable = true;
-            ResetDamage();
-        }
-        break;
-    case GW::Constants::InstanceType::Loading:
-    default:
-        break;
+        case GW::Constants::InstanceType::Outpost:
+            in_explorable = false;
+            break;
+        case GW::Constants::InstanceType::Explorable:
+            party_index.clear();
+            if (!in_explorable) {
+                in_explorable = true;
+                ResetDamage();
+            }
+            break;
+        case GW::Constants::InstanceType::Loading:
+        default:
+            break;
     }
 }
 
-void PartyDamage::DamagePacketCallback(GW::HookStatus *, const GW::Packet::StoC::GenericModifier* packet) {
+void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet)
+{
     // ignore non-damage packets
     switch (packet->type) {
-    case GW::Packet::StoC::P156_Type::damage:
-    case GW::Packet::StoC::P156_Type::critical:
-    case GW::Packet::StoC::P156_Type::armorignoring:
-        break;
-    default:
-        return;
+        case GW::Packet::StoC::P156_Type::damage:
+        case GW::Packet::StoC::P156_Type::critical:
+        case GW::Packet::StoC::P156_Type::armorignoring:
+            break;
+        default:
+            return;
     }
 
     // ignore heals
@@ -102,15 +108,15 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, const GW::Packet::StoC:
     if (cause == nullptr) return;
     if (cause->allegiance != GW::Constants::Allegiance::Ally_NonAttackable) return;
     const auto cause_it = party_index.find(cause->agent_id);
-    if (cause_it == party_index.end()) return;  // ignore damage done by non-party members
+    if (cause_it == party_index.end()) return; // ignore damage done by non-party members
 
     // get target agent
     if (packet->target_id >= agents.size()) return;
-    if ( !agents[packet->target_id]) return;
+    if (!agents[packet->target_id]) return;
     const GW::AgentLiving* const target = agents[packet->target_id]->GetAsAgentLiving();
     if (target == nullptr) return;
     if (target->login_number != 0) return; // ignore player-inflicted damage
-                                                // such as Life bond or sacrifice
+    // such as Life bond or sacrifice
     if (target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable) return; // ignore damage inflicted to allies in general
     // warning: note damage to allied spirits, minions or stones may still trigger
     // you can do damage like that by standing in bugged dart traps in eye of the north
@@ -120,12 +126,14 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, const GW::Packet::StoC:
     if (target->max_hp > 0 && target->max_hp < 100000) {
         ldmg = std::lround(-packet->value * target->max_hp);
         hp_map[target->player_number] = target->max_hp;
-    } else {
+    }
+    else {
         const auto it = hp_map.find(target->player_number);
         if (it == hp_map.end()) {
             // max hp not found, approximate with hp/lvl formula
             ldmg = std::lround(-packet->value * (target->level * 20 + 100));
-        } else {
+        }
+        else {
             // size_t maxhp = it->second;
             ldmg = std::lround(-packet->value * it->second);
         }
@@ -158,7 +166,8 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, const GW::Packet::StoC:
     }
 }
 
-void PartyDamage::Update(const float delta) {
+void PartyDamage::Update(const float delta)
+{
     UNREFERENCED_PARAMETER(delta);
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         send_timer = TIMER_INIT();
@@ -181,7 +190,8 @@ void PartyDamage::Update(const float delta) {
     }
 }
 
-void PartyDamage::CreatePartyIndexMap() {
+void PartyDamage::CreatePartyIndexMap()
+{
     if (!GW::PartyMgr::GetIsPartyLoaded()) return;
     const GW::PartyInfo* const info = GW::PartyMgr::GetPartyInfo();
     size_t index = 0;
@@ -201,7 +211,8 @@ void PartyDamage::CreatePartyIndexMap() {
     }
 }
 
-void PartyDamage::Draw(IDirect3DDevice9* device) {
+void PartyDamage::Draw(IDirect3DDevice9* device)
+{
     UNREFERENCED_PARAMETER(device);
     if (!visible) return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
@@ -269,9 +280,9 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 
     ImGui::SetNextWindowSize(ImVec2(width, size * line_height));
     if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
-        const float &x = ImGui::GetWindowPos().x;
-        const float &y = ImGui::GetWindowPos().y;
-        const float &_width = ImGui::GetWindowWidth();
+        const float& x = ImGui::GetWindowPos().x;
+        const float& y = ImGui::GetWindowPos().y;
+        const float& _width = ImGui::GetWindowWidth();
         const Color damage_col_from = Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20));
         const Color damage_col_to = Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20));
         const Color damage_recent_from = Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20));
@@ -280,8 +291,8 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
         constexpr size_t buffer_size = 16;
         char buffer[buffer_size];
         float part_of_max = 0.0f, part_of_recent = 0.0f,
-            bar_left = 0.0f, bar_right = 0.0f, recent_left = 0.0f,
-            recent_right = 0.0f, perc_of_total = 0.0f;
+              bar_left = 0.0f, bar_right = 0.0f, recent_left = 0.0f,
+              recent_right = 0.0f, perc_of_total = 0.0f;
         for (size_t i = 0; i < size; ++i) {
             const float& damage_float = static_cast<float>(damage[i].damage);
 
@@ -308,11 +319,14 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 
             if (damage[i].damage < 1000) {
                 snprintf(buffer, buffer_size, "%d", damage[i].damage);
-            } else if (damage[i].damage < 1000 * 10) {
+            }
+            else if (damage[i].damage < 1000 * 10) {
                 snprintf(buffer, buffer_size, "%.2f k", damage_float / 1000);
-            } else if (damage[i].damage < 1000 * 1000) {
+            }
+            else if (damage[i].damage < 1000 * 1000) {
                 snprintf(buffer, buffer_size, "%.1f k", damage_float / 1000);
-            } else {
+            }
+            else {
                 snprintf(buffer, buffer_size, "%.2f m", damage_float / (1000 * 1000));
             }
 
@@ -343,12 +357,14 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
     ImGui::PopStyleVar(3);
 }
 
-float PartyDamage::GetPartOfTotal(const uint32_t dmg) const {
+float PartyDamage::GetPartOfTotal(const uint32_t dmg) const
+{
     if (total == 0) return 0;
     return static_cast<float>(dmg) / total;
 }
 
-void PartyDamage::WritePartyDamage() {
+void PartyDamage::WritePartyDamage()
+{
     std::vector<size_t> idx(MAX_PLAYERS);
     for (size_t i = 0; i < MAX_PLAYERS; ++i) idx[i] = i;
     sort(idx.begin(), idx.end(), [this](const size_t i1, const size_t i2) {
@@ -361,7 +377,8 @@ void PartyDamage::WritePartyDamage() {
     send_queue.push(L"Total ~ 100 % ~ " + std::to_wstring(total));
 }
 
-void PartyDamage::WriteDamageOf(const size_t index, uint32_t rank) {
+void PartyDamage::WriteDamageOf(const size_t index, uint32_t rank)
+{
     if (index >= MAX_PLAYERS) return;
     if (damage[index].damage <= 0) return;
 
@@ -377,29 +394,32 @@ void PartyDamage::WriteDamageOf(const size_t index, uint32_t rank) {
     constexpr size_t buffer_size = 130;
     wchar_t buffer[buffer_size];
     swprintf_s(buffer, buffer_size, L"#%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
-        rank,
-        GetPercentageOfTotal(damage[index].damage),
-        GetWProfessionAcronym(damage[index].primary),
-        GetWProfessionAcronym(damage[index].secondary),
-        damage[index].name.c_str(),
-        damage[index].damage);
+               rank,
+               GetPercentageOfTotal(damage[index].damage),
+               GetWProfessionAcronym(damage[index].primary),
+               GetWProfessionAcronym(damage[index].secondary),
+               damage[index].name.c_str(),
+               damage[index].damage);
 
     send_queue.push(buffer);
 }
 
 
-void PartyDamage::WriteOwnDamage() {
+void PartyDamage::WriteOwnDamage()
+{
     WriteDamageOf(player_index);
 }
 
-void PartyDamage::ResetDamage() {
+void PartyDamage::ResetDamage()
+{
     total = 0;
     for (size_t i = 0; i < MAX_PLAYERS; ++i) {
         damage[i].Reset();
     }
 }
 
-void PartyDamage::LoadSettings(ToolboxIni* ini) {
+void PartyDamage::LoadSettings(ToolboxIni* ini)
+{
     ToolboxWidget::LoadSettings(ini);
     width = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(width), 100.0f));
     bars_left = ini->GetBoolValue(Name(), VAR_NAME(bars_left), true);
@@ -430,9 +450,9 @@ void PartyDamage::LoadSettings(ToolboxIni* ini) {
     is_movable = is_resizable = !snap_to_party_window;
 }
 
-void PartyDamage::SaveSettings(ToolboxIni* ini) {
+void PartyDamage::SaveSettings(ToolboxIni* ini)
+{
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), "lock_move", lock_move);
 
     ini->SetDoubleValue(Name(), VAR_NAME(width), width);
     ini->SetBoolValue(Name(), VAR_NAME(bars_left), bars_left);
@@ -453,7 +473,8 @@ void PartyDamage::SaveSettings(ToolboxIni* ini) {
     inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
 }
 
-void PartyDamage::DrawSettingsInternal() {
+void PartyDamage::DrawSettingsInternal()
+{
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     ImGui::Checkbox("Print Player Damage by Ctrl + Click", &print_by_click);

@@ -55,8 +55,8 @@ AllowAllParametersOfDeclarationOnNextLine: false
 #   return;
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: true
-AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: false
 AllowShortLambdasOnASingleLine: false
 
@@ -90,7 +90,7 @@ BraceWrapping:
   AfterNamespace:        false
   AfterObjCDeclaration:  true
   AfterExternBlock:      true
-  SplitEmptyFunction:    true
+  SplitEmptyFunction:    false
   SplitEmptyRecord:      true
   SplitEmptyNamespace:   true
 
