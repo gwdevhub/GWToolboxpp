@@ -490,7 +490,6 @@ void GWToolbox::Initialize()
     Resources::EnsureFolderExists(Resources::GetSettingsFolderPath());
     Resources::EnsureFolderExists(Resources::GetPath(L"img"));
     Resources::EnsureFolderExists(Resources::GetPath(L"img\\bonds"));
-    Resources::EnsureFolderExists(Resources::GetPath(L"img\\icons"));
     Resources::EnsureFolderExists(Resources::GetPath(L"img\\materials"));
     Resources::EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
     Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));

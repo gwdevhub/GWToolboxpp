@@ -143,7 +143,6 @@ void PconsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
-    Resources::Instance().LoadTexture(&button_texture, Resources::GetPath(L"img/icons", L"cupcake.png"));
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentSetPlayer>(&AgentSetPlayer_Entry, [](GW::HookStatus*, const GW::Packet::StoC::AgentSetPlayer* pak) -> void {
         Pcon::player_id = pak->unk1;
