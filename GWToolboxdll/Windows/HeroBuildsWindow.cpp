@@ -206,23 +206,24 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             }
             /* Code for copying a teambuild */
             std::vector<const char*> names(teambuilds.size(), "\0");
-            std::ranges::transform(teambuilds
-                                   ,
-                                   names.begin(),
-                                   [](const TeamHeroBuild& tb) { return tb.name; }
+            std::ranges::transform(
+                teambuilds,
+                names.begin(),
+                [](const TeamHeroBuild& tb) { return tb.name; }
             );
-            const auto num_elements = names.size();
-            static int selectedTeambuild = 0;
-            ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-            ImGui::Combo("###teamBuildCombo", &selectedTeambuild, names.data(), num_elements);
-            ImGui::PopItemWidth();
-            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-            if (ImGui::Button("Copy##1", ImVec2(60.0f, 0))) {
-                TeamHeroBuild new_tb = teambuilds[selectedTeambuild];
-                const std::string copy_name = std::string(new_tb.name) + " (Copy)";
-                GuiUtils::StrCopy(new_tb.name, copy_name.c_str(), sizeof(new_tb.name));
-                builds_changed = true;
-                teambuilds.push_back(new_tb);
+            if (const auto num_elements = names.size()) {
+                static int selected_teambuild = 0;
+                ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
+                ImGui::Combo("###teamBuildCombo", &selected_teambuild, names.data(), num_elements);
+                ImGui::PopItemWidth();
+                ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+                if (ImGui::Button("Copy##1", ImVec2(60.0f, 0))) {
+                    TeamHeroBuild new_tb = teambuilds[selected_teambuild];
+                    const auto copy_name = std::format("{} (Copy)", new_tb.name);
+                    GuiUtils::StrCopy(new_tb.name, copy_name.c_str(), sizeof(new_tb.name));
+                    builds_changed = true;
+                    teambuilds.push_back(new_tb);
+                }
             }
         }
         ImGui::End();
