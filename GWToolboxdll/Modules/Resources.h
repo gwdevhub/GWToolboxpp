@@ -67,11 +67,11 @@ public:
     using AsyncLoadMbCallback = std::function<void(bool success, const std::string& response)>;
 
     // Load from file to D3DTexture, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback = nullptr) const;
+    static void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback = nullptr);
     // Load from compiled resource id to D3DTexture, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback = nullptr) const;
+    static void LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback = nullptr);
     // Load from file to D3DTexture, fallback to resource id, runs callback on completion
-    void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback = nullptr) const;
+    static void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback = nullptr);
     // Load from file to D3DTexture, fallback to remote location, runs callback on completion
     static void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback = nullptr);
 

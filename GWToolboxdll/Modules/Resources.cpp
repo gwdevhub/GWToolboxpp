@@ -54,7 +54,6 @@ namespace {
     std::string ns;
     constexpr size_t MAX_WORKERS = 5;
     const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
-    const wchar_t* ARMOR_GALLERY_PATH = L"img\\armor_gallery";
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
     const wchar_t* ITEM_IMAGES_PATH = L"img\\items";
     const wchar_t* PROF_ICONS_PATH = L"img\\professions";
@@ -556,7 +555,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const HMODULE hSrc
     return res;
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback) const
+void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback)
 {
     EnqueueDxTask([path_to_file, texture, callback](IDirect3DDevice9* device) {
         std::wstring error{};
@@ -571,7 +570,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
     });
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback) const
+void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback)
 {
     EnqueueDxTask([id, texture, callback](IDirect3DDevice9* device) {
         std::wstring error{};
@@ -602,7 +601,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
     });
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback) const
+void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback)
 {
     LoadTexture(texture, path_to_file, [texture, id, callback](const bool success, const std::wstring& error) {
         if (!success) {
@@ -660,10 +659,10 @@ int Resources::LoadIniFromFile(const wchar_t* resource_path, ToolboxIni* inifile
 // Load from absolute file path on disk with 3 retries
 int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile) { return inifile->LoadFile(absolute_path); }
 
-int Resources::SaveIniToFile(const wchar_t* resource_filename, const ToolboxIni* inifile)
+int Resources::SaveIniToFile(const wchar_t* filename, const ToolboxIni* inifile)
 {
-    ASSERT(resource_filename && *resource_filename);
-    const auto absolute_path = GetPath(resource_filename);
+    ASSERT(filename && *filename);
+    const auto absolute_path = GetPath(filename);
     return SaveIniToFile(absolute_path, inifile);
 }
 

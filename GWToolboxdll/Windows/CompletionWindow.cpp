@@ -265,7 +265,7 @@ namespace {
         for (auto& mission_image : mission_images) {
             if (mission_image.texture)
                 continue;
-            Resources::Instance().LoadTexture(
+            Resources::LoadTexture(
                 &mission_image.texture,
                 Resources::GetPath(L"img/missions", mission_image.file_name),
                 static_cast<WORD>(mission_image.resource_id)
@@ -715,7 +715,7 @@ IDirect3DTexture9* HeroUnlock::GetMissionImage()
         swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
         char remote_image[128];
         snprintf(remote_image, _countof(remote_image), "https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
-        Resources::Instance().LoadTexture(image, local_image, remote_image);
+        Resources::LoadTexture(image, local_image, remote_image);
     }
     return *image;
 }
@@ -897,7 +897,7 @@ void CompletionWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    //Resources::Instance().LoadTexture(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
+    //Resources::LoadTexture(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
 
     missions = {
         {Campaign::Prophecies, {}},
