@@ -33,7 +33,7 @@ public:
     void Terminate() override;
 
     void Update(float delta) override;
-    void DxUpdate(IDirect3DDevice9* device);
+    static void DxUpdate(IDirect3DDevice9* device);
 
     // Enqueue instruction to be called on worker thread, away from the render loop e.g. curl requests
     static void EnqueueWorkerTask(std::function<void()> f);
@@ -78,15 +78,15 @@ public:
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetProfessionIcon(GW::Constants::Profession p);
     // Fetches skill page from GWW, parses out the image for the skill then downloads that to disk
-    // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
+    // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetSkillImage(GW::Constants::SkillID skill_id);
     // Fetches item page from GWW, parses out the image for the item then downloads that to disk
-    // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
+    // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
     // Fetches File page from GWW, parses out the image for the file given
-    // Not elegent, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
+    // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetGuildWarsWikiImage(const char* filename, size_t width = 0);
 
