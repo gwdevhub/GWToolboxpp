@@ -335,6 +335,6 @@ void GameWorldRenderer::sync_markers(IDirect3DDevice9* device)
             continue;
         }
         std::vector<GW::Vec2f> points = circular_points_from_marker(marker.pos.x, marker.pos.y, marker.size);
-        renderables.push_back(std::make_unique<GenericPolyRenderable>(device, marker.map, points, marker.color, false));
+        renderables.push_back(std::make_unique<GenericPolyRenderable>(device, marker.map, points, marker.color, marker.is_filled()));
     }
 }
