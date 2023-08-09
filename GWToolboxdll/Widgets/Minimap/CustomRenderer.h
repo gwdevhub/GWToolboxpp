@@ -62,6 +62,7 @@ class CustomRenderer : public VBuffer
         Color color{0x00FFFFFF};
         Color color_sub{0x00FFFFFF};
         void Render(IDirect3DDevice9* device) override;
+        bool is_filled() const { return shape == Shape::FullCircle; }
 
     private:
         void Initialize(IDirect3DDevice9* device) override;
