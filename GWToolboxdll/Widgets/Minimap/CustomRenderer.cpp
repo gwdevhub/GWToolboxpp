@@ -18,6 +18,7 @@
 
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/CustomRenderer.h>
+#include <Widgets/Minimap/Minimap.h>
 
 #include <Color.h>
 
@@ -93,6 +94,7 @@ void CustomRenderer::LoadMarkers()
             lines.back().map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
             lines.back().color = Colors::Load(inifile, section, "color", lines.back().color);
             lines.back().visible = inifile->GetBoolValue(section, "visible", true);
+            lines.back().draw_on_terrain = inifile->GetBoolValue(section, "draw_on_terrain", false);
             inifile->Delete(section, nullptr);
         }
         else if (strncmp(section, "custommarker", 12) == 0) {
@@ -105,6 +107,7 @@ void CustomRenderer::LoadMarkers()
             marker.color = Colors::Load(inifile, section, "color", marker.color);
             marker.color_sub = Colors::Load(inifile, section, "color_sub", marker.color_sub);
             marker.visible = inifile->GetBoolValue(section, "visible", true);
+            marker.draw_on_terrain = inifile->GetBoolValue(section, "draw_on_terrain", false);
             markers.push_back(marker);
             inifile->Delete(section, nullptr);
         }
@@ -126,6 +129,7 @@ void CustomRenderer::LoadMarkers()
             polygon.color_sub = Colors::Load(inifile, section, "color_sub", polygon.color_sub);
             polygon.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
             polygon.visible = inifile->GetBoolValue(section, "visible", true);
+            polygon.draw_on_terrain = inifile->GetBoolValue(section, "draw_on_terrain", false);
             polygons.push_back(polygon);
             inifile->Delete(section, nullptr);
         }
@@ -170,6 +174,7 @@ void CustomRenderer::SaveMarkers() const
             Colors::Save(inifile, section, "color", line.color);
             inifile->SetLongValue(section, "map", static_cast<long>(line.map));
             inifile->SetBoolValue(section, "visible", line.visible);
+            inifile->SetBoolValue(section, "draw_on_terrain", line.draw_on_terrain);
         }
         for (auto i = 0u; i < markers.size(); i++) {
             const CustomMarker& marker = markers[i];
@@ -182,6 +187,7 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetLongValue(section, "shape", static_cast<long>(marker.shape));
             inifile->SetLongValue(section, "map", static_cast<long>(marker.map));
             inifile->SetBoolValue(section, "visible", marker.visible);
+            inifile->SetBoolValue(section, "draw_on_terrain", marker.draw_on_terrain);
             Colors::Save(inifile, section, "color", marker.color);
             Colors::Save(inifile, section, "color_sub", marker.color_sub);
         }
@@ -200,6 +206,7 @@ void CustomRenderer::SaveMarkers() const
             inifile->SetValue(section, "name", polygon.name);
             inifile->SetLongValue(section, "map", static_cast<long>(polygon.map));
             inifile->SetBoolValue(section, "visible", polygon.visible);
+            inifile->SetBoolValue(section, "draw_on_terrain", polygon.draw_on_terrain);
             inifile->SetBoolValue(section, "filled", polygon.filled);
         }
 
@@ -290,6 +297,12 @@ void CustomRenderer::DrawLineSettings()
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Name");
         ImGui::SameLine(0.0f, spacing);
+
+        markers_changed |= ImGui::Checkbox("##draw_on_terrain", &line.draw_on_terrain);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Draw on in-game terrain");
+        ImGui::SameLine(0.0f, spacing);
+
         const bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Delete");
@@ -363,6 +376,12 @@ void CustomRenderer::DrawMarkerSettings()
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Name");
         ImGui::SameLine(0.0f, spacing);
+
+        markers_changed |= ImGui::Checkbox("##draw_on_terrain", &marker.draw_on_terrain);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Draw on in-game terrain");
+        ImGui::SameLine(0.0f, spacing);
+
         const bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Delete");
@@ -460,6 +479,12 @@ void CustomRenderer::DrawPolygonSettings()
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Name");
         ImGui::PopItemWidth();
+
+        markers_changed |= ImGui::Checkbox("##draw_on_terrain", &polygon.draw_on_terrain);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Draw on in-game terrain");
+        ImGui::SameLine(0.0f, spacing);
+
         ImGui::SameLine(0.0f, spacing);
         const bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
         if (ImGui::IsItemHovered())
@@ -536,8 +561,10 @@ void CustomRenderer::DrawSettings()
         DrawPolygonSettings();
         ImGui::TreePop();
     }
-    if (markers_changed)
+    if (markers_changed) {
+        Minimap::Instance().game_world_renderer.TriggerSyncAllMarkers();
         Invalidate();
+    }
 }
 
 void CustomRenderer::Initialize(IDirect3DDevice9* device)

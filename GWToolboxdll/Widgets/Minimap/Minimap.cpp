@@ -202,6 +202,7 @@ void Minimap::Terminate()
     symbols_renderer.Terminate();
     custom_renderer.Terminate();
     effect_renderer.Terminate();
+    game_world_renderer.Terminate();
 }
 
 void Minimap::Initialize()
@@ -492,6 +493,10 @@ void Minimap::DrawSettingsInternal()
         Colors::DrawSettingHueWheel("Background", &hero_flag_window_background);
         ImGui::TreePop();
     }
+    if (ImGui::TreeNodeEx("In-game rendering", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        game_world_renderer.DrawSettings();
+        ImGui::TreePop();
+    }
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();  ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
     ImGui::NextSpacedElement();  ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
@@ -575,6 +580,7 @@ void Minimap::LoadSettings(ToolboxIni *ini)
     symbols_renderer.LoadSettings(ini, Name());
     custom_renderer.LoadSettings(ini, Name());
     effect_renderer.LoadSettings(ini, Name());
+    game_world_renderer.LoadSettings(ini, Name());
 }
 
 void Minimap::SaveSettings(ToolboxIni *ini)
@@ -607,6 +613,7 @@ void Minimap::SaveSettings(ToolboxIni *ini)
     symbols_renderer.SaveSettings(ini, Name());
     custom_renderer.SaveSettings(ini, Name());
     effect_renderer.SaveSettings(ini, Name());
+    game_world_renderer.SaveSettings(ini, Name());
 }
 
 size_t Minimap::GetPlayerHeroes(const GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes, bool* has_flags)
@@ -966,6 +973,7 @@ void Minimap::Render(IDirect3DDevice9* device) {
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
         device->SetRenderState(D3DRS_STENCILENABLE, false);
     }
+    instance.game_world_renderer.Render(device);
 
     // Restore the DX9 transform
     device->SetTransform(D3DTS_WORLD, &reset_world);
