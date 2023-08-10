@@ -139,29 +139,22 @@ void GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
     // set up directX standard MVP matrices according to those used to render the game world
     // values here are largely according to GWCAs example code. my knowledge is admittedly lacking.
 
-    constexpr auto USED_FOR_PROJ_MATRIX = 0;
-    constexpr auto USED_FOR_MODEL_MATRIX = 1;
-
-    const auto r0 = *GetTransform(static_cast<GW::Render::Transform>(USED_FOR_PROJ_MATRIX));
-    // clang-format off
+    const auto r0 = *GetTransform(GW::Render::Transform::TRANSFORM_PROJECTION_MATRIX);
     const DirectX::XMFLOAT4X4 mat_proj(
         r0._11 / r0._33, 0.0f, 0.0f, 0.0f,
         0.0f, r0._22 / r0._33, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0001f, 1.0f,
         0.0f, 0.0f, -10.001f, 0.0f
     );
-    // clang-format on
     device->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&mat_proj));
 
-    const auto r1 = *GetTransform(static_cast<GW::Render::Transform>(USED_FOR_MODEL_MATRIX));
-    // clang-format off
+    const auto r1 = *GetTransform(GW::Render::Transform::TRANSFORM_MODEL_MATRIX);
     const DirectX::XMFLOAT4X4 mat_world( // it's transpose of game's 4x3 matrix
         r1._11, r1._21, r1._31, 0.0f,
         r1._12, r1._22, r1._32, 0.0f,
         r1._13, r1._23, r1._33, 0.0f,
         r1._14, r1._24, r1._34, 1.0f
     );
-    // clang-format on
     device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&mat_world));
 
     // view matrix is just identity
