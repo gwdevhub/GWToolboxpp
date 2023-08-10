@@ -31,13 +31,13 @@ public:
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    static const size_t zb_cnt = 66;
-    static const size_t zm_cnt = 69;
-    static const size_t zc_cnt = 28;
-    static const size_t zv_cnt = 136;
-    static const size_t ws_cnt = 21;
-    static const size_t wbe_cnt = 9;
-    static const size_t wbp_cnt = 6;
+    static constexpr size_t zb_cnt = 66;
+    static constexpr size_t zm_cnt = 69;
+    static constexpr size_t zc_cnt = 28;
+    static constexpr size_t zv_cnt = 136;
+    static constexpr size_t ws_cnt = 21;
+    static constexpr size_t wbe_cnt = 9;
+    static constexpr size_t wbp_cnt = 6;
 
 private:
     bool subscribed_zaishen_bounties[zb_cnt] = {false};

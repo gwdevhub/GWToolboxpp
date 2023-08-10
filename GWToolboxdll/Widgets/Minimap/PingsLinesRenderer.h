@@ -16,9 +16,7 @@ class PingsLinesRenderer : public VBuffer {
 
     struct DrawingLine {
         DrawingLine()
-            : start(TIMER_INIT())
-        {
-        }
+            : start(TIMER_INIT()) { }
 
         clock_t start;
         float x1 = 0, y1 = 0;
@@ -27,9 +25,7 @@ class PingsLinesRenderer : public VBuffer {
 
     struct PlayerDrawing {
         PlayerDrawing()
-            : player(0), session(0)
-        {
-        }
+            : player(0), session(0) { }
 
         DWORD player;
         DWORD session;
@@ -38,9 +34,7 @@ class PingsLinesRenderer : public VBuffer {
 
     struct Ping {
         Ping()
-            : start(TIMER_INIT())
-        {
-        }
+            : start(TIMER_INIT()) { }
 
         virtual ~Ping() = default;
         clock_t start;
@@ -54,9 +48,7 @@ class PingsLinesRenderer : public VBuffer {
 
     struct TerrainPing : Ping {
         TerrainPing(const float _x, const float _y)
-            : Ping(), x(_x), y(_y)
-        {
-        }
+            : Ping(), x(_x), y(_y) { }
 
         const float x, y;
         [[nodiscard]] float GetX() const override { return x; }
@@ -66,9 +58,7 @@ class PingsLinesRenderer : public VBuffer {
 
     struct AgentPing : Ping {
         AgentPing(const DWORD _id)
-            : Ping(), id(_id)
-        {
-        }
+            : Ping(), id(_id) { }
 
         DWORD id;
         [[nodiscard]] float GetX() const override;

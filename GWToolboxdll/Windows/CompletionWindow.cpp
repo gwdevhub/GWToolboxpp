@@ -63,6 +63,7 @@ namespace {
         const uint32_t flag = 1 << shift;
         return (array[real_index] & flag) != 0;
     }
+
     void ArrayBoolSet(std::vector<uint32_t>& array, const uint32_t index, const bool is_set = true)
     {
         const uint32_t real_index = index / 32;
@@ -199,6 +200,7 @@ namespace {
         }
         Instance().CheckProgress();
     }
+
     void OnFestivalHatButton(const GW::UI::DialogButtonInfo* button)
     {
         if (wcsncmp(button->message, L"\x8101\x62E2\xAD6D\x82EB\x4C26 ", 5) != 0)
@@ -410,6 +412,7 @@ namespace {
         std::wstring email;
         std::vector<std::wstring> characters;
     };
+
     bool only_show_account_chars = true;
     // Check login screen; assign missing characters to email account
     void RefreshAccountCharacters()
@@ -546,6 +549,7 @@ MapID Mission::GetOutpost() const
 {
     return TravelWindow::GetNearestOutpost(map_to);
 }
+
 bool Mission::Draw(IDirect3DDevice9*)
 {
     const auto texture = GetMissionImage();
@@ -553,16 +557,16 @@ bool Mission::Draw(IDirect3DDevice9*)
     const float scale = ImGui::GetIO().FontGlobalScale;
 
     ImVec2 s(icon_size.x * scale, icon_size.y * scale);
-    ImVec4 bg = ImVec4(0, 0, 0, 0);
+    auto bg = ImVec4(0, 0, 0, 0);
     if (IsDaily()) {
         bg = ImColor(is_daily_bg_color);
     }
     else if (HasQuest()) {
         bg = ImColor(has_quest_bg_color);
     }
-    const ImVec4 tint(1, 1, 1, 1);
-    const ImVec2 uv0 = ImVec2(0, 0);
-    ImVec2 uv1 = ImVec2(1, 1);
+    constexpr ImVec4 tint(1, 1, 1, 1);
+    constexpr auto uv0 = ImVec2(0, 0);
+    auto uv1 = ImVec2(1, 1);
 
     const ImVec2 cursor_pos = ImGui::GetCursorPos();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -616,10 +620,12 @@ bool Mission::Draw(IDirect3DDevice9*)
     }
     return true;
 }
+
 const char* Mission::Name()
 {
     return name.string().c_str();
 }
+
 void Mission::OnClick()
 {
     const MapID travel_to = GetOutpost();
@@ -634,6 +640,7 @@ void Mission::OnClick()
         TravelWindow::Instance().Travel(travel_to, District::Current, 0);
     }
 }
+
 void Mission::CheckProgress(const std::wstring& player_name)
 {
     is_completed = bonus = false;
@@ -651,6 +658,7 @@ void Mission::CheckProgress(const std::wstring& player_name)
     is_completed = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost));
     bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
 }
+
 IDirect3DTexture9* Mission::GetMissionImage()
 {
     auto* texture_list = &normal_mode_textures;
@@ -662,10 +670,12 @@ IDirect3DTexture9* Mission::GetMissionImage()
 
     return texture_list->at(index).texture;
 }
+
 bool Mission::IsDaily()
 {
     return false;
 }
+
 bool Mission::HasQuest()
 {
     return GW::QuestMgr::GetQuest(zm_quest) != nullptr;
@@ -675,6 +685,7 @@ bool Dungeon::IsDaily()
 {
     return false;
 }
+
 bool Dungeon::HasQuest()
 {
     for (const auto& zb : zb_quests) {
@@ -691,6 +702,7 @@ HeroUnlock::HeroUnlock(HeroID _hero_id)
 {
     skill_id = static_cast<SkillID>(_hero_id);
 }
+
 void HeroUnlock::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
@@ -700,10 +712,12 @@ void HeroUnlock::CheckProgress(const std::wstring& player_name)
     auto& heroes = skills.at(player_name)->heroes;
     is_completed = bonus = std::ranges::find(heroes, static_cast<uint32_t>(skill_id)) != heroes.end();
 }
+
 const char* HeroUnlock::Name()
 {
     return hero_names[static_cast<uint32_t>(skill_id)];
 }
+
 IDirect3DTexture9* HeroUnlock::GetMissionImage()
 {
     if (!image) {
@@ -719,6 +733,7 @@ IDirect3DTexture9* HeroUnlock::GetMissionImage()
     }
     return *image;
 }
+
 void HeroUnlock::OnClick()
 {
     wchar_t buf[128];
@@ -735,10 +750,12 @@ ItemAchievement::ItemAchievement(const size_t _encoded_name_index, const wchar_t
     name.language(TextLanguage::English);
     name.reset(encoded_name);
 }
+
 const char* ItemAchievement::Name()
 {
     return name.string().c_str();
 }
+
 IDirect3DTexture9* ItemAchievement::GetMissionImage()
 {
     if (!name.wstring().empty()) {
@@ -758,6 +775,7 @@ IDirect3DTexture9* ItemAchievement::GetMissionImage()
     }
     return nullptr;
 }
+
 void ItemAchievement::OnClick()
 {
     GW::GameThread::Enqueue([url = name.wstring()] {
@@ -771,6 +789,7 @@ IDirect3DTexture9* PvESkill::GetMissionImage()
         image = Resources::GetSkillImage(skill_id);
     return *image;
 }
+
 PvESkill::PvESkill(const SkillID _skill_id)
     : Mission(MapID::None, dummy_var, dummy_var), skill_id(_skill_id)
 {
@@ -782,6 +801,7 @@ PvESkill::PvESkill(const SkillID _skill_id)
         }
     }
 }
+
 void PvESkill::OnClick()
 {
     const auto wtf = std::format(L"Game_link:Skill_{}", static_cast<std::underlying_type_t<SkillID>>(skill_id));
@@ -790,6 +810,7 @@ void PvESkill::OnClick()
         GuiUtils::OpenWiki(url);
     });
 }
+
 bool PvESkill::Draw(IDirect3DDevice9* device)
 {
     const ImVec2 cursor_pos = ImGui::GetCursorPos();
@@ -819,6 +840,7 @@ bool PvESkill::Draw(IDirect3DDevice9* device)
     }
     return true;
 }
+
 void PvESkill::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
@@ -849,6 +871,7 @@ FactionsPvESkill::FactionsPvESkill(const SkillID skill_id)
         name.reset(buf.c_str());
     }
 };
+
 bool FactionsPvESkill::Draw(IDirect3DDevice9* device)
 {
     //icon_size.y *= 2.f;
@@ -869,6 +892,7 @@ void EotNMission::CheckProgress(const std::wstring& player_name)
     }
     is_completed = bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
 }
+
 IDirect3DTexture9* EotNMission::GetMissionImage()
 {
     auto* texture_list = &normal_mode_textures;
@@ -887,6 +911,7 @@ void Vanquish::CheckProgress(const std::wstring& player_name)
     auto& unlocked = completion.at(player_name)->vanquishes;
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
 }
+
 IDirect3DTexture9* Vanquish::GetMissionImage()
 {
     return hard_mode_textures.at(is_completed).texture;
@@ -1229,6 +1254,7 @@ void CompletionWindow::Initialize()
 
     RefreshAccountCharacters();
 }
+
 void CompletionWindow::Initialize_Prophecies()
 {
     LoadTextures(PropheciesMission::normal_mode_images);
@@ -1411,6 +1437,7 @@ void CompletionWindow::Initialize_Prophecies()
     eskills.push_back(new PvESkill(SkillID::Ward_Against_Harm));
     eskills.push_back(new PvESkill(SkillID::Water_Trident));
 }
+
 void CompletionWindow::Initialize_Factions()
 {
     LoadTextures(FactionsMission::normal_mode_images);
@@ -1619,6 +1646,7 @@ void CompletionWindow::Initialize_Factions()
     h.push_back(new HeroUnlock(Miku));
     h.push_back(new HeroUnlock(ZeiRi));
 }
+
 void CompletionWindow::Initialize_Nightfall()
 {
     LoadTextures(NightfallMission::normal_mode_images);
@@ -1860,6 +1888,7 @@ void CompletionWindow::Initialize_Nightfall()
     h.push_back(new HeroUnlock(Zenmai));
     h.push_back(new HeroUnlock(ZhedShadowhoof));
 }
+
 void CompletionWindow::Initialize_EotN()
 {
     LoadTextures(EotNMission::normal_mode_images);
@@ -1968,6 +1997,7 @@ void CompletionWindow::Initialize_EotN()
     h.push_back(new HeroUnlock(Vekk));
     h.push_back(new HeroUnlock(Xandra));
 }
+
 void CompletionWindow::Initialize_Dungeons()
 {
     LoadTextures(Dungeon::normal_mode_images);
@@ -2047,6 +2077,7 @@ void CompletionWindow::Terminate()
         delete camp.second;
     character_completion.clear();
 }
+
 void CompletionWindow::Draw(IDirect3DDevice9* device)
 {
     if (!visible)
@@ -2160,10 +2191,10 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     };
     if (pending_sort) {
         bool sorted = true;
-        for (auto it = missions.begin(); sorted && it != missions.end(); it++) {
+        for (auto it = missions.begin(); sorted && it != missions.end(); ++it) {
             sorted = sort(it->second);
         }
-        for (auto it = vanquishes.begin(); sorted && it != vanquishes.end(); it++) {
+        for (auto it = vanquishes.begin(); sorted && it != vanquishes.end(); ++it) {
             sorted = sort(it->second);
         }
         /*for (auto it = pve_skills.begin(); sorted && it != pve_skills.end(); it++) {
@@ -2172,7 +2203,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         for (auto it = elite_skills.begin(); sorted && it != elite_skills.end(); it++) {
             sorted = sort(it->second);
         }*/
-        for (auto it = heros.begin(); sorted && it != heros.end(); it++) {
+        for (auto it = heros.begin(); sorted && it != heros.end(); ++it) {
             sorted = sort(it->second);
         }
         if (sorted)
@@ -2383,6 +2414,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::EndChild();
     ImGui::End();
 }
+
 void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
 {
     float single_item_width = Mission::icon_size.x;
@@ -2628,6 +2660,7 @@ then press "Examine the Monument to Devotion.")");
         ImGui::PopStyleVar();
     }
 }
+
 void CompletionWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
@@ -2636,7 +2669,7 @@ void CompletionWindow::DrawSettingsInternal()
 void CompletionWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    ToolboxIni* completion_ini = new ToolboxIni(false, false, false);
+    auto completion_ini = new ToolboxIni(false, false, false);
     completion_ini->LoadFile(Resources::GetPath(completion_ini_filename).c_str());
     std::string ini_str;
     std::wstring name_ws;
@@ -2688,6 +2721,7 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     }
     CheckProgress();
 }
+
 CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
 {
     for (auto& camp : pve_skills) {
@@ -2744,10 +2778,11 @@ CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
     }
     return this;
 }
+
 void CompletionWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ToolboxIni* completion_ini = new ToolboxIni(false, false, false);
+    auto completion_ini = new ToolboxIni(false, false, false);
     std::string ini_str;
     std::string* name;
     CharacterCompletion* char_comp = nullptr;
@@ -2817,6 +2852,7 @@ void MinipetAchievement::CheckProgress(const std::wstring& player_name)
     std::vector<uint32_t>& minipets_unlocked = cc.at(player_name)->minipets_unlocked;
     is_completed = bonus = ArrayBoolAt(minipets_unlocked, encoded_name_index);
 }
+
 void WeaponAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
@@ -2837,6 +2873,7 @@ IDirect3DTexture9* AchieventWithWikiFile::GetMissionImage()
     }
     return img ? *img : nullptr;
 }
+
 void ArmorAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
@@ -2849,6 +2886,7 @@ void ArmorAchievement::CheckProgress(const std::wstring& player_name)
     const auto& unlocked = hom.resilience_detail;
     is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
+
 void CompanionAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
@@ -2861,6 +2899,7 @@ void CompanionAchievement::CheckProgress(const std::wstring& player_name)
     const auto& unlocked = hom.fellowship_detail;
     is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
+
 void HonorAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
@@ -2930,6 +2969,7 @@ const char* UnlockedPvPItemUpgrade::Name()
     LoadStrings();
     return ItemAchievement::Name();
 }
+
 void UnlockedPvPItemUpgrade::OnClick()
 {
     const auto category = (void*)PvPItemUpgradeTypeName(encoded_name_index);

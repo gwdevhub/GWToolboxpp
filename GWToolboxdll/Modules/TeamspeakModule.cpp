@@ -259,7 +259,7 @@ namespace {
         if (server_socket == INVALID_SOCKET)
             return failed("Couldn't connect to teamspeak 3; socket failure");
 
-        const DWORD timeout = 500;
+        constexpr DWORD timeout = 500;
         res = setsockopt(server_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof timeout);
         if (res == SOCKET_ERROR)
             return failed("Couldn't connect to teamspeak 3; setsockopt failure");

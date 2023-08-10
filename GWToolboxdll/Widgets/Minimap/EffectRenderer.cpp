@@ -84,9 +84,7 @@ namespace {
               , effect_id(_effect_id)
               , range(_range)
               , stoc_header(_stoc_header)
-              , duration(_duration)
-        {
-        }
+              , duration(_duration) { }
     };
 
     struct EffectTrigger {
@@ -96,9 +94,7 @@ namespace {
         std::unordered_map<std::pair<float, float>, clock_t, pair_hash> triggers_handled{};
 
         EffectTrigger(const uint32_t _triggered_effect_id, const uint32_t _duration, const float _range)
-            : triggered_effect_id(_triggered_effect_id), duration(_duration), range(_range)
-        {
-        };
+            : triggered_effect_id(_triggered_effect_id), duration(_duration), range(_range) { };
     };
 
     std::vector<Effect*> aoe_effects;

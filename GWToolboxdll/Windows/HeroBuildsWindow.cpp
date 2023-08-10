@@ -30,8 +30,8 @@ namespace {
 
     // hero index is an arbitrary index.
     // We aim to have the same order as in the gw client.
-    // Razah is after the mesmers because all players that don't have mercs have it set as mesmer.
-    const HeroID HeroIndexToID[] = {
+    // Razah is after the mesmers because all players that don't have mercenaries have it set as mesmer.
+    constexpr HeroID HeroIndexToID[] = {
         HeroID::NoHero,
         HeroID::Goren,
         HeroID::Koss,
@@ -72,7 +72,7 @@ namespace {
         HeroID::Merc8
     };
 
-    const auto hero_count = _countof(HeroIndexToID);
+    constexpr auto hero_count = _countof(HeroIndexToID);
 
     const char* HeroName[] = {
         "No Hero", "Norgu", "Goren", "Tahlkora",

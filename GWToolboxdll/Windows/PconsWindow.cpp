@@ -215,7 +215,7 @@ void PconsWindow::OnSpeechBubble(GW::HookStatus* status, const GW::Packet::StoC:
 
     const wchar_t* m = pak->message;
     const std::wstring_view msg{m, 4};
-    const std::initializer_list<std::wstring_view> msgs = {
+    constexpr std::initializer_list<std::wstring_view> msgs = {
         L"\x8CA\xA4F7\xF552\xA32",   // i love you man!
         L"\x8CB\xE20B\x9835\x4C75",  // I'm the king of the world!
         L"\x8CC\xFA4D\xF068\x393",   // I think I need to sit down

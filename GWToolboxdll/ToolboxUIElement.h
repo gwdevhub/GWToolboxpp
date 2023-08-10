@@ -9,9 +9,7 @@ public:
     [[nodiscard]] bool IsUIElement() const override { return true; }
 
     // Draw user interface. Will be called every frame if the element is visible
-    virtual void Draw(IDirect3DDevice9*)
-    {
-    }
+    virtual void Draw(IDirect3DDevice9*) { }
 
     [[nodiscard]] virtual const char* UIName() const;
     //virtual const char* SettingsName() const override { return UIName(); }

@@ -177,7 +177,7 @@ namespace GuiUtils {
         std::thread t([] {
             printf("Loading fonts\n");
 
-            const auto&io = ImGui::GetIO();
+            const auto& io = ImGui::GetIO();
 
             std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk;
             fonts_on_disk.emplace_back(L"Font.ttf", io.Fonts->GetGlyphRangesDefault());

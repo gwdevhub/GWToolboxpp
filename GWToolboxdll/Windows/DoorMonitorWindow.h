@@ -12,9 +12,7 @@ public:
     class DoorObject {
     public:
         DoorObject(const uint32_t object_id_)
-            : object_id(object_id_)
-        {
-        };
+            : object_id(object_id_) { };
 
         uint32_t object_id = 0; // object_id
         uint32_t initial_state = 0;

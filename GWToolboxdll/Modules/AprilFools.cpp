@@ -93,7 +93,7 @@ static const wchar_t* af_2020_quotes[] = {
     L"Knew I should have put shares into the paracetamol stock market this year",
     L"I swear thats the last time I eat Canthan food again!"
 };
-const auto af_quotes_length = sizeof(af_2020_quotes) / 4;
+constexpr auto af_quotes_length = sizeof(af_2020_quotes) / 4;
 
 void AprilFools::Initialize()
 {

@@ -104,9 +104,7 @@ private:
 
     struct Shape_Vertex : public GW::Vec2f {
         Shape_Vertex(const float x, const float y, const Color_Modifier mod)
-            : Vec2f(x, y), modifier(mod)
-        {
-        }
+            : Vec2f(x, y), modifier(mod) { }
 
         Color_Modifier modifier;
     };

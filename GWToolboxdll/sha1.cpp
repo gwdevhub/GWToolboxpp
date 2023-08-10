@@ -25,8 +25,8 @@
 #include <fstream>
 
 
-static const size_t BLOCK_INTS = 16; /* number of 32bit integers per SHA1 block */
-static const size_t BLOCK_BYTES = BLOCK_INTS * 4;
+static constexpr size_t BLOCK_INTS = 16; /* number of 32bit integers per SHA1 block */
+static constexpr size_t BLOCK_BYTES = BLOCK_INTS * 4;
 
 
 static void reset(uint32_t digest[], std::string& buffer, uint64_t& transforms)

@@ -17,9 +17,7 @@ namespace {
 
     struct Plugin {
         Plugin(std::filesystem::path _path)
-            : path(std::move(_path))
-        {
-        };
+            : path(std::move(_path)) { };
         std::filesystem::path path;
         HMODULE dll = nullptr;
         ToolboxPlugin* instance = nullptr;

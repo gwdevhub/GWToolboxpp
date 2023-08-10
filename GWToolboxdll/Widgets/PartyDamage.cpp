@@ -268,7 +268,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device)
         internal_offset *= uiscale_multiply;
         const int user_offset_x = abs(user_offset);
         float offset_width = width;
-        ImVec2 calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
+        auto calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
         if (calculated_pos.x < 0 || user_offset < 0) {
             // Right placement
             internal_offset.x = 4.f * uiscale_multiply;
@@ -299,8 +299,8 @@ void PartyDamage::Draw(IDirect3DDevice9* device)
             part_of_max = max > 0 ? damage_float / max : 0;
             bar_left = bars_left ? (x + _width * (1.0f - part_of_max)) : (x);
             bar_right = bars_left ? (x + _width) : (x + _width * part_of_max);
-            const ImVec2 left_vec = ImVec2(bar_left, y + i * line_height);
-            const ImVec2 right_vec = ImVec2(bar_right, y + (i + 1) * line_height);
+            const auto left_vec = ImVec2(bar_left, y + i * line_height);
+            const auto right_vec = ImVec2(bar_right, y + (i + 1) * line_height);
             ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
                 left_vec, right_vec, damage_col_from,
                 damage_col_from, damage_col_to, damage_col_to
@@ -309,8 +309,8 @@ void PartyDamage::Draw(IDirect3DDevice9* device)
             part_of_recent = max_recent > 0 ? static_cast<float>(damage[i].recent_damage) / max_recent : 0;
             recent_left = bars_left ? (x + _width * (1.0f - part_of_recent)) : (x);
             recent_right = bars_left ? (x + _width) : (x + _width * part_of_recent);
-            const ImVec2 recent_left_vec = ImVec2(recent_left, y + (i + 1) * line_height - 6);
-            const ImVec2 recent_right_vec = ImVec2(recent_right, y + (i + 1) * line_height);
+            const auto recent_left_vec = ImVec2(recent_left, y + (i + 1) * line_height - 6);
+            const auto recent_right_vec = ImVec2(recent_right, y + (i + 1) * line_height);
             ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
                 recent_left_vec, recent_right_vec,
                 damage_recent_from, damage_recent_from,

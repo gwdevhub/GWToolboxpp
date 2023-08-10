@@ -9,9 +9,7 @@ public:
         const bool a_bMultiKey = false,
         const bool a_bMultiLine = false
     )
-        : CSimpleIni(a_bIsUtf8, a_bMultiKey, a_bMultiLine)
-    {
-    }
+        : CSimpleIni(a_bIsUtf8, a_bMultiKey, a_bMultiLine) { }
 
     // Returns SI_OK if file doesn't exist or was read successfully.
     SI_Error LoadIfExists(const std::filesystem::path& a_pwszFile);

@@ -93,7 +93,7 @@ bool GenericPolyRenderable::IsInRange(const GW::GamePos& pos, const float dist_s
     // future optimisation: use a bounding box in case of polygons with many points.
     const auto as_vec2 = GW::Vec2f{pos.x, pos.y};
     for (const auto& pt : points) {
-        if (GW::GetDistance(as_vec2, pt) <= dist_sq) {
+        if (GetDistance(as_vec2, pt) <= dist_sq) {
             return true;
         }
     }
@@ -119,7 +119,7 @@ void GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         altitudes_computed = true;
         void* mem_loc = nullptr;
         // map the vertex buffer memory and write vertices to it.
-        if (vb->Lock(0, vertices.size() * sizeof(D3DVertex), (void**)&mem_loc, D3DLOCK_DISCARD) != S_OK) {
+        if (vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD) != S_OK) {
             // this should avoid an invalid memcpy, if locking fails for some reason
             GWCA_ERR("Unable to lock GenericPolyRenderable vertex buffer");
         }
@@ -142,7 +142,7 @@ void GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
     constexpr auto USED_FOR_PROJ_MATRIX = 0;
     constexpr auto USED_FOR_MODEL_MATRIX = 1;
 
-    const auto r0 = *GW::Render::GetTransform(static_cast<GW::Render::Transform>(USED_FOR_PROJ_MATRIX));
+    const auto r0 = *GetTransform(static_cast<GW::Render::Transform>(USED_FOR_PROJ_MATRIX));
     // clang-format off
     const DirectX::XMFLOAT4X4 mat_proj(
         r0._11 / r0._33, 0.0f, 0.0f, 0.0f,
@@ -153,7 +153,7 @@ void GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
     // clang-format on
     device->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&mat_proj));
 
-    const auto r1 = *GW::Render::GetTransform(static_cast<GW::Render::Transform>(USED_FOR_MODEL_MATRIX));
+    const auto r1 = *GetTransform(static_cast<GW::Render::Transform>(USED_FOR_MODEL_MATRIX));
     // clang-format off
     const DirectX::XMFLOAT4X4 mat_world( // it's transpose of game's 4x3 matrix
         r1._11, r1._21, r1._31, 0.0f,
@@ -166,7 +166,7 @@ void GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
 
     // view matrix is just identity
     DirectX::XMFLOAT4X4 mat_view;
-    DirectX::XMStoreFloat4x4(&mat_view, DirectX::XMMatrixIdentity());
+    XMStoreFloat4x4(&mat_view, DirectX::XMMatrixIdentity());
     device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&mat_view));
 }
 

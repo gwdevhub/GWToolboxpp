@@ -20,7 +20,7 @@ utf8::string Unicode16ToUtf8(const wchar_t* start, const wchar_t* end)
 {
     utf8::string res;
     const auto isize = WideCharToMultiByte(CP_UTF8, 0, start, end - start, nullptr, 0,
-                                          nullptr, nullptr);
+                                           nullptr, nullptr);
     if (isize < 0)
         return res;
     const auto size = static_cast<size_t>(isize);
@@ -37,7 +37,7 @@ utf8::string Unicode16ToUtf8(char* buffer, const size_t n_buffer, const wchar_t*
 {
     utf8::string res;
     const auto isize = WideCharToMultiByte(CP_UTF8, 0, start, end - start, buffer,
-                                          static_cast<int>(n_buffer), nullptr, nullptr);
+                                           static_cast<int>(n_buffer), nullptr, nullptr);
     if (isize < 0)
         return res;
     const auto size = static_cast<size_t>(isize);

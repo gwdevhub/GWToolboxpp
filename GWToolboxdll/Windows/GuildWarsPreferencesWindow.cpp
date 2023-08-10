@@ -140,9 +140,7 @@ namespace {
         std::wstring value;
 
         StringPreference(const GW::UI::StringPreference _pref_id, const wchar_t* _value)
-            : pref_id(_pref_id), value(_value)
-        {
-        };
+            : pref_id(_pref_id), value(_value) { };
     };
 
     struct GWPreferences {

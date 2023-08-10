@@ -15,7 +15,7 @@
 #include <Modules/Resources.h>
 #include <Windows/MaterialsWindow.h>
 
-static const DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
+static constexpr DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 
 GW::Item* MaterialsWindow::GetMerchItem(const Material mat) const
 {
@@ -226,8 +226,8 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         float x, y, h;
 
-        const auto stockStart = static_cast<size_t>(GW::Constants::Bag::Backpack);
-        const auto stockEnd = static_cast<size_t>(GW::Constants::Bag::Storage_14);
+        constexpr auto stockStart = static_cast<size_t>(GW::Constants::Bag::Backpack);
+        constexpr auto stockEnd = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 
         // note: textures are 64 x 64, but both off-center
         // and with a bunch of empty space. We want to center the image
@@ -437,7 +437,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
 
         ImGui::Separator();
 
-        const float width2 = 100.0f;
+        constexpr float width2 = 100.0f;
         const float width1 = (ImGui::GetContentRegionAvail().x - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2);
 
         // === generic materials ===

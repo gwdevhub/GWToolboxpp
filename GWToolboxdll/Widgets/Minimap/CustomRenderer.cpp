@@ -350,7 +350,7 @@ void CustomRenderer::DrawMarkerSettings()
             ImGui::SetTooltip("Size");
         ImGui::SameLine(0.0f, spacing);
 
-        static const char* const types[] = {"Circle", "FillCircle"};
+        constexpr const char* types[] = {"Circle", "FillCircle"};
         marker_changed |= ImGui::Combo("##type", reinterpret_cast<int*>(&marker.shape), types, 2);
         ImGui::SameLine(0.0f, spacing);
 
@@ -421,9 +421,7 @@ CustomRenderer::CustomMarker::CustomMarker(const char* n)
 }
 
 CustomRenderer::CustomPolygon::CustomPolygon(const char* n)
-    : CustomPolygon(GW::Map::GetMapID(), n)
-{
-};
+    : CustomPolygon(GW::Map::GetMapID(), n) {};
 
 void CustomRenderer::DrawPolygonSettings()
 {

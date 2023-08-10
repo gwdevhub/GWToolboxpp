@@ -736,7 +736,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice)
             }
 
             static int district_index = 0;
-            static const char* const district_words[] = {
+            constexpr const char* const district_words[] = {
                 "Current District",
                 "International",
                 "American",
@@ -1013,7 +1013,7 @@ bool TravelWindow::Travel(const GW::Constants::MapID MapID, const GW::Constants:
     if (!GW::Map::GetIsMapUnlocked(MapID)) {
         const GW::AreaInfo* map = GW::Map::GetMapInfo(MapID);
         wchar_t map_name_buf[8];
-        const wchar_t err_message_buf[256] = L"[Error] Your character does not have that map unlocked";
+        constexpr wchar_t err_message_buf[256] = L"[Error] Your character does not have that map unlocked";
         if (map && map->name_id && GW::UI::UInt32ToEncStr(map->name_id, map_name_buf, 8))
             Log::ErrorW(L"[Error] Your character does not have \x1\x2%s\x2\x108\x107 unlocked", map_name_buf);
         else

@@ -58,25 +58,25 @@ namespace {
 
     // Room 1-4 no dialog
     // Room 5: "Fear not the darkness. It is already within you."
-    const wchar_t kanaxai_dialog_r5[] = L"\x5336\xBEB8\x8555\x7267";
+    constexpr wchar_t kanaxai_dialog_r5[] = L"\x5336\xBEB8\x8555\x7267";
     // Room 6 "Is it comforting to know the source of your fears? Or do you fear more now that you see them in front of you."
-    const wchar_t kanaxai_dialog_r6[] = L"\x5337\xAA3A\xE96F\x3E34";
+    constexpr wchar_t kanaxai_dialog_r6[] = L"\x5337\xAA3A\xE96F\x3E34";
     // Room 7 no dialog
     // Room 8 "Even if you banish me from your sight, I will remain in your mind."
-    const wchar_t kanaxai_dialog_r8[] = L"\x5338\xFD69\xA162\x3A04";
+    constexpr wchar_t kanaxai_dialog_r8[] = L"\x5338\xFD69\xA162\x3A04";
     // Room 9 no dialog
     // Room 10 "You mortals may be here to defeat me, but acknowledging my presence only makes the nightmare grow stronger."
-    const wchar_t kanaxai_dialog_r10[] = L"\x5339\xA7BA\xC67B\x5D81";
+    constexpr wchar_t kanaxai_dialog_r10[] = L"\x5339\xA7BA\xC67B\x5D81";
     // Room 11 no dialog
     // Room 12 "So, you have passed through the depths of the Jade Sea, and into the nightmare realm. It is too bad that I must send you back from whence you came."
-    const wchar_t kanaxai_dialog_r12[] = L"\x533A\xED06\x815D\x5FFB";
+    constexpr wchar_t kanaxai_dialog_r12[] = L"\x533A\xED06\x815D\x5FFB";
     // Room 13 "I am Kanaxai, creator of nightmares. Let me make yours into reality."
-    const wchar_t kanaxai_dialog_r13[] = L"\x533B\xCAA6\xFDA9\x3277";
+    constexpr wchar_t kanaxai_dialog_r13[] = L"\x533B\xCAA6\xFDA9\x3277";
     // Room 14 "I will fill your hearts with visions of horror and despair that will haunt you for all of your days."
-    const wchar_t kanaxai_dialog_r14[] = L"\x533C\xDD33\xA330\x4E27";
+    constexpr wchar_t kanaxai_dialog_r14[] = L"\x533C\xDD33\xA330\x4E27";
     // Kanaxai "What gives you the right to enter my lair? I shall kill you for your
     // audacity, after I destroy your mind with my horrifying visions, of course."
-    const wchar_t kanaxai_dialog_r15[] = L"\x533D\x9EB1\x8BEE\x2637";
+    constexpr wchar_t kanaxai_dialog_r15[] = L"\x533D\x9EB1\x8BEE\x2637";
 
     const enum DoorID : uint32_t {
         // object_id's for doors opening.
@@ -851,7 +851,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
             }
             else {
                 for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); ++it) {
-                    auto* os = (*it).second;
+                    auto* os = it->second;
                     const bool show = os->Draw();
                     if (!show) {
                         delete os;

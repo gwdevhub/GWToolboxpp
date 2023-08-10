@@ -22,64 +22,68 @@ namespace {
             printf("0x%X ", c);
         }
     }
-    void printf_indent(size_t indent) {
+
+    void printf_indent(size_t indent)
+    {
         printf("\n");
         for (size_t l = 0; l < indent; l++) {
             printf("  ");
         }
     }
+
     void PrintEncStr(const wchar_t* enc_str, size_t indent = 0)
     {
         if (!enc_str) return;
         using namespace ToolboxUtils::EncodedStrings;
         for (size_t i = 0; enc_str[i] != 0; i++) {
-
             switch (enc_str[i]) {
-            case 0x101:
-            case 0x102:
-            case 0x103:
-            case 0x104:
-                printf_indent(indent);
-                printf("0x%X (Length: %d)", enc_str[i],GetIdentifierLength(&enc_str[i]));
-                indent++;
-                printf_indent(indent);
-                printf("0x%X ", enc_str[i + 1]);
-                indent--;
-                printf_indent(indent);
-                PrintEncStr(&enc_str[i + 2], indent);
-                return;
-            case 0x10a:
-            case 0x10b:
-            case 0x10c:
-            case 0x10d:
-            case 0x10e:
-            case 0x10f:
-                printf_indent(indent);
-                printf("0x%X (Length: %d)", enc_str[i],GetIdentifierLength(&enc_str[i + 1]));
-                indent++;
-                printf_indent(indent);
-                PrintEncStr(&enc_str[i + 1], indent);
-                return;
-            case 0x1:
-                if (indent)
+                case 0x101:
+                case 0x102:
+                case 0x103:
+                case 0x104:
+                    printf_indent(indent);
+                    printf("0x%X (Length: %d)", enc_str[i], GetIdentifierLength(&enc_str[i]));
+                    indent++;
+                    printf_indent(indent);
+                    printf("0x%X ", enc_str[i + 1]);
                     indent--;
-                printf_indent(indent);
-                printf("0x%X ", enc_str[i]);
-                PrintEncStr(&enc_str[i + 1], indent);
-                return;
-            case 0x2:
-                printf_indent(indent);
-                printf("0x%X (Length: %d)", enc_str[i],GetIdentifierLength(&enc_str[i + 1]));
-                PrintEncStr(&enc_str[i + 1], indent);
-                return;
-            default:
-                printf("0x%X ", enc_str[i]);
-                break;
+                    printf_indent(indent);
+                    PrintEncStr(&enc_str[i + 2], indent);
+                    return;
+                case 0x10a:
+                case 0x10b:
+                case 0x10c:
+                case 0x10d:
+                case 0x10e:
+                case 0x10f:
+                    printf_indent(indent);
+                    printf("0x%X (Length: %d)", enc_str[i], GetIdentifierLength(&enc_str[i + 1]));
+                    indent++;
+                    printf_indent(indent);
+                    PrintEncStr(&enc_str[i + 1], indent);
+                    return;
+                case 0x1:
+                    if (indent)
+                        indent--;
+                    printf_indent(indent);
+                    printf("0x%X ", enc_str[i]);
+                    PrintEncStr(&enc_str[i + 1], indent);
+                    return;
+                case 0x2:
+                    printf_indent(indent);
+                    printf("0x%X (Length: %d)", enc_str[i], GetIdentifierLength(&enc_str[i + 1]));
+                    PrintEncStr(&enc_str[i + 1], indent);
+                    return;
+                default:
+                    printf("0x%X ", enc_str[i]);
+                    break;
             }
         }
     }
 }
-void StringDecoderWindow::PrintEncStr(const wchar_t* enc_str) {
+
+void StringDecoderWindow::PrintEncStr(const wchar_t* enc_str)
+{
     ::PrintEncStr(enc_str);
 }
 
@@ -142,6 +146,7 @@ void StringDecoderWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 }
+
 void StringDecoderWindow::Send()
 {
     GW::Chat::SendChat('#', GetEncodedString().c_str());

@@ -20,13 +20,9 @@ public:
     void SaveSettings(ToolboxIni* ini) override;
     void Draw(IDirect3DDevice9* device) override;
 
-    void ShowVisibleRadio() override
-    {
-    }
+    void ShowVisibleRadio() override { }
 
-    void DrawSizeAndPositionSettings() override
-    {
-    }
+    void DrawSizeAndPositionSettings() override { }
 
     void SaveUILayout();
     void LoadUILayout();

@@ -29,9 +29,7 @@ class CustomRenderer : public VBuffer {
         CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n);
 
         CustomLine(const char* n)
-            : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n)
-        {
-        };
+            : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n) { };
         GW::Vec2f p1;
         GW::Vec2f p2;
         GW::Constants::MapID map;

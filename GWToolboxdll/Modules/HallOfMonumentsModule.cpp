@@ -21,7 +21,7 @@ namespace {
         -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // [96,  112)
         41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1, // [112, 128)
     };
-    const unsigned char _Base64Table[65] =
+    constexpr unsigned char _Base64Table[65] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     int _WriteBits(const int val, char* buff, const int count = 6)
@@ -69,7 +69,7 @@ bool HallOfMonumentsModule::DecodeHomCode(const char* in, HallOfMonumentsAchieve
 
 bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
 {
-    const auto bufSize = 1024;
+    constexpr auto bufSize = 1024;
     char bitStr[bufSize]; // @Cleanup: Confirm that the buffer is alway big enough.
     const int bitStrLen = Base64ToBitString(out->hom_code, bitStr, bufSize);
     if (bitStrLen == -1) {

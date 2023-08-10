@@ -143,7 +143,7 @@ uint32_t log_message_callback_identifier = 0;
 static volatile bool running;
 
 static StoCHandlerArray* game_server_handler;
-static const size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
+static constexpr size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
 static bool ignored_packets[packet_max] = {false};
 static bool blocked_packets[packet_max] = {false};
 GW::HookEntry hook_entry;

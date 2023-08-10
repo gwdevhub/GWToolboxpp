@@ -83,7 +83,7 @@ private:
     // Window could be visible but collapsed - use this var to check it.
     bool collapsed = false;
 
-static constexpr auto  ALERT_BUF_SIZE = 1024 * 16;
+    static constexpr auto ALERT_BUF_SIZE = 1024 * 16;
     char alert_buf[ALERT_BUF_SIZE]{};
     // set when the alert_buf was modified
     bool alertfile_dirty = false;

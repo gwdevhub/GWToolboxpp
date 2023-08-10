@@ -307,7 +307,7 @@ void TwitchModule::DrawSettingsInternal()
 
         ImGui::Checkbox("Show messages in chat window. Color:", &show_messages);
         ImGui::SameLine();
-        const ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
+        constexpr ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
         if (Colors::DrawSettingHueWheel("Twitch Color:", &irc_chat_color, flags)) {
             SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, Instance().irc_chat_color);
         }

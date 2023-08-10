@@ -19,9 +19,7 @@
 namespace {
     struct DupeInfo {
         DupeInfo(const GW::AgentID agent_id)
-            : agent_id(agent_id)
-        {
-        }
+            : agent_id(agent_id) { }
 
 
         GW::AgentID agent_id;

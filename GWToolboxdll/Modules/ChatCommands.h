@@ -25,9 +25,7 @@ public:
               , scale(_scale)
               , npc_model_file_id(_npcmfid)
               , npc_model_file_data(_npcmfd)
-              , flags(_flags)
-        {
-        };
+              , flags(_flags) { };
         DWORD npc_id = 0;
         DWORD scale = 0x64000000;
         DWORD npc_model_file_id = 0;

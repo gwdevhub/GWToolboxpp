@@ -76,9 +76,7 @@ public:
               , target_id(target_id)
               , is_attack(is_attack)
               , is_skill(is_skill)
-              , skill_id(skill_id)
-        {
-        }
+              , skill_id(skill_id) { }
 
         const uint32_t caster_id;
         const uint32_t target_id;
@@ -113,9 +111,7 @@ public:
     struct ObservedSkill : ObservedAction {
     public:
         ObservedSkill(const GW::Constants::SkillID skill_id)
-            : skill_id(skill_id)
-        {
-        }
+            : skill_id(skill_id) { }
 
         const GW::Constants::SkillID skill_id;
     };

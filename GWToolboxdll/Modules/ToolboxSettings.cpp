@@ -94,9 +94,7 @@ namespace {
         bool enabled;
 
         ModuleToggle(ToolboxModule& m, const bool _enabled = true)
-            : toolbox_module(&m), name(m.Name()), enabled(_enabled)
-        {
-        };
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { };
     };
 
     class WidgetToggle {
@@ -106,9 +104,7 @@ namespace {
         bool enabled;
 
         WidgetToggle(ToolboxWidget& m, const bool _enabled = true)
-            : toolbox_module(&m), name(m.Name()), enabled(_enabled)
-        {
-        };
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { };
     };
 
     class WindowToggle {
@@ -118,9 +114,7 @@ namespace {
         bool enabled;
 
         WindowToggle(ToolboxWindow& m, const bool _enabled = true)
-            : toolbox_module(&m), name(m.Name()), enabled(_enabled)
-        {
-        };
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { };
     };
 
     const char* modules_ini_section = "Toolbox Modules";

@@ -838,7 +838,7 @@ void Obfuscator::Initialize()
         GW::HookBase::EnableHooks(GetAccountData_Func);
     }
 
-    constexpr auto pre_hook_altitude = -0x9000;      // Hooks that run before other RegisterPacketCallback hooks
+    constexpr auto pre_hook_altitude = -0x9000;  // Hooks that run before other RegisterPacketCallback hooks
     constexpr auto post_hook_altitude = -0x7000; // Hooks that run after other RegisterPacketCallback hooks, but BEFORE the game processes the packet
     constexpr auto post_gw_altitude = 0x8000;    // Hooks that run after gw has processed the event
 

@@ -34,36 +34,39 @@ namespace {
 }
 
 namespace ToolboxUtils {
-
     namespace EncodedStrings {
-        bool IsNumericFlag(const wchar_t check) {
+        bool IsNumericFlag(const wchar_t check)
+        {
             switch (check) {
-            case 0x101:
-            case 0x103:
-            case 0x104:
-            case 0x105:
-            case 0x106:
-            case 0x107:
-                return true;
+                case 0x101:
+                case 0x103:
+                case 0x104:
+                case 0x105:
+                case 0x106:
+                case 0x107:
+                    return true;
             }
             return false;
         }
-        bool IsArgumentFlag(const wchar_t check) {
+
+        bool IsArgumentFlag(const wchar_t check)
+        {
             if (IsNumericFlag(check))
                 return true;
             switch (check) {
-            case 0x10a:
-            case 0x10b:
-            case 0x10c:
-            case 0x10d:
-            case 0x10e:
-            case 0x10f:
-                return true;
+                case 0x10a:
+                case 0x10b:
+                case 0x10c:
+                case 0x10d:
+                case 0x10e:
+                case 0x10f:
+                    return true;
             }
             return false;
         }
 
-        const size_t GetSegmentLength(const wchar_t* message) {
+        const size_t GetSegmentLength(const wchar_t* message)
+        {
             if (!message) return 0;
             if (IsNumericFlag(*message))
                 return 1;
@@ -78,6 +81,7 @@ namespace ToolboxUtils {
             }
             return i;
         }
+
         const size_t GetIdentifierLength(const wchar_t* message)
         {
             if (!message) return 0;
@@ -88,6 +92,7 @@ namespace ToolboxUtils {
             }
             return i;
         }
+
         const wchar_t* GetSegmentArgument(const wchar_t* message, wchar_t segment_key, size_t* segment_length_out, size_t* identifier_length_out)
         {
             if (!message) return nullptr;
@@ -131,6 +136,7 @@ namespace ToolboxUtils {
             return 0;
         }
     }
+
     bool IsOutpost()
     {
         return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;

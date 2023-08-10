@@ -74,9 +74,9 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
 
     // === Star ===
     star_offset = offset;
-    const float PI = 3.1415927f;
-    const float star_size_big = 300.0f;
-    const float star_size_small = 150.0f;
+    constexpr float PI = 3.1415927f;
+    constexpr float star_size_big = 300.0f;
+    constexpr float star_size_small = 150.0f;
     for (auto i = 0u; i < star_ntriangles; i++) {
         const float angle1 = 2 * (i + 0) * PI / star_ntriangles;
         const float angle2 = 2 * (i + 1) * PI / star_ntriangles;
@@ -121,7 +121,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
 
-    const float PI = 3.1415927f;
+    constexpr float PI = 3.1415927f;
     static float tau = 0.0f;
     const float fps = ImGui::GetIO().Framerate;
     // tau of += 0.05f is good for 60 fps, adapt that for any

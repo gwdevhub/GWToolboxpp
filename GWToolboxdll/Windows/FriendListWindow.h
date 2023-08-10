@@ -59,9 +59,7 @@ protected:
 public:
     struct Friend {
         Friend(FriendListWindow* _parent)
-            : parent(_parent)
-        {
-        };
+            : parent(_parent) { };
 
         ~Friend()
         {

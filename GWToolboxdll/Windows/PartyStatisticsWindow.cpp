@@ -147,7 +147,7 @@ namespace {
                        const uint32_t skill_count, wchar_t* out, const size_t len)
     {
         const auto written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.",
-                                     agent_name.c_str(), skill_name.c_str(), skill_count);
+                                      agent_name.c_str(), skill_name.c_str(), skill_count);
         ASSERT(written != -1);
         return written;
     }

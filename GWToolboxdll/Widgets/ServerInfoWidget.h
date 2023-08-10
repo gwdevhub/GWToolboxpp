@@ -17,9 +17,7 @@ class ServerInfoWidget : public ToolboxWidget {
 public:
     struct ServerInfo {
         ServerInfo(std::string _ip)
-            : ip(_ip)
-        {
-        };
+            : ip(_ip) { };
         std::string ip;
         std::string country;
         std::string city;

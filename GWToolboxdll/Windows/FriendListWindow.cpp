@@ -145,7 +145,7 @@ namespace {
     bool WriteError(const MessageType message_type, const wchar_t* character_name)
     {
         wchar_t buffer[122];
-        const GW::Chat::Channel channel = GW::Chat::CHANNEL_GLOBAL;
+        constexpr auto channel = GW::Chat::CHANNEL_GLOBAL;
         switch (message_type) {
             case MessageType::CHARACTER_NAME_X_DOES_NOT_EXIST:
             case MessageType::FRIEND_ALREADY_ADDED_AS_X:
@@ -607,7 +607,7 @@ void FriendListWindow::Initialize()
     RegisterPrintChatCallback(&SendChat_Entry, OnPrintChat);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, OnPlayerJoinInstance);
 
-    const GW::UI::UIMessage hook_messages[] = {
+    constexpr GW::UI::UIMessage hook_messages[] = {
         GW::UI::UIMessage::kSetAgentNameTagAttribs,
         GW::UI::UIMessage::kShowAgentNameTag,
         GW::UI::UIMessage::kWriteToChatLog
@@ -979,8 +979,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::PopID();
         if (left_clicked && !lfp->IsOffline())
             lfp->StartWhisper();
-        if (right_clicked) {
-        }
+        if (right_clicked) { }
     }
     if (!is_widget)
         ImGui::EndChild();
@@ -1137,7 +1136,7 @@ void FriendListWindow::LoadCharnames(const char* section, std::unordered_map<std
     CSimpleIni::TNamesDepend values;
     inifile->GetAllValues(section, "charname", values);
     CSimpleIni::TNamesDepend::const_iterator i;
-    for (i = values.begin(); i != values.end(); i++) {
+    for (i = values.begin(); i != values.end(); ++i) {
         std::wstring char_wstr = GuiUtils::StringToWString(i->pItem), temp;
         std::vector<std::wstring> parts;
         std::wstringstream wss(char_wstr);

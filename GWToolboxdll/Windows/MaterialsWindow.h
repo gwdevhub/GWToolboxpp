@@ -103,10 +103,10 @@ private:
     IDirect3DTexture9** tex_resscroll = nullptr;
 
     // Negative values have special meanings:
-    static const auto PRICE_DEFAULT = -1;
-    static const auto PRICE_COMPUTING_QUEUE = -2;
-    static const auto PRICE_COMPUTING_SENT = -3;
-    static const auto PRICE_NOT_AVAILABLE = -4;
+    static constexpr auto PRICE_DEFAULT = -1;
+    static constexpr auto PRICE_COMPUTING_QUEUE = -2;
+    static constexpr auto PRICE_COMPUTING_SENT = -3;
+    static constexpr auto PRICE_NOT_AVAILABLE = -4;
     int price[N_MATS] = {};
 
     // int max = 0;
@@ -123,9 +123,7 @@ private:
         Transaction(const Type t, const Material mat)
             : type(t)
               , item_id(0)
-              , material(mat)
-        {
-        }
+              , material(mat) { }
     };
 
     void Cancel();

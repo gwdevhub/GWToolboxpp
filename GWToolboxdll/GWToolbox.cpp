@@ -288,8 +288,7 @@ DWORD __stdcall ThreadEntry(LPVOID)
 
     GW::HookBase::Initialize();
     if (!GW::Initialize()) {
-        if (MessageBoxA(nullptr, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) {
-        }
+        if (MessageBoxA(nullptr, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) { }
         return 0;
     }
 
@@ -514,8 +513,7 @@ void GWToolbox::Initialize()
     GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
         __try {
             Instance().Draw(device);
-        } __except (EXCEPT_EXPRESSION_ENTRY) {
-        }
+        } __except (EXCEPT_EXPRESSION_ENTRY) { }
     });
 
     initialized = true;

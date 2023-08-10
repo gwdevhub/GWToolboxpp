@@ -76,9 +76,7 @@ namespace {
         }
 
         HintUIMessage(const TBHint& hint)
-            : HintUIMessage(hint.message, 30000, hint.message_id)
-        {
-        }
+            : HintUIMessage(hint.message, 30000, hint.message_id) { }
 
         ~HintUIMessage()
         {

@@ -72,7 +72,7 @@ private:
     // if enabled, will also apply the trade alerts filter to incoming local trade chat messages.
     bool filter_local_trade = false;
 
-static constexpr auto  ALERT_BUF_SIZE = 1024 * 16;
+    static constexpr auto ALERT_BUF_SIZE = 1024 * 16;
     char alert_buf[ALERT_BUF_SIZE]{};
     // set when the alert_buf was modified
     bool alertfile_dirty = false;

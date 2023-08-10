@@ -117,7 +117,7 @@ void Pcon::Draw(IDirect3DDevice9* device)
     const ImVec2 pos = ImGui::GetCursorPos();
     const ImVec2 s(size, size);
     const ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color).Value : ImVec4(0, 0, 0, 0);
-    const ImVec4 tint(1, 1, 1, 1);
+    constexpr ImVec4 tint(1, 1, 1, 1);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     if (ImGui::ImageButton(*texture, s, uv0, uv1, 0, bg, tint)) {
         OnButtonClick();

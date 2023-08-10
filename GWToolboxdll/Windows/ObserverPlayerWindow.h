@@ -16,9 +16,7 @@ public:
         return instance;
     }
 
-    virtual void Prepare()
-    {
-    }
+    virtual void Prepare() { }
 
     virtual uint32_t GetTracking();
     virtual uint32_t GetComparison();

@@ -32,9 +32,7 @@ public:
     class Skill {
     public:
         Skill(GW::Skill* _gw_skill)
-            : skill(_gw_skill)
-        {
-        }
+            : skill(_gw_skill) { }
 
         nlohmann::json ToJson();
         const wchar_t* Name();

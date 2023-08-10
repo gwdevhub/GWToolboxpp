@@ -57,14 +57,14 @@ namespace ObserverLabel {
 
 // TODO: replace with values from GWCA
 namespace JumboMessageType {
-    const uint8_t BASE_UNDER_ATTACK = 0;
-    const uint8_t GUILD_LORD_UNDER_ATTACK = 1;
-    const uint8_t CAPTURED_SHRINE = 3;
-    const uint8_t CAPTURED_TOWER = 5;
-    const uint8_t PARTY_DEFEATED = 6; // received in 3-way Heroes Ascent matches when one party is defeated
-    const uint8_t MORALE_BOOST = 9;
-    const uint8_t VICTORY = 16;
-    const uint8_t FLAWLESS_VICTORY = 17;
+    constexpr uint8_t BASE_UNDER_ATTACK = 0;
+    constexpr uint8_t GUILD_LORD_UNDER_ATTACK = 1;
+    constexpr uint8_t CAPTURED_SHRINE = 3;
+    constexpr uint8_t CAPTURED_TOWER = 5;
+    constexpr uint8_t PARTY_DEFEATED = 6; // received in 3-way Heroes Ascent matches when one party is defeated
+    constexpr uint8_t MORALE_BOOST = 9;
+    constexpr uint8_t VICTORY = 16;
+    constexpr uint8_t FLAWLESS_VICTORY = 17;
 }
 
 
@@ -81,8 +81,8 @@ namespace JumboMessageValue {
     // is not understood.
     // In addition, there may be a danger these variables could change with GW updates...
     // Consider these values as experimental and use with caution
-    const uint32_t PARTY_ONE = 1635021873;
-    const uint32_t PARTY_TWO = 1635021874;
+    constexpr uint32_t PARTY_ONE = 1635021873;
+    constexpr uint32_t PARTY_TWO = 1635021874;
 }
 
 // JumboMessage represents a message strewn across the center of the screen in
@@ -171,7 +171,7 @@ void ObserverModule::Initialize()
             const uint32_t caster_id = packet->cause_id;
             const uint32_t target_id = packet->target_id;
             const float value = packet->value;
-            const bool no_target = false;
+            constexpr bool no_target = false;
             HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
         }
     );
@@ -188,7 +188,7 @@ void ObserverModule::Initialize()
                                                                                const uint32_t caster_id = packet->caster;
                                                                                const uint32_t target_id = packet->target;
                                                                                const uint32_t value = packet->value;
-                                                                               const bool no_target = false;
+                                                                               constexpr bool no_target = false;
                                                                                HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
                                                                            });
 
@@ -202,9 +202,9 @@ void ObserverModule::Initialize()
 
                                                                          const uint32_t value_id = packet->value_id;
                                                                          const uint32_t caster_id = packet->agent_id;
-                                                                         const uint32_t target_id = NO_AGENT;
+                                                                         constexpr uint32_t target_id = NO_AGENT;
                                                                          const uint32_t value = packet->value;
-                                                                         const bool no_target = true;
+                                                                         constexpr bool no_target = true;
                                                                          HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
                                                                      });
 
@@ -218,9 +218,9 @@ void ObserverModule::Initialize()
 
             const uint32_t value_id = packet->type;
             const uint32_t caster_id = packet->agent_id;
-            const uint32_t target_id = NO_AGENT;
+            constexpr uint32_t target_id = NO_AGENT;
             const float value = packet->value;
-            const bool no_target = true;
+            constexpr bool no_target = true;
             HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
         }
     );
@@ -1651,9 +1651,7 @@ ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkil
 // Constructor
 ObserverModule::ObservableParty::ObservableParty(ObserverModule& parent, const GW::PartyInfo& info)
     : party_id(info.party_id)
-      , parent(parent)
-{
-}
+      , parent(parent) {}
 
 
 // Destructor

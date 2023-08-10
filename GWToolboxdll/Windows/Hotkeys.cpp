@@ -42,133 +42,134 @@ LONG* TBHotkey::mod_out = nullptr;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
 std::vector<const char*> HotkeyGWKey::labels = {};
 std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey::control_labels = {
-    { GW::UI::ControlAction::ControlAction_Interact, nullptr },
-    { GW::UI::ControlAction::ControlAction_CancelAction, nullptr },
-    { GW::UI::ControlAction::ControlAction_ClearPartyCommands, nullptr },
-    { GW::UI::ControlAction::ControlAction_CommandHero1, nullptr },
-    { GW::UI::ControlAction::ControlAction_CommandHero2, nullptr },
-    { GW::UI::ControlAction::ControlAction_CommandHero3, nullptr },
-    { GW::UI::ControlAction::ControlAction_CommandHero4, nullptr },
-    { GW::UI::ControlAction::ControlAction_CommandHero5, nullptr },
-    { GW::UI::ControlAction::ControlAction_CommandHero6, nullptr },
-    { GW::UI::ControlAction::ControlAction_CommandHero7, nullptr },
-    { GW::UI::ControlAction::ControlAction_CommandParty, nullptr },
+    {GW::UI::ControlAction::ControlAction_Interact, nullptr},
+    {GW::UI::ControlAction::ControlAction_CancelAction, nullptr},
+    {GW::UI::ControlAction::ControlAction_ClearPartyCommands, nullptr},
+    {GW::UI::ControlAction::ControlAction_CommandHero1, nullptr},
+    {GW::UI::ControlAction::ControlAction_CommandHero2, nullptr},
+    {GW::UI::ControlAction::ControlAction_CommandHero3, nullptr},
+    {GW::UI::ControlAction::ControlAction_CommandHero4, nullptr},
+    {GW::UI::ControlAction::ControlAction_CommandHero5, nullptr},
+    {GW::UI::ControlAction::ControlAction_CommandHero6, nullptr},
+    {GW::UI::ControlAction::ControlAction_CommandHero7, nullptr},
+    {GW::UI::ControlAction::ControlAction_CommandParty, nullptr},
 
-    { GW::UI::ControlAction::ControlAction_DropItem, nullptr },
-    { GW::UI::ControlAction::ControlAction_Follow, nullptr },
+    {GW::UI::ControlAction::ControlAction_DropItem, nullptr},
+    {GW::UI::ControlAction::ControlAction_Follow, nullptr},
 
-    { GW::UI::ControlAction::ControlAction_OpenHero1PetCommander, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHero2PetCommander, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHero3PetCommander, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHero4PetCommander, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHero5PetCommander, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHero6PetCommander, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHero7PetCommander, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHeroCommander1, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHeroCommander2, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHeroCommander3, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHeroCommander4, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHeroCommander5, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHeroCommander6, nullptr },
-    { GW::UI::ControlAction::ControlAction_OpenHeroCommander7, nullptr },
+    {GW::UI::ControlAction::ControlAction_OpenHero1PetCommander, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHero2PetCommander, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHero3PetCommander, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHero4PetCommander, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHero5PetCommander, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHero6PetCommander, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHero7PetCommander, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHeroCommander1, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHeroCommander2, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHeroCommander3, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHeroCommander4, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHeroCommander5, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHeroCommander6, nullptr},
+    {GW::UI::ControlAction::ControlAction_OpenHeroCommander7, nullptr},
 
-    { GW::UI::ControlAction::ControlAction_Hero1Skill1, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero1Skill2, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero1Skill3, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero1Skill4, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero1Skill5, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero1Skill6, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero1Skill7, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero1Skill8, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero2Skill1, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero2Skill2, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero2Skill3, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero2Skill4, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero2Skill5, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero2Skill6, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero2Skill7, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero2Skill8, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero3Skill1, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero3Skill2, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero3Skill3, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero3Skill4, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero3Skill5, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero3Skill6, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero3Skill7, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero3Skill8, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero4Skill1, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero4Skill2, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero4Skill3, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero4Skill4, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero4Skill5, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero4Skill6, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero4Skill7, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero4Skill8, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero5Skill1, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero5Skill2, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero5Skill3, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero5Skill4, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero5Skill5, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero5Skill6, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero5Skill7, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero5Skill8, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero6Skill1, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero6Skill2, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero6Skill3, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero6Skill4, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero6Skill5, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero6Skill6, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero6Skill7, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero6Skill8, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero7Skill1, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero7Skill2, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero7Skill3, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero7Skill4, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero7Skill5, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero7Skill6, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero7Skill7, nullptr },
-    { GW::UI::ControlAction::ControlAction_Hero7Skill8, nullptr },
+    {GW::UI::ControlAction::ControlAction_Hero1Skill1, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero1Skill2, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero1Skill3, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero1Skill4, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero1Skill5, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero1Skill6, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero1Skill7, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero1Skill8, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero2Skill1, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero2Skill2, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero2Skill3, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero2Skill4, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero2Skill5, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero2Skill6, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero2Skill7, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero2Skill8, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero3Skill1, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero3Skill2, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero3Skill3, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero3Skill4, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero3Skill5, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero3Skill6, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero3Skill7, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero3Skill8, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero4Skill1, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero4Skill2, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero4Skill3, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero4Skill4, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero4Skill5, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero4Skill6, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero4Skill7, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero4Skill8, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero5Skill1, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero5Skill2, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero5Skill3, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero5Skill4, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero5Skill5, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero5Skill6, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero5Skill7, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero5Skill8, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero6Skill1, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero6Skill2, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero6Skill3, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero6Skill4, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero6Skill5, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero6Skill6, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero6Skill7, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero6Skill8, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero7Skill1, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero7Skill2, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero7Skill3, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero7Skill4, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero7Skill5, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero7Skill6, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero7Skill7, nullptr},
+    {GW::UI::ControlAction::ControlAction_Hero7Skill8, nullptr},
 
-    { GW::UI::ControlAction::ControlAction_UseSkill1, nullptr },
-    { GW::UI::ControlAction::ControlAction_UseSkill2, nullptr },
-    { GW::UI::ControlAction::ControlAction_UseSkill3, nullptr },
-    { GW::UI::ControlAction::ControlAction_UseSkill4, nullptr },
-    { GW::UI::ControlAction::ControlAction_UseSkill5, nullptr },
-    { GW::UI::ControlAction::ControlAction_UseSkill6, nullptr },
-    { GW::UI::ControlAction::ControlAction_UseSkill7, nullptr },
-    { GW::UI::ControlAction::ControlAction_UseSkill8, nullptr },
+    {GW::UI::ControlAction::ControlAction_UseSkill1, nullptr},
+    {GW::UI::ControlAction::ControlAction_UseSkill2, nullptr},
+    {GW::UI::ControlAction::ControlAction_UseSkill3, nullptr},
+    {GW::UI::ControlAction::ControlAction_UseSkill4, nullptr},
+    {GW::UI::ControlAction::ControlAction_UseSkill5, nullptr},
+    {GW::UI::ControlAction::ControlAction_UseSkill6, nullptr},
+    {GW::UI::ControlAction::ControlAction_UseSkill7, nullptr},
+    {GW::UI::ControlAction::ControlAction_UseSkill8, nullptr},
 
-    { GW::UI::ControlAction::ControlAction_ActivateWeaponSet1, nullptr },
-    { GW::UI::ControlAction::ControlAction_ActivateWeaponSet2, nullptr },
-    { GW::UI::ControlAction::ControlAction_ActivateWeaponSet3, nullptr },
-    { GW::UI::ControlAction::ControlAction_ActivateWeaponSet4, nullptr },
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet1, nullptr},
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet2, nullptr},
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet3, nullptr},
+    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet4, nullptr},
 
-    { GW::UI::ControlAction::ControlAction_TargetAllyNearest, nullptr },
-    { GW::UI::ControlAction::ControlAction_ClearTarget, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetNearestEnemy, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetNextEnemy, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPreviousEnemy, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetNearestItem, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetNextItem, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPreviousItem, nullptr },
+    {GW::UI::ControlAction::ControlAction_TargetAllyNearest, nullptr},
+    {GW::UI::ControlAction::ControlAction_ClearTarget, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetNearestEnemy, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetNextEnemy, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPreviousEnemy, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetNearestItem, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetNextItem, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPreviousItem, nullptr},
 
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember1, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember2, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember3, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember4, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember5, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember6, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember7, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember8, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember9, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember10, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember11, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMember12, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMemberNext, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPartyMemberPrevious, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetPriorityTarget, nullptr },
-    { GW::UI::ControlAction::ControlAction_TargetSelf, nullptr }
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember1, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember2, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember3, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember4, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember5, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember6, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember7, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember8, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember9, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember10, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember11, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMember12, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMemberNext, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPartyMemberPrevious, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetPriorityTarget, nullptr},
+    {GW::UI::ControlAction::ControlAction_TargetSelf, nullptr}
 };
+
 namespace {
     // @Cleanup: when toolbox closes, this array isn't freed properly
     std::vector<std::vector<HotkeyEquipItemAttributes*>> available_items;
@@ -181,12 +182,12 @@ namespace {
 }
 
 
-TBHotkey *TBHotkey::HotkeyFactory(ToolboxIni *ini, const char *section)
+TBHotkey* TBHotkey::HotkeyFactory(ToolboxIni* ini, const char* section)
 {
     std::string str(section);
     if (str.compare(0, 7, "hotkey-") != 0)
         return nullptr;
-    const size_t first_sep = 6;
+    constexpr size_t first_sep = 6;
     const size_t second_sep = str.find(L':', first_sep);
     std::string id = str.substr(first_sep + 1, second_sep - first_sep - 1);
     const std::string type = str.substr(second_sep + 1);
@@ -239,7 +240,7 @@ TBHotkey *TBHotkey::HotkeyFactory(ToolboxIni *ini, const char *section)
     return nullptr;
 }
 
-TBHotkey::TBHotkey(const ToolboxIni *ini, const char *section)
+TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section)
     : ui_id(++cur_ui_id)
 {
     memset(prof_ids, false, sizeof(prof_ids));
@@ -252,7 +253,7 @@ TBHotkey::TBHotkey(const ToolboxIni *ini, const char *section)
         GuiUtils::IniToArray(ini_str, map_ids);
         if (map_ids.empty()) {
             // Legacy
-            const int map_id = ini->GetLongValue(section, "map_id",0);
+            const int map_id = ini->GetLongValue(section, "map_id", 0);
             if (map_id > 0)
                 map_ids.push_back(map_id);
         }
@@ -278,7 +279,6 @@ TBHotkey::TBHotkey(const ToolboxIni *ini, const char *section)
         memset(group, 0, sizeof(group));
         strncpy(group, ini_str.c_str(), _countof(group) - 1);
 
-
         instance_type = ini->GetLongValue(section, VAR_NAME(instance_type), instance_type);
         show_message_in_emote_channel =
             ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
@@ -301,7 +301,9 @@ TBHotkey::TBHotkey(const ToolboxIni *ini, const char *section)
         }
     }
 }
-size_t TBHotkey::HasProfession() {
+
+size_t TBHotkey::HasProfession()
+{
     size_t out = 0;
     for (size_t i = 1; i < _countof(prof_ids); i++) {
         if (prof_ids[i])
@@ -309,19 +311,23 @@ size_t TBHotkey::HasProfession() {
     }
     return out;
 }
-bool TBHotkey::IsValid(const char* _player_name, const GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, const bool is_pvp_character) {
+
+bool TBHotkey::IsValid(const char* _player_name, const GW::Constants::InstanceType _instance_type, GW::Constants::Profession _profession, GW::Constants::MapID _map_id, const bool is_pvp_character)
+{
     return active
-        && (!is_pvp_character || trigger_on_pvp_character)
-        && (instance_type == -1 || static_cast<GW::Constants::InstanceType>(instance_type) == _instance_type)
-        && (prof_ids[static_cast<size_t>(_profession)] || !HasProfession())
-        && (map_ids.empty() || std::ranges::find(map_ids, static_cast<uint32_t>(_map_id)) != map_ids.end())
-        && (!player_name[0] || strcmp(_player_name, player_name) == 0);
+           && (!is_pvp_character || trigger_on_pvp_character)
+           && (instance_type == -1 || static_cast<GW::Constants::InstanceType>(instance_type) == _instance_type)
+           && (prof_ids[static_cast<size_t>(_profession)] || !HasProfession())
+           && (map_ids.empty() || std::ranges::find(map_ids, static_cast<uint32_t>(_map_id)) != map_ids.end())
+           && (!player_name[0] || strcmp(_player_name, player_name) == 0);
 }
+
 bool TBHotkey::CanUse()
 {
     return !isLoading() && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow() && IsInRangeOfNPC();
 }
-void TBHotkey::Save(ToolboxIni *ini, const char *section) const
+
+void TBHotkey::Save(ToolboxIni* ini, const char* section) const
 {
     ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
     ini->SetLongValue(section, VAR_NAME(modifier), modifier);
@@ -337,7 +343,7 @@ void TBHotkey::Save(ToolboxIni *ini, const char *section) const
     ini->SetBoolValue(section, VAR_NAME(trigger_on_outpost),
                       trigger_on_outpost);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_pvp_character),
-        trigger_on_pvp_character);
+                      trigger_on_pvp_character);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
     ini->SetValue(section, VAR_NAME(player_name), player_name);
@@ -346,7 +352,7 @@ void TBHotkey::Save(ToolboxIni *ini, const char *section) const
     std::string out;
     std::vector<uint32_t> prof_ids_tmp;
     for (size_t i = 0; i < _countof(prof_ids); i++) {
-        if(prof_ids[i])
+        if (prof_ids[i])
             prof_ids_tmp.push_back(i);
     }
     GuiUtils::ArrayToIni(prof_ids_tmp.data(), prof_ids_tmp.size(), &out);
@@ -358,17 +364,21 @@ void TBHotkey::Save(ToolboxIni *ini, const char *section) const
     ini->SetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance);
     ini->SetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
 }
-const char* TBHotkey::professions[] = {"Any",          "Warrior",     "Ranger",
-                                    "Monk",         "Necromancer", "Mesmer",
-                                    "Elementalist", "Assassin",    "Ritualist",
-                                    "Paragon",      "Dervish"};
+
+const char* TBHotkey::professions[] = {"Any", "Warrior", "Ranger",
+                                       "Monk", "Necromancer", "Mesmer",
+                                       "Elementalist", "Assassin", "Ritualist",
+                                       "Paragon", "Dervish"};
 const char* TBHotkey::instance_types[] = {"Any", "Outpost", "Explorable"};
-void TBHotkey::HotkeySelector(LONG* key, LONG* modifier) {
+
+void TBHotkey::HotkeySelector(LONG* key, LONG* modifier)
+{
     key_out = key;
     mod_out = modifier;
     ImGui::OpenPopup("Select Hotkey");
 }
-bool TBHotkey::Draw(Op *op)
+
+bool TBHotkey::Draw(Op* op)
 {
     bool hotkey_changed = false;
     const float scale = ImGui::GetIO().FontGlobalScale;
@@ -376,7 +386,7 @@ bool TBHotkey::Draw(Op *op)
         if (show_active_in_header || show_run_in_header) {
             ImGui::PushID(static_cast<int>(ui_id));
             ImGui::PushID("header");
-            const ImGuiStyle &style = ImGui::GetStyle();
+            const ImGuiStyle& style = ImGui::GetStyle();
             const float btn_width = 64.0f * scale;
             if (show_active_in_header) {
                 ImGui::SameLine(
@@ -409,41 +419,41 @@ bool TBHotkey::Draw(Op *op)
     int written = 0;
     written += Description(&header[written], _countof(header) - written);
     switch (HasProfession()) {
-    case 1:
-        for (size_t i = 1; i < _countof(prof_ids);i++) {
-            if (prof_ids[i])
-                written += snprintf(&header[written], _countof(header) - written, " [%s]", professions[i]);
+        case 1:
+            for (size_t i = 1; i < _countof(prof_ids); i++) {
+                if (prof_ids[i])
+                    written += snprintf(&header[written], _countof(header) - written, " [%s]", professions[i]);
+            }
+            break;
+        case 0:
+            break;
+        default: {
+            char prof_ids_buf[128];
+            int prof_ids_written = 0;
+            for (size_t i = 1; i < _countof(prof_ids); i++) {
+                if (!prof_ids[i])
+                    continue;
+                auto format = ", %s";
+                if (!prof_ids_written)
+                    format = "%s";
+                prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, GetProfessionAcronym(static_cast<GW::Constants::Profession>(i)));
+            }
+            written += snprintf(&header[written], _countof(header) - written, " [%s]", prof_ids_buf);
         }
         break;
-    case 0:
-        break;
-    default: {
-        char prof_ids_buf[128];
-        int prof_ids_written = 0;
-        for (size_t i = 1; i < _countof(prof_ids); i++) {
-            if (!prof_ids[i])
-                continue;
-            const char* format = ", %s";
-            if (!prof_ids_written)
-                format = "%s";
-            prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, GetProfessionAcronym(static_cast<GW::Constants::Profession>(i)));
-        }
-        written += snprintf(&header[written], _countof(header) - written, " [%s]", prof_ids_buf);
-    } break;
-
     }
     switch (map_ids.size()) {
-    case 1:
-        if (map_ids[0] < _countof(GW::Constants::NAME_FROM_ID))
-            written += snprintf(&header[written], _countof(header) - written, " [%s]", GW::Constants::NAME_FROM_ID[map_ids[0]]);
-        else
-            written += snprintf(&header[written], _countof(header) - written, " [Map %d]", map_ids[0]);
-        break;
-    case 0:
-        break;
-    default:
-        written += snprintf(&header[written], _countof(header) - written, " [%d Maps]", map_ids.size());
-        break;
+        case 1:
+            if (map_ids[0] < _countof(GW::Constants::NAME_FROM_ID))
+                written += snprintf(&header[written], _countof(header) - written, " [%s]", GW::Constants::NAME_FROM_ID[map_ids[0]]);
+            else
+                written += snprintf(&header[written], _countof(header) - written, " [Map %d]", map_ids[0]);
+            break;
+        case 0:
+            break;
+        default:
+            written += snprintf(&header[written], _countof(header) - written, " [%d Maps]", map_ids.size());
+            break;
     }
 
     ASSERT(ModKeyName(keybuf, _countof(keybuf), modifier, hotkey, "<None>") != -1);
@@ -453,7 +463,8 @@ bool TBHotkey::Draw(Op *op)
                                          : 0;
     if (!ImGui::CollapsingHeader(header, flags)) {
         ShowHeaderButtons();
-    } else {
+    }
+    else {
         ShowHeaderButtons();
         ImGui::Indent();
         ImGui::PushID(static_cast<int>(ui_id));
@@ -472,7 +483,7 @@ bool TBHotkey::Draw(Op *op)
         ImGui::SameLine(offset_sameline);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when playing on PvP character", &trigger_on_pvp_character);
         ImGui::ShowHelp("Unless enabled, this hotkey will not activate when playing on a PvP only character.");
-        if (can_trigger_on_map_change) {   
+        if (can_trigger_on_map_change) {
             hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
             ImGui::SameLine(offset_sameline);
             hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost);
@@ -525,7 +536,7 @@ bool TBHotkey::Draw(Op *op)
             bool add_map_id = ImGui::InputText("##add_map_id", map_id_input_buf, _countof(map_id_input_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue);
             ImGui::PopItemWidth();
             ImGui::SameLine();
-            add_map_id |= ImGui::Button("Add##add_map_id_for_hotkey", { 64.f * scale,0.f });
+            add_map_id |= ImGui::Button("Add##add_map_id_for_hotkey", {64.f * scale, 0.f});
             if (add_map_id) {
                 int map_id_out = 0;
                 if (strlen(map_id_input_buf)
@@ -546,7 +557,7 @@ bool TBHotkey::Draw(Op *op)
             const int per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / prof_w));
             ImGui::TextDisabled("Only trigger when player is one of these professions");
             for (int i = 1; i < _countof(prof_ids); i++) {
-                const int offset = ((i-1) % per_row);
+                const int offset = ((i - 1) % per_row);
                 if (i > 1 && offset != 0)
                     ImGui::SameLine(prof_w * offset + indent_offset);
                 hotkey_changed |= ImGui::Checkbox(professions[i], &prof_ids[i]);
@@ -557,11 +568,11 @@ bool TBHotkey::Draw(Op *op)
         ImGui::PushItemWidth(60.0f * scale);
         ImGui::Text("Only use this within ");
         ImGui::SameLine(0, 0);
-        hotkey_changed |= ImGui::InputFloat("##in_range_of_distance", &in_range_of_distance, 0.f,0.f, "%.0f");
+        hotkey_changed |= ImGui::InputFloat("##in_range_of_distance", &in_range_of_distance, 0.f, 0.f, "%.0f");
         ImGui::SameLine(0, 0);
         ImGui::Text(" gwinches of NPC Id: ");
         ImGui::SameLine(0, 0);
-        hotkey_changed |= ImGui::InputInt("##in_range_of_npc_id",(int*) &in_range_of_npc_id, 0,0);
+        hotkey_changed |= ImGui::InputInt("##in_range_of_npc_id", (int*)&in_range_of_npc_id, 0, 0);
         ImGui::PopItemWidth();
         ImGui::ShowHelp("Only trigger when in range of a certain NPC");
         hotkey_changed |= ImGui::InputTextEx("Character Name##hotkey_player_name", "Any Character Name", player_name, sizeof(player_name), ImVec2(0, 0), 0, nullptr, nullptr);
@@ -593,8 +604,8 @@ bool TBHotkey::Draw(Op *op)
                     newmod |= ModKey_Alt;
             }
 
-
-            if (newkey == 0) { // we are looking for the key
+            if (newkey == 0) {
+                // we are looking for the key
                 BYTE keyboard_state[256]{};
                 const auto ret = GetKeyboardState(keyboard_state);
                 for (WORD i = 0; ret && i < 256; i++) {
@@ -617,7 +628,9 @@ bool TBHotkey::Draw(Op *op)
                         }
                     }
                 }
-            } else { // key was pressed, close if it's released
+            }
+            else {
+                // key was pressed, close if it's released
                 if (!(GetKeyState(newkey) & 0x8000)) {
                     *key_out = newkey;
                     if (mod_out)
@@ -697,7 +710,9 @@ bool TBHotkey::Draw(Op *op)
     }
     return hotkey_changed;
 }
-bool TBHotkey::IsInRangeOfNPC() {
+
+bool TBHotkey::IsInRangeOfNPC()
+{
     if (!(in_range_of_npc_id && in_range_of_distance > 0.f))
         return true;
     auto* agents = GW::Agents::GetAgentArray();
@@ -715,13 +730,15 @@ bool TBHotkey::IsInRangeOfNPC() {
     }
     return false;
 }
-HotkeySendChat::HotkeySendChat(ToolboxIni *ini, const char *section)
+
+HotkeySendChat::HotkeySendChat(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     strcpy_s(message, ini->GetValue(section, "msg", ""));
     channel = ini->GetValue(section, "channel", "/")[0];
 }
-void HotkeySendChat::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeySendChat::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetValue(section, "msg", message);
@@ -729,10 +746,12 @@ void HotkeySendChat::Save(ToolboxIni *ini, const char *section) const
     snprintf(buf, 8, "%c", channel);
     ini->SetValue(section, "channel", buf);
 }
-int HotkeySendChat::Description(char *buf, const size_t bufsz)
+
+int HotkeySendChat::Description(char* buf, const size_t bufsz)
 {
     return snprintf(buf, bufsz, "Send chat '%c%s'", channel, message);
 }
+
 bool HotkeySendChat::Draw()
 {
     bool hotkey_changed = false;
@@ -760,8 +779,8 @@ bool HotkeySendChat::Draw()
             index = 6;
             break;
     }
-    static const char *channels[] = {"/ Commands", "! All",   "@ Guild",
-                                     "# Group",    "$ Trade", "% Alliance",
+    static const char* channels[] = {"/ Commands", "! All", "@ Guild",
+                                     "# Group", "$ Trade", "% Alliance",
                                      "\" Whisper"};
     if (ImGui::Combo("Channel", &index, channels, 7)) {
         switch (index) {
@@ -798,6 +817,7 @@ bool HotkeySendChat::Draw()
     hotkey_changed |= (channel == '/' && ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel));
     return hotkey_changed;
 }
+
 void HotkeySendChat::Execute()
 {
     if (!CanUse())
@@ -808,24 +828,27 @@ void HotkeySendChat::Execute()
     GW::Chat::SendChat(channel, message);
 }
 
-HotkeyUseItem::HotkeyUseItem(ToolboxIni *ini, const char *section)
+HotkeyUseItem::HotkeyUseItem(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     item_id = static_cast<size_t>(ini->GetLongValue(section, "ItemID", 0));
     strcpy_s(name, ini->GetValue(section, "ItemName", ""));
 }
-void HotkeyUseItem::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyUseItem::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ItemID", item_id);
     ini->SetValue(section, "ItemName", name);
 }
-int HotkeyUseItem::Description(char *buf, const size_t bufsz)
+
+int HotkeyUseItem::Description(char* buf, const size_t bufsz)
 {
     if (!name[0])
         return snprintf(buf, bufsz, "Use #%d", item_id);
     return snprintf(buf, bufsz, "Use %s", name);
 }
+
 bool HotkeyUseItem::Draw()
 {
     bool hotkey_changed = ImGui::InputInt("Item ID", (int*)&item_id);
@@ -833,6 +856,7 @@ bool HotkeyUseItem::Draw()
     hotkey_changed |= ImGui::Checkbox("Display error message on failure", &show_error_on_failure);
     return hotkey_changed;
 }
+
 void HotkeyUseItem::Execute()
 {
     if (!CanUse())
@@ -849,26 +873,34 @@ void HotkeyUseItem::Execute()
     if (!used && show_error_on_failure) {
         if (name[0] == '\0') {
             Log::Error("Item #%d not found!", item_id);
-        } else {
+        }
+        else {
             Log::Error("%s not found!", name);
         }
     }
 }
 
-HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(const GW::Item* item) {
+HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(const GW::Item* item)
+{
     set(item->model_id, item->complete_name_enc ? item->complete_name_enc : item->name_enc, item->info_string, item->mod_struct, item->mod_struct_size);
 }
-HotkeyEquipItemAttributes::~HotkeyEquipItemAttributes() {
+
+HotkeyEquipItemAttributes::~HotkeyEquipItemAttributes()
+{
     if (mod_struct) {
         delete mod_struct;
         mod_struct = nullptr;
         mod_struct_size = 0;
     }
 }
-HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(const uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, const size_t _mod_struct_size) {
+
+HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(const uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, const size_t _mod_struct_size)
+{
     set(_model_id, _name_enc, _info_string, _mod_struct, _mod_struct_size);
 }
-HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(const uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, const size_t _mod_struct_size) {
+
+HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(const uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, const size_t _mod_struct_size)
+{
     model_id = _model_id;
     enc_name.reset(_name_enc);
     enc_desc.reset(_info_string);
@@ -886,11 +918,14 @@ HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(const uint32_t _model_
     }
     return this;
 }
-HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(HotkeyEquipItemAttributes const& other) {
+
+HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(const HotkeyEquipItemAttributes& other)
+{
     return set(other.model_id, other.enc_name.encoded().c_str(), other.enc_desc.encoded().c_str(), other.mod_struct, other.mod_struct_size);
 }
 
-bool HotkeyEquipItemAttributes::check(const GW::Item* item) {
+bool HotkeyEquipItemAttributes::check(const GW::Item* item)
+{
     if (!item || item->model_id != model_id || item->mod_struct_size != mod_struct_size)
         return false;
     if (wcscmp(item->complete_name_enc ? item->complete_name_enc : item->name_enc, enc_name.encoded().c_str()) != 0)
@@ -900,7 +935,7 @@ bool HotkeyEquipItemAttributes::check(const GW::Item* item) {
     return true;
 }
 
-HotkeyEquipItem::HotkeyEquipItem(ToolboxIni *ini, const char *section)
+HotkeyEquipItem::HotkeyEquipItem(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     // @Cleanup: Add error handling
@@ -927,7 +962,8 @@ HotkeyEquipItem::HotkeyEquipItem(ToolboxIni *ini, const char *section)
         item_attributes.set(model_id, enc_name.c_str(), enc_desc.c_str(), mod_structs.size() ? (GW::ItemModifier*)mod_structs.data() : nullptr, mod_structs.size());
     }
 }
-void HotkeyEquipItem::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyEquipItem::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "EquipBy", equip_by);
@@ -945,17 +981,20 @@ void HotkeyEquipItem::Save(ToolboxIni *ini, const char *section) const
         ini->SetValue(section, "ModStruct", out.c_str());
     }
 }
-int HotkeyEquipItem::Description(char *buf, const size_t bufsz)
+
+int HotkeyEquipItem::Description(char* buf, const size_t bufsz)
 {
     if (equip_by == SLOT)
         return snprintf(buf, bufsz, "Equip Item in bag %d slot %d", bag_idx, slot_idx);
     return snprintf(buf, bufsz, "Equip %s", item_attributes.name().c_str());
 }
+
 bool HotkeyEquipItem::Draw()
 {
     bool hotkey_changed = false;
-    constexpr const char* bags[6] = { "None", "Backpack", "Belt Pouch", "Bag 1", "Bag 2", "Equipment Pack" };
-    ImGui::TextUnformatted("Equip By: "); ImGui::SameLine();
+    constexpr const char* bags[6] = {"None", "Backpack", "Belt Pouch", "Bag 1", "Bag 2", "Equipment Pack"};
+    ImGui::TextUnformatted("Equip By: ");
+    ImGui::SameLine();
     hotkey_changed |= ImGui::RadioButton("Item", (int*)&equip_by, ITEM);
     ImGui::ShowHelp("Find and equip an item by its attributes, regardless of location in inventory.");
     ImGui::SameLine();
@@ -981,12 +1020,12 @@ bool HotkeyEquipItem::Draw()
             ImGui::OpenPopup("Choose Item to Equip");
         }
         constexpr size_t bags_size = _countof(bags);
-        if (ImGui::BeginPopupModal("Choose Item to Equip",nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::BeginPopupModal("Choose Item to Equip", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (need_to_fetch_bag_items) {
                 // Free available_items ptrs
-                for (auto i = available_items.begin(); i != available_items.end(); i++) {
-                    for (auto j = i->begin(); j != i->end(); j++) {
-                        delete* j;
+                for (auto i = available_items.begin(); i != available_items.end(); ++i) {
+                    for (auto j = i->begin(); j != i->end(); ++j) {
+                        delete*j;
                     }
                 }
                 available_items.clear();
@@ -1010,7 +1049,7 @@ bool HotkeyEquipItem::Draw()
                 auto& items = available_items[i];
                 if (items.empty())
                     continue;
-                
+
                 ImGui::TextUnformatted(bags[i]);
                 ImGui::Indent();
                 for (auto& ai : available_items[i]) {
@@ -1036,12 +1075,12 @@ bool HotkeyEquipItem::Draw()
             }
             ImGui::EndPopup();
         }
-
     }
     hotkey_changed |= ImGui::Checkbox("Display error message on failure", &show_error_on_failure);
     return hotkey_changed;
 }
-bool HotkeyEquipItem::IsEquippable(const GW::Item *_item)
+
+bool HotkeyEquipItem::IsEquippable(const GW::Item* _item)
 {
     if (!_item)
         return false;
@@ -1079,7 +1118,9 @@ bool HotkeyEquipItem::IsEquippable(const GW::Item *_item)
     return c && c->player_name &&
            wcscmp(c->player_name, _item->customized) == 0;*/
 }
-GW::Item* HotkeyEquipItem::FindMatchingItem(const GW::Constants::Bag _bag_idx) {
+
+GW::Item* HotkeyEquipItem::FindMatchingItem(const GW::Constants::Bag _bag_idx)
+{
     GW::Bag* bag = GW::Items::GetBag(_bag_idx);
     if (!bag) return nullptr;
     GW::ItemArray& items = bag->items;
@@ -1089,12 +1130,12 @@ GW::Item* HotkeyEquipItem::FindMatchingItem(const GW::Constants::Bag _bag_idx) {
     }
     return nullptr;
 }
+
 void HotkeyEquipItem::Execute()
 {
     if (!CanUse())
         return;
     if (!ongoing) {
-
         if (equip_by == SLOT) {
             if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
                 if (show_error_on_failure)
@@ -1138,12 +1179,13 @@ void HotkeyEquipItem::Execute()
         }
         ongoing = true;
         start_time = std::chrono::steady_clock::now();
-    } else {
+    }
+    else {
         last_try = std::chrono::steady_clock::now();
         const __int64 diff_mills =
             std::chrono::duration_cast<std::chrono::milliseconds>(last_try -
                                                                   start_time)
-                .count();
+            .count();
         if (diff_mills < 500) {
             return; // Wait 250ms between tries.
         }
@@ -1171,16 +1213,16 @@ void HotkeyEquipItem::Execute()
         item = nullptr;
         return; // Success!
     }
-    const GW::AgentLiving *p = GW::Agents::GetCharacter();
+    const GW::AgentLiving* p = GW::Agents::GetCharacter();
     if (!p || p->GetIsDead()) {
         if (show_error_on_failure)
             Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
-                slot_idx);
+                       slot_idx);
         ongoing = false;
         item = nullptr;
         return;
     }
-    const GW::Skillbar* s =  GW::SkillbarMgr::GetPlayerSkillbar();
+    const GW::Skillbar* s = GW::SkillbarMgr::GetPlayerSkillbar();
     if (p->GetIsKnockedDown() || (s && s->casting)) {
         // Player knocked down or casting; wait.
         return;
@@ -1191,13 +1233,14 @@ void HotkeyEquipItem::Execute()
     }
     if (p->GetIsIdle() || p->GetIsMoving()) {
         GW::Items::EquipItem(item);
-    } else {
+    }
+    else {
         // Move to clear model state e.g. attacking, aftercast
         GW::Agents::Move(p->pos);
     }
 }
 
-bool HotkeyDropUseBuff::GetText(void *data, int idx, const char **out_text)
+bool HotkeyDropUseBuff::GetText(void* data, int idx, const char** out_text)
 {
     static char other_buf[64];
     switch (static_cast<SkillIndex>(idx)) {
@@ -1217,6 +1260,7 @@ bool HotkeyDropUseBuff::GetText(void *data, int idx, const char **out_text)
     }
     return true;
 }
+
 HotkeyDropUseBuff::SkillIndex HotkeyDropUseBuff::GetIndex() const
 {
     switch (id) {
@@ -1230,28 +1274,32 @@ HotkeyDropUseBuff::SkillIndex HotkeyDropUseBuff::GetIndex() const
             return Other;
     }
 }
-HotkeyDropUseBuff::HotkeyDropUseBuff(ToolboxIni *ini, const char *section)
+
+HotkeyDropUseBuff::HotkeyDropUseBuff(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     id = static_cast<GW::Constants::SkillID>(ini->GetLongValue(
         section, "SkillID", static_cast<long>(GW::Constants::SkillID::Recall)));
 }
-void HotkeyDropUseBuff::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyDropUseBuff::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "SkillID", static_cast<long>(id));
 }
-int HotkeyDropUseBuff::Description(char *buf, const size_t bufsz)
+
+int HotkeyDropUseBuff::Description(char* buf, const size_t bufsz)
 {
-    const char *skillname;
-    GetText((void *)id, GetIndex(), &skillname);
+    const char* skillname;
+    GetText((void*)id, GetIndex(), &skillname);
     return snprintf(buf, bufsz, "Drop/Use %s", skillname);
 }
+
 bool HotkeyDropUseBuff::Draw()
 {
     bool hotkey_changed = false;
     SkillIndex index = GetIndex();
-    if (ImGui::Combo("Skill", (int *)&index,
+    if (ImGui::Combo("Skill", (int*)&index,
                      "Recall\0Unyielding Aura\0Holy Veil\0Other", 4)) {
         switch (index) {
             case Recall:
@@ -1272,34 +1320,36 @@ bool HotkeyDropUseBuff::Draw()
         hotkey_changed = true;
     }
     if (index == Other) {
-        if (ImGui::InputInt("Skill ID", (int *)&id))
+        if (ImGui::InputInt("Skill ID", (int*)&id))
             hotkey_changed = true;
     }
     return hotkey_changed;
 }
+
 void HotkeyDropUseBuff::Execute()
 {
     if (!CanUse())
         return;
 
-    const GW::Buff *buff = GW::Effects::GetPlayerBuffBySkillId(id);
+    const GW::Buff* buff = GW::Effects::GetPlayerBuffBySkillId(id);
     if (buff) {
         GW::Effects::DropBuff(buff->buff_id);
-    } else {
+    }
+    else {
         const int islot = GW::SkillbarMgr::GetSkillSlot(id);
         if (islot >= 0) {
             uint32_t slot = static_cast<uint32_t>(islot);
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
-                GW::GameThread::Enqueue([slot] () -> void {
+                GW::GameThread::Enqueue([slot]() -> void {
                     GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(),
-                        ImGui::IsKeyDown(ImGuiKey_ModCtrl));
+                                              ImGui::IsKeyDown(ImGuiKey_ModCtrl));
                 });
             }
         }
     }
 }
 
-bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
+bool HotkeyToggle::GetText(void*, int idx, const char** out_text)
 {
     switch (static_cast<ToggleTarget>(idx)) {
         case Clicker:
@@ -1319,12 +1369,13 @@ bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
     }
 }
 
-bool HotkeyToggle::IsValid(const ToolboxIni *ini, const char *section)
+bool HotkeyToggle::IsValid(const ToolboxIni* ini, const char* section)
 {
     const long val = ini->GetLongValue(section, "ToggleID", Clicker);
     return val >= 0 && val < Count;
 }
-HotkeyToggle::HotkeyToggle(ToolboxIni *ini, const char *section)
+
+HotkeyToggle::HotkeyToggle(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     target = static_cast<ToggleTarget>(ini->GetLongValue(section, "ToggleID", target));
@@ -1333,25 +1384,28 @@ HotkeyToggle::HotkeyToggle(ToolboxIni *ini, const char *section)
         toggled.reserve(512);
     initialised = true;
     switch (target) {
-    case Clicker:
-        interval = 7;
-        break;
-    case CoinDrop:
-        interval = 500;
-        break;
+        case Clicker:
+            interval = 7;
+            break;
+        case CoinDrop:
+            interval = 500;
+            break;
     }
 }
-void HotkeyToggle::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyToggle::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ToggleID", target);
 }
-int HotkeyToggle::Description(char *buf, const size_t bufsz)
+
+int HotkeyToggle::Description(char* buf, const size_t bufsz)
 {
     const char* name{};
     GetText(nullptr, target, &name);
     return snprintf(buf, bufsz, "Toggle %s", name);
 }
+
 bool HotkeyToggle::Draw()
 {
     bool hotkey_changed = false;
@@ -1363,11 +1417,15 @@ bool HotkeyToggle::Draw()
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
     return hotkey_changed;
 }
-HotkeyToggle::~HotkeyToggle() {
+
+HotkeyToggle::~HotkeyToggle()
+{
     if (IsToggled(true))
         toggled[togglekey] = nullptr;
 }
-void HotkeyToggle::Toggle() {
+
+void HotkeyToggle::Toggle()
+{
     if (!HasInterval())
         return Execute();
     ongoing = !IsToggled(true);
@@ -1375,22 +1433,25 @@ void HotkeyToggle::Toggle() {
     last_use = 0;
     if (ongoing || (!ongoing && !toggled[togglekey])) {
         switch (target) {
-        case Clicker:
-            Log::Info("Clicker is %s", ongoing ? "active" : "disabled");
-            break;
-        case CoinDrop:
-            Log::Info("Coindrop is %s", ongoing ? "active" : "disabled");
-            break;
+            case Clicker:
+                Log::Info("Clicker is %s", ongoing ? "active" : "disabled");
+                break;
+            case CoinDrop:
+                Log::Info("Coindrop is %s", ongoing ? "active" : "disabled");
+                break;
         }
     }
 }
-bool HotkeyToggle::IsToggled(const bool force) {
+
+bool HotkeyToggle::IsToggled(const bool force)
+{
     if (force) {
         const auto found = toggled.find(togglekey);
         ongoing = (found != toggled.end() && found->second == this);
     }
     return ongoing;
 }
+
 void HotkeyToggle::Execute()
 {
     if (HasInterval()) {
@@ -1402,7 +1463,7 @@ void HotkeyToggle::Execute()
             Toggle();
         if (TIMER_DIFF(last_use) < interval)
             return;
-        if(!IsToggled(true)) {
+        if (!IsToggled(true)) {
             ongoing = false;
             last_use = 0;
             return;
@@ -1420,7 +1481,7 @@ void HotkeyToggle::Execute()
         case Pcons:
             PconsWindow::Instance().ToggleEnable();
             ongoing = false;
-            // writing to chat is done by ToggleActive if needed
+        // writing to chat is done by ToggleActive if needed
             break;
         case CoinDrop:
             if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
@@ -1438,7 +1499,7 @@ void HotkeyToggle::Execute()
     last_use = TIMER_INIT();
 }
 
-bool HotkeyAction::GetText(void *, int idx, const char **out_text)
+bool HotkeyAction::GetText(void*, int idx, const char** out_text)
 {
     switch (static_cast<Action>(idx)) {
         case OpenXunlaiChest:
@@ -1460,27 +1521,32 @@ bool HotkeyAction::GetText(void *, int idx, const char **out_text)
             return false;
     }
 }
+
 HotkeyAction::HotkeyAction(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     action = static_cast<Action>(ini->GetLongValue(section, "ActionID", OpenXunlaiChest));
 }
-void HotkeyAction::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyAction::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ActionID", action);
 }
-int HotkeyAction::Description(char *buf, const size_t bufsz)
+
+int HotkeyAction::Description(char* buf, const size_t bufsz)
 {
     const char* name{};
     GetText(nullptr, action, &name);
     return snprintf(buf, bufsz, "%s", name);
 }
+
 bool HotkeyAction::Draw()
 {
     ImGui::Combo("Action###actioncombo", (int*)&action, GetText, nullptr, n_actions);
     return true;
 }
+
 void HotkeyAction::Execute()
 {
     if (!CanUse())
@@ -1490,7 +1556,7 @@ void HotkeyAction::Execute()
             if (isOutpost()) {
                 GW::GameThread::Enqueue([]() {
                     GW::Items::OpenXunlaiWindow();
-                    });
+                });
             }
             break;
         case OpenLockedChest: {
@@ -1513,12 +1579,12 @@ void HotkeyAction::Execute()
             break;
         }
         case EnterChallenge:
-            GW::Chat::SendChat('/',L"enter");
+            GW::Chat::SendChat('/', L"enter");
             break;
     }
 }
 
-HotkeyTarget::HotkeyTarget(ToolboxIni *ini, const char *section)
+HotkeyTarget::HotkeyTarget(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     // don't print target hotkey to chat by default
@@ -1533,62 +1599,67 @@ HotkeyTarget::HotkeyTarget(ToolboxIni *ini, const char *section)
     if (ini_type >= NPC && ini_type < Count)
         type = static_cast<HotkeyTargetType>(ini_type);
     ini_name = ini->GetValue(section, "TargetName", "");
-    strcpy_s(name, ini_name.substr(0, sizeof(name)-1).c_str());
-    name[sizeof(name)-1] = 0;
+    strcpy_s(name, ini_name.substr(0, sizeof(name) - 1).c_str());
+    name[sizeof(name) - 1] = 0;
 
     ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
-                        show_message_in_emote_channel);
+                      show_message_in_emote_channel);
 }
-void HotkeyTarget::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyTarget::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetValue(section, "TargetID", id);
     ini->SetLongValue(section, "TargetType", type);
     ini->SetValue(section, "TargetName", name);
 }
-int HotkeyTarget::Description(char *buf, const size_t bufsz)
+
+int HotkeyTarget::Description(char* buf, const size_t bufsz)
 {
     if (!name[0])
         return snprintf(buf, bufsz, "Target %s %s", type_labels[type], id);
     return snprintf(buf, bufsz, "Target %s", name);
 }
+
 bool HotkeyTarget::Draw()
 {
     const float w = ImGui::GetContentRegionAvail().x / 1.5f;
     ImGui::PushItemWidth(w);
-    bool hotkey_changed = ImGui::Combo("Target Type", (int *)&type, type_labels, 3);
+    bool hotkey_changed = ImGui::Combo("Target Type", (int*)&type, type_labels, 3);
     hotkey_changed |= ImGui::InputText(identifier_labels[type], id, _countof(id));
     ImGui::PopItemWidth();
     ImGui::ShowHelp("See Settings > Help > Chat Commands for /target options");
     ImGui::PushItemWidth(w);
     hotkey_changed |= ImGui::InputText("Hotkey label", name, _countof(name));
     ImGui::PopItemWidth();
-    ImGui::SameLine(0,0);    ImGui::TextDisabled(" (optional)");
+    ImGui::SameLine(0, 0);
+    ImGui::TextDisabled(" (optional)");
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
     return hotkey_changed;
 }
+
 void HotkeyTarget::Execute()
 {
     if (!CanUse())
         return;
 
     constexpr size_t len = 122;
-    wchar_t* message = new wchar_t[len];
+    auto message = new wchar_t[len];
     message[0] = 0;
     switch (type) {
-    case Item:
-        swprintf(message, len, L"target item %S", id);
-        break;
-    case NPC:
-        swprintf(message, len, L"target npc %S", id);
-        break;
-    case Signpost:
-        swprintf(message, len, L"target gadget %S", id);
-        break;
-    default:
-        Log::ErrorW(L"Unknown target type %d", type);
-        delete[] message;
-        return;
+        case Item:
+            swprintf(message, len, L"target item %S", id);
+            break;
+        case NPC:
+            swprintf(message, len, L"target npc %S", id);
+            break;
+        case Signpost:
+            swprintf(message, len, L"target gadget %S", id);
+            break;
+        default:
+            Log::ErrorW(L"Unknown target type %d", type);
+            delete[] message;
+            return;
     }
     GW::GameThread::Enqueue([message]() {
         GW::Chat::SendChat('/', message);
@@ -1602,7 +1673,7 @@ void HotkeyTarget::Execute()
     }
 }
 
-HotkeyMove::HotkeyMove(ToolboxIni *ini, const char *section)
+HotkeyMove::HotkeyMove(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     type = static_cast<MoveType>(ini->GetLongValue(section, "type", static_cast<int>(type)));
@@ -1613,7 +1684,8 @@ HotkeyMove::HotkeyMove(ToolboxIni *ini, const char *section)
     distance_from_location = static_cast<float>(ini->GetDoubleValue(section, "distance_from_location", distance_from_location));
     strcpy_s(name, ini->GetValue(section, "name", ""));
 }
-void HotkeyMove::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyMove::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "type", static_cast<long>(type));
@@ -1623,17 +1695,19 @@ void HotkeyMove::Save(ToolboxIni *ini, const char *section) const
     ini->SetValue(section, "name", name);
     ini->SetDoubleValue(section, "distance_from_location", distance_from_location);
 }
-int HotkeyMove::Description(char *buf, const size_t bufsz)
+
+int HotkeyMove::Description(char* buf, const size_t bufsz)
 {
     if (name[0])
         return snprintf(buf, bufsz, "Move to %s", name);
     switch (type) {
-    case MoveType::Target:
-        return snprintf(buf, bufsz, "Move to current target");
-    default:
-        return snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
+        case MoveType::Target:
+            return snprintf(buf, bufsz, "Move to current target");
+        default:
+            return snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
     }
 }
+
 bool HotkeyMove::Draw()
 {
     bool hotkey_changed = false;
@@ -1662,6 +1736,7 @@ bool HotkeyMove::Draw()
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
     return hotkey_changed;
 }
+
 void HotkeyMove::Execute()
 {
     if (!CanUse())
@@ -1686,30 +1761,34 @@ void HotkeyMove::Execute()
     if (name[0] == '\0') {
         if (show_message_in_emote_channel)
             Log::Info("Moving to (%.0f, %.0f)", x, y);
-    } else {
+    }
+    else {
         if (show_message_in_emote_channel)
             Log::Info("Moving to %s", name);
     }
 }
 
-HotkeyDialog::HotkeyDialog(ToolboxIni *ini, const char *section)
+HotkeyDialog::HotkeyDialog(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     id = static_cast<size_t>(ini->GetLongValue(section, "DialogID", 0));
     strcpy_s(name, ini->GetValue(section, "DialogName", ""));
 }
-void HotkeyDialog::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyDialog::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "DialogID", id);
     ini->SetValue(section, "DialogName", name);
 }
-int HotkeyDialog::Description(char *buf, const size_t bufsz)
+
+int HotkeyDialog::Description(char* buf, const size_t bufsz)
 {
     if (!name[0])
         return snprintf(buf, bufsz, "Dialog #%zu", id);
     return snprintf(buf, bufsz, "Dialog %s", name);
 }
+
 bool HotkeyDialog::Draw()
 {
     bool hotkey_changed = ImGui::InputInt("Dialog ID", reinterpret_cast<int*>(&id));
@@ -1718,6 +1797,7 @@ bool HotkeyDialog::Draw()
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
     return hotkey_changed;
 }
+
 void HotkeyDialog::Execute()
 {
     if (!CanUse())
@@ -1735,30 +1815,34 @@ void HotkeyDialog::Execute()
         Log::Info("Sent dialog %s (%d)", name, id);
 }
 
-bool HotkeyPingBuild::GetText(void *, const int idx, const char **out_text)
+bool HotkeyPingBuild::GetText(void*, const int idx, const char** out_text)
 {
     if (idx >= static_cast<int>(BuildsWindow::Instance().BuildCount()))
         return false;
     *out_text = BuildsWindow::Instance().BuildName(static_cast<size_t>(idx));
     return true;
 }
-HotkeyPingBuild::HotkeyPingBuild(ToolboxIni *ini, const char *section)
+
+HotkeyPingBuild::HotkeyPingBuild(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     index = static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0));
 }
-void HotkeyPingBuild::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyPingBuild::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "BuildIndex", index);
 }
-int HotkeyPingBuild::Description(char *buf, const size_t bufsz)
+
+int HotkeyPingBuild::Description(char* buf, const size_t bufsz)
 {
-    const char *buildname = BuildsWindow::Instance().BuildName(index);
+    const char* buildname = BuildsWindow::Instance().BuildName(index);
     if (buildname == nullptr)
         buildname = "<not found>";
     return snprintf(buf, bufsz, "Ping build '%s'", buildname);
 }
+
 bool HotkeyPingBuild::Draw()
 {
     bool hotkey_changed = false;
@@ -1771,6 +1855,7 @@ bool HotkeyPingBuild::Draw()
     }
     return hotkey_changed;
 }
+
 void HotkeyPingBuild::Execute()
 {
     if (!CanUse())
@@ -1779,7 +1864,7 @@ void HotkeyPingBuild::Execute()
     BuildsWindow::Instance().Send(index);
 }
 
-bool HotkeyHeroTeamBuild::GetText(void *, const int idx, const char **out_text)
+bool HotkeyHeroTeamBuild::GetText(void*, const int idx, const char** out_text)
 {
     if (idx >= static_cast<int>(HeroBuildsWindow::Instance().BuildCount()))
         return false;
@@ -1787,23 +1872,27 @@ bool HotkeyHeroTeamBuild::GetText(void *, const int idx, const char **out_text)
     *out_text = HeroBuildsWindow::Instance().BuildName(index);
     return true;
 }
-HotkeyHeroTeamBuild::HotkeyHeroTeamBuild(ToolboxIni *ini, const char *section)
+
+HotkeyHeroTeamBuild::HotkeyHeroTeamBuild(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     index = static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0));
 }
-void HotkeyHeroTeamBuild::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyHeroTeamBuild::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "BuildIndex", index);
 }
-int HotkeyHeroTeamBuild::Description(char *buf, const size_t bufsz)
+
+int HotkeyHeroTeamBuild::Description(char* buf, const size_t bufsz)
 {
-    const char *buildname = HeroBuildsWindow::Instance().BuildName(index);
+    const char* buildname = HeroBuildsWindow::Instance().BuildName(index);
     if (buildname == nullptr)
         buildname = "<not found>";
     return snprintf(buf, bufsz, "Load Hero Team Build '%s'", buildname);
 }
+
 bool HotkeyHeroTeamBuild::Draw()
 {
     bool hotkey_changed = false;
@@ -1816,6 +1905,7 @@ bool HotkeyHeroTeamBuild::Draw()
     }
     return hotkey_changed;
 }
+
 void HotkeyHeroTeamBuild::Execute()
 {
     if (!CanUse())
@@ -1823,7 +1913,7 @@ void HotkeyHeroTeamBuild::Execute()
     HeroBuildsWindow::Instance().Load(index);
 }
 
-HotkeyFlagHero::HotkeyFlagHero(ToolboxIni *ini, const char *section)
+HotkeyFlagHero::HotkeyFlagHero(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     degree = static_cast<float>(ini->GetDoubleValue(section, "degree", degree));
@@ -1832,19 +1922,22 @@ HotkeyFlagHero::HotkeyFlagHero(ToolboxIni *ini, const char *section)
     if (hero < 0) hero = 0;
     if (hero > 11) hero = 11;
 }
-void HotkeyFlagHero::Save(ToolboxIni *ini, const char *section) const
+
+void HotkeyFlagHero::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetDoubleValue(section, "degree", degree);
     ini->SetDoubleValue(section, "distance", distance);
     ini->SetLongValue(section, "hero", hero);
 }
-int HotkeyFlagHero::Description(char *buf, const size_t bufsz)
+
+int HotkeyFlagHero::Description(char* buf, const size_t bufsz)
 {
     if (hero == 0)
         return snprintf(buf, bufsz, "Flag All Heroes");
     return snprintf(buf, bufsz, "Flag Hero %d", hero);
 }
+
 bool HotkeyFlagHero::Draw()
 {
     bool hotkey_changed = false;
@@ -1862,6 +1955,7 @@ bool HotkeyFlagHero::Draw()
     ImGui::TextColored({1.f, 1.f, 0.f, 1.f}, "/flag %d toggle", hero);
     return hotkey_changed;
 }
+
 void HotkeyFlagHero::Execute()
 {
     if (!isExplorable())
@@ -1876,22 +1970,23 @@ void HotkeyFlagHero::Execute()
             GW::PartyMgr::UnflagAll();
             return;
         }
-    } else {
-        const GW::HeroFlagArray &flags = GW::GetGameContext()->world->hero_flags;
+    }
+    else {
+        const GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags;
         if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size())
             return;
 
-        const GW::HeroFlag &flag = flags[hero - 1];
+        const GW::HeroFlag& flag = flags[hero - 1];
         if (!std::isinf(flag.flag.x) || !std::isinf(flag.flag.y)) {
             GW::PartyMgr::UnflagHero(hero);
             return;
         }
     }
 
-    const GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player)
         return;
-    const GW::AgentLiving *target = GW::Agents::GetTargetAsAgentLiving();
+    const GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
 
     float reference_radiant = player->rotation_angle;
 
@@ -1902,7 +1997,8 @@ void HotkeyFlagHero::Execute()
         reference_radiant = std::atan(dx == 0 ? dy : dy / dx);
         if (dx < 0) {
             reference_radiant += DirectX::XM_PI;
-        } else if (dx > 0 && dy < 0) {
+        }
+        else if (dx > 0 && dy < 0) {
             reference_radiant += 2 * DirectX::XM_PI;
         }
     }
@@ -1911,11 +2007,12 @@ void HotkeyFlagHero::Execute()
     const float x = player->x + distance * std::cos(reference_radiant - radiant);
     const float y = player->y + distance * std::sin(reference_radiant - radiant);
 
-    const GW::GamePos pos = GW::GamePos(x, y, 0);
+    const auto pos = GW::GamePos(x, y, 0);
 
     if (hero == 0) {
         GW::PartyMgr::FlagAll(pos);
-    } else {
+    }
+    else {
         GW::PartyMgr::FlagHero(hero, pos);
     }
 }
@@ -1927,16 +2024,18 @@ HotkeyGWKey::HotkeyGWKey(ToolboxIni* ini, const char* section)
     action = static_cast<GW::UI::ControlAction>(ini->GetLongValue(section, "ActionID", action));
     const auto found = std::ranges::find_if(control_labels, [&](const std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
         return action == in.first;
-        });
+    });
     if (found != control_labels.end()) {
         action_idx = std::distance(control_labels.begin(), found);
     }
 }
+
 void HotkeyGWKey::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "ActionID", action);
 }
+
 int HotkeyGWKey::Description(char* buf, const size_t bufsz)
 {
     if (action_idx < 0 || action_idx >= static_cast<int>(control_labels.size())) {
@@ -1944,6 +2043,7 @@ int HotkeyGWKey::Description(char* buf, const size_t bufsz)
     }
     return snprintf(buf, bufsz, "Guild Wars Key: %s", control_labels[action_idx].second->string().c_str());
 }
+
 bool HotkeyGWKey::Draw()
 {
     if (labels.empty()) {
@@ -1970,16 +2070,17 @@ bool HotkeyGWKey::Draw()
     }
     return false;
 }
+
 void HotkeyGWKey::Execute()
 {
     GW::GameThread::Enqueue([&]() {
         Keypress(action);
-        });
+    });
 }
 
 namespace {
-
-    const char* GetBehaviorDesc(GW::HeroBehavior behaviour) {
+    const char* GetBehaviorDesc(GW::HeroBehavior behaviour)
+    {
         if (static_cast<uint32_t>(behaviour) < _countof(behaviors))
             return behaviors[static_cast<uint32_t>(behaviour)];
         return nullptr;
@@ -1989,29 +2090,33 @@ namespace {
 HotkeyCommandPet::HotkeyCommandPet(ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
-    behavior = ini ? static_cast<GW::HeroBehavior>(ini->GetLongValue(section, "behavior", (long)behavior)) : behavior;
+    behavior = ini ? static_cast<GW::HeroBehavior>(ini->GetLongValue(section, "behavior", static_cast<long>(behavior))) : behavior;
     if (!GetBehaviorDesc(behavior))
         behavior = GW::HeroBehavior::Fight;
 }
+
 void HotkeyCommandPet::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "behavior", static_cast<long>(behavior));
 }
+
 int HotkeyCommandPet::Description(char* buf, const size_t bufsz)
 {
     return snprintf(buf, bufsz, "Command Pet: %s", GetBehaviorDesc(behavior));
 }
+
 bool HotkeyCommandPet::Draw()
 {
     const bool changed = ImGui::Combo("Behavior###combo", (int*)&behavior, behaviors, _countof(behaviors), _countof(behaviors));
-    if(changed && !GetBehaviorDesc(behavior))
+    if (changed && !GetBehaviorDesc(behavior))
         behavior = GW::HeroBehavior::Fight;
     return changed;
 }
+
 void HotkeyCommandPet::Execute()
 {
     GW::GameThread::Enqueue([&]() {
         GW::PartyMgr::SetPetBehavior(behavior);
-        });
+    });
 }

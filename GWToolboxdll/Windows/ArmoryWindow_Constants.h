@@ -24,7 +24,7 @@ namespace GWArmory {
     //  - Armor =   0x20110007 (3)
     //  - Chaos glove = 0x20110407 (38)
 
-    const ImVec4 palette[] = {
+    constexpr ImVec4 palette[] = {
         {0.f, 0.f, 1.f, 0.f},       // Blue
         {0.f, 0.75f, 0.f, 0.f},     // Green
         {0.5f, 0.f, 0.5f, 0.f},     // Purple
@@ -62,9 +62,7 @@ namespace GWArmory {
 
     struct PlayerArmorPiece {
         PlayerArmorPiece(const ItemSlot _slot)
-            : slot(_slot)
-        {
-        };
+            : slot(_slot) { };
         ItemSlot slot = ItemSlot_Unknown;
         uint32_t model_file_id = 0;
         uint32_t unknow1 = 0;

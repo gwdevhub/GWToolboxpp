@@ -29,15 +29,11 @@ public:
     void DrawSettingsInternal() override;
     void Draw(IDirect3DDevice9*) override;
 
-    void ShowVisibleRadio() override
-    {
-    };
+    void ShowVisibleRadio() override { };
 
     static void DrawFreezeSetting();
 
-    void DrawSizeAndPositionSettings() override
-    {
-    }
+    void DrawSizeAndPositionSettings() override { }
 
     static bool move_all;
 

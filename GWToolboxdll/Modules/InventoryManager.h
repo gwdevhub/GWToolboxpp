@@ -85,9 +85,7 @@ public:
     SalvageAllType salvage_all_type = SalvageAllType::None;
 
 protected:
-    void ShowVisibleRadio() override
-    {
-    };
+    void ShowVisibleRadio() override { };
 
 private:
     bool trade_whole_stacks = false;

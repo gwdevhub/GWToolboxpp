@@ -31,6 +31,7 @@ namespace Missions {
         MissionImageList hard_mode_textures;
 
     public:
+        virtual ~Mission() = default;
         Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, GW::Constants::QuestID = static_cast<GW::Constants::QuestID>(0));
         static ImVec2 icon_size;
         [[nodiscard]] GW::Constants::MapID GetOutpost() const;
@@ -71,7 +72,7 @@ namespace Missions {
     class HeroUnlock : public PvESkill {
     public:
         HeroUnlock(GW::Constants::HeroID _hero_id);
-        ~HeroUnlock() { delete image; }
+        ~HeroUnlock() override { delete image; }
         IDirect3DTexture9* GetMissionImage() override;
 
         void OnClick() override;
@@ -87,7 +88,7 @@ namespace Missions {
         size_t encoded_name_index;
 
     public:
-        ItemAchievement(size_t hom_achievement_index, const wchar_t* encoded_name);
+        ItemAchievement(size_t _encoded_name_index, const wchar_t* encoded_name);
         IDirect3DTexture9* GetMissionImage() override;
 
         void OnClick() override;

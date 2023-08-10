@@ -526,9 +526,9 @@ AgentRenderer::AgentRenderer()
     shapes[Quad].AddVertex(1.0f, -1.0f, Dark);
     shapes[Quad].AddVertex(0.0f, 0.0f, Light);
 
-    const size_t star_ntriangles = 16;
-    const float star_size_small = 1.f;
-    const float star_size_big = 1.5f;
+    constexpr size_t star_ntriangles = 16;
+    constexpr float star_size_small = 1.f;
+    constexpr float star_size_big = 1.5f;
     for (auto i = 0u; i < star_ntriangles; i++) {
         const float angle1 = 2 * (i + 0) * pi / star_ntriangles;
         const float angle2 = 2 * (i + 1) * pi / star_ntriangles;

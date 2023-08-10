@@ -26,7 +26,6 @@
 //#define PRINT_CHAT_PACKETS
 
 namespace {
-
     using namespace ToolboxUtils::EncodedStrings;
 
     bool guild_announcement = false;
@@ -199,7 +198,7 @@ namespace {
     const wchar_t* rare_item_names[] = {
         L"\x22D9\xE7B8\xE9DD\x2322", // Glob of ectoplasm
         L"\x22EA\xFDA9\xDE53\x2D16", // Obsidian shard
-        L"\x8101\x730E" // Lockpick
+        L"\x8101\x730E"              // Lockpick
     };
 
     bool IsRare(const wchar_t* encoded_string)
@@ -208,7 +207,7 @@ namespace {
         if (encoded_string[0] == 0xA40)
             return true; // don't ignore gold items
         size_t item_name_len = 0;
-        const auto item_name = GetFirstSegment(encoded_string,nullptr,&item_name_len);
+        const auto item_name = GetFirstSegment(encoded_string, nullptr, &item_name_len);
         if (!item_name)
             return false;
         for (const auto cmp : rare_item_names) {
@@ -243,7 +242,7 @@ namespace {
     {
         if (!encoded_string) return false;
         size_t item_name_len = 0;
-        const auto item_name = GetFirstSegment(encoded_string,nullptr,&item_name_len);
+        const auto item_name = GetFirstSegment(encoded_string, nullptr, &item_name_len);
         if (!item_name)
             return false;
         for (const auto cmp : encoded_ashes_names) {
@@ -371,7 +370,7 @@ namespace {
                     return true;
                 return false; // you drop item x
             }
-            case 0x7F6:       // player x picks up item y (note: item can be unassigned gold)
+            case 0x7F6: // player x picks up item y (note: item can be unassigned gold)
                 return IsRare(GetFirstSegment(message)) ? ally_pickup_rare : ally_pickup_common;
             case 0x7FC: // you pick up item y (note: item can be unassigned gold)
                 return IsRare(GetFirstSegment(message)) ? player_pickup_rare : player_pickup_common;

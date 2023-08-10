@@ -23,7 +23,7 @@ extern "C" __declspec(dllexport) void __cdecl Terminate()
         GWToolbox::Instance().StartSelfDestruct();
     }
     // Wait up to 5000 ms for toolbox to clean up after itself; after that, bomb out
-    const uint32_t timeout = 5000 / 16;
+    constexpr uint32_t timeout = 5000 / 16;
     for (auto i = 0u; i < timeout && thread_running; i++) {
         Sleep(16);
     }
@@ -46,8 +46,7 @@ DWORD WINAPI Init() noexcept
         GW::Scanner::Initialize();
         Log::Log("Creating toolbox thread\n");
         SafeThreadEntry(dllmodule);
-    } __except (EXCEPT_EXPRESSION_ENTRY) {
-    }
+    } __except (EXCEPT_EXPRESSION_ENTRY) { }
 leave:
     thread_running = false;
     if (!is_detaching)
@@ -74,8 +73,7 @@ BOOL WINAPI DllMain(_In_ const HMODULE _HDllHandle, _In_ const DWORD _Reason, _I
 
                 if (hThread != nullptr)
                     CloseHandle(hThread);
-            } __except (EXCEPT_EXPRESSION_ENTRY) {
-            }
+            } __except (EXCEPT_EXPRESSION_ENTRY) { }
         }
         break;
         case DLL_PROCESS_DETACH: {

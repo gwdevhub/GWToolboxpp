@@ -72,9 +72,7 @@ namespace {
         SpecialNPCToAdd(const char* _alias, const int _model_id, const GW::Constants::MapID _map_id)
             : alias(_alias)
               , model_id(static_cast<uint32_t>(_model_id))
-              , map_id(_map_id)
-        {
-        };
+              , map_id(_map_id) { };
 
         std::wstring map_name;
         bool decode_pending = false;

@@ -15,9 +15,7 @@ public:
 
     void Initialize() override;
 
-    void RegisterSettingsContent() override
-    {
-    };
+    void RegisterSettingsContent() override { };
 
     [[nodiscard]] bool ShowOnWorldMap() const override { return true; }
 

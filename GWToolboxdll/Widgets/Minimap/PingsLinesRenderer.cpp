@@ -379,7 +379,7 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device)
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices),
                  D3DLOCK_DISCARD);
 
-    const float PI = 3.1415927f;
+    constexpr float PI = 3.1415927f;
     for (size_t i = 0; i < count; i++) {
         const float angle = i * (2 * PI / count);
         const bool outer = (i % 2 == 0);
@@ -409,7 +409,7 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device)
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices),
                  D3DLOCK_DISCARD);
 
-    const float PI = 3.1415927f;
+    constexpr float PI = 3.1415927f;
     _vertices[0].x = 0.0f;
     _vertices[0].y = 0.0f;
     _vertices[0].z = 0.0f;

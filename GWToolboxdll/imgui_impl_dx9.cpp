@@ -87,7 +87,7 @@ static void ImGui_ImplDX9_SetupRenderState(const ImDrawData* draw_data)
         const float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x + 0.5f;
         const float T = draw_data->DisplayPos.y + 0.5f;
         const float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y + 0.5f;
-        const D3DMATRIX mat_identity = {{{1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f}}};
+        constexpr D3DMATRIX mat_identity = {{{1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f}}};
         const D3DMATRIX mat_projection =
         {{{
             2.0f / (R - L), 0.0f, 0.0f, 0.0f,

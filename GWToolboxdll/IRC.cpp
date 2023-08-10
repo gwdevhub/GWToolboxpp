@@ -223,7 +223,7 @@ int IRC::ping()
         return 1;
     if (pong_recieved > ping_sent)
         ping_sent = 0;
-    const clock_t timeout = 60 * CLOCKS_PER_SEC;
+    constexpr clock_t timeout = 60 * CLOCKS_PER_SEC;
     const clock_t now = clock();
     if (!ping_sent && (!pong_recieved || now - pong_recieved > timeout)) {
         raw("PING\r\n");

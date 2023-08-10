@@ -26,7 +26,7 @@ namespace {
 }
 
 namespace GW::Chat {
-    const size_t SENT_LOG_LENGTH = 0x32;
+    constexpr size_t SENT_LOG_LENGTH = 0x32;
 }
 
 //#define PRINT_CHAT_PACKETS

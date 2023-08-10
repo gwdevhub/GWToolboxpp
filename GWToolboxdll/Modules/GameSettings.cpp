@@ -1220,7 +1220,7 @@ void GameSettings::Initialize()
     // But, if you try with the material page (or anniversary page in the case when you bought all other storage page)
     // you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
     // when they added anniversary page so we do it ourself.
-    const DWORD page_max = 14;
+    constexpr DWORD page_max = 14;
     ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
     ctrl_click_patch.TogglePatch(true);
 
@@ -1881,7 +1881,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Text("In-game name tag colors:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    const uint32_t flags = ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs;
+    constexpr uint32_t flags = ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs;
     ImGui::NextSpacedElement();
     Colors::DrawSettingHueWheel("Myself", &nametag_color_player_self, flags);
     ImGui::NextSpacedElement();

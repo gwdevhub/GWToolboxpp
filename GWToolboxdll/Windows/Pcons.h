@@ -37,9 +37,7 @@ protected:
          const char* desc = nullptr);
 
     Pcon(const wchar_t* file, const int threshold = 20)
-        : Pcon(nullptr, nullptr, nullptr, file, {0, 0}, {1, 1}, threshold)
-    {
-    }
+        : Pcon(nullptr, nullptr, nullptr, file, {0, 0}, {1, 1}, threshold) { }
 
     Pcon(const Pcon&) = delete;
     virtual ~Pcon();
@@ -131,9 +129,7 @@ class PconGeneric : public Pcon {
 public:
     PconGeneric(const wchar_t* file, const DWORD item, const GW::Constants::SkillID effect, const int threshold = 20)
         : Pcon(file, threshold),
-          itemID(item), effectID(effect)
-    {
-    }
+          itemID(item), effectID(effect) { }
 
     PconGeneric(const char* chat,
                 const char* abbrev,
@@ -144,9 +140,7 @@ public:
                 const int threshold,
                 const char* desc = nullptr)
         : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc),
-          itemID(item), effectID(effect)
-    {
-    }
+          itemID(item), effectID(effect) { }
 
     PconGeneric(const PconGeneric&) = delete;
 
@@ -171,9 +165,7 @@ public:
              const DWORD item, const GW::Constants::SkillID effect,
              const int threshold,
              const char* desc = nullptr)
-        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effect, threshold, desc)
-    {
-    }
+        : PconGeneric(chat, abbrev, ini, file, uv0, uv1, item, effect, threshold, desc) { }
 
     PconCons(const PconCons&) = delete;
 
@@ -189,9 +181,7 @@ public:
              const ImVec2 uv0, const ImVec2 uv1,
              const int threshold,
              const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc)
-    {
-    }
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) { }
 
     PconCity(const PconCity&) = delete;
 
@@ -246,9 +236,7 @@ public:
                 const ImVec2 uv0, const ImVec2 uv1,
                 const int threshold,
                 const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc)
-    {
-    }
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) { }
 
     PconAlcohol(const PconAlcohol&) = delete;
 
@@ -266,9 +254,7 @@ public:
               const ImVec2 uv0, const ImVec2 uv1,
               const int threshold,
               const char* desc = nullptr)
-        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc)
-    {
-    }
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) { }
 
     PconLunar(const PconLunar&) = delete;
 

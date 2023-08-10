@@ -144,8 +144,8 @@ namespace {
 
         const auto facing_angle = me->rotation_angle * 180.0f / DirectX::XM_PI;
         const auto wanted_angle = facing_angle > 0.0f ? facing_angle - 180.0f : facing_angle + 180.0f;
-        const auto max_angle_diff = 22.5f; // Acceptable angle for ebon escape
-        const auto max_distance = GW::Constants::SqrRange::Spellcast;
+        constexpr auto max_angle_diff = 22.5f; // Acceptable angle for ebon escape
+        constexpr auto max_distance = GW::Constants::SqrRange::Spellcast;
         float distance = 0.0f;
 
         auto closest = static_cast<size_t>(-1);

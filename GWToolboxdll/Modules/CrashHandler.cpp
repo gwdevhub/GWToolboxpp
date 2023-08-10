@@ -18,8 +18,7 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
         Instance().tb_exception_message = new char[len + 1];
         snprintf(Instance().tb_exception_message, len + 1, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
         throw std::runtime_error(Instance().tb_exception_message);
-    } __except (EXCEPT_EXPRESSION_ENTRY) {
-    }
+    } __except (EXCEPT_EXPRESSION_ENTRY) { }
 
     abort();
 }
@@ -45,8 +44,7 @@ void CrashHandler::OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEP
     __try {
         // Debug break here to catch stack trace in debug mode before dumping
         __debugbreak();
-    } __except (EXCEPTION_CONTINUE_EXECUTION) {
-    }
+    } __except (EXCEPTION_CONTINUE_EXECUTION) { }
 
     // Assertion here will throw a GWToolbox exception if pExceptionPointers isn't found; this will give us the correct call stack for a GW Assertion failure in the subsequent crash dump.
     if (Crash(pExceptionPointers))
@@ -72,8 +70,8 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     GetLocalTime(&stLocalTime);
     wchar_t szFileName[MAX_PATH];
     const auto fn_print = swprintf(szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
-                                  crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth,
-                                  stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond, ProcessId, ThreadId);
+                                   crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth,
+                                   stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond, ProcessId, ThreadId);
 
     HANDLE hFile = nullptr;
     MINIDUMP_USER_STREAM_INFORMATION* UserStreamParam = nullptr;

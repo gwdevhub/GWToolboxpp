@@ -50,14 +50,10 @@ public:
     virtual void Initialize();
 
     // Send termination signal to module.
-    virtual void SignalTerminate()
-    {
-    }
+    virtual void SignalTerminate() { }
 
     // Draw help section
-    virtual void DrawHelp()
-    {
-    }
+    virtual void DrawHelp() { }
 
     // Can we terminate this module?
     virtual bool CanTerminate() { return true; }
@@ -69,28 +65,20 @@ public:
     virtual void Terminate();
 
     // Update. Will always be called once every frame. Delta in seconds
-    virtual void Update(float)
-    {
-    }
+    virtual void Update(float) { }
 
     // This is provided (and called), but use ImGui::GetIO() during update/render if possible.
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
     // Load what is needed from ini
-    virtual void LoadSettings(ToolboxIni*)
-    {
-    }
+    virtual void LoadSettings(ToolboxIni*) { }
 
     // Save what is needed to ini
-    virtual void SaveSettings(ToolboxIni*)
-    {
-    }
+    virtual void SaveSettings(ToolboxIni*) { }
 
     // Draw settings interface. Will be called if the setting panel is visible, calls DrawSettingsInternal()
     //virtual void DrawSettings();
-    virtual void DrawSettingsInternal()
-    {
-    }
+    virtual void DrawSettingsInternal() { }
 
     // Register settings content
     void RegisterSettingsContent(

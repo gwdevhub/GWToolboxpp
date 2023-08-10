@@ -193,7 +193,7 @@ void Updater::LoadSettings(ToolboxIni* ini)
 #ifdef _DEBUG
     mode = static_cast<Mode>(0);
 #else
-    mode = (Mode)ini->GetLongValue(Name(), "update_mode", (int)mode);
+    mode = static_cast<Mode>(ini->GetLongValue(Name(), "update_mode", (int)mode));
 #endif
     CheckForUpdate();
 }
@@ -203,7 +203,7 @@ void Updater::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
 #ifdef _DEBUG
 #else
-    ini->SetLongValue(Name(), "update_mode", (int)mode);
+    ini->SetLongValue(Name(), "update_mode", static_cast<int>(mode));
     ini->SetValue(Name(), "dllversion", GWTOOLBOXDLL_VERSION);
 
     HMODULE module = GWToolbox::GetDLLModule();

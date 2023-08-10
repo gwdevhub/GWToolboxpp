@@ -27,13 +27,9 @@ public:
     void Terminate() override;
     bool CanTerminate() override;
 
-    void ShowVisibleRadio() override
-    {
-    }
+    void ShowVisibleRadio() override { }
 
-    void DrawSizeAndPositionSettings() override
-    {
-    }
+    void DrawSizeAndPositionSettings() override { }
 
 private:
 };
