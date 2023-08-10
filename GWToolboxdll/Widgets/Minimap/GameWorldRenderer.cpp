@@ -246,9 +246,10 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
 void GameWorldRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     // load the rendering settings from disk
-    render_max_distance = ini->GetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance);
+    render_max_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance));
     lerp_steps_per_line = ini->GetLongValue(section, VAR_NAME(lerp_steps_per_line), lerp_steps_per_line);
 }
+
 void GameWorldRenderer::SaveSettings(ToolboxIni* ini, const char* section)
 {
     // save the rendering settings to disk
