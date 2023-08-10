@@ -229,23 +229,25 @@ namespace {
 
     void OnAgentUpdateEffects(GW::HookStatus*, GW::Packet::StoC::PacketBase* base)
     {
+        if (!show_notifications_on_self_resurrected && !flash_window_on_self_resurrected) {
+            return;
+        }
         const auto packet = static_cast<GW::Packet::StoC::AgentState*>(base);
-        const GW::AgentLiving* currentCharacter = GW::Agents::GetCharacter();
+        const GW::AgentLiving* current_character = GW::Agents::GetCharacter();
+        if (!packet || !current_character) {
+            return;
+        }
 
-        const int AGENT_UPDATE_STATE_DEAD = 0x10;
-        const int AGENT_LIVING_TYPE_MAP_DEAD = 0x8;
+        constexpr int AGENT_UPDATE_STATE_DEAD = 0x10;
+        constexpr int AGENT_LIVING_TYPE_MAP_DEAD = 0x8;
 
-        if (packet->agent_id == currentCharacter->agent_id)
-        {
-            if ((packet->state & AGENT_UPDATE_STATE_DEAD) == 0 && (currentCharacter->type_map & AGENT_LIVING_TYPE_MAP_DEAD) != 0)
-            {
-                if (show_notifications_on_self_resurrected)
-                {
+        if (packet->agent_id == current_character->agent_id) {
+            if ((packet->state & AGENT_UPDATE_STATE_DEAD) == 0 && (current_character->type_map & AGENT_LIVING_TYPE_MAP_DEAD) != 0) {
+                if (show_notifications_on_self_resurrected) {
                     ToastNotifications::SendToast(L"Resurrected", L"You have been resurrected!", OnGenericToastActivated);
                 }
 
-                if (flash_window_on_self_resurrected)
-                {
+                if (flash_window_on_self_resurrected) {
                     FlashWindow();
                 }
             }
@@ -258,9 +260,7 @@ namespace {
         GW::HookEntry hook_entry;
 
         StoC_Callback(const uint32_t _header, GW::StoC::PacketCallback _cb)
-            : header(_header), cb(_cb)
-        {
-        }
+            : header(_header), cb(_cb) { }
     };
 
     std::vector<StoC_Callback> stoc_callbacks = {
@@ -271,9 +271,7 @@ namespace {
     };
 } // namespace
 ToastNotifications::Toast::Toast(std::wstring _title, std::wstring _message)
-    : title(_title), message(_message)
-{
-};
+    : title(_title), message(_message) {};
 
 ToastNotifications::Toast::~Toast()
 {
