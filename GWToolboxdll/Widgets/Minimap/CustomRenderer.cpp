@@ -85,7 +85,7 @@ void CustomRenderer::LoadMarkers()
         const char* section = entry.pItem;
         if (!section)
             continue;
-        if (strncmp(section, "customline", 10) == 0) {
+        if (strncmp(section, "customline", "customline"s.length()) == 0) {
             lines.push_back(CustomLine(inifile->GetValue(section, "name", "line")));
             lines.back().p1.x = static_cast<float>(inifile->GetDoubleValue(section, "x1", 0.0));
             lines.back().p1.y = static_cast<float>(inifile->GetDoubleValue(section, "y1", 0.0));
@@ -97,7 +97,7 @@ void CustomRenderer::LoadMarkers()
             lines.back().draw_on_terrain = inifile->GetBoolValue(section, "draw_on_terrain", false);
             inifile->Delete(section, nullptr);
         }
-        else if (strncmp(section, "custommarker", 12) == 0) {
+        else if (strncmp(section, "custommarker", "custommarker"s.length()) == 0) {
             auto marker = CustomMarker(inifile->GetValue(section, "name", "marker"));
             marker.pos.x = static_cast<float>(inifile->GetDoubleValue(section, "x", 0.0));
             marker.pos.y = static_cast<float>(inifile->GetDoubleValue(section, "y", 0.0));
@@ -111,7 +111,7 @@ void CustomRenderer::LoadMarkers()
             markers.push_back(marker);
             inifile->Delete(section, nullptr);
         }
-        else if (strncmp(section, "custompolygon", 13) == 0) {
+        else if (strncmp(section, "custompolygon", "custompolygon"s.length()) == 0) {
             auto polygon = CustomPolygon(inifile->GetValue(section, "name", "polygon"));
             for (auto i = 0; i < CustomPolygon::max_points; i++) {
                 GW::Vec2f vec;
@@ -478,10 +478,10 @@ void CustomRenderer::DrawPolygonSettings()
             ImGui::SetTooltip("Name");
         ImGui::PopItemWidth();
 
+        ImGui::SameLine(0.0f, spacing);
         markers_changed |= ImGui::Checkbox("##draw_on_terrain", &polygon.draw_on_terrain);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Draw on in-game terrain");
-        ImGui::SameLine(0.0f, spacing);
 
         ImGui::SameLine(0.0f, spacing);
         const bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
@@ -590,7 +590,7 @@ void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
             return; // can't draw a triangle with less than 3 vertices
         type = D3DPT_TRIANGLELIST;
 
-        const auto poly = std::vector<std::vector<GW::Vec2f>>{{points}};
+        const auto poly = std::vector{{points}};
         point_indices.clear();
         point_indices = mapbox::earcut<unsigned>(poly);
 

@@ -365,16 +365,13 @@ void ToolboxSettings::Draw(IDirect3DDevice9*)
     ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
 }
 
-void ToolboxSettings::Update(float delta)
+void ToolboxSettings::Update(float)
 {
-    UNREFERENCED_PARAMETER(delta);
-
     // save location data
     if (save_location_data && TIMER_DIFF(location_timer) > 1000) {
         location_timer = TIMER_INIT();
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-            && GW::Agents::GetPlayer() != nullptr
-            && GW::Map::GetInstanceTime() > 3000) {
+            && GW::Agents::GetPlayer() != nullptr) {
             GW::Constants::MapID current = GW::Map::GetMapID();
             if (location_current_map != current) {
                 location_current_map = current;
@@ -401,8 +398,7 @@ void ToolboxSettings::Update(float delta)
                 }
 
                 std::wstring prof_string;
-                GW::AgentLiving* me = GW::Agents::GetCharacter();
-                if (me) {
+                if (const auto me = GW::Agents::GetCharacter()) {
                     prof_string += L" - ";
                     prof_string += GetWProfessionAcronym(
                         static_cast<GW::Constants::Profession>(me->primary));
