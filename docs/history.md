@@ -5,11 +5,17 @@ layout: default
 # Version History
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+
+<!---
+## Version 6.12
+
+* [New] Added GameWorldRenderer to render lines, circles and polygon on the game terrain.
+--->
+
 ## Version 6.11
 
 * [New] Added item upgrade unlocks to completion window
 * [New] Added chat filter for dropped ashes
-* [Beta] Added GameWorldRenderer to render lines, circles and polygon on the game terrain. Note that this isn't fully fleshed out yet and draws over your character, props and walls. It also won't render while the in-game minimap (U) is open and there might be other issues. Use at your own discretion for now.
 * [Minor] Added default values for the Minimap position if you've never moved the in-game compass
 * [Minor] Toolbox widgets now all remember their lock_move and lock_size settings
 * [Minor] Added option to auto use keys on chests (prioritised before lockpicks)
