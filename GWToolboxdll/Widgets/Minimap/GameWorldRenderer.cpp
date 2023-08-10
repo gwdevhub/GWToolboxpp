@@ -88,7 +88,7 @@ GenericPolyRenderable::~GenericPolyRenderable()
     }
 }
 
-bool GenericPolyRenderable::is_in_range(const GW::GamePos& pos, const float dist_sq) const
+bool GenericPolyRenderable::IsInRange(const GW::GamePos& pos, const float dist_sq) const
 {
     // future optimisation: use a bounding box in case of polygons with many points.
     const auto as_vec2 = GW::Vec2f{pos.x, pos.y};
@@ -100,7 +100,7 @@ bool GenericPolyRenderable::is_in_range(const GW::GamePos& pos, const float dist
     return false;
 }
 
-void GenericPolyRenderable::draw(IDirect3DDevice9* device)
+void GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 {
     // draw this specific renderable
     if (device->SetStreamSource(0, vb, 0, sizeof(D3DVertex)) != D3D_OK) {
@@ -225,8 +225,8 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         for (const auto& renderable : renderables) {
             // future consideration: should we really render markers on terrain that have MapID=None?
             if (renderable->map_id == GW::Constants::MapID::None || renderable->map_id == map_id) {
-                if (renderable->is_in_range(look_at_2, render_max_distance)) {
-                    renderable->draw(device);
+                if (renderable->IsInRange(look_at_2, render_max_distance)) {
+                    renderable->Draw(device);
                 }
             }
         }
