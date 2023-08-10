@@ -253,7 +253,7 @@ void GameWorldRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 void GameWorldRenderer::SaveSettings(ToolboxIni* ini, const char* section)
 {
     // save the rendering settings to disk
-    ini->SetDoubleValue(section, VAR_NAME(render_max_dist_enum), render_max_distance);
+    ini->SetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance);
     ini->SetLongValue(section, VAR_NAME(lerp_steps_per_line), lerp_steps_per_line);
 }
 
