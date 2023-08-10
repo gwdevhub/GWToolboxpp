@@ -112,12 +112,12 @@ namespace ToolboxUtils {
         }
 
 
-        const wchar_t* Get1stSegment(const wchar_t* message, size_t* segment_length_out, size_t* identifier_length_out)
+        const wchar_t* GetFirstSegment(const wchar_t* message, size_t* segment_length_out, size_t* identifier_length_out)
         {
             return GetSegmentArgument(message, 0x10A, segment_length_out, identifier_length_out);
         }
 
-        const wchar_t* Get2ndSegment(const wchar_t* message, size_t* segment_length_out, size_t* identifier_length_out)
+        const wchar_t* GetSecondSegment(const wchar_t* message, size_t* segment_length_out, size_t* identifier_length_out)
         {
             return GetSegmentArgument(message, 0x10B, segment_length_out, identifier_length_out);
         }

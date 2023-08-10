@@ -208,7 +208,7 @@ namespace {
         if (encoded_string[0] == 0xA40)
             return true; // don't ignore gold items
         size_t item_name_len = 0;
-        const auto item_name = Get1stSegment(encoded_string,nullptr,&item_name_len);
+        const auto item_name = GetFirstSegment(encoded_string,nullptr,&item_name_len);
         if (!item_name)
             return false;
         for (const auto cmp : rare_item_names) {
@@ -243,7 +243,7 @@ namespace {
     {
         if (!encoded_string) return false;
         size_t item_name_len = 0;
-        const auto item_name = Get1stSegment(encoded_string,nullptr,&item_name_len);
+        const auto item_name = GetFirstSegment(encoded_string,nullptr,&item_name_len);
         if (!item_name)
             return false;
         for (const auto cmp : encoded_ashes_names) {
@@ -338,10 +338,10 @@ namespace {
             case 0x7F0: {
                 // monster/player x drops item y (no assignment)
                 // first segment describes the agent who dropped, second segment describes the item dropped
-                const auto agent_name = Get1stSegment(message);
+                const auto agent_name = GetFirstSegment(message);
                 if (!ShouldIgnoreByAgentThatDropped(agent_name))
                     return false;
-                const auto item_argument = Get2ndSegment(message);
+                const auto item_argument = GetSecondSegment(message);
                 if (self_drop_rare && IsRare(item_argument))
                     return true;
                 if (ashes_dropped && IsAshes(item_argument))
@@ -355,7 +355,7 @@ namespace {
                 // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
                 const GW::AgentLiving* me = GW::Agents::GetCharacter();
                 const bool forplayer = (me && me->player_number == GetNumericSegment(message));
-                const bool rare = IsRare(Get2ndSegment(message));
+                const bool rare = IsRare(GetSecondSegment(message));
                 if (forplayer && rare)
                     return self_drop_rare;
                 if (forplayer && !rare)
@@ -367,14 +367,14 @@ namespace {
                 return false;
             }
             case 0x7F2: {
-                if (ashes_dropped && IsAshes(Get1stSegment(message)))
+                if (ashes_dropped && IsAshes(GetFirstSegment(message)))
                     return true;
                 return false; // you drop item x
             }
             case 0x7F6:       // player x picks up item y (note: item can be unassigned gold)
-                return IsRare(Get1stSegment(message)) ? ally_pickup_rare : ally_pickup_common;
+                return IsRare(GetFirstSegment(message)) ? ally_pickup_rare : ally_pickup_common;
             case 0x7FC: // you pick up item y (note: item can be unassigned gold)
-                return IsRare(Get1stSegment(message)) ? player_pickup_rare : player_pickup_common;
+                return IsRare(GetFirstSegment(message)) ? player_pickup_rare : player_pickup_common;
             case 0x807:
                 return false; // player joined the game
             case 0x816:
