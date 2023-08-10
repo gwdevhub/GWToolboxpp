@@ -11,7 +11,7 @@ Previous releases are available on Github as dll files. There is no support for 
 * [New] Added chat filter for dropped ashes
 * [Beta] Added GameWorldRenderer to render lines, circles and polygon on the game terrain. Note that this isn't fully fleshed out yet and draws over your character, props and walls. It also won't render while the in-game minimap (U) is open and there might be other issues. Use at your own discretion for now.
 * [Minor] Added default values for the Minimap position if you've never moved the in-game compass
-* [Minor] Toolbox widgets now all remember their 
+* [Minor] Toolbox widgets now all remember their lock_move and lock_size settings
 * [Minor] Added option to auto use keys on chests (prioritised before lockpicks)
 * [Minor] Added option to get notified when resurrected
 * [Minor] Damage monitor, bonds widget and cast widget now account for the different party member height in outposts
