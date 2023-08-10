@@ -37,6 +37,7 @@ class CustomRenderer : public VBuffer {
         GW::Constants::MapID map;
         Color color{0xFFFFFFFF};
         bool visible;
+        bool draw_on_terrain;
         char name[128]{};
     };
 
@@ -53,10 +54,12 @@ class CustomRenderer : public VBuffer {
         Shape shape;
         GW::Constants::MapID map;
         bool visible;
+        bool draw_on_terrain;
         char name[128]{};
         Color color{0x00FFFFFF};
         Color color_sub{0x00FFFFFF};
         void Render(IDirect3DDevice9* device) override;
+        bool is_filled() const { return shape == Shape::FullCircle; }
 
     private:
         void Initialize(IDirect3DDevice9* device) override;
@@ -69,6 +72,7 @@ class CustomRenderer : public VBuffer {
         std::vector<GW::Vec2f> points{};
         GW::Constants::MapID map;
         bool visible = true;
+        bool draw_on_terrain;
         Shape shape;
         bool filled = false;
         char name[128]{};
@@ -93,6 +97,10 @@ public:
     void SaveSettings(ToolboxIni* ini, const char* section) const;
     void LoadMarkers();
     void SaveMarkers() const;
+
+    const std::vector<CustomLine>& get_lines() const { return lines; }
+    const std::vector<CustomPolygon>& get_polys() const { return polygons; }
+    const std::vector<CustomMarker>& get_markers() const { return markers; }
 
 private:
     void Initialize(IDirect3DDevice9* device) override;

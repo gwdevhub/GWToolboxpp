@@ -11,6 +11,7 @@
 #include <Widgets/Minimap/PmapRenderer.h>
 #include <Widgets/Minimap/RangeRenderer.h>
 #include <Widgets/Minimap/SymbolsRenderer.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 
 class Minimap final : public ToolboxWidget {
     struct Vec2i {
@@ -91,6 +92,7 @@ public:
     SymbolsRenderer symbols_renderer;
     CustomRenderer custom_renderer;
     EffectRenderer effect_renderer;
+    GameWorldRenderer game_world_renderer;
 
     static void Render(IDirect3DDevice9* device);
 
