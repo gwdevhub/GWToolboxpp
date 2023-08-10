@@ -23,7 +23,7 @@ public:
     static void LoadDefaults();
     void DrawSettings();
     void LoadSettings(ToolboxIni* ini, const char* section);
-    static void SaveSettings(ToolboxIni* ini, const char* section);
+    void SaveSettings(ToolboxIni* ini, const char* section);
 
 private:
     void Initialize(IDirect3DDevice9* device) override;

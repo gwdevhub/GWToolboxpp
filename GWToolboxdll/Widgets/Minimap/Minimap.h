@@ -13,6 +13,10 @@
 #include <Widgets/Minimap/SymbolsRenderer.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 
+#ifdef _DEBUG
+#define USE_GAME_WORLD_RENDERER
+#endif
+
 class Minimap final : public ToolboxWidget {
     struct Vec2i {
         Vec2i(const int _x, const int _y)

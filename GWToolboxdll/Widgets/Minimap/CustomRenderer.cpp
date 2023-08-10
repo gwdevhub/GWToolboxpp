@@ -478,10 +478,12 @@ void CustomRenderer::DrawPolygonSettings()
             ImGui::SetTooltip("Name");
         ImGui::PopItemWidth();
 
+#ifdef USE_GAME_WORLD_RENDERER
         ImGui::SameLine(0.0f, spacing);
         markers_changed |= ImGui::Checkbox("##draw_on_terrain", &polygon.draw_on_terrain);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Draw on in-game terrain");
+#endif
 
         ImGui::SameLine(0.0f, spacing);
         const bool remove = ImGui::Button("x##delete", ImVec2(20.0f, 0));
@@ -560,7 +562,9 @@ void CustomRenderer::DrawSettings()
         ImGui::TreePop();
     }
     if (markers_changed) {
+#ifdef USE_GAME_WORLD_RENDERER
         Minimap::Instance().game_world_renderer.TriggerSyncAllMarkers();
+#endif
         Invalidate();
     }
 }

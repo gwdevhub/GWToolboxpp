@@ -34,11 +34,12 @@
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
-#include <Widgets/Minimap/Minimap.h>
+#include "Minimap.h"
 #include <Modules/Resources.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <Defines.h>
+
 
 namespace {
     DirectX::XMFLOAT2 gwinch_scale;
@@ -540,10 +541,12 @@ void Minimap::DrawSettingsInternal()
         Colors::DrawSettingHueWheel("Background", &hero_flag_window_background);
         ImGui::TreePop();
     }
+#ifdef USE_GAME_WORLD_RENDERER
     if (ImGui::TreeNodeEx("In-game rendering", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         game_world_renderer.DrawSettings();
         ImGui::TreePop();
     }
+#endif
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
@@ -635,7 +638,9 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     symbols_renderer.LoadSettings(ini, Name());
     custom_renderer.LoadSettings(ini, Name());
     effect_renderer.LoadSettings(ini, Name());
+#ifdef USE_GAME_WORLD_RENDERER
     game_world_renderer.LoadSettings(ini, Name());
+#endif
 }
 
 void Minimap::SaveSettings(ToolboxIni* ini)
@@ -668,7 +673,9 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     symbols_renderer.SaveSettings(ini, Name());
     custom_renderer.SaveSettings(ini, Name());
     effect_renderer.SaveSettings(ini, Name());
+#ifdef USE_GAME_WORLD_RENDERER
     game_world_renderer.SaveSettings(ini, Name());
+#endif
 }
 
 size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags)
@@ -940,8 +947,8 @@ void Minimap::Render(IDirect3DDevice9* device)
         const float x, const float y, const float radius, const Color clr, const int resolution = 192) {
         const auto res = std::min(resolution, 192);
         D3DVertex vertices[193];
-        for (auto i = 0; i <= res; i++) {
-            const auto angle = i / static_cast<float>(res) * DirectX::XM_2PI;
+        for (auto i = 0u; i <= res; i++) {
+            const auto angle = static_cast<float>(i) / static_cast<float>(res) * DirectX::XM_2PI;
             vertices[i] = {
                 x + radius * cos(angle),
                 y + radius * sin(angle),
@@ -1021,6 +1028,11 @@ void Minimap::Render(IDirect3DDevice9* device)
 
     instance.pingslines_renderer.Render(device);
 
+#ifdef USE_GAME_WORLD_RENDERER
+    instance.game_world_renderer.Render(device);
+#endif
+
+
     if (instance.circular_map) {
         device->SetRenderState(D3DRS_STENCILREF, 0);
         device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
@@ -1029,7 +1041,6 @@ void Minimap::Render(IDirect3DDevice9* device)
         device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
         device->SetRenderState(D3DRS_STENCILENABLE, false);
     }
-    instance.game_world_renderer.Render(device);
 
     // Restore the DX9 transform
     device->SetTransform(D3DTS_WORLD, &reset_world);
