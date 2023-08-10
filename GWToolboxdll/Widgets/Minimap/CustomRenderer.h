@@ -76,7 +76,8 @@ class CustomRenderer : public VBuffer {
         char name[128]{};
         Color color{0xA0FFFFFF};
         Color color_sub{0x00FFFFFF};
-        constexpr static auto max_points = 21;
+        constexpr static auto max_points = 1800;
+        constexpr static auto max_points_filled = 21;
         void Render(IDirect3DDevice9* device) override;
 
     private:

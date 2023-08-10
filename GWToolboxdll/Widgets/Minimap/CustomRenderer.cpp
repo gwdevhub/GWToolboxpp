@@ -453,7 +453,7 @@ void CustomRenderer::DrawPolygonSettings()
 
         polygon_changed |= ImGui::Checkbox("##filled", &polygon.filled);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Filled");
+            ImGui::SetTooltip("Filled - this is only respected for a maximum of {} points!", CustomPolygon::max_points_filled);
         ImGui::SameLine(0.0f, spacing);
 
         polygon_changed |= ImGui::ColorButtonPicker("##colorsub", &polygon.color_sub);
@@ -585,7 +585,7 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device)
 
 void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
 {
-    if (filled) {
+    if (filled && points.size() < max_points_filled) {
         if (points.size() < 3)
             return; // can't draw a triangle with less than 3 vertices
         type = D3DPT_TRIANGLELIST;
