@@ -261,7 +261,7 @@ void GameWorldRenderer::DrawSettings()
 {
     // draw the settings using ImGui
     ImGui::Text("Note: custom markers are only rendered in-game if the option is enabled for a particular marker (check settings).");
-    need_sync_markers |= ImGui::DragFloat("Maximum render distance", &render_max_distance, 0.f, 10000.f);
+    need_sync_markers |= ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 0.f, 10000.f);
     ImGui::ShowHelp("Maximum distance to render custom markers on the in-game terrain.");
     need_sync_markers |= ImGui::DragInt("Interpolation granularity", reinterpret_cast<int*>(&lerp_steps_per_line), 1.0f, 0, 100);
     ImGui::ShowHelp("Number of points to interpolate. Affects smoothness of rendering.");
