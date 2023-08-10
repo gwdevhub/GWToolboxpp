@@ -195,7 +195,7 @@ bool TradeWindow::parse_json_message(const json& js, Message* msg) {
     unsigned long long timestamp_ull = 0ull;
     if (js["t"].is_string()) {
         const auto str = js["t"].get<std::string>();
-        timestamp_ull = strtoull (str.c_str(), NULL, 10);
+        timestamp_ull = strtoull (str.c_str(), nullptr, 10);
     }
     else if (js["t"].is_number_unsigned()) {
         timestamp_ull = js["t"].get<uint64_t>();
@@ -562,7 +562,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
     if (ImGui::Button(buf, ImVec2(ImGui::GetContentRegionAvail().x, 20.0f))) {
         if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
-            ShellExecuteA(NULL, "open", is_kamadan_chat ? https_host_kmd : https_host_asc, NULL, NULL, SW_SHOWNORMAL);
+            ShellExecuteA(nullptr, "open", is_kamadan_chat ? https_host_kmd : https_host_asc, nullptr, nullptr, SW_SHOWNORMAL);
     }
     ImGui::End();
 }

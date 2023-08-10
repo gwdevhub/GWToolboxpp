@@ -95,7 +95,7 @@ namespace {
         for (size_t i = 0; enc_string && enc_string[i] && offset < size_reqd - 1; i++) {
             offset += sprintf(&info_string[offset], "0x%X ", enc_string[i]);
         }
-        return ImGui::InputTextEx(label, NULL, info_string.data(), info_string.size(), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
+        return ImGui::InputTextEx(label, nullptr, info_string.data(), info_string.size(), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
     }
 
     bool InfoField(const char* label, const char* fmt, ...) {
@@ -105,7 +105,7 @@ namespace {
         vsnprintf(info_string, _countof(info_string), fmt, vl);
         info_string[127] = 0;
         va_end(vl);
-        return ImGui::InputTextEx(label, NULL, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
+        return ImGui::InputTextEx(label, nullptr, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
     }
 
     const char* GetStatusStr(const Status _status) {

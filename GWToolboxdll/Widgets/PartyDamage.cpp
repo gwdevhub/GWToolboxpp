@@ -468,7 +468,7 @@ void PartyDamage::SaveSettings(ToolboxIni* ini)
 
     for (const std::pair<DWORD, long>& item : hp_map) {
         std::string key = std::to_string(item.first);
-        inifile->SetLongValue(IniSection, key.c_str(), item.second, 0, false, true);
+        inifile->SetLongValue(IniSection, key.c_str(), item.second, nullptr, false, true);
     }
     inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
 }

@@ -108,7 +108,7 @@ void SkillListingWindow::ExportToJSON() {
 }
 void SkillListingWindow::Initialize() {
     ToolboxWindow::Initialize();
-    skills.resize(static_cast<size_t>(GW::Constants::SkillID::Count),0);
+    skills.resize(static_cast<size_t>(GW::Constants::SkillID::Count),nullptr);
     for (size_t i = 0; i < skills.size(); i++) {
         GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(i));
         if (!s || s->skill_id == static_cast<GW::Constants::SkillID>(0)) continue;

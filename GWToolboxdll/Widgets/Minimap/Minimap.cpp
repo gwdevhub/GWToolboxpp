@@ -137,11 +137,11 @@ namespace {
             return nullptr;
         return gamectx->party->player_party;
     }
-    GW::UI::WindowPosition* compass_frame = 0;
+    GW::UI::WindowPosition* compass_frame = nullptr;
 
     typedef uint32_t(__fastcall* DrawCompassAgentsByType_pt)(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags);
-    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = 0;
-    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Ret = 0;
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = nullptr;
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Ret = nullptr;
 
     bool hide_compass_agents = false;
     uint32_t __fastcall OnDrawCompassAgentsByType(void* ecx, void* edx, const uint32_t param_1, const uint32_t param_2, const uint32_t flags)

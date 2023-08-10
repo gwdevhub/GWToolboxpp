@@ -308,7 +308,7 @@ void PartySearchWindow::OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::
     const std::lock_guard<std::recursive_mutex> lock(instance.party_mutex);
 
     // Unless pigs fly and district/party numbers go over 16 byte length, storing party_ids as uint16_t is fine.
-    wchar_t* party_name = 0;
+    wchar_t* party_name = nullptr;
     uint32_t party_id;
     TBParty* party = nullptr;
     switch (packet->header) {
@@ -658,7 +658,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9* device) {
     }
     if (ImGui::Button(buf, ImVec2(ImGui::GetContentRegionAvail().x, 20.0f))) {
         if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
-            ShellExecuteA(NULL, "open", https_host, NULL, NULL, SW_SHOWNORMAL);
+            ShellExecuteA(nullptr, "open", https_host, nullptr, nullptr, SW_SHOWNORMAL);
     }
     ImGui::End();
 }

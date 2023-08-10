@@ -28,13 +28,13 @@ namespace {
         if (!pgc || !pgc->chars.valid())
             return false;
         uint32_t ui_state = 10;
-        SendUIMessage(GW::UI::UIMessage::kCheckUIState, 0, &ui_state);
+        SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
         return ui_state == 2;
     }
 
     typedef wchar_t*(__cdecl* GetStringParameter_pt)(uint32_t param_id_plus_0x27);
-    GetStringParameter_pt GetStringParameter_Func = 0;
-    GetStringParameter_pt GetStringParameter_Ret = 0;
+    GetStringParameter_pt GetStringParameter_Func = nullptr;
+    GetStringParameter_pt GetStringParameter_Ret = nullptr;
 
     // Always ensure character name has been pre-filled; this isn't actually used in practice as the security character feature is deprecated.
     // Prefilling it ensures that auto login can work without -charname argument being given.
@@ -53,8 +53,8 @@ namespace {
     }
 
     typedef void(__cdecl* PortalAccountLogin_pt)(uint32_t transaction_id,uint32_t* user_id,uint32_t* session_id,wchar_t* preselect_character);
-    PortalAccountLogin_pt PortalAccountLogin_Func = 0;
-    PortalAccountLogin_pt PortalAccountLogin_Ret = 0;
+    PortalAccountLogin_pt PortalAccountLogin_Func = nullptr;
+    PortalAccountLogin_pt PortalAccountLogin_Ret = nullptr;
 
     // Ensure we're asking for a valid character on login if given as a parameter
     void OnPortalAccountLogin(const uint32_t transaction_id, uint32_t* user_id, uint32_t* session_id, wchar_t* preselect_character) {

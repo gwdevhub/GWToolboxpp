@@ -464,7 +464,7 @@ bool TBHotkey::Draw(Op *op)
         // === Hotkey section ===
         const float indent_offset = ImGui::GetCurrentWindow()->DC.Indent.x;
         const float offset_sameline = indent_offset + (ImGui::GetContentRegionAvail().x / 2);
-        hotkey_changed |= ImGui::InputTextEx("Hotkey Group##hotkey_group", "No Hotkey Group", group, sizeof(group), ImVec2(0, 0), ImGuiInputTextFlags_EnterReturnsTrue, 0, 0);
+        hotkey_changed |= ImGui::InputTextEx("Hotkey Group##hotkey_group", "No Hotkey Group", group, sizeof(group), ImVec2(0, 0), ImGuiInputTextFlags_EnterReturnsTrue, nullptr, nullptr);
         if (ImGui::IsItemDeactivatedAfterEdit())
             hotkey_changed = true;
         hotkey_changed |= ImGui::Checkbox("Block key in Guild Wars when triggered", &block_gw);
@@ -564,7 +564,7 @@ bool TBHotkey::Draw(Op *op)
         hotkey_changed |= ImGui::InputInt("##in_range_of_npc_id",(int*) &in_range_of_npc_id, 0,0);
         ImGui::PopItemWidth();
         ImGui::ShowHelp("Only trigger when in range of a certain NPC");
-        hotkey_changed |= ImGui::InputTextEx("Character Name##hotkey_player_name", "Any Character Name", player_name, sizeof(player_name), ImVec2(0, 0), 0, 0, 0);
+        hotkey_changed |= ImGui::InputTextEx("Character Name##hotkey_player_name", "Any Character Name", player_name, sizeof(player_name), ImVec2(0, 0), 0, nullptr, nullptr);
         ImGui::ShowHelp("Only trigger for this character name (leave blank for any character name)");
 
         ImGui::Separator();
@@ -981,7 +981,7 @@ bool HotkeyEquipItem::Draw()
             ImGui::OpenPopup("Choose Item to Equip");
         }
         constexpr size_t bags_size = _countof(bags);
-        if (ImGui::BeginPopupModal("Choose Item to Equip",0, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::BeginPopupModal("Choose Item to Equip",nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (need_to_fetch_bag_items) {
                 // Free available_items ptrs
                 for (auto i = available_items.begin(); i != available_items.end(); i++) {
@@ -1365,13 +1365,13 @@ bool HotkeyToggle::Draw()
 }
 HotkeyToggle::~HotkeyToggle() {
     if (IsToggled(true))
-        toggled[togglekey] = 0;
+        toggled[togglekey] = nullptr;
 }
 void HotkeyToggle::Toggle() {
     if (!HasInterval())
         return Execute();
     ongoing = !IsToggled(true);
-    toggled[togglekey] = ongoing ? this : 0;
+    toggled[togglekey] = ongoing ? this : nullptr;
     last_use = 0;
     if (ongoing || (!ongoing && !toggled[togglekey])) {
         switch (target) {

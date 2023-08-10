@@ -349,7 +349,7 @@ namespace {
             }
         }
         const auto this_character_completion = Instance().GetCharacterCompletion(character_name, true);
-        std::vector<uint32_t>* write_buf = 0;
+        std::vector<uint32_t>* write_buf = nullptr;
         switch (type) {
             case CompletionType::Mission:
                 write_buf = &this_character_completion->mission;
@@ -2063,7 +2063,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     constexpr float tabs_per_row = 4.f;
     const ImVec2 tab_btn_size = {ImGui::GetContentRegionAvail().x / tabs_per_row, 0.f};
 
-    const std::wstring* sel = 0;
+    const std::wstring* sel = nullptr;
     if (chosen_player_name_s.empty()) {
         chosen_player_name = GetPlayerName();
         chosen_player_name_s = GuiUtils::WStringToString(chosen_player_name);
