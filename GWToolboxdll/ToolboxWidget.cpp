@@ -1,10 +1,8 @@
-#include "Defines.h"
 #include "stdafx.h"
 
 #include <ToolboxWidget.h>
-
+#include <Defines.h>
 #include <Modules/ToolboxSettings.h>
-
 
 void ToolboxWidget::LoadSettings(ToolboxIni* ini)
 {

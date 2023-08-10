@@ -7,8 +7,8 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
-#include "Defines.h"
-#include "ImGuiAddons.h"
+#include <Defines.h>
+#include <ImGuiAddons.h>
 #include "MouseFix.h"
 
 #include <hidusage.h>

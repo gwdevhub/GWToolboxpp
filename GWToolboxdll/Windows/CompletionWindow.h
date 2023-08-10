@@ -1,13 +1,10 @@
 #pragma once
 
-#include "ToolboxWindow.h"
-
-#include <d3d9.h>
-
 #include <GWCA/Constants/Constants.h>
-#include <Color.h>
 
 #include <Modules/HallOfMonumentsModule.h>
+#include <ToolboxWindow.h>
+#include <Color.h>
 
 namespace Missions {
     struct MissionImage {

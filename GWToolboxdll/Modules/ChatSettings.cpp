@@ -9,20 +9,18 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/FriendListMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <Modules/GameSettings.h>
 #include <Utils/ToolboxUtils.h>
-
+#include <Defines.h>
 #include "ChatSettings.h"
 
-#include "Defines.h"
-#include "GWCA/Managers/FriendListMgr.h"
-#include "GWCA/Managers/StoCMgr.h"
 
 namespace {
     // Settings
     bool show_timestamps = false;
-    bool enable_chat_log = true;
     bool hide_player_speech_bubbles = false;
     bool show_timestamp_seconds = false;
     bool show_timestamp_24h = false;

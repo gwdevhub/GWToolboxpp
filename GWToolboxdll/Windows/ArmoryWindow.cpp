@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include "ToolboxWindow.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -15,10 +14,10 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <ImGuiAddons.h>
-
 #include <Windows/ArmoryWindow_Constants.h>
 #include <Windows/ArmoryWindow.h>
+#include <ImGuiAddons.h>
+#include <ToolboxWindow.h>
 
 namespace GWArmory {
     struct PlayerArmor {
