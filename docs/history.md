@@ -5,6 +5,20 @@ layout: default
 # Version History
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 6.11
+
+* [New] Added item upgrade unlocks to completion window
+* [New] Added chat filter for dropped ashes (@adituv)
+* [New] Added GameWorldRenderer to render lines, circles and polygon on the game terrain. Note that this isn't fully fleshed out yet and draws over your character, props and walls. (@xenotrace) 
+* [Minor] Added default values for the Minimap position if you've never moved the in-game compass
+* [Minor] Toolbox widgets now all remember their 
+* [Minor] Added option to auto use keys on chests (prioritised before lockpicks)
+* [Minor] Added option to get notified when resurrected
+* [Minor] Damage monitor, bonds widget and cast widget now account for the different party member height in outposts
+* [Fix] Fixed option to auto-login when no character name parameter is passed to gw. Requires you to launch with GW Launcher
+* [Fix] Removed copy hero build button when no builds existed.
+* [Fix] Fixed bug preventing secondary profession switch on tome use.
+
 ## Version 6.10
 
 * [New] Added option in party settings to automatically flag pet to attack pinged target
