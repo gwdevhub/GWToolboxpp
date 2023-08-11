@@ -944,8 +944,8 @@ void Minimap::Render(IDirect3DDevice9* device)
 
     // we MUST draw this for the stencil test, even if alpha is 0
     const auto FillCircle = [&device](
-        const float x, const float y, const float radius, const Color clr, const int resolution = 192) {
-        const auto res = std::min(resolution, 192);
+        const float x, const float y, const float radius, const Color clr, const unsigned resolution = 192u) {
+        const auto res = std::min(resolution, 192u);
         D3DVertex vertices[193];
         for (auto i = 0u; i <= res; i++) {
             const auto angle = static_cast<float>(i) / static_cast<float>(res) * DirectX::XM_2PI;
