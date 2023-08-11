@@ -30,7 +30,6 @@ CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const flo
     : p1(x1, y1)
       , p2(x2, y2)
       , map(m)
-      , visible(true)
 {
     if (n)
         GuiUtils::StrCopy(name, n, sizeof(name));
@@ -43,7 +42,6 @@ CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const f
       , size(s)
       , shape(sh)
       , map(m)
-      , visible(true)
 {
     if (n)
         GuiUtils::StrCopy(name, n, sizeof(name));
