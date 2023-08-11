@@ -18,6 +18,7 @@
 #include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/WorldContext.h>
 
+#include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -28,18 +29,16 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
+#include <GWCA/Utilities/Scanner.h>
 #include <Utils/GuiUtils.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
 #include "Minimap.h"
 #include <Modules/Resources.h>
-#include <GWCA/Utilities/MemoryPatcher.h>
-#include <GWCA/Managers/QuestMgr.h>
 #include <Defines.h>
-
 
 namespace {
     DirectX::XMFLOAT2 gwinch_scale;
@@ -57,11 +56,11 @@ namespace {
     };
 
     enum CaptureMouseClickType : uint32_t {
-        CaptureType_None                = 0,
-        CaptureType_FlagHero            = 1,
-        CaptureType_SalvageWithUpgrades = 11,
-        CaptureType_SalvageMaterials    = 12,
-        CaptureType_Idenfify            = 13
+        CaptureType_None [[maybe_unused]]                = 0,
+        CaptureType_FlagHero [[maybe_unused]]            = 1,
+        CaptureType_SalvageWithUpgrades [[maybe_unused]] = 11,
+        CaptureType_SalvageMaterials [[maybe_unused]]    = 12,
+        CaptureType_Idenfify [[maybe_unused]]            = 13
     };
 
     struct MouseClickCaptureData {
@@ -90,9 +89,6 @@ namespace {
     uint32_t* GameCursorState = nullptr;
     CaptureMouseClickType* CaptureMouseClickTypePtr = nullptr;
 
-    // Internal flagging state to workaround not being able to set the in-game cursor state.
-    FlaggingState minimap_flagging_state = FlagState_None;
-
     FlaggingState GetFlaggingState()
     {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
@@ -115,7 +111,7 @@ namespace {
         if (set_state == FlagState_None) {
             set_state = GetFlaggingState();
         }
-        GW::UI::ControlAction key = GW::UI::ControlAction_None;
+        GW::UI::ControlAction key;
         switch (set_state) {
             case FlagState_Hero1:
                 key = GW::UI::ControlAction_CommandHero1;
@@ -344,7 +340,7 @@ void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* 
             }
             instance.is_observing = GW::Map::GetIsObserving();
         }
-        break;
+            break;
         case GW::UI::UIMessage::kSkillActivated: {
             const struct Payload {
                 uint32_t agent_id;
@@ -356,17 +352,19 @@ void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* 
                 }
             }
         }
-        break;
+            break;
         case GW::UI::UIMessage::kMapChange: {
-            instance.loading = true;
-            instance.agent_renderer.auto_target_id = 0;
-        }
-        break;
+                instance.loading = true;
+                instance.agent_renderer.auto_target_id = 0;
+            }
+            break;
         case GW::UI::UIMessage::kChangeTarget: {
-            const GW::UI::ChangeTargetUIMsg* msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
-            instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
-        }
-        break;
+                const GW::UI::ChangeTargetUIMsg* msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
+                instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
+            }
+            break;
+        default:
+            break;
     }
 }
 
@@ -383,7 +381,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR
         return; // Not explorable - "/flag" can be typed in chat to bypass flag hero buttons, so this is needed.
     }
     if (argc <= 1) {
-        Instance().FlagHero(0); // "/flag"
+        FlagHero(0); // "/flag"
         return;
     }
     const auto is_flagged = [](auto hero) -> bool {
@@ -413,7 +411,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR
     unsigned int f_hero = 0;  // Hero number to flag
     if (arg1 == L"all" || arg1 == L"0") {
         if (argc < 3) {
-            Instance().FlagHero(0); // "/flag all" == "/flag"
+            FlagHero(0); // "/flag all" == "/flag"
             return;
         }
         const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
@@ -426,7 +424,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR
             if (is_flagged(0))
                 GW::PartyMgr::UnflagAll();
             else
-                Instance().FlagHero(0);
+                FlagHero(0);
             return;
         }
         if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
@@ -455,7 +453,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR
         return; // Invalid hero number
     }
     if (argc < 3) {
-        Instance().FlagHero(f_hero); // "/flag 5"
+        FlagHero(f_hero); // "/flag 5"
         return;
     }
     const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
@@ -468,7 +466,7 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR
         if (is_flagged(f_hero))
             GW::PartyMgr::UnflagHero(f_hero);
         else
-            Instance().FlagHero(f_hero);
+            FlagHero(f_hero);
         return;
     }
     if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
@@ -708,9 +706,7 @@ size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::Agen
                 *has_flags = true;
         }
     }
-    if (player_is_leader && has_flags && party->henchmen.size())
-        *has_flags = true;
-    else if (_player_heroes.size() && has_flags)
+    if (player_is_leader && has_flags && party->henchmen.size() || _player_heroes.size() && has_flags)
         *has_flags = true;
     return _player_heroes.size();
 }
@@ -762,7 +758,7 @@ void Minimap::Draw(IDirect3DDevice9*)
     // if not center and want to move, move center towards player
     if ((translation.x != 0 || translation.y != 0) && (me->move_x != 0 || me->move_y != 0) && TIMER_DIFF(last_moved) > ms_before_back) {
         const GW::Vec2f v(translation.x, translation.y);
-        const float speed = std::min((TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
+        const auto speed = std::min(static_cast<float>(TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
         GW::Vec2f d = v;
         d = Normalize(d) * speed;
         if (std::abs(d.x) > std::abs(v.x)) {
@@ -806,11 +802,11 @@ void Minimap::Draw(IDirect3DDevice9*)
                     compass_height = std::roundf(DEFAULT_HEIGHT * multiplier);
                     compass_padding = compass_width * .05f;
 
-                    const int windowWidth = GetPreference(GW::UI::NumberPreference::WindowSizeX);
+                    const auto windowWidth = static_cast<float>(GetPreference(GW::UI::NumberPreference::WindowSizeX));
                     location.x = static_cast<int>(windowWidth - compass_width + compass_padding);
                     location.y = static_cast<int>(compass_padding);
-                    size.x = static_cast<int>(compass_width - (compass_padding * 2.0f));
-                    size.y = static_cast<int>(compass_height - (compass_padding * 2.0f));
+                    size.x = static_cast<int>(compass_width - compass_padding * 2.0f);
+                    size.y = static_cast<int>(compass_height - compass_padding * 2.0f);
                 }
 
                 ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
@@ -841,10 +837,9 @@ void Minimap::Draw(IDirect3DDevice9*)
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background).Value);
             if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
                 static const char* flag_txt[] = {"All", "1", "2", "3", "4", "5", "6", "7", "8"};
-                GW::Vec3f allflag = GW::GetGameContext()->world->all_flag;
                 const unsigned int num_heroflags = player_heroes.size() + 1;
-                const float w_but = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * num_heroflags) /
-                                    (num_heroflags + 1);
+                const float w_but = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * static_cast<float>(num_heroflags)) /
+                                    static_cast<float>(num_heroflags + 1);
 
                 for (unsigned int i = 0; i < num_heroflags; ++i) {
                     if (i > 0)
@@ -1032,7 +1027,6 @@ void Minimap::Render(IDirect3DDevice9* device)
     instance.game_world_renderer.Render(device);
 #endif
 
-
     if (instance.circular_map) {
         device->SetRenderState(D3DRS_STENCILREF, 0);
         device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
@@ -1061,12 +1055,12 @@ GW::Vec2f Minimap::InterfaceToWorldPoint(const Vec2i pos) const
     GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
 
     // Invert viewport projection
-    v.x = v.x - location.x;
-    v.y = location.y - v.y;
+    v.x = v.x - static_cast<float>(location.x);
+    v.y = static_cast<float>(location.y) - v.y;
 
     // go from [0, width][0, height] to [-1, 1][-1, 1]
-    v.x = (2.0f * v.x / size.x - 1.0f);
-    v.y = (2.0f * v.y / size.x + 1.0f);
+    v.x = 2.0f * v.x / static_cast<float>(size.x) - 1.0f;
+    v.y = 2.0f * v.y / static_cast<float>(size.x) + 1.0f;
 
     // scale up to [-w, w]
     constexpr float w = 5000.0f;
@@ -1098,8 +1092,8 @@ GW::Vec2f Minimap::InterfaceToWorldVector(const Vec2i pos) const
     v.y = -v.y;
 
     // go from [0, width][0, height] to [-1, 1][-1, 1]
-    v.x = (2.0f * v.x / size.x);
-    v.y = (2.0f * v.y / size.x);
+    v.x = 2.0f * v.x / static_cast<float>(size.x);
+    v.y = 2.0f * v.y / static_cast<float>(size.x);
 
     // scale up to [-w, w]
     constexpr float w = 5000.0f;
@@ -1396,10 +1390,12 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9* device) const
     //// note: manually craft the projection to viewport instead of using
     //// SetViewport to allow target regions outside the viewport
     //// e.g. negative x/y for slightly offscreen map
-    const float xscale = static_cast<float>(size.x) / viewport.Width;
-    const float yscale = static_cast<float>(size.x) / viewport.Height;
-    const float xtrans = static_cast<float>(location.x * 2 + size.x) / viewport.Width - 1.0f;
-    const float ytrans = -static_cast<float>(location.y * 2 + size.x) / viewport.Height + 1.0f;
+    const auto width_f = static_cast<float>(viewport.Width);
+    const auto height_f = static_cast<float>(viewport.Height);
+    const float xscale = static_cast<float>(size.x) / width_f;
+    const float yscale = static_cast<float>(size.x) / height_f;
+    const float xtrans = static_cast<float>(location.x * 2 + size.x) / width_f - 1.0f;
+    const float ytrans = -static_cast<float>(location.y * 2 + size.x) / height_f + 1.0f;
     ////IMPORTANT: we are basically setting z-near to 0 and z-far to 1
     const DirectX::XMMATRIX viewport_matrix(xscale, 0, 0, 0, 0, yscale, 0, 0, 0, 0, 1, 0, xtrans, ytrans, 0, 1);
 
