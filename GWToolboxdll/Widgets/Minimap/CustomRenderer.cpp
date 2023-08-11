@@ -563,6 +563,7 @@ void CustomRenderer::DrawSettings()
 #ifdef USE_GAME_WORLD_RENDERER
         Minimap::Instance().game_world_renderer.TriggerSyncAllMarkers();
 #endif
+        markers_changed = false;
         Invalidate();
     }
 }

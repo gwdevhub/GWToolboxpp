@@ -34,9 +34,15 @@ public:
 
 private:
     std::vector<std::unique_ptr<GenericPolyRenderable>> renderables;
+    std::mutex renderables_mutex{};
     void SyncLines(IDirect3DDevice9* device);
     void SyncPolys(IDirect3DDevice9* device);
     void SyncMarkers(IDirect3DDevice9* device);
     void SyncAllMarkers(IDirect3DDevice9* device);
-    static void SetD3DTransform(IDirect3DDevice9* device);
+    bool ConfigureProgrammablePipeline(IDirect3DDevice9* device);
+    static bool SetD3DTransform(IDirect3DDevice9* device);
+
+    IDirect3DVertexShader9* vshader = nullptr;
+    IDirect3DPixelShader9* pshader = nullptr;
+    IDirect3DVertexDeclaration9* vertex_declaration = nullptr;
 };
