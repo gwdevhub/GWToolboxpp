@@ -95,18 +95,6 @@ GenericPolyRenderable::~GenericPolyRenderable()
     }
 }
 
-bool GenericPolyRenderable::IsInRange(const GW::GamePos& pos, const float dist_sq) const
-{
-    // future optimisation: use a bounding box in case of polygons with many points.
-    const auto as_vec2 = GW::Vec2f{pos.x, pos.y};
-    for (const auto& pt : points) {
-        if (GetDistance(as_vec2, pt) <= dist_sq) {
-            return true;
-        }
-    }
-    return false;
-}
-
 void GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 {
     // draw this specific renderable

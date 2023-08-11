@@ -10,8 +10,6 @@ public:
     GenericPolyRenderable(IDirect3DDevice9* device, GW::Constants::MapID map_id, const std::vector<GW::Vec2f>& points, unsigned int col, bool filled);
     ~GenericPolyRenderable();
     void Draw(IDirect3DDevice9* device);
-    [[nodiscard]] bool IsInRange(const GW::GamePos& pos, float dist_sq) const;
-
     GW::Constants::MapID map_id{};
 
 private:
