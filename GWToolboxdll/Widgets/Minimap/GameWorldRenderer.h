@@ -19,8 +19,9 @@ private:
     unsigned int col = 0;
     std::vector<GW::Vec2f> points;
     std::vector<D3DVertex> vertices;
-    bool altitudes_computed = true;
     bool filled = false;
+    std::size_t cur_altitude = 0;
+    bool all_altitudes_queried = true;
 };
 
 class GameWorldRenderer {

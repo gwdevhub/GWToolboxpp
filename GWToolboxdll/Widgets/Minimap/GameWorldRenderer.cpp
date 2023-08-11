@@ -1,12 +1,12 @@
 #include "stdafx.h"
 
+#include <GWCA/Context/MapContext.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Camera.h>
+#include <GWCA/GameEntities/Pathing.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Context/MapContext.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <Defines.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
@@ -25,7 +25,7 @@ namespace {
     {
         return A * t + B * (1.f - t);
     }
-    constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::min();
+    constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 
     std::vector<GW::Vec2f> circular_points_from_marker(const float pos_x, const float pos_y, const float size)
     {
@@ -46,8 +46,9 @@ GenericPolyRenderable::GenericPolyRenderable(IDirect3DDevice9* device, const GW:
     : map_id(map_id)
     , col(col)
     , points(points)
-    , altitudes_computed(false)
+    , all_altitudes_queried(false)
     , filled(filled)
+    , cur_altitude(0)
 {
     if (filled && points.size() >= 3) {
         // (filling doesn't make sense if there is not at least enough points for one triangle)
@@ -114,54 +115,41 @@ void GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         return;
     }
     // update altitudes if not done already
-    if (!altitudes_computed) {
+    if (!all_altitudes_queried) {
         // altitudes (Z value) for each vertex can't be known until we are in the correct map,
         // so these are dynamically computed, one-time.
         float altitude = ALTITUDE_UNKNOWN;
-        GW::GamePos pos_per_iteration{};
 
         // in order to properly query altitudes, we have to use the pathing map
         // to determine the number of Z planes in the current map.
         const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
-        if (pathing_map == nullptr) {
-            GWCA_ERR("pathing map == nullptr");
-            return;
-        }
-        const std::size_t pmap_size = pathing_map->size();
-        if (pmap_size == 0) {
-            GWCA_ERR("pathing map is empty");
-            return;
-        }
-        for (std::size_t i = 0; i < vertices.size(); i++) {
-            // until we have a better solution, query all Z planes for each vertex:
-            pos_per_iteration.x = vertices[i].x;
-            pos_per_iteration.y = vertices[i].y;
-            // initial:
-            pos_per_iteration.zplane = pmap_size - 1;
-            GW::Map::QueryAltitude(pos_per_iteration, 0.1f, altitude);
-            vertices[i].z = altitude;
-            
-            for (std::size_t j = pmap_size - 1; j > 0; j--) {
-                pos_per_iteration.zplane = j;
-                GW::Map::QueryAltitude(pos_per_iteration, 0.1f, altitude);
-                if (altitude < vertices[i].z) {  // recall that the Up camera component is inverted
-                    vertices[i].z = altitude;
-                    break;
+        if (pathing_map != nullptr) {
+            const std::size_t pmap_size = pathing_map->size();
+            if (pmap_size > 0) {
+                for (std::size_t i = 0; i < vertices.size(); i++) {
+                    // until we have a better solution, all Z planes will be queried per vertex
+                    // to avoid a significant delay in the render thread, query one plane per frame
+                    // until all have been queried. this might result in some renderables shifting
+                    // slightly during first map load for approx <1 second, but IMO is better than
+                    // stalling. It seems to take, even in most extreme cases, less time than it takes
+                    // for agents to appear.
+                    GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, cur_altitude}, 0.1f, altitude);
+                    if (altitude < vertices[i].z) { // recall that the Up camera component is inverted
+                        vertices[i].z = altitude;
+                    }
+                }
+                if (cur_altitude++ == pmap_size - 1) {
+                    all_altitudes_queried = true;
+                }
+
+                void* mem_loc = nullptr;
+                // map the vertex buffer memory and write vertices to it.
+                if (vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD) == S_OK && mem_loc != nullptr) {
+                    // this should avoid an invalid memcpy, if locking fails for some reason
+                    memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
+                    vb->Unlock();
                 }
             }
-        }
-        altitudes_computed = true;
-
-
-        void* mem_loc = nullptr;
-        // map the vertex buffer memory and write vertices to it.
-        if (vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD) != S_OK) {
-            // this should avoid an invalid memcpy, if locking fails for some reason
-            GWCA_ERR("Unable to lock GenericPolyRenderable vertex buffer");
-        }
-        else {
-            memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
-            vb->Unlock();
         }
     }
     // copy the vertex buffer to the back buffer
@@ -292,14 +280,14 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         renderables_mutex.unlock();
     }
 
-// restore immediate state:
-device->SetRenderState(D3DRS_SCISSORTESTENABLE, old_D3DRS_SCISSORTESTENABLE);
-device->SetRenderState(D3DRS_STENCILENABLE, old_D3DRS_STENCILENABLE);
+    // restore immediate state:
+    device->SetRenderState(D3DRS_SCISSORTESTENABLE, old_D3DRS_SCISSORTESTENABLE);
+    device->SetRenderState(D3DRS_STENCILENABLE, old_D3DRS_STENCILENABLE);
 }
 
 bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
 {
-    D3DVERTEXELEMENT9 decl[] = { {0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END() };
+    D3DVERTEXELEMENT9 decl[] = {{0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END()};
     if (device->CreateVertexDeclaration(decl, &vertex_declaration) != D3D_OK) {
         GWCA_ERR("GameWorldRenderer: unable to CreateVertexDeclaration");
         return false;
@@ -377,7 +365,7 @@ void GameWorldRenderer::SyncLines(IDirect3DDevice9* device)
         if (!line.draw_on_terrain || !line.visible) {
             continue;
         }
-        std::vector<GW::Vec2f> points = { line.p1, line.p2 };
+        std::vector<GW::Vec2f> points = {line.p1, line.p2};
         renderables.push_back(std::make_unique<GenericPolyRenderable>(device, line.map, points, line.color, false));
     }
 }
