@@ -180,9 +180,10 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device, const GW::Came
     // clang-format off
     DirectX::XMStoreFloat4x4A(&mat_proj,
         DirectX::XMMatrixTranspose(
-            DirectX::XMMatrixPerspectiveFovLH(actual_fov, aspect_ratio, 1.0f, 10000.0f)
+            DirectX::XMMatrixPerspectiveFovLH(actual_fov, aspect_ratio, 0.1f, 100000.0f)
         )
     );
+    // clang-format on
     if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, (const float*)&mat_proj, 4) != D3D_OK) {
         GWCA_ERR("GameWorldRenderer: unable to SetVertexShaderConstantF(projection), aborting render.");
         return false;
