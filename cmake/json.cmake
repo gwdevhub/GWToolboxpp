@@ -7,7 +7,7 @@ include(FetchContent)
 
 FetchContent_Declare(
     json
-    GIT_REPOSITORY https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent.git
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG v3.11.2
     GIT_SHALLOW TRUE
     )
