@@ -153,7 +153,6 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device, const GW::Came
     constexpr auto vertex_shader_proj_matrix_offset = 4u;
 
     // compute view matrix:
-
     DirectX::XMFLOAT4X4A mat_view{};
     DirectX::XMFLOAT3 eye_pos = {cam->position.x, cam->position.y, cam->position.z};
     DirectX::XMFLOAT3 player_pos = {cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z};
@@ -165,10 +164,11 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device, const GW::Came
         )
     );
     // clang-format on
-    if (device->SetVertexShaderConstantF(vertex_shader_view_matrix_offset, (const float*)&mat_view, 4) != D3D_OK) {
+    if (device->SetVertexShaderConstantF(vertex_shader_view_matrix_offset, reinterpret_cast<const float*>(&mat_view), 4) != D3D_OK) {
         GWCA_ERR("GameWorldRenderer: unable to SetVertexShaderConstantF(view), aborting render.");
         return false;
     }
+
     // compute projection matrix:
     DirectX::XMFLOAT4X4A mat_proj{};
     // compute the "actual" field of view. GW uses a different value than reported by `camera->field_of_view`.
@@ -184,7 +184,7 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device, const GW::Came
         )
     );
     // clang-format on
-    if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, (const float*)&mat_proj, 4) != D3D_OK) {
+    if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, reinterpret_cast<const float*>(&mat_proj), 4) != D3D_OK) {
         GWCA_ERR("GameWorldRenderer: unable to SetVertexShaderConstantF(projection), aborting render.");
         return false;
     }
