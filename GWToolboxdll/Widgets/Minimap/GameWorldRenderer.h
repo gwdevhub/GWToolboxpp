@@ -18,7 +18,7 @@ private:
     std::vector<GW::Vec2f> points;
     std::vector<D3DVertex> vertices;
     bool filled = false;
-    std::size_t cur_altitude = 0;
+    size_t cur_altitude = 0;
     bool all_altitudes_queried = true;
 };
 

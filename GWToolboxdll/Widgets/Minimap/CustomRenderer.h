@@ -71,7 +71,7 @@ class CustomRenderer : public VBuffer {
         GW::Constants::MapID map;
         bool visible = true;
         bool draw_on_terrain = false;
-        Shape shape;
+        Shape shape{};
         bool filled = false;
         char name[128]{};
         Color color{0xA0FFFFFF};

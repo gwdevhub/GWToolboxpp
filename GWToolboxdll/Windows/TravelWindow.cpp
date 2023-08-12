@@ -1647,7 +1647,7 @@ bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& out
     }
 
     // Remove "the " from front of entered string
-    const std::size_t found = compare.rfind("the ");
+    const size_t found = compare.rfind("the ");
     if (found == 0)
         compare.replace(found, 4, "");
 

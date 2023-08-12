@@ -3,7 +3,7 @@
 class EmbeddedResource {
 public:
     struct Parameters {
-        std::size_t size_bytes = 0;
+        size_t size_bytes = 0;
         void* ptr = nullptr;
     };
 

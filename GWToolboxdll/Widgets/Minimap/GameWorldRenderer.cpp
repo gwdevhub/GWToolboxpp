@@ -46,14 +46,13 @@ GenericPolyRenderable::GenericPolyRenderable(IDirect3DDevice9* device, const GW:
     : map_id(map_id)
     , col(col)
     , points(points)
-    , all_altitudes_queried(false)
     , filled(filled)
-    , cur_altitude(0)
+    , all_altitudes_queried(false)
 {
     if (filled && points.size() >= 3) {
         // (filling doesn't make sense if there is not at least enough points for one triangle)
         std::vector<GW::Vec2f> lerp_points;
-        for (std::size_t i = 0; i < points.size(); i++) {
+        for (size_t i = 0; i < points.size(); i++) {
             const GW::Vec2f& pt = points.at(i);
             if (!lerp_points.empty() && lerp_steps_per_line > 0) {
                 for (auto j = 1u; j < lerp_steps_per_line; j++) {
@@ -66,13 +65,13 @@ GenericPolyRenderable::GenericPolyRenderable(IDirect3DDevice9* device, const GW:
         }
         const auto poly = std::vector{{lerp_points}};
         const std::vector<unsigned> indices = mapbox::earcut<unsigned>(poly);
-        for (std::size_t i = 0; i < indices.size(); i++) {
+        for (size_t i = 0; i < indices.size(); i++) {
             const auto& pt = lerp_points.at(indices.at(i));
             vertices.push_back(D3DVertex{pt.x, pt.y, ALTITUDE_UNKNOWN, col});
         }
     }
     else {
-        for (std::size_t i = 0; i < points.size(); i++) {
+        for (size_t i = 0; i < points.size(); i++) {
             const GW::Vec2f& pt = points.at(i);
             if (!vertices.empty() && lerp_steps_per_line > 0) {
                 for (auto j = 1u; j < lerp_steps_per_line; j++) {
@@ -112,9 +111,9 @@ void GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         // to determine the number of Z planes in the current map.
         const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
         if (pathing_map != nullptr) {
-            const std::size_t pmap_size = pathing_map->size();
+            const size_t pmap_size = pathing_map->size();
             if (pmap_size > 0) {
-                for (std::size_t i = 0; i < vertices.size(); i++) {
+                for (size_t i = 0; i < vertices.size(); i++) {
                     // until we have a better solution, all Z planes will be queried per vertex
                     // to avoid a significant delay in the render thread, query one plane per frame
                     // until all have been queried. this might result in some renderables shifting
@@ -149,36 +148,36 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
     // set up directX standard view/proj matrices according to those used to render the game world
     // values here are largely according to GWCAs example code. my knowledge is admittedly lacking.
 
-    constexpr const unsigned int vertex_shader_view_matrix_offset = 0;
-    constexpr const unsigned int vertex_shader_proj_matrix_offset = 4;
+    constexpr auto vertex_shader_view_matrix_offset = 0u;
+    constexpr auto vertex_shader_proj_matrix_offset = 4u;
 
     const auto game_mat_view = GetTransform(GW::Render::Transform::TRANSFORM_MODEL_MATRIX);
     if (game_mat_view == nullptr) {
-        GWCA_ERR("GameWorldRenderer: GetTransform(view) == nullptr");
+        Log::Error("GameWorldRenderer: GetTransform(view) == nullptr");
         return false;
     }
     DirectX::XMMATRIX mat_view = DirectX::XMMatrixIdentity();
     memcpy(&mat_view, game_mat_view, 4 * 4 * 3); // copy the game's 4x3 view matrix
-    if (device->SetVertexShaderConstantF(vertex_shader_view_matrix_offset, (const float*)&mat_view, 4) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to SetVertexShaderConstantF(view), aborting render.");
+    if (device->SetVertexShaderConstantF(vertex_shader_view_matrix_offset, reinterpret_cast<const float*>(&mat_view), 4) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to SetVertexShaderConstantF(view), aborting render.");
         return false;
     }
 
     const auto game_mat_proj = GetTransform(GW::Render::Transform::TRANSFORM_PROJECTION_MATRIX);
     if (game_mat_proj == nullptr) {
-        GWCA_ERR("GameWorldRenderer: GetTransform(projection) == nullptr");
+        Log::Error("GameWorldRenderer: GetTransform(projection) == nullptr");
         return false;
     }
     // clang-format off
-    DirectX::XMFLOAT4X4A mat_proj(
+    const DirectX::XMFLOAT4X4A mat_proj(
         game_mat_proj->_11 / game_mat_proj->_33, 0.0f, 0.0f, 0.0f,
         0.0f, game_mat_proj->_22 / game_mat_proj->_33, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0001f, -10.001f,
         0.0f, 0.0f, 1.0f, 0.0f
     );
     // clang-format on
-    if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, (const float*)&mat_proj, 4) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to SetVertexShaderConstantF(projection), aborting render.");
+    if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, reinterpret_cast<const float*>(&mat_proj), 4) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to SetVertexShaderConstantF(projection), aborting render.");
         return false;
     }
     return true;
@@ -220,15 +219,15 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
     device->SetRenderState(D3DRS_STENCILENABLE, false);
 
     if (vshader == nullptr || device->SetVertexShader(vshader) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to SetVertexShader, aborting render.");
+        Log::Error("GameWorldRenderer: unable to SetVertexShader, aborting render.");
         return;
     }
     if (pshader == nullptr || device->SetPixelShader(pshader) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to SetPixelShader, aborting render.");
+        Log::Error("GameWorldRenderer: unable to SetPixelShader, aborting render.");
         return;
     }
     if (device->SetVertexDeclaration(vertex_declaration) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to SetVertexShader, aborting render.");
+        Log::Error("GameWorldRenderer: unable to SetVertexShader declaration, aborting render.");
         return;
     }
     if (!SetD3DTransform(device)) {
@@ -241,19 +240,19 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         // set Pixel Shader constants. they are always expressed as Float4 here:
         // first is the player's position
 
-        constexpr const unsigned int pixel_shader_cur_pos_offset = 0;
-        constexpr const unsigned int pixel_shader_max_dist_offset = 1;
+        constexpr auto pixel_shader_cur_pos_offset = 0u;
+        constexpr auto pixel_shader_max_dist_offset = 1u;
 
-        float cur_pos_constant[4] = {cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z, 0.0f};
+        const float cur_pos_constant[4] = {cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z, 0.0f};
         if (device->SetPixelShaderConstantF(pixel_shader_cur_pos_offset, cur_pos_constant, 1) != D3D_OK) {
-            GWCA_ERR("GameWorldRenderer: unable to SetPixelShaderConstantF#0, aborting render.");
+            Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#0, aborting render.");
             return;
         }
 
         // second is the render max distance
-        float max_dist_constant[4] = {render_max_distance, 0.0f, 0.0f, 0.0f};
+        const float max_dist_constant[4] = {render_max_distance, 0.0f, 0.0f, 0.0f};
         if (device->SetPixelShaderConstantF(pixel_shader_max_dist_offset, max_dist_constant, 1) != D3D_OK) {
-            GWCA_ERR("GameWorldRenderer: unable to SetPixelShaderConstantF#1, aborting render.");
+            Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#1, aborting render.");
             return;
         }
 
@@ -275,18 +274,18 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
 
 bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
 {
-    D3DVERTEXELEMENT9 decl[] = {{0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END()};
+    constexpr D3DVERTEXELEMENT9 decl[] = {{0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END()};
     if (device->CreateVertexDeclaration(decl, &vertex_declaration) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to CreateVertexDeclaration");
+        Log::Error("GameWorldRenderer: unable to CreateVertexDeclaration");
         return false;
     }
 
-    if (device->CreateVertexShader((const DWORD*)&g_vs20_main, &vshader) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to CreateVertexShader");
+    if (device->CreateVertexShader(reinterpret_cast<const DWORD*>(&g_vs20_main), &vshader) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to CreateVertexShader");
         return false;
     }
-    if (device->CreatePixelShader((const DWORD*)&g_ps20_main, &pshader) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to CreateVertexShader");
+    if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&g_ps20_main), &pshader) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to CreateVertexShader");
         return false;
     }
     need_configure_pipeline = false;
@@ -353,7 +352,7 @@ void GameWorldRenderer::SyncLines(IDirect3DDevice9* device)
         if (!line.draw_on_terrain || !line.visible) {
             continue;
         }
-        std::vector<GW::Vec2f> points = {line.p1, line.p2};
+        std::vector points = {line.p1, line.p2};
         renderables.push_back(std::make_unique<GenericPolyRenderable>(device, line.map, points, line.color, false));
     }
 }

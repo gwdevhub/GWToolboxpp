@@ -18,7 +18,6 @@
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
-#include <GWToolbox.h>
 
 #include <Modules/Resources.h>
 #include <Windows/TradeWindow.h>
@@ -26,17 +25,17 @@
 // Every connection cost 30 seconds.
 // You have 2 tries.
 // After that, you can try every 30 seconds.
-static constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
-static constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
+constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
+constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
 static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 using easywsclient::WebSocket;
 using nlohmann::json;
 using json_vec = std::vector<json>;
 
-static constexpr char ws_host_kmd[] = "wss://kamadan.gwtoolbox.com";
-static constexpr char https_host_kmd[] = "https://kamadan.gwtoolbox.com";
-static constexpr char ws_host_asc[] = "wss://ascalon.gwtoolbox.com";
-static constexpr char https_host_asc[] = "https://ascalon.gwtoolbox.com/";
+constexpr char ws_host_kmd[] = "wss://kamadan.gwtoolbox.com";
+constexpr char https_host_kmd[] = "https://kamadan.gwtoolbox.com";
+constexpr char ws_host_asc[] = "wss://ascalon.gwtoolbox.com";
+constexpr char https_host_asc[] = "https://ascalon.gwtoolbox.com/";
 
 static wchar_t* GetMessageCore()
 {
