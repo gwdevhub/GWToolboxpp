@@ -97,9 +97,9 @@ public:
     void LoadMarkers();
     void SaveMarkers() const;
 
-    [[nodiscard]] const std::vector<CustomLine>& get_lines() const { return lines; }
-    [[nodiscard]] const std::vector<CustomPolygon>& get_polys() const { return polygons; }
-    [[nodiscard]] const std::vector<CustomMarker>& get_markers() const { return markers; }
+    [[nodiscard]] const std::vector<CustomLine>& GetLines() const { return lines; }
+    [[nodiscard]] const std::vector<CustomPolygon>& GetPolys() const { return polygons; }
+    [[nodiscard]] const std::vector<CustomMarker>& GetMarkers() const { return markers; }
 
 private:
     void Initialize(IDirect3DDevice9* device) override;

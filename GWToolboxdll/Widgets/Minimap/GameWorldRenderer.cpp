@@ -346,7 +346,7 @@ void GameWorldRenderer::SyncAllMarkers(IDirect3DDevice9* device)
 void GameWorldRenderer::SyncLines(IDirect3DDevice9* device)
 {
     // sync lines with CustomRenderer
-    const auto& lines = Minimap::Instance().custom_renderer.get_lines();
+    const auto& lines = Minimap::Instance().custom_renderer.GetLines();
     // for each line, add as a renderable if appropriate
     for (const auto& line : lines) {
         if (!line.draw_on_terrain || !line.visible) {
@@ -360,7 +360,7 @@ void GameWorldRenderer::SyncLines(IDirect3DDevice9* device)
 void GameWorldRenderer::SyncPolys(IDirect3DDevice9* device)
 {
     // sync polygons with CustomRenderer
-    const auto& polys = Minimap::Instance().custom_renderer.get_polys();
+    const auto& polys = Minimap::Instance().custom_renderer.GetPolys();
     // for each poly, add as a renderable if appropriate
     for (const auto& poly : polys) {
         if (!poly.draw_on_terrain || !poly.visible) {
@@ -376,7 +376,7 @@ void GameWorldRenderer::SyncPolys(IDirect3DDevice9* device)
 void GameWorldRenderer::SyncMarkers(IDirect3DDevice9* device)
 {
     // sync markers with CustomRenderer
-    const auto& markers = Minimap::Instance().custom_renderer.get_markers();
+    const auto& markers = Minimap::Instance().custom_renderer.GetMarkers();
     // for each marker, add as a renderable if appropriate
     for (const auto& marker : markers) {
         if (!marker.draw_on_terrain || !marker.visible) {
