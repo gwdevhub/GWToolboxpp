@@ -69,7 +69,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     )
 
 
-find_program(FXC fxc DOC "hlsl compiler")
+find_program(FXC fxc DOC "hlsl compiler" PATHS "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x86")
 if(NOT FXC)
     message(SEND_ERROR "unable to find Fxc.exe for HLSL compilation")
 endif(NOT FXC)
