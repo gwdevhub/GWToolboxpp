@@ -2,7 +2,6 @@
 
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/GameContainers/GamePos.h>
-#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Pathing.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -143,43 +142,52 @@ void GenericPolyRenderable::Draw(IDirect3DDevice9* device)
     filled ? device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3) : device->DrawPrimitive(D3DPT_LINESTRIP, 0, vertices.size() - 1);
 }
 
-bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
+bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device, const GW::Camera* cam)
 {
     // set up directX standard view/proj matrices according to those used to render the game world
-    // values here are largely according to GWCAs example code. my knowledge is admittedly lacking.
+    if (cam == nullptr || device == nullptr) {
+        return false;
+    }
 
     constexpr auto vertex_shader_view_matrix_offset = 0u;
     constexpr auto vertex_shader_proj_matrix_offset = 4u;
 
-    const auto game_mat_view = GetTransform(GW::Render::Transform::TRANSFORM_MODEL_MATRIX);
-    if (game_mat_view == nullptr) {
-        Log::Error("GameWorldRenderer: GetTransform(view) == nullptr");
+    // compute view matrix:
+
+    DirectX::XMFLOAT4X4A mat_view{};
+    DirectX::XMFLOAT3 eye_pos = {cam->position.x, cam->position.y, cam->position.z};
+    DirectX::XMFLOAT3 player_pos = {cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z};
+    static constexpr const DirectX::XMFLOAT3 up = {0.0f, 0.0f, -1.0f};
+    // clang-format off
+    DirectX::XMStoreFloat4x4A(&mat_view,
+        DirectX::XMMatrixTranspose(
+            DirectX::XMMatrixLookAtLH(XMLoadFloat3(&eye_pos), XMLoadFloat3(&player_pos), XMLoadFloat3(&up))
+        )
+    );
+    // clang-format on
+    if (device->SetVertexShaderConstantF(vertex_shader_view_matrix_offset, (const float*)&mat_view, 4) != D3D_OK) {
+        GWCA_ERR("GameWorldRenderer: unable to SetVertexShaderConstantF(view), aborting render.");
         return false;
     }
-    DirectX::XMMATRIX mat_view = DirectX::XMMatrixIdentity();
-    memcpy(&mat_view, game_mat_view, 4 * 4 * 3); // copy the game's 4x3 view matrix
-    if (device->SetVertexShaderConstantF(vertex_shader_view_matrix_offset, reinterpret_cast<const float*>(&mat_view), 4) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to SetVertexShaderConstantF(view), aborting render.");
+    // compute projection matrix:
+    DirectX::XMFLOAT4X4A mat_proj{};
+    // compute the "actual" field of view. GW uses a different value than reported by `camera->field_of_view`.
+    float apparent_fov = cam->field_of_view;
+    static constexpr float dividend = 1.0f + (2.0f / 3.0f); // this is constant
+    float actual_fov = static_cast<float>(atan2(1.0f, dividend / tan(apparent_fov * 0.5f)) * 2.0f);
+    float aspect_ratio = static_cast<float>(GW::Render::GetViewportWidth()) / static_cast<float>(GW::Render::GetViewportHeight());
+
+    // clang-format off
+    DirectX::XMStoreFloat4x4A(&mat_proj,
+        DirectX::XMMatrixTranspose(
+            DirectX::XMMatrixPerspectiveFovLH(actual_fov, aspect_ratio, 1.0f, 10000.0f)
+        )
+    );
+    if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, (const float*)&mat_proj, 4) != D3D_OK) {
+        GWCA_ERR("GameWorldRenderer: unable to SetVertexShaderConstantF(projection), aborting render.");
         return false;
     }
 
-    const auto game_mat_proj = GetTransform(GW::Render::Transform::TRANSFORM_PROJECTION_MATRIX);
-    if (game_mat_proj == nullptr) {
-        Log::Error("GameWorldRenderer: GetTransform(projection) == nullptr");
-        return false;
-    }
-    // clang-format off
-    const DirectX::XMFLOAT4X4A mat_proj(
-        game_mat_proj->_11 / game_mat_proj->_33, 0.0f, 0.0f, 0.0f,
-        0.0f, game_mat_proj->_22 / game_mat_proj->_33, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0001f, -10.001f,
-        0.0f, 0.0f, 1.0f, 0.0f
-    );
-    // clang-format on
-    if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, reinterpret_cast<const float*>(&mat_proj), 4) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to SetVertexShaderConstantF(projection), aborting render.");
-        return false;
-    }
     return true;
 }
 
@@ -230,12 +238,12 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         Log::Error("GameWorldRenderer: unable to SetVertexShader declaration, aborting render.");
         return;
     }
-    if (!SetD3DTransform(device)) {
-        return;
-    }
     const GW::Camera* cam = GW::CameraMgr::GetCamera();
     if (cam != nullptr) {
         // unsure if can ever be nullptr here, but failure mode is at least clean.
+        if (!SetD3DTransform(device, cam)) {
+            return;
+        }
 
         // set Pixel Shader constants. they are always expressed as Float4 here:
         // first is the player's position
