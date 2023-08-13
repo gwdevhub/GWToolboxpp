@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ToolboxModule.h>
+#include <GWCA/Packets/StoC.h>
 
 class PartyWindowModule : public ToolboxModule {
     PartyWindowModule() = default;
@@ -21,9 +22,12 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
+    const std::map<std::wstring, std::wstring>& GetAliasedPlayerNames();
 
 private:
     static void LoadDefaults();
+    void SetAliasedPlayerName(GW::Packet::StoC::PlayerJoinInstance* pak);
+    std::map<std::wstring, std::wstring> aliased_player_names{};
 
 private:
 };

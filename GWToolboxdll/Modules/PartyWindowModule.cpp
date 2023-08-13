@@ -12,7 +12,6 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -440,7 +439,9 @@ namespace {
         }
         return &map_name;
     }
+}
 
+<<<<<<< HEAD
     void SetAliasedPlayerName(GW::Packet::StoC::PlayerJoinInstance* pak)
     {
         if (!rename_players_according_to_friends_list_alias) {
@@ -455,6 +456,22 @@ namespace {
             if (!alias.empty()) {
                 wcscpy(pak->player_name, alias.c_str());
             }
+=======
+void PartyWindowModule::SetAliasedPlayerName(GW::Packet::StoC::PlayerJoinInstance* pak)
+{
+    if (!rename_players_according_to_friends_list_alias) {
+        return;
+    }
+    if (pak == nullptr) {
+        return;
+    }
+    const auto friend_ = FriendListWindow::Instance().GetFriend(pak->player_name);
+    if (friend_ != nullptr) {
+        const std::wstring& alias = friend_->getAliasW();
+        if (!alias.empty()) {
+            aliased_player_names[alias] = pak->player_name;
+            wcscpy(pak->player_name, alias.c_str());
+>>>>>>> 0f649515 (works with reinvite command)
         }
     }
 }
@@ -523,6 +540,7 @@ void PartyWindowModule::Initialize()
             pending_remove = {};
             pending_add.clear();
             is_explorable = pak->is_explorable != 0;
+            aliased_player_names.clear();
         });
     // Player numbers in party window
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(
@@ -791,4 +809,8 @@ void PartyWindowModule::LoadSettings(ToolboxIni* ini)
         AddSpecialNPC({alias.c_str(), model_id, static_cast<GW::Constants::MapID>(map_id)});
     }
     CheckMap();
+}
+
+const std::map<std::wstring, std::wstring>& PartyWindowModule::GetAliasedPlayerNames() {
+    return aliased_player_names;
 }
