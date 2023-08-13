@@ -30,8 +30,9 @@ void LatencyWidget::OnServerPing(GW::HookStatus*, void* packet)
 {
     const auto packet_as_uint_array = static_cast<uint32_t*>(packet);
     const uint32_t ping = packet_as_uint_array[1];
-    if (ping > 4999)
+    if (ping > 4999) {
         return; // GW checks this too.
+    }
     if (ping_history[ping_index]) {
         ping_index++;
         if (ping_index == ping_history_len) {
@@ -54,13 +55,14 @@ uint32_t LatencyWidget::GetAveragePing()
     return count ? sum / count : 0;
 }
 
-void LatencyWidget::Draw(IDirect3DDevice9* pDevice)
+void LatencyWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+    }
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         return;
+    }
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(180.0f, 60.0f), ImGuiCond_FirstUseEver);
@@ -124,14 +126,17 @@ void LatencyWidget::DrawSettingsInternal()
     ImGui::Checkbox("Show average ping", &show_avg_ping);
     ImGui::Text("Font Size");
     ImGui::Indent();
-    if (ImGui::RadioButton("Small", font_size == static_cast<int>(GuiUtils::FontSize::widget_label)))
+    if (ImGui::RadioButton("Small", font_size == static_cast<int>(GuiUtils::FontSize::widget_label))) {
         font_size = static_cast<int>(GuiUtils::FontSize::widget_label);
+    }
     ImGui::SameLine();
-    if (ImGui::RadioButton("Medium", font_size == static_cast<int>(GuiUtils::FontSize::widget_small)))
+    if (ImGui::RadioButton("Medium", font_size == static_cast<int>(GuiUtils::FontSize::widget_small))) {
         font_size = static_cast<int>(GuiUtils::FontSize::widget_small);
+    }
     ImGui::SameLine();
-    if (ImGui::RadioButton("Large", font_size == static_cast<int>(GuiUtils::FontSize::widget_large)))
+    if (ImGui::RadioButton("Large", font_size == static_cast<int>(GuiUtils::FontSize::widget_large))) {
         font_size = static_cast<int>(GuiUtils::FontSize::widget_large);
+    }
     ImGui::Unindent();
 }
 

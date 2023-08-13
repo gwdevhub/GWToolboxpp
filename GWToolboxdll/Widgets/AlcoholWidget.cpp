@@ -30,10 +30,12 @@ void AlcoholWidget::Initialize()
 uint32_t AlcoholWidget::GetAlcoholTitlePoints()
 {
     const GW::GameContext* gameContext = GW::GetGameContext();
-    if (!gameContext || !gameContext->world || !gameContext->world->titles.valid())
+    if (!gameContext || !gameContext->world || !gameContext->world->titles.valid()) {
         return 0; // Sanity checks; context not ready.
-    if (gameContext->world->titles.size() < 8)
+    }
+    if (gameContext->world->titles.size() < 8) {
         return 0; // No alcohol title
+    }
     return gameContext->world->titles[7].current_points;
 }
 
@@ -45,9 +47,8 @@ uint32_t AlcoholWidget::GetAlcoholTitlePointsGained()
     return points_gained <= 0 ? 0 : points_gained;
 }
 
-void AlcoholWidget::Update(const float delta)
+void AlcoholWidget::Update(const float)
 {
-    UNREFERENCED_PARAMETER(delta);
     if (map_id != GW::Map::GetMapID()) {
         last_alcohol = 0;
         alcohol_time = alcohol_level = prev_packet_tint_6_level = 0;
@@ -66,8 +67,9 @@ uint32_t AlcoholWidget::GetAlcoholLevel()
 void AlcoholWidget::AlcUpdate(GW::HookStatus*, const GW::Packet::StoC::PostProcess* packet)
 {
     AlcoholWidget& instance = Instance();
-    if (packet->tint == 8 && packet->level == 5)
+    if (packet->tint == 8 && packet->level == 5) {
         return; // Pahnai salad
+    }
     const uint32_t pts_gained = instance.GetAlcoholTitlePointsGained();
 
     if (packet->tint == 6) {
@@ -101,28 +103,32 @@ void AlcoholWidget::AlcUpdate(GW::HookStatus*, const GW::Packet::StoC::PostProce
     instance.alcohol_level = packet->level;
 }
 
-void AlcoholWidget::Draw(IDirect3DDevice9* pDevice)
+void AlcoholWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
 
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         return;
+    }
 
-    if (only_show_when_drunk && alcohol_level == 0)
+    if (only_show_when_drunk && alcohol_level == 0) {
         return;
+    }
 
     long t = 0;
     if (alcohol_level != 0) {
         t = static_cast<long>(static_cast<int>(last_alcohol) + static_cast<int>(alcohol_time)) - static_cast<long>(time(nullptr));
         // NB: Sometimes the game won't send through the signal to remove post processing.
-        if (t < 0)
+        if (t < 0) {
             alcohol_level = 0;
+        }
     }
 
-    if (only_show_when_drunk && t < 0)
+    if (only_show_when_drunk && t < 0) {
         return;
+    }
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiCond_FirstUseEver);

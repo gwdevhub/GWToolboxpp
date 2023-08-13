@@ -25,21 +25,26 @@ namespace {
         size_t message_len = 0;
         const size_t original_len = wcslen(message);
         const bool is_emote = wmemcmp(message, L"\x1" L"ACTION ", 7) == 0;
-        if (is_emote)
+        if (is_emote) {
             message_ws[message_len++] = '*';
+        }
         for (size_t i = (is_emote ? 8 : 0); i < original_len; i++) {
             // Break on the end of the message
-            if (message[i] == '\x1' || !message[i])
+            if (message[i] == '\x1' || !message[i]) {
                 break;
+            }
             // Double escape backsashes
-            if (message[i] == '\\')
+            if (message[i] == '\\') {
                 message_ws[message_len++] = message[i];
-            if (message_len >= 254)
+            }
+            if (message_len >= 254) {
                 break;
+            }
             message_ws[message_len++] = message[i];
         }
-        if (is_emote)
+        if (is_emote) {
             message_ws[message_len++] = '*';
+        }
         message_ws[message_len] = 0;
         if (!message_len) {
             delete[] message_ws;
@@ -52,12 +57,12 @@ namespace {
         });
     }
 
-    int OnJoin(const char* params, irc_reply_data* hostd, void* conn)
+    int OnJoin(const char* params, irc_reply_data* hostd, void*)
     {
-        UNREFERENCED_PARAMETER(conn);
         const TwitchModule* module = &TwitchModule::Instance();
-        if (!params[0] || !module->show_messages)
+        if (!params[0] || !module->show_messages) {
             return 0; // Empty msg
+        }
         wchar_t buf[600];
         if (strcmp(hostd->nick, module->irc_username.c_str()) == 0) {
             if (strcmp(&params[1], module->irc_username.c_str()) == 0) {
@@ -68,19 +73,20 @@ namespace {
             WriteChat(buf);
             return 0;
         }
-        if (!module->notify_on_user_join)
+        if (!module->notify_on_user_join) {
             return 0;
+        }
         swprintf(buf, 599, L"%s joined your channel.", GuiUtils::StringToWString(hostd->nick).c_str());
         WriteChat(buf);
         return 0;
     }
 
-    int OnLeave(const char* params, irc_reply_data* hostd, void* conn)
+    int OnLeave(const char* params, irc_reply_data* hostd, void*)
     {
-        UNREFERENCED_PARAMETER(conn);
         const TwitchModule* module = &TwitchModule::Instance();
-        if (!params[0] || !module->show_messages || !module->notify_on_user_leave)
+        if (!params[0] || !module->show_messages || !module->notify_on_user_leave) {
             return 0; // Empty msg
+        }
 
         wchar_t buf[600];
         swprintf(buf, 599, L"%s left your channel.", GuiUtils::StringToWString(hostd->nick).c_str());
@@ -88,17 +94,17 @@ namespace {
         return 0;
     }
 
-    int OnConnected(const char* params, irc_reply_data* hostd, void* conn)
+    int OnConnected(const char* params, irc_reply_data*, void* conn)
     {
-        UNREFERENCED_PARAMETER(hostd);
         TwitchModule* module = &TwitchModule::Instance();
         const auto irc_conn = static_cast<IRC*>(conn);
         // Set the username to be the connected name.
         module->irc_username = params;
         module->irc_username.erase(module->irc_username.find_first_of(' '));
         // Channel == username. This could be changed to connect to other Twitch channels/IRC channels.
-        if (module->irc_channel[0] == 0)
+        if (module->irc_channel[0] == 0) {
             module->irc_channel = module->irc_username;
+        }
         char buf[128];
         Log::Log("%s: Connected %s", module->irc_alias.c_str(), params);
         sprintf(buf, "#%s", module->irc_channel.c_str());
@@ -106,21 +112,20 @@ namespace {
         return 0;
     }
 
-    int OnMessage(const char* params, irc_reply_data* hostd, void* conn)
+    int OnMessage(const char* params, irc_reply_data* hostd, void*)
     {
-        UNREFERENCED_PARAMETER(conn);
         const TwitchModule* module = &TwitchModule::Instance();
-        if (!params[0] || !module->show_messages)
+        if (!params[0] || !module->show_messages) {
             return 0; // Empty msg
+        }
         const std::wstring message_ws = GuiUtils::StringToWString(&params[1]);
         WriteChat(message_ws.c_str(), hostd->nick);
         Log::Log("Message from %s: %s", hostd->nick, &params[1]);
         return 0;
     }
 
-    int OnNotice(const char* params, irc_reply_data* hostd, void* conn)
+    int OnNotice(const char* params, irc_reply_data*, void* conn)
     {
-        UNREFERENCED_PARAMETER(hostd);
         Log::Log("NOTICE: %s\n", params);
         if (strcmp(params, "Login authentication failed") == 0) {
             Log::Error("Twitch Failed to connect - Invalid Oauth token");
@@ -161,15 +166,16 @@ void TwitchModule::Initialize()
 
 void TwitchModule::AddHooks()
 {
-    if (hooked)
+    if (hooked) {
         return;
+    }
     hooked = true;
     // When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
-    GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, [&](const GW::HookStatus* status, wchar_t* name) -> bool {
-        UNREFERENCED_PARAMETER(status);
+    GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, [&](const GW::HookStatus*, wchar_t* name) -> bool {
         wchar_t buf[128];
-        if (!name)
+        if (!name) {
             return false;
+        }
         const std::wstring walias = GuiUtils::StringToWString(Instance().irc_alias);
         swprintf(buf, 128, L" @ %s", walias.c_str());
         if ((std::wstring(name)).find(buf) != std::wstring::npos) {
@@ -179,17 +185,20 @@ void TwitchModule::AddHooks()
     });
     // When sending a whisper to "<irc_channel>", redirect it to send message via IRC
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, [&](GW::HookStatus* status, const GW::Chat::Channel chan, const wchar_t* msg) -> bool {
-        if (chan != GW::Chat::Channel::CHANNEL_WHISPER || !connected)
+        if (chan != GW::Chat::Channel::CHANNEL_WHISPER || !connected) {
             return false;
+        }
         wchar_t msgcpy[255];
         wcscpy(msgcpy, msg);
         std::string message = GuiUtils::WStringToString(msgcpy);
         const size_t sender_idx = message.find(',');
-        if (sender_idx == std::string::npos)
+        if (sender_idx == std::string::npos) {
             return false; // Invalid sender
+        }
         const std::string to = message.substr(0, sender_idx);
-        if (to.compare(irc_alias) != 0)
+        if (to.compare(irc_alias) != 0) {
             return false;
+        }
         std::string content = message.substr(sender_idx + 1);
         Log::Log("Sending to IRC: %s", content.c_str());
         if (conn.raw("PRIVMSG #%s :%s\r\n", irc_channel.c_str(), content.c_str())) {
@@ -209,8 +218,9 @@ void TwitchModule::AddHooks()
 void TwitchModule::Disconnect()
 {
     connected = conn.is_connected();
-    if (!connected)
+    if (!connected) {
         return;
+    }
     conn.disconnect();
     connected = conn.is_connected();
 }
@@ -223,18 +233,21 @@ void TwitchModule::Terminate()
 
 bool TwitchModule::Connect()
 {
-    if (!twitch_enabled)
+    if (!twitch_enabled) {
         return true;
+    }
     connected = conn.is_connected();
-    if (connected)
+    if (connected) {
         return true;
+    }
     printf("Connecting to IRC\n");
     if (irc_server.empty()) {
         printf("Invalid server name!\n");
         return false;
     }
-    if (strcmp(irc_password.c_str(), "oauth:<your_token_here>") == 0)
+    if (strcmp(irc_password.c_str(), "oauth:<your_token_here>") == 0) {
         return false;
+    }
     /*if(irc_username.empty()) {
         printf("Invalid username!\n");
         return false;
@@ -265,9 +278,8 @@ bool TwitchModule::Connect()
     return connected = conn.is_connected();
 }
 
-void TwitchModule::Update(const float delta)
+void TwitchModule::Update(const float)
 {
-    UNREFERENCED_PARAMETER(delta);
     connected = conn.is_connected();
     if (pending_disconnect) {
         Disconnect();
@@ -277,16 +289,18 @@ void TwitchModule::Update(const float delta)
         Connect();
         pending_connect = pending_disconnect = false;
     }
-    if (connected)
+    if (connected) {
         conn.ping();
+    }
 }
 
 void TwitchModule::DrawSettingsInternal()
 {
     bool edited = false;
     ImGui::PushID("twitch_settings");
-    if (ImGui::Checkbox("Enable Twitch integration", &twitch_enabled))
+    if (ImGui::Checkbox("Enable Twitch integration", &twitch_enabled)) {
         Disconnect();
+    }
     ImGui::ShowHelp("Allows GWToolbox to send & receive messages with Twitch using the in-game chat window.");
     if (twitch_enabled) {
         ImGui::SameLine();
@@ -301,8 +315,9 @@ void TwitchModule::DrawSettingsInternal()
             edited |= true;
         }
         ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip(connected ? "Click to disconnect" : "Click to connect");
+        }
         ImGui::Indent();
 
         ImGui::Checkbox("Show messages in chat window. Color:", &show_messages);
@@ -332,10 +347,12 @@ void TwitchModule::DrawSettingsInternal()
         ImGui::Indent();
         const ImColor col(102, 187, 238, 255);
         ImGui::TextColored(col.Value, "Click Here to get a Twitch Oauth Token");
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Go to %s", "https://twitchapps.com/tmi/");
-        if (ImGui::IsItemClicked())
+        }
+        if (ImGui::IsItemClicked()) {
             ShellExecute(nullptr, "open", "https://twitchapps.com/tmi/", nullptr, nullptr, SW_SHOWNORMAL);
+        }
         ImGui::Unindent();
         ImGui::PushItemWidth(width);
         ImGui::InputText("Twitch Channel", irc_channel.data(), 56);

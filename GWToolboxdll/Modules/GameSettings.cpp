@@ -77,14 +77,17 @@ namespace {
 
     void SetWindowTitle(const bool enabled)
     {
-        if (!enabled)
+        if (!enabled) {
             return;
+        }
         const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
-        if (!hwnd)
+        if (!hwnd) {
             return;
+        }
         const std::wstring title = GetPlayerName();
-        if (!title.empty())
+        if (!title.empty()) {
             SetWindowTextW(hwnd, title.c_str());
+        }
     }
 
     void SaveChannelColor(ToolboxIni* ini, const char* section, const char* chanstr, const GW::Chat::Channel chan)
@@ -330,8 +333,9 @@ namespace {
     {
         auto find_skill = [](const GW::Constants::SkillID* skill_ids, const GW::Constants::SkillID skill_id) {
             for (auto i = 0; i < 8; i++) {
-                if (skill_ids[i] == skill_id)
+                if (skill_ids[i] == skill_id) {
                     return i;
+                }
             }
             return -1;
         };
@@ -343,8 +347,9 @@ namespace {
         for (const auto& [first_skill, second_skill] : duplicate_skills) {
             found_first = find_skill(skill_ids, first_skill);
             found_second = find_skill(skill_ids, second_skill);
-            if (found_first == -1 && found_second == -1)
+            if (found_first == -1 && found_second == -1) {
                 continue;
+            }
             unlocked_first = GW::SkillbarMgr::GetIsSkillLearnt(first_skill);
             unlocked_second = GW::SkillbarMgr::GetIsSkillLearnt(second_skill);
 
@@ -364,10 +369,12 @@ namespace {
         for (const auto& [luxon_skill, kurzick_skill] : factions_skills) {
             found_first = find_skill(skill_ids, luxon_skill);
             found_second = find_skill(skill_ids, kurzick_skill);
-            if (found_first == -1 && found_second == -1)
+            if (found_first == -1 && found_second == -1) {
                 continue;
-            if (found_first != -1 && found_second != -1)
+            }
+            if (found_first != -1 && found_second != -1) {
                 continue;
+            }
             unlocked_first = GW::SkillbarMgr::GetIsSkillLearnt(luxon_skill);
             unlocked_second = GW::SkillbarMgr::GetIsSkillLearnt(kurzick_skill);
 
@@ -428,8 +435,9 @@ namespace {
     void OnShowAgentFactionGain(const uint32_t agent_id, const uint32_t stat_type, const uint32_t amount_gained)
     {
         GW::Hook::EnterHook();
-        if (!block_faction_gain)
+        if (!block_faction_gain) {
             ShowAgentFactionGain_Ret(agent_id, stat_type, amount_gained);
+        }
         GW::Hook::LeaveHook();
     }
 
@@ -440,8 +448,9 @@ namespace {
     {
         GW::Hook::EnterHook();
         const bool blocked = (block_experience_gain || (block_zero_experience_gain && amount_gained == 0));
-        if (!blocked)
+        if (!blocked) {
             ShowAgentExperienceGain_Ret(agent_id, amount_gained);
+        }
         GW::Hook::LeaveHook();
     }
 
@@ -458,8 +467,9 @@ namespace {
         bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
         GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
-        if (block_description && description_out)
+        if (block_description && description_out) {
             *description_out = nullptr;
+        }
         GW::Hook::LeaveHook();
     }
 
@@ -475,8 +485,9 @@ namespace {
         GW::Hook::EnterHook();
         bool block_description = disable_skill_descriptions_in_outpost && IsOutpost() || disable_skill_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
-        if (block_description)
+        if (block_description) {
             encoded_string = L"\x101"; // Decodes to ""
+        }
         CreateEncodedTextLabel_Func(frame_id, encoded_string);
         GW::Hook::LeaveHook();
     }
@@ -502,8 +513,9 @@ namespace {
                 param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
 
                 // Left button clicked, on the exit button (ID 0x3)
-                if (!closing_gw)
+                if (!closing_gw) {
                     SendMessage(GW::MemoryMgr::GetGWWindowHandle(), WM_CLOSE, NULL, NULL);
+                }
                 closing_gw = true;
                 GW::Hook::LeaveHook();
                 return;
@@ -580,8 +592,9 @@ namespace {
     // Handle processing from CmdReinvite command
     void UpdateReinvite()
     {
-        if (pending_reinvite.stage == PendingReinvite::Stage::None)
+        if (pending_reinvite.stage == PendingReinvite::Stage::None) {
             return; // Nothing to do
+        }
         if (!IsOutpost()) {
             return pending_reinvite.reset();
         }
@@ -606,8 +619,9 @@ namespace {
         // Find leader and next valid player
         for (size_t i = 0; party->players.valid() && i < party->players.size(); i++) {
             auto& member = party->players[i];
-            if (!member.connected())
+            if (!member.connected()) {
                 continue;
+            }
             if (!first_player) {
                 first_player = GW::PlayerMgr::GetPlayerByID(member.login_number);
             }
@@ -659,8 +673,9 @@ namespace {
                 GW::PartyInfo* check = nullptr;
                 const auto hero_info = GetHeroPartyMember(pending_reinvite.identifier, &check);
                 if (hero_info) {
-                    if (check != party)
+                    if (check != party) {
                         return;
+                    }
                     if (hero_info->owner_player_id != me->login_number) {
                         Log::Error("The targetted hero doesn't belong to you");
                         return pending_reinvite.reset();
@@ -673,8 +688,9 @@ namespace {
                 // Henchman kick
                 const auto henchman_info = GetHenchmanPartyMember(pending_reinvite.identifier, &check);
                 if (henchman_info) {
-                    if (check != party)
+                    if (check != party) {
                         return;
+                    }
                     if (!is_leader) {
                         Log::Error("Only party leader can reinvite henchmen");
                         return pending_reinvite.reset();
@@ -693,8 +709,9 @@ namespace {
                     Log::Error("Failed to get hero info for %d", pending_reinvite.identifier);
                     return pending_reinvite.reset();
                 }
-                if (hero_info->agent_id && IsHeroInParty(hero_info->agent_id))
+                if (hero_info->agent_id && IsHeroInParty(hero_info->agent_id)) {
                     return;
+                }
                 GW::PartyMgr::AddHero(pending_reinvite.identifier);
                 return pending_reinvite.reset();
             }
@@ -705,8 +722,9 @@ namespace {
                     Log::Error("Failed to get player info for %d", pending_reinvite.identifier);
                     return pending_reinvite.reset();
                 }
-                if (IsPlayerInParty(pending_reinvite.identifier))
+                if (IsPlayerInParty(pending_reinvite.identifier)) {
                     return;
+                }
                 GW::PartyMgr::InvitePlayer(pending_reinvite.identifier);
                 return pending_reinvite.reset();
             }
@@ -716,8 +734,9 @@ namespace {
                     Log::Error("Failed to get henchman info for %d", pending_reinvite.identifier);
                     return pending_reinvite.reset();
                 }
-                if (IsHenchmanInParty(pending_reinvite.identifier))
+                if (IsHenchmanInParty(pending_reinvite.identifier)) {
                     return;
+                }
                 GW::PartyMgr::AddHenchman(pending_reinvite.identifier);
                 return pending_reinvite.reset();
             }
@@ -729,24 +748,28 @@ namespace {
     // Check and re-render item tooltips if modifier key held
     void UpdateItemTooltip()
     {
-        if (GetKeyState(modifier_key_item_descriptions) == modifier_key_item_descriptions_key_state)
+        if (GetKeyState(modifier_key_item_descriptions) == modifier_key_item_descriptions_key_state) {
             return;
+        }
         modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
         if (IsExplorable()) {
-            if (!disable_item_descriptions_in_explorable)
+            if (!disable_item_descriptions_in_explorable) {
                 return;
+            }
         }
         else if (IsOutpost()) {
-            if (!disable_item_descriptions_in_outpost)
+            if (!disable_item_descriptions_in_outpost) {
                 return;
+            }
         }
         else {
             return; // Loading
         }
         // Trigger re-render of item tooltip
         const auto hovered_item = GW::Items::GetHoveredItem();
-        if (!hovered_item)
+        if (!hovered_item) {
             return;
+        }
         uint32_t items_triggered[2]{};
         const auto inv = GW::Items::GetInventory();
         if (hovered_item == inv->weapon_set0 || hovered_item == inv->offhand_set0) {
@@ -770,34 +793,40 @@ namespace {
             items_triggered[1] = 0;
         }
         GW::GameThread::Enqueue([items = items_triggered]() {
-            if (items[0])
+            if (items[0]) {
                 SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[0]);
-            if (items[1])
+            }
+            if (items[1]) {
                 SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[1]);
+            }
         });
     }
 
     // Check and re-render item tooltips if modifier key held
     void UpdateSkillTooltip()
     {
-        if (GetKeyState(modifier_key_skill_descriptions) == modifier_key_skill_descriptions_key_state)
+        if (GetKeyState(modifier_key_skill_descriptions) == modifier_key_skill_descriptions_key_state) {
             return;
+        }
         modifier_key_skill_descriptions_key_state = GetKeyState(modifier_key_skill_descriptions);
         if (IsExplorable()) {
-            if (!disable_skill_descriptions_in_explorable)
+            if (!disable_skill_descriptions_in_explorable) {
                 return;
+            }
         }
         else if (IsOutpost()) {
-            if (!disable_skill_descriptions_in_outpost)
+            if (!disable_skill_descriptions_in_outpost) {
                 return;
+            }
         }
         else {
             return; // Loading
         }
         // Trigger re-render of the tooltip by triggering a fake change of concise skill descriptions ui message
         auto skill = GW::SkillbarMgr::GetHoveredSkill();
-        if (!skill)
+        if (!skill) {
             return;
+        }
         if (GW::SkillbarMgr::GetHoveredSkill()) {
             GW::GameThread::Enqueue([skill]() {
                 SendUIMessage(GW::UI::UIMessage::kTitleProgressUpdated, (void*)skill->title);
@@ -838,26 +867,31 @@ namespace {
     // Logic for targetting nearest item; Don't target chest as nearest item, Target green items from chest last
     void OnChangeTarget(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*)
     {
-        if (!targeting_nearest_item)
+        if (!targeting_nearest_item) {
             return;
+        }
         const auto msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
         auto chosen_target = GW::Agents::GetAgentByID(msg->manual_target_id);
-        if (!chosen_target)
+        if (!chosen_target) {
             return;
+        }
         uint32_t override_manual_agent_id = 0;
         const GW::Item* target_item = nullptr;
         const auto agents = GW::Agents::GetAgentArray();
         const auto me = agents ? GW::Agents::GetPlayer() : nullptr;
-        if (!me)
+        if (!me) {
             return;
+        }
         // If the item targeted is a green that belongs to me, and its next to the chest, try to find another item instead.
         if (chosen_target->GetIsItemType() && static_cast<GW::AgentItem*>(chosen_target)->owner == me->agent_id) {
             target_item = GW::Items::GetItemById(static_cast<GW::AgentItem*>(chosen_target)->item_id);
-            if (!(target_item && (target_item->interaction & 0x10) == 0))
+            if (!(target_item && (target_item->interaction & 0x10) == 0)) {
                 return; // Failed to get target item, or is not green.
+            }
             for (auto* agent : *agents) {
-                if (!(agent && agent->GetIsGadgetType()))
+                if (!(agent && agent->GetIsGadgetType())) {
                     continue;
+                }
                 if (GetDistance(agent->pos, chosen_target->pos) <= GW::Constants::Range::Nearby) {
                     // Choose the chest as the target instead of this green item, and drop through to the next loop
                     chosen_target = agent;
@@ -871,19 +905,24 @@ namespace {
         if (chosen_target->GetIsGadgetType()) {
             float closest_item_dist = GW::Constants::Range::Compass;
             for (auto* agent : *agents) {
-                if (!(agent && agent->GetIsItemType()))
+                if (!(agent && agent->GetIsItemType())) {
                     continue;
+                }
                 const auto agent_item = agent->GetAsAgentItem();
-                if (agent_item->owner != me->agent_id)
+                if (agent_item->owner != me->agent_id) {
                     continue;
+                }
                 target_item = GW::Items::GetItemById(agent_item->item_id);
-                if ((target_item->interaction & 0x10) != 0)
+                if ((target_item->interaction & 0x10) != 0) {
                     continue; // Don't target green items.
-                if (GetDistance(agent->pos, chosen_target->pos) > GW::Constants::Range::Nearby)
+                }
+                if (GetDistance(agent->pos, chosen_target->pos) > GW::Constants::Range::Nearby) {
                     continue;
+                }
                 const float dist = GetDistance(me->pos, agent->pos);
-                if (dist > closest_item_dist)
+                if (dist > closest_item_dist) {
                     continue;
+                }
                 override_manual_agent_id = agent->agent_id;
                 closest_item_dist = dist;
             }
@@ -908,14 +947,17 @@ namespace {
     void FriendStatusCallback(
         GW::HookStatus*, const GW::Friend* old_state, const GW::Friend* new_state)
     {
-        if (!(new_state && old_state))
+        if (!(new_state && old_state)) {
             return; // Friend added, or deleted
-        if (old_state->status == GW::FriendStatus::Unknown)
+        }
+        if (old_state->status == GW::FriendStatus::Unknown) {
             return; // First info about friend
+        }
         const bool was_online = IsOnline(old_state->status);
         const bool is_online = IsOnline(new_state->status);
-        if (was_online == is_online)
+        if (was_online == is_online) {
             return;
+        }
         if (is_online && notify_when_friends_online) {
             WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) has just logged in.", new_state->charname, new_state->alias).c_str());
         }
@@ -993,20 +1035,24 @@ namespace {
     {
         switch (message_id) {
             case GW::UI::UIMessage::kSendSetActiveQuest:
-                if (status->blocked)
+                if (status->blocked) {
                     break;
+                }
                 player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
                 break;
             case GW::UI::UIMessage::kQuestAdded:
-                if (status->blocked)
+                if (status->blocked) {
                     break;
-                if (GW::QuestMgr::GetActiveQuestId() == player_requested_active_quest_id)
+                }
+                if (GW::QuestMgr::GetActiveQuestId() == player_requested_active_quest_id) {
                     break;
+                }
                 if (keep_current_quest_when_new_quest_added) {
                     // Re-request a quest change
                     const auto quest = GW::QuestMgr::GetQuest(player_requested_active_quest_id);
-                    if (!quest)
+                    if (!quest) {
                         break;
+                    }
                     GW::Packet::StoC::QuestAdd packet;
                     packet.quest_id = quest->quest_id;
                     packet.marker = quest->marker;
@@ -1040,28 +1086,33 @@ bool GameSettings::GetSettingBool(const char* setting)
 
 void GameSettings::PingItem(GW::Item* item, const uint32_t parts)
 {
-    if (!(item && GW::PlayerMgr::GetPlayerByID()))
+    if (!(item && GW::PlayerMgr::GetPlayerByID())) {
         return;
+    }
     std::wstring out;
     if ((parts & NAME) && item->complete_name_enc) {
-        if (out.length())
+        if (out.length()) {
             out += L"\x2\x102\x2";
+        }
         out += item->complete_name_enc;
     }
     else if ((parts & NAME) && item->name_enc) {
-        if (out.length())
+        if (out.length()) {
             out += L"\x2\x102\x2";
+        }
         out += item->name_enc;
     }
     if ((parts & DESC) && item->info_string) {
-        if (out.length())
+        if (out.length()) {
             out += L"\x2\x102\x2";
+        }
         out += ShorthandItemDescription(item);
     }
 
     PendingChatMessage* m = PendingChatMessage::queueSend(GW::Chat::Channel::CHANNEL_GROUP, out.c_str(), GW::PlayerMgr::GetPlayerByID()->name_enc);
-    if (m)
+    if (m) {
         ChatSettings::AddPendingMessage(m);
+    }
 }
 
 void GameSettings::PingItem(const uint32_t item_id, const uint32_t parts)
@@ -1108,8 +1159,9 @@ bool PendingChatMessage::Cooldown()
 
 bool PendingChatMessage::Send()
 {
-    if (!IsDecoded() || this->invalid)
+    if (!IsDecoded() || this->invalid) {
         return false; // Not ready or invalid.
+    }
     const std::vector<std::wstring> sanitised_lines = SanitiseForSend();
     wchar_t buf[120];
     size_t len = 0;
@@ -1171,17 +1223,20 @@ std::vector<std::wstring> PendingChatMessage::SanitiseForSend()
     std::regex_replace(std::back_inserter(sanitised2), sanitised.begin(), sanitised.end(), no_new_lines, L"|");
     std::vector<std::wstring> parts;
     std::wstringstream wss(sanitised2);
-    while (std::getline(wss, temp, L'|'))
+    while (std::getline(wss, temp, L'|')) {
         parts.push_back(temp);
+    }
     return parts;
 }
 
 bool PendingChatMessage::PrintMessage()
 {
-    if (!IsDecoded() || this->invalid)
+    if (!IsDecoded() || this->invalid) {
         return false; // Not ready or invalid.
-    if (this->printed)
+    }
+    if (this->printed) {
         return true; // Already printed.
+    }
     wchar_t buffer[512];
     switch (channel) {
         case GW::Chat::Channel::CHANNEL_EMOTE:
@@ -1326,8 +1381,7 @@ void GameSettings::Initialize()
     // Trigger for message on party change
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(
         &PartyPlayerRemove_Entry,
-        [&](const GW::HookStatus* status, GW::Packet::StoC::PartyPlayerRemove*) {
-            UNREFERENCED_PARAMETER(status);
+        [&](const GW::HookStatus*, GW::Packet::StoC::PartyPlayerRemove*) {
             check_message_on_party_change = true;
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, bind_member(this, &GameSettings::OnScreenShake));
@@ -1410,23 +1464,28 @@ void GameSettings::OnDialogUIMessage(GW::HookStatus*, const GW::UI::UIMessage me
 
 void GameSettings::MessageOnPartyChange()
 {
-    if (!check_message_on_party_change || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+    if (!check_message_on_party_change || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return; // Don't need to check, or not an outpost.
+    }
     GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
     const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-    if (!me || !current_party || !current_party->players.valid())
+    if (!me || !current_party || !current_party->players.valid()) {
         return; // Party not ready yet.
+    }
     bool is_leading = false;
     std::vector<std::wstring> current_party_names;
     GW::PlayerPartyMemberArray& current_party_players = current_party->players; // Copy the player array here to avoid ptr issues.
     for (size_t i = 0; i < current_party_players.size(); i++) {
-        if (!current_party_players[i].login_number)
+        if (!current_party_players[i].login_number) {
             continue;
-        if (i == 0)
+        }
+        if (i == 0) {
             is_leading = current_party_players[i].login_number == me->login_number;
+        }
         const wchar_t* player_name = GW::Agents::GetPlayerNameByLoginNumber(current_party_players[i].login_number);
-        if (!player_name)
+        if (!player_name) {
             continue;
+        }
         current_party_names.push_back(player_name);
     }
     // If previous party list is empty (i.e. map change), then initialise
@@ -1588,23 +1647,26 @@ void GameSettings::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent("Inventory Settings", ICON_FA_BOXES,
                                            [this](const std::string&, const bool is_showing) {
-                                               if (!is_showing)
+                                               if (!is_showing) {
                                                    return;
+                                               }
                                                DrawInventorySettings();
                                            }, 0.9f);
 
     ToolboxModule::RegisterSettingsContent("Party Settings", ICON_FA_USERS,
                                            [this](const std::string&, const bool is_showing) {
-                                               if (!is_showing)
+                                               if (!is_showing) {
                                                    return;
+                                               }
                                                DrawPartySettings();
                                            }, 0.9f);
 
     ToolboxModule::RegisterSettingsContent(
         "Notifications", ICON_FA_BULLHORN,
         [this](const std::string&, const bool is_showing) {
-            if (is_showing)
+            if (is_showing) {
                 DrawNotificationsSettings();
+            }
         },
         0.9f);
 }
@@ -1770,8 +1832,9 @@ void GameSettings::DrawInventorySettings()
 
 void GameSettings::DrawPartySettings()
 {
-    if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle))
+    if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
         GW::PartyMgr::SetTickToggle(tick_is_toggle);
+    }
     ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
     ImGui::Checkbox("Automatically accept party invitations when ticked", &auto_accept_invites);
     ImGui::ShowHelp("When you're invited to join someone elses party");
@@ -1917,14 +1980,16 @@ void GameSettings::DrawSettingsInternal()
 
 void GameSettings::FactionEarnedCheckAndWarn()
 {
-    if (!faction_warn_percent)
+    if (!faction_warn_percent) {
         return; // Disabled
+    }
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         faction_checked = false;
         return; // Loading or explorable area.
     }
-    if (faction_checked)
+    if (faction_checked) {
         return; // Already checked.
+    }
     faction_checked = true;
     const auto world_context = GW::GetWorldContext();
     if (!world_context || !world_context->max_luxon || !world_context->total_earned_kurzick) {
@@ -1933,10 +1998,12 @@ void GameSettings::FactionEarnedCheckAndWarn()
     }
     float percent;
     // Avoid invalid user input values.
-    if (faction_warn_percent_amount < 0)
+    if (faction_warn_percent_amount < 0) {
         faction_warn_percent_amount = 0;
-    if (faction_warn_percent_amount > 100)
+    }
+    if (faction_warn_percent_amount > 100) {
         faction_warn_percent_amount = 100;
+    }
     // Warn user to dump faction if we're in a luxon/kurzick mission outpost
     switch (GW::Map::GetMapID()) {
         case GW::Constants::MapID::The_Deep:
@@ -2014,17 +2081,22 @@ void GameSettings::Update(float)
         const GW::AgentLiving* me = GW::Agents::GetCharacter();
         const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (!me || !skillbar) // I don't exist e.g. map change
+        {
             return pending_cast.reset();
+        }
 
         const GW::AgentLiving* target = pending_cast.GetTarget();
         if (!target) // Target no longer valid
+        {
             return pending_cast.reset();
+        }
 
         const uint32_t& casting = skillbar->casting;
         if (pending_cast.cast_next_frame) {
             // Do cast now
-            if (pending_cast.GetTarget())
+            if (pending_cast.GetTarget()) {
                 GW::SkillbarMgr::UseSkill(pending_cast.slot, pending_cast.target_id, pending_cast.call_target);
+            }
             pending_cast.reset();
             return;
         }
@@ -2033,7 +2105,9 @@ void GameSettings::Update(float)
             // casting/skill don't update fast enough, so delay the rupt
             const auto cast_skill = pending_cast.GetSkill();
             if (cast_skill == GW::Constants::SkillID::No_Skill) // Skill ID no longer valid
+            {
                 return pending_cast.reset();
+            }
 
             const float range = GetSkillRange(cast_skill);
             if (GetDistance(target->pos, me->pos) <= range && range > 0) {
@@ -2043,7 +2117,9 @@ void GameSettings::Update(float)
             }
         }
         if (!casting) // abort the action if not auto walking anymore
+        {
             return pending_cast.reset();
+        }
     }
 
 #ifdef APRIL_FOOLS
@@ -2055,8 +2131,9 @@ void GameSettings::Update(float)
             previous_party_names.clear();
             check_message_on_party_change = true;
         }
-        if (check_message_on_party_change)
+        if (check_message_on_party_change) {
             MessageOnPartyChange();
+        }
     }
 }
 
@@ -2064,8 +2141,9 @@ bool GameSettings::WndProc(const UINT Message, WPARAM, LPARAM)
 {
     // I don't know what would be the best solution here, but the way we capture every messages as a sign of activity can be bad.
     // Added that because when someone was typing "/afk message" he was put online directly, because "enter-up" was captured.
-    if (Message == WM_KEYUP)
+    if (Message == WM_KEYUP) {
         return false;
+    }
 
     activity_timer = TIMER_INIT();
     static clock_t set_online_timer = TIMER_INIT();
@@ -2084,8 +2162,9 @@ bool GameSettings::WndProc(const UINT Message, WPARAM, LPARAM)
 void GameSettings::OnPingWeaponSet(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*) const
 {
     ASSERT(message_id == GW::UI::UIMessage::kSendPingWeaponSet && wparam);
-    if (!shorthand_item_ping)
+    if (!shorthand_item_ping) {
         return;
+    }
     const struct Packet {
         uint32_t agent_id;
         uint32_t weapon_item_id;
@@ -2099,14 +2178,18 @@ void GameSettings::OnPingWeaponSet(GW::HookStatus* status, const GW::UI::UIMessa
 // Show a message when player joins the outpost
 void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance* pak) const
 {
-    if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost)
+    if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost) {
         return; // Dont notify about player joining
-    if (!(pak->player_name && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost))
+    }
+    if (!(pak->player_name && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) {
         return; // Only message in an outpost.
-    if (TIMER_DIFF(instance_entered_at) < 2000 && GW::Agents::GetPlayerId())
+    }
+    if (TIMER_DIFF(instance_entered_at) < 2000 && GW::Agents::GetPlayerId()) {
         return; // Only been in this map for less than 2 seconds or current player not loaded in yet; avoids spam on map load.
-    if (GW::Agents::GetAgentByID(pak->agent_id))
+    }
+    if (GW::Agents::GetAgentByID(pak->agent_id)) {
         return; // Player already joined
+    }
     if (notify_when_friends_join_outpost) {
         if (const auto f = GetFriend(nullptr, pak->player_name, GW::FriendType::Friend, GW::FriendStatus::Online)) {
             WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) entered the outpost.", f->charname, f->alias).c_str());
@@ -2121,11 +2204,12 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::Playe
 // Auto accept invitations, flash window on received party invite
 void GameSettings::OnPartyInviteReceived(const GW::HookStatus* status, const GW::Packet::StoC::PartyInviteReceived_Create* packet) const
 {
-    UNREFERENCED_PARAMETER(status);
-    if (status->blocked)
+    if (status->blocked) {
         return;
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GW::PartyMgr::GetIsLeader())
+    }
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GW::PartyMgr::GetIsLeader()) {
         return;
+    }
 
     if (GW::PartyMgr::GetIsPlayerTicked()) {
         GW::PartyInfo* other_party = GW::PartyMgr::GetPartyInfo(packet->target_party_id);
@@ -2139,24 +2223,27 @@ void GameSettings::OnPartyInviteReceived(const GW::HookStatus* status, const GW:
             GW::PartyMgr::RespondToPartyRequest(packet->target_party_id, true);
         }
     }
-    if (flash_window_on_party_invite)
+    if (flash_window_on_party_invite) {
         FlashWindow();
+    }
 }
 
 // Flash window on player added
-void GameSettings::OnPartyPlayerJoined(const GW::HookStatus* status, const GW::Packet::StoC::PartyPlayerAdd* packet)
+void GameSettings::OnPartyPlayerJoined(const GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd* packet)
 {
-    UNREFERENCED_PARAMETER(status);
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return;
+    }
     check_message_on_party_change = true;
     if (flash_window_on_party_invite) {
         const GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
-        if (!current_party)
+        if (!current_party) {
             return;
+        }
         const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-        if (!me)
+        if (!me) {
             return;
+        }
         if (packet->player_id == me->login_number
             || (packet->party_id == current_party->party_id && GW::PartyMgr::GetIsLeader())) {
             FlashWindow();
@@ -2207,8 +2294,9 @@ void GameSettings::OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd*
 {
     if (block_sparkly_drops_effect && packet->type == 4 && packet->agent_type < 0xFFFFFF) {
         GW::Item* item = GW::Items::GetItemById(packet->agent_type);
-        if (item)
+        if (item) {
             item->interaction |= 0x2000;
+        }
     }
     if (block_ghostinthebox_effect && false
         && (packet->agent_type & 0x20000000) != 0
@@ -2254,8 +2342,9 @@ void GameSettings::OnUpdateAgentState(GW::HookStatus* status, const GW::Packet::
 // Apply Collector's Edition animations on player dancing,
 void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak) const
 {
-    if (!(pak->agent_id == GW::Agents::GetPlayerId() && collectors_edition_emotes))
+    if (!(pak->agent_id == GW::Agents::GetPlayerId() && collectors_edition_emotes)) {
         return;
+    }
     static GW::Packet::StoC::GenericValue pak2;
     pak2.agent_id = pak->agent_id;
     pak2.value_id = 23;
@@ -2280,17 +2369,20 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::St
 void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) const
 {
     const auto dialog_id = (uint32_t)wparam;
-    if (!(dialog_id == 0x87 && skip_entering_name_for_faction_donate))
+    if (!(dialog_id == 0x87 && skip_entering_name_for_faction_donate)) {
         return;
+    }
     uint32_t allegiance = 2;
     const auto raising_luxon_faction_cap = L"\x8102\x4A32\xAF32\xBDB5\x21AE";
     const auto raising_kurzick_faction_cap = L"\x8102\x4A26\x814C\x89CC\x5B0";
     // Look for "Raising Luxon/Kurzick faction cap" dialog option to check allegiance
     for (const auto dialog : DialogModule::Instance().GetDialogButtons()) {
-        if (wcscmp(dialog->message, raising_luxon_faction_cap) == 0)
+        if (wcscmp(dialog->message, raising_luxon_faction_cap) == 0) {
             allegiance = 1; // Luxon
-        if (wcscmp(dialog->message, raising_kurzick_faction_cap) == 0)
+        }
+        if (wcscmp(dialog->message, raising_kurzick_faction_cap) == 0) {
             allegiance = 0; // Kurzick
+        }
     }
     const uint32_t* current_faction = nullptr;
     switch (allegiance) {
@@ -2304,10 +2396,12 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
             return;
     }
     GW::GuildContext* c = GW::GetGuildContext();
-    if (!c || !c->player_guild_index || c->guilds[c->player_guild_index]->faction != allegiance)
+    if (!c || !c->player_guild_index || c->guilds[c->player_guild_index]->faction != allegiance) {
         return; // Alliance isn't the right faction. Return here and the NPC will reply.
-    if (*current_faction < 5000)
+    }
+    if (*current_faction < 5000) {
         return; // Not enough to donate. Return here and the NPC will reply.
+    }
     status->blocked = true;
     GW::PlayerMgr::DepositFaction(allegiance);
     GW::Agents::GoNPC(GW::Agents::GetAgentByID(DialogModule::GetDialogAgent()));
@@ -2316,13 +2410,16 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, vo
 // Show a message when player leaves the outpost
 void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC::PlayerLeaveInstance* pak) const
 {
-    if (!notify_when_players_leave_outpost && !notify_when_friends_leave_outpost)
+    if (!notify_when_players_leave_outpost && !notify_when_friends_leave_outpost) {
         return; // Dont notify about player leaving
-    if (!(pak->player_number && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost))
+    }
+    if (!(pak->player_number && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) {
         return; // Only message in an outpost.
+    }
     wchar_t* player_name = GW::PlayerMgr::GetPlayerName(pak->player_number);
-    if (!player_name)
+    if (!player_name) {
         return; // Failed to get name
+    }
     if (notify_when_friends_leave_outpost) {
         if (const auto f = GetFriend(nullptr, player_name, GW::FriendType::Friend, GW::FriendStatus::Online)) {
             WriteChatF(GW::Chat::Channel::CHANNEL_GLOBAL, L"<a=1>%ls</a> (%ls) left the outpost.", f->charname, f->alias);
@@ -2335,20 +2432,20 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC
 }
 
 // Automatically return to outpost on defeat
-void GameSettings::OnPartyDefeated(const GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*)
+void GameSettings::OnPartyDefeated(const GW::HookStatus*, GW::Packet::StoC::PartyDefeated*)
 {
-    UNREFERENCED_PARAMETER(status);
-    if (!auto_return_on_defeat || !GW::PartyMgr::GetIsLeader())
+    if (!auto_return_on_defeat || !GW::PartyMgr::GetIsLeader()) {
         return;
+    }
     GW::PartyMgr::ReturnToOutpost();
 }
 
 // Automatically send /age2 on /age.
-void GameSettings::OnServerMessage(const GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) const
+void GameSettings::OnServerMessage(const GW::HookStatus* , GW::Packet::StoC::MessageServer* pak) const
 {
-    UNREFERENCED_PARAMETER(status);
-    if (!auto_age2_on_age || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL)
+    if (!auto_age2_on_age || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL) {
         return; // Disabled or message pending
+    }
     const wchar_t* msg = GetMessageCore();
     // 0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
     // 0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
@@ -2361,93 +2458,107 @@ void GameSettings::OnServerMessage(const GW::HookStatus* status, GW::Packet::Sto
 // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
 void GameSettings::OnLocalChatMessage(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak) const
 {
-    if (status->blocked)
+    if (status->blocked) {
         return; // Sender blocked, packet handled.
-    if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number)
+    }
+    if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) {
         return; // Not team chat or no sender
+    }
     const auto core = GetMessageCore();
-    if (core[0] != 0x778 && core[0] != 0x781)
+    if (core[0] != 0x778 && core[0] != 0x781) {
         return; // Not "I'm Following X" or "I'm Targeting X" message.
+    }
     std::wstring message(core);
     size_t start_idx = message.find(L"\xba9\x107");
-    if (start_idx == std::wstring::npos)
+    if (start_idx == std::wstring::npos) {
         return; // Not a player name.
+    }
     start_idx += 2;
     const size_t end_idx = message.find(L'\x1', start_idx);
-    if (end_idx == std::wstring::npos)
+    if (end_idx == std::wstring::npos) {
         return; // Not a player name, this should never happen.
+    }
     const auto player_pinged = SanitizePlayerName(message.substr(start_idx, end_idx));
-    if (player_pinged.empty())
+    if (player_pinged.empty()) {
         return; // No recipient
+    }
     const auto sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
-    if (!sender)
+    if (!sender) {
         return; // No sender
-    if (flash_window_on_name_ping && GetPlayerName() == player_pinged)
+    }
+    if (flash_window_on_name_ping && GetPlayerName() == player_pinged) {
         FlashWindow(); // Flash window - we've been followed!
+    }
     // Allow clickable player name
     message.insert(start_idx, L"<a=1>");
     message.insert(end_idx + 5, L"</a>");
     PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, message.c_str(), sender->name_enc);
-    if (m)
+    if (m) {
         ChatSettings::AddPendingMessage(m);
+    }
     ClearMessageCore();
     status->blocked = true; // consume original packet.
 }
 
 // Automatic /age on vanquish
-void GameSettings::OnVanquishComplete(const GW::HookStatus* status, GW::Packet::StoC::VanquishComplete*) const
+void GameSettings::OnVanquishComplete(const GW::HookStatus*, GW::Packet::StoC::VanquishComplete*) const
 {
-    UNREFERENCED_PARAMETER(status);
-    if (!auto_age_on_vanquish)
+    if (!auto_age_on_vanquish) {
         return;
+    }
     GW::Chat::SendChat('/', "age");
 }
 
 void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::DungeonReward*) const
 {
-    if (hide_dungeon_chest_popup)
+    if (hide_dungeon_chest_popup) {
         status->blocked = true;
+    }
 }
 
 // Flash/focus window on trade
 void GameSettings::OnTradeStarted(const GW::HookStatus* status, GW::Packet::StoC::TradeStart*) const
 {
-    if (status->blocked)
+    if (status->blocked) {
         return;
-    if (flash_window_on_trade)
+    }
+    if (flash_window_on_trade) {
         FlashWindow();
-    if (focus_window_on_trade)
+    }
+    if (focus_window_on_trade) {
         FocusWindow();
+    }
 }
 
 // Stop screen shake from aftershock etc
-void GameSettings::OnScreenShake(GW::HookStatus* status, const void* packet) const
+void GameSettings::OnScreenShake(GW::HookStatus* status, const void* ) const
 {
-    UNREFERENCED_PARAMETER(packet);
-    if (stop_screen_shake)
+    if (stop_screen_shake) {
         status->blocked = true;
+    }
 }
 
 // Automatically skip cinematics, flash window on cinematic
-void GameSettings::OnCinematic(const GW::HookStatus* status, const GW::Packet::StoC::CinematicPlay* packet) const
+void GameSettings::OnCinematic(const GW::HookStatus* , const GW::Packet::StoC::CinematicPlay* packet) const
 {
-    UNREFERENCED_PARAMETER(status);
     if (packet->play && auto_skip_cinematic) {
         GW::Map::SkipCinematic();
         return;
     }
-    if (flash_window_on_cinematic)
+    if (flash_window_on_cinematic) {
         FlashWindow();
+    }
 }
 
 // Flash/focus window on zoning
-void GameSettings::OnMapTravel(const GW::HookStatus* status, const GW::Packet::StoC::GameSrvTransfer* pak) const
+void GameSettings::OnMapTravel(const GW::HookStatus* , const GW::Packet::StoC::GameSrvTransfer* pak) const
 {
-    UNREFERENCED_PARAMETER(status);
-    if (flash_window_on_zoning)
+    if (flash_window_on_zoning) {
         FlashWindow();
-    if (focus_window_on_zoning && pak->is_explorable)
+    }
+    if (focus_window_on_zoning && pak->is_explorable) {
         FocusWindow();
+    }
 }
 
 void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*)
@@ -2464,10 +2575,12 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
         return;
     }
     const auto msg = static_cast<PlayerChatMessage*>(wParam);
-    if (msg->channel != GW::Chat::Channel::CHANNEL_GLOBAL)
+    if (msg->channel != GW::Chat::Channel::CHANNEL_GLOBAL) {
         return;
-    if (wmemcmp(L"\x846\x107", msg->message, 2) != 0)
+    }
+    if (wmemcmp(L"\x846\x107", msg->message, 2) != 0) {
         return;
+    }
     status->blocked = true;
     wchar_t file_path[256];
     size_t file_path_len = 0;
@@ -2477,8 +2590,9 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
     new_message_len += 8;
     for (size_t i = 2; msg->message[i] && msg->message[i] != 0x1; i++) {
         new_message[new_message_len++] = msg->message[i];
-        if (msg->message[i] == '\\' && msg->message[i - 1] == '\\')
+        if (msg->message[i] == '\\' && msg->message[i - 1] == '\\') {
             continue; // Skip double escaped directory separators when getting the actual file name
+        }
         file_path[file_path_len++] = msg->message[i];
     }
     file_path[file_path_len] = 0;
@@ -2511,8 +2625,9 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
 // Auto-drop UA when recasting
 void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
 {
-    if (!(wParam && drop_ua_on_cast))
+    if (!(wParam && drop_ua_on_cast)) {
         return;
+    }
     const struct Casting {
         uint32_t agent_id;
         GW::Constants::SkillID skill_id;
@@ -2564,17 +2679,21 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage me
 
 void GameSettings::OnCast(GW::HookStatus*, const uint32_t agent_id, const uint32_t slot, const uint32_t target_id, uint32_t /* call_target */) const
 {
-    if (!(target_id && agent_id == GW::Agents::GetPlayerId()))
+    if (!(target_id && agent_id == GW::Agents::GetPlayerId())) {
         return;
+    }
     const GW::Skillbar* skill_bar = GW::SkillbarMgr::GetPlayerSkillbar();
     const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
     const GW::Agent* target = GW::Agents::GetAgentByID(target_id);
-    if (!skill_bar || !me || !target)
+    if (!skill_bar || !me || !target) {
         return;
-    if (me->max_energy <= 0 || me->player_number <= 0 || target->agent_id == me->agent_id)
+    }
+    if (me->max_energy <= 0 || me->player_number <= 0 || target->agent_id == me->agent_id) {
         return;
-    if (GetDistance(me->pos, target->pos) > GetSkillRange(skill_bar->skills[slot].skill_id))
+    }
+    if (GetDistance(me->pos, target->pos) > GetSkillRange(skill_bar->skills[slot].skill_id)) {
         pending_cast.reset(slot, target_id, 0);
+    }
 }
 
 // Set window title to player name on map load
@@ -2590,16 +2709,18 @@ void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet)
     const auto pak = static_cast<GW::Packet::StoC::UpdateSkillCountAfterMapLoad*>(packet);
     if (limit_signets_of_capture && static_cast<GW::Constants::SkillID>(pak->skill_id) == GW::Constants::SkillID::Signet_of_Capture) {
         actual_signets_of_capture_amount = pak->count;
-        if (pak->count > 10)
+        if (pak->count > 10) {
             pak->count = 10;
+        }
     }
 }
 
 // Default colour for agent name tags
 void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
 {
-    if (msgid != GW::UI::UIMessage::kShowAgentNameTag && msgid != GW::UI::UIMessage::kSetAgentNameTagAttribs)
+    if (msgid != GW::UI::UIMessage::kShowAgentNameTag && msgid != GW::UI::UIMessage::kSetAgentNameTagAttribs) {
         return;
+    }
     const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
     switch (static_cast<DEFAULT_NAMETAG_COLOR>(tag->text_color)) {
         case DEFAULT_NAMETAG_COLOR::NPC:

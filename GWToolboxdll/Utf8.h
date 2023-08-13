@@ -10,8 +10,9 @@ namespace utf8 {
 
         ~string()
         {
-            if (allocated)
+            if (allocated) {
                 free(bytes);
+            }
             bytes = nullptr;
             count = 0;
         }

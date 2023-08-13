@@ -36,8 +36,9 @@ namespace {
     {
         int val = 0;
         char* s = *str;
-        for (auto i = 0; i < n; i++)
+        for (auto i = 0; i < n; i++) {
             val |= (*s++ << i);
+        }
         *str = s;
         return val;
     }
@@ -82,16 +83,20 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
     memset(out->resilience_points, 0, sizeof(out->resilience_points));
     for (size_t i = 0; i < _countof(out->resilience_detail); i++) {
         out->resilience_detail[i] = static_cast<bool>(_ReadBits(&it, 1));
-        if (!out->resilience_detail[i])
+        if (!out->resilience_detail[i]) {
             continue;
+        }
         out->resilience_tally++;
         out->resilience_points[static_cast<size_t>(ResiliencePoints::AnyArmorStatue)] = 1;
-        if (out->resilience_tally == 3)
+        if (out->resilience_tally == 3) {
             out->resilience_points[static_cast<size_t>(ResiliencePoints::ThreeArmorStatues)] = 1;
-        if (out->resilience_tally == 5)
+        }
+        if (out->resilience_tally == 5) {
             out->resilience_points[static_cast<size_t>(ResiliencePoints::FiveArmorStatues)] = 2;
-        if (out->resilience_tally == 7)
+        }
+        if (out->resilience_tally == 7) {
             out->resilience_points[static_cast<size_t>(ResiliencePoints::SevenArmorStatues)] = 1;
+        }
 
         switch (static_cast<ResilienceDetail>(i)) {
             case ResilienceDetail::EliteKurzickArmor:
@@ -116,17 +121,22 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
     memset(out->fellowship_points, 0, sizeof(out->fellowship_points));
     for (size_t i = 0; i < _countof(out->fellowship_detail); i++) {
         out->fellowship_detail[i] = static_cast<bool>(_ReadBits(&it, 1));
-        if (!out->fellowship_detail[i])
+        if (!out->fellowship_detail[i]) {
             continue;
+        }
         out->fellowship_tally++;
-        if (out->fellowship_tally == 5)
+        if (out->fellowship_tally == 5) {
             out->fellowship_points[static_cast<size_t>(FellowshipPoints::FiveCompanionStatues)] = 2;
-        if (out->fellowship_tally == 10)
+        }
+        if (out->fellowship_tally == 10) {
             out->fellowship_points[static_cast<size_t>(FellowshipPoints::TenCompanionStatues)] = 1;
-        if (out->fellowship_tally == 20)
+        }
+        if (out->fellowship_tally == 20) {
             out->fellowship_points[static_cast<size_t>(FellowshipPoints::TwentyCompanionStatues)] = 1;
-        if (out->fellowship_tally == 30)
+        }
+        if (out->fellowship_tally == 30) {
             out->fellowship_points[static_cast<size_t>(FellowshipPoints::ThirtyCompanionStatues)] = 1;
+        }
         switch (static_cast<FellowshipDetail>(i)) {
             case FellowshipDetail::AnimalCompanion:
                 out->fellowship_points[static_cast<size_t>(FellowshipPoints::AnyPetStatue)] = 1;
@@ -154,27 +164,37 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
     out->honor_points[static_cast<size_t>(HonorPoints::AccountsLinked)] = 3;
     for (size_t i = 0; i < _countof(out->honor_detail); i++) {
         out->honor_detail[i] = static_cast<bool>(_ReadBits(&it, 1));
-        if (!out->honor_detail[i])
+        if (!out->honor_detail[i]) {
             continue;
+        }
         out->honor_tally++;
-        if (out->honor_tally == 1)
+        if (out->honor_tally == 1) {
             out->honor_points[static_cast<size_t>(HonorPoints::AnyStatue)] = 2;
-        if (out->honor_tally == 5)
+        }
+        if (out->honor_tally == 5) {
             out->honor_points[static_cast<size_t>(HonorPoints::FiveStatues)] = 3;
-        if (out->honor_tally == 10)
+        }
+        if (out->honor_tally == 10) {
             out->honor_points[static_cast<size_t>(HonorPoints::TenStatues)] = 1;
-        if (out->honor_tally == 15)
+        }
+        if (out->honor_tally == 15) {
             out->honor_points[static_cast<size_t>(HonorPoints::FifteenStatues)] = 1;
-        if (out->honor_tally == 20)
+        }
+        if (out->honor_tally == 20) {
             out->honor_points[static_cast<size_t>(HonorPoints::TwentyStatues)] = 1;
-        if (out->honor_tally == 25)
+        }
+        if (out->honor_tally == 25) {
             out->honor_points[static_cast<size_t>(HonorPoints::TwentyFiveStatues)] = 1;
-        if (out->honor_tally == 30)
+        }
+        if (out->honor_tally == 30) {
             out->honor_points[static_cast<size_t>(HonorPoints::ThirtyStatues)] = 1;
-        if (out->honor_tally == 35)
+        }
+        if (out->honor_tally == 35) {
             out->honor_points[static_cast<size_t>(HonorPoints::ThirtyFiveStatues)] = 1;
-        if (out->honor_tally == 40)
+        }
+        if (out->honor_tally == 40) {
             out->honor_points[static_cast<size_t>(HonorPoints::FourtyStatues)] = 1;
+        }
         switch (static_cast<HonorDetail>(i)) {
             case HonorDetail::EternalChampion:
             case HonorDetail::EternalCodexDisciple:
@@ -197,24 +217,32 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
     memset(out->valor_points, 0, sizeof(out->valor_points));
     for (size_t i = 0; i < _countof(out->valor_detail); i++) {
         out->valor_detail[i] = static_cast<bool>(_ReadBits(&it, 1));
-        if (!out->valor_detail[i])
+        if (!out->valor_detail[i]) {
             continue;
+        }
         out->valor_tally++;
-        if (out->valor_tally == 1)
+        if (out->valor_tally == 1) {
             out->valor_points[static_cast<size_t>(ValorPoints::AnyWeaponStatue)] = 1;
-        if (out->valor_tally == 5)
+        }
+        if (out->valor_tally == 5) {
             out->valor_points[static_cast<size_t>(ValorPoints::FiveWeaponStatues)] = 1;
-        if (out->valor_tally == 11)
+        }
+        if (out->valor_tally == 11) {
             out->valor_points[static_cast<size_t>(ValorPoints::ElevenWeaponStatues)] = 2;
-        if (out->valor_tally == 15)
+        }
+        if (out->valor_tally == 15) {
             out->valor_points[static_cast<size_t>(ValorPoints::FifteenWeaponStatues)] = 1;
+        }
 
-        if (i >= static_cast<size_t>(ValorDetail::DestroyerAxe) && i <= static_cast<size_t>(ValorDetail::DestroyerSword))
+        if (i >= static_cast<size_t>(ValorDetail::DestroyerAxe) && i <= static_cast<size_t>(ValorDetail::DestroyerSword)) {
             out->valor_points[static_cast<size_t>(ValorPoints::DestroyerWeaponStatue)] = 1;
-        else if (i >= static_cast<size_t>(ValorDetail::TormentedAxe) && i <= static_cast<size_t>(ValorDetail::TormentedSword))
+        }
+        else if (i >= static_cast<size_t>(ValorDetail::TormentedAxe) && i <= static_cast<size_t>(ValorDetail::TormentedSword)) {
             out->valor_points[static_cast<size_t>(ValorPoints::TormentedWeaponStatue)] = 1;
-        else if (i >= static_cast<size_t>(ValorDetail::OppressorAxe) && i <= static_cast<size_t>(ValorDetail::OppressorSword))
+        }
+        else if (i >= static_cast<size_t>(ValorDetail::OppressorAxe) && i <= static_cast<size_t>(ValorDetail::OppressorSword)) {
             out->valor_points[static_cast<size_t>(ValorPoints::OppressorWeaponStatue)] = 1;
+        }
     }
     out->valor_points_total = 0;
     for (size_t i = 0; i < _countof(out->valor_points); i++) {
@@ -226,17 +254,22 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
     for (size_t i = 0; i < _countof(out->devotion_detail); i++) {
         out->devotion_detail[i] = static_cast<uint32_t>(_ReadBits(&it, 7));
         out->devotion_tally += out->devotion_detail[i];
-        if (!out->devotion_detail[i])
+        if (!out->devotion_detail[i]) {
             continue;
+        }
         out->devotion_points[static_cast<size_t>(DevotionPoints::AnyMiniatureStatue)] = 1;
-        if (out->devotion_tally >= 20)
+        if (out->devotion_tally >= 20) {
             out->devotion_points[static_cast<size_t>(DevotionPoints::TwentyMiniatureStatues)] = 2;
-        if (out->devotion_tally >= 30)
+        }
+        if (out->devotion_tally >= 30) {
             out->devotion_points[static_cast<size_t>(DevotionPoints::ThirtyMiniatureStatues)] = 1;
-        if (out->devotion_tally >= 40)
+        }
+        if (out->devotion_tally >= 40) {
             out->devotion_points[static_cast<size_t>(DevotionPoints::FourtyMiniatureStatues)] = 1;
-        if (out->devotion_tally >= 50)
+        }
+        if (out->devotion_tally >= 50) {
             out->devotion_points[static_cast<size_t>(DevotionPoints::FiftyMiniatureStatues)] = 1;
+        }
 
         switch (static_cast<DevotionDetail>(i)) {
             case DevotionDetail::Rare:
@@ -259,10 +292,12 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
     out->state = HallOfMonumentsAchievements::State::Loading;
     std::string character_name_s = GuiUtils::WStringToString(character_name);
     for (size_t x = 0; x < character_name_s.length(); x++) {
-        if (x == 0)
+        if (x == 0) {
             character_name_s[x] = static_cast<char>(toupper(character_name_s[x]));
-        else if (character_name_s[x - 1] == ' ')
+        }
+        else if (character_name_s[x - 1] == ' ') {
             character_name_s[x] = static_cast<char>(toupper(character_name_s[x]));
+        }
     }
     out->character_name = character_name;
 
@@ -274,8 +309,9 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
         if (!success) {
             Log::Log("Failed to load account hom code %s\n%s", out->character_name.c_str(), response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
-            if (callback)
+            if (callback) {
                 callback(out);
+            }
             return;
         }
         const std::regex json_regex("legacy_bits\":\"([^\"]+)");
@@ -283,21 +319,24 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
         if (!std::regex_search(response, m, json_regex)) {
             Log::Log("Failed to find regex code from %s", response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
-            if (callback)
+            if (callback) {
                 callback(out);
+            }
             return;
         }
         const std::string hom_code = m[1].str();
         if (!Instance().DecodeHomCode(hom_code.c_str(), out)) {
             Log::Log("Failed to DecodeHomCode from %s", m[1].str().c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
-            if (callback)
+            if (callback) {
                 callback(out);
+            }
             return;
         }
         out->state = HallOfMonumentsAchievements::State::Done;
-        if (callback)
+        if (callback) {
             callback(out);
+        }
     });
 }
 

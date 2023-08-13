@@ -31,18 +31,21 @@ namespace {
 
     GW::Constants::Campaign GetCharacterCampaign()
     {
-        if (GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Island_of_Shehkah))
+        if (GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Island_of_Shehkah)) {
             return GW::Constants::Campaign::Nightfall;
-        if (GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_pre_searing))
+        }
+        if (GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_pre_searing)) {
             return GW::Constants::Campaign::Prophecies;
+        }
         return GW::Constants::Campaign::Factions;
     }
 
     GW::SkillbarSkill* GetPlayerSkillbarSkill(const GW::Constants::SkillID skill_id)
     {
         const auto skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-        if (!skillbar)
+        if (!skillbar) {
             return nullptr;
+        }
         return skillbar->GetSkillById(skill_id);
     }
 
@@ -69,8 +72,9 @@ namespace {
                 message_encoded = new wchar_t[strlen];
                 swprintf(message_encoded, strlen, L"\x108\x107%s\x1", message);
             }
-            if (!_message_id)
+            if (!_message_id) {
                 _message_id = (uint32_t)message;
+            }
             message_id = _message_id;
             message_timeout_ms = duration;
         }
@@ -161,8 +165,9 @@ namespace {
     {
         const auto msg = static_cast<HintUIMessage*>(wparam);
         if (std::ranges::find(hints_shown, msg->message_id) != hints_shown.end()) {
-            if (only_show_hints_once)
+            if (only_show_hints_once) {
                 status->blocked = true;
+            }
         }
         else {
             hints_shown.push_back(msg->message_id);
@@ -176,8 +181,9 @@ namespace {
             case GW::Constants::MapID::Embark_Beach: {
                 if (GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Kaineng_Center_outpost)
                     || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Lions_Arch_outpost)
-                    || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost))
+                    || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost)) {
                     break;
+                }
                 wchar_t out[256];
                 const auto campaign = static_cast<uint32_t>(GetCharacterCampaign());
                 swprintf(out, 256, EMBARK_WITHOUT_HOMELAND.message, embark_beach_campaign_npcs[campaign]);
@@ -288,8 +294,9 @@ void HintsModule::DrawSettingsInternal()
     ImGui::ShowHelp("GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
     if (only_show_hints_once) {
         ImGui::TextDisabled("%d hint(s) have already been shown in-game and won't be shown again", hints_shown.size());
-        if (ImGui::Button("Clear cached hints"))
+        if (ImGui::Button("Clear cached hints")) {
             hints_shown.clear();
+        }
     }
 }
 

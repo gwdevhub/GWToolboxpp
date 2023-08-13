@@ -46,13 +46,15 @@ void ToolboxModule::Terminate()
 
 void ToolboxModule::RegisterSettingsContent()
 {
-    if (!HasSettings())
+    if (!HasSettings()) {
         return;
+    }
     RegisterSettingsContent(
         SettingsName(), Icon(),
         [this](const std::string&, const bool is_showing) {
-            if (is_showing)
+            if (is_showing) {
                 DrawSettingsInternal();
+            }
         },
         SettingsWeighting());
 }

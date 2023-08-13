@@ -34,20 +34,24 @@ namespace {
     {
         auto& plugin = *plugin_ptr;
         if (!plugin.terminating) {
-            if (plugin.instance)
+            if (plugin.instance) {
                 plugin.instance->SignalTerminate();
+            }
             plugin.terminating = true;
         }
-        if (plugin.instance && !plugin.instance->CanTerminate())
+        if (plugin.instance && !plugin.instance->CanTerminate()) {
             return false; // Pending
+        }
 
-        if (plugin.instance)
+        if (plugin.instance) {
             plugin.instance->Terminate();
+        }
         plugin.initialized = false;
         plugin.terminating = false;
         plugin.instance = nullptr;
-        if (plugin.dll)
+        if (plugin.dll) {
             ASSERT(FreeLibrary(plugin.dll));
+        }
         plugin.dll = nullptr;
         std::erase_if(loaded_plugins, [plugin_ptr](auto p) { return p == plugin_ptr; });
         return true;
@@ -56,10 +60,12 @@ namespace {
     bool LoadPlugin(Plugin* plugin_ptr)
     {
         auto& plugin = *plugin_ptr;
-        if (plugin.instance)
+        if (plugin.instance) {
             return true;
-        if (!plugin.dll)
+        }
+        if (!plugin.dll) {
             plugin.dll = LoadLibraryW(plugin.path.wstring().c_str());
+        }
         if (!plugin.dll) {
             UnloadPlugin(plugin_ptr);
             Log::Error("Failed to load plugin %s (LoadLibraryW)", plugin.path.filename().string().c_str());
@@ -81,13 +87,16 @@ namespace {
     bool InitializePlugin(Plugin* plugin_ptr)
     {
         auto& plugin = *plugin_ptr;
-        if (plugin.terminating || !plugin.instance)
+        if (plugin.terminating || !plugin.instance) {
             return false;
-        if (plugin.initialized)
+        }
+        if (plugin.initialized) {
             return true;
+        }
         const auto context = ImGui::GetCurrentContext();
-        if (!context)
+        if (!context) {
             return false;
+        }
         ImGuiAllocFns fns;
         ImGui::GetAllocatorFunctions(&fns.alloc_func, &fns.free_func, &fns.user_data);
         plugin.instance->Initialize(context, fns, GWToolbox::Instance().GetDLLModule());
@@ -104,23 +113,26 @@ namespace {
 
         const fs::path plugin_folder = pluginsfoldername;
 
-        if (!Resources::EnsureFolderExists(plugin_folder))
+        if (!Resources::EnsureFolderExists(plugin_folder)) {
             return;
+        }
 
         for (auto& p : fs::directory_iterator(plugin_folder)) {
             fs::path file_path = p.path();
             fs::path ext = file_path.extension();
             if (ext == ".lnk") {
-                if (!SUCCEEDED(Resources::ResolveShortcut(file_path, file_path)))
+                if (!SUCCEEDED(Resources::ResolveShortcut(file_path, file_path))) {
                     continue;
+                }
                 ext = file_path.extension();
             }
             if (ext == ".dll") {
                 auto found = std::ranges::find_if(plugins, [file_path](const auto plugin) {
                     return plugin->path == file_path;
                 });
-                if (found == plugins.end())
+                if (found == plugins.end()) {
                     plugins.push_back(new Plugin(file_path));
+                }
             }
         }
     }
@@ -161,8 +173,9 @@ void PluginModule::DrawSettingsInternal()
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::GetTextLineHeight() - ImGui::GetStyle().FramePadding.x - 128.f);
         snprintf(buf, _countof(buf), "%s###load_unload", plugin->instance ? "Unload" : "Load");
         if (ImGui::Button(buf)) {
-            if (!plugin->instance)
+            if (!plugin->instance) {
                 LoadPlugin(plugin);
+            }
             else {
                 UnloadPlugin(plugin);
             }
@@ -170,8 +183,9 @@ void PluginModule::DrawSettingsInternal()
         if (plugin->instance) {
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::GetTextLineHeight() - ImGui::GetStyle().FramePadding.x);
             ImGui::Checkbox("##check", &plugin->active);
-            if (ImGui::IsItemHovered())
+            if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Active");
+            }
         }
 
         if (is_showing && plugin->active && InitializePlugin(plugin)) {
@@ -213,10 +227,12 @@ void PluginModule::Draw(IDirect3DDevice9* device)
         message_displayed = true;
     }
     for (const auto plugin : loaded_plugins) {
-        if (!InitializePlugin(plugin))
+        if (!InitializePlugin(plugin)) {
             continue;
-        if (!plugin->active)
+        }
+        if (!plugin->active) {
             continue;
+        }
 
         plugin->instance->Draw(device);
     }
@@ -236,8 +252,9 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
             });
             // Find any matching plugins and load them
             for (auto plugin : matching_plugins) {
-                if (!LoadPlugin(plugin))
+                if (!LoadPlugin(plugin)) {
                     continue;
+                }
                 plugin->active = is_active;
                 InitializePlugin(plugin);
                 plugins_loaded_from_ini.push_back(plugin);
@@ -267,8 +284,9 @@ void PluginModule::Update(const float delta)
     for (const auto plugin : loaded_plugins) {
         plugin->instance->Update(delta);
         if (plugin->terminating) {
-            if (UnloadPlugin(plugin))
+            if (UnloadPlugin(plugin)) {
                 break; // loaded_plugins vector changed, skip a frame
+            }
         }
     }
 }
@@ -287,6 +305,7 @@ void PluginModule::Terminate()
     ToolboxUIElement::Terminate();
     SignalTerminate();
     ASSERT(loaded_plugins.empty());
-    for (const auto p : plugins)
+    for (const auto p : plugins) {
         delete p;
+    }
 }

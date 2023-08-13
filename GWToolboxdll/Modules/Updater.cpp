@@ -62,27 +62,34 @@ namespace {
         }
         using Json = nlohmann::json;
         Json json = Json::parse(response.c_str(), nullptr, false);
-        if (json == Json::value_t::discarded || json.empty() || !json.is_array())
+        if (json == Json::value_t::discarded || json.empty() || !json.is_array()) {
             return nullptr;
+        }
         for (const auto& js : json) {
-            if (!(js.contains("tag_name") && js["tag_name"].is_string()))
+            if (!(js.contains("tag_name") && js["tag_name"].is_string())) {
                 continue;
+            }
             auto tag_name = js["tag_name"].get<std::string>();
             const size_t version_number_len = tag_name.find("_Release", 0);
-            if (version_number_len == std::string::npos)
+            if (version_number_len == std::string::npos) {
                 continue;
-            if (!(js.contains("assets") && js["assets"].is_array() && js["assets"].size() > 0))
+            }
+            if (!(js.contains("assets") && js["assets"].is_array() && js["assets"].size() > 0)) {
                 continue;
-            if (!(js.contains("body") && js["body"].is_string()))
+            }
+            if (!(js.contains("body") && js["body"].is_string())) {
                 continue;
+            }
             for (unsigned int j = 0; j < js["assets"].size(); j++) {
                 const Json& asset = js["assets"][j];
                 if (!(asset.contains("name") && asset["name"].is_string())
-                    || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string()))
+                    || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string())) {
                     continue;
+                }
                 auto asset_name = asset["name"].get<std::string>();
-                if (asset_name != "GWToolbox.dll" && asset_name != "GWToolboxdll.dll")
+                if (asset_name != "GWToolbox.dll" && asset_name != "GWToolboxdll.dll") {
                     continue; // This release doesn't have a dll download.
+                }
                 release->download_url = asset["browser_download_url"].get<std::string>();
                 release->version = tag_name.substr(0, version_number_len);
                 release->body = js["body"].get<std::string>();
@@ -97,8 +104,9 @@ namespace {
     {
         // server and client versions match
         char path[MAX_PATH];
-        if (GetModuleFileNameA(GWToolbox::GetDLLModule(), path, sizeof(path)) == 0)
+        if (GetModuleFileNameA(GWToolbox::GetDLLModule(), path, sizeof(path)) == 0) {
             return nullptr;
+        }
         out->size = std::filesystem::file_size(path);
         out->version = GWTOOLBOXDLL_VERSION;
         out->version.append(GWTOOLBOXDLL_VERSION_BETA);
@@ -240,8 +248,9 @@ void Updater::CheckForUpdate(const bool forced)
     }
 
     Resources::EnqueueWorkerTask([forced] {
-        if (!forced && mode == Mode::DontCheckForUpdates)
+        if (!forced && mode == Mode::DontCheckForUpdates) {
             return; // Do not check for updates
+        }
 
         // Here we are in the worker thread and can do blocking operations
         // Reminder: do not send stuff to gw chat from this thread!
@@ -289,8 +298,9 @@ void Updater::Draw(IDirect3DDevice9*)
             break;
         case CheckAndAsk: {
             // check and ask
-            if (!visible)
+            if (!visible) {
                 visible = true;
+            }
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
             ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
@@ -315,8 +325,9 @@ void Updater::Draw(IDirect3DDevice9*)
             DoUpdate();
             break;
         case Downloading: {
-            if (!visible)
+            if (!visible) {
                 break;
+            }
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
             ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);
@@ -331,8 +342,9 @@ void Updater::Draw(IDirect3DDevice9*)
         }
         break;
         case Success: {
-            if (!visible)
+            if (!visible) {
                 break;
+            }
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
             ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
             ImGui::Begin("Toolbox Update!", &visible);

@@ -183,8 +183,9 @@ namespace {
 
 void ObjectiveTimerWindow::CheckIsMapLoaded()
 {
-    if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer)
+    if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer) {
         return;
+    }
     map_load_pending = false;
     if (TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
         AddObjectiveSet(static_cast<GW::Constants::MapID>(InstanceLoadInfo->map_id));
@@ -243,8 +244,9 @@ void ObjectiveTimerWindow::Initialize()
         &GameSrvTransfer_Entry, [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* packet) {
             // Exited map
             const GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(packet->map_id));
-            if (!info)
+            if (!info) {
                 return; // we should always have this
+            }
 
             static bool in_dungeon = false;
             const bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
@@ -262,14 +264,17 @@ void ObjectiveTimerWindow::Initialize()
             Event(EventType::InstanceEnd, map_id);
             map_id = packet->map_id;
             // Reset loading map vars (see CheckIsMapLoaded)
-            if (InstanceLoadFile)
+            if (InstanceLoadFile) {
                 delete InstanceLoadFile;
+            }
             InstanceLoadFile = nullptr;
-            if (InstanceLoadInfo)
+            if (InstanceLoadInfo) {
                 delete InstanceLoadInfo;
+            }
             InstanceLoadInfo = nullptr;
-            if (InstanceTimer)
+            if (InstanceTimer) {
                 delete InstanceTimer;
+            }
             InstanceTimer = nullptr;
             map_load_pending = true;
         }, -5);
@@ -277,8 +282,9 @@ void ObjectiveTimerWindow::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry,
                                                                       [this](GW::HookStatus*, GW::Packet::StoC::MessageServer*) {
                                                                           const GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
-                                                                          if (!buff || !buff->valid() || !buff->size())
+                                                                          if (!buff || !buff->valid() || !buff->size()) {
                                                                               return; // Message buffer empty!?
+                                                                          }
                                                                           const wchar_t* msg = buff->begin();
                                                                           // NB: buff->size() includes null terminating char. All GW strings are null terminated, use wcslen instead
                                                                           Event(EventType::ServerMessage, wcslen(msg), msg);
@@ -337,9 +343,7 @@ void ObjectiveTimerWindow::Initialize()
 
     /*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
 [this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
-    UNREFERENCED_PARAMETER(status);
-    UNREFERENCED_PARAMETER(packet);
-    // type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
+            // type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
     /*
     Objective *obj = GetCurrentObjective(packet->objective_id);
     if (obj) return false;
@@ -524,8 +528,9 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
         cos.second->need_to_collapse = true;
     }
     objective_sets.emplace(os->system_time, os);
-    if (os->active)
+    if (os->active) {
         current_objective_set = os;
+    }
     runs_dirty = true;
 }
 
@@ -548,8 +553,8 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
     constexpr int n_areas = 4;
 
     const auto starting_area = [&]() -> int {
-        const GW::Vec2f mallyx_spawn(-3931, -6214);
-        const GW::Vec2f area_spawns[] = {
+        constexpr GW::Vec2f mallyx_spawn(-3931, -6214);
+        constexpr GW::Vec2f area_spawns[] = {
             {-10514, 15231}, // foundry
             {-18575, -8833}, // city
             {364, -10445},   // veil
@@ -567,8 +572,9 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
         return starting_area;
     }();
 
-    if (starting_area == -1)
+    if (starting_area == -1) {
         return; // we're doing mallyx, not doa!
+    }
 
     const auto os = new ObjectiveSet;
     AsyncGetMapName(os->name, sizeof(os->name));
@@ -839,8 +845,9 @@ void ObjectiveTimerWindow::Update(float)
 
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
 {
-    if (loading)
+    if (loading) {
         return;
+    }
     // Main objective timer window
     if (visible && !loading) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -887,10 +894,12 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
 
 ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet()
 {
-    if (objective_sets.empty())
+    if (objective_sets.empty()) {
         return nullptr;
-    if (!current_objective_set || !current_objective_set->active)
+    }
+    if (!current_objective_set || !current_objective_set->active) {
         return nullptr;
+    }
     return current_objective_set;
 }
 
@@ -968,12 +977,14 @@ void ObjectiveTimerWindow::SaveSettings(ToolboxIni* ini)
 
 void ObjectiveTimerWindow::LoadRuns()
 {
-    if (!save_to_disk)
+    if (!save_to_disk) {
         return;
+    }
     // Because this does a load of file reads and JSON decoding, its on a separate thread; it could delay rendering by
     // seconds
-    if (run_loader.joinable())
+    if (run_loader.joinable()) {
         run_loader.join();
+    }
     loading = true;
     run_loader = std::thread([]() {
         ObjectiveTimerWindow& instance = Instance();
@@ -1027,10 +1038,12 @@ void ObjectiveTimerWindow::LoadRuns()
 
 void ObjectiveTimerWindow::SaveRuns()
 {
-    if (!save_to_disk || objective_sets.empty())
+    if (!save_to_disk || objective_sets.empty()) {
         return;
-    if (run_loader.joinable())
+    }
+    if (run_loader.joinable()) {
         run_loader.join();
+    }
     loading = true;
     run_loader = std::thread([]() {
         ObjectiveTimerWindow& instance = Instance();
@@ -1039,12 +1052,14 @@ void ObjectiveTimerWindow::SaveRuns()
         wchar_t filename[36];
         tm* structtime;
         for (auto& os : instance.objective_sets) {
-            if (os.second->from_disk)
+            if (os.second->from_disk) {
                 continue; // No need to re-save a run.
+            }
             time_t tt = os.second->system_time;
             structtime = gmtime(&tt);
-            if (!structtime)
+            if (!structtime) {
                 continue;
+            }
             swprintf(filename, 36, L"ObjectiveTimerRuns_%02d-%02d-%02d.json", structtime->tm_year + 1900,
                      structtime->tm_mon + 1, structtime->tm_mday);
             objective_sets_by_file[filename].push_back(os.second);
@@ -1130,8 +1145,9 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::AddEndEvent(
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetStarted()
 {
-    if (IsStarted())
+    if (IsStarted()) {
         return this;
+    }
     start_time_point = time_point_ms();                      // run_started_time_point
     start = start_time_point - parent->run_start_time_point; // Ms since run start
     PrintTime(cached_start, sizeof(cached_start), start);
@@ -1141,8 +1157,9 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetStarted()
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::SetDone()
 {
-    if (status == Status::Completed)
+    if (status == Status::Completed) {
         return this;
+    }
     if (done == TIME_UNKNOWN) {
         done_time_point = time_point_ms();
         // NB: Objective may not have triggered a start point.
@@ -1177,8 +1194,9 @@ bool ObjectiveTimerWindow::Objective::IsDone() const { return done != TIME_UNKNO
 
 const char* ObjectiveTimerWindow::Objective::GetEndTimeStr()
 {
-    if (status < Status::Completed)
+    if (status < Status::Completed) {
         return "--:--";
+    }
     if (!cached_done[0]) {
         PrintTime(cached_done, sizeof(cached_done), done, show_decimal);
     }
@@ -1187,8 +1205,9 @@ const char* ObjectiveTimerWindow::Objective::GetEndTimeStr()
 
 const char* ObjectiveTimerWindow::Objective::GetStartTimeStr()
 {
-    if (status < Status::Started)
+    if (status < Status::Started) {
         return "--:--";
+    }
     if (!cached_start[0]) {
         PrintTime(cached_start, sizeof(cached_start), start, show_decimal);
     }
@@ -1197,8 +1216,9 @@ const char* ObjectiveTimerWindow::Objective::GetStartTimeStr()
 
 const char* ObjectiveTimerWindow::Objective::GetDurationStr()
 {
-    if (status < Status::Started)
+    if (status < Status::Started) {
         return "--:--";
+    }
     if (!cached_duration[0] || status == Status::Started) {
         PrintTime(cached_duration, sizeof(cached_duration), GetDuration(), show_decimal);
     }
@@ -1214,8 +1234,9 @@ DWORD ObjectiveTimerWindow::Objective::GetDuration()
         case Status::Completed:
             ASSERT(done != TIME_UNKNOWN);
         // NB: An objective can be flagged as completed without being started if a following objective has been started.
-            if (start != TIME_UNKNOWN)
+            if (start != TIME_UNKNOWN) {
                 return duration = done - start;
+            }
     }
     return duration;
 }
@@ -1265,22 +1286,25 @@ void ObjectiveTimerWindow::Objective::Draw()
     if (show_start_column) {
         ImGui::SameLine(offset);
         ImGui::Text(GetStartTimeStr());
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Start");
+        }
         offset += ts_width;
     }
     if (show_end_column) {
         ImGui::SameLine(offset);
         ImGui::Text(GetEndTimeStr());
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("End");
+        }
         offset += ts_width + style.ItemSpacing.x;
     }
     if (show_time_column) {
         ImGui::SameLine(offset);
         ImGui::Text(GetDurationStr());
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Time");
+        }
     }
     for (auto i = 0; i < indent; i++) {
         ImGui::Unindent();
@@ -1289,8 +1313,9 @@ void ObjectiveTimerWindow::Objective::Draw()
 
 void ObjectiveTimerWindow::ObjectiveSet::Update()
 {
-    if (!active)
+    if (!active) {
         return;
+    }
 
     for (const Objective* obj : objectives) {
         obj->Update();
@@ -1300,30 +1325,36 @@ void ObjectiveTimerWindow::ObjectiveSet::Update()
 void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint32_t id1, const uint32_t id2)
 {
     auto Match = [&](const Objective::Event& event) -> bool {
-        if (type != event.type)
+        if (type != event.type) {
             return false;
+        }
         switch (type) {
             // for these, use id2 as a wchar_t*
             case EventType::ServerMessage:
             case EventType::DisplayDialogue: {
                 const wchar_t* msg1 = (wchar_t*)id2;
                 const wchar_t* msg2 = (wchar_t*)event.id2;
-                if (msg1 == nullptr)
+                if (msg1 == nullptr) {
                     return false;
-                if (msg2 == nullptr)
+                }
+                if (msg2 == nullptr) {
                     return false;
+                }
                 for (auto i = 0u; i < id1 && i < event.id1; i++) {
-                    if (msg2[i] != 0 && msg1[i] != msg2[i])
+                    if (msg2[i] != 0 && msg1[i] != msg2[i]) {
                         return false;
+                    }
                 }
                 return true;
             }
 
             default:
-                if (id1 != 0 && id1 != event.id1)
+                if (id1 != 0 && id1 != event.id1) {
                     return false;
-                if (id2 != 0 && id2 != event.id2)
+                }
+                if (id2 != 0 && id2 != event.id2) {
                     return false;
+                }
                 return true;
         }
     };
@@ -1332,8 +1363,9 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
 
     for (size_t i = 0; i < objectives.size(); i++) {
         Objective& obj = *objectives[i];
-        if (obj.IsDone())
+        if (obj.IsDone()) {
             continue; // nothing to check
+        }
 
         if (!obj.IsStarted()) {
             for (auto& event : obj.start_events) {
@@ -1345,8 +1377,9 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
                     }
                     for (size_t j = to_set_done_from; j < i; ++j) {
                         Objective* other = objectives[j];
-                        if (!other->IsDone())
+                        if (!other->IsDone()) {
                             other->SetDone();
+                        }
                     }
                     break;
                 }
@@ -1362,8 +1395,9 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
                 }
                 for (size_t j = to_set_done_from; j < i; ++j) {
                     Objective& other = *objectives[j];
-                    if (!other.IsDone())
+                    if (!other.IsDone()) {
                         other.SetDone();
+                    }
                 }
                 just_set_something_done = true;
                 break;
@@ -1403,8 +1437,9 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
 ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet()
 {
     for (const auto* obj : objectives) {
-        if (obj)
+        if (obj) {
             delete obj;
+        }
     }
     objectives.clear();
 }
@@ -1417,8 +1452,9 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
     const auto name = json.at("name").get<std::string>();
     snprintf(os->name, sizeof(os->name), "%s", name.c_str());
     os->run_start_time_point = json.at("instance_start").get<DWORD>();
-    if (json.contains("duration"))
+    if (json.contains("duration")) {
         os->duration = json.at("duration").get<DWORD>();
+    }
     nlohmann::json json_objs = json.at("objectives");
     for (auto it = json_objs.begin(); it != json_objs.end(); ++it) {
         const nlohmann::json& o = it.value();
@@ -1462,10 +1498,12 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const
     obj->status = json.at("status").get<Status>();
     obj->start = json.at("start").get<DWORD>();
     obj->done = json.at("done").get<DWORD>();
-    if (json.contains("indent"))
+    if (json.contains("indent")) {
         obj->indent = json.at("indent").get<DWORD>();
-    if (json.contains("duration"))
+    }
+    if (json.contains("duration")) {
         obj->duration = json.at("duration").get<DWORD>();
+    }
     return obj;
 }
 
@@ -1533,8 +1571,9 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
 
     bool is_open = true;
     const bool is_collapsed = !ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen);
-    if (!is_open)
+    if (!is_open) {
         return false;
+    }
     if (!is_collapsed) {
         ImGui::PushID(static_cast<int>(ui_id));
         for (Objective* objective : objectives) {

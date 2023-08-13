@@ -136,7 +136,9 @@ namespace {
 
     int PrintResignStatus(wchar_t* buffer, const size_t size, const size_t index, const wchar_t* player_name)
     {
-        if (!player_name) return 0;
+        if (!player_name) {
+            return 0;
+        }
         const auto player_status = GetResignStatus(index);
         const char* status_str = GetStatusStr(GetResignStatus(index));
         return swprintf(buffer, size, L"%zu. %s - %S", index + 1, player_name,
@@ -149,29 +151,35 @@ namespace {
     {
         const auto party = GW::PartyMgr::GetPartyInfo();
         for (size_t i = 0; party && i < party->players.size(); i++) {
-            if (party->players[i].login_number == login_number)
+            if (party->players[i].login_number == login_number) {
                 return i;
+            }
         }
         return 0xff;
     }
 
     void CheckAndWarnIfNotResigned()
     {
-        if (!show_last_to_resign_message)
+        if (!show_last_to_resign_message) {
             return;
+        }
         const auto party = GW::PartyMgr::GetPartyInfo();
-        if (!(party && party->players.size() > 1))
+        if (!(party && party->players.size() > 1)) {
             return; // Not in a party of more than 1 person
+        }
 
         const size_t my_index = GetPartyPlayerIndex(GW::PlayerMgr::GetPlayerNumber());
-        if (GetResignStatus(my_index) == Status::Resigned)
+        if (GetResignStatus(my_index) == Status::Resigned) {
             return; // I've resigned
+        }
 
         for (size_t i = 0; i < resign_statuses.size(); i++) {
-            if (i == my_index)
+            if (i == my_index) {
                 continue;
-            if (resign_statuses[i] == Status::Connected)
+            }
+            if (resign_statuses[i] == Status::Connected) {
                 return; // Someone else still to resign.
+            }
         }
 
         Log::Warning("You're the only player left to resign. Type /resign in chat to resign.");
@@ -181,10 +189,14 @@ namespace {
     wchar_t* GetStringArgument(wchar_t* encoded_string, size_t* string_argument_length)
     {
         wchar_t* start = wcschr(encoded_string, 0x107);
-        if (!start) return nullptr;
+        if (!start) {
+            return nullptr;
+        }
         start += 1;
         const wchar_t* end = wcschr(start, 0x1);
-        if (!end) return nullptr;
+        if (!end) {
+            return nullptr;
+        }
         *string_argument_length = end - start;
         return start;
     }
@@ -192,24 +204,32 @@ namespace {
     void OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* pak)
     {
         // 0x107 is the "start string" marker
-        if (!(wmemcmp(pak->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0))
+        if (!(wmemcmp(pak->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0)) {
             return;
+        }
 
         // get all the data
         GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-        if (info == nullptr) return;
+        if (info == nullptr) {
+            return;
+        }
         GW::PlayerPartyMemberArray& partymembers = info->players;
-        if (!partymembers.valid()) return;
+        if (!partymembers.valid()) {
+            return;
+        }
 
         // Prepare the name
         size_t name_len = 0;
         const wchar_t* name_argument = GetStringArgument(pak->message, &name_len);
-        if (!name_argument)
+        if (!name_argument) {
             return;
+        }
         const std::wstring buf(name_argument, name_len);
         // set the right index in party
         for (size_t i = 0; i < partymembers.size() && i < resign_statuses.size(); i++) {
-            if (resign_statuses[i] == Status::Resigned) continue;
+            if (resign_statuses[i] == Status::Resigned) {
+                continue;
+            }
             const wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymembers[i].login_number);
             if (player_name && GuiUtils::SanitizePlayerName(player_name) == buf) {
                 resign_statuses[i] = Status::Resigned;
@@ -220,25 +240,26 @@ namespace {
         CheckAndWarnIfNotResigned();
     }
 
-    void CmdResignLog(const wchar_t* cmd, const int argc, wchar_t** argv)
+    void CmdResignLog([[maybe_unused]] const wchar_t* cmd, [[maybe_unused]] const int argc, [[maybe_unused]] wchar_t** argv)
     {
-        UNREFERENCED_PARAMETER(cmd);
-        UNREFERENCED_PARAMETER(argc);
-        UNREFERENCED_PARAMETER(argv);
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             return;
+        }
         GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-        if (info == nullptr)
+        if (info == nullptr) {
             return;
+        }
         GW::PlayerPartyMemberArray& partymembers = info->players;
-        if (!partymembers.valid())
+        if (!partymembers.valid()) {
             return;
+        }
         const size_t index_max = std::min<size_t>(resign_statuses.size(), partymembers.size());
         for (size_t i = 0; i < index_max; ++i) {
             const GW::PlayerPartyMember& partymember = partymembers[i];
             wchar_t buffer[256];
-            if (resign_statuses[i] != Status::Connected)
+            if (resign_statuses[i] != Status::Connected) {
                 continue;
+            }
             PrintResignStatus(buffer, _countof(buffer), i, GW::PlayerMgr::GetPlayerName(partymember.login_number));
             send_queue.push(std::wstring(buffer));
         }
@@ -263,8 +284,9 @@ namespace {
 
     void DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, const bool force_advanced = false)
     {
-        if (!skill)
+        if (!skill) {
             return;
+        }
         name->reset(skill->name);
         static char info_id[16];
         snprintf(info_id, _countof(info_id), "skill_info_%d", skill->skill_id);
@@ -284,8 +306,9 @@ namespace {
             GW::UI::UInt32ToEncStr(skill->description, out, _countof(out));
             EncInfoField("Desc Enc", out);
         };
-        if (force_advanced)
+        if (force_advanced) {
             draw_advanced();
+        }
         else if (ImGui::TreeNodeEx("Advanced##skill", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             draw_advanced();
             ImGui::TreePop();
@@ -295,8 +318,9 @@ namespace {
 
     void DrawGuildInfo(GW::Guild* guild)
     {
-        if (!guild)
+        if (!guild) {
             return;
+        }
         ImGui::PushID(guild->index);
         if (ImGui::TreeNodeEx("Guild Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             ImGui::PushID("guild_info");
@@ -333,8 +357,9 @@ namespace {
 
     void DrawItemInfo(GW::Item* item, GuiUtils::EncString* name, const bool force_advanced = false)
     {
-        if (!item)
+        if (!item) {
             return;
+        }
         name->reset(item->single_item_name);
         static char slot[8] = "-";
         if (item->bag) {
@@ -361,8 +386,9 @@ namespace {
                 }
             }
         };
-        if (force_advanced)
+        if (force_advanced) {
             draw_advanced();
+        }
         else if (ImGui::TreeNodeEx("Advanced##item", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             draw_advanced();
             ImGui::TreePop();
@@ -371,9 +397,9 @@ namespace {
 
     void DrawAgentInfo(GW::Agent* agent)
     {
-        if (!agent)
+        if (!agent) {
             return;
-        UNREFERENCED_PARAMETER(agent);
+        }
         const GW::AgentLiving* living = agent->GetAsAgentLiving();
         const bool is_player = agent->agent_id == GW::Agents::GetPlayerId();
         const GW::AgentGadget* gadget = agent->GetAsAgentGadget();
@@ -382,15 +408,17 @@ namespace {
         const GW::Player* player = living && living->IsPlayer() ? GW::PlayerMgr::GetPlayerByID(living->player_number) : nullptr;
         const GW::Agent* me = GW::Agents::GetPlayer();
         uint32_t npc_id = living && living->IsNPC() ? living->player_number : 0;
-        if (player && living->transmog_npc_id & 0x20000000)
+        if (player && living->transmog_npc_id & 0x20000000) {
             npc_id = living->transmog_npc_id ^ 0x20000000;
+        }
         const GW::NPC* npc = npc_id ? GW::Agents::GetNPCByID(npc_id) : nullptr;
 
         GW::Guild* guild = nullptr;
         if (player && living->tags->guild_id) {
             GW::GuildArray* guilds = GW::GuildMgr::GetGuildArray();
-            if (guilds && living->tags->guild_id < guilds->size())
+            if (guilds && living->tags->guild_id < guilds->size()) {
                 guild = guilds->at(living->tags->guild_id);
+            }
         }
 
         InfoField("Agent ID", "%d", agent->agent_id);
@@ -495,8 +523,9 @@ namespace {
                 InfoField("Addr", "%p", npc);
                 InfoField("NPC ID", "%d", npc_id);
                 InfoField("NPC ModelFileID", "0x%X", npc->model_file_id);
-                if (npc->files_count)
+                if (npc->files_count) {
                     InfoField("NPC ModelFile", "0x%X", npc->model_files[0]);
+                }
                 InfoField("NPC Flags", "0x%X", npc->npc_flags);
                 EncInfoField("NPC Name", npc->name_enc);
                 InfoField("NPC Scale", "0x%X", npc->scale);
@@ -512,19 +541,23 @@ namespace {
 
     void DrawResignlog()
     {
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
             return;
+        }
         GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-        if (info == nullptr)
+        if (info == nullptr) {
             return;
+        }
         GW::PlayerPartyMemberArray& partymembers = info->players;
-        if (!partymembers.valid())
+        if (!partymembers.valid()) {
             return;
+        }
         for (size_t i = 0; i < partymembers.size(); ++i) {
             const GW::PlayerPartyMember& partymember = partymembers[i];
             wchar_t* player_name = GW::PlayerMgr::GetPlayerName(partymember.login_number);
-            if (!player_name)
+            if (!player_name) {
                 continue;
+            }
             ImGui::PushID(static_cast<int>(i));
             if (ImGui::Button("Send")) {
                 // Todo: wording probably needs improvement
@@ -599,10 +632,11 @@ void InfoWindow::Initialize()
     GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
 }
 
-void InfoWindow::Draw(IDirect3DDevice9* pDevice)
+void InfoWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible) return;
+    if (!visible) {
+        return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -695,8 +729,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
                     }
                     InfoField("Calculated Pos", "%.2f, %.2f", pos.x, pos.y);
                     static wchar_t name_enc[8];
-                    if (GW::UI::UInt32ToEncStr(map_info->name_id, name_enc, 8))
+                    if (GW::UI::UInt32ToEncStr(map_info->name_id, name_enc, 8)) {
                         EncInfoField("Name Enc", name_enc);
+                    }
                 }
                 ImGui::TreePop();
             }
@@ -753,7 +788,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
         if (show_item && ImGui::CollapsingHeader("Quoted Item")) {
             ImGui::Text("Most recently quoted item (buy or sell) from trader");
             static GuiUtils::EncString quoted_name;
-            DrawItemInfo(GW::Items::GetItemById(quoted_item_id),&quoted_name);
+            DrawItemInfo(GW::Items::GetItemById(quoted_item_id), &quoted_name);
         }
 #endif
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
@@ -800,8 +835,12 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
                 && player != nullptr) {
                 for (auto* a : *agents) {
                     const GW::AgentLiving* agent = a ? a->GetAsAgentLiving() : nullptr;
-                    if (!(agent && agent->allegiance == GW::Constants::Allegiance::Enemy)) continue; // ignore non-hostiles
-                    if (agent->GetIsDead()) continue;                                                // ignore dead
+                    if (!(agent && agent->allegiance == GW::Constants::Allegiance::Enemy)) {
+                        continue; // ignore non-hostiles
+                    }
+                    if (agent->GetIsDead()) {
+                        continue; // ignore dead
+                    }
                     const float sqrd = GetSquareDistance(player->pos, agent->pos);
                     if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor
                         || agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
@@ -810,8 +849,12 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
                             ++soul_count;
                         }
                     }
-                    if (sqrd < GW::Constants::SqrRange::Spellcast) ++cast_count;
-                    if (sqrd < GW::Constants::SqrRange::Spirit) ++spirit_count;
+                    if (sqrd < GW::Constants::SqrRange::Spellcast) {
+                        ++cast_count;
+                    }
+                    if (sqrd < GW::Constants::SqrRange::Spirit) {
+                        ++spirit_count;
+                    }
                     ++compass_count;
                 }
             }
@@ -831,25 +874,23 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice)
     ImGui::End();
 #ifdef _DEBUG
     // For debugging changes to flags/arrays etc
-    const GW::GameContext* g = GW::GetGameContext();
-    const GW::GuildContext* gu = g->guild;
-    const GW::CharContext* c = g->character;
-    const GW::WorldContext* w = g->world;
-    const GW::PartyContext* p = g->party;
-    const GW::MapContext* m = g->map;
-    const GW::AccountContext* acc = g->account;
-    const GW::ItemContext* i = g->items;
-    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-    const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
-    const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
-    (g || c || w || p || m || i || me || me_player || log || gu || ai || acc);
+    [[maybe_unused]]const GW::GameContext* g = GW::GetGameContext();
+    [[maybe_unused]]const GW::GuildContext* gu = g->guild;
+    [[maybe_unused]]const GW::CharContext* c = g->character;
+    [[maybe_unused]]const GW::WorldContext* w = g->world;
+    [[maybe_unused]]const GW::PartyContext* p = g->party;
+    [[maybe_unused]]const GW::MapContext* m = g->map;
+    [[maybe_unused]]const GW::AccountContext* acc = g->account;
+    [[maybe_unused]]const GW::ItemContext* i = g->items;
+    [[maybe_unused]]const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    [[maybe_unused]]const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
+    [[maybe_unused]]const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+    [[maybe_unused]]const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
 #endif
 }
 
-void InfoWindow::Update(const float delta)
+void InfoWindow::Update(const float )
 {
-    UNREFERENCED_PARAMETER(delta);
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         send_timer = TIMER_INIT();
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
@@ -953,8 +994,9 @@ void InfoWindow::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent(
         "Game Settings", ICON_FA_GAMEPAD,
         [this](const std::string&, const bool is_showing) {
-            if (is_showing)
+            if (is_showing) {
                 DrawGameSettings();
+            }
         },
         0.9f);
 }

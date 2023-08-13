@@ -42,11 +42,13 @@ namespace Colors {
     static Color Load(const ToolboxIni* ini, const char* section, const char* key, const Color def)
     {
         const char* wc = ini->GetValue(section, key, nullptr);
-        if (wc == nullptr)
+        if (wc == nullptr) {
             return def;
+        }
         unsigned int c;
-        if (GuiUtils::ParseUInt(wc, &c, 16))
+        if (GuiUtils::ParseUInt(wc, &c, 16)) {
             return c;
+        }
         return def;
     }
 
@@ -112,37 +114,43 @@ namespace Colors {
         if (alpha) {
             value_changed |= ImGui::DragInt("##A", &i[0], 1.0f, 0, 255, "A:%d");
             ImGui::SameLine(0, style.ItemInnerSpacing.x);
-            if (ImGui::IsItemHovered())
+            if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Alpha channel (0 - 255)\n0 is transparent, 255 is solid color");
+            }
         }
         else {
-            if (!alpha)
+            if (!alpha) {
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + w_item_one + style.ItemInnerSpacing.x);
+            }
         }
 
         value_changed |= ImGui::DragInt("##R", &i[1], 1.0f, 0, 255, "R:%d");
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Red channel (0 - 255)");
+        }
 
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         value_changed |= ImGui::DragInt("##G", &i[2], 1.0f, 0, 255, "G:%d");
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Green channel (0 - 255)");
+        }
 
         ImGui::PopItemWidth();
 
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         ImGui::PushItemWidth(w_item_last);
         value_changed |= ImGui::DragInt("##B", &i[3], 1.0f, 0, 255, "B:%d");
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Blue channel (0 - 255)");
+        }
         ImGui::PopItemWidth();
 
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         ImGui::ColorButton("", ImColor(i[1], i[2], i[3]));
 
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Color:\n0x%02X%02X%02X%02X", i[0], i[1], i[2], i[3]);
+        }
 
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         ImGui::Text(text);
@@ -150,8 +158,9 @@ namespace Colors {
         ImGui::PopID();
         ImGui::EndGroup();
 
-        if (value_changed)
+        if (value_changed) {
             *color = ConvertInt4ToU32(i);
+        }
 
         return value_changed;
     }
@@ -159,10 +168,12 @@ namespace Colors {
     static void Clamp(int c[4])
     {
         for (auto i = 0; i < 4; i++) {
-            if (c[i] < 0)
+            if (c[i] < 0) {
                 c[i] = 0;
-            if (c[i] > 0xFF)
+            }
+            if (c[i] > 0xFF) {
                 c[i] = 0xFF;
+            }
         }
     }
 

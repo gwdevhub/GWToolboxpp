@@ -159,8 +159,9 @@ namespace {
         }
         out->window_positions.clear();
         for (GW::UI::WindowID i = GW::UI::WindowID_Dialogue1; i < GW::UI::WindowID_Count; i = static_cast<GW::UI::WindowID>(i + 1)) {
-            if (!GetWindowNameID(i))
+            if (!GetWindowNameID(i)) {
                 continue;
+            }
             out->window_positions.push_back(new WindowPreference(i, GetWindowPosition(i)));
         }
         for (const auto it : out->preferences) {
@@ -258,7 +259,8 @@ void GuildWarsPreferencesWindow::Initialize()
 
 void GuildWarsPreferencesWindow::Draw(IDirect3DDevice9*)
 {
-    if (!visible)
+    if (!visible) {
         return;
+    }
     current_preferences.Draw();
 }

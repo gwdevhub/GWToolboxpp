@@ -10,7 +10,7 @@ namespace ImGui {
     IMGUI_API void SetNextWindowCenter(ImGuiWindowFlags flags);
 
     IMGUI_API bool MyCombo(const char* label, const char* preview_text, int* current_item,
-        bool(*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
+        bool(*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count);
 
     IMGUI_API bool SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");
 

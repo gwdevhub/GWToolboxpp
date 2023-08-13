@@ -26,8 +26,9 @@ public:
     public:
         static void DoorAnimation(const uint32_t object_id, const uint32_t animation_type, const uint32_t animation_stage)
         {
-            if (animation_type != 16 && animation_type != 3)
+            if (animation_type != 16 && animation_type != 3) {
                 return; // Not opening or closing door.
+            }
             DoorObject* d = GetDoor(object_id);
             d->animation_type = animation_type;
             d->is_open = animation_type == 16;
@@ -40,17 +41,21 @@ public:
             }
             if (d->is_open) {
                 // Opening
-                if (!d->first_open)
+                if (!d->first_open) {
                     d->first_open = now;
-                else
+                }
+                else {
                     d->last_open = now;
+                }
             }
             else {
                 // Closing
-                if (!d->first_close)
+                if (!d->first_close) {
                     d->first_close = now;
-                else
+                }
+                else {
                     d->last_close = now;
+                }
             }
         };
     };
@@ -64,8 +69,9 @@ public:
     static DoorObject* GetDoor(uint32_t object_id)
     {
         const auto it = Instance().doors.find(object_id);
-        if (it != Instance().doors.end())
+        if (it != Instance().doors.end()) {
             return it->second;
+        }
         auto d = new DoorObject(object_id);
         Instance().doors.emplace(object_id, d);
         return d;

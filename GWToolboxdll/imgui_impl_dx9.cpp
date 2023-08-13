@@ -106,8 +106,9 @@ static void ImGui_ImplDX9_SetupRenderState(const ImDrawData* draw_data)
 void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized
-    if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
+    if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f) {
         return;
+    }
 
     // Create and grow buffers if needed
     if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount) {
@@ -116,8 +117,9 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             g_pVB = nullptr;
         }
         g_VertexBufferSize = draw_data->TotalVtxCount + 5000;
-        if (g_pd3dDevice->CreateVertexBuffer(g_VertexBufferSize * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, nullptr) < 0)
+        if (g_pd3dDevice->CreateVertexBuffer(g_VertexBufferSize * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, nullptr) < 0) {
             return;
+        }
     }
     if (!g_pIB || g_IndexBufferSize < draw_data->TotalIdxCount) {
         if (g_pIB) {
@@ -125,14 +127,16 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             g_pIB = nullptr;
         }
         g_IndexBufferSize = draw_data->TotalIdxCount + 10000;
-        if (g_pd3dDevice->CreateIndexBuffer(g_IndexBufferSize * sizeof(ImDrawIdx), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, sizeof(ImDrawIdx) == 2 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, D3DPOOL_DEFAULT, &g_pIB, nullptr) < 0)
+        if (g_pd3dDevice->CreateIndexBuffer(g_IndexBufferSize * sizeof(ImDrawIdx), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, sizeof(ImDrawIdx) == 2 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, D3DPOOL_DEFAULT, &g_pIB, nullptr) < 0) {
             return;
+        }
     }
 
     // Backup the DX9 state
     IDirect3DStateBlock9* d3d9_state_block = nullptr;
-    if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
+    if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) {
         return;
+    }
 
     // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
     D3DMATRIX last_world, last_view, last_projection;
@@ -146,10 +150,12 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     //  2) to avoid repacking vertices: #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT struct ImDrawVert { ImVec2 pos; float z; ImU32 col; ImVec2 uv; }
     CUSTOMVERTEX* vtx_dst;
     ImDrawIdx* idx_dst;
-    if (g_pVB->Lock(0, draw_data->TotalVtxCount * sizeof(CUSTOMVERTEX), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
+    if (g_pVB->Lock(0, draw_data->TotalVtxCount * sizeof(CUSTOMVERTEX), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0) {
         return;
-    if (g_pIB->Lock(0, draw_data->TotalIdxCount * sizeof(ImDrawIdx), (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
+    }
+    if (g_pIB->Lock(0, draw_data->TotalIdxCount * sizeof(ImDrawIdx), (void**)&idx_dst, D3DLOCK_DISCARD) < 0) {
         return;
+    }
     for (int n = 0; n < draw_data->CmdListsCount; n++) {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
 
@@ -184,10 +190,12 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             if (pcmd->UserCallback != nullptr) {
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState) {
                     ImGui_ImplDX9_SetupRenderState(draw_data);
-                else
+                }
+                else {
                     pcmd->UserCallback(cmd_list, pcmd);
+                }
             }
             else {
                 const RECT r = {static_cast<LONG>(pcmd->ClipRect.x - clip_off.x), static_cast<LONG>(pcmd->ClipRect.y - clip_off.y), static_cast<LONG>(pcmd->ClipRect.z - clip_off.x), static_cast<LONG>(pcmd->ClipRect.w - clip_off.y)};
@@ -246,13 +254,16 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     // Upload texture to graphics system
     g_FontTexture = nullptr;
     // GWToolbox 2020-10-15: Changed D3DPOOL_DEFAULT to D3DPOOL_MANAGED, allows us to re-use the texture without having to rebuild across device states.
-    if (g_pd3dDevice->CreateTexture(width, height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &g_FontTexture, nullptr) < 0)
+    if (g_pd3dDevice->CreateTexture(width, height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &g_FontTexture, nullptr) < 0) {
         return false;
+    }
     D3DLOCKED_RECT tex_locked_rect;
-    if (g_FontTexture->LockRect(0, &tex_locked_rect, nullptr, 0) != D3D_OK)
+    if (g_FontTexture->LockRect(0, &tex_locked_rect, nullptr, 0) != D3D_OK) {
         return false;
-    for (int y = 0; y < height; y++)
+    }
+    for (int y = 0; y < height; y++) {
         memcpy(static_cast<unsigned char*>(tex_locked_rect.pBits) + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
+    }
     g_FontTexture->UnlockRect(0);
 
     // Store our identifier
@@ -263,17 +274,20 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
 
 bool ImGui_ImplDX9_CreateDeviceObjects()
 {
-    if (!g_pd3dDevice)
+    if (!g_pd3dDevice) {
         return false;
-    if (!ImGui_ImplDX9_CreateFontsTexture())
+    }
+    if (!ImGui_ImplDX9_CreateFontsTexture()) {
         return false;
+    }
     return true;
 }
 
 void ImGui_ImplDX9_InvalidateDeviceObjects()
 {
-    if (!g_pd3dDevice)
+    if (!g_pd3dDevice) {
         return;
+    }
     if (g_pVB) {
         g_pVB->Release();
         g_pVB = nullptr;
@@ -288,6 +302,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
 
 void ImGui_ImplDX9_NewFrame()
 {
-    if (!g_FontTexture)
+    if (!g_FontTexture) {
         ImGui_ImplDX9_CreateDeviceObjects();
+    }
 }

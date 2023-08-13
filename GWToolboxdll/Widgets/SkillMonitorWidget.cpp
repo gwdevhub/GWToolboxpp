@@ -31,16 +31,12 @@ void SkillMonitorWidget::Initialize()
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(
-        &GenericModifier_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericModifier* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-
+        &GenericModifier_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet) -> void {
             CasttimeCallback(packet->type, packet->target_id, packet->value);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
-        &GenericValueSelf_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValue* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-
+        &GenericValueSelf_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet) -> void {
             const uint32_t value_id = packet->value_id;
             const uint32_t caster_id = packet->agent_id;
             const uint32_t value = packet->value;
@@ -48,19 +44,19 @@ void SkillMonitorWidget::Initialize()
             SkillCallback(value_id, caster_id, value);
         });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
-                                                                           [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
-                                                                               UNREFERENCED_PARAMETER(status);
-                                                                               using namespace GW::Packet::StoC::GenericValueID;
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(
+        &GenericValueTarget_Entry,
+        [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
+            using namespace GW::Packet::StoC::GenericValueID;
 
-                                                                               const uint32_t value_id = packet->Value_id;
-                                                                               const uint32_t caster_id = packet->caster;
-                                                                               const uint32_t target_id = packet->target;
-                                                                               const uint32_t value = packet->value;
+            const uint32_t value_id = packet->Value_id;
+            const uint32_t caster_id = packet->caster;
+            const uint32_t target_id = packet->target;
+            const uint32_t value = packet->value;
 
-                                                                               const bool isSwapped = value_id == skill_activated || value_id == attack_skill_activated;
-                                                                               SkillCallback(value_id, isSwapped ? target_id : caster_id, value);
-                                                                           });
+            const bool isSwapped = value_id == skill_activated || value_id == attack_skill_activated;
+            SkillCallback(value_id, isSwapped ? target_id : caster_id, value);
+        });
 }
 
 void SkillMonitorWidget::Terminate()
@@ -68,16 +64,18 @@ void SkillMonitorWidget::Terminate()
     ToolboxWidget::Terminate();
 }
 
-void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
+void SkillMonitorWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(device);
-    if (!visible)
+    if (!visible) {
         return;
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+    }
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
+    }
     // @Cleanup: This doesn't need to be done every frame - only when the party has been changed
-    if (!FetchPartyInfo())
+    if (!FetchPartyInfo()) {
         return;
+    }
 
     const float img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
     const auto num_rows = show_non_party_members
@@ -134,8 +132,9 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
         auto GetGridPos = [&](const size_t _x, const size_t _y, const bool topleft) -> ImVec2 {
             size_t x = _x;
             size_t y = _y;
-            if (y >= allies_start)
+            if (y >= allies_start) {
                 ++y;
+            }
             if (!topleft) {
                 ++x;
                 ++y;
@@ -145,8 +144,9 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
 
         auto party_index = 0u;
         for (auto& [agent_id, party_slot] : party_map) {
-            if (++party_index > num_rows)
+            if (++party_index > num_rows) {
                 continue;
+            }
             auto& skill_history = history[agent_id];
             const size_t y = party_slot;
 
@@ -206,10 +206,9 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device)
     ImGui::PopStyleVar(3);
 }
 
-void SkillMonitorWidget::Update(const float delta)
+void SkillMonitorWidget::Update(const float)
 {
-    UNREFERENCED_PARAMETER(delta);
-    for (auto& [agent_id, skill_history] : history) {
+    for (auto& skill_history : history | std::views::values) {
         if (skill_history.size() > static_cast<size_t>(history_length)) {
             skill_history.erase(skill_history.begin(), skill_history.begin() + (skill_history.size() - history_length));
         }
@@ -288,8 +287,9 @@ void SkillMonitorWidget::DrawSettingsInternal()
         ImGui::InputInt("Row Height", &row_height);
         ImGui::ShowHelp("Height of each row, leave 0 for default");
     }
-    if (row_height < 0)
+    if (row_height < 0) {
         row_height = 0;
+    }
 
     ImGui::Checkbox("Flip history direction (left/right)", &history_flip_direction);
 
@@ -336,8 +336,9 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
     using namespace GW::Packet::StoC;
 
     const auto skill_history = &history[caster_id];
-    if (!skill_history)
+    if (!skill_history) {
         return;
+    }
 
     switch (value_id) {
         case GenericValueID::instant_skill_activated:
@@ -394,8 +395,9 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
 
 void SkillMonitorWidget::CasttimeCallback(const uint32_t value_id, const uint32_t caster_id, const float value)
 {
-    if (value_id != GW::Packet::StoC::GenericValueID::casttime)
+    if (value_id != GW::Packet::StoC::GenericValueID::casttime) {
         return;
+    }
 
     casttime_map[caster_id] = value;
 }
@@ -403,15 +405,17 @@ void SkillMonitorWidget::CasttimeCallback(const uint32_t value_id, const uint32_
 bool SkillMonitorWidget::FetchPartyInfo()
 {
     const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-    if (!info)
+    if (!info) {
         return false;
+    }
     party_map.clear();
     party_map_indent.clear();
     allies_start = 255;
     for (const GW::PlayerPartyMember& player : info->players) {
         const auto id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
-        if (!id)
+        if (!id) {
             continue;
+        }
         party_map[id] = party_map.size();
 
         if (info->heroes.valid()) {
@@ -433,8 +437,9 @@ bool SkillMonitorWidget::FetchPartyInfo()
             GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
             const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
             if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
-                if (allies_start == 255)
+                if (allies_start == 255) {
                     allies_start = party_map.size();
+                }
                 party_map[ally_id] = party_map.size();
             }
         }

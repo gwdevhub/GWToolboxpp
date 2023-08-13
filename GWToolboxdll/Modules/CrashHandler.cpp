@@ -36,8 +36,9 @@ void CrashHandler::GWCAPanicHandler(
 void CrashHandler::OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, const uint32_t exception_line)
 {
     GW::HookBase::EnterHook();
-    if (!Instance().gw_debug_info)
+    if (!Instance().gw_debug_info) {
         Instance().gw_debug_info = details;
+    }
     if (!pExceptionPointers) {
         FatalAssert(exception_message, exception_file, exception_line);
     }
@@ -47,8 +48,9 @@ void CrashHandler::OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEP
     } __except (EXCEPTION_CONTINUE_EXECUTION) { }
 
     // Assertion here will throw a GWToolbox exception if pExceptionPointers isn't found; this will give us the correct call stack for a GW Assertion failure in the subsequent crash dump.
-    if (Crash(pExceptionPointers))
+    if (Crash(pExceptionPointers)) {
         abort();
+    }
     Instance().gw_debug_info = nullptr;
     Instance().RetHandleCrash(details, param_2, pExceptionPointers, exception_message, exception_file, exception_line);
 

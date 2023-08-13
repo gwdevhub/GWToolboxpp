@@ -10,8 +10,9 @@ class ServerInfoWidget : public ToolboxWidget {
 
     ~ServerInfoWidget() override
     {
-        if (server_info_fetcher.joinable())
+        if (server_info_fetcher.joinable()) {
             server_info_fetcher.join();
+        }
     }
 
 public:

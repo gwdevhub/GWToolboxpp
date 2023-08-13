@@ -139,38 +139,54 @@ void ObserverPartyWindow::DrawBlankPartyMember(float& offset)
 {
     uint16_t tinys = 0;
     uint16_t shorts = 0;
-    if (show_profession)
+    if (show_profession) {
         shorts += 1;
-    if (show_player_guild_tag)
+    }
+    if (show_player_guild_tag) {
         shorts += 1;
-    if (show_player_guild_rating)
+    }
+    if (show_player_guild_rating) {
         tinys += 1;
-    if (show_player_guild_rank)
+    }
+    if (show_player_guild_rank) {
         tinys += 1;
-    if (show_kills)
+    }
+    if (show_kills) {
         tinys += 1;
-    if (show_deaths)
+    }
+    if (show_deaths) {
         tinys += 1;
-    if (show_kdr)
+    }
+    if (show_kdr) {
         tinys += 1;
-    if (show_cancels)
+    }
+    if (show_cancels) {
         tinys += 1;
-    if (show_interrupts)
+    }
+    if (show_interrupts) {
         tinys += 1;
-    if (show_knockdowns)
+    }
+    if (show_knockdowns) {
         tinys += 1;
-    if (show_received_party_attacks)
+    }
+    if (show_received_party_attacks) {
         tinys += 1;
-    if (show_dealt_party_attacks)
+    }
+    if (show_dealt_party_attacks) {
         tinys += 1;
-    if (show_received_party_crits)
+    }
+    if (show_received_party_crits) {
         tinys += 1;
-    if (show_dealt_party_crits)
+    }
+    if (show_dealt_party_crits) {
         tinys += 1;
-    if (show_received_party_skills)
+    }
+    if (show_received_party_skills) {
         tinys += 1;
-    if (show_dealt_party_skills)
+    }
+    if (show_dealt_party_skills) {
         tinys += 1;
+    }
 
     ImGui::Text("");
     ImGui::SameLine(offset += (text_long + shorts * text_short + tinys * text_tiny));
@@ -179,11 +195,8 @@ void ObserverPartyWindow::DrawBlankPartyMember(float& offset)
 
 // Draw a Party Member
 void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::ObservableAgent& agent, const ObserverModule::ObservableGuild* guild,
-                                          const bool odd, const bool is_player, const bool is_target)
+                                          const bool odd, const bool, const bool) const
 {
-    UNREFERENCED_PARAMETER(is_player);
-    UNREFERENCED_PARAMETER(is_target);
-
     auto& Text = odd ? ImGui::TextDisabled : ImGui::Text;
 
     // [profession:short]
@@ -198,28 +211,34 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
 
     // [guild-tag:short]
     if (show_player_guild_tag) {
-        if (guild)
+        if (guild) {
             ImGui::Text(guild->wrapped_tag.c_str());
-        else
+        }
+        else {
             ImGui::Text("");
+        }
         ImGui::SameLine(offset += text_short);
     }
 
     // [guild-rating:tiny]
     if (show_player_guild_rating) {
-        if (guild)
+        if (guild) {
             ImGui::Text(std::to_string(guild->rating).c_str());
-        else
+        }
+        else {
             ImGui::Text("");
+        }
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [guild-rank]
     if (show_player_guild_rank) {
-        if (guild)
+        if (guild) {
             ImGui::Text(std::to_string(guild->rank).c_str());
-        else
+        }
+        else {
             ImGui::Text("");
+        }
         ImGui::SameLine(offset += text_tiny);
     }
 
@@ -418,12 +437,14 @@ void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::Observa
 // Draw everything
 void ObserverPartyWindow::Draw(IDirect3DDevice9*)
 {
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         return ImGui::End();
+    }
 
     // TODO: background colour in the currently following player
     // TODO: background colour in the currently targetted player
@@ -440,13 +461,15 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9*)
     size_t actual_party_count = 0;
     for (const uint32_t party_id : party_ids) {
         const ObserverModule::ObservableParty* party = observer_module.GetObservablePartyById(party_id);
-        if (!party)
+        if (!party) {
             continue;
+        }
         parties.push_back(party);
         actual_party_count += 1;
         const auto size = party->agent_ids.size();
-        if (size > max_party_size)
+        if (size > max_party_size) {
             max_party_size = size;
+        }
     }
 
     const float global = ImGui::GetIO().FontGlobalScale;
@@ -472,8 +495,9 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9*)
             ImGui::Separator();
         }
         // force new line for each player
-        else if (party_member_index > 0)
+        else if (party_member_index > 0) {
             ImGui::Text("");
+        }
         // else if (party_member_index > 0) ImGui::Separator();
 
         // line offset
@@ -494,8 +518,9 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9*)
             }
 
             const ObserverModule::ObservableParty* party = parties[party_index];
-            if (!party)
+            if (!party) {
                 return;
+            }
 
             // draw party total
             if (party_member_index == -1) {

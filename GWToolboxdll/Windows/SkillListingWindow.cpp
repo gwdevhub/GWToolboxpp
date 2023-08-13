@@ -26,8 +26,9 @@ static void printchar(const wchar_t c)
 
 const wchar_t* SkillListingWindow::Skill::Name()
 {
-    if (!name_enc[0] && GW::UI::UInt32ToEncStr(skill->name, name_enc, 16))
+    if (!name_enc[0] && GW::UI::UInt32ToEncStr(skill->name, name_enc, 16)) {
         GW::UI::AsyncDecodeStr(name_enc, name_dec, 256);
+    }
     return name_dec;
 }
 
@@ -43,12 +44,15 @@ const wchar_t* SkillListingWindow::Skill::GWWDescription()
         swprintf(scale3_txt, 16, L"%d..%d", skill->duration0, skill->duration15);
         std::wstring s(raw_description);
         size_t pos = std::wstring::npos;
-        while ((pos = s.find(L"991")) != std::wstring::npos)
+        while ((pos = s.find(L"991")) != std::wstring::npos) {
             s.replace(pos, 3, scale1_txt);
-        while ((pos = s.find(L"992")) != std::wstring::npos)
+        }
+        while ((pos = s.find(L"992")) != std::wstring::npos) {
             s.replace(pos, 3, scale2_txt);
-        while ((pos = s.find(L"993")) != std::wstring::npos)
+        }
+        while ((pos = s.find(L"993")) != std::wstring::npos) {
             s.replace(pos, 3, scale3_txt);
+        }
         wsprintfW(desc_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
     }
     return desc_gww;
@@ -66,12 +70,15 @@ const wchar_t* SkillListingWindow::Skill::GWWConcise()
         swprintf(scale3_txt, 16, L"%d..%d", skill->duration0, skill->duration15);
         std::wstring s(raw_description);
         size_t pos = std::wstring::npos;
-        while ((pos = s.find(L"991")) != std::wstring::npos)
+        while ((pos = s.find(L"991")) != std::wstring::npos) {
             s.replace(pos, 3, scale1_txt);
-        while ((pos = s.find(L"992")) != std::wstring::npos)
+        }
+        while ((pos = s.find(L"992")) != std::wstring::npos) {
             s.replace(pos, 3, scale2_txt);
-        while ((pos = s.find(L"993")) != std::wstring::npos)
+        }
+        while ((pos = s.find(L"993")) != std::wstring::npos) {
             s.replace(pos, 3, scale3_txt);
+        }
         wsprintfW(concise_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
     }
     return concise_gww;
@@ -81,7 +88,9 @@ void SkillListingWindow::ExportToJSON()
 {
     nlohmann::json json;
     for (size_t i = 0; i < skills.size(); i++) {
-        if (!skills[i]) continue;
+        if (!skills[i]) {
+            continue;
+        }
         json[static_cast<uint32_t>(skills[i]->skill->skill_id)] = skills[i]->ToJson();
     }
     const auto file_location = Resources::GetPath(L"skills.json");
@@ -100,13 +109,16 @@ void SkillListingWindow::ExportToJSON()
 
     for (size_t i = 0; i < message.length(); i++) {
         // Break on the end of the message
-        if (!message[i])
+        if (!message[i]) {
             break;
+        }
         // Double escape backsashes
-        if (message[i] == '\\')
+        if (message[i] == '\\') {
             file_location_wc[msg_len++] = message[i];
-        if (msg_len >= max_len)
+        }
+        if (msg_len >= max_len) {
             break;
+        }
         file_location_wc[msg_len++] = message[i];
     }
     file_location_wc[msg_len] = 0;
@@ -121,7 +133,9 @@ void SkillListingWindow::Initialize()
     skills.resize(static_cast<size_t>(GW::Constants::SkillID::Count), nullptr);
     for (size_t i = 0; i < skills.size(); i++) {
         GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(i));
-        if (!s || s->skill_id == static_cast<GW::Constants::SkillID>(0)) continue;
+        if (!s || s->skill_id == static_cast<GW::Constants::SkillID>(0)) {
+            continue;
+        }
         skills[i] = new Skill(s);
     }
 }
@@ -130,20 +144,23 @@ void SkillListingWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     for (const auto skill : skills) {
-        if (skill) delete skill;
+        if (skill) {
+            delete skill;
+        }
     }
     skills.clear();
 }
 
-void SkillListingWindow::Draw(IDirect3DDevice9* pDevice)
+void SkillListingWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         return ImGui::End();
+    }
     float offset = 0.0f;
     const float tiny_text_width = 50.0f * ImGui::GetIO().FontGlobalScale;
     const float long_text_width = 200.0f * ImGui::GetIO().FontGlobalScale;
@@ -164,19 +181,24 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice)
         search_term = GuiUtils::ToLower(GuiUtils::StringToWString(buf));
     }
     for (size_t i = 0; i < skills.size(); i++) {
-        if (!skills[i]) continue;
-        if (!search_term.empty() && GuiUtils::ToLower(skills[i]->Name()).find(search_term) == std::wstring::npos)
+        if (!skills[i]) {
             continue;
+        }
+        if (!search_term.empty() && GuiUtils::ToLower(skills[i]->Name()).find(search_term) == std::wstring::npos) {
+            continue;
+        }
         offset = 0;
         ImGui::Text("%d", i);
-        if (!ImGui::IsItemVisible())
+        if (!ImGui::IsItemVisible()) {
             continue;
+        }
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::ImageCropped(*Resources::GetSkillImage(skills[i]->skill->skill_id), {20.f, 20.f});
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%S", skills[i]->Name());
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%S,\n%S", skills[i]->GWWDescription(), ""); // skills[i]->GWWConcise());
+        }
         ImGui::SameLine(offset += long_text_width);
         ImGui::Text("%d", skills[i]->skill->attribute);
         ImGui::SameLine(offset += tiny_text_width);
@@ -195,8 +217,9 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice)
             });
         }
     }
-    if (ImGui::Button("Export to JSON"))
+    if (ImGui::Button("Export to JSON")) {
         ExportToJSON();
+    }
     ImGui::End();
 }
 
@@ -209,29 +232,38 @@ nlohmann::json SkillListingWindow::Skill::ToJson()
     json["t"] = skill->type;
     json["p"] = skill->profession;
     json["a"] = IsPvE() ? 255 - skill->title : skill->attribute;
-    if (IsElite())
+    if (IsElite()) {
         json["e"] = 1;
+    }
     json["c"] = skill->campaign;
     nlohmann::json z_json;
-    if (HasExhaustion())
+    if (HasExhaustion()) {
         z_json["x"] = skill->overcast;
-    if (skill->recharge)
+    }
+    if (skill->recharge) {
         z_json["r"] = skill->recharge;
-    if (skill->activation)
+    }
+    if (skill->activation) {
         z_json["c"] = skill->activation;
-    if (IsMaintained())
+    }
+    if (IsMaintained()) {
         z_json["d"] = 1;
-    if (skill->adrenaline)
+    }
+    if (skill->adrenaline) {
         z_json["a"] = skill->adrenaline;
-    if (skill->energy_cost)
+    }
+    if (skill->energy_cost) {
         z_json["e"] = skill->GetEnergyCost();
-    if (skill->health_cost)
+    }
+    if (skill->health_cost) {
         z_json["s"] = skill->health_cost;
+    }
     z_json["sp"] = skill->special;
     z_json["co"] = skill->combo;
     z_json["q"] = skill->weapon_req;
-    if (z_json.size())
+    if (z_json.size()) {
         json["z"] = z_json;
+    }
     return json;
 }
 
@@ -246,8 +278,9 @@ const std::wstring SkillListingWindow::Skill::GetSkillType()
         case 5:
             return str += L"Spell", str;
         case 6:
-            if (skill->special & 0x800000)
+            if (skill->special & 0x800000) {
                 str += L"Flash ";
+            }
             return str += L"Enchantment Spell", str;
         case 7:
             return str += L"Signet", str;

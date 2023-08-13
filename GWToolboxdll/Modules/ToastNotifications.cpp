@@ -56,8 +56,9 @@ namespace {
     {
         bool show_toast;
         const auto whnd = GW::MemoryMgr::GetGWWindowHandle();
-        if (!whnd)
+        if (!whnd) {
             return false;
+        }
         if (IsIconic(whnd)) {
             show_toast = show_notifications_when_minimised;
             goto show_toast;
@@ -69,8 +70,9 @@ namespace {
         show_toast = show_notifications_when_focussed;
 
     show_toast:
-        if (!show_toast)
+        if (!show_toast) {
             return false;
+        }
 
         const auto instance_type = GW::Map::GetInstanceType();
 
@@ -88,8 +90,9 @@ namespace {
 
     void FlashWindow()
     {
-        if (CanNotify())
+        if (CanNotify()) {
             GuiUtils::FlashWindow();
+        }
     }
 
     uint32_t GetPartyId()
@@ -100,8 +103,9 @@ namespace {
 
     void OnWhisperToastActivated(const ToastNotifications::Toast* toast, const bool activated)
     {
-        if (!activated)
+        if (!activated) {
             return; // dismissed
+        }
         GuiUtils::FocusWindow();
         GW::GameThread::Enqueue([charname = toast->title]() {
             SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)charname.data());
@@ -110,8 +114,9 @@ namespace {
 
     void OnGenericToastActivated(const ToastNotifications::Toast*, const bool activated)
     {
-        if (!activated)
+        if (!activated) {
             return; // dismissed
+        }
         GuiUtils::FocusWindow();
     }
 
@@ -119,16 +124,19 @@ namespace {
 
     void OnWhisper(GW::HookStatus*, const wchar_t* from, const wchar_t* msg)
     {
-        if (show_notifications_on_whisper)
+        if (show_notifications_on_whisper) {
             ToastNotifications::SendToast(from, msg, OnWhisperToastActivated);
-        if (flash_window_on_whisper)
+        }
+        if (flash_window_on_whisper) {
             FlashWindow();
+        }
     }
 
     void TriggerToastCallback(const ToastNotifications::Toast* toast, const bool result)
     {
-        if (toast->callback)
+        if (toast->callback) {
             toast->callback(toast, result);
+        }
         // naughty but idc
         const auto nonconst = (ToastNotifications::Toast*)toast;
         nonconst->callback = nullptr;
@@ -144,8 +152,9 @@ namespace {
 
     void SendEncodedToastMessage(const wchar_t* title, wchar_t* encoded_message)
     {
-        if (!(encoded_message && encoded_message[0]))
+        if (!(encoded_message && encoded_message[0])) {
             return;
+        }
         const auto title_copy = new wchar_t[wcslen(title) + 1];
         wcscpy(title_copy, title);
         GW::UI::AsyncDecodeStr(encoded_message, OnToastMessageDecoded, title_copy);
@@ -157,28 +166,35 @@ namespace {
         const auto packet = static_cast<GW::Packet::StoC::MessageGlobal*>(base);
         switch (packet->channel) {
             case GW::Chat::Channel::CHANNEL_GUILD:
-                if (show_notifications_on_guild_chat)
+                if (show_notifications_on_guild_chat) {
                     title = L"Guild Chat";
-                if (flash_window_on_guild_chat)
+                }
+                if (flash_window_on_guild_chat) {
                     FlashWindow();
+                }
                 break;
             case GW::Chat::Channel::CHANNEL_ALLIANCE:
-                if (show_notifications_on_ally_chat)
+                if (show_notifications_on_ally_chat) {
                     title = L"Alliance Chat";
-                if (flash_window_on_ally_chat)
+                }
+                if (flash_window_on_ally_chat) {
                     FlashWindow();
+                }
                 break;
         }
-        if (!title)
+        if (!title) {
             return;
+        }
         const wchar_t* message_encoded = ToolboxUtils::GetMessageCore();
         const size_t msg_len = wcslen(packet->sender_name) + wcslen(packet->sender_guild) + wcslen(message_encoded) + 10;
         const auto message_including_sender = new wchar_t[msg_len];
         int written = -1;
-        if (packet->sender_guild[0])
+        if (packet->sender_guild[0]) {
             written = swprintf(message_including_sender, msg_len, L"\x108\x107%s [%s]: \x1\x2%s", packet->sender_name, packet->sender_guild, message_encoded);
-        else
+        }
+        else {
             written = swprintf(message_including_sender, msg_len, L"\x108\x107%s: \x1\x2%s", packet->sender_name, message_encoded);
+        }
         ASSERT(written != -1);
         SendEncodedToastMessage(title, message_including_sender);
         delete[] message_including_sender;
@@ -188,38 +204,45 @@ namespace {
     {
         const uint32_t my_player_id = GW::PlayerMgr::GetPlayerNumber();
         const auto p = GW::PartyMgr::GetPartyInfo();
-        if (!(p && p->players.size() > 1))
+        if (!(p && p->players.size() > 1)) {
             return;
+        }
         bool player_ticked = false;
         for (const auto& player : p->players) {
             if (player.login_number == my_player_id) {
                 player_ticked = player.ticked();
                 continue;
             }
-            if (!player.ticked())
+            if (!player.ticked()) {
                 return; // Other player not ticked yet.
+            }
         }
         // This far; Everyone else is ticked up
         if (!player_ticked) {
-            if (show_notifications_on_last_to_ready)
+            if (show_notifications_on_last_to_ready) {
                 ToastNotifications::SendToast(party_ready_toast_title, L"You're the last player in your party to tick up", OnGenericToastActivated);
-            if (flash_window_on_last_to_ready)
+            }
+            if (flash_window_on_last_to_ready) {
                 FlashWindow();
+            }
         }
         else {
             // Everyone including me is ticked
-            if (show_notifications_on_everyone_ready)
+            if (show_notifications_on_everyone_ready) {
                 ToastNotifications::SendToast(party_ready_toast_title, L"Everyone in your party is ticked up and ready to go!", OnGenericToastActivated);
-            if (flash_window_on_everyone_ready)
+            }
+            if (flash_window_on_everyone_ready) {
                 FlashWindow();
+            }
         }
     }
 
     void OnPartyPlayerReady(GW::HookStatus*, GW::Packet::StoC::PacketBase* base)
     {
         const auto packet = static_cast<GW::Packet::StoC::PartyPlayerReady*>(base);
-        if (packet->party_id == GetPartyId())
+        if (packet->party_id == GetPartyId()) {
             CheckLastToReady();
+        }
     }
 
     void OnMapChange(GW::HookStatus*, GW::Packet::StoC::PacketBase*)
@@ -304,18 +327,21 @@ bool ToastNotifications::Toast::send()
 {
     using namespace WinToastLib;
     const auto instance = WinToast::instance();
-    if (!instance->isCompatible())
+    if (!instance->isCompatible()) {
         return false;
+    }
     if (!instance->isInitialized()) {
         instance->setAppName(L"Guild Wars");
         const auto version = GuiUtils::StringToWString(GWTOOLBOXDLL_VERSION);
         const auto aumi = WinToast::configureAUMI(L"gwtoolbox", L"GWToolbox++", L"GWToolbox++", version);
         instance->setAppUserModelId(aumi);
-        if (!instance->initialize())
+        if (!instance->initialize()) {
             return false;
+        }
     }
-    if (!toast_template)
+    if (!toast_template) {
         toast_template = new WinToastTemplate(WinToastTemplate::WinToastTemplateType::Text02);
+    }
     toast_template->setTextField(title, WinToastTemplate::FirstLine);
     toast_template->setTextField(message, WinToastTemplate::SecondLine);
     dismiss();
@@ -342,18 +368,21 @@ bool ToastNotifications::DismissToast(const wchar_t* title)
 
 ToastNotifications::Toast* ToastNotifications::SendToast(const wchar_t* title, const wchar_t* message, const OnToastCallback callback, void* extra_args)
 {
-    if (!IsCompatible())
+    if (!IsCompatible()) {
         return nullptr;
-    if (!CanNotify())
+    }
+    if (!CanNotify()) {
         return nullptr;
+    }
     const auto found = toasts.find(title);
     Toast* toast = found != toasts.end() ? found->second : nullptr;
     if (!toast) {
         toast = new Toast(title, message);
         toasts[toast->title] = toast;
     }
-    else if (toast->message == message)
+    else if (toast->message == message) {
         return toast; // Avoid spamming desktop notifications
+    }
     toast->message = message;
     toast->callback = callback;
     toast->extra_args = extra_args;

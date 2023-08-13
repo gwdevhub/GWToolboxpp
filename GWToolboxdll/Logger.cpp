@@ -26,19 +26,13 @@ namespace {
 }
 
 static void GWCALogHandler(
-    void* context,
-    const GW::LogLevel level,
+    [[maybe_unused]] void* context,
+    [[maybe_unused]] const GW::LogLevel level,
     const char* msg,
-    const char* file,
-    const unsigned int line,
-    const char* function)
+    [[maybe_unused]] const char* file,
+    [[maybe_unused]] const unsigned int line,
+    [[maybe_unused]] const char* function)
 {
-    UNREFERENCED_PARAMETER(context);
-    UNREFERENCED_PARAMETER(level);
-    UNREFERENCED_PARAMETER(file);
-    UNREFERENCED_PARAMETER(line);
-    UNREFERENCED_PARAMETER(function);
-
     Log::Log("[GWCA] %s", msg);
 }
 
@@ -98,10 +92,12 @@ void Log::Terminate()
     GW::RegisterPanicHandler(nullptr, nullptr);
 
 #ifdef _DEBUG
-    if (stdout_file)
+    if (stdout_file) {
         fclose(stdout_file);
-    if (stderr_file)
+    }
+    if (stderr_file) {
         fclose(stderr_file);
+    }
 
     FreeConsole();
 #else
@@ -130,30 +126,34 @@ static void PrintTimestamp()
 
 void Log::Log(const char* msg, ...)
 {
-    if (!logfile)
+    if (!logfile) {
         return;
+    }
     PrintTimestamp();
 
     va_list args;
     va_start(args, msg);
     vfprintf(logfile, msg, args);
     va_end(args);
-    if (msg[strlen(msg) - 1] != '\n')
+    if (msg[strlen(msg) - 1] != '\n') {
         fprintf(logfile, "\n");
+    }
 }
 
 void Log::LogW(const wchar_t* msg, ...)
 {
-    if (!logfile)
+    if (!logfile) {
         return;
+    }
     PrintTimestamp();
 
     va_list args;
     va_start(args, msg);
     vfwprintf(logfile, msg, args);
     va_end(args);
-    if (msg[wcslen(msg) - 1] != '\n')
+    if (msg[wcslen(msg) - 1] != '\n') {
         fprintf(logfile, "\n");
+    }
 }
 
 // === Game chat logging ===

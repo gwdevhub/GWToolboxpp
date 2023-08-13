@@ -361,9 +361,6 @@ LRESULT SettingsWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    UNREFERENCED_PARAMETER(uMsg);
-    UNREFERENCED_PARAMETER(wParam);
-    UNREFERENCED_PARAMETER(lParam);
 
     m_hNoUpdate = CreateWindowW(
         WC_BUTTONW,
@@ -399,8 +396,6 @@ void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 void SettingsWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificateCode)
 {
-    UNREFERENCED_PARAMETER(ControlId);
-    UNREFERENCED_PARAMETER(NotificateCode);
 
     if (hWnd == m_hNoUpdate) {
         settings.noupdate = ToggleCheckbox(m_hNoUpdate);

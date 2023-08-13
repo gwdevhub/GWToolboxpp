@@ -42,8 +42,9 @@ public:
 
     bool* GetVisiblePtr(const bool force_show = false)
     {
-        if (!has_closebutton || show_closebutton || force_show)
+        if (!has_closebutton || show_closebutton || force_show) {
             return &visible;
+        }
         return nullptr;
     }
 

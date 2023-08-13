@@ -72,8 +72,9 @@ namespace {
     bool GetValue(const json& content, const char* key, uint32_t* out)
     {
         const auto found = content.find(key);
-        if (!(found != content.end() && found->is_number_unsigned()))
+        if (!(found != content.end() && found->is_number_unsigned())) {
             return false;
+        }
         *out = *found;
         return true;
     }
@@ -81,8 +82,9 @@ namespace {
     bool GetValue(const json& content, const char* key, std::string* out)
     {
         const auto found = content.find(key);
-        if (!(found != content.end() && found->is_string()))
+        if (!(found != content.end() && found->is_string())) {
             return false;
+        }
         *out = *found;
         return true;
     }
@@ -90,8 +92,9 @@ namespace {
     bool GetValue(const json& content, const char* key, bool* out)
     {
         const auto found = content.find(key);
-        if (!(found != content.end() && found->is_boolean()))
+        if (!(found != content.end() && found->is_boolean())) {
             return false;
+        }
         *out = *found;
         return true;
     }
@@ -99,8 +102,9 @@ namespace {
     bool GetValue(const json& content, const char* key, json* out)
     {
         const auto found = content.find(key);
-        if (!(found != content.end() && found->is_object()))
+        if (!(found != content.end() && found->is_object())) {
             return false;
+        }
         *out = *found;
         return true;
     }
@@ -108,8 +112,9 @@ namespace {
     bool GetValue(const json& content, const char* key, json_vec* out)
     {
         const auto found = content.find(key);
-        if (!(found != content.end() && found->is_array()))
+        if (!(found != content.end() && found->is_array())) {
             return false;
+        }
         *out = found->get<json_vec>();
         return true;
     }
@@ -117,13 +122,16 @@ namespace {
 
     void DeleteWebSocket()
     {
-        if (!websocket)
+        if (!websocket) {
             return;
-        if (websocket->getReadyState() == WebSocket::OPEN)
+        }
+        if (websocket->getReadyState() == WebSocket::OPEN) {
             websocket->close();
+        }
         disconnecting = true;
-        while (websocket->getReadyState() != WebSocket::CLOSED)
+        while (websocket->getReadyState() != WebSocket::CLOSED) {
             websocket->poll();
+        }
         delete websocket;
         websocket = nullptr;
     }
@@ -232,10 +240,12 @@ namespace {
     bool Connect(bool user_invoked = false)
     {
         pending_connect = false;
-        if (step == Connecting || IsConnected())
+        if (step == Connecting || IsConnected()) {
             return true;
-        if (step == Downloading)
+        }
+        if (step == Downloading) {
             return true;
+        }
         step = Connecting;
         if (!enabled) {
             step = Idle;
@@ -243,8 +253,9 @@ namespace {
         }
         int res;
         if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
-            if (user_invoked)
+            if (user_invoked) {
                 Log::Error("Failed to call WSAStartup: %d\n", res);
+            }
             step = Idle;
             return false;
         }
@@ -252,12 +263,14 @@ namespace {
         Resources::EnqueueWorkerTask([user_invoked]() {
             websocket = WebSocket::from_url(GetWebsocketHost());
             if (websocket == nullptr) {
-                if (user_invoked)
+                if (user_invoked) {
                     Log::Error("Couldn't connect to the teamspeak 5 websocket; ensure Teamspeak 5 is running and that the 'Remote Apps' feature is enabled");
+                }
             }
             else {
-                if (user_invoked)
+                if (user_invoked) {
                     Log::Info("Teamspeak 5 connected");
+                }
                 SendTeamspeakHandshake();
                 GW::Chat::CreateCommand(L"ts", OnTeamspeakCommand);
                 GW::Chat::CreateCommand(L"ts5", OnTeamspeakCommand);
@@ -271,8 +284,9 @@ namespace {
 
     TS3Server* UpsertServer(const json& props_json, const uint32_t connection_id)
     {
-        if (!props_json.is_object())
+        if (!props_json.is_object()) {
             return nullptr;
+        }
         TS3Server* teamspeak_server = GetServer(connection_id);
         if (!teamspeak_server) {
             teamspeak_server = new TS3Server();
@@ -293,8 +307,9 @@ namespace {
             connected_servers.erase(found);
             delete server;
         }
-        if (current_server == connection_id)
+        if (current_server == connection_id) {
             current_server = 0xffffffff;
+        }
     }
 
     bool OnTeamspeakAuth(const json& payload)
@@ -302,14 +317,17 @@ namespace {
         current_server = 0xffffffff;
         json_vec connections;
         json properties;
-        if (!GetValue(payload, "connections", &connections))
+        if (!GetValue(payload, "connections", &connections)) {
             return false;
+        }
         for (size_t connection_id = 0; connection_id < connections.size(); connection_id++) {
             const auto& connection = connections[connection_id];
-            if (!connection.is_object())
+            if (!connection.is_object()) {
                 continue;
-            if (!GetValue(connection, "properties", &properties))
+            }
+            if (!GetValue(connection, "properties", &properties)) {
                 continue;
+            }
             const auto teamspeak_server = UpsertServer(properties, connection_id);
             if (!teamspeak_server) {
                 Log::Log("Failed to parse teamspeak server info");
@@ -337,11 +355,13 @@ namespace {
     bool OnTeamspeakServerPropertiesUpdated(const json& payload)
     {
         uint32_t connection_id;
-        if (!GetValue(payload, "connectionId", &connection_id))
+        if (!GetValue(payload, "connectionId", &connection_id)) {
             return false;
+        }
         json properties;
-        if (!GetValue(payload, "properties", &properties))
+        if (!GetValue(payload, "properties", &properties)) {
             return false;
+        }
         const auto teamspeak_server = UpsertServer(properties, connection_id);
         if (!teamspeak_server) {
             Log::Log("Failed to parse teamspeak server info");
@@ -354,10 +374,12 @@ namespace {
     bool OnTeamspeakConnectStatusChanged(const json& payload)
     {
         uint32_t connection_id, status;
-        if (!GetValue(payload, "connectionId", &connection_id))
+        if (!GetValue(payload, "connectionId", &connection_id)) {
             return false;
-        if (!GetValue(payload, "status", &status))
+        }
+        if (!GetValue(payload, "status", &status)) {
             return false;
+        }
         const auto server = GetServer(connection_id);
         if (server) {
             GetValue(payload, "clientId", &server->my_client_id);
@@ -378,11 +400,13 @@ namespace {
     bool OnTeamspeakClientSelfPropertyUpdated(const json& payload)
     {
         bool newValue = false;
-        if (!(GetValue(payload, "newValue", &newValue) && newValue == true))
+        if (!(GetValue(payload, "newValue", &newValue) && newValue == true)) {
             return false;
+        }
         std::string flag;
-        if (!(GetValue(payload, "flag", &flag) && flag == "inputHardware"))
+        if (!(GetValue(payload, "flag", &flag) && flag == "inputHardware")) {
             return false;
+        }
 
         return GetValue(payload, "connectionId", &current_server);
     }
@@ -390,15 +414,19 @@ namespace {
     bool OnTeamspeakClientMoved(const json& payload)
     {
         uint32_t connection_id = 0, client_id = 0;
-        if (!GetValue(payload, "connectionId", &connection_id))
+        if (!GetValue(payload, "connectionId", &connection_id)) {
             return false;
+        }
         const auto server = GetServer(connection_id);
-        if (!server)
+        if (!server) {
             return false;
-        if (!GetValue(payload, "clientId", &client_id))
+        }
+        if (!GetValue(payload, "clientId", &client_id)) {
             return false;
-        if (client_id != server->my_client_id)
+        }
+        if (client_id != server->my_client_id) {
             return false;
+        }
 
         return GetValue(payload, "newChannelId", &server->my_channel_id);
     }
@@ -412,13 +440,15 @@ namespace {
             return false;
         }
         json payload;
-        if (!GetValue(res, "payload", &payload))
+        if (!GetValue(res, "payload", &payload)) {
             return false;
+        }
         GetValue(payload, "apiKey", &gwtoolbox_teamspeak5_api_key);
 
         std::string type;
-        if (!GetValue(res, "type", &type))
+        if (!GetValue(res, "type", &type)) {
             return false;
+        }
         if (type == "auth") {
             OnTeamspeakAuth(payload);
         }
@@ -490,11 +520,13 @@ void Teamspeak5Module::Update(float)
         Connect();
         pending_connect = false;
     }
-    if (!enabled && IsConnected())
+    if (!enabled && IsConnected()) {
         pending_disconnect = true;
+    }
     if (pending_disconnect) {
-        if (websocket)
+        if (websocket) {
             websocket->close();
+        }
         pending_disconnect = false;
         return;
     }
@@ -523,40 +555,49 @@ void Teamspeak5Module::DrawSettingsInternal()
 {
     ImGui::PushID("Teamspeak5Module");
     if (ImGui::Checkbox("Enable Teamspeak 5 integration", &enabled)) {
-        if (enabled)
+        if (enabled) {
             Connect(true);
-        else
+        }
+        else {
             pending_disconnect = true;
+        }
     }
     ImGui::ShowHelp(gwtoolbox_teamspeak5_description);
     if (enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, IsConnected() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
         auto status_str = []() {
-            if (IsConnected())
+            if (IsConnected()) {
                 return "Connected";
-            if (step == Connecting)
+            }
+            if (step == Connecting) {
                 return "Connecting";
-            if (step == Downloading)
+            }
+            if (step == Downloading) {
                 return "Downloading";
+            }
             return "Disconnected";
         };
         if (ImGui::Button(status_str(), ImVec2(0, 0))) {
-            if (IsConnected())
+            if (IsConnected()) {
                 pending_disconnect = true;
-            else
+            }
+            else {
                 Connect(true);
+            }
         }
         ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip(IsConnected() ? "Click to disconnect" : "Click to connect");
+        }
         if (IsConnected()) {
             ImGui::Indent();
             ImGui::TextUnformatted("Server:");
             ImGui::SameLine();
             const auto& teamspeak_server = GetCurrentServer();
-            if (!teamspeak_server)
+            if (!teamspeak_server) {
                 ImGui::TextDisabled("Not Connected");
+            }
             else {
                 ImGui::Text("%s", teamspeak_server->name.c_str());
                 ImGui::Text("Host:");

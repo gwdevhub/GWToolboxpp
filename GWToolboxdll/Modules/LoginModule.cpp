@@ -27,8 +27,9 @@ namespace {
     bool IsCharSelectReady()
     {
         const GW::PreGameContext* pgc = GW::GetPreGameContext();
-        if (!pgc || !pgc->chars.valid())
+        if (!pgc || !pgc->chars.valid()) {
             return false;
+        }
         uint32_t ui_state = 10;
         SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
         return ui_state == 2;
@@ -82,16 +83,24 @@ void LoginModule::Initialize()
     int res = -1;
 
     PortalAccountLogin_Func = (PortalAccountLogin_pt)GW::Scanner::Find("\xc7\x45\xe8\x38\x00\x00\x00\x89\x4d\xf0", "xxxxxxxxxx", -0x2b);
-    if (!PortalAccountLogin_Func) goto failed_to_initialise;
+    if (!PortalAccountLogin_Func) {
+        goto failed_to_initialise;
+    }
 
     GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\param\\param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))", -0x13);
-    if (!GetStringParameter_Func) goto failed_to_initialise;
+    if (!GetStringParameter_Func) {
+        goto failed_to_initialise;
+    }
 
     res = GW::HookBase::CreateHook(PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
-    if (res == -1) goto failed_to_initialise;
+    if (res == -1) {
+        goto failed_to_initialise;
+    }
 
     res = GW::HookBase::CreateHook(GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
-    if (res == -1) goto failed_to_initialise;
+    if (res == -1) {
+        goto failed_to_initialise;
+    }
 
     GW::HookBase::EnableHooks(PortalAccountLogin_Func);
     GW::HookBase::EnableHooks(GetStringParameter_Func);
@@ -158,8 +167,9 @@ void LoginModule::Update(float)
                 return;
             }
             const auto pgc = GW::GetPreGameContext();
-            if (pgc->index_1 == reroll_index_current)
+            if (pgc->index_1 == reroll_index_current) {
                 return; // Not moved yet
+            }
             const HWND h = GW::MemoryMgr::GetGWWindowHandle();
             if (pgc->index_1 == reroll_index_needed) {
                 // We're on the character that was asked for

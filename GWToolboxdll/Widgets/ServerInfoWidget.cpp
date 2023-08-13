@@ -28,8 +28,9 @@ sockaddr_sprint(char* s, const size_t n, const sockaddr* host, const bool inc_po
     if (host->sa_family == AF_INET) {
         const auto in = (const sockaddr_in*)host;
         const auto addr = (uint8_t*)&in->sin_addr.s_addr;
-        if (inc_port)
+        if (inc_port) {
             return snprintf(s, n, "%d.%d.%d.%d:%d", addr[0], addr[1], addr[2], addr[3], ntohs(in->sin_port));
+        }
         return snprintf(s, n, "%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3]);
     }
     if (host->sa_family == AF_INET6) {
@@ -58,16 +59,19 @@ void ServerInfoWidget::Initialize()
 
 ServerInfoWidget::ServerInfo* ServerInfoWidget::GetServerInfo()
 {
-    if (current_server_info)
+    if (current_server_info) {
         return current_server_info;
+    }
     //if (!GW::Map::GetIsMapLoaded())
     //  return nullptr;
     const GW::GameContext* g = GW::GetGameContext();
-    if (!g)
+    if (!g) {
         return nullptr;
+    }
     const GW::CharContext* c = g->character;
-    if (!c)
+    if (!c) {
         return nullptr;
+    }
     char current_ip[32] = {0};
     sockaddr_sprint(current_ip, 32, (const sockaddr*)&c->host, false);
 
@@ -84,8 +88,9 @@ ServerInfoWidget::ServerInfo* ServerInfoWidget::GetServerInfo()
 void ServerInfoWidget::Update(float)
 {
     if (current_server_info && current_server_info->country.empty() && current_server_info->last_update < time(nullptr) - 60) {
-        if (server_info_fetcher.joinable())
+        if (server_info_fetcher.joinable()) {
             server_info_fetcher.join(); // Wait for thread to end.
+        }
         current_server_info->last_update = time(nullptr);
         server_info_fetcher = std::thread([this]() {
             // Need to check details
@@ -105,10 +110,12 @@ void ServerInfoWidget::Update(float)
             if (!response.empty()) {
                 using Json = nlohmann::json;
                 Json json = Json::parse(response.c_str());
-                if (current_server_info->city.empty() && json["city"].is_string())
+                if (current_server_info->city.empty() && json["city"].is_string()) {
                     current_server_info->city = json["city"];
-                if (current_server_info->country.empty() && json["country_name"].is_string())
+                }
+                if (current_server_info->country.empty() && json["country_name"].is_string()) {
                     current_server_info->country = json["country_name"];
+                }
                 server_string_dirty = true;
             }
         });
@@ -117,13 +124,16 @@ void ServerInfoWidget::Update(float)
 
 void ServerInfoWidget::Draw(IDirect3DDevice9*)
 {
-    if (!visible)
+    if (!visible) {
         return;
-    if (!server_location && !server_ip)
+    }
+    if (!server_location && !server_ip) {
         return;
+    }
     if (!current_server_info) {
-        if (!GetServerInfo())
+        if (!GetServerInfo()) {
             return;
+        }
         server_string_dirty = true;
     }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));

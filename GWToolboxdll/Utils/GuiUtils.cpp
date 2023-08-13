@@ -41,8 +41,9 @@ namespace {
 
     int safe_ispunct(const char c)
     {
-        if (c >= -1 && c <= 255)
+        if (c >= -1 && c <= 255) {
             return ispunct(c);
+        }
         return 0;
     };
 
@@ -111,10 +112,12 @@ namespace GuiUtils {
         FLASHWINFO flashInfo = {0};
         flashInfo.cbSize = sizeof(FLASHWINFO);
         flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
-        if (!force && GetActiveWindow() == flashInfo.hwnd)
+        if (!force && GetActiveWindow() == flashInfo.hwnd) {
             return; // Already in focus
-        if (!flashInfo.hwnd)
+        }
+        if (!flashInfo.hwnd) {
             return;
+        }
         flashInfo.dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG;
         flashInfo.uCount = 5;
         flashInfo.dwTimeout = 0;
@@ -124,8 +127,9 @@ namespace GuiUtils {
     void FocusWindow()
     {
         const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
-        if (!hwnd)
+        if (!hwnd) {
             return;
+        }
         SetForegroundWindow(hwnd);
         ShowWindow(hwnd, SW_RESTORE);
     }
@@ -138,8 +142,9 @@ namespace GuiUtils {
     std::string WikiUrl(std::wstring url_path)
     {
         // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
-        if (url_path.empty())
+        if (url_path.empty()) {
             return GetWikiPrefix();
+        }
         char cmd[256];
         const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(url_path)), '_');
         snprintf(cmd, _countof(cmd), "%s%s", GetWikiPrefix(), encoded.c_str());
@@ -148,8 +153,9 @@ namespace GuiUtils {
 
     void SearchWiki(std::wstring term)
     {
-        if (term.empty())
+        if (term.empty()) {
             return;
+        }
         char cmd[256];
         const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
         ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
@@ -170,8 +176,9 @@ namespace GuiUtils {
     // Loads fonts asynchronously. CJK font files can by over 20mb in size!
     void LoadFonts()
     {
-        if (fonts_loaded || fonts_loading)
+        if (fonts_loaded || fonts_loading) {
             return;
+        }
         fonts_loading = true;
 
         std::thread t([] {
@@ -264,8 +271,9 @@ namespace GuiUtils {
             io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_large, &cfg, base.glyph_ranges);
             font_widget_large = io.Fonts->Fonts.back();
 
-            if (!io.Fonts->IsBuilt())
+            if (!io.Fonts->IsBuilt()) {
                 io.Fonts->Build();
+            }
             // Also create device objects here to avoid blocking the main draw loop when ImGui_ImplDX9_NewFrame() is called.
             // ImGui_ImplDX9_CreateDeviceObjects();
 
@@ -359,8 +367,9 @@ namespace GuiUtils {
     {
         s = RemovePunctuation(s);
         std::ranges::transform(s, s.begin(), [](const char c) -> char {
-            if (c == ' ')
+            if (c == ' ') {
                 return '_';
+            }
             return static_cast<char>(tolower(c));
         });
         return s;
@@ -370,8 +379,9 @@ namespace GuiUtils {
     {
         s = RemovePunctuation(s);
         std::ranges::transform(s, s.begin(), [](const wchar_t c) -> wchar_t {
-            if (c == ' ')
+            if (c == ' ') {
                 return '_';
+            }
             return static_cast<wchar_t>(tolower(c));
         });
         return s;
@@ -395,8 +405,9 @@ namespace GuiUtils {
 
     std::string HtmlEncode(std::string s)
     {
-        if (s.empty())
+        if (s.empty()) {
             return "";
+        }
         static char entities[256] = {0};
         static bool initialised = false;
         if (!initialised) {
@@ -423,8 +434,9 @@ namespace GuiUtils {
             }
             else {
                 const auto written = snprintf(&out[len], 255 - len, "&#%d;", in[i]);
-                if (written < 0)
+                if (written < 0) {
                     return ""; // @Cleanup; how to gracefully fail?
+                }
                 len += written;
             }
         }
@@ -434,8 +446,9 @@ namespace GuiUtils {
 
     std::string UrlEncode(const std::string s, const char space_token)
     {
-        if (s.empty())
+        if (s.empty()) {
             return "";
+        }
         static char html5[256] = {0};
         static bool initialised = false;
         if (!initialised) {
@@ -444,8 +457,9 @@ namespace GuiUtils {
                 if (i == ' ') {
                     html5[i] = space_token;
                 }
-                if (i == 255)
+                if (i == 255) {
                     break;
+                }
             }
             initialised = true;
         }
@@ -458,8 +472,9 @@ namespace GuiUtils {
             }
             else {
                 const auto written = snprintf(&out[len], 255 - len, "%%%02X", in[i]);
-                if (written < 0)
+                if (written < 0) {
                     return ""; // @Cleanup; how to gracefully fail?
+                }
                 len += written;
             }
         }
@@ -471,8 +486,9 @@ namespace GuiUtils {
     std::string WStringToString(const std::wstring& s)
     {
         // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
-        if (s.empty())
+        if (s.empty()) {
             return "";
+        }
         // NB: GW uses code page 0 (CP_ACP)
         const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, s.data(), static_cast<int>(s.size()), nullptr, 0, nullptr, nullptr);
         ASSERT(size_needed != 0);
@@ -490,8 +506,9 @@ namespace GuiUtils {
         std::string out;
         out.resize(str.length());
         for (const char i : str) {
-            if (strchr(invalid_chars, i))
+            if (strchr(invalid_chars, i)) {
                 continue;
+            }
             out[len] = i;
             len++;
         }
@@ -506,8 +523,9 @@ namespace GuiUtils {
         std::wstring out;
         out.resize(str.length());
         for (const wchar_t i : str) {
-            if (wcschr(invalid_chars, i))
+            if (wcschr(invalid_chars, i)) {
                 continue;
+            }
             out[len] = i;
             len++;
         }
@@ -527,8 +545,9 @@ namespace GuiUtils {
         }
         std::wstring out(s.length(), L'\0');
         std::ranges::transform(s, out.begin(), [&](const wchar_t wc) -> wchar_t {
-            if (wc < 0x7f)
+            if (wc < 0x7f) {
                 return wc;
+            }
             const auto it = diacritics_charmap.find(wc);
             return it == diacritics_charmap.end() ? wc : it->second;
         });
@@ -539,8 +558,9 @@ namespace GuiUtils {
     std::wstring StringToWString(const std::string& str)
     {
         // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
-        if (str.empty())
+        if (str.empty()) {
             return {};
+        }
         // NB: GW uses code page 0 (CP_ACP)
         const auto size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
         ASSERT(size_needed != 0);
@@ -558,20 +578,23 @@ namespace GuiUtils {
         wchar_t remove_char_token = 0;
         for (const auto& wchar : s) {
             if (remove_char_token) {
-                if (wchar == remove_char_token)
+                if (wchar == remove_char_token) {
                     remove_char_token = 0;
+                }
                 continue;
             }
             if (wchar == '[') {
                 remove_char_token = ']';
-                if (len > 0)
+                if (len > 0) {
                     len--;
+                }
                 continue;
             }
             if (wchar == '(') {
                 remove_char_token = ')';
-                if (len > 0)
+                if (len > 0) {
                     len--;
+                }
                 continue;
             }
             out[len++] = wchar;
@@ -583,16 +606,20 @@ namespace GuiUtils {
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out, const wchar_t** end_pos_out)
     {
         const wchar_t* start = wcschr(message, 0x107);
-        if (!start)
+        if (!start) {
             return L"";
+        }
         start += 1;
         const wchar_t* end = start ? wcschr(start, 0x1) : nullptr;
-        if (!end)
+        if (!end) {
             return L"";
-        if (start_pos_out)
+        }
+        if (start_pos_out) {
             *start_pos_out = start;
-        if (end_pos_out)
+        }
+        if (end_pos_out) {
             *end_pos_out = end;
+        }
         const std::wstring name(start, end);
         return SanitizePlayerName(name);
     }
@@ -613,8 +640,9 @@ namespace GuiUtils {
     {
         char* end;
         *val = strtol(str, &end, base);
-        if (*end != 0 || errno == ERANGE)
+        if (*end != 0 || errno == ERANGE) {
             return false;
+        }
 
         return true;
     }
@@ -623,8 +651,9 @@ namespace GuiUtils {
     {
         wchar_t* end;
         *val = wcstol(str, &end, base);
-        if (*end != 0 || errno == ERANGE)
+        if (*end != 0 || errno == ERANGE) {
             return false;
+        }
 
         return true;
     }
@@ -648,13 +677,16 @@ namespace GuiUtils {
         out.resize((in.size() + 1) / 5);
         size_t offset = 0, pos = 0, converted = 0;
         do {
-            if (pos)
+            if (pos) {
                 pos++;
+            }
             std::string substring(in.substr(pos, 4));
-            if (!ParseUInt(substring.c_str(), &converted, 16))
+            if (!ParseUInt(substring.c_str(), &converted, 16)) {
                 return 0;
-            if (converted > 0xFFFF)
+            }
+            if (converted > 0xFFFF) {
                 return 0;
+            }
             out[offset++] = static_cast<wchar_t>(converted);
         } while ((pos = in.find(' ', pos)) != std::string::npos);
         return offset;
@@ -665,11 +697,13 @@ namespace GuiUtils {
         const char* found = in;
         out.clear();
         while (true) {
-            if (!(found && *found))
+            if (!(found && *found)) {
                 break;
+            }
             const auto next_token = (char*)strchr(found, separator);
-            if (next_token)
+            if (next_token) {
                 *next_token = 0;
+            }
             out.push_back(found);
             found = nullptr;
             if (next_token) {
@@ -688,15 +722,18 @@ namespace GuiUtils {
 
     size_t IniToArray(const std::string& in, uint32_t* out, const size_t out_len)
     {
-        if ((in.size() + 1) / 9 > out_len)
+        if ((in.size() + 1) / 9 > out_len) {
             return 0;
+        }
         size_t offset = 0, pos = 0, converted = 0;
         do {
-            if (pos)
+            if (pos) {
                 pos++;
+            }
             std::string substring(in.substr(pos, 8));
-            if (!ParseUInt(substring.c_str(), &converted, 16))
+            if (!ParseUInt(substring.c_str(), &converted, 16)) {
                 return 0;
+            }
             out[offset++] = converted;
         } while ((pos = in.find(' ', pos)) != std::string::npos);
         while (offset < out_len) {
@@ -708,12 +745,14 @@ namespace GuiUtils {
     size_t TimeToString(const time_t utc_timestamp, std::string& out)
     {
         const tm* timeinfo = localtime(&utc_timestamp);
-        if (!timeinfo)
+        if (!timeinfo) {
             return 0;
+        }
         const time_t now = time(nullptr);
         const tm* nowinfo = localtime(&now);
-        if (!nowinfo)
+        if (!nowinfo) {
             return 0;
+        }
         out.resize(64);
         int written = 0;
         if (timeinfo->tm_yday != nowinfo->tm_yday || timeinfo->tm_year != nowinfo->tm_year) {
@@ -756,8 +795,9 @@ namespace GuiUtils {
         char* data = out->data();
         size_t offset = 0;
         for (size_t i = 0; i < len; i++) {
-            if (offset > 0)
+            if (offset > 0) {
                 data[offset++] = ' ';
+            }
             offset += sprintf(&data[offset], "%04x", in[i]);
         }
         return true;
@@ -773,8 +813,9 @@ namespace GuiUtils {
         char* data = out->data();
         size_t offset = 0;
         for (size_t i = 0; i < in_len; i++) {
-            if (offset > 0)
+            if (offset > 0) {
                 data[offset++] = ' ';
+            }
             offset += sprintf(&data[offset], "%08x", in[i]);
         }
         return true;
@@ -783,30 +824,35 @@ namespace GuiUtils {
     bool ParseUInt(const char* str, unsigned int* val, const int base)
     {
         char* end;
-        if (!str)
+        if (!str) {
             return false;
+        }
         *val = strtoul(str, &end, base);
-        if (str == end || errno == ERANGE)
+        if (str == end || errno == ERANGE) {
             return false;
+        }
         return true;
     }
 
     bool ParseUInt(const wchar_t* str, unsigned int* val, const int base)
     {
         wchar_t* end;
-        if (!str)
+        if (!str) {
             return false;
+        }
         *val = wcstoul(str, &end, base);
-        if (str == end || errno == ERANGE)
+        if (str == end || errno == ERANGE) {
             return false;
+        }
         return true;
     }
 
     std::wstring ToWstr(const std::string& str)
     {
         // @Cleanup: No error handling whatsoever
-        if (str.empty())
+        if (str.empty()) {
             return {};
+        }
         const auto size_needed = MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), nullptr, 0);
         std::wstring wstrTo(size_needed, 0);
         MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), wstrTo.data(), size_needed);
@@ -818,11 +864,13 @@ namespace GuiUtils {
         size_t i;
         const auto d = (unsigned char*)dest;
         for (i = 0; i < n; i++) {
-            if (src[i] & ~0x7f)
+            if (src[i] & ~0x7f) {
                 return 0;
+            }
             d[i] = src[i] & 0x7fu;
-            if (src[i] == 0)
+            if (src[i] == 0) {
                 break;
+            }
         }
         return i;
     }
@@ -838,22 +886,25 @@ namespace GuiUtils {
     {
         if (_enc_string_id && encoded_ws.length()) {
             const uint32_t this_id = GW::UI::EncStrToUInt32(encoded_ws.c_str());
-            if (this_id == _enc_string_id)
+            if (this_id == _enc_string_id) {
                 return;
+            }
         }
         reset(nullptr, sanitise);
         if (_enc_string_id) {
             wchar_t out[8] = {0};
-            if (!GW::UI::UInt32ToEncStr(_enc_string_id, out, _countof(out)))
+            if (!GW::UI::UInt32ToEncStr(_enc_string_id, out, _countof(out))) {
                 return;
+            }
             encoded_ws = out;
         }
     }
 
     EncString* EncString::language(const GW::Constants::TextLanguage l)
     {
-        if (language_id == l)
+        if (language_id == l) {
             return this;
+        }
         language_id = l;
         reset(encoded_ws.c_str());
         return this;
@@ -861,15 +912,17 @@ namespace GuiUtils {
 
     void EncString::reset(const wchar_t* _enc_string, const bool sanitise)
     {
-        if (_enc_string && wcscmp(_enc_string, encoded_ws.c_str()) == 0)
+        if (_enc_string && wcscmp(_enc_string, encoded_ws.c_str()) == 0) {
             return;
+        }
         encoded_ws.clear();
         decoded_ws.clear();
         decoded_s.clear();
         decoding = decoded = false;
         sanitised = !sanitise;
-        if (_enc_string)
+        if (_enc_string) {
             encoded_ws = _enc_string;
+        }
     }
 
     std::wstring& EncString::wstring()
@@ -894,10 +947,12 @@ namespace GuiUtils {
     void EncString::OnStringDecoded(void* param, wchar_t* decoded)
     {
         const auto context = static_cast<EncString*>(param);
-        if (!(context && context->decoding && !context->decoded))
+        if (!(context && context->decoding && !context->decoded)) {
             return; // Not expecting a decoded string; may have been reset() before response was received.
-        if (decoded && decoded[0])
+        }
+        if (decoded && decoded[0]) {
             context->decoded_ws = decoded;
+        }
         context->decoded = true;
         context->decoding = false;
     }

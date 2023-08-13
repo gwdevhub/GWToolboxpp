@@ -57,15 +57,17 @@ void DistanceWidget::SaveSettings(ToolboxIni* ini)
     Colors::Save(ini, Name(), VAR_NAME(color_compass), color_compass);
 }
 
-void DistanceWidget::Draw(IDirect3DDevice9* pDevice)
+void DistanceWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+    }
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
-    if (!show_perc_value && !show_abs_value)
+    }
+    if (!show_perc_value && !show_abs_value) {
         return;
+    }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
@@ -76,10 +78,12 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice)
             static char dist_perc[buffer_size];
             static char dist_abs[buffer_size];
             const float dist = GetDistance(me->pos, target->pos);
-            if (show_perc_value)
+            if (show_perc_value) {
                 snprintf(dist_perc, buffer_size, "%2.0f %s", dist * 100 / GW::Constants::Range::Compass, "%%");
-            if (show_abs_value)
+            }
+            if (show_abs_value) {
                 snprintf(dist_abs, buffer_size, "%.0f", dist);
+            }
 
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
             if (dist <= GW::Constants::Range::Adjacent) {

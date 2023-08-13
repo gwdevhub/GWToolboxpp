@@ -30,11 +30,13 @@ namespace {
 void WorldMapWidget::InitializeMapsUnlockedArrays()
 {
     const GW::GameContext* g = GW::GetGameContext();
-    if (!g)
+    if (!g) {
         return;
+    }
     const GW::WorldContext* w = g->world;
-    if (!w)
+    if (!w) {
         return;
+    }
     actual_maps_unlocked_packet.missions_bonus_length = 0;
     const GW::Array<uint32_t>* arr = &w->missions_bonus;
     if (arr->valid()) {
@@ -77,8 +79,7 @@ void WorldMapWidget::Initialize()
     InitializeMapsUnlockedArrays();
 
     static GW::HookEntry e;
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapsUnlocked>(&e, [](GW::HookStatus*, const GW::Packet::StoC::MapsUnlocked* packet) {
-        UNREFERENCED_PARAMETER(packet);
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapsUnlocked>(&e, [](GW::HookStatus*, const GW::Packet::StoC::MapsUnlocked*) {
         Instance().InitializeMapsUnlockedArrays();
     });
 }
@@ -87,8 +88,9 @@ void WorldMapWidget::ShowAllOutposts(const bool show = showing_all_outposts)
 {
     static bool showing = false;
     //GW::WorldContext* world = GW::GetGameContext()->world;
-    if (showing == show)
+    if (showing == show) {
         return;
+    }
     ASSERT(actual_maps_unlocked_initialised);
     if (show) {
         // Show all areas
@@ -101,9 +103,8 @@ void WorldMapWidget::ShowAllOutposts(const bool show = showing_all_outposts)
     showing = show;
 }
 
-void WorldMapWidget::Draw(IDirect3DDevice9* pDevice)
+void WorldMapWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
     if (!GW::UI::GetIsWorldMapShowing()) {
         //ShowAllOutposts(showing_all_outposts = false);
         drawn = false;
@@ -117,8 +118,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9* pDevice)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowPos(ImVec2(16.f, 16.f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
-        const GW::WorldContext* world = GW::GetGameContext()->world;
-        UNREFERENCED_PARAMETER(world);
         ImGui::Checkbox("Show all areas", &showing_all_outposts);
         show_all_rect = ImGui::GetCurrentContext()->LastItemData.Rect;
         bool is_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
@@ -134,8 +133,9 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 {
     switch (Message) {
         case WM_LBUTTONDOWN:
-            if (!drawn || !GW::UI::GetIsWorldMapShowing())
+            if (!drawn || !GW::UI::GetIsWorldMapShowing()) {
                 return false;
+            }
             auto check_rect = [lParam](const ImRect& rect) {
                 const auto x = GET_X_LPARAM(lParam);
                 const auto y = GET_Y_LPARAM(lParam);

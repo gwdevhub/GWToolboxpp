@@ -102,8 +102,9 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
             in_dungeon = new_in_dungeon;
         }
     }
-    if (!is_valid(run_started))
+    if (!is_valid(run_started)) {
         run_started = now_tp;
+    }
 
     in_explorable = pak->is_explorable;
 }
@@ -114,10 +115,12 @@ void TimerWidget::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
                                                                         [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) -> void {
-                                                                            if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish)
+                                                                            if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) {
                                                                                 return;
-                                                                            if (packet->message[1] != 0x5765)
+                                                                            }
+                                                                            if (packet->message[1] != 0x5765) {
                                                                                 return;
+                                                                            }
                                                                             cave_start = GW::Map::GetInstanceTime();
                                                                         });
 
@@ -142,8 +145,9 @@ void TimerWidget::Initialize()
     GW::Chat::CreateCommand(L"timerreset", [this](const wchar_t*, int, LPWSTR*) {
         reset_next_loading_screen = true;
     });
-    if (!is_valid(run_started))
+    if (!is_valid(run_started)) {
         run_started = now() - milliseconds(GW::Map::GetInstanceTime());
+    }
 }
 
 
@@ -341,15 +345,17 @@ ImGuiWindowFlags TimerWidget::GetWinFlags(const ImGuiWindowFlags flags, const bo
     return ToolboxWidget::GetWinFlags(flags, noinput_if_frozen) | (lock_size ? ImGuiWindowFlags_AlwaysAutoResize : 0);
 }
 
-void TimerWidget::Draw(IDirect3DDevice9* pDevice)
+void TimerWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+    }
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         return;
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+    }
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
+    }
 
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_ModCtrl);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
@@ -382,18 +388,24 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice)
             }
             ImGui::PopFont();
         };
-        if (show_deep_timer && GetDeepTimer())
+        if (show_deep_timer && GetDeepTimer()) {
             drawTimer(extra_buffer, &extra_color);
-        if (show_urgoz_timer && GetUrgozTimer())
+        }
+        if (show_urgoz_timer && GetUrgozTimer()) {
             drawTimer(extra_buffer, &extra_color);
-        if (show_doa_timer && GetDoATimer())
+        }
+        if (show_doa_timer && GetDoATimer()) {
             drawTimer(extra_buffer, &extra_color);
-        if (show_dungeon_traps_timer && GetTrapTimer())
+        }
+        if (show_dungeon_traps_timer && GetTrapTimer()) {
             drawTimer(extra_buffer, &extra_color);
-        if (show_dhuum_timer && GetDhuumTimer())
+        }
+        if (show_dhuum_timer && GetDhuumTimer()) {
             drawTimer(extra_buffer, &extra_color);
-        if (show_spirit_timers && GetSpiritTimer())
+        }
+        if (show_spirit_timers && GetSpiritTimer()) {
             drawTimer(spirits_buffer);
+        }
 
         if (click_to_print_time) {
             const ImVec2 size = ImGui::GetWindowSize();
@@ -413,10 +425,12 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice)
 
 bool TimerWidget::GetUrgozTimer()
 {
-    if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren)
+    if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren) {
         return false;
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+    }
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         return false;
+    }
     const unsigned long time = GW::Map::GetInstanceTime() / 1000;
     const unsigned long temp = (time - 1) % 25;
     if (temp < 15) {
@@ -434,25 +448,30 @@ bool TimerWidget::GetSpiritTimer()
 {
     using namespace GW::Constants;
 
-    if (!show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable)
+    if (!show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable) {
         return false;
+    }
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects)
+    if (!effects) {
         return false;
+    }
 
     int offset = 0;
     for (auto& effect : *effects) {
-        if (!effect.duration)
+        if (!effect.duration) {
             continue;
+        }
         SkillID effect_id = effect.skill_id;
         auto spirit_effect_enabled = spirit_effects_enabled.find(effect_id);
-        if (spirit_effect_enabled == spirit_effects_enabled.end() || !(spirit_effect_enabled->second))
+        if (spirit_effect_enabled == spirit_effects_enabled.end() || !(spirit_effect_enabled->second)) {
             continue;
+        }
         offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effect.GetTimeRemaining() / 1000);
     }
-    if (!offset)
+    if (!offset) {
         return false;
+    }
     spirits_buffer[offset] = 0;
     return true;
 }
@@ -461,14 +480,17 @@ bool TimerWidget::GetDeepTimer()
 {
     using namespace GW::Constants;
 
-    if (GW::Map::GetMapID() != MapID::The_Deep)
+    if (GW::Map::GetMapID() != MapID::The_Deep) {
         return false;
-    if (GW::Map::GetInstanceType() != InstanceType::Explorable)
+    }
+    if (GW::Map::GetInstanceType() != InstanceType::Explorable) {
         return false;
+    }
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects)
+    if (!effects) {
         return false;
+    }
 
     static clock_t start = -1;
     auto skill = SkillID::No_Skill;
@@ -483,8 +505,9 @@ bool TimerWidget::GetDeepTimer()
             default:
                 break;
         }
-        if (skill != SkillID::No_Skill)
+        if (skill != SkillID::No_Skill) {
             break;
+        }
     }
     if (skill == SkillID::No_Skill) {
         start = -1;
@@ -501,10 +524,12 @@ bool TimerWidget::GetDeepTimer()
     // a 30s timer starts 100s after you enter the aspect
     // a 30s timer starts 200s after you enter the aspect
     long timer = 30 - (diff % 30);
-    if (diff > 100)
+    if (diff > 100) {
         timer = std::min(timer, 30 - ((diff - 100) % 30));
-    if (diff > 200)
+    }
+    if (diff > 200) {
         timer = std::min(timer, 30 - ((diff - 200) % 30));
+    }
     switch (skill) {
         case SkillID::Aspect_of_Exhaustion:
             snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
@@ -531,8 +556,9 @@ bool TimerWidget::GetDhuumTimer()
 bool TimerWidget::GetTrapTimer()
 {
     using namespace GW::Constants;
-    if (GW::Map::GetInstanceType() != InstanceType::Explorable)
+    if (GW::Map::GetInstanceType() != InstanceType::Explorable) {
         return false;
+    }
 
     const unsigned long time = GW::Map::GetInstanceTime() / 1000;
     const unsigned long temp = time % 20;
@@ -595,30 +621,36 @@ bool TimerWidget::GetDoATimer()
 {
     using namespace GW::Constants;
 
-    if (GW::Map::GetInstanceType() != InstanceType::Explorable)
+    if (GW::Map::GetInstanceType() != InstanceType::Explorable) {
         return false;
-    if (GW::Map::GetMapID() != MapID::Domain_of_Anguish)
+    }
+    if (GW::Map::GetMapID() != MapID::Domain_of_Anguish) {
         return false;
-    if (cave_start == 0)
+    }
+    if (cave_start == 0) {
         return false;
+    }
 
     const uint32_t time = GW::Map::GetInstanceTime();
 
     uint32_t currentWave = 0;
     uint32_t time_since_previous_wave = (time - cave_start) / 1000;
     for (size_t i = 0; i < _countof(CAVE_SPAWN_INTERVALS); i++) {
-        if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[i])
+        if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[i]) {
             break;
+        }
         time_since_previous_wave -= CAVE_SPAWN_INTERVALS[i];
         ++currentWave;
     }
 
-    if (currentWave >= _countof(CAVE_SPAWN_INTERVALS))
+    if (currentWave >= _countof(CAVE_SPAWN_INTERVALS)) {
         return false;
+    }
 
     uint32_t timer = 0;
-    if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[currentWave])
+    if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[currentWave]) {
         timer = CAVE_SPAWN_INTERVALS[currentWave] - time_since_previous_wave;
+    }
 
     snprintf(extra_buffer, 32, "Wave %d: %d", currentWave + 1, timer);
     extra_color = ImColor(255, 255, 255);

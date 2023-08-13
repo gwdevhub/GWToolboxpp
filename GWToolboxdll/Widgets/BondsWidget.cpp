@@ -39,8 +39,9 @@ namespace {
         void Initialize()
         {
             // Because AvialableBond is used statically in toolbox, we need to explicitly call this function in the render loop - otherwise GetSkillConstantData won't be called at the right time.
-            if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id))
+            if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id)) {
                 skill_name.reset(skill->name);
+            }
         }
     };
 
@@ -73,8 +74,9 @@ namespace {
     AvailableBond* GetAvailableBond(const GW::Constants::SkillID skill_id)
     {
         for (auto& b : available_bonds) {
-            if (b.skill_id == skill_id)
+            if (b.skill_id == skill_id) {
                 return &b;
+            }
         }
         return nullptr;
     }
@@ -96,26 +98,33 @@ namespace {
 
     void UseBuff(GW::AgentID targetId, DWORD buff_skillid)
     {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             return;
-        if (GW::Map::GetIsObserving())
+        }
+        if (GW::Map::GetIsObserving()) {
             return;
-        if (targetId == 0)
+        }
+        if (targetId == 0) {
             return;
+        }
 
         const GW::Agent* target = GW::Agents::GetAgentByID(targetId);
-        if (target == nullptr)
+        if (target == nullptr) {
             return;
+        }
 
         const auto islot = GW::SkillbarMgr::GetSkillSlot(static_cast<GW::Constants::SkillID>(buff_skillid));
-        if (islot < 0)
+        if (islot < 0) {
             return;
+        }
         auto slot = static_cast<uint32_t>(islot);
         const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-        if (!skillbar || !skillbar->IsValid())
+        if (!skillbar || !skillbar->IsValid()) {
             return;
-        if (skillbar->skills[slot].recharge != 0)
+        }
+        if (skillbar->skills[slot].recharge != 0) {
             return;
+        }
 
         // capture by value!
         GW::GameThread::Enqueue([slot, targetId]() -> void {
@@ -131,8 +140,9 @@ namespace {
     bool FetchBondSkills()
     {
         const GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
-        if (!bar || !bar->IsValid())
+        if (!bar || !bar->IsValid()) {
             return false;
+        }
         bond_list.clear();
         bond_map.clear();
         for (const auto& skill : bar->skills) {
@@ -152,15 +162,17 @@ namespace {
     bool FetchPartyInfo()
     {
         const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-        if (!info)
+        if (!info) {
             return false;
+        }
         party_list.clear();
         party_map.clear();
         allies_start = 255;
         for (const GW::PlayerPartyMember& player : info->players) {
             const DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
-            if (!id)
+            if (!id) {
                 continue;
+            }
             party_map[id] = party_list.size();
             party_list.push_back(id);
 
@@ -183,8 +195,9 @@ namespace {
                 GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
                 const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
                 if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
-                    if (allies_start == 255)
+                    if (allies_start == 255) {
                         allies_start = party_map.size();
+                    }
                     party_map[ally_id] = party_map.size();
                 }
             }
@@ -202,29 +215,34 @@ void BondsWidget::Initialize()
     }
 }
 
-void BondsWidget::Draw(IDirect3DDevice9* device)
+void BondsWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(device);
-    if (!visible)
+    if (!visible) {
         return;
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+    }
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
+    }
     const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     const GW::PlayerArray* players = info ? GW::Agents::GetPlayerArray() : nullptr;
-    if (!players)
+    if (!players) {
         return;
+    }
     // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
 
     // ==== Get bonds ====
     // @Cleanup: This doesn't need to be done every frame - only when player skills have changed
-    if (!FetchBondSkills())
+    if (!FetchBondSkills()) {
         return;
-    if (bond_list.empty())
+    }
+    if (bond_list.empty()) {
         return; // Don't display bonds widget if we've not got any bonds on our skillbar
+    }
     // ==== Get party ====
     // @Cleanup: This doesn't need to be done every frame - only when the party has been changed
-    if (!FetchPartyInfo())
+    if (!FetchPartyInfo()) {
         return;
+    }
 
     // ==== Draw ====
     const auto img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
@@ -279,8 +297,9 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
         const float win_y = ImGui::GetWindowPos().y;
 
         const auto get_grid_pos = [&](size_t x, size_t y, const bool topleft) -> ImVec2 {
-            if (y >= allies_start)
+            if (y >= allies_start) {
                 ++y;
+            }
             if (!topleft) {
                 ++x;
                 ++y;
@@ -295,10 +314,12 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
             for (const auto& buff : *buffs) {
                 const auto agent = buff.target_agent_id;
                 const auto skill = static_cast<GW::Constants::SkillID>(buff.skill_id);
-                if (!party_map.contains(agent))
+                if (!party_map.contains(agent)) {
                     continue; // bond target not in party
-                if (!bond_map.contains(skill))
+                }
+                if (!bond_map.contains(skill)) {
                     continue; // bond with a skill not in skillbar
+                }
                 const size_t y = party_map[agent];
                 const size_t x = bond_map[skill];
                 const auto texture = *Resources::GetSkillImage(buff.skill_id);
@@ -319,17 +340,20 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
             agent_effects_array != nullptr) {
             for (auto& agent_effects_it : *agent_effects_array) {
                 auto& agent_effects = agent_effects_it.effects;
-                if (!agent_effects.valid())
+                if (!agent_effects.valid()) {
                     continue;
+                }
                 const auto agent_id = agent_effects_it.agent_id;
                 for (const GW::Effect& effect : agent_effects) {
                     const auto skill_id = static_cast<GW::Constants::SkillID>(effect.skill_id);
-                    if (!bond_map.contains(skill_id))
+                    if (!bond_map.contains(skill_id)) {
                         continue;
+                    }
 
                     const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-                    if (!skill_data || skill_data->duration0 == 0x20000)
+                    if (!skill_data || skill_data->duration0 == 0x20000) {
                         continue; // Maintained skill/enchantment
+                    }
                     const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
                     assert(agentAttributes);
                     agentAttributes = &agentAttributes[skill_data->attribute];
@@ -356,11 +380,13 @@ void BondsWidget::Draw(IDirect3DDevice9* device)
                 for (unsigned int x = 0; x < bond_list.size(); ++x) {
                     ImVec2 tl = get_grid_pos(x, y, true);
                     ImVec2 br = get_grid_pos(x, y, false);
-                    if (!ImGui::IsMouseHoveringRect(tl, br))
+                    if (!ImGui::IsMouseHoveringRect(tl, br)) {
                         continue;
+                    }
                     ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
-                    if (ImGui::IsMouseReleased(0))
+                    if (ImGui::IsMouseReleased(0)) {
                         UseBuff(party_list[y], static_cast<DWORD>(bond_list[x]));
+                    }
                 }
             }
         }
@@ -419,8 +445,9 @@ void BondsWidget::DrawSettingsInternal()
 {
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-    if (bond_list.empty())
+    if (bond_list.empty()) {
         ImGui::TextColored(ImVec4(0xFF, 0, 0, 0xFF), "Equip a maintainable enchantment or refrain to show bonds widget on-screen");
+    }
     ImGui::Checkbox("Attach to party window", &snap_to_party_window);
     if (snap_to_party_window) {
         ImGui::InputInt("Party window offset", &user_offset);
@@ -434,8 +461,9 @@ void BondsWidget::DrawSettingsInternal()
         ImGui::NextSpacedElement();
         const auto written = snprintf(label_buf, sizeof(label_buf), "%s##available_bond_%p", bond.skill_name.string().c_str(), &bond);
         ASSERT(written != -1);
-        if (ImGui::Checkbox(label_buf, &bond.enabled))
+        if (ImGui::Checkbox(label_buf, &bond.enabled)) {
             FetchBondSkills();
+        }
     }
     ImGui::Unindent();
 
@@ -455,6 +483,7 @@ void BondsWidget::DrawSettingsInternal()
         ImGui::InputInt("Row Height", &row_height);
         ImGui::ShowHelp("Height of each row, leave 0 for default");
     }
-    if (row_height < 0)
+    if (row_height < 0) {
         row_height = 0;
+    }
 }

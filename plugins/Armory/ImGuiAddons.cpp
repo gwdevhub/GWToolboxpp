@@ -94,11 +94,8 @@ bool ImGui::ColorButtonPicker(const char* label, ImU32* imcol, const ImGuiColorE
     }
     return false;
 }
-bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count)
 {
-    // @Cleanup: Remove this parameter?
-    UNREFERENCED_PARAMETER(height_in_items);
-
     ImGuiContext* g = ImGui::GetCurrentContext();
     constexpr float word_building_delay = .5f; // after this many seconds, typing will make a new search
 
@@ -122,7 +119,7 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
     time_since_last_update += g->IO.DeltaTime;
     bool update_keyboard_match = false;
     for (int n = 0; n < g->IO.InputQueueCharacters.size() && g->IO.InputQueueCharacters[n]; n++) {
-        if (const auto c = (unsigned int)g->IO.InputQueueCharacters[n]) {
+        if (const auto c = static_cast<unsigned int>(g->IO.InputQueueCharacters[n])) {
             if (c == ' ' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
                 // build temporary word
                 if (time_since_last_update < word_building_delay) { // append

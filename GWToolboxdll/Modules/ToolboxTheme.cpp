@@ -17,8 +17,9 @@ namespace {
             *out = new ToolboxIni(false, false, false);
             reload_from_disk = true;
         }
-        if (!reload_from_disk)
+        if (!reload_from_disk) {
             return *out;
+        }
         const auto path = Resources::GetPath(filename);
         if (!exists(path)) {
             Log::LogW(L"File %s doesn't exist.", path.c_str());
@@ -118,8 +119,9 @@ void ToolboxTheme::LoadSettings(ToolboxIni* ini)
 
 void ToolboxTheme::SaveUILayout()
 {
-    if (!ImGui::GetCurrentContext() || !imgui_style_loaded)
+    if (!ImGui::GetCurrentContext() || !imgui_style_loaded) {
         return;
+    }
     const auto ini = GetLayoutIni(false);
     const auto window_ini_section = "Windows";
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
@@ -151,8 +153,9 @@ ToolboxIni* ToolboxTheme::GetThemeIni(const bool reload)
 
 void ToolboxTheme::LoadUILayout()
 {
-    if (!ImGui::GetCurrentContext())
+    if (!ImGui::GetCurrentContext()) {
         return;
+    }
     // Copy theme over
     ImGui::GetStyle() = ini_style;
     // Copy window positions over
@@ -161,8 +164,9 @@ void ToolboxTheme::LoadUILayout()
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     const auto window_ini_section = "Windows";
     for (ImGuiWindow* window : windows) {
-        if (!window)
+        if (!window) {
             continue;
+        }
         ImVec2 pos = window->Pos;
         ImVec2 size = window->Size;
         char key[128];
@@ -188,8 +192,9 @@ void ToolboxTheme::SaveSettings(ToolboxIni* ini)
 {
     ToolboxUIElement::SaveSettings(ini);
 
-    if (!ImGui::GetCurrentContext() || !imgui_style_loaded)
+    if (!ImGui::GetCurrentContext() || !imgui_style_loaded) {
         return; // Imgui not initialised, can happen if destructing before first draw
+    }
 
     const ImGuiStyle& style = ImGui::GetStyle();
     const auto inifile = GetThemeIni(false);
@@ -228,8 +233,9 @@ void ToolboxTheme::SaveSettings(ToolboxIni* ini)
 
 void ToolboxTheme::Draw(IDirect3DDevice9*)
 {
-    if (layout_dirty)
+    if (layout_dirty) {
         LoadUILayout();
+    }
 }
 
 void ToolboxTheme::DrawSettingsInternal()

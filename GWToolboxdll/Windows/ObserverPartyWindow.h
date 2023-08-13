@@ -20,7 +20,7 @@ public:
 
     void DrawBlankPartyMember(float& offset);
     void DrawPartyMember(float& offset, ObserverModule::ObservableAgent& agent, const ObserverModule::ObservableGuild* guild,
-                         bool odd, bool is_player, bool is_target);
+                         bool odd, bool is_player, bool is_target) const;
     void DrawParty(float& offset, const ObserverModule::ObservableParty& party);
     void DrawHeaders(size_t party_count);
 

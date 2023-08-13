@@ -201,8 +201,9 @@ namespace {
 
     QuestEntryGroup* GetQuestEntryGroup(const wchar_t* quest_entry_encoded_name)
     {
-        if (!(quest_entry_encoded_name && *quest_entry_encoded_name && quest_entry_group_context))
+        if (!(quest_entry_encoded_name && *quest_entry_encoded_name && quest_entry_group_context)) {
             return nullptr;
+        }
         auto& quest_entries = quest_entry_group_context->quest_entries;
         const auto found = std::ranges::find_if(quest_entries, [quest_entry_encoded_name](auto& entry) {
             return wcscmp(entry.encoded_name, quest_entry_encoded_name) == 0;
@@ -212,8 +213,9 @@ namespace {
 
     QuestEntryGroup* GetQuestEntryGroup(const GW::Constants::QuestID quest_id)
     {
-        if (quest_id == static_cast<GW::Constants::QuestID>(0))
+        if (quest_id == static_cast<GW::Constants::QuestID>(0)) {
             return nullptr;
+        }
         wchar_t out[128];
         return GW::QuestMgr::GetQuestEntryGroupName(quest_id, out, _countof(out)) ? GetQuestEntryGroup(out) : nullptr;
     }
@@ -343,8 +345,9 @@ namespace {
 
     void OnPreferencesLoadFileChosen(const char* result)
     {
-        if (!result)
+        if (!result) {
             return;
+        }
         auto filename_cpy = new std::filesystem::path(result);
         GW::GameThread::Enqueue([filename_cpy]() {
             int err = SI_OK;
@@ -378,8 +381,9 @@ namespace {
 
     void OnPreferencesSaveFileChosen(const char* result)
     {
-        if (!result)
+        if (!result) {
             return;
+        }
         auto filename_cpy = new std::filesystem::path(result);
         GW::GameThread::Enqueue([filename_cpy]() {
             PreferencesStruct current_prefs;
@@ -400,10 +404,12 @@ namespace {
     void CmdSave(const wchar_t*, const int argc, const LPWSTR* argv)
     {
         std::filesystem::path filename = GetDefaultFilename();
-        if (argc > 1)
+        if (argc > 1) {
             filename = argv[1];
-        if (filename.extension() != L".ini")
+        }
+        if (filename.extension() != L".ini") {
             filename.append(L".ini");
+        }
         filename = GuiUtils::SanitiseFilename(filename.string());
         filename = Resources::GetPath(filename);
 
@@ -413,10 +419,12 @@ namespace {
     void CmdLoad(const wchar_t*, const int argc, const LPWSTR* argv)
     {
         std::filesystem::path filename = GetDefaultFilename();
-        if (argc > 1)
+        if (argc > 1) {
             filename = argv[1];
-        if (filename.extension() != L".ini")
+        }
+        if (filename.extension() != L".ini") {
             filename.append(L".ini");
+        }
         filename = GuiUtils::SanitiseFilename(filename.string());
         filename = Resources::GetPath(filename);
 
@@ -434,12 +442,14 @@ namespace {
 
     void ToggleQuestEntrySection(QuestEntryGroup* entry, const bool is_visible, const bool refresh_log = true)
     {
-        if (!(entry && entry->is_visible != is_visible))
+        if (!(entry && entry->is_visible != is_visible)) {
             return;
+        }
         entry->is_visible = is_visible;
         quest_entry_group_visibility[entry->encoded_name] = is_visible;
-        if (refresh_log)
+        if (refresh_log) {
             pending_action = PendingAction::WAIT_REFRESH_LOG;
+        }
     }
 
     using GetOrCreateQuestEntryGroup_pt = QuestEntryGroup*(__fastcall*)(QuestEntryGroupContext* context, void* edx, wchar_t* quest_entry_group_name);
@@ -452,8 +462,9 @@ namespace {
         const bool is_creating = GetQuestEntryGroup(quest_entry_group_name) == nullptr;
         QuestEntryGroup* group = GetOrCreateQuestEntryGroup_Ret(context, edx, quest_entry_group_name);
         const auto current_quest_group = GetQuestEntryGroup(GW::QuestMgr::GetActiveQuestId());
-        if (!is_creating)
+        if (!is_creating) {
             goto ret;
+        }
 
         if (group == current_quest_group) {
             // Current quest group, leave open
@@ -502,8 +513,9 @@ void GuildWarsSettingsModule::Initialize()
     ToolboxModule::Initialize();
     // NB: This address is fond twice, we only care about the first.
     uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\engine\\frame\\frkey.cpp", "count == arrsize(s_remapTable)", 0x13);
-    if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address))
+    if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
         key_mappings_array = *(uint32_t**)address;
+    }
 
     address = GW::Scanner::Find("\x89\x77\x1c\x5f\x5e\x8b\xe5\x5d\xc2\x04\x00", "xxxxxxxxxxx", -0x155);
     if (address) {
@@ -574,8 +586,9 @@ void GuildWarsSettingsModule::LoadSettings(ToolboxIni* ini)
     if (ini->GetAllKeys(section_name, keys)) {
         std::wstring quest_entry_group_name;
         for (const auto& key : keys) {
-            if (!GuiUtils::IniToArray(key.pItem, quest_entry_group_name))
+            if (!GuiUtils::IniToArray(key.pItem, quest_entry_group_name)) {
                 continue; // @Cleanup: error handling
+            }
             const bool is_visible = ini->GetBoolValue(section_name, key.pItem, true);
             quest_entry_group_visibility[quest_entry_group_name] = is_visible;
             const auto group = GetQuestEntryGroup(quest_entry_group_name.c_str());
@@ -593,8 +606,9 @@ void GuildWarsSettingsModule::SaveSettings(ToolboxIni* ini)
 
     std::string tmp;
     for (const auto& it : quest_entry_group_visibility) {
-        if (!GuiUtils::ArrayToIni(it.first, &tmp))
+        if (!GuiUtils::ArrayToIni(it.first, &tmp)) {
             continue; // @Cleanup: error handling
+        }
         ini->SetBoolValue(section_name, tmp.c_str(), it.second);
     }
 }

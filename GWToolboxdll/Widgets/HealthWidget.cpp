@@ -27,8 +27,9 @@ void HealthWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_abs_value);
     LOAD_BOOL(show_perc_value);
 
-    if (inifile == nullptr)
+    if (inifile == nullptr) {
         inifile = new ToolboxIni();
+    }
     ASSERT(inifile->LoadIfExists(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
 
     ToolboxIni::TNamesDepend entries;
@@ -89,15 +90,17 @@ void HealthWidget::DrawSettingsInternal()
     ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
 
     const bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("The first matching threshold will be used.");
+    }
     if (thresholdsNode) {
         bool changed = false;
         for (size_t i = 0; i < thresholds.size(); i++) {
             Threshold* threshold = thresholds[i];
 
-            if (!threshold)
+            if (!threshold) {
                 continue;
+            }
 
             ImGui::PushID(static_cast<int>(threshold->ui_id));
 
@@ -142,13 +145,14 @@ void HealthWidget::DrawSettingsInternal()
     }
 }
 
-void HealthWidget::Draw(IDirect3DDevice9* pDevice)
+void HealthWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+    }
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
+    }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_ModCtrl);
@@ -183,23 +187,29 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice)
             for (size_t i = 0; i < thresholds.size(); i++) {
                 Threshold* threshold = thresholds[i];
 
-                if (!threshold)
+                if (!threshold) {
                     continue;
-                if (!threshold->active)
+                }
+                if (!threshold->active) {
                     continue;
-                if (threshold->modelId && threshold->modelId != target->player_number)
+                }
+                if (threshold->modelId && threshold->modelId != target->player_number) {
                     continue;
+                }
                 if (threshold->skillId) {
                     GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-                    if (!(skillbar && skillbar->IsValid()))
+                    if (!(skillbar && skillbar->IsValid())) {
                         continue;
+                    }
                     const GW::SkillbarSkill* skill = skillbar->GetSkillById(static_cast<GW::Constants::SkillID>(threshold->skillId));
-                    if (!skill)
+                    if (!skill) {
                         continue;
+                    }
                 }
                 if (threshold->mapId) {
-                    if (static_cast<GW::Constants::MapID>(threshold->mapId) != GW::Map::GetMapID())
+                    if (static_cast<GW::Constants::MapID>(threshold->mapId) != GW::Map::GetMapID()) {
                         continue;
+                    }
                 }
 
                 if (target->hp * 100 < threshold->value) {
@@ -286,10 +296,12 @@ bool HealthWidget::Threshold::DrawHeader()
     constexpr size_t buffer_size = 64;
     char mapbuf[buffer_size] = {'\0'};
     if (mapId) {
-        if (mapId < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID))
+        if (mapId < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID)) {
             snprintf(mapbuf, buffer_size, "[%s]", GW::Constants::NAME_FROM_ID[mapId]);
-        else
+        }
+        else {
             snprintf(mapbuf, buffer_size, "[Map %d]", mapId);
+        }
     }
 
     ImGui::SameLine(0, 18);
@@ -328,20 +340,23 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op)
         if (ImGui::Button("Move Up", ImVec2(width, 0))) {
             op = Operation::MoveUp;
         }
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Move the threshold up in the list");
+        }
         ImGui::SameLine(0, spacing);
         if (ImGui::Button("Move Down", ImVec2(width, 0))) {
             op = Operation::MoveDown;
         }
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Move the threshold down in the list");
+        }
         ImGui::SameLine(0, spacing);
         if (ImGui::Button("Delete", ImVec2(width, 0))) {
             op = Operation::Delete;
         }
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Delete the threshold");
+        }
 
         ImGui::TreePop();
         ImGui::PopID();

@@ -60,10 +60,12 @@ IRC::IRC()
 
 IRC::~IRC()
 {
-    if (hooks)
+    if (hooks) {
         delete_irc_command_hook(hooks);
-    if (wsaData.wVersion)
+    }
+    if (wsaData.wVersion) {
         WSACleanup();
+    }
 }
 
 void IRC::insert_irc_command_hook(irc_command_hook* hook, const char* cmd_name, int (*function_ptr)(const char*, irc_reply_data*, void*))
@@ -100,8 +102,9 @@ void IRC::hook_irc_command(const char* cmd_name, int (*function_ptr)(const char*
 
 void IRC::delete_irc_command_hook(const irc_command_hook* cmd_hook)
 {
-    if (cmd_hook->next)
+    if (cmd_hook->next) {
         delete_irc_command_hook(cmd_hook->next);
+    }
 
     delete cmd_hook->irc_command;
     delete cmd_hook;
@@ -163,10 +166,12 @@ int IRC::start(const char* server, int port, const char* nick, const char* user,
 
 void IRC::disconnect()
 {
-    if (!connected)
+    if (!connected) {
         return;
-    if (dataout)
+    }
+    if (dataout) {
         fclose(dataout);
+    }
     printf("Disconnected from server.\n");
     connected = false;
     quit("Leaving");
@@ -176,8 +181,9 @@ void IRC::disconnect()
     closesocket(irc_socket);
     // Destroy thread.
     pending_disconnect = true;
-    if (t.joinable())
+    if (t.joinable()) {
         t.join();
+    }
     pending_disconnect = false;
     t.~thread();
 }
@@ -189,15 +195,17 @@ void IRC::error(const int err)
 
 int IRC::quit(const char* quit_message)
 {
-    if (quit_message)
+    if (quit_message) {
         return raw("QUIT %s\r\n", quit_message);
+    }
     return raw("QUIT\r\n");
 }
 
 int IRC::message_fetch()
 {
-    if (!connected)
+    if (!connected) {
         return 1;
+    }
     message_buffer[0] = '\0';
     const auto ret_len = recv(irc_socket, message_buffer, 1023, 0);
     if (ret_len == SOCKET_ERROR) {
@@ -219,10 +227,12 @@ int IRC::message_fetch()
 
 int IRC::ping()
 {
-    if (!connected)
+    if (!connected) {
         return 1;
-    if (pong_recieved > ping_sent)
+    }
+    if (pong_recieved > ping_sent) {
         ping_sent = 0;
+    }
     constexpr clock_t timeout = 60 * CLOCKS_PER_SEC;
     const clock_t now = clock();
     if (!ping_sent && (!pong_recieved || now - pong_recieved > timeout)) {
@@ -248,12 +258,15 @@ bool IRC::is_connected()
 int IRC::message_loop()
 {
     while (true) {
-        if (!connected)
+        if (!connected) {
             continue;
-        if (pending_disconnect)
+        }
+        if (pending_disconnect) {
             return 0;
-        if (message_fetch() != 0)
+        }
+        if (message_fetch() != 0) {
             return 1;
+        }
     }
     return 0;
 }
@@ -318,8 +331,9 @@ void IRC::parse_irc_reply(const char* data)
     if (data[0] == ':') {
         hostd = const_cast<char*>(&data[1]);
         cmd = strchr(hostd, ' ');
-        if (!cmd)
+        if (!cmd) {
             return;
+        }
         *cmd = '\0';
         cmd++;
         params = strchr(cmd, ' ');
@@ -623,8 +637,9 @@ void IRC::parse_irc_reply(const char* data)
         else if (!strcmp(cmd, "NOTICE")) {
             hostd_tmp.target = params;
             params = strchr(hostd_tmp.target, ' ');
-            if (params)
+            if (params) {
                 *params = '\0';
+            }
             params++;
 #ifdef __IRC_DEBUG__
             printf("%s >-%s- %s\n", hostd_tmp.nick, hostd_tmp.target, &params[1]);
@@ -633,8 +648,9 @@ void IRC::parse_irc_reply(const char* data)
         else if (!strcmp(cmd, "PRIVMSG")) {
             hostd_tmp.target = params;
             params = strchr(hostd_tmp.target, ' ');
-            if (!params)
+            if (!params) {
                 return;
+            }
             *(params++) = '\0';
 #ifdef __IRC_DEBUG__
             printf("%s: <%s> %s\n", hostd_tmp.target, hostd_tmp.nick, &params[1]);
@@ -657,14 +673,16 @@ void IRC::parse_irc_reply(const char* data)
     else {
         cmd = const_cast<char*>(data);
         data = strchr(cmd, ' ');
-        if (!data)
+        if (!data) {
             return;
+        }
         *const_cast<char*>(data) = '\0';
         params = const_cast<char*>(data + 1);
 
         if (!strcmp(cmd, "PING")) {
-            if (!params)
+            if (!params) {
                 return;
+            }
             raw("PONG %s\r\n", &params[1]);
 #ifdef __IRC_DEBUG__
             printf("Ping received, pong sent.\n");
@@ -689,8 +707,9 @@ void IRC::call_hook(const char* irc_command, const char* params, irc_reply_data*
 {
     irc_command_hook* p;
 
-    if (!hooks)
+    if (!hooks) {
         return;
+    }
 
     p = hooks;
     while (p) {
@@ -706,8 +725,9 @@ void IRC::call_hook(const char* irc_command, const char* params, irc_reply_data*
 
 int IRC::notice(const char* target, const char* message)
 {
-    if (!connected)
+    if (!connected) {
         return 1;
+    }
     fprintf(dataout, "NOTICE %s :%s\r\n", target, message);
     return fflush(dataout);
 }
@@ -717,8 +737,9 @@ int IRC::notice(const char* fmt, ...)
     va_list argp;
     //char* target;
 
-    if (!connected)
+    if (!connected) {
         return 1;
+    }
     va_start(argp, fmt);
     fprintf(dataout, "NOTICE %s :", fmt);
     vfprintf(dataout, va_arg(argp, char*), argp);
@@ -734,8 +755,9 @@ int IRC::privmsg(const char* target, const char* message)
 
 int IRC::privmsg(const char* fmt, ...)
 {
-    if (!connected)
+    if (!connected) {
         return 1;
+    }
     va_list args;
     va_start(args, fmt);
     raw("PRIVMSG %s :", fmt);
@@ -797,8 +819,9 @@ int IRC::kick(const char* channel, const char* nick, const char* message)
 
 int IRC::mode(const char* channel, const char* modes, const char* targets)
 {
-    if (!targets)
+    if (!targets) {
         return raw("MODE %s %s\r\n", channel, modes);
+    }
     return raw("MODE %s %s %s\r\n", channel, modes, targets);
 }
 

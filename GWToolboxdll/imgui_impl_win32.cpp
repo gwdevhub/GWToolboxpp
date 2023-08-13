@@ -116,10 +116,12 @@ bool ImGui_ImplWin32_Init(void* hwnd)
     IM_ASSERT(io.BackendPlatformUserData == NULL && "Already initialized a platform backend!");
 
     INT64 perf_frequency, perf_counter;
-    if (!QueryPerformanceFrequency((LARGE_INTEGER*)&perf_frequency))
+    if (!QueryPerformanceFrequency((LARGE_INTEGER*)&perf_frequency)) {
         return false;
-    if (!QueryPerformanceCounter((LARGE_INTEGER*)&perf_counter))
+    }
+    if (!QueryPerformanceCounter((LARGE_INTEGER*)&perf_counter)) {
         return false;
+    }
 
     // Setup backend capabilities flags
     auto bd = IM_NEW(ImGui_ImplWin32_Data)();
@@ -180,8 +182,9 @@ void ImGui_ImplWin32_Shutdown()
 static bool ImGui_ImplWin32_UpdateMouseCursor()
 {
     const ImGuiIO& io = ImGui::GetIO();
-    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) {
         return false;
+    }
 
     const ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor) {
@@ -239,16 +242,20 @@ static void ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
 {
     // Left & right Shift keys: when both are pressed together, Windows tend to not generate the WM_KEYUP event for the
     // first released one.
-    if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && !IsVkDown(VK_LSHIFT))
+    if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && !IsVkDown(VK_LSHIFT)) {
         ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftShift, false, VK_LSHIFT);
-    if (ImGui::IsKeyDown(ImGuiKey_RightShift) && !IsVkDown(VK_RSHIFT))
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_RightShift) && !IsVkDown(VK_RSHIFT)) {
         ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightShift, false, VK_RSHIFT);
+    }
 
     // Sometimes WM_KEYUP for Win key is not passed down to the app (e.g. for Win+V on some setups, according to GLFW).
-    if (ImGui::IsKeyDown(ImGuiKey_LeftSuper) && !IsVkDown(VK_LWIN))
+    if (ImGui::IsKeyDown(ImGuiKey_LeftSuper) && !IsVkDown(VK_LWIN)) {
         ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftSuper, false, VK_LWIN);
-    if (ImGui::IsKeyDown(ImGuiKey_RightSuper) && !IsVkDown(VK_RWIN))
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_RightSuper) && !IsVkDown(VK_RWIN)) {
         ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightSuper, false, VK_RWIN);
+    }
 }
 
 static void ImGui_ImplWin32_UpdateKeyModifiers()
@@ -272,16 +279,18 @@ static void ImGui_ImplWin32_UpdateMouseData()
         // ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
         if (io.WantSetMousePos) {
             POINT pos = {static_cast<int>(io.MousePos.x), static_cast<int>(io.MousePos.y)};
-            if (ClientToScreen(bd->hWnd, &pos))
+            if (ClientToScreen(bd->hWnd, &pos)) {
                 SetCursorPos(pos.x, pos.y);
+            }
         }
 
         // (Optional) Fallback to provide mouse position when focused (WM_MOUSEMOVE already provides this when hovered
         // or captured)
         if (!io.WantSetMousePos && !bd->MouseTracked) {
             POINT pos;
-            if (GetCursorPos(&pos) && ScreenToClient(bd->hWnd, &pos))
+            if (GetCursorPos(&pos) && ScreenToClient(bd->hWnd, &pos)) {
                 io.AddMousePosEvent(static_cast<float>(pos.x), static_cast<float>(pos.y));
+            }
         }
     }
 }
@@ -635,8 +644,9 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 #endif
 IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    if (ImGui::GetCurrentContext() == nullptr)
+    if (ImGui::GetCurrentContext() == nullptr) {
         return 0;
+    }
 
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
@@ -653,8 +663,9 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
             io.AddMousePosEvent(static_cast<float>(GET_X_LPARAM(lParam)), static_cast<float>(GET_Y_LPARAM(lParam)));
             break;
         case WM_MOUSELEAVE:
-            if (bd->MouseHwnd == hwnd)
+            if (bd->MouseHwnd == hwnd) {
                 bd->MouseHwnd = nullptr;
+            }
             bd->MouseTracked = false;
             io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
             break;
@@ -702,8 +713,9 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
                 button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4;
             }
             bd->MouseButtonsDown &= ~(1 << button);
-            if (bd->MouseButtonsDown == 0 && GetCapture() == hwnd)
+            if (bd->MouseButtonsDown == 0 && GetCapture() == hwnd) {
                 ReleaseCapture();
+            }
             io.AddMouseButtonEvent(button, false);
             return 0;
         }
@@ -726,14 +738,16 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
                 // (keypad enter doesn't have its own... VK_RETURN with KF_EXTENDED flag means keypad enter, see
                 // IM_VK_KEYPAD_ENTER definition for details, it is mapped to ImGuiKey_KeyPadEnter.)
                 int vk = static_cast<int>(wParam);
-                if ((wParam == VK_RETURN) && (HIWORD(lParam) & KF_EXTENDED))
+                if ((wParam == VK_RETURN) && (HIWORD(lParam) & KF_EXTENDED)) {
                     vk = IM_VK_KEYPAD_ENTER;
+                }
 
                 // Submit key event
                 const ImGuiKey key = ImGui_ImplWin32_VirtualKeyToImGuiKey(vk);
                 const auto scancode = LOBYTE(HIWORD(lParam));
-                if (key != ImGuiKey_None)
+                if (key != ImGuiKey_None) {
                     ImGui_ImplWin32_AddKeyEvent(key, is_key_down, vk, scancode);
+                }
 
                 // Submit individual left/right modifier events
                 if (vk == VK_SHIFT) {
@@ -771,17 +785,20 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
             return 0;
         case WM_CHAR:
             // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-            if (wParam > 0 && wParam < 0x10000)
+            if (wParam > 0 && wParam < 0x10000) {
                 io.AddInputCharacterUTF16(static_cast<unsigned short>(wParam));
+            }
             return 0;
         case WM_SETCURSOR:
             // This is required to restore cursor when transitioning from e.g resize borders to client area.
-            if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor())
+            if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor()) {
                 return 1;
+            }
             return 0;
         case WM_DEVICECHANGE:
-            if (wParam == DBT_DEVNODES_CHANGED)
+            if (wParam == DBT_DEVNODES_CHANGED) {
                 bd->WantUpdateHasGamepad = true;
+            }
             return 0;
     }
     return 0;
@@ -809,11 +826,14 @@ static BOOL _IsWindowsVersionOrGreater(const WORD major, const WORD minor, WORD)
 {
     using PFN_RtlVerifyVersionInfo = LONG(WINAPI *)(OSVERSIONINFOEXW*, ULONG, ULONGLONG);
     static PFN_RtlVerifyVersionInfo RtlVerifyVersionInfoFn = nullptr;
-    if (RtlVerifyVersionInfoFn == nullptr)
-        if (const HMODULE ntdllModule = GetModuleHandleA("ntdll.dll"))
+    if (RtlVerifyVersionInfoFn == nullptr) {
+        if (const HMODULE ntdllModule = GetModuleHandleA("ntdll.dll")) {
             RtlVerifyVersionInfoFn = (PFN_RtlVerifyVersionInfo)GetProcAddress(ntdllModule, "RtlVerifyVersionInfo");
-    if (RtlVerifyVersionInfoFn == nullptr)
+        }
+    }
+    if (RtlVerifyVersionInfoFn == nullptr) {
         return FALSE;
+    }
 
     RTL_OSVERSIONINFOEXW versionInfo = {};
     ULONGLONG conditionMask = 0;
@@ -896,8 +916,9 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
     if (_IsWindows8Point1OrGreater()) {
         static HINSTANCE shcore_dll = LoadLibraryA("shcore.dll"); // Reference counted per-process
         static PFN_GetDpiForMonitor GetDpiForMonitorFn = nullptr;
-        if (GetDpiForMonitorFn == nullptr && shcore_dll != nullptr)
+        if (GetDpiForMonitorFn == nullptr && shcore_dll != nullptr) {
             GetDpiForMonitorFn = (PFN_GetDpiForMonitor)GetProcAddress(shcore_dll, "GetDpiForMonitor");
+        }
         if (GetDpiForMonitorFn != nullptr) {
             GetDpiForMonitorFn(static_cast<HMONITOR>(monitor), MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
             IM_ASSERT(xdpi == ydpi); // Please contact me if you hit this assert!
@@ -933,12 +954,14 @@ float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
 // (the Dwm* functions are Vista era functions but we are borrowing logic from GLFW)
 void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
 {
-    if (!_IsWindowsVistaOrGreater())
+    if (!_IsWindowsVistaOrGreater()) {
         return;
+    }
 
     BOOL composition;
-    if (FAILED(::DwmIsCompositionEnabled(&composition)) || !composition)
+    if (FAILED(::DwmIsCompositionEnabled(&composition)) || !composition) {
         return;
+    }
 
     BOOL opaque;
     DWORD color;

@@ -178,26 +178,33 @@ void PconsWindow::OnPostProcessEffect(GW::HookStatus* status, const GW::Packet::
     PconAlcohol::alcohol_level = pak->level;
     const PconsWindow& instance = Instance();
     // printf("Level = %d, tint = %d\n", pak->level, pak->tint);
-    if (instance.enabled)
+    if (instance.enabled) {
         instance.pcon_alcohol->Update();
+    }
     status->blocked = PconAlcohol::suppress_drunk_effect;
 }
 
 void PconsWindow::OnGenericValue(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak)
 {
     if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetPlayerId() && pak->value_id == 22) {
-        if (pak->value == 0x33E807E5)
+        if (pak->value == 0x33E807E5) {
             pak->value = 0; // kneel
-        if (pak->value == 0x313AC9D1)
+        }
+        if (pak->value == 0x313AC9D1) {
             pak->value = 0; // bored
-        if (pak->value == 0x3033596A)
+        }
+        if (pak->value == 0x3033596A) {
             pak->value = 0; // moan
-        if (pak->value == 0x305A7EF2)
+        }
+        if (pak->value == 0x305A7EF2) {
             pak->value = 0; // flex
-        if (pak->value == 0x74999B06)
+        }
+        if (pak->value == 0x74999B06) {
             pak->value = 0; // fistshake
-        if (pak->value == 0x30446E61)
+        }
+        if (pak->value == 0x30446E61) {
             pak->value = 0; // roar
+        }
     }
 }
 
@@ -210,8 +217,9 @@ void PconsWindow::OnAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* pa
 
 void PconsWindow::OnSpeechBubble(GW::HookStatus* status, const GW::Packet::StoC::SpeechBubble* pak)
 {
-    if (!PconAlcohol::suppress_drunk_text || status->blocked)
+    if (!PconAlcohol::suppress_drunk_text || status->blocked) {
         return;
+    }
 
     const wchar_t* m = pak->message;
     const std::wstring_view msg{m, 4};
@@ -317,8 +325,9 @@ void PconsWindow::OnObjectiveDone(GW::HookStatus*, const GW::Packet::StoC::Objec
 void PconsWindow::OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::VanquishComplete*)
 {
     PconsWindow& instance = Instance();
-    if (!instance.disable_cons_on_vanquish_completion || !instance.enabled)
+    if (!instance.disable_cons_on_vanquish_completion || !instance.enabled) {
         return;
+    }
     instance.SetEnabled(false);
     Log::Info("Cons auto-disabled on completion");
 }
@@ -363,10 +372,12 @@ void PconsWindow::CmdPcons(const wchar_t*, const int argc, const LPWSTR* argv)
                 const std::string pconName(pcon->chat);
                 std::string pconNameSanitized = GuiUtils::ToLower(pconName);
                 const unsigned int pconNameLength = pconNameSanitized.length();
-                if (compareLength > pconNameLength)
+                if (compareLength > pconNameLength) {
                     continue;
-                if (pconNameSanitized.rfind(compare) == std::string::npos)
+                }
+                if (pconNameSanitized.rfind(compare) == std::string::npos) {
                     continue;
+                }
                 if (bestMatchLength < pconNameLength) {
                     bestMatchLength = pconNameLength;
                     bestMatch = pcon;
@@ -411,11 +422,13 @@ bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, const bool show_icon, 
 
 void PconsWindow::Draw(IDirect3DDevice9* device)
 {
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         return ImGui::End();
+    }
     if (show_enable_button) {
         ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
         if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
@@ -434,8 +447,9 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
     }
 
     if (instance_type == InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
-        if (j && j % items_per_row > 0)
+        if (j && j % items_per_row > 0) {
             ImGui::NewLine();
+        }
         if (!current_objectives_to_check.empty()) {
             ImGui::Checkbox("Off @ end", &disable_cons_on_objective_completion);
             ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
@@ -452,13 +466,14 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
     ImGui::End();
 }
 
-void PconsWindow::Update(const float delta)
+void PconsWindow::Update(const float)
 {
-    UNREFERENCED_PARAMETER(delta);
-    if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID())
+    if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID()) {
         MapChanged(); // Map changed.
-    if (!player && instance_type == InstanceType::Explorable)
+    }
+    if (!player && instance_type == InstanceType::Explorable) {
         player = GW::Agents::GetPlayer(); // Won't be immediately able to get player ptr on map load, so put here.
+    }
     if (!Pcon::map_has_effects_array) {
         Pcon::map_has_effects_array = GW::Effects::GetPlayerEffectsArray() != nullptr;
     }
@@ -474,12 +489,14 @@ void PconsWindow::MapChanged()
     elite_area_check_timer = TIMER_INIT();
     map_id = GW::Map::GetMapID();
     Pcon::map_has_effects_array = false;
-    if (instance_type != InstanceType::Loading)
+    if (instance_type != InstanceType::Loading) {
         previous_instance_type = instance_type;
+    }
     instance_type = GW::Map::GetInstanceType();
     // If we've just come from an explorable area then disable pcons.
-    if (disable_pcons_on_map_change && previous_instance_type == InstanceType::Explorable)
+    if (disable_pcons_on_map_change && previous_instance_type == InstanceType::Explorable) {
         SetEnabled(false);
+    }
 
     player = nullptr;
     elite_area_disable_triggered = false;
@@ -516,17 +533,20 @@ bool PconsWindow::GetEnabled()
 
 bool PconsWindow::SetEnabled(const bool b)
 {
-    if (enabled == b)
+    if (enabled == b) {
         return enabled; // Do nothing - already enabled/disabled.
+    }
     enabled = b;
     Refill(enabled);
     switch (GW::Map::GetInstanceType()) {
         case InstanceType::Outpost:
-            if (tick_with_pcons)
+            if (tick_with_pcons) {
                 GW::PartyMgr::Tick(enabled);
+            }
         case InstanceType::Explorable: {
-            if (HotkeysWindow::CurrentHotkey() && !HotkeysWindow::CurrentHotkey()->show_message_in_emote_channel)
+            if (HotkeysWindow::CurrentHotkey() && !HotkeysWindow::CurrentHotkey()->show_message_in_emote_channel) {
                 break; // Selected hotkey doesn't allow a message.
+            }
             const ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
             const ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
             if ((pcon == nullptr || pcon->Collapsed || !visible) && (main == nullptr || main->Collapsed || !MainWindow::Instance().visible)) {
@@ -546,8 +566,9 @@ void PconsWindow::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent(
         "Game Settings", nullptr,
         [this](const std::string&, const bool is_showing) {
-            if (!is_showing)
+            if (!is_showing) {
                 return;
+            }
             DrawLunarsAndAlcoholSettings();
         },
         1.1f);
@@ -589,8 +610,9 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable()
         for (size_t j = 0; j < objectives_complete.size() && !objective_complete; j++) {
             objective_complete = current_objectives_to_check.at(i) == objectives_complete.at(j);
         }
-        if (!objective_complete)
+        if (!objective_complete) {
             return; // Not all objectives complete.
+        }
     }
     if (objective_complete) {
         elite_area_disable_triggered = true;
@@ -654,12 +676,14 @@ void PconsWindow::LoadSettings(ToolboxIni* ini)
     std::string order = ini->GetValue(Name(), "order", "");
     std::vector<std::string_view> order_vec;
     for (const auto str : std::views::split(order, ';') | std::views::transform([](auto&& rng) {
-        if (rng.begin() == rng.end())
+        if (rng.begin() == rng.end()) {
             return std::string_view("");
+        }
         return std::string_view(&*rng.begin(), std::ranges::distance(rng));
     })) {
-        if (str.empty())
+        if (str.empty()) {
             continue;
+        }
         order_vec.push_back(str);
     }
     std::ranges::sort(pcons, [&order_vec](const Pcon* a, const Pcon* b) {
@@ -756,8 +780,9 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::DragFloat("Pcon Size", &Pcon::size, 1.0f, 10.0f, 0.0f);
     ImGui::ShowHelp("Size of each Pcon icon in the interface");
     Colors::DrawSettingHueWheel("Enabled-Background", &Pcon::enabled_bg_color);
-    if (Pcon::size <= 1.0f)
+    if (Pcon::size <= 1.0f) {
         Pcon::size = 1.0f;
+    }
     if (ImGui::TreeNodeEx("Visibility", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Checkbox("Show Enable/Disable button", &show_enable_button);
         ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);

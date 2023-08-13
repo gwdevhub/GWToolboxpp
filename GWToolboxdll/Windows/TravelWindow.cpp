@@ -32,9 +32,8 @@ namespace {
 
     bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
 
-    bool outpost_name_array_getter(void* data, const int idx, const char* * out_text)
+    bool outpost_name_array_getter(void* /*data*/, const int idx, const char* * out_text)
     {
-        UNREFERENCED_PARAMETER(data);
         switch (idx) {
             case 0:
                 *out_text = "Abaddon's Gate";
@@ -635,13 +634,15 @@ namespace {
             break;
             case GW::UI::UIMessage::kTravel: {
                 const auto t = static_cast<MapStruct*>(wparam);
-                if (t && t != &pending_map_travel)
+                if (t && t != &pending_map_travel) {
                     pending_map_travel = *t;
+                }
             }
             break;
             case GW::UI::UIMessage::kErrorMessage: {
-                if (!(retry_map_travel && pending_map_travel.map_id != GW::Constants::MapID::None))
+                if (!(retry_map_travel && pending_map_travel.map_id != GW::Constants::MapID::None)) {
                     break;
+                }
                 const auto msg = static_cast<UIErrorMessage*>(wparam);
                 if (msg && msg->message && *msg->message == 0xb25) {
                     // Travel failed, but we want to retry
@@ -686,8 +687,9 @@ void TravelWindow::Terminate()
 
 void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Constants::MapID mapid)
 {
-    if (x_idx != 0)
+    if (x_idx != 0) {
         ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+    }
     const float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - ImGui::GetStyle().WindowPadding.x;
     bool clicked = false;
     switch (mapid) {
@@ -701,16 +703,17 @@ void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Con
     }
     if (clicked) {
         Travel(mapid, district, district_number);
-        if (close_on_travel)
+        if (close_on_travel) {
             visible = false;
+        }
     }
 }
 
-void TravelWindow::Draw(IDirect3DDevice9* pDevice)
+void TravelWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
 
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
@@ -731,8 +734,9 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice)
                 const GW::Constants::MapID id = IndexToOutpostID(travelto_index);
                 Travel(id, district, district_number);
                 travelto_index = -1;
-                if (close_on_travel)
+                if (close_on_travel) {
                     visible = false;
+                }
             }
 
             static int district_index = 0;
@@ -830,9 +834,8 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice)
     ImGui::End();
 }
 
-void TravelWindow::Update(const float delta)
+void TravelWindow::Update(const float)
 {
-    UNREFERENCED_PARAMETER(delta);
     if (scroll_to_outpost_id != GW::Constants::MapID::None) {
         ScrollToOutpost(scroll_to_outpost_id); // We're in the process of scrolling to an outpost
     }
@@ -841,8 +844,9 @@ void TravelWindow::Update(const float delta)
         case Pending:
             for (auto i = 0u; i < static_cast<uint32_t>(GW::Constants::MapID::Count); i++) {
                 const GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
-                if (!map || !map->name_id || !map->GetIsOnWorldMap() || map->type != GW::RegionType::ExplorableZone)
+                if (!map || !map->name_id || !map->GetIsOnWorldMap() || map->type != GW::RegionType::ExplorableZone) {
                     continue;
+                }
                 searchable_explorable_area_ids.push_back(static_cast<GW::Constants::MapID>(i));
                 auto s = new GuiUtils::EncString(map->name_id);
                 s->string(); // Trigger decode
@@ -855,8 +859,9 @@ void TravelWindow::Update(const float delta)
             for (size_t i = 0; i < searchable_explorable_areas_decode.size() && ok; i++) {
                 ok = !searchable_explorable_areas_decode[i]->string().empty();
             }
-            if (ok)
+            if (ok) {
                 fetched_searchable_explorable_areas = Decoded;
+            }
         }
         break;
         case Decoded:
@@ -895,14 +900,17 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
     };
 
     GW::Vec2f this_pos = get_pos(this_map);
-    if (!this_pos.x)
+    if (!this_pos.x) {
         this_pos = {static_cast<float>(this_map->icon_start_x), static_cast<float>(this_map->icon_start_y)};
+    }
     for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
         map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
-        if (!map_info || !map_info->thumbnail_id || !map_info->GetIsOnWorldMap())
+        if (!map_info || !map_info->thumbnail_id || !map_info->GetIsOnWorldMap()) {
             continue;
-        if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing)
+        }
+        if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing) {
             continue;
+        }
         switch (map_info->type) {
             case GW::RegionType::City:
             case GW::RegionType::CompetitiveMission:
@@ -916,8 +924,9 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
         }
         //if ((map_info->flags & 0x5000000) != 0)
         //   continue; // e.g. "wrong" augury rock is map 119, no NPCs
-        if (!GW::Map::GetIsMapUnlocked(static_cast<GW::Constants::MapID>(i)))
+        if (!GW::Map::GetIsMapUnlocked(static_cast<GW::Constants::MapID>(i))) {
             continue;
+        }
         const float dist = GetDistance(this_pos, get_pos(map_info));
         if (dist < nearest_distance) {
             nearest_distance = dist;
@@ -959,12 +968,14 @@ void TravelWindow::ScrollToOutpost(const GW::Constants::MapID outpost_id, const 
         scroll_to_outpost_id = outpost_id;
         scroll_from_outpost_id = map_id;
     }
-    if (scroll_to_outpost_id != outpost_id)
+    if (scroll_to_outpost_id != outpost_id) {
         return; // Already travelling to another outpost
+    }
     if (map_id == outpost_id) {
         scroll_to_outpost_id = GW::Constants::MapID::None;
-        if (!IsAlreadyInOutpost(outpost_id, _district, _district_number))
+        if (!IsAlreadyInOutpost(outpost_id, _district, _district_number)) {
             UITravel(outpost_id, _district, _district_number);
+        }
         return; // Already at this outpost. Called GW::Map::Travel just in case district is different.
     }
 
@@ -1008,16 +1019,19 @@ void TravelWindow::ScrollToOutpost(const GW::Constants::MapID outpost_id, const 
 
 bool TravelWindow::Travel(const GW::Constants::MapID MapID, const GW::Constants::District _district /*= 0*/, const uint32_t _district_number)
 {
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         return false;
+    }
     if (!GW::Map::GetIsMapUnlocked(MapID)) {
         const GW::AreaInfo* map = GW::Map::GetMapInfo(MapID);
         wchar_t map_name_buf[8];
         constexpr wchar_t err_message_buf[256] = L"[Error] Your character does not have that map unlocked";
-        if (map && map->name_id && GW::UI::UInt32ToEncStr(map->name_id, map_name_buf, 8))
+        if (map && map->name_id && GW::UI::UInt32ToEncStr(map->name_id, map_name_buf, 8)) {
             Log::ErrorW(L"[Error] Your character does not have \x1\x2%s\x2\x108\x107 unlocked", map_name_buf);
-        else
+        }
+        else {
             Log::ErrorW(err_message_buf);
+        }
         return false;
     }
     if (IsAlreadyInOutpost(MapID, _district, _district_number)) {
@@ -1109,11 +1123,13 @@ int TravelWindow::LanguageFromDistrict(const GW::Constants::District _district)
 
 bool TravelWindow::TravelFavorite(const unsigned int idx)
 {
-    if (idx >= fav_index.size())
+    if (idx >= fav_index.size()) {
         return false;
+    }
     Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
-    if (close_on_travel)
+    if (close_on_travel) {
         visible = false;
+    }
     return true;
 }
 
@@ -1123,10 +1139,12 @@ void TravelWindow::DrawSettingsInternal()
     ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");
     ImGui::PushItemWidth(100.0f);
     if (ImGui::InputInt("Number of favorites", &fav_count)) {
-        if (fav_count < 0)
+        if (fav_count < 0) {
             fav_count = 0;
-        if (fav_count > 100)
+        }
+        if (fav_count > 100) {
             fav_count = 100;
+        }
         fav_index.resize(static_cast<size_t>(fav_count), -1);
     }
     ImGui::PopItemWidth();
@@ -1532,9 +1550,8 @@ GW::Constants::MapID TravelWindow::IndexToOutpostID(const int index)
     }
 }
 
-void TravelWindow::CmdTP(const wchar_t* message, const int argc, const LPWSTR* argv)
+void TravelWindow::CmdTP(const wchar_t* , const int argc, const LPWSTR* argv)
 {
-    UNREFERENCED_PARAMETER(message);
     // zero argument error
     if (argc == 1) {
         Log::Error("[Error] Please provide an argument");
@@ -1548,10 +1565,12 @@ void TravelWindow::CmdTP(const wchar_t* message, const int argc, const LPWSTR* a
     const std::wstring argDistrict = GuiUtils::ToLower(argv[argc - 1]);
     // Guild hall
     if (argOutpost == L"gh") {
-        if (IsInGH())
+        if (IsInGH()) {
             GW::GuildMgr::LeaveGH();
-        else
+        }
+        else {
             GW::GuildMgr::TravelGH();
+        }
         return;
     }
     TravelWindow& instance = Instance();
@@ -1591,27 +1610,38 @@ void TravelWindow::CmdTP(const wchar_t* message, const int argc, const LPWSTR* a
             case GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost:
             case GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost:
                 if (first_char_of_last_arg == 'l') // - e.g. /tp viz local
+                {
                     outpost = GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost;
-                else if (first_char_of_last_arg == 'f')
+                }
+                else if (first_char_of_last_arg == 'f') {
                     outpost = GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost;
+                }
                 break;
             case GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost:
             case GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost:
                 if (first_char_of_last_arg == 'l') // - e.g. /tp fa lux
+                {
                     outpost = GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost;
-                else if (first_char_of_last_arg == 'k')
+                }
+                else if (first_char_of_last_arg == 'k') {
                     outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
-                else
+                }
+                else {
                     outpost = IsLuxon() ? GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost : GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
+                }
                 break;
             case GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost:
             case GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost:
                 if (first_char_of_last_arg == 'l') // - e.g. /tp jq lux
+                {
                     outpost = GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost;
-                else if (first_char_of_last_arg == 'k')
+                }
+                else if (first_char_of_last_arg == 'k') {
                     outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
-                else
+                }
+                else {
                     outpost = IsLuxon() ? GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost : GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost;
+                }
                 break;
             default:
                 break;
@@ -1622,13 +1652,13 @@ void TravelWindow::CmdTP(const wchar_t* message, const int argc, const LPWSTR* a
     Log::Error("[Error] Did not recognize outpost '%ls'", argOutpost.c_str());
 }
 
-bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t& number)
+bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t& )
 {
-    UNREFERENCED_PARAMETER(number);
     // By Map ID e.g. "/tp 77" for house zu heltzer
     uint32_t map_id = 0;
-    if (GuiUtils::ParseUInt(s.c_str(), &map_id))
+    if (GuiUtils::ParseUInt(s.c_str(), &map_id)) {
         return outpost = static_cast<GW::Constants::MapID>(map_id), true;
+    }
 
     TravelWindow& instance = Instance();
 
@@ -1641,15 +1671,17 @@ bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& out
     if (shorthand_outpost != instance.shorthand_outpost_names.end()) {
         const OutpostAlias& outpost_info = shorthand_outpost->second;
         outpost = outpost_info.map_id;
-        if (outpost_info.district != GW::Constants::District::Current)
+        if (outpost_info.district != GW::Constants::District::Current) {
             district = outpost_info.district;
+        }
         return true;
     }
 
     // Remove "the " from front of entered string
     const size_t found = compare.rfind("the ");
-    if (found == 0)
+    if (found == 0) {
         compare.replace(found, 4, "");
+    }
 
     // Helper function
     auto FindMatchingMap = [](const char* compare, const char* * map_names, const GW::Constants::MapID* map_ids, const size_t map_count) -> GW::Constants::MapID {
@@ -1657,16 +1689,20 @@ bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& out
         auto bestMatchMapID = GW::Constants::MapID::None;
 
         const auto searchStringLength = compare ? strlen(compare) : 0;
-        if (!searchStringLength)
+        if (!searchStringLength) {
             return bestMatchMapID;
+        }
         for (size_t i = 0; i < map_count; i++) {
             const auto thisMapLength = strlen(map_names[i]);
-            if (searchStringLength > thisMapLength)
+            if (searchStringLength > thisMapLength) {
                 continue; // String entered by user is longer than this outpost name.
-            if (strncmp(map_names[i], compare, searchStringLength) != 0)
+            }
+            if (strncmp(map_names[i], compare, searchStringLength) != 0) {
                 continue; // No match
-            if (thisMapLength == searchStringLength)
+            }
+            if (thisMapLength == searchStringLength) {
                 return map_ids[i]; // Exact match, break.
+            }
             if (!bestMatchMapName || strcmp(map_names[i], bestMatchMapName) < 0) {
                 bestMatchMapID = map_ids[i];
                 bestMatchMapName = map_names[i];
@@ -1680,18 +1716,21 @@ bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& out
     }
     else {
         best_match_map_id = FindMatchingMap(compare.c_str(), instance.searchable_map_names, instance.searchable_map_ids, _countof(instance.searchable_map_ids));
-        if (best_match_map_id == GW::Constants::MapID::None)
+        if (best_match_map_id == GW::Constants::MapID::None) {
             best_match_map_id = FindMatchingMap(compare.c_str(), instance.searchable_dungeon_names, instance.dungeon_map_ids, _countof(instance.dungeon_map_ids));
+        }
         if (best_match_map_id == GW::Constants::MapID::None && instance.fetched_searchable_explorable_areas == Ready) {
             // find explorable area matching this, and then find nearest unlocked outpost.
             best_match_map_id = FindMatchingMap(compare.c_str(), const_cast<const char**>(instance.searchable_explorable_areas.data()), instance.searchable_explorable_area_ids.data(), instance.searchable_explorable_area_ids.size());
-            if (best_match_map_id != GW::Constants::MapID::None)
+            if (best_match_map_id != GW::Constants::MapID::None) {
                 best_match_map_id = GetNearestOutpost(best_match_map_id);
+            }
         }
     }
 
-    if (best_match_map_id != GW::Constants::MapID::None)
+    if (best_match_map_id != GW::Constants::MapID::None) {
         return outpost = best_match_map_id, true; // Exact match
+    }
     return false;
 }
 

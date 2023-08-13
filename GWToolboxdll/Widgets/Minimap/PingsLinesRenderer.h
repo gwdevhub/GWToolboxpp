@@ -113,10 +113,9 @@ public:
     bool OnMouseUp();
     void AddMouseClickPing(GW::Vec2f pos);
 
-    void P046Callback(GW::Packet::StoC::AgentPinged* pak);
-    void P138Callback(GW::Packet::StoC::CompassEvent* pak);
-    void P153Callback(GW::Packet::StoC::GenericValueTarget* pak);
-    void P221Callback(GW::Packet::StoC::SkillActivate* pak);
+    void P046Callback(const GW::Packet::StoC::AgentPinged* pak);
+    void P138Callback(const GW::Packet::StoC::CompassEvent* pak);
+    void P153Callback(const GW::Packet::StoC::GenericValueTarget* pak);
 
     void DrawSettings();
     void LoadSettings(const ToolboxIni* ini, const char* section);
@@ -127,9 +126,9 @@ private:
 
     void DrawPings(IDirect3DDevice9* device);
     void DrawShadowstepMarker(IDirect3DDevice9* device);
-    void DrawShadowstepLine(const IDirect3DDevice9* device);
-    void DrawRecallLine(const IDirect3DDevice9* device);
-    void DrawDrawings(const IDirect3DDevice9* device);
+    void DrawShadowstepLine(IDirect3DDevice9* device);
+    void DrawRecallLine(IDirect3DDevice9* device);
+    void DrawDrawings(IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
 
     short ToShortPos(const float n) const

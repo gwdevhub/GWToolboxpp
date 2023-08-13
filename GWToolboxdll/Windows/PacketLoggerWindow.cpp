@@ -39,10 +39,12 @@ namespace {
         nlohmann::json ToJson()
         {
             nlohmann::json json;
-            if (!name.empty())
+            if (!name.empty()) {
                 json["name"] = GuiUtils::WStringToString(name);
-            if (!description.empty())
+            }
+            if (!description.empty()) {
                 json["description"] = GuiUtils::WStringToString(description);
+            }
             json["campaign"] = map_info->campaign;
             json["type"] = map_info->type;
             json["region"] = map_info->region;
@@ -56,12 +58,14 @@ namespace {
 
     void FetchMapInfo()
     {
-        if (!maps.empty())
+        if (!maps.empty()) {
             return;
+        }
         for (uint32_t map_id = 1; map_id < static_cast<uint32_t>(GW::Constants::MapID::Count); map_id++) {
             const auto map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
-            if (!map_info)
+            if (!map_info) {
                 continue;
+            }
             auto map = new MapInfo();
             map->map_info = map_info;
             GW::UI::UInt32ToEncStr(map_info->name_id, map->enc_name, 8);
@@ -162,8 +166,9 @@ uintptr_t game_srv_object_addr;
 
 static void InitStoC()
 {
-    if (game_server_handler)
+    if (game_server_handler) {
         return;
+    }
     struct GameServer {
         uint8_t h0000[8];
 
@@ -190,8 +195,9 @@ static void InitStoC()
     StoCHandler_Addr = *(uintptr_t*)address;
 
     const auto addr = (GameServer* *)StoCHandler_Addr;
-    if (!(addr && *addr))
+    if (!(addr && *addr)) {
         return;
+    }
 
     game_server_handler = &(*addr)->gs_codec->handlers;
 
@@ -264,14 +270,18 @@ static void GetHexS(char* buf, const uint8_t byte)
 {
     const uint8_t h = (byte >> 4) & 0xfu;
     const uint8_t l = (byte >> 0) & 0xfu;
-    if (h < 10)
+    if (h < 10) {
         buf[0] = h + '0';
-    else
+    }
+    else {
         buf[0] = (h - 10) + 'A';
-    if (l < 10)
+    }
+    if (l < 10) {
         buf[1] = l + '0';
-    else
+    }
+    else {
         buf[1] = (l - 10) + 'A';
+    }
     buf[2] = 0;
 }
 
@@ -442,8 +452,9 @@ static void PrintNestedField(uint32_t* fields, const uint32_t n_fields,
             const FieldType field_type = GetField(type, size, count);
 
             // Used to skip field that are not printable, for instance the array end
-            if (field_type == FieldType::Ignore)
+            if (field_type == FieldType::Ignore) {
                 continue;
+            }
 
             if (field_type != FieldType::NestedStruct) {
                 PrintField(field_type, count, bytes, indent + 4);
@@ -470,30 +481,36 @@ static void PrintNestedField(uint32_t* fields, const uint32_t n_fields,
     }
 }
 
-void PacketLoggerWindow::CtoSHandler(const GW::HookStatus* status, void* packet)
+void PacketLoggerWindow::CtoSHandler(const GW::HookStatus*, void* packet)
 {
-    UNREFERENCED_PARAMETER(status);
-    if (!logger_enabled)
+    if (!logger_enabled) {
         return;
+    }
     printf(PrefixTimestamp("CtoS packet(%u 0x%X) {\n").c_str(), *static_cast<uint32_t*>(packet), *static_cast<uint32_t*>(packet));
 }
 
 void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
 {
-    if (blocked_packets[packet->header])
+    if (blocked_packets[packet->header]) {
         status->blocked = true;
-    if (!logger_enabled)
+    }
+    if (!logger_enabled) {
         return;
+    }
     InitStoC();
-    if (!game_server_handler)
+    if (!game_server_handler) {
         return;
+    }
     //if (packet->header == 95) return true;
-    if (packet->header >= game_server_handler->size())
+    if (packet->header >= game_server_handler->size()) {
         return;
-    if (auto_ignore_packets)
+    }
+    if (auto_ignore_packets) {
         ignored_packets[packet->header] = true;
-    if (ignored_packets[packet->header])
+    }
+    if (ignored_packets[packet->header]) {
         return;
+    }
 
     const StoCHandler handler = game_server_handler->at(packet->header);
     auto packet_raw = reinterpret_cast<uint8_t*>(packet);
@@ -521,8 +538,9 @@ std::string PacketLoggerWindow::PadLeft(std::string input, const uint8_t count, 
 
 std::string PacketLoggerWindow::PrefixTimestamp(std::string message)
 {
-    if (timestamp_type == TimestampType_None)
+    if (timestamp_type == TimestampType_None) {
         return message;
+    }
 
     switch (timestamp_type) {
         case TimestampType_Local: {
@@ -537,22 +555,25 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message)
                 prependColon = true;
             }
             if (timestamp_show_minutes) {
-                if (prependColon)
+                if (prependColon) {
                     time_s.append(":");
+                }
                 snprintf(t, 4, "%02d", time.wMinute);
                 time_s.append(t);
                 prependColon = true;
             }
             if (timestamp_show_seconds) {
-                if (prependColon)
+                if (prependColon) {
                     time_s.append(":");
+                }
                 snprintf(t, 4, "%02d", time.wSecond);
                 time_s.append(t);
                 prependColon = true;
             }
             if (timestamp_show_milliseconds) {
-                if (prependColon)
+                if (prependColon) {
                     time_s.append(".");
+                }
                 snprintf(t, 4, "%03d", time.wMilliseconds);
                 time_s.append(t);
             }
@@ -573,20 +594,23 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message)
                 prependColon = true;
             }
             if (timestamp_show_minutes) {
-                if (prependColon)
+                if (prependColon) {
                     time_s.append(":");
+                }
                 time_s.append(PadLeft(std::to_string(mins.count()), 2, '0'));
                 prependColon = true;
             }
             if (timestamp_show_seconds) {
-                if (prependColon)
+                if (prependColon) {
                     time_s.append(":");
+                }
                 time_s.append(PadLeft(std::to_string(secs.count()), 2, '0'));
                 prependColon = true;
             }
             if (timestamp_show_milliseconds) {
-                if (prependColon)
+                if (prependColon) {
                     time_s.append(".");
+                }
                 time_s.append(PadLeft(std::to_string(ms.count()), 3, '0'));
             }
             return time_s + "] " + message;
@@ -600,8 +624,9 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message)
 void PacketLoggerWindow::AddMessageLog(const wchar_t* encoded)
 {
     const std::wstring encoded_ws(encoded);
-    if (!encoded || message_log.contains(encoded_ws))
+    if (!encoded || message_log.contains(encoded_ws)) {
         return;
+    }
     const auto t = new ForTranslation();
     t->in = encoded;
     pending_translation.push_back(t);
@@ -615,8 +640,9 @@ void PacketLoggerWindow::SaveMessageLog() const
 
     // Send column names to the stream
     for (const auto& it : message_log) {
-        if (!it.second || !it.second->length())
+        if (!it.second || !it.second->length()) {
             continue;
+        }
         myFile << it.first.c_str();
         myFile << L",";
         myFile << it.second->c_str();
@@ -634,21 +660,24 @@ void PacketLoggerWindow::ClearMessageLog()
     message_log.clear();
 }
 
-void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice)
+void PacketLoggerWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible || !game_server_handler)
+    if (!visible || !game_server_handler) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         return ImGui::End();
+    }
     if (ImGui::Checkbox("Enable Packet Logging", &logger_enabled)) {
         logger_enabled = !logger_enabled;
-        if (!logger_enabled)
+        if (!logger_enabled) {
             Enable();
-        else
+        }
+        else {
             Disable();
+        }
     }
     ImGui::ShowHelp("Log outgoing and incoming packet contents in debug console");
     ImGui::SameLine();
@@ -691,8 +720,9 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice)
             char buf[30];
             sprintf(buf, "%zu###ignore_packet_%zu", i, i);
             bool p = ignored_packets[i];
-            if (ImGui::Checkbox(buf, &p))
+            if (ImGui::Checkbox(buf, &p)) {
                 ignored_packets[i] = p;
+            }
         }
     }
     if (ImGui::CollapsingHeader("Blocked Packets")) {
@@ -718,8 +748,9 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice)
             char buf[30];
             sprintf(buf, "%zu###block_packet_%zu", i, i);
             bool p = blocked_packets[i];
-            if (ImGui::Checkbox(buf, &p))
+            if (ImGui::Checkbox(buf, &p)) {
                 blocked_packets[i] = p;
+            }
         }
     }
     return ImGui::End();
@@ -745,8 +776,9 @@ void PacketLoggerWindow::Initialize()
 
 void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
 {
-    if (!log_npc_dialogs)
+    if (!log_npc_dialogs) {
         return;
+    }
     const auto pak = (uint32_t*)packet;
     uint32_t string_offset = 0;
     switch (pak[0]) {
@@ -774,13 +806,13 @@ void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::Pack
     }
 }
 
-void PacketLoggerWindow::Update(const float delta)
+void PacketLoggerWindow::Update(const float)
 {
-    UNREFERENCED_PARAMETER(delta);
     for (auto it = pending_translation.begin(); it != pending_translation.end(); ++it) {
         ForTranslation& t = *(*it);
-        if (t.out.empty())
+        if (t.out.empty()) {
             continue;
+        }
         wchar_t enc_str[1024];
         int len = 0;
         for (size_t i = 0; i < t.in.size(); i++) {
@@ -828,8 +860,9 @@ void PacketLoggerWindow::LoadSettings(ToolboxIni* ini)
     timestamp_show_milliseconds = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_milliseconds), true);
 
     const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
-    if (strcmp(ignored_packets_bits, "-") == 0)
+    if (strcmp(ignored_packets_bits, "-") == 0) {
         return;
+    }
     const std::bitset<packet_max> ignored_packets_bitset(ignored_packets_bits);
     for (size_t i = 0; i < packet_max; i++) {
         ignored_packets[i] = ignored_packets_bitset[i] == 1;
@@ -838,8 +871,9 @@ void PacketLoggerWindow::LoadSettings(ToolboxIni* ini)
 
 void PacketLoggerWindow::Disable()
 {
-    if (!logger_enabled || !game_server_handler)
+    if (!logger_enabled || !game_server_handler) {
         return;
+    }
     for (size_t i = 0; i < game_server_handler->size(); i++) {
         GW::StoC::RemoveCallback(i, &hook_entry);
     }
@@ -851,8 +885,9 @@ void PacketLoggerWindow::Disable()
 
 void PacketLoggerWindow::Enable()
 {
-    if (logger_enabled)
+    if (logger_enabled) {
         return;
+    }
     for (size_t i = 0; i < game_server_handler->size(); i++) {
         GW::StoC::RegisterPacketCallback(
             &hook_entry, i, [this](GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) -> void {

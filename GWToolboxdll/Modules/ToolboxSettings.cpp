@@ -346,8 +346,9 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
 void ToolboxSettings::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    if (location_file.is_open())
+    if (location_file.is_open()) {
         location_file.close();
+    }
 
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);

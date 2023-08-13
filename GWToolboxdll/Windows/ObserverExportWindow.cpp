@@ -261,8 +261,9 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
             json["parties"]["by_id"][party_id_s] = nlohmann::json::value_t::null;
             continue;
         }
-        if (name_prepend_vs)
+        if (name_prepend_vs) {
             name.append(" vs ");
+        }
         name.append(party->display_name);
         name_prepend_vs = true;
         json["parties"]["by_id"][party_id_s]["party_id"] = party->party_id;
@@ -475,13 +476,16 @@ void ObserverExportWindow::ExportToJSON(Version version)
 
     for (wchar_t i : message) {
         // Break on the end of the message
-        if (!i)
+        if (!i) {
             break;
+        }
         // Double escape backsashes
-        if (i == '\\')
+        if (i == '\\') {
             file_location_wc[msg_len++] = i;
-        if (msg_len >= max_len)
+        }
+        if (msg_len >= max_len) {
             break;
+        }
         file_location_wc[msg_len++] = i;
     }
     file_location_wc[msg_len] = 0;
@@ -492,23 +496,26 @@ void ObserverExportWindow::ExportToJSON(Version version)
 
 
 // Draw the window
-void ObserverExportWindow::Draw(IDirect3DDevice9* pDevice)
+void ObserverExportWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         return ImGui::End();
+    }
 
     ImGui::Text("Export Observer matches to JSON");
 
-    if (ImGui::Button("Export to JSON (Version 0.1)"))
+    if (ImGui::Button("Export to JSON (Version 0.1)")) {
         ExportToJSON(Version::V_0_1);
+    }
 
-    if (ImGui::Button("Export to JSON (Version 1.0)"))
+    if (ImGui::Button("Export to JSON (Version 1.0)")) {
         ExportToJSON(Version::V_1_0);
+    }
 
     ImGui::End();
 }

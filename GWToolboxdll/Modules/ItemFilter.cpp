@@ -63,8 +63,9 @@ namespace {
 
     Rarity GetRarity(const GW::Item& item)
     {
-        if (item.complete_name_enc == nullptr)
+        if (item.complete_name_enc == nullptr) {
             return Rarity::Unknown;
+        }
 
         switch (item.complete_name_enc[0]) {
             case 2621:
@@ -85,8 +86,9 @@ namespace {
     const GW::Item* GetItemFromPacket(const GW::Packet::StoC::AgentAdd& packet)
     {
         // filter non-item-agents
-        if (packet.type != 4 || packet.unk3 != 0)
+        if (packet.type != 4 || packet.unk3 != 0) {
             return nullptr;
+        }
         return GW::Items::GetItemById(packet.agent_type);
     }
 
@@ -224,8 +226,9 @@ namespace {
         const auto rarity = GetRarity(item);
 
         if (can_pick_up) {
-            if (dont_hide_for_player.contains(item.model_id))
+            if (dont_hide_for_player.contains(item.model_id)) {
                 return false;
+            }
 
             switch (rarity) {
                 case Rarity::White:
@@ -243,8 +246,9 @@ namespace {
             }
         }
 
-        if (dont_hide_for_party.contains(item.model_id))
+        if (dont_hide_for_party.contains(item.model_id)) {
             return false;
+        }
 
         switch (rarity) {
             case Rarity::White:
@@ -267,12 +271,14 @@ namespace {
     void OnAgentAdd(GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet)
     {
         const auto* item = GetItemFromPacket(*packet);
-        if (!item)
+        if (!item) {
             return;
+        }
 
         const auto* player = GW::Agents::GetCharacter();
-        if (player == nullptr)
+        if (player == nullptr) {
             return;
+        }
 
         if (player->max_energy == 0 || player->login_number == 0) {
             // we're spectating, not sure what our own player is
@@ -301,8 +307,9 @@ namespace {
             return suppressed_packet.agent_id == agent_id;
         });
 
-        if (it == suppressed_packets.end())
+        if (it == suppressed_packets.end()) {
             return;
+        }
 
         suppressed_packets.erase(it);
         status->blocked = true;
@@ -320,8 +327,9 @@ namespace {
             return owner.item == item_id;
         });
 
-        if (it != item_owners.end())
+        if (it != item_owners.end()) {
             item_owners.erase(it);
+        }
     }
 
     void OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner* packet)

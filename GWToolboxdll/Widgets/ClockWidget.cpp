@@ -6,11 +6,11 @@
 #include <Modules/ToolboxSettings.h>
 #include <Defines.h>
 
-void ClockWidget::Draw(IDirect3DDevice9* pDevice)
+void ClockWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
 
     SYSTEMTIME time;
     GetLocalTime(&time);
@@ -20,19 +20,24 @@ void ClockWidget::Draw(IDirect3DDevice9* pDevice)
     if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
         static char timer[32];
         if (use_24h_clock) {
-            if (show_seconds)
+            if (show_seconds) {
                 snprintf(timer, 32, "%02d:%02d:%02d", time.wHour, time.wMinute, time.wSecond);
-            else
+            }
+            else {
                 snprintf(timer, 32, "%02d:%02d", time.wHour, time.wMinute);
+            }
         }
         else {
             int hour = time.wHour % 12;
-            if (hour == 0)
+            if (hour == 0) {
                 hour = 12;
-            if (show_seconds)
+            }
+            if (show_seconds) {
                 snprintf(timer, 32, "%d:%02d:%02d %s", hour, time.wMinute, time.wSecond, (time.wHour >= 12 ? "p.m." : "a.m."));
-            else
+            }
+            else {
                 snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, (time.wHour >= 12 ? "p.m." : "a.m."));
+            }
         }
         ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
         const ImVec2 cur = ImGui::GetCursorPos();

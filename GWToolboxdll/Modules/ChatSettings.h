@@ -34,10 +34,12 @@ public:
 
     bool Consume()
     {
-        if (print)
+        if (print) {
             return PrintMessage();
-        if (send)
+        }
+        if (send) {
             return Send();
+        }
         return false;
     }
 

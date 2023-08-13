@@ -120,8 +120,9 @@ namespace {
         std::wstringstream stream(text_ws.c_str());
         std::wstring word;
         while (std::getline(stream, word)) {
-            if (word.empty())
+            if (word.empty()) {
                 continue;
+            }
             words.push_back(word);
         }
     }
@@ -134,8 +135,9 @@ namespace {
         std::wstringstream stream(text_ws.c_str());
         std::wstring word;
         while (std::getline(stream, word)) {
-            if (word.empty())
+            if (word.empty()) {
                 continue;
+            }
             try {
                 const auto last_slash = word.rfind('/');
                 if (word.starts_with('/') && last_slash != std::wstring::npos && last_slash != 0) {
@@ -177,8 +179,9 @@ namespace {
                     }
                     regex.emplace_back(regex_str, regex_flags);
                 }
-                else
+                else {
                     regex.emplace_back(word, std::regex_constants::optimize);
+                }
             } catch (const std::regex_error&) {
                 Log::Warning("Cannot parse regular expression '%s'", word.c_str());
             }
@@ -189,8 +192,9 @@ namespace {
     {
         auto i = 0;
         for (const wchar_t b : msg) {
-            if (s[i++] != b)
+            if (s[i++] != b) {
                 return false;
+            }
         }
         return true;
     }
@@ -203,16 +207,21 @@ namespace {
 
     bool IsRare(const wchar_t* encoded_string)
     {
-        if (!encoded_string) return false;
-        if (encoded_string[0] == 0xA40)
+        if (!encoded_string) {
+            return false;
+        }
+        if (encoded_string[0] == 0xA40) {
             return true; // don't ignore gold items
+        }
         size_t item_name_len = 0;
         const auto item_name = GetFirstSegment(encoded_string, nullptr, &item_name_len);
-        if (!item_name)
+        if (!item_name) {
             return false;
+        }
         for (const auto cmp : rare_item_names) {
-            if (wcsncmp(item_name, cmp, item_name_len) == 0)
+            if (wcsncmp(item_name, cmp, item_name_len) == 0) {
                 return true;
+            }
         }
         return false;
     }
@@ -240,14 +249,18 @@ namespace {
 
     bool IsAshes(const wchar_t* encoded_string)
     {
-        if (!encoded_string) return false;
+        if (!encoded_string) {
+            return false;
+        }
         size_t item_name_len = 0;
         const auto item_name = GetFirstSegment(encoded_string, nullptr, &item_name_len);
-        if (!item_name)
+        if (!item_name) {
             return false;
+        }
         for (const auto cmp : encoded_ashes_names) {
-            if (wcsncmp(item_name, cmp, item_name_len) == 0)
+            if (wcsncmp(item_name, cmp, item_name_len) == 0) {
                 return true;
+            }
         }
         return false;
     }
@@ -260,18 +273,21 @@ namespace {
 
     bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment)
     {
-        if (agent_segment == nullptr)
+        if (agent_segment == nullptr) {
             return false; // something went wrong, don't ignore
-        if (agent_segment[0] == 0xBA9 && agent_segment[1] == 0x107)
+        }
+        if (agent_segment[0] == 0xBA9 && agent_segment[1] == 0x107) {
             return false;
+        }
         return true;
     }
 
     // Should this message be ignored by encoded string?
     bool ShouldIgnore(const wchar_t* message)
     {
-        if (!message)
+        if (!message) {
             return false;
+        }
 
         switch (message[0]) {
             // ==== Messages not ignored ====
@@ -323,8 +339,9 @@ namespace {
             case 0x7CB:
                 return false; // You gain (message[5] - 100) experience
             case 0x7CC:
-                if (FullMatch(&message[1], {0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1}))
+                if (FullMatch(&message[1], {0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1})) {
                     return lunars; // you receive 100 gold
+                }
                 break;
             case 0x7CD:
                 return false; // You receive <quantity> <item name>
@@ -338,13 +355,16 @@ namespace {
                 // monster/player x drops item y (no assignment)
                 // first segment describes the agent who dropped, second segment describes the item dropped
                 const auto agent_name = GetFirstSegment(message);
-                if (!ShouldIgnoreByAgentThatDropped(agent_name))
+                if (!ShouldIgnoreByAgentThatDropped(agent_name)) {
                     return false;
+                }
                 const auto item_argument = GetSecondSegment(message);
-                if (self_drop_rare && IsRare(item_argument))
+                if (self_drop_rare && IsRare(item_argument)) {
                     return true;
-                if (ashes_dropped && IsAshes(item_argument))
+                }
+                if (ashes_dropped && IsAshes(item_argument)) {
                     return true;
+                }
                 return self_drop_common;
             }
             case 0x7F1: {
@@ -355,19 +375,24 @@ namespace {
                 const GW::AgentLiving* me = GW::Agents::GetCharacter();
                 const bool forplayer = (me && me->player_number == GetNumericSegment(message));
                 const bool rare = IsRare(GetSecondSegment(message));
-                if (forplayer && rare)
+                if (forplayer && rare) {
                     return self_drop_rare;
-                if (forplayer && !rare)
+                }
+                if (forplayer && !rare) {
                     return self_drop_common;
-                if (!forplayer && rare)
+                }
+                if (!forplayer && rare) {
                     return ally_drop_rare;
-                if (!forplayer && !rare)
+                }
+                if (!forplayer && !rare) {
                     return ally_drop_common;
+                }
                 return false;
             }
             case 0x7F2: {
-                if (ashes_dropped && IsAshes(GetFirstSegment(message)))
+                if (ashes_dropped && IsAshes(GetFirstSegment(message))) {
                     return true;
+                }
                 return false; // you drop item x
             }
             case 0x7F6: // player x picks up item y (note: item can be unassigned gold)
@@ -429,12 +454,14 @@ namespace {
             case 0x52C3:               // 0x52C3 0xDE9C 0xCD2F 0x78E4 0x101 0x100 - Hold-out bonus: +(message[5] - 0x100) points
                 return FullMatch(&message[1], {0xDE9C, 0xCD2F, 0x78E4, 0x101}) && challenge_mission_messages;
             case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
-                if (!FullMatch(&message[1], {0x866F, 0xB8D2, 0x5A20, 0x101}))
+                if (!FullMatch(&message[1], {0x866F, 0xB8D2, 0x5A20, 0x101})) {
                     break;
+                }
                 return faction_gain || (challenge_mission_messages && IsInChallengeMission());
             case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
-                if (!FullMatch(&message[1], {0xDD4E, 0xB502, 0x71CE, 0x101}))
+                if (!FullMatch(&message[1], {0xDD4E, 0xB502, 0x71CE, 0x101})) {
                     break;
+                }
                 return faction_gain || (challenge_mission_messages && IsInChallengeMission());
             case 0x7BF4:
                 return you_have_been_playing_for; // You have been playing for x time.
@@ -471,16 +498,21 @@ namespace {
                     case 0x7C3E: // This item cannot be used here.
                         return item_cannot_be_used;
                 }
-                if (FullMatch(&message[1], {0x6649, 0xA2F9, 0xBBFA, 0x3C27}))
+                if (FullMatch(&message[1], {0x6649, 0xA2F9, 0xBBFA, 0x3C27})) {
                     return lunars; // you will celebrate a festive new year (rocket or popper)
-                if (FullMatch(&message[1], {0x664B, 0xDBAB, 0x9F4C, 0x6742}))
+                }
+                if (FullMatch(&message[1], {0x664B, 0xDBAB, 0x9F4C, 0x6742})) {
                     return lunars; // something special is in your future! (lucky aura)
-                if (FullMatch(&message[1], {0x6648, 0xB765, 0xBC0D, 0x1F73}))
+                }
+                if (FullMatch(&message[1], {0x6648, 0xB765, 0xBC0D, 0x1F73})) {
                     return lunars; // you will have a prosperous new year! (gain 100 gold)
-                if (FullMatch(&message[1], {0x664C, 0xD634, 0x91F8, 0x76EF}))
+                }
+                if (FullMatch(&message[1], {0x664C, 0xD634, 0x91F8, 0x76EF})) {
                     return lunars; // your new year will be a blessed one (lunar blessing)
-                if (FullMatch(&message[1], {0x664A, 0xEFB8, 0xDE25, 0x363}))
+                }
+                if (FullMatch(&message[1], {0x664A, 0xEFB8, 0xDE25, 0x363})) {
                     return lunars; // You will find bad luck in this new year... or bad luck will find you
+                }
                 break;
 
             case 0x8102:
@@ -541,44 +573,54 @@ namespace {
     // Should this message be ignored by content?
     bool ShouldIgnoreByContent(const wchar_t* message)
     {
-        if (!messagebycontent)
+        if (!messagebycontent) {
             return false;
-        if (!message)
+        }
+        if (!message) {
             return false;
+        }
         if (!(message[0] == 0x108 && message[1] == 0x107)
-            && !(message[0] == 0x8102 && message[1] == 0xEFE && message[2] == 0x107))
+            && !(message[0] == 0x8102 && message[1] == 0xEFE && message[2] == 0x107)) {
             return false;
+        }
         const wchar_t* start = nullptr;
         const wchar_t* end = nullptr;
         size_t i = 0;
         while (start == nullptr && message[i]) {
-            if (message[i] == 0x107)
+            if (message[i] == 0x107) {
                 start = &message[i + 1];
+            }
             i++;
         }
-        if (start == nullptr)
+        if (start == nullptr) {
             return false; // no string segment in this packet
+        }
         while (end == nullptr && message[i]) {
-            if (message[i] == 0x1)
+            if (message[i] == 0x1) {
                 end = &message[i];
+            }
             i++;
         }
-        if (end == nullptr)
+        if (end == nullptr) {
             end = &message[i];
+        }
 
         using namespace GuiUtils;
         const auto str = std::wstring(start, end);
-        if (str.empty())
+        if (str.empty()) {
             return false;
+        }
         const auto sanitized = RemoveDiacritics(str);
         const auto lowercase = ToLower(sanitized);
         for (const auto& s : bycontent_words) {
-            if (lowercase.find(s) != std::wstring::npos)
+            if (lowercase.find(s) != std::wstring::npos) {
                 return true;
+            }
         }
         for (const auto& r : bycontent_regex) {
-            if (std::regex_search(sanitized, r))
+            if (std::regex_search(sanitized, r)) {
                 return true;
+            }
         }
         return false;
     }
@@ -606,8 +648,9 @@ namespace {
     // Should this channel be blocked altogether?
     bool ShouldBlockByChannel(uint32_t channel)
     {
-        if (!block_messages_from_inactive_channels)
+        if (!block_messages_from_inactive_channels) {
             return false;
+        }
         // Don't log chat messages if the channel is turned off - avoids hitting the chat log limit
         auto prefCheck = static_cast<GW::UI::FlagPreference>(0xffff);
         switch (static_cast<GW::Chat::Channel>(channel)) {
@@ -646,20 +689,24 @@ namespace {
     // Should this message for this channel be ignored either by encoded string or content?
     bool ShouldIgnore(const wchar_t* message, const uint32_t channel)
     {
-        if (ShouldBlockByChannel(channel))
+        if (ShouldBlockByChannel(channel)) {
             return true;
-        if (ShouldIgnore(message))
+        }
+        if (ShouldIgnore(message)) {
             return true;
-        if (!ShouldFilterByChannel(channel))
+        }
+        if (!ShouldFilterByChannel(channel)) {
             return false;
+        }
         return ShouldIgnoreByContent(message);
     }
 
     // Sets HookStatus to blocked if packet has content that hits the filter.
     void BlockIfApplicable(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
     {
-        if (status->blocked)
+        if (status->blocked) {
             return;
+        }
         uint32_t channel = 0;
         const wchar_t* message = nullptr;
         switch (packet->header) {
@@ -697,8 +744,9 @@ namespace {
     // Ensure the message buffer is cleared if this packet has been blocked
     void ClearMessageBufferIfBlocked(const GW::HookStatus* status, GW::Packet::StoC::PacketBase*)
     {
-        if (status->blocked)
+        if (status->blocked) {
             ToolboxUtils::ClearMessageCore();
+        }
     }
 }
 
@@ -1053,9 +1101,8 @@ void ChatFilter::DrawSettingsInternal()
 #endif // EXTENDED_IGNORE_LIST
 }
 
-void ChatFilter::Update(const float delta)
+void ChatFilter::Update(const float)
 {
-    UNREFERENCED_PARAMETER(delta);
     const uint32_t timestamp = GetTickCount();
     if (timer_parse_filters && timer_parse_filters < timestamp) {
         timer_parse_filters = 0;

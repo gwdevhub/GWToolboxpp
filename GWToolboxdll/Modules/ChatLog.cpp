@@ -47,10 +47,12 @@ void ChatLog::Add(GW::Chat::ChatMessage* in)
 
 void ChatLog::Add(wchar_t* _message, const uint32_t _channel, const FILETIME _timestamp)
 {
-    if (injecting || !enabled)
+    if (injecting || !enabled) {
         return;
-    if (!(((size_t)_message & 3) == 0 && _message[0]))
+    }
+    if (!(((size_t)_message & 3) == 0 && _message[0])) {
         return; // Empty message
+    }
     const auto new_message = new TBChatMessage(_message, _channel, _timestamp);
     TBChatMessage* inject = recv_last;
     if (!recv_first) {
@@ -74,8 +76,9 @@ void ChatLog::Add(wchar_t* _message, const uint32_t _channel, const FILETIME _ti
                     if (inject->prev != inject) {
                         inject->prev->next = new_message;
                     }
-                    if (inject->next == inject)
+                    if (inject->next == inject) {
                         inject->next = new_message;
+                    }
                     inject->prev = new_message;
                     recv_first = new_message;
                     goto trim_log;
@@ -89,10 +92,12 @@ void ChatLog::Add(wchar_t* _message, const uint32_t _channel, const FILETIME _ti
                     inject->next->prev = new_message;
                 }
                 inject->next = new_message;
-                if (inject->prev == inject)
+                if (inject->prev == inject) {
                     inject->prev = new_message;
-                if (inject == recv_last)
+                }
+                if (inject == recv_last) {
                     recv_last = new_message;
+                }
                 goto trim_log;
         }
     }
@@ -105,10 +110,12 @@ trim_log:
 
 void ChatLog::AddSent(wchar_t* _message, const uint32_t addr)
 {
-    if (!(((size_t)_message & 3) == 0 && _message[0]))
+    if (!(((size_t)_message & 3) == 0 && _message[0])) {
         return; // Empty message
-    if (injecting || IsAdded(_message, addr))
+    }
+    if (injecting || IsAdded(_message, addr)) {
         return;
+    }
 
     const auto new_message = new TBSentMessage(_message, addr);
     TBSentMessage* inject = sent_last;
@@ -124,8 +131,9 @@ void ChatLog::AddSent(wchar_t* _message, const uint32_t addr)
         inject->next->prev = new_message;
     }
     inject->next = new_message;
-    if (inject == sent_last)
+    if (inject == sent_last) {
         sent_last = new_message;
+    }
 trim_log:
     sent_count++;
     while (sent_count > GW::Chat::SENT_LOG_LENGTH) {
@@ -135,44 +143,54 @@ trim_log:
 
 void ChatLog::Remove(const TBChatMessage* message)
 {
-    if (message == recv_first)
+    if (message == recv_first) {
         recv_first = message->next;
-    if (message == recv_last)
+    }
+    if (message == recv_last) {
         recv_last = message->prev;
+    }
     message->next->prev = message->prev;
     message->prev->next = message->next;
-    if (recv_first == message)
+    if (recv_first == message) {
         recv_first = nullptr;
-    if (recv_last == message)
+    }
+    if (recv_last == message) {
         recv_last = nullptr;
+    }
     recv_count--;
     delete message;
 }
 
 void ChatLog::RemoveSent(const TBSentMessage* message)
 {
-    if (message == sent_first)
+    if (message == sent_first) {
         sent_first = message->next;
-    if (message == sent_last)
+    }
+    if (message == sent_last) {
         sent_last = message->prev;
+    }
     message->next->prev = message->prev;
     message->prev->next = message->next;
-    if (sent_first == message)
+    if (sent_first == message) {
         sent_first = nullptr;
-    if (sent_last == message)
+    }
+    if (sent_last == message) {
         sent_last = nullptr;
+    }
     sent_count--;
     delete message;
 }
 
 void ChatLog::Fetch()
 {
-    if (!enabled)
+    if (!enabled) {
         return;
+    }
     const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
     for (size_t i = 0; log && i < GW::Chat::CHAT_LOG_LENGTH; i++) {
-        if (log->messages[i])
+        if (log->messages[i]) {
             Add(log->messages[i]);
+        }
     }
 
     // Sent
@@ -180,8 +198,9 @@ void ChatLog::Fetch()
     if (out_log && out_log->count && out_log->prev) {
         GWSentMessage* oldest = out_log->prev;
         for (size_t i = 0; i < out_log->count; i++) {
-            if (oldest->prev)
+            if (oldest->prev) {
                 oldest = oldest->prev;
+            }
         }
         for (size_t i = 0; i < out_log->count; i++) {
             AddSent(oldest->message);
@@ -192,8 +211,9 @@ void ChatLog::Fetch()
 
 void ChatLog::Save()
 {
-    if (!enabled || account.empty())
+    if (!enabled || account.empty()) {
         return;
+    }
     // Received log FIFO
     auto inifile = new ToolboxIni(false, false, false);
     std::string msg_buf;
@@ -215,8 +235,9 @@ void ChatLog::Save()
             Log::Log("Failed to turn timestamp for message %d into string", i);
         }
 
-        if (recv == recv_last)
+        if (recv == recv_last) {
             break;
+        }
         recv = recv->next;
     }
     inifile->SaveFile(LogPath(L"recv").c_str());
@@ -231,8 +252,9 @@ void ChatLog::Save()
         ASSERT(GuiUtils::ArrayToIni(sent->msg.c_str(), &msg_buf));
         inifile->SetValue(addr_buf, "message", msg_buf.c_str());
         inifile->SetLongValue(addr_buf, "addr", sent->gw_message_address);
-        if (sent == sent_last)
+        if (sent == sent_last) {
             break;
+        }
         sent = sent->next;
     }
     inifile->SaveFile(LogPath(L"sent").c_str());
@@ -279,11 +301,13 @@ void ChatLog::Load(const std::wstring& _account)
     uint32_t addr = 0;
     for (const ToolboxIni::Entry& entry : entries) {
         std::string message = inifile.GetValue(entry.pItem, "message", "");
-        if (message.empty())
+        if (message.empty()) {
             continue;
+        }
         const size_t written = GuiUtils::IniToArray(message, buf);
-        if (!written)
+        if (!written) {
             continue;
+        }
         t.dwLowDateTime = inifile.GetLongValue(entry.pItem, "dwLowDateTime", 0);
         t.dwHighDateTime = inifile.GetLongValue(entry.pItem, "dwHighDateTime", 0);
         channel = inifile.GetLongValue(entry.pItem, "channel", 0);
@@ -297,11 +321,13 @@ void ChatLog::Load(const std::wstring& _account)
     inifile.GetAllSections(entries);
     for (const ToolboxIni::Entry& entry : entries) {
         std::string message = inifile.GetValue(entry.pItem, "message", "");
-        if (message.empty())
+        if (message.empty()) {
             continue;
+        }
         const size_t written = GuiUtils::IniToArray(message, buf);
-        if (!written)
+        if (!written) {
             continue;
+        }
         addr = inifile.GetLongValue(entry.pItem, "addr", 0);
         AddSent(buf.data(), addr);
     }
@@ -328,12 +354,14 @@ void ChatLog::Inject()
         while (recv) {
             timestamp_override_message = recv;
             GW::Chat::AddToChatLog(timestamp_override_message->msg.data(), timestamp_override_message->channel);
-            if (!log)
+            if (!log) {
                 log = GW::Chat::GetChatLog();
+            }
             ASSERT(log && !timestamp_override_message && log_pos != log->next);
             log_pos = log->next;
-            if (recv == recv_last)
+            if (recv == recv_last) {
                 break;
+            }
             recv = recv->next;
         }
     }
@@ -356,12 +384,14 @@ void ChatLog::InjectSent()
         if (sent->msg.data() && sent->msg.length()) {
             // Only add to log if the message has content
             AddToSentLog_Func(sent->msg.data());
-            if (!out_log)
+            if (!out_log) {
                 out_log = GetSentLog();
+            }
             sent->gw_message_address = (uint32_t)out_log->prev->message;
         }
-        if (sent == sent_last)
+        if (sent == sent_last) {
             break;
+        }
         sent = sent->next;
     }
     injecting = false;
@@ -369,8 +399,9 @@ void ChatLog::InjectSent()
 
 void ChatLog::SetEnabled(const bool _enabled)
 {
-    if (enabled == _enabled)
+    if (enabled == _enabled) {
         return;
+    }
     enabled = _enabled;
     if (enabled) {
         Init();
@@ -379,14 +410,17 @@ void ChatLog::SetEnabled(const bool _enabled)
 
 bool ChatLog::Init()
 {
-    if (!enabled)
+    if (!enabled) {
         return false;
+    }
     const auto c = GW::GetCharContext();
-    if (!c)
+    if (!c) {
         return false;
+    }
     const std::wstring this_account = c->player_email;
-    if (this_account == account)
+    if (this_account == account) {
         return false;
+    }
     // GW Account changed, save this log and start fresh.
     Save();
     Load(this_account);
@@ -440,8 +474,9 @@ void ChatLog::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent(
         "Chat Settings", ICON_FA_COMMENTS,
         [this](const std::string&, const bool is_showing) {
-            if (!is_showing)
+            if (!is_showing) {
                 return;
+            }
             ImGui::Checkbox("Enable GWToolbox chat log", &Instance().enabled);
             ImGui::ShowHelp(Description());
         },
@@ -464,23 +499,26 @@ void ChatLog::OnAddToSentLog(wchar_t* message)
     const GWSentMessage* lastest_message = log ? log->prev : nullptr;
     RetAddToSentLog(message);
     log = Instance().GetSentLog();
-    if (log && log->prev != lastest_message)
+    if (log && log->prev != lastest_message) {
         Instance().AddSent(log->prev->message);
+    }
     GW::HookBase::LeaveHook();
 }
 
 void ChatLog::OnPreAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage*)
 {
-    if (!Instance().enabled || Instance().injecting)
+    if (!Instance().enabled || Instance().injecting) {
         return;
+    }
     //GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
     //bool inject = ((log && log->next == 0 && !log->messages[log->next]) || !log || Instance().Init());
 }
 
 void ChatLog::OnPostAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage* logged_message)
 {
-    if (!Instance().enabled)
+    if (!Instance().enabled) {
         return;
+    }
     if (logged_message) {
         // NB: Can be false if between maps
         if (Instance().timestamp_override_message) {

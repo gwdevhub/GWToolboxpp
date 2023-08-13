@@ -11,8 +11,9 @@ class TimerWidget : public ToolboxWidget {
     TimerWidget()
     {
         for (const auto& [skill_id, name] : spirit_effects) {
-            if (!spirit_effects_enabled.contains(skill_id))
+            if (!spirit_effects_enabled.contains(skill_id)) {
                 spirit_effects_enabled[skill_id] = false;
+            }
         }
     };
     ~TimerWidget() override = default;

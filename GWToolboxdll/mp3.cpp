@@ -21,8 +21,9 @@ Mp3::~Mp3()
 
 void Mp3::Cleanup()
 {
-    if (pimc)
+    if (pimc) {
         pimc->Stop();
+    }
 
     if (pigb) {
         pigb->Release();
@@ -110,8 +111,9 @@ bool Mp3::WaitForCompletion(const long msTimeout, long* EvCode)
     // @Cleanup: Add some logging
     if (ready && pimex) {
         const HRESULT hr = pimex->WaitForCompletion(msTimeout, EvCode);
-        if (FAILED(hr))
+        if (FAILED(hr)) {
             return false;
+        }
         return *EvCode > 0;
     }
 
@@ -133,8 +135,9 @@ long Mp3::GetVolume()
         long vol = -1;
         const HRESULT hr = piba->get_Volume(&vol);
 
-        if (SUCCEEDED(hr))
+        if (SUCCEEDED(hr)) {
             return vol;
+        }
     }
 
     return -1;
@@ -151,8 +154,9 @@ __int64 Mp3::GetCurrentPosition()
         __int64 curpos = -1;
         const HRESULT hr = pims->GetCurrentPosition(&curpos);
 
-        if (SUCCEEDED(hr))
+        if (SUCCEEDED(hr)) {
             return curpos;
+        }
     }
 
     return -1;
@@ -162,15 +166,18 @@ bool Mp3::SetPositions(__int64* pCurrent, __int64* pStop, const bool bAbsolutePo
 {
     if (ready && pims) {
         DWORD flags = 0;
-        if (bAbsolutePositioning)
+        if (bAbsolutePositioning) {
             flags = AM_SEEKING_AbsolutePositioning | AM_SEEKING_SeekToKeyFrame;
-        else
+        }
+        else {
             flags = AM_SEEKING_RelativePositioning | AM_SEEKING_SeekToKeyFrame;
+        }
 
         const HRESULT hr = pims->SetPositions(pCurrent, flags, pStop, flags);
 
-        if (SUCCEEDED(hr))
+        if (SUCCEEDED(hr)) {
             return true;
+        }
     }
 
     return false;

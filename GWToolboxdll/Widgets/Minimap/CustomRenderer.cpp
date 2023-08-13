@@ -869,9 +869,8 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
     }
 }
 
-void CustomRenderer::DrawCustomLines(const IDirect3DDevice9* device)
+void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(device);
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         for (const CustomLine& line : lines) {
             if (line.visible && (line.map == GW::Constants::MapID::None || line.map == GW::Map::GetMapID())) {

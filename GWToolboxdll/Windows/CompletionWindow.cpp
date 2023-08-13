@@ -47,8 +47,9 @@ namespace {
     bool ArrayBoolAt(GW::Array<uint32_t>& array, const uint32_t index)
     {
         const uint32_t real_index = index >> 5;
-        if (real_index >= array.size())
+        if (real_index >= array.size()) {
             return false;
+        }
         const uint32_t shift = (static_cast<byte>(index) & 0x1f);
         const uint32_t flag = 1 << shift;
         return (array[real_index] & flag) != 0;
@@ -57,8 +58,9 @@ namespace {
     bool ArrayBoolAt(const std::vector<uint32_t>& array, const uint32_t index)
     {
         const uint32_t real_index = index / 32;
-        if (real_index >= array.size())
+        if (real_index >= array.size()) {
             return false;
+        }
         const uint32_t shift = index % 32;
         const uint32_t flag = 1 << shift;
         return (array[real_index] & flag) != 0;
@@ -146,8 +148,9 @@ namespace {
     {
         if (const auto& info = GW::Items::GetPvPItemUpgrade(pvp_upgrade_item_id)) {
             const auto found = std::ranges::find_if(item_upgrades_by_file_id, [file_id = info->file_id](auto& check) { return check.file_id == file_id; });
-            if (found != item_upgrades_by_file_id.end())
+            if (found != item_upgrades_by_file_id.end()) {
                 return found->completion_category;
+            }
         }
         return "Unknown Upgrades";
     }
@@ -165,11 +168,13 @@ namespace {
 
     void OnCycleDisplayedMinipetsButton(const GW::UI::DialogButtonInfo* button)
     {
-        if (wcsncmp(button->message, L"\x8102\x2B96\xA802\xD212\x380C", 5) != 0)
+        if (wcsncmp(button->message, L"\x8102\x2B96\xA802\xD212\x380C", 5) != 0) {
             return; // Not "Cycle displayed minipets"
+        }
         const wchar_t* dialog_body = DialogModule::Instance().GetDialogBody();
-        if (!(dialog_body && wcsncmp(dialog_body, L"\x8102\x2B9D\xDE1D\xB19F\x52DD", 5) == 0))
+        if (!(dialog_body && wcsncmp(dialog_body, L"\x8102\x2B9D\xDE1D\xB19F\x52DD", 5) == 0)) {
             return; // Not devotion dialog "Miniatures on display"
+        }
         const std::wregex displayed_miniatures(L"\x2\x102\x2([^\x102\x2]+)");
         std::wsmatch m;
         std::wstring subject(dialog_body);
@@ -203,11 +208,13 @@ namespace {
 
     void OnFestivalHatButton(const GW::UI::DialogButtonInfo* button)
     {
-        if (wcsncmp(button->message, L"\x8101\x62E2\xAD6D\x82EB\x4C26 ", 5) != 0)
+        if (wcsncmp(button->message, L"\x8101\x62E2\xAD6D\x82EB\x4C26 ", 5) != 0) {
             return; // Not "Lets talk about something else"
+        }
         const wchar_t* dialog_body = DialogModule::GetDialogBody();
-        if (!(dialog_body && wcsncmp(dialog_body, L"\x8101\x62E3\x8BAE\xA150\x1329", 5) == 0))
+        if (!(dialog_body && wcsncmp(dialog_body, L"\x8101\x62E3\x8BAE\xA150\x1329", 5) == 0)) {
             return; // Not "Which festival hat would you like me to make you?"
+        }
 
         const auto& buttons = DialogModule::Instance().GetDialogButtons();
         const auto cc = character_completion[GetPlayerName()];
@@ -236,21 +243,24 @@ namespace {
     void OnSendDialog(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendDialog);
-        if (GW::Map::GetMapID() != MapID::Hall_of_Monuments)
+        if (GW::Map::GetMapID() != MapID::Hall_of_Monuments) {
             return;
+        }
         uint32_t dialog_id = (uint32_t)wparam;
         const auto& available_dialogs = DialogModule::Instance().GetDialogButtons();
         const auto this_dialog_button = std::ranges::find_if(available_dialogs, [dialog_id](auto d) { return d->dialog_id == dialog_id; });
-        if (this_dialog_button == available_dialogs.end())
+        if (this_dialog_button == available_dialogs.end()) {
             return;
+        }
         std::wregex miniature_displayed_regex(L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A([^\x1]+)");
         std::wsmatch m;
         std::wstring subject((*this_dialog_button)->message);
         std::wstring msg;
         auto cc = character_completion[GetPlayerName()];
         auto& minipets_unlocked = cc->minipets_unlocked;
-        if (!std::regex_search(subject, m, miniature_displayed_regex))
+        if (!std::regex_search(subject, m, miniature_displayed_regex)) {
             return;
+        }
         std::wstring miniature_encoded_name(m[1].str());
         for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
             if (encoded_minipet_names[i] == miniature_encoded_name) {
@@ -265,8 +275,9 @@ namespace {
     {
         Resources::EnsureFolderExists(Resources::GetPath(L"img", L"missions"));
         for (auto& mission_image : mission_images) {
-            if (mission_image.texture)
+            if (mission_image.texture) {
                 continue;
+            }
             Resources::LoadTexture(
                 &mission_image.texture,
                 Resources::GetPath(L"img/missions", mission_image.file_name),
@@ -290,8 +301,9 @@ namespace {
         if (!out) {
             const auto player_name = GetPlayerName();
             const auto cc = CompletionWindow::GetCharacterCompletion(player_name, true);
-            if (!cc)
+            if (!cc) {
                 return;
+            }
             out = &cc->hom_achievements;
         }
         if (!out->isLoading()) {
@@ -305,14 +317,17 @@ namespace {
         if (!character_name) {
             from_game = true;
             const GW::GameContext* g = GW::GetGameContext();
-            if (!g)
+            if (!g) {
                 return false;
+            }
             GW::CharContext* c = g->character;
-            if (!c)
+            if (!c) {
                 return false;
+            }
             const GW::WorldContext* w = g->world;
-            if (!w)
+            if (!w) {
                 return false;
+            }
             character_name = c->player_name;
             switch (type) {
                 case CompletionType::Mission:
@@ -418,8 +433,9 @@ namespace {
     void RefreshAccountCharacters()
     {
         const auto email = GetAccountEmail();
-        if (!email)
+        if (!email) {
             return;
+        }
         const auto p = GW::GetPreGameContext();
         if (p) {
             for (const auto& character : p->chars) {
@@ -430,15 +446,17 @@ namespace {
         const auto pn = GetPlayerName();
         if (pn) {
             const auto cc = CompletionWindow::Instance().GetCharacterCompletion(pn);
-            if (cc)
+            if (cc) {
                 cc->account = email;
+            }
         }
     }
 
     void OnPostCheckUIState(GW::HookStatus*, GW::UI::UIMessage, void*, void* state)
     {
-        if (state && *static_cast<uint32_t*>(state) == 2)
+        if (state && *static_cast<uint32_t*>(state) == 2) {
             RefreshAccountCharacters();
+        }
     }
 
     std::wstring& ReplaceString(std::wstring& subject, const std::wstring& search, const std::wstring& replace)
@@ -541,8 +559,9 @@ Mission::Mission(const MapID _outpost,
 {
     map_to = outpost;
     const GW::AreaInfo* map_info = GW::Map::GetMapInfo(outpost);
-    if (map_info)
+    if (map_info) {
         name.reset(map_info->name_id);
+    }
 };
 
 MapID Mission::GetOutpost() const
@@ -581,17 +600,20 @@ bool Mission::Draw(IDirect3DDevice9*)
         if (!map_unlocked) {
             ImGui::PopStyleColor();
         }
-        if (clicked)
+        if (clicked) {
             OnClick();
+        }
     }
     else {
         if (texture) {
             uv1 = ImGui::CalculateUvCrop(texture, s);
         }
-        if (ImGui::ImageButton(texture, s, uv0, uv1, -1, bg, tint))
+        if (ImGui::ImageButton(texture, s, uv0, uv1, -1, bg, tint)) {
             OnClick();
-        if (ImGui::IsItemHovered())
+        }
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip(Name());
+        }
     }
     ImGui::PopID();
     ImGui::PopStyleColor();
@@ -645,8 +667,9 @@ void Mission::CheckProgress(const std::wstring& player_name)
 {
     is_completed = bonus = false;
     const auto& completion = character_completion;
-    if (!completion.contains(player_name))
+    if (!completion.contains(player_name)) {
         return;
+    }
     const auto& player_completion = completion.at(player_name);
     std::vector<uint32_t>* missions_complete = &player_completion->mission;
     std::vector<uint32_t>* missions_bonus = &player_completion->mission_bonus;
@@ -707,8 +730,9 @@ void HeroUnlock::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& skills = character_completion;
-    if (!skills.contains(player_name))
+    if (!skills.contains(player_name)) {
         return;
+    }
     auto& heroes = skills.at(player_name)->heroes;
     is_completed = bonus = std::ranges::find(heroes, static_cast<uint32_t>(skill_id)) != heroes.end();
 }
@@ -785,8 +809,9 @@ void ItemAchievement::OnClick()
 
 IDirect3DTexture9* PvESkill::GetMissionImage()
 {
-    if (!image)
+    if (!image) {
         image = Resources::GetSkillImage(skill_id);
+    }
     return *image;
 }
 
@@ -814,8 +839,9 @@ void PvESkill::OnClick()
 bool PvESkill::Draw(IDirect3DDevice9* device)
 {
     const ImVec2 cursor_pos = ImGui::GetCursorPos();
-    if (!Mission::Draw(device))
+    if (!Mission::Draw(device)) {
         return false;
+    }
     if (is_completed && !show_as_list) {
         const ImVec2 cursor_pos2 = ImGui::GetCursorPos();
         ImVec2 icon_size_scaled = {icon_size.x * ImGui::GetIO().FontGlobalScale, icon_size.y * ImGui::GetIO().FontGlobalScale};
@@ -845,8 +871,9 @@ void PvESkill::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& skills = character_completion;
-    if (!skills.contains(player_name))
+    if (!skills.contains(player_name)) {
         return;
+    }
     auto& unlocked = skills.at(player_name)->skills;
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id));
 }
@@ -884,8 +911,9 @@ void EotNMission::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& completion = character_completion;
-    if (!completion.contains(player_name))
+    if (!completion.contains(player_name)) {
         return;
+    }
     std::vector<uint32_t>* missions_bonus = &completion.at(player_name)->mission_bonus;
     if (hard_mode) {
         missions_bonus = &completion.at(player_name)->mission_bonus_hm;
@@ -906,8 +934,9 @@ void Vanquish::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& completion = character_completion;
-    if (!completion.contains(player_name))
+    if (!completion.contains(player_name)) {
         return;
+    }
     auto& unlocked = completion.at(player_name)->vanquishes;
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
 }
@@ -985,10 +1014,12 @@ void CompletionWindow::Initialize()
         // GW::Array<something> unlocked_pvp_item_upgrade_array
         for (size_t i = 0; i < unlocked_pvp_item_upgrade_array.size(); i++) {
             const auto& deets = unlocked_pvp_item_upgrade_array[i];
-            if (deets.file_id != it.file_id)
+            if (deets.file_id != it.file_id) {
                 continue;
-            if (deets.is_dev)
+            }
+            if (deets.is_dev) {
                 continue;
+            }
             unlocked_pvp_items[(uint32_t)PvPItemUpgradeTypeName(i)].push_back(new UnlockedPvPItemUpgrade(i));
         }
     }
@@ -1201,14 +1232,17 @@ void CompletionWindow::Initialize()
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
         const uint32_t player_number = static_cast<uint32_t*>(pak)[1];
         const auto c = GW::GetCharContext();
-        if (!(c && player_number == c->player_number))
+        if (!(c && player_number == c->player_number)) {
             return;
+        }
         const auto me = GW::PlayerMgr::GetPlayerByID(c->player_number);
-        if (!me)
+        if (!me) {
             return;
+        }
         const auto comp = Instance().GetCharacterCompletion(c->player_name);
-        if (comp)
+        if (comp) {
             comp->profession = static_cast<Profession>(me->primary);
+        }
         ParseCompletionBuffer(CompletionType::Heroes);
         Instance().CheckProgress();
     });
@@ -1247,8 +1281,9 @@ void CompletionWindow::Initialize()
     ParseCompletionBuffer(CompletionType::MapsUnlocked);
     CheckProgress();
     const wchar_t* player_name = GetPlayerName();
-    if (player_name)
+    if (player_name) {
         wcscpy(last_player_name, player_name);
+    }
 
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kCheckUIState, OnPostCheckUIState, 0x8000);
 
@@ -2056,9 +2091,11 @@ void CompletionWindow::Terminate()
     GW::StoC::RemoveCallback(GAME_SMSG_INSTANCE_LOADED, &skills_unlocked_stoc_entry);
     GW::StoC::RemoveCallback(GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, &skills_unlocked_stoc_entry);
     auto clear_vec = [](auto& vec) {
-        for (auto& c : vec)
-            for (auto i : c.second)
+        for (auto& c : vec) {
+            for (auto i : c.second) {
                 delete i;
+            }
+        }
         vec.clear();
     };
 
@@ -2069,19 +2106,22 @@ void CompletionWindow::Terminate()
     clear_vec(heros);
     clear_vec(unlocked_pvp_items);
 
-    for (const auto c : minipets)
+    for (const auto c : minipets) {
         delete c;
+    }
     minipets.clear();
 
-    for (const auto& camp : character_completion)
+    for (const auto& camp : character_completion) {
         delete camp.second;
+    }
     character_completion.clear();
 }
 
 void CompletionWindow::Draw(IDirect3DDevice9* device)
 {
-    if (!visible)
+    if (!visible) {
         return;
+    }
 
     // TODO Button at the top to go to current daily
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -2133,8 +2173,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 
 #if 1
     ImGui::SameLine();
-    if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0)
+    if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0) {
         RerollWindow::Instance().Reroll(chosen_player_name.data(), false, false);
+    }
 #endif
     ImGui::SameLine();
     if (ImGui::Checkbox("This Account", &only_show_account_chars)) {
@@ -2150,8 +2191,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::Separator();
     ImGui::BeginChild("completion_scroll");
     float single_item_width = Mission::icon_size.x;
-    if (show_as_list)
+    if (show_as_list) {
         single_item_width *= 5.f;
+    }
     int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x))));
     const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
     auto draw_missions = [missions_per_row, device](auto& camp_missions, size_t end = 0) {
@@ -2177,11 +2219,13 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     auto sort = [](auto& camp_missions) {
         bool can_sort = true;
         for (size_t i = 0; i < camp_missions.size() && can_sort; i++) {
-            if (!camp_missions[i]->Name()[0])
+            if (!camp_missions[i]->Name()[0]) {
                 can_sort = false;
+            }
         }
-        if (!can_sort)
+        if (!can_sort) {
             return false;
+        }
         std::ranges::sort(
             camp_missions,
             [](Mission* lhs, Mission* rhs) {
@@ -2206,8 +2250,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         for (auto it = heros.begin(); sorted && it != heros.end(); ++it) {
             sorted = sort(it->second);
         }
-        if (sorted)
+        if (sorted) {
             pending_sort = false;
+        }
     }
 
     ImGui::Text("Missions");
@@ -2222,8 +2267,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         for (size_t i = 0; i < camp_missions.size(); i++) {
             if (camp_missions[i]->is_completed && camp_missions[i]->bonus) {
                 completed++;
-                if (hide_completed_missions)
+                if (hide_completed_missions) {
                     continue;
+                }
             }
             filtered.push_back(camp_missions[i]);
         }
@@ -2240,15 +2286,17 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::PopStyleVar();
     for (auto& camp : vanquishes) {
         auto& camp_missions = camp.second;
-        if (!camp_missions.size())
+        if (!camp_missions.size()) {
             continue;
+        }
         size_t completed = 0;
         std::vector<Mission*> filtered;
         for (size_t i = 0; i < camp_missions.size(); i++) {
             if (camp_missions[i]->is_completed) {
                 completed++;
-                if (hide_completed_vanquishes)
+                if (hide_completed_vanquishes) {
                     continue;
+                }
             }
             filtered.push_back(camp_missions[i]);
         }
@@ -2279,8 +2327,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         for (size_t i = 0; i < camp_missions.size(); i++) {
             if (camp_missions[i]->is_completed) {
                 completed++;
-                if (hide_unlocked_skills)
+                if (hide_unlocked_skills) {
                     continue;
+                }
             }
             filtered.push_back(camp_missions[i]);
         }
@@ -2298,8 +2347,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         for (size_t i = 0; i < camp_missions.size(); i++) {
             if (camp_missions[i]->is_completed) {
                 completed++;
-                if (hide_unlocked_skills)
+                if (hide_unlocked_skills) {
                     continue;
+                }
             }
             filtered.push_back(camp_missions[i]);
         }
@@ -2361,8 +2411,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         const auto m = festival_hats[i];
         if (m->is_completed) {
             completed++;
-            if (hide_collected_hats)
+            if (hide_collected_hats) {
                 continue;
+            }
         }
         filtered.push_back(m);
     }
@@ -2380,8 +2431,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         const auto m = festival_hats[i];
         if (m->is_completed) {
             completed++;
-            if (hide_collected_hats)
+            if (hide_collected_hats) {
                 continue;
+            }
         }
         filtered.push_back(m);
     }
@@ -2399,8 +2451,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         const auto m = festival_hats[i];
         if (m->is_completed) {
             completed++;
-            if (hide_collected_hats)
+            if (hide_collected_hats) {
                 continue;
+            }
         }
         filtered.push_back(m);
     }
@@ -2418,8 +2471,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
 {
     float single_item_width = Mission::icon_size.x;
-    if (show_as_list)
+    if (show_as_list) {
         single_item_width *= 5.f;
+    }
     const int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x))));
     const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
     ImGui::Text("Hall of Monuments");
@@ -2440,8 +2494,9 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
     for (const auto m : minipets) {
         if (m->is_completed) {
             dedicated++;
-            if (hide_unlocked_achievements)
+            if (hide_unlocked_achievements) {
                 continue;
+            }
         }
         drawn++;
     }
@@ -2475,10 +2530,12 @@ then press "Examine the Monument to Devotion.")");
         }
 
         for (const auto m : minipets) {
-            if (m->is_completed && hide_unlocked_achievements)
+            if (m->is_completed && hide_unlocked_achievements) {
                 continue;
-            if (!m->Draw(device))
+            }
+            if (!m->Draw(device)) {
                 continue;
+            }
             col_count++;
             if (col_count == items_per_col) {
                 ImGui::NextColumn();
@@ -2500,8 +2557,9 @@ then press "Examine the Monument to Devotion.")");
     for (const auto m : hom_weapons) {
         if (m->is_completed) {
             dedicated++;
-            if (hide_unlocked_achievements)
+            if (hide_unlocked_achievements) {
                 continue;
+            }
         }
         drawn++;
     }
@@ -2517,10 +2575,12 @@ then press "Examine the Monument to Devotion.")");
         size_t col_count = 0;
 
         for (const auto m : hom_weapons) {
-            if (m->is_completed && hide_unlocked_achievements)
+            if (m->is_completed && hide_unlocked_achievements) {
                 continue;
-            if (!m->Draw(device))
+            }
+            if (!m->Draw(device)) {
                 continue;
+            }
             col_count++;
             if (col_count == items_per_col) {
                 ImGui::NextColumn();
@@ -2543,8 +2603,9 @@ then press "Examine the Monument to Devotion.")");
     for (const auto m : hom_armor) {
         if (m->is_completed) {
             dedicated++;
-            if (hide_unlocked_achievements)
+            if (hide_unlocked_achievements) {
                 continue;
+            }
         }
         drawn++;
     }
@@ -2560,10 +2621,12 @@ then press "Examine the Monument to Devotion.")");
         size_t col_count = 0;
 
         for (const auto m : hom_armor) {
-            if (m->is_completed && hide_unlocked_achievements)
+            if (m->is_completed && hide_unlocked_achievements) {
                 continue;
-            if (!m->Draw(device))
+            }
+            if (!m->Draw(device)) {
                 continue;
+            }
             col_count++;
             if (col_count == items_per_col) {
                 ImGui::NextColumn();
@@ -2586,8 +2649,9 @@ then press "Examine the Monument to Devotion.")");
     for (const auto m : hom_companions) {
         if (m->is_completed) {
             dedicated++;
-            if (hide_unlocked_achievements)
+            if (hide_unlocked_achievements) {
                 continue;
+            }
         }
         drawn++;
     }
@@ -2603,10 +2667,12 @@ then press "Examine the Monument to Devotion.")");
         size_t col_count = 0;
 
         for (const auto m : hom_companions) {
-            if (m->is_completed && hide_unlocked_achievements)
+            if (m->is_completed && hide_unlocked_achievements) {
                 continue;
-            if (!m->Draw(device))
+            }
+            if (!m->Draw(device)) {
                 continue;
+            }
             col_count++;
             if (col_count == items_per_col) {
                 ImGui::NextColumn();
@@ -2629,8 +2695,9 @@ then press "Examine the Monument to Devotion.")");
     for (const auto m : hom_titles) {
         if (m->is_completed) {
             dedicated++;
-            if (hide_unlocked_achievements)
+            if (hide_unlocked_achievements) {
                 continue;
+            }
         }
         drawn++;
     }
@@ -2646,10 +2713,12 @@ then press "Examine the Monument to Devotion.")");
         size_t col_count = 0;
 
         for (const auto m : hom_titles) {
-            if (m->is_completed && hide_unlocked_achievements)
+            if (m->is_completed && hide_unlocked_achievements) {
                 continue;
-            if (!m->Draw(device))
+            }
+            if (!m->Draw(device)) {
                 continue;
+            }
             col_count++;
             if (col_count == items_per_col) {
                 ImGui::NextColumn();
@@ -2687,12 +2756,14 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
         char ini_key_buf[64];
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
         const int len = completion_ini->GetLongValue(ini_section, ini_key_buf, 0);
-        if (len < 1)
+        if (len < 1) {
             return;
+        }
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
         const std::string val = completion_ini->GetValue(ini_section, ini_key_buf, "");
-        if (val.empty())
+        if (val.empty()) {
             return;
+        }
         std::vector<uint32_t> completion_buf(len);
         ASSERT(GuiUtils::IniToArray(val, completion_buf.data(), len));
         ParseCompletionBuffer(type, name_ws.data(), completion_buf.data(), completion_buf.size());
@@ -2847,8 +2918,9 @@ void MinipetAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& cc = character_completion;
-    if (!cc.contains(player_name))
+    if (!cc.contains(player_name)) {
         return;
+    }
     std::vector<uint32_t>& minipets_unlocked = cc.at(player_name)->minipets_unlocked;
     is_completed = bonus = ArrayBoolAt(minipets_unlocked, encoded_name_index);
 }
@@ -2857,11 +2929,13 @@ void WeaponAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& cc = character_completion;
-    if (!cc.contains(player_name))
+    if (!cc.contains(player_name)) {
         return;
+    }
     const auto& hom = cc.at(player_name)->hom_achievements;
-    if (hom.state != HallOfMonumentsAchievements::State::Done)
+    if (hom.state != HallOfMonumentsAchievements::State::Done) {
         return;
+    }
     auto& unlocked = hom.valor_detail;
     is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
@@ -2878,11 +2952,13 @@ void ArmorAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& cc = character_completion;
-    if (!cc.contains(player_name))
+    if (!cc.contains(player_name)) {
         return;
+    }
     const auto& hom = cc.at(player_name)->hom_achievements;
-    if (hom.state != HallOfMonumentsAchievements::State::Done)
+    if (hom.state != HallOfMonumentsAchievements::State::Done) {
         return;
+    }
     const auto& unlocked = hom.resilience_detail;
     is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
@@ -2891,11 +2967,13 @@ void CompanionAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& cc = character_completion;
-    if (!cc.contains(player_name))
+    if (!cc.contains(player_name)) {
         return;
+    }
     const auto& hom = cc.at(player_name)->hom_achievements;
-    if (hom.state != HallOfMonumentsAchievements::State::Done)
+    if (hom.state != HallOfMonumentsAchievements::State::Done) {
         return;
+    }
     const auto& unlocked = hom.fellowship_detail;
     is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
@@ -2904,11 +2982,13 @@ void HonorAchievement::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& cc = character_completion;
-    if (!cc.contains(player_name))
+    if (!cc.contains(player_name)) {
         return;
+    }
     const auto& hom = cc.at(player_name)->hom_achievements;
-    if (hom.state != HallOfMonumentsAchievements::State::Done)
+    if (hom.state != HallOfMonumentsAchievements::State::Done) {
         return;
+    }
     const auto& unlocked = hom.honor_detail;
     is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
@@ -2917,22 +2997,26 @@ void FestivalHat::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
     const auto& cc = character_completion;
-    if (!cc.contains(player_name))
+    if (!cc.contains(player_name)) {
         return;
+    }
     std::vector<uint32_t>& unlocked = cc.at(player_name)->festival_hats;
     is_completed = bonus = ArrayBoolAt(unlocked, encoded_name_index);
 }
 
 IDirect3DTexture9* UnlockedPvPItemUpgrade::GetMissionImage()
 {
-    if (image)
+    if (image) {
         return *image;
+    }
     const auto info = GW::Items::GetPvPItemUpgrade(encoded_name_index);
-    if (!info)
+    if (!info) {
         return nullptr;
+    }
     const auto found = std::ranges::find_if(item_upgrades_by_file_id, [file_id = info->file_id](auto& check) { return check.file_id == file_id; });
-    if (found == item_upgrades_by_file_id.end())
+    if (found == item_upgrades_by_file_id.end()) {
         return nullptr;
+    }
     image = Resources::GetGuildWarsWikiImage(found->wiki_filename);
     return *image;
 }
@@ -2949,8 +3033,9 @@ void UnlockedPvPItemUpgrade::CheckProgress(const std::wstring&)
 void UnlockedPvPItemUpgrade::LoadStrings()
 {
     const auto info = GW::Items::GetPvPItemUpgrade(encoded_name_index);
-    if (!info)
+    if (!info) {
         return;
+    }
     if (name.encoded().empty()) {
         wchar_t* tmp;
         if (GW::Items::GetPvPItemUpgradeEncodedName(encoded_name_index, &tmp)) {
@@ -2974,12 +3059,15 @@ void UnlockedPvPItemUpgrade::OnClick()
 {
     const auto category = (void*)PvPItemUpgradeTypeName(encoded_name_index);
     const wchar_t* wiki_url = nullptr;
-    if (category == completion_category_weapon_upgrades)
+    if (category == completion_category_weapon_upgrades) {
         wiki_url = L"Upgrade component";
-    if (category == completion_category_inscriptions)
+    }
+    if (category == completion_category_inscriptions) {
         wiki_url = L"Inscription";
-    if (category == completion_category_runes_insignias)
+    }
+    if (category == completion_category_runes_insignias) {
         wiki_url = L"Rune";
+    }
     if (wiki_url) {
         GW::GameThread::Enqueue([wiki_url] {
             GuiUtils::OpenWiki(wiki_url);

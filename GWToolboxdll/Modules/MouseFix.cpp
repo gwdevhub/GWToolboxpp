@@ -77,8 +77,9 @@ namespace {
         const HWND gw_window_handle = GetFocus();
         // @Enhancement: Maybe check that the focussed window handle is the GW window handle?
         RECT rect;
-        if (!(gw_window_handle && GetClientRect(gw_window_handle, &rect)))
+        if (!(gw_window_handle && GetClientRect(gw_window_handle, &rect))) {
             goto leave;
+        }
         gwmm->center_x = (rect.left + rect.right) / 2;
         gwmm->center_y = (rect.bottom + rect.top) / 2;
         rawInputRelativePosX = rawInputRelativePosY = 0;
@@ -91,12 +92,15 @@ namespace {
     bool OnProcessInput(uint32_t* wParam, uint32_t* lParam)
     {
         GW::Hook::EnterHook();
-        if (!(HasRegisteredTrackMouseEvent && gw_mouse_move))
+        if (!(HasRegisteredTrackMouseEvent && gw_mouse_move)) {
             goto forward_call; // Failed to find addresses for variables
-        if (!(wParam && wParam[1] == 0x200))
+        }
+        if (!(wParam && wParam[1] == 0x200)) {
             goto forward_call; // Not mouse movement
-        if (!(*HasRegisteredTrackMouseEvent && gw_mouse_move->move_camera))
+        }
+        if (!(*HasRegisteredTrackMouseEvent && gw_mouse_move->move_camera)) {
             goto forward_call; // Not moving the camera, or GW hasn't yet called TrackMouseEvent
+        }
 
         lParam[0] = 0x12;
         // Set the output parameters to be the relative position of the mouse to the center of the screen
@@ -115,10 +119,12 @@ namespace {
 
     void CursorFixWndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
     {
-        if (!(Message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam))
+        if (!(Message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam)) {
             return; // Not raw input
-        if (!gw_mouse_move)
+        }
+        if (!gw_mouse_move) {
             return; // No gw mouse move ptr; this shouldn't happen
+        }
 
         UINT dwSize = sizeof(RAWINPUT);
         BYTE lpb[sizeof(RAWINPUT)];
@@ -139,11 +145,13 @@ namespace {
 
     bool CursorFixInitialise()
     {
-        if (gw_mouse_move)
+        if (gw_mouse_move) {
             return true;
+        }
         const auto hwnd = GW::MemoryMgr::GetGWWindowHandle();
-        if (!hwnd)
+        if (!hwnd) {
             return false;
+        }
         uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\base\os\win32\osinput.cpp)", "osMsg", 0x32);
         address = GW::Scanner::FunctionFromNearCall(address);
         if (address) {
@@ -173,16 +181,20 @@ namespace {
     {
         ASSERT(CursorFixInitialise());
         if (enable) {
-            if (ProcessInput_Func)
+            if (ProcessInput_Func) {
                 GW::Hook::EnableHooks(ProcessInput_Func);
-            if (SetCursorPosCenter_Func)
+            }
+            if (SetCursorPosCenter_Func) {
                 GW::Hook::EnableHooks(SetCursorPosCenter_Func);
+            }
         }
         else {
-            if (SetCursorPosCenter_Func)
+            if (SetCursorPosCenter_Func) {
                 GW::Hook::DisableHooks(SetCursorPosCenter_Func);
-            if (ProcessInput_Func)
+            }
+            if (ProcessInput_Func) {
                 GW::Hook::DisableHooks(ProcessInput_Func);
+            }
         }
     }
 
@@ -211,23 +223,29 @@ namespace {
 
         // Do not use CreateCompatibleBitmap otherwise api will not allocate memory for bitmap
         destDC = CreateCompatibleDC(nullptr);
-        if (!destDC)
+        if (!destDC) {
             goto cleanup;
+        }
         outBitmap = CreateDIBSection(destDC, &bmi, DIB_RGB_COLORS, (void**)&ppvBits, nullptr, 0);
-        if (outBitmap == nullptr)
+        if (outBitmap == nullptr) {
             goto cleanup;
-        if (SelectObject(destDC, outBitmap) == nullptr)
+        }
+        if (SelectObject(destDC, outBitmap) == nullptr) {
             goto cleanup;
+        }
 
         srcDC = CreateCompatibleDC(nullptr);
-        if (!srcDC)
+        if (!srcDC) {
             goto cleanup;
-        if (SelectObject(srcDC, inBitmap) == nullptr)
+        }
+        if (SelectObject(srcDC, inBitmap) == nullptr) {
             goto cleanup;
+        }
 
         // copy and scaling to new width/height (w,h)
-        if (SetStretchBltMode(destDC, WHITEONBLACK) == 0)
+        if (SetStretchBltMode(destDC, WHITEONBLACK) == 0) {
             goto cleanup;
+        }
         bResult = StretchBlt(destDC, 0, 0, outWidth, outHeight, srcDC, 0, 0, inWidth, inHeight, SRCCOPY);
     cleanup:
         if (!bResult) {
@@ -236,10 +254,12 @@ namespace {
                 outBitmap = nullptr;
             }
         }
-        if (destDC)
+        if (destDC) {
             DeleteDC(destDC);
-        if (srcDC)
+        }
+        if (srcDC) {
             DeleteDC(srcDC);
+        }
 
         return outBitmap;
     }
@@ -254,28 +274,36 @@ namespace {
         HCURSOR new_cursor = nullptr;
         BITMAP tmpBitmap;
         HBITMAP scaledMask = nullptr, scaledColor = nullptr;
-        if (!GetIconInfo(cursor, &icon_info))
+        if (!GetIconInfo(cursor, &icon_info)) {
             goto cleanup;
-        if (GetObject(icon_info.hbmMask, sizeof(BITMAP), &tmpBitmap) == 0)
+        }
+        if (GetObject(icon_info.hbmMask, sizeof(BITMAP), &tmpBitmap) == 0) {
             goto cleanup;
-        if (tmpBitmap.bmWidth == targetSize)
+        }
+        if (tmpBitmap.bmWidth == targetSize) {
             goto cleanup;
+        }
         scaledMask = ScaleBitmap(icon_info.hbmMask, tmpBitmap.bmWidth, tmpBitmap.bmHeight, targetSize, targetSize);
-        if (!scaledMask)
+        if (!scaledMask) {
             goto cleanup;
-        if (GetObject(icon_info.hbmColor, sizeof(BITMAP), &tmpBitmap) == 0)
+        }
+        if (GetObject(icon_info.hbmColor, sizeof(BITMAP), &tmpBitmap) == 0) {
             goto cleanup;
+        }
         scaledColor = ScaleBitmap(icon_info.hbmColor, tmpBitmap.bmWidth, tmpBitmap.bmHeight, targetSize, targetSize);
-        if (!scaledColor)
+        if (!scaledColor) {
             goto cleanup;
+        }
         icon_info.hbmColor = scaledColor;
         icon_info.hbmMask = scaledMask;
         new_cursor = CreateIconIndirect(&icon_info);
     cleanup:
-        if (scaledColor)
+        if (scaledColor) {
             DeleteObject(scaledColor);
-        if (scaledMask)
+        }
+        if (scaledMask) {
             DeleteObject(scaledMask);
+        }
         return new_cursor;
     }
 
@@ -295,15 +323,19 @@ namespace {
         GW::Hook::EnterHook();
         ChangeCursorIcon_Ret(user_data);
         // Cursor has been changed by the game; pull it back out, scale it to target size..
-        if (cursor_size < 0 || cursor_size > 64 || cursor_size == 32)
+        if (cursor_size < 0 || cursor_size > 64 || cursor_size == 32) {
             return GW::Hook::LeaveHook();
-        if (!(user_data && user_data->cursor && user_data->cursor != current_cursor))
+        }
+        if (!(user_data && user_data->cursor && user_data->cursor != current_cursor)) {
             return GW::Hook::LeaveHook();
+        }
         const HCURSOR new_cursor = ScaleCursor(user_data->cursor, cursor_size);
-        if (!new_cursor)
+        if (!new_cursor) {
             return GW::Hook::LeaveHook();
-        if (user_data->cursor == new_cursor)
+        }
+        if (user_data->cursor == new_cursor) {
             return GW::Hook::LeaveHook();
+        }
         if (user_data->cursor) {
             // Don't forget to free the original cursor before overwriting the handle
             DestroyCursor(user_data->cursor);
@@ -325,8 +357,9 @@ namespace {
             // Force redraw
             const auto user_data = (GWWindowUserData*)GetWindowLongA(GW::MemoryMgr::GetGWWindowHandle(), -0x15);
             current_cursor = nullptr;
-            if (user_data)
+            if (user_data) {
                 OnChangeCursorIcon(user_data);
+            }
         });
     }
 
@@ -334,13 +367,15 @@ namespace {
     {
         cursor_size = new_size;
         if (cursor_size != 32) {
-            if (!cursor_size_hooked)
+            if (!cursor_size_hooked) {
                 GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
+            }
             cursor_size_hooked = true;
         }
         else {
-            if (cursor_size_hooked)
+            if (cursor_size_hooked) {
                 GW::HookBase::DisableHooks(ChangeCursorIcon_Func);
+            }
             cursor_size_hooked = false;
         }
     }
@@ -377,8 +412,9 @@ void MouseFix::Terminate()
         CursorFixEnable(false);
         OldCursorFix::UninstallCursorFix();
     }
-    if (ChangeCursorIcon_Func)
+    if (ChangeCursorIcon_Func) {
         GW::HookBase::RemoveHook(ChangeCursorIcon_Func);
+    }
 }
 
 void MouseFix::DrawSettingsInternal()
@@ -402,8 +438,9 @@ void MouseFix::DrawSettingsInternal()
 
 bool MouseFix::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
-    if (!enable_cursor_fix)
+    if (!enable_cursor_fix) {
         return false;
+    }
     if (!initialized) {
         OldCursorFix::InstallCursorFix();
         CursorFixEnable(enable_cursor_fix);

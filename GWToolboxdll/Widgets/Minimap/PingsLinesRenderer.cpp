@@ -82,7 +82,7 @@ void PingsLinesRenderer::DrawSettings()
 PingsLinesRenderer::PingsLinesRenderer()
     : lastshown(TIMER_INIT()), lastsent(TIMER_INIT()), lastqueued(TIMER_INIT()) {}
 
-void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged* pak)
+void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
 {
     bool found = false;
     if (reduce_ping_spam) {
@@ -101,7 +101,7 @@ void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged* pak)
     }
 }
 
-void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent* pak)
+void PingsLinesRenderer::P138Callback(const GW::Packet::StoC::CompassEvent* pak)
 {
     bool new_session;
     if (drawings[pak->Player].player == pak->Player) {
@@ -152,7 +152,7 @@ void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent* pak)
     }
 }
 
-void PingsLinesRenderer::P153Callback(GW::Packet::StoC::GenericValueTarget* pak)
+void PingsLinesRenderer::P153Callback(const GW::Packet::StoC::GenericValueTarget* pak)
 {
     if (pak->Value_id == 20
         && pak->caster == GW::Agents::GetPlayerId()
@@ -263,9 +263,8 @@ void PingsLinesRenderer::EnqueueVertex(const float x, const float y, const Color
     ++vertices_count;
 }
 
-void PingsLinesRenderer::DrawDrawings(const IDirect3DDevice9* device)
+void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(device);
     for (auto it = drawings.begin(); it != drawings.end(); ++it) {
         if (it->second.player == 0) {
             continue;
@@ -317,9 +316,8 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device)
     marker.Render(device);
 }
 
-void PingsLinesRenderer::DrawShadowstepLine(const IDirect3DDevice9* device)
+void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(device);
     if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) {
         return;
     }
@@ -337,9 +335,8 @@ void PingsLinesRenderer::DrawShadowstepLine(const IDirect3DDevice9* device)
     EnqueueVertex(player->pos.x, player->pos.y, color_shadowstep_line);
 }
 
-void PingsLinesRenderer::DrawRecallLine(const IDirect3DDevice9* device)
+void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(device);
     if (recall_target == 0) {
         return;
     }

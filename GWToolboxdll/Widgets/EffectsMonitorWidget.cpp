@@ -85,8 +85,9 @@ namespace {
     uint32_t GetMinionCount()
     {
         const auto w = GW::GetWorldContext();
-        if (!w)
+        if (!w) {
             return 0;
+        }
         const auto& minions_arr = w->controlled_minion_count;
         const auto me = GW::Agents::GetPlayerId();
         const auto mine = std::ranges::find_if(minions_arr, [me](const auto& cur) {
@@ -104,11 +105,13 @@ namespace {
     uint32_t GetMorale(const uint32_t agent_id)
     {
         const auto w = GW::GetWorldContext();
-        if (!(w && w->party_morale_related.size()))
+        if (!(w && w->party_morale_related.size())) {
             return 100;
+        }
         for (const auto& m : w->party_morale_related) {
-            if (m.party_member_info->agent_id == agent_id)
+            if (m.party_member_info->agent_id == agent_id) {
                 return m.party_member_info->morale;
+            }
         }
         return 100;
     }
@@ -117,11 +120,13 @@ namespace {
     const GW::Effect* GetEffect(const uint32_t effect_id)
     {
         const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-        if (!effects)
+        if (!effects) {
             return nullptr;
+        }
         for (const GW::Effect& effect : *effects) {
-            if (effect.effect_id == effect_id)
+            if (effect.effect_id == effect_id) {
                 return &effect;
+            }
         }
         return nullptr;
     }
@@ -130,8 +135,9 @@ namespace {
     const GW::Effect* GetLongestEffectBySkillId(const GW::Constants::SkillID skill_id)
     {
         const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-        if (!effects)
+        if (!effects) {
             return nullptr;
+        }
         const GW::Effect* found = nullptr;
         for (const GW::Effect& effect : *effects) {
             if (effect.skill_id == skill_id && (!found || effect.GetTimeRemaining() > found->GetTimeRemaining())) {
@@ -180,8 +186,9 @@ namespace {
     void RefreshPosition()
     {
         GW::UI::WindowPosition* pos = GetWindowPosition(GW::UI::WindowID_EffectsMonitor);
-        if (!pos)
+        if (!pos) {
             return;
+        }
         if (pos->state & 0x2) {
             // Default layout
             pos->state = 0xd;
@@ -232,8 +239,9 @@ namespace {
             return 0;
         }
         if (cd >= decimal_threshold) {
-            if (round_up)
+            if (round_up) {
                 cd += 1000;
+            }
             return snprintf(arr, 8, "%d", cd / 1000);
         }
         return snprintf(arr, 8, "%.1f", static_cast<double>(cd) / 1000.0);
@@ -243,8 +251,9 @@ namespace {
     size_t GetEffectIndex(const std::vector<GW::Effect>& arr, const GW::Constants::SkillID skill_id)
     {
         for (size_t i = 0; i < arr.size(); i++) {
-            if (arr[i].skill_id == skill_id)
+            if (arr[i].skill_id == skill_id) {
                 return i;
+            }
         }
         return 0xFF;
     }
@@ -253,8 +262,9 @@ namespace {
     bool RefreshEffects()
     {
         GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-        if (!effects)
+        if (!effects) {
             return false;
+        }
         std::vector<GW::Effect> readd_effects;
         for (GW::Effect& effect : *effects) {
             readd_effects.push_back(effect);
@@ -291,21 +301,24 @@ namespace {
     // Remove effect from gwtoolbox overlay. Will only remove if the game has also removed it, otherwise false.
     bool RemoveEffect(const uint32_t effect_id)
     {
-        if (GetEffect(effect_id))
+        if (GetEffect(effect_id)) {
             return false; // Game hasn't removed the effect yet.
+        }
         for (auto& by_type : cached_effects) {
             auto& effects = by_type.second;
             for (size_t i = 0; i < effects.size(); i++) {
-                if (effects[i].effect_id != effect_id)
+                if (effects[i].effect_id != effect_id) {
                     continue;
+                }
                 const GW::Effect* existing = GetLongestEffectBySkillId(effects[i].skill_id);
                 if (existing) {
                     memcpy(&effects[i], existing, sizeof(*existing));
                     return false; // Game hasn't removed the effect yet (copy the effect over)
                 }
                 by_type.second.erase(effects.begin() + i);
-                if (effects.empty())
+                if (effects.empty()) {
                     cached_effects.erase(by_type.first);
+                }
                 return true;
             }
         }
@@ -326,8 +339,9 @@ namespace {
             default:
                 break;
         }
-        if (effect.duration == 0.f)
+        if (effect.duration == 0.f) {
             return true;
+        }
         // Effect expired
         return RemoveEffect(effect.effect_id);
     }
@@ -336,8 +350,9 @@ namespace {
     bool SetEffect(const GW::Effect* effect)
     {
         const uint32_t type = GetEffectSortOrder(effect->skill_id);
-        if (!cached_effects.contains(type))
+        if (!cached_effects.contains(type)) {
             cached_effects[type] = std::vector<GW::Effect>();
+        }
 
         // Player can stand in range of more than 1 spirit; use the longest effect duration for the effect monitor
         if (effect->duration > 0) {
@@ -353,8 +368,9 @@ namespace {
         }
         cached_effects[type].push_back(*effect);
         // Trigger durations for aspects etc
-        if (!effect->duration)
+        if (!effect->duration) {
             DurationExpired(cached_effects[type].back());
+        }
         hard_mode |= effect->skill_id == GW::Constants::SkillID::Hard_mode;
         return true;
     }
@@ -374,8 +390,9 @@ namespace {
                     uint32_t agent_id;
                     uint32_t percent;
                 }* packet = static_cast<Packet*>(wParam);
-                if (packet->agent_id == GW::Agents::GetPlayerId())
+                if (packet->agent_id == GW::Agents::GetPlayerId()) {
                     morale_percent = packet->percent;
+                }
             }
             break;
             case GW::UI::UIMessage::kEffectAdd: {
@@ -384,15 +401,17 @@ namespace {
                     GW::Effect* e;
                 }* details = static_cast<Payload*>(wParam);
                 const uint32_t agent_id = GW::Agents::GetPlayerId();
-                if (agent_id && agent_id != details->agent_id)
+                if (agent_id && agent_id != details->agent_id) {
                     break;
+                }
                 SetEffect(details->e);
             }
             break;
             case GW::UI::UIMessage::kEffectRenew: {
                 const GW::Effect* e = GetEffect(*static_cast<uint32_t*>(wParam));
-                if (e)
+                if (e) {
                     SetEffect(e);
+                }
             }
             break;
 
@@ -446,8 +465,9 @@ void EffectsMonitorWidget::Terminate()
 
 void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 {
-    if (!visible)
+    if (!visible) {
         return;
+    }
 
     const auto window_flags = GetWinFlags(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
 
@@ -498,12 +518,15 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     };
     bool skipped_effects = false;
     const auto skip_effects = [&] {
-        if (skipped_effects)
+        if (skipped_effects) {
             return;
-        if (morale_percent != 100)
+        }
+        if (morale_percent != 100) {
             next_effect();
-        if (minion_count)
+        }
+        if (minion_count) {
             next_effect();
+        }
         skipped_effects = true;
     };
 
@@ -537,10 +560,12 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             if (draw > 0) {
                 const ImVec2 label_size = ImGui::CalcTextSize(remaining_str);
                 const ImVec2 label_pos(skill_top_left.x + m_skill_width - label_size.x - 1.f, skill_top_left.y + m_skill_width - label_size.y - 1.f);
-                if ((color_background & IM_COL32_A_MASK) != 0)
+                if ((color_background & IM_COL32_A_MASK) != 0) {
                     ImGui::GetWindowDrawList()->AddRectFilled({skill_top_left.x + m_skill_width - label_size.x - 2.f, skill_top_left.y + m_skill_width - label_size.y}, {skill_top_left.x + m_skill_width, skill_top_left.y + m_skill_width}, color_background);
-                if ((color_text_shadow & IM_COL32_A_MASK) != 0)
+                }
+                if ((color_text_shadow & IM_COL32_A_MASK) != 0) {
                     ImGui::GetWindowDrawList()->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_shadow, remaining_str);
+                }
                 ImGui::GetWindowDrawList()->AddText(label_pos, color_text_effects, remaining_str);
             }
             next_effect();

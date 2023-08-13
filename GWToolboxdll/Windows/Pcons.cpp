@@ -57,8 +57,9 @@ Pcon::Pcon(const char* chatname,
       , uv1(uv1_)
 {
     enabled = settings_by_charname[L"default"] = new bool(false);
-    if (desc_)
+    if (desc_) {
         desc = desc_;
+    }
     chat = chatname ? chatname : GuiUtils::WStringToString(filename);
     abbrev = abbrevname ? abbrevname : GuiUtils::RemovePunctuation(chat);
     ini = ininame ? ininame : GuiUtils::ToSlug(chat);
@@ -85,8 +86,9 @@ void Pcon::ResetCounts()
 
 void Pcon::SetEnabled(const bool b)
 {
-    if (*enabled == b)
+    if (*enabled == b) {
         return;
+    }
     *enabled = b;
     ResetCounts();
     Refill(refill_if_below_threshold && IsEnabled() && PconsWindow::Instance().GetEnabled());
@@ -100,20 +102,21 @@ bool Pcon::IsVisible() const
 wchar_t* Pcon::SetPlayerName()
 {
     const auto c = GW::GetCharContext();
-    if (!(c && c->player_name))
+    if (!(c && c->player_name)) {
         return nullptr;
+    }
     enabled = GetSettingsByName(pcons_by_character ? c->player_name : L"default");
     return c->player_name;
 }
 
-void Pcon::Draw(IDirect3DDevice9* device)
+void Pcon::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(device);
     if (!texture) {
         texture = Resources::GetItemImage(filename);
     }
-    if (*texture == nullptr)
+    if (*texture == nullptr) {
         return;
+    }
     const ImVec2 pos = ImGui::GetCursorPos();
     const ImVec2 s(size, size);
     const ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color).Value : ImVec4(0, 0, 0, 0);
@@ -133,12 +136,15 @@ void Pcon::Draw(IDirect3DDevice9* device)
         const ImVec2 nextPos = ImGui::GetCursorPos();
         ImGui::PushFont(f);
         ImVec4 color;
-        if (quantity == 0)
+        if (quantity == 0) {
             color = ImVec4(1, 0, 0, 1);
-        else if (quantity < threshold)
+        }
+        else if (quantity < threshold) {
             color = ImVec4(1, 1, 0, 1);
-        else
+        }
+        else {
             color = ImVec4(0, 1, 0, 1);
+        }
 
         ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
         ImGui::TextColored(ImVec4(0, 0, 0, 1), "%d", quantity);
@@ -175,13 +181,15 @@ void Pcon::Update(int delay)
     }
     // Refill pcons if needed.
     UpdateRefill();
-    if (maptype == GW::Constants::InstanceType::Loading || GW::Map::GetIsObserving())
+    if (maptype == GW::Constants::InstanceType::Loading || GW::Map::GetIsObserving()) {
         return;
+    }
     // Check pcon count in inventory
     if (!pcon_quantity_checked) {
         const auto qty = CheckInventory();
-        if (qty < 0)
+        if (qty < 0) {
             return; // Inventory pointers not ready
+        }
         quantity = qty;
         if (maptype == GW::Constants::InstanceType::Outpost) {
             quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
@@ -199,8 +207,9 @@ void Pcon::Update(int delay)
     }
     // === Use item if possible ===
     if (IsEnabled() && PconsWindow::Instance().GetEnabled()) {
-        if (delay < 0)
+        if (delay < 0) {
             delay = pcons_delay;
+        }
         player = GW::Agents::GetPlayerAsAgentLiving();
         // NOTE: Only fails CanUseByEffect() if we've found an effects array for this map before.
         if (player != nullptr
@@ -218,8 +227,9 @@ void Pcon::Update(int delay)
 
 bool Pcon::ReserveSlotForMove(const size_t bagIndex, const size_t slot)
 {
-    if (IsSlotReservedForMove(bagIndex, slot))
+    if (IsSlotReservedForMove(bagIndex, slot)) {
         return false;
+    }
     reserved_bag_slots.at(bagIndex).at(slot) = TIMER_INIT();
     return true;
 }
@@ -248,14 +258,16 @@ void Pcon::AfterUsed(const bool used, const int qty)
                 mapid = GW::Map::GetMapID();
                 maptype = GW::Map::GetInstanceType();
                 Log::Warning("Just used the last %s", chat.c_str());
-                if (disable_when_not_found)
+                if (disable_when_not_found) {
                     SetEnabled(false);
+                }
             }
         }
         else {
             // we should have used but didn't find the item
-            if (disable_when_not_found)
+            if (disable_when_not_found) {
                 SetEnabled(false);
+            }
             if (mapid != GW::Map::GetMapID()
                 || maptype != GW::Map::GetInstanceType()) {
                 // only yell at the user once
@@ -271,19 +283,22 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem)
 {
     // Scan bags, find an incomplete stack, or otherwise an empty slot.
     GW::Bag** bags = GW::Items::GetBagArray();
-    if (bags == nullptr)
+    if (bags == nullptr) {
         return nullptr;
+    }
     auto emptySlotIdx = static_cast<size_t>(-1);
     GW::Bag* emptyBag = nullptr;
 
     for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) {
         // Work from last bag to first; pcons at bottom of inventory
         GW::Bag* bag = bags[bagIndex];
-        if (bag == nullptr)
+        if (bag == nullptr) {
             continue; // No bag, skip
+        }
         GW::ItemArray& items = bag->items;
-        if (!items.valid())
+        if (!items.valid()) {
             continue; // No item array, skip
+        }
         for (size_t i = items.size(); i > 0; i--) {
             // Work from last slot to first; pcons at bottom of inventory
             const size_t slotIndex = i - 1;
@@ -296,21 +311,27 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem)
                 }
                 continue;
             }
-            if (!likeItem)
+            if (!likeItem) {
                 continue; // Only compare with existing items if we have something to compare to.
-            if (likeItem->mod_struct_size != item->mod_struct_size || likeItem->model_id != item->model_id)
+            }
+            if (likeItem->mod_struct_size != item->mod_struct_size || likeItem->model_id != item->model_id) {
                 continue; // This is not the same item - apples and pears.
-            if (likeItem->item_id == item->item_id || item->quantity >= 250)
+            }
+            if (likeItem->item_id == item->item_id || item->quantity >= 250) {
                 continue; // Comparing against yourself, or this item is already a full stack.
+            }
             if (ReserveSlotForMove(bag->index, item->slot)) {
                 if (emptySlotIdx != static_cast<size_t>(-1)) // Unlock the empty slot.
+                {
                     UnreserveSlotForMove(emptyBag->index, emptySlotIdx);
+                }
                 return item; // Found a stack with space.
             }
         }
     }
-    if (!emptyBag)
+    if (!emptyBag) {
         return nullptr;
+    }
     const auto item = new GW::Item(); // Create a "fake" item...
     item->bag = emptyBag;             // ...that belongs in the empty bag/slot we found...
     item->slot = static_cast<uint8_t>(emptySlotIdx);
@@ -321,31 +342,38 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem)
 
 uint32_t Pcon::MoveItem(const GW::Item* item, GW::Bag* bag, const size_t slot, size_t quantity)
 {
-    if (!item || !bag)
+    if (!item || !bag) {
         return 0;
-    if (bag->items.size() < slot)
+    }
+    if (bag->items.size() < slot) {
         return 0;
-    if (quantity < 1)
+    }
+    if (quantity < 1) {
         quantity = item->quantity;
-    if (quantity > item->quantity)
+    }
+    if (quantity > item->quantity) {
         quantity = item->quantity;
+    }
     const GW::Item* destItem = bag->items.valid() ? bag->items[slot] : nullptr;
     const uint32_t originalQuantity = destItem ? destItem->quantity : 0u;
     const uint32_t vacantQuantity = 250 - originalQuantity;
-    if (quantity > 1 && vacantQuantity < quantity)
+    if (quantity > 1 && vacantQuantity < quantity) {
         quantity = vacantQuantity;
+    }
     GW::Items::MoveItem(item, bag, slot, quantity);
     return quantity;
 }
 
 void Pcon::Refill(const bool do_refill)
 {
-    if (refilling == do_refill)
+    if (refilling == do_refill) {
         return;
+    }
     refilling = do_refill;
     if (!refilling) {
-        if (pending_move_to_bag)
+        if (pending_move_to_bag) {
             UnreserveSlotForMove(pending_move_to_bag->index, pending_move_to_slot);
+        }
         pending_move_to_bag = nullptr;
         pending_move_to_slot = 0;
         pending_move_to_quantity = 0;
@@ -356,8 +384,9 @@ void Pcon::Refill(const bool do_refill)
 
 void Pcon::UpdateRefill()
 {
-    if (!refilling)
+    if (!refilling) {
         return;
+    }
     if (!IsVisible() || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         Refill(false);
         pcon_quantity_checked = false;
@@ -365,8 +394,9 @@ void Pcon::UpdateRefill()
     }
     if (pending_move_to_quantity) {
         const GW::Item* item = GW::Items::GetItemBySlot(pending_move_to_bag, pending_move_to_slot + 1);
-        if (!item || !QuantityForEach(item) || item->quantity != pending_move_to_quantity)
+        if (!item || !QuantityForEach(item) || item->quantity != pending_move_to_quantity) {
             return; // Still waiting for move.
+        }
         UnreserveSlotForMove(item->bag->index, item->slot);
     }
     quantity = CheckInventory();
@@ -385,18 +415,22 @@ void Pcon::UpdateRefill()
     }
     for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
         GW::Bag* storageBag = bags[bagIndex];
-        if (storageBag == nullptr)
+        if (storageBag == nullptr) {
             continue; // No bag, skip
+        }
         GW::ItemArray& storageItems = storageBag->items;
-        if (!storageItems.valid())
+        if (!storageItems.valid()) {
             continue; // No item array, skip
+        }
         for (size_t i = 0; i < storageItems.size() && storageItems.valid(); i++) {
             GW::Item* storageItem = storageItems[i];
-            if (storageItem == nullptr)
+            if (storageItem == nullptr) {
                 continue; // No item, skip
+            }
             const size_t points_per_item = QuantityForEach(storageItem);
-            if (points_per_item < 1)
-                continue;                                                                  // This is not the pcon you're looking for...
+            if (points_per_item < 1) {
+                continue; // This is not the pcon you're looking for...
+            }
             const GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(storageItem); // Now find a slot in inventory to move them to.
             if (inventoryItem == nullptr) {
                 printf("No more space for %s", chat.c_str());
@@ -405,13 +439,15 @@ void Pcon::UpdateRefill()
                 return;
             }
             auto quantity_to_move = static_cast<size_t>(ceil(static_cast<float>(points_needed) / static_cast<float>(points_per_item)));
-            if (quantity_to_move > storageItem->quantity)
+            if (quantity_to_move > storageItem->quantity) {
                 quantity_to_move = storageItem->quantity;
+            }
             const size_t slot_to = inventoryItem->slot;
             GW::Bag* bag_to = inventoryItem->bag;
             pending_move_to_quantity = inventoryItem->quantity + MoveItem(storageItem, bag_to, slot_to, quantity_to_move);
-            if (inventoryItem->quantity == 0)
+            if (inventoryItem->quantity == 0) {
                 delete inventoryItem; // Empty slot was returned; free memory here.
+            }
             pending_move_to_bag = bag_to;
             pending_move_to_slot = slot_to;
             return;
@@ -425,22 +461,27 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
     size_t count = 0;
     size_t used_qty = 0;
     GW::Bag** bags = GW::Items::GetBagArray();
-    if (bags == nullptr)
+    if (bags == nullptr) {
         return -1;
+    }
     for (size_t bagIndex = from_bag; bagIndex <= to_bag; ++bagIndex) {
         GW::Bag* bag = bags[bagIndex];
-        if (bag == nullptr)
+        if (bag == nullptr) {
             continue; // No bag, skip
+        }
         GW::ItemArray& items = bag->items;
-        if (!items.valid())
+        if (!items.valid()) {
             continue; // No item array, skip
+        }
         for (size_t i = 0; i < items.size(); i++) {
             const GW::Item* item = items[i];
-            if (item == nullptr)
+            if (item == nullptr) {
                 continue; // No item, skip
+            }
             const size_t qtyea = QuantityForEach(item);
-            if (qtyea < 1)
+            if (qtyea < 1) {
                 continue; // This is not the pcon you're looking for...
+            }
             if (used != nullptr && !*used) {
                 GW::Items::UseItem(item);
                 *used = true;
@@ -449,8 +490,9 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
             count += qtyea * item->quantity;
         }
     }
-    if (used_qty_ptr)
+    if (used_qty_ptr) {
         *used_qty_ptr = used_qty;
+    }
     return static_cast<int>(count - used_qty);
 }
 
@@ -488,8 +530,9 @@ void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
     sectionsub += ':';
     const size_t section_len = sectionsub.size();
     for (const ToolboxIni::Entry& entry : entries) {
-        if (strncmp(entry.pItem, sectionsub.c_str(), section_len) != 0)
+        if (strncmp(entry.pItem, sectionsub.c_str(), section_len) != 0) {
             continue;
+        }
         std::string str(entry.pItem);
         const size_t charname_pos = section_len;
         std::wstring charname = GuiUtils::StringToWString(entry.pItem + charname_pos);
@@ -516,8 +559,9 @@ void Pcon::SaveSettings(ToolboxIni* inifile, const char* section)
             continue;
         }
         const auto& charname = charname_pcons.first;
-        if (charname.empty())
+        if (charname.empty()) {
             continue;
+        }
         std::string char_section(section);
         char_section.append(":");
         char_section.append(GuiUtils::WStringToString(charname).c_str());
@@ -528,8 +572,9 @@ void Pcon::SaveSettings(ToolboxIni* inifile, const char* section)
 // ================================================
 size_t PconGeneric::QuantityForEach(const GW::Item* item) const
 {
-    if (item->model_id == static_cast<DWORD>(itemID))
+    if (item->model_id == static_cast<DWORD>(itemID)) {
         return 1;
+    }
     return 0;
 }
 
@@ -548,13 +593,15 @@ void PconGeneric::OnButtonClick()
         const auto found = r::find_if(categories, [this](const auto& category) {
             return r::find(category, itemID) != r::end(category);
         });
-        if (found == r::end(categories))
+        if (found == r::end(categories)) {
             return;
+        }
         const auto& category = *found;
         auto enable_if_same_category = [this, &category](Pcon* other) {
             auto* generic = dynamic_cast<PconGeneric*>(other);
-            if (generic == nullptr)
+            if (generic == nullptr) {
                 return;
+            }
             if (r::find(category, generic->itemID) != r::end(category)) {
                 generic->SetEnabled(IsEnabled());
             }
@@ -566,16 +613,19 @@ void PconGeneric::OnButtonClick()
 bool PconGeneric::CanUseByEffect() const
 {
     const GW::Agent* _player = GW::Agents::GetPlayer();
-    if (!_player)
+    if (!_player) {
         return false; // player doesn't exist?
+    }
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects)
+    if (!effects) {
         return true;
+    }
 
     for (const auto& effect : *effects) {
-        if (effect.skill_id == effectID)
+        if (effect.skill_id == effectID) {
             return effect.GetTimeRemaining() < 1000;
+        }
     }
     return true;
 }
@@ -583,24 +633,30 @@ bool PconGeneric::CanUseByEffect() const
 // ================================================
 bool PconCons::CanUseByEffect() const
 {
-    if (!PconGeneric::CanUseByEffect())
+    if (!PconGeneric::CanUseByEffect()) {
         return false;
-    if (!GW::PartyMgr::GetIsPartyLoaded())
+    }
+    if (!GW::PartyMgr::GetIsPartyLoaded()) {
         return false;
+    }
 
     GW::MapAgentArray* mapAgents = GW::Agents::GetMapAgentArray();
-    if (!mapAgents)
+    if (!mapAgents) {
         return false;
+    }
 
     const size_t n_players = GW::Agents::GetAmountOfPlayersInInstance();
     for (size_t i = 1; i <= n_players; i++) {
         const DWORD currentPlayerAgID = GW::Agents::GetAgentIdByLoginNumber(i);
-        if (currentPlayerAgID <= 0)
+        if (currentPlayerAgID <= 0) {
             return false;
-        if (currentPlayerAgID >= mapAgents->size())
+        }
+        if (currentPlayerAgID >= mapAgents->size()) {
             return false;
-        if (mapAgents->at(currentPlayerAgID).GetIsDead())
+        }
+        if (mapAgents->at(currentPlayerAgID).GetIsDead()) {
             return false;
+        }
     }
 
     return true;
@@ -608,8 +664,9 @@ bool PconCons::CanUseByEffect() const
 
 void PconRefiller::Draw(IDirect3DDevice9* device)
 {
-    if (maptype == GW::Constants::InstanceType::Explorable)
+    if (maptype == GW::Constants::InstanceType::Explorable) {
         return; // Don't draw in explorable areas - this is only for refilling in an outpost!
+    }
     Pcon::Draw(device);
 }
 
@@ -623,19 +680,23 @@ bool PconCity::CanUseByEffect() const
 {
     using namespace GW::Constants;
     const GW::Agent* _player = GW::Agents::GetPlayer();
-    if (!_player)
+    if (!_player) {
         return false; // player doesn't exist?
+    }
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects)
+    if (!effects) {
         return true;
+    }
 
-    if (_player->move_x == 0.0f && _player->move_y == 0.0f)
+    if (_player->move_x == 0.0f && _player->move_y == 0.0f) {
         return false;
+    }
 
     for (DWORD i = 0; i < effects->size(); i++) {
-        if (effects->at(i).GetTimeRemaining() < 1000)
+        if (effects->at(i).GetTimeRemaining() < 1000) {
             continue;
+        }
         if (effects->at(i).skill_id == SkillID::Sugar_Rush_short
             || effects->at(i).skill_id == SkillID::Sugar_Rush_medium
             || effects->at(i).skill_id == SkillID::Sugar_Rush_long
@@ -698,8 +759,9 @@ size_t PconAlcohol::QuantityForEach(const GW::Item* item) const
             return 5;
         case ItemID::Keg: {
             const GW::ItemModifier* mod = item->mod_struct;
-            if (mod == nullptr)
+            if (mod == nullptr) {
                 return 5; // we don't think this will ever happen
+            }
 
             for (DWORD i = 0; i < item->mod_struct_size; i++) {
                 if (mod->identifier() == 0x2458) {
@@ -732,9 +794,8 @@ void PconAlcohol::ForceUse()
 }
 
 // ================================================
-void PconLunar::Update(const int delay)
+void PconLunar::Update(const int)
 {
-    UNREFERENCED_PARAMETER(delay);
     Pcon::Update(lunar_delay);
 }
 
@@ -763,8 +824,9 @@ size_t PconLunar::QuantityForEach(const GW::Item* item) const
 bool PconLunar::CanUseByEffect() const
 {
     const GW::Agent* _player = GW::Agents::GetPlayer();
-    if (!_player)
+    if (!_player) {
         return false; // player doesn't exist?
+    }
 
     return GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Lunar_Blessing) == nullptr;
 }

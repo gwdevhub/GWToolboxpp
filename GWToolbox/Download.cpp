@@ -326,12 +326,8 @@ LRESULT DownloadWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
 }
 
-void DownloadWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+void DownloadWindow::OnCreate(HWND hWnd, UINT, WPARAM, LPARAM)
 {
-    UNREFERENCED_PARAMETER(uMsg);
-    UNREFERENCED_PARAMETER(wParam);
-    UNREFERENCED_PARAMETER(lParam);
-
     m_hProgressBar = CreateWindowW(
         PROGRESS_CLASSW,
         L"Inject",

@@ -28,20 +28,21 @@ void SettingsWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
 }
 
-void SettingsWindow::Draw(IDirect3DDevice9* pDevice)
+void SettingsWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
     static auto last_instance_type = GW::Constants::InstanceType::Loading;
     const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 
     if (instance_type != last_instance_type) {
-        if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable)
+        if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable) {
             visible = false;
+        }
         last_instance_type = instance_type;
     }
 
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(768, 768), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -51,10 +52,12 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::Text("GWToolbox++");
         ImGui::SameLine(0, 0);
         ImGui::TextColored(sCol, " v%s ", GWTOOLBOXDLL_VERSION);
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Go to %s", GWTOOLBOX_WEBSITE);
-        if (ImGui::IsItemClicked())
+        }
+        if (ImGui::IsItemClicked()) {
             ShellExecute(nullptr, "open", GWTOOLBOX_WEBSITE, nullptr, nullptr, SW_SHOWNORMAL);
+        }
         if constexpr (!std::string(GWTOOLBOXDLL_VERSION_BETA).empty()) {
             ImGui::SameLine();
             ImGui::Text("- %s", GWTOOLBOXDLL_VERSION_BETA);
@@ -77,13 +80,15 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice)
 #endif
         const float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2;
         if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
-            if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
+            if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
                 ShellExecuteW(nullptr, L"open", Resources::GetSettingsFolderPath().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+            }
         }
         ImGui::SameLine();
         if (ImGui::Button("Open GWToolbox++ Website", ImVec2(w, 0))) {
-            if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
+            if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
                 ShellExecuteA(nullptr, "open", GWTOOLBOX_WEBSITE, nullptr, nullptr, SW_SHOWNORMAL);
+            }
         }
 
         ToolboxSettings::Instance().DrawFreezeSetting();
@@ -159,37 +164,44 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice)
         auto modules = GWToolbox::Instance().GetModules();
         std::ranges::sort(modules, sort);
         for (const auto m : modules) {
-            if (m->HasSettings())
+            if (m->HasSettings()) {
                 DrawSettingsSection(m->SettingsName());
+            }
         }
         auto windows = GWToolbox::Instance().GetWindows();
         std::ranges::sort(windows, sort);
-        if (!windows.empty())
+        if (!windows.empty()) {
             ImGui::Text("Windows:");
+        }
         for (const auto m : windows) {
-            if (m->HasSettings())
+            if (m->HasSettings()) {
                 DrawSettingsSection(m->SettingsName());
+            }
         }
         auto widgets = GWToolbox::Instance().GetWidgets();
         std::ranges::sort(widgets, sort);
-        if (!widgets.empty())
+        if (!widgets.empty()) {
             ImGui::Text("Widgets:");
+        }
         for (const auto m : widgets) {
-            if (m->HasSettings())
+            if (m->HasSettings()) {
                 DrawSettingsSection(m->SettingsName());
+            }
         }
 
         if (ImGui::Button("Save Now", ImVec2(w, 0))) {
             GWToolbox::Instance().SaveSettings();
         }
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Toolbox normally saves settings on exit.\nClick to save to disk now.");
+        }
         ImGui::SameLine();
         if (ImGui::Button("Load Now", ImVec2(w, 0))) {
             GWToolbox::Instance().LoadSettings();
         }
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Toolbox normally loads settings on launch.\nClick to re-load from disk now.");
+        }
         ImGui::PopTextWrapPos();
     }
     ImGui::End();
@@ -197,16 +209,19 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice)
 
 bool SettingsWindow::DrawSettingsSection(const char* section)
 {
-    if (strcmp(section, "") == 0)
+    if (strcmp(section, "") == 0) {
         return true;
+    }
     const auto& callbacks = GetSettingsCallbacks();
     const auto& icons = GetSettingsIcons();
 
     const auto& settings_section = callbacks.find(section);
-    if (settings_section == callbacks.end())
+    if (settings_section == callbacks.end()) {
         return false;
-    if (drawn_settings.contains(section))
+    }
+    if (drawn_settings.contains(section)) {
         return true; // Already drawn
+    }
     drawn_settings[section] = true;
 
     static char buf[128];
@@ -215,8 +230,9 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     const bool is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
 
     const char* icon = nullptr;
-    if (const auto it = icons.find(section); it != icons.end())
+    if (const auto it = icons.find(section); it != icons.end()) {
         icon = it->second;
+    }
     if (icon) {
         const auto& style = ImGui::GetStyle();
         const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number

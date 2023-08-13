@@ -23,12 +23,15 @@ ImGuiWindowFlags ToolboxWidget::GetWinFlags(ImGuiWindowFlags flags, const bool n
     flags |= ImGuiWindowFlags_NoTitleBar;
     flags |= ImGuiWindowFlags_NoScrollbar;
     if (!ToolboxSettings::move_all) {
-        if (lock_move)
+        if (lock_move) {
             flags |= ImGuiWindowFlags_NoMove;
-        if (lock_size)
+        }
+        if (lock_size) {
             flags |= ImGuiWindowFlags_NoResize;
-        if (noinput_if_frozen && lock_move && lock_size)
+        }
+        if (noinput_if_frozen && lock_move && lock_size) {
             flags |= ImGuiWindowFlags_NoInputs;
+        }
     }
     return flags;
 }

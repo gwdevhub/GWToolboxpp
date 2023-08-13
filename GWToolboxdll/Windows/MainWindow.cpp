@@ -39,8 +39,9 @@ void MainWindow::RegisterSettingsContent()
         Icon(),
         [this](const std::string&, const bool is_showing) {
             // ShowVisibleRadio();
-            if (!is_showing)
+            if (!is_showing) {
                 return;
+            }
             ImGui::Text("Main Window Visibility");
             ShowVisibleRadio();
             DrawSizeAndPositionSettings();
@@ -54,13 +55,15 @@ void MainWindow::RefreshButtons()
     const std::vector<ToolboxUIElement*>& ui = GWToolbox::Instance().GetUIElements();
     modules_to_draw.clear();
     for (auto& ui_module : ui) {
-        if (!ui_module->show_menubutton)
+        if (!ui_module->show_menubutton) {
             continue;
+        }
         float weighting = GetModuleWeighting(ui_module);
         auto it = modules_to_draw.begin();
         for (it = modules_to_draw.begin(); it != modules_to_draw.end(); ++it) {
-            if (it->first > weighting)
+            if (it->first > weighting) {
                 break;
+            }
         }
         modules_to_draw.insert(it, {weighting, ui_module});
     }
@@ -68,10 +71,12 @@ void MainWindow::RefreshButtons()
 
 void MainWindow::Draw(IDirect3DDevice9* device)
 {
-    if (!visible)
+    if (!visible) {
         return;
-    if (pending_refresh_buttons)
+    }
+    if (pending_refresh_buttons) {
         RefreshButtons();
+    }
     static bool open = true;
     ImGui::SetNextWindowSize(ImVec2(110.0f, 300.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), show_closebutton ? &open : nullptr, GetWinFlags())) {
@@ -80,17 +85,20 @@ void MainWindow::Draw(IDirect3DDevice9* device)
         const size_t msize = modules_to_draw.size();
         for (size_t i = 0; i < msize; i++) {
             ImGui::PushID(static_cast<int>(i));
-            if (drawn)
+            if (drawn) {
                 ImGui::Separator();
+            }
             drawn = true;
             const auto& ui_module = modules_to_draw[i].second;
             if (ui_module->DrawTabButton(device, show_icons, true, center_align_text)) {
                 if (one_panel_at_time_only && ui_module->visible && ui_module->IsWindow()) {
                     for (const auto& ui_module2 : modules_to_draw) {
-                        if (ui_module2.second == ui_module)
+                        if (ui_module2.second == ui_module) {
                             continue;
-                        if (!ui_module2.second->IsWindow())
+                        }
+                        if (!ui_module2.second->IsWindow()) {
                             continue;
+                        }
                         ui_module2.second->visible = false;
                     }
                 }
@@ -101,6 +109,7 @@ void MainWindow::Draw(IDirect3DDevice9* device)
     }
     ImGui::End();
 
-    if (!open)
+    if (!open) {
         GWToolbox::Instance().StartSelfDestruct();
+    }
 }

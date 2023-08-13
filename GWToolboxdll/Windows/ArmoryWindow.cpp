@@ -60,8 +60,9 @@ namespace GWArmory {
     uint32_t GetEquipmentPieceItemId(const ItemSlot slot)
     {
         const auto equip = GetPlayerEquipment();
-        if (!equip)
+        if (!equip) {
             return 0;
+        }
         switch (slot) {
             case ItemSlot_Chest:
                 return equip->item_id_chest;
@@ -231,8 +232,9 @@ namespace GWArmory {
 
     GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent)
     {
-        if (!agent)
+        if (!agent) {
             return GW::Constants::Profession::None;
+        }
         const auto primary = static_cast<GW::Constants::Profession>(agent->primary);
         switch (primary) {
             case GW::Constants::Profession::None:
@@ -288,8 +290,9 @@ namespace GWArmory {
 
     uint32_t CreateColor(DyeColor col1, DyeColor col2 = DyeColor::None, DyeColor col3 = DyeColor::None, DyeColor col4 = DyeColor::None)
     {
-        if (col1 == DyeColor::None && col2 == DyeColor::None && col3 == DyeColor::None && col4 == DyeColor::None)
+        if (col1 == DyeColor::None && col2 == DyeColor::None && col3 == DyeColor::None && col4 == DyeColor::None) {
             col1 = DyeColor::Gray;
+        }
         const auto c1 = static_cast<uint32_t>(col1);
         const auto c2 = static_cast<uint32_t>(col2);
         const auto c3 = static_cast<uint32_t>(col3);
@@ -300,18 +303,21 @@ namespace GWArmory {
 
     ItemModelInfo* GetItemModelInfo(const uint32_t model_file_id)
     {
-        if (!(item_model_info_array && model_file_id && model_file_id < item_model_info_array->size()))
+        if (!(item_model_info_array && model_file_id && model_file_id < item_model_info_array->size())) {
             return nullptr;
+        }
         return &item_model_info_array->m_buffer[model_file_id];
     }
 
     ItemSlot GetItemSlot(const uint32_t model_file_id)
     {
-        if (!model_file_id)
+        if (!model_file_id) {
             return ItemSlot_Unknown;
+        }
         const auto info = GetItemModelInfo(model_file_id);
-        if (!info)
+        if (!info) {
             return ItemSlot_Unknown;
+        }
         switch (info->class_flags >> 0x16) {
             case 0:
             case 1:
@@ -426,12 +432,15 @@ namespace GWArmory {
                     break;
             }
 
-            if (!(state && piece))
+            if (!(state && piece)) {
                 continue;
-            if (piece->model_file_id == armors[i].model_file_id)
+            }
+            if (piece->model_file_id == armors[i].model_file_id) {
                 state->current_piece = &armors[i];
-            if (current_campaign != Campaign_All && armors[i].campaign != current_campaign)
+            }
+            if (current_campaign != Campaign_All && armors[i].campaign != current_campaign) {
                 continue;
+            }
             state->pieces.push_back(&armors[i]);
 
             if (piece && piece->model_file_id) {
@@ -454,8 +463,9 @@ namespace GWArmory {
     bool GetPlayerArmor(PlayerArmor& out)
     {
         const auto player = static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer());
-        if (!(player && player->equip && player->equip[0]))
+        if (!(player && player->equip && player->equip[0])) {
             return false;
+        }
         const GW::Equipment* equip = player->equip[0];
         InitItemPiece(&out.head, &equip->head);
         InitItemPiece(&out.chest, &equip->chest);
@@ -468,8 +478,9 @@ namespace GWArmory {
 
     bool Reset()
     {
-        if (!GetPlayerArmor(player_armor))
+        if (!GetPlayerArmor(player_armor)) {
             return false;
+        }
         SetArmorItem(&player_armor.head);
         SetArmorItem(&player_armor.chest);
         SetArmorItem(&player_armor.hands);
@@ -492,8 +503,9 @@ namespace GWArmory {
         bool value_changed = false;
         const char* label_display_end = ImGui::FindRenderedTextEnd(label);
 
-        if (ImGui::ColorButton("##ColorButton", current_color, *color == DyeColor::None ? ImGuiColorEditFlags_AlphaPreview : 0))
+        if (ImGui::ColorButton("##ColorButton", current_color, *color == DyeColor::None ? ImGuiColorEditFlags_AlphaPreview : 0)) {
             ImGui::OpenPopup("picker");
+        }
 
         if (ImGui::BeginPopup("picker")) {
             if (label != label_display_end) {
@@ -502,10 +514,12 @@ namespace GWArmory {
             }
             size_t palette_index;
             if (ImGui::ColorPalette("##picker", &palette_index, palette, _countof(palette), 7, ImGuiColorEditFlags_AlphaPreview)) {
-                if (palette_index < _countof(palette))
+                if (palette_index < _countof(palette)) {
                     *color = DyeColorFromInt(palette_index + static_cast<size_t>(DyeColor::Blue));
-                else
+                }
+                else {
                     *color = DyeColor::None;
+                }
                 value_changed = true;
                 ImGui::CloseCurrentPopup();
             }
@@ -549,20 +563,24 @@ using namespace GWArmory;
 
 void ArmoryWindow::Draw(IDirect3DDevice9*)
 {
-    if (!visible)
+    if (!visible) {
         return;
+    }
     GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player_agent)
+    if (!player_agent) {
         return;
+    }
 
     bool update_data = false;
     const GW::Constants::Profession prof = GetAgentProfession(player_agent);
-    if (prof != current_profession)
+    if (prof != current_profession) {
         update_data = true;
+    }
 
     const auto equip = GetPlayerEquipment();
-    if (!equip)
+    if (!equip) {
         return;
+    }
 
     if (pending_reset_equipment) {
         Reset();
@@ -575,27 +593,34 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
         ImGui::Text("Profession: %s", GetProfessionName(prof));
         ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
 
-        if (ImGui::Button("Reset"))
+        if (ImGui::Button("Reset")) {
             pending_reset_equipment = true;
+        }
 
-        if (ImGui::MyCombo("##filter", "All", (int*)&current_campaign, armor_filter_array_getter, nullptr, 5))
+        if (ImGui::MyCombo("##filter", "All", (int*)&current_campaign, armor_filter_array_getter, nullptr, 5)) {
             UpdateArmorsFilter();
+        }
         const bool showing_helm = !equip->costume_head.model_file_id && IsEquipmentShowing(GW::EquipmentType::Helm);
         const bool showing_body = !equip->costume_body.model_file_id;
 
         if (showing_helm) {
-            if (DrawArmorPiece("##head", &player_armor.head, &head))
+            if (DrawArmorPiece("##head", &player_armor.head, &head)) {
                 SetArmorItem(&player_armor.head);
+            }
         }
         if (showing_body) {
-            if (DrawArmorPiece("##chest", &player_armor.chest, &chest))
+            if (DrawArmorPiece("##chest", &player_armor.chest, &chest)) {
                 SetArmorItem(&player_armor.chest);
-            if (DrawArmorPiece("##hands", &player_armor.hands, &hands))
+            }
+            if (DrawArmorPiece("##hands", &player_armor.hands, &hands)) {
                 SetArmorItem(&player_armor.hands);
-            if (DrawArmorPiece("##legs", &player_armor.legs, &legs))
+            }
+            if (DrawArmorPiece("##legs", &player_armor.legs, &legs)) {
                 SetArmorItem(&player_armor.legs);
-            if (DrawArmorPiece("##feets", &player_armor.feets, &feets))
+            }
+            if (DrawArmorPiece("##feets", &player_armor.feets, &feets)) {
                 SetArmorItem(&player_armor.feets);
+            }
         }
 
         if (!showing_helm) {

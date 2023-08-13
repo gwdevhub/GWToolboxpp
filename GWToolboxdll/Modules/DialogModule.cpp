@@ -86,8 +86,9 @@ namespace {
         GW::HookBase::EnterHook();
         if (message->message_id == 0xb) {
             ResetDialog();
-            if (dialog_info.agent_id)
+            if (dialog_info.agent_id) {
                 last_agent_id = dialog_info.agent_id;
+            }
             dialog_info.agent_id = 0;
         }
         NPCDialogUICallback_Ret(message, wparam, lparam);
@@ -96,12 +97,14 @@ namespace {
 
     void OnDialogClosedByServer()
     {
-        if (queued_dialogs_to_send.empty())
+        if (queued_dialogs_to_send.empty()) {
             return;
+        }
         const GW::Agent* npc = GW::Agents::GetAgentByID(last_agent_id);
         const GW::Agent* me = GW::Agents::GetPlayer();
-        if (npc && me && GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area)
+        if (npc && me && GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area) {
             GW::Agents::GoNPC(npc);
+        }
     }
 
     bool IsDialogButtonAvailable(uint32_t dialog_id)
@@ -125,8 +128,9 @@ void DialogModule::OnPreUIMessage(
         break;
         case GW::UI::UIMessage::kSendDialog: {
             const auto dialog_id = reinterpret_cast<uint32_t>(wparam);
-            if ((dialog_id & 0xff000000) != 0)
+            if ((dialog_id & 0xff000000) != 0) {
                 break; // Don't handle merchant interaction dialogs.
+            }
             if (!IsDialogButtonAvailable(dialog_id)) {
                 status->blocked = true;
             }
@@ -282,8 +286,9 @@ void DialogModule::Update(float)
             queued_dialogs_to_send.erase(it);
             break;
         }
-        if (!GetDialogAgent())
+        if (!GetDialogAgent()) {
             continue;
+        }
         if (it->first == 0) {
             // If dialog queued is id 0, this means the player wants to take (or accept reward for) the first available quest.
             AcceptFirstAvailableQuest();
@@ -309,13 +314,15 @@ const std::vector<GuiUtils::EncString*>& DialogModule::GetDialogButtonMessages()
 
 uint32_t DialogModule::AcceptFirstAvailableQuest()
 {
-    if (dialog_buttons.empty())
+    if (dialog_buttons.empty()) {
         return 0;
+    }
     std::vector<uint32_t> available_quests;
     for (const auto dialog_button : dialog_buttons) {
         const uint32_t dialog_id = dialog_button->dialog_id;
-        if (!IsQuest(dialog_id))
+        if (!IsQuest(dialog_id)) {
             continue;
+        }
         // Quest related dialog
         uint32_t quest_id = GetQuestID(dialog_id);
         switch (GetQuestDialogType(dialog_id)) {
@@ -342,8 +349,9 @@ uint32_t DialogModule::AcceptFirstAvailableQuest()
     // restore -> escort -> uwg
     for (const auto quest_id : {GW::Constants::QuestID::UW_Restore, GW::Constants::QuestID::UW_Escort}) {
         const uint32_t uquest_id = static_cast<uint32_t>(quest_id);
-        if (std::ranges::find(available_quests, uquest_id) != std::ranges::end(available_quests))
+        if (std::ranges::find(available_quests, uquest_id) != std::ranges::end(available_quests)) {
             return take_quest(uquest_id);
+        }
     }
     if (!available_quests.empty()) {
         return take_quest(available_quests[0]);

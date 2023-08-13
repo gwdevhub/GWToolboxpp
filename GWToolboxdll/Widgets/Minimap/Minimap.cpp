@@ -298,16 +298,14 @@ void Minimap::Initialize()
             pingslines_renderer.P138Callback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&CompassEvent_Entry, [this](const GW::HookStatus* status, GW::Packet::StoC::PlayEffect* pak) -> void {
-        UNREFERENCED_PARAMETER(status);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&CompassEvent_Entry, [this](const GW::HookStatus*, GW::Packet::StoC::PlayEffect* pak) -> void {
         if (visible) {
             if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
                 effect_renderer.PacketCallback(pak);
             }
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValueTarget_Entry, [this](const GW::HookStatus* s, GW::Packet::StoC::GenericValue* pak) -> void {
-        UNREFERENCED_PARAMETER(s);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValueTarget_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak) -> void {
         if (visible) {
             if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
                 effect_renderer.PacketCallback(pak);
@@ -388,10 +386,8 @@ GW::Vec2f Minimap::ShadowstepLocation() const
     return shadowstep_location;
 }
 
-void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR* argv)
+void Minimap::OnFlagHeroCmd(const wchar_t*, const int argc, const LPWSTR* argv)
 {
-    UNREFERENCED_PARAMETER(message);
-
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         return; // Not explorable - "/flag" can be typed in chat to bypass flag hero buttons, so this is needed.
     }
@@ -1268,10 +1264,8 @@ bool Minimap::FlagHeros(const LPARAM lParam)
     }
 }
 
-bool Minimap::OnMouseDown(const UINT Message, const WPARAM wParam, const LPARAM lParam)
+bool Minimap::OnMouseDown(const UINT, const WPARAM, const LPARAM lParam)
 {
-    UNREFERENCED_PARAMETER(Message);
-    UNREFERENCED_PARAMETER(wParam);
     if (!IsActive()) {
         return false;
     }
@@ -1314,10 +1308,8 @@ bool Minimap::OnMouseDown(const UINT Message, const WPARAM wParam, const LPARAM 
     return true;
 }
 
-bool Minimap::OnMouseDblClick(const UINT Message, const WPARAM wParam, const LPARAM lParam) const
+bool Minimap::OnMouseDblClick(const UINT , const WPARAM , const LPARAM lParam) const
 {
-    UNREFERENCED_PARAMETER(Message);
-    UNREFERENCED_PARAMETER(wParam);
     if (!IsActive()) {
         return false;
     }
@@ -1336,11 +1328,8 @@ bool Minimap::OnMouseDblClick(const UINT Message, const WPARAM wParam, const LPA
     return true;
 }
 
-bool Minimap::OnMouseUp(const UINT Message, const WPARAM wParam, const LPARAM lParam)
+bool Minimap::OnMouseUp(const UINT , const WPARAM , const LPARAM )
 {
-    UNREFERENCED_PARAMETER(Message);
-    UNREFERENCED_PARAMETER(wParam);
-    UNREFERENCED_PARAMETER(lParam);
     if (!IsActive()) {
         return false;
     }
@@ -1354,11 +1343,8 @@ bool Minimap::OnMouseUp(const UINT Message, const WPARAM wParam, const LPARAM lP
     return pingslines_renderer.OnMouseUp();
 }
 
-bool Minimap::OnMouseMove(const UINT Message, const WPARAM wParam, const LPARAM lParam)
+bool Minimap::OnMouseMove(const UINT, const WPARAM, const LPARAM lParam)
 {
-    UNREFERENCED_PARAMETER(Message);
-    UNREFERENCED_PARAMETER(wParam);
-    UNREFERENCED_PARAMETER(lParam);
     if (!IsActive()) {
         return false;
     }
@@ -1388,10 +1374,8 @@ bool Minimap::OnMouseMove(const UINT Message, const WPARAM wParam, const LPARAM 
     return pingslines_renderer.OnMouseMove(v.x, v.y);
 }
 
-bool Minimap::OnMouseWheel(const UINT Message, const WPARAM wParam, const LPARAM lParam)
+bool Minimap::OnMouseWheel(const UINT , const WPARAM wParam, const LPARAM )
 {
-    UNREFERENCED_PARAMETER(Message);
-    UNREFERENCED_PARAMETER(lParam);
     if (!IsActive()) {
         return false;
     }

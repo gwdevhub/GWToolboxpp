@@ -43,8 +43,9 @@ protected:
 
         void setName(std::wstring _name)
         {
-            if (name == _name)
+            if (name == _name) {
                 return;
+            }
             name = std::move(_name);
             name_str.clear();
         }
@@ -119,8 +120,9 @@ public:
 
         void setAlias(const std::wstring_view _alias)
         {
-            if (alias == _alias)
+            if (alias == _alias) {
                 return;
+            }
             alias = _alias;
             alias_str.clear();
         }

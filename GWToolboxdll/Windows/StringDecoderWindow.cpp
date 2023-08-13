@@ -33,7 +33,9 @@ namespace {
 
     void PrintEncStr(const wchar_t* enc_str, size_t indent = 0)
     {
-        if (!enc_str) return;
+        if (!enc_str) {
+            return;
+        }
         using namespace ToolboxUtils::EncodedStrings;
         for (size_t i = 0; enc_str[i] != 0; i++) {
             switch (enc_str[i]) {
@@ -63,8 +65,9 @@ namespace {
                     PrintEncStr(&enc_str[i + 1], indent);
                     return;
                 case 0x1:
-                    if (indent)
+                    if (indent) {
                         indent--;
+                    }
                     printf_indent(indent);
                     printf("0x%X ", enc_str[i]);
                     PrintEncStr(&enc_str[i + 1], indent);
@@ -87,11 +90,11 @@ void StringDecoderWindow::PrintEncStr(const wchar_t* enc_str)
     ::PrintEncStr(enc_str);
 }
 
-void StringDecoderWindow::Draw(IDirect3DDevice9* pDevice)
+void StringDecoderWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {

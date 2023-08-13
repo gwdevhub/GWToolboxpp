@@ -62,9 +62,8 @@ void PartyDamage::Terminate()
     }
 }
 
-void PartyDamage::MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded* packet)
+void PartyDamage::MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded*)
 {
-    UNREFERENCED_PARAMETER(packet);
     switch (GW::Map::GetInstanceType()) {
         case GW::Constants::InstanceType::Outpost:
             in_explorable = false;
@@ -95,29 +94,53 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::
     }
 
     // ignore heals
-    if (packet->value >= 0) return;
+    if (packet->value >= 0) {
+        return;
+    }
 
     const GW::AgentArray* agents_ptr = GW::Agents::GetAgentArray();
-    if (!agents_ptr) return;
+    if (!agents_ptr) {
+        return;
+    }
     auto& agents = *agents_ptr;
     // get cause agent
-    if (packet->cause_id >= agents.size()) return;
-    if (!agents[packet->cause_id]) return;
+    if (packet->cause_id >= agents.size()) {
+        return;
+    }
+    if (!agents[packet->cause_id]) {
+        return;
+    }
     const GW::AgentLiving* const cause = agents[packet->cause_id]->GetAsAgentLiving();
 
-    if (cause == nullptr) return;
-    if (cause->allegiance != GW::Constants::Allegiance::Ally_NonAttackable) return;
+    if (cause == nullptr) {
+        return;
+    }
+    if (cause->allegiance != GW::Constants::Allegiance::Ally_NonAttackable) {
+        return;
+    }
     const auto cause_it = party_index.find(cause->agent_id);
-    if (cause_it == party_index.end()) return; // ignore damage done by non-party members
+    if (cause_it == party_index.end()) {
+        return; // ignore damage done by non-party members
+    }
 
     // get target agent
-    if (packet->target_id >= agents.size()) return;
-    if (!agents[packet->target_id]) return;
+    if (packet->target_id >= agents.size()) {
+        return;
+    }
+    if (!agents[packet->target_id]) {
+        return;
+    }
     const GW::AgentLiving* const target = agents[packet->target_id]->GetAsAgentLiving();
-    if (target == nullptr) return;
-    if (target->login_number != 0) return; // ignore player-inflicted damage
+    if (target == nullptr) {
+        return;
+    }
+    if (target->login_number != 0) {
+        return; // ignore player-inflicted damage
+    }
     // such as Life bond or sacrifice
-    if (target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable) return; // ignore damage inflicted to allies in general
+    if (target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable) {
+        return; // ignore damage inflicted to allies in general
+    }
     // warning: note damage to allied spirits, minions or stones may still trigger
     // you can do damage like that by standing in bugged dart traps in eye of the north
     // or maybe with some skills that damage minions/spirits
@@ -142,7 +165,9 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::
     const uint32_t dmg = static_cast<uint32_t>(ldmg);
 
     const size_t index = cause_it->second;
-    if (index >= MAX_PLAYERS) return; // something went very wrong.
+    if (index >= MAX_PLAYERS) {
+        return; // something went very wrong.
+    }
     if (damage[index].damage == 0) {
         damage[index].agent_id = packet->cause_id;
         GW::Agents::AsyncGetAgentName(cause, damage[index].name);
@@ -166,9 +191,8 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::
     }
 }
 
-void PartyDamage::Update(const float delta)
+void PartyDamage::Update(const float)
 {
-    UNREFERENCED_PARAMETER(delta);
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         send_timer = TIMER_INIT();
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
@@ -192,12 +216,16 @@ void PartyDamage::Update(const float delta)
 
 void PartyDamage::CreatePartyIndexMap()
 {
-    if (!GW::PartyMgr::GetIsPartyLoaded()) return;
+    if (!GW::PartyMgr::GetIsPartyLoaded()) {
+        return;
+    }
     const GW::PartyInfo* const info = GW::PartyMgr::GetPartyInfo();
     size_t index = 0;
     for (const GW::PlayerPartyMember& player : info->players) {
         const uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
-        if (id == GW::Agents::GetPlayerId()) player_index = index;
+        if (id == GW::Agents::GetPlayerId()) {
+            player_index = index;
+        }
         party_index[id] = index++;
 
         for (const GW::HeroPartyMember& hero : info->heroes) {
@@ -211,17 +239,23 @@ void PartyDamage::CreatePartyIndexMap()
     }
 }
 
-void PartyDamage::Draw(IDirect3DDevice9* device)
+void PartyDamage::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(device);
-    if (!visible) return;
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+    if (!visible) {
         return;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+    }
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+        return;
+    }
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
+        return;
+    }
 
     const float line_height = (row_height > 0 && !snap_to_party_window) ? row_height : GuiUtils::GetPartyHealthbarHeight();
     uint32_t size = GW::PartyMgr::GetPartySize();
-    if (size > MAX_PLAYERS) size = static_cast<uint32_t>(MAX_PLAYERS);
+    if (size > MAX_PLAYERS) {
+        size = static_cast<uint32_t>(MAX_PLAYERS);
+    }
 
     uint32_t max_recent = 0;
     uint32_t max = 0;
@@ -359,14 +393,18 @@ void PartyDamage::Draw(IDirect3DDevice9* device)
 
 float PartyDamage::GetPartOfTotal(const uint32_t dmg) const
 {
-    if (total == 0) return 0;
+    if (total == 0) {
+        return 0;
+    }
     return static_cast<float>(dmg) / total;
 }
 
 void PartyDamage::WritePartyDamage()
 {
     std::vector<size_t> idx(MAX_PLAYERS);
-    for (size_t i = 0; i < MAX_PLAYERS; ++i) idx[i] = i;
+    for (size_t i = 0; i < MAX_PLAYERS; ++i) {
+        idx[i] = i;
+    }
     sort(idx.begin(), idx.end(), [this](const size_t i1, const size_t i2) {
         return damage[i1].damage > damage[i2].damage;
     });
@@ -379,15 +417,25 @@ void PartyDamage::WritePartyDamage()
 
 void PartyDamage::WriteDamageOf(const size_t index, uint32_t rank)
 {
-    if (index >= MAX_PLAYERS) return;
-    if (damage[index].damage <= 0) return;
+    if (index >= MAX_PLAYERS) {
+        return;
+    }
+    if (damage[index].damage <= 0) {
+        return;
+    }
 
     if (rank == 0) {
         rank = 1; // start at 1, add 1 for each player with higher damage
         for (size_t i = 0; i < MAX_PLAYERS; ++i) {
-            if (i == index) continue;
-            if (damage[i].agent_id == 0) continue;
-            if (damage[i].damage > damage[index].damage) ++rank;
+            if (i == index) {
+                continue;
+            }
+            if (damage[i].agent_id == 0) {
+                continue;
+            }
+            if (damage[i].damage > damage[index].damage) {
+                ++rank;
+            }
         }
     }
 
@@ -433,16 +481,22 @@ void PartyDamage::LoadSettings(ToolboxIni* ini)
     snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
     user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 
-    if (inifile == nullptr) inifile = new ToolboxIni(false, false, false);
+    if (inifile == nullptr) {
+        inifile = new ToolboxIni(false, false, false);
+    }
     inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
     ToolboxIni::TNamesDepend keys;
     inifile->GetAllKeys(IniSection, keys);
     for (const ToolboxIni::Entry& key : keys) {
         int lkey;
         if (GuiUtils::ParseInt(key.pItem, &lkey)) {
-            if (lkey <= 0) continue;
+            if (lkey <= 0) {
+                continue;
+            }
             const long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
-            if (lval <= 0) continue;
+            if (lval <= 0) {
+                continue;
+            }
             hp_map[static_cast<size_t>(lkey)] = static_cast<uint32_t>(lval);
         }
     }
@@ -492,9 +546,13 @@ void PartyDamage::DrawSettingsInternal()
         ImGui::InputInt("Row Height", &row_height);
         ImGui::ShowHelp("Height of each row, leave 0 for default");
     }
-    if (width <= 0) width = 1.0f;
+    if (width <= 0) {
+        width = 1.0f;
+    }
     ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%d milliseconds");
-    if (recent_max_time < 0) recent_max_time = 0;
+    if (recent_max_time < 0) {
+        recent_max_time = 0;
+    }
     ImGui::ShowHelp("After this amount of time, each player recent damage (blue bar) will be reset");
     Colors::DrawSettingHueWheel("Background", &color_background);
     Colors::DrawSettingHueWheel("Damage", &color_damage);

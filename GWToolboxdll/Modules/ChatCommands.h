@@ -126,8 +126,9 @@ private:
 
         void Terminate()
         {
-            for (const auto& it : npc_names)
+            for (const auto& it : npc_names) {
                 delete it.second;
+            }
             npc_names.clear();
         }
     } npc_to_find;

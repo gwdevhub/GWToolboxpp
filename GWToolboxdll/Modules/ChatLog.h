@@ -82,15 +82,18 @@ private:
     // Check outgoing log to see if message has already been added
     bool IsAdded(wchar_t* _message, uint32_t addr)
     {
-        if (!addr)
+        if (!addr) {
             addr = (uint32_t)_message;
+        }
         const TBSentMessage* sent = sent_last;
         while (sent) {
             // NB: GW uses TList in memory which means the only time the address will be nuked is when the log is cleared anyway
-            if (sent->gw_message_address == addr && wcscmp(sent->msg.c_str(), _message) == 0)
+            if (sent->gw_message_address == addr && wcscmp(sent->msg.c_str(), _message) == 0) {
                 return true;
-            if (sent == sent_first)
+            }
+            if (sent == sent_first) {
                 break;
+            }
             sent = sent->prev;
         }
         return false;

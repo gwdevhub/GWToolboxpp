@@ -93,8 +93,9 @@ namespace {
     {
         switch (message_id) {
             case GW::UI::UIMessage::kEnumPreference:
-                if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize)
+                if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize) {
                     Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
+                }
                 break;
         }
     }
@@ -192,8 +193,9 @@ void Resources::OpenFileDialog(std::function<void(const char*)> callback, const 
         }
 
         callback(outPath);
-        if (outPath)
+        if (outPath) {
             free(outPath);
+        }
     });
 }
 
@@ -219,8 +221,9 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
                 Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
                 break;
         }
-        if (outPath)
+        if (outPath) {
             free(outPath);
+        }
     });
 }
 
@@ -255,8 +258,9 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
         return S_OK;
     }
     hRes = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    if (!SUCCEEDED(hRes))
+    if (!SUCCEEDED(hRes)) {
         return hRes;
+    }
     IShellLink* psl = nullptr;
 
     // buffer that receives the null-terminated string
@@ -325,8 +329,9 @@ void Resources::Cleanup()
 {
     should_stop = true;
     for (std::thread* worker : workers) {
-        if (!worker)
+        if (!worker) {
             continue;
+        }
         ASSERT(worker->joinable());
         worker->join();
         delete worker;
@@ -516,10 +521,12 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     size_t tries = 0;
     const auto ext = path_to_file.extension();
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
-        if (ext == ".dds")
+        if (ext == ".dds") {
             res = DirectX::CreateDDSTextureFromFileEx(device, path_to_file.c_str(), 0, D3DPOOL_MANAGED, true, texture);
-        else
+        }
+        else {
             res = CreateWICTextureFromFileEx(device, path_to_file.c_str(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_FLAGS::WIC_LOADER_DEFAULT, texture);
+        }
     }
     if (res != D3D_OK) {
         StrSwprintf(error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
@@ -677,14 +684,17 @@ int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const T
     auto tmp_file = std::filesystem::path(absolute_path);
     tmp_file += ".tmp";
     const SI_Error res = ini->SaveFile(tmp_file.c_str());
-    if (res < 0)
+    if (res < 0) {
         return res;
+    }
     std::error_code ec;
     std::filesystem::rename(tmp_file, absolute_path, ec);
-    if (ec.value() != 0)
+    if (ec.value() != 0) {
         return ec.value();
-    if (!(!exists(tmp_file) && exists(absolute_path)))
+    }
+    if (!(!exists(tmp_file) && exists(absolute_path))) {
         return -1; // rename failed
+    }
     return 0;
 }
 
@@ -837,8 +847,9 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
     const auto texture = new IDirect3DTexture9*;
     *texture = nullptr;
     skill_images[skill_id] = texture;
-    if (skill_id == static_cast<GW::Constants::SkillID>(0))
+    if (skill_id == static_cast<GW::Constants::SkillID>(0)) {
         return texture;
+    }
     static std::filesystem::path path = GetPath(SKILL_IMAGES_PATH);
     if (!EnsureFolderExists(path)) {
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());

@@ -5,11 +5,11 @@
 
 constexpr auto TEXT_SIZE = 2024 * 16;
 
-void NotePadWindow::Draw(IDirect3DDevice9* pDevice)
+void NotePadWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(300.0f, 200.0f), ImGuiCond_FirstUseEver);

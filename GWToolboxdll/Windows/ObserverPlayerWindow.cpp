@@ -20,17 +20,20 @@ void ObserverPlayerWindow::Initialize()
 // Get the agent we're currently tracking
 uint32_t ObserverPlayerWindow::GetTracking()
 {
-    if (!ObserverModule::Instance().IsActive())
+    if (!ObserverModule::Instance().IsActive()) {
         return previously_tracked_agent_id;
+    }
 
     // keep tracking up-to-date with the current desired target
     const GW::Agent* agent = GW::Agents::GetPlayer();
-    if (!agent)
+    if (!agent) {
         return previously_tracked_agent_id;
+    }
 
     const GW::AgentLiving* living = agent->GetAsAgentLiving();
-    if (!living)
+    if (!living) {
         return previously_tracked_agent_id;
+    }
 
     previously_tracked_agent_id = living->agent_id;
 
@@ -40,17 +43,20 @@ uint32_t ObserverPlayerWindow::GetTracking()
 // Get the agent we're comparing to
 uint32_t ObserverPlayerWindow::GetComparison()
 {
-    if (!ObserverModule::Instance().IsActive())
+    if (!ObserverModule::Instance().IsActive()) {
         return previously_compared_agent_id;
+    }
 
     // keep tracking up-to-date with the current desired target
     const GW::Agent* agent = GW::Agents::GetTarget();
-    if (!agent)
+    if (!agent) {
         return previously_compared_agent_id;
+    }
 
     const GW::AgentLiving* living = agent->GetAsAgentLiving();
-    if (!living)
+    if (!living) {
         return previously_compared_agent_id;
+    }
 
     previously_compared_agent_id = living->agent_id;
 
@@ -142,26 +148,29 @@ void ObserverPlayerWindow::DrawSkills(const std::unordered_map<GW::Constants::Sk
         i += 1;
         offset = 0;
         ObserverModule::ObservableSkill* skill = ObserverModule::Instance().GetObservableSkillById(skill_id);
-        if (!skill)
+        if (!skill) {
             continue;
+        }
         auto it_usages = skills.find(skill_id);
-        if (it_usages == skills.end())
+        if (it_usages == skills.end()) {
             continue;
+        }
         DrawAction(("# " + std::to_string(i) + ". " + skill->Name()).c_str(), it_usages->second);
     }
 }
 
 
 // Draw the window
-void ObserverPlayerWindow::Draw(IDirect3DDevice9* pDevice)
+void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         return ImGui::End();
+    }
 
     ObserverModule& om = ObserverModule::Instance();
 

@@ -28,8 +28,9 @@ extern "C" __declspec(dllexport) void __cdecl Terminate()
         Sleep(16);
     }
     Sleep(16);
-    if (!is_detaching)
+    if (!is_detaching) {
         FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+    }
 }
 
 
@@ -49,15 +50,15 @@ DWORD WINAPI Init() noexcept
     } __except (EXCEPT_EXPRESSION_ENTRY) { }
 leave:
     thread_running = false;
-    if (!is_detaching)
+    if (!is_detaching) {
         FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+    }
     return 0;
 }
 
 // DLL entry point, dont do things in this thread unless you know what you are doing.
-BOOL WINAPI DllMain(_In_ const HMODULE _HDllHandle, _In_ const DWORD _Reason, _In_opt_ const LPVOID _Reserved)
+BOOL WINAPI DllMain(_In_ const HMODULE _HDllHandle, _In_ const DWORD _Reason, _In_opt_ const LPVOID)
 {
-    UNREFERENCED_PARAMETER(_Reserved);
     DisableThreadLibraryCalls(_HDllHandle);
     switch (_Reason) {
         case DLL_PROCESS_ATTACH: {
@@ -71,8 +72,9 @@ BOOL WINAPI DllMain(_In_ const HMODULE _HDllHandle, _In_ const DWORD _Reason, _I
                     0,
                     nullptr);
 
-                if (hThread != nullptr)
+                if (hThread != nullptr) {
                     CloseHandle(hThread);
+                }
             } __except (EXCEPT_EXPRESSION_ENTRY) { }
         }
         break;

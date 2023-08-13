@@ -35,10 +35,12 @@ namespace {
 
     uint32_t GetAgentMaxHP(const GW::AgentLiving* agent)
     {
-        if (!agent)
+        if (!agent) {
             return 0; // Invalid agent
-        if (agent->max_hp)
+        }
+        if (agent->max_hp) {
             return agent->max_hp;
+        }
         switch (agent->player_number) {
             case GW::Constants::ModelID::DoA::SoulTormentor:
             case GW::Constants::ModelID::DoA::VeilSoulTormentor:
@@ -55,8 +57,9 @@ namespace {
     int GetHealthRegenPips(const GW::AgentLiving* agent)
     {
         const auto max_hp = GetAgentMaxHP(agent);
-        if (!(max_hp && agent->hp_pips != .0f))
+        if (!(max_hp && agent->hp_pips != .0f)) {
             return 0; // Invalid agent, unknown max HP, or no regen or degen
+        }
         const float health_regen_per_second = max_hp * agent->hp_pips;
         const float pips = std::ceil(health_regen_per_second / 2.f); // 1 pip = 2 health per second
         return static_cast<int>(pips);
@@ -67,8 +70,9 @@ namespace {
         const auto agentA = GetAgentLivingByID(a.agent_id);
         const auto agentB = agentA ? GetAgentLivingByID(b.agent_id) : nullptr;
 
-        if (!agentB)
+        if (!agentB) {
             return false;
+        }
 
         if (agentA->hp > 0.35f && agentB->hp > 0.35f) {
             return agentA->hp_pips > agentB->hp_pips;
@@ -79,8 +83,9 @@ namespace {
 
     void DrawDuping(const char* label, const std::vector<DupeInfo>& vec)
     {
-        if (vec.empty())
+        if (vec.empty()) {
             return;
+        }
 
         ImGui::Spacing();
         ImGui::Text(label);
@@ -95,8 +100,9 @@ namespace {
 
             for (const auto& dupe_info : vec) {
                 const auto living = GetAgentLivingByID(dupe_info.agent_id);
-                if (!living)
+                if (!living) {
                     continue;
+                }
                 const auto selected = target && target->agent_id == living->agent_id;
 
                 ImGui::PushID(dupe_info.agent_id);
@@ -183,14 +189,15 @@ void DupingWindow::Terminate()
     ClearDupes();
 }
 
-void DupingWindow::Draw(IDirect3DDevice9* device)
+void DupingWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(device);
-    if (!visible)
+    if (!visible) {
         return;
+    }
     const bool is_in_doa = (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable);
-    if (hide_when_nothing && !is_in_doa)
+    if (hide_when_nothing && !is_in_doa) {
         return;
+    }
 
     const float sqr_range = range * range;
     int soul_count = 0;
@@ -215,14 +222,16 @@ void DupingWindow::Draw(IDirect3DDevice9* device)
     agents = GW::Agents::GetAgentArray();
     player = agents ? GW::Agents::GetPlayer() : nullptr;
 
-    if (!player)
+    if (!player) {
         goto done_calculation;
+    }
 
     for (auto* agent : *agents) {
         const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
 
-        if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive() || GetSquareDistance(player->pos, living->pos) > sqr_range)
+        if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive() || GetSquareDistance(player->pos, living->pos) > sqr_range) {
             continue;
+        }
 
         switch (living->player_number) {
             case GW::Constants::ModelID::DoA::SoulTormentor:
@@ -286,8 +295,9 @@ done_calculation:
         && waters.size() == 0
         && !(show_minds_counter && mind_count > 0)
         && minds.size() == 0
-    )
+    ) {
         return;
+    }
 
     // ==== Draw the window ====
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);

@@ -22,8 +22,9 @@ GW::Item* MaterialsWindow::GetMerchItem(const Material mat) const
     const uint32_t model_id = GetModelID(mat);
     for (const uint32_t item_id : merch_items) {
         GW::Item* item = GW::Items::GetItemById(item_id);
-        if (item && item->model_id == model_id)
+        if (item && item->model_id == model_id) {
             return item;
+        }
     }
     return nullptr;
 }
@@ -33,37 +34,43 @@ GW::Item* MaterialsWindow::GetBagItem(const Material mat) const
     const uint32_t model_id = GetModelID(mat);
     const auto min_qty = mat <= WoodPlank ? 10 : 1; // 10 if common, 1 if rare
     GW::Bag** bags = GW::Items::GetBagArray();
-    if (!bags)
+    if (!bags) {
         return nullptr;
+    }
     constexpr auto bag_i = static_cast<size_t>(GW::Constants::Bag::Backpack);
     constexpr auto bag_n = static_cast<size_t>(GW::Constants::Bag::Bag_2);
     for (size_t i = bag_i; i <= bag_n; i++) {
         GW::Bag* bag = bags[i];
-        if (!bag)
+        if (!bag) {
             continue;
+        }
         size_t pos = bag->find1(model_id, 0);
         while (pos != GW::Bag::npos) {
             GW::Item* item = bag->items[pos];
-            if (item->quantity >= min_qty)
+            if (item->quantity >= min_qty) {
                 return item;
+            }
             pos = bag->find1(model_id, pos + 1);
         }
     }
     return nullptr;
 }
 
-void MaterialsWindow::Update(const float delta)
+void MaterialsWindow::Update(const float)
 {
-    UNREFERENCED_PARAMETER(delta);
-    if (cancelled)
+    if (cancelled) {
         return;
+    }
     const auto tickcount = GetTickCount();
-    if (quote_pending && (tickcount < quote_pending_time))
+    if (quote_pending && (tickcount < quote_pending_time)) {
         return;
-    if (trans_pending && (tickcount < trans_pending_time))
+    }
+    if (trans_pending && (tickcount < trans_pending_time)) {
         return;
-    if (transactions.empty())
+    }
+    if (transactions.empty()) {
         return;
+    }
 
     Transaction& trans = transactions.front();
 
@@ -106,8 +113,9 @@ void MaterialsWindow::Initialize()
         &QuotedItemPrice_Entry,
         [this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* pak) -> void {
             // printf("Received price %d for %d (item %d)\n", pak->price, item->ModelId, pak->itemid);
-            if (transactions.empty())
+            if (transactions.empty()) {
                 return;
+            }
             const Transaction& trans = transactions.front();
             if (cancelled || (trans.item_id != pak->itemid)) {
                 quote_pending = false;
@@ -174,10 +182,10 @@ void MaterialsWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TransactionDone>(
         &TransactionDone_Entry,
-        [this](GW::HookStatus*, const GW::Packet::StoC::TransactionDone* pak) -> void {
-            UNREFERENCED_PARAMETER(pak);
-            if (transactions.empty())
+        [this](GW::HookStatus*, const GW::Packet::StoC::TransactionDone*) -> void {
+            if (transactions.empty()) {
                 return;
+            }
             trans_pending = false;
             Dequeue();
         });
@@ -186,13 +194,15 @@ void MaterialsWindow::Initialize()
         &ItemStreamEnd_Entry,
         [this](GW::HookStatus*, const GW::Packet::StoC::ItemStreamEnd* pak) -> void {
             // @Remark: unk1 = 13 means "selling" tab
-            if (pak->unk1 != 12)
+            if (pak->unk1 != 12) {
                 return;
+            }
             GW::MerchItemArray* items = GW::Merchant::GetMerchantItemsArray();
             merch_items.clear();
             if (items) {
-                for (const auto item_id : *items)
+                for (const auto item_id : *items) {
                     merch_items.push_back(item_id);
+                }
             }
         });
 }
@@ -216,11 +226,11 @@ void MaterialsWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(use_stock), use_stock);
 }
 
-void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
+void MaterialsWindow::Draw(IDirect3DDevice9* )
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -236,8 +246,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         // === Essence ===
         ImGui::Image(*tex_essence, ImVec2(50, 50),
                      ImVec2(4.0f / 64, 9.0f / 64), ImVec2(47.0f / 64, 52.0f / 64));
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Essence of Celerity\nFeathers and Dust");
+        }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
         y = ImGui::GetCursorPosY();
@@ -254,8 +265,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
         ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
         ImGui::InputInt("###essenceqty", &qty_essence);
-        if (qty_essence < 1)
+        if (qty_essence < 1) {
             qty_essence = 1;
+        }
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##essence", ImVec2(100.0f, 0))) {
@@ -277,8 +289,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         // === Grail ===
         ImGui::Image(*tex_grail, ImVec2(50, 50),
                      ImVec2(3.0f / 64, 11.0f / 64), ImVec2(49.0f / 64, 57.0f / 64));
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Grail of Might\nIron and Dust");
+        }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
         y = ImGui::GetCursorPosY();
@@ -295,8 +308,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
         ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
         ImGui::InputInt("###grailqty", &qty_grail);
-        if (qty_grail < 1)
+        if (qty_grail < 1) {
             qty_grail = 1;
+        }
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##grail", ImVec2(100.0f, 0))) {
@@ -318,8 +332,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         // === Armor ===
         ImGui::Image(*tex_armor, ImVec2(50, 50),
                      ImVec2(0, 1.0f / 64), ImVec2(59.0f / 64, 60.0f / 64));
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Armor of Salvation\nIron and Bones");
+        }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
         y = ImGui::GetCursorPosY();
@@ -336,8 +351,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
         ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
         ImGui::InputInt("###armorqty", &qty_armor);
-        if (qty_armor < 1)
+        if (qty_armor < 1) {
             qty_armor = 1;
+        }
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##armor", ImVec2(100.0f, 0))) {
@@ -359,8 +375,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         // === Powerstone ===
         ImGui::Image(*tex_powerstone, ImVec2(50, 50),
                      ImVec2(0, 6.0f / 64), ImVec2(54.0f / 64, 60.0f / 64));
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Powerstone of Courage\nGranite and Dust");
+        }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
         y = ImGui::GetCursorPosY();
@@ -376,8 +393,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
         ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
         ImGui::InputInt("###pstoneqty", &qty_pstone);
-        if (qty_pstone < 1)
+        if (qty_pstone < 1) {
             qty_pstone = 1;
+        }
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##pstone", ImVec2(100.0f, 0))) {
@@ -399,8 +417,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         // === Res scroll ===
         ImGui::Image(*tex_resscroll, ImVec2(50, 50),
                      ImVec2(1.0f / 64, 4.0f / 64), ImVec2(56.0f / 64, 59.0f / 64));
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Scroll of Resurrection\nFibers and Bones");
+        }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
         y = ImGui::GetCursorPosY();
@@ -416,8 +435,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
         ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
         ImGui::InputInt("###resscrollqty", &qty_resscroll);
-        if (qty_resscroll < 1)
+        if (qty_resscroll < 1) {
             qty_resscroll = 1;
+        }
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##resscroll", ImVec2(100.0f, 0))) {
@@ -463,8 +483,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::PushItemWidth(width2);
         ImGui::InputInt("##commonqty", &common_qty);
         ImGui::PopItemWidth();
-        if (common_qty < 1)
+        if (common_qty < 1) {
             common_qty = 1;
+        }
         ImGui::SameLine();
         if (ImGui::Button("Buy##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
             const auto materialStock = GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(common_idx)), stockStart, stockEnd);
@@ -516,8 +537,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::PushItemWidth(width2);
         ImGui::InputInt("##rareqty", &rare_qty);
         ImGui::PopItemWidth();
-        if (rare_qty < 1)
+        if (rare_qty < 1) {
             rare_qty = 1;
+        }
         ImGui::SameLine();
         if (ImGui::Button("Buy##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
             const auto material_stock = GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(rare_idx + AmberChunk)), stockStart, stockEnd);
@@ -535,15 +557,19 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
 
         ImGui::Separator();
         float progress = 0.0f;
-        if (trans_queued > 0)
+        if (trans_queued > 0) {
             progress = static_cast<float>(trans_done) / trans_queued;
+        }
         auto status = "";
-        if (cancelled)
+        if (cancelled) {
             status = "Cancelled";
-        else if (trans_done < trans_queued)
+        }
+        else if (trans_done < trans_queued) {
             status = "Working";
-        else
+        }
+        else {
             status = "Ready";
+        }
         ImGui::Text("%s [%d / %d]", status, trans_done, trans_queued);
         ImGui::SameLine(width1 + ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().ItemSpacing.x);
         ImGui::ProgressBar(progress, ImVec2(width2, 0));
@@ -551,8 +577,9 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice)
         if (ImGui::Button("Cancel", ImVec2(100.0f, 0))) {
             Cancel();
         }
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Cancel the current queue of operations");
+        }
     }
     ImGui::End();
 }
@@ -600,8 +627,9 @@ void MaterialsWindow::EnqueueSell(const Material material)
 DWORD MaterialsWindow::RequestPurchaseQuote(const Material material)
 {
     GW::Item* item = GetMerchItem(material);
-    if (!item)
+    if (!item) {
         return 0;
+    }
     GW::Merchant::QuoteInfo give, recv;
     give.unknown = 0;
     give.item_count = 0;
@@ -616,8 +644,9 @@ DWORD MaterialsWindow::RequestPurchaseQuote(const Material material)
 DWORD MaterialsWindow::RequestSellQuote(const Material material)
 {
     GW::Item* item = GetBagItem(material);
-    if (!item)
+    if (!item) {
         return 0;
+    }
     GW::Merchant::QuoteInfo give, recv;
     give.unknown = 0;
     give.item_count = 1;

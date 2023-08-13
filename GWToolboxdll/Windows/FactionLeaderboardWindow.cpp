@@ -20,33 +20,35 @@ void FactionLeaderboardWindow::Initialize()
 {
     ToolboxWindow::Initialize();
     leaderboard.resize(15);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TownAllianceObject>(&TownAlliance_Entry,
-                                                                           [this](const GW::HookStatus* status, GW::Packet::StoC::TownAllianceObject* pak) -> bool {
-                                                                               UNREFERENCED_PARAMETER(status);
-                                                                               const LeaderboardEntry leaderboardEntry = {
-                                                                                   pak->map_id,
-                                                                                   pak->rank,
-                                                                                   pak->allegiance,
-                                                                                   pak->faction,
-                                                                                   pak->name,
-                                                                                   pak->tag
-                                                                               };
-                                                                               if (leaderboard.size() <= leaderboardEntry.rank)
-                                                                                   leaderboard.resize(leaderboardEntry.rank + 1);
-                                                                               leaderboard.at(leaderboardEntry.rank) = leaderboardEntry;
-                                                                               return false;
-                                                                           });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TownAllianceObject>(
+        &TownAlliance_Entry,
+        [this](const GW::HookStatus*, GW::Packet::StoC::TownAllianceObject* pak) -> bool {
+            const LeaderboardEntry leaderboardEntry = {
+                pak->map_id,
+                pak->rank,
+                pak->allegiance,
+                pak->faction,
+                pak->name,
+                pak->tag
+            };
+            if (leaderboard.size() <= leaderboardEntry.rank) {
+                leaderboard.resize(leaderboardEntry.rank + 1);
+            }
+            leaderboard.at(leaderboardEntry.rank) = leaderboardEntry;
+            return false;
+        });
 }
 
-void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice)
+void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         return ImGui::End();
+    }
     float offset = 0.0f;
     const float tiny_text_width = 50.0f * ImGui::GetIO().FontGlobalScale;
     const float short_text_width = 80.0f * ImGui::GetIO().FontGlobalScale;
@@ -65,15 +67,17 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice)
     bool has_entries = false;
     for (size_t i = 0; i < leaderboard.size(); i++) {
         LeaderboardEntry* e = &leaderboard[i];
-        if (!e->initialised)
+        if (!e->initialised) {
             continue;
+        }
         has_entries = true;
         offset = 0.0f;
         if (e->map_name[0] == 0) {
             // Try to load map name in.
             const GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(e->map_id));
-            if (info && GW::UI::UInt32ToEncStr(info->name_id, e->map_name_enc, 256))
+            if (info && GW::UI::UInt32ToEncStr(info->name_id, e->map_name_enc, 256)) {
                 GW::UI::AsyncDecodeStr(e->map_name_enc, e->map_name, 256);
+            }
         }
         ImGui::Text("%d", e->rank);
         ImGui::SameLine(offset += tiny_text_width);

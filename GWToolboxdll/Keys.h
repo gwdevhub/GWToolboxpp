@@ -520,8 +520,9 @@ inline int ModKeyName(char* buf, const size_t bufsz, const LONG mod, const LONG 
 {
     char vkey_c[32];
     if (vkey > 0) {
-        if (!KeyName(vkey, vkey_c, _countof(vkey_c)))
+        if (!KeyName(vkey, vkey_c, _countof(vkey_c))) {
             snprintf(vkey_c, _countof(vkey_c), "%s", KeyName(vkey));
+        }
     }
     return snprintf(buf, bufsz, "%s%s%s%s",
                     (mod & ModKey_Control) ? "Control + " : "",

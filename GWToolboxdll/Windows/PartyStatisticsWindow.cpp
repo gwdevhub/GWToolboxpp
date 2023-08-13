@@ -107,12 +107,14 @@ namespace {
     {
         const GW::SkillbarArray* skillbar_array = GW::SkillbarMgr::GetSkillbarArray();
 
-        if (!skillbar_array)
+        if (!skillbar_array) {
             return nullptr;
+        }
 
         for (const GW::Skillbar& skillbar : *skillbar_array) {
-            if (skillbar.agent_id == agent_id)
+            if (skillbar.agent_id == agent_id) {
                 return &skillbar;
+            }
         }
 
         return nullptr;
@@ -154,8 +156,9 @@ namespace {
 
     void WritePlayerStatisticsSingleSkill(PartyMember* party_member, const uint32_t skill_idx)
     {
-        if (!(party_member && skill_idx < party_member->skills.size()))
+        if (!(party_member && skill_idx < party_member->skills.size())) {
             return;
+        }
 
         const Skill& skill = party_member->skills[skill_idx];
 
@@ -166,12 +169,14 @@ namespace {
 
     void WritePlayerStatisticsAllSkills(PartyMember* party_member)
     {
-        if (!party_member)
+        if (!party_member) {
             return;
+        }
         for (size_t i = 0; i < party_member->skills.size(); i++) {
             const auto& skill = party_member->skills[i];
-            if (0U == skill.count)
+            if (0U == skill.count) {
                 continue;
+            }
             WritePlayerStatisticsSingleSkill(party_member, i);
         }
     }
@@ -192,8 +197,9 @@ namespace {
             snprintf(table_name, _countof(table_name), "###Table%d", party_member.party_idx);
 
             const float width = ImGui::GetContentRegionAvail().x;
-            if (party_member.skills.size() == 0)
+            if (party_member.skills.size() == 0) {
                 return;
+            }
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
             if (ImGui::BeginTable(table_name, party_member.skills.size())) {
                 const float column_width = width / party_member.skills.size();
@@ -207,8 +213,9 @@ namespace {
                 ImGui::TableNextRow();
                 for (size_t i = 0; i < party_member.skills.size(); i++) {
                     const Skill& skill = party_member.skills[i];
-                    if (skill.id == GW::Constants::SkillID::No_Skill)
+                    if (skill.id == GW::Constants::SkillID::No_Skill) {
                         continue; // Skip empty skill slots (for heroes and yourself)
+                    }
                     ImGui::TableNextColumn();
                     const float percentage = skill.count
                                                  ? static_cast<float>(skill.count) /
@@ -263,14 +270,17 @@ namespace {
 
     bool SetPartyMembers()
     {
-        if (!GW::PartyMgr::GetIsPartyLoaded())
+        if (!GW::PartyMgr::GetIsPartyLoaded()) {
             return false;
-        if (!GW::Map::GetIsMapLoaded())
+        }
+        if (!GW::Map::GetIsMapLoaded()) {
             return false;
+        }
 
         GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-        if (info == nullptr)
+        if (info == nullptr) {
             return false;
+        }
 
         const uint32_t my_player_id = GW::Agents::GetPlayerId();
         const GW::Skillbar* my_skillbar = GetAgentSkillbar(my_player_id);
@@ -285,8 +295,9 @@ namespace {
 
         auto set_party_member = [&valid_party_members,&party_idx](const uint32_t agent_id) {
             const wchar_t* agent_name = GW::Agents::GetAgentEncName(agent_id);
-            if (!agent_name)
+            if (!agent_name) {
                 return static_cast<PartyMember*>(nullptr); // Can fail if game hasn't got all the goodies yet
+            }
             // NB: Sanitising removes [henchman type] and player numbers
             const auto sanitised = GuiUtils::SanitizePlayerName(agent_name);
             auto party_member = GetPartyMemberByEncName(sanitised.c_str());
@@ -303,8 +314,9 @@ namespace {
         auto set_member_skill = [](PartyMember* party_member, const GW::Constants::SkillID skill_id) {
             auto& existing_skills = party_member->skills;
             for (const auto& skill : existing_skills) {
-                if (skill.id == skill_id)
+                if (skill.id == skill_id) {
                     return;
+                }
             }
             existing_skills.push_back(skill_id);
         };
@@ -313,24 +325,29 @@ namespace {
             const auto agent_id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
 
             auto party_member = set_party_member(agent_id);
-            if (!party_member)
+            if (!party_member) {
                 return false;
+            }
 
             if (agent_id == my_player_id) {
                 player_party_member = party_member;
             }
-            if (!info->heroes.valid())
+            if (!info->heroes.valid()) {
                 continue;
+            }
             for (const GW::HeroPartyMember& hero : info->heroes) {
-                if (hero.owner_player_id != player.login_number)
+                if (hero.owner_player_id != player.login_number) {
                     continue;
+                }
 
                 party_member = set_party_member(hero.agent_id);
-                if (!party_member)
+                if (!party_member) {
                     return false;
+                }
                 const GW::Skillbar* skillbar = GetAgentSkillbar(hero.agent_id);
-                if (!skillbar)
+                if (!skillbar) {
                     continue;
+                }
                 /* Skillbar for other players and henchmen is unknown in outpost init with No_Skill */
 
                 for (const GW::SkillbarSkill& skill : skillbar->skills) {
@@ -374,8 +391,9 @@ namespace {
 
     void WritePlayerStatistics(const uint32_t player_idx = -1, const uint32_t skill_idx = -1)
     {
-        if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType())
+        if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType()) {
             return;
+        }
 
         /* all skills for self player */
         if (static_cast<size_t>(-1) == player_idx) {
@@ -391,10 +409,8 @@ namespace {
         }
     }
 
-    void CmdSkillStatistics(const wchar_t* message, const int argc, const LPWSTR* argv)
+    void CmdSkillStatistics(const wchar_t*, const int argc, const LPWSTR* argv)
     {
-        UNREFERENCED_PARAMETER(message);
-
         /* command: /skillstats */
         /* will write the stats of the self player */
         if (argc < 2) {
@@ -485,13 +501,15 @@ namespace {
             }
         }
 
-        if (NONE_SKILL == value)
+        if (NONE_SKILL == value) {
             return;
+        }
 
         Skill* found_skill = nullptr;
         const auto party_member = GetPartyMemberByAgentId(agent_id);
-        if (!party_member)
+        if (!party_member) {
             return;
+        }
         for (auto& skill : party_member->skills) {
             if (skill.id == activated_skill_id) {
                 found_skill = &skill;
@@ -524,9 +542,7 @@ void PartyStatisticsWindow::Initialize()
 
     /* Skill on self or party player */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
-        &GenericValueSelf_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValue* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-
+        &GenericValueSelf_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet) -> void {
             const uint32_t value_id = packet->value_id;
             const uint32_t caster_id = packet->agent_id;
             constexpr uint32_t target_id = 0U;
@@ -536,50 +552,50 @@ void PartyStatisticsWindow::Initialize()
         });
 
     /* Skill on enemy player */
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
-                                                                           [this](const GW::HookStatus* status, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
-                                                                               UNREFERENCED_PARAMETER(status);
-
-                                                                               const uint32_t value_id = packet->Value_id;
-                                                                               const uint32_t caster_id = packet->caster;
-                                                                               const uint32_t target_id = packet->target;
-                                                                               const uint32_t value = packet->value;
-                                                                               constexpr bool no_target = false;
-                                                                               SkillCallback(value_id, caster_id, target_id, value, no_target);
-                                                                           });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(
+        &GenericValueTarget_Entry,
+        [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
+            const uint32_t value_id = packet->Value_id;
+            const uint32_t caster_id = packet->caster;
+            const uint32_t target_id = packet->target;
+            const uint32_t value = packet->value;
+            constexpr bool no_target = false;
+            SkillCallback(value_id, caster_id, target_id, value, no_target);
+        });
 
     UnsetPartyStatistics();
     pending_party_members = true;
 }
 
-void PartyStatisticsWindow::Update(const float delta)
+void PartyStatisticsWindow::Update(const float )
 {
-    UNREFERENCED_PARAMETER(delta);
-
     if (pending_party_members && SetPartyMembers()) {
         pending_party_members = false;
     }
 
     if (constexpr auto time_diff_threshold = 600.0f; !chat_queue.empty() && (TIMER_DIFF(send_timer) > time_diff_threshold)) {
         send_timer = TIMER_INIT();
-        if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType())
+        if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType()) {
             return;
-        if (!GW::Agents::GetPlayer())
+        }
+        if (!GW::Agents::GetPlayer()) {
             return;
+        }
 
         GW::Chat::SendChat('#', chat_queue.front().c_str());
         chat_queue.pop();
     }
 }
 
-void PartyStatisticsWindow::Draw(IDirect3DDevice9* pDevice)
+void PartyStatisticsWindow::Draw(IDirect3DDevice9* )
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
 
-    if (!GW::Map::GetIsMapLoaded())
+    if (!GW::Map::GetIsMapLoaded()) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {

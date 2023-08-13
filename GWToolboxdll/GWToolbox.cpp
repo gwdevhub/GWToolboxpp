@@ -47,8 +47,9 @@ namespace {
 
     bool AttachWndProcHandler()
     {
-        if (event_handler_attached)
+        if (event_handler_attached) {
             return true;
+        }
         Log::Log("installing event handler\n");
         gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
         OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
@@ -68,8 +69,9 @@ namespace {
 
     bool DetachWndProcHandler()
     {
-        if (!event_handler_attached)
+        if (!event_handler_attached) {
             return true;
+        }
         Log::Log("Restoring input hook\n");
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
         event_handler_attached = false;
@@ -80,8 +82,9 @@ namespace {
 
     bool AttachImgui(IDirect3DDevice9* device)
     {
-        if (imgui_initialized)
+        if (imgui_initialized) {
             return true;
+        }
         ImGui::CreateContext();
         //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
         ImGui_ImplDX9_Init(device);
@@ -111,8 +114,9 @@ namespace {
 
     bool DetachImgui()
     {
-        if (!imgui_initialized)
+        if (!imgui_initialized) {
             return true;
+        }
         ImGui_ImplDX9_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
@@ -140,15 +144,17 @@ namespace {
     {
         // NB: No way of manually freeing inifile if its trapped inside this function, but nbd, OS will clean up. Alternative is memcpy, but no need for the extra copy
         static ToolboxIni* inifile = nullptr;
-        if (config.empty())
+        if (config.empty()) {
             config = GWTOOLBOX_INI_FILENAME;
+        }
         if (config != GWTOOLBOX_INI_FILENAME) {
             config = std::filesystem::path(L"configs") / config;
             config += L".ini";
         }
         const auto full_path = Resources::GetPath(config);
-        if (!fresh && !(inifile && inifile->location_on_disk == full_path))
+        if (!fresh && !(inifile && inifile->location_on_disk == full_path)) {
             fresh = true;
+        }
         if (fresh) {
             // inifile is cached, unless path for config has changed.
             const auto tmp = new ToolboxIni(false, false, false);
@@ -165,8 +171,9 @@ namespace {
         const auto found = std::ranges::find(vec, &m);
         if (found != vec.end()) {
             // Module found
-            if (enable)
+            if (enable) {
                 return true;
+            }
             m.SaveSettings(OpenSettingsFile());
             modules_terminating.push_back(&m);
             m.SignalTerminate();
@@ -175,11 +182,13 @@ namespace {
             return false;
         }
         // Module not found
-        if (!enable)
+        if (!enable) {
             return false;
+        }
         const auto is_terminating = std::ranges::find(modules_terminating, &m);
-        if (is_terminating != modules_terminating.end())
+        if (is_terminating != modules_terminating.end()) {
             return false; // Not finished terminating
+        }
         vec.push_back(&m);
         m.Initialize();
         m.LoadSettings(OpenSettingsFile());
@@ -322,8 +331,9 @@ DWORD __stdcall ThreadEntry(LPVOID)
 
     // @Remark:
     // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks
-    while (GW::HookBase::GetInHookCount())
+    while (GW::HookBase::GetInHookCount()) {
         Sleep(16);
+    }
 
     // @Remark:
     // We can't guarantee that the code in Guild Wars thread isn't still in the trampoline, but
@@ -364,12 +374,15 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
-    if (Message == WM_RBUTTONUP)
+    if (Message == WM_RBUTTONUP) {
         right_mouse_down = false;
-    if (Message == WM_RBUTTONDOWN)
+    }
+    if (Message == WM_RBUTTONDOWN) {
         right_mouse_down = true;
-    if (Message == WM_RBUTTONDBLCLK)
+    }
+    if (Message == WM_RBUTTONDBLCLK) {
         right_mouse_down = true;
+    }
 
     GWToolbox::Instance().right_mouse_down = right_mouse_down;
 
@@ -403,15 +416,18 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         case WM_RBUTTONDBLCLK:
         case WM_MOUSEMOVE:
         case WM_MOUSEWHEEL: {
-            if (io.WantCaptureMouse && !skip_mouse_capture)
+            if (io.WantCaptureMouse && !skip_mouse_capture) {
                 return true;
+            }
             bool captured = false;
             for (const auto m : tb.GetAllModules()) {
-                if (m->WndProc(Message, wParam, lParam))
+                if (m->WndProc(Message, wParam, lParam)) {
                     captured = true;
+                }
             }
-            if (captured)
+            if (captured) {
                 return true;
+            }
         }
         //if (!skip_mouse_capture) {
 
@@ -421,8 +437,9 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         // keyboard messages
         case WM_KEYUP:
         case WM_SYSKEYUP:
-            if (io.WantTextInput)
+            if (io.WantTextInput) {
                 break; // if imgui wants them, send to imgui (above) and to gw
+            }
         // else fallthrough
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
@@ -435,8 +452,9 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         case WM_MBUTTONDOWN:
         case WM_MBUTTONDBLCLK:
         case WM_MBUTTONUP:
-            if (io.WantTextInput)
+            if (io.WantTextInput) {
                 return true; // if imgui wants them, send just to imgui (above)
+            }
 
         // send input to chat commands for camera movement
             if (ChatCommands::Instance().WndProc(Message, wParam, lParam)) {
@@ -447,11 +465,13 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         {
             bool captured = false;
             for (const auto m : tb.GetAllModules()) {
-                if (m->WndProc(Message, wParam, lParam))
+                if (m->WndProc(Message, wParam, lParam)) {
                     captured = true;
+                }
             }
-            if (captured)
+            if (captured) {
                 return true;
+            }
         }
         // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
         // We may want to not send events to toolbox if the player is typing in-game
@@ -477,8 +497,9 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
 
 void GWToolbox::Initialize()
 {
-    if (initialized || must_self_destruct)
+    if (initialized || must_self_destruct) {
         return;
+    }
 
     imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
 
@@ -507,8 +528,9 @@ void GWToolbox::Initialize()
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
         const auto* c = GW::GetCharContext();
-        if (c && c->player_name)
+        if (c && c->player_name) {
             Log::InfoW(L"Hello!");
+        }
     }
     GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
         __try {
@@ -554,8 +576,9 @@ std::filesystem::path GWToolbox::SaveSettings(const std::filesystem::path& confi
 
 void GWToolbox::StartSelfDestruct() const
 {
-    if (must_self_destruct)
+    if (must_self_destruct) {
         return;
+    }
     if (initialized) {
         SaveSettings();
         while (modules_enabled.size()) {
@@ -574,8 +597,9 @@ void GWToolbox::StartSelfDestruct() const
 
 void GWToolbox::Terminate()
 {
-    if (!initialized)
+    if (!initialized) {
         return;
+    }
     SaveSettings();
 
     GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
@@ -599,10 +623,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 {
     // === destruction ===
     if (initialized && must_self_destruct) {
-        if (!GuiUtils::FontsLoaded())
+        if (!GuiUtils::FontsLoaded()) {
             return;
-        if (!CanTerminate())
+        }
+        if (!CanTerminate()) {
             return;
+        }
 
         Instance().Terminate();
         ASSERT(DetachImgui());
@@ -619,17 +645,22 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         // Attach imgui if not already done so
         ASSERT(AttachImgui(device));
 
-        if (!GW::UI::GetIsUIDrawn())
+        if (!GW::UI::GetIsUIDrawn()) {
             return;
-        if (GW::GetPreGameContext())
+        }
+        if (GW::GetPreGameContext()) {
             return; // Login screen
-        if (GW::Map::GetIsInCinematic())
+        }
+        if (GW::Map::GetIsInCinematic()) {
             return;
-        if (IsIconic(GW::MemoryMgr::GetGWWindowHandle()))
+        }
+        if (IsIconic(GW::MemoryMgr::GetGWWindowHandle())) {
             return;
+        }
 
-        if (!GuiUtils::FontsLoaded())
+        if (!GuiUtils::FontsLoaded()) {
             return; // Fonts not loaded yet.
+        }
 
         Resources::Instance().DxUpdate(device);
 
@@ -638,8 +669,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
         const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
-        if (!world_map_showing)
+        if (!world_map_showing) {
             Minimap::Render(device);
+        }
 
         ImGui::NewFrame();
 
@@ -651,8 +683,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         io.AddKeyEvent(ImGuiKey_ModAlt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
         for (const auto uielement : ui_elements_enabled) {
-            if (world_map_showing && !uielement->ShowOnWorldMap())
+            if (world_map_showing && !uielement->ShowOnWorldMap()) {
                 continue;
+            }
             uielement->Draw(device);
         }
 
@@ -676,8 +709,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 void GWToolbox::Update(GW::HookStatus*)
 {
     static DWORD last_tick_count;
-    if (last_tick_count == 0)
+    if (last_tick_count == 0) {
         last_tick_count = GetTickCount();
+    }
 
     // @Enhancement:
     // Improve precision with QueryPerformanceCounter

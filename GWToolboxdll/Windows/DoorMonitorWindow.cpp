@@ -10,15 +10,16 @@
 #include <Windows/DoorMonitorWindow.h>
 #include <ImGuiAddons.h>
 
-void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice)
+void DoorMonitorWindow::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(512, 256), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         return ImGui::End();
+    }
 
     const float colWidth = 100.0f * ImGui::GetIO().FontGlobalScale;
     float offset = 0.0f;
@@ -50,26 +51,30 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::Text("%s", mbstr);
         mbstr[0] = '-';
         mbstr[1] = 0;
-        if (o.first_open)
+        if (o.first_open) {
             std::strftime(mbstr, 100, "%H:%M:%S", std::localtime(&o.first_open));
+        }
         ImGui::SameLine(offset += colWidth);
         ImGui::Text("%s", mbstr);
         mbstr[0] = '-';
         mbstr[1] = 0;
-        if (o.first_close)
+        if (o.first_close) {
             std::strftime(mbstr, 100, "%H:%M:%S", std::localtime(&o.first_close));
+        }
         ImGui::SameLine(offset += colWidth);
         ImGui::Text("%s", mbstr);
         mbstr[0] = '-';
         mbstr[1] = 0;
-        if (o.last_open)
+        if (o.last_open) {
             std::strftime(mbstr, 100, "%H:%M:%S", std::localtime(&o.last_open));
+        }
         ImGui::SameLine(offset += colWidth);
         ImGui::Text("%s", mbstr);
         mbstr[0] = '-';
         mbstr[1] = 0;
-        if (o.last_close)
+        if (o.last_close) {
             std::strftime(mbstr, 100, "%H:%M:%S", std::localtime(&o.last_close));
+        }
         ImGui::SameLine(offset += colWidth);
         ImGui::Text("%s", mbstr);
         ImGui::SameLine(offset += colWidth);
@@ -108,21 +113,23 @@ void DoorMonitorWindow::Initialize()
         in_zone = true;
     }
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Callback,
-                                                                         [this](const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
-                                                                             UNREFERENCED_PARAMETER(status);
-                                                                             if (!packet->is_explorable)
-                                                                                 return in_zone = false, false;
-                                                                             doors.clear();
-                                                                             return in_zone = true, false;
-                                                                         });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
+        &InstanceLoadInfo_Callback,
+        [this](const GW::HookStatus* , const GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+            if (!packet->is_explorable) {
+                return in_zone = false, false;
+            }
+            doors.clear();
+            return in_zone = true, false;
+        });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Callback,
-                                                                            [this](const GW::HookStatus* status, const GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
-                                                                                UNREFERENCED_PARAMETER(status);
-                                                                                if (!in_zone)
-                                                                                    return false;
-                                                                                DoorObject::DoorAnimation(packet->object_id, packet->animation_type, packet->animation_stage);
-                                                                                return false;
-                                                                            });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
+        &ManipulateMapObject_Callback,
+        [this](const GW::HookStatus* , const GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
+            if (!in_zone) {
+                return false;
+            }
+            DoorObject::DoorAnimation(packet->object_id, packet->animation_type, packet->animation_stage);
+            return false;
+        });
 }

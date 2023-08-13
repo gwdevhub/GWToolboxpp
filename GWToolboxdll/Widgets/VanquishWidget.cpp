@@ -9,19 +9,20 @@
 #include <Utils/GuiUtils.h>
 #include <Widgets/VanquishWidget.h>
 
-void VanquishWidget::Draw(IDirect3DDevice9* pDevice)
+void VanquishWidget::Draw(IDirect3DDevice9*)
 {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible)
+    if (!visible) {
         return;
+    }
 
     const DWORD tokill = GW::Map::GetFoesToKill();
     const DWORD killed = GW::Map::GetFoesKilled();
 
     if ((GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) ||
         !GW::PartyMgr::GetIsPartyInHardMode() ||
-        tokill <= 0)
+        tokill <= 0) {
         return;
+    }
 
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_ModCtrl);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));

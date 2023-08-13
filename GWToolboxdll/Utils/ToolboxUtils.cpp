@@ -51,8 +51,9 @@ namespace ToolboxUtils {
 
         bool IsArgumentFlag(const wchar_t check)
         {
-            if (IsNumericFlag(check))
+            if (IsNumericFlag(check)) {
                 return true;
+            }
             switch (check) {
                 case 0x10a:
                 case 0x10b:
@@ -67,9 +68,12 @@ namespace ToolboxUtils {
 
         const size_t GetSegmentLength(const wchar_t* message)
         {
-            if (!message) return 0;
-            if (IsNumericFlag(*message))
+            if (!message) {
+                return 0;
+            }
+            if (IsNumericFlag(*message)) {
                 return 1;
+            }
             size_t i = 0;
             for (i = 0; message[i] > 0x2; i++) {
                 if (IsNumericFlag(message[i])) {
@@ -84,21 +88,27 @@ namespace ToolboxUtils {
 
         const size_t GetIdentifierLength(const wchar_t* message)
         {
-            if (!message) return 0;
+            if (!message) {
+                return 0;
+            }
             size_t i = 0;
             for (i = 0; message[i] > 0x2; i++) {
-                if (IsArgumentFlag(message[i]))
+                if (IsArgumentFlag(message[i])) {
                     break;
+                }
             }
             return i;
         }
 
         const wchar_t* GetSegmentArgument(const wchar_t* message, wchar_t segment_key, size_t* segment_length_out, size_t* identifier_length_out)
         {
-            if (!message) return nullptr;
+            if (!message) {
+                return nullptr;
+            }
             for (size_t i = 0; message[i] > 0x2; i++) {
-                if (!IsArgumentFlag(message[i]))
+                if (!IsArgumentFlag(message[i])) {
                     continue;
+                }
                 if (message[i] == segment_key) {
                     const wchar_t* argument_start_pos = message + i + 1;
                     if (segment_length_out) {
@@ -129,10 +139,13 @@ namespace ToolboxUtils {
 
         DWORD GetNumericSegment(const wchar_t* message)
         {
-            if (!message) return 0;
+            if (!message) {
+                return 0;
+            }
             const wchar_t* found = GetSegmentArgument(message, 0x101);
-            if (found && *found)
+            if (found && *found) {
                 return *found - 0x100;
+            }
             return 0;
         }
     }
@@ -149,17 +162,21 @@ namespace ToolboxUtils {
 
     GW::Player* GetPlayerByName(const wchar_t* _name)
     {
-        if (!_name)
+        if (!_name) {
             return nullptr;
+        }
         const std::wstring name = GuiUtils::SanitizePlayerName(_name);
         GW::PlayerArray* players = GW::PlayerMgr::GetPlayerArray();
-        if (!players)
+        if (!players) {
             return nullptr;
+        }
         for (GW::Player& player : *players) {
-            if (!player.name)
+            if (!player.name) {
                 continue;
-            if (name == GuiUtils::SanitizePlayerName(player.name))
+            }
+            if (name == GuiUtils::SanitizePlayerName(player.name)) {
                 return &player;
+            }
         }
         return nullptr;
     }
@@ -196,8 +213,9 @@ namespace ToolboxUtils {
     bool ClearMessageCore()
     {
         auto* buf = GetMessageBuffer();
-        if (!buf)
+        if (!buf) {
             return false;
+        }
         buf->clear();
         return true;
     }
@@ -220,21 +238,25 @@ namespace ToolboxUtils {
     GW::Player* GetPlayerByAgentId(const uint32_t agent_id, GW::AgentLiving** info_out)
     {
         const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-        if (!(agent && agent->GetIsLivingType() && agent->IsPlayer()))
+        if (!(agent && agent->GetIsLivingType() && agent->IsPlayer())) {
             return nullptr;
-        if (info_out)
+        }
+        if (info_out) {
             *info_out = agent;
+        }
         return GW::PlayerMgr::GetPlayerByID(agent->login_number);
     }
 
     GW::HeroInfo* GetHeroInfo(const uint32_t hero_id)
     {
         const auto w = GW::GetWorldContext();
-        if (!(w && w->hero_info.size()))
+        if (!(w && w->hero_info.size())) {
             return nullptr;
+        }
         for (auto& a : w->hero_info) {
-            if (a.hero_id == hero_id)
+            if (a.hero_id == hero_id) {
                 return &a;
+            }
         }
         return nullptr;
     }
@@ -245,11 +267,13 @@ namespace ToolboxUtils {
             return IsHenchmanInParty(agent_id);
         }
         const auto w = GW::GetWorldContext();
-        if (!(w && w->henchmen_agent_ids.size()))
+        if (!(w && w->henchmen_agent_ids.size())) {
             return false;
+        }
         for (const auto a : w->henchmen_agent_ids) {
-            if (a == agent_id)
+            if (a == agent_id) {
                 return true;
+            }
         }
         return false;
     }
@@ -261,12 +285,14 @@ namespace ToolboxUtils {
             return IsHeroInParty(agent_id);
         }
         const auto w = GW::GetWorldContext();
-        if (!(w && w->hero_info.size()))
+        if (!(w && w->hero_info.size())) {
             return false;
+        }
         for (auto& a : w->hero_info) {
             if (a.agent_id == agent_id) {
-                if (info_out)
+                if (info_out) {
                     *info_out = &a;
+                }
                 return true;
             }
         }
@@ -283,16 +309,20 @@ namespace ToolboxUtils {
     const GW::HenchmanPartyMember* GetHenchmanPartyMember(const uint32_t agent_id, GW::PartyInfo** party_out)
     {
         const auto* parties = GetParties();
-        if (!parties)
+        if (!parties) {
             return nullptr;
+        }
         for (const auto party : *parties) {
-            if (!party)
+            if (!party) {
                 continue;
+            }
             for (const auto& p : party->henchmen) {
-                if (p.agent_id != agent_id)
+                if (p.agent_id != agent_id) {
                     continue;
-                if (party_out)
+                }
+                if (party_out) {
                     *party_out = party;
+                }
                 return &p;
             }
         }
@@ -308,16 +338,20 @@ namespace ToolboxUtils {
     const GW::HeroPartyMember* GetHeroPartyMember(const uint32_t agent_id, GW::PartyInfo** party_out)
     {
         const auto* parties = GetParties();
-        if (!parties)
+        if (!parties) {
             return nullptr;
+        }
         for (const auto party : *parties) {
-            if (!party)
+            if (!party) {
                 continue;
+            }
             for (const auto& p : party->heroes) {
-                if (p.agent_id != agent_id)
+                if (p.agent_id != agent_id) {
                     continue;
-                if (party_out)
+                }
+                if (party_out) {
                     *party_out = party;
+                }
                 return &p;
             }
         }
@@ -333,16 +367,20 @@ namespace ToolboxUtils {
     const GW::PlayerPartyMember* GetPlayerPartyMember(const uint32_t login_number, GW::PartyInfo** party_out)
     {
         const auto* parties = GetParties();
-        if (!parties)
+        if (!parties) {
             return nullptr;
+        }
         for (const auto party : *parties) {
-            if (!party)
+            if (!party) {
                 continue;
+            }
             for (const auto& p : party->players) {
-                if (p.login_number != login_number)
+                if (p.login_number != login_number) {
                     continue;
-                if (party_out)
+                }
+                if (party_out) {
                     *party_out = party;
+                }
                 return &p;
             }
         }
@@ -355,8 +393,9 @@ namespace ToolboxUtils {
         GW::PartyInfo* playerParty = partyContext->player_party;
 
         for (const auto& player : playerParty->players) {
-            if (player.login_number == login_number)
+            if (player.login_number == login_number) {
                 return true;
+            }
         }
 
         return false;
@@ -365,10 +404,12 @@ namespace ToolboxUtils {
     bool IsAgentInParty(const uint32_t agent_id)
     {
         const auto* party = GW::PartyMgr::GetPartyInfo();
-        if (!party)
+        if (!party) {
             return false;
-        if (IsHenchmanInParty(agent_id) || IsHeroInParty(agent_id))
+        }
+        if (IsHenchmanInParty(agent_id) || IsHeroInParty(agent_id)) {
             return true;
+        }
         const auto player = GetPlayerByAgentId(agent_id);
         return player && IsPlayerInParty(player->player_number);
     }
@@ -376,39 +417,50 @@ namespace ToolboxUtils {
     float GetSkillRange(const GW::Constants::SkillID skill_id)
     {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-        if (!skill)
+        if (!skill) {
             return 0.f;
-        if (skill->IsTouchRange())
+        }
+        if (skill->IsTouchRange()) {
             return GW::Constants::Range::Touch;
-        if (skill->IsHalfRange())
+        }
+        if (skill->IsHalfRange()) {
             return GW::Constants::Range::Spellcast / 2.f;
+        }
         return GW::Constants::Range::Spellcast;
     }
 
     // Helper function; avoids doing string checks on offline friends.
     GW::Friend* GetFriend(const wchar_t* account, const wchar_t* playing, const GW::FriendType type, const GW::FriendStatus status)
     {
-        if (!(account || playing))
+        if (!(account || playing)) {
             return nullptr;
+        }
         GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
-        if (!fl)
+        if (!fl) {
             return nullptr;
+        }
         uint32_t n_friends = fl->number_of_friend, n_found = 0;
         GW::FriendsListArray& friends = fl->friends;
         for (GW::Friend* it : friends) {
-            if (n_found == n_friends)
+            if (n_found == n_friends) {
                 break;
-            if (!it)
+            }
+            if (!it) {
                 continue;
-            if (it->type != type)
+            }
+            if (it->type != type) {
                 continue;
+            }
             n_found++;
-            if (it->status != status)
+            if (it->status != status) {
                 continue;
-            if (account && !wcsncmp(it->alias, account, 20))
+            }
+            if (account && !wcsncmp(it->alias, account, 20)) {
                 return it;
-            if (playing && !wcsncmp(it->charname, playing, 20))
+            }
+            if (playing && !wcsncmp(it->charname, playing, 20)) {
                 return it;
+            }
         }
         return nullptr;
     }
@@ -438,8 +490,9 @@ namespace ToolboxUtils {
                     swprintf(buffer, _countof(buffer), L"\x2\x102\x2\xA86\x10A\xA44\x1\x101%s", m[1].str().c_str());
                     original += buffer;
                 }
-                if (IsInfused(item))
+                if (IsInfused(item)) {
                     original += L"\x2\x102\x2\xAC9";
+                }
                 return original;
             }
             default:
@@ -619,8 +672,9 @@ namespace ToolboxUtils {
         if (std::regex_search(original, m, attribute_stacks)) {
             for (auto& match : m) {
                 const std::wstring found = match.str();
-                if (found[4] != found[16])
+                if (found[4] != found[16]) {
                     continue; // Different attributes.
+                }
                 swprintf(buffer, _countof(buffer), L"%c\x10A\xA84\x10A%c\x1\x101%c\x2\xA84\x101%c\x1",
                          found[0], found[4], found[7], found[19]);
                 original = std::regex_replace(original, std::wregex(found), buffer);

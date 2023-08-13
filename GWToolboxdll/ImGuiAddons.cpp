@@ -18,8 +18,9 @@ namespace ImGui {
     void StartSpacedElements(const float width, const bool include_font_scaling)
     {
         element_spacing_width = width;
-        if (include_font_scaling)
+        if (include_font_scaling) {
             element_spacing_width *= FontScale();
+        }
         element_spacing_cols = static_cast<int>(std::floor(GetContentRegionAvail().x / element_spacing_width));
         element_spacing_col_idx = 0;
         element_spacing_indent = &(GetCurrentWindow()->DC.Indent.x);
@@ -121,14 +122,18 @@ namespace ImGui {
             img_size = {0.f, 0.f};
         }
         else {
-            if (icon_size.x > 0.f)
+            if (icon_size.x > 0.f) {
                 img_size.x = icon_size.x;
-            if (icon_size.y > 0.f)
+            }
+            if (icon_size.y > 0.f) {
                 img_size.y = icon_size.y;
-            if (img_size.y == 0.f)
+            }
+            if (img_size.y == 0.f) {
                 img_size.y = button_size.y - 2.f;
-            if (img_size.x == 0.f)
+            }
+            if (img_size.x == 0.f) {
                 img_size.x = img_size.y;
+            }
         }
         const ImGuiStyle& style = GetStyle();
         const float content_width = img_size.x + textsize.x + (style.FramePadding.x * 2.f);
@@ -144,8 +149,9 @@ namespace ImGui {
         if (img_size.x) {
             AddImageCropped(icon, ImVec2(img_x, img_y), ImVec2(img_x + img_size.x, img_y + img_size.y));
         }
-        if (label)
+        if (label) {
             GetWindowDrawList()->AddText(ImVec2(text_x, text_y), ImColor(GetStyle().Colors[ImGuiCol_Text]), label);
+        }
         return clicked;
     }
 
@@ -278,8 +284,9 @@ namespace ImGui {
             const auto texture = static_cast<IDirect3DTexture9*>(user_texture_id);
             D3DSURFACE_DESC desc;
             const HRESULT res = texture->GetLevelDesc(0, &desc);
-            if (!SUCCEEDED(res))
+            if (!SUCCEEDED(res)) {
                 return uv1; // Don't throw anything into the log here; this function is called every frame by modules that use it!
+            }
             const float ratio = size.x / size.y;
             const float image_ratio = static_cast<float>(desc.Width) / static_cast<float>(desc.Height);
             if (image_ratio < ratio) {
@@ -318,8 +325,9 @@ namespace ImGui {
                 value_changed = true;
             }
             PopID();
-            if (((i + 1) % max_per_line) != 0)
+            if (((i + 1) % max_per_line) != 0) {
                 SameLine();
+            }
         }
 
         if (flags & ImGuiColorEditFlags_AlphaPreview) {
