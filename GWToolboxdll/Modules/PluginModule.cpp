@@ -145,10 +145,13 @@ void PluginModule::DrawSettingsInternal()
         style.Colors[ImGuiCol_Header] = {0, 0, 0, 0};
 
         static char buf[128];
-        sprintf(buf, "      %s", plugin->path.filename().string().c_str());
-        const auto pos = ImGui::GetCursorScreenPos();
         const auto has_settings = plugin->initialized && plugin->instance && plugin->instance->HasSettings();
-        const bool is_showing = has_settings ? ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap) : ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_Leaf);
+        if (has_settings)
+            sprintf(buf, "      %s", plugin->path.filename().string().c_str());
+        else
+            sprintf(buf, "             %s", plugin->path.filename().string().c_str());
+        const auto pos = ImGui::GetCursorScreenPos();
+        const bool is_showing = has_settings ? ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap) : ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_AllowItemOverlap);
 
         if (const auto icon = plugin->initialized ? plugin->instance->Icon() : nullptr) {
             const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
@@ -177,7 +180,7 @@ void PluginModule::DrawSettingsInternal()
             }
         }
 
-        if (is_showing && plugin->visible && InitializePlugin(plugin) && has_settings) {
+        if (is_showing && InitializePlugin(plugin) && has_settings) {
             plugin->instance->DrawSettings();
         }
         ImGui::PopID();
