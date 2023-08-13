@@ -1,6 +1,7 @@
 // Two attributes to this shader (provided once per frame):
 float4 cur_pos : register(c0);  // only xyz components are used
-float4 max_dist : register(c1);  // only x component is used
+float4 max_dist : register(c1); // only x component is used
+float4 fog_starts_at : register(c2); // only x component is used
 
 
 // Compute the euclidean distance between two 3D points.
@@ -26,8 +27,12 @@ float4 main(PS_INPUT input) : COLOR {
     // If this pixel is >= max_dist away, render it fully transparent.
     // `clip(-1)` did not work for unknown reasons.
     float pixel_dist = euclidean(cur_pos.xyz, input.position_for_dist_check.xyz);
-    if (pixel_dist >= max_dist.x) {
-       return float4(0.0, 0.0, 0.0, 0.0);
+    if (pixel_dist >= max_dist.x) {  // completely removed
+        return float4(0.0, 0.0, 0.0, 0.0);
     }
-    return input.color;
+    float4 output = input.color;
+    if (pixel_dist > fog_starts_at.x) {  // fog is applied
+        output.rgba = lerp(output.rgba, float4(0.0, 0.0, 0.0, 0.0), (pixel_dist - fog_starts_at.x) / (max_dist.x - fog_starts_at.x));
+    }
+    return output;
 }
