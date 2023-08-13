@@ -2,6 +2,7 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/GameEntities/Camera.h>
 #include <ToolboxIni.h>
 #include <Widgets/Minimap/D3DVertex.h>
 
@@ -40,7 +41,7 @@ private:
     void SyncMarkers(IDirect3DDevice9* device);
     void SyncAllMarkers(IDirect3DDevice9* device);
     bool ConfigureProgrammablePipeline(IDirect3DDevice9* device);
-    static bool SetD3DTransform(IDirect3DDevice9* device);
+    static bool SetD3DTransform(IDirect3DDevice9* device, const GW::Camera* cam);
 
     IDirect3DVertexShader9* vshader = nullptr;
     IDirect3DPixelShader9* pshader = nullptr;
