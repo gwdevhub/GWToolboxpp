@@ -193,5 +193,5 @@ private:
     ToolboxIni* agentcolorinifile = nullptr;
 
     GW::HookEntry UIMsg_Entry;
-    static void OnUIMessage(GW::HookStatus* /*unused*/, GW::UI::UIMessage /*msgid*/, void* /*wParam*/, void* /*unused*/);
+    static void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
 };

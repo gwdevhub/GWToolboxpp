@@ -337,7 +337,7 @@ void Minimap::Initialize()
     GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
 }
 
-void Minimap::OnUIMessage(GW::HookStatus* /*unused*/, const GW::UI::UIMessage msgid, void* wParam, void* /*unused*/)
+void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
 {
     auto& instance = Instance();
     switch (msgid) {
@@ -753,7 +753,7 @@ DirectX::XMFLOAT2 Minimap::GetGwinchScale()
     return gwinch_scale;
 }
 
-void Minimap::Draw(IDirect3DDevice9* /*unused*/)
+void Minimap::Draw(IDirect3DDevice9*)
 {
     if (!IsActive()) {
         return;

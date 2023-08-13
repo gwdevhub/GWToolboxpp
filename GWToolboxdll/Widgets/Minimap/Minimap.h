@@ -155,5 +155,5 @@ private:
     GW::HookEntry InstanceLoadInfo_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry UIMsg_Entry;
-    static void OnUIMessage(GW::HookStatus* /*unused*/, GW::UI::UIMessage /*msgid*/, void* /*wParam*/, void* /*unused*/);
+    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage /*msgid*/, void* /*wParam*/, void*);
 };
