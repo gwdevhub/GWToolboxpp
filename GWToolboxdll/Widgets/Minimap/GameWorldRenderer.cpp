@@ -184,7 +184,7 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
 
     // compute projection matrix:
     DirectX::XMFLOAT4X4A mat_proj{};
-    const auto fov = GW::CameraMgr::GetFieldOfView();
+    const auto fov = GW::Render::GetFieldOfView();
     const auto aspect_ratio = static_cast<float>(GW::Render::GetViewportWidth()) / static_cast<float>(GW::Render::GetViewportHeight());
 
     XMStoreFloat4x4A(
