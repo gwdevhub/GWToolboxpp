@@ -1,12 +1,9 @@
 #include "stdafx.h"
 
-using Json = nlohmann::json;
-
 #include <File.h>
 #include <Path.h>
 
 #include <RestClient.h>
-
 #include "Download.h"
 
 class AsyncFileDownloader : public AsyncRestClient {
@@ -75,10 +72,10 @@ struct Release {
 
 static bool ParseRelease(const std::string& json_text, Release* release)
 {
-    Json json;
+    nlohmann::json json;
     try {
-        json = Json::parse(json_text.c_str());
-    } catch (Json::exception&) {
+        json = nlohmann::json::parse(json_text.c_str());
+    } catch (nlohmann::json::exception&) {
         fprintf(stderr, "Json::parse failed\n");
         return false;
     }
@@ -105,7 +102,7 @@ static bool ParseRelease(const std::string& json_text, Release* release)
     release->body = it_body->get<std::string>();
 
     for (size_t i = 0; i < it_assets->size(); i++) {
-        Json& entry = it_assets->at(i);
+        nlohmann::json& entry = it_assets->at(i);
 
         auto it_name = entry.find("name");
         if (it_name == entry.end() || !it_name->is_string()) {
