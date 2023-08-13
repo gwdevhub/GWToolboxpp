@@ -13,7 +13,7 @@ public:
 
     DownloadWindow& operator=(const DownloadWindow&) = delete;
 
-    bool Create();
+    bool Create() override;
     static bool DownloadAllFiles();
     void SetChangelog(const char* str, size_t length) const;
 
