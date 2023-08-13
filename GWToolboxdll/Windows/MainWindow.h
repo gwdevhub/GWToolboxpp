@@ -39,7 +39,7 @@ private:
     bool show_icons = true;
     bool center_align_text = false;
 
-    float GetModuleWeighting(const ToolboxUIElement* m)
+    float GetModuleWeighting(const ToolboxUIElement* m) const
     {
         const auto found = module_weightings.find(m->Name());
         return found == module_weightings.end() ? 1.0f : found->second;

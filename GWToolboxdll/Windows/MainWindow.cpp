@@ -92,14 +92,14 @@ void MainWindow::Draw(IDirect3DDevice9* device)
             const auto& ui_module = modules_to_draw[i].second;
             if (ui_module->DrawTabButton(device, show_icons, true, center_align_text)) {
                 if (one_panel_at_time_only && ui_module->visible && ui_module->IsWindow()) {
-                    for (const auto& ui_module2 : modules_to_draw) {
-                        if (ui_module2.second == ui_module) {
+                    for (const auto& module : modules_to_draw | std::views::values) {
+                        if (module == ui_module) {
                             continue;
                         }
-                        if (!ui_module2.second->IsWindow()) {
+                        if (!module->IsWindow()) {
                             continue;
                         }
-                        ui_module2.second->visible = false;
+                        module->visible = false;
                     }
                 }
             }
