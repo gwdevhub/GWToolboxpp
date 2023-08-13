@@ -728,8 +728,8 @@ namespace {
                     return;
                 }
                 const auto aliases = PartyWindowModule::Instance().GetAliasedPlayerNames();
-                if (aliases.find(player->name) != aliases.end()) {
-                    auto orig_name = aliases.at(player->name).c_str();
+                if (aliases.contains(player->name)) {
+                    const auto orig_name = aliases.at(player->name).c_str();
                     GW::PartyMgr::InvitePlayer(const_cast<wchar_t*>(orig_name));
                 }
                 else {
@@ -749,7 +749,6 @@ namespace {
                 GW::PartyMgr::AddHenchman(pending_reinvite.identifier);
                 return pending_reinvite.reset();
             }
-            break;
         }
         pending_reinvite.reset();
     }
