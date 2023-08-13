@@ -21,5 +21,5 @@ namespace ImGui {
     IMGUI_API bool ColorButtonPicker(const char*, ImU32*, ImGuiColorEditFlags = 0);
 
     IMGUI_API bool ColorPalette(const char* label, size_t* palette_index,
-        ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags);
+                                const ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags);
 }

@@ -24,7 +24,7 @@ void LatencyWidget::Initialize()
     GW::Chat::CreateCommand(L"ping", SendPing);
 }
 
-void LatencyWidget::Update(const float delta) { UNREFERENCED_PARAMETER(delta); }
+void LatencyWidget::Update(const float) { }
 
 void LatencyWidget::OnServerPing(GW::HookStatus*, void* packet)
 {

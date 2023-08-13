@@ -202,7 +202,7 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
     EndCombo();
     return value_changed;
 }
-bool ImGui::ColorPalette(const char* label, size_t* palette_index, ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags)
+bool ImGui::ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags)
 {
     PushID(label);
     BeginGroup();
@@ -220,7 +220,7 @@ bool ImGui::ColorPalette(const char* label, size_t* palette_index, ImVec4* palet
     }
 
     if (flags & ImGuiColorEditFlags_AlphaPreview) {
-        const ImVec4 col;
+        constexpr ImVec4 col;
         PushID(count);
         if (ColorButton("", col, ImGuiColorEditFlags_AlphaPreview)) {
             *palette_index = count;
