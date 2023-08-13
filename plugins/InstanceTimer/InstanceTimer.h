@@ -16,7 +16,7 @@ public:
 	void LoadSettings(const wchar_t*) override;
     void SaveSettings(const wchar_t*) override;
     void DrawSettings() override;
-    void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
+    void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE, bool*) override;
     void Terminate() override;
     bool CanTerminate() override;
     void SignalTerminate() override;
@@ -33,7 +33,6 @@ private:
 
 	bool click_to_print_time = true;
     bool show_extra_timers = false;
-    bool visible = true;
 
     char timer_buffer[32] = "";
     char extra_buffer[32] = "";

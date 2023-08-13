@@ -48,14 +48,15 @@ public:
 
     [[nodiscard]] virtual const char* Icon() const { return nullptr; }
 
-    [[nodiscard]] virtual bool HasSettings() const { return true; }
+    [[nodiscard]] virtual bool HasSettings() const { return false; }
 
     // Initialize module
-    virtual void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll)
+    virtual void Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll, bool* visible_ptr)
     {
         ImGui::SetCurrentContext(ctx);
         ImGui::SetAllocatorFunctions(allocator_fns.alloc_func, allocator_fns.free_func, allocator_fns.user_data);
         toolbox_handle = toolbox_dll;
+        plugin_visible_ptr = visible_ptr;
     }
 
     // Send termination signal to module, make sure Terminate can be called.
@@ -87,4 +88,5 @@ public:
 
 protected:
     HMODULE toolbox_handle = nullptr;
+    bool* plugin_visible_ptr = nullptr;
 };

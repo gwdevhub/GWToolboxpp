@@ -51,18 +51,23 @@ void InstanceTimer::DrawSettings()
     }
 }
 
-void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
+void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll, bool* visible_ptr)
 {
-    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
+    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll, visible_ptr);
     GW::Scanner::Initialize();
     GW::Initialize();
 }
-void InstanceTimer::SignalTerminate() {
+
+void InstanceTimer::SignalTerminate()
+{
     GW::DisableHooks();
 }
-bool InstanceTimer::CanTerminate() {
+
+bool InstanceTimer::CanTerminate()
+{
     return GW::HookBase::GetInHookCount() == 0;
 }
+
 void InstanceTimer::Terminate()
 {
     ToolboxPlugin::Terminate();
@@ -72,7 +77,7 @@ void InstanceTimer::Terminate()
 void InstanceTimer::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle) return;
-    if (!visible) return;
+    if (!plugin_visible_ptr || !*plugin_visible_ptr) return;
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 
     const auto time = GW::Map::GetInstanceTime() / 1000;
@@ -148,10 +153,17 @@ bool InstanceTimer::GetDeepTimer()
     for (const auto& effect : effects) {
         const SkillID effect_id = effect.skill_id;
         switch (effect_id) {
-            case SkillID::Aspect_of_Exhaustion: skill = SkillID::Aspect_of_Exhaustion; break;
-            case SkillID::Aspect_of_Depletion_energy_loss: skill = SkillID::Aspect_of_Depletion_energy_loss; break;
-            case SkillID::Scorpion_Aspect: skill = SkillID::Scorpion_Aspect; break;
-            default: break;
+            case SkillID::Aspect_of_Exhaustion:
+                skill = SkillID::Aspect_of_Exhaustion;
+                break;
+            case SkillID::Aspect_of_Depletion_energy_loss:
+                skill = SkillID::Aspect_of_Depletion_energy_loss;
+                break;
+            case SkillID::Scorpion_Aspect:
+                skill = SkillID::Scorpion_Aspect;
+                break;
+            default:
+                break;
         }
     }
     if (skill == SkillID::No_Skill) {
@@ -172,10 +184,17 @@ bool InstanceTimer::GetDeepTimer()
     if (diff > 100) timer = std::min(timer, 30 - ((diff - 100) % 30));
     if (diff > 200) timer = std::min(timer, 30 - ((diff - 200) % 30));
     switch (skill) {
-        case SkillID::Aspect_of_Exhaustion: snprintf(extra_buffer, 32, "Exhaustion: %d", timer); break;
-        case SkillID::Aspect_of_Depletion_energy_loss: snprintf(extra_buffer, 32, "Depletion: %d", timer); break;
-        case SkillID::Scorpion_Aspect: snprintf(extra_buffer, 32, "Scorpion: %d", timer); break;
-        default: break;
+        case SkillID::Aspect_of_Exhaustion:
+            snprintf(extra_buffer, 32, "Exhaustion: %d", timer);
+            break;
+        case SkillID::Aspect_of_Depletion_energy_loss:
+            snprintf(extra_buffer, 32, "Depletion: %d", timer);
+            break;
+        case SkillID::Scorpion_Aspect:
+            snprintf(extra_buffer, 32, "Scorpion: %d", timer);
+            break;
+        default:
+            break;
     }
     extra_color = ImColor(255, 255, 255);
     return true;
@@ -209,24 +228,41 @@ bool InstanceTimer::GetTrapTimer()
         case MapID::Catacombs_of_Kathandrax_Level_3:
         case MapID::Bloodstone_Caves_Level_1:
         case MapID::Arachnis_Haunt_Level_2:
-        case MapID::Oolas_Lab_Level_2: snprintf(extra_buffer, 32, "Fire Jet: %d", timer); return true;
-        case MapID::Heart_of_the_Shiverpeaks_Level_3: snprintf(extra_buffer, 32, "Fire Spout: %d", timer); return true;
+        case MapID::Oolas_Lab_Level_2:
+            snprintf(extra_buffer, 32, "Fire Jet: %d", timer);
+            return true;
+        case MapID::Heart_of_the_Shiverpeaks_Level_3:
+            snprintf(extra_buffer, 32, "Fire Spout: %d", timer);
+            return true;
         case MapID::Shards_of_Orr_Level_3:
-        case MapID::Cathedral_of_Flames_Level_3: snprintf(extra_buffer, 32, "Fire Trap: %d", timer); return true;
+        case MapID::Cathedral_of_Flames_Level_3:
+            snprintf(extra_buffer, 32, "Fire Trap: %d", timer);
+            return true;
         case MapID::Sepulchre_of_Dragrimmar_Level_1:
         case MapID::Ravens_Point_Level_1:
         case MapID::Ravens_Point_Level_2:
         case MapID::Heart_of_the_Shiverpeaks_Level_1:
-        case MapID::Darkrime_Delves_Level_2: snprintf(extra_buffer, 32, "Ice Jet: %d", timer); return true;
+        case MapID::Darkrime_Delves_Level_2:
+            snprintf(extra_buffer, 32, "Ice Jet: %d", timer);
+            return true;
         case MapID::Darkrime_Delves_Level_1:
-        case MapID::Secret_Lair_of_the_Snowmen: snprintf(extra_buffer, 32, "Ice Spout: %d", timer); return true;
+        case MapID::Secret_Lair_of_the_Snowmen:
+            snprintf(extra_buffer, 32, "Ice Spout: %d", timer);
+            return true;
         case MapID::Bogroot_Growths_Level_1:
         case MapID::Arachnis_Haunt_Level_1:
         case MapID::Shards_of_Orr_Level_1:
-        case MapID::Shards_of_Orr_Level_2: snprintf(extra_buffer, 32, "Poison Jet: %d", timer); return true;
-        case MapID::Bloodstone_Caves_Level_2: snprintf(extra_buffer, 32, "Poison Spout: %d", timer); return true;
+        case MapID::Shards_of_Orr_Level_2:
+            snprintf(extra_buffer, 32, "Poison Jet: %d", timer);
+            return true;
+        case MapID::Bloodstone_Caves_Level_2:
+            snprintf(extra_buffer, 32, "Poison Spout: %d", timer);
+            return true;
         case MapID::Cathedral_of_Flames_Level_2:
-        case MapID::Bloodstone_Caves_Level_3: snprintf(extra_buffer, 32, "Poison Trap: %d", timer); return true;
-        default: return false;
+        case MapID::Bloodstone_Caves_Level_3:
+            snprintf(extra_buffer, 32, "Poison Trap: %d", timer);
+            return true;
+        default:
+            return false;
     }
 }

@@ -28,7 +28,7 @@ public:
     static void Draw(IDirect3DDevice9* device);
     static void Update(GW::HookStatus*);
 
-    void Initialize();
+    static void Initialize();
     static void Terminate();
 
     static bool CanTerminate();

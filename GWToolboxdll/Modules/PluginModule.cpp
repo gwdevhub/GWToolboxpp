@@ -15,22 +15,11 @@ namespace {
 
     const char* plugins_enabled_section = "Plugins Enabled";
 
-    struct Plugin {
-        Plugin(std::filesystem::path _path)
-            : path(std::move(_path)) { };
-        std::filesystem::path path;
-        HMODULE dll = nullptr;
-        ToolboxPlugin* instance = nullptr;
-        bool initialized = false;
-        bool terminating = false;
-        bool active = false;
-    };
+    std::vector<PluginModule::Plugin*> plugins;
 
-    std::vector<Plugin*> plugins;
+    std::vector<PluginModule::Plugin*> loaded_plugins;
 
-    std::vector<Plugin*> loaded_plugins;
-
-    bool UnloadPlugin(Plugin* plugin_ptr)
+    bool UnloadPlugin(PluginModule::Plugin* plugin_ptr)
     {
         auto& plugin = *plugin_ptr;
         if (!plugin.terminating) {
@@ -57,7 +46,7 @@ namespace {
         return true;
     }
 
-    bool LoadPlugin(Plugin* plugin_ptr)
+    bool LoadPlugin(PluginModule::Plugin* plugin_ptr)
     {
         auto& plugin = *plugin_ptr;
         if (plugin.instance) {
@@ -84,7 +73,7 @@ namespace {
         return true;
     }
 
-    bool InitializePlugin(Plugin* plugin_ptr)
+    bool InitializePlugin(PluginModule::Plugin* plugin_ptr)
     {
         auto& plugin = *plugin_ptr;
         if (plugin.terminating || !plugin.instance) {
@@ -99,7 +88,7 @@ namespace {
         }
         ImGuiAllocFns fns;
         ImGui::GetAllocatorFunctions(&fns.alloc_func, &fns.free_func, &fns.user_data);
-        plugin.instance->Initialize(context, fns, GWToolbox::Instance().GetDLLModule());
+        plugin.instance->Initialize(context, fns, GWToolbox::Instance().GetDLLModule(), &plugin.visible);
         plugin.instance->LoadSettings(pluginsfoldername);
         plugin.initialized = true;
         return true;
@@ -131,7 +120,7 @@ namespace {
                     return plugin->path == file_path;
                 });
                 if (found == plugins.end()) {
-                    plugins.push_back(new Plugin(file_path));
+                    plugins.push_back(new PluginModule::Plugin(file_path));
                 }
             }
         }
@@ -158,10 +147,11 @@ void PluginModule::DrawSettingsInternal()
         static char buf[128];
         sprintf(buf, "      %s", plugin->path.filename().string().c_str());
         const auto pos = ImGui::GetCursorScreenPos();
-        const bool is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
+        const auto has_settings = plugin->initialized && plugin->instance && plugin->instance->HasSettings();
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        const bool is_showing = has_settings ? ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap) : ImGui::TreeNodeBehavior(window->GetID(buf), 0, buf);
 
-        const auto icon = plugin->initialized ? plugin->instance->Icon() : nullptr;
-        if (icon) {
+        if (const auto icon = plugin->initialized ? plugin->instance->Icon() : nullptr) {
             const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
             ImGui::GetWindowDrawList()->AddText(
                 ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2),
@@ -182,13 +172,13 @@ void PluginModule::DrawSettingsInternal()
         }
         if (plugin->instance) {
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::GetTextLineHeight() - ImGui::GetStyle().FramePadding.x);
-            ImGui::Checkbox("##check", &plugin->active);
+            ImGui::Checkbox("##check", &plugin->visible);
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Active");
+                ImGui::SetTooltip("Visible");
             }
         }
 
-        if (is_showing && plugin->active && InitializePlugin(plugin)) {
+        if (is_showing && plugin->visible && InitializePlugin(plugin) && has_settings) {
             plugin->instance->DrawSettings();
         }
         ImGui::PopID();
@@ -207,6 +197,11 @@ bool PluginModule::CanTerminate()
     return std::ranges::all_of(loaded_plugins, [](const auto plugin) {
         return !plugin->instance || plugin->instance->CanTerminate();
     });
+}
+
+std::vector<PluginModule::Plugin*> PluginModule::GetPlugins()
+{
+    return loaded_plugins;
 }
 
 void PluginModule::Initialize()
@@ -230,7 +225,7 @@ void PluginModule::Draw(IDirect3DDevice9* device)
         if (!InitializePlugin(plugin)) {
             continue;
         }
-        if (!plugin->active) {
+        if (!plugin->visible) {
             continue;
         }
 
@@ -255,7 +250,7 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
                 if (!LoadPlugin(plugin)) {
                     continue;
                 }
-                plugin->active = is_active;
+                plugin->visible = is_active;
                 InitializePlugin(plugin);
                 plugins_loaded_from_ini.push_back(plugin);
             }
@@ -275,7 +270,7 @@ void PluginModule::SaveSettings(ToolboxIni* ini)
     ini->Delete(plugins_enabled_section, nullptr);
     for (const auto plugin : loaded_plugins) {
         plugin->instance->SaveSettings(pluginsfoldername);
-        ini->SetBoolValue(plugins_enabled_section, plugin->path.filename().string().c_str(), plugin->active);
+        ini->SetBoolValue(plugins_enabled_section, plugin->path.filename().string().c_str(), plugin->visible);
     }
 }
 

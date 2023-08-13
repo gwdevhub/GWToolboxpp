@@ -74,7 +74,7 @@ void Armory::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle)
         return;
-    if (!visible)
+    if (!plugin_visible_ptr || !*plugin_visible_ptr)
         return;
     GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
     if (!player_agent)
@@ -89,7 +89,7 @@ void Armory::Draw(IDirect3DDevice9*)
 
     // constexpr ImVec2 window_size(330.f, 208.f);
     // ImGui::SetNextWindowSize(window_size);
-    if (ImGui::Begin("Armory", &visible, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar)) {
+    if (ImGui::Begin("Armory", plugin_visible_ptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar)) {
         ImGui::Text("Profession: %s", GetProfessionName(prof));
         ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
 
@@ -97,7 +97,7 @@ void Armory::Draw(IDirect3DDevice9*)
             reset_helm_visibility = true;
             head.current_piece = nullptr;
             if (player_agent->equip && player_agent->equip[0]) {
-                GW::Equipment* equip = player_agent->equip[0];
+                const GW::Equipment* equip = player_agent->equip[0];
                 InitItemPiece(&player_armor.head, &equip->head);
                 InitItemPiece(&player_armor.chest, &equip->chest);
                 InitItemPiece(&player_armor.hands, &equip->hands);
@@ -130,35 +130,9 @@ void Armory::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-void Armory::DrawSettings()
+void Armory::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll, bool* visible_ptr)
 {
-    ToolboxPlugin::DrawSettings();
-
-    ImGui::Checkbox("Visible", &visible);
-}
-
-void Armory::LoadSettings(const wchar_t* folder)
-{
-    CSimpleIniA ini{};
-    const auto path = std::filesystem::path(folder) / L"armory.ini";
-    ini.LoadFile(path.wstring().c_str());
-    visible = ini.GetBoolValue(Name(), "visible", visible);
-}
-
-void Armory::SaveSettings(const wchar_t* folder)
-{
-    CSimpleIniA ini{};
-    const auto path = std::filesystem::path(folder) / L"armory.ini";
-    ini.SetBoolValue(Name(), "visible", visible);
-    const auto error = ini.SaveFile(path.wstring().c_str());
-    if (error < 0) {
-        GW::Chat::WriteChat(GW::Chat::CHANNEL_GWCA1, L"Failed to save settings.", L"Armory");
-    }
-}
-
-void Armory::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
-{
-    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
+    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll, visible_ptr);
 
     GW::Scanner::Initialize();
     const auto old_color = GW::Chat::SetMessageColor(GW::Chat::CHANNEL_GWCA1, 0xFFFFFFFF);
@@ -170,7 +144,7 @@ void Armory::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dl
 
     const auto player_agent = GW::Agents::GetPlayerAsAgentLiving();
     if (player_agent && player_agent->equip && player_agent->equip[0]) {
-        GW::Equipment* equip = player_agent->equip[0];
+        const GW::Equipment* equip = player_agent->equip[0];
         InitItemPiece(&player_armor.head, &equip->head);
         InitItemPiece(&player_armor.chest, &equip->chest);
         InitItemPiece(&player_armor.hands, &equip->hands);

@@ -50,15 +50,17 @@ void Clock::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle)
         return;
+    if (!plugin_visible_ptr || !*plugin_visible_ptr)
+        return;
     ImGui::Begin("clock");
     GetTime(time_buf, _countof(time_buf));
     ImGui::TextUnformatted(time_buf);
     ImGui::End();
 }
 
-void Clock::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
+void Clock::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll, bool* visible_ptr)
 {
-    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
+    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll, visible_ptr);
 
     GW::HookBase::Initialize();
     GW::Scanner::Initialize();

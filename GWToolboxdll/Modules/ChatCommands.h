@@ -8,6 +8,7 @@
 
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
+#include <Modules/PluginModule.h>
 
 class ChatCommands : public ToolboxModule {
     const float DEFAULT_CAM_SPEED = 1000.f;            // 600 units per sec
@@ -111,6 +112,7 @@ private:
     static const wchar_t* GetRemainingArgsWstr(const wchar_t* message, int argc_start);
 
     static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t* message, int argc, const LPWSTR* argv);
+    static std::vector<PluginModule::Plugin*> MatchingPlugins(const wchar_t* message, int argc, const LPWSTR* argv);
     static GW::UI::WindowID MatchingGWWindow(const wchar_t*, int argc, const LPWSTR* argv);
 
     float cam_speed = DEFAULT_CAM_SPEED;
@@ -126,8 +128,8 @@ private:
 
         void Terminate()
         {
-            for (const auto& it : npc_names) {
-                delete it.second;
+            for (const auto& name : npc_names | std::views::values) {
+                delete name;
             }
             npc_names.clear();
         }

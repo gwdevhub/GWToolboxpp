@@ -7,6 +7,6 @@ public:
     const char* Name() const override { return "Clock"; }
 
     void Draw(IDirect3DDevice9*) override;
-    void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
+    void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE, bool*) override;
     void Terminate() override;
 };
