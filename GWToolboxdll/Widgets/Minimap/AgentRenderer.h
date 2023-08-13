@@ -30,7 +30,7 @@ public:
     void Render(IDirect3DDevice9* device) override;
 
     void DrawSettings();
-    void LoadSettings(ToolboxIni* ini, const char* section);
+    void LoadSettings(const ToolboxIni* ini, const char* section);
     void SaveSettings(ToolboxIni* ini, const char* section) const;
     void LoadCustomAgents();
     void SaveCustomAgents() const;
@@ -74,8 +74,8 @@ private:
             ModelIdChange
         };
 
-        CustomAgent(ToolboxIni* ini, const char* section);
-        CustomAgent(DWORD _modelId, Color _color, const char* _name);
+        CustomAgent(const ToolboxIni* ini, const char* section);
+        CustomAgent(DWORD model_id, Color _color, const char* _name);
 
         bool DrawHeader();
         bool DrawSettings(Operation& op);
@@ -102,7 +102,7 @@ private:
         bool size_active = false;
     };
 
-    struct Shape_Vertex : public GW::Vec2f {
+    struct Shape_Vertex : GW::Vec2f {
         Shape_Vertex(const float x, const float y, const Color_Modifier mod)
             : Vec2f(x, y), modifier(mod) { }
 
@@ -193,5 +193,5 @@ private:
     ToolboxIni* agentcolorinifile = nullptr;
 
     GW::HookEntry UIMsg_Entry;
-    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnUIMessage(GW::HookStatus* /*unused*/, GW::UI::UIMessage /*msgid*/, void* /*wParam*/, void* /*unused*/);
 };

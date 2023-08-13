@@ -9,7 +9,7 @@
 #include <Widgets/Minimap/PmapRenderer.h>
 
 
-void PmapRenderer::LoadSettings(ToolboxIni* ini, const char* section)
+void PmapRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     color_map = Colors::Load(ini, section, "color_map", 0xFF999999);
     color_mapshadow = Colors::Load(ini, section, "color_mapshadow", 0xFF120808);
@@ -33,12 +33,15 @@ void PmapRenderer::DrawSettings()
         color_mapbackground = 0x00000000;
         Invalidate();
     }
-    if (Colors::DrawSettingHueWheel("Map", &color_map))
+    if (Colors::DrawSettingHueWheel("Map", &color_map)) {
         Invalidate();
-    if (Colors::DrawSettingHueWheel("Shadow", &color_mapshadow))
+    }
+    if (Colors::DrawSettingHueWheel("Shadow", &color_mapshadow)) {
         Invalidate();
-    if (Colors::DrawSettingHueWheel("Background", &color_mapbackground))
+    }
+    if (Colors::DrawSettingHueWheel("Background", &color_mapbackground)) {
         Invalidate();
+    }
 }
 
 void PmapRenderer::Initialize(IDirect3DDevice9* device)
@@ -53,15 +56,16 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device)
         initialized = false;
         return; // no map loaded yet, so don't render anything
     }
-    const bool shadow_show = ((color_mapshadow & IM_COL32_A_MASK) > 0);
+    const bool shadow_show = (color_mapshadow & IM_COL32_A_MASK) > 0;
 
     // get the number of trapezoids, need it to allocate the vertex buffer
     trapez_count_ = 0;
     for (const GW::PathingMap& map : *path_map) {
         trapez_count_ += map.trapezoid_count;
     }
-    if (trapez_count_ == 0)
+    if (trapez_count_ == 0) {
         return;
+    }
 
 #ifdef WIREFRAME_MODE
 
@@ -74,8 +78,9 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device)
 #else
 
     total_tri_count_ = tri_count_ = trapez_count_ * 2;
-    if (shadow_show)
+    if (shadow_show) {
         total_tri_count_ = tri_count_ * 2;
+    }
 
     vert_count_ = tri_count_ * 3;
     total_vert_count_ = total_tri_count_ * 3;
@@ -85,8 +90,9 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device)
     D3DVertex* vertices = nullptr;
 
     // allocate new vertex buffer
-    if (buffer)
+    if (buffer) {
         buffer->Release();
+    }
     device->CreateVertexBuffer(sizeof(D3DVertex) * total_vert_count_, D3DUSAGE_WRITEONLY,
                                D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * total_vert_count_,

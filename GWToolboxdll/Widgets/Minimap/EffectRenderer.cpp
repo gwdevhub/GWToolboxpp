@@ -7,13 +7,13 @@
 
 #include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
+#include <Color.h>
+#include <Timer.h>
 #include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/EffectRenderer.h>
-#include <Timer.h>
-#include <Color.h>
 
 namespace {
     enum SkillEffect {
@@ -149,7 +149,7 @@ void EffectRenderer::Invalidate()
     }
 }
 
-void EffectRenderer::LoadSettings(ToolboxIni* ini, const char* section)
+void EffectRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     Invalidate();
     LoadDefaults();
@@ -187,29 +187,30 @@ void EffectRenderer::DrawSettings()
 void EffectRenderer::RemoveTriggeredEffect(const uint32_t effect_id, GW::Vec2f* pos)
 {
     const auto it1 = aoe_effect_triggers.find(effect_id);
-    if (it1 == aoe_effect_triggers.end())
+    if (it1 == aoe_effect_triggers.end()) {
         return;
+    }
     const auto trigger = it1->second;
     const auto settings = aoe_effect_settings.find(trigger->triggered_effect_id)->second;
-    std::pair<float, float> posp = {pos->x, pos->y};
+    std::pair posp = {pos->x, pos->y};
     const auto trap_handled = trigger->triggers_handled.find(posp);
     if (trap_handled != trigger->triggers_handled.end() && TIMER_DIFF(trap_handled->second) < 5000) {
         return; // Already handled this trap, e.g. Spike Trap triggers 3 times over 2 seconds; we only care about the first.
     }
     trigger->triggers_handled.emplace(posp, TIMER_INIT());
-    std::lock_guard<std::recursive_mutex> lock(effects_mutex);
+    std::lock_guard lock(effects_mutex);
     Effect* closest = nullptr;
     float closestDistance = GW::Constants::SqrRange::Nearby;
-    uint32_t closest_idx = 0;
     for (size_t i = 0; i < aoe_effects.size(); i++) {
         Effect* effect = aoe_effects[i];
-        if (!effect || effect->effect_id != settings->effect_id)
+        if (!effect || effect->effect_id != settings->effect_id) {
             continue;
+        }
         // Need to estimate position; player may have moved on cast slightly.
         const float newDistance = GetSquareDistance(*pos, effect->pos);
-        if (newDistance > closestDistance)
+        if (newDistance > closestDistance) {
             continue;
-        closest_idx = i;
+        }
         closest = effect;
         closestDistance = newDistance;
     }
@@ -221,70 +222,89 @@ void EffectRenderer::RemoveTriggeredEffect(const uint32_t effect_id, GW::Vec2f* 
     }
 }
 
-void EffectRenderer::PacketCallback(const GW::Packet::StoC::GenericValue* pak)
+void EffectRenderer::PacketCallback(const GW::Packet::StoC::GenericValue* pak) const
 {
-    if (!initialized)
+    if (!initialized) {
         return;
-    if (pak->value_id != 21) // Effect on agent
+    }
+    if (pak->value_id != 21) {
+        // Effect on agent
         return;
+    }
     const auto it = aoe_effect_settings.find(pak->value);
-    if (it == aoe_effect_settings.end())
+    if (it == aoe_effect_settings.end()) {
         return;
+    }
     const auto settings = it->second;
-    if (settings->stoc_header && settings->stoc_header != pak->header)
+    if (settings->stoc_header && settings->stoc_header != pak->header) {
         return;
+    }
     const auto* caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-    if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy)
+    if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy) {
         return;
+    }
     aoe_effects.push_back(new Effect(pak->value, caster->pos.x, caster->pos.y, settings->duration, settings->range, &settings->color));
 }
 
-void EffectRenderer::PacketCallback(const GW::Packet::StoC::GenericValueTarget* pak)
+void EffectRenderer::PacketCallback(const GW::Packet::StoC::GenericValueTarget* pak) const
 {
-    if (!initialized)
+    if (!initialized) {
         return;
-    if (pak->Value_id != 20) // Effect on target
+    }
+    if (pak->Value_id != 20) {
+        // Effect on target
         return;
+    }
     const auto it = aoe_effect_settings.find(pak->value);
-    if (it == aoe_effect_settings.end())
+    if (it == aoe_effect_settings.end()) {
         return;
+    }
     const auto settings = it->second;
-    if (settings->stoc_header && settings->stoc_header != pak->header)
+    if (settings->stoc_header && settings->stoc_header != pak->header) {
         return;
-    if (pak->caster == pak->target)
+    }
+    if (pak->caster == pak->target) {
         return;
+    }
     const auto caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->caster));
-    if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy)
+    if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy) {
         return;
+    }
     const GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
-    if (!target)
+    if (!target) {
         return;
+    }
     aoe_effects.push_back(new Effect(pak->value, target->pos.x, target->pos.y, settings->duration, settings->range, &settings->color));
 }
 
-void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak)
+void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) const
 {
-    if (!initialized)
+    if (!initialized) {
         return;
+    }
     // TODO: Fire storm and Meteor shower have no caster!
     // Need to record GenericValueTarget with value_id matching these skills, then roughly match the coords after.
     RemoveTriggeredEffect(pak->effect_id, &pak->coords);
     const auto it = aoe_effect_settings.find(pak->effect_id);
-    if (it == aoe_effect_settings.end())
+    if (it == aoe_effect_settings.end()) {
         return;
+    }
     const auto settings = it->second;
-    if (settings->stoc_header && settings->stoc_header != pak->header)
+    if (settings->stoc_header && settings->stoc_header != pak->header) {
         return;
+    }
     const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-    if (!a || a->allegiance != GW::Constants::Allegiance::Enemy)
+    if (!a || a->allegiance != GW::Constants::Allegiance::Enemy) {
         return;
+    }
     aoe_effects.push_back(new Effect(pak->effect_id, pak->coords.x, pak->coords.y, settings->duration, settings->range, &settings->color));
 }
 
 void EffectRenderer::Initialize(IDirect3DDevice9* device)
 {
-    if (initialized)
+    if (initialized) {
         return;
+    }
     initialized = true;
     type = D3DPT_LINELIST;
 
@@ -310,14 +330,16 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device)
         Invalidate();
         need_to_clear_effects = false;
     }
-    if (aoe_effects.empty())
+    if (aoe_effects.empty()) {
         return;
-    std::lock_guard<std::recursive_mutex> lock(effects_mutex);
+    }
+    std::lock_guard lock(effects_mutex);
     size_t effect_size = aoe_effects.size();
     for (size_t i = 0; i < effect_size; i++) {
         Effect* effect = aoe_effects[i];
-        if (!effect)
+        if (!effect) {
             continue;
+        }
         if (TIMER_DIFF(effect->start) > static_cast<clock_t>(effect->duration)) {
             aoe_effects.erase(aoe_effects.begin() + static_cast<int>(i));
             delete effect;
@@ -340,8 +362,9 @@ void EffectCircle::Initialize(IDirect3DDevice9* device)
     const auto vertex_count = count + 1;
     D3DVertex* vertices = nullptr;
 
-    if (buffer)
+    if (buffer) {
         buffer->Release();
+    }
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
                                D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count,

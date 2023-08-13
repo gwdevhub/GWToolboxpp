@@ -8,37 +8,37 @@
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/GameEntities/Quest.h>
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/WorldContext.h>
 
-#include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Scanner.h>
-#include <Utils/GuiUtils.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
+#include <Utils/GuiUtils.h>
 
 #include "Minimap.h"
-#include <Modules/Resources.h>
 #include <Defines.h>
+#include <Modules/Resources.h>
 
 namespace {
     DirectX::XMFLOAT2 gwinch_scale;
@@ -91,10 +91,12 @@ namespace {
 
     FlaggingState GetFlaggingState()
     {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             return FlagState_None;
-        if (!CaptureMouseClickTypePtr || *CaptureMouseClickTypePtr != CaptureType_FlagHero || !MouseClickCaptureDataPtr || !MouseClickCaptureDataPtr->sub1)
+        }
+        if (!CaptureMouseClickTypePtr || *CaptureMouseClickTypePtr != CaptureType_FlagHero || !MouseClickCaptureDataPtr || !MouseClickCaptureDataPtr->sub1) {
             return FlagState_None;
+        }
         return *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
     }
 
@@ -102,12 +104,14 @@ namespace {
 
     bool SetFlaggingState(FlaggingState set_state)
     {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             return false;
+        }
         // keep an internal flag for the minimap flagging until StartCaptureMouseClick_Func is working
         // minimap_flagging_state = set_state;
-        if (GetFlaggingState() == set_state)
+        if (GetFlaggingState() == set_state) {
             return true;
+        }
         if (set_state == FlagState_None) {
             set_state = GetFlaggingState();
         }
@@ -147,11 +151,14 @@ namespace {
     bool GetPlayerIsLeader()
     {
         GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
-        if (!party || !party->players.size()) return false;
+        if (!party || !party->players.size()) {
+            return false;
+        }
         const uint32_t player_id = GW::PlayerMgr::GetPlayerNumber();
         for (auto& player : party->players) {
-            if (!player.connected())
+            if (!player.connected()) {
                 continue;
+            }
             return player.login_number == player_id;
         }
         return false;
@@ -160,8 +167,9 @@ namespace {
     GW::PartyInfo* GetPlayerParty()
     {
         const GW::GameContext* gamectx = GW::GetGameContext();
-        if (!(gamectx && gamectx->party))
+        if (!(gamectx && gamectx->party)) {
             return nullptr;
+        }
         return gamectx->party->player_party;
     }
 
@@ -189,8 +197,9 @@ namespace {
 
     void ToggleCompassQuestMarker(const bool enable)
     {
-        if (enable == show_compass_quest_marker_patch.GetIsEnable())
+        if (enable == show_compass_quest_marker_patch.GetIsEnable()) {
             return;
+        }
         show_compass_quest_marker_patch.TogglePatch(enable);
         GW::GameThread::Enqueue([] {
             const auto quest = GW::QuestMgr::GetActiveQuest();
@@ -216,8 +225,9 @@ namespace {
 
 void Minimap::DrawHelp()
 {
-    if (!ImGui::TreeNodeEx("Minimap", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth))
+    if (!ImGui::TreeNodeEx("Minimap", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         return;
+    }
 
     ImGui::Bullet();
     ImGui::Text("'/marktarget' highlights the current target on your minimap.");
@@ -260,18 +270,21 @@ void Minimap::Initialize()
     GW::HookBase::EnableHooks(DrawCompassAgentsByType_Func);
 
     address = GW::Scanner::Find("\xdd\xd8\x6a\x01\x52", "xxxxx");
-    if (address)
+    if (address) {
         show_compass_quest_marker_patch.SetPatch(address, "\xEB\xEC", 2);
+    }
     ToggleCompassQuestMarker(hide_compass_quest_marker);
 
     GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus*, const uint32_t key) {
-        if (key != GW::UI::ControlAction_ReverseCamera)
+        if (key != GW::UI::ControlAction_ReverseCamera) {
             return;
+        }
         camera_currently_reversed = true;
     });
     GW::UI::RegisterKeyupCallback(&AgentPinged_Entry, [this](GW::HookStatus*, const uint32_t key) {
-        if (key != GW::UI::ControlAction_ReverseCamera)
+        if (key != GW::UI::ControlAction_ReverseCamera) {
             return;
+        }
         camera_currently_reversed = false;
     });
 
@@ -288,23 +301,25 @@ void Minimap::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&CompassEvent_Entry, [this](const GW::HookStatus* status, GW::Packet::StoC::PlayEffect* pak) -> void {
         UNREFERENCED_PARAMETER(status);
         if (visible) {
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
                 effect_renderer.PacketCallback(pak);
+            }
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValueTarget_Entry, [this](const GW::HookStatus* s, const GW::Packet::StoC::GenericValue* pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValueTarget_Entry, [this](const GW::HookStatus* s, GW::Packet::StoC::GenericValue* pak) -> void {
         UNREFERENCED_PARAMETER(s);
         if (visible) {
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
                 effect_renderer.PacketCallback(pak);
+            }
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry, [this](const GW::HookStatus* s, GW::Packet::StoC::GenericValueTarget* pak) -> void {
-        UNREFERENCED_PARAMETER(s);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry, [this](GW::HookStatus*, GW::Packet::StoC::GenericValueTarget* pak) -> void {
         if (visible) {
             pingslines_renderer.P153Callback(pak);
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
                 effect_renderer.PacketCallback(pak);
+            }
         }
     });
     constexpr GW::UI::UIMessage hook_messages[] = {
@@ -324,7 +339,7 @@ void Minimap::Initialize()
     GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
 }
 
-void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
+void Minimap::OnUIMessage(GW::HookStatus* /*unused*/, const GW::UI::UIMessage msgid, void* wParam, void* /*unused*/)
 {
     auto& instance = Instance();
     switch (msgid) {
@@ -340,7 +355,7 @@ void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* 
             }
             instance.is_observing = GW::Map::GetIsObserving();
         }
-            break;
+        break;
         case GW::UI::UIMessage::kSkillActivated: {
             const struct Payload {
                 uint32_t agent_id;
@@ -352,17 +367,17 @@ void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* 
                 }
             }
         }
-            break;
+        break;
         case GW::UI::UIMessage::kMapChange: {
-                instance.loading = true;
-                instance.agent_renderer.auto_target_id = 0;
-            }
-            break;
+            instance.loading = true;
+            instance.agent_renderer.auto_target_id = 0;
+        }
+        break;
         case GW::UI::UIMessage::kChangeTarget: {
-                const GW::UI::ChangeTargetUIMsg* msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
-                instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
-            }
-            break;
+            const GW::UI::ChangeTargetUIMsg* msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
+            instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
+        }
+        break;
         default:
             break;
     }
@@ -393,8 +408,9 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR
         }
         else {
             const GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags;
-            if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size())
+            if (!flags.valid() || static_cast<uint32_t>(hero) > flags.size()) {
                 return false;
+            }
 
             const GW::HeroFlag& flag = flags[hero - 1];
             if (!std::isinf(flag.flag.x) || !std::isinf(flag.flag.y)) {
@@ -421,10 +437,12 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR
         }
         if (arg2 == L"toggle") {
             // "/flag 5 toggle"
-            if (is_flagged(0))
+            if (is_flagged(0)) {
                 GW::PartyMgr::UnflagAll();
-            else
+            }
+            else {
                 FlagHero(0);
+            }
             return;
         }
         if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
@@ -436,8 +454,9 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR
     }
     const auto& heroarray = GW::GetGameContext()->party->player_party->heroes;
 
-    if (heroarray.valid())
+    if (heroarray.valid()) {
         n_heros = heroarray.size();
+    }
     if (n_heros < 1) {
         return; // Player has no heroes, so no need to continue.
     }
@@ -463,10 +482,12 @@ void Minimap::OnFlagHeroCmd(const wchar_t* message, const int argc, const LPWSTR
     }
     if (arg2 == L"toggle") {
         // "/flag 5 toggle"
-        if (is_flagged(f_hero))
+        if (is_flagged(f_hero)) {
             GW::PartyMgr::UnflagHero(f_hero);
-        else
+        }
+        else {
             FlagHero(f_hero);
+        }
         return;
     }
     if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
@@ -506,8 +527,9 @@ void Minimap::DrawSettingsInternal()
 
     ImGui::Text("General");
     static float a = scale;
-    if (ImGui::DragFloat("Scale", &a, 0.01f, 0.1f, 10.f))
+    if (ImGui::DragFloat("Scale", &a, 0.01f, 0.1f, 10.f)) {
         scale = a;
+    }
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     // agent_rendered has its own TreeNodes
     agent_renderer.DrawSettings();
@@ -520,7 +542,7 @@ void Minimap::DrawSettingsInternal()
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("AoE Effects", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        effect_renderer.DrawSettings();
+        EffectRenderer::DrawSettings();
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("Symbols", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -670,7 +692,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     pingslines_renderer.SaveSettings(ini, Name());
     symbols_renderer.SaveSettings(ini, Name());
     custom_renderer.SaveSettings(ini, Name());
-    effect_renderer.SaveSettings(ini, Name());
+    EffectRenderer::SaveSettings(ini, Name());
 #ifdef USE_GAME_WORLD_RENDERER
     game_world_renderer.SaveSettings(ini, Name());
 #endif
@@ -679,11 +701,13 @@ void Minimap::SaveSettings(ToolboxIni* ini)
 size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags)
 {
     _player_heroes.clear();
-    if (!party)
+    if (!party) {
         return 0;
+    }
     const uint32_t player_id = GW::PlayerMgr::GetPlayerNumber();
-    if (!player_id)
+    if (!player_id) {
         return 0;
+    }
     const GW::HeroPartyMemberArray& heroes = party->heroes;
 
     const bool player_is_leader = GetPlayerIsLeader();
@@ -696,18 +720,22 @@ size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::Agen
 
     _player_heroes.reserve(heroes.size());
     for (const GW::HeroPartyMember& hero : heroes) {
-        if (hero.owner_player_id == player_id)
+        if (hero.owner_player_id == player_id) {
             _player_heroes.push_back(hero.agent_id);
+        }
         else if (player_is_leader) {
             auto found = party_players_by_id.find(hero.owner_player_id);
-            if (found == party_players_by_id.end() || found->second->connected())
+            if (found == party_players_by_id.end() || found->second->connected()) {
                 continue;
-            if (has_flags)
+            }
+            if (has_flags) {
                 *has_flags = true;
+            }
         }
     }
-    if (player_is_leader && has_flags && party->henchmen.size() || _player_heroes.size() && has_flags)
+    if (player_is_leader && has_flags && party->henchmen.size() || _player_heroes.size() && has_flags) {
         *has_flags = true;
+    }
     return _player_heroes.size();
 }
 
@@ -728,14 +756,16 @@ DirectX::XMFLOAT2 Minimap::GetGwinchScale()
     return gwinch_scale;
 }
 
-void Minimap::Draw(IDirect3DDevice9*)
+void Minimap::Draw(IDirect3DDevice9* /*unused*/)
 {
-    if (!IsActive())
+    if (!IsActive()) {
         return;
+    }
 
     const GW::Agent* me = GW::Agents::GetPlayer();
-    if (me == nullptr)
+    if (me == nullptr) {
         return;
+    }
 
     // Check shadowstep location
     if (shadowstep_location.x != 0.0f || shadowstep_location.y != 0.0f) {
@@ -747,7 +777,9 @@ void Minimap::Draw(IDirect3DDevice9*)
             bool found = false;
             for (const auto& effect : *effects) {
                 found = effect.skill_id == GW::Constants::SkillID::Shadow_of_Haste || effect.skill_id == GW::Constants::SkillID::Shadow_Walk;
-                if (found) break;
+                if (found) {
+                    break;
+                }
             }
             if (!found) {
                 shadowstep_location = GW::Vec2f();
@@ -790,7 +822,7 @@ void Minimap::Draw(IDirect3DDevice9*)
                 float compass_height = compass_frame->height(multiplier);
                 float compass_padding = compass_width * .05f;
                 location = {static_cast<int>(compass_frame->left(multiplier) + compass_padding), static_cast<int>(compass_frame->top(multiplier) + compass_padding)};
-                size = {static_cast<int>(compass_width - (compass_padding * 2.f)), static_cast<int>(compass_height - (compass_padding * 2.f))};
+                size = {static_cast<int>(compass_width - compass_padding * 2.f), static_cast<int>(compass_height - compass_padding * 2.f)};
 
                 if (compass_width == 0 && location.x == 0 && location.y == 0) {
                     // In "Restore Defaults" state - replace with sane default values
@@ -842,27 +874,34 @@ void Minimap::Draw(IDirect3DDevice9*)
                                     static_cast<float>(num_heroflags + 1);
 
                 for (unsigned int i = 0; i < num_heroflags; ++i) {
-                    if (i > 0)
+                    if (i > 0) {
                         ImGui::SameLine();
+                    }
                     const bool is_flagging = GetFlaggingState() == i;
-                    if (is_flagging)
+                    if (is_flagging) {
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
+                    }
 
                     if (ImGui::Button(flag_txt[i], ImVec2(w_but, 0))) {
-                        if (is_flagging)
+                        if (is_flagging) {
                             SetFlaggingState(FlagState_None);
-                        else
+                        }
+                        else {
                             SetFlaggingState(static_cast<FlaggingState>(i));
+                        }
                         //flagging[i] ^= 1;
                     }
-                    if (is_flagging)
+                    if (is_flagging) {
                         ImGui::PopStyleColor();
+                    }
 
                     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-                        if (i == 0)
+                        if (i == 0) {
                             GW::PartyMgr::UnflagAll();
-                        else
+                        }
+                        else {
                             GW::PartyMgr::FlagHeroAgent(player_heroes[i - 1], GW::GamePos(HUGE_VALF, HUGE_VALF, 0));
+                        }
                     }
                 }
                 ImGui::SameLine();
@@ -887,18 +926,25 @@ void Minimap::Render(IDirect3DDevice9* device)
         compass_fix_pending = false;
     }
     auto& instance = Instance();
-    if (!instance.IsActive())
+    if (!instance.IsActive()) {
         return;
+    }
 
     const GW::Agent* me = GW::Agents::GetPlayer();
-    if (me == nullptr) return;
+    if (me == nullptr) {
+        return;
+    }
 
     // Backup the DX9 state
     IDirect3DStateBlock9* d3d9_state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) return;
+    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) {
+        return;
+    }
 
     // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
-    D3DMATRIX reset_world, reset_view, reset_projection;
+    D3DMATRIX reset_world;
+    D3DMATRIX reset_view;
+    D3DMATRIX reset_projection;
     device->GetTransform(D3DTS_WORLD, &reset_world);
     device->GetTransform(D3DTS_VIEW, &reset_view);
     device->GetTransform(D3DTS_PROJECTION, &reset_projection);
@@ -1049,8 +1095,9 @@ void Minimap::Render(IDirect3DDevice9* device)
 GW::Vec2f Minimap::InterfaceToWorldPoint(const Vec2i pos) const
 {
     const GW::Agent* me = GW::Agents::GetPlayer();
-    if (me == nullptr)
+    if (me == nullptr) {
         return {0, 0};
+    }
 
     GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
 
@@ -1102,25 +1149,32 @@ GW::Vec2f Minimap::InterfaceToWorldVector(const Vec2i pos) const
     return v;
 }
 
-void Minimap::SelectTarget(const GW::Vec2f pos) const
+void Minimap::SelectTarget(const GW::Vec2f pos)
 {
     const auto* agents = GW::Agents::GetAgentArray();
-    if (agents == nullptr) return;
+    if (agents == nullptr) {
+        return;
+    }
     auto distance = 600.0f * 600.0f;
     const GW::Agent* closest = nullptr;
 
     for (const auto* agent : *agents) {
-        if (agent == nullptr)
+        if (agent == nullptr) {
             continue;
+        }
         const auto* living = agent->GetAsAgentLiving();
-        if (living && living->GetIsDead())
+        if (living && living->GetIsDead()) {
             continue;
-        if (agent->GetIsItemType())
+        }
+        if (agent->GetIsItemType()) {
             continue;
-        if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id != 8141)
+        }
+        if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id != 8141) {
             continue; // allow locked chests
-        if (!GW::Agents::GetIsAgentTargettable(agent))
+        }
+        if (!GW::Agents::GetIsAgentTargettable(agent)) {
             continue; // block all useless minis
+        }
         const float newDistance = GetSquareDistance(pos, agent->pos);
         if (distance > newDistance) {
             distance = newDistance;
@@ -1135,22 +1189,29 @@ void Minimap::SelectTarget(const GW::Vec2f pos) const
 
 bool Minimap::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
-    if (!GetKeyState(VK_LBUTTON) && mousedown) // fix left button being released outside of gw window
+    if (!GetKeyState(VK_LBUTTON) && mousedown) {
+        // fix left button being released outside of gw window
         mousedown = false;
-    if (!IsActive())
+    }
+    if (!IsActive()) {
         return false;
-    if (is_observing)
+    }
+    if (is_observing) {
         return false;
+    }
     if (mouse_clickthrough_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         if (!IsKeyDown(MinimapModifierBehaviour::Target) &&
             !IsKeyDown(MinimapModifierBehaviour::Walk) &&
-            !IsKeyDown(MinimapModifierBehaviour::Move))
+            !IsKeyDown(MinimapModifierBehaviour::Move)) {
             return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
+        }
     }
-    if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+    if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         if (!IsKeyDown(MinimapModifierBehaviour::Target) && !IsKeyDown(MinimapModifierBehaviour::Walk) &&
-            !IsKeyDown(MinimapModifierBehaviour::Move))
+            !IsKeyDown(MinimapModifierBehaviour::Move)) {
             return false;
+        }
+    }
     switch (Message) {
         case WM_MOUSEMOVE:
             return OnMouseMove(Message, wParam, lParam);
@@ -1169,8 +1230,9 @@ bool Minimap::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lPar
 
 bool Minimap::FlagHero(uint32_t idx)
 {
-    if (idx > FlagState_None)
+    if (idx > FlagState_None) {
         return false;
+    }
     return SetFlaggingState(static_cast<FlaggingState>(idx));
 }
 
@@ -1178,8 +1240,9 @@ bool Minimap::FlagHeros(const LPARAM lParam)
 {
     const int x = GET_X_LPARAM(lParam);
     const int y = GET_Y_LPARAM(lParam);
-    if (!IsInside(x, y))
+    if (!IsInside(x, y)) {
         return false;
+    }
     bool has_flagall = false;
     GetPlayerHeroes(GetPlayerParty(), player_heroes, &has_flagall);
     const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
@@ -1189,14 +1252,16 @@ bool Minimap::FlagHeros(const LPARAM lParam)
         case FlagState_None:
             return false;
         case FlagState_All:
-            if (!has_flagall)
+            if (!has_flagall) {
                 return false;
+            }
             SetFlaggingState(FlagState_None);
             GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
             return true;
         default:
-            if (flag_state > player_heroes.size())
+            if (flag_state > player_heroes.size()) {
                 return false;
+            }
             SetFlaggingState(FlagState_None);
             GW::PartyMgr::FlagHeroAgent(player_heroes[flag_state - 1], GW::GamePos(worldpos));
             return true;
@@ -1207,14 +1272,17 @@ bool Minimap::OnMouseDown(const UINT Message, const WPARAM wParam, const LPARAM 
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
-    if (!IsActive())
+    if (!IsActive()) {
         return false;
-    if (FlagHeros(lParam))
+    }
+    if (FlagHeros(lParam)) {
         return true;
+    }
     const int x = GET_X_LPARAM(lParam);
     const int y = GET_Y_LPARAM(lParam);
-    if (!IsInside(x, y))
+    if (!IsInside(x, y)) {
         return false;
+    }
 
     mousedown = true;
     const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
@@ -1233,28 +1301,32 @@ bool Minimap::OnMouseDown(const UINT Message, const WPARAM wParam, const LPARAM 
     drag_start.x = x;
     drag_start.y = y;
 
-    if (IsKeyDown(MinimapModifierBehaviour::Move))
+    if (IsKeyDown(MinimapModifierBehaviour::Move)) {
         return true;
+    }
 
-    if (!lock_move)
+    if (!lock_move) {
         return true;
+    }
 
     pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
 
     return true;
 }
 
-bool Minimap::OnMouseDblClick(const UINT Message, const WPARAM wParam, const LPARAM lParam)
+bool Minimap::OnMouseDblClick(const UINT Message, const WPARAM wParam, const LPARAM lParam) const
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
-    if (!IsActive())
+    if (!IsActive()) {
         return false;
+    }
 
     const int x = GET_X_LPARAM(lParam);
     const int y = GET_Y_LPARAM(lParam);
-    if (!IsInside(x, y))
+    if (!IsInside(x, y)) {
         return false;
+    }
 
     if (IsKeyDown(MinimapModifierBehaviour::Target)) {
         SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
@@ -1269,11 +1341,13 @@ bool Minimap::OnMouseUp(const UINT Message, const WPARAM wParam, const LPARAM lP
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
     UNREFERENCED_PARAMETER(lParam);
-    if (!IsActive())
+    if (!IsActive()) {
         return false;
+    }
 
-    if (!mousedown)
+    if (!mousedown) {
         return false;
+    }
 
     mousedown = false;
 
@@ -1285,11 +1359,13 @@ bool Minimap::OnMouseMove(const UINT Message, const WPARAM wParam, const LPARAM 
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(wParam);
     UNREFERENCED_PARAMETER(lParam);
-    if (!IsActive())
+    if (!IsActive()) {
         return false;
+    }
 
-    if (!mousedown)
+    if (!mousedown) {
         return false;
+    }
 
     const int x = GET_X_LPARAM(lParam);
     const int y = GET_Y_LPARAM(lParam);
@@ -1316,13 +1392,15 @@ bool Minimap::OnMouseWheel(const UINT Message, const WPARAM wParam, const LPARAM
 {
     UNREFERENCED_PARAMETER(Message);
     UNREFERENCED_PARAMETER(lParam);
-    if (!IsActive())
+    if (!IsActive()) {
         return false;
+    }
 
     // Mouse wheel x and y are in absolute coords, not window coords! (Windows why...)
     const ImVec2 mouse = ImGui::GetMousePos();
-    if (!IsInside(static_cast<int>(mouse.x), static_cast<int>(mouse.y)))
+    if (!IsInside(static_cast<int>(mouse.x), static_cast<int>(mouse.y))) {
         return false;
+    }
 
     const int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 
@@ -1338,21 +1416,26 @@ bool Minimap::OnMouseWheel(const UINT Message, const WPARAM wParam, const LPARAM
 bool Minimap::IsInside(const int x, const int y) const
 {
     // if outside square, return false
-    if (x < location.x)
+    if (x < location.x) {
         return false;
-    if (x > location.x + size.x)
+    }
+    if (x > location.x + size.x) {
         return false;
-    if (y < location.y)
+    }
+    if (y < location.y) {
         return false;
-    if (y > location.y + size.y)
+    }
+    if (y > location.y + size.y) {
         return false;
+    }
 
     // if centered, use radar range
     if (translation.x == 0 && translation.y == 0) {
         const GW::Vec2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
         const GW::Agent* me = GW::Agents::GetPlayer();
-        if (!me)
+        if (!me) {
             return false;
+        }
         const float sqrdst = GetSquareDistance(me->pos, gamepos);
         return sqrdst < GW::Constants::SqrRange::Compass;
     }

@@ -7,11 +7,11 @@
 #include <Widgets/Minimap/AgentRenderer.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/EffectRenderer.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Widgets/Minimap/PingsLinesRenderer.h>
 #include <Widgets/Minimap/PmapRenderer.h>
 #include <Widgets/Minimap/RangeRenderer.h>
 #include <Widgets/Minimap/SymbolsRenderer.h>
-#include <Widgets/Minimap/GameWorldRenderer.h>
 
 #ifdef _DEBUG
 #define USE_GAME_WORLD_RENDERER
@@ -37,7 +37,8 @@ class Minimap final : public ToolboxWidget {
 public:
     Minimap(const Minimap&) = delete;
 
-    static Minimap& Instance()
+    static Minimap&
+    Instance()
     {
         static Minimap instance;
         return instance;
@@ -69,7 +70,7 @@ public:
 
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
-    bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam);
+    [[nodiscard]] bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam) const;
     bool OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam);
@@ -105,7 +106,7 @@ private:
 
     [[nodiscard]] GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
     [[nodiscard]] GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
-    void SelectTarget(GW::Vec2f pos) const;
+    static void SelectTarget(GW::Vec2f pos);
     [[nodiscard]] bool IsKeyDown(MinimapModifierBehaviour mmb) const;
 
     bool mousedown = false;
@@ -154,5 +155,5 @@ private:
     GW::HookEntry InstanceLoadInfo_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry UIMsg_Entry;
-    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnUIMessage(GW::HookStatus* /*unused*/, GW::UI::UIMessage /*msgid*/, void* /*wParam*/, void* /*unused*/);
 };

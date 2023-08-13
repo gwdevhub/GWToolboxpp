@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GWCA/Constants/Constants.h>
-
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/Packets/StoC.h>
@@ -16,18 +14,18 @@ public:
 
     void Invalidate() override;
     void Terminate() override;
-    void PacketCallback(const GW::Packet::StoC::GenericValue* pak);
-    void PacketCallback(const GW::Packet::StoC::GenericValueTarget* pak);
-    void PacketCallback(GW::Packet::StoC::PlayEffect* pak);
+    void PacketCallback(const GW::Packet::StoC::GenericValue* pak) const;
+    void PacketCallback(const GW::Packet::StoC::GenericValueTarget* pak) const;
+    void PacketCallback(GW::Packet::StoC::PlayEffect* pak) const;
 
     static void LoadDefaults();
-    void DrawSettings();
-    void LoadSettings(ToolboxIni* ini, const char* section);
-    void SaveSettings(ToolboxIni* ini, const char* section);
+    static void DrawSettings();
+    void LoadSettings(const ToolboxIni* ini, const char* section);
+    static void SaveSettings(ToolboxIni* ini, const char* section);
 
 private:
     void Initialize(IDirect3DDevice9* device) override;
 
-    void RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos);
+    static void RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos);
     void DrawAoeEffects(IDirect3DDevice9* device);
 };

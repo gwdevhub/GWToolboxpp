@@ -23,8 +23,9 @@ public:
 
     virtual void Invalidate()
     {
-        if (buffer)
+        if (buffer) {
             buffer->Release();
+        }
         buffer = nullptr;
         initialized = false;
     }

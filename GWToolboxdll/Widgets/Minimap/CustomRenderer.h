@@ -28,7 +28,7 @@ class CustomRenderer : public VBuffer {
     struct CustomLine {
         CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n);
 
-        CustomLine(const char* n)
+        explicit CustomLine(const char* n)
             : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n) { };
         GW::Vec2f p1{};
         GW::Vec2f p2{};
@@ -65,7 +65,7 @@ class CustomRenderer : public VBuffer {
 
     struct CustomPolygon final : VBuffer {
         CustomPolygon(GW::Constants::MapID m, const char* n);
-        CustomPolygon(const char* n);
+        explicit CustomPolygon(const char* n);
 
         std::vector<GW::Vec2f> points{};
         GW::Constants::MapID map;
@@ -92,7 +92,7 @@ public:
     void DrawLineSettings();
     void DrawMarkerSettings();
     void DrawPolygonSettings();
-    void LoadSettings(ToolboxIni* ini, const char* section);
+    void LoadSettings(const ToolboxIni* ini, const char* section);
     void SaveSettings(ToolboxIni* ini, const char* section) const;
     void LoadMarkers();
     void SaveMarkers() const;

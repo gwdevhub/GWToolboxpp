@@ -13,7 +13,7 @@ public:
     void SetDrawCenter(const bool b) { draw_center_ = b; }
 
     void DrawSettings();
-    void LoadSettings(ToolboxIni* ini, const char* section);
+    void LoadSettings(const ToolboxIni* ini, const char* section);
     void SaveSettings(ToolboxIni* ini, const char* section) const;
     void LoadDefaults();
     // Returns number of vertices used.

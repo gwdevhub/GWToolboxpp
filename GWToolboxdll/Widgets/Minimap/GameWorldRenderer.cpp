@@ -27,7 +27,7 @@ namespace {
     IDirect3DPixelShader9* pshader = nullptr;
     IDirect3DVertexDeclaration9* vertex_declaration = nullptr;
 
-    constexpr auto lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t) -> GW::Vec2f
+    constexpr GW::Vec2f lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t)
     {
         return a * t + b * (1.f - t);
     }
@@ -155,7 +155,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
     filled ? device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3) : device->DrawPrimitive(D3DPT_LINESTRIP, 0, vertices.size() - 1);
 }
 
-auto GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device) -> bool
+bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
 {
     // set up directX standard view/proj matrices according to those used to render the game world
     if (device == nullptr) {
@@ -283,7 +283,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
     device->SetRenderState(D3DRS_STENCILENABLE, old_D3DRS_STENCILENABLE);
 }
 
-auto GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device) -> bool
+bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
 {
     constexpr D3DVERTEXELEMENT9 decl[] = {{0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END()};
     if (device->CreateVertexDeclaration(decl, &vertex_declaration) != D3D_OK) {

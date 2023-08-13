@@ -3,18 +3,18 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Quest.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 
 #include <ImGuiAddons.h>
 
+#include <GWCA/Managers/QuestMgr.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/Minimap/SymbolsRenderer.h>
-#include <GWCA/Managers/QuestMgr.h>
 
-void SymbolsRenderer::LoadSettings(ToolboxIni* ini, const char* section)
+void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
     color_north = Colors::Load(ini, section, "color_north", 0xFFFF8000);
@@ -38,19 +38,23 @@ void SymbolsRenderer::DrawSettings()
         color_modifier = 0x001E1E1E;
         Invalidate();
     }
-    if (Colors::DrawSettingHueWheel("Quest Marker", &color_quest))
+    if (Colors::DrawSettingHueWheel("Quest Marker", &color_quest)) {
         Invalidate();
-    if (Colors::DrawSettingHueWheel("North Marker", &color_north))
+    }
+    if (Colors::DrawSettingHueWheel("North Marker", &color_north)) {
         Invalidate();
-    if (Colors::DrawSettingHueWheel("Symbol Modifier", &color_modifier))
+    }
+    if (Colors::DrawSettingHueWheel("Symbol Modifier", &color_modifier)) {
         Invalidate();
+    }
     ImGui::ShowHelp("Each symbol has this value removed on the border and added at the center\nZero makes them have solid color, while a high number makes them appear more shaded.");
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
 {
-    if (initialized)
+    if (initialized) {
         return;
+    }
     initialized = true;
     type = D3DPT_TRIANGLELIST;
 
@@ -80,10 +84,10 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
     for (auto i = 0u; i < star_ntriangles; i++) {
         const float angle1 = 2 * (i + 0) * PI / star_ntriangles;
         const float angle2 = 2 * (i + 1) * PI / star_ntriangles;
-        const float size1 = ((i + 0) % 2 == 0 ? star_size_small : star_size_big);
-        const float size2 = ((i + 1) % 2 == 0 ? star_size_small : star_size_big);
-        const Color c1 = ((i + 0) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
-        const Color c2 = ((i + 1) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
+        const float size1 = (i + 0) % 2 == 0 ? star_size_small : star_size_big;
+        const float size2 = (i + 1) % 2 == 0 ? star_size_small : star_size_big;
+        const Color c1 = (i + 0) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier);
+        const Color c2 = (i + 1) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier);
         AddVertex(std::cos(angle1) * size1, std::sin(angle1) * size1, c1);
         AddVertex(std::cos(angle2) * size2, std::sin(angle2) * size2, c2);
         AddVertex(0.0f, 0.0f, Colors::Add(color_quest, color_modifier));
@@ -115,8 +119,9 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     Initialize(device);
 
     const GW::Agent* me = GW::Agents::GetPlayer();
-    if (me == nullptr)
+    if (me == nullptr) {
         return;
+    }
 
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
@@ -127,15 +132,17 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     // tau of += 0.05f is good for 60 fps, adapt that for any
     // note: framerate is a moving average of the last 120 frames, so it won't adapt quickly.
     // when the framerate changes a lot, the quest marker may speed up or down for a bit.
-    tau += (0.05f * 60.0f / std::max(fps, 1.0f));
-    if (tau > 10 * PI)
+    tau += 0.05f * 60.0f / std::max(fps, 1.0f);
+    if (tau > 10 * PI) {
         tau -= 10 * PI;
-    DirectX::XMMATRIX translate{}, world{};
+    }
+    DirectX::XMMATRIX translate{};
+    DirectX::XMMATRIX world{};
 
     if (const GW::Quest* quest = GW::QuestMgr::GetActiveQuest()) {
         const GW::Vec2f qpos = {quest->marker.x, quest->marker.y};
         const float compass_scale = Minimap::Instance().Scale();
-        const float marker_scale = (1.0f / compass_scale);
+        const float marker_scale = 1.0f / compass_scale;
         auto rotate = DirectX::XMMatrixRotationZ(-tau / 5);
         DirectX::XMMATRIX scale = DirectX::XMMatrixScaling(marker_scale + std::sin(tau) * 0.3f * marker_scale,
                                                            marker_scale + std::sin(tau) * 0.3f * marker_scale, 1.0f);

@@ -25,19 +25,19 @@ public:
         bool all_altitudes_queried = false;
     };
 
-public:
-    void Render(IDirect3DDevice9* device);
+
+    static void Render(IDirect3DDevice9* device);
     static void LoadSettings(const ToolboxIni* ini, const char* section);
     static void SaveSettings(ToolboxIni* ini, const char* section);
     static void DrawSettings();
-    void Terminate();
+    static void Terminate();
     static void TriggerSyncAllMarkers();
 
 private:
     static void SyncLines(IDirect3DDevice9* device);
     static void SyncPolys(IDirect3DDevice9* device);
     static void SyncMarkers(IDirect3DDevice9* device);
-    void SyncAllMarkers(IDirect3DDevice9* device);
-    auto ConfigureProgrammablePipeline(IDirect3DDevice9* device) -> bool;
-    static auto SetD3DTransform(IDirect3DDevice9* device) -> bool;
+    static void SyncAllMarkers(IDirect3DDevice9* device);
+    static bool ConfigureProgrammablePipeline(IDirect3DDevice9* device);
+    static bool SetD3DTransform(IDirect3DDevice9* device);
 };

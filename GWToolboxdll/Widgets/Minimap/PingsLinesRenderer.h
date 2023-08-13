@@ -1,11 +1,11 @@
 #pragma once
 
-#include <GWCA/Packets/StoC.h>
-#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Packets/StoC.h>
 
-#include <Timer.h>
 #include <Color.h>
+#include <Timer.h>
 
 #include <Widgets/Minimap/VBuffer.h>
 
@@ -24,11 +24,8 @@ class PingsLinesRenderer : public VBuffer {
     };
 
     struct PlayerDrawing {
-        PlayerDrawing()
-            : player(0), session(0) { }
-
-        DWORD player;
-        DWORD session;
+        DWORD player{0};
+        DWORD session{0};
         std::deque<DrawingLine> lines{};
     };
 
@@ -48,7 +45,7 @@ class PingsLinesRenderer : public VBuffer {
 
     struct TerrainPing : Ping {
         TerrainPing(const float _x, const float _y)
-            : Ping(), x(_x), y(_y) { }
+            : x(_x), y(_y) { }
 
         const float x, y;
         [[nodiscard]] float GetX() const override { return x; }
@@ -57,8 +54,8 @@ class PingsLinesRenderer : public VBuffer {
     };
 
     struct AgentPing : Ping {
-        AgentPing(const DWORD _id)
-            : Ping(), id(_id) { }
+        explicit AgentPing(const DWORD _id)
+            : id(_id) { }
 
         DWORD id;
         [[nodiscard]] float GetX() const override;
@@ -69,7 +66,7 @@ class PingsLinesRenderer : public VBuffer {
 
     struct ClickPing : Ping {
         ClickPing(const float _x, const float _y)
-            : Ping(), x(_x), y(_y)
+            : x(_x), y(_y)
         {
             start = TIMER_INIT() - 200;
             duration = 1000;
@@ -105,8 +102,9 @@ public:
     {
         VBuffer::Invalidate();
         ping_circle.Invalidate();
-        for (const Ping* p : pings)
+        for (const Ping* p : pings) {
             delete p;
+        }
         pings.clear();
     }
 
@@ -115,13 +113,13 @@ public:
     bool OnMouseUp();
     void AddMouseClickPing(GW::Vec2f pos);
 
-    void P046Callback(const GW::Packet::StoC::AgentPinged* pak);
-    void P138Callback(const GW::Packet::StoC::CompassEvent* pak);
-    void P153Callback(const GW::Packet::StoC::GenericValueTarget* pak);
+    void P046Callback(GW::Packet::StoC::AgentPinged* pak);
+    void P138Callback(GW::Packet::StoC::CompassEvent* pak);
+    void P153Callback(GW::Packet::StoC::GenericValueTarget* pak);
     void P221Callback(GW::Packet::StoC::SkillActivate* pak);
 
     void DrawSettings();
-    void LoadSettings(ToolboxIni* ini, const char* section);
+    void LoadSettings(const ToolboxIni* ini, const char* section);
     void SaveSettings(ToolboxIni* ini, const char* section) const;
 
 private:
@@ -134,15 +132,16 @@ private:
     void DrawDrawings(const IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
 
-    short ToShortPos(const float n)
+    short ToShortPos(const float n) const
     {
         return static_cast<short>(std::lroundf(n / drawing_scale));
     }
 
     void BumpSessionID()
     {
-        if (--session_id < 0)
+        if (--session_id < 0) {
             session_id = 7;
+        }
     }
 
     void SendQueue();

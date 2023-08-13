@@ -12,11 +12,10 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 
 #include <Widgets/Minimap/RangeRenderer.h>
-#include <Widgets/Minimap/PingsLinesRenderer.h>
 
 #include "Minimap.h"
 
-void RangeRenderer::LoadSettings(ToolboxIni* ini, const char* section)
+void RangeRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     LoadDefaults();
     color_range_hos = Colors::Load(ini, section, "color_range_hos", color_range_hos);
@@ -74,8 +73,9 @@ void RangeRenderer::DrawSettings()
     changed |= Colors::DrawSettingHueWheel("Res Aggro range", &color_range_res_aggro);
     changed |= Colors::DrawSettingHueWheel("Shadow Step range", &color_range_shadowstep_aggro);
     changed |= ImGui::DragFloat("Line thickness", &line_thickness, 0.1f, 1.f, 10.f, "%.1f");
-    if (changed)
+    if (changed) {
         Invalidate();
+    }
 }
 
 size_t RangeRenderer::CreateCircle(D3DVertex* vertices, const float radius, const DWORD color) const
@@ -97,8 +97,9 @@ size_t RangeRenderer::CreateCircle(D3DVertex* vertices, const float radius, cons
 
 void RangeRenderer::Initialize(IDirect3DDevice9* device)
 {
-    if (initialized)
+    if (initialized) {
         return;
+    }
     initialized = true;
     count = circle_points * num_circles;
     type = D3DPT_TRIANGLESTRIP;
@@ -212,8 +213,9 @@ void RangeRenderer::Render(IDirect3DDevice9* device)
     vertices_offset += circle_points;
 
     // Draw Hos range
-    if (havehos_)
+    if (havehos_) {
         device->DrawPrimitive(type, vertices_offset, circle_triangles);
+    }
     vertices_offset += circle_points;
 
     const GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
@@ -296,10 +298,12 @@ bool RangeRenderer::HaveHos()
 
     for (const auto& skill : skillbar->skills) {
         const auto id = static_cast<GW::Constants::SkillID>(skill.skill_id);
-        if (id == GW::Constants::SkillID::Heart_of_Shadow)
+        if (id == GW::Constants::SkillID::Heart_of_Shadow) {
             return true;
-        if (id == GW::Constants::SkillID::Vipers_Defense)
+        }
+        if (id == GW::Constants::SkillID::Vipers_Defense) {
             return true;
+        }
     }
     return false;
 }
