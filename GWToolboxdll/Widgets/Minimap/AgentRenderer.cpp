@@ -216,10 +216,9 @@ void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 
 void AgentRenderer::LoadCustomAgents()
 {
-    if (agentcolorinifile) {
+    if (!agentcolorinifile) {
         agentcolorinifile = new ToolboxIni();
     }
-    ASSERT(agentcolorinifile);
     ASSERT(agentcolorinifile->LoadIfExists(Resources::GetPath(AGENTCOLOR_INIFILENAME)) == SI_OK);
 
     custom_agents.clear();

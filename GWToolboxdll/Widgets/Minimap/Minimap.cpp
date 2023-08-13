@@ -616,16 +616,17 @@ void Minimap::DrawSettingsInternal()
 void Minimap::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"),
-                                "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
-                                [](const bool success, const std::wstring& error) {
-                                    if (success) {
-                                        Instance().custom_renderer.LoadMarkers();
-                                    }
-                                    else {
-                                        Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
-                                    }
-                                });
+    Resources::EnsureFileExists(
+        Resources::GetPath(L"Markers.ini"),
+        "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
+        [](const bool success, const std::wstring& error) {
+            if (success) {
+                Instance().custom_renderer.LoadMarkers();
+            }
+            else {
+                Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
+            }
+        });
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
     hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
     hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
@@ -1308,7 +1309,7 @@ bool Minimap::OnMouseDown(const UINT, const WPARAM, const LPARAM lParam)
     return true;
 }
 
-bool Minimap::OnMouseDblClick(const UINT , const WPARAM , const LPARAM lParam) const
+bool Minimap::OnMouseDblClick(const UINT, const WPARAM, const LPARAM lParam) const
 {
     if (!IsActive()) {
         return false;
@@ -1328,7 +1329,7 @@ bool Minimap::OnMouseDblClick(const UINT , const WPARAM , const LPARAM lParam) c
     return true;
 }
 
-bool Minimap::OnMouseUp(const UINT , const WPARAM , const LPARAM )
+bool Minimap::OnMouseUp(const UINT, const WPARAM, const LPARAM)
 {
     if (!IsActive()) {
         return false;
@@ -1374,7 +1375,7 @@ bool Minimap::OnMouseMove(const UINT, const WPARAM, const LPARAM lParam)
     return pingslines_renderer.OnMouseMove(v.x, v.y);
 }
 
-bool Minimap::OnMouseWheel(const UINT , const WPARAM wParam, const LPARAM )
+bool Minimap::OnMouseWheel(const UINT, const WPARAM wParam, const LPARAM)
 {
     if (!IsActive()) {
         return false;
