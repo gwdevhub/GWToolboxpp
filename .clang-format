@@ -226,6 +226,9 @@ PenaltyBreakString: 10
 PenaltyExcessCharacter: 100
 PenaltyReturnTypeOnItsOwnLine: 60
 
+# const auto instead of auto const
+QualifierAlignment: Right
+
 # Sort includes within include block, but preserve the block
 # #include <GWCA/b.h>             #include <GWCA/a.h>
 # #include <GWCA/a.h>             #include <GWCA/b.h>
