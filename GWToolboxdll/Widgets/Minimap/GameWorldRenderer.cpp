@@ -331,7 +331,7 @@ void GameWorldRenderer::DrawSettings()
 {
     // draw the settings using ImGui
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
-    ImGui::TextColored(red, "Warning: This is a beta feature and may render over your character or game props, or not work at all while the U map is open.");
+    ImGui::TextColored(red, "Warning: This is a beta feature and will render over your character, game props, and UI elements.");
     ImGui::Text("Note: custom markers are only rendered in-game if the option is enabled for a particular marker (check settings).");
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 0.f, 10000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("Maximum distance to render custom markers on the in-game terrain.");
