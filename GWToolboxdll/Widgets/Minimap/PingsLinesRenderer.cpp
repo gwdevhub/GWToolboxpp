@@ -79,7 +79,8 @@ void PingsLinesRenderer::DrawSettings()
     }
 }
 
-PingsLinesRenderer::PingsLinesRenderer(): lastshown(TIMER_INIT()), lastsent(TIMER_INIT()), lastqueued(TIMER_INIT()) {}
+PingsLinesRenderer::PingsLinesRenderer()
+    : lastshown(TIMER_INIT()), lastsent(TIMER_INIT()), lastqueued(TIMER_INIT()) {}
 
 void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged* pak)
 {
@@ -188,7 +189,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device)
     DrawShadowstepMarker(device);
 
     vertices_count = 0;
-    const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
+    const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
     if (FAILED(res)) {
         printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
     }
