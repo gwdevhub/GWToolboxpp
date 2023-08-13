@@ -441,22 +441,6 @@ namespace {
     }
 }
 
-<<<<<<< HEAD
-    void SetAliasedPlayerName(GW::Packet::StoC::PlayerJoinInstance* pak)
-    {
-        if (!rename_players_according_to_friends_list_alias) {
-            return;
-        }
-        if (pak == nullptr) {
-            return;
-        }
-        const auto friend_ = FriendListWindow::Instance().GetFriend(pak->player_name);
-        if (friend_ != nullptr) {
-            const std::wstring& alias = friend_->getAliasW();
-            if (!alias.empty()) {
-                wcscpy(pak->player_name, alias.c_str());
-            }
-=======
 void PartyWindowModule::SetAliasedPlayerName(GW::Packet::StoC::PlayerJoinInstance* pak)
 {
     if (!rename_players_according_to_friends_list_alias) {
@@ -471,7 +455,6 @@ void PartyWindowModule::SetAliasedPlayerName(GW::Packet::StoC::PlayerJoinInstanc
         if (!alias.empty()) {
             aliased_player_names[alias] = pak->player_name;
             wcscpy(pak->player_name, alias.c_str());
->>>>>>> 0f649515 (works with reinvite command)
         }
     }
 }

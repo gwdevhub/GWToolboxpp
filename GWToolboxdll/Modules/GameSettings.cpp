@@ -726,10 +726,7 @@ namespace {
                 }
                 if (IsPlayerInParty(pending_reinvite.identifier)) {
                     return;
-<<<<<<< HEAD
                 }
-                GW::PartyMgr::InvitePlayer(pending_reinvite.identifier);
-=======
                 const auto aliases = PartyWindowModule::Instance().GetAliasedPlayerNames();
                 if (aliases.find(player->name) != aliases.end()) {
                     auto orig_name = aliases.at(player->name).c_str();
@@ -738,7 +735,6 @@ namespace {
                 else {
                     GW::PartyMgr::InvitePlayer(pending_reinvite.identifier);
                 }
->>>>>>> 0f649515 (works with reinvite command)
                 return pending_reinvite.reset();
             }
             break;
