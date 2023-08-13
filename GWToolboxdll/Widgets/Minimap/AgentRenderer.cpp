@@ -167,9 +167,6 @@ unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 
 void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
-    auto Name = [section] {
-        return section;
-    };
     LoadDefaultColors();
     color_marked_target = Colors::Load(ini, section, VAR_NAME(color_marked_target), color_marked_target);
     color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
@@ -194,6 +191,9 @@ void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     show_quest_npcs_on_minimap = ini->GetBoolValue(section, VAR_NAME(show_quest_npcs_on_minimap), show_quest_npcs_on_minimap);
 
 #ifdef _DEBUG
+    auto Name = [section] {
+        return section;
+    };
     LOAD_BOOL(show_props_on_minimap);
 #endif
 
@@ -206,9 +206,7 @@ void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     size_boss = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_boss), size_boss));
     size_minion = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_minion), size_minion));
     default_shape = static_cast<Shape_e>(ini->GetLongValue(section, VAR_NAME(default_shape), default_shape));
-    agent_border_thickness =
-        static_cast<uint32_t>(ini->GetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness));
-
+    agent_border_thickness = static_cast<uint32_t>(ini->GetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness));
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
 
     LoadCustomAgents();
@@ -221,6 +219,7 @@ void AgentRenderer::LoadCustomAgents()
     if (agentcolorinifile) {
         agentcolorinifile = new ToolboxIni();
     }
+    ASSERT(agentcolorinifile);
     ASSERT(agentcolorinifile->LoadIfExists(Resources::GetPath(AGENTCOLOR_INIFILENAME)) == SI_OK);
 
     custom_agents.clear();
