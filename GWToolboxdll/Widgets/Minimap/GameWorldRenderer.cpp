@@ -3,6 +3,7 @@
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Pathing.h>
+#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
@@ -20,10 +21,12 @@ namespace {
     float render_max_distance = 500.f;
     bool need_sync_markers = true;
     bool need_configure_pipeline = true;
-    GW::Vec2f lerp(const GW::Vec2f& A, const GW::Vec2f& B, const float t)
+
+    constexpr GW::Vec2f lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t)
     {
-        return A * t + B * (1.f - t);
+        return a * t + b * (1.f - t);
     }
+
     constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 
     std::vector<GW::Vec2f> circular_points_from_marker(const float pos_x, const float pos_y, const float size)
@@ -41,12 +44,11 @@ namespace {
     }
 } // namespace
 
-GenericPolyRenderable::GenericPolyRenderable(IDirect3DDevice9* device, const GW::Constants::MapID map_id, const std::vector<GW::Vec2f>& points, const unsigned int col, const bool filled)
+GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(IDirect3DDevice9* device, const GW::Constants::MapID map_id, const std::vector<GW::Vec2f>& points, const unsigned int col, const bool filled)
     : map_id(map_id)
-    , col(col)
-    , points(points)
-    , filled(filled)
-    , all_altitudes_queried(false)
+      , col(col)
+      , points(points)
+      , filled(filled)
 {
     if (filled && points.size() >= 3) {
         // (filling doesn't make sense if there is not at least enough points for one triangle)
@@ -86,14 +88,14 @@ GenericPolyRenderable::GenericPolyRenderable(IDirect3DDevice9* device, const GW:
     device->CreateVertexBuffer(vertices.size() * sizeof(D3DVertex), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &vb, nullptr);
 }
 
-GenericPolyRenderable::~GenericPolyRenderable()
+GameWorldRenderer::GenericPolyRenderable::~GenericPolyRenderable()
 {
     if (vb != nullptr) {
         vb->Release();
     }
 }
 
-void GenericPolyRenderable::Draw(IDirect3DDevice9* device)
+void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 {
     // draw this specific renderable
     if (device->SetStreamSource(0, vb, 0, sizeof(D3DVertex)) != D3D_OK) {
@@ -120,7 +122,8 @@ void GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                     // stalling. It seems to take, even in most extreme cases, less time than it takes
                     // for agents to appear.
                     GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, cur_altitude}, 0.1f, altitude);
-                    if (altitude < vertices[i].z) { // recall that the Up camera component is inverted
+                    if (altitude < vertices[i].z) {
+                        // recall that the Up camera component is inverted
                         vertices[i].z = altitude;
                     }
                 }
@@ -142,10 +145,10 @@ void GenericPolyRenderable::Draw(IDirect3DDevice9* device)
     filled ? device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3) : device->DrawPrimitive(D3DPT_LINESTRIP, 0, vertices.size() - 1);
 }
 
-bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device, const GW::Camera* cam)
+bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
 {
     // set up directX standard view/proj matrices according to those used to render the game world
-    if (cam == nullptr || device == nullptr) {
+    if (device == nullptr) {
         return false;
     }
 
@@ -154,38 +157,32 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device, const GW::Came
 
     // compute view matrix:
     DirectX::XMFLOAT4X4A mat_view{};
-    DirectX::XMFLOAT3 eye_pos = {cam->position.x, cam->position.y, cam->position.z};
-    DirectX::XMFLOAT3 player_pos = {cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z};
-    static constexpr const DirectX::XMFLOAT3 up = {0.0f, 0.0f, -1.0f};
-    // clang-format off
+    const auto cam = GW::CameraMgr::GetCamera();
+    const DirectX::XMFLOAT3 eye_pos = {cam->position.x, cam->position.y, cam->position.z};
+    const DirectX::XMFLOAT3 player_pos = {cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z};
+    constexpr DirectX::XMFLOAT3 up = {0.0f, 0.0f, -1.0f};
     DirectX::XMStoreFloat4x4A(&mat_view,
-        DirectX::XMMatrixTranspose(
-            DirectX::XMMatrixLookAtLH(XMLoadFloat3(&eye_pos), XMLoadFloat3(&player_pos), XMLoadFloat3(&up))
-        )
+                              DirectX::XMMatrixTranspose(
+                                  DirectX::XMMatrixLookAtLH(XMLoadFloat3(&eye_pos), XMLoadFloat3(&player_pos), XMLoadFloat3(&up))
+                              )
     );
-    // clang-format on
     if (device->SetVertexShaderConstantF(vertex_shader_view_matrix_offset, reinterpret_cast<const float*>(&mat_view), 4) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to SetVertexShaderConstantF(view), aborting render.");
+        Log::Error("GameWorldRenderer: unable to SetVertexShaderConstantF(view), aborting render.");
         return false;
     }
 
     // compute projection matrix:
     DirectX::XMFLOAT4X4A mat_proj{};
-    // compute the "actual" field of view. GW uses a different value than reported by `camera->field_of_view`.
-    float apparent_fov = cam->field_of_view;
-    static constexpr float dividend = 1.0f + (2.0f / 3.0f); // this is constant
-    float actual_fov = static_cast<float>(atan2(1.0f, dividend / tan(apparent_fov * 0.5f)) * 2.0f);
-    float aspect_ratio = static_cast<float>(GW::Render::GetViewportWidth()) / static_cast<float>(GW::Render::GetViewportHeight());
+    const auto fov = GW::CameraMgr::GetFieldOfView();
+    const auto aspect_ratio = static_cast<float>(GW::Render::GetViewportWidth()) / static_cast<float>(GW::Render::GetViewportHeight());
 
-    // clang-format off
     DirectX::XMStoreFloat4x4A(&mat_proj,
-        DirectX::XMMatrixTranspose(
-            DirectX::XMMatrixPerspectiveFovLH(actual_fov, aspect_ratio, 0.1f, 100000.0f)
-        )
+                              DirectX::XMMatrixTranspose(
+                                  DirectX::XMMatrixPerspectiveFovLH(fov, aspect_ratio, 0.1f, 100000.0f)
+                              )
     );
-    // clang-format on
     if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, reinterpret_cast<const float*>(&mat_proj), 4) != D3D_OK) {
-        GWCA_ERR("GameWorldRenderer: unable to SetVertexShaderConstantF(projection), aborting render.");
+        Log::Error("GameWorldRenderer: unable to SetVertexShaderConstantF(projection), aborting render.");
         return false;
     }
 
@@ -200,10 +197,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         SyncAllMarkers(device);
     }
     if (renderables.empty()) {
-        // as both a performance optimisation, and a safety feature, if there are no renderables,
-        // i.e. nothing ticked "Draw On Terrain", then no extra directX stuff will happen here.
-        // that means that it'll not hit performance much, and also, if there is some bug with
-        // the rendering, TB can at least continue to function.
+        // if nothing ticked "Draw On Terrain", don't waste performance
         return;
     }
     if (need_configure_pipeline) {
@@ -217,16 +211,6 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         return;
     }
 
-    // backup original immediate state and transforms:
-    DWORD old_D3DRS_SCISSORTESTENABLE;
-    DWORD old_D3DRS_STENCILENABLE;
-    device->GetRenderState(D3DRS_SCISSORTESTENABLE, &old_D3DRS_SCISSORTESTENABLE);
-    device->GetRenderState(D3DRS_STENCILENABLE, &old_D3DRS_STENCILENABLE);
-
-    // no scissor test / stencil (used by minimap)
-    device->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
-    device->SetRenderState(D3DRS_STENCILENABLE, false);
-
     if (vshader == nullptr || device->SetVertexShader(vshader) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to SetVertexShader, aborting render.");
         return;
@@ -239,13 +223,19 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         Log::Error("GameWorldRenderer: unable to SetVertexShader declaration, aborting render.");
         return;
     }
-    const GW::Camera* cam = GW::CameraMgr::GetCamera();
-    if (cam != nullptr) {
-        // unsure if can ever be nullptr here, but failure mode is at least clean.
-        if (!SetD3DTransform(device, cam)) {
-            return;
-        }
 
+    // backup original immediate state and transforms:
+    DWORD old_D3DRS_SCISSORTESTENABLE;
+    DWORD old_D3DRS_STENCILENABLE;
+    device->GetRenderState(D3DRS_SCISSORTESTENABLE, &old_D3DRS_SCISSORTESTENABLE);
+    device->GetRenderState(D3DRS_STENCILENABLE, &old_D3DRS_STENCILENABLE);
+
+    // no scissor test / stencil (used by minimap)
+    device->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
+    device->SetRenderState(D3DRS_STENCILENABLE, false);
+
+    if (SetD3DTransform(device)) {
+        const GW::Camera* cam = GW::CameraMgr::GetCamera();
         // set Pixel Shader constants. they are always expressed as Float4 here:
         // first is the player's position
 
@@ -301,7 +291,7 @@ bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
     return true;
 }
 
-void GameWorldRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
+void GameWorldRenderer::LoadSettings(ToolboxIni* ini, const char* section)
 {
     // load the rendering settings from disk
     render_max_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance));
@@ -372,6 +362,7 @@ void GameWorldRenderer::SyncPolys(IDirect3DDevice9* device)
     const auto& polys = Minimap::Instance().custom_renderer.GetPolys();
     // for each poly, add as a renderable if appropriate
     for (const auto& poly : polys) {
+
         if (!poly.draw_on_terrain || !poly.visible) {
             continue;
         }
