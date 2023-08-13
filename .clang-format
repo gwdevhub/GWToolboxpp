@@ -129,6 +129,8 @@ IndentCaseLabels: true
 # type
 IndentWrappedFunctionNames: false
 
+InsertBraces: false
+
 # Align pointer to the left
 # int* a;
 PointerAlignment: Left
@@ -227,7 +229,7 @@ PenaltyExcessCharacter: 100
 PenaltyReturnTypeOnItsOwnLine: 60
 
 # const auto instead of auto const
-QualifierAlignment: Right
+QualifierAlignment: Left
 
 # Sort includes within include block, but preserve the block
 # #include <GWCA/b.h>             #include <GWCA/a.h>
