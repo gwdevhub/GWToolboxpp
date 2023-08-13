@@ -557,12 +557,10 @@ void Minimap::DrawSettingsInternal()
         Colors::DrawSettingHueWheel("Background", &hero_flag_window_background);
         ImGui::TreePop();
     }
-#ifdef USE_GAME_WORLD_RENDERER
     if (ImGui::TreeNodeEx("In-game rendering", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         game_world_renderer.DrawSettings();
         ImGui::TreePop();
     }
-#endif
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
@@ -655,9 +653,7 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     symbols_renderer.LoadSettings(ini, Name());
     custom_renderer.LoadSettings(ini, Name());
     effect_renderer.LoadSettings(ini, Name());
-#ifdef USE_GAME_WORLD_RENDERER
     game_world_renderer.LoadSettings(ini, Name());
-#endif
 }
 
 void Minimap::SaveSettings(ToolboxIni* ini)
@@ -690,9 +686,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     symbols_renderer.SaveSettings(ini, Name());
     custom_renderer.SaveSettings(ini, Name());
     EffectRenderer::SaveSettings(ini, Name());
-#ifdef USE_GAME_WORLD_RENDERER
     game_world_renderer.SaveSettings(ini, Name());
-#endif
 }
 
 size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags)
@@ -1066,9 +1060,7 @@ void Minimap::Render(IDirect3DDevice9* device)
 
     instance.pingslines_renderer.Render(device);
 
-#ifdef USE_GAME_WORLD_RENDERER
     instance.game_world_renderer.Render(device);
-#endif
 
     if (instance.circular_map) {
         device->SetRenderState(D3DRS_STENCILREF, 0);
