@@ -407,6 +407,7 @@ void RerollWindow::Update(float)
         }
     }
     if (reroll_stage != None && TIMER_INIT() > reroll_timeout) {
+        GW::UI::SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
         RerollFailed(L"Reroll timed out");
         return;
     }
@@ -449,29 +450,19 @@ void RerollWindow::Update(float)
             if (pgc->index_1 == reroll_index_current) {
                 return; // Not moved yet
             }
-            const HWND h = GW::MemoryMgr::GetGWWindowHandle();
+            const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
             if (pgc->index_1 == reroll_index_needed) {
                 // Play
-                SendMessage(h, WM_KEYDOWN, 0x50, 0x00190001);
-                SendMessage(h, WM_CHAR, 'p', 0x00190001);
-                SendMessage(h, WM_KEYUP, 0x50, 0xC0190001);
+                SendMessage(hwnd, WM_KEYDOWN, 0x50, 0x00190001);
+                SendMessage(hwnd, WM_CHAR, 'p', 0x00190001);
+                SendMessage(hwnd, WM_KEYUP, 0x50, 0xC0190001);
                 reroll_stage = WaitForCharacterLoad;
-                reroll_direction = true;
                 reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                 return;
             }
             reroll_index_current = pgc->index_1;
-            if (pgc->index_1 == std::numeric_limits<uint32_t>::max()) {
-                reroll_direction = !reroll_direction;
-            }
-            if (reroll_direction) {
-                SendMessage(h, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
-                SendMessage(h, WM_KEYUP, VK_RIGHT, 0xC14D0001);
-            }
-            else {
-                SendMessage(h, WM_KEYDOWN, VK_LEFT, 0x014B0001);
-                SendMessage(h, WM_KEYUP, VK_LEFT, 0xC14B0001);
-            }
+            SendMessage(hwnd, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
+            SendMessage(hwnd, WM_KEYUP, VK_RIGHT, 0xC14D0001);
             return;
         }
         case WaitForCharacterLoad: {
@@ -486,6 +477,7 @@ void RerollWindow::Update(float)
                 RerollFailed(L"Wrong character was loaded");
                 return;
             }
+            GW::UI::SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
             if (same_map) {
                 if (!IsInMap()) {
                     if (guild_hall_uuid) {
@@ -672,6 +664,8 @@ bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const b
     reroll_stage = None;
     reverting_reroll = false;
     failed_message = nullptr;
+    char_sort_order = GW::UI::GetPreference(GW::UI::EnumPreference::CharSortOrder);
+    GW::UI::SetPreference(GW::UI::EnumPreference::CharSortOrder, static_cast<uint32_t>(GW::Constants::Preference::CharSort::Alphabetize));
     if (!character_name) {
         return false;
     }
