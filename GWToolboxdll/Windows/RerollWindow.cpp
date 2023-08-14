@@ -175,11 +175,6 @@ namespace {
         return GuiUtils::ToLower(GuiUtils::RemovePunctuation(in));
     }
 
-    std::wstring LowerCaseRemovePunct(std::string in)
-    {
-        return LowerCaseRemovePunct(GuiUtils::StringToWString(in));
-    }
-
     std::vector<std::wstring> exclude_charnames_from_reroll_cmd;
     char excluded_char_add_buf[20] = {0};
 
