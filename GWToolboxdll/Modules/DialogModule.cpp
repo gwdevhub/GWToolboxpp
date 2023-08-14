@@ -43,7 +43,7 @@ namespace {
     }
 
     // Parse any buttons held within the dialog body
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     void OnDialogBodyDecoded(void*, wchar_t* decoded)
     {
         const std::wregex button_regex(L"<a=([0-9]+)>([^<]+)(<|$)");

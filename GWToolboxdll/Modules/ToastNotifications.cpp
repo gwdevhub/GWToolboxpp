@@ -143,7 +143,7 @@ namespace {
         nonconst->dismiss();
     }
 
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     void OnToastMessageDecoded(void* callback_param, wchar_t* decoded)
     {
         const auto title = static_cast<wchar_t*>(callback_param);
@@ -151,7 +151,7 @@ namespace {
         delete[] title;
     }
 
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     void SendEncodedToastMessage(const wchar_t* title, wchar_t* encoded_message)
     {
         if (!(encoded_message && encoded_message[0])) {

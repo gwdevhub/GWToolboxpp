@@ -57,7 +57,7 @@ namespace {
         });
     }
 
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     int OnJoin(const char* params, irc_reply_data* hostd, void*)
     {
         const TwitchModule* module = &TwitchModule::Instance();
@@ -82,7 +82,7 @@ namespace {
         return 0;
     }
 
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     int OnLeave(const char* params, irc_reply_data* hostd, void*)
     {
         const TwitchModule* module = &TwitchModule::Instance();
@@ -96,7 +96,7 @@ namespace {
         return 0;
     }
 
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     int OnConnected(const char* params, irc_reply_data*, void* conn)
     {
         TwitchModule* module = &TwitchModule::Instance();
@@ -115,7 +115,7 @@ namespace {
         return 0;
     }
 
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     int OnMessage(const char* params, irc_reply_data* hostd, void*)
     {
         const TwitchModule* module = &TwitchModule::Instance();
@@ -128,7 +128,7 @@ namespace {
         return 0;
     }
 
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     int OnNotice(const char* params, irc_reply_data*, void* conn)
     {
         Log::Log("NOTICE: %s\n", params);

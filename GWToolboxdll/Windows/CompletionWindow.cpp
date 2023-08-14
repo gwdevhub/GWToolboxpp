@@ -283,7 +283,7 @@ namespace {
         }
     }
 
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     void OnHomLoaded(HallOfMonumentsAchievements* result)
     {
         if (result->state != HallOfMonumentsAchievements::State::Done) {

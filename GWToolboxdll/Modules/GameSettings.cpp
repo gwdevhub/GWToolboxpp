@@ -2488,7 +2488,7 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 }
 
 // Flash/focus window on trade
-//NOLINTNEXTLINE
+//NOLINTNEXTLINE(readability-non-const-parameter)
 void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::TradeStart*)
 {
     if (status->blocked) {

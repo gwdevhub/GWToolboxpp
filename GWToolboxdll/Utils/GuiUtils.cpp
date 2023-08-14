@@ -944,7 +944,7 @@ namespace GuiUtils {
         }
     }
 
-    //NOLINTNEXTLINE
+    //NOLINTNEXTLINE(readability-non-const-parameter)
     void EncString::OnStringDecoded(void* param, wchar_t* decoded)
     {
         const auto context = static_cast<EncString*>(param);
