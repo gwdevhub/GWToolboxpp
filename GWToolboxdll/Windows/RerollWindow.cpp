@@ -449,7 +449,6 @@ void RerollWindow::Update(float)
             if (pgc->index_1 == reroll_index_current) {
                 return; // Not moved yet
             }
-            Log::Log("NavigateToCharname: %d of %d", reroll_index_current, reroll_index_needed);
             const HWND h = GW::MemoryMgr::GetGWWindowHandle();
             if (pgc->index_1 == reroll_index_needed) {
                 // Play
