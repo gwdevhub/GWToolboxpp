@@ -276,7 +276,7 @@ void ChatLog::LoadSettings(ToolboxIni* ini)
     Init();
 }
 
-std::filesystem::path ChatLog::LogPath(const wchar_t* prefix)
+std::filesystem::path ChatLog::LogPath(const wchar_t* prefix) const
 {
     wchar_t fn[128];
     swprintf(fn, 128, L"%s_%s.ini", prefix, account.c_str());
@@ -297,8 +297,6 @@ void ChatLog::Load(const std::wstring& _account)
     inifile.GetAllSections(entries);
     std::wstring buf;
     FILETIME t;
-    uint32_t channel = 0;
-    uint32_t addr = 0;
     for (const ToolboxIni::Entry& entry : entries) {
         std::string message = inifile.GetValue(entry.pItem, "message", "");
         if (message.empty()) {
@@ -310,7 +308,7 @@ void ChatLog::Load(const std::wstring& _account)
         }
         t.dwLowDateTime = inifile.GetLongValue(entry.pItem, "dwLowDateTime", 0);
         t.dwHighDateTime = inifile.GetLongValue(entry.pItem, "dwHighDateTime", 0);
-        channel = inifile.GetLongValue(entry.pItem, "channel", 0);
+        uint32_t channel = inifile.GetLongValue(entry.pItem, "channel", 0);
         Add(buf.data(), channel, t);
     }
 
@@ -328,7 +326,7 @@ void ChatLog::Load(const std::wstring& _account)
         if (!written) {
             continue;
         }
-        addr = inifile.GetLongValue(entry.pItem, "addr", 0);
+        uint32_t addr = inifile.GetLongValue(entry.pItem, "addr", 0);
         AddSent(buf.data(), addr);
     }
 }
@@ -507,9 +505,7 @@ void ChatLog::OnAddToSentLog(wchar_t* message)
 
 void ChatLog::OnPreAddToChatLog(GW::HookStatus*, wchar_t*, uint32_t, GW::Chat::ChatMessage*)
 {
-    if (!Instance().enabled || Instance().injecting) {
-        return;
-    }
+    if (!Instance().enabled || Instance().injecting) { }
     //GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
     //bool inject = ((log && log->next == 0 && !log->messages[log->next]) || !log || Instance().Init());
 }

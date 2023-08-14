@@ -43,6 +43,7 @@ namespace {
     }
 
     // Parse any buttons held within the dialog body
+    //NOLINTNEXTLINE
     void OnDialogBodyDecoded(void*, wchar_t* decoded)
     {
         const std::wregex button_regex(L"<a=([0-9]+)>([^<]+)(<|$)");
@@ -253,7 +254,7 @@ void DialogModule::SendDialog(const uint32_t dialog_id, clock_t time)
     if ((dialog_id & 0xf84) == dialog_id && (dialog_id & 0xfff) >> 8 != 0) {
         // Dialog is for changing profession; queue up the enquire dialog option aswell
         const uint32_t profession_id = (dialog_id & 0xfff) >> 8;
-        const uint32_t enquire_dialog_id = (profession_id << 8) | 0x85;
+        const uint32_t enquire_dialog_id = profession_id << 8 | 0x85;
         queued_dialogs_to_send[enquire_dialog_id] = time;
         return;
     }

@@ -19,6 +19,6 @@ public:
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;
-    void SetInfected(GW::Agent* agent, bool is_infected);
+    static void SetInfected(GW::Agent* agent, bool is_infected);
     void SetEnabled(bool is_enabled);
 };

@@ -1067,7 +1067,7 @@ time_t GetWeeklyRotationTime(const time_t* unix)
 
 time_t GetNextWeeklyRotationTime()
 {
-    time_t unix = time(nullptr);
+    const time_t unix = time(nullptr);
     return GetWeeklyRotationTime(&unix) + 604800;
 }
 
@@ -1170,7 +1170,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     }
     ImGui::NewLine();
     ImGui::Separator();
-    ImGui::BeginChild("dailies_scroll", ImVec2(0, (-1 * (20.0f * ImGui::GetIO().FontGlobalScale)) - ImGui::GetStyle().ItemInnerSpacing.y));
+    ImGui::BeginChild("dailies_scroll", ImVec2(0, -1 * (20.0f * ImGui::GetIO().FontGlobalScale) - ImGui::GetStyle().ItemInnerSpacing.y));
     time_t unix = time(nullptr);
     uint32_t idx = 0;
     const ImColor sCol(102, 187, 238, 255);
@@ -1486,7 +1486,7 @@ void DailyQuests::Initialize()
     });
 }
 
-void DailyQuests::Update(const float )
+void DailyQuests::Update(const float)
 {
     if (subscriptions_changed) {
         checked_subscriptions = false;
@@ -1498,10 +1498,10 @@ void DailyQuests::Update(const float )
     if (!start_time) {
         start_time = time(nullptr);
     }
-    if (GW::Map::GetIsMapLoaded() && (time(nullptr) - start_time) > 1) {
+    if (GW::Map::GetIsMapLoaded() && time(nullptr) - start_time > 1) {
         checked_subscriptions = true;
         // Check daily quests for the next 6 days, and send a message if found. Only runs once when TB is opened.
-        time_t now = time(nullptr);
+        const time_t now = time(nullptr);
         time_t unix = now + 0;
         uint32_t quest_idx;
         for (auto i = 0u; i < subscriptions_lookahead_days; i++) {

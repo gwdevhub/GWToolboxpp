@@ -574,7 +574,7 @@ std::filesystem::path GWToolbox::SaveSettings(const std::filesystem::path& confi
     return ini->location_on_disk;
 }
 
-void GWToolbox::StartSelfDestruct() const
+void GWToolbox::StartSelfDestruct()
 {
     if (must_self_destruct) {
         return;

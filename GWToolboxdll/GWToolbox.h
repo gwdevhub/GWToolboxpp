@@ -36,7 +36,7 @@ public:
     static std::filesystem::path SaveSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME);
     static std::filesystem::path LoadSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME, bool fresh = false);
 
-    void StartSelfDestruct() const;
+    static void StartSelfDestruct();
 
 
     //const std::vector<ToolboxModule*>& GetModules();

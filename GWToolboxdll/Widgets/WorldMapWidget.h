@@ -25,7 +25,7 @@ public:
 
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void ShowAllOutposts(bool show);
+    static void ShowAllOutposts(bool show);
 
     void DrawSettingsInternal() override;
 

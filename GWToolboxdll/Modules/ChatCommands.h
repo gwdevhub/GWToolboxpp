@@ -63,7 +63,7 @@ public:
     static void CmdReapplyTitle(const wchar_t* message, int argc, const LPWSTR* argv);
 
 private:
-    static bool ReadTemplateFile(std::wstring path, char* buff, size_t buffSize);
+    static bool ReadTemplateFile(const std::wstring& path, char* buff, size_t buffSize);
 
     static bool IsLuxon();
 
@@ -79,7 +79,7 @@ private:
     static void CmdUseSkill(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdShow(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdHide(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdToggle(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdToggle(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdZoom(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdCamera(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdSCWiki(const wchar_t* message, int argc, const LPWSTR* argv);
@@ -105,7 +105,7 @@ private:
 
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string& name, PendingTransmo& transmo);
-    static bool GetNPCInfoByName(std::wstring name, PendingTransmo& transmo);
+    static bool GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo);
     static bool ParseScale(int scale, PendingTransmo& transmo);
     static bool GetTargetTransmoInfo(PendingTransmo& transmo);
     static void TargetNearest(const wchar_t* model_id_or_name, TargetType type);

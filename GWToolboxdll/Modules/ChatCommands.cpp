@@ -92,7 +92,7 @@ namespace {
                 tan_angle = pi / 2;
             }
             else {
-                tan_angle = (pi / 2) * -1.0f;
+                tan_angle = pi / 2 * -1.0f;
             }
         }
         else if (pos.x < 0.0f) {
@@ -252,7 +252,7 @@ namespace {
             return Log::Error(chat_tab_syntax);
         }
         channel |= 0x8000;
-        GW::GameThread::Enqueue([channel]() {
+        GW::GameThread::Enqueue([channel] {
             // See OnChatUI_Callback for intercept
             SendUIMessage(GW::UI::UIMessage::kAppendMessageToChat, (void*)L"", (void*)channel);
         });
@@ -289,7 +289,7 @@ namespace {
         s->agent_id = GW::Agents::GetPlayerId();
         s->skill_slot = 0;
         s->skill_id = skill_id;
-        GW::GameThread::Enqueue([s]() {
+        GW::GameThread::Enqueue([s] {
             GW::StoC::EmulatePacket(s);
             delete s;
         });
@@ -333,7 +333,8 @@ namespace {
     const char* pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";
     using CmdPrefCB = void(__cdecl*)(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id);
 
-    void CmdValuePref(const wchar_t*, const int argc, LPWSTR* argv, uint32_t pref_id)
+    //NOLINTNEXTLINE
+    void CmdValuePref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id)
     {
         const auto pref = static_cast<GW::UI::NumberPreference>(pref_id);
 
@@ -350,7 +351,8 @@ namespace {
         return Log::Error(pref_syntax);
     }
 
-    void CmdEnumPref(const wchar_t*, const int argc, LPWSTR* argv, uint32_t pref_id)
+    //NOLINTNEXTLINE
+    void CmdEnumPref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id)
     {
         const auto pref = static_cast<GW::UI::EnumPreference>(pref_id);
 
@@ -377,7 +379,7 @@ namespace {
         Log::InfoW(available_vals_buffer);
     }
 
-    void CmdFlagPref(const wchar_t*, const int argc, LPWSTR* argv, uint32_t pref_id)
+    void CmdFlagPref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id)
     {
         const auto pref = static_cast<GW::UI::FlagPreference>(pref_id);
 
@@ -460,12 +462,11 @@ namespace {
         }
 
         // Find preference by name
-        const PrefMapCommand* pref = nullptr;
         const auto found = options.find(argv[1]);
         if (found == options.end()) {
             return Log::Error(pref_syntax);
         }
-        pref = &found->second;
+        const PrefMapCommand* pref = &found->second;
 
         pref->preference_callback(cmd, argc, argv, pref->preference_id);
     }
@@ -542,7 +543,7 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
         npc.primary = 1;
         npc.scale = scale;
         npc.default_level = 0;
-        GW::GameThread::Enqueue([npc_id, npc]() {
+        GW::GameThread::Enqueue([npc_id, npc] {
             GW::Packet::StoC::NpcGeneralStats packet{};
             packet.npc_id = npc_id;
             packet.file_id = npc.model_file_id;
@@ -556,7 +557,7 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
             GW::StoC::EmulatePacket(&packet);
         });
         if (npc_model_file_data) {
-            GW::GameThread::Enqueue([npc_id, npc_model_file_data]() {
+            GW::GameThread::Enqueue([npc_id, npc_model_file_data] {
                 GW::Packet::StoC::NPCModelFile packet;
                 packet.npc_id = npc_id;
                 packet.count = 1;
@@ -566,7 +567,7 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
             });
         }
     }
-    GW::GameThread::Enqueue([npc_id, agent_id, scale]() {
+    GW::GameThread::Enqueue([npc_id, agent_id, scale] {
         if (npc_id) {
             const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
             const GW::NPC npc = npcs[npc_id];
@@ -601,7 +602,7 @@ bool ChatCommands::GetNPCInfoByName(const std::string& name, PendingTransmo& tra
     return false;
 }
 
-bool ChatCommands::GetNPCInfoByName(const std::wstring name, PendingTransmo& transmo)
+bool ChatCommands::GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo)
 {
     return GetNPCInfoByName(GuiUtils::WStringToString(name), transmo);
 }
@@ -1137,7 +1138,7 @@ void ChatCommands::Update(const float delta)
             keep_forward = false;
         }
 
-        if (GWToolbox::Instance().right_mouse_down && (rotate != 0.f)) {
+        if (GWToolbox::Instance().right_mouse_down && rotate != 0.f) {
             side = rotate;
             rotate = 0.f;
         }
@@ -1267,7 +1268,6 @@ void ChatCommands::SearchAgent::Update()
         }
     }
     // Do search
-    size_t found = std::wstring::npos;
     float distance = GW::Constants::SqrRange::Compass;
     size_t closest = 0;
     const GW::Agent* me = GW::Agents::GetPlayer();
@@ -1275,7 +1275,7 @@ void ChatCommands::SearchAgent::Update()
         return;
     }
     for (const auto& enc_name : npc_names) {
-        found = GuiUtils::ToLower(enc_name.second->wstring()).find(search.c_str());
+        const size_t found = GuiUtils::ToLower(enc_name.second->wstring()).find(search.c_str());
         if (found == std::wstring::npos) {
             continue;
         }
@@ -1328,7 +1328,7 @@ void ChatCommands::SkillToUse::Update()
     }
 }
 
-bool ChatCommands::ReadTemplateFile(std::wstring path, char* buff, const size_t buffSize)
+bool ChatCommands::ReadTemplateFile(const std::wstring& path, char* buff, const size_t buffSize)
 {
     const auto fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr);
     if (fileHandle == INVALID_HANDLE_VALUE) {
@@ -1658,7 +1658,7 @@ void ChatCommands::CmdHide(const wchar_t* message, int, LPWSTR*)
     GW::Chat::SendChat('/', cmd.c_str());
 }
 
-void ChatCommands::CmdToggle(const wchar_t* message, const int argc, LPWSTR* argv)
+void ChatCommands::CmdToggle(const wchar_t* message, const int argc, const LPWSTR* argv)
 {
     if (argc < 2) {
         Log::ErrorW(L"Invalid syntax: %s", message);
@@ -1706,7 +1706,7 @@ void ChatCommands::CmdToggle(const wchar_t* message, const int argc, LPWSTR* arg
                 state = GW::EquipmentStatus::AlwaysHide;
                 break;
             default:
-                state = (state == GW::EquipmentStatus::AlwaysShow ? GW::EquipmentStatus::AlwaysHide : GW::EquipmentStatus::AlwaysShow);
+                state = state == GW::EquipmentStatus::AlwaysShow ? GW::EquipmentStatus::AlwaysHide : GW::EquipmentStatus::AlwaysShow;
                 break;
         }
         ASSERT(GW::Items::SetEquipmentVisibility(equipment_slot, state));
@@ -2063,7 +2063,7 @@ void ChatCommands::CmdUseSkill(const wchar_t*, const int argc, const LPWSTR* arg
     skill_to_use.skill_usage_delay = .0f;
 }
 
-void ChatCommands::CmdSCWiki(const wchar_t* , const int argc, const LPWSTR* argv)
+void ChatCommands::CmdSCWiki(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     const auto res = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     if (!SUCCEEDED(res)) {
@@ -2085,7 +2085,7 @@ void ChatCommands::CmdSCWiki(const wchar_t* , const int argc, const LPWSTR* argv
     }
 }
 
-void ChatCommands::CmdLoad(const wchar_t* , const int argc, const LPWSTR* argv)
+void ChatCommands::CmdLoad(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     // We will & should move that to GWCA.
     static int (__cdecl *GetPersonalDir)(size_t size, wchar_t* dir) = nullptr;
@@ -2131,7 +2131,7 @@ void ChatCommands::CmdLoad(const wchar_t* , const int argc, const LPWSTR* argv)
     }
 }
 
-void ChatCommands::CmdPing(const wchar_t* , const int argc, const LPWSTR* argv)
+void ChatCommands::CmdPing(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     // We will & should move that to GWCA.
     static int (__cdecl *GetPersonalDir)(size_t size, wchar_t* dir) = nullptr;
@@ -2177,7 +2177,7 @@ void ChatCommands::CmdPing(const wchar_t* , const int argc, const LPWSTR* argv)
     }
 }
 
-void ChatCommands::CmdPingEquipment(const wchar_t* , const int argc, const LPWSTR* argv)
+void ChatCommands::CmdPingEquipment(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (!IsMapReady()) {
         return;
@@ -2359,7 +2359,7 @@ void ChatCommands::CmdHom(const wchar_t* message, const int argc, LPWSTR*)
 // /withdraw quantity model_id1 [model_id2 ...]
 void ChatCommands::CmdWithdraw(const wchar_t*, const int argc, const LPWSTR* argv)
 {
-    const auto syntax_error = []() {
+    const auto syntax_error = [] {
         Log::Error("Incorrect syntax:");
         Log::Error(withdraw_syntax);
     };
@@ -2594,7 +2594,7 @@ void ChatCommands::CmdTransmoAgent(const wchar_t*, const int argc, const LPWSTR*
     TransmoAgent(agent_id, transmo);
 }
 
-void ChatCommands::CmdResize(const wchar_t* , const int argc, const LPWSTR* argv)
+void ChatCommands::CmdResize(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (argc != 3) {
         Log::Error("The syntax is /resize width height");
@@ -2611,7 +2611,7 @@ void ChatCommands::CmdResize(const wchar_t* , const int argc, const LPWSTR* argv
     MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
 }
 
-void ChatCommands::CmdReapplyTitle(const wchar_t* , const int argc, const LPWSTR* argv)
+void ChatCommands::CmdReapplyTitle(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     uint32_t title_id = Instance().default_title_id;
     if (argc > 1) {

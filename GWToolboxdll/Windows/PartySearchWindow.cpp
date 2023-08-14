@@ -25,7 +25,6 @@
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
-#include <GWToolbox.h>
 
 #include <Modules/Resources.h>
 #include <Windows/PartySearchWindow.h>
@@ -251,7 +250,7 @@ void PartySearchWindow::Initialize()
     messages = CircularBuffer<Message>(100);
 
     should_stop = false;
-    worker = std::thread([this]() {
+    worker = std::thread([this] {
         while (!should_stop) {
             if (thread_jobs.empty()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -331,7 +330,7 @@ void PartySearchWindow::FillParties()
     }
 }
 
-PartySearchWindow::TBParty* PartySearchWindow::GetParty(const uint32_t party_id, wchar_t** leader_out)
+PartySearchWindow::TBParty* PartySearchWindow::GetParty(const uint32_t party_id, wchar_t** leader_out) const
 {
     for (const auto& party : party_advertisements) {
         if (!party.second) {
@@ -347,7 +346,7 @@ PartySearchWindow::TBParty* PartySearchWindow::GetParty(const uint32_t party_id,
     return nullptr;
 }
 
-PartySearchWindow::TBParty* PartySearchWindow::GetPartyByName(std::wstring leader)
+PartySearchWindow::TBParty* PartySearchWindow::GetPartyByName(const std::wstring& leader)
 {
     const auto it = party_advertisements.find(leader);
     if (it == party_advertisements.end()) {
@@ -359,7 +358,7 @@ PartySearchWindow::TBParty* PartySearchWindow::GetPartyByName(std::wstring leade
 void PartySearchWindow::OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
 {
     auto& instance = Instance();
-    const std::lock_guard<std::recursive_mutex> lock(instance.party_mutex);
+    const std::lock_guard lock(instance.party_mutex);
 
     // Unless pigs fly and district/party numbers go over 16 byte length, storing party_ids as uint16_t is fine.
     wchar_t* party_name = nullptr;
@@ -407,7 +406,7 @@ void PartySearchWindow::OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::
         break;
         case GAME_SMSG_UPDATE_AGENT_PARTYSIZE: {
             const uint32_t player_id = *(&packet->header + 1);
-            GW::Player* player = GW::PlayerMgr::GetPlayerByID(player_id);
+            const GW::Player* player = GW::PlayerMgr::GetPlayerByID(player_id);
             if (!player || !player->name) {
                 break;
             }
@@ -487,10 +486,10 @@ void PartySearchWindow::Update(const float)
         ws_window->poll();
     }
     constexpr bool maintain_socket = false; // (visible && !collapsed) || (print_game_chat && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0);
-    if constexpr (maintain_socket && !ws_window) {
+    if constexpr (maintain_socket) {
         AsyncWindowConnect();
     }
-    if (!maintain_socket && ws_window && ws_window->getReadyState() == WebSocket::OPEN) {
+    if (ws_window && ws_window->getReadyState() == WebSocket::OPEN) {
         ws_window->close();
         messages.clear();
         window_rate_limiter = RateLimiter(); // Deliberately closed; reset rate limiter.
@@ -560,7 +559,7 @@ void PartySearchWindow::fetch()
     });
 }
 
-bool PartySearchWindow::IsLfpAlert(std::string& message)
+bool PartySearchWindow::IsLfpAlert(std::string& message) const
 {
     if (!filter_alerts) {
         return true;
@@ -644,7 +643,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
         const float districtwidth = 100.0f * font_scale;
         const float message_left = districtleft + districtwidth + innerspacing;
 
-        ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - (btn_width * _countof(display_party_types)));
+        ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - btn_width * _countof(display_party_types));
         ImGui::PushItemWidth(btn_width);
         float start_x = ImGui::GetCursorPosX();
         for (size_t i = 0; i < _countof(display_party_types); i++) {
@@ -707,7 +706,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
             if (ImGui::Button(label, ImVec2(playernamewidth, 0))) {
                 std::wstring leader_name = GuiUtils::StringToWString(party->player_name);
                 // open whisper to player
-                GW::GameThread::Enqueue([leader_name]() {
+                GW::GameThread::Enqueue([leader_name] {
                     SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)leader_name.data(), nullptr);
                 });
             }
@@ -830,7 +829,7 @@ void PartySearchWindow::AsyncWindowConnect(const bool force)
         return;
     }
     ws_window_connecting = true;
-    thread_jobs.push([this]() {
+    thread_jobs.push([this] {
         if ((ws_window = WebSocket::from_url(ws_host)) == nullptr) {
             printf("Couldn't connect to the host '%s'", ws_host);
         }

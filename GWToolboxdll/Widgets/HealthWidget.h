@@ -53,12 +53,12 @@ private:
             Delete,
         };
 
-        Threshold(ToolboxIni* ini, const char* section);
+        Threshold(const ToolboxIni* ini, const char* section);
         Threshold(const char* _name, Color _color, int _value);
 
         bool DrawHeader();
         bool DrawSettings(Operation& op);
-        void SaveSettings(ToolboxIni* ini, const char* section);
+        void SaveSettings(ToolboxIni* ini, const char* section) const;
 
         const unsigned int ui_id = 0;
         size_t index = 0;

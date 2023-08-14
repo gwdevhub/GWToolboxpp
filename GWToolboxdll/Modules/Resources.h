@@ -36,11 +36,11 @@ public:
     static void DxUpdate(IDirect3DDevice9* device);
 
     // Enqueue instruction to be called on worker thread, away from the render loop e.g. curl requests
-    static void EnqueueWorkerTask(std::function<void()> f);
+    static void EnqueueWorkerTask(const std::function<void()>& f);
     // Enqueue instruction to be called on the main update loop of GW
-    static void EnqueueMainTask(std::function<void()> f);
+    static void EnqueueMainTask(const std::function<void()>& f);
     // Enqueue instruction to be called on the draw loop of GW e.g. messing with DirectX9 device
-    static void EnqueueDxTask(std::function<void(IDirect3DDevice9*)> f);
+    static void EnqueueDxTask(const std::function<void(IDirect3DDevice9*)>& f);
 
     static void OpenFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
     static void SaveFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
@@ -96,14 +96,14 @@ public:
     static GuiUtils::EncString* DecodeStringId(uint32_t enc_str_id);
 
     // Ensure file exists on disk, download from remote location if not found. If an error occurs, details are held in error string
-    static void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
+    static void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, const AsyncLoadCallback& callback);
 
     // download to file, blocking. If an error occurs, details are held in response string
     bool Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response);
     // download to file, async, calls callback on completion. If an error occurs, details are held in response string
     void Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
     // download to memory, blocking. If an error occurs, details are held in response string
-    bool Download(const std::string& url, std::string& response);
+    static bool Download(const std::string& url, std::string& response);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
     void Download(const std::string& url, AsyncLoadMbCallback callback);
 
@@ -114,7 +114,7 @@ public:
     static void Post(const std::string& url, const std::string& payload, AsyncLoadMbCallback callback);
 
     // Stops the worker thread once it's done with the current jobs.
-    void EndLoading();
+    void EndLoading() const;
 
 private:
     static void Cleanup();

@@ -91,7 +91,7 @@ public:
         Character* SetCharacter(const wchar_t*, uint8_t profession = 0);
         GW::Friend* GetFriend();
         std::string GetCharactersHover(bool include_charname = false);
-        void StartWhisper();
+        void StartWhisper() const;
         bool RemoveGWFriend();
         bool ValidUuid();
 
@@ -102,7 +102,7 @@ public:
 
         [[nodiscard]] bool NeedToUpdate(const clock_t now) const
         {
-            return (now - last_update) > 10000; // 10 Second stale.
+            return now - last_update > 10000; // 10 Second stale.
         }
 
         [[nodiscard]] std::string& getAliasA()
@@ -133,7 +133,7 @@ protected:
     Friend* SetFriend(const GW::Friend*);
 
 
-    void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out);
+    void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out) const;
 
     std::unordered_map<uint32_t, bool> ignored_parties{};
     bool ignore_trade = false;
@@ -167,8 +167,8 @@ public:
     [[nodiscard]] bool IsWidget() const override;
     [[nodiscard]] bool IsWindow() const override;
 
-    static void CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdAddFriend(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CmdRemoveFriend(const wchar_t* message, int argc, const LPWSTR* argv);
     static void CmdWhisper(const wchar_t* message, int argc, LPWSTR* argv);
 
     void Initialize() override;

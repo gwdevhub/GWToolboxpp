@@ -159,7 +159,7 @@ namespace {
         Log::Log("content: %s\n error: %s %s", response->content.c_str(), response->error_id.c_str(), response->error_text.c_str());
 
         {
-            std::regex server_info_regex("ip=([^ ]+) port=([0-9]+)");
+            const std::regex server_info_regex("ip=([^ ]+) port=([0-9]+)");
             std::smatch m;
             std::regex_search(response->content, m, server_info_regex);
             if (!m.size()) {
@@ -174,7 +174,7 @@ namespace {
             if (!response) {
                 goto cleanup;
             }
-            std::regex client_info_regex("clid=([0-9]+) cid=([0-9]+)");
+            const std::regex client_info_regex("clid=([0-9]+) cid=([0-9]+)");
             if (!std::regex_search(response->content, m, client_info_regex)) {
                 goto cleanup;
             }
@@ -185,7 +185,7 @@ namespace {
             if (!response) {
                 goto cleanup;
             }
-            std::regex server_name_regex("virtualserver_name=([^\n]+)");
+            const std::regex server_name_regex("virtualserver_name=([^\n]+)");
             if (!std::regex_search(response->content, m, server_name_regex)) {
                 goto cleanup;
             }
@@ -229,7 +229,7 @@ namespace {
 
     void GetServerInfo(std::function<void()> callback = nullptr)
     {
-        Resources::EnqueueWorkerTask([callback]() {
+        Resources::EnqueueWorkerTask([callback] {
             GetServerInfoBlocking();
             if (callback) {
                 callback();
@@ -337,7 +337,7 @@ namespace {
 
     bool Connect(bool user_invoked = false, std::function<void(bool)> callback = nullptr)
     {
-        Resources::EnqueueWorkerTask([user_invoked,callback]() {
+        Resources::EnqueueWorkerTask([user_invoked,callback] {
             const bool success = ConnectBlocking(user_invoked);
             if (callback) {
                 callback(success);
@@ -419,7 +419,7 @@ namespace {
 
     void OnTeamspeakCommand(const wchar_t*, int, LPWSTR*)
     {
-        Resources::EnqueueWorkerTask([]() {
+        Resources::EnqueueWorkerTask([] {
             GetServerInfoBlocking();
             OnGotServerInfo();
         });
@@ -496,7 +496,7 @@ void TeamspeakModule::DrawSettingsInternal()
     if (enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, IsConnected() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-        auto status_str = []() {
+        auto status_str = [] {
             if (IsConnected()) {
                 return "Connected";
             }

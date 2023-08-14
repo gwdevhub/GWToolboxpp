@@ -101,7 +101,7 @@ void ObserverPlayerWindow::DrawHeaders() const
     }
 }
 
-void ObserverPlayerWindow::DrawAction(const std::string& name, const ObserverModule::ObservedAction* action)
+void ObserverPlayerWindow::DrawAction(const std::string& name, const ObserverModule::ObservedAction* action) const
 {
     float offset = 0;
     ImGui::Text(name.c_str());
@@ -144,9 +144,7 @@ void ObserverPlayerWindow::DrawSkills(const std::unordered_map<GW::Constants::Sk
 {
     auto i = 0u;
     for (auto skill_id : skill_ids) {
-        float offset = 0;
         i += 1;
-        offset = 0;
         ObserverModule::ObservableSkill* skill = ObserverModule::Instance().GetObservableSkillById(skill_id);
         if (!skill) {
             continue;
@@ -207,8 +205,8 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
             ImGui::Separator();
             const auto it_used_on_agent_skills = tracking->stats.skills_used_on_agents.find(compared->agent_id);
             const auto it_used_on_agent_skill_ids = tracking->stats.skill_ids_used_on_agents.find(compared->agent_id);
-            if ((it_used_on_agent_skills != tracking->stats.skills_used_on_agents.end()) &&
-                (it_used_on_agent_skill_ids != tracking->stats.skill_ids_used_on_agents.end())) {
+            if (it_used_on_agent_skills != tracking->stats.skills_used_on_agents.end() &&
+                it_used_on_agent_skill_ids != tracking->stats.skill_ids_used_on_agents.end()) {
                 DrawSkills(it_used_on_agent_skills->second, it_used_on_agent_skill_ids->second);
             }
         }

@@ -33,7 +33,7 @@ namespace {
         GuiUtils::EncString skill_name;
         bool enabled = true;
 
-        AvailableBond(GW::Constants::SkillID _skill_id, bool _enabled = true)
+        AvailableBond(const GW::Constants::SkillID _skill_id, const bool _enabled = true)
             : skill_id(_skill_id), enabled(_enabled) { };
 
         void Initialize()

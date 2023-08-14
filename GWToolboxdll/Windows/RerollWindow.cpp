@@ -170,7 +170,7 @@ namespace {
         return out;
     };
 
-    std::wstring LowerCaseRemovePunct(std::wstring in)
+    std::wstring LowerCaseRemovePunct(const std::wstring& in)
     {
         return GuiUtils::ToLower(GuiUtils::RemovePunctuation(in));
     }
@@ -260,10 +260,10 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
         for (size_t i = 0; i < available_chars_ptr->size(); i++) {
             auto& character = available_chars_ptr->at(i);
-            wchar_t* player_name = character.player_name;
+            const wchar_t* player_name = character.player_name;
             uint32_t profession = character.primary();
             buf = GuiUtils::WStringToString(player_name);
-            if ((i % 2) != 0) {
+            if (i % 2 != 0) {
                 ImGui::SameLine();
             }
             if (ImGui::IconButton(buf.c_str(), *Resources::GetProfessionIcon(static_cast<GW::Constants::Profession>(profession)), btn_dim)) {
@@ -339,7 +339,7 @@ void RerollWindow::CmdReroll(const wchar_t* message, const int argc, LPWSTR*)
     }
 
     // Search by character name
-    for (auto& available_char : *available_characters) {
+    for (const auto& available_char : *available_characters) {
         const auto player_name = available_char.player_name;
         if (IsExcludedFromReroll(player_name)) {
             continue;
@@ -407,7 +407,7 @@ void RerollWindow::Update(float)
         }
     }
     if (reroll_stage != None && TIMER_INIT() > reroll_timeout) {
-        GW::UI::SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
+        SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
         RerollFailed(L"Reroll timed out");
         return;
     }
@@ -477,7 +477,7 @@ void RerollWindow::Update(float)
                 RerollFailed(L"Wrong character was loaded");
                 return;
             }
-            GW::UI::SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
+            SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
             if (same_map) {
                 if (!IsInMap()) {
                     if (guild_hall_uuid) {
@@ -595,7 +595,7 @@ void RerollWindow::AddAvailableCharacter(const wchar_t* email, const wchar_t* ch
     account_characters[email]->push_back(charname);
 }
 
-bool RerollWindow::IsInMap(const bool include_district)
+bool RerollWindow::IsInMap(const bool include_district) const
 {
     if (guild_hall_uuid) {
         const GW::Guild* current_location = GW::GuildMgr::GetCurrentGH();
@@ -645,7 +645,7 @@ void RerollWindow::RerollFailed(const wchar_t* reason)
     reroll_stage = PendingLogout;
 }
 
-bool RerollWindow::Reroll(wchar_t* character_name, const GW::Constants::MapID _map_id)
+bool RerollWindow::Reroll(const wchar_t* character_name, const GW::Constants::MapID _map_id)
 {
     if (!Reroll(character_name, true, false)) {
         return false;
@@ -664,8 +664,8 @@ bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const b
     reroll_stage = None;
     reverting_reroll = false;
     failed_message = nullptr;
-    char_sort_order = GW::UI::GetPreference(GW::UI::EnumPreference::CharSortOrder);
-    GW::UI::SetPreference(GW::UI::EnumPreference::CharSortOrder, static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
+    char_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
+    SetPreference(GW::UI::EnumPreference::CharSortOrder, static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
     if (!character_name) {
         return false;
     }

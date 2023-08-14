@@ -373,7 +373,7 @@ namespace {
                 // <monster> is wchar_t id of several wchars
                 // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
                 const GW::AgentLiving* me = GW::Agents::GetCharacter();
-                const bool forplayer = (me && me->player_number == GetNumericSegment(message));
+                const bool forplayer = me && me->player_number == GetNumericSegment(message);
                 const bool rare = IsRare(GetSecondSegment(message));
                 if (forplayer && rare) {
                     return self_drop_rare;

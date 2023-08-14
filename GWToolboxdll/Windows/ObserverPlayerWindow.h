@@ -22,7 +22,7 @@ public:
     virtual uint32_t GetComparison();
 
     void DrawHeaders() const;
-    void DrawAction(const std::string& name, const ObserverModule::ObservedAction* action);
+    void DrawAction(const std::string& name, const ObserverModule::ObservedAction* action) const;
 
     void DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,
                     const std::vector<GW::Constants::SkillID>& skill_ids);

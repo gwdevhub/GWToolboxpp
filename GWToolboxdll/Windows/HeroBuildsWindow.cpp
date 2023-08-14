@@ -259,7 +259,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             const float icon_btn_width = btn_width / 1.75f;
             const float panel_width = btn_width + 12.0f;
             const float item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-            const float text_item_width = (ImGui::GetContentRegionAvail().x - btn_width - btn_width - btn_width - panel_width - (item_spacing * 3)) / 3;
+            const float text_item_width = (ImGui::GetContentRegionAvail().x - btn_width - btn_width - btn_width - panel_width - item_spacing * 3) / 3;
             float offset = btn_width;
             ImGui::SetCursorPosX(offset);
             ImGui::Text("Name");
@@ -694,7 +694,7 @@ void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, const int argc, const LP
         argBuildname.append(L" ");
         argBuildname.append(argv[i]);
     }
-    std::string argBuildName_s = GuiUtils::WStringToString(argBuildname);
+    const std::string argBuildName_s = GuiUtils::WStringToString(argBuildname);
     const TeamHeroBuild* found = Instance().GetTeambuildByName(argBuildName_s);
     if (!found) {
         Log::ErrorW(L"No hero build found for %s", argBuildname.c_str());
@@ -777,7 +777,7 @@ void HeroBuildsWindow::LoadFromFile()
     builds_changed = false;
 }
 
-void HeroBuildsWindow::SaveToFile()
+void HeroBuildsWindow::SaveToFile() const
 {
     constexpr size_t buffer_size = 16;
     if (builds_changed) {

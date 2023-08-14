@@ -341,11 +341,11 @@ public:
         ObserverModule& parent;
         const GW::Skill& gw_skill;
 
-        const wchar_t* DecName() { return name_dec; }
-        const bool HasExhaustion() { return gw_skill.special & 0x1; }
-        const bool IsMaintained() { return gw_skill.duration0 == 0x20000; }
-        const bool IsPvE() { return (gw_skill.special & 0x80000) != 0; }
-        const bool IsElite() { return (gw_skill.special & 0x4) != 0; }
+        const wchar_t* DecName() const { return name_dec; }
+        const bool HasExhaustion() const { return gw_skill.special & 0x1; }
+        const bool IsMaintained() const { return gw_skill.duration0 == 0x20000; }
+        const bool IsPvE() const { return (gw_skill.special & 0x80000) != 0; }
+        const bool IsElite() const { return (gw_skill.special & 0x4) != 0; }
         ObservableSkillStats stats = ObservableSkillStats();
 
         const std::string Name();
@@ -389,7 +389,7 @@ public:
         // agent_ids representing the players
         std::vector<uint32_t> agent_ids = {};
 
-        std::string DebugName()
+        std::string DebugName() const
         {
             std::string _debug_name = "(" + std::to_string(party_id) + ") " + display_name;
             return _debug_name;
@@ -443,7 +443,7 @@ public:
         return instance;
     }
 
-    const bool IsActive();
+    const bool IsActive() const;
     bool is_enabled = false;
 
     [[nodiscard]] const char* Name() const override { return "Observer Module"; }
@@ -464,7 +464,7 @@ public:
     ObservableSkill* GetObservableSkillById(GW::Constants::SkillID skill_id);
     ObservableParty* GetObservablePartyById(uint32_t party_id);
 
-    ObservableMap* GetMap() { return map; }
+    ObservableMap* GetMap() const { return map; }
     const std::vector<uint32_t>& GetObservableGuildIds() { return observable_guild_ids; }
     const std::vector<uint32_t>& GetObservableAgentIds() { return observable_agent_ids; }
     const std::vector<uint32_t>& GetObservablePartyIds() { return observable_party_ids; }

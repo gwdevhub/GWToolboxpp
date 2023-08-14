@@ -67,14 +67,14 @@ public:
     // Pass true to start refill, or false to stop.
     void Refill(bool do_refill = true);
     void SetEnabled(bool enabled);
-    const bool IsEnabled() { return IsVisible() && *enabled; }
+    const bool IsEnabled() const { return IsVisible() && *enabled; }
     [[nodiscard]] virtual bool IsVisible() const;
     void AfterUsed(bool used, int qty);
     void Toggle() { SetEnabled(!IsEnabled()); }
     // Resets pcon counters so it needs to recalc number and refill.
     void ResetCounts();
     void LoadSettings(const ToolboxIni* ini, const char* section);
-    void SaveSettings(ToolboxIni* ini, const char* section);
+    void SaveSettings(ToolboxIni* ini, const char* section) const;
 
     bool* enabled{}; // This is a ptr to the current char's status if applicable.
     bool pcon_quantity_checked = false;

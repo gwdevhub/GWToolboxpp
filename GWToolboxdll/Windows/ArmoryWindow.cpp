@@ -297,7 +297,7 @@ namespace GWArmory {
         const auto c2 = static_cast<uint32_t>(col2);
         const auto c3 = static_cast<uint32_t>(col3);
         const auto c4 = static_cast<uint32_t>(col4);
-        const uint32_t composite = c1 | (c2 << 4) | (c3 << 8) | (c4 << 12);
+        const uint32_t composite = c1 | c2 << 4 | c3 << 8 | c4 << 12;
         return composite;
     }
 
@@ -571,11 +571,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
         return;
     }
 
-    bool update_data = false;
-    const GW::Constants::Profession prof = GetAgentProfession(player_agent);
-    if (prof != current_profession) {
-        update_data = true;
-    }
+    const auto prof = GetAgentProfession(player_agent);
 
     const auto equip = GetPlayerEquipment();
     if (!equip) {
@@ -627,7 +623,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
             ImGui::TextUnformatted(ICON_FA_EXCLAMATION_TRIANGLE " Your helm is currently hidden ");
             ImGui::SameLine();
             if (ImGui::SmallButton("Show Helm")) {
-                GW::GameThread::Enqueue([]() {
+                GW::GameThread::Enqueue([] {
                     GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
                     GW::Items::SetEquipmentVisibility(GW::EquipmentType::CostumeHeadpiece, GW::EquipmentStatus::AlwaysHide);
                 });
@@ -637,7 +633,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
             ImGui::TextUnformatted(ICON_FA_EXCLAMATION_TRIANGLE " Your armor is currently hidden ");
             ImGui::SameLine();
             if (ImGui::SmallButton("Hide Costume")) {
-                GW::GameThread::Enqueue([]() {
+                GW::GameThread::Enqueue([] {
                     GW::Items::SetEquipmentVisibility(GW::EquipmentType::CostumeBody, GW::EquipmentStatus::AlwaysHide);
                 });
             }

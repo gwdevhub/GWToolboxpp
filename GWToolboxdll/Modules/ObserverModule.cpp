@@ -5,7 +5,6 @@
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GuildMgr.h>
@@ -93,7 +92,7 @@ struct JumboMessage : GW::Packet::StoC::Packet<JumboMessage> {
     uint32_t value{}; // JumboMessageValue
 };
 
-const uint32_t GW::Packet::StoC::Packet<JumboMessage>::STATIC_HEADER = (0x18F); // 399
+const uint32_t GW::Packet::StoC::Packet<JumboMessage>::STATIC_HEADER = 0x18F; // 399
 
 
 // Destructor
@@ -111,7 +110,7 @@ void ObserverModule::Initialize()
     is_observer = GW::Map::GetIsObserving();
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
-        &InstanceLoadInfo_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
+        &InstanceLoadInfo_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
             HandleInstanceLoadInfo(status, packet);
         });
 
@@ -247,7 +246,7 @@ void ObserverModule::Terminate()
 
 
 // Is the Module actively tracking agents?
-const bool ObserverModule::IsActive()
+const bool ObserverModule::IsActive() const
 {
     // an observer match is considered an explorable area
     return is_enabled && is_explorable && (enable_in_explorable_areas || is_observer);
@@ -474,7 +473,7 @@ void ObserverModule::HandleDamageDone(const uint32_t caster_id, const uint32_t t
     ObservableAgent* target = GetObservableAgentById(target_id);
 
     // get last hit to credit the kill
-    if (target && caster && caster->party_id != NO_PARTY && (amount_pc < 0)) {
+    if (target && caster && caster->party_id != NO_PARTY && amount_pc < 0) {
         target->last_hit_by = caster->agent_id;
     }
 
@@ -525,7 +524,7 @@ void ObserverModule::HandleDamageDone(const uint32_t caster_id, const uint32_t t
 
 // Handle AgentAdd Packet
 // Fired when an Agent is to be loaded into memory
-void ObserverModule::HandleAgentAdd(const uint32_t )
+void ObserverModule::HandleAgentAdd(const uint32_t)
 {
     // queue update parties
     party_sync_timer = TIMER_INIT();
@@ -719,7 +718,7 @@ void ObserverModule::HandleVictory(ObservableParty* winning_party)
 
     // notify other parties that they lost
     for (auto& [_, losing_party] : observable_parties) {
-        if (losing_party && (losing_party->party_id != winning_party->party_id)) {
+        if (losing_party && losing_party->party_id != winning_party->party_id) {
             losing_party->is_defeated = true;
             losing_party->is_victorious = false;
         }
@@ -790,9 +789,6 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage sta
     if (target) {
         target_party = GetObservablePartyById(target->party_id);
     }
-
-    bool same_team = caster && target && (caster->team_id != NO_TEAM) && (caster->team_id == target->team_id);
-    bool same_party = target_party && caster_party && (target_party->party_id == caster_party->party_id);
 
     // notify caster & caster_party of interrupt
     //
@@ -940,8 +936,8 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage sta
                 break;
             }
         }
-        same_team = caster && target && (caster->team_id != NO_TEAM) && (caster->team_id == target->team_id);
-        same_party = target_party && caster_party && (target_party->party_id == caster_party->party_id);
+        const bool same_team = caster && target && caster->team_id != NO_TEAM && caster->team_id == target->team_id;
+        const bool same_party = target_party && caster_party && target_party->party_id == caster_party->party_id;
 
         // notify the skill
         skill->stats.total_usages.Reduce(action, stage);
@@ -1257,7 +1253,7 @@ void ObserverModule::DrawSettingsInternal()
 }
 
 
-void ObserverModule::Update(const float )
+void ObserverModule::Update(const float)
 {
     if (party_sync_timer == 0) {
         return;
@@ -1710,7 +1706,7 @@ ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkil
     const auto it_caster = skills_received_from_agents.find(caster_agent_id);
     if (it_caster == skills_received_from_agents.end()) {
         // receiver and his skills are not registered with this agent
-        std::vector<GW::Constants::SkillID> received_skill_ids = {skill_id};
+        std::vector received_skill_ids = {skill_id};
         skill_ids_received_from_agents.insert({caster_agent_id, received_skill_ids});
         auto observed_skill = new ObservedSkill(skill_id);
         std::unordered_map<GW::Constants::SkillID, ObservedSkill*> received_skills = {{skill_id, observed_skill}};
@@ -1734,7 +1730,7 @@ ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkil
         return *observed_skill;
     }
     // receivers already registered this skill
-    return *(it_observed_skill->second);
+    return *it_observed_skill->second;
 }
 
 
@@ -1745,7 +1741,7 @@ ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkil
     const auto it_target = skills_used_on_agents.find(target_agent_id);
     if (it_target == skills_used_on_agents.end()) {
         // receiver and his skills are not registered with this agent
-        std::vector<GW::Constants::SkillID> used_skill_ids = {skill_id};
+        std::vector used_skill_ids = {skill_id};
         skill_ids_used_on_agents.insert({target_agent_id, used_skill_ids});
         auto observed_skill = new ObservedSkill(skill_id);
         std::unordered_map<GW::Constants::SkillID, ObservedSkill*> used_skills = {{skill_id, observed_skill}};
@@ -1769,7 +1765,7 @@ ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkil
         return *observed_skill;
     }
     // receivers already registered this skill
-    return *(it_observed_skill->second);
+    return *it_observed_skill->second;
 }
 
 
@@ -1934,7 +1930,7 @@ bool ObserverModule::ObservableParty::SynchroniseParty()
                 guild_id = guild->guild_id;
                 name = guild->name;
                 rank = guild->rank;
-                rank_str = (guild->rank == NO_RANK) ? "N/A" : std::to_string(guild->rank);
+                rank_str = guild->rank == NO_RANK ? "N/A" : std::to_string(guild->rank);
                 rating = guild->rating;
                 display_name = guild->name + " [" + guild->tag + "]";
             }

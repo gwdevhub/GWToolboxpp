@@ -155,7 +155,7 @@ void AprilFools::SetInfected(GW::Agent* agent, const bool is_infected)
 {
     auto agent_id = agent->agent_id;
     if (!is_infected) {
-        GW::GameThread::Enqueue([agent_id]() {
+        GW::GameThread::Enqueue([agent_id] {
             GW::Packet::StoC::GenericValue packet;
             packet.agent_id = agent_id;
             packet.value_id = 7; // Remove effect
@@ -171,7 +171,7 @@ void AprilFools::SetInfected(GW::Agent* agent, const bool is_infected)
     infection_queued = true;
     SetInfected(agent, false);
     static auto last_quote_idx = -1;
-    GW::GameThread::Enqueue([agent_id]() {
+    GW::GameThread::Enqueue([agent_id] {
         GW::Packet::StoC::GenericValue packet;
         packet.agent_id = agent_id;
         packet.value_id = 6; // Add effect
@@ -214,7 +214,7 @@ void AprilFools::Update(const float)
             std::advance(it, rand() % player_agents.size());
             SetInfected(it->second, true);
         }
-        uint32_t infection_interval = ((60 / player_agents.size()) * CLOCKS_PER_SEC);
+        uint32_t infection_interval = 60 / player_agents.size() * CLOCKS_PER_SEC;
         if (infection_interval < 2500) {
             infection_interval = 2500;
         }

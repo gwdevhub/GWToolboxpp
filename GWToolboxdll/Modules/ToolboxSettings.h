@@ -20,7 +20,7 @@ public:
     [[nodiscard]] const char* Name() const override { return "Toolbox Settings"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_TOOLBOX; }
 
-    void LoadModules(ToolboxIni* ini);
+    static void LoadModules(ToolboxIni* ini);
 
     void Update(float delta) override;
 

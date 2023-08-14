@@ -74,7 +74,7 @@ namespace {
     std::vector<std::thread*> workers;
 
     // snprintf error message, pass to callback as a failure. Used internally.
-    void trigger_failure_callback(std::function<void(bool, const std::wstring&)> callback, const wchar_t* format, ...)
+    void trigger_failure_callback(const std::function<void(bool, const std::wstring&)>& callback, const wchar_t* format, ...)
     {
         std::wstring out;
         va_list vl;
@@ -152,21 +152,21 @@ Resources::~Resources()
     map_names.clear();
 };
 
-void Resources::EnqueueWorkerTask(std::function<void()> f)
+void Resources::EnqueueWorkerTask(const std::function<void()>& f)
 {
     worker_mutex.lock();
     thread_jobs.push(f);
     worker_mutex.unlock();
 }
 
-void Resources::EnqueueMainTask(std::function<void()> f)
+void Resources::EnqueueMainTask(const std::function<void()>& f)
 {
     main_mutex.lock();
     main_jobs.push(f);
     main_mutex.unlock();
 }
 
-void Resources::EnqueueDxTask(std::function<void(IDirect3DDevice9*)> f)
+void Resources::EnqueueDxTask(const std::function<void(IDirect3DDevice9*)>& f)
 {
     dx_mutex.lock();
     dx_jobs.push(f);
@@ -177,7 +177,7 @@ void Resources::OpenFileDialog(std::function<void(const char*)> callback, const 
 {
     auto filterList_cpy = new std::string(filterList);
     auto defaultPath_cpy = new std::string(defaultPath);
-    EnqueueWorkerTask([callback, filterList_cpy, defaultPath_cpy]() {
+    EnqueueWorkerTask([callback, filterList_cpy, defaultPath_cpy] {
         nfdchar_t* outPath = nullptr;
         const nfdresult_t result = NFD_OpenDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
         delete filterList_cpy;
@@ -204,7 +204,7 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
     auto filterList_cpy = new std::string(filterList);
     auto defaultPath_cpy = new std::string(defaultPath);
 
-    EnqueueWorkerTask([callback, filterList_cpy, defaultPath_cpy]() {
+    EnqueueWorkerTask([callback, filterList_cpy, defaultPath_cpy] {
         nfdchar_t* outPath = nullptr;
         const nfdresult_t result = NFD_SaveDialog(filterList_cpy->c_str(), defaultPath_cpy->c_str(), &outPath);
         delete filterList_cpy;
@@ -252,12 +252,11 @@ float Resources::GetGWScaleMultiplier(const bool force)
 
 HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path)
 {
-    HRESULT hRes = E_FAIL;
     if (in_shortcut_path.extension() != ".lnk") {
         out_actual_path = in_shortcut_path;
         return S_OK;
     }
-    hRes = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    HRESULT hRes = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
@@ -318,7 +317,7 @@ void Resources::Initialize()
 {
     ToolboxModule::Initialize();
     for (size_t i = 0; i < MAX_WORKERS; i++) {
-        workers.push_back(new std::thread([this]() {
+        workers.push_back(new std::thread([this] {
             WorkerUpdate();
         }));
     }
@@ -365,7 +364,7 @@ void Resources::Terminate()
     Cleanup();
 }
 
-void Resources::EndLoading()
+void Resources::EndLoading() const
 {
     EnqueueWorkerTask([this] {
         should_stop = true;
@@ -464,7 +463,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback)
     EnqueueWorkerTask([this, url, callback] {
         std::string response;
         bool ok = Download(url, response);
-        EnqueueMainTask([callback, ok, response]() {
+        EnqueueMainTask([callback, ok, response] {
             callback(ok, response);
         });
     });
@@ -496,13 +495,13 @@ void Resources::Post(const std::string& url, const std::string& payload, AsyncLo
     EnqueueWorkerTask([url, payload, callback] {
         std::string response;
         bool ok = Post(url, payload, response);
-        EnqueueMainTask([callback, ok, response]() {
+        EnqueueMainTask([callback, ok, response] {
             callback(ok, response);
         });
     });
 }
 
-void Resources::EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
+void Resources::EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, const AsyncLoadCallback& callback)
 {
     if (exists(path_to_file)) {
         // if file exists, run the callback immediately in the same thread
@@ -980,7 +979,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
 
     // No local file found; download from wiki via searching by the item name; the wiki will usually return a 302 redirect if its an exact item match
     const std::string search_str = GuiUtils::WikiUrl(item_name);
-    Instance().Download(search_str, [texture, item_name, callback](bool ok, const std::string& response) {
+    Instance().Download(search_str, [texture, item_name, callback](const bool ok, const std::string& response) {
         if (!ok) {
             callback(ok, GuiUtils::StringToWString(response));
             return;
@@ -1000,7 +999,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
                 trigger_failure_callback(callback, L"Failed to find title HTML for %s from wiki", item_name.c_str());
                 return;
             }
-            std::string html_item_name = GuiUtils::HtmlEncode(m[1].str());
+            const std::string html_item_name = GuiUtils::HtmlEncode(m[1].str());
             snprintf(regex_str, sizeof(regex_str), R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", html_item_name.c_str());
             if (!std::regex_search(response, m, std::regex(regex_str))) {
                 trigger_failure_callback(callback, L"Failed to find image HTML for %s from wiki", item_name.c_str());

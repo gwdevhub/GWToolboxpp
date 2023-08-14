@@ -201,7 +201,7 @@ void Updater::LoadSettings(ToolboxIni* ini)
 #ifdef _DEBUG
     mode = static_cast<Mode>(0);
 #else
-    mode = static_cast<Mode>(ini->GetLongValue(Name(), "update_mode", (int)mode));
+    mode = static_cast<Mode>(ini->GetLongValue(Name(), "update_mode", static_cast<int>(mode)));
 #endif
     CheckForUpdate();
 }
@@ -214,9 +214,9 @@ void Updater::SaveSettings(ToolboxIni* ini)
     ini->SetLongValue(Name(), "update_mode", static_cast<int>(mode));
     ini->SetValue(Name(), "dllversion", GWTOOLBOXDLL_VERSION);
 
-    HMODULE module = GWToolbox::GetDLLModule();
+    const HMODULE module = GWToolbox::GetDLLModule();
     CHAR dllfile[MAX_PATH];
-    DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
+    const DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
     ini->SetValue(Name(), "dllpath", size > 0 ? dllfile : "error");
 #endif
 }

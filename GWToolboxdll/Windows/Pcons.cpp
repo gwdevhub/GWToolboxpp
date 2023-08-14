@@ -423,7 +423,7 @@ void Pcon::UpdateRefill()
             continue; // No item array, skip
         }
         for (size_t i = 0; i < storageItems.size() && storageItems.valid(); i++) {
-            GW::Item* storageItem = storageItems[i];
+            const GW::Item* storageItem = storageItems[i];
             if (storageItem == nullptr) {
                 continue; // No item, skip
             }
@@ -541,7 +541,7 @@ void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
     }
 }
 
-void Pcon::SaveSettings(ToolboxIni* inifile, const char* section)
+void Pcon::SaveSettings(ToolboxIni* inifile, const char* section) const
 {
     char buf_active[256];
     char buf_threshold[256];

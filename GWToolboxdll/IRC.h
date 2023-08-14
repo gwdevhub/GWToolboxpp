@@ -63,29 +63,29 @@ public:
     ~IRC();
     int start(const char* server, int port, const char* nick, const char* user, const char* name, const char* pass);
     void disconnect();
-    int privmsg(const char* target, const char* message);
-    int privmsg(const char* fmt, ...);
-    int notice(const char* target, const char* message);
-    int notice(const char* fmt, ...);
+    int privmsg(const char* target, const char* message) const;
+    int privmsg(const char* fmt, ...) const;
+    int notice(const char* target, const char* message) const;
+    int notice(const char* fmt, ...) const;
 
-    int part(const char* channel);
-    int kick(const char* channel, const char* nick, const char* message);
-    int mode(const char* modes);
-    int mode(const char* channel, const char* modes, const char* targets);
-    int nick(const char* newnick);
-    int quit(const char* quit_message);
-    int raw(const char* fmt, ...);
-    int raw(const wchar_t* fmt, ...);
-    int join(const char* channel) { return raw("JOIN %s\r\n", channel); }
-    int kick(const char* channel, const char* nick) { return raw("KICK %s %s\r\n", channel, nick); }
+    int part(const char* channel) const;
+    int kick(const char* channel, const char* nick, const char* message) const;
+    int mode(const char* modes) const;
+    int mode(const char* channel, const char* modes, const char* targets) const;
+    int nick(const char* newnick) const;
+    int quit(const char* quit_message) const;
+    int raw(const char* fmt, ...) const;
+    int raw(const wchar_t* fmt, ...) const;
+    int join(const char* channel) const { return raw("JOIN %s\r\n", channel); }
+    int kick(const char* channel, const char* nick) const { return raw("KICK %s %s\r\n", channel, nick); }
     void hook_irc_command(const char* cmd_name, int (*function_ptr)(const char*, irc_reply_data*, void*));
     int message_loop();
     int message_fetch();
     int ping();
-    int is_op(const char* channel, const char* nick);
-    int is_voice(const char* channel, const char* nick);
-    char* current_nick();
-    bool is_connected();
+    int is_op(const char* channel, const char* nick) const;
+    int is_voice(const char* channel, const char* nick) const;
+    char* current_nick() const;
+    bool is_connected() const;
 
 private:
     static void error(int err);

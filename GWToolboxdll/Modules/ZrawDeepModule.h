@@ -24,11 +24,11 @@ public:
     void Update(float delta) override;
     void DrawSettingsInternal() override;
     void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
-    void PlayKanaxaiDialog(uint8_t idx);
+    static void PlayKanaxaiDialog(uint8_t idx);
     void SaveSettings(ToolboxIni* ini) override;
     void LoadSettings(ToolboxIni* ini) override;
 
-    void SetTransmogs();
+    void SetTransmogs() const;
     static bool IsEnabled();
 
     GW::HookEntry ZrawDeepModule_StoCs;

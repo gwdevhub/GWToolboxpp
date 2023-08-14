@@ -209,12 +209,10 @@ void GWPreferences::Draw()
         const float font_scale = ImGui::GetIO().FontGlobalScale;
 
         const float name_width = avail_width - 80.f * font_scale;
-        float offset = 0.f;
         ImGui::Text(" ");
         ImGui::SameLine(name_width);
         ImGui::Text("Value");
         for (const auto* pref : current_preferences.preferences) {
-            offset = 0.f;
             ImGui::Text("find the name for this!");
             ImGui::SameLine(name_width);
             ImGui::Text("%ls", pref->value.c_str());
@@ -226,7 +224,7 @@ void GWPreferences::Draw()
         const float font_scale = ImGui::GetIO().FontGlobalScale;
 
         const float atts_width = 80.f * font_scale;
-        const float name_width = avail_width - (atts_width * 3);
+        const float name_width = avail_width - atts_width * 3;
         float offset = 0.f;
         ImGui::Text(" ");
         ImGui::SameLine(offset += name_width);

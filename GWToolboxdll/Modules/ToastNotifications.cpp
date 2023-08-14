@@ -107,7 +107,7 @@ namespace {
             return; // dismissed
         }
         GuiUtils::FocusWindow();
-        GW::GameThread::Enqueue([charname = toast->title]() {
+        GW::GameThread::Enqueue([charname = toast->title] {
             SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)charname.data());
         });
     }
@@ -143,6 +143,7 @@ namespace {
         nonconst->dismiss();
     }
 
+    //NOLINTNEXTLINE
     void OnToastMessageDecoded(void* callback_param, wchar_t* decoded)
     {
         const auto title = static_cast<wchar_t*>(callback_param);
@@ -150,6 +151,7 @@ namespace {
         delete[] title;
     }
 
+    //NOLINTNEXTLINE
     void SendEncodedToastMessage(const wchar_t* title, wchar_t* encoded_message)
     {
         if (!(encoded_message && encoded_message[0])) {
@@ -282,7 +284,7 @@ namespace {
         GW::StoC::PacketCallback cb;
         GW::HookEntry hook_entry;
 
-        StoC_Callback(const uint32_t _header, GW::StoC::PacketCallback _cb)
+        StoC_Callback(const uint32_t _header, const GW::StoC::PacketCallback& _cb)
             : header(_header), cb(_cb) { }
     };
 
@@ -293,7 +295,7 @@ namespace {
         {GAME_SMSG_AGENT_UPDATE_EFFECTS, OnAgentUpdateEffects}
     };
 } // namespace
-ToastNotifications::Toast::Toast(std::wstring _title, std::wstring _message)
+ToastNotifications::Toast::Toast(const std::wstring& _title, const std::wstring& _message)
     : title(_title), message(_message) {};
 
 ToastNotifications::Toast::~Toast()

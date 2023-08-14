@@ -19,7 +19,6 @@
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
-#include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -91,7 +90,7 @@ namespace {
     bool EncInfoField(const char* label, const wchar_t* enc_string)
     {
         std::string info_string;
-        const size_t size_reqd = enc_string ? (wcslen(enc_string) * 7) + 1 : 0;
+        const size_t size_reqd = enc_string ? wcslen(enc_string) * 7 + 1 : 0;
         info_string.resize(size_reqd, 0); // 7 chars = 0xFFFF plus a space
         size_t offset = 0;
         for (size_t i = 0; enc_string && enc_string[i] && offset < size_reqd - 1; i++) {
@@ -142,8 +141,8 @@ namespace {
         const auto player_status = GetResignStatus(index);
         const char* status_str = GetStatusStr(GetResignStatus(index));
         return swprintf(buffer, size, L"%zu. %s - %S", index + 1, player_name,
-                        (player_status == Status::Connected
-                         && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+                        player_status == Status::Connected
+                        && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
                             ? "Connected (not resigned)" : status_str);
     }
 
@@ -293,7 +292,7 @@ namespace {
         ImGui::PushID(info_id);
         InfoField("SkillID", "%d", skill->skill_id);
         InfoField("Name", "%s", name->string().c_str());
-        auto draw_advanced = [&, skill]() {
+        auto draw_advanced = [&, skill] {
             InfoField("Addr", "%p", skill);
             InfoField("Type", "%d", skill->type);
             short file_ids[2];
@@ -368,7 +367,7 @@ namespace {
         InfoField("Bag/Slot", "%s", slot);
         InfoField("ModelID", "%d", item->model_id);
         InfoField("Name", "%s", name->string().c_str());
-        auto draw_advanced = [&, item]() {
+        auto draw_advanced = [&, item] {
             InfoField("Addr", "%p", item);
             InfoField("Id", "%d", item->item_id);
             InfoField("Type", "%d", item->type);
@@ -570,7 +569,7 @@ namespace {
             ImGui::Text("%d. %S - %s", i + 1, player_name, status_str);
             if (resign_statuses[i] != Status::Unknown) {
                 ImGui::SameLine();
-                ImGui::TextDisabled("[%d:%02d:%02d.%03d]", (timestamp[i] / (60 * 60 * 1000)), (timestamp[i] / (60 * 1000)) % 60, (timestamp[i] / (1000)) % 60, (timestamp[i]) % 1000);
+                ImGui::TextDisabled("[%d:%02d:%02d.%03d]", timestamp[i] / (60 * 60 * 1000), timestamp[i] / (60 * 1000) % 60, timestamp[i] / 1000 % 60, timestamp[i] % 1000);
             }
             ImGui::PopID();
         }
@@ -661,7 +660,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
 
         if (show_open_chest) {
             if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
-                GW::GameThread::Enqueue([]() {
+                GW::GameThread::Enqueue([] {
                     GW::Items::OpenXunlaiWindow();
                 });
             }
@@ -889,7 +888,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
 #endif
 }
 
-void InfoWindow::Update(const float )
+void InfoWindow::Update(const float)
 {
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         send_timer = TIMER_INIT();

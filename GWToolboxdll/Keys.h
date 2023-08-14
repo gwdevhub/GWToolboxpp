@@ -525,8 +525,8 @@ inline int ModKeyName(char* buf, const size_t bufsz, const LONG mod, const LONG 
         }
     }
     return snprintf(buf, bufsz, "%s%s%s%s",
-                    (mod & ModKey_Control) ? "Control + " : "",
-                    (mod & ModKey_Alt) ? "Alt + " : "",
-                    (mod & ModKey_Shift) ? "Shift + " : "",
+                    mod & ModKey_Control ? "Control + " : "",
+                    mod & ModKey_Alt ? "Alt + " : "",
+                    mod & ModKey_Shift ? "Shift + " : "",
                     vkey > 0 ? vkey_c : ifempty);
 }

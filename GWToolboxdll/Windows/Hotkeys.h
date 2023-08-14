@@ -90,7 +90,7 @@ protected:
     static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
     static bool isExplorable() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
     static bool isOutpost() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
-    bool IsInRangeOfNPC();
+    bool IsInRangeOfNPC() const;
 
     const unsigned int ui_id = 0; // an internal id to ensure interface consistency
 
@@ -108,7 +108,7 @@ public:
     static const char* IniSection() { return "SendChat"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeySendChat(ToolboxIni* ini, const char* section);
+    HotkeySendChat(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -127,7 +127,7 @@ public:
 
     HotkeyEquipItemAttributes& operator=(const HotkeyEquipItemAttributes& other) = delete;
 
-    bool check(const GW::Item* item = nullptr);
+    bool check(const GW::Item* item = nullptr) const;
     uint32_t model_id = 0;
     GuiUtils::EncString enc_name;
     GuiUtils::EncString enc_desc;
@@ -168,7 +168,7 @@ public:
 
     static bool IsEquippable(const GW::Item* item);
 
-    GW::Item* FindMatchingItem(GW::Constants::Bag bag_idx);
+    GW::Item* FindMatchingItem(GW::Constants::Bag bag_idx) const;
 };
 
 // hotkey to use an item
@@ -181,7 +181,7 @@ public:
     static const char* IniSection() { return "UseItem"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyUseItem(ToolboxIni* ini, const char* section);
+    HotkeyUseItem(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -211,7 +211,7 @@ public:
     static const char* IniSection() { return "DropUseBuff"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyDropUseBuff(ToolboxIni* ini, const char* section);
+    HotkeyDropUseBuff(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -237,7 +237,7 @@ public:
     static const char* IniSection() { return "Toggle"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyToggle(ToolboxIni* ini, const char* section);
+    HotkeyToggle(const ToolboxIni* ini, const char* section);
     ~HotkeyToggle() override;
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -276,7 +276,7 @@ public:
     static const char* IniSection() { return "Action"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyAction(ToolboxIni* ini, const char* section);
+    HotkeyAction(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -306,7 +306,7 @@ public:
     static const char* IniSection() { return "Target"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyTarget(ToolboxIni* ini, const char* section);
+    HotkeyTarget(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -333,7 +333,7 @@ public:
     static const char* IniSection() { return "Move"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyMove(ToolboxIni* ini, const char* section);
+    HotkeyMove(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -350,7 +350,7 @@ public:
     static const char* IniSection() { return "Dialog"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyDialog(ToolboxIni* ini, const char* section);
+    HotkeyDialog(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -368,7 +368,7 @@ public:
     static const char* IniSection() { return "PingBuild"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyPingBuild(ToolboxIni* ini, const char* section);
+    HotkeyPingBuild(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -386,7 +386,7 @@ public:
     static const char* IniSection() { return "HeroTeamBuild"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyHeroTeamBuild(ToolboxIni* ini, const char* section);
+    HotkeyHeroTeamBuild(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -411,7 +411,7 @@ public:
         return IniSection();
     }
 
-    HotkeyFlagHero(ToolboxIni* ini, const char* section);
+    HotkeyFlagHero(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -432,7 +432,7 @@ public:
     static const char* IniSection() { return "GWHotkey"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }
 
-    HotkeyGWKey(ToolboxIni* ini, const char* section);
+    HotkeyGWKey(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
@@ -455,7 +455,7 @@ public:
         return IniSection();
     }
 
-    HotkeyCommandPet(ToolboxIni* ini, const char* section);
+    HotkeyCommandPet(const ToolboxIni* ini, const char* section);
 
     void Save(ToolboxIni* ini, const char* section) const override;
 

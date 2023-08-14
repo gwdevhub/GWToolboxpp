@@ -92,7 +92,7 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
 
         const GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(pak->map_id));
         if (info) {
-            const bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
+            const bool new_in_dungeon = info->type == GW::RegionType::Dungeon;
 
             if (new_in_dungeon && !in_dungeon) {
                 // zoning from explorable to dungeon
@@ -289,7 +289,7 @@ milliseconds TimerWidget::GetMapTimeElapsed()
     return duration_cast<milliseconds>(now() - instance_started);
 }
 
-milliseconds TimerWidget::GetTimer()
+milliseconds TimerWidget::GetTimer() const
 {
     if (use_instance_timer) {
         return milliseconds(instance_timer_valid ? GW::Map::GetInstanceTime() : 0);
@@ -297,7 +297,7 @@ milliseconds TimerWidget::GetTimer()
     return GetRunTimeElapsed();
 }
 
-milliseconds TimerWidget::GetRunTimeElapsed()
+milliseconds TimerWidget::GetRunTimeElapsed() const
 {
     if (!is_valid(run_started)) {
         return milliseconds(0);
@@ -318,9 +318,9 @@ unsigned long TimerWidget::GetStartPoint() const
     return static_cast<unsigned long>(ms.count());
 }
 
-unsigned long TimerWidget::GetTimerMs() { return static_cast<unsigned long>(GetTimer().count()); }
+unsigned long TimerWidget::GetTimerMs() const { return static_cast<unsigned long>(GetTimer().count()); }
 unsigned long TimerWidget::GetMapTimeElapsedMs() { return static_cast<unsigned long>(GetMapTimeElapsed().count()); }
-unsigned long TimerWidget::GetRunTimeElapsedMs() { return static_cast<unsigned long>(GetRunTimeElapsed().count()); }
+unsigned long TimerWidget::GetRunTimeElapsedMs() const { return static_cast<unsigned long>(GetRunTimeElapsed().count()); }
 
 
 void TimerWidget::SetRunCompleted(const bool no_print)
@@ -333,7 +333,7 @@ void TimerWidget::SetRunCompleted(const bool no_print)
     }
 }
 
-void TimerWidget::PrintTimer()
+void TimerWidget::PrintTimer() const
 {
     char buf[32];
     print_time(GetTimer(), 2, 32, buf);
@@ -464,7 +464,7 @@ bool TimerWidget::GetSpiritTimer()
         }
         SkillID effect_id = effect.skill_id;
         auto spirit_effect_enabled = spirit_effects_enabled.find(effect_id);
-        if (spirit_effect_enabled == spirit_effects_enabled.end() || !(spirit_effect_enabled->second)) {
+        if (spirit_effect_enabled == spirit_effects_enabled.end() || !spirit_effect_enabled->second) {
             continue;
         }
         offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effect.GetTimeRemaining() / 1000);
@@ -523,12 +523,12 @@ bool TimerWidget::GetDeepTimer()
     // a 30s timer starts when you enter the aspect
     // a 30s timer starts 100s after you enter the aspect
     // a 30s timer starts 200s after you enter the aspect
-    long timer = 30 - (diff % 30);
+    long timer = 30 - diff % 30;
     if (diff > 100) {
-        timer = std::min(timer, 30 - ((diff - 100) % 30));
+        timer = std::min(timer, 30 - (diff - 100) % 30);
     }
     if (diff > 200) {
-        timer = std::min(timer, 30 - ((diff - 200) % 30));
+        timer = std::min(timer, 30 - (diff - 200) % 30);
     }
     switch (skill) {
         case SkillID::Aspect_of_Exhaustion:

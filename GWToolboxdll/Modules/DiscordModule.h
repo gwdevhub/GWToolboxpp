@@ -62,7 +62,7 @@ public:
 
     void InviteUser(const DiscordUser* user);
     static void FailedJoin(const char* error_msg);
-    void JoinParty();
+    static void JoinParty();
     static bool IsInJoinablePartyMap();
 
     Application app{};
@@ -95,7 +95,7 @@ private:
     time_t last_activity_update = 0;
 
     bool LoadDll();
-    bool UnloadDll();
+    bool UnloadDll() const;
     bool Connect();
     static void ConnectCanary();
     void Disconnect();

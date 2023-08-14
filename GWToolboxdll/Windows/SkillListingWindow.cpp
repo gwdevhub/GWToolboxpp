@@ -84,7 +84,7 @@ const wchar_t* SkillListingWindow::Skill::GWWConcise()
     return concise_gww;
 }
 
-void SkillListingWindow::ExportToJSON()
+void SkillListingWindow::ExportToJSON() const
 {
     nlohmann::json json;
     for (size_t i = 0; i < skills.size(); i++) {
@@ -211,7 +211,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
         if (ImGui::SmallButton(buf2)) {
             auto url = new char[128];
             snprintf(url, 128, "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skills[i]->skill->skill_id);
-            GW::GameThread::Enqueue([url]() {
+            GW::GameThread::Enqueue([url] {
                 SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, url);
                 delete[] url;
             });

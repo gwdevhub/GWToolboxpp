@@ -29,7 +29,7 @@ GW::Item* MaterialsWindow::GetMerchItem(const Material mat) const
     return nullptr;
 }
 
-GW::Item* MaterialsWindow::GetBagItem(const Material mat) const
+GW::Item* MaterialsWindow::GetBagItem(const Material mat)
 {
     const uint32_t model_id = GetModelID(mat);
     const auto min_qty = mat <= WoodPlank ? 10 : 1; // 10 if common, 1 if rare
@@ -62,10 +62,10 @@ void MaterialsWindow::Update(const float)
         return;
     }
     const auto tickcount = GetTickCount();
-    if (quote_pending && (tickcount < quote_pending_time)) {
+    if (quote_pending && tickcount < quote_pending_time) {
         return;
     }
-    if (trans_pending && (tickcount < trans_pending_time)) {
+    if (trans_pending && tickcount < trans_pending_time) {
         return;
     }
     if (transactions.empty()) {
@@ -90,7 +90,7 @@ void MaterialsWindow::Update(const float)
     }
 }
 
-bool MaterialsWindow::GetIsInProgress()
+bool MaterialsWindow::GetIsInProgress() const
 {
     return !transactions.empty();
 }
@@ -117,7 +117,7 @@ void MaterialsWindow::Initialize()
                 return;
             }
             const Transaction& trans = transactions.front();
-            if (cancelled || (trans.item_id != pak->itemid)) {
+            if (cancelled || trans.item_id != pak->itemid) {
                 quote_pending = false;
                 return;
             }
@@ -226,7 +226,7 @@ void MaterialsWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(use_stock), use_stock);
 }
 
-void MaterialsWindow::Draw(IDirect3DDevice9* )
+void MaterialsWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
         return;
@@ -234,8 +234,6 @@ void MaterialsWindow::Draw(IDirect3DDevice9* )
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        float x, y, h;
-
         constexpr auto stockStart = static_cast<size_t>(GW::Constants::Bag::Backpack);
         constexpr auto stockEnd = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 
@@ -250,8 +248,8 @@ void MaterialsWindow::Draw(IDirect3DDevice9* )
             ImGui::SetTooltip("Essence of Celerity\nFeathers and Dust");
         }
         ImGui::SameLine();
-        x = ImGui::GetCursorPosX();
-        y = ImGui::GetCursorPosY();
+        float x = ImGui::GetCursorPosX();
+        float y = ImGui::GetCursorPosY();
         ImGui::Text(GetPrice(Feather, 5.0f, PileofGlitteringDust, 5.0f, 250).c_str());
         FullConsPriceTooltip();
         ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
@@ -259,7 +257,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* )
             EnqueueQuote(Feather);
             EnqueueQuote(PileofGlitteringDust);
         }
-        h = ImGui::GetCurrentContext()->LastItemData.Rect.GetHeight();
+        float h = ImGui::GetCurrentContext()->LastItemData.Rect.GetHeight();
         static int qty_essence = 1;
         ImGui::SetCursorPosX(x);
         ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
@@ -458,7 +456,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* )
         ImGui::Separator();
 
         constexpr float width2 = 100.0f;
-        const float width1 = (ImGui::GetContentRegionAvail().x - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2);
+        const float width1 = ImGui::GetContentRegionAvail().x - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2;
 
         // === generic materials ===
         static int common_idx = 0;
@@ -624,7 +622,7 @@ void MaterialsWindow::EnqueueSell(const Material material)
     Enqueue(Transaction::Sell, material);
 }
 
-DWORD MaterialsWindow::RequestPurchaseQuote(const Material material)
+DWORD MaterialsWindow::RequestPurchaseQuote(const Material material) const
 {
     GW::Item* item = GetMerchItem(material);
     if (!item) {

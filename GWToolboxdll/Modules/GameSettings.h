@@ -62,34 +62,34 @@ public:
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     // callback functions
-    void OnPingWeaponSet(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
-    void OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue*) const;
-    void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) const;
+    static void OnPingWeaponSet(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
+    static void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak);
     static void OnAgentEffect(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
     void OnFactionDonate(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
     static void OnPartyDefeated(const GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
-    void OnVanquishComplete(const GW::HookStatus*, GW::Packet::StoC::VanquishComplete*) const;
+    static void OnVanquishComplete(const GW::HookStatus*, GW::Packet::StoC::VanquishComplete*);
     void OnDungeonReward(GW::HookStatus*, GW::Packet::StoC::DungeonReward*) const;
     static void OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
-    void OnCinematic(const GW::HookStatus*, const GW::Packet::StoC::CinematicPlay*) const;
-    void OnMapTravel(const GW::HookStatus*, const GW::Packet::StoC::GameSrvTransfer*) const;
-    void OnTradeStarted(const GW::HookStatus*, GW::Packet::StoC::TradeStart*) const;
-    void OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC::PlayerLeaveInstance*) const;
-    void OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance*) const;
-    void OnPartyInviteReceived(const GW::HookStatus*, const GW::Packet::StoC::PartyInviteReceived_Create*) const;
+    static void OnCinematic(const GW::HookStatus*, const GW::Packet::StoC::CinematicPlay*);
+    static void OnMapTravel(const GW::HookStatus*, const GW::Packet::StoC::GameSrvTransfer*);
+    static void OnTradeStarted(GW::HookStatus*, GW::Packet::StoC::TradeStart*);
+    static void OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC::PlayerLeaveInstance*);
+    static void OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance*);
+    static void OnPartyInviteReceived(const GW::HookStatus*, const GW::Packet::StoC::PartyInviteReceived_Create*);
     void OnPartyPlayerJoined(const GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd*);
-    void OnLocalChatMessage(GW::HookStatus*, const GW::Packet::StoC::MessageLocal*) const;
-    void OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::MessageServer*) const;
+    static void OnLocalChatMessage(GW::HookStatus*, const GW::Packet::StoC::MessageLocal*);
+    static void OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::MessageServer*);
     void OnScreenShake(GW::HookStatus*, const void* packet) const;
-    void OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*) const;
+    static void OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
     static void OnAgentStartCast(GW::HookStatus* status, GW::UI::UIMessage, void*, void*);
-    void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
-    void OnCast(GW::HookStatus*, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target) const;
-    void OnAgentAdd(GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet) const;
-    void OnUpdateAgentState(GW::HookStatus* status, const GW::Packet::StoC::AgentState* packet) const;
+    static void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnCast(GW::HookStatus*, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
+    static void OnAgentAdd(GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet);
+    static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
     static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
     static void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
-    void OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
+    static void OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
 
 private:

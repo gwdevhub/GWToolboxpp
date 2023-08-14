@@ -59,7 +59,7 @@ void AlcoholWidget::Update(const float)
     }
 }
 
-uint32_t AlcoholWidget::GetAlcoholLevel()
+uint32_t AlcoholWidget::GetAlcoholLevel() const
 {
     return alcohol_level;
 }
@@ -133,10 +133,8 @@ void AlcoholWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-        ImVec2 cur;
-
         ImGui::PushFont(GetFont(GuiUtils::FontSize::header1));
-        cur = ImGui::GetCursorPos();
+        ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
         ImGui::TextColored(ImColor(0, 0, 0), "Alcohol");
         ImGui::SetCursorPos(cur);
@@ -144,7 +142,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9*)
         ImGui::PopFont();
 
         static char timer[32];
-        snprintf(timer, 32, "%1ld:%02ld", (t / 60) % 60, t % 60);
+        snprintf(timer, 32, "%1ld:%02ld", t / 60 % 60, t % 60);
 
         ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
         cur = ImGui::GetCursorPos();

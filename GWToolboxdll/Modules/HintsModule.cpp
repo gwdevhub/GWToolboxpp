@@ -68,7 +68,7 @@ namespace {
                 wcscpy(message_encoded, message);
             }
             else {
-                strlen += (3 * sizeof(wchar_t));
+                strlen += 3 * sizeof(wchar_t);
                 message_encoded = new wchar_t[strlen];
                 swprintf(message_encoded, strlen, L"\x108\x107%s\x1", message);
             }
@@ -92,7 +92,7 @@ namespace {
             SendUIMessage(GW::UI::UIMessage::kShowHint, this);
         }
 
-        void Delay(const clock_t delay_ms)
+        void Delay(const clock_t delay_ms) const
         {
             delayed_hints.push_back(std::pair(clock() + delay_ms, new HintUIMessage(message_encoded, message_timeout_ms, message_id)));
         }

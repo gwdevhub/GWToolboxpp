@@ -500,17 +500,17 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             ImGui::GetWindowDrawList()->AddText({label_pos.x + 1, label_pos.y + 1}, 0xFFFF0000, str.data());
         }
         if (layout == Layout::Rows) {
-            skill_top_left.x += (m_skill_width * x_translate);
+            skill_top_left.x += m_skill_width * x_translate;
             if (row_skills_drawn == skills_per_row && row_idx < row_count) {
-                skill_top_left.y += (m_skill_width * y_translate);
+                skill_top_left.y += m_skill_width * y_translate;
                 skill_top_left.x = x_translate > 0 ? imgui_pos.x : imgui_pos.x + imgui_size.x - m_skill_width;
                 row_skills_drawn = 0;
             }
         }
         else {
-            skill_top_left.y += (m_skill_width * y_translate);
+            skill_top_left.y += m_skill_width * y_translate;
             if (row_skills_drawn == skills_per_row && row_idx < row_count) {
-                skill_top_left.x += (m_skill_width * x_translate);
+                skill_top_left.x += m_skill_width * x_translate;
                 skill_top_left.y = y_translate > 0 ? imgui_pos.y : imgui_pos.y + imgui_size.y - m_skill_width;
                 row_skills_drawn = 0;
             }

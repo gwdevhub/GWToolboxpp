@@ -207,7 +207,7 @@ namespace {
     HBITMAP ScaleBitmap(const HBITMAP inBitmap, const int inWidth, const int inHeight, const int outWidth, const int outHeight)
     {
         // NB: We could use GDIPlus for this logic which has better image res handling etc, but no need
-        HDC destDC = nullptr, srcDC = nullptr;
+        HDC srcDC = nullptr;
         BYTE* ppvBits = nullptr;
         BOOL bResult = 0;
         HBITMAP outBitmap = nullptr;
@@ -222,7 +222,7 @@ namespace {
         bmi.bmiHeader.biPlanes = 1;
 
         // Do not use CreateCompatibleBitmap otherwise api will not allocate memory for bitmap
-        destDC = CreateCompatibleDC(nullptr);
+        HDC destDC = CreateCompatibleDC(nullptr);
         if (!destDC) {
             goto cleanup;
         }

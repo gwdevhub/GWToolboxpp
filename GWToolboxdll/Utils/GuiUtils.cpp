@@ -134,12 +134,12 @@ namespace GuiUtils {
         ShowWindow(hwnd, SW_RESTORE);
     }
 
-    std::string WikiUrl(std::string url_path)
+    std::string WikiUrl(const std::string& url_path)
     {
         return WikiUrl(StringToWString(url_path));
     }
 
-    std::string WikiUrl(std::wstring url_path)
+    std::string WikiUrl(const std::wstring& url_path)
     {
         // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
         if (url_path.empty()) {
@@ -151,7 +151,7 @@ namespace GuiUtils {
         return cmd;
     }
 
-    void SearchWiki(std::wstring term)
+    void SearchWiki(const std::wstring& term)
     {
         if (term.empty()) {
             return;
@@ -403,7 +403,7 @@ namespace GuiUtils {
         return s;
     }
 
-    std::string HtmlEncode(std::string s)
+    std::string HtmlEncode(const std::string& s)
     {
         if (s.empty()) {
             return "";
@@ -444,7 +444,7 @@ namespace GuiUtils {
         return out;
     }
 
-    std::string UrlEncode(const std::string s, const char space_token)
+    std::string UrlEncode(const std::string& s, const char space_token)
     {
         if (s.empty()) {
             return "";
@@ -453,7 +453,7 @@ namespace GuiUtils {
         static bool initialised = false;
         if (!initialised) {
             for (uint8_t i = 0; ; i++) {
-                html5[i] = (isalnum(i) || i == '*' || i == '-' || i == '.' || i == '_') ? i : 0;
+                html5[i] = isalnum(i) || i == '*' || i == '-' || i == '.' || i == '_' ? i : 0;
                 if (i == ' ') {
                     html5[i] = space_token;
                 }
@@ -569,7 +569,7 @@ namespace GuiUtils {
         return std::move(wstrTo);
     }
 
-    std::wstring SanitizePlayerName(std::wstring s)
+    std::wstring SanitizePlayerName(const std::wstring& s)
     {
         // e.g. "Player Name (2)" => "Player Name", for pvp player names
         // e.g. "Player Name [TAG]" = >"Player Name", for alliance message sender name
@@ -791,7 +791,7 @@ namespace GuiUtils {
             out->clear();
             return true;
         }
-        out->resize((len * 5) - 1, 0);
+        out->resize(len * 5 - 1, 0);
         char* data = out->data();
         size_t offset = 0;
         for (size_t i = 0; i < len; i++) {
@@ -809,7 +809,7 @@ namespace GuiUtils {
             out->clear();
             return true;
         }
-        out->resize((in_len * 9) - 1, 0);
+        out->resize(in_len * 9 - 1, 0);
         char* data = out->data();
         size_t offset = 0;
         for (size_t i = 0; i < in_len; i++) {
@@ -944,6 +944,7 @@ namespace GuiUtils {
         }
     }
 
+    //NOLINTNEXTLINE
     void EncString::OnStringDecoded(void* param, wchar_t* decoded)
     {
         const auto context = static_cast<EncString*>(param);

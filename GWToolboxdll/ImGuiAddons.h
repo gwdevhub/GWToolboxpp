@@ -15,7 +15,7 @@ namespace ImGui {
     // Shows '(?)' and the helptext when hovered
     IMGUI_API void ShowHelp(const char* help);
     // Shows current text with a drop shadow
-    IMGUI_API void TextShadowed(const char* label, ImVec2 offset = {1, 1}, ImVec4 shadow_color = {0, 0, 0, 1});
+    IMGUI_API void TextShadowed(const char* label, ImVec2 offset = {1, 1}, const ImVec4& shadow_color = {0, 0, 0, 1});
 
     IMGUI_API void SetNextWindowCenter(ImGuiWindowFlags flags);
 

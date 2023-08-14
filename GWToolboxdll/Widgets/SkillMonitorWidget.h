@@ -55,7 +55,7 @@ private:
     const float PARTY_MEMBER_PADDING_FIXED = 1.f;
     const float PARTY_HERO_INDENT_BASE = 22.f;
 
-    Color GetColor(const SkillActivationStatus status)
+    Color GetColor(const SkillActivationStatus status) const
     {
         switch (status) {
             case CASTING:

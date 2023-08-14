@@ -85,7 +85,7 @@ public:
     void DrawSettingsInternal() override;
 
     void LoadFromFile();
-    void SaveToFile();
+    void SaveToFile() const;
 
     void Load(unsigned int idx);
     [[nodiscard]] const char* BuildName(unsigned int idx) const;
@@ -103,7 +103,7 @@ private:
     void Load(const TeamHeroBuild& tbuild, unsigned int idx);
     void Send(const TeamHeroBuild& tbuild, size_t idx);
     void Send(const TeamHeroBuild& tbuild);
-    void View(const TeamHeroBuild& tbuild, unsigned int idx);
+    static void View(const TeamHeroBuild& tbuild, unsigned int idx);
     static void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
     TeamHeroBuild* GetTeambuildByName(const std::string& argBuildname);
 

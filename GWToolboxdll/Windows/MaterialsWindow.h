@@ -76,7 +76,7 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
 
-    bool GetIsInProgress();
+    bool GetIsInProgress() const;
 
     // Update. Will always be called every frame.
     void Update(float delta) override;
@@ -93,8 +93,8 @@ private:
     void FullConsPriceTooltip() const;
 
     // returns item id if successful, 0 if error
-    DWORD RequestPurchaseQuote(Material material);
-    DWORD RequestSellQuote(Material material);
+    DWORD RequestPurchaseQuote(Material material) const;
+    static DWORD RequestSellQuote(Material material);
 
     IDirect3DTexture9** tex_essence = nullptr;
     IDirect3DTexture9** tex_grail = nullptr;
@@ -111,7 +111,7 @@ private:
 
     // int max = 0;
     [[nodiscard]] GW::Item* GetMerchItem(Material mat) const;
-    [[nodiscard]] GW::Item* GetBagItem(Material mat) const;
+    [[nodiscard]] static GW::Item* GetBagItem(Material mat);
 
     struct Transaction {
         enum Type { Sell, Buy, Quote };

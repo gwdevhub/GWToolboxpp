@@ -15,7 +15,7 @@ void ObserverPartyWindow::Initialize()
 
 
 // Draw stats headers for the parties
-void ObserverPartyWindow::DrawHeaders(const size_t party_count)
+void ObserverPartyWindow::DrawHeaders(const size_t party_count) const
 {
     float offset = 0;
 
@@ -135,7 +135,7 @@ void ObserverPartyWindow::DrawHeaders(const size_t party_count)
 
 
 // Draw a blank
-void ObserverPartyWindow::DrawBlankPartyMember(float& offset)
+void ObserverPartyWindow::DrawBlankPartyMember(float& offset) const
 {
     uint16_t tinys = 0;
     uint16_t shorts = 0;
@@ -189,7 +189,7 @@ void ObserverPartyWindow::DrawBlankPartyMember(float& offset)
     }
 
     ImGui::Text("");
-    ImGui::SameLine(offset += (text_long + shorts * text_short + tinys * text_tiny));
+    ImGui::SameLine(offset += text_long + shorts * text_short + tinys * text_tiny);
 }
 
 
@@ -323,7 +323,7 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
 
 
 // Draw a Party row
-void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::ObservableParty& party)
+void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::ObservableParty& party) const
 {
     // [name:long]
     ImGui::Text(party.display_name.c_str());

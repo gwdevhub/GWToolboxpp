@@ -18,11 +18,11 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
 
-    void DrawBlankPartyMember(float& offset);
+    void DrawBlankPartyMember(float& offset) const;
     void DrawPartyMember(float& offset, ObserverModule::ObservableAgent& agent, const ObserverModule::ObservableGuild* guild,
                          bool odd, bool is_player, bool is_target) const;
-    void DrawParty(float& offset, const ObserverModule::ObservableParty& party);
-    void DrawHeaders(size_t party_count);
+    void DrawParty(float& offset, const ObserverModule::ObservableParty& party) const;
+    void DrawHeaders(size_t party_count) const;
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;

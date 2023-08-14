@@ -679,10 +679,7 @@ void TravelWindow::Terminate()
         delete[] it;
     }
     searchable_explorable_areas.clear();
-    for (const auto message_id : messages_to_hook) {
-        (message_id);
-        GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
-    }
+    GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
 void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Constants::MapID mapid)
@@ -880,9 +877,7 @@ void TravelWindow::Update(const float)
 
 GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID map_to)
 {
-    GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
-    const GW::AreaInfo* nearest = nullptr;
-    GW::AreaInfo* map_info = nullptr;
+    const GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
     float nearest_distance = FLT_MAX;
     auto nearest_map_id = GW::Constants::MapID::None;
 
@@ -904,7 +899,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
         this_pos = {static_cast<float>(this_map->icon_start_x), static_cast<float>(this_map->icon_start_y)};
     }
     for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
-        map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
+        const GW::AreaInfo* map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
         if (!map_info || !map_info->thumbnail_id || !map_info->GetIsOnWorldMap()) {
             continue;
         }
@@ -930,7 +925,6 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
         const float dist = GetDistance(this_pos, get_pos(map_info));
         if (dist < nearest_distance) {
             nearest_distance = dist;
-            nearest = map_info;
             nearest_map_id = static_cast<GW::Constants::MapID>(i);
         }
     }
@@ -1550,7 +1544,7 @@ GW::Constants::MapID TravelWindow::IndexToOutpostID(const int index)
     }
 }
 
-void TravelWindow::CmdTP(const wchar_t* , const int argc, const LPWSTR* argv)
+void TravelWindow::CmdTP(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     // zero argument error
     if (argc == 1) {
@@ -1652,7 +1646,7 @@ void TravelWindow::CmdTP(const wchar_t* , const int argc, const LPWSTR* argv)
     Log::Error("[Error] Did not recognize outpost '%ls'", argOutpost.c_str());
 }
 
-bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t& )
+bool TravelWindow::ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t&)
 {
     // By Map ID e.g. "/tp 77" for house zu heltzer
     uint32_t map_id = 0;

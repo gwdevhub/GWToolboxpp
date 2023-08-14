@@ -28,13 +28,13 @@ public:
     void Terminate() override;
 
     bool SetEnabled(bool b);
-    bool GetEnabled();
+    bool GetEnabled() const;
     bool show_storage_quantity = false;
     bool shift_click_toggles_category = false;
 
     void ToggleEnable() { SetEnabled(!enabled); }
 
-    void Refill(bool do_refill = true);
+    void Refill(bool do_refill = true) const;
 
     void Update(float delta) override;
 

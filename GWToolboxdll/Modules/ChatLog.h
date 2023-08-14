@@ -71,7 +71,7 @@ private:
     void Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp);
     void Save();
     // Path to chat log file on disk
-    std::filesystem::path LogPath(const wchar_t* prefix);
+    std::filesystem::path LogPath(const wchar_t* prefix) const;
     // Load chat log from file via account email address
     void Load(const std::wstring& _account);
     // Clear current chat log and prefill from tb chat log; chat box will update on map change
@@ -80,7 +80,7 @@ private:
     // Set up chat log, load from file if applicable. Returns true if initialised
     bool Init();
     // Check outgoing log to see if message has already been added
-    bool IsAdded(wchar_t* _message, uint32_t addr)
+    bool IsAdded(wchar_t* _message, uint32_t addr) const
     {
         if (!addr) {
             addr = (uint32_t)_message;
@@ -116,7 +116,7 @@ private:
 
     uintptr_t gw_sent_log_ptr = 0;
 
-    GWSentLog* GetSentLog()
+    GWSentLog* GetSentLog() const
     {
         return gw_sent_log_ptr ? (GWSentLog*)(gw_sent_log_ptr - 0x4) : nullptr;
     }

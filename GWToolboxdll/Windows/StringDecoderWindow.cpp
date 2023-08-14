@@ -23,7 +23,7 @@ namespace {
         }
     }
 
-    void printf_indent(size_t indent)
+    void printf_indent(const size_t indent)
     {
         printf("\n");
         for (size_t l = 0; l < indent; l++) {
@@ -155,24 +155,23 @@ void StringDecoderWindow::Send()
     GW::Chat::SendChat('#', GetEncodedString().c_str());
 }
 
-std::wstring StringDecoderWindow::GetEncodedString()
+std::wstring StringDecoderWindow::GetEncodedString() const
 {
     std::istringstream iss(encoded);
-    const std::vector<std::string> results((std::istream_iterator<std::string>(iss)),
-                                           std::istream_iterator<std::string>());
+    const std::vector results((std::istream_iterator<std::string>(iss)),
+                              std::istream_iterator<std::string>());
 
     std::wstring encodedW(results.size() + 1, 0);
     size_t i = 0;
     for (i = 0; i < results.size(); i++) {
         //Log::Log("%s\n", results[i].c_str());
-        wchar_t c;
         unsigned int lval = 0;
         const auto base = results[i].rfind("0x", 0) == 0 ? 0 : 16;
         if (!(GuiUtils::ParseUInt(results[i].c_str(), &lval, base) && lval < 0xffff)) {
             Log::Error("Failed to ParseUInt %s", results[i].c_str());
             return L"";
         }
-        c = static_cast<wchar_t>(lval);
+        const wchar_t c = static_cast<wchar_t>(lval);
         encodedW[i] = c;
         //printchar(encodedW[i]);
         //printf("\n");

@@ -194,7 +194,7 @@ void DupingWindow::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    const bool is_in_doa = (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable);
+    const bool is_in_doa = GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     if (hide_when_nothing && !is_in_doa) {
         return;
     }
@@ -206,87 +206,80 @@ void DupingWindow::Draw(IDirect3DDevice9*)
     float threshold = .0f;
     std::set<GW::AgentID>* all_agents_of_type = nullptr;
     std::vector<DupeInfo>* duped_agents_of_type = nullptr;
-    const GW::AgentArray* agents = nullptr;
-    const GW::Agent* player = nullptr;
 
     // ==== Calculate the data ====
     if (!is_in_doa) {
         ClearDupes();
-        goto done_calculation;
     }
 
     all_souls.clear();
     all_waters.clear();
     all_minds.clear();
 
-    agents = GW::Agents::GetAgentArray();
-    player = agents ? GW::Agents::GetPlayer() : nullptr;
+    const GW::AgentArray* agents = GW::Agents::GetAgentArray();
+    const GW::Agent* player = agents ? GW::Agents::GetPlayer() : nullptr;
 
-    if (!player) {
-        goto done_calculation;
-    }
+    if (player && is_in_doa) {
+        for (auto* agent : *agents) {
+            const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
 
-    for (auto* agent : *agents) {
-        const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
+            if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive() || GetSquareDistance(player->pos, living->pos) > sqr_range) {
+                continue;
+            }
 
-        if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive() || GetSquareDistance(player->pos, living->pos) > sqr_range) {
-            continue;
-        }
-
-        switch (living->player_number) {
-            case GW::Constants::ModelID::DoA::SoulTormentor:
-            case GW::Constants::ModelID::DoA::VeilSoulTormentor:
-                all_agents_of_type = &all_souls;
+            switch (living->player_number) {
+                case GW::Constants::ModelID::DoA::SoulTormentor:
+                case GW::Constants::ModelID::DoA::VeilSoulTormentor:
+                    all_agents_of_type = &all_souls;
                 duped_agents_of_type = &souls;
                 threshold = souls_threshhold;
                 soul_count++;
                 break;
-            case GW::Constants::ModelID::DoA::WaterTormentor:
-            case GW::Constants::ModelID::DoA::VeilWaterTormentor:
-                all_agents_of_type = &all_waters;
+                case GW::Constants::ModelID::DoA::WaterTormentor:
+                case GW::Constants::ModelID::DoA::VeilWaterTormentor:
+                    all_agents_of_type = &all_waters;
                 duped_agents_of_type = &waters;
                 threshold = waters_threshhold;
                 water_count++;
                 break;
-            case GW::Constants::ModelID::DoA::MindTormentor:
-            case GW::Constants::ModelID::DoA::VeilMindTormentor:
-                all_agents_of_type = &all_minds;
+                case GW::Constants::ModelID::DoA::MindTormentor:
+                case GW::Constants::ModelID::DoA::VeilMindTormentor:
+                    all_agents_of_type = &all_minds;
                 duped_agents_of_type = &minds;
                 threshold = minds_threshhold;
                 mind_count++;
                 break;
-            default:
-                continue;
+                default:
+                    continue;
+            }
+
+            if (living->hp <= threshold) {
+                all_agents_of_type->insert(living->agent_id);
+
+                const bool is_duping = living->skill == static_cast<uint16_t>(GW::Constants::SkillID::Call_to_the_Torment);
+
+                auto found_dupe_info = std::ranges::find_if(*duped_agents_of_type, [living](const DupeInfo& info) {
+                    return info.agent_id == living->agent_id;
+                });
+                if (found_dupe_info == duped_agents_of_type->end()) {
+                    duped_agents_of_type->push_back(living->agent_id);
+                    found_dupe_info = duped_agents_of_type->end() - 1;
+                }
+                if (is_duping && TIMER_DIFF(found_dupe_info->last_duped) > 5000) {
+                    found_dupe_info->last_duped = TIMER_INIT();
+                    found_dupe_info->dupe_count += 1;
+                }
+            }
         }
 
-        if (living->hp <= threshold) {
-            all_agents_of_type->insert(living->agent_id);
+        std::erase_if(souls, [](auto& info) { return !all_souls.contains(info.agent_id); });
+        std::erase_if(waters, [](auto& info) { return !all_waters.contains(info.agent_id); });
+        std::erase_if(minds, [](auto& info) { return !all_minds.contains(info.agent_id); });
 
-            const bool is_duping = living->skill == static_cast<uint16_t>(GW::Constants::SkillID::Call_to_the_Torment);
-
-            auto found_dupe_info = std::ranges::find_if(*duped_agents_of_type, [living](const DupeInfo& info) {
-                return info.agent_id == living->agent_id;
-            });
-            if (found_dupe_info == duped_agents_of_type->end()) {
-                duped_agents_of_type->push_back(living->agent_id);
-                found_dupe_info = duped_agents_of_type->end() - 1;
-            }
-            if (is_duping && TIMER_DIFF(found_dupe_info->last_duped) > 5000) {
-                found_dupe_info->last_duped = TIMER_INIT();
-                found_dupe_info->dupe_count += 1;
-            }
-        }
+        std::ranges::sort(souls, &OrderDupeInfo);
+        std::ranges::sort(waters, &OrderDupeInfo);
+        std::ranges::sort(minds, &OrderDupeInfo);
     }
-
-    std::erase_if(souls, [](auto& info) { return !all_souls.contains(info.agent_id); });
-    std::erase_if(waters, [](auto& info) { return !all_waters.contains(info.agent_id); });
-    std::erase_if(minds, [](auto& info) { return !all_minds.contains(info.agent_id); });
-
-    std::ranges::sort(souls, &OrderDupeInfo);
-    std::ranges::sort(waters, &OrderDupeInfo);
-    std::ranges::sort(minds, &OrderDupeInfo);
-
-done_calculation:
 
     if (hide_when_nothing
         && !(show_souls_counter && soul_count > 0)

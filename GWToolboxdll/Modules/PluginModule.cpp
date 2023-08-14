@@ -146,10 +146,12 @@ void PluginModule::DrawSettingsInternal()
 
         static char buf[128];
         const auto has_settings = plugin->initialized && plugin->instance && plugin->instance->HasSettings();
-        if (has_settings)
+        if (has_settings) {
             sprintf(buf, "      %s", plugin->path.filename().string().c_str());
-        else
+        }
+        else {
             sprintf(buf, "             %s", plugin->path.filename().string().c_str());
+        }
         const auto pos = ImGui::GetCursorScreenPos();
         const bool is_showing = has_settings ? ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap) : ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_AllowItemOverlap);
 

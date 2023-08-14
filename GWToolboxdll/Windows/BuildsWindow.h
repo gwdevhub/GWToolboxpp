@@ -22,7 +22,7 @@ class BuildsWindow : public ToolboxWindow {
         char code[128]{};
         const GW::Constants::SkillID* skills();
         const GW::SkillbarMgr::SkillTemplate* decode();
-        bool decoded() { return !(skill_template.primary == GW::Constants::Profession::None && skill_template.secondary == GW::Constants::Profession::None); }
+        bool decoded() const { return !(skill_template.primary == GW::Constants::Profession::None && skill_template.secondary == GW::Constants::Profession::None); }
         GW::SkillbarMgr::SkillTemplate skill_template{};
         // Vector of pcons to use for this build, listed by ini name e.g. "cupcake"
         std::set<std::string> pcons{};
@@ -87,11 +87,11 @@ private:
     void Send(const TeamBuild& tbuild, unsigned int idx);
     void SendPcons(const TeamBuild& tbuild, unsigned int idx, bool include_build_name = true);
     // Load a specific build from a teambuild (and any applicable pcons)
-    void Load(const TeamBuild& tbuild, unsigned int idx);
+    void Load(const TeamBuild& tbuild, unsigned int idx) const;
     // Toggle pcons for a specific build
-    void LoadPcons(const TeamBuild& tbuild, unsigned int idx);
+    void LoadPcons(const TeamBuild& tbuild, unsigned int idx) const;
     // View a specific build from a teambuild
-    void View(const TeamBuild& tbuild, unsigned int idx);
+    static void View(const TeamBuild& tbuild, unsigned int idx);
     // Load build by name or code, without specific teambuild assigned.
     void Load(const char* build_name);
     // Load build by teambuild name and build name
@@ -130,5 +130,5 @@ private:
     // Attempt to add a preferred build by code and name
     const char* AddPreferredBuild(const char* code);
 
-    bool GetCurrentSkillBar(char* out, size_t out_len);
+    static bool GetCurrentSkillBar(char* out, size_t out_len);
 };

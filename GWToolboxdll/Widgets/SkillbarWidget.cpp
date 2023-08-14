@@ -49,7 +49,7 @@ std::vector<SkillbarWidget::Effect> SkillbarWidget::get_effects(const GW::Consta
             Effect e;
             e.remaining = effect.GetTimeRemaining();
             if (effect.duration) {
-                e.progress = (e.remaining / 1000.0f) / effect.duration;
+                e.progress = e.remaining / 1000.0f / effect.duration;
             }
             else {
                 e.progress = 1.f;
@@ -77,7 +77,7 @@ SkillbarWidget::Effect SkillbarWidget::get_longest_effect(const GW::Constants::S
             if (ret.remaining < remaining) {
                 ret.remaining = remaining;
                 if (effect.duration) {
-                    ret.progress = (ret.remaining / 1000.0f) / effect.duration;
+                    ret.progress = ret.remaining / 1000.0f / effect.duration;
                 }
                 else {
                     ret.progress = 1.f;
@@ -147,7 +147,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     }
 
     const auto window_flags = GetWinFlags();
-    const Color col_border = (window_flags & ImGuiWindowFlags_NoMove) ? color_border : Colors::White();
+    const Color col_border = window_flags & ImGuiWindowFlags_NoMove ? color_border : Colors::White();
 
     ImGui::PushFont(GetFont(font_recharge));
 
@@ -229,18 +229,18 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         ImVec2 pos1(winpos.x, winpos.y);
 
         if (layout == Layout::Row) {
-            pos1.x += (i * skillsize.x);
+            pos1.x += i * skillsize.x;
         }
         else if (layout == Layout::Rows) {
-            pos1.x += (i % 4 * skillsize.x);
-            pos1.y += (std::floor(i / 4.f) * skillsize.y);
+            pos1.x += i % 4 * skillsize.x;
+            pos1.y += std::floor(i / 4.f) * skillsize.y;
         }
         else if (layout == Layout::Column) {
-            pos1.y += (i * skillsize.y);
+            pos1.y += i * skillsize.y;
         }
         else if (layout == Layout::Columns) {
-            pos1.x += (i % 2 * skillsize.x);
-            pos1.y += (std::floor(i / 2.f) * skillsize.y);
+            pos1.x += i % 2 * skillsize.x;
+            pos1.y += std::floor(i / 2.f) * skillsize.y;
         }
 
         auto pos2 = ImVec2(pos1.x + skillsize.x, pos1.y + skillsize.y);
@@ -531,7 +531,7 @@ void SkillbarWidget::DrawSettingsInternal()
 
     constexpr const char* font_sizes[] = {"16", "18", "20", "24", "42", "48"};
 
-    const bool is_vertical = (layout == Layout::Column || layout == Layout::Columns);
+    const bool is_vertical = layout == Layout::Column || layout == Layout::Columns;
 
     ImGui::Separator();
     ImGui::Text("Skill overlay settings");

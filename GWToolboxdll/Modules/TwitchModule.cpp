@@ -28,7 +28,7 @@ namespace {
         if (is_emote) {
             message_ws[message_len++] = '*';
         }
-        for (size_t i = (is_emote ? 8 : 0); i < original_len; i++) {
+        for (size_t i = is_emote ? 8 : 0; i < original_len; i++) {
             // Break on the end of the message
             if (message[i] == '\x1' || !message[i]) {
                 break;
@@ -50,13 +50,14 @@ namespace {
             delete[] message_ws;
             return;
         }
-        GW::GameThread::Enqueue([message_ws, sender_ws]() {
+        GW::GameThread::Enqueue([message_ws, sender_ws] {
             // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, message_ws, sender_ws.c_str());
             delete[] message_ws;
         });
     }
 
+    //NOLINTNEXTLINE
     int OnJoin(const char* params, irc_reply_data* hostd, void*)
     {
         const TwitchModule* module = &TwitchModule::Instance();
@@ -81,6 +82,7 @@ namespace {
         return 0;
     }
 
+    //NOLINTNEXTLINE
     int OnLeave(const char* params, irc_reply_data* hostd, void*)
     {
         const TwitchModule* module = &TwitchModule::Instance();
@@ -94,6 +96,7 @@ namespace {
         return 0;
     }
 
+    //NOLINTNEXTLINE
     int OnConnected(const char* params, irc_reply_data*, void* conn)
     {
         TwitchModule* module = &TwitchModule::Instance();
@@ -112,6 +115,7 @@ namespace {
         return 0;
     }
 
+    //NOLINTNEXTLINE
     int OnMessage(const char* params, irc_reply_data* hostd, void*)
     {
         const TwitchModule* module = &TwitchModule::Instance();
@@ -124,6 +128,7 @@ namespace {
         return 0;
     }
 
+    //NOLINTNEXTLINE
     int OnNotice(const char* params, irc_reply_data*, void* conn)
     {
         Log::Log("NOTICE: %s\n", params);
@@ -178,7 +183,7 @@ void TwitchModule::AddHooks()
         }
         const std::wstring walias = GuiUtils::StringToWString(Instance().irc_alias);
         swprintf(buf, 128, L" @ %s", walias.c_str());
-        if ((std::wstring(name)).find(buf) != std::wstring::npos) {
+        if (std::wstring(name).find(buf) != std::wstring::npos) {
             wcscpy(name, walias.c_str());
         }
         return false;

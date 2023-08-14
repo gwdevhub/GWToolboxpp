@@ -100,7 +100,7 @@ namespace ToolboxUtils {
             return i;
         }
 
-        const wchar_t* GetSegmentArgument(const wchar_t* message, wchar_t segment_key, size_t* segment_length_out, size_t* identifier_length_out)
+        const wchar_t* GetSegmentArgument(const wchar_t* message, const wchar_t segment_key, size_t* segment_length_out, size_t* identifier_length_out)
         {
             if (!message) {
                 return nullptr;
@@ -227,7 +227,6 @@ namespace ToolboxUtils {
                 const auto p = static_cast<GW::Packet::StoC::MessageGlobal*>(packet);
                 return p->sender_name;
             }
-            break;
             case GAME_SMSG_CHAT_MESSAGE_LOCAL:
             case GAME_SMSG_TRADE_REQUEST:
                 return GetPlayerName(((uint32_t*)packet)[1]);
@@ -389,7 +388,7 @@ namespace ToolboxUtils {
 
     bool IsPlayerInParty(const uint32_t login_number)
     {
-        GW::PartyContext* partyContext = GW::GetPartyContext();
+        const GW::PartyContext* partyContext = GW::GetPartyContext();
         GW::PartyInfo* playerParty = partyContext->player_party;
 
         for (const auto& player : playerParty->players) {

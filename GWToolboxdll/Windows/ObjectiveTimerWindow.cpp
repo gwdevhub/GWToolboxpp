@@ -142,10 +142,10 @@ namespace {
         else {
             const DWORD sec = time / 1000;
             if (show_ms && show_decimal) {
-                snprintf(buf, size, "%02lu:%02lu.%1lu", (sec / 60), sec % 60, (time / 100) % 10);
+                snprintf(buf, size, "%02lu:%02lu.%1lu", sec / 60, sec % 60, time / 100 % 10);
             }
             else {
-                snprintf(buf, size, "%02lu:%02lu", (sec / 60), sec % 60);
+                snprintf(buf, size, "%02lu:%02lu", sec / 60, sec % 60);
             }
         }
     }
@@ -166,11 +166,11 @@ namespace {
         n_columns = 0 + (show_start_column ? 1 : 0) + (show_end_column ? 1 : 0) + (show_time_column ? 1 : 0);
     }
 
-    float GetTimestampWidth() { return (65.0f * ImGui::GetIO().FontGlobalScale); }
+    float GetTimestampWidth() { return 65.0f * ImGui::GetIO().FontGlobalScale; }
 
     float GetLabelWidth()
     {
-        return std::max(GetTimestampWidth(), ImGui::GetContentRegionAvail().x - (GetTimestampWidth() * n_columns));
+        return std::max(GetTimestampWidth(), ImGui::GetContentRegionAvail().x - GetTimestampWidth() * n_columns);
     }
 
     bool runs_dirty = false;
@@ -249,7 +249,7 @@ void ObjectiveTimerWindow::Initialize()
             }
 
             static bool in_dungeon = false;
-            const bool new_in_dungeon = (info->type == GW::RegionType::Dungeon);
+            const bool new_in_dungeon = info->type == GW::RegionType::Dungeon;
             if (in_dungeon && !new_in_dungeon) {
                 // moved from dungeon to outside
                 StopObjectives();
@@ -359,12 +359,12 @@ void ObjectiveTimerWindow::Initialize()
 });*/
 }
 
-void ObjectiveTimerWindow::Event(const EventType type, const uint32_t count, const wchar_t* msg)
+void ObjectiveTimerWindow::Event(const EventType type, const uint32_t count, const wchar_t* msg) const
 {
     Event(type, count, (uint32_t)msg);
 }
 
-void ObjectiveTimerWindow::Event(const EventType type, const uint32_t id1, const uint32_t id2)
+void ObjectiveTimerWindow::Event(const EventType type, const uint32_t id1, const uint32_t id2) const
 {
     if (ObjectiveSet* os = GetCurrentObjectiveSet()) {
         os->Event(type, id1, id2);
@@ -580,7 +580,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
     AsyncGetMapName(os->name, sizeof(os->name));
 
     const std::vector<std::function<void()>> add_doa_obj = {
-        [&]() {
+        [&] {
             Objective* parent = os->AddObjectiveAfterAll(new Objective("Foundry"))
                                   ->AddStartEvent(EventType::DoACompleteZone, Gloom)
                                   ->AddStartEvent(EventType::DoorOpen, DoA_foundry_entrance_r1)
@@ -614,7 +614,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
                                    ->AddEndEvent(EventType::DoACompleteZone, Foundry));
             }
         },
-        [&]() {
+        [&] {
             Objective* parent = os->AddObjectiveAfterAll(new Objective("City"))
                                   ->AddStartEvent(EventType::DoACompleteZone, Foundry)
                                   ->AddEndEvent(EventType::DoACompleteZone, City);
@@ -629,7 +629,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
 
             // TODO: jadoth (starts at end of city, ends when chest spawns)
         },
-        [&]() {
+        [&] {
             Objective* parent = os->AddObjectiveAfterAll(new Objective("Veil"))
                                   ->AddStartEvent(EventType::DoACompleteZone, City)
                                   ->AddEndEvent(EventType::DoACompleteZone, Veil);
@@ -652,7 +652,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
                                    ->AddEndEvent(EventType::DoACompleteZone, Veil));
             }
         },
-        [&]() {
+        [&] {
             Objective* parent = os->AddObjectiveAfterAll(new Objective("Gloom"))
                                   ->AddStartEvent(EventType::DoACompleteZone, Veil)
                                   ->AddEndEvent(EventType::DoACompleteZone, Gloom);
@@ -862,7 +862,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
                     const bool show = os->Draw();
                     if (!show) {
                         delete os;
-                        objective_sets.erase(--(it.base()));
+                        objective_sets.erase(--it.base());
                         break;
                         // iterators go crazy, don't even bother, we're skipping a frame. NBD.
                         // if you really want to draw the rest make sure you extensively test this.
@@ -892,7 +892,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
     }
 }
 
-ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet()
+ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet() const
 {
     if (objective_sets.empty()) {
         return nullptr;
@@ -986,7 +986,7 @@ void ObjectiveTimerWindow::LoadRuns()
         run_loader.join();
     }
     loading = true;
-    run_loader = std::thread([]() {
+    run_loader = std::thread([] {
         ObjectiveTimerWindow& instance = Instance();
         // ClearObjectiveSets();
         Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
@@ -1045,18 +1045,17 @@ void ObjectiveTimerWindow::SaveRuns()
         run_loader.join();
     }
     loading = true;
-    run_loader = std::thread([]() {
+    run_loader = std::thread([] {
         ObjectiveTimerWindow& instance = Instance();
         Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
         std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
         wchar_t filename[36];
-        tm* structtime;
         for (auto& os : instance.objective_sets) {
             if (os.second->from_disk) {
                 continue; // No need to re-save a run.
             }
             time_t tt = os.second->system_time;
-            structtime = gmtime(&tt);
+            const tm* structtime = gmtime(&tt);
             if (!structtime) {
                 continue;
             }
@@ -1064,7 +1063,6 @@ void ObjectiveTimerWindow::SaveRuns()
                      structtime->tm_mon + 1, structtime->tm_mday);
             objective_sets_by_file[filename].push_back(os.second);
         }
-        bool error_saving = false;
         for (auto& it : objective_sets_by_file) {
             try {
                 std::ofstream file;
@@ -1079,7 +1077,6 @@ void ObjectiveTimerWindow::SaveRuns()
                 }
             } catch (const std::exception&) {
                 Log::Error("Failed to save ObjectiveSets to json");
-                error_saving = true;
             }
         }
         runs_dirty = false;
@@ -1107,8 +1104,7 @@ void ObjectiveTimerWindow::StopObjectives()
 // =============================================================================
 
 ObjectiveTimerWindow::Objective::Objective(const char* _name)
-    : indent(0)
-      , start(TIME_UNKNOWN)
+    : start(TIME_UNKNOWN)
       , done(TIME_UNKNOWN)
       , duration(TIME_UNKNOWN)
 {
@@ -1311,7 +1307,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     }
 }
 
-void ObjectiveTimerWindow::ObjectiveSet::Update()
+void ObjectiveTimerWindow::ObjectiveSet::Update() const
 {
     if (!active) {
         return;
@@ -1588,7 +1584,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
     return true;
 }
 
-void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(tm* timeinfo)
+void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(tm* timeinfo) const
 {
     const time_t ts = system_time;
     memcpy(timeinfo, localtime(&ts), sizeof(timeinfo[0]));

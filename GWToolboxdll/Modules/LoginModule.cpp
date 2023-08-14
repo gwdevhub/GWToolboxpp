@@ -80,8 +80,6 @@ void LoginModule::Initialize()
 
     state = LoginState::Idle;
 
-    int res = -1;
-
     PortalAccountLogin_Func = (PortalAccountLogin_pt)GW::Scanner::Find("\xc7\x45\xe8\x38\x00\x00\x00\x89\x4d\xf0", "xxxxxxxxxx", -0x2b);
     if (!PortalAccountLogin_Func) {
         goto failed_to_initialise;
@@ -91,20 +89,21 @@ void LoginModule::Initialize()
     if (!GetStringParameter_Func) {
         goto failed_to_initialise;
     }
+    {
+        int res = GW::HookBase::CreateHook(PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
+        if (res == -1) {
+            goto failed_to_initialise;
+        }
 
-    res = GW::HookBase::CreateHook(PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
-    if (res == -1) {
-        goto failed_to_initialise;
-    }
-
-    res = GW::HookBase::CreateHook(GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
-    if (res == -1) {
-        goto failed_to_initialise;
-    }
+        res = GW::HookBase::CreateHook(GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
+        if (res == -1) {
+            goto failed_to_initialise;
+        }
 
     GW::HookBase::EnableHooks(PortalAccountLogin_Func);
     GW::HookBase::EnableHooks(GetStringParameter_Func);
-    return;
+        return;
+    }
 
 failed_to_initialise:
     Log::Error("Failed to initialise LoginModule");

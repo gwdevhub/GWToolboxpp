@@ -15,7 +15,6 @@
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
-#include <Modules/Resources.h>
 #include <Widgets/AlcoholWidget.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/MainWindow.h>
@@ -519,14 +518,14 @@ void PconsWindow::MapChanged()
     }
 }
 
-void PconsWindow::Refill(const bool do_refill)
+void PconsWindow::Refill(const bool do_refill) const
 {
     for (Pcon* pcon : pcons) {
         pcon->Refill(do_refill && pcon->IsEnabled());
     }
 }
 
-bool PconsWindow::GetEnabled()
+bool PconsWindow::GetEnabled() const
 {
     return enabled;
 }
@@ -697,7 +696,7 @@ void PconsWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
 
-    for (Pcon* pcon : pcons) {
+    for (const Pcon* pcon : pcons) {
         pcon->SaveSettings(ini, Name());
     }
 

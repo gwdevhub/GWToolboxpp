@@ -33,10 +33,10 @@ void ClockWidget::Draw(IDirect3DDevice9*)
                 hour = 12;
             }
             if (show_seconds) {
-                snprintf(timer, 32, "%d:%02d:%02d %s", hour, time.wMinute, time.wSecond, (time.wHour >= 12 ? "p.m." : "a.m."));
+                snprintf(timer, 32, "%d:%02d:%02d %s", hour, time.wMinute, time.wSecond, time.wHour >= 12 ? "p.m." : "a.m.");
             }
             else {
-                snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, (time.wHour >= 12 ? "p.m." : "a.m."));
+                snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, time.wHour >= 12 ? "p.m." : "a.m.");
             }
         }
         ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));

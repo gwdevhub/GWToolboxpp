@@ -30,7 +30,6 @@
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/Hotkeys.h>
 #include <Windows/PconsWindow.h>
-#include <Modules/Resources.h>
 
 
 bool TBHotkey::show_active_in_header = true;
@@ -388,7 +387,7 @@ bool TBHotkey::Draw(Op* op)
 {
     bool hotkey_changed = false;
     const float scale = ImGui::GetIO().FontGlobalScale;
-    auto ShowHeaderButtons = [&]() {
+    auto ShowHeaderButtons = [&] {
         if (show_active_in_header || show_run_in_header) {
             ImGui::PushID(static_cast<int>(ui_id));
             ImGui::PushID("header");
@@ -399,7 +398,7 @@ bool TBHotkey::Draw(Op* op)
                     ImGui::GetContentRegionAvail().x -
                     ImGui::GetTextLineHeight() - style.FramePadding.y * 2 -
                     (show_run_in_header
-                         ? (btn_width + ImGui::GetStyle().ItemSpacing.x)
+                         ? btn_width + ImGui::GetStyle().ItemSpacing.x
                          : 0));
                 hotkey_changed |= ImGui::Checkbox("", &active);
                 if (ImGui::IsItemHovered()) {
@@ -470,7 +469,7 @@ bool TBHotkey::Draw(Op* op)
 
     ASSERT(ModKeyName(keybuf, _countof(keybuf), modifier, hotkey, "<None>") != -1);
     ASSERT(snprintf(&header[written], _countof(header) - written, " [%s]###header%u", keybuf, ui_id) != -1);
-    const ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header)
+    const ImGuiTreeNodeFlags flags = show_active_in_header || show_run_in_header
                                          ? ImGuiTreeNodeFlags_AllowItemOverlap
                                          : 0;
     if (!ImGui::CollapsingHeader(header, flags)) {
@@ -486,7 +485,7 @@ bool TBHotkey::Draw(Op* op)
 
         // === Hotkey section ===
         const float indent_offset = ImGui::GetCurrentWindow()->DC.Indent.x;
-        const float offset_sameline = indent_offset + (ImGui::GetContentRegionAvail().x / 2);
+        const float offset_sameline = indent_offset + ImGui::GetContentRegionAvail().x / 2;
         hotkey_changed |= ImGui::InputTextEx("Hotkey Group##hotkey_group", "No Hotkey Group", group, sizeof(group), ImVec2(0, 0), ImGuiInputTextFlags_EnterReturnsTrue, nullptr, nullptr);
         if (ImGui::IsItemDeactivatedAfterEdit()) {
             hotkey_changed = true;
@@ -525,7 +524,7 @@ bool TBHotkey::Draw(Op* op)
             ImGui::Indent();
 
             ImGui::TextDisabled("Only trigger in selected maps:");
-            const float map_id_w = (140.f * scale);
+            const float map_id_w = 140.f * scale;
             if (map_ids.empty()) {
                 ImGui::Text("    This hotkey will trigger in any map - add a map ID below to limit to a map");
             }
@@ -570,7 +569,7 @@ bool TBHotkey::Draw(Op* op)
             const int per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / prof_w));
             ImGui::TextDisabled("Only trigger when player is one of these professions");
             for (int i = 1; i < _countof(prof_ids); i++) {
-                const int offset = ((i - 1) % per_row);
+                const int offset = (i - 1) % per_row;
                 if (i > 1 && offset != 0) {
                     ImGui::SameLine(prof_w * offset + indent_offset);
                 }
@@ -737,7 +736,7 @@ bool TBHotkey::Draw(Op* op)
     return hotkey_changed;
 }
 
-bool TBHotkey::IsInRangeOfNPC()
+bool TBHotkey::IsInRangeOfNPC() const
 {
     if (!(in_range_of_npc_id && in_range_of_distance > 0.f)) {
         return true;
@@ -762,7 +761,7 @@ bool TBHotkey::IsInRangeOfNPC()
     return false;
 }
 
-HotkeySendChat::HotkeySendChat(ToolboxIni* ini, const char* section)
+HotkeySendChat::HotkeySendChat(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     strcpy_s(message, ini->GetValue(section, "msg", ""));
@@ -845,7 +844,7 @@ bool HotkeySendChat::Draw()
         hotkey_changed = true;
     }
     hotkey_changed |= ImGui::InputText("Message", message, _countof(message));
-    hotkey_changed |= (channel == '/' && ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel));
+    hotkey_changed |= channel == '/' && ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
     return hotkey_changed;
 }
 
@@ -860,7 +859,7 @@ void HotkeySendChat::Execute()
     GW::Chat::SendChat(channel, message);
 }
 
-HotkeyUseItem::HotkeyUseItem(ToolboxIni* ini, const char* section)
+HotkeyUseItem::HotkeyUseItem(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     item_id = static_cast<size_t>(ini->GetLongValue(section, "ItemID", 0));
@@ -959,7 +958,7 @@ HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(const HotkeyEquipItemA
     return set(other.model_id, other.enc_name.encoded().c_str(), other.enc_desc.encoded().c_str(), other.mod_struct, other.mod_struct_size);
 }
 
-bool HotkeyEquipItemAttributes::check(const GW::Item* item)
+bool HotkeyEquipItemAttributes::check(const GW::Item* item) const
 {
     if (!item || item->model_id != model_id || item->mod_struct_size != mod_struct_size) {
         return false;
@@ -1150,7 +1149,6 @@ bool HotkeyEquipItem::IsEquippable(const GW::Item* _item)
             break;
         default:
             return false;
-            break;
     }
     return true;
     // 2021-05-02: Disabled customised check, conflicts with obfuscator module, not worth the hassle - the hotkey will fail with a message on timeout anyway - Jon
@@ -1163,7 +1161,7 @@ bool HotkeyEquipItem::IsEquippable(const GW::Item* _item)
            wcscmp(c->player_name, _item->customized) == 0;*/
 }
 
-GW::Item* HotkeyEquipItem::FindMatchingItem(const GW::Constants::Bag _bag_idx)
+GW::Item* HotkeyEquipItem::FindMatchingItem(const GW::Constants::Bag _bag_idx) const
 {
     GW::Bag* bag = GW::Items::GetBag(_bag_idx);
     if (!bag) {
@@ -1331,7 +1329,7 @@ HotkeyDropUseBuff::SkillIndex HotkeyDropUseBuff::GetIndex() const
     }
 }
 
-HotkeyDropUseBuff::HotkeyDropUseBuff(ToolboxIni* ini, const char* section)
+HotkeyDropUseBuff::HotkeyDropUseBuff(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     id = static_cast<GW::Constants::SkillID>(ini->GetLongValue(
@@ -1433,7 +1431,7 @@ bool HotkeyToggle::IsValid(const ToolboxIni* ini, const char* section)
     return val >= 0 && val < Count;
 }
 
-HotkeyToggle::HotkeyToggle(ToolboxIni* ini, const char* section)
+HotkeyToggle::HotkeyToggle(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     target = static_cast<ToggleTarget>(ini->GetLongValue(section, "ToggleID", target));
@@ -1509,7 +1507,7 @@ bool HotkeyToggle::IsToggled(const bool force)
 {
     if (force) {
         const auto found = toggled.find(togglekey);
-        ongoing = (found != toggled.end() && found->second == this);
+        ongoing = found != toggled.end() && found->second == this;
     }
     return ongoing;
 }
@@ -1588,7 +1586,7 @@ bool HotkeyAction::GetText(void*, int idx, const char** out_text)
     }
 }
 
-HotkeyAction::HotkeyAction(ToolboxIni* ini, const char* section)
+HotkeyAction::HotkeyAction(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     action = static_cast<Action>(ini->GetLongValue(section, "ActionID", OpenXunlaiChest));
@@ -1621,7 +1619,7 @@ void HotkeyAction::Execute()
     switch (action) {
         case OpenXunlaiChest:
             if (isOutpost()) {
-                GW::GameThread::Enqueue([]() {
+                GW::GameThread::Enqueue([] {
                     GW::Items::OpenXunlaiWindow();
                 });
             }
@@ -1651,7 +1649,7 @@ void HotkeyAction::Execute()
     }
 }
 
-HotkeyTarget::HotkeyTarget(ToolboxIni* ini, const char* section)
+HotkeyTarget::HotkeyTarget(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     // don't print target hotkey to chat by default
@@ -1732,7 +1730,7 @@ void HotkeyTarget::Execute()
             delete[] message;
             return;
     }
-    GW::GameThread::Enqueue([message]() {
+    GW::GameThread::Enqueue([message] {
         GW::Chat::SendChat('/', message);
         delete[] message;
     });
@@ -1744,7 +1742,7 @@ void HotkeyTarget::Execute()
     }
 }
 
-HotkeyMove::HotkeyMove(ToolboxIni* ini, const char* section)
+HotkeyMove::HotkeyMove(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     type = static_cast<MoveType>(ini->GetLongValue(section, "type", static_cast<int>(type)));
@@ -1846,7 +1844,7 @@ void HotkeyMove::Execute()
     }
 }
 
-HotkeyDialog::HotkeyDialog(ToolboxIni* ini, const char* section)
+HotkeyDialog::HotkeyDialog(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     id = static_cast<size_t>(ini->GetLongValue(section, "DialogID", 0));
@@ -1905,7 +1903,7 @@ bool HotkeyPingBuild::GetText(void*, const int idx, const char** out_text)
     return true;
 }
 
-HotkeyPingBuild::HotkeyPingBuild(ToolboxIni* ini, const char* section)
+HotkeyPingBuild::HotkeyPingBuild(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     index = static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0));
@@ -1959,7 +1957,7 @@ bool HotkeyHeroTeamBuild::GetText(void*, const int idx, const char** out_text)
     return true;
 }
 
-HotkeyHeroTeamBuild::HotkeyHeroTeamBuild(ToolboxIni* ini, const char* section)
+HotkeyHeroTeamBuild::HotkeyHeroTeamBuild(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     index = static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0));
@@ -2002,7 +2000,7 @@ void HotkeyHeroTeamBuild::Execute()
     HeroBuildsWindow::Instance().Load(index);
 }
 
-HotkeyFlagHero::HotkeyFlagHero(ToolboxIni* ini, const char* section)
+HotkeyFlagHero::HotkeyFlagHero(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     degree = static_cast<float>(ini->GetDoubleValue(section, "degree", degree));
@@ -2118,7 +2116,7 @@ void HotkeyFlagHero::Execute()
     }
 }
 
-HotkeyGWKey::HotkeyGWKey(ToolboxIni* ini, const char* section)
+HotkeyGWKey::HotkeyGWKey(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     can_trigger_on_map_change = trigger_on_explorable = trigger_on_outpost = false;
@@ -2174,7 +2172,7 @@ bool HotkeyGWKey::Draw()
 
 void HotkeyGWKey::Execute()
 {
-    GW::GameThread::Enqueue([&]() {
+    GW::GameThread::Enqueue([&] {
         Keypress(action);
     });
 }
@@ -2189,7 +2187,7 @@ namespace {
     }
 }
 
-HotkeyCommandPet::HotkeyCommandPet(ToolboxIni* ini, const char* section)
+HotkeyCommandPet::HotkeyCommandPet(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
     behavior = ini ? static_cast<GW::HeroBehavior>(ini->GetLongValue(section, "behavior", static_cast<long>(behavior))) : behavior;
@@ -2220,7 +2218,7 @@ bool HotkeyCommandPet::Draw()
 
 void HotkeyCommandPet::Execute()
 {
-    GW::GameThread::Enqueue([&]() {
+    GW::GameThread::Enqueue([&] {
         GW::PartyMgr::SetPetBehavior(behavior);
     });
 }

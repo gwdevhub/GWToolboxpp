@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <GWToolbox.h>
 #include <ToolboxModule.h>
 
 namespace {

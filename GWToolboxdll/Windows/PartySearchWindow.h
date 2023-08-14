@@ -109,8 +109,8 @@ private:
 
     CircularBuffer<Message> messages;
 
-    TBParty* GetParty(uint32_t party_id, wchar_t** leader_out = nullptr);
-    TBParty* GetPartyByName(std::wstring leader);
+    TBParty* GetParty(uint32_t party_id, wchar_t** leader_out = nullptr) const;
+    TBParty* GetPartyByName(const std::wstring& leader);
 
     void ClearParties();
     void FillParties();
@@ -118,8 +118,8 @@ private:
     void AsyncWindowConnect(bool force = false);
     void fetch();
     static bool parse_json_message(const nlohmann::json& js, Message* msg);
-    void ParseBuffer(const char* text, std::vector<std::string>& words);
+    static void ParseBuffer(const char* text, std::vector<std::string>& words);
     static void DeleteWebSocket(easywsclient::WebSocket* ws);
-    bool IsLfpAlert(std::string& message);
+    bool IsLfpAlert(std::string& message) const;
     static void OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);
 };

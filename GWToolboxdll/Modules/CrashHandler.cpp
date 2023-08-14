@@ -61,7 +61,7 @@ void CrashHandler::OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEP
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
 {
     const std::wstring crash_folder = Resources::GetPath(L"crashes");
-    const char* failure_message = nullptr;
+    const char* failure_message;
     wchar_t error_info[512];
 
     const DWORD ProcessId = GetCurrentProcessId();
@@ -75,13 +75,28 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
                                    crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth,
                                    stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond, ProcessId, ThreadId);
 
-    HANDLE hFile = nullptr;
     MINIDUMP_USER_STREAM_INFORMATION* UserStreamParam = nullptr;
     char* extra_info = nullptr;
 
-    BOOL success;
     MINIDUMP_EXCEPTION_INFORMATION* ExpParam = nullptr;
-
+    // NOLINTBEGIN
+    BOOL success;
+    const HANDLE hFile = CreateFileW(
+        szFileName, GENERIC_READ | GENERIC_WRITE,
+        FILE_SHARE_WRITE | FILE_SHARE_READ, nullptr,
+        CREATE_ALWAYS, 0, nullptr);
+    if (!Resources::EnsureFolderExists(crash_folder.c_str())) {
+        failure_message = "Failed to create crash directory";
+        goto failed;
+    }
+    if (fn_print < 0) {
+        failure_message = "Failed to swprintf crash file name";
+        goto failed;
+    }
+    if (hFile == INVALID_HANDLE_VALUE) {
+        failure_message = "Failed to CreateFileW crash file";
+        goto failed;
+    }
     if (!Resources::EnsureFolderExists(crash_folder.c_str())) {
         failure_message = "Failed to create crash directory";
         goto failed;
@@ -89,12 +104,6 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
 
     if (fn_print < 0) {
         failure_message = "Failed to swprintf crash file name";
-        goto failed;
-    }
-    hFile = CreateFileW(
-        szFileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ, nullptr, CREATE_ALWAYS, 0, nullptr);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        failure_message = "Failed to CreateFileW crash file";
         goto failed;
     }
     if (Instance().gw_debug_info) {
@@ -118,9 +127,12 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
         ExpParam->ExceptionPointers = pExceptionPointers;
         ExpParam->ClientPointers = false;
     }
-
-    success = MiniDumpWriteDump(GetCurrentProcess(), ProcessId, hFile, static_cast<MINIDUMP_TYPE>(MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs), ExpParam, UserStreamParam, nullptr);
+    success = MiniDumpWriteDump(
+        GetCurrentProcess(), ProcessId, hFile,
+        static_cast<MINIDUMP_TYPE>(MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs),
+        ExpParam, UserStreamParam, nullptr);
     CloseHandle(hFile);
+    // NOLINTEND
 
     delete[] Instance().tb_exception_message;
 

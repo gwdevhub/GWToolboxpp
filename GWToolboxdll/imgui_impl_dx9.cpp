@@ -103,7 +103,7 @@ static void ImGui_ImplDX9_SetupRenderState(const ImDrawData* draw_data)
 
 // Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
-void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
+void ImGui_ImplDX9_RenderDrawData(const ImDrawData* draw_data)
 {
     // Avoid rendering when minimized
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f) {
@@ -127,7 +127,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             g_pIB = nullptr;
         }
         g_IndexBufferSize = draw_data->TotalIdxCount + 10000;
-        if (g_pd3dDevice->CreateIndexBuffer(g_IndexBufferSize * sizeof(ImDrawIdx), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, sizeof(ImDrawIdx) == 2 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, D3DPOOL_DEFAULT, &g_pIB, nullptr) < 0) {
+        if (g_pd3dDevice->CreateIndexBuffer(g_IndexBufferSize * sizeof(ImDrawIdx), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &g_pIB, nullptr) < 0) {
             return;
         }
     }
@@ -262,7 +262,7 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
         return false;
     }
     for (int y = 0; y < height; y++) {
-        memcpy(static_cast<unsigned char*>(tex_locked_rect.pBits) + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
+        memcpy(static_cast<unsigned char*>(tex_locked_rect.pBits) + tex_locked_rect.Pitch * y, pixels + width * bytes_per_pixel * y, width * bytes_per_pixel);
     }
     g_FontTexture->UnlockRect(0);
 

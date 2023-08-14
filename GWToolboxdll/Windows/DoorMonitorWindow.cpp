@@ -38,9 +38,8 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9*)
     ImGui::SameLine(offset += colWidth);
     ImGui::Text("Current State");
     ImGui::Separator();
-    std::map<uint32_t, DoorObject*>::iterator it;
 
-    for (it = doors.begin(); it != doors.end(); ++it) {
+    for (std::map<uint32_t, DoorObject*>::iterator it = doors.begin(); it != doors.end(); ++it) {
         offset = 0.0f;
         DoorObject& o = *it->second;
         ImGui::PushID(o.object_id);
@@ -115,7 +114,7 @@ void DoorMonitorWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
         &InstanceLoadInfo_Callback,
-        [this](const GW::HookStatus* , const GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+        [this](const GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
             if (!packet->is_explorable) {
                 return in_zone = false, false;
             }
@@ -125,7 +124,7 @@ void DoorMonitorWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
         &ManipulateMapObject_Callback,
-        [this](const GW::HookStatus* , const GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
+        [this](const GW::HookStatus*, const GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
             if (!in_zone) {
                 return false;
             }

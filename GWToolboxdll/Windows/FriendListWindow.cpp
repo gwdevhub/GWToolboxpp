@@ -173,7 +173,7 @@ namespace {
         std::wstring message;
         clock_t pending_add = 0;
 
-        void reset(std::wstring _charname = L"", std::wstring _message = L"")
+        void reset(const std::wstring& _charname = L"", const std::wstring& _message = L"")
         {
             charname = _charname;
             message = _message;
@@ -348,7 +348,7 @@ bool FriendListWindow::GetIsPlayerIgnored(const std::wstring& player_name)
     return f && f->type == GW::FriendType::Ignore;
 }
 
-void FriendListWindow::CmdAddFriend(const wchar_t*, const int argc, LPWSTR* argv)
+void FriendListWindow::CmdAddFriend(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (argc < 2) {
         return Log::Error("Missing player name");
@@ -360,7 +360,7 @@ void FriendListWindow::CmdAddFriend(const wchar_t*, const int argc, LPWSTR* argv
     GW::FriendListMgr::AddFriend(player_name.c_str());
 }
 
-void FriendListWindow::CmdRemoveFriend(const wchar_t*, const int argc, LPWSTR* argv)
+void FriendListWindow::CmdRemoveFriend(const wchar_t*, const int argc, const LPWSTR* argv)
 {
     if (argc < 2) {
         return Log::Error("Missing player name");
@@ -393,12 +393,12 @@ GW::Friend* FriendListWindow::Friend::GetFriend()
 }
 
 // Start whisper to this player via their current char name.
-void FriendListWindow::Friend::StartWhisper()
+void FriendListWindow::Friend::StartWhisper() const
 {
     if (!(current_char && !current_char->getNameW().empty())) {
         return Log::ErrorW(L"Player %s is not logged in", alias.c_str());
     }
-    GW::GameThread::Enqueue([charname = current_char->getNameW()]() {
+    GW::GameThread::Enqueue([charname = current_char->getNameW()] {
         SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)charname.data());
     });
 }
@@ -530,7 +530,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(const GW::Friend* f)
 }
 
 /* Getters */
-std::string FriendListWindow::Friend::GetCharactersHover(bool include_charname)
+std::string FriendListWindow::Friend::GetCharactersHover(const bool include_charname)
 {
     if (!cached_charnames_hover) {
         std::wstring cached_charnames_hover_ws = L"Characters for ";
@@ -770,7 +770,7 @@ void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr)
         return;
     }
     static std::wstring new_message;
-    new_message = std::wstring(message, (name_end - message));
+    new_message = std::wstring(message, name_end - message);
     new_message += L" (";
     new_message += friend_->getAliasW();
     new_message += L")";
@@ -779,7 +779,7 @@ void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr)
     *message_ptr = (wchar_t*)new_message.c_str();
 }
 
-void FriendListWindow::Update(const float )
+void FriendListWindow::Update(const float)
 {
     if (loading) {
         return;
@@ -879,7 +879,7 @@ bool FriendListWindow::IsWindow() const
            || (loading_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading);
 }
 
-void FriendListWindow::Draw(IDirect3DDevice9* )
+void FriendListWindow::Draw(IDirect3DDevice9*)
 {
     if (!(visible && GetIsFriendListReady() && GetIsMapReady())) {
         return;
@@ -1196,13 +1196,12 @@ void FriendListWindow::Terminate()
     }
 }
 
-void FriendListWindow::LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out)
+void FriendListWindow::LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out) const
 {
     // Grab char names
     CSimpleIni::TNamesDepend values;
     inifile->GetAllValues(section, "charname", values);
-    CSimpleIni::TNamesDepend::const_iterator i;
-    for (i = values.begin(); i != values.end(); ++i) {
+    for (CSimpleIni::TNamesDepend::const_iterator i = values.begin(); i != values.end(); ++i) {
         std::wstring char_wstr = GuiUtils::StringToWString(i->pItem), temp;
         std::vector<std::wstring> parts;
         std::wstringstream wss(char_wstr);
@@ -1231,7 +1230,7 @@ void FriendListWindow::LoadFromFile()
     if (settings_thread.joinable()) {
         settings_thread.join();
     }
-    settings_thread = std::thread([this]() {
+    settings_thread = std::thread([this] {
         // clear builds from toolbox
         uuid_by_name.clear();
         while (friends.begin() != friends.end()) {
@@ -1286,7 +1285,7 @@ void FriendListWindow::SaveToFile()
     if (settings_thread.joinable()) {
         settings_thread.join();
     }
-    settings_thread = std::thread([this]() {
+    settings_thread = std::thread([this] {
         friends_changed = false;
         inifile->Reset();
         // Load the existing file in, and amend the info

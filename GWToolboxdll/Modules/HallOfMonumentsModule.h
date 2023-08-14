@@ -324,7 +324,7 @@ public:
     }
 
     // Decode a zero terminated base64 encoded hom code
-    bool DecodeHomCode(const char* in, HallOfMonumentsAchievements* out);
+    static bool DecodeHomCode(const char* in, HallOfMonumentsAchievements* out);
     // Decode a zero terminated base64 encoded hom code
     static bool DecodeHomCode(HallOfMonumentsAchievements* out);
     // Get the account achievements for the current player

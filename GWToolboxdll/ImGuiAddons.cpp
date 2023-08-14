@@ -23,14 +23,14 @@ namespace ImGui {
         }
         element_spacing_cols = static_cast<int>(std::floor(GetContentRegionAvail().x / element_spacing_width));
         element_spacing_col_idx = 0;
-        element_spacing_indent = &(GetCurrentWindow()->DC.Indent.x);
+        element_spacing_indent = &GetCurrentWindow()->DC.Indent.x;
     }
 
     void NextSpacedElement()
     {
         if (element_spacing_col_idx) {
             if (element_spacing_col_idx < element_spacing_cols) {
-                SameLine((element_spacing_width * element_spacing_col_idx) + *element_spacing_indent);
+                SameLine(element_spacing_width * element_spacing_col_idx + *element_spacing_indent);
             }
             else {
                 element_spacing_col_idx = 0;
@@ -49,7 +49,7 @@ namespace ImGui {
         }
     }
 
-    void TextShadowed(const char* label, const ImVec2 offset, ImVec4 shadow_color)
+    void TextShadowed(const char* label, const ImVec2 offset, const ImVec4& shadow_color)
     {
         const ImVec2 pos = GetCursorPos();
         SetCursorPos(ImVec2(pos.x + offset.x, pos.y + offset.y));
@@ -136,14 +136,14 @@ namespace ImGui {
             }
         }
         const ImGuiStyle& style = GetStyle();
-        const float content_width = img_size.x + textsize.x + (style.FramePadding.x * 2.f);
+        const float content_width = img_size.x + textsize.x + style.FramePadding.x * 2.f;
         float content_x = pos.x + style.FramePadding.x;
         if (content_width < button_size.x) {
             const float avail_space = button_size.x - content_width;
-            content_x += (avail_space * style.ButtonTextAlign.x);
+            content_x += avail_space * style.ButtonTextAlign.x;
         }
         const float img_x = content_x;
-        const float img_y = pos.y + ((button_size.y - img_size.y) / 2.f);
+        const float img_y = pos.y + (button_size.y - img_size.y) / 2.f;
         const float text_x = img_x + img_size.x + 3.f;
         const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
         if (img_size.x) {
@@ -253,8 +253,8 @@ namespace ImGui {
         bool value_changed = false;
         for (auto i = 0; i < items_count; i++) {
             PushID(reinterpret_cast<void*>(i));
-            const bool item_selected = (i == *current_item);
-            const bool item_keyboard_selected = (i == keyboard_selected);
+            const bool item_selected = i == *current_item;
+            const bool item_keyboard_selected = i == keyboard_selected;
             const char* item_text;
             if (!items_getter(data, i, &item_text)) {
                 item_text = "*Unknown item*";
@@ -325,7 +325,7 @@ namespace ImGui {
                 value_changed = true;
             }
             PopID();
-            if (((i + 1) % max_per_line) != 0) {
+            if ((i + 1) % max_per_line != 0) {
                 SameLine();
             }
         }

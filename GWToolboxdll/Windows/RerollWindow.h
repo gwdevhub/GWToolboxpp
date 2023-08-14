@@ -49,7 +49,7 @@ public:
     static void CmdReroll(const wchar_t* message, int argc, LPWSTR* argv);
 
     bool Reroll(const wchar_t* character_name, bool same_map = true, bool same_party = true);
-    bool Reroll(wchar_t* character_name, GW::Constants::MapID _map_id);
+    bool Reroll(const wchar_t* character_name, GW::Constants::MapID _map_id);
 
 private:
     bool travel_to_same_location_after_rerolling = true;
@@ -68,22 +68,22 @@ private:
         /* + h0040 */
         uint32_t props[17];
 
-        uint32_t map_id()
+        uint32_t map_id() const
         {
-            return (props[0] & 0xffff0000);
+            return props[0] & 0xffff0000;
         }
 
-        uint32_t primary()
+        uint32_t primary() const
         {
             return (props[2] & 0x00f00000) >> 20;
         }
 
-        uint32_t campaign()
+        uint32_t campaign() const
         {
             return (props[7] & 0x000f0000) >> 16;
         }
 
-        uint32_t level()
+        uint32_t level() const
         {
             return ((props[7] & 0x0ff00000) >> 20) - 64;
         }
@@ -135,8 +135,8 @@ private:
 
     std::map<std::wstring, std::vector<std::wstring>*> account_characters{};
 
-    bool IsInMap(bool include_district = true);
-    bool IsCharSelectReady();
+    bool IsInMap(bool include_district = true) const;
+    static bool IsCharSelectReady();
 
     void AddAvailableCharacter(const wchar_t* email, const wchar_t* charname);
 

@@ -34,10 +34,10 @@ namespace GuiUtils {
     };
 
     void LoadFonts();
-    std::string WikiUrl(std::wstring term);
-    std::string WikiUrl(std::string term);
+    std::string WikiUrl(const std::wstring& term);
+    std::string WikiUrl(const std::string& term);
     void OpenWiki(const std::wstring& term);
-    void SearchWiki(std::wstring term);
+    void SearchWiki(const std::wstring& term);
     bool FontsLoaded();
     DLLAPI ImFont* GetFont(FontSize size);
 
@@ -51,8 +51,8 @@ namespace GuiUtils {
     std::wstring ToSlug(std::wstring s);
     std::string ToLower(std::string s);
     std::wstring ToLower(std::wstring s);
-    std::string UrlEncode(std::string s, char space_token = '_');
-    std::string HtmlEncode(std::string s);
+    std::string UrlEncode(const std::string& s, char space_token = '_');
+    std::string HtmlEncode(const std::string& s);
     std::wstring RemovePunctuation(std::wstring s);
     std::string RemovePunctuation(std::string s);
     std::wstring RemoveDiacritics(const std::wstring& s);
@@ -62,7 +62,7 @@ namespace GuiUtils {
     std::string SanitiseFilename(const std::string& str);
     std::wstring SanitiseFilename(const std::wstring& str);
 
-    std::wstring SanitizePlayerName(std::wstring s);
+    std::wstring SanitizePlayerName(const std::wstring& s);
 
     // Extract first unencoded substring from gw encoded string. Pass second and third args to know where the player name was found in the original string.
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** out_pos_out = nullptr);
@@ -150,7 +150,7 @@ namespace GuiUtils {
     public:
         // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
         EncString* language(GW::Constants::TextLanguage l = static_cast<GW::Constants::TextLanguage>(-1));
-        bool IsDecoding() { return decoding && decoded_ws.empty(); };
+        bool IsDecoding() const { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string
         void reset(uint32_t _enc_string_id = 0, bool sanitise = true);

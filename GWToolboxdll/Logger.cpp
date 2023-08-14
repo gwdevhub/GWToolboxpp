@@ -72,8 +72,9 @@ bool Log::InitializeLog()
 #else
     Resources::EnsureFolderExists(Resources::GetSettingsFolderPath());
     logfile = _wfreopen(Resources::GetPath(L"log.txt").c_str(), L"w", stdout);
-    if (!logfile)
+    if (!logfile) {
         return false;
+    }
 #endif
 
     RegisterLogHandler(GWCALogHandler, nullptr);
@@ -175,7 +176,7 @@ static void _chatlog(const LogType log_type, const wchar_t* message)
     auto to_send = new wchar_t[len];
     swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", GWTOOLBOX_SENDER, color, message);
 
-    GW::GameThread::Enqueue([to_send]() {
+    GW::GameThread::Enqueue([to_send] {
         WriteChat(GWTOOLBOX_CHAN, to_send, nullptr);
         delete[] to_send;
     });

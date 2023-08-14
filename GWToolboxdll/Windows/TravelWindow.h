@@ -29,8 +29,8 @@ public:
     bool Travel(GW::Constants::MapID MapID, GW::Constants::District district, uint32_t district_number = 0);
 
     // Travel via UI interface, allowing "Are you sure" dialogs
-    void UITravel(GW::Constants::MapID MapID, GW::Constants::District district,
-                  uint32_t district_number = 0);
+    static void UITravel(GW::Constants::MapID MapID, GW::Constants::District district,
+                         uint32_t district_number = 0);
 
     // Travel to relevent outpost, then use scroll to access Urgoz/Deep
     void ScrollToOutpost(

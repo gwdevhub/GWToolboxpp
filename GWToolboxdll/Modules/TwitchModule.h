@@ -45,7 +45,7 @@ public:
     bool notify_on_user_leave = true;
     bool notify_on_user_join = true;
 
-    bool isConnected() { return connected; };
+    bool isConnected() const { return connected; };
     IRC* irc() { return &conn; };
 
 private:

@@ -56,8 +56,8 @@ public:
 
     void IdentifyAll(IdentifyAllType type);
     void SalvageAll(SalvageAllType type);
-    bool IsPendingIdentify();
-    bool IsPendingSalvage();
+    bool IsPendingIdentify() const;
+    bool IsPendingSalvage() const;
     bool HasSettings() override { return true; }
     void Initialize() override;
     void Terminate() override;
@@ -144,23 +144,23 @@ private:
 
 public:
     struct Item : GW::Item {
-        GW::ItemModifier* GetModifier(uint32_t identifier);
-        GW::Constants::Rarity GetRarity();
-        uint32_t GetUses();
-        bool IsIdentificationKit();
-        bool IsSalvageKit();
-        bool IsTome();
-        bool IsLesserKit();
-        bool IsExpertSalvageKit();
-        bool IsPerfectSalvageKit();
+        GW::ItemModifier* GetModifier(uint32_t identifier) const;
+        GW::Constants::Rarity GetRarity() const;
+        uint32_t GetUses() const;
+        bool IsIdentificationKit() const;
+        bool IsSalvageKit() const;
+        bool IsTome() const;
+        bool IsLesserKit() const;
+        bool IsExpertSalvageKit() const;
+        bool IsPerfectSalvageKit() const;
         bool IsWeapon();
         bool IsArmor();
         bool IsSalvagable();
 
-        bool IsRareMaterial();
+        bool IsRareMaterial() const;
         bool IsWeaponSetItem();
-        bool IsOfferedInTrade();
-        bool CanOfferToTrade();
+        bool IsOfferedInTrade() const;
+        bool CanOfferToTrade() const;
 
         [[nodiscard]] bool IsSparkly() const
         {
@@ -213,10 +213,10 @@ public:
         }
     };
 
-    Item* GetNextUnsalvagedItem(Item* salvage_kit = nullptr, const Item* start_after_item = nullptr);
-    Item* GetNextUnidentifiedItem(const Item* start_after_item = nullptr);
-    void Identify(Item* item, Item* kit);
-    void Salvage(Item* item, Item* kit);
+    Item* GetNextUnsalvagedItem(const Item* salvage_kit = nullptr, const Item* start_after_item = nullptr);
+    Item* GetNextUnidentifiedItem(const Item* start_after_item = nullptr) const;
+    void Identify(const Item* item, const Item* kit);
+    void Salvage(Item* item, const Item* kit);
 
     uint32_t stack_prompt_item_id = 0;
 
@@ -271,8 +271,8 @@ private:
 
         CtoS_QuoteItem quote();
         TransactItems transact();
-        Item* item();
-        bool in_progress() { return state > Prompt; }
+        Item* item() const;
+        bool in_progress() const { return state > Prompt; }
         bool selling();
     };
 
@@ -283,7 +283,7 @@ private:
         GW::Constants::Bag bag = GW::Constants::Bag::None;
         uint32_t uses = 0;
         uint32_t quantity = 0;
-        bool set(Item* item = nullptr);
+        bool set(const Item* item = nullptr);
         GuiUtils::EncString name;
         GuiUtils::EncString desc;
         GuiUtils::EncString wiki_name;
@@ -295,7 +295,7 @@ private:
 
         PluralEncString plural_item_name;
 
-        Item* item();
+        Item* item() const;
     };
 
     struct PotentialItem : PendingItem {

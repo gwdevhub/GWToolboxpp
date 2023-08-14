@@ -11,18 +11,18 @@ using Color = ImU32;
 namespace Colors {
     static Color ARGB(const int a, const int r, const int g, const int b)
     {
-        return (static_cast<Color>(a) << IM_COL32_A_SHIFT) |
-               (static_cast<Color>(r) << IM_COL32_R_SHIFT) |
-               (static_cast<Color>(g) << IM_COL32_G_SHIFT) |
-               (static_cast<Color>(b) << IM_COL32_B_SHIFT);
+        return static_cast<Color>(a) << IM_COL32_A_SHIFT |
+               static_cast<Color>(r) << IM_COL32_R_SHIFT |
+               static_cast<Color>(g) << IM_COL32_G_SHIFT |
+               static_cast<Color>(b) << IM_COL32_B_SHIFT;
     }
 
     static Color RGB(const int r, const int g, const int b)
     {
-        return (0xFFu << IM_COL32_A_SHIFT) |
-               (static_cast<Color>(r) << IM_COL32_R_SHIFT) |
-               (static_cast<Color>(g) << IM_COL32_G_SHIFT) |
-               (static_cast<Color>(b) << IM_COL32_B_SHIFT);
+        return 0xFFu << IM_COL32_A_SHIFT |
+               static_cast<Color>(r) << IM_COL32_R_SHIFT |
+               static_cast<Color>(g) << IM_COL32_G_SHIFT |
+               static_cast<Color>(b) << IM_COL32_B_SHIFT;
     }
 
     static Color FullAlpha(const Color clr)
@@ -61,10 +61,10 @@ namespace Colors {
 
     static void ConvertU32ToInt4(const Color color, int* i)
     {
-        i[0] = static_cast<int>((color >> IM_COL32_A_SHIFT) & 0xFF);
-        i[1] = static_cast<int>((color >> IM_COL32_R_SHIFT) & 0xFF);
-        i[2] = static_cast<int>((color >> IM_COL32_G_SHIFT) & 0xFF);
-        i[3] = static_cast<int>((color >> IM_COL32_B_SHIFT) & 0xFF);
+        i[0] = static_cast<int>(color >> IM_COL32_A_SHIFT & 0xFF);
+        i[1] = static_cast<int>(color >> IM_COL32_R_SHIFT & 0xFF);
+        i[2] = static_cast<int>(color >> IM_COL32_G_SHIFT & 0xFF);
+        i[3] = static_cast<int>(color >> IM_COL32_B_SHIFT & 0xFF);
     }
 
     static Color ConvertInt4ToU32(const int* i)

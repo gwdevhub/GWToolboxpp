@@ -1,14 +1,11 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Scanner.h>
-
 #include <GWCA/Packets/Opcodes.h>
 
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/AccountContext.h>
 
 #include <GWCA/GameEntities/Skill.h>
@@ -50,7 +47,7 @@ namespace {
         if (real_index >= array.size()) {
             return false;
         }
-        const uint32_t shift = (static_cast<byte>(index) & 0x1f);
+        const uint32_t shift = static_cast<byte>(index) & 0x1f;
         const uint32_t flag = 1 << shift;
         return (array[real_index] & flag) != 0;
     }
@@ -179,7 +176,7 @@ namespace {
         std::wsmatch m;
         std::wstring subject(dialog_body);
         std::wstring msg;
-        auto cc = character_completion[GetPlayerName()];
+        const auto cc = character_completion[GetPlayerName()];
         auto& minipets_unlocked = cc->minipets_unlocked;
         minipets_unlocked.clear();
         while (std::regex_search(subject, m, displayed_miniatures)) {
@@ -240,7 +237,7 @@ namespace {
     }
 
     // Flag miniature as unlocked for current character when dedicated
-    void OnSendDialog(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    void OnSendDialog(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendDialog);
         if (GW::Map::GetMapID() != MapID::Hall_of_Monuments) {
@@ -252,16 +249,16 @@ namespace {
         if (this_dialog_button == available_dialogs.end()) {
             return;
         }
-        std::wregex miniature_displayed_regex(L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A([^\x1]+)");
+        const std::wregex miniature_displayed_regex(L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A([^\x1]+)");
         std::wsmatch m;
-        std::wstring subject((*this_dialog_button)->message);
+        const std::wstring subject((*this_dialog_button)->message);
         std::wstring msg;
-        auto cc = character_completion[GetPlayerName()];
+        const auto cc = character_completion[GetPlayerName()];
         auto& minipets_unlocked = cc->minipets_unlocked;
         if (!std::regex_search(subject, m, miniature_displayed_regex)) {
             return;
         }
-        std::wstring miniature_encoded_name(m[1].str());
+        const std::wstring miniature_encoded_name(m[1].str());
         for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
             if (encoded_minipet_names[i] == miniature_encoded_name) {
                 ArrayBoolSet(minipets_unlocked, i, true);
@@ -286,6 +283,7 @@ namespace {
         }
     }
 
+    //NOLINTNEXTLINE
     void OnHomLoaded(HallOfMonumentsAchievements* result)
     {
         if (result->state != HallOfMonumentsAchievements::State::Done) {
@@ -320,7 +318,7 @@ namespace {
             if (!g) {
                 return false;
             }
-            GW::CharContext* c = g->character;
+            const GW::CharContext* c = g->character;
             if (!c) {
                 return false;
             }
@@ -636,7 +634,7 @@ bool Mission::Draw(IDirect3DDevice9*)
         ImGui::SetCursorPos(cursor_pos);
 
         const ImVec2 check_size = ImGui::CalcTextSize(ICON_FA_CHECK);
-        ImGui::GetWindowDrawList()->AddText({screen_pos.x + ((icon_size_scaled.x - check_size.x) / 2), screen_pos.y + ((icon_size_scaled.y - check_size.y) / 2)},
+        ImGui::GetWindowDrawList()->AddText({screen_pos.x + (icon_size_scaled.x - check_size.x) / 2, screen_pos.y + (icon_size_scaled.y - check_size.y) / 2},
                                             completed_text, ICON_FA_CHECK);
         ImGui::SetCursorPos(cursor_pos2);
     }
@@ -671,8 +669,8 @@ void Mission::CheckProgress(const std::wstring& player_name)
         return;
     }
     const auto& player_completion = completion.at(player_name);
-    std::vector<uint32_t>* missions_complete = &player_completion->mission;
-    std::vector<uint32_t>* missions_bonus = &player_completion->mission_bonus;
+    const std::vector<uint32_t>* missions_complete = &player_completion->mission;
+    const std::vector<uint32_t>* missions_bonus = &player_completion->mission_bonus;
     if (hard_mode) {
         missions_complete = &player_completion->mission_hm;
         missions_bonus = &player_completion->mission_bonus_hm;
@@ -684,7 +682,7 @@ void Mission::CheckProgress(const std::wstring& player_name)
 
 IDirect3DTexture9* Mission::GetMissionImage()
 {
-    auto* texture_list = &normal_mode_textures;
+    const auto* texture_list = &normal_mode_textures;
 
     if (hard_mode) {
         texture_list = &hard_mode_textures;
@@ -762,7 +760,7 @@ void HeroUnlock::OnClick()
 {
     wchar_t buf[128];
     swprintf(buf, 128, L"Game_link:Hero_%d", skill_id);
-    GW::GameThread::Enqueue([buf]() {
+    GW::GameThread::Enqueue([buf] {
         GuiUtils::OpenWiki(buf);
     });
 }
@@ -874,7 +872,7 @@ void PvESkill::CheckProgress(const std::wstring& player_name)
     if (!skills.contains(player_name)) {
         return;
     }
-    auto& unlocked = skills.at(player_name)->skills;
+    const auto& unlocked = skills.at(player_name)->skills;
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id));
 }
 
@@ -914,7 +912,7 @@ void EotNMission::CheckProgress(const std::wstring& player_name)
     if (!completion.contains(player_name)) {
         return;
     }
-    std::vector<uint32_t>* missions_bonus = &completion.at(player_name)->mission_bonus;
+    const std::vector<uint32_t>* missions_bonus = &completion.at(player_name)->mission_bonus;
     if (hard_mode) {
         missions_bonus = &completion.at(player_name)->mission_bonus_hm;
     }
@@ -923,7 +921,7 @@ void EotNMission::CheckProgress(const std::wstring& player_name)
 
 IDirect3DTexture9* EotNMission::GetMissionImage()
 {
-    auto* texture_list = &normal_mode_textures;
+    const auto* texture_list = &normal_mode_textures;
     if (hard_mode) {
         texture_list = &hard_mode_textures;
     }
@@ -937,7 +935,7 @@ void Vanquish::CheckProgress(const std::wstring& player_name)
     if (!completion.contains(player_name)) {
         return;
     }
-    auto& unlocked = completion.at(player_name)->vanquishes;
+    const auto& unlocked = completion.at(player_name)->vanquishes;
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
 }
 
@@ -2182,7 +2180,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         RefreshAccountCharacters();
     }
     ImGui::ShowHelp("Limits the character dropdown to only show the characters belonging to this account.");
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x - (200.f * gscale));
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 200.f * gscale);
     ImGui::Checkbox("View as list", &show_as_list);
     ImGui::SameLine();
     if (ImGui::Checkbox("Hard mode", &hard_mode)) {
@@ -2194,7 +2192,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     if (show_as_list) {
         single_item_width *= 5.f;
     }
-    int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x))));
+    int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + ImGui::GetStyle().ItemSpacing.x)));
     const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
     auto draw_missions = [missions_per_row, device](auto& camp_missions, size_t end = 0) {
         if (end == 0) {
@@ -2274,7 +2272,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             filtered.push_back(camp_missions[i]);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
@@ -2301,7 +2299,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             filtered.push_back(camp_missions[i]);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f,
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f,
                  camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
@@ -2334,7 +2332,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             filtered.push_back(camp_missions[i]);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
@@ -2354,7 +2352,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             filtered.push_back(camp_missions[i]);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
@@ -2369,7 +2367,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             }
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_heros_%d", CampaignName(camp.first), completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_heros_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(camp_missions);
         }
@@ -2384,7 +2382,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             }
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###unlocked_pvp_items_%d", (const char*)camp.first, completed, camp_missions.size(), (static_cast<float>(completed) / static_cast<float>(camp_missions.size())) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###unlocked_pvp_items_%d", (const char*)camp.first, completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(camp_missions);
         }
@@ -2417,7 +2415,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         filtered.push_back(m);
     }
-    snprintf(label, _countof(label), "Halloween Hats (%d of %d collected) - %.0f%%###halloween_hats", completed, (to_index - offset), (static_cast<float>(completed) / static_cast<float>(to_index - offset)) * 100.f);
+    snprintf(label, _countof(label), "Halloween Hats (%d of %d collected) - %.0f%%###halloween_hats", completed, to_index - offset, static_cast<float>(completed) / static_cast<float>(to_index - offset) * 100.f);
     if (ImGui::CollapsingHeader(label)) {
         draw_missions(filtered);
     }
@@ -2437,7 +2435,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         filtered.push_back(m);
     }
-    snprintf(label, _countof(label), "Wintersday Hats (%d of %d collected) - %.0f%%###wintersday_hats", completed, (to_index - offset), (static_cast<float>(completed) / static_cast<float>(to_index - offset)) * 100.f);
+    snprintf(label, _countof(label), "Wintersday Hats (%d of %d collected) - %.0f%%###wintersday_hats", completed, to_index - offset, static_cast<float>(completed) / static_cast<float>(to_index - offset) * 100.f);
     if (ImGui::CollapsingHeader(label)) {
         draw_missions(filtered);
     }
@@ -2457,7 +2455,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         filtered.push_back(m);
     }
-    snprintf(label, _countof(label), "Dragon Festival Hats (%d of %d collected) - %.0f%%###dragon_festival_hats", completed, (to_index - offset), (static_cast<float>(completed) / static_cast<float>(to_index - offset)) * 100.f);
+    snprintf(label, _countof(label), "Dragon Festival Hats (%d of %d collected) - %.0f%%###dragon_festival_hats", completed, to_index - offset, static_cast<float>(completed) / static_cast<float>(to_index - offset) * 100.f);
     if (ImGui::CollapsingHeader(label)) {
         draw_missions(filtered);
     }
@@ -2474,7 +2472,7 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
     if (show_as_list) {
         single_item_width *= 5.f;
     }
-    const int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + (ImGui::GetStyle().ItemSpacing.x))));
+    const int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + ImGui::GetStyle().ItemSpacing.x)));
     const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
     ImGui::Text("Hall of Monuments");
     ImGui::SameLine(checkbox_offset);
@@ -2566,7 +2564,7 @@ then press "Examine the Monument to Devotion.")");
     snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d weapons displayed) - %.0f%%###valor_points", "Valor",
              completed, ValorPoints::TotalAvailable,
              dedicated, hom_weapons.size(),
-             (static_cast<float>(dedicated) / static_cast<float>(hom_weapons.size())) * 100.f);
+             static_cast<float>(dedicated) / static_cast<float>(hom_weapons.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -2612,7 +2610,7 @@ then press "Examine the Monument to Devotion.")");
     snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d armor sets displayed) - %.0f%%###resilience_points", "Resilience",
              completed, ResiliencePoints::TotalAvailable,
              dedicated, hom_armor.size(),
-             (static_cast<float>(dedicated) / static_cast<float>(hom_armor.size())) * 100.f);
+             static_cast<float>(dedicated) / static_cast<float>(hom_armor.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -2658,7 +2656,7 @@ then press "Examine the Monument to Devotion.")");
     snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d companions displayed) - %.0f%%###fellowship_points", "Fellowship",
              completed, FellowshipPoints::TotalAvailable,
              dedicated, hom_companions.size(),
-             (static_cast<float>(dedicated) / static_cast<float>(hom_companions.size())) * 100.f);
+             static_cast<float>(dedicated) / static_cast<float>(hom_companions.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -2704,7 +2702,7 @@ then press "Examine the Monument to Devotion.")");
     snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d titles achieved) - %.0f%%###honor_points", "Honor",
              completed, HonorPoints::TotalAvailable,
              dedicated, hom_titles.size(),
-             (static_cast<float>(dedicated) / static_cast<float>(hom_titles.size())) * 100.f);
+             static_cast<float>(dedicated) / static_cast<float>(hom_titles.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -2738,7 +2736,7 @@ void CompletionWindow::DrawSettingsInternal()
 void CompletionWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    auto completion_ini = new ToolboxIni(false, false, false);
+    const auto completion_ini = new ToolboxIni(false, false, false);
     completion_ini->LoadFile(Resources::GetPath(completion_ini_filename).c_str());
     std::string ini_str;
     std::wstring name_ws;
@@ -2855,8 +2853,6 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     ToolboxWindow::SaveSettings(ini);
     auto completion_ini = new ToolboxIni(false, false, false);
     std::string ini_str;
-    std::string* name;
-    CharacterCompletion* char_comp = nullptr;
 
     SAVE_BOOL(show_as_list);
     SAVE_BOOL(hide_unlocked_skills);
@@ -2876,8 +2872,8 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     };
 
     for (const auto& char_unlocks : character_completion) {
-        char_comp = char_unlocks.second;
-        name = &char_comp->name_str;
+        CharacterCompletion* char_comp = char_unlocks.second;
+        const std::string* name = &char_comp->name_str;
         completion_ini->SetLongValue(name->c_str(), "profession", static_cast<uint32_t>(char_comp->profession));
         completion_ini->SetValue(name->c_str(), "account", GuiUtils::WStringToString(char_comp->account).c_str());
         write_buf_to_ini("mission", &char_comp->mission, ini_str, name);
@@ -2921,7 +2917,7 @@ void MinipetAchievement::CheckProgress(const std::wstring& player_name)
     if (!cc.contains(player_name)) {
         return;
     }
-    std::vector<uint32_t>& minipets_unlocked = cc.at(player_name)->minipets_unlocked;
+    const std::vector<uint32_t>& minipets_unlocked = cc.at(player_name)->minipets_unlocked;
     is_completed = bonus = ArrayBoolAt(minipets_unlocked, encoded_name_index);
 }
 
@@ -3000,7 +2996,7 @@ void FestivalHat::CheckProgress(const std::wstring& player_name)
     if (!cc.contains(player_name)) {
         return;
     }
-    std::vector<uint32_t>& unlocked = cc.at(player_name)->festival_hats;
+    const std::vector<uint32_t>& unlocked = cc.at(player_name)->festival_hats;
     is_completed = bonus = ArrayBoolAt(unlocked, encoded_name_index);
 }
 

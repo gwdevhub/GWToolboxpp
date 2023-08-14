@@ -273,7 +273,7 @@ static void ImGui_ImplWin32_UpdateMouseData()
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(bd->hWnd != 0);
 
-    const bool is_app_focused = (GetForegroundWindow() == bd->hWnd);
+    const bool is_app_focused = GetForegroundWindow() == bd->hWnd;
     if (is_app_focused) {
         // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when
         // ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
@@ -642,7 +642,8 @@ ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(const WPARAM wParam)
 // Copy this line into your .cpp file to forward declare the function.
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
-IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+//NOLINTNEXTLINE
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler([[maybe_unused]] HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui::GetCurrentContext() == nullptr) {
         return 0;
@@ -688,7 +689,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
                 button = 2;
             }
             if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) {
-                button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4;
+                button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4;
             }
             //if (bd->MouseButtonsDown == 0 && ::GetCapture() == NULL) ::SetCapture(hwnd);
             bd->MouseButtonsDown |= 1 << button;
@@ -710,7 +711,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
                 button = 2;
             }
             if (msg == WM_XBUTTONUP) {
-                button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4;
+                button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4;
             }
             bd->MouseButtonsDown &= ~(1 << button);
             if (bd->MouseButtonsDown == 0 && GetCapture() == hwnd) {
@@ -729,7 +730,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         case WM_KEYUP:
         case WM_SYSKEYDOWN:
         case WM_SYSKEYUP: {
-            const bool is_key_down = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+            const bool is_key_down = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
             if (wParam < 256) {
                 // Submit modifiers
                 ImGui_ImplWin32_UpdateKeyModifiers();
@@ -738,7 +739,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
                 // (keypad enter doesn't have its own... VK_RETURN with KF_EXTENDED flag means keypad enter, see
                 // IM_VK_KEYPAD_ENTER definition for details, it is mapped to ImGuiKey_KeyPadEnter.)
                 int vk = static_cast<int>(wParam);
-                if ((wParam == VK_RETURN) && (HIWORD(lParam) & KF_EXTENDED)) {
+                if (wParam == VK_RETURN && HIWORD(lParam) & KF_EXTENDED) {
                     vk = IM_VK_KEYPAD_ENTER;
                 }
 
@@ -842,7 +843,7 @@ static BOOL _IsWindowsVersionOrGreater(const WORD major, const WORD minor, WORD)
     versionInfo.dwMinorVersion = minor;
     VER_SET_CONDITION(conditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
     VER_SET_CONDITION(conditionMask, VER_MINORVERSION, VER_GREATER_EQUAL);
-    return (RtlVerifyVersionInfoFn(&versionInfo, VER_MAJORVERSION | VER_MINORVERSION, conditionMask) == 0)
+    return RtlVerifyVersionInfoFn(&versionInfo, VER_MAJORVERSION | VER_MINORVERSION, conditionMask) == 0
                ? TRUE
                : FALSE;
 }

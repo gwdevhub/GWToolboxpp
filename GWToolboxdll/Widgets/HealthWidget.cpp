@@ -180,7 +180,6 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 }
             }
 
-            ImVec2 cur;
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
             const auto background = ImColor(Colors::Black());
 
@@ -220,7 +219,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
 
             // 'health'
             ImGui::PushFont(GetFont(GuiUtils::FontSize::header1));
-            cur = ImGui::GetCursorPos();
+            ImVec2 cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
             ImGui::TextColored(background, "Health");
             ImGui::SetCursorPos(cur);
@@ -271,7 +270,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
 
 unsigned int HealthWidget::Threshold::cur_ui_id = 0;
 
-HealthWidget::Threshold::Threshold(ToolboxIni* ini, const char* section)
+HealthWidget::Threshold::Threshold(const ToolboxIni* ini, const char* section)
     : ui_id(++cur_ui_id)
 {
     active = ini->GetBoolValue(section, VAR_NAME(active));
@@ -368,7 +367,7 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op)
     return changed;
 }
 
-void HealthWidget::Threshold::SaveSettings(ToolboxIni* ini, const char* section)
+void HealthWidget::Threshold::SaveSettings(ToolboxIni* ini, const char* section) const
 {
     ini->SetBoolValue(section, VAR_NAME(active), active);
     ini->SetValue(section, VAR_NAME(name), name);

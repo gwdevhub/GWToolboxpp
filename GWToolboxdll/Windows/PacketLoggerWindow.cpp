@@ -36,7 +36,7 @@ namespace {
         std::wstring description;
         GW::AreaInfo* map_info{};
 
-        nlohmann::json ToJson()
+        nlohmann::json ToJson() const
         {
             nlohmann::json json;
             if (!name.empty()) {
@@ -190,9 +190,8 @@ static void InitStoC()
         } * gs_codec;
     };
 
-    uintptr_t StoCHandler_Addr;
     const uintptr_t address = GW::Scanner::Find("\x75\x04\x33\xC0\x5D\xC3\x8B\x41\x08\xA8\x01\x75", "xxxxxxxxxxxx", -6);
-    StoCHandler_Addr = *(uintptr_t*)address;
+    const uintptr_t StoCHandler_Addr = *(uintptr_t*)address;
 
     const auto addr = (GameServer* *)StoCHandler_Addr;
     if (!(addr && *addr)) {
@@ -268,19 +267,19 @@ static void PrintIndent(const uint32_t indent)
 
 static void GetHexS(char* buf, const uint8_t byte)
 {
-    const uint8_t h = (byte >> 4) & 0xfu;
-    const uint8_t l = (byte >> 0) & 0xfu;
+    const uint8_t h = byte >> 4 & 0xfu;
+    const uint8_t l = byte >> 0 & 0xfu;
     if (h < 10) {
         buf[0] = h + '0';
     }
     else {
-        buf[0] = (h - 10) + 'A';
+        buf[0] = h - 10 + 'A';
     }
     if (l < 10) {
         buf[1] = l + '0';
     }
     else {
-        buf[1] = (l - 10) + 'A';
+        buf[1] = l - 10 + 'A';
     }
     buf[2] = 0;
 }
@@ -364,7 +363,7 @@ static void PrintField(const FieldType field, const uint32_t count, uint8_t** by
                 char buf[3];
                 GetHexS(buf, **bytes);
                 printf("%s ", buf);
-                ++(*bytes);
+                ++*bytes;
             }
             printf("\n");
             break;
@@ -376,7 +375,7 @@ static void PrintField(const FieldType field, const uint32_t count, uint8_t** by
             printf("String(%zu) \"", length);
             PrintString(length, str);
             printf("\"\n");
-            *bytes += (count * 2);
+            *bytes += count * 2;
             break;
         }
         case FieldType::Array8: {
@@ -399,7 +398,7 @@ static void PrintField(const FieldType field, const uint32_t count, uint8_t** by
             PrintIndent(indent);
             uint32_t length = count;
             Serialize<uint32_t>(bytes, &length);
-            uint8_t* end = *bytes + (count * 2);
+            uint8_t* end = *bytes + count * 2;
             printf("Array16(%u of %u) {\n", length, count);
             if (length < 64) {
                 uint16_t val;
@@ -417,7 +416,7 @@ static void PrintField(const FieldType field, const uint32_t count, uint8_t** by
             PrintIndent(indent);
             uint32_t length = count;
             Serialize<uint32_t>(bytes, &length);
-            uint8_t* end = *bytes + (count * 4);
+            uint8_t* end = *bytes + count * 4;
             printf("Array32(%u of %u) {\n", length, count);
             if (length < 128) {
                 uint32_t val;
@@ -444,9 +443,9 @@ static void PrintNestedField(uint32_t* fields, const uint32_t n_fields,
         printf("[%u] => {\n", rep);
         for (auto i = 0u; i < n_fields; i++) {
             const uint32_t field = fields[i];
-            const uint32_t type = (field >> 0) & 0xF;
-            const uint32_t size = (field >> 4) & 0xF;
-            const uint32_t count = (field >> 8) & 0xFFFF;
+            const uint32_t type = field >> 0 & 0xF;
+            const uint32_t size = field >> 4 & 0xF;
+            const uint32_t count = field >> 8 & 0xFFFF;
 
             // Just to make it easier to print
             const FieldType field_type = GetField(type, size, count);
@@ -536,7 +535,7 @@ std::string PacketLoggerWindow::PadLeft(std::string input, const uint8_t count, 
     return input;
 }
 
-std::string PacketLoggerWindow::PrefixTimestamp(std::string message)
+std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
 {
     if (timestamp_type == TimestampType_None) {
         return message;
@@ -809,7 +808,7 @@ void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::Pack
 void PacketLoggerWindow::Update(const float)
 {
     for (auto it = pending_translation.begin(); it != pending_translation.end(); ++it) {
-        ForTranslation& t = *(*it);
+        ForTranslation& t = **it;
         if (t.out.empty()) {
             continue;
         }
@@ -897,7 +896,7 @@ void PacketLoggerWindow::Enable()
     }
     for (size_t i = 0; i < 180; i++) {
         GW::CtoS::RegisterPacketCallback(
-            &hook_entry, i, [this](GW::HookStatus* status, void* packet) -> void {
+            &hook_entry, i, [this](const GW::HookStatus* status, void* packet) -> void {
                 CtoSHandler(status, packet);
             }
         );

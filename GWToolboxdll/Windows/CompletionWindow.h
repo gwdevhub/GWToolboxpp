@@ -271,7 +271,7 @@ namespace Missions {
         static MissionImageList normal_mode_images;
         static MissionImageList hard_mode_images;
 
-        Dungeon(const GW::Constants::MapID _outpost, std::vector<GW::Constants::QuestID> _zb_quests)
+        Dungeon(const GW::Constants::MapID _outpost, const std::vector<GW::Constants::QuestID>& _zb_quests)
             : EotNMission(_outpost, normal_mode_images, hard_mode_images), zb_quests(_zb_quests) { }
 
         Dungeon(const GW::Constants::MapID _outpost, GW::Constants::QuestID _zb_quest = static_cast<GW::Constants::QuestID>(0))
@@ -324,7 +324,7 @@ public:
     static void Initialize_Dungeons();
     void Terminate() override;
     void Draw(IDirect3DDevice9* pDevice) override;
-    void DrawHallOfMonuments(IDirect3DDevice9* device);
+    static void DrawHallOfMonuments(IDirect3DDevice9* device);
 
     static CharacterCompletion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
 

@@ -18,7 +18,7 @@ void VanquishWidget::Draw(IDirect3DDevice9*)
     const DWORD tokill = GW::Map::GetFoesToKill();
     const DWORD killed = GW::Map::GetFoesKilled();
 
-    if ((GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) ||
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable ||
         !GW::PartyMgr::GetIsPartyInHardMode() ||
         tokill <= 0) {
         return;

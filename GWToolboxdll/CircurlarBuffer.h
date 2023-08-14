@@ -26,7 +26,7 @@ struct CircularBuffer {
 
     bool full() { return size == allocated; }
     void clear() { count = 0, cursor = 0; }
-    size_t size() { return count; }
+    size_t size() const { return count; }
 
     void add(const T& val)
     {

@@ -202,7 +202,7 @@ static void OnJoinRequest([[maybe_unused]] void* data, DiscordUser* user)
     app->activities->send_request_reply(app->activities, user->id, DiscordActivityJoinRequestReply_Yes, app, OnJoinRequestReplyCallback);
 }
 
-static void OnPartyInvite([[maybe_unused]] void* event_data, EDiscordActivityActionType , DiscordUser* user, DiscordActivity* )
+static void OnPartyInvite([[maybe_unused]] void* event_data, EDiscordActivityActionType, DiscordUser* user, DiscordActivity*)
 {
     Log::Log("Party invite received from %s\n", user->username);
 }
@@ -216,11 +216,10 @@ static void OnDiscordLog([[maybe_unused]] void* data, const EDiscordLogLevel lev
 DWORD GetProcId(const char* ProcName)
 {
     PROCESSENTRY32 pe32;
-    HANDLE hSnapshot = nullptr;
     uint32_t pid = 0;
     const uint32_t len = strlen(ProcName);
     pe32.dwSize = sizeof(PROCESSENTRY32);
-    hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    const HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
     if (Process32First(hSnapshot, &pe32)) {
         do {
@@ -286,50 +285,50 @@ void DiscordModule::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
         &InstanceLoadInfo_Callback,
-                                                                         [this](const GW::HookStatus* , const GW::Packet::StoC::InstanceLoadInfo* ) -> void {
-                                                                             zone_entered_time = time(nullptr); // Because you cant rely on instance time at this point.
-                                                                             pending_activity_update = true;
-                                                                             if (!discord_connected) {
-                                                                                 pending_discord_connect = true; // Connect in Update() loop instead of StoC callback, just incase its blocking
-                                                                             }
-                                                                             join_party_next_action = time(nullptr) + 2; // 2 seconds for other packets to be received e.g. players, guild info
-                                                                         });
+        [this](const GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo*) -> void {
+            zone_entered_time = time(nullptr); // Because you cant rely on instance time at this point.
+            pending_activity_update = true;
+            if (!discord_connected) {
+                pending_discord_connect = true; // Connect in Update() loop instead of StoC callback, just incase its blocking
+            }
+            join_party_next_action = time(nullptr) + 2; // 2 seconds for other packets to be received e.g. players, guild info
+        });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(
         &PartyPlayerAdd_Callback,
-                                                                       [this](const GW::HookStatus* , const GW::Packet::StoC::PartyPlayerAdd* packet) -> void {
-                                                                           const GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
-                                                                           if (player_agent && packet->player_id == player_agent->player_number) {
-                                                                               pending_activity_update = true; // Update if this is me
-                                                                               return;
-                                                                           }
-                                                                           const GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
-                                                                           if (p && packet->party_id == p->party_id) {
-                                                                               pending_activity_update = true; // Update if this is my party
-                                                                           }
-                                                                       });
+        [this](const GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd* packet) -> void {
+            const GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
+            if (player_agent && packet->player_id == player_agent->player_number) {
+                pending_activity_update = true; // Update if this is me
+                return;
+            }
+            const GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
+            if (p && packet->party_id == p->party_id) {
+                pending_activity_update = true; // Update if this is my party
+            }
+        });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyUpdateSize>(
         &PartyUpdateSize_Callback,
-                                                                        [this](const GW::HookStatus* , const GW::Packet::StoC::PartyUpdateSize* packet) -> void {
-                                                                            GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
-                                                                            if (p && packet->player_id == p->players[0].login_number) {
-                                                                                pending_activity_update = true; // Update if this is my leader
-                                                                            }
-                                                                        });
+        [this](const GW::HookStatus*, const GW::Packet::StoC::PartyUpdateSize* packet) -> void {
+            GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
+            if (p && packet->player_id == p->players[0].login_number) {
+                pending_activity_update = true; // Update if this is my leader
+            }
+        });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ErrorMessage>(
         &ErrorMessage_Callback,
-                                                                     [this](const GW::HookStatus* , const GW::Packet::StoC::ErrorMessage* packet) -> void {
-                                                                         if (!join_in_progress.map_id) {
-                                                                             return;
-                                                                         }
-                                                                         switch (packet->message_id) {
-                                                                             case 0x35: // Cannot enter outpost (e.g. char has no access to outpost or GH)
-                                                                                 FailedJoin("Cannot enter outpost on this character");
-                                                                                 break;
-                                                                             case 0x3C: // Already in active district (try to join party)
-                                                                                 JoinParty();
-                                                                                 break;
-                                                                         }
-                                                                     });
+        [this](const GW::HookStatus*, const GW::Packet::StoC::ErrorMessage* packet) -> void {
+            if (!join_in_progress.map_id) {
+                return;
+            }
+            switch (packet->message_id) {
+                case 0x35: // Cannot enter outpost (e.g. char has no access to outpost or GH)
+                    FailedJoin("Cannot enter outpost on this character");
+                    break;
+                case 0x3C: // Already in active district (try to join party)
+                    JoinParty();
+                    break;
+            }
+        });
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         zone_entered_time = time(nullptr) - GW::Map::GetInstanceTime() / 1000;
     }
@@ -505,7 +504,7 @@ bool DiscordModule::LoadDll()
         return false;
     }
     // resolve function address here
-    discordCreate = (DiscordCreate_pt)((uintptr_t)(GetProcAddress(hGetProcIDDLL, "DiscordCreate")));
+    discordCreate = (DiscordCreate_pt)(uintptr_t)GetProcAddress(hGetProcIDDLL, "DiscordCreate");
     if (!discordCreate) {
         UnloadDll();
         Log::LogW(L"Failed to find address for DiscordCreate\n");
@@ -515,7 +514,7 @@ bool DiscordModule::LoadDll()
     return true;
 }
 
-bool DiscordModule::UnloadDll()
+bool DiscordModule::UnloadDll() const
 {
     const HINSTANCE hGetProcIDDLL = GetModuleHandleW(dll_location.c_str());
     return !hGetProcIDDLL || FreeLibrary(hGetProcIDDLL);
@@ -582,7 +581,7 @@ void DiscordModule::LoadSettings(ToolboxIni* ini)
     show_party_info = ini->GetBoolValue(Name(), VAR_NAME(show_party_info), show_party_info);
 }
 
-void DiscordModule::Update(const float )
+void DiscordModule::Update(const float)
 {
     if (!discord_enabled && discord_connected) {
         Disconnect();

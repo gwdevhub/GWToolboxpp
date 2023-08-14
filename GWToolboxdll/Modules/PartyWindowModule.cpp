@@ -65,7 +65,7 @@ namespace {
         uint32_t agent_id;
         uint32_t player_number;
         uint32_t allegiance_bits;
-        GW::AgentLiving* GetAgent();
+        GW::AgentLiving* GetAgent() const;
     };
 
     struct SpecialNPCToAdd {
@@ -140,7 +140,7 @@ namespace {
     }
 
     struct PartyInfo : GW::PartyInfo {
-        size_t GetPartySize()
+        size_t GetPartySize() const
         {
             return players.size() + henchmen.size() + heroes.size();
         }
@@ -260,7 +260,7 @@ namespace {
             return false; // Not in an explorable area
         }
         const GW::Constants::MapID map_id = GW::Map::GetMapID();
-        const uint32_t player_number = (agent_type ^ 0x20000000);
+        const uint32_t player_number = agent_type ^ 0x20000000;
         const auto it = user_defined_npcs_by_model_id.find(player_number);
         if (it == user_defined_npcs_by_model_id.end()) {
             return false;
@@ -356,11 +356,9 @@ namespace {
         packet.agent_id = agent_id;
 
         const auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-        float prev_hp = 0.0f;
         wchar_t prev_name[8] = {0};
         if (a) {
             wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
-            prev_hp = a->hp;
         }
         // 1. Remove NPC from window.
         GW::StoC::EmulatePacket(&packet);
@@ -380,20 +378,14 @@ namespace {
         if (!a || a->GetIsDead() || a->GetIsDeadByTypeMap()) {
             return;
         }
-        float prev_hp = a->hp;
         wchar_t prev_name[8] = {0};
         wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
-        prev_hp = a->hp;
         GW::Packet::StoC::PartyAllyAdd packet;
-        GW::Packet::StoC::AgentName packet2;
 
         packet.header = GW::Packet::StoC::PartyAllyAdd::STATIC_HEADER;
         packet.agent_id = p.agent_id;
         packet.agent_type = p.player_number | 0x20000000;
         packet.allegiance_bits = 1886151033;
-
-        packet2.header = GW::Packet::StoC::AgentName::STATIC_HEADER;
-        packet2.agent_id = p.agent_id;
 
         // 1. Remove NPC from window.
         GW::StoC::EmulatePacket(&packet);
@@ -402,7 +394,7 @@ namespace {
         allies_added_to_party.push_back(p.agent_id);
     }
 
-    GW::AgentLiving* PendingAddToParty::GetAgent()
+    GW::AgentLiving* PendingAddToParty::GetAgent() const
     {
         auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
         if (!a || !a->GetIsLivingType() || a->player_number != player_number || a->allegiance == GW::Constants::Allegiance::Enemy) {
@@ -422,7 +414,7 @@ namespace {
         }
         decode_pending = true;
         if (map_id != GW::Constants::MapID::None) {
-            GW::GameThread::Enqueue([this]() {
+            GW::GameThread::Enqueue([this] {
                 const GW::AreaInfo* info = GW::Map::GetMapInfo(map_id);
                 if (!info) {
                     return;
@@ -686,7 +678,7 @@ void PartyWindowModule::DrawSettingsInternal()
         ImGui::Text("%d", npc->model_id);
         ImGui::SameLine(cols[1]);
         ImGui::Text("%ls", npc->GetMapName()->c_str());
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - (48.0f * fontScale));
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 48.0f * fontScale);
         const bool clicked = ImGui::Button(" X ");
         ImGui::PopID();
         if (clicked) {
@@ -794,6 +786,7 @@ void PartyWindowModule::LoadSettings(ToolboxIni* ini)
     CheckMap();
 }
 
-const std::map<std::wstring, std::wstring>& PartyWindowModule::GetAliasedPlayerNames() {
+const std::map<std::wstring, std::wstring>& PartyWindowModule::GetAliasedPlayerNames()
+{
     return aliased_player_names;
 }

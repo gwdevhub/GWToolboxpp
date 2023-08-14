@@ -180,7 +180,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
                         GW::Vec2f yPartyWindow = party_window_position->yAxis() * uiscale_multiply;
                         yPartyWindow.x += PARTY_OFFSET_TOP_BASE * uiscale_multiply;
 
-                        ImVec2 member_tl(xPartyWindow.x, yPartyWindow.x + y * (GuiUtils::GetPartyHealthbarHeight()));
+                        ImVec2 member_tl(xPartyWindow.x, yPartyWindow.x + y * GuiUtils::GetPartyHealthbarHeight());
 
                         if (party_map_indent[agent_id]) {
                             member_tl.x += PARTY_HERO_INDENT_BASE * uiscale_multiply;

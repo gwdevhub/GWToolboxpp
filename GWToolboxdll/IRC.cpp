@@ -153,7 +153,7 @@ int IRC::start(const char* server, int port, const char* nick, const char* user,
     freeaddrinfo(servinfo);
 
     connected = true;
-    t = std::thread([&]() {
+    t = std::thread([&] {
         message_loop();
     });
     t.detach();
@@ -193,7 +193,7 @@ void IRC::error(const int err)
     printf("Error: %d\n", err);
 }
 
-int IRC::quit(const char* quit_message)
+int IRC::quit(const char* quit_message) const
 {
     if (quit_message) {
         return raw("QUIT %s\r\n", quit_message);
@@ -250,7 +250,7 @@ int IRC::ping()
     return 0;
 }
 
-bool IRC::is_connected()
+bool IRC::is_connected() const
 {
     return connected;
 }
@@ -268,7 +268,6 @@ int IRC::message_loop()
             return 1;
         }
     }
-    return 0;
 }
 
 void IRC::split_to_replies(const char* data)
@@ -281,11 +280,9 @@ void IRC::split_to_replies(const char* data)
     }
 }
 
-int IRC::is_op(const char* channel, const char* nick)
+int IRC::is_op(const char* channel, const char* nick) const
 {
-    channel_user* cup;
-
-    cup = chan_users;
+    const channel_user* cup = chan_users;
 
     while (cup) {
         if (!strcmp(cup->channel, channel) && !strcmp(cup->nick, nick)) {
@@ -297,11 +294,9 @@ int IRC::is_op(const char* channel, const char* nick)
     return 0;
 }
 
-int IRC::is_voice(const char* channel, const char* nick)
+int IRC::is_voice(const char* channel, const char* nick) const
 {
-    channel_user* cup;
-
-    cup = chan_users;
+    const channel_user* cup = chan_users;
 
     while (cup) {
         if (!strcmp(cup->channel, channel) && !strcmp(cup->nick, nick)) {
@@ -557,7 +552,6 @@ void IRC::parse_irc_reply(const char* data)
                         break;
                     default:
                         return;
-                        break;
                 }
                 // ------------ END OF MODE ---------------
             }
@@ -651,7 +645,7 @@ void IRC::parse_irc_reply(const char* data)
             if (!params) {
                 return;
             }
-            *(params++) = '\0';
+            *params++ = '\0';
 #ifdef __IRC_DEBUG__
             printf("%s: <%s> %s\n", hostd_tmp.target, hostd_tmp.nick, &params[1]);
 #endif
@@ -705,16 +699,14 @@ void IRC::parse_irc_reply(const char* data)
 
 void IRC::call_hook(const char* irc_command, const char* params, irc_reply_data* hostd)
 {
-    irc_command_hook* p;
-
     if (!hooks) {
         return;
     }
 
-    p = hooks;
+    const irc_command_hook* p = hooks;
     while (p) {
         if (!strcmp(p->irc_command, irc_command)) {
-            (*(p->function))(params, hostd, this);
+            (*p->function)(params, hostd, this);
             p = nullptr;
         }
         else {
@@ -723,7 +715,7 @@ void IRC::call_hook(const char* irc_command, const char* params, irc_reply_data*
     }
 }
 
-int IRC::notice(const char* target, const char* message)
+int IRC::notice(const char* target, const char* message) const
 {
     if (!connected) {
         return 1;
@@ -732,7 +724,7 @@ int IRC::notice(const char* target, const char* message)
     return fflush(dataout);
 }
 
-int IRC::notice(const char* fmt, ...)
+int IRC::notice(const char* fmt, ...) const
 {
     va_list argp;
     //char* target;
@@ -748,12 +740,12 @@ int IRC::notice(const char* fmt, ...)
     return fflush(dataout);
 }
 
-int IRC::privmsg(const char* target, const char* message)
+int IRC::privmsg(const char* target, const char* message) const
 {
     return raw("PRIVMSG %s :%s\r\n", target, message);
 }
 
-int IRC::privmsg(const char* fmt, ...)
+int IRC::privmsg(const char* fmt, ...) const
 {
     if (!connected) {
         return 1;
@@ -766,12 +758,12 @@ int IRC::privmsg(const char* fmt, ...)
     return ok;
 }
 
-int IRC::part(const char* channel)
+int IRC::part(const char* channel) const
 {
     return raw("PART %s\r\n", channel);
 }
 
-int IRC::raw(const wchar_t* fmt, ...)
+int IRC::raw(const wchar_t* fmt, ...) const
 {
     wchar_t buffer[600];
     va_list args;
@@ -781,7 +773,7 @@ int IRC::raw(const wchar_t* fmt, ...)
     return raw("%ls", buffer);
 }
 
-int IRC::raw(const char* fmt, ...)
+int IRC::raw(const char* fmt, ...) const
 {
     if (!connected) {
         printf("IRC:raw called when not connected\n");
@@ -812,12 +804,12 @@ int IRC::raw(const char* fmt, ...)
     return 0;
 }
 
-int IRC::kick(const char* channel, const char* nick, const char* message)
+int IRC::kick(const char* channel, const char* nick, const char* message) const
 {
     return raw("KICK %s %s :%s\r\n", channel, nick, message);
 }
 
-int IRC::mode(const char* channel, const char* modes, const char* targets)
+int IRC::mode(const char* channel, const char* modes, const char* targets) const
 {
     if (!targets) {
         return raw("MODE %s %s\r\n", channel, modes);
@@ -825,17 +817,17 @@ int IRC::mode(const char* channel, const char* modes, const char* targets)
     return raw("MODE %s %s %s\r\n", channel, modes, targets);
 }
 
-int IRC::mode(const char* modes)
+int IRC::mode(const char* modes) const
 {
     return mode(cur_nick, modes, nullptr);
 }
 
-int IRC::nick(const char* newnick)
+int IRC::nick(const char* newnick) const
 {
     return raw("NICK %s\r\n", newnick);
 }
 
-char* IRC::current_nick()
+char* IRC::current_nick() const
 {
     return cur_nick;
 }

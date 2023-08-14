@@ -33,7 +33,7 @@ public:
 
     void Initialize() override;
     void Update(float delta) override;
-    uint32_t GetAlcoholLevel();
+    uint32_t GetAlcoholLevel() const;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     static uint32_t GetAlcoholTitlePoints(); // Gets current alcohol title points.

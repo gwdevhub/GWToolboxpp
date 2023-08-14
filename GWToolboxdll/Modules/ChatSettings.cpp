@@ -54,7 +54,7 @@ namespace {
     void PrintTime(wchar_t* buffer, const size_t n, const DWORD time_sec)
     {
         const DWORD secs = time_sec % 60;
-        const DWORD minutes = (time_sec / 60) % 60;
+        const DWORD minutes = time_sec / 60 % 60;
         const DWORD hours = time_sec / 3600;
         DWORD time = 0;
         auto time_unit = L"";

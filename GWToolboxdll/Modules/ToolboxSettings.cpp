@@ -363,7 +363,7 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
 
 void ToolboxSettings::Draw(IDirect3DDevice9*)
 {
-    ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
+    ImGui::GetStyle().WindowBorderSize = move_all ? 1.0f : 0.0f;
 }
 
 void ToolboxSettings::Update(float)
@@ -410,13 +410,13 @@ void ToolboxSettings::Update(float)
 
                 SYSTEMTIME localtime;
                 GetLocalTime(&localtime);
-                std::wstring filename = std::to_wstring(localtime.wYear)
-                                        + L"-" + std::to_wstring(localtime.wMonth)
-                                        + L"-" + std::to_wstring(localtime.wDay)
-                                        + L" - " + std::to_wstring(localtime.wHour)
-                                        + L"-" + std::to_wstring(localtime.wMinute)
-                                        + L"-" + std::to_wstring(localtime.wSecond)
-                                        + L" - " + map_string + prof_string + L".log";
+                const std::wstring filename = std::to_wstring(localtime.wYear)
+                                              + L"-" + std::to_wstring(localtime.wMonth)
+                                              + L"-" + std::to_wstring(localtime.wDay)
+                                              + L" - " + std::to_wstring(localtime.wHour)
+                                              + L"-" + std::to_wstring(localtime.wMinute)
+                                              + L"-" + std::to_wstring(localtime.wSecond)
+                                              + L" - " + map_string + prof_string + L".log";
 
                 if (location_file && location_file.is_open()) {
                     location_file.close();
@@ -425,7 +425,7 @@ void ToolboxSettings::Update(float)
                 location_file.open(path);
             }
 
-            GW::Agent* me = GW::Agents::GetCharacter();
+            const GW::Agent* me = GW::Agents::GetCharacter();
             if (location_file.is_open() && me != nullptr) {
                 location_file << "Time=" << GW::Map::GetInstanceTime();
                 location_file << " X=" << me->pos.x;

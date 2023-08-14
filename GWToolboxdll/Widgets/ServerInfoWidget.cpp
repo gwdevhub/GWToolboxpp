@@ -92,7 +92,7 @@ void ServerInfoWidget::Update(float)
             server_info_fetcher.join(); // Wait for thread to end.
         }
         current_server_info->last_update = time(nullptr);
-        server_info_fetcher = std::thread([this]() {
+        server_info_fetcher = std::thread([this] {
             // Need to check details
             using namespace std::string_literals;
             const std::string url = "https://api.ipgeolocation.io/ipgeo?apiKey="s + IPGEO_API_KEY + "&ip=" + current_server_info->ip;

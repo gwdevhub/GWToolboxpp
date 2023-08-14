@@ -72,7 +72,7 @@ namespace {
     const bool IsKanaxai(uint32_t agent_type_or_player_number = 0)
     {
         if (agent_type_or_player_number & 0x20000000) {
-            agent_type_or_player_number = (agent_type_or_player_number ^ 0x20000000);
+            agent_type_or_player_number = agent_type_or_player_number ^ 0x20000000;
         }
         return agent_type_or_player_number == GW::Constants::ModelID::Deep::Kanaxai;
     }
@@ -259,7 +259,7 @@ void ZrawDeepModule::DrawSettingsInternal()
     }
 }
 
-void ZrawDeepModule::SetTransmogs()
+void ZrawDeepModule::SetTransmogs() const
 {
     if (!GW::Map::GetIsMapLoaded()) {
         return;
@@ -296,7 +296,7 @@ void ZrawDeepModule::SetTransmogs()
         }
     }
     if (!can_terminate && !transmo_kanaxai_ && !transmo_team_) {
-        GW::GameThread::Enqueue([this]() {
+        GW::GameThread::Enqueue([this] {
             can_terminate = true;
         });
     }

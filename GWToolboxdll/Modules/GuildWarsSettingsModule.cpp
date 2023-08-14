@@ -348,29 +348,24 @@ namespace {
         if (!result) {
             return;
         }
-        auto filename_cpy = new std::filesystem::path(result);
-        GW::GameThread::Enqueue([filename_cpy]() {
-            int err = SI_OK;
+        GW::GameThread::Enqueue([filename_cpy = std::filesystem::path(result)] {
             PreferencesStruct prefs;
             ToolboxIni ini;
-            if (!exists(*filename_cpy)) {
-                Log::Error("File name %s doesn't exist", filename_cpy->string().c_str());
-                goto cleanup;
+            if (!exists(filename_cpy)) {
+                Log::Error("File name %s doesn't exist", filename_cpy.string().c_str());
+                return;
             }
 
-            err = ini.LoadFile(filename_cpy->string().c_str());
+            const auto err = ini.LoadFile(filename_cpy.string().c_str());
             if (err != SI_OK) {
-                Log::Error("Failed to load ini file %s - error code %d", filename_cpy->string().c_str(), err);
-                goto cleanup;
+                Log::Error("Failed to load ini file %s - error code %d", filename_cpy.string().c_str(), err);
+                return;
             }
 
             LoadPreferences(prefs, ini);
             SetPreferences(prefs);
 
-            Log::Info("Preferences loaded from %s", filename_cpy->filename().string().c_str());
-
-        cleanup:
-            delete filename_cpy;
+            Log::Info("Preferences loaded from %s", filename_cpy.filename().string().c_str());
         });
     }
 
@@ -385,7 +380,7 @@ namespace {
             return;
         }
         auto filename_cpy = new std::filesystem::path(result);
-        GW::GameThread::Enqueue([filename_cpy]() {
+        GW::GameThread::Enqueue([filename_cpy] {
             PreferencesStruct current_prefs;
             GetPreferences(current_prefs);
             ToolboxIni ini;
@@ -489,7 +484,7 @@ namespace {
         if (wparam[1] == 0 && wparam[2] == 6) {
             // Player manually toggled visibility
             const bool is_visible = static_cast<bool>(wparam[3]);
-            const auto quest_entry_group_name = (wchar_t*)(context[2]);
+            const auto quest_entry_group_name = (wchar_t*)context[2];
             quest_entry_group_visibility[quest_entry_group_name] = is_visible;
             if (ImGui::IsKeyDown(ImGuiKey_LeftShift)) {
                 // Collapse or expand all
@@ -641,5 +636,5 @@ void GuildWarsSettingsModule::DrawSettingsInternal()
         filename = Resources::GetPath(filename);
         Resources::SaveFileDialog(OnPreferencesSaveFileChosen, "ini", filename.string().c_str());
     }
-    (quest_entry_group_context);
+    quest_entry_group_context;
 }

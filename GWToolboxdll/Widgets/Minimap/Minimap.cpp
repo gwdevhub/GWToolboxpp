@@ -288,12 +288,12 @@ void Minimap::Initialize()
         camera_currently_reversed = false;
     });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry, [this](GW::HookStatus*, GW::Packet::StoC::AgentPinged* pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::AgentPinged* pak) -> void {
         if (visible) {
             pingslines_renderer.P046Callback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CompassEvent>(&CompassEvent_Entry, [this](GW::HookStatus*, GW::Packet::StoC::CompassEvent* pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CompassEvent>(&CompassEvent_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::CompassEvent* pak) -> void {
         if (visible) {
             pingslines_renderer.P138Callback(pak);
         }
@@ -312,7 +312,7 @@ void Minimap::Initialize()
             }
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry, [this](GW::HookStatus*, GW::Packet::StoC::GenericValueTarget* pak) -> void {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* pak) -> void {
         if (visible) {
             pingslines_renderer.P153Callback(pak);
             if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {

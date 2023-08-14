@@ -6,7 +6,6 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
 
-#include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -16,7 +15,6 @@
 #include <Utils/GuiUtils.h>
 #include <Keys.h>
 
-#include <Modules/Resources.h>
 #include <Windows/HotkeysWindow.h>
 #include <GWCA/Utilities/Scanner.h>
 #include <Timer.h>
@@ -73,8 +71,7 @@ namespace {
         loaded_action_labels = true;
 
         using GetActionLabel_pt = wchar_t*(__cdecl*)(GW::UI::ControlAction action);
-        GetActionLabel_pt GetActionLabel_Func = nullptr;
-        GetActionLabel_Func = (GetActionLabel_pt)GW::Scanner::Find("\x83\xfe\x5b\x74\x27\x83\xfe\x5c\x74\x22\x83\xfe\x5d\x74\x1d", "xxxxxxxxxxxxxxx", -0x7);
+        const auto GetActionLabel_Func = (GetActionLabel_pt)GW::Scanner::Find("\x83\xfe\x5b\x74\x27\x83\xfe\x5c\x74\x22\x83\xfe\x5d\x74\x1d", "xxxxxxxxxxxxxxx", -0x7);
         GWCA_INFO("[SCAN] GetActionLabel_Func = %p\n", (void*)GetActionLabel_Func);
         if (!GetActionLabel_Func) {
             return;

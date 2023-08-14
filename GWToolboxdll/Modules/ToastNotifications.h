@@ -36,7 +36,7 @@ public:
         OnToastCallback callback = nullptr;
         void* extra_args = nullptr;
         WinToastLib::WinToastTemplate* toast_template = nullptr;
-        Toast(std::wstring _title, std::wstring _message);
+        Toast(const std::wstring& _title, const std::wstring& _message);
         ~Toast() override;
         // Public interfaces
         void toastActivated() const override;

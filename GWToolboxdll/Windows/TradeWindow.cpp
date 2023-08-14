@@ -110,7 +110,7 @@ void TradeWindow::Initialize()
     messages = CircularBuffer<Message>(100);
 
     should_stop = false;
-    worker = std::thread([this]() {
+    worker = std::thread([this] {
         while (!should_stop) {
             if (thread_jobs.empty()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -349,7 +349,7 @@ void TradeWindow::fetch()
     });
 }
 
-bool TradeWindow::IsTradeAlert(std::string& message)
+bool TradeWindow::IsTradeAlert(std::string& message) const
 {
     if (!filter_alerts) {
         return true;
@@ -436,7 +436,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
     /* Search bar header */
     const float& font_scale = ImGui::GetIO().FontGlobalScale;
     const float btn_width = 80.0f * font_scale;
-    const float search_bar_width = (ImGui::GetContentRegionAvail().x - (btn_width * 4) - ImGui::GetStyle().ItemInnerSpacing.x * 7);
+    const float search_bar_width = ImGui::GetContentRegionAvail().x - btn_width * 4 - ImGui::GetStyle().ItemInnerSpacing.x * 7;
     if (GetInKamadanAE1(false) || GetInAscalonAE1(false)) {
         bool advertise_dirty = false;
         static int search_type = GW::PartySearchType::PartySearchType_Trade;
@@ -526,7 +526,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
     /* Connection checks */
     if (!ws_window && !ws_window_connecting) {
         char buf[255];
-        snprintf(buf, 255, "The connection to %s has timed out.", (is_kamadan_chat) ? ws_host_kmd : ws_host_asc);
+        snprintf(buf, 255, "The connection to %s has timed out.", is_kamadan_chat ? ws_host_kmd : ws_host_asc);
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(buf).x) / 2);
         ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
         ImGui::Text(buf);
@@ -592,7 +592,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
             }
             if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
                 // open whisper to player
-                GW::GameThread::Enqueue([&msg]() {
+                GW::GameThread::Enqueue([&msg] {
                     std::wstring name_ws = GuiUtils::ToWstr(msg.name);
                     SendUIMessage(GW::UI::UIMessage::kOpenWhisper, name_ws.data());
                 });
@@ -753,9 +753,9 @@ void TradeWindow::AsyncWindowConnect(const bool force)
         return;
     }
     ws_window_connecting = true;
-    thread_jobs.push([this]() {
-        if ((ws_window = WebSocket::from_url((is_kamadan_chat) ? ws_host_kmd : ws_host_asc)) == nullptr) {
-            printf("Couldn't connect to the host '%s'", (is_kamadan_chat) ? ws_host_kmd : ws_host_asc);
+    thread_jobs.push([this] {
+        if ((ws_window = WebSocket::from_url(is_kamadan_chat ? ws_host_kmd : ws_host_asc)) == nullptr) {
+            printf("Couldn't connect to the host '%s'", is_kamadan_chat ? ws_host_kmd : ws_host_asc);
         }
         ws_window_connecting = false;
         if (messages.size() == 0 && pending_query_string.empty()) {

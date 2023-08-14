@@ -27,7 +27,7 @@ namespace {
     int _WriteBits(const int val, char* buff, const int count = 6)
     {
         for (auto i = 0; i < count; i++) {
-            buff[i] = ((val >> i) & 1);
+            buff[i] = val >> i & 1;
         }
         return count;
     }
@@ -37,7 +37,7 @@ namespace {
         int val = 0;
         char* s = *str;
         for (auto i = 0; i < n; i++) {
-            val |= (*s++ << i);
+            val |= *s++ << i;
         }
         *str = s;
         return val;
@@ -46,7 +46,7 @@ namespace {
     int Base64ToBitString(const char* in, char* out, const int out_len)
     {
         const auto in_len = static_cast<int>(strlen(in));
-        ASSERT((in_len * 6) < out_len);
+        ASSERT(in_len * 6 < out_len);
 
         auto bitStrLen = 0;
         for (auto i = 0; i < in_len; i++) {

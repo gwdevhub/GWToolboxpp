@@ -62,7 +62,7 @@ namespace {
         return g ? g->player_name : nullptr;
     }
 
-    std::vector<const wchar_t*> obfuscated_name_pool = {
+    std::vector obfuscated_name_pool = {
         L"Abbot Ramoth",
         L"Acolyte of Dwayna",
         L"Acolyte of Grenth",
@@ -336,7 +336,7 @@ namespace {
         return true;
     }
 
-    bool UnobfuscateName(std::wstring_view _obfuscated_name, std::wstring& out)
+    bool UnobfuscateName(const std::wstring_view _obfuscated_name, std::wstring& out)
     {
         if (_obfuscated_name.empty()) {
             return false;
@@ -363,7 +363,7 @@ namespace {
         std::wstring tmp_out;
         do {
             const size_t player_name_len = player_name_end - player_name_start;
-            tmp_out.append(offset, (player_name_start - offset));
+            tmp_out.append(offset, player_name_start - offset);
             offset = player_name_start + player_name_len;
             tmp_name.assign(player_name_start, player_name_len);
             if (tmp_name.empty()) {

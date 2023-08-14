@@ -34,13 +34,13 @@ void PartyDamage::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(
         &GenericModifier_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::GenericModifier* packet) -> void {
+        [this](GW::HookStatus* status, const GW::Packet::StoC::GenericModifier* packet) -> void {
             return DamagePacketCallback(status, packet);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(
         &MapLoaded_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::MapLoaded* packet) -> void {
+        [this](GW::HookStatus* status, const GW::Packet::StoC::MapLoaded* packet) -> void {
             return MapLoadedCallback(status, packet);
         });
 
@@ -251,7 +251,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
         return;
     }
 
-    const float line_height = (row_height > 0 && !snap_to_party_window) ? row_height : GuiUtils::GetPartyHealthbarHeight();
+    const float line_height = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
     uint32_t size = GW::PartyMgr::GetPartySize();
     if (size > MAX_PLAYERS) {
         size = static_cast<uint32_t>(MAX_PLAYERS);
@@ -324,15 +324,12 @@ void PartyDamage::Draw(IDirect3DDevice9*)
         const float height_diff = (line_height - ImGui::GetTextLineHeight()) / 2;
         constexpr size_t buffer_size = 16;
         char buffer[buffer_size];
-        float part_of_max = 0.0f, part_of_recent = 0.0f,
-              bar_left = 0.0f, bar_right = 0.0f, recent_left = 0.0f,
-              recent_right = 0.0f, perc_of_total = 0.0f;
         for (size_t i = 0; i < size; ++i) {
             const float& damage_float = static_cast<float>(damage[i].damage);
 
-            part_of_max = max > 0 ? damage_float / max : 0;
-            bar_left = bars_left ? (x + _width * (1.0f - part_of_max)) : (x);
-            bar_right = bars_left ? (x + _width) : (x + _width * part_of_max);
+            const float part_of_max = max > 0 ? damage_float / max : 0;
+            const float bar_left = bars_left ? x + _width * (1.0f - part_of_max) : x;
+            const float bar_right = bars_left ? x + _width : x + _width * part_of_max;
             const auto left_vec = ImVec2(bar_left, y + i * line_height);
             const auto right_vec = ImVec2(bar_right, y + (i + 1) * line_height);
             ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
@@ -340,9 +337,9 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 damage_col_from, damage_col_to, damage_col_to
             );
 
-            part_of_recent = max_recent > 0 ? static_cast<float>(damage[i].recent_damage) / max_recent : 0;
-            recent_left = bars_left ? (x + _width * (1.0f - part_of_recent)) : (x);
-            recent_right = bars_left ? (x + _width) : (x + _width * part_of_recent);
+            const float part_of_recent = max_recent > 0 ? static_cast<float>(damage[i].recent_damage) / max_recent : 0;
+            const float recent_left = bars_left ? x + _width * (1.0f - part_of_recent) : x;
+            const float recent_right = bars_left ? x + _width : x + _width * part_of_recent;
             const auto recent_left_vec = ImVec2(recent_left, y + (i + 1) * line_height - 6);
             const auto recent_right_vec = ImVec2(recent_right, y + (i + 1) * line_height);
             ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
@@ -365,13 +362,13 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             }
 
             ImGui::GetWindowDrawList()->AddText(
-                ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + (i * line_height) + height_diff),
+                ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + i * line_height + height_diff),
                 IM_COL32(255, 255, 255, 255), buffer);
 
-            perc_of_total = GetPercentageOfTotal(damage[i].damage);
+            const float perc_of_total = GetPercentageOfTotal(damage[i].damage);
             snprintf(buffer, buffer_size, "%.1f %%", perc_of_total);
             ImGui::GetWindowDrawList()->AddText(
-                ImVec2(x + _width / 2, y + (i * line_height) + height_diff),
+                ImVec2(x + _width / 2, y + i * line_height + height_diff),
                 IM_COL32(255, 255, 255, 255), buffer
             );
 

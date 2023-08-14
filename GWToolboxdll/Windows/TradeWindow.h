@@ -27,7 +27,7 @@ public:
     static void CmdPricecheck(const wchar_t* message, int argc, const LPWSTR* argv);
     static void OnMessageLocal(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak);
 
-    bool IsTradeAlert(std::string& message);
+    bool IsTradeAlert(std::string& message) const;
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void SignalTerminate() override;
@@ -110,8 +110,8 @@ private:
     bool should_stop = false;
     std::thread worker;
 
-    void ParseBuffer(const char* text, std::vector<std::string>& words);
-    void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
+    static void ParseBuffer(const char* text, std::vector<std::string>& words);
+    static void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
     static void DeleteWebSocket(easywsclient::WebSocket* ws);
     void SwitchSockets();

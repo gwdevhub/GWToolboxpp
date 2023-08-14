@@ -8,7 +8,6 @@
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
 #include <Utils/GuiUtils.h>
@@ -98,7 +97,7 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
     if (!has_entries) {
         const ImVec2 w = ImGui::CalcTextSize("Enter a Canthan outpost to see data");
         ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
-        ImGui::SetCursorPosX(avail_width / 2 - (w.x / 2));
+        ImGui::SetCursorPosX(avail_width / 2 - w.x / 2);
         ImGui::Text("Enter a Canthan outpost to see data");
     }
     return ImGui::End();

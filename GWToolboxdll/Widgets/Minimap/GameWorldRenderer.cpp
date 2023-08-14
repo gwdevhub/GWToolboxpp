@@ -270,11 +270,11 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         }
 
         // third is the fog constant
-        const float fog_starts_at_constant[4] = {render_max_distance - (render_max_distance * fog_factor), 0.0f, 0.0f, 0.0f};
+        const float fog_starts_at_constant[4] = {render_max_distance - render_max_distance * fog_factor, 0.0f, 0.0f, 0.0f};
         if (device->SetPixelShaderConstantF(pixel_shader_fog_starts_at_offset, fog_starts_at_constant, 1) != D3D_OK) {
             Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#2, aborting render.");
             return;
-        } 
+        }
 
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();

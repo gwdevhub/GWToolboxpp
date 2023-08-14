@@ -567,13 +567,13 @@ void PartyStatisticsWindow::Initialize()
     pending_party_members = true;
 }
 
-void PartyStatisticsWindow::Update(const float )
+void PartyStatisticsWindow::Update(const float)
 {
     if (pending_party_members && SetPartyMembers()) {
         pending_party_members = false;
     }
 
-    if (constexpr auto time_diff_threshold = 600.0f; !chat_queue.empty() && (TIMER_DIFF(send_timer) > time_diff_threshold)) {
+    if (constexpr auto time_diff_threshold = 600.0f; !chat_queue.empty() && TIMER_DIFF(send_timer) > time_diff_threshold) {
         send_timer = TIMER_INIT();
         if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType()) {
             return;
@@ -587,7 +587,7 @@ void PartyStatisticsWindow::Update(const float )
     }
 }
 
-void PartyStatisticsWindow::Draw(IDirect3DDevice9* )
+void PartyStatisticsWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
         return;

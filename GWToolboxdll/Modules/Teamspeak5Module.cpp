@@ -260,7 +260,7 @@ namespace {
             return false;
         }
         step = Connecting;
-        Resources::EnqueueWorkerTask([user_invoked]() {
+        Resources::EnqueueWorkerTask([user_invoked] {
             websocket = WebSocket::from_url(GetWebsocketHost());
             if (websocket == nullptr) {
                 if (user_invoked) {
@@ -566,7 +566,7 @@ void Teamspeak5Module::DrawSettingsInternal()
     if (enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, IsConnected() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-        auto status_str = []() {
+        auto status_str = [] {
             if (IsConnected()) {
                 return "Connected";
             }

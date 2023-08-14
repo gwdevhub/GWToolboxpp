@@ -204,8 +204,8 @@ private:
         void StopObjectives();
         static ObjectiveSet* FromJson(const nlohmann::json& json);
         nlohmann::json ToJson();
-        void Update();
-        void GetStartTime(tm* timeinfo);
+        void Update() const;
+        void GetStartTime(tm* timeinfo) const;
 
         const unsigned int ui_id = 0; // an internal id to ensure interface consistency
 
@@ -217,7 +217,7 @@ private:
 
     std::map<DWORD, ObjectiveSet*> objective_sets{};
 
-    ObjectiveSet* GetCurrentObjectiveSet();
+    ObjectiveSet* GetCurrentObjectiveSet() const;
     bool show_current_run_window = false;
     bool clear_cached_times = false;
     bool auto_send_age = false;
@@ -225,8 +225,8 @@ private:
     bool show_debug_events = false;
     ObjectiveSet* current_objective_set = nullptr;
 
-    void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0);
-    void Event(EventType type, uint32_t count, const wchar_t* msg);
+    void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0) const;
+    void Event(EventType type, uint32_t count, const wchar_t* msg) const;
 
     void AddObjectiveSet(ObjectiveSet* os);
     void AddObjectiveSet(GW::Constants::MapID map_id);

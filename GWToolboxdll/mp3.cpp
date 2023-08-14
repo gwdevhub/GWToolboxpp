@@ -79,7 +79,7 @@ bool Mp3::Load(const LPCWSTR szFile)
     return ready;
 }
 
-bool Mp3::Play()
+bool Mp3::Play() const
 {
     if (ready && pimc) {
         const HRESULT hr = pimc->Run();
@@ -88,7 +88,7 @@ bool Mp3::Play()
     return false;
 }
 
-bool Mp3::Pause()
+bool Mp3::Pause() const
 {
     if (ready && pimc) {
         const HRESULT hr = pimc->Pause();
@@ -97,7 +97,7 @@ bool Mp3::Pause()
     return false;
 }
 
-bool Mp3::Stop()
+bool Mp3::Stop() const
 {
     if (ready && pimc) {
         const HRESULT hr = pimc->Stop();
@@ -106,7 +106,7 @@ bool Mp3::Stop()
     return false;
 }
 
-bool Mp3::WaitForCompletion(const long msTimeout, long* EvCode)
+bool Mp3::WaitForCompletion(const long msTimeout, long* EvCode) const
 {
     // @Cleanup: Add some logging
     if (ready && pimex) {
@@ -120,7 +120,7 @@ bool Mp3::WaitForCompletion(const long msTimeout, long* EvCode)
     return false;
 }
 
-bool Mp3::SetVolume(const long vol)
+bool Mp3::SetVolume(const long vol) const
 {
     if (ready && piba) {
         const HRESULT hr = piba->put_Volume(vol);
@@ -129,7 +129,7 @@ bool Mp3::SetVolume(const long vol)
     return false;
 }
 
-long Mp3::GetVolume()
+long Mp3::GetVolume() const
 {
     if (ready && piba) {
         long vol = -1;
@@ -143,12 +143,12 @@ long Mp3::GetVolume()
     return -1;
 }
 
-__int64 Mp3::GetDuration()
+__int64 Mp3::GetDuration() const
 {
     return duration;
 }
 
-__int64 Mp3::GetCurrentPosition()
+__int64 Mp3::GetCurrentPosition() const
 {
     if (ready && pims) {
         __int64 curpos = -1;
@@ -162,7 +162,7 @@ __int64 Mp3::GetCurrentPosition()
     return -1;
 }
 
-bool Mp3::SetPositions(__int64* pCurrent, __int64* pStop, const bool bAbsolutePositioning)
+bool Mp3::SetPositions(__int64* pCurrent, __int64* pStop, const bool bAbsolutePositioning) const
 {
     if (ready && pims) {
         DWORD flags = 0;

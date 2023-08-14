@@ -635,7 +635,7 @@ void BuildsWindow::View(const TeamBuild& tbuild, const unsigned int idx)
     });
 }
 
-void BuildsWindow::Load(const TeamBuild& tbuild, const unsigned int idx)
+void BuildsWindow::Load(const TeamBuild& tbuild, const unsigned int idx) const
 {
     if (idx >= tbuild.builds.size()) {
         return;
@@ -675,10 +675,9 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
 
     std::vector<std::pair<TeamBuild, size_t>> local_teambuilds;
     for (auto& tb : teambuilds) {
-        size_t found = local_teambuilds.size();
         size_t tbuild_best_match = tb.builds.size();
         if (tbuild_name) {
-            found = GuiUtils::ToLower(tb.name).find(tbuild_ws.c_str());
+            const size_t found = GuiUtils::ToLower(tb.name).find(tbuild_ws.c_str());
             if (found == std::string::npos) {
                 continue; // Teambuild name doesn't match
             }
@@ -722,7 +721,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
     Load(teambuild_it->first, teambuild_it->second);
 }
 
-void BuildsWindow::LoadPcons(const TeamBuild& tbuild, const unsigned int idx)
+void BuildsWindow::LoadPcons(const TeamBuild& tbuild, const unsigned int idx) const
 {
     if (idx >= tbuild.builds.size()) {
         return;
@@ -983,7 +982,7 @@ void BuildsWindow::LoadFromFile()
     }
     // Sort by name
     if (order_by_name) {
-        sort(teambuilds.begin(), teambuilds.end(), [](TeamBuild a, TeamBuild b) {
+        sort(teambuilds.begin(), teambuilds.end(), [](const TeamBuild& a, const TeamBuild& b) {
             return _stricmp(a.name, b.name) < 0;
         });
     }
@@ -1002,7 +1001,7 @@ void BuildsWindow::SaveToFile()
 
         for (unsigned int i = 0; i < preferred_skill_order_builds.size(); ++i) {
             const Build& tbuild = preferred_skill_order_builds[i];
-            auto section = "preferred_skill_orders";
+            const auto section = "preferred_skill_orders";
             inifile->SetValue(section, tbuild.code, tbuild.code);
         }
 
