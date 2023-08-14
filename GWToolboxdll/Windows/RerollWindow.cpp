@@ -120,7 +120,7 @@ namespace {
 
     GW::Constants::MapID GetScrollableOutpostForEliteArea(const GW::Constants::MapID elite_area)
     {
-        auto map_id = GW::Constants::MapID::Embark_Beach;
+        GW::Constants::MapID map_id;
         switch (elite_area) {
             case GW::Constants::MapID::The_Deep:
                 map_id = GW::Constants::MapID::Cavalon_outpost;
@@ -454,6 +454,7 @@ void RerollWindow::Update(float)
             if (pgc->index_1 == reroll_index_current) {
                 return; // Not moved yet
             }
+            Log::Log("NavigateToCharname: %d of %d", reroll_index_current, reroll_index_needed);
             const HWND h = GW::MemoryMgr::GetGWWindowHandle();
             if (pgc->index_1 == reroll_index_needed) {
                 // Play
@@ -461,12 +462,22 @@ void RerollWindow::Update(float)
                 SendMessage(h, WM_CHAR, 'p', 0x00190001);
                 SendMessage(h, WM_KEYUP, 0x50, 0xC0190001);
                 reroll_stage = WaitForCharacterLoad;
+                reroll_direction = true;
                 reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                 return;
             }
             reroll_index_current = pgc->index_1;
-            SendMessage(h, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
-            SendMessage(h, WM_KEYUP, VK_RIGHT, 0xC14D0001);
+            if (pgc->index_1 == std::numeric_limits<uint32_t>::max()) {
+                reroll_direction = !reroll_direction;
+            }
+            if (reroll_direction) {
+                SendMessage(h, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
+                SendMessage(h, WM_KEYUP, VK_RIGHT, 0xC14D0001);
+            }
+            else {
+                SendMessage(h, WM_KEYDOWN, VK_LEFT, 0x014B0001);
+                SendMessage(h, WM_KEYUP, VK_LEFT, 0xC14B0001);
+            }
             return;
         }
         case WaitForCharacterLoad: {
