@@ -304,7 +304,7 @@ DWORD __stdcall ThreadEntry(LPVOID)
     Log::Log("Installing dx hooks\n");
 
     // Some modules rely on the gwdx_ptr being present for stuff like getting viewport coords.
-    // Becuase this ptr isn't set until the Render loop runs at least once, let it run and then reassign SetRenderCallback.
+    // Because this ptr isn't set until the Render loop runs at least once, let it run and then reassign SetRenderCallback.
     GWToolbox::Instance().Initialize();
 
     Log::Log("Installed dx hooks\n");

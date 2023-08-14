@@ -128,71 +128,68 @@ void LoginModule::Update(float)
     // If they have, then we use the user interface to manually navigate to a character
     // This is because the Portal login above would usually do it, but it overrides any reconnect dialogs.
     switch (state) {
-    case LoginState::Idle:
-        return;
-    case LoginState::PendingLogin:
-    {
-        // No charname to switch to
-        if (TIMER_DIFF(state_timestamp) > 5000) {
-            state = LoginState::Idle;
+        case LoginState::Idle:
             return;
-        }
-        if (char_sort_order == std::numeric_limits<uint32_t>::max()) {
-            char_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
-            SetPreference(GW::UI::EnumPreference::CharSortOrder, static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
-        }
-        if (IsCharSelectReady()) {
-            state = LoginState::FindCharacterIndex;
-        }
-    }
-    break;
-    case LoginState::FindCharacterIndex:
-    {
-        // No charname to switch to
-        if (!(original_charname_parameter && *original_charname_parameter)) {
-            state = LoginState::Idle;
-            return;
-        }
-        const auto pgc = GW::GetPreGameContext();
-        for (size_t i = 0; i < pgc->chars.size(); i++) {
-            if (wcscmp(pgc->chars[i].character_name, original_charname_parameter) == 0) {
-                state_timestamp = TIMER_INIT();
-                state = LoginState::SelectChar;
-                reroll_index_needed = i;
-                reroll_index_current = 0xffff;
-                // Wipe out the command line parameter for GW here; its only relevent for the first login!
-                *original_charname_parameter = 0;
+        case LoginState::PendingLogin: {
+            // No charname to switch to
+            if (TIMER_DIFF(state_timestamp) > 5000) {
+                state = LoginState::Idle;
                 return;
             }
-        }
-        // Character no found
-        state = LoginState::Idle;
-    }
-    break;
-    case LoginState::SelectChar:
-    {
-        if (TIMER_DIFF(state_timestamp) > 250) {
-            // This could be due to a reconnect dialog in the way, which is fine
-            state = LoginState::Idle;
-            return;
-        }
-        const auto pgc = GW::GetPreGameContext();
-        if (pgc->index_1 == reroll_index_current) {
-            return; // Not moved yet
-        }
-        const HWND h = GW::MemoryMgr::GetGWWindowHandle();
-        if (pgc->index_1 == reroll_index_needed) {
-            // We're on the character that was asked for
-            state = LoginState::Idle;
-            if (char_sort_order != std::numeric_limits<uint32_t>::max() && char_sort_order != GetPreference(GW::UI::EnumPreference::CharSortOrder)) {
-                SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
+            if (char_sort_order == std::numeric_limits<uint32_t>::max()) {
+                char_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
+                SetPreference(GW::UI::EnumPreference::CharSortOrder, static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
             }
-            return;
+            if (IsCharSelectReady()) {
+                state = LoginState::FindCharacterIndex;
+            }
         }
-        reroll_index_current = pgc->index_1;
-        SendMessage(h, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
-        SendMessage(h, WM_KEYUP, VK_RIGHT, 0xC14D0001);
-    }
-    break;
+        break;
+        case LoginState::FindCharacterIndex: {
+            // No charname to switch to
+            if (!(original_charname_parameter && *original_charname_parameter)) {
+                state = LoginState::Idle;
+                return;
+            }
+            const auto pgc = GW::GetPreGameContext();
+            for (size_t i = 0; i < pgc->chars.size(); i++) {
+                if (wcscmp(pgc->chars[i].character_name, original_charname_parameter) == 0) {
+                    state_timestamp = TIMER_INIT();
+                    state = LoginState::SelectChar;
+                    reroll_index_needed = i;
+                    reroll_index_current = 0xffff;
+                    // Wipe out the command line parameter for GW here; its only relevent for the first login!
+                    *original_charname_parameter = 0;
+                    return;
+                }
+            }
+            // Character no found
+            state = LoginState::Idle;
+        }
+        break;
+        case LoginState::SelectChar: {
+            if (TIMER_DIFF(state_timestamp) > 250) {
+                // This could be due to a reconnect dialog in the way, which is fine
+                state = LoginState::Idle;
+                return;
+            }
+            const auto pgc = GW::GetPreGameContext();
+            if (pgc->index_1 == reroll_index_current) {
+                return; // Not moved yet
+            }
+            const HWND h = GW::MemoryMgr::GetGWWindowHandle();
+            if (pgc->index_1 == reroll_index_needed) {
+                // We're on the character that was asked for
+                state = LoginState::Idle;
+                if (char_sort_order != std::numeric_limits<uint32_t>::max() && char_sort_order != GetPreference(GW::UI::EnumPreference::CharSortOrder)) {
+                    SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
+                }
+                return;
+            }
+            reroll_index_current = pgc->index_1;
+            SendMessage(h, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
+            SendMessage(h, WM_KEYUP, VK_RIGHT, 0xC14D0001);
+        }
+        break;
     }
 }

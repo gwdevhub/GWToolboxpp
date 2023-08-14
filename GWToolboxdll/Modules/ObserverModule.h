@@ -100,8 +100,8 @@ public:
         size_t interrupted = 0;
 
         // should be zero at all times except when an action is not yet concluded
-        // used to indicate there may be innacuracies in the stats due to due to
-        // innacuracies in our modelling of the game engine
+        // used to indicate there may be inaccuracies in the stats due to due to
+        // inaccuracies in our modelling of the game engine
         int integrity = 0;
 
         void Reduce(const TargetAction* action, ActionStage stage);
@@ -109,7 +109,6 @@ public:
 
     // an agents statistics for an action (skill)
     struct ObservedSkill : ObservedAction {
-    public:
         ObservedSkill(const GW::Constants::SkillID skill_id)
             : skill_id(skill_id) { }
 

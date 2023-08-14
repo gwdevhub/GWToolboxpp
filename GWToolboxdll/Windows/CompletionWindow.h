@@ -13,7 +13,7 @@ namespace Missions {
         IDirect3DTexture9* texture = nullptr;
 
         MissionImage(const wchar_t* _file_name, const int _resource_id)
-            : file_name(_file_name), resource_id(_resource_id) {};
+            : file_name(_file_name), resource_id(_resource_id) {}
     };
 
     class Mission {

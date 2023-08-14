@@ -1,6 +1,7 @@
 ---
 Language: Cpp
 AccessModifierOffset: -4
+AlignAfterOpenBracket: BlockIndent 
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: Left
@@ -12,25 +13,25 @@ AllowShortIfStatementsOnASingleLine: true
 AllowShortLambdasOnASingleLine: false
 AlwaysBreakTemplateDeclarations: Yes
 BraceWrapping: 
-  AfterCaseLabel: true
-  AfterClass: true
+  AfterCaseLabel: false
+  AfterClass: false
   AfterControlStatement: false
-  AfterEnum: true
+  AfterEnum: false
   AfterFunction: true
-  AfterNamespace: true
-  AfterStruct: true
-  AfterUnion: true
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
   AfterExternBlock: false
-  BeforeCatch: true
+  BeforeCatch: false
   BeforeElse: true
-  BeforeLambdaBody: true
-  BeforeWhile: true
+  BeforeLambdaBody: false
+  BeforeWhile: false
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
 BreakBeforeBraces: Custom
-BreakConstructorInitializers: AfterColon
-BreakInheritanceList: BeforeComma
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: AfterColon
 BreakStringLiterals: false
 ColumnLimit: 256
 IncludeCategories: 
@@ -41,7 +42,7 @@ IncludeCategories:
   - Regex: '.*'
     Priority: 3
 IncludeIsMainRegex: '([-_](test|unittest))?$'
-IndentCaseBlocks: true
+IndentCaseLabels: true
 IndentWidth: 4
 InsertBraces: false
 KeepEmptyLinesAtTheStartOfBlocks: false
@@ -58,6 +59,7 @@ PenaltyExcessCharacter: 100
 PointerAlignment: Left
 QualifierAlignment: Left
 SortIncludes: true
+SpaceBeforeParens: ControlStatementsExceptControlMacros 
 SpacesInAngles: false
 SpacesInContainerLiterals: false
 TabWidth: 4

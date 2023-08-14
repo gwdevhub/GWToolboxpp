@@ -336,8 +336,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
         }
 
         // Player and hero effects that aren't bonds
-        if (const GW::AgentEffectsArray* agent_effects_array = GW::Effects::GetPartyEffectsArray();
-            agent_effects_array != nullptr) {
+        if (const GW::AgentEffectsArray* agent_effects_array = GW::Effects::GetPartyEffectsArray(); agent_effects_array != nullptr) {
             for (auto& agent_effects_it : *agent_effects_array) {
                 auto& agent_effects = agent_effects_it.effects;
                 if (!agent_effects.valid()) {

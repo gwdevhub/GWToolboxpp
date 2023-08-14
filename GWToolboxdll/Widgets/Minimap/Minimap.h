@@ -33,8 +33,7 @@ class Minimap final : public ToolboxWidget {
 public:
     Minimap(const Minimap&) = delete;
 
-    static Minimap&
-    Instance()
+    static Minimap& Instance()
     {
         static Minimap instance;
         return instance;
