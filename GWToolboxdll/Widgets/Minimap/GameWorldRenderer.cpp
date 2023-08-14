@@ -18,7 +18,8 @@
 
 namespace {
     unsigned lerp_steps_per_line = 10;
-    float render_max_distance = 500.f;
+    float render_max_distance = 5000.f;
+    float fog_factor = 0.5f;
     bool need_sync_markers = true;
     bool need_configure_pipeline = true;
     std::vector<std::unique_ptr<GameWorldRenderer::GenericPolyRenderable>> renderables;
@@ -128,9 +129,9 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                     // until we have a better solution, all Z planes will be queried per vertex
                     // to avoid a significant delay in the render thread, query one plane per frame
                     // until all have been queried. this might result in some renderables shifting
-                    // slightly during first map load for approx <1 second, but IMO is better than
-                    // stalling. It seems to take, even in most extreme cases, less time than it takes
-                    // for agents to appear.
+                    // not appearing for a while on first map load, but IMO is better than stalling.
+                    // It seems to take, even in most extreme cases, less time than it takes for agents
+                    // to appear.
                     GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, cur_altitude}, 0.1f, altitude);
                     if (altitude < vertices[i].z) {
                         // recall that the Up camera component is inverted
@@ -139,14 +140,14 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                 }
                 if (cur_altitude++ == pmap_size - 1) {
                     all_altitudes_queried = true;
-                }
-
-                void* mem_loc = nullptr;
-                // map the vertex buffer memory and write vertices to it.
-                if (vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD) == S_OK && mem_loc != nullptr) {
-                    // this should avoid an invalid memcpy, if locking fails for some reason
-                    memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
-                    vb->Unlock();
+                    // commit the completed vertices to vram
+                    void* mem_loc = nullptr;
+                    // map the vertex buffer memory and write vertices to it.
+                    if (vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD) == S_OK && mem_loc != nullptr) {
+                        // this should avoid an invalid memcpy, if locking fails for some reason
+                        memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
+                        vb->Unlock();
+                    }
                 }
             }
         }
@@ -253,6 +254,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
 
         constexpr auto pixel_shader_cur_pos_offset = 0u;
         constexpr auto pixel_shader_max_dist_offset = 1u;
+        constexpr auto pixel_shader_fog_starts_at_offset = 2u;
 
         const float cur_pos_constant[4] = {cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z, 0.0f};
         if (device->SetPixelShaderConstantF(pixel_shader_cur_pos_offset, cur_pos_constant, 1) != D3D_OK) {
@@ -267,11 +269,17 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
             return;
         }
 
+        // third is the fog constant
+        const float fog_starts_at_constant[4] = {render_max_distance - (render_max_distance * fog_factor), 0.0f, 0.0f, 0.0f};
+        if (device->SetPixelShaderConstantF(pixel_shader_fog_starts_at_offset, fog_starts_at_constant, 1) != D3D_OK) {
+            Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#2, aborting render.");
+            return;
+        } 
+
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();
         for (const auto& renderable : renderables) {
-            // future consideration: should we really render markers on terrain that have MapID=None?
-            if (renderable->map_id == GW::Constants::MapID::None || renderable->map_id == map_id) {
+            if (renderable->map_id == map_id) {
                 renderable->Draw(device);
             }
         }
@@ -306,8 +314,9 @@ bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
 void GameWorldRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     // load the rendering settings from disk
-    render_max_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance));
+    render_max_distance = std::max(static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance)), 10.0f);
     lerp_steps_per_line = ini->GetLongValue(section, VAR_NAME(lerp_steps_per_line), lerp_steps_per_line);
+    fog_factor = std::clamp(static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(fog_factor), fog_factor)), 0.0f, 1.0f);
 }
 
 void GameWorldRenderer::SaveSettings(ToolboxIni* ini, const char* section)
@@ -315,18 +324,21 @@ void GameWorldRenderer::SaveSettings(ToolboxIni* ini, const char* section)
     // save the rendering settings to disk
     ini->SetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance);
     ini->SetLongValue(section, VAR_NAME(lerp_steps_per_line), lerp_steps_per_line);
+    ini->SetDoubleValue(section, VAR_NAME(fog_factor), fog_factor);
 }
 
 void GameWorldRenderer::DrawSettings()
 {
     // draw the settings using ImGui
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
-    ImGui::TextColored(red, "Warning: This is a beta feature and may render over your character or game props, or not work at all while the U map is open.");
+    ImGui::TextColored(red, "Warning: This is a beta feature and will render over your character, game props, and UI elements.");
     ImGui::Text("Note: custom markers are only rendered in-game if the option is enabled for a particular marker (check settings).");
-    need_sync_markers |= ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 0.f, 10000.f);
+    ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 0.f, 10000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("Maximum distance to render custom markers on the in-game terrain.");
-    need_sync_markers |= ImGui::DragInt("Interpolation granularity", reinterpret_cast<int*>(&lerp_steps_per_line), 1.0f, 0, 100);
+    need_sync_markers |= ImGui::DragInt("Interpolation granularity", reinterpret_cast<int*>(&lerp_steps_per_line), 1.0f, 0, 100, "%d", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("Number of points to interpolate. Affects smoothness of rendering.");
+    ImGui::DragFloat("Fog factor", &fog_factor, 0.1f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("Scales from 0.0 (disabled) to 1.0");
 }
 
 void GameWorldRenderer::TriggerSyncAllMarkers()
@@ -343,8 +355,6 @@ void GameWorldRenderer::Terminate()
 
 void GameWorldRenderer::SyncAllMarkers(IDirect3DDevice9* device)
 {
-    // as a performance optimisation, the distance comparison skips sqrt calculation,
-    // so we pre-calculate the squared value ahead of time.
     renderables_mutex.lock();
     renderables.clear();
     SyncLines(device);
