@@ -480,7 +480,7 @@ static void PrintNestedField(uint32_t* fields, const uint32_t n_fields,
     }
 }
 
-void PacketLoggerWindow::CtoSHandler(const GW::HookStatus*, void* packet)
+void PacketLoggerWindow::CtoSHandler(const GW::HookStatus*, void* packet) const
 {
     if (!logger_enabled) {
         return;
@@ -488,7 +488,7 @@ void PacketLoggerWindow::CtoSHandler(const GW::HookStatus*, void* packet)
     printf(PrefixTimestamp("CtoS packet(%u 0x%X) {\n").c_str(), *static_cast<uint32_t*>(packet), *static_cast<uint32_t*>(packet));
 }
 
-void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
+void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) const
 {
     if (blocked_packets[packet->header]) {
         status->blocked = true;

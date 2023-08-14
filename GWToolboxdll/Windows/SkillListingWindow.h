@@ -41,7 +41,7 @@ public:
         //const wchar_t* Description(uint32_t attribute_level, wchar_t* buffer);
         //const wchar_t* Concise(uint32_t attribute_level, wchar_t* buffer);
         GW::Skill* skill;
-        const std::wstring GetSkillType();
+        const std::wstring GetSkillType() const;
         const bool HasExhaustion() const { return skill->special & 0x1; }
         const bool IsMaintained() const { return skill->duration0 == 0x20000; }
         const bool IsPvE() const { return (skill->special & 0x80000) != 0; }

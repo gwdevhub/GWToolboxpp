@@ -427,7 +427,7 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
     return true;
 }
 
-void Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
+void Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback) const
 {
     EnqueueWorkerTask([this, path_to_file, url, callback] {
         std::wstring error_message;
@@ -458,7 +458,7 @@ bool Resources::Download(const std::string& url, std::string& response)
     return true;
 }
 
-void Resources::Download(const std::string& url, AsyncLoadMbCallback callback)
+void Resources::Download(const std::string& url, AsyncLoadMbCallback callback) const
 {
     EnqueueWorkerTask([this, url, callback] {
         std::string response;

@@ -150,7 +150,7 @@ void StringDecoderWindow::Initialize()
     ToolboxWindow::Initialize();
 }
 
-void StringDecoderWindow::Send()
+void StringDecoderWindow::Send() const
 {
     GW::Chat::SendChat('#', GetEncodedString().c_str());
 }

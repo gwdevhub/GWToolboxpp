@@ -94,7 +94,7 @@ private:
     std::wstring dll_location;
     time_t last_activity_update = 0;
 
-    bool LoadDll();
+    bool LoadDll() const;
     bool UnloadDll() const;
     bool Connect();
     static void ConnectCanary();

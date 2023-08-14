@@ -25,7 +25,7 @@ public:
     void DrawAction(const std::string& name, const ObserverModule::ObservedAction* action) const;
 
     void DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,
-                    const std::vector<GW::Constants::SkillID>& skill_ids);
+                    const std::vector<GW::Constants::SkillID>& skill_ids) const;
 
     [[nodiscard]] const char* Name() const override { return "Observer Player"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }

@@ -267,7 +267,7 @@ nlohmann::json SkillListingWindow::Skill::ToJson()
     return json;
 }
 
-const std::wstring SkillListingWindow::Skill::GetSkillType()
+const std::wstring SkillListingWindow::Skill::GetSkillType() const
 {
     std::wstring str(IsElite() ? L"Elite " : L"");
     switch (static_cast<uint32_t>(skill->type)) {

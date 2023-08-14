@@ -20,5 +20,5 @@ public:
     void Terminate() override;
     void Update(float delta) override;
     static void SetInfected(GW::Agent* agent, bool is_infected);
-    void SetEnabled(bool is_enabled);
+    static void SetEnabled(bool is_enabled);
 };

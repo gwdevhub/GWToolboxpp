@@ -99,13 +99,13 @@ public:
     static void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, const AsyncLoadCallback& callback);
 
     // download to file, blocking. If an error occurs, details are held in response string
-    bool Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response);
+    static bool Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response);
     // download to file, async, calls callback on completion. If an error occurs, details are held in response string
-    void Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback);
+    void Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback) const;
     // download to memory, blocking. If an error occurs, details are held in response string
     static bool Download(const std::string& url, std::string& response);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
-    void Download(const std::string& url, AsyncLoadMbCallback callback);
+    void Download(const std::string& url, AsyncLoadMbCallback callback) const;
 
 
     // download to memory, blocking. If an error occurs, details are held in response string

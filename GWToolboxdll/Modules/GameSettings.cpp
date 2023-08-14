@@ -48,10 +48,6 @@
 
 #include <Modules/PartyWindowModule.h>
 
-#ifdef _DEBUG
-#include <Windows/StringDecoderWindow.h>
-#endif
-
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>

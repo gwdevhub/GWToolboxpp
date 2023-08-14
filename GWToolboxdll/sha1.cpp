@@ -46,6 +46,7 @@ static void reset(uint32_t digest[], std::string& buffer, uint64_t& transforms)
 
 static uint32_t rol(const uint32_t value, const size_t bits)
 {
+    // ReSharper disable once CppRedundantParentheses
     return value << bits | value >> (32 - bits);
 }
 

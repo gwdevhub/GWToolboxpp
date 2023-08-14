@@ -493,7 +493,7 @@ void DiscordModule::ConnectCanary()
     SetEnvironmentVariable("DISCORD_INSTANCE_ID", discord_env ? "1" : "0");
 }
 
-bool DiscordModule::LoadDll()
+bool DiscordModule::LoadDll() const
 {
     if (discordCreate) {
         return true; // Already loaded.

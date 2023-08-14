@@ -662,9 +662,8 @@ void ArmoryWindow::Initialize()
         Log::Error("GWArmory failed to find the SetItem function");
     }
 #ifdef _DEBUG
-    char* buf = nullptr;
     for (auto& armor : warrior_armors) {
-        buf = new char[100];
+        const auto buf = new char[100];
         snprintf(buf, 100, "%s %#04x", armor.label, armor.model_file_id);
         armor.label = buf;
     }

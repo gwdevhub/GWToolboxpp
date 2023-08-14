@@ -21,7 +21,7 @@ public:
     static std::string PadLeft(std::string input, uint8_t count, char c);
     static nlohmann::json ToJSON_V_0_1();
     static nlohmann::json ToJSON_V_1_0();
-    void ExportToJSON(Version version);
+    static void ExportToJSON(Version version);
 
     [[nodiscard]] const char* Name() const override { return "Observer Export"; };
     [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }

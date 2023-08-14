@@ -209,7 +209,7 @@ void ChatLog::Fetch()
     }
 }
 
-void ChatLog::Save()
+void ChatLog::Save() const
 {
     if (!enabled || account.empty()) {
         return;
@@ -308,7 +308,7 @@ void ChatLog::Load(const std::wstring& _account)
         }
         t.dwLowDateTime = inifile.GetLongValue(entry.pItem, "dwLowDateTime", 0);
         t.dwHighDateTime = inifile.GetLongValue(entry.pItem, "dwHighDateTime", 0);
-        uint32_t channel = inifile.GetLongValue(entry.pItem, "channel", 0);
+        const uint32_t channel = inifile.GetLongValue(entry.pItem, "channel", 0);
         Add(buf.data(), channel, t);
     }
 
@@ -326,7 +326,7 @@ void ChatLog::Load(const std::wstring& _account)
         if (!written) {
             continue;
         }
-        uint32_t addr = inifile.GetLongValue(entry.pItem, "addr", 0);
+        const uint32_t addr = inifile.GetLongValue(entry.pItem, "addr", 0);
         AddSent(buf.data(), addr);
     }
 }

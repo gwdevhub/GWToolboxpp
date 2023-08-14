@@ -39,7 +39,7 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9*)
     ImGui::Text("Current State");
     ImGui::Separator();
 
-    for (std::map<uint32_t, DoorObject*>::iterator it = doors.begin(); it != doors.end(); ++it) {
+    for (auto it = doors.begin(); it != doors.end(); ++it) {
         offset = 0.0f;
         DoorObject& o = *it->second;
         ImGui::PushID(o.object_id);

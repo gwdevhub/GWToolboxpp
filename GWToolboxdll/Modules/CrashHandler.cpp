@@ -58,11 +58,24 @@ void CrashHandler::OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEP
     abort();
 }
 
+int failed(const char* failure_message)
+{
+    wchar_t error_info[512];
+    swprintf(error_info, _countof(error_info),
+             L"Guild Wars crashed!\n\n"
+             "GWToolbox tried to create a crash dump, but failed\n\n"
+             "%S\n"
+             "GetLastError code: %d\n\n"
+             "I don't really know what to do, sorry, contact the developers.\n",
+             failure_message, GetLastError());
+
+    MessageBoxW(nullptr, error_info, L"GWToolbox++ crash dump error", 0);
+    return 1;
+}
+
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
 {
     const std::wstring crash_folder = Resources::GetPath(L"crashes");
-    const char* failure_message;
-    wchar_t error_info[512];
 
     const DWORD ProcessId = GetCurrentProcessId();
     const DWORD ThreadId = GetCurrentThreadId();
@@ -79,32 +92,25 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     char* extra_info = nullptr;
 
     MINIDUMP_EXCEPTION_INFORMATION* ExpParam = nullptr;
-    // NOLINTBEGIN
-    BOOL success;
     const HANDLE hFile = CreateFileW(
         szFileName, GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_WRITE | FILE_SHARE_READ, nullptr,
         CREATE_ALWAYS, 0, nullptr);
     if (!Resources::EnsureFolderExists(crash_folder.c_str())) {
-        failure_message = "Failed to create crash directory";
-        goto failed;
+        return failed("Failed to create crash directory");
     }
     if (fn_print < 0) {
-        failure_message = "Failed to swprintf crash file name";
-        goto failed;
+        return failed("Failed to swprintf crash file name");
     }
     if (hFile == INVALID_HANDLE_VALUE) {
-        failure_message = "Failed to CreateFileW crash file";
-        goto failed;
+        return failed("Failed to CreateFileW crash file");
     }
     if (!Resources::EnsureFolderExists(crash_folder.c_str())) {
-        failure_message = "Failed to create crash directory";
-        goto failed;
+        return failed("Failed to create crash directory");
     }
 
     if (fn_print < 0) {
-        failure_message = "Failed to swprintf crash file name";
-        goto failed;
+        return failed("Failed to swprintf crash file name");
     }
     if (Instance().gw_debug_info) {
         extra_info = Instance().gw_debug_info->buffer;
@@ -127,12 +133,11 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
         ExpParam->ExceptionPointers = pExceptionPointers;
         ExpParam->ClientPointers = false;
     }
-    success = MiniDumpWriteDump(
+    const BOOL success = MiniDumpWriteDump(
         GetCurrentProcess(), ProcessId, hFile,
         static_cast<MINIDUMP_TYPE>(MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs),
         ExpParam, UserStreamParam, nullptr);
     CloseHandle(hFile);
-    // NOLINTEND
 
     delete[] Instance().tb_exception_message;
 
@@ -142,19 +147,9 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     }
     delete ExpParam;
     if (!success) {
-        failure_message = "Failed to create MiniDumpWriteDump";
-    failed:
-        swprintf(error_info, _countof(error_info),
-                 L"Guild Wars crashed!\n\n"
-                 "GWToolbox tried to create a crash dump, but failed\n\n"
-                 "%S\n"
-                 "GetLastError code: %d\n\n"
-                 "I don't really know what to do, sorry, contact the developers.\n",
-                 failure_message, GetLastError());
-
-        MessageBoxW(nullptr, error_info, L"GWToolbox++ crash dump error", 0);
-        return 1;
+        return failed("Failed to create MiniDumpWriteDump");
     }
+    wchar_t error_info[512];
     swprintf(error_info, _countof(error_info), L"Guild Wars crashed!\n\n"
              "GWToolbox created a crash dump for more info\n\n"
              "Crash file created @ %s\n\n", szFileName);

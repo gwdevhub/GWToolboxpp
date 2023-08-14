@@ -222,7 +222,7 @@ namespace {
         bmi.bmiHeader.biPlanes = 1;
 
         // Do not use CreateCompatibleBitmap otherwise api will not allocate memory for bitmap
-        HDC destDC = CreateCompatibleDC(nullptr);
+        const HDC destDC = CreateCompatibleDC(nullptr);
         if (!destDC) {
             goto cleanup;
         }

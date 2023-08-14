@@ -69,7 +69,7 @@ private:
     void RemoveSent(const TBSentMessage* message);
     // Add message to incoming log
     void Add(wchar_t* _message, uint32_t _channel, FILETIME _timestamp);
-    void Save();
+    void Save() const;
     // Path to chat log file on disk
     std::filesystem::path LogPath(const wchar_t* prefix) const;
     // Load chat log from file via account email address
