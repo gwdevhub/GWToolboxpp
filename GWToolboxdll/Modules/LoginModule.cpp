@@ -1,4 +1,6 @@
 #include "stdafx.h"
+
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/PreGameContext.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -13,6 +15,7 @@
 
 namespace {
     clock_t state_timestamp = 0;
+    uint32_t char_sort_order = std::numeric_limits<uint32_t>::max();
 
     enum class LoginState {
         Idle,
@@ -72,6 +75,14 @@ namespace {
         state = LoginState::PendingLogin;
         GW::Hook::LeaveHook();
     }
+
+    void InitialiationFailure(const char* msg = nullptr)
+    {
+        Log::Error(msg ? msg : "Failed to initialise LoginModule");
+#if _DEBUG
+        ASSERT(false);
+#endif
+    }
 }
 
 void LoginModule::Initialize()
@@ -82,34 +93,27 @@ void LoginModule::Initialize()
 
     PortalAccountLogin_Func = (PortalAccountLogin_pt)GW::Scanner::Find("\xc7\x45\xe8\x38\x00\x00\x00\x89\x4d\xf0", "xxxxxxxxxx", -0x2b);
     if (!PortalAccountLogin_Func) {
-        goto failed_to_initialise;
+        return InitialiationFailure("Failed to initialize PortalAccountLogin_Func");
     }
 
     GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\param\\param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))", -0x13);
     if (!GetStringParameter_Func) {
-        goto failed_to_initialise;
+        return InitialiationFailure("Failed to initialize GetStringParameter_Func");
     }
     {
         int res = GW::HookBase::CreateHook(PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
         if (res == -1) {
-            goto failed_to_initialise;
+            return InitialiationFailure("Failed to hook PortalAccountLogin_Func");
         }
 
         res = GW::HookBase::CreateHook(GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
         if (res == -1) {
-            goto failed_to_initialise;
+            return InitialiationFailure("Failed to hook GetStringParameter_Func");
         }
 
         GW::HookBase::EnableHooks(PortalAccountLogin_Func);
         GW::HookBase::EnableHooks(GetStringParameter_Func);
-        return;
     }
-
-failed_to_initialise:
-    Log::Error("Failed to initialise LoginModule");
-#if _DEBUG
-    ASSERT(false);
-#endif
 }
 
 void LoginModule::Terminate()
@@ -124,61 +128,71 @@ void LoginModule::Update(float)
     // If they have, then we use the user interface to manually navigate to a character
     // This is because the Portal login above would usually do it, but it overrides any reconnect dialogs.
     switch (state) {
-        case LoginState::Idle:
-            return;
-        case LoginState::PendingLogin: {
-            // No charname to switch to
-            if (TIMER_DIFF(state_timestamp) > 5000) {
-                state = LoginState::Idle;
-                return;
-            }
-            if (IsCharSelectReady()) {
-                state = LoginState::FindCharacterIndex;
-            }
-        }
-        break;
-        case LoginState::FindCharacterIndex: {
-            // No charname to switch to
-            if (!(original_charname_parameter && *original_charname_parameter)) {
-                state = LoginState::Idle;
-                return;
-            }
-            const auto pgc = GW::GetPreGameContext();
-            for (size_t i = 0; i < pgc->chars.size(); i++) {
-                if (wcscmp(pgc->chars[i].character_name, original_charname_parameter) == 0) {
-                    state_timestamp = TIMER_INIT();
-                    state = LoginState::SelectChar;
-                    reroll_index_needed = i;
-                    reroll_index_current = 0xffff;
-                    // Wipe out the command line parameter for GW here; its only relevent for the first login!
-                    *original_charname_parameter = 0;
-                    return;
-                }
-            }
-            // Character no found
+    case LoginState::Idle:
+        return;
+    case LoginState::PendingLogin:
+    {
+        // No charname to switch to
+        if (TIMER_DIFF(state_timestamp) > 5000) {
             state = LoginState::Idle;
+            return;
         }
-        break;
-        case LoginState::SelectChar: {
-            if (TIMER_DIFF(state_timestamp) > 250) {
-                // This could be due to a reconnect dialog in the way, which is fine
-                state = LoginState::Idle;
+        if (char_sort_order == std::numeric_limits<uint32_t>::max()) {
+            char_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
+            SetPreference(GW::UI::EnumPreference::CharSortOrder, static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
+        }
+        if (IsCharSelectReady()) {
+            state = LoginState::FindCharacterIndex;
+        }
+    }
+    break;
+    case LoginState::FindCharacterIndex:
+    {
+        // No charname to switch to
+        if (!(original_charname_parameter && *original_charname_parameter)) {
+            state = LoginState::Idle;
+            return;
+        }
+        const auto pgc = GW::GetPreGameContext();
+        for (size_t i = 0; i < pgc->chars.size(); i++) {
+            if (wcscmp(pgc->chars[i].character_name, original_charname_parameter) == 0) {
+                state_timestamp = TIMER_INIT();
+                state = LoginState::SelectChar;
+                reroll_index_needed = i;
+                reroll_index_current = 0xffff;
+                // Wipe out the command line parameter for GW here; its only relevent for the first login!
+                *original_charname_parameter = 0;
                 return;
             }
-            const auto pgc = GW::GetPreGameContext();
-            if (pgc->index_1 == reroll_index_current) {
-                return; // Not moved yet
-            }
-            const HWND h = GW::MemoryMgr::GetGWWindowHandle();
-            if (pgc->index_1 == reroll_index_needed) {
-                // We're on the character that was asked for
-                state = LoginState::Idle;
-                return;
-            }
-            reroll_index_current = pgc->index_1;
-            SendMessage(h, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
-            SendMessage(h, WM_KEYUP, VK_RIGHT, 0xC14D0001);
         }
-        break;
+        // Character no found
+        state = LoginState::Idle;
+    }
+    break;
+    case LoginState::SelectChar:
+    {
+        if (TIMER_DIFF(state_timestamp) > 250) {
+            // This could be due to a reconnect dialog in the way, which is fine
+            state = LoginState::Idle;
+            return;
+        }
+        const auto pgc = GW::GetPreGameContext();
+        if (pgc->index_1 == reroll_index_current) {
+            return; // Not moved yet
+        }
+        const HWND h = GW::MemoryMgr::GetGWWindowHandle();
+        if (pgc->index_1 == reroll_index_needed) {
+            // We're on the character that was asked for
+            state = LoginState::Idle;
+            if (char_sort_order != std::numeric_limits<uint32_t>::max() && char_sort_order != GetPreference(GW::UI::EnumPreference::CharSortOrder)) {
+                SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
+            }
+            return;
+        }
+        reroll_index_current = pgc->index_1;
+        SendMessage(h, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
+        SendMessage(h, WM_KEYUP, VK_RIGHT, 0xC14D0001);
+    }
+    break;
     }
 }

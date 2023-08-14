@@ -122,14 +122,14 @@ namespace {
     {
         GW::Constants::MapID map_id;
         switch (elite_area) {
-            case GW::Constants::MapID::The_Deep:
-                map_id = GW::Constants::MapID::Cavalon_outpost;
-                break;
-            case GW::Constants::MapID::Urgozs_Warren:
-                map_id = GW::Constants::MapID::House_zu_Heltzer_outpost;
-                break;
-            default:
-                return GW::Constants::MapID::None;
+        case GW::Constants::MapID::The_Deep:
+            map_id = GW::Constants::MapID::Cavalon_outpost;
+            break;
+        case GW::Constants::MapID::Urgozs_Warren:
+            map_id = GW::Constants::MapID::House_zu_Heltzer_outpost;
+            break;
+        default:
+            return GW::Constants::MapID::None;
         }
         if (!GW::Map::GetIsMapUnlocked(map_id)) {
             map_id = GW::Constants::MapID::Embark_Beach;
@@ -141,12 +141,12 @@ namespace {
     {
         uint32_t scroll_model_id = 0;
         switch (elite_area) {
-            case GW::Constants::MapID::The_Deep:
-                scroll_model_id = 22279;
-                break;
-            case GW::Constants::MapID::Urgozs_Warren:
-                scroll_model_id = 3256;
-                break;
+        case GW::Constants::MapID::The_Deep:
+            scroll_model_id = 22279;
+            break;
+        case GW::Constants::MapID::Urgozs_Warren:
+            scroll_model_id = 3256;
+            break;
         }
         if (!scroll_model_id) {
             return nullptr;
@@ -407,180 +407,192 @@ void RerollWindow::Update(float)
         }
     }
     if (reroll_stage != None && TIMER_INIT() > reroll_timeout) {
-        SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
+        if (char_sort_order != std::numeric_limits<uint32_t>::max()) {
+            SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
+        }
         RerollFailed(L"Reroll timed out");
         return;
     }
     GW::PreGameContext* pgc = GW::GetPreGameContext();
     switch (reroll_stage) {
-        case PendingLogout: {
-            uint32_t logout[] = {0, 0};
-            SendUIMessage(GW::UI::UIMessage::kLogout, logout);
-            reroll_stage = WaitingForCharSelect;
-            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 10000;
+    case PendingLogout:
+    {
+        uint32_t logout[] = {0, 0};
+        SendUIMessage(GW::UI::UIMessage::kLogout, logout);
+        reroll_stage = WaitingForCharSelect;
+        reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 10000;
+        return;
+    }
+    case WaitingForCharSelect:
+    {
+        if (!GetIsCharSelectReady()) {
             return;
         }
-        case WaitingForCharSelect: {
-            if (!GetIsCharSelectReady()) {
-                return;
-            }
-            reroll_stage = CheckForCharname;
-            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 5000;
+        reroll_stage = CheckForCharname;
+        reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 5000;
+        return;
+    }
+    case CheckForCharname:
+    {
+        if (!GetIsCharSelectReady()) {
             return;
         }
-        case CheckForCharname: {
-            if (!GetIsCharSelectReady()) {
+        for (size_t i = 0; i < pgc->chars.size(); i++) {
+            if (wcscmp(pgc->chars[i].character_name, reroll_to_player_name) == 0) {
+                reroll_index_needed = i;
+                reroll_index_current = 0xffffffdd;
+                reroll_stage = NavigateToCharname;
+                reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 3000;
                 return;
             }
-            for (size_t i = 0; i < pgc->chars.size(); i++) {
-                if (wcscmp(pgc->chars[i].character_name, reroll_to_player_name) == 0) {
-                    reroll_index_needed = i;
-                    reroll_index_current = 0xffffffdd;
-                    reroll_stage = NavigateToCharname;
-                    reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 3000;
-                    return;
-                }
-            }
+        }
+        return;
+    }
+    case NavigateToCharname:
+    {
+        if (!GetIsCharSelectReady()) {
             return;
         }
-        case NavigateToCharname: {
-            if (!GetIsCharSelectReady()) {
-                return;
-            }
-            if (pgc->index_1 == reroll_index_current) {
-                return; // Not moved yet
-            }
-            const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
-            if (pgc->index_1 == reroll_index_needed) {
-                // Play
-                SendMessage(hwnd, WM_KEYDOWN, 0x50, 0x00190001);
-                SendMessage(hwnd, WM_CHAR, 'p', 0x00190001);
-                SendMessage(hwnd, WM_KEYUP, 0x50, 0xC0190001);
-                reroll_stage = WaitForCharacterLoad;
-                reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
-                return;
-            }
-            reroll_index_current = pgc->index_1;
-            SendMessage(hwnd, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
-            SendMessage(hwnd, WM_KEYUP, VK_RIGHT, 0xC14D0001);
+        if (pgc->index_1 == reroll_index_current) {
+            return; // Not moved yet
+        }
+        const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+        if (pgc->index_1 == reroll_index_needed) {
+            // Play
+            SendMessage(hwnd, WM_KEYDOWN, 0x50, 0x00190001);
+            SendMessage(hwnd, WM_CHAR, 'p', 0x00190001);
+            SendMessage(hwnd, WM_KEYUP, 0x50, 0xC0190001);
+            reroll_stage = WaitForCharacterLoad;
+            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
             return;
         }
-        case WaitForCharacterLoad: {
-            if (GetIsCharSelectReady()) {
-                return;
-            }
-            if (!GetIsMapReady() || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-                return;
-            }
-            const wchar_t* player_name = GetPlayerName();
-            if (!player_name || wcscmp(player_name, reroll_to_player_name) != 0) {
-                RerollFailed(L"Wrong character was loaded");
-                return;
-            }
+        reroll_index_current = pgc->index_1;
+        SendMessage(hwnd, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
+        SendMessage(hwnd, WM_KEYUP, VK_RIGHT, 0xC14D0001);
+        return;
+    }
+    case WaitForCharacterLoad:
+    {
+        if (GetIsCharSelectReady()) {
+            return;
+        }
+        if (!GetIsMapReady() || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+            return;
+        }
+        const wchar_t* player_name = GetPlayerName();
+        if (!player_name || wcscmp(player_name, reroll_to_player_name) != 0) {
+            RerollFailed(L"Wrong character was loaded");
+            return;
+        }
+        if (char_sort_order != std::numeric_limits<uint32_t>::max()) {
             SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
-            if (same_map) {
-                if (!IsInMap()) {
-                    if (guild_hall_uuid) {
-                        // Was previously in a guild hall
-                        GW::GuildMgr::TravelGH(*(GW::GHKey*)guild_hall_uuid);
+        }
+        if (same_map) {
+            if (!IsInMap()) {
+                if (guild_hall_uuid) {
+                    // Was previously in a guild hall
+                    GW::GuildMgr::TravelGH(*reinterpret_cast<GW::GHKey*>(guild_hall_uuid));
+                }
+                else {
+                    if (!GW::Map::GetIsMapUnlocked(map_id)) {
+                        RerollFailed(L"Map isn't unlocked");
+                        return;
                     }
-                    else {
-                        if (!GW::Map::GetIsMapUnlocked(map_id)) {
-                            RerollFailed(L"Map isn't unlocked");
+                    reroll_scroll_from_map_id = static_cast<uint32_t>(GetScrollableOutpostForEliteArea(map_id));
+                    if (reroll_scroll_from_map_id) {
+                        if (!GW::Map::GetIsMapUnlocked(static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id))) {
+                            RerollFailed(L"No scrollable outpost unlocked");
                             return;
                         }
-                        reroll_scroll_from_map_id = static_cast<uint32_t>(GetScrollableOutpostForEliteArea(map_id));
-                        if (reroll_scroll_from_map_id) {
-                            if (!GW::Map::GetIsMapUnlocked(static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id))) {
-                                RerollFailed(L"No scrollable outpost unlocked");
-                                return;
-                            }
-                            if (!GetScrollItemForEliteArea(map_id)) {
-                                RerollFailed(L"No scroll available for elite area");
-                                return;
-                            }
-                            if (GW::Map::GetMapID() != static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id)) {
-                                GW::Map::Travel(static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id), 0, region_id, language_id);
-                            }
+                        if (!GetScrollItemForEliteArea(map_id)) {
+                            RerollFailed(L"No scroll available for elite area");
+                            return;
+                        }
+                        if (GW::Map::GetMapID() != static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id)) {
+                            GW::Map::Travel(static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id), 0, region_id, language_id);
+                        }
 
-                            reroll_stage = WaitForScrollableOutpost;
-                            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
-                            return;
-                        }
-                        GW::Map::Travel(map_id, 0, region_id, language_id);
-                        reroll_stage = WaitForActiveDistrict;
+                        reroll_stage = WaitForScrollableOutpost;
                         reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                         return;
                     }
+                    GW::Map::Travel(map_id, 0, region_id, language_id);
+                    reroll_stage = WaitForActiveDistrict;
+                    reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
+                    return;
                 }
-                reroll_stage = WaitForMapLoad;
-                reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
-                return;
-            }
-            RerollSuccess();
-            return;
-        }
-        case WaitForScrollableOutpost: {
-            if (!GetIsMapReady() || GW::Map::GetMapID() != static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id)) {
-                return;
-            }
-            const GW::Item* scroll = GetScrollItemForEliteArea(map_id);
-            if (!scroll) {
-                RerollFailed(L"No scroll available for elite area");
-                return;
-            }
-            GW::Items::UseItem(scroll);
-            reroll_stage = WaitForActiveDistrict;
-            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
-        }
-        break;
-
-        case WaitForActiveDistrict: {
-            if (!GetIsMapReady() || !IsInMap(false)) {
-                return;
-            }
-            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-                return;
-            }
-            if (!IsInMap()) {
-                // Same map, wrong district
-                GW::Map::Travel(map_id, district_id, region_id, language_id);
             }
             reroll_stage = WaitForMapLoad;
             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
             return;
         }
-        case WaitForMapLoad: {
-            if (!GetIsMapReady() || !IsInMap()) {
-                return;
-            }
-            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-                return;
-            }
-
-            if (same_party && party_leader[0]) {
-                GW::PartyInfo* player_party = GetPlayerParty();
-                if (player_party && player_party->GetPartySize() > 1) {
-                    GW::PartyMgr::LeaveParty();
-                    GW::PartyMgr::KickAllHeroes();
-                }
-                reroll_stage = WaitForEmptyParty;
-                reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 3000;
-                return;
-            }
-            RerollSuccess();
+        RerollSuccess();
+        return;
+    }
+    case WaitForScrollableOutpost:
+    {
+        if (!GetIsMapReady() || GW::Map::GetMapID() != static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id)) {
             return;
-        case WaitForEmptyParty:
+        }
+        const GW::Item* scroll = GetScrollItemForEliteArea(map_id);
+        if (!scroll) {
+            RerollFailed(L"No scroll available for elite area");
+            return;
+        }
+        GW::Items::UseItem(scroll);
+        reroll_stage = WaitForActiveDistrict;
+        reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
+    }
+    break;
+
+    case WaitForActiveDistrict:
+    {
+        if (!GetIsMapReady() || !IsInMap(false)) {
+            return;
+        }
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+            return;
+        }
+        if (!IsInMap()) {
+            // Same map, wrong district
+            GW::Map::Travel(map_id, district_id, region_id, language_id);
+        }
+        reroll_stage = WaitForMapLoad;
+        reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
+        return;
+    }
+    case WaitForMapLoad:
+    {
+        if (!GetIsMapReady() || !IsInMap()) {
+            return;
+        }
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+            return;
+        }
+
+        if (same_party && party_leader[0]) {
             GW::PartyInfo* player_party = GetPlayerParty();
             if (player_party && player_party->GetPartySize() > 1) {
-                return;
+                GW::PartyMgr::LeaveParty();
+                GW::PartyMgr::KickAllHeroes();
             }
-            wchar_t msg_buf[32];
-            ASSERT(same_party && party_leader[0]);
-            ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %s", party_leader) != -1);
-            GW::Chat::SendChat('/', msg_buf);
-            RerollSuccess();
+            reroll_stage = WaitForEmptyParty;
+            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 3000;
+            return;
         }
+        RerollSuccess();
+        return;
+    case WaitForEmptyParty:
+        GW::PartyInfo* player_party = GetPlayerParty();
+        if (player_party && player_party->GetPartySize() > 1) {
+            return;
+        }
+        wchar_t msg_buf[32];
+        ASSERT(same_party && party_leader[0]);
+        ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %s", party_leader) != -1);
+        GW::Chat::SendChat('/', msg_buf);
+        RerollSuccess();
+    }
     }
 }
 

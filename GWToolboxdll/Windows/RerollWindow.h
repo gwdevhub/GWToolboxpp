@@ -93,7 +93,7 @@ private:
     GW::Array<AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
     clock_t reroll_timeout = 0;
-    uint32_t char_sort_order = 0;
+    uint32_t char_sort_order = std::numeric_limits<uint32_t>::max();
     clock_t reroll_stage_set = 0;
     uint32_t reroll_index_needed = 0;
     uint32_t reroll_index_current = 0xffffffdd;
