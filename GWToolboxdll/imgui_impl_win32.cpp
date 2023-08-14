@@ -642,7 +642,8 @@ ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(const WPARAM wParam)
 // Copy this line into your .cpp file to forward declare the function.
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
-//NOLINTNEXTLINE(readability-non-const-parameter)
+// ReSharper disable once CppParameterMayBeConst
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler([[maybe_unused]] HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui::GetCurrentContext() == nullptr) {

@@ -143,7 +143,8 @@ namespace {
         nonconst->dismiss();
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void OnToastMessageDecoded(void* callback_param, wchar_t* decoded)
     {
         const auto title = static_cast<wchar_t*>(callback_param);
@@ -151,7 +152,8 @@ namespace {
         delete[] title;
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void SendEncodedToastMessage(const wchar_t* title, wchar_t* encoded_message)
     {
         if (!(encoded_message && encoded_message[0])) {

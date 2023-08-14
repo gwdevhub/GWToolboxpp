@@ -231,24 +231,24 @@ void DupingWindow::Draw(IDirect3DDevice9*)
                 case GW::Constants::ModelID::DoA::SoulTormentor:
                 case GW::Constants::ModelID::DoA::VeilSoulTormentor:
                     all_agents_of_type = &all_souls;
-                duped_agents_of_type = &souls;
-                threshold = souls_threshhold;
-                soul_count++;
-                break;
+                    duped_agents_of_type = &souls;
+                    threshold = souls_threshhold;
+                    soul_count++;
+                    break;
                 case GW::Constants::ModelID::DoA::WaterTormentor:
                 case GW::Constants::ModelID::DoA::VeilWaterTormentor:
                     all_agents_of_type = &all_waters;
-                duped_agents_of_type = &waters;
-                threshold = waters_threshhold;
-                water_count++;
-                break;
+                    duped_agents_of_type = &waters;
+                    threshold = waters_threshhold;
+                    water_count++;
+                    break;
                 case GW::Constants::ModelID::DoA::MindTormentor:
                 case GW::Constants::ModelID::DoA::VeilMindTormentor:
                     all_agents_of_type = &all_minds;
-                duped_agents_of_type = &minds;
-                threshold = minds_threshhold;
-                mind_count++;
-                break;
+                    duped_agents_of_type = &minds;
+                    threshold = minds_threshhold;
+                    mind_count++;
+                    break;
                 default:
                     continue;
             }

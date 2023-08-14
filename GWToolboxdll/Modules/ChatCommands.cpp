@@ -333,7 +333,8 @@ namespace {
     const char* pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";
     using CmdPrefCB = void(__cdecl*)(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id);
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void CmdValuePref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id)
     {
         const auto pref = static_cast<GW::UI::NumberPreference>(pref_id);
@@ -351,7 +352,8 @@ namespace {
         return Log::Error(pref_syntax);
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void CmdEnumPref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id)
     {
         const auto pref = static_cast<GW::UI::EnumPreference>(pref_id);

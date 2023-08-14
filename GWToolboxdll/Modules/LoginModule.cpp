@@ -100,8 +100,8 @@ void LoginModule::Initialize()
             goto failed_to_initialise;
         }
 
-    GW::HookBase::EnableHooks(PortalAccountLogin_Func);
-    GW::HookBase::EnableHooks(GetStringParameter_Func);
+        GW::HookBase::EnableHooks(PortalAccountLogin_Func);
+        GW::HookBase::EnableHooks(GetStringParameter_Func);
         return;
     }
 

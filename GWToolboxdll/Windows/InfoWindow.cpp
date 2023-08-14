@@ -873,18 +873,18 @@ void InfoWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 #ifdef _DEBUG
     // For debugging changes to flags/arrays etc
-    [[maybe_unused]]const GW::GameContext* g = GW::GetGameContext();
-    [[maybe_unused]]const GW::GuildContext* gu = g->guild;
-    [[maybe_unused]]const GW::CharContext* c = g->character;
-    [[maybe_unused]]const GW::WorldContext* w = g->world;
-    [[maybe_unused]]const GW::PartyContext* p = g->party;
-    [[maybe_unused]]const GW::MapContext* m = g->map;
-    [[maybe_unused]]const GW::AccountContext* acc = g->account;
-    [[maybe_unused]]const GW::ItemContext* i = g->items;
-    [[maybe_unused]]const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-    [[maybe_unused]]const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
-    [[maybe_unused]]const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    [[maybe_unused]]const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
+    [[maybe_unused]] const GW::GameContext* g = GW::GetGameContext();
+    [[maybe_unused]] const GW::GuildContext* gu = g->guild;
+    [[maybe_unused]] const GW::CharContext* c = g->character;
+    [[maybe_unused]] const GW::WorldContext* w = g->world;
+    [[maybe_unused]] const GW::PartyContext* p = g->party;
+    [[maybe_unused]] const GW::MapContext* m = g->map;
+    [[maybe_unused]] const GW::AccountContext* acc = g->account;
+    [[maybe_unused]] const GW::ItemContext* i = g->items;
+    [[maybe_unused]] const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    [[maybe_unused]] const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
+    [[maybe_unused]] const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+    [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
 #endif
 }
 

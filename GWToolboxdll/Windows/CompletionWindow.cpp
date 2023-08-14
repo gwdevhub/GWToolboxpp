@@ -283,7 +283,8 @@ namespace {
         }
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void OnHomLoaded(HallOfMonumentsAchievements* result)
     {
         if (result->state != HallOfMonumentsAchievements::State::Done) {

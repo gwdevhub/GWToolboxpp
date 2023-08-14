@@ -57,7 +57,8 @@ namespace {
         });
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnJoin(const char* params, irc_reply_data* hostd, void*)
     {
         const TwitchModule* module = &TwitchModule::Instance();
@@ -82,7 +83,8 @@ namespace {
         return 0;
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnLeave(const char* params, irc_reply_data* hostd, void*)
     {
         const TwitchModule* module = &TwitchModule::Instance();
@@ -96,7 +98,8 @@ namespace {
         return 0;
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnConnected(const char* params, irc_reply_data*, void* conn)
     {
         TwitchModule* module = &TwitchModule::Instance();
@@ -115,7 +118,8 @@ namespace {
         return 0;
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnMessage(const char* params, irc_reply_data* hostd, void*)
     {
         const TwitchModule* module = &TwitchModule::Instance();
@@ -128,7 +132,8 @@ namespace {
         return 0;
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnNotice(const char* params, irc_reply_data*, void* conn)
     {
         Log::Log("NOTICE: %s\n", params);

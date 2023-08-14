@@ -944,7 +944,8 @@ namespace GuiUtils {
         }
     }
 
-    //NOLINTNEXTLINE(readability-non-const-parameter)
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void EncString::OnStringDecoded(void* param, wchar_t* decoded)
     {
         const auto context = static_cast<EncString*>(param);
