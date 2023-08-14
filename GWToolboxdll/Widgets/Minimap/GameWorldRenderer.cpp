@@ -219,8 +219,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         }
     }
 
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
-        // perhaps not actually needed, but it's here to be safe.
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         return;
     }
 
