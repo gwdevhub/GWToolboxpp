@@ -6,16 +6,11 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for the latest version, go to the [Home Page](./) instead.
 
 
-<!---
-## Version 6.12
-
-* [New] Added GameWorldRenderer to render lines, circles and polygon on the game terrain.
---->
-
 ## Version 6.11
 
 * [New] Added item upgrade unlocks to completion window
 * [New] Added chat filter for dropped ashes
+* [New] Added GameWorldRenderer to render lines, circles and polygons on the game terrain. This isn't fully fleshed out yet and draws even on parts that are behind walls or agents - might be enhanced in the future.
 * [Minor] Added default values for the Minimap position if you've never moved the in-game compass
 * [Minor] Toolbox widgets now all remember their lock_move and lock_size settings
 * [Minor] Added option to auto use keys on chests (prioritised before lockpicks)
@@ -24,6 +19,7 @@ Previous releases are available on Github as dll files. There is no support for 
 * [Fix] Fixed option to auto-login when no character name parameter is passed to gw. Requires you to launch with GW Launcher
 * [Fix] Removed copy hero build button when no builds existed.
 * [Fix] Fixed bug preventing secondary profession switch on tome use.
+* [Fix] Fixed rerolling to characters when you had empty char slots
 
 ## Version 6.10
 
