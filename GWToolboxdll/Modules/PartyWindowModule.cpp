@@ -369,7 +369,7 @@ namespace {
         }
     }
 
-    void AddAllyActual(PendingAddToParty& p)
+    void AddAllyActual(const PendingAddToParty& p)
     {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             return;

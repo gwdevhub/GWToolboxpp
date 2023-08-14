@@ -381,6 +381,8 @@ namespace {
         Log::InfoW(available_vals_buffer);
     }
 
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void CmdFlagPref(const wchar_t*, int argc, LPWSTR* argv, uint32_t pref_id)
     {
         const auto pref = static_cast<GW::UI::FlagPreference>(pref_id);

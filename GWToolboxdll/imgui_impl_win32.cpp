@@ -14,6 +14,7 @@
 // the backends you need. If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of
 // imgui.cpp. Read online: https://github.com/ocornut/imgui/tree/master/docs
 
+// ReSharper disable CppParameterMayBeConst
 #include "imgui_impl_win32.h"
 #include "imgui.h"
 #ifndef WIN32_LEAN_AND_MEAN
@@ -642,8 +643,6 @@ ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(const WPARAM wParam)
 // Copy this line into your .cpp file to forward declare the function.
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
-// ReSharper disable once CppParameterMayBeConst
-// ReSharper disable once CppParameterMayBeConstPtrOrRef
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler([[maybe_unused]] HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui::GetCurrentContext() == nullptr) {
