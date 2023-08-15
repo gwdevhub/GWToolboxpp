@@ -30,7 +30,7 @@ void HealthWidget::LoadSettings(ToolboxIni* ini)
     if (inifile == nullptr) {
         inifile = new ToolboxIni();
     }
-    ASSERT(inifile->LoadIfExists(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
+    ASSERT(inifile->LoadIfExists(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
 
     ToolboxIni::TNamesDepend entries;
     inifile->GetAllSections(entries);
@@ -73,7 +73,7 @@ void HealthWidget::SaveSettings(ToolboxIni* ini)
             thresholds[i]->SaveSettings(inifile, buf);
         }
 
-        ASSERT(inifile->SaveFile(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME).c_str()) == SI_OK);
+        ASSERT(inifile->SaveFile(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME).c_str()) == SI_OK);
         thresholds_changed = false;
     }
 }

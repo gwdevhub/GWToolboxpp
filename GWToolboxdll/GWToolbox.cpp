@@ -37,6 +37,8 @@ namespace {
     HWND gw_window_handle = nullptr;
 
     utf8::string imgui_inifile;
+    bool imgui_inifile_changed = false;
+    bool settings_folder_changed = false;
 
     bool must_self_destruct = false; // is true when toolbox should quit
     GW::HookEntry Update_Entry;
@@ -98,16 +100,17 @@ namespace {
         io.MouseDrawCursor = false;
         io.IniFilename = imgui_inifile.bytes;
 
-        Resources::EnsureFileExists(Resources::GetPath(L"Font.ttf"),
-                                    "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
-                                    [](const bool success, const std::wstring& error) {
-                                        if (success) {
-                                            GuiUtils::LoadFonts();
-                                        }
-                                        else {
-                                            Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
-                                        }
-                                    });
+        Resources::EnsureFileExists(
+            Resources::GetPath(L"Font.ttf"),
+            "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
+            [](const bool success, const std::wstring& error) {
+                if (success) {
+                    GuiUtils::LoadFonts();
+                }
+                else {
+                    Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
+                }
+            });
         imgui_initialized = true;
         return true;
     }
@@ -140,29 +143,16 @@ namespace {
         });
     }
 
-    ToolboxIni* OpenSettingsFile(std::filesystem::path config = GWTOOLBOX_INI_FILENAME, bool fresh = false)
+    ToolboxIni* OpenSettingsFile()
     {
         // NB: No way of manually freeing inifile if its trapped inside this function, but nbd, OS will clean up. Alternative is memcpy, but no need for the extra copy
         static ToolboxIni* inifile = nullptr;
-        if (config.empty()) {
-            config = GWTOOLBOX_INI_FILENAME;
-        }
-        if (config != GWTOOLBOX_INI_FILENAME) {
-            config = std::filesystem::path(L"configs") / config;
-            config += L".ini";
-        }
-        const auto full_path = Resources::GetPath(config);
-        if (!fresh && !(inifile && inifile->location_on_disk == full_path)) {
-            fresh = true;
-        }
-        if (fresh) {
-            // inifile is cached, unless path for config has changed.
-            const auto tmp = new ToolboxIni(false, false, false);
-            ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
-            tmp->location_on_disk = full_path;
-            delete inifile;
-            inifile = tmp;
-        }
+        const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
+        const auto tmp = new ToolboxIni(false, false, false);
+        ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
+        tmp->location_on_disk = full_path;
+        delete inifile;
+        inifile = tmp;
         return inifile;
     }
 
@@ -365,12 +355,12 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
         // we can't sleep here, because toolbox modules will probably be using the render loop to close off things
         // like hooks
-        GWToolbox::Instance().StartSelfDestruct();
+        GWToolbox::StartSelfDestruct();
         defer_close = true;
         return 0;
     }
 
-    if (!(!GW::GetPreGameContext() && imgui_initialized && GWToolbox::Instance().IsInitialized() && !tb_destroyed)) {
+    if (!(!GW::GetPreGameContext() && imgui_initialized && GWToolbox::IsInitialized() && !tb_destroyed)) {
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
@@ -501,13 +491,13 @@ void GWToolbox::Initialize()
         return;
     }
 
-    imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
+    imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
 
     Log::Log("Creating Toolbox\n");
 
     GW::GameThread::RegisterGameThreadCallback(&Update_Entry, [](GW::HookStatus* a) { Instance().Update(a); });
 
-    Resources::EnsureFolderExists(Resources::GetSettingsFolderPath());
+    Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
     Resources::EnsureFolderExists(Resources::GetPath(L"img"));
     Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));
     Resources::EnsureFolderExists(Resources::GetPath(L"configs"));
@@ -541,25 +531,47 @@ void GWToolbox::Initialize()
     initialized = true;
 }
 
-std::filesystem::path GWToolbox::LoadSettings(const std::filesystem::path& config, const bool fresh)
+std::filesystem::path GWToolbox::LoadSettings()
 {
-    const auto ini = OpenSettingsFile(config, fresh);
-    for (const auto m : modules_enabled) {
-        m->LoadSettings(ini);
-    }
-    for (const auto m : widgets_enabled) {
-        m->LoadSettings(ini);
-    }
-    for (const auto m : windows_enabled) {
-        m->LoadSettings(ini);
+    const auto ini = OpenSettingsFile();
+    if (!ini->location_on_disk.empty()) {
+        for (const auto m : modules_enabled) {
+            m->LoadSettings(ini);
+        }
+        for (const auto m : widgets_enabled) {
+            m->LoadSettings(ini);
+        }
+        for (const auto m : windows_enabled) {
+            m->LoadSettings(ini);
+        }
     }
     return ini->location_on_disk;
 }
 
-// ReSharper disable once CppMemberFunctionMayBeConst
-std::filesystem::path GWToolbox::SaveSettings(const std::filesystem::path& config)
+bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
 {
-    const auto ini = OpenSettingsFile(config, false);
+    static auto last_path = std::filesystem::path{};
+    if (last_path != path) {
+        if (Resources::SetSettingsFolder(path)) {
+            imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
+            settings_folder_changed = true;
+            imgui_inifile_changed = true;
+            last_path = path;
+            return true;
+        }
+        return false;
+    }
+    return true;
+}
+
+bool GWToolbox::SettingsFolderChanged()
+{
+    return settings_folder_changed;
+}
+
+std::filesystem::path GWToolbox::SaveSettings()
+{
+    const auto ini = OpenSettingsFile();
     for (const auto m : modules_enabled) {
         m->SaveSettings(ini);
     }
@@ -570,7 +582,11 @@ std::filesystem::path GWToolbox::SaveSettings(const std::filesystem::path& confi
         m->SaveSettings(ini);
     }
     ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
-    Log::LogW(L"Toolbox settings saved to %s", ini->location_on_disk.wstring().c_str());
+    const auto dir = ini->location_on_disk.parent_path();
+    const auto dirstr = dir.wstring();
+    const std::wstring printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
+    Log::LogW(L"Toolbox settings saved to %s", printable.c_str());
+    settings_folder_changed = false;
     return ini->location_on_disk;
 }
 
@@ -644,6 +660,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         ASSERT(AttachWndProcHandler());
         // Attach imgui if not already done so
         ASSERT(AttachImgui(device));
+
+        if (imgui_inifile_changed) {
+            auto& io = ImGui::GetIO();
+            io.IniFilename = imgui_inifile.bytes;
+            imgui_inifile_changed = false;
+        }
 
         if (!GW::UI::GetIsUIDrawn()) {
             return;

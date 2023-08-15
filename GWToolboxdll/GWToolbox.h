@@ -6,6 +6,8 @@
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
+#include "Windows/HeroBuildsWindow.h"
+
 DWORD __stdcall SafeThreadEntry(LPVOID mod) noexcept;
 DWORD __stdcall ThreadEntry(LPVOID);
 
@@ -33,8 +35,9 @@ public:
 
     static bool CanTerminate();
 
-    static std::filesystem::path SaveSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME);
-    static std::filesystem::path LoadSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME, bool fresh = false);
+    static std::filesystem::path SaveSettings();
+    static std::filesystem::path LoadSettings();
+    static bool SetSettingsFolder(const std::filesystem::path& path);
 
     static void StartSelfDestruct();
 
@@ -49,6 +52,7 @@ public:
     static const std::vector<ToolboxWindow*>& GetWindows();
 
     static const std::vector<ToolboxWidget*>& GetWidgets();
+    static bool SettingsFolderChanged();
 
     bool right_mouse_down = false;
 

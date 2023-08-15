@@ -22,9 +22,15 @@
 
 #include <Color.h>
 
+#include "GWToolbox.h"
+
 using namespace std::string_literals;
 
 constexpr auto ini_filename = L"Markers.ini";
+
+namespace {
+    ToolboxIni inifile{};
+}
 
 CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* n)
     : p1(x1, y1)
@@ -78,53 +84,50 @@ void CustomRenderer::LoadMarkers()
     markers.clear();
     polygons.clear();
 
-    if (inifile == nullptr) {
-        inifile = new ToolboxIni(false, false, false);
-    }
-    inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
+    ASSERT(inifile.LoadIfExists(Resources::GetSettingFile(ini_filename).c_str()) == SI_OK);
 
     // then load new
     ToolboxIni::TNamesDepend entries;
-    inifile->GetAllSections(entries);
+    inifile.GetAllSections(entries);
     for (const ToolboxIni::Entry& entry : entries) {
         const char* section = entry.pItem;
         if (!section) {
             continue;
         }
         if (strncmp(section, "customline", "customline"s.length()) == 0) {
-            lines.push_back(CustomLine(inifile->GetValue(section, "name", "line")));
-            lines.back().p1.x = static_cast<float>(inifile->GetDoubleValue(section, "x1", 0.0));
-            lines.back().p1.y = static_cast<float>(inifile->GetDoubleValue(section, "y1", 0.0));
-            lines.back().p2.x = static_cast<float>(inifile->GetDoubleValue(section, "x2", 0.0));
-            lines.back().p2.y = static_cast<float>(inifile->GetDoubleValue(section, "y2", 0.0));
-            lines.back().map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
-            lines.back().color = Colors::Load(inifile, section, "color", lines.back().color);
-            lines.back().visible = inifile->GetBoolValue(section, "visible", true);
-            lines.back().draw_on_terrain = inifile->GetBoolValue(section, "draw_on_terrain", false);
-            inifile->Delete(section, nullptr);
+            lines.push_back(CustomLine(inifile.GetValue(section, "name", "line")));
+            lines.back().p1.x = static_cast<float>(inifile.GetDoubleValue(section, "x1", 0.0));
+            lines.back().p1.y = static_cast<float>(inifile.GetDoubleValue(section, "y1", 0.0));
+            lines.back().p2.x = static_cast<float>(inifile.GetDoubleValue(section, "x2", 0.0));
+            lines.back().p2.y = static_cast<float>(inifile.GetDoubleValue(section, "y2", 0.0));
+            lines.back().map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
+            lines.back().color = Colors::Load(&inifile, section, "color", lines.back().color);
+            lines.back().visible = inifile.GetBoolValue(section, "visible", true);
+            lines.back().draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
+            inifile.Delete(section, nullptr);
         }
         else if (strncmp(section, "custommarker", "custommarker"s.length()) == 0) {
-            auto marker = CustomMarker(inifile->GetValue(section, "name", "marker"));
-            marker.pos.x = static_cast<float>(inifile->GetDoubleValue(section, "x", 0.0));
-            marker.pos.y = static_cast<float>(inifile->GetDoubleValue(section, "y", 0.0));
-            marker.size = static_cast<float>(inifile->GetDoubleValue(section, "size", 0.0));
-            marker.shape = static_cast<Shape>(inifile->GetLongValue(section, "shape", 0));
-            marker.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
-            marker.color = Colors::Load(inifile, section, "color", marker.color);
-            marker.color_sub = Colors::Load(inifile, section, "color_sub", marker.color_sub);
-            marker.visible = inifile->GetBoolValue(section, "visible", true);
-            marker.draw_on_terrain = inifile->GetBoolValue(section, "draw_on_terrain", false);
+            auto marker = CustomMarker(inifile.GetValue(section, "name", "marker"));
+            marker.pos.x = static_cast<float>(inifile.GetDoubleValue(section, "x", 0.0));
+            marker.pos.y = static_cast<float>(inifile.GetDoubleValue(section, "y", 0.0));
+            marker.size = static_cast<float>(inifile.GetDoubleValue(section, "size", 0.0));
+            marker.shape = static_cast<Shape>(inifile.GetLongValue(section, "shape", 0));
+            marker.map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
+            marker.color = Colors::Load(&inifile, section, "color", marker.color);
+            marker.color_sub = Colors::Load(&inifile, section, "color_sub", marker.color_sub);
+            marker.visible = inifile.GetBoolValue(section, "visible", true);
+            marker.draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
             markers.push_back(marker);
-            inifile->Delete(section, nullptr);
+            inifile.Delete(section, nullptr);
         }
         else if (strncmp(section, "custompolygon", "custompolygon"s.length()) == 0) {
-            auto polygon = CustomPolygon(inifile->GetValue(section, "name", "polygon"));
+            auto polygon = CustomPolygon(inifile.GetValue(section, "name", "polygon"));
             for (auto i = 0; i < CustomPolygon::max_points; i++) {
                 GW::Vec2f vec;
                 vec.x = static_cast<float>(
-                    inifile->GetDoubleValue(section, ("point["s + std::to_string(i) + "].x").c_str(), 0.f));
+                    inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].x").c_str(), 0.f));
                 vec.y = static_cast<float>(
-                    inifile->GetDoubleValue(section, ("point["s + std::to_string(i) + "].y").c_str(), 0.f));
+                    inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].y").c_str(), 0.f));
                 if (vec.x != 0.f || vec.y != 0.f) {
                     polygon.points.emplace_back(vec);
                 }
@@ -132,40 +135,44 @@ void CustomRenderer::LoadMarkers()
                     break;
                 }
             }
-            polygon.filled = inifile->GetBoolValue(section, "filled", polygon.filled);
-            polygon.color = Colors::Load(inifile, section, "color", polygon.color);
-            polygon.color_sub = Colors::Load(inifile, section, "color_sub", polygon.color_sub);
-            polygon.map = static_cast<GW::Constants::MapID>(inifile->GetLongValue(section, "map", 0));
-            polygon.visible = inifile->GetBoolValue(section, "visible", true);
-            polygon.draw_on_terrain = inifile->GetBoolValue(section, "draw_on_terrain", false);
+            polygon.filled = inifile.GetBoolValue(section, "filled", polygon.filled);
+            polygon.color = Colors::Load(&inifile, section, "color", polygon.color);
+            polygon.color_sub = Colors::Load(&inifile, section, "color_sub", polygon.color_sub);
+            polygon.map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
+            polygon.visible = inifile.GetBoolValue(section, "visible", true);
+            polygon.draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
             polygons.push_back(polygon);
-            inifile->Delete(section, nullptr);
+            inifile.Delete(section, nullptr);
         }
     }
 
-    markers_changed = false;
+    marker_file_dirty = false;
+    markers_changed = true;
 }
 
-void CustomRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
+void CustomRenderer::SaveSettings(ToolboxIni* ini, const char* section)
 {
     Colors::Save(ini, section, "color_custom_markers", color);
     SaveMarkers();
 }
 
-void CustomRenderer::SaveMarkers() const
+void CustomRenderer::SaveMarkers()
 {
     // clear markers from ini
     // then load new
-    if (markers_changed) {
+    if (marker_file_dirty || GWToolbox::SettingsFolderChanged()) {
         ToolboxIni::TNamesDepend entries;
-        inifile->GetAllSections(entries);
+        inifile.GetAllSections(entries);
         for (const ToolboxIni::Entry& entry : entries) {
             const char* section = entry.pItem;
-            if (strncmp(section, "customline", 10) == 0) {
-                inifile->Delete(section, nullptr);
+            if (strncmp(section, "customline", "customline"s.length()) == 0) {
+                inifile.Delete(section, nullptr);
             }
-            if (strncmp(section, "custommarker", 12) == 0) {
-                inifile->Delete(section, nullptr);
+            if (strncmp(section, "custommarker", "custommarker"s.length()) == 0) {
+                inifile.Delete(section, nullptr);
+            }
+            if (strncmp(section, "custompolygon", "custompolygon"s.length()) == 0) {
+                inifile.Delete(section, nullptr);
             }
         }
 
@@ -174,51 +181,52 @@ void CustomRenderer::SaveMarkers() const
             const CustomLine& line = lines[i];
             char section[32];
             snprintf(section, 32, "customline%03d", i);
-            inifile->SetValue(section, "name", line.name);
-            inifile->SetDoubleValue(section, "x1", line.p1.x);
-            inifile->SetDoubleValue(section, "y1", line.p1.y);
-            inifile->SetDoubleValue(section, "x2", line.p2.x);
-            inifile->SetDoubleValue(section, "y2", line.p2.y);
-            Colors::Save(inifile, section, "color", line.color);
-            inifile->SetLongValue(section, "map", static_cast<long>(line.map));
-            inifile->SetBoolValue(section, "visible", line.visible);
-            inifile->SetBoolValue(section, "draw_on_terrain", line.draw_on_terrain);
+            inifile.SetValue(section, "name", line.name);
+            inifile.SetDoubleValue(section, "x1", line.p1.x);
+            inifile.SetDoubleValue(section, "y1", line.p1.y);
+            inifile.SetDoubleValue(section, "x2", line.p2.x);
+            inifile.SetDoubleValue(section, "y2", line.p2.y);
+            Colors::Save(&inifile, section, "color", line.color);
+            inifile.SetLongValue(section, "map", static_cast<long>(line.map));
+            inifile.SetBoolValue(section, "visible", line.visible);
+            inifile.SetBoolValue(section, "draw_on_terrain", line.draw_on_terrain);
         }
         for (auto i = 0u; i < markers.size(); i++) {
             const CustomMarker& marker = markers[i];
             char section[32];
             snprintf(section, 32, "custommarker%03d", i);
-            inifile->SetValue(section, "name", marker.name);
-            inifile->SetDoubleValue(section, "x", marker.pos.x);
-            inifile->SetDoubleValue(section, "y", marker.pos.y);
-            inifile->SetDoubleValue(section, "size", marker.size);
-            inifile->SetLongValue(section, "shape", static_cast<long>(marker.shape));
-            inifile->SetLongValue(section, "map", static_cast<long>(marker.map));
-            inifile->SetBoolValue(section, "visible", marker.visible);
-            inifile->SetBoolValue(section, "draw_on_terrain", marker.draw_on_terrain);
-            Colors::Save(inifile, section, "color", marker.color);
-            Colors::Save(inifile, section, "color_sub", marker.color_sub);
+            inifile.SetValue(section, "name", marker.name);
+            inifile.SetDoubleValue(section, "x", marker.pos.x);
+            inifile.SetDoubleValue(section, "y", marker.pos.y);
+            inifile.SetDoubleValue(section, "size", marker.size);
+            inifile.SetLongValue(section, "shape", static_cast<long>(marker.shape));
+            inifile.SetLongValue(section, "map", static_cast<long>(marker.map));
+            inifile.SetBoolValue(section, "visible", marker.visible);
+            inifile.SetBoolValue(section, "draw_on_terrain", marker.draw_on_terrain);
+            Colors::Save(&inifile, section, "color", marker.color);
+            Colors::Save(&inifile, section, "color_sub", marker.color_sub);
         }
         for (auto i = 0u; i < polygons.size(); i++) {
             const CustomPolygon& polygon = polygons[i];
             char section[32];
             snprintf(section, 32, "custompolygon%03d", i);
             for (auto j = 0u; j < polygon.points.size(); j++) {
-                inifile->SetDoubleValue(
+                inifile.SetDoubleValue(
                     section, ("point["s + std::to_string(j) + "].x").c_str(), polygon.points.at(j).x);
-                inifile->SetDoubleValue(
+                inifile.SetDoubleValue(
                     section, ("point["s + std::to_string(j) + "].y").c_str(), polygon.points.at(j).y);
             }
-            Colors::Save(inifile, section, "color", polygon.color);
-            Colors::Save(inifile, section, "color_sub", polygon.color_sub);
-            inifile->SetValue(section, "name", polygon.name);
-            inifile->SetLongValue(section, "map", static_cast<long>(polygon.map));
-            inifile->SetBoolValue(section, "visible", polygon.visible);
-            inifile->SetBoolValue(section, "draw_on_terrain", polygon.draw_on_terrain);
-            inifile->SetBoolValue(section, "filled", polygon.filled);
+            Colors::Save(&inifile, section, "color", polygon.color);
+            Colors::Save(&inifile, section, "color_sub", polygon.color_sub);
+            inifile.SetValue(section, "name", polygon.name);
+            inifile.SetLongValue(section, "map", static_cast<long>(polygon.map));
+            inifile.SetBoolValue(section, "visible", polygon.visible);
+            inifile.SetBoolValue(section, "draw_on_terrain", polygon.draw_on_terrain);
+            inifile.SetBoolValue(section, "filled", polygon.filled);
         }
 
-        inifile->SaveFile(Resources::GetPath(ini_filename).c_str());
+        ASSERT(inifile.SaveFile(Resources::GetSettingFile(ini_filename).c_str()) == SI_OK);
+        marker_file_dirty = false;
     }
 }
 
@@ -603,6 +611,7 @@ void CustomRenderer::DrawSettings()
     }
     if (markers_changed) {
         Minimap::Instance().game_world_renderer.TriggerSyncAllMarkers();
+        marker_file_dirty = true;
         markers_changed = false;
         Invalidate();
     }

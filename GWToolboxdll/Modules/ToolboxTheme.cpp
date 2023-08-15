@@ -5,6 +5,8 @@
 #include <Modules/Resources.h>
 #include <Modules/ToolboxTheme.h>
 
+#include "GWToolbox.h"
+
 constexpr auto IniFilename = L"Theme.ini";
 // @Enhancement: Allow users to save different layouts by changing this variable in settings
 constexpr auto WindowPositionsFilename = L"Layout.ini";
@@ -17,17 +19,17 @@ namespace {
             *out = new ToolboxIni(false, false, false);
             reload_from_disk = true;
         }
-        if (!reload_from_disk) {
+        const auto path = Resources::GetSettingFile(filename);
+        if (!reload_from_disk && GWToolbox::SettingsFolderChanged()) {
             return *out;
         }
-        const auto path = Resources::GetPath(filename);
         if (!exists(path)) {
             Log::LogW(L"File %s doesn't exist.", path.c_str());
             return *out;
         }
         const auto tmp = new ToolboxIni(false, false, false);
-        ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
-        delete*out;
+        ASSERT(tmp->LoadIfExists(path) == SI_OK);
+        delete *out;
         *out = tmp;
         return *out;
     }
@@ -138,7 +140,7 @@ void ToolboxTheme::SaveUILayout()
         snprintf(key, 128, "_%s_Collapsed", window->Name);
         ini->SetBoolValue(window_ini_section, key, window->Collapsed);
     }
-    ASSERT(Resources::SaveIniToFile(WindowPositionsFilename, ini) == 0);
+    ASSERT(Resources::SaveIniToFile(Resources::GetSettingFile(WindowPositionsFilename), ini) == 0);
 }
 
 ToolboxIni* ToolboxTheme::GetLayoutIni(const bool reload)
@@ -226,7 +228,7 @@ void ToolboxTheme::SaveSettings(ToolboxIni* ini)
         Colors::Save(inifile, IniSection, name, color);
     }
 
-    ASSERT(Resources::SaveIniToFile(IniFilename, inifile) == 0);
+    ASSERT(Resources::SaveIniToFile(Resources::GetSettingFile(IniFilename), inifile) == 0);
 
     SaveUILayout();
 }

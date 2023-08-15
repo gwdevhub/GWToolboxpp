@@ -14,6 +14,7 @@ namespace GW::Constants {
 }
 
 class Resources : public ToolboxModule {
+    friend class GWToolbox;
     Resources();
     ~Resources() override;
 
@@ -45,12 +46,17 @@ public:
     static void OpenFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
     static void SaveFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
 
-    static int LoadIniFromFile(const wchar_t* filename, ToolboxIni* inifile);
     static int LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile);
-    static int SaveIniToFile(const wchar_t* filename, const ToolboxIni* inifile);
     static int SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* inifile);
 
+    static std::filesystem::path GetComputerFolderPath();
     static std::filesystem::path GetSettingsFolderPath();
+
+private:
+    static bool SetSettingsFolder(const std::filesystem::path& foldername);
+
+public:
+    static std::filesystem::path GetSettingFile(const std::filesystem::path& file);
     static std::filesystem::path GetPath(const std::filesystem::path& file);
     static std::filesystem::path GetPath(const std::filesystem::path& folder, const std::filesystem::path& file);
     static HRESULT ResolveShortcut(const std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path);

@@ -29,6 +29,8 @@
 #include <Modules/Resources.h>
 #include <Windows/PartySearchWindow.h>
 
+#include "GWToolbox.h"
+
 // Every connection cost 30 seconds.
 // You have 2 tries.
 // After that, you can try every 30 seconds.
@@ -772,7 +774,7 @@ void PartySearchWindow::LoadSettings(ToolboxIni* ini)
     filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
 
     std::ifstream alert_file;
-    alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
+    alert_file.open(Resources::GetSettingFile(L"AlertKeywords.txt"));
     if (alert_file.is_open()) {
         alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
         alert_file.close();
@@ -788,9 +790,9 @@ void PartySearchWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
     ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
 
-    if (alertfile_dirty) {
+    if (alertfile_dirty || GWToolbox::SettingsFolderChanged()) {
         std::ofstream bycontent_file;
-        bycontent_file.open(Resources::GetPath(L"AlertKeywords.txt"));
+        bycontent_file.open(Resources::GetSettingFile(L"AlertKeywords.txt"));
         if (bycontent_file.is_open()) {
             bycontent_file.write(alert_buf, strlen(alert_buf));
             bycontent_file.close();

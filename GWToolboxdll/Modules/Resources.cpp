@@ -21,6 +21,7 @@
 #include <include/nfd.h>
 #include <nfd_common.c>
 #include <nfd_win.cpp>
+#include <wolfssl/wolfcrypt/asn.h>
 
 namespace {
     const char* d3dErrorMessage(HRESULT code)
@@ -51,7 +52,7 @@ namespace {
     std::map<uint32_t, IDirect3DTexture9**> profession_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::map<uint32_t, GuiUtils::EncString*> encoded_string_ids;
-    std::string ns;
+    std::filesystem::path current_settings_folder;
     constexpr size_t MAX_WORKERS = 5;
     const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
@@ -371,7 +372,7 @@ void Resources::EndLoading() const
     });
 }
 
-std::filesystem::path Resources::GetSettingsFolderPath()
+std::filesystem::path Resources::GetComputerFolderPath()
 {
     std::filesystem::path computer_name;
     ASSERT(PathGetComputerName(computer_name));
@@ -385,11 +386,42 @@ std::filesystem::path Resources::GetSettingsFolderPath()
     return docpath;
 }
 
-std::filesystem::path Resources::GetPath(const std::filesystem::path& file) { return GetSettingsFolderPath() / file; }
+std::filesystem::path Resources::GetSettingsFolderPath()
+{
+    const auto computer_path = GetComputerFolderPath();
+    return current_settings_folder.empty() ? computer_path : computer_path / current_settings_folder;
+}
 
-std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, const std::filesystem::path& file) { return GetSettingsFolderPath() / folder / file; }
+bool Resources::SetSettingsFolder(const std::filesystem::path& foldername)
+{
+    if (foldername.empty()) {
+        current_settings_folder.clear();
+    }
+    else {
+        current_settings_folder = L"configs" / foldername;
+    }
+    return EnsureFolderExists(GetSettingsFolderPath());
+}
 
-bool Resources::EnsureFolderExists(const std::filesystem::path& path) { return exists(path) || create_directory(path); }
+std::filesystem::path Resources::GetSettingFile(const std::filesystem::path& file)
+{
+    return GetSettingsFolderPath() / file;
+}
+
+std::filesystem::path Resources::GetPath(const std::filesystem::path& file)
+{
+    return GetComputerFolderPath() / file;
+}
+
+std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, const std::filesystem::path& file)
+{
+    return GetComputerFolderPath() / folder / file;
+}
+
+bool Resources::EnsureFolderExists(const std::filesystem::path& path)
+{
+    return exists(path) || create_directory(path);
+}
 
 utf8::string Resources::GetPathUtf8(const std::wstring& file)
 {
@@ -657,25 +689,10 @@ bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_
     return true;
 }
 
-// Load from resource file name on disk with 3 retries
-int Resources::LoadIniFromFile(const wchar_t* filename, ToolboxIni* inifile)
-{
-    ASSERT(filename && *filename);
-    const auto absolute_path = GetPath(filename);
-    return LoadIniFromFile(absolute_path, inifile);
-}
-
 // Load from absolute file path on disk with 3 retries
 int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile)
 {
     return inifile->LoadFile(absolute_path);
-}
-
-int Resources::SaveIniToFile(const wchar_t* filename, const ToolboxIni* inifile)
-{
-    ASSERT(filename && *filename);
-    const auto absolute_path = GetPath(filename);
-    return SaveIniToFile(absolute_path, inifile);
 }
 
 int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* ini)

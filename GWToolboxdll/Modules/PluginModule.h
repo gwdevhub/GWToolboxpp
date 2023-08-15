@@ -4,7 +4,7 @@
 #include <../plugins/Base/ToolboxPlugin.h>
 
 class PluginModule final : public ToolboxUIElement {
-    PluginModule();
+    PluginModule() = default;
     ~PluginModule() override = default;
 
 public:

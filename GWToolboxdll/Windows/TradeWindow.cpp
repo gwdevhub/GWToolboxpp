@@ -22,6 +22,8 @@
 #include <Modules/Resources.h>
 #include <Windows/TradeWindow.h>
 
+#include "GWToolbox.h"
+
 // Every connection cost 30 seconds.
 // You have 2 tries.
 // After that, you can try every 30 seconds.
@@ -680,7 +682,7 @@ void TradeWindow::LoadSettings(ToolboxIni* ini)
     is_kamadan_chat = ini->GetBoolValue(Name(), VAR_NAME(is_kamadan_chat), is_kamadan_chat);
 
     std::ifstream alert_file;
-    alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
+    alert_file.open(Resources::GetSettingFile(L"AlertKeywords.txt"));
     if (alert_file.is_open()) {
         alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
         alert_file.close();
@@ -700,9 +702,9 @@ void TradeWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(filter_local_trade), filter_local_trade);
     ini->SetBoolValue(Name(), VAR_NAME(is_kamadan_chat), is_kamadan_chat);
 
-    if (alertfile_dirty) {
+    if (alertfile_dirty || GWToolbox::SettingsFolderChanged()) {
         std::ofstream bycontent_file;
-        bycontent_file.open(Resources::GetPath(L"AlertKeywords.txt"));
+        bycontent_file.open(Resources::GetSettingFile(L"AlertKeywords.txt"));
         if (bycontent_file.is_open()) {
             bycontent_file.write(alert_buf, strlen(alert_buf));
             bycontent_file.close();

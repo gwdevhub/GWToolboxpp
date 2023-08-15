@@ -481,7 +481,7 @@ void PartyDamage::LoadSettings(ToolboxIni* ini)
     if (inifile == nullptr) {
         inifile = new ToolboxIni(false, false, false);
     }
-    inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
+    inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
     ToolboxIni::TNamesDepend keys;
     inifile->GetAllKeys(IniSection, keys);
     for (const ToolboxIni::Entry& key : keys) {
@@ -517,11 +517,11 @@ void PartyDamage::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
     ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
 
-    for (const std::pair<DWORD, long>& item : hp_map) {
-        std::string key = std::to_string(item.first);
-        inifile->SetLongValue(IniSection, key.c_str(), item.second, nullptr, false, true);
+    for (const auto& [player_number, hp] : hp_map) {
+        std::string key = std::to_string(player_number);
+        inifile->SetLongValue(IniSection, key.c_str(), hp, nullptr, false, true);
     }
-    inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
+    ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);
 }
 
 void PartyDamage::DrawSettingsInternal()

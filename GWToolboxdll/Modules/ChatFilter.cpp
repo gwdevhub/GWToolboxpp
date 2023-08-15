@@ -23,6 +23,8 @@
 #include <Utils/ToolboxUtils.h>
 #include <Utils/GuiUtils.h>
 
+#include "GWToolbox.h"
+
 //#define PRINT_CHAT_PACKETS
 
 namespace {
@@ -707,8 +709,8 @@ namespace {
         if (status->blocked) {
             return;
         }
-        uint32_t channel = 0;
-        const wchar_t* message = nullptr;
+        uint32_t channel;
+        const wchar_t* message;
         switch (packet->header) {
             case GAME_SMSG_CHAT_MESSAGE_GLOBAL: {
                 const auto p = static_cast<GW::Packet::StoC::MessageGlobal*>(packet);
@@ -821,28 +823,24 @@ void ChatFilter::LoadSettings(ToolboxIni* ini)
     strcpy_s(bycontent_word_buf, "");
     strcpy_s(bycontent_regex_buf, "");
 
-    {
-        std::ifstream file;
-        file.open(Resources::GetPath(L"FilterByContent.txt"));
-        if (file.is_open()) {
-            file.get(bycontent_word_buf, FILTER_BUF_SIZE, '\0');
-            file.close();
-            ParseBuffer(bycontent_word_buf, bycontent_words);
-        }
+    std::ifstream file1;
+    file1.open(Resources::GetSettingFile(L"FilterByContent.txt"));
+    if (file1.is_open()) {
+        file1.get(bycontent_word_buf, FILTER_BUF_SIZE, '\0');
+        file1.close();
+        ParseBuffer(bycontent_word_buf, bycontent_words);
     }
-    {
-        std::ifstream file;
-        file.open(Resources::GetPath(L"FilterByContent_regex.txt"));
-        if (file.is_open()) {
-            file.get(bycontent_regex_buf, FILTER_BUF_SIZE, '\0');
-            file.close();
-            ParseBuffer(bycontent_regex_buf, bycontent_regex);
-        }
+    std::ifstream file2;
+    file2.open(Resources::GetSettingFile(L"FilterByContent_regex.txt"));
+    if (file2.is_open()) {
+        file2.get(bycontent_regex_buf, FILTER_BUF_SIZE, '\0');
+        file2.close();
+        ParseBuffer(bycontent_regex_buf, bycontent_regex);
     }
 
 #ifdef EXTENDED_IGNORE_LIST
     std::ifstream byauthor_file;
-    byauthor_file.open(Resources::GetPath(L"FilterByAuthor.txt"));
+    byauthor_file.open(Resources::GetSettingFile(L"FilterByAuthor.txt"));
     if (byauthor_file.is_open()) {
         byauthor_file.get(byauthor_buf, FILTER_BUF_SIZE, '\0');
         byauthor_file.close();
@@ -912,15 +910,15 @@ void ChatFilter::SaveSettings(ToolboxIni* ini)
         bycontent_filedirty = true;
     }
 
-    if (bycontent_filedirty) {
+    if (bycontent_filedirty || GWToolbox::SettingsFolderChanged()) {
         std::ofstream file1;
-        file1.open(Resources::GetPath(L"FilterByContent.txt"));
+        file1.open(Resources::GetSettingFile(L"FilterByContent.txt"));
         if (file1.is_open()) {
             file1.write(bycontent_word_buf, strlen(bycontent_word_buf));
             file1.close();
         }
         std::ofstream file2;
-        file2.open(Resources::GetPath(L"FilterByContent_regex.txt"));
+        file2.open(Resources::GetSettingFile(L"FilterByContent_regex.txt"));
         if (file2.is_open()) {
             file2.write(bycontent_regex_buf, strlen(bycontent_regex_buf));
             file2.close();
@@ -931,7 +929,7 @@ void ChatFilter::SaveSettings(ToolboxIni* ini)
 #ifdef EXTENDED_IGNORE_LIST
     if (byauthor_filedirty) {
         std::ofstream byauthor_file;
-        byauthor_file.open(Resources::GetPath(L"FilterByAuthor.txt"));
+        byauthor_file.open(Resources::GetSettingFile(L"FilterByAuthor.txt"));
         if (byauthor_file.is_open()) {
             byauthor_file.write(byauthor_buf, strlen(byauthor_buf));
             byauthor_file.close();

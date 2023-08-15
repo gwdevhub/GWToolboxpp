@@ -23,6 +23,8 @@
 #include <Modules/Resources.h>
 #include <Windows/HeroBuildsWindow.h>
 
+#include "GWToolbox.h"
+
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
 namespace {
@@ -732,7 +734,7 @@ void HeroBuildsWindow::LoadFromFile()
     // clear builds from toolbox
     teambuilds.clear();
 
-    inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
+    inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
 
     // then load
     ToolboxIni::TNamesDepend entries;
@@ -780,7 +782,7 @@ void HeroBuildsWindow::LoadFromFile()
 void HeroBuildsWindow::SaveToFile() const
 {
     constexpr size_t buffer_size = 16;
-    if (builds_changed) {
+    if (builds_changed || GWToolbox::SettingsFolderChanged()) {
         // clear builds from ini
         inifile->Reset();
 
@@ -812,7 +814,7 @@ void HeroBuildsWindow::SaveToFile() const
             }
         }
 
-        inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
+        ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);
     }
 }
 

@@ -11,7 +11,7 @@
 #include <string>
 
 namespace {
-    wchar_t pluginsfoldername[MAX_PATH]{};
+    std::wstring pluginsfoldername;
 
     const char* plugins_enabled_section = "Plugins Enabled";
 
@@ -89,7 +89,7 @@ namespace {
         ImGuiAllocFns fns;
         ImGui::GetAllocatorFunctions(&fns.alloc_func, &fns.free_func, &fns.user_data);
         plugin.instance->Initialize(context, fns, GWToolbox::Instance().GetDLLModule(), &plugin.visible);
-        plugin.instance->LoadSettings(pluginsfoldername);
+        plugin.instance->LoadSettings(pluginsfoldername.c_str());
         plugin.initialized = true;
         return true;
     }
@@ -110,10 +110,9 @@ namespace {
             fs::path file_path = p.path();
             fs::path ext = file_path.extension();
             if (ext == ".lnk") {
-                if (!SUCCEEDED(Resources::ResolveShortcut(file_path, file_path))) {
-                    continue;
+                if (SUCCEEDED(Resources::ResolveShortcut(file_path, file_path))) {
+                    ext = file_path.extension();
                 }
-                ext = file_path.extension();
             }
             if (ext == ".dll") {
                 auto found = std::ranges::find_if(plugins, [file_path](const auto plugin) {
@@ -126,13 +125,6 @@ namespace {
         }
     }
 }
-
-PluginModule::PluginModule()
-{
-    const auto wpath = Resources::GetPath(L"plugins");
-    wcscpy_s(pluginsfoldername, wpath.c_str());
-}
-
 
 void PluginModule::DrawSettingsInternal()
 {
@@ -210,6 +202,7 @@ std::vector<PluginModule::Plugin*> PluginModule::GetPlugins()
 
 void PluginModule::Initialize()
 {
+    pluginsfoldername = Resources::GetPath(L"plugins");
     ToolboxUIElement::Initialize();
     RefreshDlls();
 }
@@ -273,7 +266,7 @@ void PluginModule::SaveSettings(ToolboxIni* ini)
 {
     ini->Delete(plugins_enabled_section, nullptr);
     for (const auto plugin : loaded_plugins) {
-        plugin->instance->SaveSettings(pluginsfoldername);
+        plugin->instance->SaveSettings(pluginsfoldername.c_str());
         ini->SetBoolValue(plugins_enabled_section, plugin->path.filename().string().c_str(), plugin->visible);
     }
 }

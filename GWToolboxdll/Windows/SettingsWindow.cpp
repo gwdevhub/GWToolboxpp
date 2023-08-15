@@ -79,7 +79,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         ImGui::Text("(Debug)");
 #endif
         const float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2;
-        if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
+        if (ImGui::Button("Open current settings folder", ImVec2(w, 0))) {
             if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
                 ShellExecuteW(nullptr, L"open", Resources::GetSettingsFolderPath().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
             }
@@ -190,14 +190,14 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         }
 
         if (ImGui::Button("Save Now", ImVec2(w, 0))) {
-            GWToolbox::Instance().SaveSettings();
+            GWToolbox::SaveSettings();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Toolbox normally saves settings on exit.\nClick to save to disk now.");
         }
         ImGui::SameLine();
         if (ImGui::Button("Load Now", ImVec2(w, 0))) {
-            GWToolbox::Instance().LoadSettings();
+            GWToolbox::LoadSettings();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Toolbox normally loads settings on launch.\nClick to re-load from disk now.");

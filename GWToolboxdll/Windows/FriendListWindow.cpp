@@ -1240,7 +1240,7 @@ void FriendListWindow::LoadFromFile()
 
         inifile->Reset();
         inifile->SetMultiKey(true);
-        inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
+        inifile->LoadFile(Resources::GetSettingFile(ini_filename).c_str());
 
         ToolboxIni::TNamesDepend entries;
         inifile->GetAllSections(entries);
@@ -1289,7 +1289,7 @@ void FriendListWindow::SaveToFile()
         friends_changed = false;
         inifile->Reset();
         // Load the existing file in, and amend the info
-        inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
+        inifile->LoadFile(Resources::GetSettingFile(ini_filename).c_str());
         inifile->SetMultiKey(true);
         if (friends.empty()) {
             return; // Error, should have at least 1 friend
@@ -1320,6 +1320,6 @@ void FriendListWindow::SaveToFile()
                 inifile->SetValue(uuid, "charname", charname);
             }
         }
-        inifile->SaveFile(Resources::GetPath(ini_filename).c_str());
+        ASSERT(inifile->SaveFile(Resources::GetSettingFile(ini_filename).c_str()) == SI_OK);
     });
 }

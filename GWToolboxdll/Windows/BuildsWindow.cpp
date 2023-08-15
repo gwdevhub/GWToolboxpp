@@ -26,6 +26,8 @@
 #include <Windows/BuildsWindow.h>
 #include <Windows/PconsWindow.h>
 
+#include "GWToolbox.h"
+
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 
 bool order_by_changed = false;
@@ -933,7 +935,7 @@ void BuildsWindow::LoadFromFile()
     if (inifile == nullptr) {
         inifile = new ToolboxIni(false, false, false);
     }
-    inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
+    inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
 
     // then load
     preferred_skill_order_builds.clear();
@@ -991,7 +993,7 @@ void BuildsWindow::LoadFromFile()
 
 void BuildsWindow::SaveToFile()
 {
-    if (builds_changed) {
+    if (builds_changed || GWToolbox::SettingsFolderChanged()) {
         if (inifile == nullptr) {
             inifile = new ToolboxIni();
         }
@@ -1037,8 +1039,7 @@ void BuildsWindow::SaveToFile()
                     inifile->SetValue(section, pconskey, pconsval.c_str());
                 }
             }
+            ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);
         }
-
-        inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
     }
 }

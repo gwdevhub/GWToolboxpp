@@ -60,6 +60,8 @@
 #include <Modules/DialogModule.h>
 #include <GWCA/Managers/QuestMgr.h>
 
+#include "Resources.h"
+
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
@@ -1488,11 +1490,21 @@ void ChatCommands::CmdTB(const wchar_t* message, const int argc, LPWSTR* argv)
         }
         else if (arg1 == L"save") {
             // e.g. /tb save
-            GWToolbox::Instance().SaveSettings();
+            GWToolbox::SetSettingsFolder({});
+            const auto file_location = GWToolbox::SaveSettings();
+            const auto dir = file_location.parent_path();
+            const auto dirstr = dir.wstring();
+            const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
+            Log::InfoW(L"Settings saved to %s", printable.c_str());
         }
         else if (arg1 == L"load") {
             // e.g. /tb load
-            GWToolbox::Instance().LoadSettings(GWTOOLBOX_INI_FILENAME, true);
+            GWToolbox::SetSettingsFolder({});
+            const auto file_location = GWToolbox::LoadSettings();
+            const auto dir = file_location.parent_path();
+            const auto dirstr = dir.wstring();
+            const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
+            Log::InfoW(L"Settings loaded from %s", printable.c_str());
         }
         else if (arg1 == L"reset") {
             // e.g. /tb reset
@@ -1561,13 +1573,23 @@ void ChatCommands::CmdTB(const wchar_t* message, const int argc, LPWSTR* argv)
     }
     else if (arg1 == L"save") {
         // e.g. /tb save pure
-        const auto file_location = GWToolbox::Instance().SaveSettings(GuiUtils::SanitiseFilename(arg2.c_str()));
-        Log::InfoW(L"Settings saved to %s", file_location.c_str());
+        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2.c_str());
+        GWToolbox::SetSettingsFolder(sanitised_foldername);
+        const auto file_location = GWToolbox::SaveSettings();
+        const auto dir = file_location.parent_path();
+        const auto dirstr = dir.wstring();
+        const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
+        Log::InfoW(L"Settings saved to %s", printable.c_str());
     }
     else if (arg1 == L"load") {
         // e.g. /tb load tas
-        const auto file_location = GWToolbox::Instance().LoadSettings(GuiUtils::SanitiseFilename(arg2.c_str()), true);
-        Log::InfoW(L"Settings loaded from %s", file_location.c_str());
+        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2.c_str());
+        GWToolbox::SetSettingsFolder(sanitised_foldername);
+        const auto file_location = GWToolbox::LoadSettings();
+        const auto dir = file_location.parent_path();
+        const auto dirstr = dir.wstring();
+        const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
+        Log::InfoW(L"Settings loaded from %s", printable.c_str());
     }
     else {
         // Invalid argument

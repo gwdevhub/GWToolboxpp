@@ -70,7 +70,7 @@ bool Log::InitializeLog()
     SetConsoleTitle("GWTB++ Debug Console");
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 #else
-    Resources::EnsureFolderExists(Resources::GetSettingsFolderPath());
+    Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
     logfile = _wfreopen(Resources::GetPath(L"log.txt").c_str(), L"w", stdout);
     if (!logfile) {
         return false;

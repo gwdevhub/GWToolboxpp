@@ -24,6 +24,8 @@
 #include <Widgets/Minimap/AgentRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
 
+#include "GWToolbox.h"
+
 constexpr auto AGENTCOLOR_INIFILENAME = L"AgentColors.ini";
 
 namespace {
@@ -217,7 +219,7 @@ void AgentRenderer::LoadCustomAgents()
     if (!agentcolorinifile) {
         agentcolorinifile = new ToolboxIni();
     }
-    ASSERT(agentcolorinifile->LoadIfExists(Resources::GetPath(AGENTCOLOR_INIFILENAME)) == SI_OK);
+    ASSERT(agentcolorinifile->LoadIfExists(Resources::GetSettingFile(AGENTCOLOR_INIFILENAME)) == SI_OK);
 
     custom_agents.clear();
     custom_agents_map.clear();
@@ -279,7 +281,7 @@ void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
 
 void AgentRenderer::SaveCustomAgents() const
 {
-    if (agentcolors_changed && agentcolorinifile != nullptr) {
+    if ((agentcolors_changed || GWToolbox::SettingsFolderChanged()) && agentcolorinifile != nullptr) {
         // clear colors from ini
         agentcolorinifile->Reset();
 
@@ -289,7 +291,7 @@ void AgentRenderer::SaveCustomAgents() const
             snprintf(buf, 256, "customagent%03d", i);
             custom_agents[i]->SaveSettings(agentcolorinifile, buf);
         }
-        ASSERT(agentcolorinifile->SaveFile(Resources::GetPath(AGENTCOLOR_INIFILENAME).c_str()) == SI_OK);
+        ASSERT(agentcolorinifile->SaveFile(Resources::GetSettingFile(AGENTCOLOR_INIFILENAME).c_str()) == SI_OK);
     }
 }
 

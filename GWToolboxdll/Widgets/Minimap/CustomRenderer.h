@@ -93,9 +93,9 @@ public:
     void DrawMarkerSettings();
     void DrawPolygonSettings();
     void LoadSettings(const ToolboxIni* ini, const char* section);
-    void SaveSettings(ToolboxIni* ini, const char* section) const;
+    void SaveSettings(ToolboxIni* ini, const char* section);
     void LoadMarkers();
-    void SaveMarkers() const;
+    void SaveMarkers();
 
     [[nodiscard]] const std::vector<CustomLine>& GetLines() const { return lines; }
     [[nodiscard]] const std::vector<CustomPolygon>& GetPolys() const { return polygons; }
@@ -126,11 +126,8 @@ private:
 
     int show_polygon_details = -1;
     bool markers_changed = false;
+    bool marker_file_dirty = true;
     std::vector<CustomLine> lines{};
     std::vector<CustomMarker> markers{};
     std::vector<CustomPolygon> polygons{};
-
-    ToolboxIni* inifile = nullptr;
-
-    bool initialized = false;
 };

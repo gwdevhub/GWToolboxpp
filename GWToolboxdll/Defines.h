@@ -5,7 +5,7 @@
 
 #define DIRECTX_REDIST_WEBSITE "https://www.microsoft.com/en-us/download/details.aspx?id=35"
 
-#define GWTOOLBOX_INI_FILENAME L"GWToolbox.ini"
+constexpr auto GWTOOLBOX_INI_FILENAME = L"GWToolbox.ini";
 
 #ifndef GWTOOLBOXDLL_VERSION
 #define GWTOOLBOXDLL_VERSION "6.0"
