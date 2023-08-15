@@ -57,9 +57,9 @@ GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
     const unsigned int col,
     const bool filled)
     : map_id(map_id)
-      , col(col)
-      , points(points)
-      , filled(filled)
+    , col(col)
+    , points(points)
+    , filled(filled)
 {
     if (filled && points.size() >= 3) {
         // (filling doesn't make sense if there is not at least enough points for one triangle)
@@ -219,7 +219,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         }
     }
 
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+    if (!Minimap::ShouldMarkersDrawOnMap()) {
         return;
     }
 

@@ -45,8 +45,8 @@ class CustomRenderer : public VBuffer {
     };
 
     struct CustomMarker final : VBuffer {
-        CustomMarker(float x, float y, float s, Shape sh, GW::Constants::MapID m, const char* n);
-        explicit CustomMarker(const char* n);
+        CustomMarker(float x, float y, float s, Shape sh, GW::Constants::MapID m, const char* _name);
+        explicit CustomMarker(const char* name);
         GW::Vec2f pos;
         float size;
         Shape shape;
@@ -65,7 +65,7 @@ class CustomRenderer : public VBuffer {
 
     struct CustomPolygon final : VBuffer {
         CustomPolygon(GW::Constants::MapID m, const char* n);
-        explicit CustomPolygon(const char* n);
+        explicit CustomPolygon(const char* name);
 
         std::vector<GW::Vec2f> points{};
         GW::Constants::MapID map;

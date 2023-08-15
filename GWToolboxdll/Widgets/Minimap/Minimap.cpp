@@ -909,6 +909,24 @@ void Minimap::Draw(IDirect3DDevice9*)
     }
 }
 
+bool Minimap::ShouldMarkersDrawOnMap()
+{
+    const auto map_has_outpost_and_explorable = [](const GW::Constants::MapID map_id) {
+        switch (map_id) {
+            case GW::Constants::MapID::Domain_of_Anguish:
+                return true;
+            default:
+                return false;
+        }
+    };
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || (
+            GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost &&
+            map_has_outpost_and_explorable(GW::Map::GetMapID()))) {
+        return false;
+            }
+    return true;
+}
+
 void Minimap::Render(IDirect3DDevice9* device)
 {
     if (compass_fix_pending) {

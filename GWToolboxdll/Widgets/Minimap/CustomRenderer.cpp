@@ -28,8 +28,8 @@ constexpr auto ini_filename = L"Markers.ini";
 
 CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* n)
     : p1(x1, y1)
-      , p2(x2, y2)
-      , map(m)
+    , p2(x2, y2)
+    , map(m)
 {
     if (n) {
         GuiUtils::StrCopy(name, n, sizeof(name));
@@ -39,19 +39,19 @@ CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const flo
     }
 };
 
-CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* n)
+CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* _name)
     : pos(x, y)
-      , size(s)
-      , shape(sh)
-      , map(m)
+    , size(s)
+    , shape(sh)
+    , map(m)
 {
-    if (n) {
-        GuiUtils::StrCopy(name, n, sizeof(name));
+    if (_name) {
+        GuiUtils::StrCopy(name, _name, sizeof(name));
     }
     else {
         GuiUtils::StrCopy(name, "marker", sizeof(name));
     }
-};
+}
 
 CustomRenderer::CustomPolygon::CustomPolygon(const GW::Constants::MapID m, const char* n)
     : map(m)
@@ -442,8 +442,8 @@ void CustomRenderer::DrawMarkerSettings()
     }
 }
 
-CustomRenderer::CustomMarker::CustomMarker(const char* n)
-    : CustomMarker(0, 0, 100.0f, Shape::LineCircle, GW::Map::GetMapID(), n)
+CustomRenderer::CustomMarker::CustomMarker(const char* name)
+    : CustomMarker(0, 0, 100.0f, Shape::LineCircle, GW::Map::GetMapID(), name)
 {
     if (const auto player = GW::Agents::GetPlayerAsAgentLiving()) {
         pos.x = player->pos.x;
@@ -451,8 +451,8 @@ CustomRenderer::CustomMarker::CustomMarker(const char* n)
     }
 }
 
-CustomRenderer::CustomPolygon::CustomPolygon(const char* n)
-    : CustomPolygon(GW::Map::GetMapID(), n) {};
+CustomRenderer::CustomPolygon::CustomPolygon(const char* name)
+    : CustomPolygon(GW::Map::GetMapID(), name) {}
 
 void CustomRenderer::DrawPolygonSettings()
 {
@@ -786,7 +786,7 @@ void CustomRenderer::CustomMarker::Render(IDirect3DDevice9* device)
 void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device)
 {
     type = D3DPT_LINESTRIP;
-    count = 48; // polycount
+    count = 48; // poly count
     const auto vertex_count = count + 1;
     D3DVertex* _vertices = nullptr;
 
@@ -838,31 +838,33 @@ void CustomRenderer::Render(IDirect3DDevice9* device)
 
 void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
 {
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        for (CustomPolygon& polygon : polygons) {
-            polygon.Render(device);
-        }
-
-        for (CustomMarker& marker : markers) {
-            marker.Render(device);
-        }
-
-        if (GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags; flags.valid()) {
-            for (const auto& flag : flags) {
-                const auto translate = DirectX::XMMatrixTranslation(flag.flag.x, flag.flag.y, 0.0f);
-                const auto scale = DirectX::XMMatrixScaling(200.0f, 200.0f, 1.0f);
-                const auto world = scale * translate;
-                device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-                linecircle.Render(device);
-            }
-        }
-        const GW::Vec3f allflag = GW::GetGameContext()->world->all_flag;
-        const auto translate = DirectX::XMMatrixTranslation(allflag.x, allflag.y, 0.0f);
-        const auto scale = DirectX::XMMatrixScaling(300.0f, 300.0f, 1.0f);
-        const auto world = scale * translate;
-        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-        linecircle.Render(device);
+    if (!Minimap::ShouldMarkersDrawOnMap()) {
+        return;
     }
+
+    for (CustomPolygon& polygon : polygons) {
+        polygon.Render(device);
+    }
+
+    for (CustomMarker& marker : markers) {
+        marker.Render(device);
+    }
+
+    if (GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags; flags.valid()) {
+        for (const auto& flag : flags) {
+            const auto translate = DirectX::XMMatrixTranslation(flag.flag.x, flag.flag.y, 0.0f);
+            const auto scale = DirectX::XMMatrixScaling(200.0f, 200.0f, 1.0f);
+            const auto world = scale * translate;
+            device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
+            linecircle.Render(device);
+        }
+    }
+    const GW::Vec3f allflag = GW::GetGameContext()->world->all_flag;
+    const auto translate = DirectX::XMMatrixTranslation(allflag.x, allflag.y, 0.0f);
+    const auto scale = DirectX::XMMatrixScaling(300.0f, 300.0f, 1.0f);
+    const auto world = scale * translate;
+    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
+    linecircle.Render(device);
 }
 
 void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
