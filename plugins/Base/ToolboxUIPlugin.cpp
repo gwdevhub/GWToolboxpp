@@ -4,8 +4,6 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Managers/ChatMgr.h>
 
-#include "Defines.h"
-
 import PluginUtils;
 
 namespace {

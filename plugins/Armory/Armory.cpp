@@ -1,6 +1,5 @@
-#include "Armory.h"
-
 #include "stl.h"
+#include "Armory.h"
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>

@@ -61,7 +61,6 @@
 #include <DirectXMath.h>
 
 // libraries
-#include <Logger.h>
 #include <ToolboxIni.h>
 
 #include <IconsFontAwesome5.h>
@@ -70,3 +69,12 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+
+#define VAR_NAME(v) (#v)
+
+#define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
+#define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
+#define LOAD_FLOAT(var) var = static_cast<float>(ini->GetDoubleValue(Name(), #var, static_cast<double>(var)));
+#define SAVE_FLOAT(var) ini->SetDoubleValue(Name(), #var, static_cast<double>(var));
+#define LOAD_UINT(var) var = static_cast<unsigned int>(ini->GetLongValue(Name(), #var, static_cast<long>(var)));
+#define SAVE_UINT(var) ini->SetLongValue(Name(), #var, static_cast<long>(var));
