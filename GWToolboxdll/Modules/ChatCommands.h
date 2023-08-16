@@ -112,7 +112,6 @@ private:
     static const wchar_t* GetRemainingArgsWstr(const wchar_t* message, int argc_start);
 
     static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t* message, int argc, const LPWSTR* argv);
-    static std::vector<PluginModule::Plugin*> MatchingPlugins(const wchar_t* message, int argc, const LPWSTR* argv);
     static GW::UI::WindowID MatchingGWWindow(const wchar_t*, int argc, const LPWSTR* argv);
 
     float cam_speed = DEFAULT_CAM_SPEED;

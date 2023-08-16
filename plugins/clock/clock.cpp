@@ -3,12 +3,7 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
-#include <imgui.h>
-#include <cstdint>
 #include <corecrt_wstdio.h>
-#include <time.h>
-
-#define _countof(var) sizeof(var) / sizeof(*var)
 
 namespace {
     char time_buf[100] = { 0 };
@@ -50,7 +45,7 @@ void Clock::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle)
         return;
-    if (!plugin_visible_ptr || !*plugin_visible_ptr)
+    if (!plugin_visible)
         return;
     ImGui::Begin("clock");
     GetTime(time_buf, _countof(time_buf));
@@ -58,9 +53,9 @@ void Clock::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-void Clock::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll, bool* visible_ptr)
+void Clock::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
-    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll, visible_ptr);
+    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
 
     GW::HookBase::Initialize();
     GW::Scanner::Initialize();

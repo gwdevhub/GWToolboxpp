@@ -17,9 +17,6 @@
 #include "Helpers.h"
 #include "ImGuiAddons.h"
 
-#include <filesystem>
-#include <SimpleIni.h>
-
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
     static Armory instance;
@@ -74,8 +71,6 @@ void Armory::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle)
         return;
-    if (!plugin_visible_ptr || !*plugin_visible_ptr)
-        return;
     GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
     if (!player_agent)
         return;
@@ -89,7 +84,7 @@ void Armory::Draw(IDirect3DDevice9*)
 
     // constexpr ImVec2 window_size(330.f, 208.f);
     // ImGui::SetNextWindowSize(window_size);
-    if (ImGui::Begin("Armory", plugin_visible_ptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar)) {
+    if (ImGui::Begin("Armory", &plugin_visible, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar)) {
         ImGui::Text("Profession: %s", GetProfessionName(prof));
         ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
 
@@ -130,9 +125,9 @@ void Armory::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-void Armory::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll, bool* visible_ptr)
+void Armory::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
-    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll, visible_ptr);
+    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
 
     GW::Scanner::Initialize();
     const auto old_color = GW::Chat::SetMessageColor(GW::Chat::CHANNEL_GWCA1, 0xFFFFFFFF);

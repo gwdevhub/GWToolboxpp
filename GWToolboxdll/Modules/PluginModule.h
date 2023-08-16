@@ -39,10 +39,10 @@ public:
     void SignalTerminate() override;
     void Terminate() override;
     bool CanTerminate() override;
+    bool ShowOnWorldMap() const override { return true; }
 
     static std::vector<Plugin*> GetPlugins();
 
     void ShowVisibleRadio() override { }
-
     void DrawSizeAndPositionSettings() override { }
 };

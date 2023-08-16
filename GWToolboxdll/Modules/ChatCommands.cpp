@@ -1,6 +1,4 @@
-#include "PluginModule.h"
 #include "stdafx.h"
-#include "../../plugins/Base/ToolboxPlugin.h"
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
@@ -60,9 +58,6 @@
 #include <Modules/DialogModule.h>
 #include <GWCA/Managers/QuestMgr.h>
 
-#include "Resources.h"
-
-
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
 
@@ -83,12 +78,10 @@ namespace {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
     }
 
-    bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
-
     float GetAngle(const GW::GamePos& pos)
     {
         constexpr float pi = DirectX::XM_PI;
-        float tan_angle = 0.0f;
+        float tan_angle;
         if (pos.x == 0.0f) {
             if (pos.y >= 0.0f) {
                 tan_angle = pi / 2;
@@ -1531,32 +1524,21 @@ void ChatCommands::CmdTB(const wchar_t* message, const int argc, LPWSTR* argv)
             for (ToolboxUIElement* window : windows) {
                 window->visible ^= 1;
             }
-            const auto plugins = MatchingPlugins(message, argc, argv);
-            for (const auto plugin : plugins) {
-                plugin->visible ^= 1;
-            }
         }
         return;
     }
     const std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
-    const auto plugins = MatchingPlugins(message, argc, argv);
     const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
     if (arg2 == L"hide") {
         // e.g. /tb travel hide
         for (const auto& window : windows) {
             window->visible = false;
         }
-        for (const auto& plugin : plugins) {
-            plugin->visible = false;
-        }
     }
     else if (arg2 == L"show") {
         // e.g. /tb travel show
         for (const auto& window : windows) {
             window->visible = true;
-        }
-        for (const auto& plugin : plugins) {
-            plugin->visible = true;
         }
     }
     else if (arg2 == L"mini" || arg2 == L"minimize" || arg2 == L"collapse") {
@@ -1619,28 +1601,6 @@ GW::UI::WindowID ChatCommands::MatchingGWWindow(const wchar_t*, const int argc, 
         }
     }
     return GW::UI::WindowID_Count;
-}
-
-std::vector<PluginModule::Plugin*> ChatCommands::MatchingPlugins(const wchar_t*, const int argc, const LPWSTR* argv)
-{
-    std::vector<PluginModule::Plugin*> ret;
-    if (argc > 1) {
-        const std::wstring arg = GuiUtils::ToLower(argv[1]);
-        if (arg == L"all") {
-            for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](const PluginModule::Plugin* p) { return p->initialized; })) {
-                ret.push_back(plugin);
-            }
-        }
-        else if (!arg.empty()) {
-            const std::string name = GuiUtils::WStringToString(arg);
-            for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](const PluginModule::Plugin* p) { return p->initialized; })) {
-                if (GuiUtils::ToLower(plugin->instance->Name()).find(name) == 0) {
-                    ret.push_back(plugin);
-                }
-            }
-        }
-    }
-    return ret;
 }
 
 std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t*, const int argc, const LPWSTR* argv)

@@ -51,9 +51,9 @@ void InstanceTimer::DrawSettings()
     }
 }
 
-void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll, bool* visible_ptr)
+void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
-    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll, visible_ptr);
+    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
     GW::Scanner::Initialize();
     GW::Initialize();
 }
@@ -77,7 +77,7 @@ void InstanceTimer::Terminate()
 void InstanceTimer::Draw(IDirect3DDevice9*)
 {
     if (!toolbox_handle) return;
-    if (!plugin_visible_ptr || !*plugin_visible_ptr) return;
+    if (!plugin_visible) return;
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 
     const auto time = GW::Map::GetInstanceTime() / 1000;

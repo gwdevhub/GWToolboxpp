@@ -1,11 +1,11 @@
 #pragma once
 
-#include <ToolboxPlugin.h>
+#include <ToolboxUIPlugin.h>
 
 #include <imgui.h>
 #include <SimpleIni.h>
 
-class InstanceTimer : public ToolboxPlugin {
+class InstanceTimer : public ToolboxUIPlugin {
 
 public:
     InstanceTimer() = default;
@@ -16,7 +16,7 @@ public:
 	void LoadSettings(const wchar_t*) override;
     void SaveSettings(const wchar_t*) override;
     void DrawSettings() override;
-    void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE, bool*) override;
+    void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     void Terminate() override;
     bool CanTerminate() override;
     void SignalTerminate() override;

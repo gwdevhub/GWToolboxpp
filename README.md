@@ -6,10 +6,11 @@ If you are here to check toolbox features and for a download link to go [https:/
 
 ## How to download, build, and run
 ### Requirements
-* CMake 3.16 or higher. Download the latest version from [https://cmake.org/download/](https://cmake.org/download/). 
-* Visual Studio 2019 or 2022. You can download Visual Studio Community for free here: [https://visualstudio.microsoft.com/vs/community/](https://visualstudio.microsoft.com/vs/community/). You will also need the "Desktop development with C++" package. 
-* C++20 compatible MSVC Platform Toolset, either v142 or v143
-* Git. [https://git-scm.com/](https://git-scm.com/)
+* Visual Studio 2022 version 17.7+. You can download [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/) for free. You will also need the "Desktop development with C++" package.
+* C++20 compatible v143 MSVC Platform Toolset
+* CMake 3.16 or higher. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://cmake.org/download/](https://cmake.org/download/).
+* Windows 10 or 11 SDK
+* [Git](https://git-scm.com/)
 
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
 

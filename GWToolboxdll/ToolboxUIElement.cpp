@@ -83,33 +83,20 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             ImGui::ShowHelp(buf);
         }
     }
-    bool new_line = false;
     if (is_movable) {
-        if (new_line) {
-            ImGui::SameLine();
-        }
-        new_line = true;
+        ImGui::SameLine();
         ImGui::Checkbox("Lock Position", &lock_move);
     }
     if (is_resizable) {
-        if (new_line) {
-            ImGui::SameLine();
-        }
-        new_line = true;
+        ImGui::SameLine();
         ImGui::Checkbox("Lock Size", &lock_size);
     }
     if (has_closebutton) {
-        if (new_line) {
-            ImGui::SameLine();
-        }
-        new_line = true;
+        ImGui::SameLine();
         ImGui::Checkbox("Show close button", &show_closebutton);
     }
     if (can_show_in_main_window) {
-        if (new_line) {
-            ImGui::SameLine();
-        }
-        new_line = true;
+        ImGui::SameLine();
         if (ImGui::Checkbox("Show in main window", &show_menubutton)) {
             MainWindow::Instance().pending_refresh_buttons = true;
         }

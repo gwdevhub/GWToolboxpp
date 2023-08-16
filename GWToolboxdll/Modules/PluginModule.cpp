@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <string>
 
+#include "GWCA/Managers/UIMgr.h"
+
 namespace {
     std::wstring pluginsfoldername;
 
@@ -88,7 +90,7 @@ namespace {
         }
         ImGuiAllocFns fns;
         ImGui::GetAllocatorFunctions(&fns.alloc_func, &fns.free_func, &fns.user_data);
-        plugin.instance->Initialize(context, fns, GWToolbox::Instance().GetDLLModule(), &plugin.visible);
+        plugin.instance->Initialize(context, fns, GWToolbox::Instance().GetDLLModule());
         plugin.instance->LoadSettings(pluginsfoldername.c_str());
         plugin.initialized = true;
         return true;
@@ -166,9 +168,9 @@ void PluginModule::DrawSettingsInternal()
                 UnloadPlugin(plugin);
             }
         }
-        if (plugin->instance) {
+        if (plugin->instance && plugin->instance->GetVisiblePtr()) {
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::GetTextLineHeight() - ImGui::GetStyle().FramePadding.x);
-            ImGui::Checkbox("##check", &plugin->visible);
+            ImGui::Checkbox("##check", plugin->instance->GetVisiblePtr());
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Visible");
             }
@@ -222,7 +224,7 @@ void PluginModule::Draw(IDirect3DDevice9* device)
         if (!InitializePlugin(plugin)) {
             continue;
         }
-        if (!plugin->visible) {
+        if (GW::UI::GetIsWorldMapShowing() && !plugin->instance->ShowOnWorldMap()) {
             continue;
         }
 
@@ -238,7 +240,6 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
         for (const auto& entry : dlls_to_load) {
             std::filesystem::path path = entry.pItem;
             const auto filename = path.filename();
-            const bool is_active = ini->GetBoolValue(plugins_enabled_section, entry.pItem, false);
             auto matching_plugins = std::views::filter(plugins, [filename](auto plugin) {
                 return plugin->path.filename() == filename;
             });
@@ -247,7 +248,6 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
                 if (!LoadPlugin(plugin)) {
                     continue;
                 }
-                plugin->visible = is_active;
                 InitializePlugin(plugin);
                 plugins_loaded_from_ini.push_back(plugin);
             }
@@ -267,7 +267,7 @@ void PluginModule::SaveSettings(ToolboxIni* ini)
     ini->Delete(plugins_enabled_section, nullptr);
     for (const auto plugin : loaded_plugins) {
         plugin->instance->SaveSettings(pluginsfoldername.c_str());
-        ini->SetBoolValue(plugins_enabled_section, plugin->path.filename().string().c_str(), plugin->visible);
+        ini->SetBoolValue(plugins_enabled_section, plugin->path.filename().string().c_str(), true);
     }
 }
 
