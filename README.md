@@ -8,8 +8,8 @@ If you are here to check toolbox features and for a download link to go [https:/
 ### Requirements
 * Visual Studio 2022 version 17.7+. You can download [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/) for free. You will also need the "Desktop development with C++" package.
 * C++20 compatible v143 MSVC Platform Toolset
-* CMake 3.16 or higher. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://cmake.org/download/](https://cmake.org/download/).
 * Windows 10 or 11 SDK
+* CMake 3.16 or higher. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://cmake.org/download/](https://cmake.org/download/).
 * [Git](https://git-scm.com/)
 
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
@@ -34,13 +34,13 @@ If you are here to check toolbox features and for a download link to go [https:/
 * You can use the Visual Studio debugger directly to be able to break and step through toolbox code. First launch toolbox in debug mode as normal, then go to Debug -> Attach to process, then select the Gw.exe process and click Attach. You can also attach the debugger *before* running toolbox, to debug issues during launch, but then you will have to manually launch toolbox from outside visual studio, either with `GWToolbox.exe` or `AutoItLauncher/inject.au3`. 
 
 ## How to contribute
-* First of all make sure you take a look at the code and respect the somewhat consistent code conventions.
 * Create a new branch and commit the changes relevant to your contribution. Please make sure you don't commit unrelated lines.
-* Finally submit a pull request and let us review your code. Stay updated in the pull request page for feedback and comments.
+* Run clang-format and clang-tidy on the code you wrote. .clang-tidy and .clang-format files are in the root of the repository.
+* Finally, submit a pull request and let us review your code. Stay updated in the pull request page for feedback and comments.
 
 **Quick code overview:**
-There are three main kinds of Toolbox components: Modules, Widgets and Windows. Any code change is most likely an additional one of those, or some change in one. 
-* Modules are components without an interface, but they do have a panel in Settings. Two modules noteworthy: `GameSettings` contains any static change to the game, while `ToolboxSettings` contains any static change to toolbox.
+There are three main kinds of Toolbox components: Modules, Widgets and Windows. Any new code is most likely an additional one of those, or some change in one. 
+* Modules are components without an interface, but they do have a panel in Settings.
 * Widgets are visual elements without an explicit window (border, header, etc).
 * Windows are visual elements with an explicit window.
 
@@ -49,7 +49,7 @@ Both Widgets and Windows can also have a panel in Settings, and share common cod
 **Important**: The destruction chain is as follows: SignalTerminate -> Terminate -> Destructor. Make sure to handle all destruction logic that uses other modules or interfaces with GWCA in SignalTerminate, Terminate to revert any changes to the game and only use the destructor for class scope clean up.
 
 ## Plugins
-Toolbox supports plugins, meaning you can extend Toolboxes functionality.
+Toolbox supports plugins, meaning you can extend Toolbox functionality.
 Please take note that plugins are currently a *beta* feature - plugins compiled for one version of toolbox should continue working, but may have to be recompiled
 
 For users: put the plugin into GWToolboxpp/\<Computername\>/plugins
@@ -57,7 +57,7 @@ For users: put the plugin into GWToolboxpp/\<Computername\>/plugins
 For developers: there are a few things you should take note of:
 * three examples (Clock, Armory and InstanceTimer) will automatically be added to the solution (see CMakeLists.txt)
 * Your Plugin::Initialize must call ToolboxPlugin::Initialize(ctx, fns, tbdll), otherwise you must take care of creating and destroying your own ImGui context.
-* we do not guarantee API stability between versions but try to not change existing exported method signatures
+* we do not guarantee API stability between versions
 * you will likely want GWCA access in your plugin, so call GW::Initialize(). If you also change toolbox functionality, by pattern scanning the Toolbox dll, make sure your plugins signature scanner is pointed to gw.exe at the end of Plugin::Initialize().
 
 ## Credits
@@ -80,6 +80,7 @@ For developers: there are a few things you should take note of:
  
  **[Dub](https://github.com/DubbleClick)**
  * Implemented many new features and improvements.
+ * Giving active contributors [JetBrains OSS licenses](https://www.jetbrains.com/community/opensource/#support).
 
  **Itecka** 
  * Original creator of a damage monitor, which inspired the toolbox damage monitor.
