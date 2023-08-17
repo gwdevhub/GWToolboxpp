@@ -80,7 +80,7 @@ For developers: there are a few things you should take note of:
  
  **[Dub](https://github.com/DubbleClick)**
  * Implemented many new features and improvements.
- * Giving active contributors [JetBrains OSS licenses](https://www.jetbrains.com/community/opensource/#support).
+ * Organising [JetBrains OSS licenses(https://www.jetbrains.com/community/opensource/#support) for core contributors.
 
  **Itecka** 
  * Original creator of a damage monitor, which inspired the toolbox damage monitor.
