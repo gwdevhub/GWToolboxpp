@@ -228,7 +228,9 @@ void PluginModule::Draw(IDirect3DDevice9* device)
             continue;
         }
 
-        plugin->instance->Draw(device);
+        if (plugin->instance->GetVisiblePtr() && *plugin->instance->GetVisiblePtr()) {
+            plugin->instance->Draw(device);
+        }
     }
 }
 

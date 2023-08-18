@@ -50,13 +50,7 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 
 void Clock::Draw(IDirect3DDevice9*)
 {
-    if (!toolbox_handle) {
-        return;
-    }
     constexpr auto flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
-    if (!GetVisiblePtr() || !*GetVisiblePtr()) {
-        return;
-    }
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags(flags))) {
         GetTime(time_buf, _countof(time_buf));
         ImGui::TextUnformatted(time_buf);

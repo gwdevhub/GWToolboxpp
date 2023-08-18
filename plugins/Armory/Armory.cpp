@@ -68,7 +68,7 @@ void Armory::Update(const float delta)
 
 void Armory::Draw(IDirect3DDevice9*)
 {
-    if (!toolbox_handle) {
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         return;
     }
     GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();

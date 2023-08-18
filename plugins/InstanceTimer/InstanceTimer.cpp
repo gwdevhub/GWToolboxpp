@@ -78,9 +78,6 @@ void InstanceTimer::Terminate()
 
 void InstanceTimer::Draw(IDirect3DDevice9*)
 {
-    if (!toolbox_handle) {
-        return;
-    }
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         return;
     }
