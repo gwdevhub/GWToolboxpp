@@ -71,10 +71,9 @@
 #include <imgui_internal.h>
 
 #define VAR_NAME(v) (#v)
-#define PLUGIN_ASSERT(expression) (void)(                                                       \
-(!!(expression)) ||                                                              \
-(_wassert(_CRT_WIDE(#expression), _CRT_WIDE(__FILE__), (unsigned)(__LINE__)), 0) \
-)
+#ifndef PLUGIN_ASSERT
+#define PLUGIN_ASSERT(expr) ((void)(!!(expr) || (std::cerr << (#expr, __FILE__, (unsigned)__LINE__), 0)))
+#endif
 
 #define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
 #define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
