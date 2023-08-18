@@ -20,7 +20,7 @@ Previous releases are available on Github as dll files. There is no support for 
 * [Fix] Removed copy hero build button when no builds existed.
 * [Fix] Fixed bug preventing secondary profession switch on tome use.
 * [Fix] Fixed rerolling to characters when you had empty char slots
-* [Developers] Plugins now initialise with an extra bool* argument to control the visibility of the plugin window.
+* [Developers] Plugins have been reworked in order to more closely integrate into Toolbox. You will have to update your plugins in order for them to load.
 
 ## Version 6.10
 

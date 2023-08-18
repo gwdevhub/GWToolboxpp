@@ -38,6 +38,4 @@ public:
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-
-private:
 };

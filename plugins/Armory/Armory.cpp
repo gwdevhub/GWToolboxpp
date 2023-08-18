@@ -10,7 +10,6 @@
 #include <GWCA/Utilities/Scanner.h>
 
 #include <Timer.h>
-#include <imgui.h>
 
 #include "ArmorsDatabase.h"
 #include "Helpers.h"

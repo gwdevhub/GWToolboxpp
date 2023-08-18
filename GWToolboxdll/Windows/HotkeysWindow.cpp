@@ -19,6 +19,8 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <Timer.h>
 
+#include "GWToolbox.h"
+
 
 namespace {
     std::vector<TBHotkey*> hotkeys; // list of hotkeys
@@ -27,7 +29,7 @@ namespace {
 
     // Ordered subsets
     enum class GroupBy : int {
-        None,
+        None [[maybe_unused]],
         Profession,
         Map,
         PlayerName,
@@ -40,25 +42,16 @@ namespace {
     std::unordered_map<int, std::vector<TBHotkey*>> by_instance_type;
     std::unordered_map<std::string, std::vector<TBHotkey*>> by_player_name;
     std::unordered_map<std::string, std::vector<TBHotkey*>> by_group;
-    bool need_to_check_valid_hotkeys = true;
 
-
-    long max_id_ = 0;
     bool block_hotkeys = false;
-
     bool clickerActive = false;   // clicker is active or not
     bool dropCoinsActive = false; // coin dropper is active or not
-
     bool map_change_triggered = false;
 
     clock_t clickerTimer = 0;   // timer for clicker
     clock_t dropCoinsTimer = 0; // timer for coin dropper
 
-    float movementX = 0; // X coordinate of the destination of movement macro
-    float movementY = 0; // Y coordinate of the destination of movement macro
-
     TBHotkey* current_hotkey = nullptr;
-    bool is_window_active = true;
 
     bool loaded_action_labels = false;
     // NB: GetActionLabel_Func() must be called when we're in-game, because it relies on other gw modules being loaded internally.
@@ -71,13 +64,13 @@ namespace {
         loaded_action_labels = true;
 
         using GetActionLabel_pt = wchar_t*(__cdecl*)(GW::UI::ControlAction action);
-        const auto GetActionLabel_Func = (GetActionLabel_pt)GW::Scanner::Find("\x83\xfe\x5b\x74\x27\x83\xfe\x5c\x74\x22\x83\xfe\x5d\x74\x1d", "xxxxxxxxxxxxxxx", -0x7);
-        GWCA_INFO("[SCAN] GetActionLabel_Func = %p\n", (void*)GetActionLabel_Func);
+        const auto GetActionLabel_Func = reinterpret_cast<GetActionLabel_pt>(GW::Scanner::Find("\x83\xfe\x5b\x74\x27\x83\xfe\x5c\x74\x22\x83\xfe\x5d\x74\x1d", "xxxxxxxxxxxxxxx", -0x7));
+        GWCA_INFO("[SCAN] GetActionLabel_Func = %p\n", reinterpret_cast<void*>(GetActionLabel_Func));
         if (!GetActionLabel_Func) {
             return;
         }
-        for (auto& label : HotkeyGWKey::control_labels) {
-            label.second = new GuiUtils::EncString(GetActionLabel_Func(label.first));
+        for (auto& [action, label] : HotkeyGWKey::control_labels) {
+            label = new GuiUtils::EncString(GetActionLabel_Func(action));
         }
     }
 
@@ -237,11 +230,9 @@ void HotkeysWindow::Terminate()
         delete hotkey;
     }
     hotkeys.clear();
-    for (auto& it : HotkeyGWKey::control_labels) {
-        if (it.second) {
-            delete it.second;
-        }
-        it.second = nullptr;
+    for (auto& label : HotkeyGWKey::control_labels | std::views::values) {
+        delete label;
+        label = nullptr;
     }
 }
 
@@ -374,7 +365,6 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                         if (it != hotkeys.end() && it != hotkeys.begin()) {
                             std::swap(*it, *(it - 1));
                             these_hotkeys_changed = true;
-                            return true;
                         }
                     }
                     break;
@@ -383,7 +373,6 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                         if (it != hotkeys.end() && it != hotkeys.end() - 1) {
                             std::swap(*it, *(it + 1));
                             these_hotkeys_changed = true;
-                            return true;
                         }
                     }
                     break;
@@ -407,17 +396,17 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
         };
         switch (group_by) {
             case GroupBy::Group:
-                for (auto& it : by_group) {
-                    if (it.first == "") {
+                for (auto& [group, hotkeys] : by_group) {
+                    if (group == "") {
                         // No collapsing header for hotkeys without a group.
-                        if (draw_hotkeys_vec(it.second)) {
+                        if (draw_hotkeys_vec(hotkeys)) {
                             hotkeys_changed = true;
                             break;
                         }
                     }
-                    else if (ImGui::CollapsingHeader(it.first.c_str())) {
+                    else if (ImGui::CollapsingHeader(group.c_str())) {
                         ImGui::Indent();
-                        if (draw_hotkeys_vec(it.second)) {
+                        if (draw_hotkeys_vec(hotkeys)) {
                             hotkeys_changed = true;
                             ImGui::Unindent();
                             break;
@@ -427,10 +416,10 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                 }
                 break;
             case GroupBy::Profession:
-                for (auto& it : by_profession) {
-                    if (ImGui::CollapsingHeader(TBHotkey::professions[it.first])) {
+                for (auto& [profession, hotkeys] : by_profession) {
+                    if (ImGui::CollapsingHeader(TBHotkey::professions[profession])) {
                         ImGui::Indent();
-                        if (draw_hotkeys_vec(it.second)) {
+                        if (draw_hotkeys_vec(hotkeys)) {
                             hotkeys_changed = true;
                             ImGui::Unindent();
                             break;
@@ -441,19 +430,19 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                 break;
             case GroupBy::Map: {
                 const char* map_name;
-                for (auto& it : by_map) {
-                    if (it.first == 0) {
+                for (auto& [map, hotkeys] : by_map) {
+                    if (map == 0) {
                         map_name = "Any";
                     }
-                    else if (it.first >= 0 && it.first < _countof(GW::Constants::NAME_FROM_ID)) {
-                        map_name = GW::Constants::NAME_FROM_ID[it.first];
+                    else if (map >= 0 && map < _countof(GW::Constants::NAME_FROM_ID)) {
+                        map_name = GW::Constants::NAME_FROM_ID[map];
                     }
                     else {
                         map_name = "Unknown";
                     }
                     if (ImGui::CollapsingHeader(map_name)) {
                         ImGui::Indent();
-                        if (draw_hotkeys_vec(it.second)) {
+                        if (draw_hotkeys_vec(hotkeys)) {
                             hotkeys_changed = true;
                             ImGui::Unindent();
                             break;
@@ -465,16 +454,16 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
             break;
             case GroupBy::PlayerName: {
                 const char* player_name;
-                for (auto& it : by_player_name) {
-                    if (it.first.empty()) {
+                for (auto& [player, hotkeys] : by_player_name) {
+                    if (player.empty()) {
                         player_name = "Any";
                     }
                     else {
-                        player_name = it.first.c_str();
+                        player_name = player.c_str();
                     }
                     if (ImGui::CollapsingHeader(player_name)) {
                         ImGui::Indent();
-                        if (draw_hotkeys_vec(it.second)) {
+                        if (draw_hotkeys_vec(hotkeys)) {
                             hotkeys_changed = true;
                             ImGui::Unindent();
                             break;
@@ -537,7 +526,7 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), "show_active_in_header", TBHotkey::show_active_in_header);
     ini->SetBoolValue(Name(), "show_run_in_header", TBHotkey::show_run_in_header);
 
-    if (TBHotkey::hotkeys_changed) {
+    if (TBHotkey::hotkeys_changed || GWToolbox::SettingsFolderChanged()) {
         // clear hotkeys from ini
         ToolboxIni::TNamesDepend entries;
         ini->GetAllSections(entries);
@@ -548,8 +537,8 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
         }
 
         // then save again
-        char buf[256];
         for (unsigned int i = 0; i < hotkeys.size(); ++i) {
+            char buf[256];
             snprintf(buf, 256, "hotkey-%03d:%s", i, hotkeys[i]->Name());
             hotkeys[i]->Save(ini, buf);
         }

@@ -24,18 +24,18 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 
 void InstanceTimer::LoadSettings(const wchar_t* folder)
 {
-    const auto inifile = std::filesystem::path(folder) / L"instancetimer.ini";
-    ini.LoadFile(inifile.c_str());
+    ToolboxUIPlugin::LoadSettings(folder);
+    ini.LoadFile(GetSettingFile(folder).c_str());
     click_to_print_time = ini.GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     show_extra_timers = ini.GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
 }
 
 void InstanceTimer::SaveSettings(const wchar_t* folder)
 {
-    const auto inifile = std::filesystem::path(folder) / L"instancetimer.ini";
+    ToolboxUIPlugin::SaveSettings(folder);
     ini.SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini.SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
-    ini.SaveFile(inifile.c_str());
+    ini.SaveFile(GetSettingFile(folder).c_str());
 }
 
 void InstanceTimer::DrawSettings()
