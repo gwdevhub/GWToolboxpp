@@ -24,10 +24,10 @@ public:
 
     InjectWindow& operator=(const InjectWindow&) = delete;
 
-    bool Create();
+    bool Create() override;
 
     // Returns false if no options were selected, typically when the window was closed.
-    bool GetSelected(size_t* index);
+    bool GetSelected(size_t* index) const;
 
 private:
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
@@ -45,4 +45,4 @@ private:
     int m_Selected;
 };
 
-bool InjectRemoteThread(Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode);
+bool InjectRemoteThread(const Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode);

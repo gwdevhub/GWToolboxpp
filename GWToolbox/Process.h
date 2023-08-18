@@ -17,17 +17,17 @@ public:
     Process& operator=(const Process&) = delete;
     Process& operator=(Process&&) noexcept;
 
-    bool IsOpen();
+    bool IsOpen() const;
     bool Open(uint32_t pid, DWORD rights = PROCESS_ALL_ACCESS);
     void Close();
 
-    bool Read(uintptr_t address, void* buffer, size_t size);
-    bool Write(uintptr_t address, void* buffer, size_t size);
+    bool Read(uintptr_t address, void* buffer, size_t size) const;
+    bool Write(uintptr_t address, const void* buffer, size_t size) const;
 
     bool GetName(std::wstring& name);
     bool GetModule(ProcessModule* module);
-    bool GetModule(ProcessModule* module, const wchar_t* module_name);
-    bool GetModules(std::vector<ProcessModule>& modules);
+    bool GetModule(ProcessModule* module, const wchar_t* module_name) const;
+    bool GetModules(std::vector<ProcessModule>& modules) const;
 
     HANDLE GetHandle() const { return m_hProcess; }
     DWORD GetProcessId() const;

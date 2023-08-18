@@ -1,7 +1,6 @@
 #pragma once
 
-class Thread
-{
+class Thread {
 public:
     Thread();
     Thread(const Thread&) = delete;
@@ -12,7 +11,7 @@ public:
     bool StartThread();
 
     void Join();
-    bool Join(uint32_t TimeoutMs);
+    bool Join(uint32_t TimeoutMs) const;
 
     bool Alive() const;
 
@@ -20,13 +19,13 @@ public:
     void SetThreadName(const char* name);
 
 private:
-    void *m_Handle;
+    void* m_Handle;
     uint32_t m_ThreadId;
     char m_ThreadName[256];
 
 private:
     virtual void Run() = 0;
 
-    static unsigned long __stdcall ThreadEntry(void *param);
+    static unsigned long __stdcall ThreadEntry(void* param);
     __declspec(noreturn) static void Exit(uint32_t ErrorCode);
 };

@@ -17,12 +17,10 @@ name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 struct InjectProcess {
-    InjectProcess(bool injected, Process&& process, std::wstring&& charname)
+    InjectProcess(const bool injected, Process&& process, std::wstring&& charname)
         : m_Injected(injected)
-          , m_Process(std::move(process))
-          , m_Charname(std::move(charname))
-    {
-    }
+        , m_Process(std::move(process))
+        , m_Charname(std::move(charname)) { }
 
     InjectProcess(const InjectProcess&) = delete;
     InjectProcess(InjectProcess&&) = default;
@@ -229,16 +227,12 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
 
 InjectWindow::InjectWindow()
     : m_hCharacters(nullptr)
-      , m_hLaunchButton(nullptr)
-      , m_hRestartAsAdmin(nullptr)
-      , m_hSettings(nullptr)
-      , m_Selected(-1)
-{
-}
+    , m_hLaunchButton(nullptr)
+    , m_hRestartAsAdmin(nullptr)
+    , m_hSettings(nullptr)
+    , m_Selected(-1) {}
 
-InjectWindow::~InjectWindow()
-{
-}
+InjectWindow::~InjectWindow() {}
 
 bool InjectWindow::Create()
 {
@@ -247,7 +241,7 @@ bool InjectWindow::Create()
     return Window::Create();
 }
 
-bool InjectWindow::GetSelected(size_t* index)
+bool InjectWindow::GetSelected(size_t* index) const
 {
     if (m_Selected >= 0) {
         *index = static_cast<size_t>(m_Selected);
@@ -256,7 +250,7 @@ bool InjectWindow::GetSelected(size_t* index)
     return false;
 }
 
-LRESULT InjectWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
     switch (uMsg) {
         case WM_CREATE:
@@ -291,7 +285,6 @@ LRESULT InjectWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-
     const HWND hGroupBox = CreateWindowW(
         WC_BUTTONW,
         L"Select Character",
@@ -366,17 +359,16 @@ void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 }
 
-void InjectWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificationCode)
+void InjectWindow::OnCommand(HWND hWnd, const LONG ControlId, LONG NotificationCode)
 {
-
-    if ((hWnd == m_hLaunchButton) && (ControlId == STN_CLICKED)) {
+    if (hWnd == m_hLaunchButton && ControlId == STN_CLICKED) {
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
         DestroyWindow(m_hWnd);
     }
-    else if ((hWnd == m_hRestartAsAdmin) && (ControlId == STN_CLICKED)) {
+    else if (hWnd == m_hRestartAsAdmin && ControlId == STN_CLICKED) {
         RestartWithSameArgs(true);
     }
-    else if ((hWnd == m_hSettings) && (ControlId == STN_CLICKED)) {
+    else if (hWnd == m_hSettings && ControlId == STN_CLICKED) {
         m_SettingsWindow.Create();
     }
 }
@@ -398,7 +390,7 @@ static FARPROC GetLoadLibrary()
     return pLoadLibraryW;
 }
 
-bool InjectRemoteThread(Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode)
+bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD lpExitCode)
 {
     *lpExitCode = 0;
 
@@ -409,11 +401,12 @@ bool InjectRemoteThread(Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode)
     }
 
     const LPVOID pLoadLibraryW = GetLoadLibrary();
-    if (pLoadLibraryW == nullptr)
+    if (pLoadLibraryW == nullptr) {
         return FALSE;
+    }
 
     const size_t ImagePathLength = wcslen(ImagePath);
-    const size_t ImagePathSize = (ImagePathLength * 2) + 2;
+    const size_t ImagePathSize = ImagePathLength * 2 + 2;
 
     const LPVOID ImagePathAddress = VirtualAllocEx(
         ProcessHandle,
@@ -435,7 +428,7 @@ bool InjectRemoteThread(Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode)
         ImagePathSize,
         &BytesWritten);
 
-    if (!Success || (ImagePathSize != BytesWritten)) {
+    if (!Success || ImagePathSize != BytesWritten) {
         fprintf(stderr, "WriteProcessMemory failed (%lu)\n", GetLastError());
         VirtualFreeEx(ProcessHandle, ImagePathAddress, 0, MEM_RELEASE);
         return FALSE;

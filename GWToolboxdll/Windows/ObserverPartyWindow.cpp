@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-
 #include <Utils/GuiUtils.h>
 
 #include <Modules/ObserverModule.h>

@@ -122,8 +122,8 @@ private:
 
         Transaction(const Type t, const Material mat)
             : type(t)
-              , item_id(0)
-              , material(mat) { }
+            , item_id(0)
+            , material(mat) { }
     };
 
     void Cancel();

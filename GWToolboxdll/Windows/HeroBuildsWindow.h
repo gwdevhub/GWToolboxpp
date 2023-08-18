@@ -19,8 +19,8 @@ class HeroBuildsWindow : public ToolboxWindow {
     struct HeroBuild {
         HeroBuild(const char* n, const char* c, const int index = -1, const int panel = 0, const uint32_t _behavior = 1)
             : hero_index(index)
-              , behavior(_behavior)
-              , show_panel(panel)
+            , behavior(_behavior)
+            , show_panel(panel)
         {
             GuiUtils::StrCopy(name, n, sizeof(name));
             GuiUtils::StrCopy(code, c, sizeof(code));
@@ -129,8 +129,8 @@ private:
 
         CodeOnHero(const char* c = "", const GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, const int _show_panel = 0, uint32_t _behavior = 1)
             : heroid(i)
-              , show_panel(_show_panel)
-              , behavior(static_cast<GW::HeroBehavior>(_behavior))
+            , show_panel(_show_panel)
+            , behavior(static_cast<GW::HeroBehavior>(_behavior))
         {
             snprintf(code, BUFFER_SIZE, "%s", c);
             if (behavior > GW::HeroBehavior::AvoidCombat) {

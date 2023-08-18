@@ -7,6 +7,8 @@
 import PluginUtils;
 
 namespace {
+    // ReSharper disable once CppParameterMayBeConst
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void CmdTB(const wchar_t*, int argc, LPWSTR* argv)
     {
         const std::wstring arg1 = PluginUtils::ToLower(argv[1]);
@@ -96,7 +98,7 @@ void ToolboxUIPlugin::DrawSizeAndPositionSettings()
     }
 }
 
-void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll)
+void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
     GW::Chat::CreateCommand(L"tb", CmdTB);
@@ -115,7 +117,9 @@ void ToolboxUIPlugin::Terminate()
 
 void ToolboxUIPlugin::LoadSettings(const wchar_t* folder)
 {
-    if (!HasSettings()) return;
+    if (!HasSettings()) {
+        return;
+    }
     ini.LoadFile(GetSettingFile(folder).c_str());
     plugin_visible = ini.GetBoolValue(Name(), VAR_NAME(plugin_visible), plugin_visible);
     lock_move = ini.GetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
@@ -125,7 +129,9 @@ void ToolboxUIPlugin::LoadSettings(const wchar_t* folder)
 
 void ToolboxUIPlugin::SaveSettings(const wchar_t* folder)
 {
-    if (!HasSettings()) return;
+    if (!HasSettings()) {
+        return;
+    }
     ini.SetBoolValue(Name(), VAR_NAME(plugin_visible), plugin_visible);
     ini.SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
     ini.SetBoolValue(Name(), VAR_NAME(lock_size), lock_size);

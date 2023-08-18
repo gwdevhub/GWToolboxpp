@@ -5,98 +5,107 @@
 
 void ImGui::ShowHelp(const char* help)
 {
-    ImGui::SameLine();
-    ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip(help);
+    SameLine();
+    TextDisabled("(?)");
+    if (IsItemHovered()) {
+        SetTooltip(help);
     }
 }
-void ImGui::TextShadowed(const char* label, ImVec2 offset, const ImVec4& shadow_color)
+
+void ImGui::TextShadowed(const char* label, const ImVec2 offset, const ImVec4& shadow_color)
 {
-    const ImVec2 pos = ImGui::GetCursorPos();
+    const ImVec2 pos = GetCursorPos();
     ImGui::SetCursorPos(ImVec2(pos.x + offset.x, pos.y + offset.y));
-    ImGui::TextColored(shadow_color, label);
+    TextColored(shadow_color, label);
     ImGui::SetCursorPos(pos);
-    ImGui::Text(label);
+    Text(label);
 }
-void ImGui::SetNextWindowCenter(ImGuiWindowFlags flags)
+
+void ImGui::SetNextWindowCenter(const ImGuiWindowFlags flags)
 {
-    const auto& io = ImGui::GetIO();
-    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), flags, ImVec2(0.5f, 0.5f));
+    const auto& io = GetIO();
+    SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), flags, ImVec2(0.5f, 0.5f));
 }
+
 bool ImGui::SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)
 {
     static char id_buf[128];
     snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, confirm_bool);
-    if (ImGui::SmallButton(label)) {
-        ImGui::OpenPopup(id_buf);
+    if (SmallButton(label)) {
+        OpenPopup(id_buf);
     }
-    if (ImGui::BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text(confirm_content);
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+    if (BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        Text(confirm_content);
+        if (Button("OK", ImVec2(120, 0))) {
             *confirm_bool = true;
-            ImGui::CloseCurrentPopup();
+            CloseCurrentPopup();
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
+        SameLine();
+        if (Button("Cancel", ImVec2(120, 0))) {
+            CloseCurrentPopup();
         }
-        ImGui::EndPopup();
+        EndPopup();
     }
     return *confirm_bool;
 }
+
 bool ImGui::ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)
 {
     static char id_buf[128];
     snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, confirm_bool);
-    if (ImGui::Button(label)) {
-        ImGui::OpenPopup(id_buf);
+    if (Button(label)) {
+        OpenPopup(id_buf);
     }
-    if (ImGui::BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text(confirm_content);
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+    if (BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        Text(confirm_content);
+        if (Button("OK", ImVec2(120, 0))) {
             *confirm_bool = true;
-            ImGui::CloseCurrentPopup();
+            CloseCurrentPopup();
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
+        SameLine();
+        if (Button("Cancel", ImVec2(120, 0))) {
+            CloseCurrentPopup();
         }
-        ImGui::EndPopup();
+        EndPopup();
     }
     return *confirm_bool;
 }
+
 bool ImGui::IconButton(const char* label, ImTextureID icon, const ImVec2& size)
 {
     char button_id[128];
     snprintf(button_id, sizeof(button_id), "###icon_button_%s", label);
-    const ImVec2& pos = ImGui::GetCursorScreenPos();
-    const ImVec2& textsize = ImGui::CalcTextSize(label);
-    const bool clicked = ImGui::Button(button_id, size);
+    const ImVec2& pos = GetCursorScreenPos();
+    const ImVec2& textsize = CalcTextSize(label);
+    const bool clicked = Button(button_id, size);
 
-    const ImVec2& button_size = ImGui::GetItemRectSize();
+    const ImVec2& button_size = GetItemRectSize();
     const float img_size = icon ? button_size.y : 0;
-    const ImGuiStyle& style = ImGui::GetStyle();
+    const ImGuiStyle& style = GetStyle();
     const float img_x = pos.x + (button_size.x - img_size - textsize.x) / 2;
     const float text_x = img_x + img_size;
-    if (img_size)
-        ImGui::GetWindowDrawList()->AddImage(icon, ImVec2(img_x, pos.y), ImVec2(img_x + img_size, pos.y + img_size));
-    if (label)
-        ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + style.ItemSpacing.y / 2), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), label);
+    if (img_size) {
+        GetWindowDrawList()->AddImage(icon, ImVec2(img_x, pos.y), ImVec2(img_x + img_size, pos.y + img_size));
+    }
+    if (label) {
+        GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + style.ItemSpacing.y / 2), ImColor(GetStyle().Colors[ImGuiCol_Text]), label);
+    }
     return clicked;
 }
+
 bool ImGui::ColorButtonPicker(const char* label, ImU32* imcol, const ImGuiColorEditFlags flags)
 {
-    ImVec4 col = ImGui::ColorConvertU32ToFloat4(*imcol);
-    if (ImGui::ColorEdit4(label, &col.x, flags | ImGuiColorEditFlags_DisplayMask_ | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs)) {
-        *imcol = ImGui::ColorConvertFloat4ToU32(col);
+    ImVec4 col = ColorConvertU32ToFloat4(*imcol);
+    if (ColorEdit4(label, &col.x, flags | ImGuiColorEditFlags_DisplayMask_ | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs)) {
+        *imcol = ColorConvertFloat4ToU32(col);
         return true;
     }
     return false;
 }
-bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count)
+
+bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, const int items_count)
 {
-    ImGuiContext* g = ImGui::GetCurrentContext();
+    ImGuiContext* g = GetCurrentContext();
     constexpr float word_building_delay = .5f; // after this many seconds, typing will make a new search
 
     if (*current_item >= 0 && *current_item < items_count) {
@@ -122,14 +131,16 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
         if (const auto c = static_cast<unsigned int>(g->IO.InputQueueCharacters[n])) {
             if (c == ' ' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
                 // build temporary word
-                if (time_since_last_update < word_building_delay) { // append
+                if (time_since_last_update < word_building_delay) {
+                    // append
                     const size_t i = strnlen(word, 64);
                     if (i + 1 < 64) {
                         word[i] = static_cast<char>(c);
                         word[i + 1] = '\0';
                     }
                 }
-                else { // reset
+                else {
+                    // reset
                     word[0] = static_cast<char>(c);
                     word[1] = '\0';
                 }
@@ -179,8 +190,8 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
     bool value_changed = false;
     for (int i = 0; i < items_count; i++) {
         PushID(i);
-        const bool item_selected = (i == *current_item);
-        const bool item_keyboard_selected = (i == keyboard_selected);
+        const bool item_selected = i == *current_item;
+        const bool item_keyboard_selected = i == keyboard_selected;
         const char* item_text;
         if (!items_getter(data, i, &item_text)) {
             item_text = "*Unknown item*";
@@ -202,7 +213,8 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
     EndCombo();
     return value_changed;
 }
-bool ImGui::ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags)
+
+bool ImGui::ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, const size_t count, const size_t max_per_line, const ImGuiColorEditFlags flags)
 {
     PushID(label);
     BeginGroup();
@@ -215,8 +227,9 @@ bool ImGui::ColorPalette(const char* label, size_t* palette_index, const ImVec4*
             value_changed = true;
         }
         PopID();
-        if (((i + 1) % max_per_line) != 0)
-            ImGui::SameLine();
+        if ((i + 1) % max_per_line != 0) {
+            SameLine();
+        }
     }
 
     if (flags & ImGuiColorEditFlags_AlphaPreview) {

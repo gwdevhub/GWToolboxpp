@@ -55,8 +55,8 @@ namespace {
     struct PendingAddToParty {
         PendingAddToParty(const uint32_t _agent_id, const uint32_t _allegiance_bits, const uint32_t _player_number)
             : agent_id(_agent_id)
-              , player_number(_player_number)
-              , allegiance_bits(_allegiance_bits)
+            , player_number(_player_number)
+            , allegiance_bits(_allegiance_bits)
         {
             add_timer = TIMER_INIT();
         }
@@ -71,8 +71,8 @@ namespace {
     struct SpecialNPCToAdd {
         SpecialNPCToAdd(const char* _alias, const int _model_id, const GW::Constants::MapID _map_id)
             : alias(_alias)
-              , model_id(static_cast<uint32_t>(_model_id))
-              , map_id(_map_id) { };
+            , model_id(static_cast<uint32_t>(_model_id))
+            , map_id(_map_id) { };
 
         std::wstring map_name;
         bool decode_pending = false;

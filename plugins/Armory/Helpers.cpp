@@ -57,8 +57,10 @@ DyeColor DyeColorFromInt(size_t color)
         case DyeColor::Black:
         case DyeColor::Gray:
         case DyeColor::White:
-        case DyeColor::Pink: return col;
-        default: return DyeColor::None;
+        case DyeColor::Pink:
+            return col;
+        default:
+            return DyeColor::None;
     }
 }
 
@@ -77,33 +79,48 @@ ImVec4 ImVec4FromDyeColor(DyeColor color)
         case DyeColor::Black:
         case DyeColor::Gray:
         case DyeColor::White:
-        case DyeColor::Pink: assert(color_id < _countof(palette)); return palette[color_id];
-        default: return {};
+        case DyeColor::Pink: assert(color_id < _countof(palette));
+            return palette[color_id];
+        default:
+            return {};
     }
 }
 
-const char* GetProfessionName(GW::Constants::Profession prof)
+const char* GetProfessionName(const GW::Constants::Profession prof)
 {
     switch (prof) {
-        case GW::Constants::Profession::None: return "None";
-        case GW::Constants::Profession::Warrior: return "Warrior";
-        case GW::Constants::Profession::Ranger: return "Ranger";
-        case GW::Constants::Profession::Monk: return "Monk";
-        case GW::Constants::Profession::Necromancer: return "Necromancer";
-        case GW::Constants::Profession::Mesmer: return "Mesmer";
-        case GW::Constants::Profession::Elementalist: return "Elementalist";
-        case GW::Constants::Profession::Assassin: return "Assassin";
-        case GW::Constants::Profession::Ritualist: return "Ritualist";
-        case GW::Constants::Profession::Paragon: return "Paragon";
-        case GW::Constants::Profession::Dervish: return "Dervish";
-        default: return "Unknown Profession";
+        case GW::Constants::Profession::None:
+            return "None";
+        case GW::Constants::Profession::Warrior:
+            return "Warrior";
+        case GW::Constants::Profession::Ranger:
+            return "Ranger";
+        case GW::Constants::Profession::Monk:
+            return "Monk";
+        case GW::Constants::Profession::Necromancer:
+            return "Necromancer";
+        case GW::Constants::Profession::Mesmer:
+            return "Mesmer";
+        case GW::Constants::Profession::Elementalist:
+            return "Elementalist";
+        case GW::Constants::Profession::Assassin:
+            return "Assassin";
+        case GW::Constants::Profession::Ritualist:
+            return "Ritualist";
+        case GW::Constants::Profession::Paragon:
+            return "Paragon";
+        case GW::Constants::Profession::Dervish:
+            return "Dervish";
+        default:
+            return "Unknown Profession";
     }
 }
 
 GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent)
 {
-    if (!agent)
+    if (!agent) {
         return GW::Constants::Profession::None;
+    }
     const auto primary = static_cast<GW::Constants::Profession>(agent->primary);
     switch (primary) {
         case GW::Constants::Profession::None:
@@ -116,33 +133,48 @@ GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent)
         case GW::Constants::Profession::Assassin:
         case GW::Constants::Profession::Ritualist:
         case GW::Constants::Profession::Paragon:
-        case GW::Constants::Profession::Dervish: return primary;
-        default: return GW::Constants::Profession::None;
+        case GW::Constants::Profession::Dervish:
+            return primary;
+        default:
+            return GW::Constants::Profession::None;
     }
 }
 
-bool armor_filter_array_getter(void*, int idx, const char** out_text)
+bool armor_filter_array_getter(void*, const int idx, const char** out_text)
 {
     switch (idx) {
-        case Campaign_All: *out_text = "All"; break;
-        case Campaign_Core: *out_text = "Core"; break;
-        case Campaign_Prophecies: *out_text = "Prophecies"; break;
-        case Campaign_Factions: *out_text = "Factions"; break;
-        case Campaign_Nightfall: *out_text = "Nightfall"; break;
-        case Campaign_EotN: *out_text = "Eye of the North"; break;
-        default: return false;
+        case Campaign_All:
+            *out_text = "All";
+            break;
+        case Campaign_Core:
+            *out_text = "Core";
+            break;
+        case Campaign_Prophecies:
+            *out_text = "Prophecies";
+            break;
+        case Campaign_Factions:
+            *out_text = "Factions";
+            break;
+        case Campaign_Nightfall:
+            *out_text = "Nightfall";
+            break;
+        case Campaign_EotN:
+            *out_text = "Eye of the North";
+            break;
+        default:
+            return false;
     }
     return true;
 }
 
-bool armor_pieces_array_getter(void* data, int idx, const char** out_text)
+bool armor_pieces_array_getter(void* data, const int idx, const char** out_text)
 {
     const auto armors = static_cast<Armor**>(data);
     *out_text = armors[idx]->label;
     return true;
 }
 
-void UpdateArmorsFilter(GW::Constants::Profession prof, Campaign campaign)
+void UpdateArmorsFilter(const GW::Constants::Profession prof, const Campaign campaign)
 {
     size_t count = 0;
     Armor* armors = GetArmorsPerProfession(prof, &count);
@@ -161,7 +193,7 @@ void UpdateArmorsFilter(GW::Constants::Profession prof, Campaign campaign)
 
     for (size_t i = 0; i < count; i++) {
         ComboListState* state = nullptr;
-        PlayerArmorPiece* piece = nullptr;
+        const PlayerArmorPiece* piece = nullptr;
 
         switch (armors[i].item_slot) {
             case ItemSlot_Head:
@@ -186,12 +218,15 @@ void UpdateArmorsFilter(GW::Constants::Profession prof, Campaign campaign)
                 break;
         }
 
-        if (!(state && piece))
+        if (!(state && piece)) {
             continue;
-        if (piece->model_file_id == armors[i].model_file_id)
+        }
+        if (piece->model_file_id == armors[i].model_file_id) {
             state->current_piece = &armors[i];
-        if (campaign != Campaign_All && armors[i].campaign != campaign)
+        }
+        if (campaign != Campaign_All && armors[i].campaign != campaign) {
             continue;
+        }
         state->pieces.push_back(&armors[i]);
 
         if (piece && piece->model_file_id) {
@@ -214,21 +249,23 @@ void InitItemPiece(PlayerArmorPiece* piece, const GW::Equipment::ItemData* item_
 
 uint32_t CreateColor(DyeColor col1, DyeColor col2 = DyeColor::None, DyeColor col3 = DyeColor::None, DyeColor col4 = DyeColor::None)
 {
-    if (col1 == DyeColor::None && col2 == DyeColor::None && col3 == DyeColor::None && col4 == DyeColor::None)
+    if (col1 == DyeColor::None && col2 == DyeColor::None && col3 == DyeColor::None && col4 == DyeColor::None) {
         col1 = DyeColor::Gray;
-    uint32_t c1 = static_cast<uint32_t>(col1);
-    uint32_t c2 = static_cast<uint32_t>(col2);
-    uint32_t c3 = static_cast<uint32_t>(col3);
-    uint32_t c4 = static_cast<uint32_t>(col4);
-    uint32_t composite = c1 | (c2 << 4) | (c3 << 8) | (c4 << 12);
+    }
+    const uint32_t c1 = static_cast<uint32_t>(col1);
+    const uint32_t c2 = static_cast<uint32_t>(col2);
+    const uint32_t c3 = static_cast<uint32_t>(col3);
+    const uint32_t c4 = static_cast<uint32_t>(col4);
+    const uint32_t composite = c1 | c2 << 4 | c3 << 8 | c4 << 12;
     return composite;
 }
 
 void SetArmorItem(const PlayerArmorPiece* piece)
 {
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!(player && player->equip && *player->equip))
+    if (!(player && player->equip && *player->equip)) {
         return;
+    }
     const uint32_t color = CreateColor(piece->color1, piece->color2, piece->color3, piece->color4);
     // 0x60111109
     if (piece->model_file_id) {
@@ -245,8 +282,9 @@ bool DyePicker(const char* label, DyeColor* color)
     bool value_changed = false;
     const char* label_display_end = ImGui::FindRenderedTextEnd(label);
 
-    if (ImGui::ColorButton("##ColorButton", current_color, *color == DyeColor::None ? ImGuiColorEditFlags_AlphaPreview : 0))
+    if (ImGui::ColorButton("##ColorButton", current_color, *color == DyeColor::None ? ImGuiColorEditFlags_AlphaPreview : 0)) {
         ImGui::OpenPopup("picker");
+    }
 
     if (ImGui::BeginPopup("picker")) {
         if (label != label_display_end) {
@@ -255,10 +293,12 @@ bool DyePicker(const char* label, DyeColor* color)
         }
         size_t palette_index;
         if (ImGui::ColorPalette("##picker", &palette_index, palette, _countof(palette), 7, ImGuiColorEditFlags_AlphaPreview)) {
-            if (palette_index < _countof(palette))
+            if (palette_index < _countof(palette)) {
                 *color = DyeColorFromInt(palette_index + static_cast<size_t>(DyeColor::Blue));
-            else
+            }
+            else {
                 *color = DyeColor::None;
+            }
             value_changed = true;
             ImGui::CloseCurrentPopup();
         }

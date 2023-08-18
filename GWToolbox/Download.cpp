@@ -9,9 +9,7 @@
 class AsyncFileDownloader : public AsyncRestClient {
 public:
     AsyncFileDownloader()
-        : m_DownloadLength{0}
-    {
-    }
+        : m_DownloadLength{0} { }
 
     AsyncFileDownloader(const AsyncFileDownloader&) = delete;
 
@@ -21,7 +19,7 @@ public:
     }
 
 private: // From AsyncRestClient
-    void OnContent(const char* bytes, size_t count) override
+    void OnContent(const char* bytes, const size_t count) override
     {
         AsyncRestClient::OnContent(bytes, count);
         m_DownloadLength += count;
@@ -152,7 +150,7 @@ std::string GetDllRelease(const std::filesystem::path& dllpath)
     if (sz == 0) {
         return {};
     }
-    auto buf = new char[sz];
+    const auto buf = new char[sz];
     if (!GetFileVersionInfoW(filename, dw_handle, sz, &buf[0])) {
         delete[] buf;
         return {};
@@ -191,8 +189,9 @@ bool DownloadWindow::DownloadAllFiles()
     if (!release_string.empty()) {
         std::string release_tag = release.tag_name;
         const auto current_version = std::regex_replace(release_tag, std::regex(R"([^0-9.])"), "");
-        if (release_string.starts_with(current_version))
+        if (release_string.starts_with(current_version)) {
             return true;
+        }
     }
 
     std::filesystem::path dll_path;
@@ -275,13 +274,13 @@ bool DownloadWindow::Create()
     return Window::Create();
 }
 
-void DownloadWindow::SetChangelog(const char* str, size_t length) const
+void DownloadWindow::SetChangelog(const char* str, const size_t length) const
 {
     const std::wstring content(str, str + length);
     SendMessageW(m_hChangelog, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(content.c_str()));
 }
 
-LRESULT DownloadWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT DownloadWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
     switch (uMsg) {
         case WM_CREATE:
@@ -311,15 +310,16 @@ LRESULT DownloadWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         case WM_COMMAND: {
             const auto hControl = reinterpret_cast<HWND>(lParam);
             const LONG ControlId = LOWORD(wParam);
-            if ((hControl == m_hCloseButton) && (ControlId == STN_CLICKED)) {
+            if (hControl == m_hCloseButton && ControlId == STN_CLICKED) {
                 DestroyWindow(m_hWnd);
             }
             break;
         }
 
         case WM_KEYUP:
-            if (wParam == VK_ESCAPE || wParam == VK_RETURN)
+            if (wParam == VK_ESCAPE || wParam == VK_RETURN) {
                 DestroyWindow(hWnd);
+            }
             break;
     }
 

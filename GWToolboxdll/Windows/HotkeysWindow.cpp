@@ -18,8 +18,7 @@
 #include <Windows/HotkeysWindow.h>
 #include <GWCA/Utilities/Scanner.h>
 #include <Timer.h>
-
-#include "GWToolbox.h"
+#include <GWToolbox.h>
 
 
 namespace {
@@ -396,17 +395,17 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
         };
         switch (group_by) {
             case GroupBy::Group:
-                for (auto& [group, hotkeys] : by_group) {
+                for (auto& [group, tb_hotkeys] : by_group) {
                     if (group == "") {
                         // No collapsing header for hotkeys without a group.
-                        if (draw_hotkeys_vec(hotkeys)) {
+                        if (draw_hotkeys_vec(tb_hotkeys)) {
                             hotkeys_changed = true;
                             break;
                         }
                     }
                     else if (ImGui::CollapsingHeader(group.c_str())) {
                         ImGui::Indent();
-                        if (draw_hotkeys_vec(hotkeys)) {
+                        if (draw_hotkeys_vec(tb_hotkeys)) {
                             hotkeys_changed = true;
                             ImGui::Unindent();
                             break;
@@ -416,10 +415,10 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                 }
                 break;
             case GroupBy::Profession:
-                for (auto& [profession, hotkeys] : by_profession) {
+                for (auto& [profession, tb_hotkeys] : by_profession) {
                     if (ImGui::CollapsingHeader(TBHotkey::professions[profession])) {
                         ImGui::Indent();
-                        if (draw_hotkeys_vec(hotkeys)) {
+                        if (draw_hotkeys_vec(tb_hotkeys)) {
                             hotkeys_changed = true;
                             ImGui::Unindent();
                             break;
@@ -430,7 +429,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                 break;
             case GroupBy::Map: {
                 const char* map_name;
-                for (auto& [map, hotkeys] : by_map) {
+                for (auto& [map, tb_hotkeys] : by_map) {
                     if (map == 0) {
                         map_name = "Any";
                     }
@@ -442,7 +441,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                     }
                     if (ImGui::CollapsingHeader(map_name)) {
                         ImGui::Indent();
-                        if (draw_hotkeys_vec(hotkeys)) {
+                        if (draw_hotkeys_vec(tb_hotkeys)) {
                             hotkeys_changed = true;
                             ImGui::Unindent();
                             break;
@@ -454,7 +453,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
             break;
             case GroupBy::PlayerName: {
                 const char* player_name;
-                for (auto& [player, hotkeys] : by_player_name) {
+                for (auto& [player, tb_hotkeys] : by_player_name) {
                     if (player.empty()) {
                         player_name = "Any";
                     }
@@ -463,7 +462,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                     }
                     if (ImGui::CollapsingHeader(player_name)) {
                         ImGui::Indent();
-                        if (draw_hotkeys_vec(hotkeys)) {
+                        if (draw_hotkeys_vec(tb_hotkeys)) {
                             hotkeys_changed = true;
                             ImGui::Unindent();
                             break;

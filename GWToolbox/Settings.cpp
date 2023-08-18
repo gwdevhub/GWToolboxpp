@@ -5,7 +5,7 @@
 
 Settings settings;
 
-void PrintUsage(bool terminate)
+void PrintUsage(const bool terminate)
 {
     fprintf(stderr,
             "Usage: [options]\n\n"
@@ -26,8 +26,9 @@ void PrintUsage(bool terminate)
             "    /pid <process id>          Process id of the target in which to inject\n"
     );
 
-    if (terminate)
+    if (terminate) {
         exit(0);
+    }
 }
 
 void ParseRegSettings()
@@ -40,12 +41,12 @@ void ParseRegSettings()
 
     DWORD asadmin;
     if (RegReadDWORD(SettingsKey, L"asadmin", &asadmin)) {
-        settings.asadmin = (asadmin != 0);
+        settings.asadmin = asadmin != 0;
     }
 
     DWORD noupdate;
     if (RegReadDWORD(SettingsKey, L"noupdate", &noupdate)) {
-        settings.noupdate = (noupdate != 0);
+        settings.noupdate = noupdate != 0;
     }
 
     RegCloseKey(SettingsKey);
@@ -70,15 +71,18 @@ static void WriteRegSettings()
     RegCloseKey(SettingsKey);
 }
 
-static bool IsOneOrZeroOf3(bool b1, bool b2, bool b3)
+static bool IsOneOrZeroOf3(const bool b1, const bool b2, const bool b3)
 {
     int count = 0;
-    if (b1)
+    if (b1) {
         ++count;
-    if (b2)
+    }
+    if (b2) {
         ++count;
-    if (b3)
+    }
+    if (b3) {
         ++count;
+    }
     return count <= 1;
 }
 
@@ -149,8 +153,9 @@ void ParseCommandLine()
         }
     }
 
-    if (settings.help)
+    if (settings.help) {
         PrintUsage(true);
+    }
 
     if (!IsOneOrZeroOf3(settings.install, settings.uninstall, settings.reinstall)) {
         printf("You can only use one of '/install', '/uninstall' and '/reinstall'\n");
@@ -184,16 +189,17 @@ bool IsRunningAsAdmin()
     }
 
     FreeSid(AdministratorsGroup);
-    return (IsRunAsAdmin != FALSE);
+    return IsRunAsAdmin != FALSE;
 }
 
-bool CreateProcessInt(const wchar_t* path, const wchar_t* args, const wchar_t* workdir, bool as_admin)
+bool CreateProcessInt(const wchar_t* path, const wchar_t* args, const wchar_t* workdir, const bool as_admin)
 {
     wchar_t command_line[1024] = L"";
     const size_t n_path = wcslen(path);
     const size_t n_args = wcslen(args);
-    if ((n_path + n_args + 2) >= _countof(command_line))
+    if (n_path + n_args + 2 >= _countof(command_line)) {
         return false;
+    }
 
     wcscat_s(command_line, path);
     wcscat_s(command_line, L" ");
@@ -202,8 +208,9 @@ bool CreateProcessInt(const wchar_t* path, const wchar_t* args, const wchar_t* w
     SHELLEXECUTEINFOW ExecInfo = {0};
     ExecInfo.cbSize = sizeof(ExecInfo);
     ExecInfo.fMask = SEE_MASK_NOASYNC;
-    if (as_admin)
+    if (as_admin) {
         ExecInfo.lpVerb = L"runas";
+    }
     ExecInfo.lpFile = path;
     ExecInfo.lpParameters = args;
     ExecInfo.lpDirectory = workdir;
@@ -216,7 +223,8 @@ bool CreateProcessInt(const wchar_t* path, const wchar_t* args, const wchar_t* w
 
     return true;
 }
-bool Restart(const wchar_t* args, bool force_admin)
+
+bool Restart(const wchar_t* args, const bool force_admin)
 {
     wchar_t path[1024];
     if (!GetModuleFileNameW(GetModuleHandleW(nullptr), path, _countof(path))) {
@@ -242,8 +250,9 @@ bool RestartAsAdmin(const wchar_t* args)
 static LPWSTR ConsumeSpaces(LPWSTR Str)
 {
     for (;;) {
-        if (*Str != ' ')
+        if (*Str != ' ') {
             return Str;
+        }
         ++Str;
     }
 }
@@ -253,8 +262,9 @@ static LPWSTR ConsumeArg(LPWSTR CmdLine)
     bool Quotes = false;
 
     for (;;) {
-        if (*CmdLine == 0)
+        if (*CmdLine == 0) {
             return CmdLine;
+        }
 
         if (*CmdLine == '"') {
             if (Quotes) {
@@ -276,7 +286,7 @@ static wchar_t* GetCommandLineWithoutProgram()
     return ConsumeArg(CmdLine);
 }
 
-void RestartWithSameArgs(bool force_admin)
+void RestartWithSameArgs(const bool force_admin)
 {
     Restart(GetCommandLineWithoutProgram(), force_admin);
 }
@@ -284,7 +294,7 @@ void RestartWithSameArgs(bool force_admin)
 bool EnableDebugPrivilege()
 {
     HANDLE token;
-    const DWORD flags = TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY;
+    constexpr DWORD flags = TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY;
     if (!OpenProcessToken(GetCurrentProcess(), flags, &token)) {
         fprintf(stderr, "OpenProcessToken failed: %lu\n", GetLastError());
         return false;
@@ -311,7 +321,7 @@ bool EnableDebugPrivilege()
     return true;
 }
 
-static void SetCheckbox(HWND hWnd, bool Checked)
+static void SetCheckbox(HWND hWnd, const bool Checked)
 {
     if (Checked) {
         SendMessageW(hWnd, BM_SETCHECK, BST_CHECKED, 0);
@@ -324,7 +334,7 @@ static void SetCheckbox(HWND hWnd, bool Checked)
 static bool ToggleCheckbox(HWND hWnd)
 {
     const LRESULT State = SendMessageW(hWnd, BM_GETCHECK, 0, 0);
-    const bool Checked = (State == BST_CHECKED);
+    const bool Checked = State == BST_CHECKED;
     SetCheckbox(hWnd, !Checked);
     return !Checked;
 }
@@ -336,7 +346,7 @@ bool SettingsWindow::Create()
     return Window::Create();
 }
 
-LRESULT SettingsWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT SettingsWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
     switch (uMsg) {
         case WM_CREATE:
@@ -361,7 +371,6 @@ LRESULT SettingsWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-
     m_hNoUpdate = CreateWindowW(
         WC_BUTTONW,
         L"Never check for update",
@@ -394,9 +403,8 @@ void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
     SetCheckbox(m_hStartAsAdmin, settings.asadmin);
 }
 
-void SettingsWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificateCode)
+void SettingsWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificateCode) const
 {
-
     if (hWnd == m_hNoUpdate) {
         settings.noupdate = ToggleCheckbox(m_hNoUpdate);
         WriteRegSettings();

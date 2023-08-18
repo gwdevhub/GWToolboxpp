@@ -42,7 +42,7 @@ bool DeleteSettingsKey()
     return true;
 }
 
-bool RegWriteStr(HKEY hKey, LPCWSTR KeyName, LPCWSTR Value)
+bool RegWriteStr(HKEY hKey, const LPCWSTR KeyName, const LPCWSTR Value)
 {
     const size_t ValueSize = wcslen(Value) * 2;
     const LSTATUS status = RegSetValueExW(
@@ -62,7 +62,7 @@ bool RegWriteStr(HKEY hKey, LPCWSTR KeyName, LPCWSTR Value)
     return true;
 }
 
-bool RegWriteDWORD(HKEY hKey, LPCWSTR KeyName, DWORD Value)
+bool RegWriteDWORD(HKEY hKey, const LPCWSTR KeyName, const DWORD Value)
 {
     const LSTATUS status = RegSetValueExW(
         hKey,
@@ -81,7 +81,7 @@ bool RegWriteDWORD(HKEY hKey, LPCWSTR KeyName, DWORD Value)
     return true;
 }
 
-bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferLength)
+bool RegReadStr(HKEY hKey, const LPCWSTR KeyName, LPWSTR Buffer, const size_t BufferLength)
 {
     assert(BufferLength > 0);
 
@@ -105,7 +105,7 @@ bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferLength)
     return true;
 }
 
-bool RegReadDWORD(HKEY hKey, LPCWSTR KeyName, PDWORD dwDword)
+bool RegReadDWORD(HKEY hKey, const LPCWSTR KeyName, PDWORD dwDword)
 {
     DWORD cbData = sizeof(*dwDword);
     const LSTATUS status = RegGetValueW(

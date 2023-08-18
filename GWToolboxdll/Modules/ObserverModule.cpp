@@ -3,19 +3,17 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
 
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Skill.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-
-#include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Party.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Skill.h>
 
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
@@ -1772,7 +1770,7 @@ ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkil
 // Constructor
 ObserverModule::ObservableParty::ObservableParty(ObserverModule& parent, const GW::PartyInfo& info)
     : party_id(info.party_id)
-      , parent(parent) {}
+    , parent(parent) {}
 
 
 // Destructor
@@ -1949,7 +1947,7 @@ bool ObserverModule::ObservableParty::SynchroniseParty()
 // Constructor
 ObserverModule::ObservableSkill::ObservableSkill(ObserverModule& parent, const GW::Skill& _gw_skill)
     : parent(parent)
-      , gw_skill(_gw_skill)
+    , gw_skill(_gw_skill)
 {
     skill_id = _gw_skill.skill_id;
     // initialize the name asynchronously here
@@ -1988,17 +1986,17 @@ std::string ObserverModule::ObservableSkill::DebugName()
 // Constructor
 ObserverModule::ObservableGuild::ObservableGuild(ObserverModule& parent, const GW::Guild& guild)
     : parent(parent)
-      , guild_id(guild.index)
-      , key(guild.key)
-      , name(GuiUtils::WStringToString(guild.name))
-      , tag(GuiUtils::WStringToString(guild.tag))
-      , wrapped_tag("[" + tag + "]")
-      , rank(guild.rank)
-      , rating(guild.rating)
-      , faction(guild.faction)
-      , faction_point(guild.faction_point)
-      , qualifier_point(guild.qualifier_point)
-      , cape_trim(guild.cape_trim)
+    , guild_id(guild.index)
+    , key(guild.key)
+    , name(GuiUtils::WStringToString(guild.name))
+    , tag(GuiUtils::WStringToString(guild.tag))
+    , wrapped_tag("[" + tag + "]")
+    , rank(guild.rank)
+    , rating(guild.rating)
+    , faction(guild.faction)
+    , faction_point(guild.faction_point)
+    , qualifier_point(guild.qualifier_point)
+    , cape_trim(guild.cape_trim)
 {
     //
 }
@@ -2007,15 +2005,15 @@ ObserverModule::ObservableGuild::ObservableGuild(ObserverModule& parent, const G
 // Constructor
 ObserverModule::ObservableAgent::ObservableAgent(ObserverModule& parent, const GW::AgentLiving& agent_living)
     : parent(parent)
-      , agent_id(agent_living.agent_id)
-      , login_number(agent_living.login_number)
-      , state(agent_living.model_state)
-      , guild_id(static_cast<uint32_t>(agent_living.tags->guild_id))
-      , team_id(agent_living.team_id)
-      , primary(static_cast<GW::Constants::Profession>(agent_living.primary))
-      , secondary(static_cast<GW::Constants::Profession>(agent_living.secondary))
-      , is_player(agent_living.IsPlayer())
-      , is_npc(agent_living.IsNPC())
+    , agent_id(agent_living.agent_id)
+    , login_number(agent_living.login_number)
+    , state(agent_living.model_state)
+    , guild_id(static_cast<uint32_t>(agent_living.tags->guild_id))
+    , team_id(agent_living.team_id)
+    , primary(static_cast<GW::Constants::Profession>(agent_living.primary))
+    , secondary(static_cast<GW::Constants::Profession>(agent_living.secondary))
+    , is_player(agent_living.IsPlayer())
+    , is_npc(agent_living.IsNPC())
 {
     // async initialise the agents name now because we probably want it later
     GW::Agents::AsyncGetAgentName(&agent_living, _raw_name_w);
@@ -2146,12 +2144,12 @@ std::string ObserverModule::ObservableAgent::DebugName()
 // Constructor
 ObserverModule::ObservableMap::ObservableMap(const GW::AreaInfo& area_info)
     : campaign(area_info.campaign)
-      , continent(area_info.continent)
-      , region(area_info.region)
-      , type(area_info.type)
-      , flags(area_info.flags)
-      , name_id(area_info.name_id)
-      , description_id(area_info.description_id)
+    , continent(area_info.continent)
+    , region(area_info.region)
+    , type(area_info.type)
+    , flags(area_info.flags)
+    , name_id(area_info.name_id)
+    , description_id(area_info.description_id)
 {
     // async initialise the name
     if (GW::UI::UInt32ToEncStr(area_info.name_id, name_enc, 8)) {

@@ -4,7 +4,7 @@ template <typename T>
 struct CircularBuffer {
     CircularBuffer(const size_t size)
         : buffer(new T[size])
-          , allocated(size) { }
+        , allocated(size) { }
 
     CircularBuffer() = default;
 
@@ -12,9 +12,9 @@ struct CircularBuffer {
 
     CircularBuffer(CircularBuffer&& other) noexcept
         : buffer(other.buffer)
-          , cursor(other.cursor)
-          , count(other.count)
-          , allocated(other.allocated)
+        , cursor(other.cursor)
+        , count(other.count)
+        , allocated(other.allocated)
     {
         other.buffer = nullptr;
     }

@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/GameEntities/Agent.h>
-
 #include <GWCA/Managers/AgentMgr.h>
 
 #include <Modules/ObserverModule.h>

@@ -27,7 +27,7 @@ static bool RestartAsAdminForInjection(const uint32_t target_pid)
     return RestartAsAdmin(args);
 }
 
-static bool InjectInstalledDllInProcess(Process* process)
+static bool InjectInstalledDllInProcess(const Process* process)
 {
     ProcessModule module;
     if (process->GetModule(&module, L"GWToolboxdll.dll")) {

@@ -13,12 +13,12 @@ public:
     Window& operator=(Window&&) = delete;
 
     virtual bool Create();
-    bool WaitMessages();
-    bool PollMessages(uint32_t TimeoutMs);
-    bool ProcessMessages();
+    bool WaitMessages() const;
+    bool PollMessages(uint32_t TimeoutMs) const;
+    static bool ProcessMessages();
 
-    void SignalStop();
-    bool ShouldClose();
+    void SignalStop() const;
+    bool ShouldClose() const;
 
     void SetWindowName(LPCWSTR lpName);
     void SetWindowPosition(int X, int Y);

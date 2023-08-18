@@ -284,8 +284,8 @@ HealthWidget::Threshold::Threshold(const ToolboxIni* ini, const char* section)
 
 HealthWidget::Threshold::Threshold(const char* _name, const Color _color, const int _value)
     : ui_id(++cur_ui_id)
-      , value(_value)
-      , color(_color)
+    , value(_value)
+    , color(_color)
 {
     GuiUtils::StrCopy(name, _name, sizeof(name));
 }

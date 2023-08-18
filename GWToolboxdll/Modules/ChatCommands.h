@@ -23,10 +23,10 @@ public:
     struct PendingTransmo {
         PendingTransmo(const DWORD _npcid = 0, const DWORD _scale = 0x64000000, const DWORD _npcmfid = 0, const DWORD _npcmfd = 0, const DWORD _flags = 0)
             : npc_id(_npcid)
-              , scale(_scale)
-              , npc_model_file_id(_npcmfid)
-              , npc_model_file_data(_npcmfd)
-              , flags(_flags) { };
+            , scale(_scale)
+            , npc_model_file_id(_npcmfid)
+            , npc_model_file_data(_npcmfd)
+            , flags(_flags) { };
         DWORD npc_id = 0;
         DWORD scale = 0x64000000;
         DWORD npc_model_file_id = 0;

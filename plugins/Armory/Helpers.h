@@ -9,21 +9,20 @@
 
 struct ComboListState;
 
-enum class DyeColor
-{
-    None = 0,
-    Blue = 2,
-    Green = 3,
+enum class DyeColor {
+    None   = 0,
+    Blue   = 2,
+    Green  = 3,
     Purple = 4,
-    Red = 5,
+    Red    = 5,
     Yellow = 6,
-    Brown = 7,
+    Brown  = 7,
     Orange = 8,
     Silver = 9,
-    Black = 10,
-    Gray = 11,
-    White = 12,
-    Pink = 13
+    Black  = 10,
+    Gray   = 11,
+    White  = 12,
+    Pink   = 13
 };
 
 
@@ -50,7 +49,7 @@ struct PlayerArmor {
     PlayerArmorPiece feets;
 };
 
-typedef void(__fastcall* SetItem_pt)(GW::Equipment* equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id);
+using SetItem_pt = void(__fastcall*)(GW::Equipment* equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id);
 extern SetItem_pt SetItem_Func;
 extern ComboListState head;
 extern ComboListState chest;
@@ -71,4 +70,3 @@ bool DrawArmorPiece(const char* label, PlayerArmorPiece* player_piece, ComboList
 
 bool armor_filter_array_getter(void* data, int idx, const char** out_text);
 bool armor_pieces_array_getter(void* data, int idx, const char** out_text);
-

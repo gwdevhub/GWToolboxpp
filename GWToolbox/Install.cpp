@@ -67,8 +67,9 @@ bool CopyInstaller()
         return false;
     }
 
-    if (source_path == dest_path)
+    if (source_path == dest_path) {
         return true;
+    }
 
     if (!PathSafeCopy(source_path, dest_path, true)) {
         return false;
@@ -111,10 +112,11 @@ bool DeleteInstallationDirectory()
     return true;
 }
 
-bool Install(bool quiet)
+bool Install(const bool quiet)
 {
-    if (IsInstalled())
+    if (IsInstalled()) {
         return true;
+    }
 
     if (!EnsureInstallationDirectoryExist()) {
         fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
@@ -138,7 +140,7 @@ bool Install(bool quiet)
     return true;
 }
 
-bool Uninstall(bool quiet)
+bool Uninstall(const bool quiet)
 {
     bool DeleteAllFiles = true;
     if (quiet == false) {
@@ -148,8 +150,9 @@ bool Uninstall(bool quiet)
             L"Uninstallation",
             MB_YESNO);
 
-        if (iRet != IDYES)
+        if (iRet != IDYES) {
             DeleteAllFiles = false;
+        }
     }
 
     if (DeleteAllFiles) {
@@ -176,10 +179,12 @@ bool IsInstalled()
     }
     const fs::path computerpath = dllpath / computername;
 
-    if (!exists(dllpath / L"GWToolboxdll.dll"))
+    if (!exists(dllpath / L"GWToolboxdll.dll")) {
         return false;
-    if (!exists(dllpath / L"GWToolbox.exe"))
+    }
+    if (!exists(dllpath / L"GWToolbox.exe")) {
         return false;
+    }
 
     return true;
 }

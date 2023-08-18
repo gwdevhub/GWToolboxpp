@@ -3,17 +3,16 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
-// ReSharper disable once CppUnusedIncludeDirective - false positive
+// ReSharper disable once CppUnusedIncludeDirective
 #include <GWCA/GameEntities/Agent.h>
+// ReSharper disable once CppUnusedIncludeDirective
+#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Skill.h>
-// ReSharper disable once CppUnusedIncludeDirective - false positive
-#include <GWCA/GameEntities/Party.h>
 #include <GWCA/Utilities/Hook.h>
 
 #include <ToolboxModule.h>
-#include <Timer.h>
 
 constexpr auto NO_SKILL = static_cast<GW::Constants::SkillID>(0);
 constexpr auto NO_AGENT = 0;
@@ -73,10 +72,10 @@ public:
                      const GW::Constants::SkillID skill_id
         )
             : caster_id(caster_id)
-              , target_id(target_id)
-              , is_attack(is_attack)
-              , is_skill(is_skill)
-              , skill_id(skill_id) { }
+            , target_id(target_id)
+            , is_attack(is_attack)
+            , is_skill(is_skill)
+            , skill_id(skill_id) { }
 
         const uint32_t caster_id;
         const uint32_t target_id;

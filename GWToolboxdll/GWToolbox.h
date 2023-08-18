@@ -2,7 +2,6 @@
 
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <Defines.h>
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 

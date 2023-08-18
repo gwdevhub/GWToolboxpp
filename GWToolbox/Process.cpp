@@ -2,14 +2,14 @@
 
 #include "Process.h"
 
-Process::Process(uint32_t pid, DWORD rights) noexcept
+Process::Process(const uint32_t pid, const DWORD rights) noexcept
 {
     Open(pid, rights);
 }
 
 Process::Process(Process&& other) noexcept
     : m_hProcess(other.m_hProcess)
-      , m_Rights(other.m_Rights)
+    , m_Rights(other.m_Rights)
 {
     other.m_hProcess = nullptr;
 }
@@ -28,12 +28,12 @@ Process& Process::operator=(Process&& other) noexcept
     return *this;
 }
 
-bool Process::IsOpen()
+bool Process::IsOpen() const
 {
     return m_hProcess != nullptr;
 }
 
-bool Process::Open(uint32_t pid, DWORD rights)
+bool Process::Open(const uint32_t pid, const DWORD rights)
 {
     Close();
     m_hProcess = OpenProcess(rights, FALSE, pid);
@@ -55,7 +55,7 @@ void Process::Close()
     m_Rights = 0;
 }
 
-bool Process::Read(uintptr_t address, void* buffer, size_t size)
+bool Process::Read(const uintptr_t address, void* buffer, const size_t size) const
 {
     assert(m_Rights & PROCESS_VM_READ);
 
@@ -76,7 +76,7 @@ bool Process::Read(uintptr_t address, void* buffer, size_t size)
     return true;
 }
 
-bool Process::Write(uintptr_t address, void* buffer, size_t size)
+bool Process::Write(const uintptr_t address, const void* buffer, const size_t size) const
 {
     assert(m_Rights & PROCESS_VM_WRITE);
 
@@ -135,12 +135,13 @@ bool Process::GetName(std::wstring& name)
 bool Process::GetModule(ProcessModule* module)
 {
     std::wstring pname;
-    if (!GetName(pname))
+    if (!GetName(pname)) {
         return false;
+    }
     return GetModule(module, pname.c_str());
 }
 
-bool Process::GetModule(ProcessModule* module, const wchar_t* module_name)
+bool Process::GetModule(ProcessModule* module, const wchar_t* module_name) const
 {
     // Cleanup:
     // Figure out which rights are needed and assert it.
@@ -181,7 +182,7 @@ bool Process::GetModule(ProcessModule* module, const wchar_t* module_name)
     return false;
 }
 
-bool Process::GetModules(std::vector<ProcessModule>& modules)
+bool Process::GetModules(std::vector<ProcessModule>& modules) const
 {
     // Cleanup:
     // Figure out which rights are needed and assert it.
@@ -227,7 +228,7 @@ DWORD Process::GetProcessId() const
     return ::GetProcessId(m_hProcess);
 }
 
-bool GetProcesses(std::vector<Process>& processes, const wchar_t* name, DWORD rights)
+bool GetProcesses(std::vector<Process>& processes, const wchar_t* name, const DWORD rights)
 {
     assert(name != nullptr);
 
@@ -252,10 +253,12 @@ bool GetProcesses(std::vector<Process>& processes, const wchar_t* name, DWORD ri
     for (const DWORD pid : pids) {
         Process proc(pid, rights);
         std::wstring pname;
-        if (!(proc.IsOpen() && proc.GetName(pname)))
+        if (!(proc.IsOpen() && proc.GetName(pname))) {
             continue;
-        if (_wcsicmp(pname.c_str(), name) == 0)
+        }
+        if (_wcsicmp(pname.c_str(), name) == 0) {
             processes.push_back(std::move(proc));
+        }
     }
 
     return true;
@@ -267,14 +270,15 @@ struct EnumWindowUserParam {
     std::vector<Process>* processes{};
 };
 
-static BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
+static BOOL CALLBACK EnumWindowsProc(HWND hWnd, const LPARAM lParam)
 {
     const EnumWindowUserParam* UserParam = reinterpret_cast<EnumWindowUserParam*>(lParam);
 
     WCHAR ClassName[256];
     const int iCopied = GetClassNameW(hWnd, ClassName, _countof(ClassName));
-    if (iCopied <= 0)
+    if (iCopied <= 0) {
         return TRUE;
+    }
 
     if (wcsncmp(ClassName, UserParam->classname, _countof(ClassName)) == 0) {
         DWORD ProcessId;
@@ -295,7 +299,7 @@ static BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
     return TRUE;
 }
 
-bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t* classname, DWORD rights)
+bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t* classname, const DWORD rights)
 {
     EnumWindowUserParam UserParam;
     UserParam.rights = rights;
@@ -342,8 +346,9 @@ bool ProcessScanner::FindPatternRva(const char* pattern, const char* mask, const
     for (size_t i = 0; i < m_size; i++) {
         size_t j;
         for (j = 0; j < length; j++) {
-            if (mask[j] == 'x' && m_buffer[i + j] != upattern[j])
+            if (mask[j] == 'x' && m_buffer[i + j] != upattern[j]) {
                 break;
+            }
         }
         if (j == length) {
             *rva = i + offset;

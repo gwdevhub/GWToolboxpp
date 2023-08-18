@@ -1394,42 +1394,42 @@ static Armor dervish_armors[] = {
     {"0xC9A", 0xC9A, GW::Constants::Profession::Dervish, ItemSlot_Head, Campaign_All, 8},
 };
 
-static Armor* GetArmorsPerProfession(GW::Constants::Profession prof, size_t *count)
+static Armor* GetArmorsPerProfession(const GW::Constants::Profession prof, size_t* count)
 {
     switch (prof) {
-    case GW::Constants::Profession::Warrior:
-        *count = _countof(warrior_armors);
-        return warrior_armors;
-    case GW::Constants::Profession::Ranger:
-        *count = _countof(ranger_armors);
-        return ranger_armors;
-    case GW::Constants::Profession::Monk:
-        *count = _countof(monk_armors);
-        return monk_armors;
-    case GW::Constants::Profession::Necromancer:
-        *count = _countof(necromancer_armors);
-        return necromancer_armors;
-    case GW::Constants::Profession::Mesmer:
-        *count = _countof(mesmer_armors);
-        return mesmer_armors;
-    case GW::Constants::Profession::Elementalist:
-        *count = _countof(elementalist_armors);
-        return elementalist_armors;
-    case GW::Constants::Profession::Assassin:
-        *count = _countof(assassin_armors);
-        return assassin_armors;
-    case GW::Constants::Profession::Ritualist:
-        *count = _countof(ritualist_armors);
-        return ritualist_armors;
-    case GW::Constants::Profession::Paragon:
-        *count = _countof(paragon_armors);
-        return paragon_armors;
-    case GW::Constants::Profession::Dervish:
-        *count = _countof(dervish_armors);
-        return dervish_armors;
-    case GW::Constants::Profession::None:
-    default:
-        *count = 0;
-        return nullptr;
+        case GW::Constants::Profession::Warrior:
+            *count = _countof(warrior_armors);
+            return warrior_armors;
+        case GW::Constants::Profession::Ranger:
+            *count = _countof(ranger_armors);
+            return ranger_armors;
+        case GW::Constants::Profession::Monk:
+            *count = _countof(monk_armors);
+            return monk_armors;
+        case GW::Constants::Profession::Necromancer:
+            *count = _countof(necromancer_armors);
+            return necromancer_armors;
+        case GW::Constants::Profession::Mesmer:
+            *count = _countof(mesmer_armors);
+            return mesmer_armors;
+        case GW::Constants::Profession::Elementalist:
+            *count = _countof(elementalist_armors);
+            return elementalist_armors;
+        case GW::Constants::Profession::Assassin:
+            *count = _countof(assassin_armors);
+            return assassin_armors;
+        case GW::Constants::Profession::Ritualist:
+            *count = _countof(ritualist_armors);
+            return ritualist_armors;
+        case GW::Constants::Profession::Paragon:
+            *count = _countof(paragon_armors);
+            return paragon_armors;
+        case GW::Constants::Profession::Dervish:
+            *count = _countof(dervish_armors);
+            return dervish_armors;
+        case GW::Constants::Profession::None:
+        default:
+            *count = 0;
+            return nullptr;
     }
 }

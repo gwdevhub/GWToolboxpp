@@ -1105,8 +1105,8 @@ void ObjectiveTimerWindow::StopObjectives()
 
 ObjectiveTimerWindow::Objective::Objective(const char* _name)
     : start(TIME_UNKNOWN)
-      , done(TIME_UNKNOWN)
-      , duration(TIME_UNKNOWN)
+    , done(TIME_UNKNOWN)
+    , duration(TIME_UNKNOWN)
 {
     GuiUtils::StrCopy(name, _name, sizeof(name));
 }

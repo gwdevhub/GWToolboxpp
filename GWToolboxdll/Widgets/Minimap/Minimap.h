@@ -17,7 +17,7 @@ class Minimap final : public ToolboxWidget {
     struct Vec2i {
         Vec2i(const int _x, const int _y)
             : x(_x)
-              , y(_y) { }
+            , y(_y) { }
 
         Vec2i() = default;
         int x = 0;

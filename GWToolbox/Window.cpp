@@ -2,9 +2,9 @@
 
 #include "Window.h"
 
-LRESULT CALLBACK Window::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK Window::MainWndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
-    Window* window = nullptr;
+    Window* window;
 
     if (uMsg == WM_CREATE) {
         const auto param = reinterpret_cast<LPCREATESTRUCTW>(lParam);
@@ -24,24 +24,26 @@ LRESULT CALLBACK Window::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 
 Window::Window()
     : m_hWnd(nullptr)
-      , m_hFont(nullptr)
-      , m_hIcon(nullptr)
-      , m_hEvent(nullptr)
-      , m_WindowName(nullptr)
-      , m_X(CW_USEDEFAULT)
-      , m_Y(CW_USEDEFAULT)
-      , m_Width(CW_USEDEFAULT)
-      , m_Height(CW_USEDEFAULT)
+    , m_hFont(nullptr)
+    , m_hIcon(nullptr)
+    , m_hEvent(nullptr)
+    , m_WindowName(nullptr)
+    , m_X(CW_USEDEFAULT)
+    , m_Y(CW_USEDEFAULT)
+    , m_Width(CW_USEDEFAULT)
+    , m_Height(CW_USEDEFAULT)
 {
     m_hInstance = GetModuleHandleW(nullptr);
 }
 
 Window::~Window()
 {
-    if (m_hEvent)
+    if (m_hEvent) {
         CloseHandle(m_hEvent);
-    if (m_hFont)
+    }
+    if (m_hFont) {
         DeleteObject(m_hFont);
+    }
 }
 
 bool Window::Create()
@@ -111,7 +113,7 @@ bool Window::Create()
     return true;
 }
 
-bool Window::WaitMessages()
+bool Window::WaitMessages() const
 {
     MSG msg;
     for (;;) {
@@ -122,8 +124,9 @@ bool Window::WaitMessages()
             INFINITE,
             QS_ALLINPUT);
 
-        if (dwRet == WAIT_OBJECT_0)
+        if (dwRet == WAIT_OBJECT_0) {
             break;
+        }
 
         if (dwRet == WAIT_FAILED) {
             fprintf(stderr, "MsgWaitForMultipleObjects failed (%lu)\n", GetLastError());
@@ -139,7 +142,7 @@ bool Window::WaitMessages()
     return true;
 }
 
-bool Window::PollMessages(uint32_t TimeoutMs)
+bool Window::PollMessages(const uint32_t TimeoutMs) const
 {
     MSG msg;
 
@@ -150,8 +153,9 @@ bool Window::PollMessages(uint32_t TimeoutMs)
         TimeoutMs,
         QS_ALLINPUT);
 
-    if (dwRet == WAIT_OBJECT_0 || dwRet == WAIT_TIMEOUT)
+    if (dwRet == WAIT_OBJECT_0 || dwRet == WAIT_TIMEOUT) {
         return true;
+    }
 
     if (dwRet == WAIT_FAILED) {
         fprintf(stderr, "MsgWaitForMultipleObjects failed (%lu)\n", GetLastError());
@@ -178,36 +182,38 @@ bool Window::ProcessMessages()
     return true;
 }
 
-void Window::SignalStop()
+void Window::SignalStop() const
 {
     SetEvent(m_hEvent);
 }
 
-bool Window::ShouldClose()
+bool Window::ShouldClose() const
 {
     const DWORD dwReason = WaitForSingleObject(m_hEvent, 0);
 
-    if (dwReason == WAIT_TIMEOUT)
+    if (dwReason == WAIT_TIMEOUT) {
         return false;
+    }
 
-    if (dwReason != WAIT_OBJECT_0)
+    if (dwReason != WAIT_OBJECT_0) {
         fprintf(stderr, "WaitForSingleObject failed (%lu)\n", GetLastError());
+    }
 
     return true;
 }
 
-void Window::SetWindowName(LPCWSTR lpName)
+void Window::SetWindowName(const LPCWSTR lpName)
 {
     m_WindowName = lpName;
 }
 
-void Window::SetWindowPosition(int X, int Y)
+void Window::SetWindowPosition(const int X, const int Y)
 {
     m_X = X;
     m_Y = Y;
 }
 
-void Window::SetWindowDimension(int Width, int Height)
+void Window::SetWindowDimension(const int Width, const int Height)
 {
     m_Width = Width;
     m_Height = Height;

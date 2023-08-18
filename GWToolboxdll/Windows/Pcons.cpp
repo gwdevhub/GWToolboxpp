@@ -51,10 +51,10 @@ Pcon::Pcon(const char* chatname,
            const ImVec2 uv0_, const ImVec2 uv1_, const int threshold_,
            const char* desc_)
     : threshold(threshold_)
-      , filename(filename_)
-      , timer(TIMER_INIT())
-      , uv0(uv0_)
-      , uv1(uv1_)
+    , filename(filename_)
+    , timer(TIMER_INIT())
+    , uv0(uv0_)
+    , uv1(uv1_)
 {
     enabled = settings_by_charname[L"default"] = new bool(false);
     if (desc_) {

@@ -23,6 +23,7 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 
 bool reset_helm_visibility = false;
 bool head_item_set = false;
+
 void Armory::Update(const float delta)
 {
     ToolboxPlugin::Update(delta);
@@ -67,16 +68,19 @@ void Armory::Update(const float delta)
 
 void Armory::Draw(IDirect3DDevice9*)
 {
-    if (!toolbox_handle)
+    if (!toolbox_handle) {
         return;
+    }
     GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player_agent)
+    if (!player_agent) {
         return;
+    }
 
     bool update_data = false;
     const GW::Constants::Profession prof = GetAgentProfession(player_agent);
-    if (prof != current_profession)
+    if (prof != current_profession) {
         update_data = true;
+    }
 
     static int filter_index = Campaign_All;
 
@@ -101,8 +105,9 @@ void Armory::Draw(IDirect3DDevice9*)
             update_data = true;
         }
 
-        if (ImGui::MyCombo("##filter", "All", &filter_index, armor_filter_array_getter, nullptr, 5))
+        if (ImGui::MyCombo("##filter", "All", &filter_index, armor_filter_array_getter, nullptr, 5)) {
             update_data = true;
+        }
         if (update_data) {
             UpdateArmorsFilter(prof, static_cast<Campaign>(filter_index));
         }
@@ -111,27 +116,31 @@ void Armory::Draw(IDirect3DDevice9*)
             SetArmorItem(&player_armor.head);
             head_item_set = true;
         }
-        if (DrawArmorPiece("##chest", &player_armor.chest, &chest))
+        if (DrawArmorPiece("##chest", &player_armor.chest, &chest)) {
             SetArmorItem(&player_armor.chest);
-        if (DrawArmorPiece("##hands", &player_armor.hands, &hands))
+        }
+        if (DrawArmorPiece("##hands", &player_armor.hands, &hands)) {
             SetArmorItem(&player_armor.hands);
-        if (DrawArmorPiece("##legs", &player_armor.legs, &legs))
+        }
+        if (DrawArmorPiece("##legs", &player_armor.legs, &legs)) {
             SetArmorItem(&player_armor.legs);
-        if (DrawArmorPiece("##feets", &player_armor.feets, &feets))
+        }
+        if (DrawArmorPiece("##feets", &player_armor.feets, &feets)) {
             SetArmorItem(&player_armor.feets);
+        }
     }
     ImGui::End();
 }
 
-void Armory::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
+void Armory::Initialize(ImGuiContext* ctx, const ImGuiAllocFns fns, const HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
 
     GW::Scanner::Initialize();
-    const auto old_color = GW::Chat::SetMessageColor(GW::Chat::CHANNEL_GWCA1, 0xFFFFFFFF);
+    const auto old_color = SetMessageColor(GW::Chat::CHANNEL_GWCA1, 0xFFFFFFFF);
     SetItem_Func = reinterpret_cast<SetItem_pt>(GW::Scanner::Find("\x83\xC4\x04\x8B\x08\x8B\xC1\xC1", "xxxxxxxx", -0x24));
     if (!SetItem_Func) {
-        GW::Chat::WriteChat(GW::Chat::CHANNEL_GWCA1, L"Failed to find the SetItem function.", L"Armory");
+        WriteChat(GW::Chat::CHANNEL_GWCA1, L"Failed to find the SetItem function.", L"Armory");
         return;
     }
 
@@ -145,8 +154,8 @@ void Armory::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dl
         InitItemPiece(&player_armor.feets, &equip->feet);
     }
 
-    GW::Chat::WriteChat(GW::Chat::CHANNEL_GWCA1, L"Initialized", L"Armory");
-    GW::Chat::SetMessageColor(GW::Chat::CHANNEL_GWCA1, old_color);
+    WriteChat(GW::Chat::CHANNEL_GWCA1, L"Initialized", L"Armory");
+    SetMessageColor(GW::Chat::CHANNEL_GWCA1, old_color);
 }
 
 void Armory::Terminate()

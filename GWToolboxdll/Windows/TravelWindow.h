@@ -110,8 +110,8 @@ private:
     struct OutpostAlias {
         OutpostAlias(const GW::Constants::MapID m, const GW::Constants::District d = GW::Constants::District::Current, const uint8_t n = 0)
             : map_id(m)
-              , district(d)
-              , district_number(n) { };
+            , district(d)
+            , district_number(n) { }
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
         GW::Constants::District district = GW::Constants::District::Current;
         uint8_t district_number = 0;
@@ -120,7 +120,7 @@ private:
     struct DistrictAlias {
         DistrictAlias(const GW::Constants::District d, const uint8_t n = 0)
             : district(d)
-              , district_number(n) { };
+            , district_number(n) { }
         GW::Constants::District district = GW::Constants::District::Current;
         uint8_t district_number = 0;
     };

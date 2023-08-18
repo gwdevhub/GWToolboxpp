@@ -39,13 +39,13 @@ public:
 
     SettingsWindow& operator=(const SettingsWindow&) = delete;
 
-    bool Create();
+    bool Create() override;
 
 private:
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
     void OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    void OnCommand(HWND hwnd, LONG ControlId, LONG NotificateCode);
+    void OnCommand(HWND hwnd, LONG ControlId, LONG NotificateCode) const;
 
 private:
     HWND m_hNoUpdate = nullptr;

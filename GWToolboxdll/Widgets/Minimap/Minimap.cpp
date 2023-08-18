@@ -923,7 +923,7 @@ bool Minimap::ShouldMarkersDrawOnMap()
             GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost &&
             map_has_outpost_and_explorable(GW::Map::GetMapID()))) {
         return false;
-            }
+    }
     return true;
 }
 

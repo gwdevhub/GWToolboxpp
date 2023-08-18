@@ -45,9 +45,9 @@ namespace {
         Effect(const uint32_t _effect_id, const float _x, const float _y, const uint32_t _duration,
                const float range, Color* _color)
             : start(TIMER_INIT())
-              , effect_id(_effect_id)
-              , pos(_x, _y)
-              , duration(_duration)
+            , effect_id(_effect_id)
+            , pos(_x, _y)
+            , duration(_duration)
         {
             circle.range = range;
             circle.color = _color;
@@ -81,10 +81,10 @@ namespace {
 
         EffectSettings(const char* _name, const uint32_t _effect_id, const float _range, const uint32_t _duration, const uint32_t _stoc_header = 0)
             : name(_name)
-              , effect_id(_effect_id)
-              , range(_range)
-              , stoc_header(_stoc_header)
-              , duration(_duration) { }
+            , effect_id(_effect_id)
+            , range(_range)
+            , stoc_header(_stoc_header)
+            , duration(_duration) { }
     };
 
     struct EffectTrigger {
