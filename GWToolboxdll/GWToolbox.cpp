@@ -145,16 +145,14 @@ namespace {
 
     ToolboxIni* OpenSettingsFile()
     {
-        // NB: No way of manually freeing inifile if its trapped inside this function, but nbd, OS will clean up. Alternative is memcpy, but no need for the extra copy
-        static ToolboxIni* inifile = nullptr;
+        static std::unique_ptr<ToolboxIni> inifile = nullptr;
         const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
-        if (!GWToolbox::SettingsFolderChanged() && inifile) return inifile;
-        const auto tmp = new ToolboxIni(false, false, false);
+        if (!GWToolbox::SettingsFolderChanged() && inifile) return inifile.get();
+        auto tmp = std::make_unique<ToolboxIni>(false, false, false);
         ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
         tmp->location_on_disk = full_path;
-        delete inifile;
-        inifile = tmp;
-        return inifile;
+        inifile = std::move(tmp);
+        return inifile.get();
     }
 
     bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, const bool enable)
