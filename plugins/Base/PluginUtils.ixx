@@ -310,7 +310,7 @@ namespace PluginUtils {
         }
         char cmd[256];
         const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
-        assert(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
+        PLUGIN_ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
         SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
     }
 
@@ -493,9 +493,9 @@ namespace PluginUtils {
         }
         // NB: GW uses code page 0 (CP_ACP)
         const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, s.data(), static_cast<int>(s.size()), nullptr, 0, nullptr, nullptr);
-        assert(size_needed != 0);
+        PLUGIN_ASSERT(size_needed != 0);
         std::string strTo(size_needed, 0);
-        assert(WideCharToMultiByte(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), strTo.data(), size_needed, NULL, NULL));
+        PLUGIN_ASSERT(WideCharToMultiByte(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), strTo.data(), size_needed, NULL, NULL));
         return std::move(strTo);
     }
 
@@ -565,9 +565,9 @@ namespace PluginUtils {
         }
         // NB: GW uses code page 0 (CP_ACP)
         const auto size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
-        assert(size_needed != 0);
+        PLUGIN_ASSERT(size_needed != 0);
         std::wstring wstrTo(size_needed, 0);
-        assert(MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), wstrTo.data(), size_needed));
+        PLUGIN_ASSERT(MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), wstrTo.data(), size_needed));
         return std::move(wstrTo);
     }
 
@@ -968,7 +968,7 @@ namespace PluginUtils {
         va_start(args, msg);
         const auto size = vsnprintf(nullptr, 0, msg, args);
         out.resize(size + 1);
-        assert(vsnprintf(out.data(), out.size(), msg, args) <= size);
+        PLUGIN_ASSERT(vsnprintf(out.data(), out.size(), msg, args) <= size);
         va_end(args);
         return std::move(out);
     }
@@ -980,7 +980,7 @@ namespace PluginUtils {
         va_start(args, msg);
         const auto size = _vsnwprintf(nullptr, 0, msg, args);
         out.resize(size + 1);
-        assert(_vsnwprintf(out.data(), out.size(), msg, args) <= size);
+        PLUGIN_ASSERT(_vsnwprintf(out.data(), out.size(), msg, args) <= size);
         va_end(args);
         return std::move(out);
     }

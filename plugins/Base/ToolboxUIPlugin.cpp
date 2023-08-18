@@ -144,8 +144,7 @@ void ToolboxUIPlugin::SaveSettings(const wchar_t* folder)
     ini.SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
     ini.SetBoolValue(Name(), VAR_NAME(lock_size), lock_size);
     ini.SetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
-    [[maybe_unused]] const auto si_error = ini.SaveFile(GetSettingFile(folder).c_str());
-    assert(si_error == SI_OK);
+    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
 
 int ToolboxUIPlugin::GetWinFlags(ImGuiWindowFlags flags) const

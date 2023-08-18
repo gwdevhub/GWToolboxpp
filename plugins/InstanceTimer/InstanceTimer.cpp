@@ -35,7 +35,7 @@ void InstanceTimer::SaveSettings(const wchar_t* folder)
     ToolboxUIPlugin::SaveSettings(folder);
     ini.SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini.SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
-    assert(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
 
 void InstanceTimer::DrawSettings()

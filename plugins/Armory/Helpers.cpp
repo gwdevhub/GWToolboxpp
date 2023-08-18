@@ -79,7 +79,8 @@ ImVec4 ImVec4FromDyeColor(DyeColor color)
         case DyeColor::Black:
         case DyeColor::Gray:
         case DyeColor::White:
-        case DyeColor::Pink: assert(color_id < _countof(palette));
+        case DyeColor::Pink:
+            PLUGIN_ASSERT(color_id < _countof(palette));
             return palette[color_id];
         default:
             return {};
