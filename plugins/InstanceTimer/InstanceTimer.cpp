@@ -81,9 +81,6 @@ void InstanceTimer::Draw(IDirect3DDevice9*)
     if (!toolbox_handle) {
         return;
     }
-    if (!plugin_visible) {
-        return;
-    }
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         return;
     }
@@ -94,7 +91,7 @@ void InstanceTimer::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
-    if (ImGui::Begin(Name(), nullptr, flags)) {
+    if (ImGui::Begin(Name(), GetVisiblePtr(), flags)) {
         snprintf(timer_buffer, 32, "%d:%02d:%02d", time / (60 * 60), time / 60 % 60, time % 60);
         ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
         const auto cursor_pos = ImGui::GetCursorPos();

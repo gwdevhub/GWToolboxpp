@@ -4,6 +4,8 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Managers/ChatMgr.h>
 
+#include "GWCA/GWCA.h"
+
 import PluginUtils;
 
 namespace {
@@ -11,59 +13,86 @@ namespace {
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void CmdTB(const wchar_t*, int argc, LPWSTR* argv)
     {
+        const auto instance = static_cast<ToolboxUIPlugin*>(ToolboxPluginInstance());
+        if (!instance) {
+            return;
+        }
         const std::wstring arg1 = PluginUtils::ToLower(argv[1]);
         if (argc < 3) {
             if (arg1 == L"hide") {
                 // e.g. /tb hide
-                if (ToolboxPluginInstance()->GetVisiblePtr()) {
-                    *ToolboxPluginInstance()->GetVisiblePtr() = false;
-                }
+                *instance->GetVisiblePtr() = false;
             }
             else if (arg1 == L"show") {
                 // e.g. /tb show
-                if (ToolboxPluginInstance()->GetVisiblePtr()) {
-                    *ToolboxPluginInstance()->GetVisiblePtr() = true;
-                }
+                *instance->GetVisiblePtr() = true;
             }
             return;
         }
-        const auto should_react = [](auto arg) {
+        const auto should_react = [instance](auto arg) {
             if (!arg.empty()) {
                 const std::string name = PluginUtils::WStringToString(arg);
-                if (arg == L"all" || PluginUtils::ToLower(ToolboxPluginInstance()->Name()).find(name) == 0) {
+                if (arg == L"all" || PluginUtils::ToLower(instance->Name()).find(name) == 0) {
                     return true;
                 }
             }
             return false;
         };
-        const std::wstring arg = PluginUtils::ToLower(argv[1]);
-
         const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
-        if (arg2 == L"hide") {
+        if (!should_react(arg2)) {
+            return;
+        }
+        if (arg1 == L"hide") {
             // e.g. /tb travel hide
-            if (should_react(arg)) {
-                if (ToolboxPluginInstance()->GetVisiblePtr()) {
-                    *ToolboxPluginInstance()->GetVisiblePtr() = false;
-                }
-            }
+            *instance->GetVisiblePtr() = false;
         }
-        else if (arg2 == L"show") {
+        else if (arg1 == L"show") {
             // e.g. /tb travel show
-            if (ToolboxPluginInstance()->GetVisiblePtr()) {
-                *ToolboxPluginInstance()->GetVisiblePtr() = true;
-            }
+            *instance->GetVisiblePtr() = true;
         }
-        else if (arg2 == L"toggle") {
+        else if (arg1 == L"toggle") {
             // e.g. /tb travel show
-            if (ToolboxPluginInstance()->GetVisiblePtr()) {
-                *ToolboxPluginInstance()->GetVisiblePtr() = !*ToolboxPluginInstance()->GetVisiblePtr();
-            }
+            *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
     }
 }
 
-void ToolboxUIPlugin::DrawSizeAndPositionSettings()
+bool* ToolboxUIPlugin::GetVisiblePtr()
 {
+    if (!has_closebutton || show_closebutton) {
+        return &plugin_visible;
+    }
+    return nullptr;
+}
+
+
+void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
+{
+    ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
+    GW::Chat::CreateCommand(L"tb", CmdTB);
+}
+
+bool ToolboxUIPlugin::CanTerminate()
+{
+    return GW::HookBase::GetInHookCount() == 0;
+}
+
+void ToolboxUIPlugin::SignalTerminate()
+{
+    ToolboxPlugin::SignalTerminate();
+    GW::DisableHooks();
+}
+
+void ToolboxUIPlugin::Terminate()
+{
+    GW::Chat::DeleteCommand(L"tb");
+    ToolboxPlugin::Terminate();
+}
+
+void ToolboxUIPlugin::DrawSettings()
+{
+    ToolboxPlugin::DrawSettings();
+
     ImVec2 pos(0, 0);
     ImVec2 size(100.0f, 100.0f);
     if (const auto window = ImGui::FindWindowByName(Name())) {
@@ -81,38 +110,17 @@ void ToolboxUIPlugin::DrawSizeAndPositionSettings()
         }
     }
     if (is_movable) {
-        ImGui::SameLine();
         ImGui::Checkbox("Lock Position", &lock_move);
     }
     if (is_resizable) {
-        ImGui::SameLine();
         ImGui::Checkbox("Lock Size", &lock_size);
     }
     if (has_closebutton) {
-        ImGui::SameLine();
         ImGui::Checkbox("Show close button", &show_closebutton);
     }
     if (can_show_in_main_window) {
-        ImGui::SameLine();
         ImGui::Checkbox("Show in main window", &show_menubutton);
     }
-}
-
-void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
-{
-    ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
-    GW::Chat::CreateCommand(L"tb", CmdTB);
-}
-
-bool ToolboxUIPlugin::CanTerminate()
-{
-    return GW::HookBase::GetInHookCount() == 0;
-}
-
-void ToolboxUIPlugin::Terminate()
-{
-    GW::Chat::DeleteCommand(L"tb");
-    ToolboxPlugin::Terminate();
 }
 
 void ToolboxUIPlugin::LoadSettings(const wchar_t* folder)
@@ -136,5 +144,21 @@ void ToolboxUIPlugin::SaveSettings(const wchar_t* folder)
     ini.SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
     ini.SetBoolValue(Name(), VAR_NAME(lock_size), lock_size);
     ini.SetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
-    ini.SaveFile(GetSettingFile(folder).c_str());
+    [[maybe_unused]] const auto si_error = ini.SaveFile(GetSettingFile(folder).c_str());
+    assert(si_error == SI_OK);
+}
+
+int ToolboxUIPlugin::GetWinFlags(ImGuiWindowFlags flags) const
+{
+    if (lock_size || !is_resizable) {
+        flags |= ImGuiWindowFlags_NoResize;
+    }
+    if (lock_move || !is_movable) {
+        flags |= ImGuiWindowFlags_NoMove;
+    }
+    if (!show_closebutton) {
+        flags |= ImGuiWindowFlags_NoCollapse;
+    }
+
+    return flags;
 }

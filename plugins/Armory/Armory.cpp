@@ -86,7 +86,7 @@ void Armory::Draw(IDirect3DDevice9*)
 
     // constexpr ImVec2 window_size(330.f, 208.f);
     // ImGui::SetNextWindowSize(window_size);
-    if (ImGui::Begin("Armory", &plugin_visible, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar)) {
+    if (ImGui::Begin("Armory", GetVisiblePtr(), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar)) {
         ImGui::Text("Profession: %s", GetProfessionName(prof));
         ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
 

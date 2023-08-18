@@ -5,6 +5,8 @@
 
 #include <corecrt_wstdio.h>
 
+#include "GWCA/GWCA.h"
+
 namespace {
     char time_buf[100] = {0};
 
@@ -51,18 +53,21 @@ void Clock::Draw(IDirect3DDevice9*)
     if (!toolbox_handle) {
         return;
     }
-    if (!plugin_visible) {
+    constexpr auto flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
+    if (!GetVisiblePtr() || !*GetVisiblePtr()) {
         return;
     }
-    ImGui::Begin("clock");
-    GetTime(time_buf, _countof(time_buf));
-    ImGui::TextUnformatted(time_buf);
+    if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags(flags))) {
+        GetTime(time_buf, _countof(time_buf));
+        ImGui::TextUnformatted(time_buf);
+    }
     ImGui::End();
 }
 
 void Clock::Initialize(ImGuiContext* ctx, const ImGuiAllocFns fns, const HMODULE toolbox_dll)
 {
-    ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
+    GW::Initialize();
+    ToolboxUIPlugin::Initialize(ctx, fns, toolbox_dll);
 
     GW::HookBase::Initialize();
     GW::Scanner::Initialize();
@@ -77,7 +82,7 @@ void Clock::Initialize(ImGuiContext* ctx, const ImGuiAllocFns fns, const HMODULE
 
 void Clock::Terminate()
 {
-    ToolboxPlugin::Terminate();
+    ToolboxUIPlugin::Terminate();
     if (SendChat_Func) {
         GW::HookBase::RemoveHook(SendChat_Func);
     }
