@@ -68,9 +68,8 @@ namespace {
     GW::MemoryPatcher ctrl_click_patch;
     GW::MemoryPatcher tome_patch;
     GW::MemoryPatcher gold_confirm_patch;
-    GW::MemoryPatcher item_description_patch;
-    GW::MemoryPatcher item_description_patch2;
     GW::MemoryPatcher skill_description_patch;
+    GW::MemoryPatcher remove_skill_warmup_duration_patch;
 
     void SetWindowTitle(const bool enabled)
     {
@@ -1296,6 +1295,13 @@ void GameSettings::Initialize()
     if (address) {
         gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
     }
+
+    address = GW::Scanner::Find("\xdf\xe0\xf6\xc4\x41\x7a\x78", "xxxxxxx", 0x5);
+    if(address) {
+        remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
+        remove_skill_warmup_duration_patch.TogglePatch(true);
+    }
+
     // This could be done with patches if we wanted to still show description for weapon sets and merchants etc, but its more signatures to log.
     GetItemDescription_Func = (GetItemDescription_pt)GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f);
     if (GetItemDescription_Func) {
@@ -1679,6 +1685,7 @@ void GameSettings::Terminate()
     gold_confirm_patch.Reset();
     skill_description_patch.Reset();
     skip_map_entry_message_patch.Reset();
+    remove_skill_warmup_duration_patch.Reset();
 
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
 }
