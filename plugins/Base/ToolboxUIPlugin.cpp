@@ -39,18 +39,18 @@ namespace {
             return false;
         };
         const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
-        if (!should_react(arg2)) {
+        if (!should_react(arg1)) {
             return;
         }
-        if (arg1 == L"hide") {
+        if (arg2 == L"hide") {
             // e.g. /tb travel hide
             *instance->GetVisiblePtr() = false;
         }
-        else if (arg1 == L"show") {
+        else if (arg2 == L"show") {
             // e.g. /tb travel show
             *instance->GetVisiblePtr() = true;
         }
-        else if (arg1 == L"toggle") {
+        else if (arg2 == L"toggle") {
             // e.g. /tb travel show
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
