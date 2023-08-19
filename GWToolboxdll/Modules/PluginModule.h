@@ -41,7 +41,7 @@ public:
     bool CanTerminate() override;
     bool ShowOnWorldMap() const override { return true; }
 
-    static std::vector<Plugin*> GetPlugins();
+    static std::vector<ToolboxPlugin*> GetPlugins();
 
     void ShowVisibleRadio() override { }
     void DrawSizeAndPositionSettings() override { }

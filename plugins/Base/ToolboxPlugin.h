@@ -52,24 +52,14 @@ public:
 
     [[nodiscard]] virtual bool* GetVisiblePtr() { return nullptr; }
 
+    [[nodiscard]] virtual bool ShowInMainMenu() const { return false; }
+
     [[nodiscard]] virtual bool ShowOnWorldMap() const { return false; }
 
-    [[nodiscard]] virtual std::filesystem::path GetSettingFile(const wchar_t* folder) const
-    {
-        wchar_t wstr[64];
-        const int wchars_num = MultiByteToWideChar(CP_UTF8, 0, Name(), -1, nullptr, 0);
-        MultiByteToWideChar(CP_UTF8, 0, Name(), -1, wstr, std::min(wchars_num, 64));
-        const auto ininame = std::wstring(wstr) + L".ini";
-        return std::filesystem::path(folder) / ininame;
-    }
+    [[nodiscard]] virtual std::filesystem::path GetSettingFile(const wchar_t* folder) const;
 
     // Initialize module
-    virtual void Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
-    {
-        ImGui::SetCurrentContext(ctx);
-        ImGui::SetAllocatorFunctions(allocator_fns.alloc_func, allocator_fns.free_func, allocator_fns.user_data);
-        toolbox_handle = toolbox_dll;
-    }
+    virtual void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll);
 
     // Send termination signal to module, make sure Terminate can be called.
     virtual void SignalTerminate() {}
@@ -97,6 +87,8 @@ public:
 
     // Will be drawn in the Settings/Plugins menu. Must use ImGui
     virtual void DrawSettings() {}
+
+    virtual bool DrawTabButton(bool, bool, bool) { return false; }
 
 protected:
     HMODULE toolbox_handle = nullptr;

@@ -103,6 +103,36 @@ void MainWindow::Draw(IDirect3DDevice9*)
                         module->visible = false;
                     }
                 }
+                for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](ToolboxPlugin* p) {
+                    return p && p->GetVisiblePtr() && p->ShowInMainMenu();
+                })) {
+                    *plugin->GetVisiblePtr() = false;
+                }
+            }
+            ImGui::PopID();
+        }
+        for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](ToolboxPlugin* p) {
+            return p && p->GetVisiblePtr() && p->ShowInMainMenu();
+        })) {
+            ImGui::PushID(plugin);
+            if (drawn) {
+                ImGui::Separator();
+            }
+            if (plugin->DrawTabButton(show_icons, true, center_align_text)) {
+                if (one_panel_at_time_only && plugin->GetVisiblePtr() && *plugin->GetVisiblePtr()) {
+                    for (const auto& module : modules_to_draw | std::views::values) {
+                        if (!module->IsWindow()) {
+                            continue;
+                        }
+                        module->visible = false;
+                    }
+                    for (const auto plug : PluginModule::GetPlugins() | std::views::filter([](ToolboxPlugin* p) {
+                        return p && p->GetVisiblePtr() && p->ShowInMainMenu();
+                    })) {
+                        if (plugin == plug) continue;
+                        *plug->GetVisiblePtr() = false;
+                    }
+                }
             }
             ImGui::PopID();
         }

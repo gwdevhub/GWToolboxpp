@@ -21,7 +21,8 @@ namespace {
             return false;
         }
         const std::wstring arg1 = PluginUtils::ToLower(argv[1]);
-        const auto pluginname = PluginUtils::ToLower(PluginUtils::StringToWString(instance->Name()));
+        auto pluginname = PluginUtils::ToLower(PluginUtils::StringToWString(instance->Name()));
+        pluginname.erase(std::ranges::remove_if(pluginname, [](const wchar_t x) { return std::isspace(x); }).begin(), pluginname.end());
         if (arg1.empty()) {
             return false;
         }
@@ -41,13 +42,18 @@ namespace {
             // /tb PluginName hide
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
-        return arg1 == pluginname || arg1 == L"plugins";
+        return arg1 == pluginname;
     }
 }
 
 bool* ToolboxUIPlugin::GetVisiblePtr()
 {
     return &plugin_visible;
+}
+
+bool ToolboxUIPlugin::ShowInMainMenu() const
+{
+    return can_show_in_main_window && show_menubutton;
 }
 
 void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
@@ -64,12 +70,12 @@ bool ToolboxUIPlugin::CanTerminate()
 void ToolboxUIPlugin::SignalTerminate()
 {
     ToolboxPlugin::SignalTerminate();
+    GW::Chat::DeleteCommand(L"tb");
     GW::DisableHooks();
 }
 
 void ToolboxUIPlugin::Terminate()
 {
-    GW::Chat::DeleteCommand(L"tb");
     ToolboxPlugin::Terminate();
 }
 
@@ -166,4 +172,39 @@ int ToolboxUIPlugin::GetWinFlags(ImGuiWindowFlags flags) const
     }
 
     return flags;
+}
+
+bool ToolboxUIPlugin::DrawTabButton(const bool show_icon, const bool show_text, const bool center_align_text)
+{
+    ImGui::PushStyleColor(ImGuiCol_Button, plugin_visible ? ImGui::GetStyle().Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    const ImVec2 textsize = ImGui::CalcTextSize(Name());
+    const float width = ImGui::GetContentRegionAvail().x;
+
+    float img_size = 0;
+    if (show_icon) {
+        img_size = ImGui::GetTextLineHeightWithSpacing();
+    }
+    float text_x;
+    if (center_align_text) {
+        text_x = pos.x + img_size + (width - img_size - textsize.x) / 2;
+    }
+    else {
+        text_x = pos.x + img_size + ImGui::GetStyle().ItemSpacing.x;
+    }
+    const bool clicked = ImGui::Button("", ImVec2(width, ImGui::GetTextLineHeightWithSpacing()));
+    if (show_icon && Icon()) {
+        ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),
+                                            ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Icon());
+    }
+    if (show_text) {
+        ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),
+                                            ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Name());
+    }
+
+    if (clicked) {
+        plugin_visible = !plugin_visible;
+    }
+    ImGui::PopStyleColor();
+    return clicked;
 }

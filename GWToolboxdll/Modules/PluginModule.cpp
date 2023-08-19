@@ -197,9 +197,13 @@ bool PluginModule::CanTerminate()
     });
 }
 
-std::vector<PluginModule::Plugin*> PluginModule::GetPlugins()
+std::vector<ToolboxPlugin*> PluginModule::GetPlugins()
 {
-    return loaded_plugins;
+    std::vector<ToolboxPlugin*> _plugins;
+    for (const auto plugin : loaded_plugins) {
+        _plugins.push_back(plugin->instance);
+    }
+    return _plugins;
 }
 
 void PluginModule::Initialize()

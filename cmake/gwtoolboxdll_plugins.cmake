@@ -3,6 +3,7 @@ target_sources(plugin_base INTERFACE
     "plugins/Base/dllmain.cpp"
     "plugins/Base/stl.h"
     "plugins/Base/ToolboxPlugin.h"
+    "plugins/Base/ToolboxPlugin.cpp"
     "plugins/Base/PluginUtils.ixx"
     "plugins/Base/ToolboxUIPlugin.h"
     "plugins/Base/ToolboxUIPlugin.cpp")
