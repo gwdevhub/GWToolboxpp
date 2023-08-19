@@ -21,19 +21,14 @@ namespace {
             return false;
         }
         const std::wstring arg1 = PluginUtils::ToLower(argv[1]);
-        const auto should_react = [instance](auto arg) {
-            if (!arg.empty()) {
-                const std::string name = PluginUtils::WStringToString(arg);
-                if (arg == L"all" || arg == L"plugins" || PluginUtils::ToLower(instance->Name()).find(name) == 0) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
-        if (!should_react(arg1)) {
+        const auto pluginname = PluginUtils::ToLower(PluginUtils::StringToWString(instance->Name()));
+        if (arg1.empty()) {
             return false;
         }
+        if (!(arg1 == L"all" || arg1 == L"plugins" || pluginname.find(arg1) == 0)) {
+            return false;
+        }
+        const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
         if (arg2 == L"hide") {
             // /tb PluginName hide
             *instance->GetVisiblePtr() = false;
@@ -46,7 +41,7 @@ namespace {
             // /tb PluginName hide
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
-        return arg2 == PluginUtils::StringToWString(instance->Name()) || arg2 == L"plugins";
+        return arg2 == pluginname || arg2 == L"plugins";
     }
 }
 
