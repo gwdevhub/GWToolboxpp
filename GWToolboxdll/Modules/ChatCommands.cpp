@@ -1479,6 +1479,10 @@ void ChatCommands::CmdTB(const wchar_t* message, const int argc, LPWSTR* argv)
             // e.g. /tb show
             MainWindow::Instance().visible = true;
         }
+        else if (arg1 == L"toggle") {
+            // e.g. /tb toggle
+            MainWindow::Instance().visible = !MainWindow::Instance().visible;
+        }
         else if (arg1 == L"save") {
             // e.g. /tb save
             GWToolbox::SetSettingsFolder({});
@@ -1539,6 +1543,12 @@ void ChatCommands::CmdTB(const wchar_t* message, const int argc, LPWSTR* argv)
             window->visible = true;
         }
     }
+    else if (arg2 == L"toggle") {
+        // e.g. /tb travel show
+        for (const auto& window : windows) {
+            window->visible = !window->visible;
+        }
+    }
     else if (arg2 == L"mini" || arg2 == L"minimize" || arg2 == L"collapse") {
         // e.g. /tb travel mini
         for (const auto& window : windows) {
@@ -1573,7 +1583,7 @@ void ChatCommands::CmdTB(const wchar_t* message, const int argc, LPWSTR* argv)
     }
     else {
         // Invalid argument
-        const auto text = std::format(L"Syntax: {} {} [hide|show|mini|maxi|load|save]", argv[0], argv[1]);
+        const auto text = std::format(L"Syntax: {} {} [hide|show|toggle|mini|maxi|load|save]", argv[0], argv[1]);
         Log::ErrorW(text.c_str());
     }
 }
