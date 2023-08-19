@@ -142,6 +142,8 @@ void ToolboxUIPlugin::LoadSettings(const wchar_t* folder)
     lock_move = ini.GetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
     lock_size = ini.GetBoolValue(Name(), VAR_NAME(lock_size), lock_size);
     show_menubutton = ini.GetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
+    show_closebutton = ini.SetBoolValue(Name(), VAR_NAME(show_closebutton), show_closebutton);
+    show_title = ini.SetBoolValue(Name(), VAR_NAME(show_title), show_title);
 }
 
 void ToolboxUIPlugin::SaveSettings(const wchar_t* folder)
@@ -153,6 +155,8 @@ void ToolboxUIPlugin::SaveSettings(const wchar_t* folder)
     ini.SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
     ini.SetBoolValue(Name(), VAR_NAME(lock_size), lock_size);
     ini.SetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
+    ini.SetBoolValue(Name(), VAR_NAME(show_closebutton), show_closebutton);
+    ini.SetBoolValue(Name(), VAR_NAME(show_title), show_title);
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
 
