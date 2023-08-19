@@ -180,6 +180,7 @@ namespace {
 
     bool auto_skip_cinematic = false;
     bool show_unlearned_skill = false;
+    bool remove_min_skill_warmup_duration = false;
 
     bool faction_warn_percent = true;
     int faction_warn_percent_amount = 75;
@@ -1299,7 +1300,6 @@ void GameSettings::Initialize()
     address = GW::Scanner::Find("\xdf\xe0\xf6\xc4\x41\x7a\x78", "xxxxxxx", 0x5);
     if(address) {
         remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
-        remove_skill_warmup_duration_patch.TogglePatch(true);
     }
 
     // This could be done with patches if we wanted to still show description for weapon sets and merchants etc, but its more signatures to log.
@@ -1563,6 +1563,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
     auto_return_on_defeat = ini->GetBoolValue(Name(), VAR_NAME(auto_return_on_defeat), auto_return_on_defeat);
 
+    remove_min_skill_warmup_duration = ini->GetBoolValue(Name(), VAR_NAME(remove_min_for_cast_time_popup), remove_min_skill_warmup_duration);
     show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
     auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
@@ -1640,6 +1641,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     SetWindowTitle(set_window_title_as_charname);
 
     tome_patch.TogglePatch(show_unlearned_skill);
+    remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
     skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
 
@@ -1719,6 +1721,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
     ini->SetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
 
+    ini->SetBoolValue(Name(), VAR_NAME(remove_min_for_cast_time_popup), remove_min_skill_warmup_duration);
     ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
     ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
@@ -1872,6 +1875,10 @@ void GameSettings::DrawSettingsInternal()
 
     if (ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill)) {
         tome_patch.TogglePatch(show_unlearned_skill);
+    }
+
+    if (ImGui::Checkbox("Remove 1.5 second minimum for the cast bar to show.", &remove_min_skill_warmup_duration)) {
+        remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
     }
 
     ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
