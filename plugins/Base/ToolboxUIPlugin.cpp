@@ -83,23 +83,17 @@ void ToolboxUIPlugin::DrawSettings()
         pos = window->Pos;
         size = window->Size;
     }
-    int count = 0;
     if (is_movable) {
-        if (++count % 2 == 0) {
-            ImGui::SameLine();
-        }
         if (ImGui::DragFloat2("Position", reinterpret_cast<float*>(&pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
             ImGui::SetWindowPos(Name(), pos);
         }
     }
     if (is_resizable) {
-        if (++count % 2 == 0) {
-            ImGui::SameLine();
-        }
         if (ImGui::DragFloat2("Size", reinterpret_cast<float*>(&size), 1.0f, 0.0f, 0.0f, "%.0f")) {
             ImGui::SetWindowSize(Name(), size);
         }
     }
+    int count = 0;
     if (is_movable) {
         if (++count % 2 == 0) {
             ImGui::SameLine();
