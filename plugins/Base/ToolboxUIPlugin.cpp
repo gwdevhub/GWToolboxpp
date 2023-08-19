@@ -11,28 +11,20 @@ import PluginUtils;
 namespace {
     // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
-    void CmdTB(const wchar_t*, int argc, LPWSTR* argv)
+    bool CmdTB(const wchar_t*, int argc, LPWSTR* argv)
     {
         const auto instance = static_cast<ToolboxUIPlugin*>(ToolboxPluginInstance());
         if (!instance) {
-            return;
+            return false;
+        }
+        if (argc < 3) {
+            return false;
         }
         const std::wstring arg1 = PluginUtils::ToLower(argv[1]);
-        if (argc < 3) {
-            if (arg1 == L"hide") {
-                // e.g. /tb hide
-                *instance->GetVisiblePtr() = false;
-            }
-            else if (arg1 == L"show") {
-                // e.g. /tb show
-                *instance->GetVisiblePtr() = true;
-            }
-            return;
-        }
         const auto should_react = [instance](auto arg) {
             if (!arg.empty()) {
                 const std::string name = PluginUtils::WStringToString(arg);
-                if (arg == L"all" || PluginUtils::ToLower(instance->Name()).find(name) == 0) {
+                if (arg == L"all" || arg == L"plugins" || PluginUtils::ToLower(instance->Name()).find(name) == 0) {
                     return true;
                 }
             }
@@ -40,20 +32,21 @@ namespace {
         };
         const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
         if (!should_react(arg1)) {
-            return;
+            return false;
         }
         if (arg2 == L"hide") {
-            // e.g. /tb travel hide
+            // /tb PluginName hide
             *instance->GetVisiblePtr() = false;
         }
         else if (arg2 == L"show") {
-            // e.g. /tb travel show
+            // /tb PluginName hide
             *instance->GetVisiblePtr() = true;
         }
         else if (arg2 == L"toggle") {
-            // e.g. /tb travel show
+            // /tb PluginName hide
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
+        return arg2 == PluginUtils::StringToWString(instance->Name()) || arg2 == L"plugins";
     }
 }
 
@@ -69,7 +62,7 @@ bool* ToolboxUIPlugin::GetVisiblePtr()
 void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
-    GW::Chat::CreateCommand(L"tb", CmdTB);
+    GW::Chat::CreateCommand(L"tb", GW::Chat::CmdCB(CmdTB));
 }
 
 bool ToolboxUIPlugin::CanTerminate()
