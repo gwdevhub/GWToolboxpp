@@ -23,10 +23,6 @@ void ToolboxUIElement::Initialize()
 void ToolboxUIElement::Terminate()
 {
     ToolboxModule::Terminate();
-    if (button_texture) {
-        button_texture->Release();
-    }
-    button_texture = nullptr;
 }
 
 void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
@@ -116,8 +112,7 @@ void ToolboxUIElement::ShowVisibleRadio()
     ImGui::PopID();
 }
 
-bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
-                                     const bool show_icon, const bool show_text, const bool center_align_text)
+bool ToolboxUIElement::DrawTabButton(const bool show_icon, const bool show_text, const bool center_align_text)
 {
     ImGui::PushStyleColor(ImGuiCol_Button, visible ? ImGui::GetStyle().Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));
     const ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -136,12 +131,7 @@ bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9*,
         text_x = pos.x + img_size + ImGui::GetStyle().ItemSpacing.x;
     }
     const bool clicked = ImGui::Button("", ImVec2(width, ImGui::GetTextLineHeightWithSpacing()));
-    if (show_icon) {
-        if (button_texture != nullptr) {
-            ImGui::GetWindowDrawList()->AddImage(
-                button_texture, pos, ImVec2(pos.x + img_size, pos.y + img_size));
-        }
-        else if (Icon()) {
+    if (show_icon) {if (Icon()) {
             ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),
                                                 ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Icon());
         }

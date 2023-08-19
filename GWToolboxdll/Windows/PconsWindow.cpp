@@ -405,9 +405,9 @@ void PconsWindow::CmdPcons(const wchar_t*, const int argc, const LPWSTR* argv)
     }
 }
 
-bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, const bool show_icon, const bool show_text, const bool center_align_text)
+bool PconsWindow::DrawTabButton(const bool show_icon, const bool show_text, const bool center_align_text)
 {
-    const bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text, center_align_text);
+    const bool clicked = ToolboxWindow::DrawTabButton(show_icon, show_text, center_align_text);
 
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));

@@ -38,7 +38,7 @@ public:
 
     void Update(float delta) override;
 
-    bool DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text, bool center_align_text) override;
+    bool DrawTabButton(bool show_icon, bool show_text, bool center_align_text) override;
     void Draw(IDirect3DDevice9* pDevice) override;
 
     void LoadSettings(ToolboxIni* ini) override;

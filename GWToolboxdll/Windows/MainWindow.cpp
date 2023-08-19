@@ -4,6 +4,7 @@
 #include <GWToolbox.h>
 
 #include <Windows/MainWindow.h>
+#include <Modules/PluginModule.h>
 
 void MainWindow::LoadSettings(ToolboxIni* ini)
 {
@@ -69,7 +70,7 @@ void MainWindow::RefreshButtons()
     }
 }
 
-void MainWindow::Draw(IDirect3DDevice9* device)
+void MainWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
         return;
@@ -90,7 +91,7 @@ void MainWindow::Draw(IDirect3DDevice9* device)
             }
             drawn = true;
             const auto& ui_module = modules_to_draw[i].second;
-            if (ui_module->DrawTabButton(device, show_icons, true, center_align_text)) {
+            if (ui_module->DrawTabButton(show_icons, true, center_align_text)) {
                 if (one_panel_at_time_only && ui_module->visible && ui_module->IsWindow()) {
                     for (const auto& module : modules_to_draw | std::views::values) {
                         if (module == ui_module) {
