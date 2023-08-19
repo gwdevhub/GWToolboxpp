@@ -62,36 +62,39 @@ For developers: there are a few things you should take note of:
 
 ## Credits
 
- **[HasKha](https://github.com/HasKha)**
- * Original creator of GWToolbox++.
+**[HasKha](https://github.com/HasKha)**
+* Original creator of GWToolbox++.
  
- **[KAOS](https://github.com/GregLando113)**
- * Original creator of the GW API used, reverse engineering work.
- * Several minor additions.
+**[KAOS](https://github.com/GregLando113)**
+* Original creator of the GW API used, reverse engineering work.
+* Several minor additions.
 
- **[Ziox](https://github.com/reduf)**   
- * Implementation of the vast majority of the chat-based features, such as custom chats and the chat timestamps.
- * Major contributor to the GW API used, reverse engineering work.
+**[Ziox](https://github.com/reduf)**   
+* Implementation of the vast majority of the chat-based features, such as custom chats and the chat timestamps.
+* Major contributor to the GW API used, reverse engineering work.
  
- **[Jon](https://github.com/3vcloud)**
- * Implemented many new features and improvements.
- * Major contributor to the GW API used, reverse engineering work.
- * Current maintainer of the project.
+**[Jon](https://github.com/3vcloud)**
+* Implemented many new features and improvements.
+* Major contributor to the GW API used, reverse engineering work.
+* Current maintainer of the project.
  
- **[Dub](https://github.com/DubbleClick)**
- * Implemented many new features and improvements.
- * Organising [JetBrains OSS licenses](https://www.jetbrains.com/community/opensource/#support) for core contributors.
+**[Dub](https://github.com/DubbleClick)**
+* Implemented many new features and improvements.
+* Code quality improvements.
 
- **Itecka** 
- * Original creator of a damage monitor, which inspired the toolbox damage monitor.
- * Created original implementation of the Cursor Fix.
+**[Itecka]()** 
+* Original creator of a damage monitor, which inspired the toolbox damage monitor.
+* Created original implementation of the Cursor Fix.
 
- **Everyone who [proposed a PR](https://github.com/HasKha/GWToolboxpp/pulls?q=is%3Apr+is%3Amerged)**
+**[Misty](https://github.com/Hour-of-the-Owl)/[DarkManic]()**
+* Extensive work on the site and documentation.
 
- **[Misty](https://github.com/Hour-of-the-Owl)/DarkManic**
- * Extensive work on the site and documentation.
+**[JetBrains](https://github.com/JetBrains)**
+* <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" alt="JetBrains Logo" width="23" style="float: left" /> Providing core contributors with <a href="https://www.jetbrains.com/community/opensource">OSS Development Licenses</a>
 
- **and everyone suggesting ideas!**
+**Everyone who [proposed a PR](https://github.com/HasKha/GWToolboxpp/pulls?q=is%3Apr+is%3Amerged)**
 
-**Images:**
-* All images in `resources/icons` are from www.flaticon.com 
+**and everyone suggesting ideas!**
+
+
+All images in `resources/icons` are from www.flaticon.com
