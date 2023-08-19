@@ -11,4 +11,3 @@ CheckOptions:
     value:           0
   - key:             modernize-use-auto.RemoveStars
     value:           1
-	
