@@ -47,12 +47,8 @@ namespace {
 
 bool* ToolboxUIPlugin::GetVisiblePtr()
 {
-    if (!has_closebutton || show_closebutton) {
-        return &plugin_visible;
-    }
-    return nullptr;
+    return &plugin_visible;
 }
-
 
 void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
@@ -87,27 +83,52 @@ void ToolboxUIPlugin::DrawSettings()
         pos = window->Pos;
         size = window->Size;
     }
+    int count = 0;
     if (is_movable) {
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         if (ImGui::DragFloat2("Position", reinterpret_cast<float*>(&pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
             ImGui::SetWindowPos(Name(), pos);
         }
     }
     if (is_resizable) {
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         if (ImGui::DragFloat2("Size", reinterpret_cast<float*>(&size), 1.0f, 0.0f, 0.0f, "%.0f")) {
             ImGui::SetWindowSize(Name(), size);
         }
     }
     if (is_movable) {
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         ImGui::Checkbox("Lock Position", &lock_move);
     }
     if (is_resizable) {
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         ImGui::Checkbox("Lock Size", &lock_size);
     }
-    if (has_closebutton) {
+    if (can_close) {
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         ImGui::Checkbox("Show close button", &show_closebutton);
     }
     if (can_show_in_main_window) {
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         ImGui::Checkbox("Show in main window", &show_menubutton);
+    }
+    if (can_collapse) {
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
+        ImGui::Checkbox("Show title", &show_title);
     }
 }
 
@@ -143,8 +164,11 @@ int ToolboxUIPlugin::GetWinFlags(ImGuiWindowFlags flags) const
     if (lock_move || !is_movable) {
         flags |= ImGuiWindowFlags_NoMove;
     }
-    if (!show_closebutton) {
+    if (!can_collapse) {
         flags |= ImGuiWindowFlags_NoCollapse;
+    }
+    if (!show_title || !can_collapse) {
+        flags |= ImGuiWindowFlags_NoTitleBar;
     }
 
     return flags;

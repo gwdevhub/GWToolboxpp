@@ -19,8 +19,10 @@ protected:
     ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const;
 
     bool show_closebutton = true;
+    bool show_title = true;
     bool can_show_in_main_window = false;
-    bool has_closebutton = false;
+    bool can_collapse = true;
+    bool can_close = false;
     bool is_resizable = true;
     bool is_movable = true;
 

@@ -7,10 +7,16 @@
 
 class InstanceTimer : public ToolboxUIPlugin {
 public:
-    InstanceTimer() = default;
+    InstanceTimer()
+    {
+        can_show_in_main_window = false;
+        show_title = false;
+        can_collapse = false;
+        can_close = false;
+    }
     ~InstanceTimer() override = default;
 
-    const char* Name() const override { return "Plugin Timer"; }
+    const char* Name() const override { return "PluginTimer"; }
 
     void LoadSettings(const wchar_t*) override;
     void SaveSettings(const wchar_t*) override;

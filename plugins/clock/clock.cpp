@@ -51,7 +51,7 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 void Clock::Draw(IDirect3DDevice9*)
 {
     constexpr auto flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
-    if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags(flags))) {
+    if (ImGui::Begin(Name(), can_close && show_closebutton ? GetVisiblePtr() : nullptr, GetWinFlags(flags))) {
         GetTime(time_buf, _countof(time_buf));
         ImGui::TextUnformatted(time_buf);
     }

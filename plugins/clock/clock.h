@@ -7,6 +7,9 @@ public:
     Clock()
     {
         show_closebutton = false;
+        show_title = false;
+        can_collapse = false;
+        can_close = false;
         is_resizable = true;
         is_movable = true;
         lock_size = true;
