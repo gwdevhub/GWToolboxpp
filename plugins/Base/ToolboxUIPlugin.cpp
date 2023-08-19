@@ -41,7 +41,7 @@ namespace {
             // /tb PluginName hide
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
-        return arg2 == pluginname || arg2 == L"plugins";
+        return arg1 == pluginname || arg1 == L"plugins";
     }
 }
 
