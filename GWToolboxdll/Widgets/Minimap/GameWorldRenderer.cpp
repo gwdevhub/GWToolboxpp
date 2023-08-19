@@ -316,6 +316,7 @@ void GameWorldRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     render_max_distance = std::max(static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance)), 10.0f);
     lerp_steps_per_line = ini->GetLongValue(section, VAR_NAME(lerp_steps_per_line), lerp_steps_per_line);
     fog_factor = std::clamp(static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(fog_factor), fog_factor)), 0.0f, 1.0f);
+    need_sync_markers = true;
 }
 
 void GameWorldRenderer::SaveSettings(ToolboxIni* ini, const char* section)
