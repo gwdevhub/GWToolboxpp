@@ -1,0 +1,19 @@
+# Run clang-tidy
+name: clang-tidy
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  checkout-and-check-formatting:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run clang-tidy
+      uses: HorstBaerbel/action-clang-tidy@1.2
+      with:
+        extensions: 'c,h,cpp,ixx'
