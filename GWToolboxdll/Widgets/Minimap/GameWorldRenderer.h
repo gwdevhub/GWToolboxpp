@@ -25,7 +25,6 @@ public:
         bool all_altitudes_queried = false;
     };
 
-
     static void Render(IDirect3DDevice9* device);
     static void LoadSettings(const ToolboxIni* ini, const char* section);
     static void SaveSettings(ToolboxIni* ini, const char* section);

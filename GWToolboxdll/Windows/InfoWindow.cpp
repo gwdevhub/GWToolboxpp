@@ -640,7 +640,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (show_widgets) {
-            const auto& widgets = GWToolbox::Instance().GetWidgets();
+            const auto& widgets = GWToolbox::GetWidgets();
 
             const unsigned cols = static_cast<unsigned>(ceil(ImGui::GetWindowSize().x / 200.f));
             ImGui::PushID("info_enable_widget_items");

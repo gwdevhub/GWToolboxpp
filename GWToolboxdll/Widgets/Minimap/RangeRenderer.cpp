@@ -80,7 +80,7 @@ void RangeRenderer::DrawSettings()
 
 size_t RangeRenderer::CreateCircle(D3DVertex* vertices, const float radius, const DWORD color) const
 {
-    const auto scale = Minimap::Instance().GetGwinchScale();
+    const auto scale = Minimap::GetGwinchScale();
     const auto xdiff = static_cast<float>(line_thickness) / scale.x;
     const auto ydiff = static_cast<float>(line_thickness) / scale.y;
     for (auto i = 0; i <= circle_triangles; i += 2) {

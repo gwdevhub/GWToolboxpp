@@ -53,7 +53,7 @@ void MainWindow::RegisterSettingsContent()
 void MainWindow::RefreshButtons()
 {
     pending_refresh_buttons = false;
-    const std::vector<ToolboxUIElement*>& ui = GWToolbox::Instance().GetUIElements();
+    const std::vector<ToolboxUIElement*>& ui = GWToolbox::GetUIElements();
     modules_to_draw.clear();
     for (auto& ui_module : ui) {
         if (!ui_module->show_menubutton) {
@@ -141,6 +141,6 @@ void MainWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 
     if (!open) {
-        GWToolbox::Instance().StartSelfDestruct();
+        GWToolbox::StartSelfDestruct();
     }
 }

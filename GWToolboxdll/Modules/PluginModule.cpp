@@ -90,7 +90,7 @@ namespace {
         }
         ImGuiAllocFns fns;
         ImGui::GetAllocatorFunctions(&fns.alloc_func, &fns.free_func, &fns.user_data);
-        plugin.instance->Initialize(context, fns, GWToolbox::Instance().GetDLLModule());
+        plugin.instance->Initialize(context, fns, GWToolbox::GetDLLModule());
         plugin.instance->LoadSettings(pluginsfoldername.c_str());
         plugin.initialized = true;
         return true;

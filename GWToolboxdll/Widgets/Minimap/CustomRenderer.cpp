@@ -610,7 +610,7 @@ void CustomRenderer::DrawSettings()
         ImGui::TreePop();
     }
     if (markers_changed) {
-        Minimap::Instance().game_world_renderer.TriggerSyncAllMarkers();
+        GameWorldRenderer::TriggerSyncAllMarkers();
         marker_file_dirty = true;
         markers_changed = false;
         Invalidate();

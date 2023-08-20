@@ -97,7 +97,7 @@ namespace {
         return (kanaxai->transmog_npc_id ^ 0x20000000) == GW::Constants::ModelID::Minipet::Gwen;
     }
 
-    const bool IsWholePartyTransformed()
+    bool IsWholePartyTransformed()
     {
         GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
         GW::PlayerArray* players = p ? GW::Agents::GetPlayerArray() : nullptr;

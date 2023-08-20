@@ -294,7 +294,7 @@ DWORD __stdcall ThreadEntry(LPVOID)
 
     // Some modules rely on the gwdx_ptr being present for stuff like getting viewport coords.
     // Because this ptr isn't set until the Render loop runs at least once, let it run and then reassign SetRenderCallback.
-    GWToolbox::Instance().Initialize();
+    GWToolbox::Initialize();
 
     Log::Log("Installed dx hooks\n");
 
@@ -452,14 +452,10 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         case WM_ACTIVATE:
             // send to toolbox modules and plugins
         {
-            bool captured = false;
             for (const auto m : tb.GetAllModules()) {
                 if (m->WndProc(Message, wParam, lParam)) {
-                    captured = true;
+                    return true;
                 }
-            }
-            if (captured) {
-                return true;
             }
         }
         // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
@@ -494,7 +490,7 @@ void GWToolbox::Initialize()
 
     Log::Log("Creating Toolbox\n");
 
-    GW::GameThread::RegisterGameThreadCallback(&Update_Entry, [](GW::HookStatus* a) { Instance().Update(a); });
+    GW::GameThread::RegisterGameThreadCallback(&Update_Entry, [](GW::HookStatus* a) { Update(a); });
 
     Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
     Resources::EnsureFolderExists(Resources::GetPath(L"img"));
@@ -513,7 +509,7 @@ void GWToolbox::Initialize()
     ToggleModule(MainWindow::Instance());
     ToggleModule(DialogModule::Instance());
 
-    ToolboxSettings::Instance().LoadModules(ini); // initialize all other modules as specified by the user
+    ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
         const auto* c = GW::GetCharContext();
@@ -523,7 +519,7 @@ void GWToolbox::Initialize()
     }
     GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
         __try {
-            Instance().Draw(device);
+            Draw(device);
         } __except (EXCEPT_EXPRESSION_ENTRY) { }
     });
 
@@ -683,7 +679,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
             return; // Fonts not loaded yet.
         }
 
-        Resources::Instance().DxUpdate(device);
+        Resources::DxUpdate(device);
 
         ImGui_ImplDX9_NewFrame();
         ImGui_ImplWin32_NewFrame();

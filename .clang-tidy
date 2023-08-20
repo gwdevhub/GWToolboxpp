@@ -1,4 +1,4 @@
-Checks:          '*, -performance-no-int-to-ptr, -misc-unused-parameters, -android*, -readability-non-const-parameter, -modernize-use-trailing-return-type, -bugprone-bool-pointer-implicit-conversion'
+Checks:          '*,-performance-no-int-to-ptr,-misc-unused-parameters,-android*,-readability-non-const-parameter,-modernize-use-trailing-return-type,-bugprone-bool-pointer-implicit-conversion'
 WarningsAsErrors: true
 CheckOptions:
   - key:             bugprone-unhandled-self-assignment.WarnOnlyIfThisHasSuspiciousField

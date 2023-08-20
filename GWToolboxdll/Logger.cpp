@@ -113,7 +113,7 @@ void Log::Terminate()
 // === File/console logging ===
 static void PrintTimestamp()
 {
-    time_t rawtime;
+    time_t rawtime{};
     time(&rawtime);
 
     tm timeinfo{};

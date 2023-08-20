@@ -89,7 +89,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
             }
         }
 
-        ToolboxSettings::Instance().DrawFreezeSetting();
+        ToolboxSettings::DrawFreezeSetting();
         ImGui::SameLine();
         ImGui::Checkbox("Hide Settings when entering explorable area", &hide_when_entering_explorable);
 
@@ -147,7 +147,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
                 ImGui::Text("Send Chat hotkey to enter one of the commands above.");
                 ImGui::TreePop();
             }
-            for (const auto module : GWToolbox::Instance().GetAllModules()) {
+            for (const auto module : GWToolbox::GetAllModules()) {
                 module->DrawHelp();
             }
         }
@@ -159,14 +159,14 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
             return strcmp(a->Name(), b->Name()) < 0;
         };
 
-        auto modules = GWToolbox::Instance().GetModules();
+        auto modules = GWToolbox::GetModules();
         std::ranges::sort(modules, sort);
         for (const auto m : modules) {
             if (m->HasSettings()) {
                 DrawSettingsSection(m->SettingsName());
             }
         }
-        auto windows = GWToolbox::Instance().GetWindows();
+        auto windows = GWToolbox::GetWindows();
         std::ranges::sort(windows, sort);
         if (!windows.empty()) {
             ImGui::Text("Windows:");
@@ -176,7 +176,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
                 DrawSettingsSection(m->SettingsName());
             }
         }
-        auto widgets = GWToolbox::Instance().GetWidgets();
+        auto widgets = GWToolbox::GetWidgets();
         std::ranges::sort(widgets, sort);
         if (!widgets.empty()) {
             ImGui::Text("Widgets:");

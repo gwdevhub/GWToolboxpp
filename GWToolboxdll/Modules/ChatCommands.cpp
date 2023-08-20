@@ -1602,9 +1602,9 @@ GW::UI::WindowID ChatCommands::MatchingGWWindow(const wchar_t*, const int argc, 
     }
     const std::wstring arg = GuiUtils::ToLower(argv[1]);
     if (!arg.empty() && arg != L"all") {
-        for (const auto& it : gw_windows) {
-            if (wcscmp(it.second, arg.c_str()) == 0) {
-                return it.first;
+        for (const auto& [window_id, window_name] : gw_windows) {
+            if (wcscmp(window_name, arg.c_str()) == 0) {
+                return window_id;
             }
         }
     }
@@ -1620,13 +1620,13 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t*, con
     else {
         const std::wstring arg = GuiUtils::ToLower(argv[1]);
         if (arg == L"all") {
-            for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
+            for (ToolboxUIElement* window : GWToolbox::GetUIElements()) {
                 ret.push_back(window);
             }
         }
         else if (!arg.empty()) {
             const std::string name = GuiUtils::WStringToString(arg);
-            for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
+            for (ToolboxUIElement* window : GWToolbox::GetUIElements()) {
                 if (GuiUtils::ToLower(window->Name()).find(name) == 0) {
                     ret.push_back(window);
                 }
@@ -2323,7 +2323,7 @@ void GetAchievements(const std::wstring& player_name)
         return Log::Error("Invalid player name for hall of monuments command");
     }
     memset(&hom_achievements, 0, sizeof(hom_achievements));
-    HallOfMonumentsModule::Instance().AsyncGetAccountAchievements(
+    HallOfMonumentsModule::AsyncGetAccountAchievements(
         player_name, &hom_achievements, OnAchievementsLoaded);
 }
 

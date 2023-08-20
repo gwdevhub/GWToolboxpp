@@ -98,9 +98,9 @@ void ServerInfoWidget::Update(float)
             const std::string url = "https://api.ipgeolocation.io/ipgeo?apiKey="s + IPGEO_API_KEY + "&ip=" + current_server_info->ip;
             int tries = 0;
             std::string response;
-            bool success = false;
+            bool success;
             do {
-                success = Resources::Instance().Download(url, response);
+                success = Resources::Download(url, response);
                 tries++;
             } while (!success && tries < 5);
             if (!success) {

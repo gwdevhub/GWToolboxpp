@@ -248,7 +248,7 @@ void Minimap::Terminate()
     symbols_renderer.Terminate();
     custom_renderer.Terminate();
     effect_renderer.Terminate();
-    game_world_renderer.Terminate();
+    GameWorldRenderer::Terminate();
 }
 
 void Minimap::Initialize()

@@ -1904,10 +1904,7 @@ bool HotkeyPingBuild::GetText(void*, const int idx, const char** out_text)
 }
 
 HotkeyPingBuild::HotkeyPingBuild(const ToolboxIni* ini, const char* section)
-    : TBHotkey(ini, section)
-{
-    index = static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0));
-}
+    : TBHotkey(ini, section), index(static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0))) {}
 
 void HotkeyPingBuild::Save(ToolboxIni* ini, const char* section) const
 {

@@ -58,13 +58,11 @@ namespace {
     bool hard_mode = false;
     ImVec2 imgui_pos = {0.f, 0.f};
     ImVec2 imgui_size = {0.f, 0.f};
-    bool map_ready = false;
-    bool initialised = false;
 
     // Emulated effects in order of addition
     std::map<uint32_t, std::vector<GW::Effect>> cached_effects;
 
-    struct MoraleChangeUIMessage {
+    struct [[maybe_unused]] MoraleChangeUIMessage {
         uint32_t agent_id;
         uint32_t percent;
     };
@@ -100,20 +98,6 @@ namespace {
     {
         const auto w = GW::GetWorldContext();
         return w ? w->morale : 100;
-    }
-
-    uint32_t GetMorale(const uint32_t agent_id)
-    {
-        const auto w = GW::GetWorldContext();
-        if (!(w && w->party_morale_related.size())) {
-            return 100;
-        }
-        for (const auto& m : w->party_morale_related) {
-            if (m.party_member_info->agent_id == agent_id) {
-                return m.party_member_info->morale;
-            }
-        }
-        return 100;
     }
 
     // Get matching effect from gwtoolbox overlay
@@ -284,7 +268,7 @@ namespace {
         remove.header = GAME_SMSG_EFFECT_REMOVED;
         add.agent_id = remove.agent_id = GW::Agents::GetPlayerId();
 
-        for (GW::Effect& effect : readd_effects) {
+        for (auto& effect : readd_effects) {
             remove.effect_id = effect.effect_id;
             GW::StoC::EmulatePacket(&remove);
             add.skill_id = static_cast<uint32_t>(effect.skill_id);
@@ -469,15 +453,13 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         return;
     }
 
-    const auto window_flags = GetWinFlags(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
-
     ImGui::SetNextWindowSize(imgui_size);
     ImGui::SetNextWindowPos(imgui_pos);
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
-    ImGui::Begin(Name(), nullptr, window_flags);
+    ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize));
 
     ImVec2 skill_top_left({imgui_pos.x, imgui_pos.y});
     if (y_translate < 0) {
@@ -486,7 +468,6 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (x_translate < 0) {
         skill_top_left.x = imgui_pos.x + imgui_size.x - m_skill_width;
     }
-    char remaining_str[16];
     ImGui::PushFont(GetFont(font_effects));
 
     int row_skills_drawn = 0;
@@ -537,6 +518,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 
     for (auto& effects : cached_effects | std::views::values) {
         for (auto& effect : effects) {
+            char remaining_str[16];
             if (effect.duration > 0) {
                 const auto remaining = effect.GetTimeRemaining();
                 draw = remaining < static_cast<DWORD>(effect.duration * 1000.f);

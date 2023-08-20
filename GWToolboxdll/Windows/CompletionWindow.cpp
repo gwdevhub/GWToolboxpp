@@ -168,7 +168,7 @@ namespace {
         if (wcsncmp(button->message, L"\x8102\x2B96\xA802\xD212\x380C", 5) != 0) {
             return; // Not "Cycle displayed minipets"
         }
-        const wchar_t* dialog_body = DialogModule::Instance().GetDialogBody();
+        const wchar_t* dialog_body = DialogModule::GetDialogBody();
         if (!(dialog_body && wcsncmp(dialog_body, L"\x8102\x2B9D\xDE1D\xB19F\x52DD", 5) == 0)) {
             return; // Not devotion dialog "Miniatures on display"
         }
@@ -213,7 +213,7 @@ namespace {
             return; // Not "Which festival hat would you like me to make you?"
         }
 
-        const auto& buttons = DialogModule::Instance().GetDialogButtons();
+        const auto& buttons = DialogModule::GetDialogButtons();
         const auto cc = character_completion[GetPlayerName()];
         auto& unlocked = cc->festival_hats;
         for (const auto btn : buttons) {
@@ -244,7 +244,7 @@ namespace {
             return;
         }
         uint32_t dialog_id = (uint32_t)wparam;
-        const auto& available_dialogs = DialogModule::Instance().GetDialogButtons();
+        const auto& available_dialogs = DialogModule::GetDialogButtons();
         const auto this_dialog_button = std::ranges::find_if(available_dialogs, [dialog_id](auto d) { return d->dialog_id == dialog_id; });
         if (this_dialog_button == available_dialogs.end()) {
             return;
@@ -364,7 +364,7 @@ namespace {
                 default: ASSERT("Invalid CompletionType" && false);
             }
         }
-        const auto this_character_completion = Instance().GetCharacterCompletion(character_name, true);
+        const auto this_character_completion = CompletionWindow::GetCharacterCompletion(character_name, true);
         std::vector<uint32_t>* write_buf = nullptr;
         switch (type) {
             case CompletionType::Mission:
@@ -444,7 +444,7 @@ namespace {
         }
         const auto pn = GetPlayerName();
         if (pn) {
-            const auto cc = CompletionWindow::Instance().GetCharacterCompletion(pn);
+            const auto cc = CompletionWindow::GetCharacterCompletion(pn);
             if (cc) {
                 cc->account = email;
             }
@@ -1231,15 +1231,14 @@ void CompletionWindow::Initialize()
     GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
         const uint32_t player_number = static_cast<uint32_t*>(pak)[1];
         const auto c = GW::GetCharContext();
-        if (!(c && player_number == c->player_number)) {
+        if (!c || player_number != c->player_number) {
             return;
         }
         const auto me = GW::PlayerMgr::GetPlayerByID(c->player_number);
         if (!me) {
             return;
         }
-        const auto comp = Instance().GetCharacterCompletion(c->player_name);
-        if (comp) {
+        if (const auto comp = GetCharacterCompletion(c->player_name)) {
             comp->profession = static_cast<Profession>(me->primary);
         }
         ParseCompletionBuffer(CompletionType::Heroes);

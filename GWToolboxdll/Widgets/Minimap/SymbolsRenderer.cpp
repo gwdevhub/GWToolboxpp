@@ -136,7 +136,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     if (tau > 10 * PI) {
         tau -= 10 * PI;
     }
-    DirectX::XMMATRIX translate{};
+    DirectX::XMMATRIX translate;
     DirectX::XMMATRIX world{};
 
     if (const GW::Quest* quest = GW::QuestMgr::GetActiveQuest()) {
