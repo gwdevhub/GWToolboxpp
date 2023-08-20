@@ -526,7 +526,10 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
                     draw = UptimeToString(remaining_str, static_cast<int>(remaining));
                 }
                 else if (DurationExpired(effect)) {
-                    goto enddraw; // cached_effects is now invalidated; skip to end and redraw next frame
+                    // cached_effects is now invalidated; skip to end and redraw next frame
+                    ImGui::PopFont();
+                    ImGui::End();
+                    ImGui::PopStyleVar(2);
                 }
             }
             else if (effect.skill_id == GW::Constants::SkillID::Hard_mode) {
@@ -554,7 +557,6 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             skip_effects();
         }
     }
-enddraw:
     ImGui::PopFont();
     ImGui::End();
     ImGui::PopStyleVar(2);
