@@ -53,12 +53,13 @@ Toolbox supports plugins, meaning you can extend Toolbox functionality.
 Please take note that plugins are currently a *beta* feature - plugins compiled for one version of toolbox should continue working, but may have to be recompiled
 
 For users: put the plugin into GWToolboxpp/\<Computername\>/plugins
+If you use plugins that aren't compatible with your Toolbox version, you might experience crashes.
 
 For developers: there are a few things you should take note of:
-* three examples (Clock, Armory and InstanceTimer) will automatically be added to the solution (see CMakeLists.txt)
+* Two examples (Clock and InstanceTimer) will automatically be added to the solution (see CMakeLists.txt)
 * Your Plugin::Initialize must call ToolboxPlugin::Initialize(ctx, fns, tbdll), otherwise you must take care of creating and destroying your own ImGui context.
-* we do not guarantee API stability between versions
-* you will likely want GWCA access in your plugin, so call GW::Initialize(). If you also change toolbox functionality, by pattern scanning the Toolbox dll, make sure your plugins signature scanner is pointed to gw.exe at the end of Plugin::Initialize().
+* We do not guarantee API stability between versions
+* If you wish to draw in your plugin, inherit from ToolboxUIPlugin. It will automatically initialise GWCA access for you (GW::Initialize()). If you create a plugin that inherits from ToolboxPlugin, you must manage that yourself. If you use GWCA, make sure the GW::Scanner points to GW.exe at the end of Plugin::Initialize().
 
 ## Credits
 

@@ -50,10 +50,14 @@ public:
 
     [[nodiscard]] virtual bool HasSettings() const { return false; }
 
+    // return a pointer to a bool that will be used to show/hide the window
+    // if you wish to draw, you should consider inheriting from ToolboxUIPlugin.
     [[nodiscard]] virtual bool* GetVisiblePtr() { return nullptr; }
 
+    // if a hide/close entry for this plugin should be added to the main menu
     [[nodiscard]] virtual bool ShowInMainMenu() const { return false; }
 
+    // do we want to draw while the world map is showing?
     [[nodiscard]] virtual bool ShowOnWorldMap() const { return false; }
 
     [[nodiscard]] virtual std::filesystem::path GetSettingFile(const wchar_t* folder) const;
@@ -70,7 +74,8 @@ public:
     // Terminate module. Release any resources used. Make sure to revert all callbacks
     virtual void Terminate() {}
 
-    // Update. Will always be called once every frame. Delta is in milliseconds.
+    // Update. Will be called once every frame unless the world map is showing and ShowInWorldMap returns false.
+    // Delta is in milliseconds.
     virtual void Update(float) {}
 
     // Draw. Will always be called once every frame.
@@ -85,9 +90,10 @@ public:
     // Save settings from folder
     virtual void SaveSettings(const wchar_t*) {}
 
-    // Will be drawn in the Settings/Plugins menu. Must use ImGui
+    // Will be drawn in the Settings/Plugins menu. Must use ImGui.
     virtual void DrawSettings() {}
 
+    // Will be used to draw an open/close button in the main window.
     virtual bool DrawTabButton(bool, bool, bool) { return false; }
 
 protected:
