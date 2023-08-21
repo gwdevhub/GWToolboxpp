@@ -134,7 +134,7 @@ namespace {
             toast->callback(toast, result);
         }
         // naughty but idc
-        const auto nonconst = (ToastNotifications::Toast*)toast;
+        const auto nonconst = const_cast<ToastNotifications::Toast*>(toast);
         nonconst->callback = nullptr;
         nonconst->dismiss();
     }
