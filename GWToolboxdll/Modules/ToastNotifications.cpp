@@ -52,24 +52,20 @@ namespace {
     // Pointers deleted in ChatSettings::Terminate
     std::map<std::wstring, ToastNotifications::Toast*> toasts;
 
-    bool show_toast(bool show_toast)
+    bool ShouldNotifyInstanceType(const bool notify)
     {
-        if (!show_toast) {
+        if (!notify) {
             return false;
         }
 
         switch (GW::Map::GetInstanceType()) {
             case GW::Constants::InstanceType::Explorable:
-                show_toast = show_notifications_when_in_explorable;
-                break;
+                return show_notifications_when_in_explorable;
             case GW::Constants::InstanceType::Outpost:
-                show_toast = show_notifications_when_in_outpost;
-                break;
+                return show_notifications_when_in_outpost;
             default:
-                break;
+                return false;
         }
-
-        return show_toast;
     }
 
     bool CanNotify()
@@ -79,13 +75,13 @@ namespace {
             return false;
         }
         if (IsIconic(whnd)) {
-            return show_toast(show_notifications_when_minimised);
+            return ShouldNotifyInstanceType(show_notifications_when_minimised);
         }
         if (GetActiveWindow() != whnd) {
-            return show_toast(show_notifications_when_in_background);
+            return ShouldNotifyInstanceType(show_notifications_when_in_background);
         }
 
-        return show_toast(show_notifications_when_focussed);
+        return ShouldNotifyInstanceType(show_notifications_when_focussed);
     }
 
     void FlashWindow()
