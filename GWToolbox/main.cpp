@@ -113,7 +113,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         return 0;
     }
     log_file_path = log_file_path.parent_path() / L"GWToolbox.error.log";
-    if (!freopen(log_file_path.string().c_str(), "w", stderr)) {
+    static FILE* stream;
+    if (freopen_s(&stream, log_file_path.string().c_str(), "w", stderr) != 0) {
         wchar_t buf[MAX_PATH + 128];
         swprintf(buf, MAX_PATH + 128,
                  L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.",

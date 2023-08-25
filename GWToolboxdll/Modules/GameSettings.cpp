@@ -248,7 +248,7 @@ namespace {
         }
     } pending_cast;
 
-    struct SkillData {
+    struct [[maybe_unused]] SkillData {
         GW::Constants::Profession primary;
         GW::Constants::Profession secondary;
         uint32_t attribute_count;

@@ -1051,15 +1051,14 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
 
 void FriendListWindow::DrawSettingsInternal()
 {
-    bool edited = false;
-    edited |= ImGui::Checkbox("Lock size as widget", &lock_size_as_widget);
+    ImGui::Checkbox("Lock size as widget", &lock_size_as_widget);
     ImGui::SameLine();
-    edited |= ImGui::Checkbox("Lock move as widget", &lock_move_as_widget);
+    ImGui::Checkbox("Lock move as widget", &lock_move_as_widget);
     const float dropdown_width = 160.0f * ImGui::GetIO().FontGlobalScale;
     ImGui::Text("Show as");
     ImGui::SameLine();
     ImGui::PushItemWidth(dropdown_width);
-    edited |= ImGui::Combo("###show_as_outpost", &outpost_show_as, "Window\0Widget\0Hidden");
+    ImGui::Combo("###show_as_outpost", &outpost_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("in outpost");
@@ -1067,7 +1066,7 @@ void FriendListWindow::DrawSettingsInternal()
     ImGui::Text("Show as");
     ImGui::SameLine();
     ImGui::PushItemWidth(dropdown_width);
-    edited |= ImGui::Combo("###show_as_explorable", &explorable_show_as, "Window\0Widget\0Hidden");
+    ImGui::Combo("###show_as_explorable", &explorable_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("in explorable");
@@ -1075,7 +1074,7 @@ void FriendListWindow::DrawSettingsInternal()
     ImGui::Text("Show as");
     ImGui::SameLine();
     ImGui::PushItemWidth(dropdown_width);
-    edited |= ImGui::Combo("###show_as_loading", &loading_show_as, "Window\0Widget\0Hidden");
+    ImGui::Combo("###show_as_loading", &loading_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("while loading");

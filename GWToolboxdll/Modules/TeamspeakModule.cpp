@@ -37,13 +37,11 @@ namespace {
     enum ConnectionStep : uint8_t {
         Idle,
         Connecting,
-        Downloading
     };
 
     ConnectionStep step = Idle;
 
     bool enabled = false;
-    bool disconnecting = false;
     bool pending_connect = false;
     bool pending_disconnect = false;
     WSAData wsaData = {0};
@@ -68,7 +66,7 @@ namespace {
     void OnTeamspeakCommand(const wchar_t*, int, LPWSTR*);
     bool ConnectBlocking(bool user_invoked = false);
 
-    const bool IsConnected()
+    bool IsConnected()
     {
         return server_socket != INVALID_SOCKET && step != Connecting;
     }
@@ -115,9 +113,8 @@ namespace {
         if (server_socket == INVALID_SOCKET) {
             return nullptr;
         }
-        int res = 0;
         if (!request.empty()) {
-            res = send(server_socket, request.c_str(), request.size(), 0);
+            const int res = send(server_socket, request.c_str(), request.size(), 0);
             if (res == SOCKET_ERROR) {
                 return nullptr;
             }
@@ -126,7 +123,7 @@ namespace {
         _client_query_response.error_text.clear();
         _client_query_response.content.clear();
         while (true) {
-            res = recv(server_socket, response_buffer, sizeof(response_buffer) - 1, 0);
+            const int res = recv(server_socket, response_buffer, sizeof(response_buffer) - 1, 0);
             if (res == SOCKET_ERROR || res == 0) {
                 break;
             }

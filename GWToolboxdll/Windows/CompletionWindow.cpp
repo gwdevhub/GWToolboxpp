@@ -422,11 +422,6 @@ namespace {
         return true;
     }
 
-    struct AccountInfo {
-        std::wstring email;
-        std::vector<std::wstring> characters;
-    };
-
     bool only_show_account_chars = true;
     // Check login screen; assign missing characters to email account
     void RefreshAccountCharacters()

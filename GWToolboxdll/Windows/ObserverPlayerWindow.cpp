@@ -97,7 +97,6 @@ void ObserverPlayerWindow::DrawHeaders() const
     if (show_integrity) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Integrity);
-        offset_d = text_tiny;
     }
 }
 

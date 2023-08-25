@@ -599,7 +599,7 @@ namespace GuiUtils {
             }
             out[len++] = wchar;
         }
-        out[len++] = 0;
+        out[len] = 0;
         return {out};
     }
 

@@ -306,7 +306,6 @@ void TwitchModule::Update(const float)
 
 void TwitchModule::DrawSettingsInternal()
 {
-    bool edited = false;
     ImGui::PushID("twitch_settings");
     if (ImGui::Checkbox("Enable Twitch integration", &twitch_enabled)) {
         Disconnect();
@@ -322,7 +321,6 @@ void TwitchModule::DrawSettingsInternal()
             else {
                 pending_connect = true;
             }
-            edited |= true;
         }
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) {

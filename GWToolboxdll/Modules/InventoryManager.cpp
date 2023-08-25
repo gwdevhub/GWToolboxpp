@@ -1375,10 +1375,9 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(const Item* st
     if (start_after_item) {
         for (size_t i = 0; i < start_after_item->bag->items.size(); i++) {
             if (start_after_item->bag->items[i] == start_after_item) {
-                size_t start_position = i + 1;
+                const size_t start_position = i + 1;
                 start_bag = start_after_item->bag->index + 1;
                 if (start_position >= start_after_item->bag->items.size()) {
-                    start_position = 0;
                     start_bag++;
                 }
                 break;

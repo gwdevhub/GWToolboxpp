@@ -72,7 +72,6 @@ bool Mp3::Load(const LPCWSTR szFile)
             if (pims) {
                 pims->SetTimeFormat(&TIME_FORMAT_MEDIA_TIME);
                 pims->GetDuration(&duration); // returns 10,000,000 for a second.
-                duration = duration;
             }
         }
     }

@@ -104,7 +104,7 @@ namespace {
         }
         GuiUtils::FocusWindow();
         GW::GameThread::Enqueue([charname = toast->title] {
-            SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)charname.data());
+            SendUIMessage(GW::UI::UIMessage::kOpenWhisper, const_cast<wchar_t*>(charname.data()));
         });
     }
 
@@ -188,7 +188,7 @@ namespace {
         const wchar_t* message_encoded = ToolboxUtils::GetMessageCore();
         const size_t msg_len = wcslen(packet->sender_name) + wcslen(packet->sender_guild) + wcslen(message_encoded) + 10;
         const auto message_including_sender = new wchar_t[msg_len];
-        int written = -1;
+        int written;
         if (packet->sender_guild[0]) {
             written = swprintf(message_including_sender, msg_len, L"\x108\x107%s [%s]: \x1\x2%s", packet->sender_name, packet->sender_guild, message_encoded);
         }

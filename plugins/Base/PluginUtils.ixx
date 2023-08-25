@@ -765,7 +765,7 @@ namespace PluginUtils {
         if (timeinfo->tm_year != nowinfo->tm_year) {
             written += snprintf(&out[written], out.capacity() - written, " %d", timeinfo->tm_year + 1900);
         }
-        written += snprintf(&out[written], out.capacity() - written, written > 0 ? ", %02d:%02d" : " %02d:%02d",
+        snprintf(&out[written], out.capacity() - written, written > 0 ? ", %02d:%02d" : " %02d:%02d",
                             timeinfo->tm_hour, timeinfo->tm_min);
         return out.size();
     }
