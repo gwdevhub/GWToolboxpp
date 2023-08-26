@@ -228,7 +228,7 @@ namespace {
         return false;
     }
 
-    constexpr std::wstring_view encoded_ashes_names[] = {
+    const wchar_t* encoded_ashes_names[] = {
         L"\x6C1F", // Factions ashes.  0x6C20 is unused content "Ashes of Li".
         L"\x6C21",
         L"\x6C22",
@@ -259,7 +259,12 @@ namespace {
         if (!item_name) {
             return false;
         }
-        return std::ranges::find(encoded_ashes_names, std::wstring_view(item_name, item_name_len)) != std::ranges::end(encoded_ashes_names);
+        for (const auto cmp : encoded_ashes_names) {
+            if (wcsncmp(item_name, cmp, item_name_len) == 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     bool IsInChallengeMission()
@@ -352,8 +357,11 @@ namespace {
                 // monster/player x drops item y (no assignment)
                 // first segment describes the agent who dropped, second segment describes the item dropped
                 const auto agent_name = GetFirstSegment(message);
+                if (!ShouldIgnoreByAgentThatDropped(agent_name)) {
+                    return false;
+                }
                 const auto item_argument = GetSecondSegment(message);
-                if (ashes_dropped && IsAshes(item_argument)) {
+                if (ShouldIgnoreByAgentThatDropped(agent_name) && self_drop_rare && IsRare(item_argument)) {
                     return true;
                 }
                 if (!ShouldIgnoreByAgentThatDropped(agent_name)) {
