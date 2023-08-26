@@ -20,7 +20,7 @@ namespace {
             reload_from_disk = true;
         }
         const auto path = Resources::GetSettingFile(filename);
-        if (!reload_from_disk && GWToolbox::SettingsFolderChanged()) {
+        if (!reload_from_disk && !GWToolbox::SettingsFolderChanged()) {
             return *out;
         }
         if (!exists(path)) {
