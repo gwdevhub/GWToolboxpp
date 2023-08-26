@@ -66,12 +66,12 @@ namespace ToolboxUtils {
             return false;
         }
 
-        const size_t GetSegmentLength(const wchar_t* message)
+        size_t GetSegmentLength(const wchar_t* message)
         {
             if (!message) {
                 return 0;
             }
-            if (IsNumericFlag(*message)) {
+            if (IsNumericFlag(message[0])) {
                 return 1;
             }
             size_t i = 0;
@@ -86,12 +86,12 @@ namespace ToolboxUtils {
             return i;
         }
 
-        const size_t GetIdentifierLength(const wchar_t* message)
+        size_t GetIdentifierLength(const wchar_t* message)
         {
             if (!message) {
                 return 0;
             }
-            size_t i = 0;
+            size_t i;
             for (i = 0; message[i] > 0x2; i++) {
                 if (IsArgumentFlag(message[i])) {
                     break;
@@ -100,12 +100,16 @@ namespace ToolboxUtils {
             return i;
         }
 
-        const wchar_t* GetSegmentArgument(const wchar_t* message, const wchar_t segment_key, size_t* segment_length_out, size_t* identifier_length_out)
+        const wchar_t* GetSegmentArgument(const wchar_t* message, const wchar_t segment_key, int segment_number, size_t* segment_length_out, size_t* identifier_length_out)
         {
             if (!message) {
                 return nullptr;
             }
             for (size_t i = 0; message[i] > 0x2; i++) {
+                if (message[i + 1] == 0x1 && message[i + 2] == 0x1 && segment_number-- > 0) { // end of nth segment, skip to next
+                    i += 2;
+                    continue;
+                }
                 if (!IsArgumentFlag(message[i])) {
                     continue;
                 }
@@ -129,12 +133,12 @@ namespace ToolboxUtils {
 
         const wchar_t* GetFirstSegment(const wchar_t* message, size_t* segment_length_out, size_t* identifier_length_out)
         {
-            return GetSegmentArgument(message, 0x10A, segment_length_out, identifier_length_out);
+            return GetSegmentArgument(message, 0x10A, 0, segment_length_out, identifier_length_out);
         }
 
         const wchar_t* GetSecondSegment(const wchar_t* message, size_t* segment_length_out, size_t* identifier_length_out)
         {
-            return GetSegmentArgument(message, 0x10B, segment_length_out, identifier_length_out);
+            return GetSegmentArgument(message, 0x10B, 1, segment_length_out, identifier_length_out);
         }
 
         DWORD GetNumericSegment(const wchar_t* message)
