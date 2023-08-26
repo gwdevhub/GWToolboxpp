@@ -114,10 +114,6 @@ namespace ToolboxUtils {
                     continue;
                 }
                 if (message[i] == segment_key) {
-                    const auto segment_key_count = std::ranges::count(std::wstring_view(message), segment_key);
-                    if (segment_number > 0 && segment_key_count > 1) {
-                        continue;
-                    }
                     const wchar_t* argument_start_pos = message + i + 1;
                     if (segment_length_out) {
                         *segment_length_out = GetSegmentLength(argument_start_pos);
