@@ -452,10 +452,14 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         case WM_ACTIVATE:
             // send to toolbox modules and plugins
         {
+            bool captured = false;
             for (const auto m : tb.GetAllModules()) {
                 if (m->WndProc(Message, wParam, lParam)) {
-                    return true;
+                    captured = true;
                 }
+            }
+            if (captured) {
+                return true;
             }
         }
         // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
