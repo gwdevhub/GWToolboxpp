@@ -87,7 +87,7 @@ For developers: there are a few things you should take note of:
 * Original creator of a damage monitor, which inspired the toolbox damage monitor.
 * Created original implementation of the Cursor Fix.
 
-**[Misty](https://github.com/Hour-of-the-Owl)/[DarkManic]()**
+**[Misty](https://github.com/Hour-of-the-Owl)/[DarkManic](https://github.com/DarkManic)**
 * Extensive work on the site and documentation.
 
 **[JetBrains](https://github.com/JetBrains)**
