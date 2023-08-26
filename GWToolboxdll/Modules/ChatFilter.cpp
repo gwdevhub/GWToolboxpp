@@ -353,10 +353,13 @@ namespace {
                 // first segment describes the agent who dropped, second segment describes the item dropped
                 const auto agent_name = GetFirstSegment(message);
                 const auto item_argument = GetSecondSegment(message);
-                if (ShouldIgnoreByAgentThatDropped(agent_name) && self_drop_rare && IsRare(item_argument)) {
+                if (ashes_dropped && IsAshes(item_argument)) {
                     return true;
                 }
-                if (ashes_dropped && IsAshes(item_argument)) {
+                if (!ShouldIgnoreByAgentThatDropped(agent_name)) {
+                    return false;
+                }
+                if (self_drop_rare && IsRare(item_argument)) {
                     return true;
                 }
                 return self_drop_common;
