@@ -394,12 +394,14 @@ namespace {
                 return ally_pickup_common; // party shares gold ?
             case 0x7F0: {
                 // monster/player x drops item y (no assignment)
+                // monster x drops item y, your party assigns to player z
+                // 07f0 fab6 c4e6 1b50 010a <monster> 0001 010b <rarity> 010a <item> 0001 0001
                 // first segment describes the agent who dropped, second segment describes the item dropped
                 const auto item_argument = GetSecondSegment(message);
-                if(IsAshes(item_argument))
-                    return ashes_dropped;
                 if(IsRare(item_argument))
                     return self_drop_rare;
+                if(IsAshes(GetFirstSegment(item_argument)))
+                    return ashes_dropped;
                 // @Enhancement: Block drops by other players?
                 return self_drop_common;
             }
