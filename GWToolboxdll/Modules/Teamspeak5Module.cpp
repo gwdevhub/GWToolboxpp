@@ -208,7 +208,7 @@ namespace {
                  teamspeak_server->user_count);
         GW::Chat::SendChat('#', buf);
 
-        swprintf(buf, _countof(buf) - 1, L"TS3: [http://invite.teamspeak.com/%S/?port=%d;xx]",
+        swprintf(buf, _countof(buf) - 1, L"TS3: [https://invite.teamspeak.com/%S/?port=%d;xx]",
                  teamspeak_server->host.c_str(),
                  teamspeak_server->port);
         GW::Chat::SendChat('#', buf);

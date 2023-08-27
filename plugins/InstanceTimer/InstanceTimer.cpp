@@ -165,8 +165,7 @@ bool InstanceTimer::GetDeepTimer()
     static clock_t start = -1;
     auto skill = SkillID::No_Skill;
     for (const auto& effect : effects) {
-        const SkillID effect_id = effect.skill_id;
-        switch (effect_id) {
+        switch (effect.skill_id) {
             case SkillID::Aspect_of_Exhaustion:
                 skill = SkillID::Aspect_of_Exhaustion;
                 break;

@@ -60,12 +60,13 @@ protected:
 public:
     struct Friend {
         Friend(FriendListWindow* _parent)
-            : parent(_parent) { };
+            : parent(_parent) { }
 
         ~Friend()
         {
             characters.clear();
-        };
+        }
+
         Friend(const Friend&) = delete;
 
     private:
@@ -98,7 +99,7 @@ public:
         [[nodiscard]] bool IsOffline() const
         {
             return status == GW::FriendStatus::Offline;
-        };
+        }
 
         [[nodiscard]] bool NeedToUpdate(const clock_t now) const
         {

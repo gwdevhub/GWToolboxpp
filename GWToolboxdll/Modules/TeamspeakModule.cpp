@@ -402,7 +402,7 @@ namespace {
                  teamspeak_server->user_count);
         GW::Chat::SendChat('#', buf);
 
-        swprintf(buf, _countof(buf) - 1, L"TS3: [http://invite.teamspeak.com/%S/?port=%S;xx]",
+        swprintf(buf, _countof(buf) - 1, L"TS3: [https://invite.teamspeak.com/%S/?port=%S;xx]",
                  teamspeak_server->host.c_str(),
                  teamspeak_server->port.c_str());
         GW::Chat::SendChat('#', buf);

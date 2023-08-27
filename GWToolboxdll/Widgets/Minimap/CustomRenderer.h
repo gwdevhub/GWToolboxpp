@@ -13,12 +13,12 @@ using Color = uint32_t;
 namespace mapbox::util {
     template <>
     struct nth<0, GW::Vec2f> {
-        static auto get(const GW::Vec2f& t) { return t.x; };
+        static auto get(const GW::Vec2f& t) { return t.x; }
     };
 
     template <>
     struct nth<1, GW::Vec2f> {
-        static auto get(const GW::Vec2f& t) { return t.y; };
+        static auto get(const GW::Vec2f& t) { return t.y; }
     };
 }
 
@@ -29,7 +29,7 @@ class CustomRenderer : public VBuffer {
         CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n);
 
         explicit CustomLine(const char* n)
-            : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n) { };
+            : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n) { }
         GW::Vec2f p1{};
         GW::Vec2f p2{};
         GW::Constants::MapID map{};

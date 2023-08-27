@@ -685,7 +685,7 @@ void ChatCommands::DrawHelp()
     ImGui::Bullet();
     ImGui::Text("'/resize <width> <height>' resize the GW window");
     ImGui::Bullet();
-    ImGui::Text("'/scwiki [<search_term>]' search http://wiki.fbgmguild.com.");
+    ImGui::Text("'/scwiki [<search_term>]' search https://wiki.fbgmguild.com.");
     ImGui::Bullet();
     ImGui::Text("'/show <name>' opens the window, in-game feature or widget titled <name>.");
     ImGui::ShowHelp(toggle_hint);
@@ -2064,11 +2064,11 @@ void ChatCommands::CmdSCWiki(const wchar_t*, const int argc, const LPWSTR* argv)
         return;
     }
     if (argc == 1) {
-        ShellExecuteW(nullptr, L"open", L"http://wiki.fbgmguild.com/Main_Page", nullptr, nullptr, SW_SHOWNORMAL);
+        ShellExecuteW(nullptr, L"open", L"https://wiki.fbgmguild.com/Main_Page", nullptr, nullptr, SW_SHOWNORMAL);
     }
     else {
         // the buffer is large enough, because you can type only 120 characters at once in the chat.
-        wchar_t link[256] = L"http://wiki.fbgmguild.com/index.php?search=";
+        wchar_t link[256] = L"https://wiki.fbgmguild.com/index.php?search=";
         int i;
         for (i = 1; i < argc - 1; i++) {
             wcscat_s(link, argv[i]);

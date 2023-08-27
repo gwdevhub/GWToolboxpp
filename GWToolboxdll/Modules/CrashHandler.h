@@ -4,7 +4,7 @@
 
 class CrashHandler : public ToolboxModule {
     CrashHandler() = default;
-    ~CrashHandler() override { Cleanup(); };
+    ~CrashHandler() override { Cleanup(); }
 
 public:
     static CrashHandler& Instance()

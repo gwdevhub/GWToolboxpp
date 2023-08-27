@@ -15,7 +15,7 @@ class ChatLog : public ToolboxModule {
     ~ChatLog() override
     {
         Reset();
-    };
+    }
 
     struct TBChatMessage {
         TBChatMessage* next{};

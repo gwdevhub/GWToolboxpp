@@ -203,9 +203,6 @@ void DupingWindow::Draw(IDirect3DDevice9*)
     int soul_count = 0;
     int water_count = 0;
     int mind_count = 0;
-    float threshold = .0f;
-    std::set<GW::AgentID>* all_agents_of_type = nullptr;
-    std::vector<DupeInfo>* duped_agents_of_type = nullptr;
 
     // ==== Calculate the data ====
     if (!is_in_doa) {
@@ -220,7 +217,10 @@ void DupingWindow::Draw(IDirect3DDevice9*)
     const GW::Agent* player = agents ? GW::Agents::GetPlayer() : nullptr;
 
     if (player && is_in_doa) {
+        std::vector<DupeInfo>* duped_agents_of_type = nullptr;
+        std::set<GW::AgentID>* all_agents_of_type = nullptr;
         for (auto* agent : *agents) {
+            float threshold = .0f;
             const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
 
             if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive() || GetSquareDistance(player->pos, living->pos) > sqr_range) {

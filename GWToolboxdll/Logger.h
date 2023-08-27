@@ -43,4 +43,4 @@ namespace Log {
     void WarningW(const wchar_t* format, ...);
 
     void FatalAssert(const char* expr, const char* file, unsigned int line);
-};
+}

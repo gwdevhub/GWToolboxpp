@@ -159,7 +159,7 @@ void PingsLinesRenderer::P153Callback(const GW::Packet::StoC::GenericValueTarget
         && pak->value == 928) {
         recall_target = pak->target;
     }
-};
+}
 
 void PingsLinesRenderer::Initialize(IDirect3DDevice9* device)
 {
@@ -386,9 +386,8 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device)
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices),
                  D3DLOCK_DISCARD);
 
-    constexpr float PI = 3.1415927f;
     for (size_t i = 0; i < count; i++) {
-        const float angle = i * (2 * PI / count);
+        const float angle = i * (2 * DirectX::XM_PI / count);
         const bool outer = i % 2 == 0;
         const float radius = outer ? 1.0f : 0.8f;
         _vertices[i].x = radius * std::cos(angle);
@@ -417,13 +416,12 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device)
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices),
                  D3DLOCK_DISCARD);
 
-    constexpr float PI = 3.1415927f;
     _vertices[0].x = 0.0f;
     _vertices[0].y = 0.0f;
     _vertices[0].z = 0.0f;
     _vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
     for (size_t i = 1; i < vertex_count; i++) {
-        const float angle = (i - 1) * (2 * PI / count);
+        const float angle = (i - 1) * (2 * DirectX::XM_PI / count);
         _vertices[i].x = std::cos(angle);
         _vertices[i].y = std::sin(angle);
         _vertices[i].z = 0.0f;

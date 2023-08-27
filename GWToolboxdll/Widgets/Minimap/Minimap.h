@@ -27,7 +27,8 @@ class Minimap final : public ToolboxWidget {
     Minimap()
     {
         is_resizable = false;
-    };
+    }
+
     ~Minimap() override = default;
 
 public:
