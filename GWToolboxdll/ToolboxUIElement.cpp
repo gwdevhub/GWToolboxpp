@@ -131,7 +131,8 @@ bool ToolboxUIElement::DrawTabButton(const bool show_icon, const bool show_text,
         text_x = pos.x + img_size + ImGui::GetStyle().ItemSpacing.x;
     }
     const bool clicked = ImGui::Button("", ImVec2(width, ImGui::GetTextLineHeightWithSpacing()));
-    if (show_icon) {if (Icon()) {
+    if (show_icon) {
+        if (Icon()) {
             ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),
                                                 ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Icon());
         }

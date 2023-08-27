@@ -27,8 +27,6 @@ namespace GW {
 }
 
 namespace ToolboxUtils {
-
-
     // Map
 
     bool IsOutpost();

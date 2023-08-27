@@ -34,7 +34,6 @@ namespace {
 }
 
 namespace ToolboxUtils {
-
     bool IsOutpost()
     {
         return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;

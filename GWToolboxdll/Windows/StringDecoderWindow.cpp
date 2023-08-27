@@ -8,7 +8,6 @@
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
-#include <Utils/ToolboxUtils.h>
 
 #include <Windows/StringDecoderWindow.h>
 
@@ -32,10 +31,7 @@ namespace {
     }
 }
 
-void StringDecoderWindow::PrintEncStr(const wchar_t*)
-{
-   
-}
+void StringDecoderWindow::PrintEncStr(const wchar_t*) {}
 
 void StringDecoderWindow::Draw(IDirect3DDevice9*)
 {
