@@ -398,12 +398,12 @@ namespace {
                 // 07f0 fab6 c4e6 1b50 010a <monster> 0001 010b <rarity> 010a <item> 0001 0001
                 // first segment describes the agent who dropped, second segment describes the item dropped
                 const auto item_argument = GetSecondSegment(message);
-                if(IsRare(item_argument))
-                    return self_drop_rare;
                 if(IsAshes(GetFirstSegment(item_argument)))
                     return ashes_dropped;
                 if (IsPlayerName(GetFirstSegment(message)))
                     return false; // Don't block other players dropping items
+                if(IsRare(item_argument))
+                    return self_drop_rare;
                 return self_drop_common;
             }
             case 0x7F1: {
