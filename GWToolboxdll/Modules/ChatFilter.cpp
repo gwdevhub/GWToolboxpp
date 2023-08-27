@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-
 #include <Defines.h>
 #include <GWCA/Packets/StoC.h>
 
@@ -440,7 +439,7 @@ namespace {
                 return false;
             }
             case 0x7F2: {
-                if(IsAshes(GetFirstSegment(GetFirstSegment(message)))) {
+                if (IsAshes(GetFirstSegment(GetFirstSegment(message)))) {
                     return ashes_dropped;
                 }
                 return false; // you drop item x
